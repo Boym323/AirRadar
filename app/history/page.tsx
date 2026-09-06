@@ -5,6 +5,17 @@ import { useEffect, useState } from "react";
 import { useRef } from "react";
 import maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
+import {
+  flightSummary,
+  formatAltitude,
+  formatCoordinate,
+  formatDateTime,
+  formatDistance,
+  formatSpeed,
+  formatTrack,
+  historySummary,
+  t,
+} from "@/lib/i18n";
 import type { HistoryResponse } from "@/lib/server/history";
 
 const HISTORY_MAP_STYLE: StyleSpecification = {
@@ -32,7 +43,7 @@ function HistoryTrailMap({ positions }: { positions: HistoryResponse["positions"
     });
     return () => map.remove();
   }, [positions]);
-  return <div ref={containerRef} className="history-map" aria-label="Flight trail map" />;
+  return <div ref={containerRef} className="history-map" aria-label={t.history.trailMap} />;
 }
 
 export default function HistoryPage() {
@@ -58,10 +69,10 @@ export default function HistoryPage() {
     setError(null);
     try {
       const response = await fetch(`/api/history/${encodeURIComponent(normalized)}`, { cache: "no-store" });
-      if (!response.ok) throw new Error("History request failed");
+      if (!response.ok) throw new Error(t.history.requestFailed);
       setHistory((await response.json()) as HistoryResponse);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to load history");
+    } catch {
+      setError(t.history.requestFailed);
     } finally {
       setLoading(false);
     }
@@ -70,48 +81,48 @@ export default function HistoryPage() {
   return (
     <main className="history-page">
       <div className="history-page-header">
-        <div><h1>Flight history</h1><p className="brand-subtitle">SAMPLED TRACKS FROM AIRRADAR</p></div>
-        <Link className="back-link" href="/">← Back to radar</Link>
+        <div><h1>{t.history.title}</h1><p className="brand-subtitle">{t.history.subtitle}</p></div>
+        <Link className="back-link" href="/">{t.history.backToRadar}</Link>
       </div>
       <section className="history-card">
         <div className="history-card-header">
-          <strong>Look up an aircraft</strong>
-          <p>Historical positions are sampled every 20 seconds when PostgreSQL is configured. Demo mode also exposes the in-memory trail.</p>
+          <strong>{t.history.lookupAircraft}</strong>
+          <p>{t.history.description}</p>
           <form className="history-form" onSubmit={(event) => { event.preventDefault(); void loadHistory(); }}>
-            <input value={hex} onChange={(event) => setHex(event.target.value)} placeholder="ICAO hex, e.g. 896139" aria-label="ICAO hex" />
-            <button className="primary-button" type="submit">{loading ? "Loading…" : "Load history"}</button>
+            <input value={hex} onChange={(event) => setHex(event.target.value)} placeholder={t.history.icaoPlaceholder} aria-label={t.aircraft.icaoHex} />
+            <button className="primary-button" type="submit">{loading ? t.common.loading : t.history.load}</button>
           </form>
         </div>
         {error && <div className="history-note">{error}</div>}
-        {!history && !error && <div className="history-note">Enter an ICAO hex to inspect the most recent sampled flight track.</div>}
+        {!history && !error && <div className="history-note">{t.history.enterIcao}</div>}
         {history && (
           <>
-            <div className="history-note">{history.flight?.callsign || history.flight ? `Flight ${history.flight.callsign || "unknown callsign"}` : "No recorded flight"} · source: {history.source} · {history.positions.length} positions</div>
+            <div className="history-note">{history.flight ? flightSummary(history.flight.callsign) : t.history.noRecordedFlight} · {historySummary(history.source, history.positions.length)}</div>
             {history.flight && <div className="history-summary">
-              <div><span>Registration</span><strong>{history.flight.registration || "—"}</strong></div>
-              <div><span>Aircraft type</span><strong>{history.flight.aircraftType || "—"}</strong></div>
-              <div><span>Airline</span><strong>{history.flight.airline || "—"}</strong></div>
-              <div><span>Route</span><strong>{history.flight.origin && history.flight.destination ? `${history.flight.origin} → ${history.flight.destination}` : "—"}</strong></div>
-              <div><span>First seen</span><strong>{history.flight.startedAt ? new Date(history.flight.startedAt).toLocaleString() : "—"}</strong></div>
-              <div><span>Last seen</span><strong>{history.flight.lastSeenAt ? new Date(history.flight.lastSeenAt).toLocaleString() : "—"}</strong></div>
-              <div><span>Max altitude</span><strong>{history.flight.maxAltitude === null ? "—" : `${history.flight.maxAltitude.toLocaleString()} ft`}</strong></div>
-              <div><span>Min distance</span><strong>{history.flight.minDistanceKm === null ? "—" : `${history.flight.minDistanceKm.toFixed(1)} km`}</strong></div>
+              <div><span>{t.aircraft.registration}</span><strong>{history.flight.registration || t.common.emptyValue}</strong></div>
+              <div><span>{t.aircraft.aircraftType}</span><strong>{history.flight.aircraftType || t.common.emptyValue}</strong></div>
+              <div><span>{t.route.airline}</span><strong>{history.flight.airline || t.common.emptyValue}</strong></div>
+              <div><span>{t.route.originDestination}</span><strong>{history.flight.origin && history.flight.destination ? `${history.flight.origin} → ${history.flight.destination}` : t.common.emptyValue}</strong></div>
+              <div><span>{t.history.firstSeen}</span><strong>{formatDateTime(history.flight.startedAt)}</strong></div>
+              <div><span>{t.history.lastSeen}</span><strong>{formatDateTime(history.flight.lastSeenAt)}</strong></div>
+              <div><span>{t.history.maxAltitude}</span><strong>{formatAltitude(history.flight.maxAltitude)}</strong></div>
+              <div><span>{t.history.minDistance}</span><strong>{formatDistance(history.flight.minDistanceKm)}</strong></div>
             </div>}
             {history.positions.length > 1 && <HistoryTrailMap positions={history.positions} />}
             {history.positions.length > 0 ? (
               <table className="history-table">
-                <thead><tr><th>Recorded</th><th>Position</th><th>Altitude</th><th>Speed</th><th>Track</th></tr></thead>
+                <thead><tr><th>{t.history.recorded}</th><th>{t.aircraft.position}</th><th>{t.aircraft.altitude}</th><th>{t.aircraft.groundSpeed}</th><th>{t.aircraft.track}</th></tr></thead>
                 <tbody>{history.positions.slice().reverse().map((position) => (
                   <tr key={`${position.recordedAt}-${position.lat}-${position.lon}`}>
-                    <td>{new Date(position.recordedAt).toLocaleString()}</td>
-                    <td>{position.lat.toFixed(4)}, {position.lon.toFixed(4)}</td>
-                    <td>{position.altitude === null ? "—" : `${position.altitude.toLocaleString()} ft`}</td>
-                    <td>{position.groundSpeed === null ? "—" : `${Math.round(position.groundSpeed)} kt`}</td>
-                    <td>{position.track === null ? "—" : `${Math.round(position.track)}°`}</td>
+                    <td>{formatDateTime(position.recordedAt)}</td>
+                    <td>{formatCoordinate(position.lat)}, {formatCoordinate(position.lon)}</td>
+                    <td>{formatAltitude(position.altitude)}</td>
+                    <td>{formatSpeed(position.groundSpeed)}</td>
+                    <td>{formatTrack(position.track)}</td>
                   </tr>
                 ))}</tbody>
               </table>
-            ) : <div className="history-note">No sampled positions found for this aircraft yet.</div>}
+            ) : <div className="history-note">{t.history.noPositions}</div>}
           </>
         )}
       </section>

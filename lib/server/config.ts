@@ -1,4 +1,5 @@
 import type { ReceiverPosition } from "@/lib/aircraft/types";
+import { t } from "@/lib/i18n";
 
 export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 
@@ -18,7 +19,7 @@ export function getReceiverPosition(): ReceiverPosition {
   return {
     lat: envCoordinate("RECEIVER_LAT", 50.0755, -90, 90),
     lon: envCoordinate("RECEIVER_LON", 14.4378, -180, 180),
-    name: process.env.RECEIVER_NAME?.trim() || "AirRadar receiver",
+    name: process.env.RECEIVER_NAME?.trim() || t.radar.receiverName,
   };
 }
 

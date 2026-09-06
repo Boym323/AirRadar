@@ -5,12 +5,30 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, StyleSpecification } from "maplibre-gl";
 import { circleCoordinates } from "@/lib/geo";
+import {
+  aircraftInRange,
+  formatAge,
+  formatAltitude,
+  formatAtcNote,
+  formatAtcService,
+  formatCoordinate,
+  formatDistance,
+  formatNumber,
+  formatSpeed,
+  formatTime,
+  formatTrack,
+  secondaryStats,
+  t,
+  visibleAircraft,
+  watchlistKindLabel,
+  watchlistSummary,
+} from "@/lib/i18n";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, FlightRoute, ReceiverPosition, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcSector, AtcTransmitter } from "@/lib/atc/types";
 
-const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: "AirRadar receiver" };
+const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
 const EMPTY_SNAPSHOT: StateSnapshot = {
   aircraft: [],
   receiver: DEMO_RECEIVER,
@@ -41,36 +59,6 @@ const MAP_STYLE: StyleSpecification = {
   ],
 };
 
-function formatNumber(value: number | null, digits = 0): string {
-  return value === null || !Number.isFinite(value) ? "—" : value.toLocaleString("en-US", { maximumFractionDigits: digits });
-}
-
-function formatAltitude(value: number | null): string {
-  return value === null ? "—" : `${formatNumber(value)} ft`;
-}
-
-function formatSpeed(value: number | null): string {
-  return value === null ? "—" : `${formatNumber(value)} kt`;
-}
-
-function formatDistance(value: number | null): string {
-  return value === null ? "—" : `${formatNumber(value, value < 10 ? 1 : 0)} km`;
-}
-
-function formatTrack(value: number | null): string {
-  return value === null ? "—" : `${Math.round(value).toString().padStart(3, "0")}°`;
-}
-
-function formatAge(value: number | null): string {
-  return value === null ? "—" : `${value.toFixed(1)} s ago`;
-}
-
-function formatTime(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-}
-
 function labelForAircraft(aircraft: AircraftView): string {
   return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
 }
@@ -95,8 +83,8 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean) {
       properties: {
         id: sector.id,
         name: sector.name,
-        service: sector.service ?? sector.atcCallsign ?? "ATC",
-        altitude: `${sector.lowerAltitudeFt ?? 0}–${sector.upperAltitudeFt ?? "unlimited"} ft`,
+        service: formatAtcService(sector.service ?? sector.atcCallsign),
+        altitude: `${sector.lowerAltitudeFt ?? 0}–${sector.upperAltitudeFt ?? t.common.unlimited} ft`,
         frequencies: sector.frequencies.map((frequency) => `${frequency.frequencyMhz.toFixed(3)} MHz`).join(", "),
       },
       geometry: { type: "Polygon" as const, coordinates: [polygon] },
@@ -283,7 +271,7 @@ export function AirRadarApp() {
 
     const receiverElement = document.createElement("div");
     receiverElement.className = "receiver-marker";
-    receiverElement.setAttribute("aria-label", "Receiver position");
+    receiverElement.setAttribute("aria-label", t.radar.receiverPosition);
     receiverMarkerRef.current = new maplibregl.Marker({ element: receiverElement, anchor: "center" })
       .setLngLat([startingReceiver.lon, startingReceiver.lat])
       .addTo(map);
@@ -315,7 +303,7 @@ export function AirRadarApp() {
         const content = document.createElement("div");
         content.className = "map-popup";
         const title = document.createElement("strong");
-        title.textContent = String(properties.name ?? "ATC sector");
+        title.textContent = String(properties.name ?? t.atc.sector);
         const body = document.createElement("span");
         body.textContent = `${String(properties.service ?? "")} · ${String(properties.altitude ?? "")} · ${String(properties.frequencies ?? "")}`;
         content.append(title, body);
@@ -330,7 +318,7 @@ export function AirRadarApp() {
         const content = document.createElement("div");
         content.className = "map-popup";
         const title = document.createElement("strong");
-        title.textContent = String(properties.name ?? "ATC transmitter");
+        title.textContent = String(properties.name ?? t.atc.transmitter);
         const body = document.createElement("span");
         body.textContent = `${String(properties.service ?? "")} · ${String(properties.frequency ?? "")} ${String(properties.notes ?? "")}`;
         content.append(title, body);
@@ -455,7 +443,7 @@ export function AirRadarApp() {
       type: "FeatureCollection",
       features: showAtc ? atcData.transmitters.map((transmitter) => ({
         type: "Feature" as const,
-        properties: { name: transmitter.name, service: transmitter.service ?? "", frequency: `${transmitter.frequencyMhz.toFixed(3)} MHz`, notes: transmitter.notes ?? "" },
+        properties: { name: transmitter.name, service: formatAtcService(transmitter.service), frequency: `${transmitter.frequencyMhz.toFixed(3)} MHz`, notes: formatAtcNote(transmitter.notes) },
         geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
       })) : [],
     });
@@ -508,15 +496,15 @@ export function AirRadarApp() {
           <LogoMark />
           <div>
             <div className="brand-title">AirRadar</div>
-            <div className="brand-subtitle">PERSONAL ADS-B SITUATIONAL AWARENESS</div>
+            <div className="brand-subtitle">{t.brand.subtitle}</div>
           </div>
         </div>
         <div className="topbar-meta">
           <span>{snapshot.receiver.name} · {snapshot.receiver.lat.toFixed(4)}, {snapshot.receiver.lon.toFixed(4)}</span>
-          <span className={`mode-pill ${isDemo ? "" : "hidden"}`}>DEMO MODE</span>
+          <span className={`mode-pill ${isDemo ? "" : "hidden"}`}>{t.brand.demoMode}</span>
           <span className={`status-pill ${statusOffline ? "offline" : isDemo ? "demo" : ""}`}>
             <span className="status-dot" />
-            {statusOffline ? "Receiver offline" : isDemo ? "Mock receiver" : streamConnected ? "Live receiver" : "Connecting"}
+            {statusOffline ? t.status.receiverOffline : isDemo ? t.status.mockReceiver : streamConnected ? t.status.liveReceiver : t.status.connecting}
           </span>
         </div>
       </header>
@@ -526,8 +514,8 @@ export function AirRadarApp() {
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
             <div className="map-overlay-card">
-              <div className="map-overlay-title">Live air picture</div>
-              <div className="map-overlay-value">{snapshot.aircraft.length} aircraft in range</div>
+              <div className="map-overlay-title">{t.radar.liveAirPicture}</div>
+              <div className="map-overlay-value">{aircraftInRange(snapshot.aircraft.length)}</div>
             </div>
             <div className="map-overlay-card range-legend">
               <span><i className="legend-dot" /> 25 km</span>
@@ -535,8 +523,8 @@ export function AirRadarApp() {
               <span><i className="legend-dot" /> 100 km</span>
             </div>
             {selectedAircraft?.enrichment?.route && <div className="map-overlay-card layer-legend">
-              <span><i className="legend-line observed" /> ADS-B trail</span>
-              <span><i className="legend-line planned" /> route reference</span>
+              <span><i className="legend-line observed" /> {t.radar.adsbTrail}</span>
+              <span><i className="legend-line planned" /> {t.radar.routeReference}</span>
             </div>}
           </div>
         </div>
@@ -545,88 +533,88 @@ export function AirRadarApp() {
           <div className="sidebar-header">
             <div className="sidebar-heading">
               <div>
-                <div className="sidebar-title">Aircraft nearby</div>
-                <div className="sidebar-count">{filteredAircraft.length} / {snapshot.aircraft.length} visible</div>
+                <div className="sidebar-title">{t.radar.aircraftNearby}</div>
+                <div className="sidebar-count">{visibleAircraft(filteredAircraft.length, snapshot.aircraft.length)}</div>
               </div>
-              <button className="icon-button mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-label={mobileCompact ? "Expand aircraft panel" : "Collapse aircraft panel"}>
+              <button className="icon-button mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
                 {mobileCompact ? "↑" : "↓"}
               </button>
             </div>
             <div className="search-wrap">
               <span className="search-icon" aria-hidden="true">⌕</span>
-              <input className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search callsign, registration, ICAO…" aria-label="Search aircraft" />
+              <input className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.search.placeholder} aria-label={t.search.aircraftLabel} />
             </div>
             <div className="filters">
-              <select className="filter-select" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label="Sort aircraft">
-                <option value="distance">Sort: distance</option>
-                <option value="altitude">Sort: altitude</option>
-                <option value="callsign">Sort: callsign</option>
+              <select className="filter-select" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label={t.filters.sortLabel}>
+                <option value="distance">{t.filters.sortDistance}</option>
+                <option value="altitude">{t.filters.sortAltitude}</option>
+                <option value="callsign">{t.filters.sortCallsign}</option>
               </select>
-              <select className="filter-select" value={altitudeFilter} onChange={(event) => setAltitudeFilter(event.target.value)} aria-label="Minimum altitude">
-                <option value="all">Altitude: all</option>
-                <option value="10000">Above 10k ft</option>
-                <option value="30000">Above 30k ft</option>
+              <select className="filter-select" value={altitudeFilter} onChange={(event) => setAltitudeFilter(event.target.value)} aria-label={t.filters.minimumAltitude}>
+                <option value="all">{t.filters.altitudeAll}</option>
+                <option value="10000">{t.filters.altitudeAbove10k}</option>
+                <option value="30000">{t.filters.altitudeAbove30k}</option>
               </select>
-              <select className="filter-select" value={distanceFilter} onChange={(event) => setDistanceFilter(event.target.value)} aria-label="Maximum distance">
-                <option value="all">Distance: all</option>
-                <option value="25">Within 25 km</option>
-                <option value="75">Within 75 km</option>
+              <select className="filter-select" value={distanceFilter} onChange={(event) => setDistanceFilter(event.target.value)} aria-label={t.filters.maximumDistance}>
+                <option value="all">{t.filters.distanceAll}</option>
+                <option value="25">{t.filters.distanceWithin25}</option>
+                <option value="75">{t.filters.distanceWithin75}</option>
               </select>
-              <select className="filter-select" value={airlineFilter} onChange={(event) => setAirlineFilter(event.target.value)} aria-label="Airline filter">
-                <option value="all">Airline: all</option>
+              <select className="filter-select" value={airlineFilter} onChange={(event) => setAirlineFilter(event.target.value)} aria-label={t.filters.airline}>
+                <option value="all">{t.filters.airlineAll}</option>
                 {filterOptions.airlines.map((airline) => <option key={airline} value={airline}>{airline}</option>)}
               </select>
-              <select className="filter-select" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} aria-label="Aircraft type filter">
-                <option value="all">Type: all</option>
+              <select className="filter-select" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} aria-label={t.filters.aircraftType}>
+                <option value="all">{t.filters.aircraftTypeAll}</option>
                 {filterOptions.types.map((type) => <option key={type} value={type}>{type}</option>)}
               </select>
-              <select className="filter-select" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)} aria-label="Registration country filter">
-                <option value="all">Registration: all</option>
+              <select className="filter-select" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)} aria-label={t.filters.registration}>
+                <option value="all">{t.filters.registrationAll}</option>
                 {filterOptions.countries.map((country) => <option key={country} value={country}>{country}</option>)}
               </select>
-              <label className="filter-toggle"><input type="checkbox" checked={airborneOnly} onChange={(event) => setAirborneOnly(event.target.checked)} /> Airborne only</label>
-              <label className="filter-toggle"><input type="checkbox" checked={emergencyOnly} onChange={(event) => setEmergencyOnly(event.target.checked)} /> Emergency only</label>
-              <label className="filter-toggle"><input type="checkbox" checked={watchlistOnly} onChange={(event) => setWatchlistOnly(event.target.checked)} /> Watchlist only</label>
+              <label className="filter-toggle"><input type="checkbox" checked={airborneOnly} onChange={(event) => setAirborneOnly(event.target.checked)} /> {t.filters.airborneOnly}</label>
+              <label className="filter-toggle"><input type="checkbox" checked={emergencyOnly} onChange={(event) => setEmergencyOnly(event.target.checked)} /> {t.filters.emergencyOnly}</label>
+              <label className="filter-toggle"><input type="checkbox" checked={watchlistOnly} onChange={(event) => setWatchlistOnly(event.target.checked)} /> {t.filters.watchlistOnly}</label>
             </div>
             <div className="map-toggles">
-              <label><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> Airports</label>
-              <label><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> ATC sectors</label>
+              <label><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> {t.filters.airports}</label>
+              <label><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {t.filters.atcSectors}</label>
             </div>
             <details className="watchlist-box">
-              <summary>Watchlist <span>{watchlist.length ? `${watchlist.length} rules` : "add a rule"}</span></summary>
+              <summary>{t.watchlist.title} <span>{watchlistSummary(watchlist.length)}</span></summary>
               <form onSubmit={addWatchlistRule} className="watchlist-form">
-                <select value={watchlistKind} onChange={(event) => setWatchlistKind(event.target.value)} aria-label="Watchlist rule type">
-                  <option value="icao">ICAO</option><option value="registration">Registration</option><option value="callsign">Exact callsign</option><option value="pattern">Callsign pattern</option><option value="type">Aircraft type</option><option value="airline">Airline</option>
+                <select value={watchlistKind} onChange={(event) => setWatchlistKind(event.target.value)} aria-label={t.watchlist.ruleType}>
+                  <option value="icao">{t.watchlist.ruleKinds.icao}</option><option value="registration">{t.watchlist.ruleKinds.registration}</option><option value="callsign">{t.watchlist.exactCallsign}</option><option value="pattern">{t.watchlist.callsignPattern}</option><option value="type">{t.watchlist.ruleKinds.type}</option><option value="airline">{t.watchlist.ruleKinds.airline}</option>
                 </select>
-                <input value={watchlistValue} onChange={(event) => setWatchlistValue(event.target.value)} placeholder={watchlistKind === "pattern" ? "UAE*" : "A6-EVL"} aria-label="Watchlist value" />
-                <button type="submit" className="watchlist-add">Add</button>
+                <input value={watchlistValue} onChange={(event) => setWatchlistValue(event.target.value)} placeholder={watchlistKind === "pattern" ? "UAE*" : "A6-EVL"} aria-label={t.watchlist.value} />
+                <button type="submit" className="watchlist-add">{t.watchlist.add}</button>
               </form>
-              {watchlist.length > 0 && <div className="watchlist-rules">{watchlist.map((rule) => <button key={`${rule.kind}-${rule.value}`} type="button" onClick={() => setWatchlist((current) => current.filter((item) => item !== rule))}>{rule.kind}: {rule.value} ×</button>)}</div>}
+              {watchlist.length > 0 && <div className="watchlist-rules">{watchlist.map((rule) => <button key={`${rule.kind}-${rule.value}`} type="button" onClick={() => setWatchlist((current) => current.filter((item) => item !== rule))}>{watchlistKindLabel(rule.kind)}: {rule.value} ×</button>)}</div>}
             </details>
             <div className="stats-row">
-              <div className="stat-card"><div className="stat-value">{snapshot.stats.currentAircraft}</div><div className="stat-label">Tracking now</div></div>
-              <div className="stat-card"><div className="stat-value">{snapshot.stats.aircraftSeenToday}</div><div className="stat-label">Seen today</div></div>
-              <div className="stat-card"><div className="stat-value">{formatDistance(snapshot.stats.maxDistanceKm)}</div><div className="stat-label">Max distance</div></div>
+              <div className="stat-card"><div className="stat-value">{formatNumber(snapshot.stats.currentAircraft)}</div><div className="stat-label">{t.stats.trackingNow}</div></div>
+              <div className="stat-card"><div className="stat-value">{formatNumber(snapshot.stats.aircraftSeenToday)}</div><div className="stat-label">{t.stats.seenToday}</div></div>
+              <div className="stat-card"><div className="stat-value">{formatDistance(snapshot.stats.maxDistanceKm)}</div><div className="stat-label">{t.stats.maxDistance}</div></div>
             </div>
-            <div className="stats-secondary">{snapshot.stats.uniqueAircraftToday} unique · {snapshot.stats.maxConcurrentAircraft} max simultaneous · {snapshot.stats.messagesPerSecond === null ? "—" : `${snapshot.stats.messagesPerSecond.toFixed(1)} msg/s`}</div>
+            <div className="stats-secondary">{secondaryStats(snapshot.stats.uniqueAircraftToday, snapshot.stats.maxConcurrentAircraft, snapshot.stats.messagesPerSecond)}</div>
             <details className="stats-breakdowns">
-              <summary>Traffic mix</summary>
-              <div><strong>Aircraft types</strong>{snapshot.stats.aircraftTypes.length ? snapshot.stats.aircraftTypes.slice(0, 5).map((item) => <span key={item.name}>{item.name} · {item.count}</span>) : <span>—</span>}</div>
-              <div><strong>Airlines</strong>{snapshot.stats.airlines.length ? snapshot.stats.airlines.slice(0, 5).map((item) => <span key={item.name}>{item.name} · {item.count}</span>) : <span>—</span>}</div>
+              <summary>{t.stats.trafficMix}</summary>
+              <div><strong>{t.stats.aircraftTypes}</strong>{snapshot.stats.aircraftTypes.length ? snapshot.stats.aircraftTypes.slice(0, 5).map((item) => <span key={item.name}>{item.name} · {formatNumber(item.count)}</span>) : <span>{t.common.emptyValue}</span>}</div>
+              <div><strong>{t.stats.airlines}</strong>{snapshot.stats.airlines.length ? snapshot.stats.airlines.slice(0, 5).map((item) => <span key={item.name}>{item.name} · {formatNumber(item.count)}</span>) : <span>{t.common.emptyValue}</span>}</div>
             </details>
           </div>
 
           <div className="aircraft-list">
             {filteredAircraft.length === 0 ? (
               <div className="empty-list">
-                <strong>{snapshot.aircraft.length === 0 ? "Waiting for traffic" : "No matching aircraft"}</strong>
-                {snapshot.aircraft.length === 0 ? "The radar will keep retrying the data source." : "Try clearing a filter or changing your search."}
+                <strong>{snapshot.aircraft.length === 0 ? t.radar.waitingForTraffic : t.radar.noMatchingAircraft}</strong>
+                {snapshot.aircraft.length === 0 ? t.radar.waitingForTrafficDescription : t.radar.noMatchingAircraftDescription}
               </div>
             ) : filteredAircraft.map((aircraft) => (
               <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""}`} onClick={() => selectAircraft(aircraft.icaoHex)}>
                 <span className="aircraft-row-icon"><AirplaneGlyph /></span>
                 <span className="aircraft-row-main">
-                  <span className="aircraft-row-name">{labelForAircraft(aircraft)} {isWatchlisted(aircraft) && <span className="watch-badge">WATCH</span>} {aircraft.emergency && <span className="emergency-badge">{aircraft.emergency}</span>} <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || "unknown type"}</span></span>
+                  <span className="aircraft-row-name">{labelForAircraft(aircraft)} {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge">{aircraft.emergency}</span>} <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}</span></span>
                   <span className="aircraft-row-meta"><span>{aircraft.icaoHex}</span><span>{formatAltitude(aircraft.altitude)}</span><span>{formatSpeed(aircraft.groundSpeed)}</span><span>{formatTrack(aircraft.track)}</span></span>
                 </span>
                 <span className="aircraft-row-distance">{formatDistance(aircraft.distanceKm)}</span>
@@ -637,60 +625,60 @@ export function AirRadarApp() {
           {selectedAircraft && (
             <div className="detail-panel">
               <div className="detail-heading">
-                <div><div className="detail-callsign">{labelForAircraft(selectedAircraft)}</div><div className="detail-registration">{airlineForAircraft(selectedAircraft) || "Airline unknown"} · {selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || "Registration unknown"} · {selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || selectedAircraft.aircraftType || "Type unknown"}</div></div>
-                <button className="close-button" onClick={() => setSelectedHex(null)} aria-label="Close aircraft details">×</button>
+                <div><div className="detail-callsign">{labelForAircraft(selectedAircraft)}</div><div className="detail-registration">{airlineForAircraft(selectedAircraft) || t.aircraft.unknownAirline} · {selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || t.aircraft.unknownRegistration} · {selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || selectedAircraft.aircraftType || t.aircraft.unknownAircraftType}</div></div>
+                <button className="close-button" onClick={() => setSelectedHex(null)} aria-label={t.history.closeAircraftDetails}>×</button>
               </div>
-              <DetailSection title="Live ADS-B">
-                <DetailItem label="ICAO hex" value={selectedAircraft.icaoHex} />
-                <DetailItem label="Altitude" value={formatAltitude(selectedAircraft.altitude)} />
-                <DetailItem label="Baro / geom altitude" value={`${formatAltitude(selectedAircraft.baroAltitude)} / ${formatAltitude(selectedAircraft.geomAltitude)}`} />
-                <DetailItem label="Ground speed" value={formatSpeed(selectedAircraft.groundSpeed)} />
-                <DetailItem label="Track" value={formatTrack(selectedAircraft.track)} />
-                <DetailItem label="Vertical rate" value={selectedAircraft.verticalRate === null ? "—" : `${formatNumber(selectedAircraft.verticalRate)} ft/min`} />
-                <DetailItem label="Baro / geom rate" value={`${selectedAircraft.baroRate === null ? "—" : `${formatNumber(selectedAircraft.baroRate)} ft/min`} / ${selectedAircraft.geomRate === null ? "—" : `${formatNumber(selectedAircraft.geomRate)} ft/min`}`} />
-                <DetailItem label="Squawk" value={selectedAircraft.squawk || "—"} />
-                <DetailItem label="Category" value={selectedAircraft.category || "—"} />
-                <DetailItem label="RSSI" value={selectedAircraft.rssi === null ? "—" : `${selectedAircraft.rssi.toFixed(1)} dBFS`} />
-                <DetailItem label="Messages" value={formatNumber(selectedAircraft.messages)} />
-                <DetailItem label="Seen / position" value={`${formatAge(selectedAircraft.seenSeconds)} / ${formatAge(selectedAircraft.seenPosSeconds)}`} />
-                <DetailItem label="Distance" value={formatDistance(selectedAircraft.distanceKm)} />
-                <DetailItem label="Bearing" value={formatTrack(selectedAircraft.bearing)} />
-                <DetailItem label="Position" value={selectedAircraft.lat === null || selectedAircraft.lon === null ? "—" : `${selectedAircraft.lat.toFixed(4)}, ${selectedAircraft.lon.toFixed(4)}`} />
-                <DetailItem label="Source" value={selectedAircraft.source} />
-                <DetailItem label="readsb source type" value={selectedAircraft.sourceType || "—"} />
-                <DetailItem label="Emergency" value={selectedAircraft.emergency || "None reported"} />
+              <DetailSection title={t.aircraft.liveAdsb}>
+                <DetailItem label={t.aircraft.icaoHex} value={selectedAircraft.icaoHex} />
+                <DetailItem label={t.aircraft.altitude} value={formatAltitude(selectedAircraft.altitude)} />
+                <DetailItem label={t.aircraft.baroGeomAltitude} value={`${formatAltitude(selectedAircraft.baroAltitude)} / ${formatAltitude(selectedAircraft.geomAltitude)}`} />
+                <DetailItem label={t.aircraft.groundSpeed} value={formatSpeed(selectedAircraft.groundSpeed)} />
+                <DetailItem label={t.aircraft.track} value={formatTrack(selectedAircraft.track)} />
+                <DetailItem label={t.aircraft.verticalRate} value={selectedAircraft.verticalRate === null ? t.common.emptyValue : `${formatNumber(selectedAircraft.verticalRate)} ft/min`} />
+                <DetailItem label={t.aircraft.baroGeomRate} value={`${selectedAircraft.baroRate === null ? t.common.emptyValue : `${formatNumber(selectedAircraft.baroRate)} ft/min`} / ${selectedAircraft.geomRate === null ? t.common.emptyValue : `${formatNumber(selectedAircraft.geomRate)} ft/min`}`} />
+                <DetailItem label={t.aircraft.squawk} value={selectedAircraft.squawk || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.category} value={selectedAircraft.category || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.rssi} value={selectedAircraft.rssi === null ? t.common.emptyValue : `${formatNumber(selectedAircraft.rssi, 1)} dBFS`} />
+                <DetailItem label={t.aircraft.messages} value={formatNumber(selectedAircraft.messages)} />
+                <DetailItem label={t.aircraft.seenPosition} value={`${formatAge(selectedAircraft.seenSeconds)} / ${formatAge(selectedAircraft.seenPosSeconds)}`} />
+                <DetailItem label={t.aircraft.distance} value={formatDistance(selectedAircraft.distanceKm)} />
+                <DetailItem label={t.aircraft.bearing} value={formatTrack(selectedAircraft.bearing)} />
+                <DetailItem label={t.aircraft.position} value={selectedAircraft.lat === null || selectedAircraft.lon === null ? t.common.emptyValue : `${formatCoordinate(selectedAircraft.lat)}, ${formatCoordinate(selectedAircraft.lon)}`} />
+                <DetailItem label={t.aircraft.source} value={selectedAircraft.source} />
+                <DetailItem label={t.aircraft.readsbSourceType} value={selectedAircraft.sourceType || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.emergency} value={selectedAircraft.emergency || t.common.notReported} />
               </DetailSection>
-              <DetailSection title="Aircraft metadata">
-                <DetailItem label="Manufacturer" value={selectedAircraft.enrichment?.metadata?.manufacturer || "—"} />
-                <DetailItem label="Model / type" value={selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || "—"} />
-                <DetailItem label="ICAO type" value={selectedAircraft.enrichment?.metadata?.icaoTypeCode || selectedAircraft.aircraftType || "—"} />
-                <DetailItem label="Operator" value={selectedAircraft.enrichment?.metadata?.operator || "—"} />
-                <DetailItem label="Registration country" value={registrationCountryForAircraft(selectedAircraft) || "—"} />
+              <DetailSection title={t.aircraft.metadata}>
+                <DetailItem label={t.aircraft.manufacturer} value={selectedAircraft.enrichment?.metadata?.manufacturer || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.modelType} value={selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.icaoType} value={selectedAircraft.enrichment?.metadata?.icaoTypeCode || selectedAircraft.aircraftType || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.operator} value={selectedAircraft.enrichment?.metadata?.operator || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.registrationCountry} value={registrationCountryForAircraft(selectedAircraft) || t.common.emptyValue} />
               </DetailSection>
-              <DetailSection title="Route reference">
-                <DetailItem label="Airline" value={airlineForAircraft(selectedAircraft) || "—"} />
-                <DetailItem label="Origin → destination" value={selectedAircraft.enrichment?.route?.originAirport && selectedAircraft.enrichment.route.destinationAirport ? `${airportCodes(selectedAircraft.enrichment.route.originAirport)} → ${airportCodes(selectedAircraft.enrichment.route.destinationAirport)}` : selectedAircraft.enrichment?.route?.origin && selectedAircraft.enrichment?.route?.destination ? `${selectedAircraft.enrichment.route.origin} → ${selectedAircraft.enrichment.route.destination}` : "Not available"} />
-                <DetailItem label="Airports" value={selectedAircraft.enrichment?.route?.originAirport && selectedAircraft.enrichment.route.destinationAirport ? `${selectedAircraft.enrichment.route.originAirport.city || selectedAircraft.enrichment.route.originAirport.name} → ${selectedAircraft.enrichment.route.destinationAirport.city || selectedAircraft.enrichment.route.destinationAirport.name}` : "—"} />
-                <DetailItem label="Route source" value={selectedAircraft.enrichment?.route?.source || "—"} />
+              <DetailSection title={t.radar.routeReference}>
+                <DetailItem label={t.route.airline} value={airlineForAircraft(selectedAircraft) || t.common.emptyValue} />
+                <DetailItem label={t.route.originDestination} value={selectedAircraft.enrichment?.route?.originAirport && selectedAircraft.enrichment.route.destinationAirport ? `${airportCodes(selectedAircraft.enrichment.route.originAirport)} → ${airportCodes(selectedAircraft.enrichment.route.destinationAirport)}` : selectedAircraft.enrichment?.route?.origin && selectedAircraft.enrichment?.route?.destination ? `${selectedAircraft.enrichment.route.origin} → ${selectedAircraft.enrichment.route.destination}` : t.route.notAvailable} />
+                <DetailItem label={t.route.airports} value={selectedAircraft.enrichment?.route?.originAirport && selectedAircraft.enrichment.route.destinationAirport ? `${selectedAircraft.enrichment.route.originAirport.city || selectedAircraft.enrichment.route.originAirport.name} → ${selectedAircraft.enrichment.route.destinationAirport.city || selectedAircraft.enrichment.route.destinationAirport.name}` : t.common.emptyValue} />
+                <DetailItem label={t.route.source} value={selectedAircraft.enrichment?.route?.source || t.common.emptyValue} />
               </DetailSection>
-              {selectedAircraft.enrichment?.flightPlan && <DetailSection title="Filed flight plan">
-                <DetailItem label="Scheduled departure" value={selectedAircraft.enrichment.flightPlan.scheduledDeparture || "—"} />
-                <DetailItem label="Actual departure" value={selectedAircraft.enrichment.flightPlan.actualDeparture || "—"} />
-                <DetailItem label="Scheduled arrival" value={selectedAircraft.enrichment.flightPlan.scheduledArrival || "—"} />
-                <DetailItem label="Estimated arrival" value={selectedAircraft.enrichment.flightPlan.estimatedArrival || "—"} />
-                <DetailItem label="Filed route" value={selectedAircraft.enrichment.flightPlan.filedRoute || "—"} />
-                <DetailItem label="Waypoints" value={selectedAircraft.enrichment.flightPlan.waypoints.join(" · ") || "—"} />
+              {selectedAircraft.enrichment?.flightPlan && <DetailSection title={t.flightPlan.title}>
+                <DetailItem label={t.flightPlan.scheduledDeparture} value={selectedAircraft.enrichment.flightPlan.scheduledDeparture || t.common.emptyValue} />
+                <DetailItem label={t.flightPlan.actualDeparture} value={selectedAircraft.enrichment.flightPlan.actualDeparture || t.common.emptyValue} />
+                <DetailItem label={t.flightPlan.scheduledArrival} value={selectedAircraft.enrichment.flightPlan.scheduledArrival || t.common.emptyValue} />
+                <DetailItem label={t.flightPlan.estimatedArrival} value={selectedAircraft.enrichment.flightPlan.estimatedArrival || t.common.emptyValue} />
+                <DetailItem label={t.flightPlan.filedRoute} value={selectedAircraft.enrichment.flightPlan.filedRoute || t.common.emptyValue} />
+                <DetailItem label={t.flightPlan.waypoints} value={selectedAircraft.enrichment.flightPlan.waypoints.join(" · ") || t.common.emptyValue} />
               </DetailSection>}
-              <DetailSection title="ATC estimate">
+              <DetailSection title={t.atc.estimate}>
                 {selectedAircraft.atc ? <>
-                  <DetailItem label="Sector / service" value={`${selectedAircraft.atc.name} · ${selectedAircraft.atc.service || selectedAircraft.atc.callsign || "ATC"}`} />
-                  <DetailItem label="Primary frequency" value={selectedAircraft.atc.primaryFrequencyMhz === null ? "—" : `${selectedAircraft.atc.primaryFrequencyMhz.toFixed(3)} MHz`} />
-                  <DetailItem label="Alternates" value={selectedAircraft.atc.alternateFrequenciesMhz.map((frequency) => `${frequency.toFixed(3)} MHz`).join(", ") || "—"} />
-                  <div className="detail-disclaimer">Probable frequency based on position and altitude. ADS-B does not report the aircraft’s tuned ATC frequency.</div>
-                </> : <div className="detail-disclaimer">No matching sector for the current position and altitude.</div>}
+                  <DetailItem label={t.atc.sectorService} value={`${selectedAircraft.atc.name} · ${formatAtcService(selectedAircraft.atc.service || selectedAircraft.atc.callsign)}`} />
+                  <DetailItem label={t.atc.primaryFrequency} value={selectedAircraft.atc.primaryFrequencyMhz === null ? t.common.emptyValue : `${selectedAircraft.atc.primaryFrequencyMhz.toFixed(3)} MHz`} />
+                  <DetailItem label={t.atc.alternates} value={selectedAircraft.atc.alternateFrequenciesMhz.map((frequency) => `${frequency.toFixed(3)} MHz`).join(", ") || t.common.emptyValue} />
+                  <div className="detail-disclaimer">{t.atc.probableFrequency}</div>
+                </> : <div className="detail-disclaimer">{t.atc.noMatchingSector}</div>}
               </DetailSection>
-              <div className="watchlist-actions"><button className="watchlist-add" onClick={() => setWatchlist((current) => current.some((rule) => rule.kind === "icao" && rule.value === selectedAircraft.icaoHex) ? current : [...current, { kind: "icao", value: selectedAircraft.icaoHex }])}>{isWatchlisted(selectedAircraft) ? "On watchlist" : "Add ICAO to watchlist"}</button></div>
-              <div className="detail-footer"><span>Last seen {formatTime(selectedAircraft.lastSeen)}</span><Link className="history-link" href={`/history?hex=${selectedAircraft.icaoHex}`}>View history →</Link></div>
+              <div className="watchlist-actions"><button className="watchlist-add" onClick={() => setWatchlist((current) => current.some((rule) => rule.kind === "icao" && rule.value === selectedAircraft.icaoHex) ? current : [...current, { kind: "icao", value: selectedAircraft.icaoHex }])}>{isWatchlisted(selectedAircraft) ? t.watchlist.onWatchlist : t.watchlist.addIcao}</button></div>
+              <div className="detail-footer"><span>{t.history.lastSeen} {formatTime(selectedAircraft.lastSeen)}</span><Link className="history-link" href={`/history?hex=${selectedAircraft.icaoHex}`}>{t.history.viewHistory} →</Link></div>
             </div>
           )}
         </aside>

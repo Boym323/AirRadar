@@ -83,6 +83,12 @@ For the first production deployment, keep `FLIGHTAWARE_API_KEY=` empty. If a key
 
 `APP_TIMEZONE` controls the local day used by live daily statistics and defaults to `Europe/Prague`.
 
+## Localization
+
+The user interface defaults to Czech (`cs-CZ`).
+Visible UI strings are centralized under `lib/i18n`.
+Source code, API names, database schema and technical documentation remain in English.
+
 The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled ATC layer is explicitly demo-only (`AirRadar sample data`) and is selected only without `READSB_BASE_URL` (or with the explicit `ATC_SAMPLE_ENABLED=true`). In production set `ATC_SAMPLE_ENABLED=false`; `/api/atc/sectors` and the resolver then use imported PostgreSQL data, or an empty layer if no verified dataset has been imported. Store sector rings as JSON `[[[lon, lat], ...]]` in `AtcSector.polygonJson` and alternate frequencies as JSON `[{"frequencyMhz": 127.35, "label": "..."}]` in `alternateFrequenciesJson`, with the source and validity interval recorded on each row. No Czech AIP import is bundled.
 
 ## Useful commands

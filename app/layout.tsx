@@ -4,8 +4,8 @@ import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 
 export const metadata: Metadata = {
-  title: "AirRadar — personal ADS-B radar",
-  description: "Personal ADS-B radar powered by readsb",
+  title: "AirRadar — osobní ADS-B radar",
+  description: "Soukromý ADS-B radar pro sledování letadel v okolí.",
   applicationName: "AirRadar",
   manifest: "/manifest.webmanifest",
 };
@@ -17,7 +17,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="cs">
       <body>
         {children}
         <PwaRegister />
