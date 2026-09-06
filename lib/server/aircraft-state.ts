@@ -1,4 +1,4 @@
-import type { Aircraft, ProviderSnapshot, RadarStats, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
+import type { Aircraft, AircraftEnrichment, ProviderSnapshot, RadarStats, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import {
   getAircraftStaleAfterMs,
   getHistorySampleIntervalMs,
@@ -26,6 +26,21 @@ function emptyStats(): RadarStats {
     airlines: [],
     messagesPerSecond: null,
   };
+}
+
+function mergeEnrichment(
+  previous: AircraftEnrichment | undefined,
+  incoming: AircraftEnrichment | undefined,
+  sameCallsign: boolean,
+): AircraftEnrichment | undefined {
+  const merged: AircraftEnrichment = {};
+  const metadata = previous?.metadata ?? incoming?.metadata;
+  const route = sameCallsign ? incoming?.route ?? previous?.route : incoming?.route;
+  const flightPlan = sameCallsign ? incoming?.flightPlan ?? previous?.flightPlan : incoming?.flightPlan;
+  if (metadata) merged.metadata = metadata;
+  if (route) merged.route = route;
+  if (flightPlan) merged.flightPlan = flightPlan;
+  return Object.keys(merged).length ? merged : undefined;
 }
 
 export class AircraftStateService {
@@ -154,7 +169,8 @@ export class AircraftStateService {
       currentHexes.add(incoming.icaoHex);
       const previous = this.aircraft.get(incoming.icaoHex);
       const trail = this.updateTrail(previous, incoming);
-      const enrichment = previous?.callsign === incoming.callsign ? previous.enrichment : incoming.enrichment;
+      const sameCallsign = previous?.callsign === incoming.callsign;
+      const enrichment = mergeEnrichment(previous?.enrichment, incoming.enrichment, sameCallsign);
       const atc = previous?.callsign === incoming.callsign ? previous.atc : incoming.atc;
       this.aircraft.set(incoming.icaoHex, { ...incoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
       this.seenToday.set(incoming.icaoHex, new Date().toISOString().slice(0, 10));
@@ -270,7 +286,10 @@ export class AircraftStateService {
 
   private async enrichSnapshot(snapshot: ProviderSnapshot): Promise<void> {
     if (!this.enrichment.hasProviders) return;
-    const candidates = snapshot.aircraft.filter((item) => !this.aircraft.get(item.icaoHex)?.enrichment);
+    const candidates = snapshot.aircraft.filter((item) => {
+      const current = this.aircraft.get(item.icaoHex);
+      return !current?.enrichment?.metadata || Boolean(item.callsign && !current.enrichment.route);
+    });
     const results = await Promise.allSettled(candidates.map(async (item) => ({
       item,
       enrichment: await this.enrichment.enrich(item, new Date(snapshot.fetchedAt)),
@@ -280,7 +299,9 @@ export class AircraftStateService {
       if (result.status !== "fulfilled" || !result.value.enrichment) continue;
       const current = this.aircraft.get(result.value.item.icaoHex);
       if (!current || current.callsign !== result.value.item.callsign) continue;
-      this.aircraft.set(current.icaoHex, { ...current, enrichment: result.value.enrichment });
+      const enrichment = mergeEnrichment(current.enrichment, result.value.enrichment, true);
+      if (!enrichment) continue;
+      this.aircraft.set(current.icaoHex, { ...current, enrichment });
       changed = true;
     }
     if (changed) {
