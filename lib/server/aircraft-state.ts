@@ -5,6 +5,8 @@ import {
   getMaxProviderRetryIntervalMs,
   getPollIntervalMs,
   getReceiverPosition,
+  dayKey,
+  getAppTimezone,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 import { createAircraftProvider, createEnrichmentService } from "@/lib/server/providers";
@@ -62,7 +64,7 @@ export class AircraftStateService {
   private readonly enrichment: EnrichmentService;
   private readonly atc: AtcSectorService;
   private readonly atcResolutionKeys = new Map<string, string>();
-  private observationDate = new Date().toISOString().slice(0, 10);
+  private observationDate = dayKey(new Date(), getAppTimezone());
 
   constructor(
     provider: AircraftProvider = createAircraftProvider(),
@@ -162,7 +164,7 @@ export class AircraftStateService {
 
   private applySnapshot(snapshot: ProviderSnapshot): void {
     this.currentReceiver = snapshot.receiver;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = dayKey(new Date(), getAppTimezone());
     if (today !== this.observationDate) {
       this.observationDate = today;
       this.seenToday.clear();

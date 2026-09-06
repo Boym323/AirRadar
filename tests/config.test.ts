@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getReceiverPosition } from "@/lib/server/config";
+import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getReceiverPosition } from "@/lib/server/config";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -14,6 +14,19 @@ describe("numeric environment configuration", () => {
     vi.stubEnv("RECEIVER_LAT", "0");
     vi.stubEnv("RECEIVER_LON", "0");
     expect(getReceiverPosition()).toMatchObject({ lat: 0, lon: 0 });
+  });
+
+  it("derives day keys in the configured local timezone", () => {
+    expect(dayKey(new Date("2026-07-01T21:59:00Z"), "Europe/Prague")).toBe("2026-07-01");
+    expect(dayKey(new Date("2026-07-01T22:01:00Z"), "Europe/Prague")).toBe("2026-07-02");
+  });
+
+  it("falls back safely when APP_TIMEZONE is missing or invalid", () => {
+    vi.stubEnv("APP_TIMEZONE", " ");
+    expect(getAppTimezone()).toBe(DEFAULT_APP_TIMEZONE);
+    vi.stubEnv("APP_TIMEZONE", "not/a-timezone");
+    expect(getAppTimezone()).toBe(DEFAULT_APP_TIMEZONE);
+    expect(dayKey(new Date("2026-07-01T22:01:00Z"), "not/a-timezone")).toBe("2026-07-02");
   });
 
   it.each([

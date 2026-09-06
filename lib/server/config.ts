@@ -1,5 +1,7 @@
 import type { ReceiverPosition } from "@/lib/aircraft/types";
 
+export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
+
 function envNumber(name: string, fallback: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw.trim() === "") return fallback;
@@ -18,6 +20,32 @@ export function getReceiverPosition(): ReceiverPosition {
     lon: envCoordinate("RECEIVER_LON", 14.4378, -180, 180),
     name: process.env.RECEIVER_NAME?.trim() || "AirRadar receiver",
   };
+}
+
+function isValidTimezone(timezone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function getAppTimezone(): string {
+  const configured = process.env.APP_TIMEZONE?.trim();
+  return configured && isValidTimezone(configured) ? configured : DEFAULT_APP_TIMEZONE;
+}
+
+export function dayKey(date: Date, timezone = getAppTimezone()): string {
+  const safeTimezone = isValidTimezone(timezone) ? timezone : DEFAULT_APP_TIMEZONE;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: safeTimezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 export function isReadsbConfigured(): boolean {

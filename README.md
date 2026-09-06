@@ -79,6 +79,10 @@ The integrations below are optional. A provider failure is negatively cached and
 
 ADSBDB lookups are keyed by ICAO hex or callsign and cached for hours to a day; the cache coalesces concurrent requests and negatively caches misses, so the provider is not queried on every realtime update. FlightAware is disabled when `FLIGHTAWARE_API_KEY` is empty. Missing keys therefore do not reduce live radar functionality. Route lines are schematic references, not filed flight plans; the orange solid trail is the observed ADS-B trail.
 
+For the first production deployment, keep `FLIGHTAWARE_API_KEY=` empty. If a key is configured later, the current architecture can request flight plans for currently tracked aircraft that have a callsign; these are AeroAPI requests and may incur commercial charges. The key is used only server-side. The optional FlightAware route lookup is best-effort, so a route failure does not discard the basic flight-plan times or filed route.
+
+`APP_TIMEZONE` controls the local day used by live daily statistics and defaults to `Europe/Prague`.
+
 The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled ATC layer is explicitly demo-only (`AirRadar sample data`) and is selected only without `READSB_BASE_URL` (or with the explicit `ATC_SAMPLE_ENABLED=true`). In production set `ATC_SAMPLE_ENABLED=false`; `/api/atc/sectors` and the resolver then use imported PostgreSQL data, or an empty layer if no verified dataset has been imported. Store sector rings as JSON `[[[lon, lat], ...]]` in `AtcSector.polygonJson` and alternate frequencies as JSON `[{"frequencyMhz": 127.35, "label": "..."}]` in `alternateFrequenciesJson`, with the source and validity interval recorded on each row. No Czech AIP import is bundled.
 
 ## Useful commands

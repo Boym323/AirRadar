@@ -64,7 +64,7 @@ describe("aircraft state service", () => {
 
   it("counts unique aircraft once and resets daily maxima at midnight", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-01T23:59:00Z"));
+    vi.setSystemTime(new Date("2026-07-01T21:59:00Z"));
     const receiver = { lat: 50, lon: 14, name: "Test" };
     const makeAircraft = (hex: string, lon: number) => {
       const value = normalizeAircraft({ hex, flight: hex, lat: 50, lon }, receiver, new Date());
@@ -80,7 +80,7 @@ describe("aircraft state service", () => {
     apply([makeAircraft("AAA001", 14), makeAircraft("BBB002", 15)]);
     expect(service.getSnapshot().stats).toMatchObject({ aircraftSeenToday: 2, uniqueAircraftToday: 2, maxConcurrentAircraft: 2 });
 
-    vi.setSystemTime(new Date("2026-01-02T00:01:00Z"));
+    vi.setSystemTime(new Date("2026-07-01T22:01:00Z"));
     apply([makeAircraft("CCC003", 14.05)]);
     expect(service.getSnapshot().stats).toMatchObject({ aircraftSeenToday: 1, uniqueAircraftToday: 1, maxConcurrentAircraft: 1 });
     expect(service.getSnapshot().stats.maxDistanceKm).toBeLessThan(10);

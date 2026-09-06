@@ -111,6 +111,10 @@ async function readRoute(apiKey: string, faFlightId: string): Promise<string[]> 
     return Array.isArray(payload.fixes)
       ? payload.fixes.map((fix) => stringValue(fix.name)).filter((name): name is string => name !== null)
       : [];
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown route lookup error";
+    console.warn(`FlightAware route enrichment unavailable for ${faFlightId}: ${message}`);
+    return [];
   } finally {
     clearTimeout(timeout);
   }

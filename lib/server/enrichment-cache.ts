@@ -123,14 +123,24 @@ export function flightPlanCacheKey(callsign: string, observedAt: Date): string {
 }
 
 export class EnrichmentService {
-  private readonly metadataLimiter = new ConcurrencyLimiter(6);
-  private readonly routeLimiter = new ConcurrencyLimiter(6);
+  private readonly metadataLimiter: ConcurrencyLimiter;
+  private readonly routeLimiter: ConcurrencyLimiter;
   private readonly flightPlanLimiter = new ConcurrencyLimiter(2);
 
   constructor(
     private readonly providers: ProviderRegistry,
     private readonly cache = new ProviderCache(),
-  ) {}
+  ) {
+    // The factory supplies one AdsbDbProvider instance for both capabilities.
+    // Sharing only that instance's limiter keeps future provider combinations independent.
+    const sharedAdsbDbLimiter = providers.aircraftMetadata
+      && providers.flightRoute
+      && (providers.aircraftMetadata as object) === (providers.flightRoute as object)
+      ? new ConcurrencyLimiter(6)
+      : null;
+    this.metadataLimiter = sharedAdsbDbLimiter ?? new ConcurrencyLimiter(6);
+    this.routeLimiter = sharedAdsbDbLimiter ?? new ConcurrencyLimiter(6);
+  }
 
   get hasProviders(): boolean {
     return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute || this.providers.flightPlan);

@@ -44,6 +44,37 @@ describe("optional enrichment providers", () => {
     expect(fetchMock.mock.calls[1][1]).toMatchObject({ headers: { "x-apikey": "secret-key" } });
   });
 
+  it("keeps the basic FlightPlan when the optional route endpoint returns HTTP 500", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ flights: [{
+        ident: "UAE139", fa_flight_id: "UAE139-current", scheduled_out: "2026-01-01T08:00:00Z",
+        actual_out: "2026-01-01T08:10:00Z", scheduled_in: "2026-01-01T16:00:00Z",
+        estimated_in: "2026-01-01T16:20:00Z", route: "DCT L604",
+      }] })))
+      .mockResolvedValueOnce(new Response("upstream failure", { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(new FlightAwareFlightPlanProvider("secret-key").getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z"))).resolves.toMatchObject({
+      callsign: "UAE139", scheduledDeparture: "2026-01-01T08:00:00Z", actualDeparture: "2026-01-01T08:10:00Z",
+      scheduledArrival: "2026-01-01T16:00:00Z", estimatedArrival: "2026-01-01T16:20:00Z",
+      filedRoute: "DCT L604", waypoints: [],
+    });
+  });
+
+  it("keeps the basic FlightPlan when the optional route endpoint times out", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ flights: [{
+        ident: "UAE139", fa_flight_id: "UAE139-current", scheduled_out: "2026-01-01T08:00:00Z",
+        scheduled_in: "2026-01-01T16:00:00Z", route: "DCT L604",
+      }] })))
+      .mockRejectedValueOnce(new Error("The operation was aborted"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(new FlightAwareFlightPlanProvider("secret-key").getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z"))).resolves.toMatchObject({
+      filedRoute: "DCT L604", scheduledDeparture: "2026-01-01T08:00:00Z", waypoints: [],
+    });
+  });
+
   it("does not call FlightAware when the optional key is empty", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

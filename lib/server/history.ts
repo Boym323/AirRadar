@@ -144,7 +144,11 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
 
       if (!flight || callsignChanged || continuityBroken) {
         if (flight) {
-          await schema.Flight.where({ id: flight.id }).update({ endTime: recordedAt, lastSeenAt: recordedAt });
+          await schema.Flight.where({ id: flight.id }).update(
+            continuityBroken
+              ? { endTime: flight.lastSeenAt }
+              : { endTime: recordedAt, lastSeenAt: recordedAt },
+          );
         }
         flight = await schema.Flight.create({
           aircraftId: dbAircraft.id,

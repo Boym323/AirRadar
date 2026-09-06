@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { closeStaleFlights, staleFlightEndTime } from "@/lib/server/history";
+import { normalizeAircraft } from "@/lib/aircraft/normalize";
+import { getPrisma } from "@/lib/server/db";
+import { closeStaleFlights, recordAircraftSnapshot, staleFlightEndTime } from "@/lib/server/history";
 
-afterEach(() => vi.unstubAllEnvs());
+vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn() }));
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.mocked(getPrisma).mockReset();
+});
 
 describe("historical flight maintenance", () => {
   it("uses lastSeenAt as the end time after the continuity gap", () => {
@@ -24,5 +31,54 @@ describe("historical flight maintenance", () => {
     const database = { orm: { public: { Flight } } } as never;
     await closeStaleFlights(database, new Date("2026-01-01T12:02:00Z"));
     expect(update).toHaveBeenCalledWith({ endTime: lastSeenAt });
+  });
+
+  it("ends a continuity-broken flight at its last observation and starts a new one", async () => {
+    vi.stubEnv("FLIGHT_CONTINUITY_GAP_MS", "600000");
+    const lastSeenAt = new Date("2026-01-01T12:00:00Z");
+    const recordedAt = new Date("2026-01-01T12:20:00Z");
+    const oldFlight = { id: 7, callsign: "TEST123", lastSeenAt, endTime: null };
+    const update = vi.fn().mockImplementation(async (values: Record<string, unknown>) => {
+      Object.assign(oldFlight, values);
+    });
+    const flightCreate = vi.fn().mockResolvedValue({ id: 8 });
+    const aircraft = normalizeAircraft(
+      { hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 },
+      { lat: 50, lon: 14, name: "Test" },
+      recordedAt,
+    );
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+
+    const flightWhere = vi.fn((filter: Record<string, unknown>) => {
+      if ("aircraftId" in filter) {
+        return {
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(oldFlight) }),
+          }),
+        };
+      }
+      if ("id" in filter) return { update };
+      return { where: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }) };
+    });
+    const database = {
+      orm: {
+        public: {
+          Aircraft: { where: vi.fn().mockReturnValue({ upsert: vi.fn().mockResolvedValue({ id: 42 }) }) },
+          Flight: { where: flightWhere, create: flightCreate },
+          FlightPosition: {
+            create: vi.fn().mockResolvedValue({ id: 99 }),
+            where: vi.fn().mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) }),
+          },
+        },
+      },
+      transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(database),
+    };
+    vi.mocked(getPrisma).mockReturnValue(database as never);
+
+    await recordAircraftSnapshot([aircraft], recordedAt);
+
+    expect(update).toHaveBeenCalledWith({ endTime: lastSeenAt });
+    expect(oldFlight.lastSeenAt).toEqual(lastSeenAt);
+    expect(flightCreate).toHaveBeenCalledWith(expect.objectContaining({ startTime: recordedAt, lastSeenAt: recordedAt }));
   });
 });

@@ -29,13 +29,14 @@ DATABASE_URL=postgresql://airradar:<password>@127.0.0.1:5432/airradar?schema=pub
 ADSBDB_ENABLED=true
 ATC_SAMPLE_ENABLED=false
 FLIGHTAWARE_API_KEY=
+APP_TIMEZONE=Europe/Prague
 ```
 
 Use the actual readsb/tar1090 web root in `READSB_BASE_URL`; AirRadar appends
 `/data/aircraft.json` and `/data/receiver.json`. Keep the real `.env` readable
 by `airradar` but not world-readable (`chmod 640` with an appropriate group).
 
-Optional enrichment is configured in the same server-only `.env`: set `ADSBDB_ENABLED=true` for free, keyless aircraft metadata and route lookups, and/or set `FLIGHTAWARE_API_KEY` for the optional commercial flight-plan adapter. Never use a `NEXT_PUBLIC_*` variable for these values. If either provider or PostgreSQL is offline, live readsb polling continues and the UI degrades gracefully.
+Optional enrichment is configured in the same server-only `.env`: set `ADSBDB_ENABLED=true` for free, keyless aircraft metadata and route lookups. Keep `FLIGHTAWARE_API_KEY=` empty for the first production deployment; if configured, the current architecture may perform paid AeroAPI flight-plan lookups for currently tracked aircraft with callsigns. Never use a `NEXT_PUBLIC_*` variable for these values. If either provider or PostgreSQL is offline, live readsb polling continues and the UI degrades gracefully.
 
 After installing dependencies and building as that user, install `airradar.service` into `/etc/systemd/system/` and run:
 

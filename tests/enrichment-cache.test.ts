@@ -157,6 +157,31 @@ describe("provider enrichment cache", () => {
     expect(getMetadata).toHaveBeenCalledTimes(14);
   });
 
+  it("shares the six-request ADSBDB budget between metadata and route lookups", async () => {
+    let active = 0;
+    let maximum = 0;
+    const enterAndHold = async <T>(value: T): Promise<T> => {
+      active += 1;
+      maximum = Math.max(maximum, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active -= 1;
+      return value;
+    };
+    const getMetadata = vi.fn(async (hex: string) => enterAndHold(metadata(hex)));
+    const getRoute = vi.fn(async (callsign: string) => enterAndHold(route(callsign, "OMDB", "LKPR")));
+    const adsbDb = { name: "adsbdb", getMetadata, getRoute };
+    const service = new EnrichmentService({ aircraftMetadata: adsbDb, flightRoute: adsbDb });
+
+    await Promise.all(Array.from({ length: 14 }, (_, index) => service.enrich(
+      aircraft(`ABC${index.toString(16).padStart(3, "0")}`, `TEST${index}`),
+      new Date("2026-01-01T12:00:00Z"),
+    )));
+
+    expect(maximum).toBeLessThanOrEqual(6);
+    expect(getMetadata).toHaveBeenCalledTimes(14);
+    expect(getRoute).toHaveBeenCalledTimes(14);
+  });
+
   it("keeps the paid FlightAware plan provider at two concurrent requests", async () => {
     let active = 0;
     let maximum = 0;
