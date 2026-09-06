@@ -1,4 +1,5 @@
 import type { StateSnapshot } from "@/lib/aircraft/types";
+import type { AtcDatasetMetadata } from "@/lib/atc/types";
 
 export interface HealthDatabaseStatus {
   status: "ok" | "offline" | "not_configured";
@@ -22,6 +23,7 @@ export interface PublicHealthResponse {
   };
   aircraftCount: number;
   lastReadsbUpdate: string | null;
+  atc: AtcDatasetMetadata;
   checkedAt: string;
 }
 
@@ -29,6 +31,15 @@ export function toPublicHealthResponse(
   snapshot: StateSnapshot,
   database: HealthDatabaseStatus,
   checkedAt = new Date().toISOString(),
+  atc: AtcDatasetMetadata = {
+    status: "unavailable",
+    source: null,
+    sourceReference: null,
+    effectiveDate: null,
+    lastVerifiedAt: null,
+    sectorCount: 0,
+    transmitterCount: 0,
+  },
 ): PublicHealthResponse {
   const readsbStatus: "ok" | "offline" | "demo" = snapshot.provider === "mock"
     ? "demo"
@@ -60,6 +71,7 @@ export function toPublicHealthResponse(
     },
     aircraftCount: snapshot.aircraft.length,
     lastReadsbUpdate: snapshot.lastReadsbUpdate,
+    atc,
     checkedAt,
   };
 }

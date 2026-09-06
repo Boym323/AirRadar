@@ -7,7 +7,7 @@ import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import type { ProviderRegistry } from "@/lib/server/provider";
 import { DatabaseAtcSectorProvider, getStoredAtcData, SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS, SampleAtcSectorProvider } from "@/lib/server/atc-data";
-import type { AtcSector, AtcTransmitter } from "@/lib/atc/types";
+import type { AtcDataResponse } from "@/lib/atc/types";
 
 export function createAircraftProvider(): AircraftProvider {
   const baseUrl = process.env.READSB_BASE_URL?.trim();
@@ -33,7 +33,33 @@ export function createAtcSectorProvider() {
   return shouldUseSampleAtcData() ? new SampleAtcSectorProvider() : new DatabaseAtcSectorProvider();
 }
 
-export async function getAtcData(): Promise<{ sectors: AtcSector[]; transmitters: AtcTransmitter[] }> {
-  if (shouldUseSampleAtcData()) return { sectors: SAMPLE_ATC_SECTORS, transmitters: SAMPLE_ATC_TRANSMITTERS };
-  return await getStoredAtcData() ?? { sectors: [], transmitters: [] };
+export async function getAtcData(): Promise<AtcDataResponse> {
+  if (shouldUseSampleAtcData()) {
+    return {
+      sectors: SAMPLE_ATC_SECTORS,
+      transmitters: SAMPLE_ATC_TRANSMITTERS,
+      metadata: {
+        status: "sample",
+        source: "AirRadar sample data",
+        sourceReference: "demo://airradar-sample-atc",
+        effectiveDate: null,
+        lastVerifiedAt: "2026-01-01T00:00:00.000Z",
+        sectorCount: SAMPLE_ATC_SECTORS.length,
+        transmitterCount: SAMPLE_ATC_TRANSMITTERS.length,
+      },
+    };
+  }
+  return await getStoredAtcData() ?? {
+    sectors: [],
+    transmitters: [],
+    metadata: {
+      status: "unavailable",
+      source: null,
+      sourceReference: null,
+      effectiveDate: null,
+      lastVerifiedAt: null,
+      sectorCount: 0,
+      transmitterCount: 0,
+    },
+  };
 }

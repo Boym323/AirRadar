@@ -125,12 +125,26 @@ export function watchlistKindLabel(kind: string, dictionary: LocaleDictionary = 
 export function formatAtcService(service: string | null | undefined, dictionary: LocaleDictionary = t): string {
   if (!service) return dictionary.atc.defaultService;
   const normalized = service.trim().toLowerCase();
-  if (normalized === "area control") return dictionary.atc.services.areaControl;
-  if (normalized === "approach") return dictionary.atc.services.approach;
+  if (normalized === "area control" || normalized === "acc" || normalized === "radar") return dictionary.atc.services.areaControl;
+  if (normalized === "approach" || normalized === "app" || normalized === "tma") return dictionary.atc.services.approach;
+  if (normalized === "tower" || normalized === "twr") return dictionary.atc.services.tower;
+  if (normalized === "ground" || normalized === "gnd") return dictionary.atc.services.ground;
+  if (normalized === "delivery" || normalized === "del") return dictionary.atc.services.delivery;
+  if (normalized === "fis") return dictionary.atc.services.fis;
+  if (normalized === "atis") return dictionary.atc.services.atis;
   return service;
 }
 
 export function formatAtcNote(note: string | null | undefined, dictionary: LocaleDictionary = t): string {
   if (!note) return dictionary.common.emptyValue;
   return note.trim().toLowerCase() === "sample transmitter location" ? dictionary.atc.sampleTransmitterLocation : note;
+}
+
+export function formatAtcFrequency(value: number | null | undefined, dictionary: LocaleDictionary = t): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return dictionary.common.emptyValue;
+  return `${new Intl.NumberFormat(dictionary.locale, { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(value)} MHz`;
+}
+
+export function formatAtcConfidence(value: "inside" | "boundary", dictionary: LocaleDictionary = t): string {
+  return dictionary.atc.confidenceValues[value];
 }

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "name": "REPLACE_WITH_OFFICIAL_SOURCE",
+    "reference": "REPLACE_WITH_SOURCE_REFERENCE_OR_URL",
+    "effectiveDate": "YYYY-MM-DD",
+    "lastVerifiedAt": "YYYY-MM-DDTHH:MM:SSZ"
+  },
+  "sectors": [],
+  "transmitters": []
+}

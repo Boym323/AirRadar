@@ -20,6 +20,8 @@ export interface AtcSector {
   validTo: string | null;
   country: string | null;
   source: string;
+  sourceReference: string;
+  lastVerifiedAt: string;
 }
 
 export interface AtcAssignment {
@@ -33,6 +35,10 @@ export interface AtcAssignment {
   upperAltitudeFt: number | null;
   country: string | null;
   source: string;
+  sourceReference: string;
+  validFrom: string | null;
+  validTo: string | null;
+  lastVerifiedAt: string;
   confidence: "inside" | "boundary";
 }
 
@@ -44,6 +50,27 @@ export interface AtcTransmitter {
   service: string | null;
   frequencyMhz: number;
   notes: string | null;
+  source: string;
+  sourceReference: string;
+  validFrom: string | null;
+  validTo: string | null;
+  lastVerifiedAt: string;
+}
+
+export interface AtcDatasetMetadata {
+  status: "sample" | "configured" | "empty" | "unavailable";
+  source: string | null;
+  sourceReference: string | null;
+  effectiveDate: string | null;
+  lastVerifiedAt: string | null;
+  sectorCount: number;
+  transmitterCount: number;
+}
+
+export interface AtcDataResponse {
+  sectors: AtcSector[];
+  transmitters: AtcTransmitter[];
+  metadata: AtcDatasetMetadata;
 }
 
 export interface AtcSectorMatch {

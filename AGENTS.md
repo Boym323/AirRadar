@@ -101,6 +101,9 @@ Generated files under `generated/` are outputs, not the database schema source o
   aircraft's actual tuned frequency.
 - Sample ATC data is automatic only in demo mode. With a real receiver it must
   be explicitly enabled and never appear silently.
+- Imported ATC rows retain source/reference, validity and last-verification
+  provenance; `data/atc/` and `npm run atc:import` are the import workflow
+  sources.
 - Public APIs must not expose exact receiver coordinates unless explicitly
   configured; internal receiver coordinates remain exact for calculations.
 - Public DTOs must not contain secrets, raw provider errors, or other internal

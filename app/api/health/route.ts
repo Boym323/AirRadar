@@ -2,6 +2,7 @@ import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
 import { toPublicHealthResponse } from "@/lib/server/public-health";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
+import { getAtcData } from "@/lib/server/providers";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,8 @@ export async function GET(): Promise<Response> {
       database = { status: "offline" };
     }
   }
-  return Response.json(toPublicHealthResponse(snapshot, database), {
+  const atc = (await getAtcData()).metadata;
+  return Response.json(toPublicHealthResponse(snapshot, database, undefined, atc), {
     headers: { "Cache-Control": "no-store" },
   });
 }

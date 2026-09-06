@@ -22,6 +22,10 @@ export function assignmentFromMatch(match: AtcSectorMatch): AtcAssignment {
     upperAltitudeFt: match.sector.upperAltitudeFt,
     country: match.sector.country,
     source: match.sector.source,
+    sourceReference: match.sector.sourceReference,
+    validFrom: match.sector.validFrom,
+    validTo: match.sector.validTo,
+    lastVerifiedAt: match.sector.lastVerifiedAt,
     confidence: match.confidence,
   };
 }
@@ -77,6 +81,35 @@ export function matchSector(sector: AtcSector, lookup: AtcLookup): AtcSectorMatc
   return confidence ? { sector, confidence } : null;
 }
 
+function servicePriority(service: string | null | undefined): number {
+  const normalized = service?.trim().toUpperCase() ?? "";
+  if (normalized === "TWR" || normalized === "TOWER") return 10;
+  if (normalized === "GND" || normalized === "GROUND") return 20;
+  if (normalized === "DEL" || normalized === "DELIVERY") return 30;
+  if (normalized === "APP" || normalized === "APPROACH" || normalized === "TMA") return 40;
+  if (normalized === "ACC" || normalized === "AREA CONTROL" || normalized === "RADAR") return 50;
+  if (normalized === "FIS") return 60;
+  if (normalized === "ATIS") return 70;
+  return 100;
+}
+
+function altitudeSpan(sector: AtcSector): number {
+  return (sector.upperAltitudeFt ?? 100000) - (sector.lowerAltitudeFt ?? 0);
+}
+
+export function compareAtcMatches(a: AtcSectorMatch, b: AtcSectorMatch): number {
+  const serviceDifference = servicePriority(a.sector.service ?? a.sector.atcCallsign) - servicePriority(b.sector.service ?? b.sector.atcCallsign);
+  if (serviceDifference !== 0) return serviceDifference;
+  const spanDifference = altitudeSpan(a.sector) - altitudeSpan(b.sector);
+  if (spanDifference !== 0) return spanDifference;
+  const upperDifference = (a.sector.upperAltitudeFt ?? Number.POSITIVE_INFINITY) - (b.sector.upperAltitudeFt ?? Number.POSITIVE_INFINITY);
+  if (upperDifference !== 0) return upperDifference;
+  const lowerDifference = (b.sector.lowerAltitudeFt ?? 0) - (a.sector.lowerAltitudeFt ?? 0);
+  if (lowerDifference !== 0) return lowerDifference;
+  if (a.confidence !== b.confidence) return a.confidence === "boundary" ? -1 : 1;
+  return a.sector.id.localeCompare(b.sector.id);
+}
+
 export class AtcSectorService {
   private sectors: AtcSector[] | null = null;
   private loading: Promise<AtcSector[]> | null = null;
@@ -88,8 +121,16 @@ export class AtcSectorService {
     const matches = sectors
       .map((sector) => matchSector(sector, lookup))
       .filter((match): match is AtcSectorMatch => match !== null)
-      .sort((a, b) => (a.sector.upperAltitudeFt ?? Number.POSITIVE_INFINITY) - (b.sector.upperAltitudeFt ?? Number.POSITIVE_INFINITY));
+      .sort(compareAtcMatches);
     return matches[0] ?? null;
+  }
+
+  async lookupAll(lookup: AtcLookup): Promise<AtcSectorMatch[]> {
+    const sectors = await this.getSectors();
+    return sectors
+      .map((sector) => matchSector(sector, lookup))
+      .filter((match): match is AtcSectorMatch => match !== null)
+      .sort(compareAtcMatches);
   }
 
   async getAll(): Promise<AtcSector[]> {

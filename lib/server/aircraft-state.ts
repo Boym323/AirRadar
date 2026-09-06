@@ -145,7 +145,10 @@ export class AircraftStateService {
       this.notify();
       this.queueHistory(snapshot);
       void this.enrichSnapshot(snapshot);
-      void this.resolveAtc(snapshot);
+      void this.resolveAtc(snapshot).catch((error) => {
+        // ATC is optional enrichment; a provider failure must never affect live tracking.
+        console.error("AirRadar ATC resolution failed", error);
+      });
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : "Unknown aircraft provider error";
       this.consecutiveFailures += 1;

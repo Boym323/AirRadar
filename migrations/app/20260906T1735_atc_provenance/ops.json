@@ -1,0 +1,506 @@
+[
+  {
+    "id": "column.public.atcTransmitter.validFrom",
+    "label": "Add column \"validFrom\" to \"atcTransmitter\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "validFrom",
+        "table": "atcTransmitter"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"validFrom\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "validFrom"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"validFrom\"",
+        "sql": "ALTER TABLE \"public\".\"atcTransmitter\" ADD COLUMN \"validFrom\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"validFrom\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "validFrom"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.atcTransmitter.validTo",
+    "label": "Add column \"validTo\" to \"atcTransmitter\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "validTo",
+        "table": "atcTransmitter"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"validTo\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "validTo"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"validTo\"",
+        "sql": "ALTER TABLE \"public\".\"atcTransmitter\" ADD COLUMN \"validTo\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"validTo\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "validTo"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.atcSector.lastVerifiedAt",
+    "label": "Add column \"lastVerifiedAt\" to \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "lastVerifiedAt",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"lastVerifiedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "lastVerifiedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"lastVerifiedAt\"",
+        "sql": "ALTER TABLE \"public\".\"atcSector\" ADD COLUMN \"lastVerifiedAt\" timestamptz DEFAULT (now()) NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"lastVerifiedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "lastVerifiedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.atcSector.sourceReference",
+    "label": "Add column \"sourceReference\" to \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "sourceReference",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"sourceReference\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "sourceReference"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"sourceReference\"",
+        "sql": "ALTER TABLE \"public\".\"atcSector\" ADD COLUMN \"sourceReference\" text DEFAULT 'legacy://unknown-atc-source' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"sourceReference\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "sourceReference"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.atcTransmitter.lastVerifiedAt",
+    "label": "Add column \"lastVerifiedAt\" to \"atcTransmitter\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "lastVerifiedAt",
+        "table": "atcTransmitter"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"lastVerifiedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "lastVerifiedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"lastVerifiedAt\"",
+        "sql": "ALTER TABLE \"public\".\"atcTransmitter\" ADD COLUMN \"lastVerifiedAt\" timestamptz DEFAULT (now()) NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"lastVerifiedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "lastVerifiedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.atcTransmitter.source",
+    "label": "Add column \"source\" to \"atcTransmitter\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "source",
+        "table": "atcTransmitter"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"source\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "source"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"source\"",
+        "sql": "ALTER TABLE \"public\".\"atcTransmitter\" ADD COLUMN \"source\" text DEFAULT 'Legacy imported ATC row' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"source\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "source"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.atcTransmitter.sourceReference",
+    "label": "Add column \"sourceReference\" to \"atcTransmitter\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "sourceReference",
+        "table": "atcTransmitter"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"sourceReference\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "sourceReference"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"sourceReference\"",
+        "sql": "ALTER TABLE \"public\".\"atcTransmitter\" ADD COLUMN \"sourceReference\" text DEFAULT 'legacy://unknown-atc-source' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"sourceReference\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "sourceReference"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropDefault.atcSector.lastVerifiedAt",
+    "label": "Drop default on \"atcSector\".\"lastVerifiedAt\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "lastVerifiedAt",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"lastVerifiedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "lastVerifiedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop default on \"lastVerifiedAt\"",
+        "sql": "ALTER TABLE \"public\".\"atcSector\" ALTER COLUMN \"lastVerifiedAt\" DROP DEFAULT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"lastVerifiedAt\" has no default",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"column_default\" IS NULL)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "lastVerifiedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropDefault.atcSector.sourceReference",
+    "label": "Drop default on \"atcSector\".\"sourceReference\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "sourceReference",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"sourceReference\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "sourceReference"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop default on \"sourceReference\"",
+        "sql": "ALTER TABLE \"public\".\"atcSector\" ALTER COLUMN \"sourceReference\" DROP DEFAULT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"sourceReference\" has no default",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"column_default\" IS NULL)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "sourceReference"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropDefault.atcTransmitter.lastVerifiedAt",
+    "label": "Drop default on \"atcTransmitter\".\"lastVerifiedAt\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "lastVerifiedAt",
+        "table": "atcTransmitter"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"lastVerifiedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "lastVerifiedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop default on \"lastVerifiedAt\"",
+        "sql": "ALTER TABLE \"public\".\"atcTransmitter\" ALTER COLUMN \"lastVerifiedAt\" DROP DEFAULT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"lastVerifiedAt\" has no default",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"column_default\" IS NULL)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "lastVerifiedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropDefault.atcTransmitter.source",
+    "label": "Drop default on \"atcTransmitter\".\"source\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "source",
+        "table": "atcTransmitter"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"source\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "source"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop default on \"source\"",
+        "sql": "ALTER TABLE \"public\".\"atcTransmitter\" ALTER COLUMN \"source\" DROP DEFAULT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"source\" has no default",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"column_default\" IS NULL)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "source"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropDefault.atcTransmitter.sourceReference",
+    "label": "Drop default on \"atcTransmitter\".\"sourceReference\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "sourceReference",
+        "table": "atcTransmitter"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"sourceReference\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "sourceReference"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop default on \"sourceReference\"",
+        "sql": "ALTER TABLE \"public\".\"atcTransmitter\" ALTER COLUMN \"sourceReference\" DROP DEFAULT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"sourceReference\" has no default",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"column_default\" IS NULL)) AS \"result\"",
+        "params": [
+          "public",
+          "atcTransmitter",
+          "sourceReference"
+        ]
+      }
+    ]
+  }
+]

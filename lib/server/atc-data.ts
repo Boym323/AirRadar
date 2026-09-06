@@ -1,4 +1,4 @@
-import type { AtcSector, AtcTransmitter } from "@/lib/atc/types";
+import type { AtcDataResponse, AtcDatasetMetadata, AtcSector, AtcTransmitter } from "@/lib/atc/types";
 import type { AtcSectorProvider } from "@/lib/server/provider";
 import { getPrisma } from "@/lib/server/db";
 
@@ -23,6 +23,8 @@ export const SAMPLE_ATC_SECTORS: AtcSector[] = [
     validTo: null,
     country: "CZ",
     source: "AirRadar sample data",
+    sourceReference: "demo://airradar-sample-atc",
+    lastVerifiedAt: "2026-01-01T00:00:00.000Z",
   },
   {
     id: "CZ-PRAGUE-APPROACH",
@@ -42,12 +44,14 @@ export const SAMPLE_ATC_SECTORS: AtcSector[] = [
     validTo: null,
     country: "CZ",
     source: "AirRadar sample data",
+    sourceReference: "demo://airradar-sample-atc",
+    lastVerifiedAt: "2026-01-01T00:00:00.000Z",
   },
 ];
 
 export const SAMPLE_ATC_TRANSMITTERS: AtcTransmitter[] = [
-  { id: "LKPR-APP", name: "Praha Approach", latitude: 50.1008, longitude: 14.26, service: "Approach", frequencyMhz: 118.1, notes: "Sample transmitter location" },
-  { id: "LKPR-RADAR", name: "Praha Radar", latitude: 50.0755, longitude: 14.4378, service: "Area control", frequencyMhz: 127.35, notes: "Sample transmitter location" },
+  { id: "LKPR-APP", name: "Praha Approach", latitude: 50.1008, longitude: 14.26, service: "Approach", frequencyMhz: 118.1, notes: "Sample transmitter location", source: "AirRadar sample data", sourceReference: "demo://airradar-sample-atc", validFrom: null, validTo: null, lastVerifiedAt: "2026-01-01T00:00:00.000Z" },
+  { id: "LKPR-RADAR", name: "Praha Radar", latitude: 50.0755, longitude: 14.4378, service: "Area control", frequencyMhz: 127.35, notes: "Sample transmitter location", source: "AirRadar sample data", sourceReference: "demo://airradar-sample-atc", validFrom: null, validTo: null, lastVerifiedAt: "2026-01-01T00:00:00.000Z" },
 ];
 
 export class SampleAtcSectorProvider implements AtcSectorProvider {
@@ -114,8 +118,10 @@ function storedSector(record: {
   alternateFrequenciesJson: string | null;
   country: string | null;
   source: string;
+  sourceReference: string;
   validFrom: Temporal.Instant | null;
   validTo: Temporal.Instant | null;
+  lastVerifiedAt: Temporal.Instant;
 }): AtcSector | null {
   const polygons = polygonsFromJson(record.polygonJson);
   if (!polygons.length) return null;
@@ -132,6 +138,8 @@ function storedSector(record: {
     validTo: record.validTo?.toString() ?? null,
     country: record.country,
     source: record.source,
+    sourceReference: record.sourceReference,
+    lastVerifiedAt: record.lastVerifiedAt.toString(),
   };
 }
 
@@ -140,7 +148,31 @@ function storedSector(record: {
  * AtcSector.polygonJson as GeoJSON-style [[lon, lat], ...] rings and
  * alternateFrequenciesJson as [{ frequencyMhz, label? }, ...].
  */
-export async function getStoredAtcData(): Promise<{ sectors: AtcSector[]; transmitters: AtcTransmitter[] } | null> {
+function datasetMetadata(
+  status: AtcDatasetMetadata["status"],
+  sectors: AtcSector[],
+  transmitters: AtcTransmitter[],
+): AtcDatasetMetadata {
+  const first = sectors[0] ?? null;
+  const firstTransmitter = transmitters[0] ?? null;
+  return {
+    status,
+    source: first?.source ?? firstTransmitter?.source ?? null,
+    sourceReference: first?.sourceReference ?? firstTransmitter?.sourceReference ?? null,
+    effectiveDate: first?.validFrom ?? firstTransmitter?.validFrom ?? null,
+    lastVerifiedAt: first?.lastVerifiedAt ?? firstTransmitter?.lastVerifiedAt ?? null,
+    sectorCount: sectors.length,
+    transmitterCount: transmitters.length,
+  };
+}
+
+function validAt(validFrom: string | null, validTo: string | null, observedAt = Date.now()): boolean {
+  const from = validFrom ? Date.parse(validFrom) : Number.NEGATIVE_INFINITY;
+  const to = validTo ? Date.parse(validTo) : Number.POSITIVE_INFINITY;
+  return Number.isFinite(from) && Number.isFinite(to) ? observedAt >= from && observedAt <= to : from === Number.NEGATIVE_INFINITY || to === Number.POSITIVE_INFINITY;
+}
+
+export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
   const database = getPrisma();
   if (!database) return null;
   try {
@@ -148,9 +180,8 @@ export async function getStoredAtcData(): Promise<{ sectors: AtcSector[]; transm
       database.orm.public.AtcSector.limit(2000).all(),
       database.orm.public.AtcTransmitter.limit(2000).all(),
     ]);
-    return {
-      sectors: sectorRows.map(storedSector).filter((sector): sector is AtcSector => sector !== null),
-      transmitters: transmitterRows.map((transmitter) => ({
+    const sectors = sectorRows.map(storedSector).filter((sector): sector is AtcSector => sector !== null && validAt(sector.validFrom, sector.validTo));
+    const transmitters = transmitterRows.map((transmitter) => ({
         id: transmitter.id,
         name: transmitter.name,
         latitude: transmitter.latitude,
@@ -158,8 +189,13 @@ export async function getStoredAtcData(): Promise<{ sectors: AtcSector[]; transm
         service: transmitter.service,
         frequencyMhz: transmitter.frequencyMhz,
         notes: transmitter.notes,
-      })),
-    };
+        source: transmitter.source,
+        sourceReference: transmitter.sourceReference,
+        validFrom: transmitter.validFrom?.toString() ?? null,
+        validTo: transmitter.validTo?.toString() ?? null,
+        lastVerifiedAt: transmitter.lastVerifiedAt.toString(),
+      })).filter((transmitter) => validAt(transmitter.validFrom, transmitter.validTo));
+    return { sectors, transmitters, metadata: datasetMetadata(sectors.length || transmitters.length ? "configured" : "empty", sectors, transmitters) };
   } catch (error) {
     console.error("AirRadar stored ATC data unavailable", error);
     return null;

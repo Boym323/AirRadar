@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "name": "Test authority publication",
+    "reference": "https://example.invalid/test-atc-publication",
+    "effectiveDate": "2026-09-01",
+    "lastVerifiedAt": "2026-09-01T12:00:00Z"
+  },
+  "sectors": [
+    {
+      "id": "TEST-APP",
+      "name": "Test Approach",
+      "atcCallsign": "TEST APPROACH",
+      "service": "APP",
+      "country": "CZ",
+      "polygons": [
+        [[14, 50], [15, 50], [15, 51], [14, 51]]
+      ],
+      "lowerAltitude": "SFC",
+      "upperAltitude": "FL245",
+      "primaryFrequencyMhz": 118.005,
+      "alternateFrequencies": [{ "frequencyMhz": 119.175, "label": "Test alternate" }]
+    }
+  ],
+  "transmitters": [
+    {
+      "id": "TEST-APP-TX",
+      "name": "Test Approach transmitter",
+      "latitude": 50.1,
+      "longitude": 14.4,
+      "service": "APP",
+      "frequencyMhz": 118.005
+    }
+  ]
+}

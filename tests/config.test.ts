@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getPublicReceiverPositionMode, getReceiverPosition } from "@/lib/server/config";
+import { getAtcData } from "@/lib/server/providers";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -48,5 +49,15 @@ describe("numeric environment configuration", () => {
   it.each([undefined, "", "invalid", "EXACTLY"])("defaults invalid public receiver mode %j to approximate", (mode) => {
     vi.stubEnv("PUBLIC_RECEIVER_POSITION_MODE", mode ?? "");
     expect(getPublicReceiverPositionMode()).toBe("approximate");
+  });
+
+  it("does not leak demo ATC data for a real receiver without an imported database dataset", async () => {
+    vi.stubEnv("READSB_BASE_URL", "http://receiver.example");
+    vi.stubEnv("ATC_SAMPLE_ENABLED", "false");
+    vi.stubEnv("DATABASE_URL", "");
+    const data = await getAtcData();
+    expect(data.sectors).toEqual([]);
+    expect(data.transmitters).toEqual([]);
+    expect(data.metadata.status).toBe("unavailable");
   });
 });

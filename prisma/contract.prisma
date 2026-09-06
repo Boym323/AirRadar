@@ -63,8 +63,10 @@ model AtcSector {
   alternateFrequenciesJson String?
   country           String?
   source            String
+  sourceReference   String
   validFrom         DateTime?
   validTo           DateTime?
+  lastVerifiedAt    DateTime
   createdAt         DateTime @default(now())
   updatedAt         DateTime @default(now())
 
@@ -80,6 +82,11 @@ model AtcTransmitter {
   service      String?
   frequencyMhz Float
   notes        String?
+  source       String
+  sourceReference String
+  validFrom    DateTime?
+  validTo      DateTime?
+  lastVerifiedAt DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now())
 }

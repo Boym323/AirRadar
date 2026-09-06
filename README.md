@@ -117,6 +117,24 @@ Source code, API names, database schema and technical documentation remain in En
 
 The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled ATC layer is explicitly demo-only (`AirRadar sample data`) and is selected only without `READSB_BASE_URL` (or with the explicit `ATC_SAMPLE_ENABLED=true`). In production set `ATC_SAMPLE_ENABLED=false`; `/api/atc/sectors` and the resolver then use imported PostgreSQL data, or an empty layer if no verified dataset has been imported. Store sector rings as JSON `[[[lon, lat], ...]]` in `AtcSector.polygonJson` and alternate frequencies as JSON `[{"frequencyMhz": 127.35, "label": "..."}]` in `alternateFrequenciesJson`, with the source and validity interval recorded on each row. No Czech AIP import is bundled.
 
+ATC reference data can be loaded from the versioned JSON format documented in
+[`data/atc/README.md`](data/atc/README.md):
+
+```bash
+npm run atc:import -- --dry-run data/atc/cz-atc.json
+npm run atc:import -- data/atc/cz-atc.json
+```
+
+The importer validates the complete document before writing, normalizes
+`SFC`/`FLxxx`/`UNL` altitude semantics, preserves aviation frequency precision,
+and commits sector/transmitter upserts plus same-source obsolescence in one
+transaction. Every imported row retains source name, reference, effective
+validity and last-verification metadata. It never changes aircraft history.
+The resolver cache is process-local; restart the service after an import.
+ATC matches are always probable candidates based on position, normalized
+barometric/geometric altitude and UTC validity. ADS-B does not report the
+aircraft's actual tuned ATC frequency.
+
 ## Useful commands
 
 ```bash
@@ -130,6 +148,7 @@ npm run prisma:generate # emit Prisma 8 contract artifacts
 npm run prisma:migrate  # plan a new migration from the contract
 npm run prisma:deploy   # apply pending migrations
 npm run prisma:verify   # verify the configured database
+npm run atc:import -- --dry-run data/atc/cz-atc.json # validate/preview ATC data
 ```
 
 ## API
@@ -139,7 +158,7 @@ npm run prisma:verify   # verify the configured database
 - `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback
 - `GET /api/airports` — configured airport catalog or bundled fallback catalog
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
-- `GET /api/health` — application, database, readsb and live-state health
+- `GET /api/health` — application, database, readsb, ATC dataset and live-state health
 
 ## Production deployment
 

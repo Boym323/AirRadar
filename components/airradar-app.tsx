@@ -9,9 +9,12 @@ import {
   aircraftInRange,
   formatAge,
   formatAltitude,
+  formatAtcFrequency,
+  formatAtcConfidence,
   formatAtcNote,
   formatAtcService,
   formatCoordinate,
+  formatDateTime,
   formatDistance,
   formatNumber,
   formatSpeed,
@@ -26,10 +29,15 @@ import {
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, FlightRoute, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
-import type { AtcSector, AtcTransmitter } from "@/lib/atc/types";
+import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
 const EMPTY_RECEIVER: PublicReceiverPosition = { lat: null, lon: null, name: t.radar.receiverName };
+const EMPTY_ATC_DATA: AtcDataResponse = {
+  sectors: [],
+  transmitters: [],
+  metadata: { status: "unavailable", source: null, sourceReference: null, effectiveDate: null, lastVerifiedAt: null, sectorCount: 0, transmitterCount: 0 },
+};
 const EMPTY_SNAPSHOT: PublicStateSnapshot = {
   aircraft: [],
   receiver: EMPTY_RECEIVER,
@@ -85,8 +93,15 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean) {
         id: sector.id,
         name: sector.name,
         service: formatAtcService(sector.service ?? sector.atcCallsign),
-        altitude: `${sector.lowerAltitudeFt ?? 0}–${sector.upperAltitudeFt ?? t.common.unlimited} ft`,
-        frequencies: sector.frequencies.map((frequency) => `${frequency.frequencyMhz.toFixed(3)} MHz`).join(", "),
+        lowerAltitudeFt: sector.lowerAltitudeFt,
+        upperAltitudeFt: sector.upperAltitudeFt,
+        primaryFrequency: formatAtcFrequency((sector.frequencies.find((frequency) => frequency.isPrimary) ?? sector.frequencies[0])?.frequencyMhz),
+        alternateFrequencies: sector.frequencies.filter((frequency) => !frequency.isPrimary).map((frequency) => formatAtcFrequency(frequency.frequencyMhz)).join(", "),
+        source: sector.source,
+        sourceReference: sector.sourceReference,
+        validFrom: sector.validFrom,
+        validTo: sector.validTo,
+        lastVerifiedAt: sector.lastVerifiedAt,
       },
       geometry: { type: "Polygon" as const, coordinates: [polygon] },
     }))) : [],
@@ -161,7 +176,7 @@ export function AirRadarApp() {
   const [watchlistValue, setWatchlistValue] = useState("");
   const [showAtc, setShowAtc] = useState(false);
   const [showAirports, setShowAirports] = useState(true);
-  const [atcData, setAtcData] = useState<{ sectors: AtcSector[]; transmitters: AtcTransmitter[] }>({ sectors: [], transmitters: [] });
+  const [atcData, setAtcData] = useState<AtcDataResponse>(EMPTY_ATC_DATA);
   const [streamConnected, setStreamConnected] = useState(false);
   const [mobileCompact, setMobileCompact] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -182,7 +197,7 @@ export function AirRadarApp() {
       // Local storage is optional; the radar remains usable when it is blocked.
     }
     void fetch("/api/atc/sectors", { cache: "no-store" })
-      .then((response) => response.ok ? response.json() as Promise<{ sectors: AtcSector[]; transmitters: AtcTransmitter[] }> : null)
+      .then((response) => response.ok ? response.json() as Promise<AtcDataResponse> : null)
       .then((data) => { if (data) setAtcData(data); })
       .catch(() => undefined);
   }, []);
@@ -287,6 +302,7 @@ export function AirRadarApp() {
       map.addSource("atc-sectors", { type: "geojson", data: createAtcGeoJSON([], false) });
       map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": "#8068ff", "fill-opacity": 0.09 } });
       map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": "#a990ff", "line-opacity": 0.6, "line-width": 1.2, "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "name"], "text-size": 10, "text-offset": [0, 0.8], "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#d7caff", "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
       map.addSource("atc-transmitters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": "#f3b95f", "circle-radius": 5, "circle-stroke-color": "#08111d", "circle-stroke-width": 1.5 } });
       map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([], false) });
@@ -301,7 +317,8 @@ export function AirRadarApp() {
         const title = document.createElement("strong");
         title.textContent = String(properties.name ?? t.atc.sector);
         const body = document.createElement("span");
-        body.textContent = `${String(properties.service ?? "")} · ${String(properties.altitude ?? "")} · ${String(properties.frequencies ?? "")}`;
+        const altitude = `${properties.lowerAltitudeFt ?? 0}–${properties.upperAltitudeFt ?? t.common.unlimited} ft`;
+        body.textContent = `${String(properties.service ?? "")} · ${altitude} · ${t.atc.primaryFrequency}: ${String(properties.primaryFrequency ?? t.common.emptyValue)} · ${t.atc.alternates}: ${String(properties.alternateFrequencies || t.common.emptyValue)} · ${t.atc.source}: ${String(properties.source ?? t.common.emptyValue)} · ${t.atc.sourceReference}: ${String(properties.sourceReference ?? t.common.emptyValue)} · ${t.atc.effectiveDate}: ${String(properties.validFrom ?? t.common.emptyValue)}`;
         content.append(title, body);
         new maplibregl.Popup({ closeButton: true, maxWidth: "260px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
       });
@@ -316,7 +333,7 @@ export function AirRadarApp() {
         const title = document.createElement("strong");
         title.textContent = String(properties.name ?? t.atc.transmitter);
         const body = document.createElement("span");
-        body.textContent = `${String(properties.service ?? "")} · ${String(properties.frequency ?? "")} ${String(properties.notes ?? "")}`;
+        body.textContent = `${String(properties.service ?? "")} · ${String(properties.frequency ?? "")} · ${t.atc.source}: ${String(properties.source ?? t.common.emptyValue)} · ${t.atc.sourceReference}: ${String(properties.sourceReference ?? t.common.emptyValue)} · ${String(properties.notes ?? "")}`;
         content.append(title, body);
         new maplibregl.Popup({ closeButton: true, maxWidth: "260px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
       });
@@ -453,7 +470,7 @@ export function AirRadarApp() {
       type: "FeatureCollection",
       features: showAtc ? atcData.transmitters.map((transmitter) => ({
         type: "Feature" as const,
-        properties: { name: transmitter.name, service: formatAtcService(transmitter.service), frequency: `${transmitter.frequencyMhz.toFixed(3)} MHz`, notes: formatAtcNote(transmitter.notes) },
+        properties: { name: transmitter.name, service: formatAtcService(transmitter.service), frequency: formatAtcFrequency(transmitter.frequencyMhz), notes: formatAtcNote(transmitter.notes), source: transmitter.source, sourceReference: transmitter.sourceReference, validFrom: transmitter.validFrom, validTo: transmitter.validTo, lastVerifiedAt: transmitter.lastVerifiedAt },
         geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
       })) : [],
     });
@@ -463,7 +480,7 @@ export function AirRadarApp() {
     });
     const airportSource = map.getSource("route-airports") as GeoJSONSource | undefined;
     airportSource?.setData(createAirportGeoJSON(airports, showAirports));
-    for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-transmitters-circle"] as const) {
+    for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
   }, [atcData, mapReady, showAirports, showAtc, snapshot.aircraft]);
@@ -684,8 +701,16 @@ export function AirRadarApp() {
               <DetailSection title={t.atc.estimate}>
                 {selectedAircraft.atc ? <>
                   <DetailItem label={t.atc.sectorService} value={`${selectedAircraft.atc.name} · ${formatAtcService(selectedAircraft.atc.service || selectedAircraft.atc.callsign)}`} />
-                  <DetailItem label={t.atc.primaryFrequency} value={selectedAircraft.atc.primaryFrequencyMhz === null ? t.common.emptyValue : `${selectedAircraft.atc.primaryFrequencyMhz.toFixed(3)} MHz`} />
-                  <DetailItem label={t.atc.alternates} value={selectedAircraft.atc.alternateFrequenciesMhz.map((frequency) => `${frequency.toFixed(3)} MHz`).join(", ") || t.common.emptyValue} />
+                  <DetailItem label={t.atc.primaryFrequency} value={formatAtcFrequency(selectedAircraft.atc.primaryFrequencyMhz)} />
+                  <DetailItem label={t.atc.alternates} value={selectedAircraft.atc.alternateFrequenciesMhz.map((frequency) => formatAtcFrequency(frequency)).join(", ") || t.common.emptyValue} />
+                  <DetailItem label={t.atc.lowerLimit} value={formatAltitude(selectedAircraft.atc.lowerAltitudeFt)} />
+                  <DetailItem label={t.atc.upperLimit} value={selectedAircraft.atc.upperAltitudeFt === null ? t.common.unlimited : formatAltitude(selectedAircraft.atc.upperAltitudeFt)} />
+                  <DetailItem label={t.atc.source} value={selectedAircraft.atc.source} />
+                  <DetailItem label={t.atc.sourceReference} value={selectedAircraft.atc.sourceReference} />
+                  <DetailItem label={t.atc.effectiveDate} value={formatDateTime(selectedAircraft.atc.validFrom)} />
+                  <DetailItem label={t.atc.validTo} value={formatDateTime(selectedAircraft.atc.validTo)} />
+                  <DetailItem label={t.atc.lastVerified} value={formatDateTime(selectedAircraft.atc.lastVerifiedAt)} />
+                  <DetailItem label={t.atc.confidence} value={formatAtcConfidence(selectedAircraft.atc.confidence)} />
                   <div className="detail-disclaimer">{t.atc.probableFrequency}</div>
                 </> : <div className="detail-disclaimer">{t.atc.noMatchingSector}</div>}
               </DetailSection>

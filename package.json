@@ -23,7 +23,8 @@
     "prisma:generate": "prisma contract emit",
     "prisma:migrate": "prisma migration plan --name init",
     "prisma:deploy": "prisma db migrate",
-    "prisma:verify": "prisma db verify"
+    "prisma:verify": "prisma db verify",
+    "atc:import": "jiti scripts/atc-import.ts"
   },
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.8",
