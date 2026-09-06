@@ -147,8 +147,22 @@ npm run atc:status:cz
 
 The sync obtains ENR 2.1 from AIM ŘLP ČR, discovers the effective date and
 published AIP/AIRAC amendment metadata, and has no runtime dependency on AIM.
-Unsupported state-border geometry stops a production sync before any database
-write; no boundary is guessed.
+For a lateral `state boundary` construct, ENR 2.1 remains authoritative for
+the sector meaning, endpoints, ordering, vertical limits, callsign and
+frequencies; the missing boundary polyline is resolved from the official
+[ČÚZK Data50 service](https://ags.cuzk.gov.cz/arcgis/rest/services/DATA50/MapServer)
+and its [metadata record](https://geoportal.gov.cz/php/micka/record/basic/CZ-CUZK-DATA50-V?dlang=eng).
+The sync fetches that dataset once, uses a bounded endpoint snap and a
+connected state-boundary graph (including the Germany–Poland tripoint), and
+fails on ambiguity, disconnection, excessive snap distance or invalid
+polygon geometry. It never creates a straight-line or other guessed
+boundary; if the authoritative path intersects a generalized AIP walk, the
+walk is polygonized into validated rings without adding geometry. Data50 is
+attributed as ČÚZK Data50 under [CC BY 4.0](https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx). AIM and ČÚZK
+are sync-time sources only; live radar has no runtime dependency on either.
+The complete parse, geometry resolution and validation finish before the
+transaction, so a failed source or unresolved boundary leaves the database
+unchanged.
 
 ## Useful commands
 

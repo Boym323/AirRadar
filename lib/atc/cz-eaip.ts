@@ -1,10 +1,12 @@
 import { load, type CheerioAPI } from "cheerio";
 import type { AtcImportDocument, AtcImportFrequency, AtcImportSector, ImportAltitude } from "./import-format";
 import type { Coordinate } from "./types";
+import { CZ_CUZK_DATA50_METADATA_URL, CZ_CUZK_DATA50_QUERY_URL, type StateBoundaryProvider, type StateBoundaryResolution } from "./cz-boundary";
 import { aviationCoordinateToDecimal, densifyArc, type ArcDirection } from "./cz-geometry";
 
 export const CZ_EAIP_ENR21_URL = "https://aim.rlp.cz/eaip/html/eAIP/LK-ENR-2.1-en-GB.html";
 export const CZ_EAIP_GEN02_URL = "https://aim.rlp.cz/ais_data/aip/data/valid/g0-2.html";
+export const CZ_ATC_SOURCE_REFERENCE = `${CZ_EAIP_ENR21_URL} | geometry: ${CZ_CUZK_DATA50_QUERY_URL} | metadata: ${CZ_CUZK_DATA50_METADATA_URL}`;
 const AUTHORITATIVE_HOST = "aim.rlp.cz";
 const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
 
@@ -22,6 +24,15 @@ export interface CzEaipSectorDiagnostic {
   objectType: CzAtcObjectType;
   status: "accepted" | "skipped";
   reason?: string;
+  boundaryResolutions?: StateBoundaryResolution[];
+  polygonMetrics?: CzPolygonMetric[];
+}
+
+export interface CzPolygonMetric {
+  vertexCount: number;
+  areaSquareKm: number;
+  maxSegmentKm: number;
+  boundingBox: { west: number; south: number; east: number; north: number };
 }
 
 export interface CzEaipParseResult {
@@ -57,11 +68,23 @@ interface ArcEvent {
   center: Coordinate;
 }
 
+interface StateBoundaryEvent {
+  label: string;
+}
+
+type BoundaryEvent =
+  | { kind: "coordinate"; coordinate: Coordinate }
+  | { kind: "arc"; arc: ArcEvent }
+  | { kind: "border"; border: StateBoundaryEvent };
+
 interface ParsedBoundary {
   polygons: Coordinate[][];
   directGeometry: boolean;
   arcCount: number;
   borderNames: string[];
+  borderSegments: StateBoundaryEvent[];
+  boundaryResolutions: StateBoundaryResolution[];
+  events: BoundaryEvent[];
   lateralReference: string | null;
   constituentReferences: string[];
 }
@@ -189,53 +212,160 @@ function parseBoundary($: CheerioAPI, cell: Parameters<CheerioAPI>[0]): ParsedBo
   const uniqueReferences = [...new Set(references.filter((value) => value !== name))];
   const lateralReference = /lateral limits same as/i.test(cellText) ? uniqueReferences[0] ?? null : null;
   const constituentReferences = /consists of:/i.test(cellText) ? uniqueReferences : [];
-  const events: Array<{ kind: "coordinate"; coordinate: Coordinate } | { kind: "arc"; arc: ArcEvent } | { kind: "border"; label: string }> = [];
+  const events: BoundaryEvent[] = [];
   const borderNames: string[] = [];
   $(cell).find("p, div").each((_, paragraph) => {
     const paragraphNode = $(paragraph);
     const coordinate = parseCoordinatePair($, paragraphNode);
     const arc = parseArc($, paragraphNode);
-    const borderToken = sourceTokens($, paragraphNode).find((token) => token.param.startsWith("TGEO_BORDER;"));
+    const borderTokens = sourceTokens($, paragraphNode).filter((token) => token.param.startsWith("TGEO_BORDER;"));
     if (coordinate) events.push({ kind: "coordinate", coordinate });
     if (arc) events.push({ kind: "arc", arc });
-    if (borderToken) {
-      borderNames.push(borderToken.value);
-      events.push({ kind: "border", label: borderToken.value });
+    if (borderTokens.length) {
+      const label = borderTokens.map((token) => token.value).join(" ");
+      borderNames.push(...borderTokens.map((token) => token.value));
+      events.push({ kind: "border", border: { label } });
     }
   });
+  return {
+    polygons: [],
+    directGeometry: false,
+    arcCount: events.filter((event) => event.kind === "arc").length,
+    borderNames: [...new Set(borderNames)],
+    borderSegments: events.filter((event): event is { kind: "border"; border: StateBoundaryEvent } => event.kind === "border").map((event) => event.border),
+    boundaryResolutions: [],
+    events,
+    lateralReference,
+    constituentReferences,
+  };
+}
 
+function assembleBoundary(boundary: ParsedBoundary, name: string, provider?: StateBoundaryProvider): void {
   const coordinates: Coordinate[] = [];
   let pendingArc: ArcEvent | null = null;
-  let arcCount = 0;
-  for (const event of events) {
+  let pendingBorder: StateBoundaryEvent | null = null;
+  const resolutions: StateBoundaryResolution[] = [];
+  for (const event of boundary.events) {
     if (event.kind === "coordinate") {
       if (pendingArc) {
-        if (!coordinates.length) throw new CzEaipParseError([`Arc in ${name || "unnamed airspace"} has no start point`]);
-        coordinates.push(...densifyArc({ start: coordinates[coordinates.length - 1], end: event.coordinate, ...pendingArc }).slice(1));
+        const start = coordinates.at(-1);
+        if (!start) throw new CzEaipParseError([`Arc in ${name || "unnamed airspace"} has no start point`]);
+        appendUniqueCoordinates(coordinates, densifyArc({ start, end: event.coordinate, ...pendingArc }).slice(1));
         pendingArc = null;
+      } else if (pendingBorder) {
+        const start = coordinates.pop();
+        if (!start) throw new CzEaipParseError([`State boundary in ${name || "unnamed airspace"} has no start point`]);
+        if (!provider) {
+          coordinates.push(start);
+          coordinates.push(event.coordinate);
+        } else {
+          let resolution: StateBoundaryResolution;
+          try {
+            resolution = provider.getBoundarySegment({ start, end: event.coordinate, hint: pendingBorder.label });
+          } catch (error) {
+            throw new CzEaipParseError([`${name || "unnamed airspace"}: ${error instanceof Error ? error.message : String(error)}`]);
+          }
+          appendUniqueCoordinates(coordinates, resolution.coordinates);
+          resolutions.push(resolution);
+        }
+        pendingBorder = null;
       } else {
-        coordinates.push(event.coordinate);
+        appendUniqueCoordinates(coordinates, [event.coordinate]);
       }
     } else if (event.kind === "arc") {
-      if (pendingArc) throw new CzEaipParseError([`Consecutive arcs are not supported in ${name || "unnamed airspace"}`]);
+      if (pendingArc || pendingBorder) throw new CzEaipParseError([`Consecutive or unterminated boundary constructs are not supported in ${name || "unnamed airspace"}`]);
       pendingArc = event.arc;
-      arcCount += 1;
+    } else {
+      if (pendingArc || pendingBorder || !coordinates.length) throw new CzEaipParseError([`Malformed state-boundary construct in ${name || "unnamed airspace"}`]);
+      pendingBorder = event.border;
     }
   }
   if (pendingArc) throw new CzEaipParseError([`Arc in ${name || "unnamed airspace"} has no end point`]);
+  if (pendingBorder) throw new CzEaipParseError([`State boundary in ${name || "unnamed airspace"} has no end point`]);
   if (coordinates.length > 1 && coordinates[0][0] === coordinates.at(-1)?.[0] && coordinates[0][1] === coordinates.at(-1)?.[1]) {
     // The source already closes the ring.
   } else if (coordinates.length >= 3) {
     coordinates.push(coordinates[0]);
   }
+  boundary.polygons = coordinates.length >= 3 ? polygonizeBoundaryWalk(coordinates) : [];
+  boundary.directGeometry = boundary.polygons.length > 0;
+  boundary.boundaryResolutions = resolutions;
+}
+
+function appendUniqueCoordinates(target: Coordinate[], coordinates: Coordinate[]): void {
+  for (const coordinate of coordinates) {
+    const previous = target.at(-1);
+    if (!previous || previous[0] !== coordinate[0] || previous[1] !== coordinate[1]) target.push(coordinate);
+  }
+}
+
+function properSegmentIntersection(a: Coordinate, b: Coordinate, c: Coordinate, d: Coordinate): { point: Coordinate; firstFraction: number; secondFraction: number } | null {
+  const firstX = b[0] - a[0];
+  const firstY = b[1] - a[1];
+  const secondX = d[0] - c[0];
+  const secondY = d[1] - c[1];
+  const denominator = firstX * secondY - firstY * secondX;
+  if (Math.abs(denominator) < 1e-12) return null;
+  const offsetX = c[0] - a[0];
+  const offsetY = c[1] - a[1];
+  const firstFraction = (offsetX * secondY - offsetY * secondX) / denominator;
+  const secondFraction = (offsetX * firstY - offsetY * firstX) / denominator;
+  const epsilon = 1e-10;
+  if (firstFraction <= epsilon || firstFraction >= 1 - epsilon || secondFraction <= epsilon || secondFraction >= 1 - epsilon) return null;
   return {
-    polygons: coordinates.length >= 3 ? [coordinates] : [],
-    directGeometry: coordinates.length >= 3,
-    arcCount,
-    borderNames: [...new Set(borderNames)],
-    lateralReference,
-    constituentReferences,
+    point: [a[0] + firstX * firstFraction, a[1] + firstY * firstFraction],
+    firstFraction,
+    secondFraction,
   };
+}
+
+function pointAlongSegment(start: Coordinate, end: Coordinate, fraction: number): Coordinate {
+  return [start[0] + (end[0] - start[0]) * fraction, start[1] + (end[1] - start[1]) * fraction];
+}
+
+function boundaryPathSlice(ring: Coordinate[], startSegment: number, startFraction: number, endSegment: number, endFraction: number): Coordinate[] {
+  const segmentCount = ring.length - 1;
+  const result = [pointAlongSegment(ring[startSegment], ring[startSegment + 1], startFraction)];
+  const steps = (endSegment - startSegment + segmentCount) % segmentCount;
+  for (let step = 1; step <= steps; step += 1) {
+    result.push(ring[(startSegment + step) % segmentCount]);
+  }
+  result.push(pointAlongSegment(ring[endSegment], ring[endSegment + 1], endFraction));
+  appendUniqueCoordinates(result, [result[0]]);
+  return result;
+}
+
+function firstBoundaryIntersection(ring: Coordinate[]): { firstSegment: number; secondSegment: number; firstFraction: number; secondFraction: number } | null {
+  const segmentCount = ring.length - 1;
+  for (let first = 0; first < segmentCount; first += 1) {
+    for (let second = first + 1; second < segmentCount; second += 1) {
+      if (second === first + 1 || (first === 0 && second === segmentCount - 1)) continue;
+      const intersection = properSegmentIntersection(ring[first], ring[first + 1], ring[second], ring[second + 1]);
+      if (intersection) return { firstSegment: first, secondSegment: second, ...intersection };
+    }
+  }
+  return null;
+}
+
+function polygonizeBoundaryWalk(ring: Coordinate[]): Coordinate[][] {
+  const pending = [ring];
+  const polygons: Coordinate[][] = [];
+  let splitCount = 0;
+  while (pending.length) {
+    const current = pending.pop()!;
+    const intersection = firstBoundaryIntersection(current);
+    if (!intersection) {
+      polygons.push(current);
+      continue;
+    }
+    splitCount += 1;
+    if (splitCount > 32) throw new CzEaipParseError(["Boundary walk contains too many self-intersections to polygonize safely"]);
+    pending.push(
+      boundaryPathSlice(current, intersection.firstSegment, intersection.firstFraction, intersection.secondSegment, intersection.secondFraction),
+      boundaryPathSlice(current, intersection.secondSegment, intersection.secondFraction, intersection.firstSegment, intersection.firstFraction),
+    );
+  }
+  return polygons.filter((polygon) => polygon.length >= 4);
 }
 
 function parseAltitude(value: string | null, unit: string | null, code: string | null, boundary: "lower" | "upper"): ImportAltitude | null {
@@ -353,10 +483,46 @@ function validatePolygon(name: string, polygon: Coordinate[]): string | null {
   for (let first = 0; first < polygon.length - 1; first += 1) {
     for (let second = first + 1; second < polygon.length - 1; second += 1) {
       if (second === first + 1 || (first === 0 && second === polygon.length - 2)) continue;
-      if (segmentIntersects(polygon[first], polygon[first + 1], polygon[second], polygon[second + 1])) return `${name} has self-intersecting geometry`;
+      if (segmentIntersects(polygon[first], polygon[first + 1], polygon[second], polygon[second + 1])) {
+        return `${name} has self-intersecting geometry`;
+      }
     }
   }
   return null;
+}
+
+function polygonMetric(polygon: Coordinate[]): CzPolygonMetric {
+  const latitudes = polygon.map((coordinate) => coordinate[1]);
+  const longitudes = polygon.map((coordinate) => coordinate[0]);
+  const meanLatitude = latitudes.reduce((sum, latitude) => sum + latitude, 0) / latitudes.length;
+  let areaDegrees = 0;
+  for (let index = 0; index < polygon.length - 1; index += 1) areaDegrees += polygon[index][0] * polygon[index + 1][1] - polygon[index + 1][0] * polygon[index][1];
+  const longitudeKm = 111.320 * Math.cos(meanLatitude * Math.PI / 180);
+  const maxSegmentKm = polygon.slice(1).reduce((maximum, coordinate, index) => {
+    const start = polygon[index];
+    const latitudeDelta = (coordinate[1] - start[1]) * Math.PI / 180;
+    const longitudeDelta = (coordinate[0] - start[0]) * Math.PI / 180;
+    const startLatitude = start[1] * Math.PI / 180;
+    const endLatitude = coordinate[1] * Math.PI / 180;
+    const haversine = Math.sin(latitudeDelta / 2) ** 2 + Math.cos(startLatitude) * Math.cos(endLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+    const distance = 2 * 6371.0088 * Math.asin(Math.sqrt(Math.min(1, haversine)));
+    return Math.max(maximum, distance);
+  }, 0);
+  return {
+    vertexCount: polygon.length,
+    areaSquareKm: Math.abs(areaDegrees / 2) * longitudeKm * 110.574,
+    maxSegmentKm,
+    boundingBox: {
+      west: Math.min(...longitudes),
+      south: Math.min(...latitudes),
+      east: Math.max(...longitudes),
+      north: Math.max(...latitudes),
+    },
+  };
+}
+
+function polygonMetrics(polygons: Coordinate[][]): CzPolygonMetric[] {
+  return polygons.map(polygonMetric);
 }
 
 function publicationName(publication: CzPublicationMetadata): string {
@@ -376,7 +542,34 @@ function parseRows($: CheerioAPI): ParsedRow[] {
   return table.find("tbody > tr").toArray().map((row) => parseRow($, $(row))).filter((row): row is ParsedRow => row !== null);
 }
 
-export function parseCzEaipEnr21(html: string, options: { publicationHtml?: string; lastVerifiedAt?: string } = {}): CzEaipParseResult {
+function sameAltitude(left: ImportAltitude | null, right: ImportAltitude | null): boolean {
+  return left === right;
+}
+
+/**
+ * Some AIP aggregate rows carry the common vertical limits while a concrete
+ * PART row omits them. Inherit only a unanimous complete limit pair from the
+ * aggregate's explicitly named concrete siblings; never infer from sector
+ * names or from unrelated rows.
+ */
+function inheritLogicalVerticalLimits(rows: ParsedRow[]): void {
+  const byName = new Map(rows.map((row) => [row.name, row]));
+  for (const aggregate of rows.filter((row) => row.boundary.constituentReferences.length > 0)) {
+    const parts = aggregate.boundary.constituentReferences
+      .map((reference) => byName.get(reference))
+      .filter((row): row is ParsedRow => row !== undefined);
+    const completeParts = parts.filter((part) => part.lowerAltitude !== null && part.upperAltitude !== null);
+    if (!completeParts.length) continue;
+    const reference = completeParts[0];
+    if (!completeParts.every((part) => sameAltitude(part.lowerAltitude, reference.lowerAltitude) && sameAltitude(part.upperAltitude, reference.upperAltitude))) continue;
+    for (const part of parts) {
+      part.lowerAltitude ??= reference.lowerAltitude;
+      part.upperAltitude ??= reference.upperAltitude;
+    }
+  }
+}
+
+export function parseCzEaipEnr21(html: string, options: { publicationHtml?: string; lastVerifiedAt?: string; stateBoundaryProvider?: StateBoundaryProvider } = {}): CzEaipParseResult {
   const $ = load(html, { xmlMode: true });
   const effectiveDate = extractEffectiveDate($);
   const publicationDate = parseDateParts(metadataValue($, "DC.date"));
@@ -395,50 +588,54 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
   for (const row of rows) classification[row.objectType] += 1;
   const accRows = rows.filter((row) => row.objectType === "ACC_OPERATIONAL_SECTOR");
   if (!accRows.length) throw new CzEaipParseError(["No PRAHA ACC operational sector rows were found"]);
+  inheritLogicalVerticalLimits(accRows);
+  for (const row of accRows) assembleBoundary(row.boundary, row.name, options.stateBoundaryProvider);
   const byName = new Map(accRows.map((row) => [row.name, row]));
   const diagnostics: CzEaipSectorDiagnostic[] = [];
   const accepted: AtcImportSector[] = [];
   const lastVerifiedAt = options.lastVerifiedAt ?? new Date().toISOString();
-  const sourceName = publicationName(publication);
+  const sourceName = `${publicationName(publication)}${options.stateBoundaryProvider ? " + ČÚZK Data50" : ""}`;
 
   for (const row of accRows) {
     if (row.boundary.constituentReferences.length) {
       row.skipReason = "aggregate sector row; constituent sectors are imported separately";
-    } else if (row.boundary.borderNames.length) {
-      row.skipReason = `state-border segment has no explicit geometry in ENR 2.1 (${row.boundary.borderNames.join(", ")})`;
+    } else if (row.boundary.borderSegments.length && !options.stateBoundaryProvider) {
+      row.skipReason = `state-border segment requires authoritative geometry (${row.boundary.borderNames.join(", ")})`;
     } else if (!row.boundary.directGeometry && row.boundary.lateralReference) {
       const target = byName.get(row.boundary.lateralReference);
       if (!target) row.skipReason = `lateral geometry reference not found: ${row.boundary.lateralReference}`;
-      else if (target.boundary.borderNames.length || !target.boundary.directGeometry) row.skipReason = `lateral geometry reference is unsupported: ${row.boundary.lateralReference}`;
-      else row.boundary.polygons = target.boundary.polygons;
+      else if (!target.boundary.directGeometry) row.skipReason = `lateral geometry reference is unsupported: ${row.boundary.lateralReference}`;
+      else {
+        row.boundary.polygons = target.boundary.polygons;
+        row.boundary.boundaryResolutions = target.boundary.boundaryResolutions;
+      }
     } else if (!row.boundary.directGeometry) {
       row.skipReason = "missing explicit or resolvable lateral geometry";
     }
-    if (!row.skipReason && !row.lowerAltitude) row.skipReason = "missing lower vertical limit";
-    if (!row.skipReason && !row.upperAltitude) row.skipReason = "missing upper vertical limit";
+    if (!row.skipReason && row.lowerAltitude === null) row.skipReason = "missing lower vertical limit";
+    if (!row.skipReason && row.upperAltitude === null) row.skipReason = "missing upper vertical limit";
     if (!row.skipReason && row.primaryFrequencyMhz === null) row.skipReason = "missing primary frequency";
     if (!row.skipReason) {
-      const geometryIssue = validatePolygon(row.name, row.boundary.polygons[0]);
+      const geometryIssue = row.boundary.polygons.map((polygon) => validatePolygon(row.name, polygon)).find((issue): issue is string => issue !== null);
       if (geometryIssue) row.skipReason = geometryIssue;
     }
     if (row.skipReason) {
-      diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "skipped", reason: row.skipReason });
+      diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "skipped", reason: row.skipReason, boundaryResolutions: row.boundary.boundaryResolutions, polygonMetrics: polygonMetrics(row.boundary.polygons) });
       continue;
     }
-    const polygon = row.boundary.polygons[0];
     accepted.push({
       id: row.stableId!,
       name: row.name,
       atcCallsign: row.callsign,
       service: "ACC",
       country: "CZ",
-      polygons: [polygon],
+      polygons: row.boundary.polygons,
       lowerAltitude: row.lowerAltitude,
       upperAltitude: row.upperAltitude,
       primaryFrequencyMhz: row.primaryFrequencyMhz,
       alternateFrequencies: row.frequencies.filter((frequency) => frequency.frequencyMhz !== row.primaryFrequencyMhz || frequency.label === "Reserve"),
     });
-    diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "accepted" });
+    diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "accepted", boundaryResolutions: row.boundary.boundaryResolutions, polygonMetrics: polygonMetrics(row.boundary.polygons) });
   }
 
   if (!accepted.length) throw new CzEaipParseError(["No valid PRAHA ACC operational sector geometry was produced", ...accRows.map((row) => `${row.name}: ${row.skipReason ?? "unknown parser rejection"}`)]);
@@ -446,7 +643,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
   return {
     document: {
       schemaVersion: 1,
-      source: { name: sourceName, reference: CZ_EAIP_ENR21_URL, effectiveDate, lastVerifiedAt },
+      source: { name: sourceName, reference: options.stateBoundaryProvider ? CZ_ATC_SOURCE_REFERENCE : CZ_EAIP_ENR21_URL, effectiveDate, lastVerifiedAt },
       sectors: accepted,
       transmitters: [],
     },

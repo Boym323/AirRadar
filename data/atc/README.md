@@ -64,11 +64,19 @@ npm run atc:status:cz
 
 The sync accepts only concrete `PRAHA ACC` / `PRAHA RADAR` operational
 sectors. FIR/CTA/TMA/FIC rows and aggregate sector rows are classified but are
-not imported. `CWA`/`CCA` arcs are deterministically densified. A state-border
-segment without explicit authoritative geometry is reported as unsupported;
-the production sync fails before the transaction rather than inventing a
-boundary. Generated snapshots and downloaded source files are not committed;
-the current official dataset belongs in PostgreSQL after an explicit sync.
+not imported. `CWA`/`CCA` arcs are deterministically densified. AIP remains
+the source of ATC semantics; when it marks a side as a state boundary, the
+sync obtains the missing WGS84 polyline from the official [ČÚZK Data50
+service](https://ags.cuzk.gov.cz/arcgis/rest/services/DATA50/MapServer),
+using its [official metadata](https://geoportal.gov.cz/php/micka/record/basic/CZ-CUZK-DATA50-V?dlang=eng).
+The process-local provider fetches Data50 once per sync, snaps only within a
+bounded tolerance, joins connected state/tripoint features, and rejects
+ambiguous, disconnected or self-intersecting results. There is no straight
+line fallback; intersecting AIP/Data50 walks are split into validated rings,
+never repaired with a guessed line. Data50 attribution is [ČÚZK Data50, CC BY
+4.0](https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx). Generated
+snapshots and downloaded source files are not committed; the current official
+dataset belongs in PostgreSQL only after an explicit, fully validated sync.
 
 The template file in this directory is documentation only and contains no
 operational Czech sector or frequency data.

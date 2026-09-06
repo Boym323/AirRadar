@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   const database = createAtcDatabase();
   const rows = database ? await existingAtcRows(database) : null;
   const importedDates = rows?.sectors
-    .filter((sector) => sector.sourceReference === CZ_EAIP_ENR21_URL)
+    .filter((sector) => sector.sourceReference.startsWith(CZ_EAIP_ENR21_URL))
     .map((sector) => dateOnly(sector.validFrom))
     .filter((date): date is string => date !== null) ?? [];
   const databaseEffectiveDate = importedDates.sort().at(-1) ?? null;

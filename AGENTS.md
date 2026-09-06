@@ -105,7 +105,10 @@ Generated files under `generated/` are outputs, not the database schema source o
   provenance; `data/atc/` and `npm run atc:import` are the import workflow
   sources.
 - Czech production ACC ATC data is derived from the official AIM/eAIP source
-  through the explicit sync pipeline; it is not a runtime dependency.
+  through the explicit sync pipeline; it is not a runtime dependency. AIP
+  supplies ATC semantics and ČÚZK Data50 supplies only reconstructed state-
+  boundary geometry; unresolved or invalid geometry fails before the import
+  transaction.
 - Public APIs must not expose exact receiver coordinates unless explicitly
   configured; internal receiver coordinates remain exact for calculations.
 - Public DTOs must not contain secrets, raw provider errors, or other internal
