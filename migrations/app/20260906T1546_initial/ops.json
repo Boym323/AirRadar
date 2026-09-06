@@ -1,0 +1,853 @@
+[
+  {
+    "id": "schema.public",
+    "label": "Create schema \"public\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create schema \"public\"",
+        "sql": "CREATE SCHEMA IF NOT EXISTS \"public\"",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "table.aircraft",
+    "label": "Create table \"aircraft\"",
+    "summary": "Creates table \"aircraft\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "aircraft"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"aircraft\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraft\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"aircraft\"",
+        "sql": "CREATE TABLE \"public\".\"aircraft\" (\n  \"aircraftType\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"icaoHex\" text NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"manufacturer\" text,\n  \"model\" text,\n  \"operator\" text,\n  \"registration\" text,\n  \"registrationCountry\" text,\n  \"registrationCountryCode\" text,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"aircraft\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraft\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.airport",
+    "label": "Create table \"airport\"",
+    "summary": "Creates table \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"airport\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"airport\"",
+        "sql": "CREATE TABLE \"public\".\"airport\" (\n  \"city\" text,\n  \"country\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"iata\" text,\n  \"icao\" text NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"latitude\" float8 NOT NULL,\n  \"longitude\" float8 NOT NULL,\n  \"name\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"airport\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.atcSector",
+    "label": "Create table \"atcSector\"",
+    "summary": "Creates table \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"atcSector\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcSector\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"atcSector\"",
+        "sql": "CREATE TABLE \"public\".\"atcSector\" (\n  \"alternateFrequenciesJson\" text,\n  \"atcCallsign\" text,\n  \"country\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"lowerAltitudeFt\" int4,\n  \"name\" text NOT NULL,\n  \"polygonJson\" text NOT NULL,\n  \"primaryFrequencyMhz\" float8,\n  \"service\" text,\n  \"source\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"upperAltitudeFt\" int4,\n  \"validFrom\" timestamptz,\n  \"validTo\" timestamptz,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"atcSector\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcSector\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.atcTransmitter",
+    "label": "Create table \"atcTransmitter\"",
+    "summary": "Creates table \"atcTransmitter\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "atcTransmitter"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"atcTransmitter\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcTransmitter\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"atcTransmitter\"",
+        "sql": "CREATE TABLE \"public\".\"atcTransmitter\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"frequencyMhz\" float8 NOT NULL,\n  \"id\" text NOT NULL,\n  \"latitude\" float8 NOT NULL,\n  \"longitude\" float8 NOT NULL,\n  \"name\" text NOT NULL,\n  \"notes\" text,\n  \"service\" text,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"atcTransmitter\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcTransmitter\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.flight",
+    "label": "Create table \"flight\"",
+    "summary": "Creates table \"flight\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "flight"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"flight\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"flight\"",
+        "sql": "CREATE TABLE \"public\".\"flight\" (\n  \"aircraftId\" int4 NOT NULL,\n  \"aircraftType\" text,\n  \"airline\" text,\n  \"callsign\" text,\n  \"destination\" text,\n  \"endTime\" timestamptz,\n  \"id\" SERIAL NOT NULL,\n  \"instanceKey\" text NOT NULL,\n  \"lastSeenAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"maxAltitude\" int4,\n  \"minDistanceKm\" float8,\n  \"origin\" text,\n  \"registration\" text,\n  \"startTime\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"flight\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.flightPosition",
+    "label": "Create table \"flightPosition\"",
+    "summary": "Creates table \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"flightPosition\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightPosition\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"flightPosition\"",
+        "sql": "CREATE TABLE \"public\".\"flightPosition\" (\n  \"altitude\" int4,\n  \"flightId\" int4 NOT NULL,\n  \"groundSpeed\" float8,\n  \"id\" SERIAL NOT NULL,\n  \"lat\" float8 NOT NULL,\n  \"lon\" float8 NOT NULL,\n  \"recordedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"track\" float8,\n  \"verticalRate\" int4,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"flightPosition\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightPosition\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.aircraft.aircraft_icaoHex_key",
+    "label": "Add unique constraint on \"aircraft\" (icaoHex)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "aircraft_icaoHex_key",
+        "table": "aircraft"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"aircraft_icaoHex_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "aircraft_icaoHex_key",
+          "public",
+          "\"public\".\"aircraft\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"aircraft_icaoHex_key\"",
+        "sql": "ALTER TABLE \"public\".\"aircraft\" ADD CONSTRAINT \"aircraft_icaoHex_key\" UNIQUE (\"icaoHex\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"aircraft_icaoHex_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "aircraft_icaoHex_key",
+          "public",
+          "\"public\".\"aircraft\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.airport.airport_icao_key",
+    "label": "Add unique constraint on \"airport\" (icao)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "airport_icao_key",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"airport_icao_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airport_icao_key",
+          "public",
+          "\"public\".\"airport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"airport_icao_key\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD CONSTRAINT \"airport_icao_key\" UNIQUE (\"icao\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"airport_icao_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airport_icao_key",
+          "public",
+          "\"public\".\"airport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.flight.flight_instanceKey_key",
+    "label": "Add unique constraint on \"flight\" (instanceKey)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "flight_instanceKey_key",
+        "table": "flight"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"flight_instanceKey_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "flight_instanceKey_key",
+          "public",
+          "\"public\".\"flight\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"flight_instanceKey_key\"",
+        "sql": "ALTER TABLE \"public\".\"flight\" ADD CONSTRAINT \"flight_instanceKey_key\" UNIQUE (\"instanceKey\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"flight_instanceKey_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "flight_instanceKey_key",
+          "public",
+          "\"public\".\"flight\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.airport.airport_country_idx_c3994778",
+    "label": "Create index \"airport_country_idx_c3994778\" on \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "airport_country_idx_c3994778",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"airport_country_idx_c3994778\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airport_country_idx_c3994778\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"airport_country_idx_c3994778\"",
+        "sql": "CREATE INDEX \"airport_country_idx_c3994778\" ON \"public\".\"airport\" (\"country\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"airport_country_idx_c3994778\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airport_country_idx_c3994778\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.airport.airport_iata_idx_824cf92a",
+    "label": "Create index \"airport_iata_idx_824cf92a\" on \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "airport_iata_idx_824cf92a",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"airport_iata_idx_824cf92a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airport_iata_idx_824cf92a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"airport_iata_idx_824cf92a\"",
+        "sql": "CREATE INDEX \"airport_iata_idx_824cf92a\" ON \"public\".\"airport\" (\"iata\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"airport_iata_idx_824cf92a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airport_iata_idx_824cf92a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.atcSector.atcSector_country_idx_c3994778",
+    "label": "Create index \"atcSector_country_idx_c3994778\" on \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "atcSector_country_idx_c3994778",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"atcSector_country_idx_c3994778\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcSector_country_idx_c3994778\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"atcSector_country_idx_c3994778\"",
+        "sql": "CREATE INDEX \"atcSector_country_idx_c3994778\" ON \"public\".\"atcSector\" (\"country\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"atcSector_country_idx_c3994778\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcSector_country_idx_c3994778\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.atcSector.atcSector_validFrom_validTo_idx_705b270a",
+    "label": "Create index \"atcSector_validFrom_validTo_idx_705b270a\" on \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "atcSector_validFrom_validTo_idx_705b270a",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"atcSector_validFrom_validTo_idx_705b270a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcSector_validFrom_validTo_idx_705b270a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"atcSector_validFrom_validTo_idx_705b270a\"",
+        "sql": "CREATE INDEX \"atcSector_validFrom_validTo_idx_705b270a\" ON \"public\".\"atcSector\" (\"validFrom\", \"validTo\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"atcSector_validFrom_validTo_idx_705b270a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"atcSector_validFrom_validTo_idx_705b270a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.flight.flight_aircraftId_endTime_lastSeenAt_idx_ae25d43c",
+    "label": "Create index \"flight_aircraftId_endTime_lastSeenAt_idx_ae25d43c\" on \"flight\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flight_aircraftId_endTime_lastSeenAt_idx_ae25d43c",
+        "table": "flight"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flight_aircraftId_endTime_lastSeenAt_idx_ae25d43c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_aircraftId_endTime_lastSeenAt_idx_ae25d43c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flight_aircraftId_endTime_lastSeenAt_idx_ae25d43c\"",
+        "sql": "CREATE INDEX \"flight_aircraftId_endTime_lastSeenAt_idx_ae25d43c\" ON \"public\".\"flight\" (\"aircraftId\", \"endTime\", \"lastSeenAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flight_aircraftId_endTime_lastSeenAt_idx_ae25d43c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_aircraftId_endTime_lastSeenAt_idx_ae25d43c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.flight.flight_aircraftId_idx_4bc2d770",
+    "label": "Create index \"flight_aircraftId_idx_4bc2d770\" on \"flight\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flight_aircraftId_idx_4bc2d770",
+        "table": "flight"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flight_aircraftId_idx_4bc2d770\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_aircraftId_idx_4bc2d770\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flight_aircraftId_idx_4bc2d770\"",
+        "sql": "CREATE INDEX \"flight_aircraftId_idx_4bc2d770\" ON \"public\".\"flight\" (\"aircraftId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flight_aircraftId_idx_4bc2d770\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_aircraftId_idx_4bc2d770\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.flight.flight_aircraftId_startTime_idx_df9cbc5e",
+    "label": "Create index \"flight_aircraftId_startTime_idx_df9cbc5e\" on \"flight\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flight_aircraftId_startTime_idx_df9cbc5e",
+        "table": "flight"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flight_aircraftId_startTime_idx_df9cbc5e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_aircraftId_startTime_idx_df9cbc5e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flight_aircraftId_startTime_idx_df9cbc5e\"",
+        "sql": "CREATE INDEX \"flight_aircraftId_startTime_idx_df9cbc5e\" ON \"public\".\"flight\" (\"aircraftId\", \"startTime\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flight_aircraftId_startTime_idx_df9cbc5e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_aircraftId_startTime_idx_df9cbc5e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.flightPosition.flightPosition_flightId_idx_7ef5148f",
+    "label": "Create index \"flightPosition_flightId_idx_7ef5148f\" on \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flightPosition_flightId_idx_7ef5148f",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flightPosition_flightId_idx_7ef5148f\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightPosition_flightId_idx_7ef5148f\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flightPosition_flightId_idx_7ef5148f\"",
+        "sql": "CREATE INDEX \"flightPosition_flightId_idx_7ef5148f\" ON \"public\".\"flightPosition\" (\"flightId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flightPosition_flightId_idx_7ef5148f\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightPosition_flightId_idx_7ef5148f\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.flightPosition.flightPosition_flightId_recordedAt_idx_750175c0",
+    "label": "Create index \"flightPosition_flightId_recordedAt_idx_750175c0\" on \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flightPosition_flightId_recordedAt_idx_750175c0",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flightPosition_flightId_recordedAt_idx_750175c0\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightPosition_flightId_recordedAt_idx_750175c0\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flightPosition_flightId_recordedAt_idx_750175c0\"",
+        "sql": "CREATE INDEX \"flightPosition_flightId_recordedAt_idx_750175c0\" ON \"public\".\"flightPosition\" (\"flightId\", \"recordedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flightPosition_flightId_recordedAt_idx_750175c0\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightPosition_flightId_recordedAt_idx_750175c0\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.flightPosition.flightPosition_recordedAt_idx_fd5b4732",
+    "label": "Create index \"flightPosition_recordedAt_idx_fd5b4732\" on \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flightPosition_recordedAt_idx_fd5b4732",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flightPosition_recordedAt_idx_fd5b4732\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightPosition_recordedAt_idx_fd5b4732\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flightPosition_recordedAt_idx_fd5b4732\"",
+        "sql": "CREATE INDEX \"flightPosition_recordedAt_idx_fd5b4732\" ON \"public\".\"flightPosition\" (\"recordedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flightPosition_recordedAt_idx_fd5b4732\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightPosition_recordedAt_idx_fd5b4732\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.flight.flight_aircraftId_fkey",
+    "label": "Add foreign key \"flight_aircraftId_fkey\" on \"flight\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "flight_aircraftId_fkey",
+        "table": "flight"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"flight_aircraftId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "flight_aircraftId_fkey",
+          "public",
+          "\"public\".\"flight\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"flight_aircraftId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"flight\"\nADD CONSTRAINT \"flight_aircraftId_fkey\"\nFOREIGN KEY (\"aircraftId\")\nREFERENCES \"public\".\"aircraft\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"flight_aircraftId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "flight_aircraftId_fkey",
+          "public",
+          "\"public\".\"flight\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.flightPosition.flightPosition_flightId_fkey",
+    "label": "Add foreign key \"flightPosition_flightId_fkey\" on \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "flightPosition_flightId_fkey",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"flightPosition_flightId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "flightPosition_flightId_fkey",
+          "public",
+          "\"public\".\"flightPosition\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"flightPosition_flightId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"flightPosition\"\nADD CONSTRAINT \"flightPosition_flightId_fkey\"\nFOREIGN KEY (\"flightId\")\nREFERENCES \"public\".\"flight\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"flightPosition_flightId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "flightPosition_flightId_fkey",
+          "public",
+          "\"public\".\"flightPosition\""
+        ]
+      }
+    ]
+  }
+]
