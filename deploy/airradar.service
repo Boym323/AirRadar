@@ -1,0 +1,22 @@
+[Unit]
+Description=AirRadar personal ADS-B radar
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=airradar
+Group=airradar
+WorkingDirectory=/var/www/airradar
+EnvironmentFile=/var/www/airradar/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

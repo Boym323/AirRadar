@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Aircraft {
+  id           Int      @id @default(autoincrement())
+  icaoHex      String   @unique
+  registration String?
+  aircraftType String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  flights      Flight[]
+}
+
+model Flight {
+  id         Int              @id @default(autoincrement())
+  aircraftId Int
+  callsign   String?
+  startTime  DateTime         @default(now())
+  endTime    DateTime?
+  aircraft   Aircraft         @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
+  positions  FlightPosition[]
+
+  @@index([aircraftId, startTime])
+}
+
+model FlightPosition {
+  id           Int      @id @default(autoincrement())
+  flightId     Int
+  recordedAt   DateTime @default(now())
+  lat          Float
+  lon          Float
+  altitude     Int?
+  groundSpeed  Float?
+  track        Float?
+  verticalRate Int?
+  flight       Flight   @relation(fields: [flightId], references: [id], onDelete: Cascade)
+
+  @@index([flightId, recordedAt])
+}
