@@ -17,7 +17,7 @@
     "build": "prisma contract emit && next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "prisma contract emit && tsc --noEmit",
+    "typecheck": "prisma contract emit && next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "prisma:generate": "prisma contract emit",

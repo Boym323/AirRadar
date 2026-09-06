@@ -8,7 +8,7 @@ export async function GET(_request: Request, context: { params: Promise<{ hex: s
   const normalizedHex = decodeURIComponent(hex).toUpperCase();
   const service = getAircraftStateService();
   await service.waitForReady();
-  const current = service.getSnapshot().aircraft.find((item) => item.icaoHex === normalizedHex) ?? null;
+  const current = service.getAircraft(normalizedHex);
   const history = await getAircraftHistory(normalizedHex, current);
   return Response.json({ icaoHex: normalizedHex, ...history }, { headers: { "Cache-Control": "no-store" } });
 }

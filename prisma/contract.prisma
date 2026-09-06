@@ -10,14 +10,17 @@ model Aircraft {
 
 model Flight {
   id         Int              @id @default(autoincrement())
+  instanceKey String          @unique
   aircraftId Int
   callsign   String?
   startTime  DateTime         @default(now())
+  lastSeenAt DateTime         @default(now())
   endTime    DateTime?
   aircraft   Aircraft         @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
   positions  FlightPosition[]
 
   @@index([aircraftId, startTime])
+  @@index([aircraftId, endTime, lastSeenAt])
 }
 
 model FlightPosition {
@@ -33,4 +36,5 @@ model FlightPosition {
   flight       Flight   @relation(fields: [flightId], references: [id], onDelete: Cascade)
 
   @@index([flightId, recordedAt])
+  @@index([recordedAt])
 }

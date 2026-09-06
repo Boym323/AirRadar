@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, StyleSpecification } from "maplibre-gl";
 import { circleCoordinates } from "@/lib/geo";
-import type { Aircraft, ReceiverPosition, StateSnapshot } from "@/lib/aircraft/types";
+import type { AircraftView, ReceiverPosition, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: "AirRadar receiver" };
 const EMPTY_SNAPSHOT: StateSnapshot = {
@@ -13,6 +13,9 @@ const EMPTY_SNAPSHOT: StateSnapshot = {
   receiver: DEMO_RECEIVER,
   fetchedAt: new Date(0).toISOString(),
   provider: "mock",
+  sourceOnline: false,
+  lastSourceUpdate: null,
+  sourceError: null,
   readsbOnline: false,
   lastReadsbUpdate: null,
   lastError: null,
@@ -61,7 +64,7 @@ function formatTime(value: string | null): string {
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-function labelForAircraft(aircraft: Aircraft): string {
+function labelForAircraft(aircraft: AircraftView): string {
   return aircraft.callsign || aircraft.registration || aircraft.icaoHex;
 }
 
@@ -104,6 +107,7 @@ export function AirRadarApp() {
   const receiverMarkerRef = useRef<maplibregl.Marker | null>(null);
   const aircraftMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const animationFramesRef = useRef<Map<string, number>>(new Map());
+  const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const receiverRef = useRef(snapshot.receiver);
   const [mapReady, setMapReady] = useState(false);
 
@@ -119,6 +123,19 @@ export function AirRadarApp() {
       try {
         const next = JSON.parse((event as MessageEvent<string>).data) as StateSnapshot;
         if (active) {
+          const currentHexes = new Set(next.aircraft.map((aircraft) => aircraft.icaoHex));
+          for (const hex of liveTrailsRef.current.keys()) {
+            if (!currentHexes.has(hex)) liveTrailsRef.current.delete(hex);
+          }
+          for (const aircraft of next.aircraft) {
+            if (aircraft.lat === null || aircraft.lon === null) continue;
+            const trail = liveTrailsRef.current.get(aircraft.icaoHex) ?? [];
+            const previous = trail[trail.length - 1];
+            if (!previous || Math.abs(previous.lat - aircraft.lat) > 0.00001 || Math.abs(previous.lon - aircraft.lon) > 0.00001) {
+              trail.push({ lat: aircraft.lat, lon: aircraft.lon, recordedAt: aircraft.lastSeen });
+              liveTrailsRef.current.set(aircraft.icaoHex, trail.slice(-80));
+            }
+          }
           setSnapshot(next);
           setStreamConnected(true);
         }
@@ -152,6 +169,7 @@ export function AirRadarApp() {
     mapRef.current = map;
     const animationFrames = animationFramesRef.current;
     const aircraftMarkers = aircraftMarkersRef.current;
+    const liveTrails = liveTrailsRef.current;
 
     const receiverElement = document.createElement("div");
     receiverElement.className = "receiver-marker";
@@ -180,6 +198,7 @@ export function AirRadarApp() {
       receiverMarkerRef.current = null;
       for (const marker of aircraftMarkers.values()) marker.remove();
       aircraftMarkers.clear();
+      liveTrails.clear();
       map.remove();
       mapRef.current = null;
       setMapReady(false);
@@ -261,9 +280,10 @@ export function AirRadarApp() {
     }
 
     const selected = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex);
+    const selectedTrail = selectedHex ? liveTrailsRef.current.get(selectedHex) : null;
     const trailSource = map.getSource("selected-trail") as GeoJSONSource | undefined;
-    trailSource?.setData(selected && selected.trail.length > 1
-      ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: selected.trail.map((point) => [point.lon, point.lat]) } }
+    trailSource?.setData(selected && selectedTrail && selectedTrail.length > 1
+      ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: selectedTrail.map((point) => [point.lon, point.lat]) } }
       : { type: "FeatureCollection", features: [] });
   }, [snapshot.aircraft, selectedHex, mapReady, selectAircraft]);
 
@@ -286,7 +306,7 @@ export function AirRadarApp() {
   }, [airborneOnly, altitudeFilter, distanceFilter, search, snapshot.aircraft, sortBy]);
 
   const isDemo = snapshot.provider === "mock";
-  const statusOffline = !isDemo && !snapshot.readsbOnline;
+  const statusOffline = !isDemo && !snapshot.sourceOnline;
 
   return (
     <main className="radar-shell">

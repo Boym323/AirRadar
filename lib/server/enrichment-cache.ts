@@ -1,0 +1,131 @@
+import type { Aircraft, AircraftEnrichment } from "@/lib/aircraft/types";
+import type { ProviderRegistry } from "@/lib/server/provider";
+
+export const ENRICHMENT_TTLS = {
+  metadataMs: 24 * 60 * 60_000,
+  metadataNegativeMs: 15 * 60_000,
+  routeMs: 6 * 60 * 60_000,
+  routeNegativeMs: 10 * 60_000,
+  flightPlanMs: 15 * 60_000,
+  flightPlanNegativeMs: 2 * 60_000,
+} as const;
+
+interface CacheEntry<T> {
+  value: T | null;
+  expiresAt: number;
+}
+
+interface CacheOptions {
+  ttlMs: number;
+  negativeTtlMs: number;
+}
+
+/** Small bounded TTL cache with negative caching and in-flight request coalescing. */
+export class ProviderCache {
+  private readonly entries = new Map<string, CacheEntry<unknown>>();
+  private readonly inFlight = new Map<string, Promise<unknown>>();
+
+  constructor(private readonly maxEntries = 10_000) {}
+
+  async get<T>(key: string, loader: () => Promise<T | null>, options: CacheOptions): Promise<T | null> {
+    const now = Date.now();
+    const cached = this.entries.get(key);
+    if (cached && cached.expiresAt > now) return cached.value as T | null;
+    if (cached) this.entries.delete(key);
+
+    const existing = this.inFlight.get(key);
+    if (existing) return existing as Promise<T | null>;
+
+    const request = loader()
+      .catch(() => null)
+      .then((value) => {
+        this.entries.set(key, {
+          value,
+          expiresAt: Date.now() + (value === null ? options.negativeTtlMs : options.ttlMs),
+        });
+        this.evictIfNeeded();
+        return value;
+      })
+      .finally(() => {
+        this.inFlight.delete(key);
+      });
+    this.inFlight.set(key, request);
+    return request;
+  }
+
+  clear(): void {
+    this.entries.clear();
+    this.inFlight.clear();
+  }
+
+  private evictIfNeeded(): void {
+    if (this.entries.size <= this.maxEntries) return;
+    const oldest = this.entries.keys().next().value;
+    if (oldest !== undefined) this.entries.delete(oldest);
+  }
+}
+
+function normalizeHex(hex: string): string {
+  return hex.trim().toUpperCase();
+}
+
+function normalizeCallsign(callsign: string): string {
+  return callsign.trim().toUpperCase();
+}
+
+function dayKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+export function metadataCacheKey(icaoHex: string): string {
+  return `aircraft-metadata:${normalizeHex(icaoHex)}`;
+}
+
+export function routeCacheKey(callsign: string, observedAt: Date): string {
+  return `flight-route:${normalizeCallsign(callsign)}:${dayKey(observedAt)}`;
+}
+
+export function flightPlanCacheKey(callsign: string, observedAt: Date): string {
+  return `flight-plan:${normalizeCallsign(callsign)}:${dayKey(observedAt)}`;
+}
+
+export class EnrichmentService {
+  constructor(
+    private readonly providers: ProviderRegistry,
+    private readonly cache = new ProviderCache(),
+  ) {}
+
+  get hasProviders(): boolean {
+    return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute || this.providers.flightPlan);
+  }
+
+  async enrich(aircraft: Aircraft, observedAt: Date): Promise<AircraftEnrichment | null> {
+    if (!this.hasProviders) return null;
+    const [metadata, route, flightPlan] = await Promise.all([
+      this.providers.aircraftMetadata
+        ? this.cache.get(metadataCacheKey(aircraft.icaoHex), () => this.providers.aircraftMetadata!.getMetadata(aircraft.icaoHex), {
+            ttlMs: ENRICHMENT_TTLS.metadataMs,
+            negativeTtlMs: ENRICHMENT_TTLS.metadataNegativeMs,
+          })
+        : Promise.resolve(null),
+      aircraft.callsign && this.providers.flightRoute
+        ? this.cache.get(routeCacheKey(aircraft.callsign, observedAt), () => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt), {
+            ttlMs: ENRICHMENT_TTLS.routeMs,
+            negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
+          })
+        : Promise.resolve(null),
+      aircraft.callsign && this.providers.flightPlan
+        ? this.cache.get(flightPlanCacheKey(aircraft.callsign, observedAt), () => this.providers.flightPlan!.getFlightPlan(aircraft.callsign!, observedAt), {
+            ttlMs: ENRICHMENT_TTLS.flightPlanMs,
+            negativeTtlMs: ENRICHMENT_TTLS.flightPlanNegativeMs,
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const enrichment: AircraftEnrichment = {};
+    if (metadata) enrichment.metadata = metadata;
+    if (route) enrichment.route = route;
+    if (flightPlan) enrichment.flightPlan = flightPlan;
+    return Object.keys(enrichment).length ? enrichment : null;
+  }
+}

@@ -1,6 +1,7 @@
 import { normalizeAircraftResponse, type RawReadsbAircraftResponse } from "@/lib/aircraft/normalize";
 import type { AircraftProvider } from "@/lib/server/provider";
 import type { ProviderSnapshot, ReceiverPosition } from "@/lib/aircraft/types";
+import { getReceiverRefreshIntervalMs } from "@/lib/server/config";
 
 function endpoint(baseUrl: string, path: string): string {
   const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -21,32 +22,37 @@ async function fetchJson<T>(url: string): Promise<T> {
 
 export class LocalReadsbProvider implements AircraftProvider {
   readonly name = "readsb" as const;
+  private currentReceiver: ReceiverPosition;
+  private lastReceiverCheckAt = 0;
 
   constructor(
     private readonly baseUrl: string,
-    private readonly receiver: ReceiverPosition,
-  ) {}
+    receiver: ReceiverPosition,
+  ) {
+    this.currentReceiver = receiver;
+  }
 
   async getSnapshot(): Promise<ProviderSnapshot> {
     const aircraftResponse = await fetchJson<RawReadsbAircraftResponse>(endpoint(this.baseUrl, "/data/aircraft.json"));
-    // receiver.json is optional in a few readsb deployments. The configured
-    // position remains authoritative if it is absent or has an invalid shape.
-    let receiver = this.receiver;
-    try {
-      const receiverResponse = await fetchJson<Record<string, unknown>>(endpoint(this.baseUrl, "/data/receiver.json"));
-      const lat = Number(receiverResponse.lat);
-      const lon = Number(receiverResponse.lon);
-      if (Number.isFinite(lat) && Number.isFinite(lon)) {
-        receiver = { ...this.receiver, lat, lon };
+    const now = Date.now();
+    if (now - this.lastReceiverCheckAt >= getReceiverRefreshIntervalMs()) {
+      this.lastReceiverCheckAt = now;
+      try {
+        const receiverResponse = await fetchJson<Record<string, unknown>>(endpoint(this.baseUrl, "/data/receiver.json"));
+        const lat = Number(receiverResponse.lat);
+        const lon = Number(receiverResponse.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          this.currentReceiver = { ...this.currentReceiver, lat, lon };
+        }
+      } catch {
+        // aircraft.json is enough to keep the radar alive.
       }
-    } catch {
-      // aircraft.json is enough to keep the radar alive.
     }
 
-    const fetchedAt = new Date().toISOString();
+    const fetchedAt = new Date(now).toISOString();
     return {
-      aircraft: normalizeAircraftResponse(aircraftResponse, receiver, new Date(fetchedAt)),
-      receiver,
+      aircraft: normalizeAircraftResponse(aircraftResponse, this.currentReceiver, new Date(fetchedAt)),
+      receiver: this.currentReceiver,
       fetchedAt,
       provider: "readsb",
     };

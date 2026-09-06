@@ -24,12 +24,18 @@ export async function GET(): Promise<Response> {
 
   const readsbStatus = snapshot.provider === "mock"
     ? "demo"
-    : snapshot.readsbOnline ? "ok" : "offline";
+    : snapshot.sourceOnline ? "ok" : "offline";
   const degraded = readsbStatus === "offline" || database.status === "offline";
   return Response.json({
     status: degraded ? "degraded" : "ok",
     application: { status: "ok", name: "AirRadar" },
     database,
+    source: {
+      status: readsbStatus,
+      provider: snapshot.provider,
+      lastUpdate: snapshot.lastSourceUpdate,
+      error: snapshot.sourceError,
+    },
     readsb: {
       status: readsbStatus,
       provider: snapshot.provider,

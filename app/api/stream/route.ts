@@ -13,28 +13,65 @@ export async function GET(request: Request): Promise<Response> {
   let closed = false;
   let heartbeat: ReturnType<typeof setInterval> | null = null;
   let unsubscribe: () => void = () => undefined;
+  let controllerRef: ReadableStreamDefaultController<Uint8Array> | null = null;
+  let pending: Uint8Array | null = null;
+
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    unsubscribe();
+    if (heartbeat) clearInterval(heartbeat);
+    heartbeat = null;
+    try {
+      controllerRef?.close();
+    } catch {
+      // The client may have cancelled the stream before the abort event arrived.
+    }
+  };
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
+      controllerRef = controller;
       const send = (snapshot: ReturnType<typeof service.getSnapshot>) => {
-        if (!closed) controller.enqueue(encoder.encode(event("snapshot", snapshot)));
+        if (closed) return;
+        const chunk = encoder.encode(event("snapshot", snapshot));
+        if ((controller.desiredSize ?? 0) > 0) {
+          try {
+            controller.enqueue(chunk);
+          } catch {
+            close();
+          }
+        } else {
+          // Keep only the newest snapshot for a slow client; never build an unbounded queue.
+          pending = chunk;
+        }
       };
       unsubscribe = service.subscribe(send);
       send(service.getSnapshot());
       heartbeat = setInterval(() => {
-        if (!closed) controller.enqueue(encoder.encode(": keep-alive\n\n"));
+        if (closed) return;
+        try {
+          if ((controller.desiredSize ?? 0) > 0) controller.enqueue(encoder.encode(": keep-alive\n\n"));
+        } catch {
+          close();
+        }
       }, 15000);
-      request.signal.addEventListener("abort", () => {
-        closed = true;
-        unsubscribe();
-        if (heartbeat) clearInterval(heartbeat);
-        controller.close();
-      });
+      request.signal.addEventListener("abort", close, { once: true });
+      if (request.signal.aborted) close();
+    },
+    pull(controller) {
+      if (!closed && pending && (controller.desiredSize ?? 0) > 0) {
+        const chunk = pending;
+        pending = null;
+        try {
+          controller.enqueue(chunk);
+        } catch {
+          close();
+        }
+      }
     },
     cancel() {
-      closed = true;
-      unsubscribe();
-      if (heartbeat) clearInterval(heartbeat);
+      close();
     },
   });
 

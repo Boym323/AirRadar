@@ -30,7 +30,7 @@ The polling loop retries automatically. If readsb goes away, the UI and API stay
 
 ## PostgreSQL and Prisma
 
-Live state is never written on every ADS-B update. The state service samples each aircraft at the configured interval (20 seconds by default) and stores `Aircraft`, `Flight`, and `FlightPosition` records.
+Live state is never written on every ADS-B update. The state service samples each aircraft at the configured interval (20 seconds by default), writes positions with bounded concurrency, and stores `Aircraft`, `Flight`, and `FlightPosition` records. `HISTORY_RETENTION_DAYS` (30 by default) removes old position samples periodically.
 
 The project uses the Prisma 8 contract-based PostgreSQL workflow. `prisma/contract.prisma` is the source of truth, `prisma.config.ts` defines the PostgreSQL target, and `generated/prisma8/` contains generated runtime contract artifacts. The checked-in migration lives under `migrations/app/`.
 
@@ -84,6 +84,12 @@ Configure Nginx Proxy Manager to proxy the public hostname to `127.0.0.1:3000` a
 
 ## Architecture
 
-The browser talks only to AirRadar APIs. `AircraftProvider` is the stable server-side abstraction; `LocalReadsbProvider` and `MockReadsbProvider` implement it. `AircraftStateService` owns the in-memory map, derived distance/bearing, trails, statistics, polling and sampling. Future metadata, route, FlightAware, external ADS-B or ATC-sector providers can be composed behind the same server-side boundary without changing the frontend.
+The browser talks only to AirRadar APIs. `AircraftProvider` is the stable server-side abstraction; `LocalReadsbProvider` and `MockReadsbProvider` implement it. `AircraftStateService` owns the in-memory map, derived distance/bearing, bounded trails, statistics, polling, stale-target cleanup and sampling. SSE coalesces snapshots for slow clients, so a disconnected or slow browser cannot grow a server-side queue.
 
-The MVP intentionally does not implement ATC sectors/frequencies, FlightAware, complex flight plans, global ADS-B, RTL-airband, push notifications or coverage heatmaps.
+Optional server-side contracts are defined for `AircraftMetadataProvider`, `FlightRouteProvider`, `FlightPlanProvider`, `ExternalAdsbProvider`, `AtcSectorProvider` and `AtcActivityProvider`. The enrichment cache uses normalized keys, positive/negative TTLs and in-flight request coalescing; no provider is called when no integration is configured. The frontend receives normalized data and never selects a provider.
+
+`Flight` represents a flight instance, not a callsign. A new instance is opened when the callsign changes or the continuity gap is exceeded; the ICAO address remains the aircraft identity and registration/callsign are observations.
+
+The ATC service already models multi-polygon sectors, vertical limits, validity, country, callsign, primary/alternate frequencies and source. Its resolver performs point-in-polygon plus altitude/time matching. The project intentionally does not ship AIP data yet; a future AIP-backed `AtcSectorProvider` can replace the empty provider without changing the resolver or frontend.
+
+The MVP intentionally does not ship populated AIP/FlightAware data, global ADS-B, RTL-airband ingestion, push notifications or coverage heatmaps.
