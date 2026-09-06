@@ -39,7 +39,8 @@ async function main(): Promise<void> {
       longitude: airport.longitude,
       updatedAt: now,
     };
-    await database.orm.public.Airport.where({ icao: airport.icaoCode }).upsert({
+    await database.orm.public.Airport.upsert({
+      conflictOn: { icao: airport.icaoCode },
       update: values,
       create: { icao: airport.icaoCode, ...values },
     });

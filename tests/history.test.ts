@@ -36,7 +36,7 @@ describe("historical flight maintenance", () => {
     const database = {
       orm: {
         public: {
-          Aircraft: { where: vi.fn().mockReturnValue({ upsert }) },
+          Aircraft: { upsert },
           Flight: { where: flightWhere, create: flightCreate },
           FlightPosition: {
             create: vi.fn().mockResolvedValue({ id: 99 }),
@@ -57,6 +57,7 @@ describe("historical flight maintenance", () => {
     await recordAircraftSnapshot([aircraft, { ...aircraft, icaoHex: "abc123" }], recordedAt);
 
     expect(upsert).toHaveBeenCalledTimes(1);
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ conflictOn: { icaoHex: "ABC123" } }));
     expect(flightCreate).toHaveBeenCalledTimes(1);
     expect(transactionAttempts).toBe(2);
   });
@@ -114,7 +115,7 @@ describe("historical flight maintenance", () => {
     const database = {
       orm: {
         public: {
-          Aircraft: { where: vi.fn().mockReturnValue({ upsert: vi.fn().mockResolvedValue({ id: 42 }) }) },
+          Aircraft: { upsert: vi.fn().mockResolvedValue({ id: 42 }) },
           Flight: { where: flightWhere, create: flightCreate },
           FlightPosition: {
             create: vi.fn().mockResolvedValue({ id: 99 }),

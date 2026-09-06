@@ -160,7 +160,10 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
     const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime());
     await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
-      const dbAircraft = await schema.Aircraft.where({ icaoHex: item.icaoHex }).upsert({
+      const dbAircraft = await schema.Aircraft.upsert({
+        // Prisma 8 defaults conflict resolution to the primary key. Aircraft
+        // identity is ICAO hex, so use its unique constraint explicitly.
+        conflictOn: { icaoHex: item.icaoHex },
         update: {
           registration: item.registration ?? item.enrichment?.metadata?.registration ?? null,
           registrationCountry: item.enrichment?.metadata?.registrationCountry,

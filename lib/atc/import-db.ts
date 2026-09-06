@@ -96,13 +96,15 @@ export async function writeAtcImport(
   await database.transaction(async (transaction) => {
     const schema = transaction.orm.public;
     for (const sector of dataset.sectors) {
-      await schema.AtcSector.where({ id: sector.id }).upsert({
+      await schema.AtcSector.upsert({
+        conflictOn: { id: sector.id },
         update: sectorValues(sector),
         create: { id: sector.id, ...sectorValues(sector) },
       });
     }
     for (const transmitter of dataset.transmitters) {
-      await schema.AtcTransmitter.where({ id: transmitter.id }).upsert({
+      await schema.AtcTransmitter.upsert({
+        conflictOn: { id: transmitter.id },
         update: transmitterValues(transmitter),
         create: { id: transmitter.id, ...transmitterValues(transmitter) },
       });

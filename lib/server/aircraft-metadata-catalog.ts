@@ -321,7 +321,8 @@ export class AircraftMetadataCatalog implements AircraftMetadataProvider {
     const checkedAt = Temporal.Instant.fromEpochMilliseconds(values.lastCheckedAt.getTime());
     const updatedAt = Temporal.Instant.fromEpochMilliseconds(Date.now());
     const lastUpdatedAt = values.lastUpdatedAt ? Temporal.Instant.fromEpochMilliseconds(values.lastUpdatedAt.getTime()) : null;
-    await database.orm.public.AircraftMetadataSync.where({ id: SYNC_ID }).upsert({
+    await database.orm.public.AircraftMetadataSync.upsert({
+      conflictOn: { id: SYNC_ID },
       create: {
         id: SYNC_ID,
         sourceUrl: this.sourceUrl,
