@@ -222,6 +222,7 @@ export function AirRadarApp() {
   const [watchlistValue, setWatchlistValue] = useState("");
   const [showAtc, setShowAtc] = useState(false);
   const [showAirports, setShowAirports] = useState(true);
+  const [airports, setAirports] = useState<Airport[]>([]);
   const [atcData, setAtcData] = useState<AtcDataResponse>(EMPTY_ATC_DATA);
   const [streamConnected, setStreamConnected] = useState(false);
   const [mobileCompact, setMobileCompact] = useState(false);
@@ -245,6 +246,10 @@ export function AirRadarApp() {
     void fetch("/api/atc/sectors", { cache: "no-store" })
       .then((response) => response.ok ? response.json() as Promise<AtcDataResponse> : null)
       .then((data) => { if (data) setAtcData(data); })
+      .catch(() => undefined);
+    void fetch("/api/airports", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() as Promise<Airport[]> : null)
+      .then((data) => { if (data) setAirports(data); })
       .catch(() => undefined);
   }, []);
 
@@ -533,16 +538,16 @@ export function AirRadarApp() {
         geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
       })) : [],
     });
-    const airports = snapshot.aircraft.flatMap((aircraft) => {
+    const routeAirports = snapshot.aircraft.flatMap((aircraft) => {
       const route = aircraft.enrichment?.route;
       return [route?.originAirport, route?.destinationAirport].filter((airport): airport is Airport => Boolean(airport));
     });
     const airportSource = map.getSource("route-airports") as GeoJSONSource | undefined;
-    airportSource?.setData(createAirportGeoJSON(airports, showAirports));
+    airportSource?.setData(createAirportGeoJSON([...airports, ...routeAirports], showAirports));
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
-  }, [atcData, mapReady, showAirports, showAtc, snapshot.aircraft]);
+  }, [airports, atcData, mapReady, showAirports, showAtc, snapshot.aircraft]);
 
   const selectedAircraft = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) ?? null;
   const filterOptions = useMemo(() => ({
