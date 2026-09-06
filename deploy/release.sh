@@ -7,7 +7,9 @@ readonly EXPECTED_APP_DIR="/var/www/airradar"
 readonly LOCK_FILE="/var/lock/airradar-release.lock"
 readonly SERVICE_NAME="airradar"
 readonly PUBLIC_HEALTH_URL="https://airradar.pomykal.cz/api/health"
-readonly LOCAL_HEALTH_URL="http://127.0.0.1:3000/api/health"
+# The service binds to the production LAN address so the separate Nginx Proxy
+# Manager host can reach it; loopback is intentionally not a listener.
+readonly LOCAL_HEALTH_URL="http://192.168.1.142:3000/api/health"
 readonly HEALTH_ATTEMPTS=15
 readonly HEALTH_DELAY_SECONDS=2
 readonly PUBLIC_HEALTH_ATTEMPTS=3
