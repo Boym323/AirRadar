@@ -13,6 +13,36 @@ model Aircraft {
   flights      Flight[]
 }
 
+model AircraftMetadataCache {
+  icaoHex            String   @id
+  registration       String?
+  icaoTypeCode       String?
+  aircraftDescription String?
+  operator           String?
+  flags              String?
+  year               String?
+  source             String
+  sourceReference    String
+  datasetVersion     String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now())
+
+  @@index([source])
+  @@index([updatedAt])
+}
+
+model AircraftMetadataSync {
+  id            String   @id
+  sourceUrl     String
+  etag          String?
+  lastCheckedAt DateTime?
+  lastUpdatedAt DateTime?
+  recordCount   Int      @default(0)
+  lastError     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+}
+
 model Flight {
   id         Int              @id @default(autoincrement())
   instanceKey String          @unique

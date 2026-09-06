@@ -18,7 +18,7 @@ Open <http://localhost:3000>. The mock provider generates UAE139 / Emirates A380
 
 ## Connect readsb
 
-Set the base URL of the readsb/tar1090 web root. AirRadar reads `/data/aircraft.json` and optionally `/data/receiver.json`:
+Set the base URL of the readsb/tar1090 web root. AirRadar reads `/data/aircraft.json` and optionally `/data/receiver.json`. When the web root is tar1090, it also discovers and reads tar1090's hashed static aircraft database to fill registration, ICAO type code and type description:
 
 ```dotenv
 READSB_BASE_URL=http://192.168.1.50:8080
@@ -71,6 +71,7 @@ Persistence boundaries are intentional:
 | Data | Storage | Restart behavior |
 | --- | --- | --- |
 | `Aircraft`, `Flight`, `FlightPosition` and sampled history | PostgreSQL | Persistent; never reset by AirRadar startup |
+| `AircraftMetadataCache` and `AircraftMetadataSync` | PostgreSQL | Persistent catalog; refreshed at most once per day with conditional HTTP validation |
 | ADSBDB / FlightAware enrichment cache | Process memory with TTL and negative caching | Rebuilt after restart; live radar is independent |
 | Watchlist rules | Browser `localStorage` | Persists in that browser; not a shared database list |
 | Live statistics | Process memory, derived from current process observations | Rebuilt after restart; historical positions remain in PostgreSQL |
@@ -98,12 +99,15 @@ The integrations below are optional. A provider failure is negatively cached and
 
 | Capability | Provider | Configuration | Cost / key |
 | --- | --- | --- | --- |
+| Aircraft metadata | tar1090 static database + PostgreSQL cache | Automatic when `READSB_BASE_URL` points to a tar1090 web root; daily catalog sync uses `AIRCRAFT_METADATA_URL` | Local metadata; no key |
 | Aircraft metadata | [ADSBDB](https://github.com/mrjackwills/adsbdb) | `ADSBDB_ENABLED=true` and optional `ADSBDB_BASE_URL` | Free community API, no key |
 | Callsign airline and origin/destination | ADSBDB | Same as above | Free community API, no key |
 | Scheduled/actual/estimated times, filed route and waypoints | [FlightAware AeroAPI](https://www.flightaware.com/commercial/aeroapi/v4/documentation) | `FLIGHTAWARE_API_KEY=…` | Optional commercial service; key stays server-side |
 | ATC sectors and transmitters | Demo constants / PostgreSQL import | `ATC_SAMPLE_ENABLED` | Demo sample only; production uses an explicitly synced authoritative dataset |
 
 ADSBDB lookups are keyed by ICAO hex or callsign and cached for hours to a day; the cache coalesces concurrent requests and negatively caches misses, so the provider is not queried on every realtime update. FlightAware is disabled when `FLIGHTAWARE_API_KEY` is empty. Missing keys therefore do not reduce live radar functionality. Route lines are schematic references, not filed flight plans; the orange solid trail is the observed ADS-B trail.
+
+The tar1090 metadata lookup is best-effort and uses a PostgreSQL catalog mirrored in RAM. The catalog checks `AIRCRAFT_METADATA_URL` once per day (with ETag validation) and keeps the previous dataset when GitHub is unavailable. The local tar1090 `databaseFolder` blocks remain an immediate fallback when PostgreSQL or the catalog is unavailable. If the configured page is plain readsb, AirRadar continues with the fields present in `aircraft.json`. When both tar1090 metadata and ADSBDB are enabled, non-empty fields from ADSBDB take precedence and missing fields are filled from the local catalog/fallback.
 
 For the first production deployment, keep `FLIGHTAWARE_API_KEY=` empty. If a key is configured later, the current architecture can request flight plans for currently tracked aircraft that have a callsign; these are AeroAPI requests and may incur commercial charges. The key is used only server-side. The optional FlightAware route lookup is best-effort, so a route failure does not discard the basic flight-plan times or filed route.
 
@@ -208,7 +212,7 @@ cd /var/www/airradar
 sudo ./deploy/release.sh
 ```
 
-The script acquires a release lock, rejects tracked or staged working-tree changes, updates the current branch with a fast-forward-only Git operation, runs `npm ci`, Prisma generation, lint, typecheck, tests, Prisma migrations and the production build, then restarts `airradar.service` and checks local and public health. Use `sudo ./deploy/release.sh --dry-run` to run preflight checks and print the plan without changing the checkout or service. A non-`main` checkout must be explicitly selected with `--branch`.
+The script acquires a release lock, rejects tracked or staged working-tree changes, updates the current branch with a fast-forward-only Git operation, runs `npm ci`, Prisma generation, lint, typecheck, tests, Prisma migrations and the production build, then restarts `airradar.service` and checks local and public health. To test and release uncommitted changes, use `sudo ./deploy/release.sh --allow-dirty`; this preserves the current working tree and skips the update from `origin` to avoid overwriting or conflicting with local changes. Use `sudo ./deploy/release.sh --dry-run` to run preflight checks and print the plan without changing the checkout or service. A non-`main` checkout must be explicitly selected with `--branch`.
 
 The script does not automatically roll back Git code or database migrations after a post-restart failure. This avoids returning code to a state that may be incompatible with an already-applied migration; inspect the diagnostics and perform a compatibility-aware recovery manually.
 

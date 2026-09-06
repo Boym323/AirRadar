@@ -60,8 +60,9 @@ Normal production releases use `deploy/release.sh`; bypass it only for debugging
   ATC resolution, and history sampling.
 - The browser consumes AirRadar APIs only. `/api/stream` publishes snapshots
   over SSE; it is intentionally not a WebSocket endpoint.
-- PostgreSQL stores sampled history and imported ATC/airport data, not every
-  ADS-B update. Live radar must remain useful without PostgreSQL.
+- PostgreSQL stores sampled history, imported ATC/airport data and the optional
+  aircraft metadata catalog, not every ADS-B update. Live radar must remain
+  useful without PostgreSQL.
 - Optional enrichment is server-side and isolated from the readsb polling loop.
 
 ## Sources of truth
@@ -91,8 +92,8 @@ Generated files under `generated/` are outputs, not the database schema source o
   the old instance at current `recordedAt` and open a new instance.
 - Derived altitude and vertical rate prefer barometric, then geometric
   fallback; preserve raw barometric and geometric values.
-- Live aircraft state belongs in RAM. PostgreSQL stores sampled history, not
-  every ADS-B update.
+- Live aircraft state belongs in RAM. PostgreSQL stores sampled history and
+  durable reference/catalog data, not every ADS-B update.
 - PostgreSQL or optional enrichment failure must not stop live radar. One slow
   or disconnected SSE client must not affect other clients.
 - SSE delivery is bounded/coalesced: slow clients keep only the latest pending
@@ -130,6 +131,10 @@ Do not put either data file path into `READSB_BASE_URL`. The adapter prefers bar
 ### ADSBDB
 
 Optional, keyless enrichment; enable with `ADSBDB_ENABLED=true`. Metadata is keyed by ICAO hex; route data is keyed by normalized callsign and UTC date. The total concurrency budget for the same ADSBDB provider instance is `6`. Failures and misses are cached and must not break live polling.
+
+### tar1090 database
+
+When `READSB_BASE_URL` points to a tar1090 web root, AirRadar enriches aircraft by ICAO hex from a PostgreSQL catalog mirrored in RAM. The catalog checks `AIRCRAFT_METADATA_URL` once per day with ETag validation; the hashed tar1090 database folder remains the immediate fallback. A plain readsb root, unavailable database or failed sync leaves live polling unaffected. If ADSBDB is also enabled, its non-empty metadata fields take precedence and the catalog fills missing values.
 
 ### FlightAware
 

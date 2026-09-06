@@ -17,12 +17,14 @@ readonly PUBLIC_HEALTH_DELAY_SECONDS=2
 
 DEPLOY_BRANCH="main"
 DRY_RUN=0
+ALLOW_DIRTY=0
 OLD_SHA=""
 NEW_SHA=""
 RESTART_ATTEMPTED=0
 ERROR_REPORTED=0
 DIAGNOSTICS_PRINTED=0
 HEALTH_SUMMARY=""
+WORKTREE_DIRTY=0
 STARTED_AT="$(date --iso-8601=seconds)"
 STARTED_EPOCH="$(date +%s)"
 
@@ -32,6 +34,7 @@ Usage: sudo ./deploy/release.sh [options]
 
 Options:
   --branch BRANCH  Release the current checkout of BRANCH instead of main.
+  --allow-dirty    Release uncommitted changes without updating from origin.
   --dry-run        Run preflight checks and print the release plan only.
   --help           Show this help.
 
@@ -138,6 +141,10 @@ parse_args() {
         DRY_RUN=1
         shift
         ;;
+      --allow-dirty)
+        ALLOW_DIRTY=1
+        shift
+        ;;
       --help|-h)
         usage
         trap - EXIT
@@ -208,14 +215,16 @@ check_repository() {
   [[ "${current_branch}" == "${DEPLOY_BRANCH}" ]] || die "Current branch is ${current_branch}; expected ${DEPLOY_BRANCH}. Use --branch explicitly if this is intentional."
   git_cmd remote get-url origin >/dev/null 2>&1 || die "Git remote origin is not configured."
 
-  dirty_status="$(git_cmd status --porcelain)"
-  while IFS= read -r status_line; do
-    [[ -z "${status_line}" ]] && continue
-    [[ "${status_line:0:2}" == "??" ]] && continue
-    error "Working tree contains tracked or staged changes:"
-    printf '%s\n' "${dirty_status}" >&2
-    die "Refusing to update a dirty production checkout."
-  done <<< "${dirty_status}"
+  if (( ALLOW_DIRTY == 0 )); then
+    dirty_status="$(git_cmd status --porcelain)"
+    while IFS= read -r status_line; do
+      [[ -z "${status_line}" ]] && continue
+      [[ "${status_line:0:2}" == "??" ]] && continue
+      error "Working tree contains tracked or staged changes:"
+      printf '%s\n' "${dirty_status}" >&2
+      die "Refusing to update a dirty production checkout. Use --allow-dirty to release the current working tree without updating from origin."
+    done <<< "${dirty_status}"
+  fi
 }
 
 check_permissions() {
@@ -252,17 +261,18 @@ acquire_lock() {
   log "Release lock acquired: ${LOCK_FILE}"
 }
 
-assert_clean_worktree() {
-  local status_line dirty_status
+detect_worktree_changes() {
+  local dirty_status
 
   dirty_status="$(git_cmd status --porcelain)"
-  while IFS= read -r status_line; do
-    [[ -z "${status_line}" ]] && continue
-    [[ "${status_line:0:2}" == "??" ]] && continue
-    error "Working tree changed during the release:"
-    printf '%s\n' "${dirty_status}" >&2
-    die "Refusing to continue with tracked or staged changes."
-  done <<< "${dirty_status}"
+  if [[ -z "${dirty_status}" ]]; then
+    WORKTREE_DIRTY=0
+    return
+  fi
+
+  WORKTREE_DIRTY=1
+  warn "Working tree has uncommitted changes; releasing the current working tree."
+  printf '%s\n' "${dirty_status}" >&2
 }
 
 update_repository() {
@@ -270,6 +280,13 @@ update_repository() {
 
   OLD_SHA="$(git_cmd rev-parse HEAD)"
   log "Current commit: ${OLD_SHA}"
+
+  if (( WORKTREE_DIRTY == 1 )); then
+    warn "Skipping origin/${DEPLOY_BRANCH} update to preserve uncommitted changes. Commit or stash them before a release that must include remote updates."
+    NEW_SHA="${OLD_SHA}"
+    return
+  fi
+
   log "Updating repository from origin/${DEPLOY_BRANCH}"
   git_cmd fetch origin "${DEPLOY_BRANCH}"
 
@@ -393,9 +410,16 @@ restart_and_check() {
 
 print_dry_run_plan() {
   OLD_SHA="$(git_cmd rev-parse HEAD)"
+  if (( ALLOW_DIRTY == 1 )); then
+    detect_worktree_changes
+  fi
   log "Dry run; no repository update, dependency installation, migrations, build, restart, or health checks will run."
   log "Current commit: ${OLD_SHA}"
-  log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, npm ci, Prisma generate, lint, typecheck, tests, Prisma deploy, build, restart, local health, public health."
+  if (( WORKTREE_DIRTY == 1 )); then
+    log "Planned release: preserve the current working tree, npm ci, Prisma generate, lint, typecheck, tests, Prisma deploy, build, restart, local health, public health."
+  else
+    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, npm ci, Prisma generate, lint, typecheck, tests, Prisma deploy, build, restart, local health, public health."
+  fi
 }
 
 main() {
@@ -408,10 +432,11 @@ main() {
   fi
 
   acquire_lock
-  assert_clean_worktree
+  if (( ALLOW_DIRTY == 1 )); then
+    detect_worktree_changes
+  fi
   update_repository
   run_release_steps
-  assert_clean_worktree
   restart_and_check
 
   log "Release successful"

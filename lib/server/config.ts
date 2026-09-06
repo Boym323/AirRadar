@@ -2,6 +2,7 @@ import type { ReceiverPosition } from "@/lib/aircraft/types";
 import { t } from "@/lib/i18n";
 
 export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
+export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/wiedehopf/tar1090-db/refs/heads/csv/aircraft.csv.gz";
 
 export type PublicReceiverPositionMode = "exact" | "approximate" | "hidden";
 
@@ -104,6 +105,10 @@ export function isAdsbDbEnabled(): boolean {
 
 export function getAdsbDbBaseUrl(): string {
   return process.env.ADSBDB_BASE_URL?.trim() || "https://api.adsbdb.com/v0";
+}
+
+export function getAircraftMetadataUrl(): string {
+  return process.env.AIRCRAFT_METADATA_URL?.trim() || DEFAULT_AIRCRAFT_METADATA_URL;
 }
 
 export function getFlightAwareApiKey(): string | null {

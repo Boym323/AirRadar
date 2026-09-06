@@ -1,0 +1,158 @@
+[
+  {
+    "id": "table.aircraftMetadataCache",
+    "label": "Create table \"aircraftMetadataCache\"",
+    "summary": "Creates table \"aircraftMetadataCache\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "aircraftMetadataCache"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"aircraftMetadataCache\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftMetadataCache\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"aircraftMetadataCache\"",
+        "sql": "CREATE TABLE \"public\".\"aircraftMetadataCache\" (\n  \"aircraftDescription\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"datasetVersion\" text,\n  \"flags\" text,\n  \"icaoHex\" text NOT NULL,\n  \"icaoTypeCode\" text,\n  \"operator\" text,\n  \"registration\" text,\n  \"source\" text NOT NULL,\n  \"sourceReference\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"year\" text,\n  PRIMARY KEY (\"icaoHex\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"aircraftMetadataCache\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftMetadataCache\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.aircraftMetadataSync",
+    "label": "Create table \"aircraftMetadataSync\"",
+    "summary": "Creates table \"aircraftMetadataSync\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "aircraftMetadataSync"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"aircraftMetadataSync\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftMetadataSync\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"aircraftMetadataSync\"",
+        "sql": "CREATE TABLE \"public\".\"aircraftMetadataSync\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"etag\" text,\n  \"id\" text NOT NULL,\n  \"lastCheckedAt\" timestamptz,\n  \"lastError\" text,\n  \"lastUpdatedAt\" timestamptz,\n  \"recordCount\" int4 DEFAULT 0 NOT NULL,\n  \"sourceUrl\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"aircraftMetadataSync\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftMetadataSync\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.aircraftMetadataCache.aircraftMetadataCache_source_idx_c937a07d",
+    "label": "Create index \"aircraftMetadataCache_source_idx_c937a07d\" on \"aircraftMetadataCache\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "aircraftMetadataCache_source_idx_c937a07d",
+        "table": "aircraftMetadataCache"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"aircraftMetadataCache_source_idx_c937a07d\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftMetadataCache_source_idx_c937a07d\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"aircraftMetadataCache_source_idx_c937a07d\"",
+        "sql": "CREATE INDEX \"aircraftMetadataCache_source_idx_c937a07d\" ON \"public\".\"aircraftMetadataCache\" (\"source\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"aircraftMetadataCache_source_idx_c937a07d\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftMetadataCache_source_idx_c937a07d\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.aircraftMetadataCache.aircraftMetadataCache_updatedAt_idx_8c508b31",
+    "label": "Create index \"aircraftMetadataCache_updatedAt_idx_8c508b31\" on \"aircraftMetadataCache\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "aircraftMetadataCache_updatedAt_idx_8c508b31",
+        "table": "aircraftMetadataCache"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"aircraftMetadataCache_updatedAt_idx_8c508b31\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftMetadataCache_updatedAt_idx_8c508b31\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"aircraftMetadataCache_updatedAt_idx_8c508b31\"",
+        "sql": "CREATE INDEX \"aircraftMetadataCache_updatedAt_idx_8c508b31\" ON \"public\".\"aircraftMetadataCache\" (\"updatedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"aircraftMetadataCache_updatedAt_idx_8c508b31\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftMetadataCache_updatedAt_idx_8c508b31\""
+        ]
+      }
+    ]
+  }
+]

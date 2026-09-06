@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
+import { AircraftMetadataCatalog, parseAircraftMetadataCsv } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
+import { Tar1090DbProvider } from "@/lib/server/tar1090-db-provider";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -110,6 +112,90 @@ describe("local readsb provider", () => {
       geomAltitude: 28600, groundSpeed: 430, track: 91, baroRate: 0, geomRate: 64,
       squawk: "1000", category: "A3", rssi: -12.5, messages: 456, source: "ADS-B",
       sourceType: "adsb_icao", seenSeconds: 0.2, seenPosSeconds: 0.1,
+    });
+  });
+});
+
+describe("tar1090 database provider", () => {
+  it("discovers the hashed database folder and resolves metadata by ICAO hex", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('<script>let databaseFolder = "db-test";</script>'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        BAACB: ["TC-JVK", "B738", "00", "BOEING 737-800"],
+      })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new Tar1090DbProvider("http://receiver.local/tar1090");
+    await expect(provider.getMetadata("4baacb")).resolves.toMatchObject({
+      registration: "TC-JVK",
+      aircraftType: "B738",
+      icaoTypeCode: "B738",
+      aircraftDescription: "BOEING 737-800",
+      source: "tar1090-db",
+    });
+    await expect(provider.getMetadata("4BAACB")).resolves.toMatchObject({ icaoTypeCode: "B738" });
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "http://receiver.local/tar1090/",
+      "http://receiver.local/tar1090/db-test/4.js",
+    ]);
+  });
+
+  it("follows nested database blocks and returns null for an unknown address", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('let databaseFolder = "db-test";'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ children: ["4B"] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ children: ["4BA"] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ children: ["4BAA"] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ children: ["4BAAC"] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ children: ["4BAACB"] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ "": ["TC-JVK", "B738", "00", "BOEING 737-800"] })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new Tar1090DbProvider("http://receiver.local/tar1090/");
+    await expect(provider.getMetadata("4BAACB")).resolves.toMatchObject({ icaoTypeCode: "B738" });
+    await expect(provider.getMetadata("4BAACC")).resolves.toBeNull();
+  });
+
+  it("degrades to a metadata miss when the tar1090 page is unavailable", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("offline", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(new Tar1090DbProvider("http://receiver.local/tar1090").getMetadata("4BAACB")).resolves.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("aircraft metadata catalog", () => {
+  it("parses the readsb semicolon catalog and normalizes hex keys", () => {
+    const records = parseAircraftMetadataCsv(
+      "4baacb;TC-JVK;B738;00;BOEING 737-800;;;\n4BAACC;;;10;Unknown\\; aircraft;;;;",
+      "https://example.test/aircraft.csv.gz",
+      "etag-1",
+    );
+
+    expect(records).toEqual([
+      {
+        icaoHex: "4BAACB", registration: "TC-JVK", icaoTypeCode: "B738",
+        aircraftDescription: "BOEING 737-800", operator: null, flags: "00", year: null,
+        source: "tar1090-db", sourceReference: "https://example.test/aircraft.csv.gz", datasetVersion: "etag-1",
+      },
+      {
+        icaoHex: "4BAACC", registration: null, icaoTypeCode: null,
+        aircraftDescription: "Unknown; aircraft", operator: null, flags: "10", year: null,
+        source: "tar1090-db", sourceReference: "https://example.test/aircraft.csv.gz", datasetVersion: "etag-1",
+      },
+    ]);
+  });
+
+  it("falls back to the local tar1090 database when PostgreSQL is not configured", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('let databaseFolder = "db-test";'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ BAACB: ["TC-JVK", "B738", "00", "BOEING 737-800"] })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(new AircraftMetadataCatalog("http://receiver.local/tar1090").getMetadata("4BAACB")).resolves.toMatchObject({
+      registration: "TC-JVK", icaoTypeCode: "B738", aircraftDescription: "BOEING 737-800",
     });
   });
 });
