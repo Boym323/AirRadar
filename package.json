@@ -30,7 +30,8 @@
     "maplibre-gl": "4.7.1",
     "next": "^15.5.4",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "temporal-polyfill": "1.0.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.0",

@@ -30,7 +30,8 @@ describe("historical flight maintenance", () => {
     };
     const database = { orm: { public: { Flight } } } as never;
     await closeStaleFlights(database, new Date("2026-01-01T12:02:00Z"));
-    expect(update).toHaveBeenCalledWith({ endTime: lastSeenAt });
+    expect(update).toHaveBeenCalledWith({ endTime: expect.anything() });
+    expect((update.mock.calls[0]?.[0] as { endTime: Temporal.Instant }).endTime.epochMilliseconds).toBe(lastSeenAt.getTime());
   });
 
   it("ends a continuity-broken flight at its last observation and starts a new one", async () => {
@@ -77,8 +78,15 @@ describe("historical flight maintenance", () => {
 
     await recordAircraftSnapshot([aircraft], recordedAt);
 
-    expect(update).toHaveBeenCalledWith({ endTime: lastSeenAt });
+    expect(update).toHaveBeenCalledWith({ endTime: expect.anything() });
+    expect((update.mock.calls[0]?.[0] as { endTime: Temporal.Instant }).endTime.epochMilliseconds).toBe(lastSeenAt.getTime());
     expect(oldFlight.lastSeenAt).toEqual(lastSeenAt);
-    expect(flightCreate).toHaveBeenCalledWith(expect.objectContaining({ startTime: recordedAt, lastSeenAt: recordedAt }));
+    expect(flightCreate).toHaveBeenCalledWith(expect.objectContaining({ startTime: expect.anything(), lastSeenAt: expect.anything() }));
+    const createdFlight = flightCreate.mock.calls[0]?.[0] as {
+      startTime: Temporal.Instant;
+      lastSeenAt: Temporal.Instant;
+    };
+    expect(createdFlight.startTime.epochMilliseconds).toBe(recordedAt.getTime());
+    expect(createdFlight.lastSeenAt.epochMilliseconds).toBe(recordedAt.getTime());
   });
 });

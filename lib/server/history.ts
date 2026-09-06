@@ -1,3 +1,4 @@
+import "temporal-polyfill/full/global";
 import type { Aircraft } from "@/lib/aircraft/types";
 import { getFlightContinuityGapMs, getHistoryRetentionDays, getHistorySampleIntervalMs } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
@@ -30,6 +31,18 @@ export interface HistoryResponse {
 
 let lastRetentionRunAt = 0;
 let lastFlightMaintenanceRunAt = 0;
+
+function timestampAsDate(value: Temporal.Instant | Date): Date {
+  return value instanceof Date ? value : new Date(value.epochMilliseconds);
+}
+
+function timestampAsInstant(value: Temporal.Instant | Date): Temporal.Instant {
+  return value instanceof Date ? Temporal.Instant.fromEpochMilliseconds(value.getTime()) : value;
+}
+
+function timestampAsIso(value: Temporal.Instant | Date): string {
+  return timestampAsInstant(value).toString();
+}
 
 async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
   let nextIndex = 0;
@@ -68,7 +81,8 @@ async function pruneHistoryIfDue(database: NonNullable<ReturnType<typeof getPris
     const cutoff = new Date(now - getHistoryRetentionDays() * 24 * 60 * 60_000);
     // This also removes old samples belonging to still-open flights. A later
     // migration can partition this table if a larger installation needs it.
-    await database.orm.public.FlightPosition.where((position) => position.recordedAt.lt(cutoff)).delete();
+    const cutoffInstant = Temporal.Instant.fromEpochMilliseconds(cutoff.getTime());
+    await database.orm.public.FlightPosition.where((position) => position.recordedAt.lt(cutoffInstant)).delete();
   } catch (error) {
     lastRetentionRunAt = 0;
     console.error("AirRadar history retention cleanup failed", error);
@@ -86,14 +100,18 @@ export async function closeStaleFlights(
 ): Promise<void> {
   const cutoff = new Date(now.getTime() - getFlightContinuityGapMs());
   const schema = database.orm.public;
+  const cutoffInstant = Temporal.Instant.fromEpochMilliseconds(cutoff.getTime());
   const staleFlights = await schema.Flight
     .where({ endTime: null })
-    .where((flight) => flight.lastSeenAt.lt(cutoff))
+    .where((flight) => flight.lastSeenAt.lt(cutoffInstant))
     .all();
   await runWithConcurrency(staleFlights, 4, async (flight) => {
-    const endTime = staleFlightEndTime(flight.lastSeenAt, now);
+    const lastSeenAt = timestampAsDate(flight.lastSeenAt);
+    const endTime = staleFlightEndTime(lastSeenAt, now);
     if (!endTime) return;
-    await schema.Flight.where({ id: flight.id }).update({ endTime });
+    await schema.Flight.where({ id: flight.id }).update({
+      endTime: Temporal.Instant.fromEpochMilliseconds(endTime.getTime()),
+    });
   });
 }
 
@@ -105,6 +123,7 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
     if (item.lat === null || item.lon === null) return;
     const latitude = item.lat;
     const longitude = item.lon;
+    const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime());
     await database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const dbAircraft = await schema.Aircraft.where({ icaoHex: item.icaoHex }).upsert({
@@ -116,7 +135,7 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
           manufacturer: item.enrichment?.metadata?.manufacturer,
           model: item.enrichment?.metadata?.aircraftDescription,
           operator: item.enrichment?.metadata?.operator,
-          updatedAt: recordedAt,
+          updatedAt: recordedAtInstant,
         },
         create: {
           icaoHex: item.icaoHex,
@@ -127,7 +146,7 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
           manufacturer: item.enrichment?.metadata?.manufacturer,
           model: item.enrichment?.metadata?.aircraftDescription,
           operator: item.enrichment?.metadata?.operator,
-          updatedAt: recordedAt,
+          updatedAt: recordedAtInstant,
         },
       });
 
@@ -139,15 +158,15 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
 
       const callsignChanged = Boolean(flight?.callsign && item.callsign && flight.callsign !== item.callsign);
       const continuityBroken = Boolean(
-        flight && recordedAt.getTime() - flight.lastSeenAt.getTime() > getFlightContinuityGapMs(),
+        flight && recordedAt.getTime() - timestampAsDate(flight.lastSeenAt).getTime() > getFlightContinuityGapMs(),
       );
 
       if (!flight || callsignChanged || continuityBroken) {
         if (flight) {
           await schema.Flight.where({ id: flight.id }).update(
             continuityBroken
-              ? { endTime: flight.lastSeenAt }
-              : { endTime: recordedAt, lastSeenAt: recordedAt },
+              ? { endTime: timestampAsInstant(flight.lastSeenAt) }
+              : { endTime: recordedAtInstant, lastSeenAt: recordedAtInstant },
           );
         }
         flight = await schema.Flight.create({
@@ -161,8 +180,8 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
           destination: item.enrichment?.route?.destination ?? null,
           maxAltitude: item.altitude,
           minDistanceKm: item.distanceKm,
-          startTime: recordedAt,
-          lastSeenAt: recordedAt,
+          startTime: recordedAtInstant,
+          lastSeenAt: recordedAtInstant,
         });
       } else {
         await schema.Flight.where({ id: flight.id }).update({
@@ -176,13 +195,13 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
           minDistanceKm: Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
             ? null
             : Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY),
-          lastSeenAt: recordedAt,
+          lastSeenAt: recordedAtInstant,
         });
       }
 
       await schema.FlightPosition.create({
         flightId: flight.id,
-        recordedAt,
+        recordedAt: recordedAtInstant,
         lat: latitude,
         lon: longitude,
         ...(item.altitude === null ? {} : { altitude: item.altitude }),
@@ -224,14 +243,14 @@ export async function getAircraftHistory(hex: string, fallback: Aircraft | null)
           airline: flight.airline,
           origin: flight.origin,
           destination: flight.destination,
-          startedAt: flight.startTime.toISOString(),
-          endedAt: flight.endTime?.toISOString() ?? null,
-          lastSeenAt: flight.lastSeenAt.toISOString(),
+          startedAt: timestampAsIso(flight.startTime),
+          endedAt: flight.endTime ? timestampAsIso(flight.endTime) : null,
+          lastSeenAt: timestampAsIso(flight.lastSeenAt),
           maxAltitude: flight.maxAltitude,
           minDistanceKm: flight.minDistanceKm,
           },
           positions: positions.reverse().map((position) => ({
-            recordedAt: position.recordedAt.toISOString(),
+            recordedAt: timestampAsIso(position.recordedAt),
             lat: position.lat,
             lon: position.lon,
             altitude: position.altitude,

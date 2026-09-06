@@ -114,8 +114,8 @@ function storedSector(record: {
   alternateFrequenciesJson: string | null;
   country: string | null;
   source: string;
-  validFrom: Date | null;
-  validTo: Date | null;
+  validFrom: Temporal.Instant | null;
+  validTo: Temporal.Instant | null;
 }): AtcSector | null {
   const polygons = polygonsFromJson(record.polygonJson);
   if (!polygons.length) return null;
@@ -128,8 +128,8 @@ function storedSector(record: {
     lowerAltitudeFt: record.lowerAltitudeFt,
     upperAltitudeFt: record.upperAltitudeFt,
     frequencies: frequenciesFromRecord(record.primaryFrequencyMhz, record.alternateFrequenciesJson),
-    validFrom: record.validFrom?.toISOString() ?? null,
-    validTo: record.validTo?.toISOString() ?? null,
+    validFrom: record.validFrom?.toString() ?? null,
+    validTo: record.validTo?.toString() ?? null,
     country: record.country,
     source: record.source,
   };

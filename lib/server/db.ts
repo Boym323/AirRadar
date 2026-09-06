@@ -1,3 +1,4 @@
+import "temporal-polyfill/full/global";
 import postgres from "@prisma/orm-postgres/runtime";
 import type { Contract } from "@/generated/prisma8/contract";
 import contractJson from "@/generated/prisma8/contract.json" with { type: "json" };
