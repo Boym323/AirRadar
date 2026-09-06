@@ -10,12 +10,16 @@ Group=airradar
 WorkingDirectory=/var/www/airradar
 EnvironmentFile=/var/www/airradar/.env
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/npm run start
-Restart=always
+ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1 --port 3000
+Restart=on-failure
 RestartSec=5
+TimeoutStopSec=20
+StandardOutput=journal
+StandardError=journal
+UMask=027
 NoNewPrivileges=true
 PrivateTmp=true
-ProtectSystem=full
+ProtectSystem=strict
 ProtectHome=true
 
 [Install]

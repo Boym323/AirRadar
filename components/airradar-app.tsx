@@ -60,6 +60,10 @@ function formatTrack(value: number | null): string {
   return value === null ? "—" : `${Math.round(value).toString().padStart(3, "0")}°`;
 }
 
+function formatAge(value: number | null): string {
+  return value === null ? "—" : `${value.toFixed(1)} s ago`;
+}
+
 function formatTime(value: string | null): string {
   if (!value) return "—";
   const date = new Date(value);
@@ -632,16 +636,21 @@ export function AirRadarApp() {
               <DetailSection title="Live ADS-B">
                 <DetailItem label="ICAO hex" value={selectedAircraft.icaoHex} />
                 <DetailItem label="Altitude" value={formatAltitude(selectedAircraft.altitude)} />
+                <DetailItem label="Baro / geom altitude" value={`${formatAltitude(selectedAircraft.baroAltitude)} / ${formatAltitude(selectedAircraft.geomAltitude)}`} />
                 <DetailItem label="Ground speed" value={formatSpeed(selectedAircraft.groundSpeed)} />
                 <DetailItem label="Track" value={formatTrack(selectedAircraft.track)} />
                 <DetailItem label="Vertical rate" value={selectedAircraft.verticalRate === null ? "—" : `${formatNumber(selectedAircraft.verticalRate)} ft/min`} />
+                <DetailItem label="Baro / geom rate" value={`${selectedAircraft.baroRate === null ? "—" : `${formatNumber(selectedAircraft.baroRate)} ft/min`} / ${selectedAircraft.geomRate === null ? "—" : `${formatNumber(selectedAircraft.geomRate)} ft/min`}`} />
                 <DetailItem label="Squawk" value={selectedAircraft.squawk || "—"} />
+                <DetailItem label="Category" value={selectedAircraft.category || "—"} />
                 <DetailItem label="RSSI" value={selectedAircraft.rssi === null ? "—" : `${selectedAircraft.rssi.toFixed(1)} dBFS`} />
                 <DetailItem label="Messages" value={formatNumber(selectedAircraft.messages)} />
+                <DetailItem label="Seen / position" value={`${formatAge(selectedAircraft.seenSeconds)} / ${formatAge(selectedAircraft.seenPosSeconds)}`} />
                 <DetailItem label="Distance" value={formatDistance(selectedAircraft.distanceKm)} />
                 <DetailItem label="Bearing" value={formatTrack(selectedAircraft.bearing)} />
                 <DetailItem label="Position" value={selectedAircraft.lat === null || selectedAircraft.lon === null ? "—" : `${selectedAircraft.lat.toFixed(4)}, ${selectedAircraft.lon.toFixed(4)}`} />
                 <DetailItem label="Source" value={selectedAircraft.source} />
+                <DetailItem label="readsb source type" value={selectedAircraft.sourceType || "—"} />
                 <DetailItem label="Emergency" value={selectedAircraft.emergency || "None reported"} />
               </DetailSection>
               <DetailSection title="Aircraft metadata">

@@ -1,7 +1,7 @@
 import type { AtcAssignment } from "@/lib/atc/types";
 import type { Airport } from "@/lib/airports/types";
 
-export type AircraftSource = "ADS-B" | "MLAT" | "TIS-B" | "UNKNOWN";
+export type AircraftSource = "ADS-B" | "MLAT" | "TIS-B" | "Mode-S" | "UNKNOWN";
 
 export interface ReceiverPosition {
   lat: number;
@@ -62,15 +62,23 @@ export interface Aircraft {
   lat: number | null;
   lon: number | null;
   altitude: number | null;
+  baroAltitude: number | null;
+  geomAltitude: number | null;
   groundSpeed: number | null;
   track: number | null;
   verticalRate: number | null;
+  baroRate: number | null;
+  geomRate: number | null;
   squawk: string | null;
+  category: string | null;
   emergency: string | null;
   rssi: number | null;
   messages: number | null;
+  seenSeconds: number | null;
+  seenPosSeconds: number | null;
   lastSeen: string;
   source: AircraftSource;
+  sourceType: string | null;
   onGround: boolean;
   distanceKm: number | null;
   bearing: number | null;

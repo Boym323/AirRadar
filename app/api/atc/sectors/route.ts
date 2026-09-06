@@ -1,9 +1,9 @@
-import { SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS } from "@/lib/server/atc-data";
+import { getAtcData } from "@/lib/server/providers";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<Response> {
-  return Response.json({ sectors: SAMPLE_ATC_SECTORS, transmitters: SAMPLE_ATC_TRANSMITTERS }, {
+  return Response.json(await getAtcData(), {
     headers: { "Cache-Control": "public, max-age=300" },
   });
 }

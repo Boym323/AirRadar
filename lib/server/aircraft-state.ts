@@ -11,7 +11,7 @@ import { createAircraftProvider, createEnrichmentService } from "@/lib/server/pr
 import type { EnrichmentService } from "@/lib/server/enrichment-cache";
 import type { AircraftProvider } from "@/lib/server/provider";
 import { assignmentFromMatch, AtcSectorService } from "@/lib/server/atc-sector-service";
-import { SampleAtcSectorProvider } from "@/lib/server/atc-data";
+import { createAtcSectorProvider } from "@/lib/server/providers";
 
 type Listener = (snapshot: StateSnapshot) => void;
 
@@ -53,7 +53,7 @@ export class AircraftStateService {
   constructor(
     provider: AircraftProvider = createAircraftProvider(),
     enrichment: EnrichmentService = createEnrichmentService(),
-    atc: AtcSectorService = new AtcSectorService(new SampleAtcSectorProvider()),
+    atc: AtcSectorService = new AtcSectorService(createAtcSectorProvider()),
   ) {
     this.provider = provider;
     this.enrichment = enrichment;
@@ -214,7 +214,7 @@ export class AircraftStateService {
 
   private async persistHistory(snapshot: ProviderSnapshot): Promise<void> {
     const now = Date.now();
-    const due = snapshot.aircraft.filter((item) => {
+    const due = snapshot.aircraft.map((item) => this.aircraft.get(item.icaoHex) ?? item).filter((item) => {
       const previous = this.lastHistorySample.get(item.icaoHex) ?? 0;
       return now - previous >= getHistorySampleIntervalMs();
     });

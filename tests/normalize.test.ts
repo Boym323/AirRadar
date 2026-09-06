@@ -16,4 +16,18 @@ describe("readsb normalization", () => {
   it("ignores malformed entries without an ICAO hex", () => {
     expect(normalizeAircraftResponse({ aircraft: [{ flight: "NOHEX" }] }, { lat: 50, lon: 14, name: "Test" })).toEqual([]);
   });
+
+  it("keeps readsb source and independent barometric/geometric fields", () => {
+    const result = normalizeAircraftResponse({ aircraft: [{
+      hex: "~abc123", type: "mode_s", flight: "MODE123 ", lat: "50.1", lon: "14.1",
+      alt_baro: "ground", alt_geom: 120, baro_rate: -128, geom_rate: 256,
+      seen: 2.5, seen_pos: 0.75, category: "A3", mlat: [], tisb: [],
+    }] }, { lat: 50, lon: 14, name: "Test" }, new Date("2026-01-01T00:00:00Z"));
+    expect(result[0]).toMatchObject({
+      icaoHex: "~ABC123", callsign: "MODE123", altitude: 120, baroAltitude: null, geomAltitude: 120,
+      verticalRate: 256, baroRate: -128, geomRate: 256, category: "A3",
+      seenSeconds: 2.5, seenPosSeconds: 0.75, source: "Mode-S", sourceType: "mode_s", onGround: true,
+    });
+    expect(result[0].lastSeen).toBe("2025-12-31T23:59:57.500Z");
+  });
 });

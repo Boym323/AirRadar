@@ -17,6 +17,7 @@ export interface RawReadsbAircraft {
   baro_rate?: unknown;
   geom_rate?: unknown;
   squawk?: unknown;
+  category?: unknown;
   rssi?: unknown;
   messages?: unknown;
   seen?: unknown;
@@ -50,6 +51,11 @@ function text(value: unknown): string | null {
   return trimmed.length ? trimmed : null;
 }
 
+function coordinate(value: unknown, minimum: number, maximum: number): number | null {
+  const parsed = numeric(value);
+  return parsed !== null && parsed >= minimum && parsed <= maximum ? parsed : null;
+}
+
 function emergency(value: unknown): string | null {
   const normalized = text(value)?.toLowerCase() ?? null;
   return normalized && normalized !== "none" && normalized !== "unknown" ? normalized : null;
@@ -57,28 +63,39 @@ function emergency(value: unknown): string | null {
 
 function sourceFor(raw: RawReadsbAircraft): AircraftSource {
   const explicit = text(raw.type)?.toLowerCase();
-  if (explicit?.includes("mlat") || raw.mlat === true) return "MLAT";
-  if (explicit?.includes("tisb") || raw.tisb === true) return "TIS-B";
-  if (explicit?.includes("adsb") || raw.mlat === false) return "ADS-B";
+  if (explicit === "mlat" || explicit?.startsWith("mlat_")) return "MLAT";
+  if (explicit?.startsWith("tisb")) return "TIS-B";
+  if (explicit === "mode_s" || explicit === "mode-s") return "Mode-S";
+  if (explicit?.startsWith("adsb") || explicit?.startsWith("adsr")) return "ADS-B";
+  if (raw.mlat === true || Array.isArray(raw.mlat) && raw.mlat.length > 0) return "MLAT";
+  if (raw.tisb === true || Array.isArray(raw.tisb) && raw.tisb.length > 0) return "TIS-B";
   return "UNKNOWN";
 }
 
-function isOnGround(raw: RawReadsbAircraft, altitude: number | null): boolean {
+function isOnGround(raw: RawReadsbAircraft): boolean {
   if (typeof raw.on_ground === "boolean") return raw.on_ground;
-  return typeof raw.alt_baro === "string" && raw.alt_baro.toLowerCase() === "ground" || altitude === null;
+  const onGround = text(raw.on_ground)?.toLowerCase();
+  if (onGround === "true" || onGround === "ground") return true;
+  if (onGround === "false" || onGround === "air") return false;
+  return typeof raw.alt_baro === "string" && raw.alt_baro.toLowerCase() === "ground";
 }
 
 export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosition, now = new Date()): Aircraft | null {
   const icaoHex = text(raw.hex)?.toUpperCase();
   if (!icaoHex) return null;
 
-  const lat = numeric(raw.lat);
-  const lon = numeric(raw.lon);
-  const altitude = numeric(raw.alt_geom) ?? numeric(raw.alt_baro);
+  const lat = coordinate(raw.lat, -90, 90);
+  const lon = coordinate(raw.lon, -180, 180);
+  const baroAltitude = numeric(raw.alt_baro);
+  const geomAltitude = numeric(raw.alt_geom);
+  const altitude = geomAltitude ?? baroAltitude;
   const distanceKm = lat !== null && lon !== null ? haversineDistanceKm(receiver.lat, receiver.lon, lat, lon) : null;
   const bearing = lat !== null && lon !== null ? initialBearing(receiver.lat, receiver.lon, lat, lon) : null;
-  const seenSeconds = numeric(raw.seen);
-  const lastSeen = new Date(now.getTime() - Math.max(0, seenSeconds ?? 0) * 1000).toISOString();
+  const seenSecondsValue = numeric(raw.seen);
+  const seenSeconds = seenSecondsValue !== null && seenSecondsValue >= 0 ? seenSecondsValue : null;
+  const seenPosSecondsValue = numeric(raw.seen_pos);
+  const seenPosSeconds = seenPosSecondsValue !== null && seenPosSecondsValue >= 0 ? seenPosSecondsValue : null;
+  const lastSeen = new Date(now.getTime() - (seenSeconds ?? 0) * 1000).toISOString();
 
   return {
     icaoHex,
@@ -89,16 +106,24 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
     lat,
     lon,
     altitude,
+    baroAltitude,
+    geomAltitude,
     groundSpeed: numeric(raw.gs),
     track: numeric(raw.track),
     verticalRate: numeric(raw.geom_rate) ?? numeric(raw.baro_rate),
+    baroRate: numeric(raw.baro_rate),
+    geomRate: numeric(raw.geom_rate),
     squawk: text(raw.squawk),
+    category: text(raw.category),
     emergency: emergency(raw.emergency),
     rssi: numeric(raw.rssi),
     messages: numeric(raw.messages),
+    seenSeconds,
+    seenPosSeconds,
     lastSeen,
     source: sourceFor(raw),
-    onGround: isOnGround(raw, altitude),
+    sourceType: text(raw.type),
+    onGround: isOnGround(raw),
     distanceKm,
     bearing,
     trail: lat !== null && lon !== null ? [{ lat, lon, recordedAt: now.toISOString() }] : [],
@@ -110,7 +135,10 @@ export function normalizeAircraftResponse(
   receiver: ReceiverPosition,
   now = new Date(),
 ): Aircraft[] {
+  const generatedAt = numeric(response.now);
+  const observedAt = generatedAt !== null ? new Date(generatedAt * 1000) : now;
+  const normalizationTime = Number.isNaN(observedAt.getTime()) ? now : observedAt;
   return (Array.isArray(response.aircraft) ? response.aircraft : [])
-    .map((raw) => normalizeAircraft(raw, receiver, now))
+    .map((raw) => normalizeAircraft(raw, receiver, normalizationTime))
     .filter((aircraft): aircraft is Aircraft => aircraft !== null);
 }

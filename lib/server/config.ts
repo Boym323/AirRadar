@@ -13,6 +13,18 @@ export function getReceiverPosition(): ReceiverPosition {
   };
 }
 
+export function isReadsbConfigured(): boolean {
+  return Boolean(process.env.READSB_BASE_URL?.trim());
+}
+
+/** Sample ATC is useful in demo mode, but is opt-in once a real receiver is configured. */
+export function shouldUseSampleAtcData(): boolean {
+  const explicit = process.env.ATC_SAMPLE_ENABLED?.trim().toLowerCase();
+  if (explicit === "true") return true;
+  if (explicit === "false") return false;
+  return !isReadsbConfigured();
+}
+
 export function getPollIntervalMs(): number {
   return Math.max(1000, envNumber("READSB_POLL_INTERVAL_MS", 3000));
 }

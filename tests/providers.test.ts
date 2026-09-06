@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
+import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -30,5 +31,36 @@ describe("optional enrichment providers", () => {
     const provider = new FlightAwareFlightPlanProvider("secret-key");
     await expect(provider.getFlightPlan("UAE139", new Date("2026-01-01T00:00:00Z"))).resolves.toMatchObject({ scheduledDeparture: "2026-01-01T08:00:00Z", estimatedArrival: "2026-01-01T16:20:00Z", waypoints: ["TOP"] });
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ headers: { "x-apikey": "secret-key" } });
+  });
+});
+
+describe("local readsb provider", () => {
+  it("reads the tar1090 data endpoints and normalizes a real readsb-shaped payload", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        now: 1767225600, messages: 123456, aircraft: [{
+          hex: "3c1234", type: "adsb_icao", flight: " DLH123  ", r: "D-TEST", t: "A320",
+          lat: 50.2, lon: 14.5, alt_baro: 28000, alt_geom: 28600, gs: 430, track: 91,
+          baro_rate: 0, geom_rate: 64, squawk: "1000", category: "A3", rssi: -12.5,
+          messages: 456, seen: 0.2, seen_pos: 0.1, mlat: [], tisb: [],
+        }],
+      })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ lat: 50.05, lon: 14.4 })));
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new LocalReadsbProvider("http://receiver.local/tar1090", { lat: 50, lon: 14, name: "Configured" });
+
+    const snapshot = await provider.getSnapshot();
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "http://receiver.local/tar1090/data/aircraft.json",
+      "http://receiver.local/tar1090/data/receiver.json",
+    ]);
+    expect(snapshot.receiver).toMatchObject({ lat: 50.05, lon: 14.4 });
+    expect(snapshot.aircraft[0]).toMatchObject({
+      icaoHex: "3C1234", callsign: "DLH123", lat: 50.2, lon: 14.5, baroAltitude: 28000,
+      geomAltitude: 28600, groundSpeed: 430, track: 91, baroRate: 0, geomRate: 64,
+      squawk: "1000", category: "A3", rssi: -12.5, messages: 456, source: "ADS-B",
+      sourceType: "adsb_icao", seenSeconds: 0.2, seenPosSeconds: 0.1,
+    });
   });
 });

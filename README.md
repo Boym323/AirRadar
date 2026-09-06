@@ -18,7 +18,7 @@ Open <http://localhost:3000>. The mock provider generates UAE139 / Emirates A380
 
 ## Connect readsb
 
-Set the base URL of the readsb web server. AirRadar reads `/data/aircraft.json` and optionally `/data/receiver.json`:
+Set the base URL of the readsb/tar1090 web root. AirRadar reads `/data/aircraft.json` and optionally `/data/receiver.json`:
 
 ```dotenv
 READSB_BASE_URL=http://192.168.1.50:8080
@@ -26,11 +26,29 @@ RECEIVER_LAT=50.0755
 RECEIVER_LON=14.4378
 ```
 
+For a tar1090 installation mounted below a path, include that path, for example
+`http://192.168.1.50/tar1090`; do not include `/data/aircraft.json` in
+`READSB_BASE_URL`. The adapter preserves the readsb fields `alt_baro`,
+`alt_geom`, `baro_rate`, `geom_rate`, `seen`, `seen_pos`, `category`,
+`messages`, and `rssi`. It exposes the derived `altitude`/`verticalRate` as
+well as the individual values, and maps readsb `type` to a display source while
+retaining the exact value as `sourceType`.
+
 The polling loop retries automatically. If readsb goes away, the UI and API stay alive and report `Receiver offline`.
 
 ## PostgreSQL and Prisma
 
 Live state is never written on every ADS-B update. The state service samples each aircraft at the configured interval (20 seconds by default), writes positions with bounded concurrency, and stores `Aircraft`, `Flight`, and `FlightPosition` records. `HISTORY_RETENTION_DAYS` (30 by default) removes old position samples periodically.
+
+Persistence boundaries are intentional:
+
+| Data | Storage | Restart behavior |
+| --- | --- | --- |
+| `Aircraft`, `Flight`, `FlightPosition` and sampled history | PostgreSQL | Persistent; never reset by AirRadar startup |
+| ADSBDB / FlightAware enrichment cache | Process memory with TTL and negative caching | Rebuilt after restart; live radar is independent |
+| Watchlist rules | Browser `localStorage` | Persists in that browser; not a shared database list |
+| Live statistics | Process memory, derived from current process observations | Rebuilt after restart; historical positions remain in PostgreSQL |
+| ATC data | Sample constants in demo; PostgreSQL `AtcSector`/`AtcTransmitter` in production | Sample is never used for a configured real receiver |
 
 The project uses the Prisma 8 contract-based PostgreSQL workflow. `prisma/contract.prisma` is the source of truth, `prisma.config.ts` defines the PostgreSQL target, and `generated/prisma8/` contains generated runtime contract artifacts. The checked-in migration lives under `migrations/app/`.
 
@@ -57,11 +75,11 @@ The integrations below are optional. A provider failure is negatively cached and
 | Aircraft metadata | [ADSBDB](https://github.com/mrjackwills/adsbdb) | `ADSBDB_ENABLED=true` and optional `ADSBDB_BASE_URL` | Free community API, no key |
 | Callsign airline and origin/destination | ADSBDB | Same as above | Free community API, no key |
 | Scheduled/actual/estimated times, filed route and waypoints | [FlightAware AeroAPI](https://www.flightaware.com/commercial/aeroapi/v4/documentation) | `FLIGHTAWARE_API_KEY=…` | Optional commercial service; key stays server-side |
-| ATC sectors and transmitters | AirRadar sample provider | No configuration | Included sample data; replace with a maintained/licensed AIP dataset for production |
+| ATC sectors and transmitters | Demo constants / PostgreSQL import | `ATC_SAMPLE_ENABLED` | Demo sample only; production requires a maintained/licensed AIP dataset |
 
-ADSBDB lookups are keyed by ICAO hex or callsign and cached for hours to a day; they are never made on every ADS-B update. FlightAware is disabled when `FLIGHTAWARE_API_KEY` is empty. Missing keys therefore do not reduce live radar functionality. Route lines are schematic references, not filed flight plans; the orange solid trail is the observed ADS-B trail.
+ADSBDB lookups are keyed by ICAO hex or callsign and cached for hours to a day; the cache coalesces concurrent requests and negatively caches misses, so the provider is not queried on every realtime update. FlightAware is disabled when `FLIGHTAWARE_API_KEY` is empty. Missing keys therefore do not reduce live radar functionality. Route lines are schematic references, not filed flight plans; the orange solid trail is the observed ADS-B trail.
 
-The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled sample ATC layer is available at `/api/atc/sectors` and can be replaced by a provider without changing the UI resolver.
+The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled ATC layer is explicitly demo-only (`AirRadar sample data`) and is selected only without `READSB_BASE_URL` (or with the explicit `ATC_SAMPLE_ENABLED=true`). In production set `ATC_SAMPLE_ENABLED=false`; `/api/atc/sectors` and the resolver then use imported PostgreSQL data, or an empty layer if no verified dataset has been imported. Store sector rings as JSON `[[[lon, lat], ...]]` in `AtcSector.polygonJson` and alternate frequencies as JSON `[{"frequencyMhz": 127.35, "label": "..."}]` in `alternateFrequenciesJson`, with the source and validity interval recorded on each row. No Czech AIP import is bundled.
 
 ## Useful commands
 
@@ -97,7 +115,24 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now airradar
 ```
 
-Configure Nginx Proxy Manager to proxy the public hostname to `127.0.0.1:3000` and enable WebSocket support if desired; SSE itself works over standard HTTP proxying with buffering disabled in the included unit notes.
+Configure Nginx Proxy Manager to proxy the public hostname to `127.0.0.1:3000`. AirRadar uses SSE, not WebSocket. In the Proxy Host **Advanced** field (directives are applied inside the proxy location), use:
+
+```nginx
+proxy_http_version 1.1;
+proxy_buffering off;
+proxy_cache off;
+proxy_read_timeout 1h;
+proxy_send_timeout 1h;
+proxy_set_header Connection "";
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+```
+
+`/api/stream` already sends `Content-Type: text/event-stream`,
+`Cache-Control: no-cache, no-transform`, `Connection: keep-alive`, and
+`X-Accel-Buffering: no`. WebSocket support is not required for this endpoint.
 
 ## Architecture
 
