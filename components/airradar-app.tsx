@@ -163,9 +163,54 @@ function LogoMark() {
   );
 }
 
-type AircraftMarkerKind = "airplane" | "helicopter" | "glider" | "drone" | "ground";
+type AircraftMarkerKind = "airplane" | "a220" | "a320" | "a330" | "a350" | "a380" | "b717" | "b727" | "b737" | "b747" | "b757" | "b767" | "b777" | "b787" | "regional" | "turboprop" | "business-jet" | "general-aviation" | "helicopter" | "glider" | "drone" | "ground";
 
-function aircraftMarkerKind(aircraft: Pick<AircraftView, "category">): AircraftMarkerKind {
+const AIRCRAFT_GLYPH_PATHS: Record<AircraftMarkerKind, string> = {
+  // Every silhouette points north at 0°, matching ADS-B track semantics.
+  airplane: "m16 2 4 12 8 5-1 2-9-2-2 10-2-10-9 2-1-2 8-5 4-12Z",
+  a220: "m16 2 3 12 8 5-1 2-9-2-1 11h-2l-1-11-9 2-1-2 8-5 3-12Z",
+  a320: "m16 2 3 12 9 5-1 2-10-2-1 11-2 0-1-11-10 2-1-2 9-5 3-12Z",
+  a330: "m16 2 4 11 9 5-1 3-10-2-1 11h-2l-1-11-10 2-1-3 9-5 4-11Z",
+  a350: "m16 2 4 11 9 5-1 3-10-2-1 11h-2l-1-11-10 2-1-3 9-5 4-11ZM11 16l-3 1m13-1 3 1",
+  a380: "m16 2 5 11 9 5-1 3-11-2-1 11h-2l-1-11-11 2-1-3 9-5 5-11Z",
+  b717: "m16 3 2 12 8 4-1 2-9-2-1 9h-1l-1-9-9 2-1-2 8-4 2-12Z",
+  b727: "m16 2 3 12 9 5-1 2-10-2-1 11h-2l-1-11-10 2-1-2 9-5 3-12ZM13 24l-3 2m9-2 3 2",
+  b737: "m16 2 3 12 9 5-1 2-10-2-1 11h-2l-1-11-10 2-1-2 9-5 3-12ZM11 16l-2 1m12-1 2 1",
+  b747: "m16 2 5 11 9 5-1 3-11-2-1 11h-2l-1-11-11 2-1-3 9-5 5-11ZM14 7h4",
+  b757: "m16 2 3 12 10 5-1 2-11-2-1 11h-2l-1-11-11 2-1-2 10-5 3-12Z",
+  b767: "m16 2 4 11 9 5-1 3-10-2-1 11h-2l-1-11-10 2-1-3 9-5 4-11ZM10 17l-2 1m14-1 2 1",
+  b777: "m16 2 4 11 10 5-1 3-11-2-1 11h-2l-1-11-11 2-1-3 10-5 4-11Z",
+  b787: "m16 2 4 11 9 5-1 3-10-2-1 11h-2l-1-11-10 2-1-3 9-5 4-11ZM11 17l-3 1m13-1 3 1",
+  regional: "m16 3 2 12 8 4-1 2-9-2-1 9h-1l-1-9-9 2-1-2 8-4 2-12Z",
+  turboprop: "m16 4 2 11 8 4-1 2-9-2-1 9h-1l-1-9-9 2-1-2 8-4 2-11ZM8 13H4m4 3H4m20-3h4m-4 3h4",
+  "business-jet": "m16 2 2 13 8 5-1 2-9-3-1 9h-1l-1-9-9 3-1-2 8-5 2-13Z",
+  "general-aviation": "m16 3 1 13 9 4-1 2-10-2-1 8h-1l-1-8-10 2-1-2 9-4 1-13Z",
+  helicopter: "M16 8v15M9 12h14M6 8h20M16 5v3M12 23h8l3 4H9l3-4Z",
+  glider: "m16 3 3 12 10 5-1 2-10-2-2 9-2-9-10 2-1-2 10-5 3-12Z",
+  drone: "M16 8v16M8 16h16M10 10h4v4h-4zM18 10h4v4h-4zM10 18h4v4h-4zM18 18h4v4h-4z",
+  ground: "M10 11h12l3 8v5H7v-5l3-8Zm1 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z",
+};
+
+function aircraftMarkerKind(aircraft: Pick<AircraftView, "category" | "aircraftType" | "enrichment">): AircraftMarkerKind {
+  const type = (aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType ?? "").toUpperCase().replaceAll("-", "");
+  if (["A318", "A319", "A320", "A321", "A19N", "A20N", "A21N"].includes(type)) return "a320";
+  if (/^(BCS1|BCS3|A221|A223)/.test(type)) return "a220";
+  if (/^(A306|A310|A342|A343|A345|A346)/.test(type)) return "a330";
+  if (/^(A332|A333|A338|A339)/.test(type)) return "a330";
+  if (/^(A359|A35K)/.test(type)) return "a350";
+  if (type === "A388") return "a380";
+  if (/^(B712|B717)/.test(type)) return "b717";
+  if (/^(B721|B722|B727)/.test(type)) return "b727";
+  if (/^(B731|B732|B733|B734|B735|B736|B737|B738|B739|B37M|B38M|B39M|B3XM)/.test(type)) return "b737";
+  if (/^(B741|B742|B743|B744|B748)/.test(type)) return "b747";
+  if (/^(B752|B753|B757)/.test(type)) return "b757";
+  if (/^(B762|B763|B764|B767)/.test(type)) return "b767";
+  if (/^(B772|B773|B77L|B77W|B777)/.test(type)) return "b777";
+  if (/^(B781|B788|B789|B78J|B787)/.test(type)) return "b787";
+  if (/^(AT4|AT7|DH8|DHC|SF3|F50|JS4)/.test(type)) return "turboprop";
+  if (/^(E1[3-9]|E2[0-9]|CRJ|RJ[0-9]|ARJ)/.test(type)) return "regional";
+  if (/^(GLF|CL[0-9]|LJ[0-9]|E55|FA[0-9]|C5[0-9]|C68|C7[0-9]|PRM|H25|DA[0-9])/.test(type)) return "business-jet";
+  if (/^(C[0-4]|P28|P32|P46|PA[0-9]|PC1|TBM|BE[0-9]|SR2|M20|DA4)/.test(type)) return "general-aviation";
   switch (aircraft.category?.toUpperCase()) {
     case "A7": return "helicopter";
     case "B1": return "glider";
@@ -177,31 +222,11 @@ function aircraftMarkerKind(aircraft: Pick<AircraftView, "category">): AircraftM
 }
 
 function AircraftGlyph({ kind = "airplane" }: { kind?: AircraftMarkerKind }) {
-  if (kind === "helicopter") {
-    return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 8v15M9 12h14M6 8h20M16 5v3M12 23h8l3 4H9l3-4Z" /></svg>;
-  }
-  if (kind === "glider") {
-    return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 3 12 10 5-1 2-10-2-2 9-2-9-10 2-1-2 10-5 3-12Z" /></svg>;
-  }
-  if (kind === "drone") {
-    return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 8v16M8 16h16M10 10h4v4h-4zM18 10h4v4h-4zM10 18h4v4h-4zM18 18h4v4h-4z" /></svg>;
-  }
-  if (kind === "ground") {
-    return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 11h12l3 8v5H7v-5l3-8Zm1 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" /></svg>;
-  }
-  // The nose is at the top of the viewBox: 0° is geographic north.
-  return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 2 4 12 8 5-1 2-9-2-2 10-2-10-9 2-1-2 8-5 4-12Z" /></svg>;
+  return <svg className={`aircraft-glyph aircraft-glyph-${kind}`} viewBox="0 0 32 32" aria-hidden="true"><path d={AIRCRAFT_GLYPH_PATHS[kind]} /></svg>;
 }
 
 function aircraftGlyphMarkup(kind: AircraftMarkerKind): string {
-  const paths: Record<AircraftMarkerKind, string> = {
-    helicopter: "<path d=\"M16 8v15M9 12h14M6 8h20M16 5v3M12 23h8l3 4H9l3-4Z\" />",
-    glider: "<path d=\"m16 3 3 12 10 5-1 2-10-2-2 9-2-9-10 2-1-2 10-5 3-12Z\" />",
-    drone: "<path d=\"M16 8v16M8 16h16M10 10h4v4h-4zM18 10h4v4h-4zM10 18h4v4h-4zM18 18h4v4h-4z\" />",
-    ground: "<path d=\"M10 11h12l3 8v5H7v-5l3-8Zm1 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z\" />",
-    airplane: "<path d=\"m16 2 4 12 8 5-1 2-9-2-2 10-2-10-9 2-1-2 8-5 4-12Z\" />",
-  };
-  return `<svg viewBox="0 0 32 32" aria-hidden="true">${paths[kind]}</svg>`;
+  return `<svg class="aircraft-glyph aircraft-glyph-${kind}" viewBox="0 0 32 32" aria-hidden="true"><path d="${AIRCRAFT_GLYPH_PATHS[kind]}" /></svg>`;
 }
 
 export function AirRadarApp() {

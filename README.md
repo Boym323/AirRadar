@@ -121,6 +121,23 @@ Source code, API names, database schema and technical documentation remain in En
 
 The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled ATC layer is explicitly demo-only (`AirRadar sample data`) and is selected only without `READSB_BASE_URL` (or with the explicit `ATC_SAMPLE_ENABLED=true`). In production set `ATC_SAMPLE_ENABLED=false`; `/api/atc/sectors` and the resolver then use imported PostgreSQL data, or an empty layer if no verified dataset has been imported. Store sector rings as JSON `[[[lon, lat], ...]]` in `AtcSector.polygonJson` and alternate frequencies as JSON `[{"frequencyMhz": 127.35, "label": "..."}]` in `alternateFrequenciesJson`, with source, altitude reference and validity recorded on each row. The current Czech AIP-derived dataset is generated locally by the explicit sync workflow and is not bundled.
 
+### Airport catalog
+
+The map uses the local PostgreSQL `Airport` catalog when it has rows, with a
+small bundled fallback otherwise. Populate it from the public-domain,
+daily-updated [OurAirports dataset](https://ourairports.com/data/):
+
+```bash
+npm run airports:import -- --dry-run
+npm run airports:import
+```
+
+The import downloads `airports.csv`, validates coordinates and ICAO codes, and
+upserts by ICAO without deleting existing rows. It includes medium and large
+airports worldwide, plus small airports, heliports and seaplane bases in Czechia
+and neighbouring Austria, Germany, Poland and Slovakia. Pass another CSV URL as
+the final argument only when deliberately importing a compatible snapshot.
+
 ATC reference data can be loaded from the versioned JSON format documented in
 [`data/atc/README.md`](data/atc/README.md):
 
@@ -165,6 +182,8 @@ boundary; if the authoritative path intersects a generalized AIP walk, the
 walk is polygonized into validated rings without adding geometry. Data50 is
 attributed as ČÚZK Data50 under [CC BY 4.0](https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx). AIM and ČÚZK
 are sync-time sources only; live radar has no runtime dependency on either.
+`state boundary with Germany/Poland/Austria/Slovakia` selects ČÚZK Data50 for Czech national-border geometry. `state boundary Germany - Poland` instead selects the official [BKG VG25 WFS](https://sgx.geodatenzentrum.de/wfs_vg25) layer `vg25:vg25_li` for the Germany–Poland international border. BKG VG25 attribution: © Bundesamt für Kartographie und Geodäsie (BKG), VG25, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
 The complete parse, geometry resolution and validation finish before the
 transaction, so a failed source or unresolved boundary leaves the database
 unchanged.

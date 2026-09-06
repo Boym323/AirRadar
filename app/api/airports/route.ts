@@ -11,7 +11,7 @@ export async function GET(): Promise<Response> {
   const database = getPrisma();
   if (database) {
     try {
-      const airports = await database.orm.public.Airport.limit(5000).all();
+      const airports = await database.orm.public.Airport.limit(10000).all();
       if (airports.length) {
         return Response.json(airports.map((airport): Airport => ({
           icaoCode: airport.icao,

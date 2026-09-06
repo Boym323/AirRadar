@@ -9,7 +9,9 @@ const MAX_SOURCE_BYTES = 32 * 1024 * 1024;
 // Production policy: an eAIP endpoint may only be snapped to authoritative
 // Data50 geometry when the displacement is at most 0.5 km. There is no
 // untested 0.5–1.0 km exception and no larger fallback tolerance.
-export const CZ_PRODUCTION_MAX_SNAP_DISTANCE_KM = 0.5;
+export const ATC_BOUNDARY_MAX_SNAP_DISTANCE_KM = 0.5;
+/** @deprecated Use ATC_BOUNDARY_MAX_SNAP_DISTANCE_KM. */
+export const CZ_PRODUCTION_MAX_SNAP_DISTANCE_KM = ATC_BOUNDARY_MAX_SNAP_DISTANCE_KM;
 const MAX_BOUNDARY_EDGE_LENGTH_KM = 25;
 const NODE_PRECISION = 7;
 
@@ -36,6 +38,8 @@ export interface StateBoundaryResolution {
   vertexCount: number;
   maxSegmentLengthKm: number;
   featureIds: string[];
+  provider?: string;
+  semantic?: string;
 }
 
 export interface StateBoundaryProvider {
@@ -126,16 +130,6 @@ function projectOnSegment(point: Coordinate, start: Coordinate, end: Coordinate)
   return { point: candidate, fraction, distanceKm: haversineKm(point, candidate) };
 }
 
-function classificationForHint(hint: string | undefined): Set<BoundaryClassification> {
-  const normalized = normalizedText(hint ?? "").toLocaleLowerCase("en-US");
-  // Data50 represents a Germany–Poland transition as a connected path that
-  // reaches a tripoint feature from the ordinary Czech state-boundary line.
-  // Keep both classes for that explicit AIP hint; restricting the path to the
-  // tripoint feature alone would discard the authoritative approach to it.
-  if (/(germany\s*-\s*poland|poland\s*-\s*germany)/.test(normalized)) return new Set(["state", "tripoint"]);
-  return new Set(["state"]);
-}
-
 function appendUnique(target: Coordinate[], coordinates: Coordinate[]): void {
   for (const coordinate of coordinates) {
     const previous = target.at(-1);
@@ -222,9 +216,10 @@ class MinQueue {
 export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
   private readonly nodes = new Map<string, GraphNode>();
   private readonly edges: GraphEdge[] = [];
+  private readonly edgeKeys = new Set<string>();
   private readonly adjacency = new Map<string, GraphEdge[]>();
 
-  constructor(features: StateBoundaryFeature[]) {
+  constructor(features: StateBoundaryFeature[], private readonly maxBoundaryEdgeLengthKm = MAX_BOUNDARY_EDGE_LENGTH_KM) {
     for (const feature of features) {
       const coordinates = feature.coordinates.filter((coordinate, index) => index === 0 || coordinate[0] !== feature.coordinates[index - 1][0] || coordinate[1] !== feature.coordinates[index - 1][1]);
       for (let index = 1; index < coordinates.length; index += 1) {
@@ -232,9 +227,10 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
         const to = this.ensureNode(coordinates[index]);
         if (from === to) continue;
         const lengthKm = haversineKm(coordinates[index - 1], coordinates[index]);
-        if (lengthKm > MAX_BOUNDARY_EDGE_LENGTH_KM) throw new CuzkBoundaryError(`ČÚZK boundary edge ${feature.id} is implausibly long (${lengthKm.toFixed(3)} km)`);
-        const existing = this.edges.find((edge) => edge.from === from && edge.to === to || edge.from === to && edge.to === from);
-        if (existing) continue;
+        if (lengthKm > this.maxBoundaryEdgeLengthKm) throw new CuzkBoundaryError(`State-boundary edge ${feature.id} is implausibly long (${lengthKm.toFixed(3)} km)`);
+        const edgeKey = from < to ? `${from}|${to}` : `${to}|${from}`;
+        if (this.edgeKeys.has(edgeKey)) continue;
+        this.edgeKeys.add(edgeKey);
         const edge: GraphEdge = { id: `${feature.id}:${index}`, from, to, lengthKm, classification: feature.classification, featureId: feature.id };
         this.edges.push(edge);
         this.adjacency.set(from, [...(this.adjacency.get(from) ?? []), edge]);
@@ -245,8 +241,8 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
   }
 
   getBoundarySegment(input: StateBoundaryInput): StateBoundaryResolution {
-    const allowed = classificationForHint(input.hint);
-    const maxSnapDistanceKm = input.maxSnapDistanceKm ?? CZ_PRODUCTION_MAX_SNAP_DISTANCE_KM;
+    const allowed = new Set<BoundaryClassification>(["state", "tripoint"]);
+    const maxSnapDistanceKm = input.maxSnapDistanceKm ?? ATC_BOUNDARY_MAX_SNAP_DISTANCE_KM;
     if (!Number.isFinite(maxSnapDistanceKm) || maxSnapDistanceKm <= 0) throw new CuzkBoundaryError("State-boundary snap tolerance must be positive");
     const start = this.findSnap(input.start, allowed, maxSnapDistanceKm);
     const end = this.findSnap(input.end, allowed, maxSnapDistanceKm);
@@ -255,7 +251,7 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
     appendUnique(coordinates, path.coordinates);
     if (coordinates.length < 1) throw new CuzkBoundaryError("State-boundary resolver produced an empty path");
     const maxSegmentLengthKm = coordinates.slice(1).reduce((maximum, coordinate, index) => Math.max(maximum, haversineKm(coordinates[index], coordinate)), 0);
-    if (maxSegmentLengthKm > MAX_BOUNDARY_EDGE_LENGTH_KM) throw new CuzkBoundaryError(`Resolved state-boundary path contains an implausible jump (${maxSegmentLengthKm.toFixed(3)} km)`);
+    if (maxSegmentLengthKm > this.maxBoundaryEdgeLengthKm) throw new CuzkBoundaryError(`Resolved state-boundary path contains an implausible jump (${maxSegmentLengthKm.toFixed(3)} km)`);
     return {
       coordinates,
       startSnapDistanceKm: start.distanceKm,
@@ -411,6 +407,6 @@ export class CuzkStateBoundaryProvider implements StateBoundaryProvider {
 
   getBoundarySegment(input: StateBoundaryInput): StateBoundaryResolution {
     if (!this.graph) throw new CuzkBoundaryError("ČÚZK Data50 boundary provider has not been loaded");
-    return this.graph.getBoundarySegment(input);
+    return { ...this.graph.getBoundarySegment(input), provider: "ČÚZK Data50" };
   }
 }

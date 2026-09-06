@@ -79,6 +79,8 @@ line. Data50 attribution is [ČÚZK Data50, CC BY
 snapshots and downloaded source files are not committed; the current official
 dataset belongs in PostgreSQL only after an explicit, fully validated sync.
 
+State-boundary source selection follows AIP semantics: Czech national-border constructs use ČÚZK Data50; `state boundary Germany - Poland` uses the official [BKG VG25 WFS](https://sgx.geodatenzentrum.de/wfs_vg25), layer `vg25:vg25_li`. BKG VG25 attribution: © Bundesamt für Kartographie und Geodäsie (BKG), VG25, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Both are sync-time inputs only.
+
 The template file in this directory is documentation only and contains no
 operational Czech sector or frequency data.
 

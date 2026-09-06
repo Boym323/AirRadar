@@ -107,9 +107,10 @@ Generated files under `generated/` are outputs, not the database schema source o
   sources.
 - Czech production ACC ATC data is derived from the official AIM/eAIP source
   through the explicit sync pipeline; it is not a runtime dependency. AIP
-  supplies ATC semantics and ČÚZK Data50 supplies only reconstructed state-
-  boundary geometry; endpoint snapping is production-safe only at or below
-  0.5 km, and unresolved or invalid geometry fails before the import
+  semantics select reconstructed state-boundary geometry: Czech national
+  borders use ČÚZK Data50 and the Germany–Poland international border uses
+  BKG VG25. Endpoint snapping is production-safe only at or below 0.5 km,
+  and unresolved or invalid geometry fails before the import
   transaction.
 - Public APIs must not expose exact receiver coordinates unless explicitly
   configured; internal receiver coordinates remain exact for calculations.

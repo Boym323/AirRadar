@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import "dotenv/config";
+import { BkgGermanyPolandBoundaryProvider } from "../lib/atc/bkg-boundary";
+import { AuthoritativeBoundaryResolver } from "../lib/atc/boundary-resolver";
 import { CuzkBoundaryError, CuzkStateBoundaryProvider } from "../lib/atc/cz-boundary";
 import { fetchCurrentCzEaip, parseCzEaipEnr21 } from "../lib/atc/cz-eaip";
 import { validateAtcImportDocument } from "../lib/atc/import-format";
@@ -35,7 +37,7 @@ function printDiagnostics(result: ReturnType<typeof parseCzEaipEnr21>): void {
   }
   for (const diagnostic of result.diagnostics.filter((item) => item.boundaryResolutions?.length)) {
     for (const resolution of diagnostic.boundaryResolutions ?? []) {
-      console.log(`  boundary ${diagnostic.name}: snap ${resolution.startSnapDistanceKm.toFixed(3)} km/${resolution.endSnapDistanceKm.toFixed(3)} km; ${resolution.vertexCount} vertices; ${resolution.pathLengthKm.toFixed(3)} km path; max segment ${resolution.maxSegmentLengthKm.toFixed(3)} km; features ${resolution.featureIds.join(",")}`);
+      console.log(`  boundary ${diagnostic.name}: ${resolution.semantic ?? "unknown semantic"}; ${resolution.provider ?? "unknown"}; snap ${resolution.startSnapDistanceKm.toFixed(3)} km/${resolution.endSnapDistanceKm.toFixed(3)} km; ${resolution.vertexCount} vertices; ${resolution.pathLengthKm.toFixed(3)} km path; max segment ${resolution.maxSegmentLengthKm.toFixed(3)} km; features ${resolution.featureIds.join(",")}`);
     }
   }
 }
@@ -43,9 +45,9 @@ function printDiagnostics(result: ReturnType<typeof parseCzEaipEnr21>): void {
 async function main(): Promise<void> {
   const dryRun = dryRunArgument();
   const source = await fetchCurrentCzEaip();
-  const boundaryProvider = new CuzkStateBoundaryProvider();
-  await boundaryProvider.load();
-  const parsed = parseCzEaipEnr21(source.enr21Html, { publicationHtml: source.publicationHtml, stateBoundaryProvider: boundaryProvider });
+  const boundaryResolver = new AuthoritativeBoundaryResolver(new CuzkStateBoundaryProvider(), new BkgGermanyPolandBoundaryProvider());
+  await boundaryResolver.load();
+  const parsed = parseCzEaipEnr21(source.enr21Html, { publicationHtml: source.publicationHtml, boundaryResolver });
   const dataset = validateAtcImportDocument(parsed.document);
   console.log(`Official source: ${dataset.source.reference}`);
   console.log(`Publication effective: ${parsed.effectiveDate}; published: ${parsed.publicationDate ?? "unknown"}`);

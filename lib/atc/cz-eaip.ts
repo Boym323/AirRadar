@@ -1,12 +1,14 @@
 import { load, type CheerioAPI } from "cheerio";
 import type { AtcImportDocument, AtcImportFrequency, AtcImportSector, ImportAltitude } from "./import-format";
 import type { Coordinate } from "./types";
-import { CZ_CUZK_DATA50_METADATA_URL, CZ_CUZK_DATA50_QUERY_URL, type StateBoundaryProvider, type StateBoundaryResolution } from "./cz-boundary";
+import { BKG_VG25_ATTRIBUTION, BKG_VG25_WFS_URL } from "./bkg-boundary";
+import { type BoundaryResolver, type StateBoundaryReference } from "./boundary-resolver";
+import { CZ_CUZK_DATA50_METADATA_URL, CZ_CUZK_DATA50_QUERY_URL, type StateBoundaryResolution } from "./cz-boundary";
 import { aviationCoordinateToDecimal, densifyArc, type ArcDirection } from "./cz-geometry";
 
 export const CZ_EAIP_ENR21_URL = "https://aim.rlp.cz/eaip/html/eAIP/LK-ENR-2.1-en-GB.html";
 export const CZ_EAIP_GEN02_URL = "https://aim.rlp.cz/ais_data/aip/data/valid/g0-2.html";
-export const CZ_ATC_SOURCE_REFERENCE = `${CZ_EAIP_ENR21_URL} | geometry: ${CZ_CUZK_DATA50_QUERY_URL} | metadata: ${CZ_CUZK_DATA50_METADATA_URL}`;
+export const CZ_ATC_SOURCE_REFERENCE = `${CZ_EAIP_ENR21_URL} | Czech boundary geometry: ${CZ_CUZK_DATA50_QUERY_URL} | metadata: ${CZ_CUZK_DATA50_METADATA_URL} | Germany–Poland boundary geometry: ${BKG_VG25_WFS_URL} (${BKG_VG25_ATTRIBUTION})`;
 const AUTHORITATIVE_HOST = "aim.rlp.cz";
 const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
 
@@ -71,6 +73,7 @@ interface ArcEvent {
 
 interface StateBoundaryEvent {
   label: string;
+  reference: StateBoundaryReference;
 }
 
 type BoundaryEvent =
@@ -226,7 +229,7 @@ function parseBoundary($: CheerioAPI, cell: Parameters<CheerioAPI>[0]): ParsedBo
     if (borderTokens.length) {
       const label = borderTokens.map((token) => token.value).join(" ");
       borderNames.push(...borderTokens.map((token) => token.value));
-      events.push({ kind: "border", border: { label } });
+      events.push({ kind: "border", border: { label, reference: parseStateBoundaryReference(label) } });
     }
   });
   return {
@@ -242,7 +245,21 @@ function parseBoundary($: CheerioAPI, cell: Parameters<CheerioAPI>[0]): ParsedBo
   };
 }
 
-function assembleBoundary(boundary: ParsedBoundary, name: string, provider?: StateBoundaryProvider): void {
+function parseStateBoundaryReference(label: string): StateBoundaryReference {
+  const normalized = normalizedText(label).toLocaleLowerCase("en-US");
+  const countryLabel = normalized.replace(/^state boundary with\s+/, "");
+  const neighbour = /^(germany|poland|austria|slovakia)$/.exec(countryLabel)?.[1];
+  const czechNeighbours = { germany: "DE", poland: "PL", austria: "AT", slovakia: "SK" } as const;
+  if (neighbour && neighbour in czechNeighbours) return { kind: "czech-border", neighbour: czechNeighbours[neighbour as keyof typeof czechNeighbours] };
+  if (/^(?:state boundary\s+)?(germany\s*-\s*poland|poland\s*-\s*germany)$/.test(normalized)) return { kind: "foreign-border", countryA: "DE", countryB: "PL" };
+  throw new CzEaipParseError([`Unsupported state-boundary semantics: ${label}`]);
+}
+
+function formatStateBoundaryReference(reference: StateBoundaryReference): string {
+  return reference.kind === "czech-border" ? `Czech border with ${reference.neighbour}` : "Germany–Poland international border";
+}
+
+function assembleBoundary(boundary: ParsedBoundary, name: string, provider?: BoundaryResolver): void {
   const coordinates: Coordinate[] = [];
   let pendingArc: ArcEvent | null = null;
   let pendingBorder: StateBoundaryEvent | null = null;
@@ -263,7 +280,7 @@ function assembleBoundary(boundary: ParsedBoundary, name: string, provider?: Sta
         } else {
           let resolution: StateBoundaryResolution;
           try {
-            resolution = provider.getBoundarySegment({ start, end: event.coordinate, hint: pendingBorder.label });
+            resolution = { ...provider.getBoundarySegment(pendingBorder.reference, { start, end: event.coordinate }), semantic: formatStateBoundaryReference(pendingBorder.reference) };
           } catch (error) {
             throw new CzEaipParseError([`${name || "unnamed airspace"}: ${error instanceof Error ? error.message : String(error)}`]);
           }
@@ -571,7 +588,7 @@ function inheritLogicalVerticalLimits(rows: ParsedRow[]): void {
   }
 }
 
-export function parseCzEaipEnr21(html: string, options: { publicationHtml?: string; lastVerifiedAt?: string; stateBoundaryProvider?: StateBoundaryProvider } = {}): CzEaipParseResult {
+export function parseCzEaipEnr21(html: string, options: { publicationHtml?: string; lastVerifiedAt?: string; boundaryResolver?: BoundaryResolver } = {}): CzEaipParseResult {
   const $ = load(html, { xmlMode: true });
   const effectiveDate = extractEffectiveDate($);
   const publicationDate = parseDateParts(metadataValue($, "DC.date"));
@@ -593,7 +610,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
   inheritLogicalVerticalLimits(accRows);
   for (const row of accRows) {
     try {
-      assembleBoundary(row.boundary, row.name, options.stateBoundaryProvider);
+      assembleBoundary(row.boundary, row.name, options.boundaryResolver);
     } catch (error) {
       if (!(error instanceof CzEaipParseError)) throw error;
       row.boundaryError = error.issues.join("; ");
@@ -604,13 +621,13 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
   const diagnostics: CzEaipSectorDiagnostic[] = [];
   const accepted: AtcImportSector[] = [];
   const lastVerifiedAt = options.lastVerifiedAt ?? new Date().toISOString();
-  const sourceName = `${publicationName(publication)}${options.stateBoundaryProvider ? " + ČÚZK Data50" : ""}`;
+  const sourceName = `${publicationName(publication)}${options.boundaryResolver ? " + authoritative boundary geometry" : ""}`;
 
   for (const row of accRows) {
     if (!row.skipReason) {
       if (row.boundary.constituentReferences.length) {
         row.skipReason = "aggregate sector row; constituent sectors are imported separately";
-      } else if (row.boundary.borderSegments.length && !options.stateBoundaryProvider) {
+      } else if (row.boundary.borderSegments.length && !options.boundaryResolver) {
         row.skipReason = `state-border segment requires authoritative geometry (${row.boundary.borderNames.join(", ")})`;
       } else if (!row.boundary.directGeometry && row.boundary.lateralReference) {
         const target = byName.get(row.boundary.lateralReference);
@@ -659,7 +676,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
   return {
     document: {
       schemaVersion: 1,
-      source: { name: sourceName, reference: options.stateBoundaryProvider ? CZ_ATC_SOURCE_REFERENCE : CZ_EAIP_ENR21_URL, effectiveDate, lastVerifiedAt },
+      source: { name: sourceName, reference: options.boundaryResolver ? CZ_ATC_SOURCE_REFERENCE : CZ_EAIP_ENR21_URL, effectiveDate, lastVerifiedAt },
       sectors: accepted,
       transmitters: [],
     },
