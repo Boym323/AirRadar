@@ -1,5 +1,5 @@
 import type { Aircraft } from "@/lib/aircraft/types";
-import { getFlightContinuityGapMs, getHistoryRetentionDays } from "@/lib/server/config";
+import { getFlightContinuityGapMs, getHistoryRetentionDays, getHistorySampleIntervalMs } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 
 export interface HistoryResponse {
@@ -29,6 +29,7 @@ export interface HistoryResponse {
 }
 
 let lastRetentionRunAt = 0;
+let lastFlightMaintenanceRunAt = 0;
 
 async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
   let nextIndex = 0;
@@ -49,7 +50,19 @@ async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T
 
 async function pruneHistoryIfDue(database: NonNullable<ReturnType<typeof getPrisma>>): Promise<void> {
   const now = Date.now();
-  if (now - lastRetentionRunAt < 6 * 60 * 60_000) return;
+  const maintenanceDue = now - lastFlightMaintenanceRunAt >= Math.max(getHistorySampleIntervalMs(), 5 * 60_000);
+  const retentionDue = now - lastRetentionRunAt >= 6 * 60 * 60_000;
+  if (!maintenanceDue && !retentionDue) return;
+  if (maintenanceDue) {
+    lastFlightMaintenanceRunAt = now;
+    try {
+      await closeStaleFlights(database, new Date(now));
+    } catch (error) {
+      lastFlightMaintenanceRunAt = 0;
+      console.error("AirRadar stale flight cleanup failed", error);
+    }
+  }
+  if (!retentionDue) return;
   lastRetentionRunAt = now;
   try {
     const cutoff = new Date(now - getHistoryRetentionDays() * 24 * 60 * 60_000);
@@ -60,6 +73,28 @@ async function pruneHistoryIfDue(database: NonNullable<ReturnType<typeof getPris
     lastRetentionRunAt = 0;
     console.error("AirRadar history retention cleanup failed", error);
   }
+}
+
+export function staleFlightEndTime(lastSeenAt: Date, now: Date, continuityGapMs = getFlightContinuityGapMs()): Date | null {
+  return now.getTime() - lastSeenAt.getTime() > continuityGapMs ? lastSeenAt : null;
+}
+
+/** Closes flights whose aircraft disappeared without a final snapshot. */
+export async function closeStaleFlights(
+  database: NonNullable<ReturnType<typeof getPrisma>>,
+  now = new Date(),
+): Promise<void> {
+  const cutoff = new Date(now.getTime() - getFlightContinuityGapMs());
+  const schema = database.orm.public;
+  const staleFlights = await schema.Flight
+    .where({ endTime: null })
+    .where((flight) => flight.lastSeenAt.lt(cutoff))
+    .all();
+  await runWithConcurrency(staleFlights, 4, async (flight) => {
+    const endTime = staleFlightEndTime(flight.lastSeenAt, now);
+    if (!endTime) return;
+    await schema.Flight.where({ id: flight.id }).update({ endTime });
+  });
 }
 
 export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: Date): Promise<void> {

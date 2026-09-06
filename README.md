@@ -145,3 +145,5 @@ Optional server-side contracts are defined for `AircraftMetadataProvider`, `Flig
 The ATC service models multi-polygon sectors, vertical limits, validity, country, callsign, service, primary/alternate frequencies and source. Its resolver performs point-in-polygon plus altitude/time matching and reports a probable sector only. It never claims to know the aircraft’s actually tuned frequency.
 
 The project intentionally does not claim a definitive AIP dataset, actual tuned radio frequency, global ADS-B coverage, RTL-airband ingestion, push notifications or coverage heatmaps.
+
+For receivers regularly tracking several hundred aircraft, review mobile performance before replacing DOM markers; the next targeted optimization would be a GeoJSON source with a MapLibre symbol layer.

@@ -43,7 +43,7 @@ export class LocalReadsbProvider implements AircraftProvider {
         const receiverResponse = await fetchJson<Record<string, unknown>>(endpoint(this.baseUrl, "/data/receiver.json"));
         const lat = Number(receiverResponse.lat);
         const lon = Number(receiverResponse.lon);
-        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        if (Number.isFinite(lat) && lat >= -90 && lat <= 90 && Number.isFinite(lon) && lon >= -180 && lon <= 180) {
           this.currentReceiver = { ...this.currentReceiver, lat, lon };
         }
       } catch {

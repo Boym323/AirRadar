@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, StyleSpecification } from "maplibre-gl";
 import { circleCoordinates } from "@/lib/geo";
+import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, FlightRoute, ReceiverPosition, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcSector, AtcTransmitter } from "@/lib/atc/types";
@@ -181,6 +182,7 @@ export function AirRadarApp() {
   const animationFramesRef = useRef<Map<string, number>>(new Map());
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const receiverRef = useRef(snapshot.receiver);
+  const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -357,10 +359,15 @@ export function AirRadarApp() {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const receiver = snapshot.receiver;
+    receiverRef.current = receiver;
     receiverMarkerRef.current?.setLngLat([receiver.lon, receiver.lat]);
     const rings = map.getSource("range-rings") as GeoJSONSource | undefined;
     rings?.setData(createRangeGeoJSON(receiver));
-  }, [snapshot.receiver, mapReady]);
+    if (shouldRecenterOnReceiver(snapshot.provider, centeredReceiverRef.current, receiver)) {
+      map.jumpTo({ center: [receiver.lon, receiver.lat] });
+      centeredReceiverRef.current = receiver;
+    }
+  }, [mapReady, snapshot.provider, snapshot.receiver]);
 
   useEffect(() => {
     const map = mapRef.current;

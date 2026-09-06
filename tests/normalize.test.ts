@@ -25,9 +25,20 @@ describe("readsb normalization", () => {
     }] }, { lat: 50, lon: 14, name: "Test" }, new Date("2026-01-01T00:00:00Z"));
     expect(result[0]).toMatchObject({
       icaoHex: "~ABC123", callsign: "MODE123", altitude: 120, baroAltitude: null, geomAltitude: 120,
-      verticalRate: 256, baroRate: -128, geomRate: 256, category: "A3",
+      verticalRate: -128, baroRate: -128, geomRate: 256, category: "A3",
       seenSeconds: 2.5, seenPosSeconds: 0.75, source: "Mode-S", sourceType: "mode_s", onGround: true,
     });
     expect(result[0].lastSeen).toBe("2025-12-31T23:59:57.500Z");
+  });
+
+  it("uses barometric altitude and rate for the general ATC/display values", () => {
+    const result = normalizeAircraftResponse({ aircraft: [{
+      hex: "abc123", flight: "ALT123", lat: 50, lon: 14,
+      alt_baro: 28000, alt_geom: 28600, baro_rate: -512, geom_rate: -256,
+    }] }, { lat: 50, lon: 14, name: "Test" });
+    expect(result[0]).toMatchObject({
+      altitude: 28000, baroAltitude: 28000, geomAltitude: 28600,
+      verticalRate: -512, baroRate: -512, geomRate: -256,
+    });
   });
 });

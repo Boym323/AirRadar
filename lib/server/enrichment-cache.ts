@@ -20,6 +20,39 @@ interface CacheOptions {
   negativeTtlMs: number;
 }
 
+/** Runs different provider keys in parallel only up to the provider budget. */
+export class ConcurrencyLimiter {
+  private active = 0;
+  private readonly queue: Array<{
+    task: () => Promise<unknown>;
+    resolve: (value: unknown) => void;
+    reject: (reason?: unknown) => void;
+  }> = [];
+
+  constructor(private readonly limit: number) {}
+
+  run<T>(task: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.queue.push({ task, resolve: resolve as (value: unknown) => void, reject });
+      this.drain();
+    });
+  }
+
+  private drain(): void {
+    while (this.active < this.limit && this.queue.length) {
+      const entry = this.queue.shift();
+      if (!entry) return;
+      this.active += 1;
+      void entry.task()
+        .then(entry.resolve, entry.reject)
+        .finally(() => {
+          this.active -= 1;
+          this.drain();
+        });
+    }
+  }
+}
+
 /** Small bounded TTL cache with negative caching and in-flight request coalescing. */
 export class ProviderCache {
   private readonly entries = new Map<string, CacheEntry<unknown>>();
@@ -90,6 +123,10 @@ export function flightPlanCacheKey(callsign: string, observedAt: Date): string {
 }
 
 export class EnrichmentService {
+  private readonly metadataLimiter = new ConcurrencyLimiter(6);
+  private readonly routeLimiter = new ConcurrencyLimiter(6);
+  private readonly flightPlanLimiter = new ConcurrencyLimiter(2);
+
   constructor(
     private readonly providers: ProviderRegistry,
     private readonly cache = new ProviderCache(),
@@ -99,23 +136,31 @@ export class EnrichmentService {
     return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute || this.providers.flightPlan);
   }
 
+  needsEnrichment(aircraft: Aircraft, existing: AircraftEnrichment | undefined): boolean {
+    return Boolean(
+      (this.providers.aircraftMetadata && !existing?.metadata)
+      || (aircraft.callsign && this.providers.flightRoute && !existing?.route)
+      || (aircraft.callsign && this.providers.flightPlan && !existing?.flightPlan),
+    );
+  }
+
   async enrich(aircraft: Aircraft, observedAt: Date): Promise<AircraftEnrichment | null> {
     if (!this.hasProviders) return null;
     const [metadata, route, flightPlan] = await Promise.all([
       this.providers.aircraftMetadata
-        ? this.cache.get(metadataCacheKey(aircraft.icaoHex), () => this.providers.aircraftMetadata!.getMetadata(aircraft.icaoHex), {
+        ? this.cache.get(metadataCacheKey(aircraft.icaoHex), () => this.metadataLimiter.run(() => this.providers.aircraftMetadata!.getMetadata(aircraft.icaoHex)), {
             ttlMs: ENRICHMENT_TTLS.metadataMs,
             negativeTtlMs: ENRICHMENT_TTLS.metadataNegativeMs,
           })
         : Promise.resolve(null),
       aircraft.callsign && this.providers.flightRoute
-        ? this.cache.get(routeCacheKey(aircraft.callsign, observedAt), () => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt), {
+        ? this.cache.get(routeCacheKey(aircraft.callsign, observedAt), () => this.routeLimiter.run(() => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt)), {
             ttlMs: ENRICHMENT_TTLS.routeMs,
             negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
           })
         : Promise.resolve(null),
       aircraft.callsign && this.providers.flightPlan
-        ? this.cache.get(flightPlanCacheKey(aircraft.callsign, observedAt), () => this.providers.flightPlan!.getFlightPlan(aircraft.callsign!, observedAt), {
+        ? this.cache.get(flightPlanCacheKey(aircraft.callsign, observedAt), () => this.flightPlanLimiter.run(() => this.providers.flightPlan!.getFlightPlan(aircraft.callsign!, observedAt)), {
             ttlMs: ENRICHMENT_TTLS.flightPlanMs,
             negativeTtlMs: ENRICHMENT_TTLS.flightPlanNegativeMs,
           })

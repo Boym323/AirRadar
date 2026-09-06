@@ -63,7 +63,6 @@ export class AircraftStateService {
   private readonly atc: AtcSectorService;
   private readonly atcResolutionKeys = new Map<string, string>();
   private observationDate = new Date().toISOString().slice(0, 10);
-  private observedAircraftToday = 0;
 
   constructor(
     provider: AircraftProvider = createAircraftProvider(),
@@ -163,6 +162,13 @@ export class AircraftStateService {
 
   private applySnapshot(snapshot: ProviderSnapshot): void {
     this.currentReceiver = snapshot.receiver;
+    const today = new Date().toISOString().slice(0, 10);
+    if (today !== this.observationDate) {
+      this.observationDate = today;
+      this.seenToday.clear();
+      this.stats.maxDistanceKm = 0;
+      this.stats.maxConcurrentAircraft = 0;
+    }
     const currentHexes = new Set<string>();
     for (const incoming of snapshot.aircraft) {
       if (Date.parse(incoming.lastSeen) < Date.now() - getAircraftStaleAfterMs()) continue;
@@ -173,28 +179,20 @@ export class AircraftStateService {
       const enrichment = mergeEnrichment(previous?.enrichment, incoming.enrichment, sameCallsign);
       const atc = previous?.callsign === incoming.callsign ? previous.atc : incoming.atc;
       this.aircraft.set(incoming.icaoHex, { ...incoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
-      this.seenToday.set(incoming.icaoHex, new Date().toISOString().slice(0, 10));
-      this.observedAircraftToday += 1;
+      this.seenToday.set(incoming.icaoHex, today);
       if ((incoming.distanceKm ?? 0) > this.stats.maxDistanceKm) {
         this.stats.maxDistanceKm = incoming.distanceKm ?? this.stats.maxDistanceKm;
       }
     }
     for (const hex of this.aircraft.keys()) {
-      if (!currentHexes.has(hex)) this.aircraft.delete(hex);
+      if (!currentHexes.has(hex)) this.removeAircraft(hex);
     }
     this.stats.currentAircraft = this.aircraft.size;
-    const today = new Date().toISOString().slice(0, 10);
-    if (today !== this.observationDate) {
-      this.observationDate = today;
-      this.observedAircraftToday = this.aircraft.size;
-      this.seenToday.clear();
-      for (const item of this.aircraft.values()) this.seenToday.set(item.icaoHex, today);
-    }
     for (const [hex, date] of this.seenToday) {
-      if (date !== today) this.seenToday.delete(hex);
+      if (date !== today && !this.aircraft.has(hex)) this.seenToday.delete(hex);
     }
     this.stats.uniqueAircraftToday = this.seenToday.size;
-    this.stats.aircraftSeenToday = this.observedAircraftToday;
+    this.stats.aircraftSeenToday = this.seenToday.size;
     this.stats.maxConcurrentAircraft = Math.max(this.stats.maxConcurrentAircraft, this.aircraft.size);
     this.stats.messagesPerSecond = snapshot.messagesPerSecond ?? this.stats.messagesPerSecond;
     const typeCounts = new Map<string, number>();
@@ -212,9 +210,15 @@ export class AircraftStateService {
   private removeStaleAircraft(): void {
     const cutoff = Date.now() - getAircraftStaleAfterMs();
     for (const [hex, item] of this.aircraft) {
-      if (Date.parse(item.lastSeen) < cutoff) this.aircraft.delete(hex);
+      if (Date.parse(item.lastSeen) < cutoff) this.removeAircraft(hex);
     }
     this.stats.currentAircraft = this.aircraft.size;
+  }
+
+  private removeAircraft(hex: string): void {
+    this.aircraft.delete(hex);
+    this.atcResolutionKeys.delete(hex);
+    this.lastHistorySample.delete(hex);
   }
 
   private updateTrail(previous: Aircraft | undefined, incoming: Aircraft): TrailPoint[] {
@@ -234,13 +238,18 @@ export class AircraftStateService {
       const previous = this.lastHistorySample.get(item.icaoHex) ?? 0;
       return now - previous >= getHistorySampleIntervalMs();
     });
-    if (!due.length) return;
-    try {
-      await recordAircraftSnapshot(due, new Date(snapshot.fetchedAt));
-      for (const item of due) this.lastHistorySample.set(item.icaoHex, now);
-    } catch (error) {
-      // History is best-effort and must never make a healthy receiver look offline.
-      console.error("AirRadar history persistence failed", error);
+    if (due.length) {
+      try {
+        await recordAircraftSnapshot(due, new Date(snapshot.fetchedAt));
+        for (const item of due) this.lastHistorySample.set(item.icaoHex, now);
+      } catch (error) {
+        // History is best-effort and must never make a healthy receiver look offline.
+        console.error("AirRadar history persistence failed", error);
+      }
+    } else {
+      // Let the throttled history maintenance run even when no position sample
+      // is due (for example while every aircraft is out of range).
+      await recordAircraftSnapshot([], new Date(snapshot.fetchedAt));
     }
     const cleanupBefore = now - Math.max(getHistorySampleIntervalMs() * 2, 60 * 60_000);
     for (const [hex, sampledAt] of this.lastHistorySample) {
@@ -288,7 +297,7 @@ export class AircraftStateService {
     if (!this.enrichment.hasProviders) return;
     const candidates = snapshot.aircraft.filter((item) => {
       const current = this.aircraft.get(item.icaoHex);
-      return !current?.enrichment?.metadata || Boolean(item.callsign && !current.enrichment.route);
+      return this.enrichment.needsEnrichment(item, current?.enrichment);
     });
     const results = await Promise.allSettled(candidates.map(async (item) => ({
       item,
@@ -326,10 +335,15 @@ export class AircraftStateService {
   private async resolveAtc(snapshot: ProviderSnapshot): Promise<void> {
     const results = await Promise.all(snapshot.aircraft.map(async (incoming) => {
       if (incoming.lat === null || incoming.lon === null) return { incoming, assignment: null };
+      if (!this.aircraft.has(incoming.icaoHex)) return { incoming, assignment: null };
       const key = `${incoming.lat.toFixed(2)}:${incoming.lon.toFixed(2)}:${incoming.altitude === null ? "unknown" : Math.round(incoming.altitude / 1000)}`;
       if (this.atcResolutionKeys.get(incoming.icaoHex) === key) return { incoming, assignment: this.aircraft.get(incoming.icaoHex)?.atc ?? null };
       this.atcResolutionKeys.set(incoming.icaoHex, key);
       const match = await this.atc.lookup({ latitude: incoming.lat, longitude: incoming.lon, altitudeFt: incoming.altitude, observedAt: new Date(snapshot.fetchedAt) });
+      if (!this.aircraft.has(incoming.icaoHex)) {
+        this.atcResolutionKeys.delete(incoming.icaoHex);
+        return { incoming, assignment: null };
+      }
       return { incoming, assignment: match ? assignmentFromMatch(match) : null };
     }));
     let changed = false;

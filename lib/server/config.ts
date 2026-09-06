@@ -1,14 +1,21 @@
 import type { ReceiverPosition } from "@/lib/aircraft/types";
 
 function envNumber(name: string, fallback: number): number {
-  const value = Number(process.env[name]);
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const value = Number(raw);
   return Number.isFinite(value) ? value : fallback;
+}
+
+function envCoordinate(name: string, fallback: number, minimum: number, maximum: number): number {
+  const value = envNumber(name, fallback);
+  return value >= minimum && value <= maximum ? value : fallback;
 }
 
 export function getReceiverPosition(): ReceiverPosition {
   return {
-    lat: envNumber("RECEIVER_LAT", 50.0755),
-    lon: envNumber("RECEIVER_LON", 14.4378),
+    lat: envCoordinate("RECEIVER_LAT", 50.0755, -90, 90),
+    lon: envCoordinate("RECEIVER_LON", 14.4378, -180, 180),
     name: process.env.RECEIVER_NAME?.trim() || "AirRadar receiver",
   };
 }

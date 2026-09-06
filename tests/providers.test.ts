@@ -25,12 +25,30 @@ describe("optional enrichment providers", () => {
     });
   });
 
-  it("keeps the FlightAware key in a server-side request and maps plan fields", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ flights: [{ ident: "UAE139", scheduled_out: "2026-01-01T08:00:00Z", actual_out: null, scheduled_in: "2026-01-01T16:00:00Z", estimated_in: "2026-01-01T16:20:00Z", filed_route: "DCT L604", waypoints: ["TOP"], }] })));
+  it("selects the observed FlightAware instance and loads its filed route by fa_flight_id", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ flights: [
+        { ident: "UAE139", fa_flight_id: "UAE139-past", scheduled_out: "2026-01-01T02:00:00Z", actual_out: "2026-01-01T02:10:00Z", actual_in: "2026-01-01T06:00:00Z", route: "OLD ROUTE" },
+        { ident: "UAE139", fa_flight_id: "UAE139-current", scheduled_out: "2026-01-01T08:00:00Z", actual_out: "2026-01-01T08:10:00Z", scheduled_in: "2026-01-01T16:00:00Z", estimated_in: "2026-01-01T16:20:00Z", route: "DCT L604" },
+        { ident: "UAE139", fa_flight_id: "UAE139-future", scheduled_out: "2026-01-02T08:00:00Z", scheduled_in: "2026-01-02T16:00:00Z", route: "FUTURE ROUTE" },
+      ] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ fixes: [{ name: "TOP" }, { name: "L604" }] })));
     vi.stubGlobal("fetch", fetchMock);
     const provider = new FlightAwareFlightPlanProvider("secret-key");
-    await expect(provider.getFlightPlan("UAE139", new Date("2026-01-01T00:00:00Z"))).resolves.toMatchObject({ scheduledDeparture: "2026-01-01T08:00:00Z", estimatedArrival: "2026-01-01T16:20:00Z", waypoints: ["TOP"] });
+    await expect(provider.getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z"))).resolves.toMatchObject({
+      scheduledDeparture: "2026-01-01T08:00:00Z", estimatedArrival: "2026-01-01T16:20:00Z",
+      filedRoute: "DCT L604", waypoints: ["TOP", "L604"],
+    });
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ headers: { "x-apikey": "secret-key" } });
+    expect(fetchMock.mock.calls[1][0]).toBe("https://aeroapi.flightaware.com/aeroapi/flights/UAE139-current/route");
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ headers: { "x-apikey": "secret-key" } });
+  });
+
+  it("does not call FlightAware when the optional key is empty", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(new FlightAwareFlightPlanProvider(" ").getFlightPlan("UAE139", new Date())).resolves.toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

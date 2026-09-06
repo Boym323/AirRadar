@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ENRICHMENT_TTLS, EnrichmentService, ProviderCache, metadataCacheKey, routeCacheKey } from "@/lib/server/enrichment-cache";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
-import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
+import type { AircraftMetadata, FlightPlan, FlightRoute } from "@/lib/aircraft/types";
 
 describe("provider enrichment cache", () => {
   function aircraft(hex: string, callsign: string) {
@@ -139,5 +139,40 @@ describe("provider enrichment cache", () => {
     expect(result?.metadata).toMatchObject({ registration: "A6-RJX", manufacturer: "Boeing", operator: "Royal Jet" });
     expect(result?.route).toMatchObject({ airline: "Emirates", origin: "OMDB", destination: "LKPR" });
     expect(result?.metadata?.operator).not.toBe(result?.route?.airline);
+  });
+
+  it("bounds concurrent lookups for different cache keys", async () => {
+    let active = 0;
+    let maximum = 0;
+    const getMetadata = vi.fn(async (hex: string) => {
+      active += 1;
+      maximum = Math.max(maximum, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active -= 1;
+      return metadata(hex);
+    });
+    const service = new EnrichmentService({ aircraftMetadata: { name: "adsbdb", getMetadata } });
+    await Promise.all(Array.from({ length: 14 }, (_, index) => service.enrich(aircraft(`ABC${index.toString(16).padStart(3, "0")}`, `TEST${index}`), new Date("2026-01-01T12:00:00Z"))));
+    expect(maximum).toBeLessThanOrEqual(6);
+    expect(getMetadata).toHaveBeenCalledTimes(14);
+  });
+
+  it("keeps the paid FlightAware plan provider at two concurrent requests", async () => {
+    let active = 0;
+    let maximum = 0;
+    const getFlightPlan = vi.fn(async (callsign: string): Promise<FlightPlan> => {
+      active += 1;
+      maximum = Math.max(maximum, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active -= 1;
+      return {
+        callsign, scheduledDeparture: null, actualDeparture: null, scheduledArrival: null,
+        estimatedArrival: null, filedRoute: null, waypoints: [], source: "flightaware", retrievedAt: new Date().toISOString(),
+      };
+    });
+    const service = new EnrichmentService({ flightPlan: { name: "flightaware", getFlightPlan } });
+    await Promise.all(Array.from({ length: 7 }, (_, index) => service.enrich(aircraft(`DEF${index.toString(16).padStart(3, "0")}`, `PLAN${index}`), new Date("2026-01-01T12:00:00Z"))));
+    expect(maximum).toBeLessThanOrEqual(2);
+    expect(getFlightPlan).toHaveBeenCalledTimes(7);
   });
 });

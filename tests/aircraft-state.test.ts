@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
@@ -60,5 +60,45 @@ describe("aircraft state service", () => {
     expect(current?.callsign).toBe("NEW123");
     expect(current?.enrichment?.metadata).toMatchObject({ registration: "OK-ABC", operator: "Operator ABC123" });
     expect(current?.enrichment?.route).toBeUndefined();
+  });
+
+  it("counts unique aircraft once and resets daily maxima at midnight", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T23:59:00Z"));
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const makeAircraft = (hex: string, lon: number) => {
+      const value = normalizeAircraft({ hex, flight: hex, lat: 50, lon }, receiver, new Date());
+      if (!value) throw new Error("test aircraft could not be normalized");
+      return value;
+    };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver), new EnrichmentService({}), new AtcSectorService(new EmptyAtcSectorProvider()));
+    const apply = (aircraft: ReturnType<typeof makeAircraft>[]) => (service as unknown as { applySnapshot: (snapshot: ProviderSnapshot) => void }).applySnapshot({
+      aircraft, receiver, fetchedAt: new Date().toISOString(), provider: "test",
+    });
+
+    apply([makeAircraft("AAA001", 14)]);
+    apply([makeAircraft("AAA001", 14), makeAircraft("BBB002", 15)]);
+    expect(service.getSnapshot().stats).toMatchObject({ aircraftSeenToday: 2, uniqueAircraftToday: 2, maxConcurrentAircraft: 2 });
+
+    vi.setSystemTime(new Date("2026-01-02T00:01:00Z"));
+    apply([makeAircraft("CCC003", 14.05)]);
+    expect(service.getSnapshot().stats).toMatchObject({ aircraftSeenToday: 1, uniqueAircraftToday: 1, maxConcurrentAircraft: 1 });
+    expect(service.getSnapshot().stats.maxDistanceKm).toBeLessThan(10);
+    vi.useRealTimers();
+  });
+
+  it("removes ATC resolution keys when an aircraft disappears", async () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const aircraft = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 }, receiver);
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+    const provider: AircraftProvider = { name: "test", getSnapshot: async () => ({ aircraft: [], receiver, fetchedAt: new Date().toISOString(), provider: "test" }) };
+    const service = new AircraftStateService(provider, new EnrichmentService({}), new AtcSectorService(new EmptyAtcSectorProvider()));
+    const snapshot: ProviderSnapshot = { aircraft: [aircraft], receiver, fetchedAt: new Date().toISOString(), provider: "test" };
+    const internal = service as unknown as { applySnapshot: (value: ProviderSnapshot) => void; resolveAtc: (value: ProviderSnapshot) => Promise<void>; atcResolutionKeys: Map<string, string> };
+    internal.applySnapshot(snapshot);
+    await internal.resolveAtc(snapshot);
+    expect(internal.atcResolutionKeys.has("ABC123")).toBe(true);
+    internal.applySnapshot({ ...snapshot, aircraft: [] });
+    expect(internal.atcResolutionKeys.has("ABC123")).toBe(false);
   });
 });
