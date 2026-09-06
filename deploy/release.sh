@@ -154,6 +154,14 @@ require_command() {
   command -v "${command_name}" >/dev/null 2>&1 || die "Required command is not available: ${command_name}"
 }
 
+git_cmd() {
+  if (( EUID == 0 )); then
+    GIT_TERMINAL_PROMPT=0 git -c "safe.directory=${APP_DIR}" -C "${APP_DIR}" "$@"
+  else
+    GIT_TERMINAL_PROMPT=0 git -C "${APP_DIR}" "$@"
+  fi
+}
+
 check_node_version() {
   local required_node current_node
 
@@ -188,17 +196,17 @@ check_repository() {
   [[ -f "${APP_DIR}/deploy/airradar.service" ]] || die "Missing ${APP_DIR}/deploy/airradar.service."
   [[ -f "${APP_DIR}/.env" ]] || die "Missing ${APP_DIR}/.env."
 
-  git_root="$(git -C "${APP_DIR}" rev-parse --show-toplevel 2>/dev/null)" || die "${APP_DIR} is not a Git repository."
+  git_root="$(git_cmd rev-parse --show-toplevel 2>/dev/null)" || die "${APP_DIR} is not a Git repository."
   git_root="$(cd -- "${git_root}" && pwd -P)"
   [[ "${git_root}" == "${APP_DIR}" ]] || die "Git repository root is ${git_root}, expected ${APP_DIR}."
 
-  current_branch="$(git -C "${APP_DIR}" branch --show-current)"
+  current_branch="$(git_cmd branch --show-current)"
   [[ -n "${current_branch}" ]] || die "The checkout is detached; release requires a named branch."
-  git check-ref-format --branch "${DEPLOY_BRANCH}" >/dev/null 2>&1 || die "Invalid release branch name: ${DEPLOY_BRANCH}"
+  git_cmd check-ref-format --branch "${DEPLOY_BRANCH}" >/dev/null 2>&1 || die "Invalid release branch name: ${DEPLOY_BRANCH}"
   [[ "${current_branch}" == "${DEPLOY_BRANCH}" ]] || die "Current branch is ${current_branch}; expected ${DEPLOY_BRANCH}. Use --branch explicitly if this is intentional."
-  git -C "${APP_DIR}" remote get-url origin >/dev/null 2>&1 || die "Git remote origin is not configured."
+  git_cmd remote get-url origin >/dev/null 2>&1 || die "Git remote origin is not configured."
 
-  dirty_status="$(git -C "${APP_DIR}" status --porcelain)"
+  dirty_status="$(git_cmd status --porcelain)"
   while IFS= read -r status_line; do
     [[ -z "${status_line}" ]] && continue
     [[ "${status_line:0:2}" == "??" ]] && continue
@@ -245,7 +253,7 @@ acquire_lock() {
 assert_clean_worktree() {
   local status_line dirty_status
 
-  dirty_status="$(git -C "${APP_DIR}" status --porcelain)"
+  dirty_status="$(git_cmd status --porcelain)"
   while IFS= read -r status_line; do
     [[ -z "${status_line}" ]] && continue
     [[ "${status_line:0:2}" == "??" ]] && continue
@@ -258,15 +266,15 @@ assert_clean_worktree() {
 update_repository() {
   local remote_ref remote_sha merge_base
 
-  OLD_SHA="$(git -C "${APP_DIR}" rev-parse HEAD)"
+  OLD_SHA="$(git_cmd rev-parse HEAD)"
   log "Current commit: ${OLD_SHA}"
   log "Updating repository from origin/${DEPLOY_BRANCH}"
-  GIT_TERMINAL_PROMPT=0 git -C "${APP_DIR}" fetch origin "${DEPLOY_BRANCH}"
+  git_cmd fetch origin "${DEPLOY_BRANCH}"
 
   remote_ref="refs/remotes/origin/${DEPLOY_BRANCH}"
-  git -C "${APP_DIR}" show-ref --verify --quiet "${remote_ref}" || die "Fetched origin/${DEPLOY_BRANCH}, but its remote-tracking ref is unavailable."
-  remote_sha="$(git -C "${APP_DIR}" rev-parse "${remote_ref}")"
-  merge_base="$(git -C "${APP_DIR}" merge-base HEAD "${remote_ref}")"
+  git_cmd show-ref --verify --quiet "${remote_ref}" || die "Fetched origin/${DEPLOY_BRANCH}, but its remote-tracking ref is unavailable."
+  remote_sha="$(git_cmd rev-parse "${remote_ref}")"
+  merge_base="$(git_cmd merge-base HEAD "${remote_ref}")"
 
   if [[ "${merge_base}" != "${OLD_SHA}" && "${merge_base}" != "${remote_sha}" ]]; then
     die "Local ${DEPLOY_BRANCH} and origin/${DEPLOY_BRANCH} have divergent history; refusing to merge on production."
@@ -276,12 +284,12 @@ update_repository() {
     log "No new commit; validating current release."
   elif [[ "${merge_base}" == "${OLD_SHA}" ]]; then
     log "Fast-forwarding ${DEPLOY_BRANCH} to ${remote_sha}"
-    git -C "${APP_DIR}" merge --ff-only "${remote_ref}"
+    git_cmd merge --ff-only "${remote_ref}"
   else
     log "Local ${DEPLOY_BRANCH} is ahead of origin/${DEPLOY_BRANCH}; keeping the local fast-forward-only state."
   fi
 
-  NEW_SHA="$(git -C "${APP_DIR}" rev-parse HEAD)"
+  NEW_SHA="$(git_cmd rev-parse HEAD)"
   log "New commit: ${NEW_SHA}"
 }
 
@@ -382,7 +390,7 @@ restart_and_check() {
 }
 
 print_dry_run_plan() {
-  OLD_SHA="$(git -C "${APP_DIR}" rev-parse HEAD)"
+  OLD_SHA="$(git_cmd rev-parse HEAD)"
   log "Dry run; no repository update, dependency installation, migrations, build, restart, or health checks will run."
   log "Current commit: ${OLD_SHA}"
   log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, npm ci, Prisma generate, lint, typecheck, tests, Prisma deploy, build, restart, local health, public health."
