@@ -20,6 +20,8 @@ export function assignmentFromMatch(match: AtcSectorMatch): AtcAssignment {
     alternateFrequenciesMhz: match.sector.frequencies.filter((frequency) => frequency !== primary).map((frequency) => frequency.frequencyMhz),
     lowerAltitudeFt: match.sector.lowerAltitudeFt,
     upperAltitudeFt: match.sector.upperAltitudeFt,
+    lowerAltitudeReference: match.sector.lowerAltitudeReference ?? null,
+    upperAltitudeReference: match.sector.upperAltitudeReference ?? null,
     country: match.sector.country,
     source: match.sector.source,
     sourceReference: match.sector.sourceReference,

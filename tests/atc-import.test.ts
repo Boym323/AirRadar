@@ -36,6 +36,16 @@ describe("ATC import format", () => {
     expect(result.sectors[0].validFrom).toBe("2026-09-01T00:00:00.000Z");
   });
 
+  it("retains AGL/flight-level references and published UHF alternates", () => {
+    const document = structuredClone(validDocument) as typeof validDocument;
+    document.sectors[0].lowerAltitude = "1000 AGL";
+    document.sectors[0].upperAltitude = "FL125";
+    document.sectors[0].alternateFrequencies = [{ frequencyMhz: 378.75, label: "Reserve" }];
+    const result = validateAtcImportDocument(document);
+    expect(result.sectors[0]).toMatchObject({ lowerAltitudeFt: 1000, lowerAltitudeReference: "AGL", upperAltitudeFt: 12500, upperAltitudeReference: "FL" });
+    expect(result.sectors[0].alternateFrequencies).toEqual([{ frequencyMhz: 378.75, label: "Reserve" }]);
+  });
+
   it("rejects invalid coordinates, frequencies, polygons and ranges before writing", () => {
     const invalid = structuredClone(validDocument) as typeof validDocument;
     invalid.sectors[0].polygons = [[[181, 50], [15, 50]]];
@@ -61,6 +71,8 @@ describe("ATC import format", () => {
         polygonJson: JSON.stringify(dataset.sectors[0].polygons),
         lowerAltitudeFt: 0,
         upperAltitudeFt: 24500,
+        lowerAltitudeReference: "SFC",
+        upperAltitudeReference: "FL",
         atcCallsign: null,
         service: "APP",
         primaryFrequencyMhz: 118.005,

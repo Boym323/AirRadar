@@ -15,6 +15,8 @@ export interface AtcSector {
   polygons: SectorPolygon[];
   lowerAltitudeFt: number | null;
   upperAltitudeFt: number | null;
+  lowerAltitudeReference?: string | null;
+  upperAltitudeReference?: string | null;
   frequencies: AtcFrequency[];
   validFrom: string | null;
   validTo: string | null;
@@ -33,6 +35,8 @@ export interface AtcAssignment {
   alternateFrequenciesMhz: number[];
   lowerAltitudeFt: number | null;
   upperAltitudeFt: number | null;
+  lowerAltitudeReference?: string | null;
+  upperAltitudeReference?: string | null;
   country: string | null;
   source: string;
   sourceReference: string;

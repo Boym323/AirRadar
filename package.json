@@ -24,10 +24,13 @@
     "prisma:migrate": "prisma migration plan --name init",
     "prisma:deploy": "prisma db migrate",
     "prisma:verify": "prisma db verify",
-    "atc:import": "jiti scripts/atc-import.ts"
+    "atc:import": "jiti scripts/atc-import.ts",
+    "atc:sync:cz": "jiti scripts/atc-sync-cz.ts",
+    "atc:status:cz": "jiti scripts/atc-status-cz.ts"
   },
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.8",
+    "cheerio": "^1.2.0",
     "maplibre-gl": "4.7.1",
     "next": "^15.5.4",
     "react": "^19.1.0",
@@ -40,9 +43,9 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^17.4.2",
     "eslint": "^9.20.1",
     "eslint-config-next": "^15.5.4",
-    "dotenv": "^17.4.2",
     "postcss": "8.5.28",
     "prisma": "8.0.0-rc.13",
     "tailwindcss": "^3.4.17",

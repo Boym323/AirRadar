@@ -80,6 +80,13 @@ function registrationCountryForAircraft(aircraft: AircraftView): string | null {
   return aircraft.enrichment?.metadata?.registrationCountryCode ?? aircraft.enrichment?.metadata?.registrationCountry ?? null;
 }
 
+function formatAtcLimit(feet: number | null, reference: string | null | undefined, unlimited: string): string {
+  if (reference === "SFC") return "SFC";
+  if (reference === "UNL" || feet === null) return unlimited;
+  if (reference === "FL") return `FL${Math.round(feet / 100)}`;
+  return `${formatAltitude(feet)}${reference === "AGL" ? " AGL" : ""}`;
+}
+
 function airportCodes(airport: Airport): string {
   return airport.iataCode ? `${airport.iataCode}/${airport.icaoCode}` : airport.icaoCode;
 }
@@ -95,6 +102,8 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean) {
         service: formatAtcService(sector.service ?? sector.atcCallsign),
         lowerAltitudeFt: sector.lowerAltitudeFt,
         upperAltitudeFt: sector.upperAltitudeFt,
+        lowerAltitude: formatAtcLimit(sector.lowerAltitudeFt, sector.lowerAltitudeReference, t.common.unlimited),
+        upperAltitude: formatAtcLimit(sector.upperAltitudeFt, sector.upperAltitudeReference, t.common.unlimited),
         primaryFrequency: formatAtcFrequency((sector.frequencies.find((frequency) => frequency.isPrimary) ?? sector.frequencies[0])?.frequencyMhz),
         alternateFrequencies: sector.frequencies.filter((frequency) => !frequency.isPrimary).map((frequency) => formatAtcFrequency(frequency.frequencyMhz)).join(", "),
         source: sector.source,
@@ -317,7 +326,7 @@ export function AirRadarApp() {
         const title = document.createElement("strong");
         title.textContent = String(properties.name ?? t.atc.sector);
         const body = document.createElement("span");
-        const altitude = `${properties.lowerAltitudeFt ?? 0}–${properties.upperAltitudeFt ?? t.common.unlimited} ft`;
+        const altitude = `${String(properties.lowerAltitude ?? properties.lowerAltitudeFt ?? 0)}–${String(properties.upperAltitude ?? properties.upperAltitudeFt ?? t.common.unlimited)}`;
         body.textContent = `${String(properties.service ?? "")} · ${altitude} · ${t.atc.primaryFrequency}: ${String(properties.primaryFrequency ?? t.common.emptyValue)} · ${t.atc.alternates}: ${String(properties.alternateFrequencies || t.common.emptyValue)} · ${t.atc.source}: ${String(properties.source ?? t.common.emptyValue)} · ${t.atc.sourceReference}: ${String(properties.sourceReference ?? t.common.emptyValue)} · ${t.atc.effectiveDate}: ${String(properties.validFrom ?? t.common.emptyValue)}`;
         content.append(title, body);
         new maplibregl.Popup({ closeButton: true, maxWidth: "260px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
@@ -703,8 +712,8 @@ export function AirRadarApp() {
                   <DetailItem label={t.atc.sectorService} value={`${selectedAircraft.atc.name} · ${formatAtcService(selectedAircraft.atc.service || selectedAircraft.atc.callsign)}`} />
                   <DetailItem label={t.atc.primaryFrequency} value={formatAtcFrequency(selectedAircraft.atc.primaryFrequencyMhz)} />
                   <DetailItem label={t.atc.alternates} value={selectedAircraft.atc.alternateFrequenciesMhz.map((frequency) => formatAtcFrequency(frequency)).join(", ") || t.common.emptyValue} />
-                  <DetailItem label={t.atc.lowerLimit} value={formatAltitude(selectedAircraft.atc.lowerAltitudeFt)} />
-                  <DetailItem label={t.atc.upperLimit} value={selectedAircraft.atc.upperAltitudeFt === null ? t.common.unlimited : formatAltitude(selectedAircraft.atc.upperAltitudeFt)} />
+                  <DetailItem label={t.atc.lowerLimit} value={formatAtcLimit(selectedAircraft.atc.lowerAltitudeFt, selectedAircraft.atc.lowerAltitudeReference, t.common.unlimited)} />
+                  <DetailItem label={t.atc.upperLimit} value={formatAtcLimit(selectedAircraft.atc.upperAltitudeFt, selectedAircraft.atc.upperAltitudeReference, t.common.unlimited)} />
                   <DetailItem label={t.atc.source} value={selectedAircraft.atc.source} />
                   <DetailItem label={t.atc.sourceReference} value={selectedAircraft.atc.sourceReference} />
                   <DetailItem label={t.atc.effectiveDate} value={formatDateTime(selectedAircraft.atc.validFrom)} />

@@ -101,7 +101,7 @@ The integrations below are optional. A provider failure is negatively cached and
 | Aircraft metadata | [ADSBDB](https://github.com/mrjackwills/adsbdb) | `ADSBDB_ENABLED=true` and optional `ADSBDB_BASE_URL` | Free community API, no key |
 | Callsign airline and origin/destination | ADSBDB | Same as above | Free community API, no key |
 | Scheduled/actual/estimated times, filed route and waypoints | [FlightAware AeroAPI](https://www.flightaware.com/commercial/aeroapi/v4/documentation) | `FLIGHTAWARE_API_KEY=…` | Optional commercial service; key stays server-side |
-| ATC sectors and transmitters | Demo constants / PostgreSQL import | `ATC_SAMPLE_ENABLED` | Demo sample only; production requires a maintained/licensed AIP dataset |
+| ATC sectors and transmitters | Demo constants / PostgreSQL import | `ATC_SAMPLE_ENABLED` | Demo sample only; production uses an explicitly synced authoritative dataset |
 
 ADSBDB lookups are keyed by ICAO hex or callsign and cached for hours to a day; the cache coalesces concurrent requests and negatively caches misses, so the provider is not queried on every realtime update. FlightAware is disabled when `FLIGHTAWARE_API_KEY` is empty. Missing keys therefore do not reduce live radar functionality. Route lines are schematic references, not filed flight plans; the orange solid trail is the observed ADS-B trail.
 
@@ -115,7 +115,7 @@ The user interface defaults to Czech (`cs-CZ`).
 Visible UI strings are centralized under `lib/i18n`.
 Source code, API names, database schema and technical documentation remain in English.
 
-The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled ATC layer is explicitly demo-only (`AirRadar sample data`) and is selected only without `READSB_BASE_URL` (or with the explicit `ATC_SAMPLE_ENABLED=true`). In production set `ATC_SAMPLE_ENABLED=false`; `/api/atc/sectors` and the resolver then use imported PostgreSQL data, or an empty layer if no verified dataset has been imported. Store sector rings as JSON `[[[lon, lat], ...]]` in `AtcSector.polygonJson` and alternate frequencies as JSON `[{"frequencyMhz": 127.35, "label": "..."}]` in `alternateFrequenciesJson`, with the source and validity interval recorded on each row. No Czech AIP import is bundled.
+The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled ATC layer is explicitly demo-only (`AirRadar sample data`) and is selected only without `READSB_BASE_URL` (or with the explicit `ATC_SAMPLE_ENABLED=true`). In production set `ATC_SAMPLE_ENABLED=false`; `/api/atc/sectors` and the resolver then use imported PostgreSQL data, or an empty layer if no verified dataset has been imported. Store sector rings as JSON `[[[lon, lat], ...]]` in `AtcSector.polygonJson` and alternate frequencies as JSON `[{"frequencyMhz": 127.35, "label": "..."}]` in `alternateFrequenciesJson`, with source, altitude reference and validity recorded on each row. The current Czech AIP-derived dataset is generated locally by the explicit sync workflow and is not bundled.
 
 ATC reference data can be loaded from the versioned JSON format documented in
 [`data/atc/README.md`](data/atc/README.md):
@@ -129,11 +129,26 @@ The importer validates the complete document before writing, normalizes
 `SFC`/`FLxxx`/`UNL` altitude semantics, preserves aviation frequency precision,
 and commits sector/transmitter upserts plus same-source obsolescence in one
 transaction. Every imported row retains source name, reference, effective
-validity and last-verification metadata. It never changes aircraft history.
+validity, altitude reference and last-verification metadata. It never changes
+aircraft history.
 The resolver cache is process-local; restart the service after an import.
 ATC matches are always probable candidates based on position, normalized
 barometric/geometric altitude and UTC validity. ADS-B does not report the
 aircraft's actual tuned ATC frequency.
+
+For Czech ACC data, use the official eAIP sync rather than a hand-maintained
+snapshot:
+
+```bash
+npm run atc:sync:cz -- --dry-run
+npm run atc:sync:cz
+npm run atc:status:cz
+```
+
+The sync obtains ENR 2.1 from AIM ŘLP ČR, discovers the effective date and
+published AIP/AIRAC amendment metadata, and has no runtime dependency on AIM.
+Unsupported state-border geometry stops a production sync before any database
+write; no boundary is guessed.
 
 ## Useful commands
 
@@ -149,6 +164,8 @@ npm run prisma:migrate  # plan a new migration from the contract
 npm run prisma:deploy   # apply pending migrations
 npm run prisma:verify   # verify the configured database
 npm run atc:import -- --dry-run data/atc/cz-atc.json # validate/preview ATC data
+npm run atc:sync:cz -- --dry-run # preview current official Czech ACC data
+npm run atc:status:cz # compare imported Czech effective date with AIM
 ```
 
 ## API

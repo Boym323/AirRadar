@@ -13,8 +13,10 @@ geometry is an array of polygon rings; coordinates are always
 sector. Frequencies are numeric MHz values with at most three decimal places.
 
 Altitude values are normalized during import: use a number for feet AMSL,
-`SFC`, `FL245`-style flight levels, or `UNL` for an open upper limit. Do not
-put local unit conversion logic into the resolver.
+`1000 AGL`, `SFC`, `FL245`-style flight levels, or `UNL` for an open upper
+limit. AGL/FL/SFC/UNL references are retained on the imported sector. Do not
+put local unit conversion logic into the resolver. Frequencies may include
+VHF and explicitly published UHF values up to 400 MHz.
 
 The row-level `sourceReference`, `lastVerifiedAt`, `validFrom`, and `validTo`
 fields may override the source defaults. `validTo: null` means no known end.
@@ -45,6 +47,28 @@ Missing IDs from the same source are retained but expired at the new dataset
 effective date; flight history is never touched. Re-running the same document
 does not create duplicates. Restart the application after an import so the
 in-process resolver cache observes the new dataset.
+
+## Czech eAIP sync
+
+The reproducible Czech ACC adapter downloads only the official AIM/eAIP host,
+reads ENR 2.1 plus official GEN 0.2 amendment metadata, parses the XHTML DOM,
+normalizes coordinates/arcs/limits/frequencies, validates the complete result,
+and then calls the same importer above. AIM is not contacted by the running
+radar service.
+
+```bash
+npm run atc:sync:cz -- --dry-run
+npm run atc:sync:cz
+npm run atc:status:cz
+```
+
+The sync accepts only concrete `PRAHA ACC` / `PRAHA RADAR` operational
+sectors. FIR/CTA/TMA/FIC rows and aggregate sector rows are classified but are
+not imported. `CWA`/`CCA` arcs are deterministically densified. A state-border
+segment without explicit authoritative geometry is reported as unsupported;
+the production sync fails before the transaction rather than inventing a
+boundary. Generated snapshots and downloaded source files are not committed;
+the current official dataset belongs in PostgreSQL after an explicit sync.
 
 The template file in this directory is documentation only and contains no
 operational Czech sector or frequency data.

@@ -112,6 +112,8 @@ function storedSector(record: {
   polygonJson: string;
   lowerAltitudeFt: number | null;
   upperAltitudeFt: number | null;
+  lowerAltitudeReference: string | null;
+  upperAltitudeReference: string | null;
   atcCallsign: string | null;
   service: string | null;
   primaryFrequencyMhz: number | null;
@@ -133,6 +135,8 @@ function storedSector(record: {
     polygons,
     lowerAltitudeFt: record.lowerAltitudeFt,
     upperAltitudeFt: record.upperAltitudeFt,
+    lowerAltitudeReference: record.lowerAltitudeReference,
+    upperAltitudeReference: record.upperAltitudeReference,
     frequencies: frequenciesFromRecord(record.primaryFrequencyMhz, record.alternateFrequenciesJson),
     validFrom: record.validFrom?.toString() ?? null,
     validTo: record.validTo?.toString() ?? null,

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "column.public.atcSector.lowerAltitudeReference",
+    "label": "Add column \"lowerAltitudeReference\" to \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "lowerAltitudeReference",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"lowerAltitudeReference\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "lowerAltitudeReference"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"lowerAltitudeReference\"",
+        "sql": "ALTER TABLE \"public\".\"atcSector\" ADD COLUMN \"lowerAltitudeReference\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"lowerAltitudeReference\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "lowerAltitudeReference"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.atcSector.upperAltitudeReference",
+    "label": "Add column \"upperAltitudeReference\" to \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "upperAltitudeReference",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"upperAltitudeReference\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "upperAltitudeReference"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"upperAltitudeReference\"",
+        "sql": "ALTER TABLE \"public\".\"atcSector\" ADD COLUMN \"upperAltitudeReference\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"upperAltitudeReference\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "upperAltitudeReference"
+        ]
+      }
+    ]
+  }
+]

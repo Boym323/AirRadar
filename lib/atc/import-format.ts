@@ -1,4 +1,5 @@
-export type ImportAltitude = number | "SFC" | "UNL" | `FL${number}`;
+export type ImportAltitude = number | "SFC" | "UNL" | `FL${number}` | `${number} AGL`;
+export type ImportAltitudeReference = "AMSL" | "AGL" | "FL" | "SFC" | "UNL";
 
 export interface AtcImportSource {
   name: string;
@@ -66,6 +67,8 @@ export interface NormalizedAtcSector {
   polygons: number[][][];
   lowerAltitudeFt: number | null;
   upperAltitudeFt: number | null;
+  lowerAltitudeReference: ImportAltitudeReference | null;
+  upperAltitudeReference: ImportAltitudeReference | null;
   primaryFrequencyMhz: number | null;
   alternateFrequencies: NormalizedAtcFrequency[];
   source: string;
@@ -108,6 +111,8 @@ export interface ExistingAtcSectorRecord {
   polygonJson: string;
   lowerAltitudeFt: number | null;
   upperAltitudeFt: number | null;
+  lowerAltitudeReference?: string | null;
+  upperAltitudeReference?: string | null;
   atcCallsign: string | null;
   service: string | null;
   primaryFrequencyMhz: number | null;
@@ -172,6 +177,8 @@ function sameSector(row: ExistingAtcSectorRecord, sector: NormalizedAtcSector): 
     && sameJson(parsedJson(row.polygonJson), sector.polygons)
     && row.lowerAltitudeFt === sector.lowerAltitudeFt
     && row.upperAltitudeFt === sector.upperAltitudeFt
+    && (row.lowerAltitudeReference ?? null) === sector.lowerAltitudeReference
+    && (row.upperAltitudeReference ?? null) === sector.upperAltitudeReference
     && row.atcCallsign === sector.atcCallsign
     && row.service === sector.service
     && row.primaryFrequencyMhz === sector.primaryFrequencyMhz
@@ -282,41 +289,47 @@ function optionalDate(value: unknown, path: string, issues: string[], endOfDay =
   return parseDate(value, path, issues, endOfDay);
 }
 
-function altitude(value: unknown, path: string, issues: string[], boundary: "lower" | "upper"): number | null {
-  if (value === undefined || value === null) return null;
+function altitude(value: unknown, path: string, issues: string[], boundary: "lower" | "upper"): { feet: number | null; reference: ImportAltitudeReference | null } {
+  if (value === undefined || value === null) return { feet: null, reference: null };
   if (typeof value === "number") {
     if (!Number.isInteger(value) || value < 0 || value > 100000) issues.push(`${path} must be an integer between 0 and 100000 ft`);
-    return Number.isInteger(value) && value >= 0 && value <= 100000 ? value : null;
+    return Number.isInteger(value) && value >= 0 && value <= 100000 ? { feet: value, reference: "AMSL" } : { feet: null, reference: null };
   }
   if (typeof value !== "string") {
-    issues.push(`${path} must be a number, SFC, FLxxx or UNL`);
-    return null;
+    issues.push(`${path} must be a number, SFC, FLxxx, feet AGL or UNL`);
+    return { feet: null, reference: null };
   }
   const normalized = value.trim().toUpperCase();
   if (normalized === "SFC") {
     if (boundary === "upper") issues.push(`${path} cannot use SFC as an upper limit`);
-    return boundary === "lower" ? 0 : null;
+    return boundary === "lower" ? { feet: 0, reference: "SFC" } : { feet: null, reference: null };
   }
   if (normalized === "UNL") {
     if (boundary === "lower") issues.push(`${path} cannot use UNL as a lower limit`);
-    return null;
+    return boundary === "upper" ? { feet: null, reference: "UNL" } : { feet: null, reference: null };
+  }
+  const agl = /^(\d+)\s*(?:FT\s*)?AGL$/.exec(normalized);
+  if (agl) {
+    const feet = Number(agl[1]);
+    if (feet > 100000) issues.push(`${path} exceeds the supported altitude limit`);
+    return feet <= 100000 ? { feet, reference: "AGL" } : { feet: null, reference: null };
   }
   const flightLevel = /^FL\s*(\d{1,3})$/.exec(normalized);
   if (!flightLevel) {
-    issues.push(`${path} must be a number, SFC, FLxxx or UNL`);
-    return null;
+    issues.push(`${path} must be a number, SFC, FLxxx, feet AGL or UNL`);
+    return { feet: null, reference: null };
   }
   const feet = Number(flightLevel[1]) * 100;
   if (feet > 100000) issues.push(`${path} exceeds the supported altitude limit`);
-  return feet <= 100000 ? feet : null;
+  return feet <= 100000 ? { feet, reference: "FL" } : { feet: null, reference: null };
 }
 
 function frequency(value: unknown, path: string, issues: string[]): number | null {
   const result = finiteNumber(value, path, issues);
   if (result === null) return null;
-  if (result < 108 || result > 137) issues.push(`${path} must be between 108.000 and 137.000 MHz`);
+  if (result < 108 || result > 400) issues.push(`${path} must be between 108.000 and 400.000 MHz`);
   if (Math.abs(result * 1000 - Math.round(result * 1000)) > 1e-7) issues.push(`${path} must have at most three decimal places`);
-  return result >= 108 && result <= 137 && Math.abs(result * 1000 - Math.round(result * 1000)) <= 1e-7 ? result : null;
+  return result >= 108 && result <= 400 && Math.abs(result * 1000 - Math.round(result * 1000)) <= 1e-7 ? result : null;
 }
 
 function textOrNull(value: unknown, path: string, issues: string[]): string | null {
@@ -349,12 +362,12 @@ function polygons(value: unknown, path: string, issues: string[]): number[][][] 
   });
 }
 
-function resolveAltitude(raw: Record<string, unknown>, key: "lower" | "upper", path: string, issues: string[]): number | null {
+function resolveAltitude(raw: Record<string, unknown>, key: "lower" | "upper", path: string, issues: string[]): { feet: number | null; reference: ImportAltitudeReference | null } {
   const semanticKey = `${key}Altitude`;
   const legacyKey = `${key}AltitudeFt`;
   if (raw[semanticKey] !== undefined && raw[legacyKey] !== undefined) {
     issues.push(`${path} must use only ${semanticKey} or ${legacyKey}`);
-    return null;
+    return { feet: null, reference: null };
   }
   return altitude(raw[semanticKey] ?? raw[legacyKey], `${path}.${raw[semanticKey] !== undefined ? semanticKey : legacyKey}`, issues, key);
 }
@@ -423,8 +436,10 @@ export function validateAtcImportDocument(value: unknown): NormalizedAtcImport {
       const id = stringValue(rawSector.id, `${path}.id`, issues, true) ?? "";
       const name = stringValue(rawSector.name, `${path}.name`, issues, true) ?? "";
       const ringData = polygons(rawSector.polygons, `${path}.polygons`, issues);
-      const lowerAltitudeFt = resolveAltitude(rawSector, "lower", path, issues);
-      const upperAltitudeFt = resolveAltitude(rawSector, "upper", path, issues);
+      const lowerAltitude = resolveAltitude(rawSector, "lower", path, issues);
+      const upperAltitude = resolveAltitude(rawSector, "upper", path, issues);
+      const lowerAltitudeFt = lowerAltitude.feet;
+      const upperAltitudeFt = upperAltitude.feet;
       if (lowerAltitudeFt !== null && upperAltitudeFt !== null && lowerAltitudeFt > upperAltitudeFt) issues.push(`${path} lower altitude must not exceed upper altitude`);
       const parsedFrequencies = frequencies(rawSector, path, issues);
       const validFrom = optionalDate(rawSector.validFrom ?? effectiveDate, `${path}.validFrom`, issues);
@@ -445,6 +460,8 @@ export function validateAtcImportDocument(value: unknown): NormalizedAtcImport {
         polygons: ringData,
         lowerAltitudeFt,
         upperAltitudeFt,
+        lowerAltitudeReference: lowerAltitude.reference,
+        upperAltitudeReference: upperAltitude.reference,
         primaryFrequencyMhz: parsedFrequencies.primary,
         alternateFrequencies: parsedFrequencies.alternates,
         source: sourceName,

@@ -57,6 +57,8 @@ model AtcSector {
   polygonJson       String
   lowerAltitudeFt   Int?
   upperAltitudeFt   Int?
+  lowerAltitudeReference String?
+  upperAltitudeReference String?
   atcCallsign       String?
   service           String?
   primaryFrequencyMhz Float?
