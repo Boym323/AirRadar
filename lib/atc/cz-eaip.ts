@@ -24,6 +24,7 @@ export interface CzEaipSectorDiagnostic {
   objectType: CzAtcObjectType;
   status: "accepted" | "skipped";
   reason?: string;
+  boundaryError?: string;
   boundaryResolutions?: StateBoundaryResolution[];
   polygonMetrics?: CzPolygonMetric[];
 }
@@ -101,6 +102,7 @@ interface ParsedRow {
   upperAltitude: ImportAltitude | null;
   boundary: ParsedBoundary;
   skipReason?: string;
+  boundaryError?: string;
 }
 
 function normalizedText(value: string): string {
@@ -589,7 +591,15 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
   const accRows = rows.filter((row) => row.objectType === "ACC_OPERATIONAL_SECTOR");
   if (!accRows.length) throw new CzEaipParseError(["No PRAHA ACC operational sector rows were found"]);
   inheritLogicalVerticalLimits(accRows);
-  for (const row of accRows) assembleBoundary(row.boundary, row.name, options.stateBoundaryProvider);
+  for (const row of accRows) {
+    try {
+      assembleBoundary(row.boundary, row.name, options.stateBoundaryProvider);
+    } catch (error) {
+      if (!(error instanceof CzEaipParseError)) throw error;
+      row.boundaryError = error.issues.join("; ");
+      row.skipReason = row.boundaryError;
+    }
+  }
   const byName = new Map(accRows.map((row) => [row.name, row]));
   const diagnostics: CzEaipSectorDiagnostic[] = [];
   const accepted: AtcImportSector[] = [];
@@ -597,20 +607,26 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
   const sourceName = `${publicationName(publication)}${options.stateBoundaryProvider ? " + ČÚZK Data50" : ""}`;
 
   for (const row of accRows) {
-    if (row.boundary.constituentReferences.length) {
-      row.skipReason = "aggregate sector row; constituent sectors are imported separately";
-    } else if (row.boundary.borderSegments.length && !options.stateBoundaryProvider) {
-      row.skipReason = `state-border segment requires authoritative geometry (${row.boundary.borderNames.join(", ")})`;
-    } else if (!row.boundary.directGeometry && row.boundary.lateralReference) {
-      const target = byName.get(row.boundary.lateralReference);
-      if (!target) row.skipReason = `lateral geometry reference not found: ${row.boundary.lateralReference}`;
-      else if (!target.boundary.directGeometry) row.skipReason = `lateral geometry reference is unsupported: ${row.boundary.lateralReference}`;
-      else {
-        row.boundary.polygons = target.boundary.polygons;
-        row.boundary.boundaryResolutions = target.boundary.boundaryResolutions;
+    if (!row.skipReason) {
+      if (row.boundary.constituentReferences.length) {
+        row.skipReason = "aggregate sector row; constituent sectors are imported separately";
+      } else if (row.boundary.borderSegments.length && !options.stateBoundaryProvider) {
+        row.skipReason = `state-border segment requires authoritative geometry (${row.boundary.borderNames.join(", ")})`;
+      } else if (!row.boundary.directGeometry && row.boundary.lateralReference) {
+        const target = byName.get(row.boundary.lateralReference);
+        if (!target) row.skipReason = `lateral geometry reference not found: ${row.boundary.lateralReference}`;
+        else if (target.boundaryError) {
+          row.boundaryError = `Referenced sector ${row.boundary.lateralReference} is blocked: ${target.boundaryError}`;
+          row.skipReason = `lateral geometry reference is blocked: ${row.boundary.lateralReference}`;
+        }
+        else if (!target.boundary.directGeometry) row.skipReason = `lateral geometry reference is unsupported: ${row.boundary.lateralReference}`;
+        else {
+          row.boundary.polygons = target.boundary.polygons;
+          row.boundary.boundaryResolutions = target.boundary.boundaryResolutions;
+        }
+      } else if (!row.boundary.directGeometry) {
+        row.skipReason = "missing explicit or resolvable lateral geometry";
       }
-    } else if (!row.boundary.directGeometry) {
-      row.skipReason = "missing explicit or resolvable lateral geometry";
     }
     if (!row.skipReason && row.lowerAltitude === null) row.skipReason = "missing lower vertical limit";
     if (!row.skipReason && row.upperAltitude === null) row.skipReason = "missing upper vertical limit";
@@ -620,7 +636,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
       if (geometryIssue) row.skipReason = geometryIssue;
     }
     if (row.skipReason) {
-      diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "skipped", reason: row.skipReason, boundaryResolutions: row.boundary.boundaryResolutions, polygonMetrics: polygonMetrics(row.boundary.polygons) });
+      diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "skipped", reason: row.skipReason, boundaryError: row.boundaryError, boundaryResolutions: row.boundary.boundaryResolutions, polygonMetrics: polygonMetrics(row.boundary.polygons) });
       continue;
     }
     accepted.push({

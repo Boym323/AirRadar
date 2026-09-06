@@ -122,6 +122,8 @@ export const cs = {
     manufacturer: "Výrobce",
     modelType: "Model / typ",
     icaoType: "ICAO typ",
+    flags: "Flags",
+    year: "Rok",
     operator: "Provozovatel",
     registrationCountry: "Země registrace",
   },

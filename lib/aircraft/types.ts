@@ -25,6 +25,9 @@ export interface AircraftMetadata {
   aircraftDescription: string | null;
   operator: string | null;
   manufacturer: string | null;
+  /** Optional fields present in the tar1090/readsb catalog. */
+  flags?: string | null;
+  year?: string | null;
   source: string;
   retrievedAt: string;
 }

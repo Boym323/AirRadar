@@ -36,9 +36,9 @@ class CombinedMetadataProvider implements AircraftMetadataProvider {
     for (const value of values.slice(1)) {
       for (const key of [
         "registration", "registrationCountry", "registrationCountryCode", "aircraftType",
-        "icaoTypeCode", "aircraftDescription", "operator", "manufacturer",
+        "icaoTypeCode", "aircraftDescription", "operator", "manufacturer", "flags", "year",
       ] as const) {
-        if (merged[key] === null && value[key] !== null) merged[key] = value[key];
+        if (merged[key] == null && value[key] != null) merged[key] = value[key];
       }
     }
     return merged;

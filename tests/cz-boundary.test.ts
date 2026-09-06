@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { InMemoryStateBoundaryProvider, type StateBoundaryFeature, type StateBoundaryProvider } from "@/lib/atc/cz-boundary";
 import { parseCzEaipEnr21 } from "@/lib/atc/cz-eaip";
+import { aviationCoordinateToDecimal } from "@/lib/atc/cz-geometry";
 
 const boundaryFeature = (id: string, coordinates: [number, number][], classification: StateBoundaryFeature["classification"] = "state"): StateBoundaryFeature => ({ id, coordinates, classification });
 
@@ -21,6 +22,22 @@ describe("ČÚZK state-boundary graph", () => {
   it("fails when an endpoint is outside the bounded snap tolerance", () => {
     const provider = new InMemoryStateBoundaryProvider([boundaryFeature("simple", [[0, 0], [0.01, 0]])]);
     expect(() => provider.getBoundarySegment({ start: [0, 1], end: [0.5, 0], maxSnapDistanceKm: 50 })).toThrow(/maximum 50 km/);
+  });
+
+  it("rejects a several-kilometre nearest snap under the production policy", () => {
+    const provider = new InMemoryStateBoundaryProvider([boundaryFeature("simple", [[0, 0], [0.02, 0]])]);
+    expect(() => provider.getBoundarySegment({ start: [0.01, 0.005], end: [0.015, 0] })).toThrow(/maximum 0.5 km/);
+  });
+
+  it("rejects the audited Germany–Poland AIP endpoint instead of accepting a 3.598 km snap", () => {
+    const provider = new InMemoryStateBoundaryProvider([
+      boundaryFeature("35485:0", [[14.968341754358262, 50.99007376365752], [14.969, 50.990]]),
+    ]);
+    expect(() => provider.getBoundarySegment({
+      start: [14.916945, 50.990677],
+      end: [14.969, 50.990],
+      hint: "state boundary Germany - Poland",
+    })).toThrow(/3\.598 km.*maximum 0\.5 km/);
   });
 
   it("joins multiple features and preserves the Germany–Poland tripoint transition", () => {
@@ -47,13 +64,18 @@ describe("ČÚZK state-boundary graph", () => {
       boundaryFeature("diamond-upper", [[0, 0], [0.005, 0.005], [0.01, 0]]),
       boundaryFeature("diamond-lower", [[0, 0], [0.005, -0.005], [0.01, 0]]),
     ]);
-    expect(() => ambiguous.getBoundarySegment({ start: [0, 0], end: [0.01, 0.01] })).toThrow(/equally short/);
+    expect(() => ambiguous.getBoundarySegment({ start: [0, 0], end: [0.01, 0] })).toThrow(/equally short/);
 
     const disconnected = new InMemoryStateBoundaryProvider([
       boundaryFeature("left", [[0, 0], [0.01, 0]]),
       boundaryFeature("right", [[0.03, 0], [0.04, 0]]),
     ]);
     expect(() => disconnected.getBoundarySegment({ start: [0.002, 0.001], end: [0.038, -0.001] })).toThrow(/No connected/);
+  });
+
+  it("converts the audited AIP endpoint from DMS independently", () => {
+    expect(aviationCoordinateToDecimal("505926.4372N")).toBeCloseTo(50.990677, 10);
+    expect(aviationCoordinateToDecimal("0145501.0020E")).toBeCloseTo(14.916945, 10);
   });
 });
 

@@ -93,6 +93,8 @@ function metadataFromRecord(record: AircraftMetadataRecord): AircraftMetadata {
     aircraftDescription: record.aircraftDescription,
     operator: record.operator,
     manufacturer: null,
+    flags: record.flags,
+    year: record.year,
     source: record.source,
     retrievedAt: new Date().toISOString(),
   };

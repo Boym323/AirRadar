@@ -124,6 +124,8 @@ export const en = {
     manufacturer: "Manufacturer",
     modelType: "Model / type",
     icaoType: "ICAO type",
+    flags: "Flags",
+    year: "Year",
     operator: "Operator",
     registrationCountry: "Registration country",
   },

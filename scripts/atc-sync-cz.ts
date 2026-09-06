@@ -22,6 +22,7 @@ function printDiagnostics(result: ReturnType<typeof parseCzEaipEnr21>): void {
     console.log(`  accepted ${sector.id}: ${sector.name}; ${sector.lowerAltitude ?? "?"}–${sector.upperAltitude ?? "?"}; primary ${sector.primaryFrequencyMhz}; alternate ${alternate}`);
   }
   for (const diagnostic of skipped) console.log(`  skipped ${diagnostic.name}: ${diagnostic.reason}`);
+  for (const diagnostic of skipped.filter((item) => item.boundaryError)) console.log(`  boundary ${diagnostic.name}: blocked; ${diagnostic.boundaryError}`);
   for (const diagnostic of result.diagnostics.filter((item) => item.status === "accepted" && item.polygonMetrics?.length)) {
     const metrics = diagnostic.polygonMetrics ?? [];
     const box = metrics.reduce((current, metric) => ({

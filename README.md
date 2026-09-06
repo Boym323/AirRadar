@@ -156,9 +156,10 @@ the sector meaning, endpoints, ordering, vertical limits, callsign and
 frequencies; the missing boundary polyline is resolved from the official
 [ČÚZK Data50 service](https://ags.cuzk.gov.cz/arcgis/rest/services/DATA50/MapServer)
 and its [metadata record](https://geoportal.gov.cz/php/micka/record/basic/CZ-CUZK-DATA50-V?dlang=eng).
-The sync fetches that dataset once, uses a bounded endpoint snap and a
-connected state-boundary graph (including the Germany–Poland tripoint), and
-fails on ambiguity, disconnection, excessive snap distance or invalid
+The sync fetches that dataset once, accepts an endpoint snap only at or below
+the explicit 0.5 km production tolerance, and uses a connected
+state-boundary graph (including the Germany–Poland tripoint). It fails on
+ambiguity, disconnection, excessive snap distance or invalid
 polygon geometry. It never creates a straight-line or other guessed
 boundary; if the authoritative path intersects a generalized AIP walk, the
 walk is polygonized into validated rings without adding geometry. Data50 is

@@ -6,11 +6,10 @@ export const CZ_CUZK_DATA50_ATTRIBUTION = "ČÚZK Data50 (CC BY 4.0)";
 
 const CUZK_HOST = "ags.cuzk.gov.cz";
 const MAX_SOURCE_BYTES = 32 * 1024 * 1024;
-// Data50 is a 1:50,000 cartographic model; the current AIP/Data50
-// Germany–Poland endpoint audit reaches 3.6 km at its worst endpoint.
-// Keep this explicit and bounded rather than silently connecting arbitrary
-// points with a straight line.
-const DEFAULT_MAX_SNAP_DISTANCE_KM = 5;
+// Production policy: an eAIP endpoint may only be snapped to authoritative
+// Data50 geometry when the displacement is at most 0.5 km. There is no
+// untested 0.5–1.0 km exception and no larger fallback tolerance.
+export const CZ_PRODUCTION_MAX_SNAP_DISTANCE_KM = 0.5;
 const MAX_BOUNDARY_EDGE_LENGTH_KM = 25;
 const NODE_PRECISION = 7;
 
@@ -247,7 +246,7 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
 
   getBoundarySegment(input: StateBoundaryInput): StateBoundaryResolution {
     const allowed = classificationForHint(input.hint);
-    const maxSnapDistanceKm = input.maxSnapDistanceKm ?? DEFAULT_MAX_SNAP_DISTANCE_KM;
+    const maxSnapDistanceKm = input.maxSnapDistanceKm ?? CZ_PRODUCTION_MAX_SNAP_DISTANCE_KM;
     if (!Number.isFinite(maxSnapDistanceKm) || maxSnapDistanceKm <= 0) throw new CuzkBoundaryError("State-boundary snap tolerance must be positive");
     const start = this.findSnap(input.start, allowed, maxSnapDistanceKm);
     const end = this.findSnap(input.end, allowed, maxSnapDistanceKm);

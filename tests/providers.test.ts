@@ -131,6 +131,7 @@ describe("tar1090 database provider", () => {
       aircraftType: "B738",
       icaoTypeCode: "B738",
       aircraftDescription: "BOEING 737-800",
+      flags: "00",
       source: "tar1090-db",
     });
     await expect(provider.getMetadata("4BAACB")).resolves.toMatchObject({ icaoTypeCode: "B738" });

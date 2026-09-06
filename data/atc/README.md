@@ -69,11 +69,12 @@ the source of ATC semantics; when it marks a side as a state boundary, the
 sync obtains the missing WGS84 polyline from the official [ČÚZK Data50
 service](https://ags.cuzk.gov.cz/arcgis/rest/services/DATA50/MapServer),
 using its [official metadata](https://geoportal.gov.cz/php/micka/record/basic/CZ-CUZK-DATA50-V?dlang=eng).
-The process-local provider fetches Data50 once per sync, snaps only within a
-bounded tolerance, joins connected state/tripoint features, and rejects
-ambiguous, disconnected or self-intersecting results. There is no straight
-line fallback; intersecting AIP/Data50 walks are split into validated rings,
-never repaired with a guessed line. Data50 attribution is [ČÚZK Data50, CC BY
+The process-local provider fetches Data50 once per sync, accepts endpoint
+snaps only at or below the explicit 0.5 km production tolerance, joins
+connected state/tripoint features, and rejects ambiguous, disconnected or
+self-intersecting results. There is no straight line fallback; intersecting
+AIP/Data50 walks are split into validated rings, never repaired with a guessed
+line. Data50 attribution is [ČÚZK Data50, CC BY
 4.0](https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx). Generated
 snapshots and downloaded source files are not committed; the current official
 dataset belongs in PostgreSQL only after an explicit, fully validated sync.

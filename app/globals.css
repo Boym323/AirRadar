@@ -143,7 +143,11 @@ button { cursor: pointer; }
 .history-link { color: var(--mint); text-decoration: none; }
 .history-link:hover { text-decoration: underline; }
 
-.aircraft-plane { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 50%; color: #07131d; background: var(--mint); border: 2px solid rgba(232, 240, 246, .9); box-shadow: 0 0 0 4px rgba(55, 214, 192, .18), 0 5px 14px rgba(0,0,0,.4); font-size: 15px; line-height: 1; transition: background .18s, box-shadow .18s, transform .2s; }
+.aircraft-plane { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 50%; color: #07131d; background: var(--mint); border: 2px solid rgba(232, 240, 246, .9); box-shadow: 0 0 0 4px rgba(55, 214, 192, .18), 0 5px 14px rgba(0,0,0,.4); line-height: 1; transition: background .18s, box-shadow .18s; }
+.aircraft-plane svg, .aircraft-row-icon svg { width: 20px; height: 20px; fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.aircraft-plane[data-kind="glider"] svg { width: 23px; }
+.aircraft-plane[data-kind="helicopter"] svg, .aircraft-plane[data-kind="drone"] svg { fill: none; }
+.aircraft-plane[data-kind="ground"] svg { width: 18px; }
 .aircraft-marker.selected .aircraft-plane { color: #201709; background: var(--amber); box-shadow: 0 0 0 5px rgba(243, 185, 95, .22), 0 5px 16px rgba(0,0,0,.55); }
 .aircraft-marker.watchlisted .aircraft-plane { box-shadow: 0 0 0 5px rgba(243, 185, 95, .36), 0 5px 16px rgba(0,0,0,.55); }
 .receiver-marker { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--amber); background: rgba(243, 185, 95, .2); box-shadow: 0 0 0 7px rgba(243, 185, 95, .08); }

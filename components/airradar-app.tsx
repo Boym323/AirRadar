@@ -163,8 +163,45 @@ function LogoMark() {
   );
 }
 
-function AirplaneGlyph() {
-  return <span aria-hidden="true">✈</span>;
+type AircraftMarkerKind = "airplane" | "helicopter" | "glider" | "drone" | "ground";
+
+function aircraftMarkerKind(aircraft: Pick<AircraftView, "category">): AircraftMarkerKind {
+  switch (aircraft.category?.toUpperCase()) {
+    case "A7": return "helicopter";
+    case "B1": return "glider";
+    case "B6": return "drone";
+    case "C1":
+    case "C2": return "ground";
+    default: return "airplane";
+  }
+}
+
+function AircraftGlyph({ kind = "airplane" }: { kind?: AircraftMarkerKind }) {
+  if (kind === "helicopter") {
+    return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 8v15M9 12h14M6 8h20M16 5v3M12 23h8l3 4H9l3-4Z" /></svg>;
+  }
+  if (kind === "glider") {
+    return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 3 3 12 10 5-1 2-10-2-2 9-2-9-10 2-1-2 10-5 3-12Z" /></svg>;
+  }
+  if (kind === "drone") {
+    return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 8v16M8 16h16M10 10h4v4h-4zM18 10h4v4h-4zM10 18h4v4h-4zM18 18h4v4h-4z" /></svg>;
+  }
+  if (kind === "ground") {
+    return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 11h12l3 8v5H7v-5l3-8Zm1 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" /></svg>;
+  }
+  // The nose is at the top of the viewBox: 0° is geographic north.
+  return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 2 4 12 8 5-1 2-9-2-2 10-2-10-9 2-1-2 8-5 4-12Z" /></svg>;
+}
+
+function aircraftGlyphMarkup(kind: AircraftMarkerKind): string {
+  const paths: Record<AircraftMarkerKind, string> = {
+    helicopter: "<path d=\"M16 8v15M9 12h14M6 8h20M16 5v3M12 23h8l3 4H9l3-4Z\" />",
+    glider: "<path d=\"m16 3 3 12 10 5-1 2-10-2-2 9-2-9-10 2-1-2 10-5 3-12Z\" />",
+    drone: "<path d=\"M16 8v16M8 16h16M10 10h4v4h-4zM18 10h4v4h-4zM10 18h4v4h-4zM18 18h4v4h-4z\" />",
+    ground: "<path d=\"M10 11h12l3 8v5H7v-5l3-8Zm1 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z\" />",
+    airplane: "<path d=\"m16 2 4 12 8 5-1 2-9-2-2 10-2-10-9 2-1-2 8-5 4-12Z\" />",
+  };
+  return `<svg viewBox="0 0 32 32" aria-hidden="true">${paths[kind]}</svg>`;
 }
 
 export function AirRadarApp() {
@@ -431,13 +468,17 @@ export function AirRadarApp() {
         root.setAttribute("aria-label", labelForAircraft(aircraft));
         const plane = document.createElement("div");
         plane.className = "aircraft-plane";
-        plane.textContent = "✈";
+        const markerKind = aircraftMarkerKind(aircraft);
+        plane.dataset.kind = markerKind;
+        plane.innerHTML = aircraftGlyphMarkup(markerKind);
         root.appendChild(plane);
         root.addEventListener("click", () => selectAircraft(aircraft.icaoHex));
         root.addEventListener("keydown", (event) => {
           if (event.key === "Enter" || event.key === " ") selectAircraft(aircraft.icaoHex);
         });
-        marker = new maplibregl.Marker({ element: root, anchor: "center" }).setLngLat([aircraft.lon, aircraft.lat]).addTo(map);
+        marker = new maplibregl.Marker({ element: root, anchor: "center", rotationAlignment: "map" })
+          .setLngLat([aircraft.lon, aircraft.lat])
+          .addTo(map);
         aircraftMarkersRef.current.set(aircraft.icaoHex, marker);
       } else {
         animate(aircraft.icaoHex, marker, [aircraft.lon, aircraft.lat]);
@@ -446,7 +487,16 @@ export function AirRadarApp() {
       root.classList.toggle("selected", aircraft.icaoHex === selectedHex);
       root.classList.toggle("watchlisted", isWatchlisted(aircraft));
       const plane = root.querySelector<HTMLElement>(".aircraft-plane");
-      if (plane) plane.style.transform = `rotate(${aircraft.track ?? 0}deg)`;
+      if (plane) {
+        const markerKind = aircraftMarkerKind(aircraft);
+        if (plane.dataset.kind !== markerKind) {
+          plane.dataset.kind = markerKind;
+          plane.innerHTML = aircraftGlyphMarkup(markerKind);
+        }
+      }
+      // readsb's track is clockwise from geographic north. Let MapLibre apply
+      // it in map coordinates, so it remains correct when the user rotates map.
+      if (aircraft.track !== null) marker.setRotation(aircraft.track);
     }
 
     for (const [hex, marker] of aircraftMarkersRef.current) {
@@ -650,7 +700,7 @@ export function AirRadarApp() {
               </div>
             ) : filteredAircraft.map((aircraft) => (
               <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""}`} onClick={() => selectAircraft(aircraft.icaoHex)}>
-                <span className="aircraft-row-icon"><AirplaneGlyph /></span>
+                <span className="aircraft-row-icon"><AircraftGlyph kind={aircraftMarkerKind(aircraft)} /></span>
                 <span className="aircraft-row-main">
                   <span className="aircraft-row-name">{labelForAircraft(aircraft)} {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge">{aircraft.emergency}</span>} <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}</span></span>
                   <span className="aircraft-row-meta"><span>{aircraft.icaoHex}</span><span>{formatAltitude(aircraft.altitude)}</span><span>{formatSpeed(aircraft.groundSpeed)}</span><span>{formatTrack(aircraft.track)}</span></span>
@@ -687,9 +737,13 @@ export function AirRadarApp() {
                 <DetailItem label={t.aircraft.emergency} value={selectedAircraft.emergency || t.common.notReported} />
               </DetailSection>
               <DetailSection title={t.aircraft.metadata}>
+                <DetailItem label={t.aircraft.icaoHex} value={selectedAircraft.icaoHex} />
+                <DetailItem label={t.aircraft.registration} value={selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || t.common.emptyValue} />
                 <DetailItem label={t.aircraft.manufacturer} value={selectedAircraft.enrichment?.metadata?.manufacturer || t.common.emptyValue} />
                 <DetailItem label={t.aircraft.modelType} value={selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || t.common.emptyValue} />
                 <DetailItem label={t.aircraft.icaoType} value={selectedAircraft.enrichment?.metadata?.icaoTypeCode || selectedAircraft.aircraftType || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.flags} value={selectedAircraft.enrichment?.metadata?.flags || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.year} value={selectedAircraft.enrichment?.metadata?.year || t.common.emptyValue} />
                 <DetailItem label={t.aircraft.operator} value={selectedAircraft.enrichment?.metadata?.operator || t.common.emptyValue} />
                 <DetailItem label={t.aircraft.registrationCountry} value={registrationCountryForAircraft(selectedAircraft) || t.common.emptyValue} />
               </DetailSection>

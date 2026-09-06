@@ -56,6 +56,7 @@ export class Tar1090DbProvider implements AircraftMetadataProvider {
 
     const registration = stringValue(record[0]);
     const icaoTypeCode = stringValue(record[1]);
+    const flags = stringValue(record[2]);
     const aircraftDescription = stringValue(record[3]);
     if (!registration && !icaoTypeCode && !aircraftDescription) return null;
 
@@ -68,6 +69,8 @@ export class Tar1090DbProvider implements AircraftMetadataProvider {
       aircraftDescription,
       operator: null,
       manufacturer: null,
+      flags,
+      year: null,
       source: this.name,
       retrievedAt: new Date().toISOString(),
     };
