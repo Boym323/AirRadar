@@ -32,14 +32,19 @@ The polling loop retries automatically. If readsb goes away, the UI and API stay
 
 Live state is never written on every ADS-B update. The state service samples each aircraft at the configured interval (20 seconds by default) and stores `Aircraft`, `Flight`, and `FlightPosition` records.
 
+The project uses the Prisma 8 contract-based PostgreSQL workflow. `prisma/contract.prisma` is the source of truth, `prisma.config.ts` defines the PostgreSQL target, and `generated/prisma8/` contains generated runtime contract artifacts. The checked-in migration lives under `migrations/app/`.
+
 ```bash
 # Example local database
 createdb airradar
 
 # Set DATABASE_URL in .env, then:
+npm run prisma:generate
 npm run prisma:deploy
 npm run dev
 ```
+
+Prisma 8 currently requires Node.js 22.18 or newer. The repository pins the Prisma 8 release candidates used by this MVP and enforces the requirement through `engines` and `.nvmrc`.
 
 Without `DATABASE_URL`, the app still works fully in demo mode. History falls back to the in-memory trail and `/api/health` reports the database as `not_configured`.
 
@@ -52,6 +57,10 @@ npm run typecheck    # strict TypeScript
 npm run test         # Vitest unit tests
 npm run build        # Prisma generate + production build
 npm run start        # production server
+npm run prisma:generate # emit Prisma 8 contract artifacts
+npm run prisma:migrate  # plan a new migration from the contract
+npm run prisma:deploy   # apply pending migrations
+npm run prisma:verify   # verify the configured database
 ```
 
 ## API

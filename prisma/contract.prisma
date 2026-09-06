@@ -1,19 +1,10 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 model Aircraft {
   id           Int      @id @default(autoincrement())
   icaoHex      String   @unique
   registration String?
   aircraftType String?
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+     updatedAt    DateTime @default(now())
   flights      Flight[]
 }
 

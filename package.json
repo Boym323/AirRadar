@@ -2,6 +2,11 @@
   "name": "airradar",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0",
+    "npm": ">=10"
+  },
   "overrides": {
     "@mapbox/jsonlint-lines-primitives": "2.0.2",
     "deepmerge-ts": "8.0.0",
@@ -9,18 +14,19 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma contract emit && next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "prisma contract emit && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:generate": "prisma contract emit",
+    "prisma:migrate": "prisma migration plan --name init",
+    "prisma:deploy": "prisma db migrate",
+    "prisma:verify": "prisma db verify"
   },
   "dependencies": {
-    "@prisma/client": "^6.15.0",
+    "@prisma/orm-postgres": "8.0.0-rc.8",
     "maplibre-gl": "4.7.1",
     "next": "^15.5.4",
     "react": "^19.1.0",
@@ -34,10 +40,11 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^9.20.1",
     "eslint-config-next": "^15.5.4",
+    "dotenv": "^17.4.2",
     "postcss": "8.5.28",
-    "prisma": "^6.15.0",
+    "prisma": "8.0.0-rc.13",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.2",
+    "typescript": "^5.9.0",
     "vitest": "^3.0.9"
   }
 }

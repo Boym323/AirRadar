@@ -20,13 +20,13 @@ export interface HistoryResponse {
 }
 
 export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: Date): Promise<void> {
-  const prisma = getPrisma();
-  if (!prisma) return;
+  const database = getPrisma();
+  if (!database) return;
+  const schema = database.orm.public;
 
   for (const item of aircraft) {
     if (item.lat === null || item.lon === null) continue;
-    const dbAircraft = await prisma.aircraft.upsert({
-      where: { icaoHex: item.icaoHex },
+    const dbAircraft = await schema.Aircraft.where({ icaoHex: item.icaoHex }).upsert({
       update: {
         registration: item.registration,
         aircraftType: item.aircraftType,
@@ -36,56 +36,56 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
         icaoHex: item.icaoHex,
         registration: item.registration,
         aircraftType: item.aircraftType,
+        updatedAt: recordedAt,
       },
     });
 
-    let flight = await prisma.flight.findFirst({
-      where: { aircraftId: dbAircraft.id, endTime: null },
-      orderBy: { startTime: "desc" },
-    });
+    let flight = await schema.Flight
+      .where({ aircraftId: dbAircraft.id })
+      .where({ endTime: null })
+      .orderBy((row) => row.startTime.desc())
+      .first();
     if (!flight) {
-      flight = await prisma.flight.create({
-        data: {
-          aircraftId: dbAircraft.id,
-          callsign: item.callsign,
-          startTime: recordedAt,
-        },
+      flight = await schema.Flight.create({
+        aircraftId: dbAircraft.id,
+        callsign: item.callsign,
+        startTime: recordedAt,
       });
     } else if (flight.callsign !== item.callsign) {
-      flight = await prisma.flight.update({ where: { id: flight.id }, data: { callsign: item.callsign } });
+      await schema.Flight.where({ id: flight.id }).update({ callsign: item.callsign });
     }
 
-    await prisma.flightPosition.create({
-      data: {
-        flightId: flight.id,
-        recordedAt,
-        lat: item.lat,
-        lon: item.lon,
-        altitude: item.altitude,
-        groundSpeed: item.groundSpeed,
-        track: item.track,
-        verticalRate: item.verticalRate,
-      },
+    await schema.FlightPosition.create({
+      flightId: flight.id,
+      recordedAt,
+      lat: item.lat,
+      lon: item.lon,
+      altitude: item.altitude,
+      groundSpeed: item.groundSpeed,
+      track: item.track,
+      verticalRate: item.verticalRate,
     });
   }
 }
 
 export async function getAircraftHistory(hex: string, fallback: Aircraft | null): Promise<HistoryResponse> {
-  const prisma = getPrisma();
-  if (prisma) {
+  const database = getPrisma();
+  if (database) {
     try {
-      const aircraft = await prisma.aircraft.findUnique({
-        where: { icaoHex: hex.toUpperCase() },
-        include: {
-          flights: {
-            orderBy: { startTime: "desc" },
-            take: 1,
-            include: { positions: { orderBy: { recordedAt: "asc" }, take: 500 } },
-          },
-        },
-      });
-      const flight = aircraft?.flights[0];
+      const schema = database.orm.public;
+      const aircraft = await schema.Aircraft.where({ icaoHex: hex.toUpperCase() }).first();
+      const flight = aircraft
+        ? await schema.Flight
+            .where({ aircraftId: aircraft.id })
+            .orderBy((row) => row.startTime.desc())
+            .first()
+        : null;
       if (flight) {
+        const positions = await schema.FlightPosition
+          .where({ flightId: flight.id })
+          .orderBy((row) => row.recordedAt.asc())
+          .limit(500)
+          .all();
         return {
           source: "postgres",
           flight: {
@@ -94,7 +94,7 @@ export async function getAircraftHistory(hex: string, fallback: Aircraft | null)
             startedAt: flight.startTime.toISOString(),
             endedAt: flight.endTime?.toISOString() ?? null,
           },
-          positions: flight.positions.map((position) => ({
+          positions: positions.map((position) => ({
             recordedAt: position.recordedAt.toISOString(),
             lat: position.lat,
             lon: position.lon,

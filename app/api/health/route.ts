@@ -15,7 +15,7 @@ export async function GET(): Promise<Response> {
     try {
       const prisma = getPrisma();
       if (!prisma) throw new Error("Prisma client is not configured");
-      await prisma.$queryRaw`SELECT 1`;
+      await prisma.orm.public.Aircraft.limit(1).all();
       database = { status: "ok" };
     } catch (error) {
       database = { status: "offline", message: error instanceof Error ? error.message : "Database unavailable" };
