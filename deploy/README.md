@@ -46,7 +46,7 @@ sudo systemctl enable --now airradar
 sudo journalctl -u airradar -f
 ```
 
-Nginx Proxy Manager should proxy to `http://127.0.0.1:3000`. For long-lived SSE responses, turn off proxy buffering (or add `X-Accel-Buffering: no`, which AirRadar already sends) and use a generous read timeout.
+Nginx Proxy Manager should proxy to `http://192.168.1.142:3000`. The reverse proxy is separate from the AirRadar LXC, so do not use its own `127.0.0.1`. For long-lived SSE responses, turn off proxy buffering (or add `X-Accel-Buffering: no`, which AirRadar already sends) and use a generous read timeout.
 
 AirRadar uses Server-Sent Events, not WebSocket. In the Proxy Host **Advanced** field add:
 
@@ -71,7 +71,7 @@ The service runs as the unprivileged `airradar` user. Verify the resolved Node p
 sudo systemctl status airradar
 sudo journalctl -u airradar -n 100 --no-pager
 sudo journalctl -u airradar -f
-curl -fsS http://127.0.0.1:3000/api/health | jq
+curl -fsS http://192.168.1.142:3000/api/health | jq
 ```
 
 The health response reports application, PostgreSQL, readsb, last successful readsb update, current aircraft count, and a sanitized diagnostic message. It never returns `DATABASE_URL`, API keys, or passwords.

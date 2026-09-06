@@ -143,7 +143,7 @@ sudo systemctl status airradar
 sudo journalctl -u airradar -n 100 --no-pager
 ```
 
-Configure Nginx Proxy Manager to proxy the public hostname to `127.0.0.1:3000`. AirRadar uses SSE, not WebSocket. In the Proxy Host **Advanced** field (directives are applied inside the proxy location), use:
+Configure Nginx Proxy Manager to proxy the public hostname to `192.168.1.142:3000`. AirRadar uses SSE, not WebSocket. In the Proxy Host **Advanced** field (directives are applied inside the proxy location), use:
 
 ```nginx
 proxy_http_version 1.1;
