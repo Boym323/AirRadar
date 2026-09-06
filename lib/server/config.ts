@@ -3,6 +3,8 @@ import { t } from "@/lib/i18n";
 
 export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 
+export type PublicReceiverPositionMode = "exact" | "approximate" | "hidden";
+
 function envNumber(name: string, fallback: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw.trim() === "") return fallback;
@@ -21,6 +23,13 @@ export function getReceiverPosition(): ReceiverPosition {
     lon: envCoordinate("RECEIVER_LON", 14.4378, -180, 180),
     name: process.env.RECEIVER_NAME?.trim() || t.radar.receiverName,
   };
+}
+
+export function getPublicReceiverPositionMode(): PublicReceiverPositionMode {
+  const configured = process.env.PUBLIC_RECEIVER_POSITION_MODE?.trim().toLowerCase();
+  return configured === "exact" || configured === "hidden" || configured === "approximate"
+    ? configured
+    : "approximate";
 }
 
 function isValidTimezone(timezone: string): boolean {

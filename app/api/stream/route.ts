@@ -1,4 +1,5 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
+import { toPublicStateSnapshot } from "@/lib/server/public-serialization";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -34,7 +35,7 @@ export async function GET(request: Request): Promise<Response> {
       controllerRef = controller;
       const send = (snapshot: ReturnType<typeof service.getSnapshot>) => {
         if (closed) return;
-        const chunk = encoder.encode(event("snapshot", snapshot));
+        const chunk = encoder.encode(event("snapshot", toPublicStateSnapshot(snapshot)));
         if ((controller.desiredSize ?? 0) > 0) {
           try {
             controller.enqueue(chunk);

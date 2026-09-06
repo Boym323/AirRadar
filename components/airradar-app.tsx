@@ -24,14 +24,15 @@ import {
   watchlistSummary,
 } from "@/lib/i18n";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
-import type { AircraftView, FlightRoute, ReceiverPosition, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
+import type { AircraftView, FlightRoute, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcSector, AtcTransmitter } from "@/lib/atc/types";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
-const EMPTY_SNAPSHOT: StateSnapshot = {
+const EMPTY_RECEIVER: PublicReceiverPosition = { lat: null, lon: null, name: t.radar.receiverName };
+const EMPTY_SNAPSHOT: PublicStateSnapshot = {
   aircraft: [],
-  receiver: DEMO_RECEIVER,
+  receiver: EMPTY_RECEIVER,
   fetchedAt: new Date(0).toISOString(),
   provider: "mock",
   sourceOnline: false,
@@ -143,7 +144,7 @@ function AirplaneGlyph() {
 }
 
 export function AirRadarApp() {
-  const [snapshot, setSnapshot] = useState<StateSnapshot>(EMPTY_SNAPSHOT);
+  const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
@@ -169,7 +170,7 @@ export function AirRadarApp() {
   const aircraftMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const animationFramesRef = useRef<Map<string, number>>(new Map());
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
-  const receiverRef = useRef(snapshot.receiver);
+  const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
@@ -219,7 +220,7 @@ export function AirRadarApp() {
     const source = new EventSource("/api/stream");
     const onSnapshot = (event: Event) => {
       try {
-        const next = JSON.parse((event as MessageEvent<string>).data) as StateSnapshot;
+        const next = JSON.parse((event as MessageEvent<string>).data) as PublicStateSnapshot;
         if (active) {
           const currentHexes = new Set(next.aircraft.map((aircraft) => aircraft.icaoHex));
           for (const hex of liveTrailsRef.current.keys()) {
@@ -253,7 +254,9 @@ export function AirRadarApp() {
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
-    const startingReceiver = receiverRef.current;
+    const startingReceiver = receiverRef.current.lat === null || receiverRef.current.lon === null
+      ? DEMO_RECEIVER
+      : receiverRef.current as ReceiverPosition;
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: MAP_STYLE,
@@ -269,15 +272,8 @@ export function AirRadarApp() {
     const aircraftMarkers = aircraftMarkersRef.current;
     const liveTrails = liveTrailsRef.current;
 
-    const receiverElement = document.createElement("div");
-    receiverElement.className = "receiver-marker";
-    receiverElement.setAttribute("aria-label", t.radar.receiverPosition);
-    receiverMarkerRef.current = new maplibregl.Marker({ element: receiverElement, anchor: "center" })
-      .setLngLat([startingReceiver.lon, startingReceiver.lat])
-      .addTo(map);
-
     map.on("load", () => {
-      map.addSource("range-rings", { type: "geojson", data: createRangeGeoJSON(startingReceiver) });
+      map.addSource("range-rings", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
         id: "range-rings-line",
         type: "line",
@@ -348,12 +344,26 @@ export function AirRadarApp() {
     if (!map || !mapReady) return;
     const receiver = snapshot.receiver;
     receiverRef.current = receiver;
-    receiverMarkerRef.current?.setLngLat([receiver.lon, receiver.lat]);
     const rings = map.getSource("range-rings") as GeoJSONSource | undefined;
-    rings?.setData(createRangeGeoJSON(receiver));
+    if (receiver.lat === null || receiver.lon === null) {
+      receiverMarkerRef.current?.remove();
+      rings?.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+    const receiverWithCoordinates: ReceiverPosition = { name: receiver.name, lat: receiver.lat, lon: receiver.lon };
+    if (!receiverMarkerRef.current) {
+      const receiverElement = document.createElement("div");
+      receiverElement.className = "receiver-marker";
+      receiverElement.setAttribute("aria-label", t.radar.receiverPosition);
+      receiverMarkerRef.current = new maplibregl.Marker({ element: receiverElement, anchor: "center" })
+        .setLngLat([receiver.lon, receiver.lat])
+        .addTo(map);
+    }
+    receiverMarkerRef.current?.setLngLat([receiver.lon, receiver.lat]);
+    rings?.setData(createRangeGeoJSON(receiverWithCoordinates));
     if (shouldRecenterOnReceiver(snapshot.provider, centeredReceiverRef.current, receiver)) {
       map.jumpTo({ center: [receiver.lon, receiver.lat] });
-      centeredReceiverRef.current = receiver;
+      centeredReceiverRef.current = receiverWithCoordinates;
     }
   }, [mapReady, snapshot.provider, snapshot.receiver]);
 
@@ -500,7 +510,9 @@ export function AirRadarApp() {
           </div>
         </div>
         <div className="topbar-meta">
-          <span>{snapshot.receiver.name} · {snapshot.receiver.lat.toFixed(4)}, {snapshot.receiver.lon.toFixed(4)}</span>
+          <span>{snapshot.receiver.name} · {snapshot.receiver.lat === null || snapshot.receiver.lon === null
+            ? t.common.unavailable
+            : `${snapshot.receiver.lat.toFixed(4)}, ${snapshot.receiver.lon.toFixed(4)}`}</span>
           <span className={`mode-pill ${isDemo ? "" : "hidden"}`}>{t.brand.demoMode}</span>
           <span className={`status-pill ${statusOffline ? "offline" : isDemo ? "demo" : ""}`}>
             <span className="status-dot" />

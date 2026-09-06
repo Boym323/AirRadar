@@ -9,6 +9,13 @@ export interface ReceiverPosition {
   name: string;
 }
 
+/** Public receiver coordinates may be intentionally unavailable. */
+export interface PublicReceiverPosition {
+  lat: number | null;
+  lon: number | null;
+  name: string;
+}
+
 export interface AircraftMetadata {
   registration: string | null;
   registrationCountry: string | null;
@@ -116,6 +123,10 @@ export interface StateSnapshot {
   lastReadsbUpdate: string | null;
   lastError: string | null;
   stats: RadarStats;
+}
+
+export interface PublicStateSnapshot extends Omit<StateSnapshot, "receiver"> {
+  receiver: PublicReceiverPosition;
 }
 
 export interface RadarStats {

@@ -36,6 +36,32 @@ retaining the exact value as `sourceType`.
 
 The polling loop retries automatically. If readsb goes away, the UI and API stay alive and report `Receiver offline`.
 
+## Public deployment / security
+
+The public API uses same-origin access; no wildcard CORS policy is enabled. The
+receiver's exact coordinates are kept server-side for distance, bearing and
+coverage calculations, but are not exposed by default. Set
+`PUBLIC_RECEIVER_POSITION_MODE` to `approximate` (default, deterministic
+two-decimal coordinates), `hidden` (no public receiver coordinates), or
+`exact` only when deliberately publishing the location. Aircraft positions are
+not redacted.
+
+Application responses include `nosniff`, strict referrer and permissions
+policies, clickjacking protection and a CSP that permits the MapLibre blob
+worker and OpenStreetMap tiles. Live endpoints are not cached; catalog data is
+short-lived cacheable data. Public response errors are generic and secrets stay
+server-side.
+
+The request-response API endpoints have a small bounded in-memory fixed-window
+limiter per endpoint: aircraft 60/minute, history 30/minute, airports
+30/minute, ATC sectors 30/minute and health 60/minute. It is intentionally
+global to this single Node instance rather than trusting `X-Forwarded-For` from
+the reverse proxy. `/api/stream` is excluded so long-lived SSE connections and
+their heartbeat/coalescing behavior are not interrupted. The limiter is not a
+replacement for an upstream network policy; if Nginx Proxy Manager is used for
+additional limiting, apply it at the server/http layer and exempt
+`/api/stream`.
+
 ## PostgreSQL and Prisma
 
 Live state is never written on every ADS-B update. The state service samples each aircraft at the configured interval (20 seconds by default), writes positions with bounded concurrency, and stores `Aircraft`, `Flight`, and `FlightPosition` records. `HISTORY_RETENTION_DAYS` (30 by default) removes old position samples periodically.
@@ -156,7 +182,13 @@ proxy_set_header Host $host;
 proxy_set_header X-Real-IP $remote_addr;
 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 proxy_set_header X-Forwarded-Proto $scheme;
+client_max_body_size 1m;
 ```
+
+The application does not use forwarded headers as a client identity for rate
+limiting. Nginx Proxy Manager's location-level Advanced field cannot safely
+declare a shared `limit_req_zone`; configure any extra proxy rate limit in the
+appropriate server/http context and keep `/api/stream` exempt.
 
 `/api/stream` already sends `Content-Type: text/event-stream`,
 `Cache-Control: no-cache, no-transform`, `Connection: keep-alive`, and

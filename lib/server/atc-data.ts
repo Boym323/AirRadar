@@ -145,8 +145,8 @@ export async function getStoredAtcData(): Promise<{ sectors: AtcSector[]; transm
   if (!database) return null;
   try {
     const [sectorRows, transmitterRows] = await Promise.all([
-      database.orm.public.AtcSector.all(),
-      database.orm.public.AtcTransmitter.all(),
+      database.orm.public.AtcSector.limit(2000).all(),
+      database.orm.public.AtcTransmitter.limit(2000).all(),
     ]);
     return {
       sectors: sectorRows.map(storedSector).filter((sector): sector is AtcSector => sector !== null),

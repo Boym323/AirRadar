@@ -1,14 +1,17 @@
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getPrisma } from "@/lib/server/db";
 import type { Airport } from "@/lib/airports/types";
+import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("airports");
+  if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const database = getPrisma();
   if (database) {
     try {
-      const airports = await database.orm.public.Airport.all();
+      const airports = await database.orm.public.Airport.limit(5000).all();
       if (airports.length) {
         return Response.json(airports.map((airport): Airport => ({
           icaoCode: airport.icao,

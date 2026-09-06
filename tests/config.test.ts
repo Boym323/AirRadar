@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getReceiverPosition } from "@/lib/server/config";
+import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getPublicReceiverPositionMode, getReceiverPosition } from "@/lib/server/config";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -38,5 +38,15 @@ describe("numeric environment configuration", () => {
     vi.stubEnv("RECEIVER_LAT", lat);
     vi.stubEnv("RECEIVER_LON", lon);
     expect(getReceiverPosition()).toMatchObject({ lat: expectedLat, lon: expectedLon });
+  });
+
+  it.each(["exact", "approximate", "hidden"])("accepts public receiver mode %s", (mode) => {
+    vi.stubEnv("PUBLIC_RECEIVER_POSITION_MODE", mode);
+    expect(getPublicReceiverPositionMode()).toBe(mode);
+  });
+
+  it.each([undefined, "", "invalid", "EXACTLY"])("defaults invalid public receiver mode %j to approximate", (mode) => {
+    vi.stubEnv("PUBLIC_RECEIVER_POSITION_MODE", mode ?? "");
+    expect(getPublicReceiverPositionMode()).toBe("approximate");
   });
 });

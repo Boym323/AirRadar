@@ -1,25 +1,20 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
+import { toPublicHealthResponse } from "@/lib/server/public-health";
+import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-function safeError(message: string | null): string | null {
-  if (!message) return null;
-  return message
-    .replace(/((?:postgres(?:ql)?):\/\/[^\s/@:]+:)[^\s/@]+@/gi, "$1[redacted]@")
-    .replace(/([?&](?:password|passwd|secret|token|api[_-]?key|key)=)[^&\s]*/gi, "$1[redacted]")
-    .replace(/(x-api-key\s*:\s*)[^\s,;]+/gi, "$1[redacted]")
-    .slice(0, 240);
-}
-
 export async function GET(): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("health");
+  if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const service = getAircraftStateService();
   await service.waitForReady();
   const snapshot = service.getSnapshot();
-  let database: { status: string; message?: string };
+  let database: { status: "ok" | "offline" | "not_configured" };
 
   if (!isDatabaseConfigured()) {
-    database = { status: "not_configured", message: "DATABASE_URL is not set" };
+    database = { status: "not_configured" };
   } else {
     try {
       const prisma = getPrisma();
@@ -27,35 +22,10 @@ export async function GET(): Promise<Response> {
       await prisma.orm.public.Aircraft.limit(1).all();
       database = { status: "ok" };
     } catch {
-      database = { status: "offline", message: "PostgreSQL query failed" };
+      database = { status: "offline" };
     }
   }
-
-  const readsbStatus = snapshot.provider === "mock"
-    ? "demo"
-    : snapshot.sourceOnline ? "ok" : "offline";
-  const databaseRequired = snapshot.provider !== "mock";
-  const degraded = readsbStatus === "offline"
-    || database.status === "offline"
-    || databaseRequired && database.status === "not_configured";
-  return Response.json({
-    status: degraded ? "degraded" : "ok",
-    application: { status: "ok", name: "AirRadar" },
-    database,
-    source: {
-      status: readsbStatus,
-      provider: snapshot.provider,
-      lastUpdate: snapshot.lastSourceUpdate,
-      error: safeError(snapshot.sourceError),
-    },
-    readsb: {
-      status: readsbStatus,
-      provider: snapshot.provider,
-      lastUpdate: snapshot.lastReadsbUpdate,
-      error: safeError(snapshot.lastError),
-    },
-    aircraftCount: snapshot.aircraft.length,
-    lastReadsbUpdate: snapshot.lastReadsbUpdate,
-    checkedAt: new Date().toISOString(),
-  }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json(toPublicHealthResponse(snapshot, database), {
+    headers: { "Cache-Control": "no-store" },
+  });
 }
