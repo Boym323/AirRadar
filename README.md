@@ -117,12 +117,30 @@ npm run prisma:verify   # verify the configured database
 
 ## Production deployment
 
-`deploy/airradar.service` is a systemd unit for `/var/www/airradar`. Put a production `.env` in the project directory, run `npm run build`, run Prisma migrations if PostgreSQL is enabled, then install the unit:
+`deploy/airradar.service` is a systemd unit for `/var/www/airradar`. Put the production `.env` in the project directory and install the unit during initial setup:
 
 ```bash
 sudo cp deploy/airradar.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now airradar
+```
+
+For normal production releases, use the release script from the application directory:
+
+```bash
+cd /var/www/airradar
+sudo ./deploy/release.sh
+```
+
+The script acquires a release lock, rejects tracked or staged working-tree changes, updates the current branch with a fast-forward-only Git operation, runs `npm ci`, Prisma generation, lint, typecheck, tests, Prisma migrations and the production build, then restarts `airradar.service` and checks local and public health. Use `sudo ./deploy/release.sh --dry-run` to run preflight checks and print the plan without changing the checkout or service. A non-`main` checkout must be explicitly selected with `--branch`.
+
+The script does not automatically roll back Git code or database migrations after a post-restart failure. This avoids returning code to a state that may be incompatible with an already-applied migration; inspect the diagnostics and perform a compatibility-aware recovery manually.
+
+For emergency diagnostics:
+
+```bash
+sudo systemctl status airradar
+sudo journalctl -u airradar -n 100 --no-pager
 ```
 
 Configure Nginx Proxy Manager to proxy the public hostname to `127.0.0.1:3000`. AirRadar uses SSE, not WebSocket. In the Proxy Host **Advanced** field (directives are applied inside the proxy location), use:

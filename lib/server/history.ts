@@ -61,6 +61,40 @@ async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T
   if (firstError) throw firstError;
 }
 
+function uniqueAircraftByHex(aircraft: Aircraft[]): Aircraft[] {
+  const unique = new Map<string, Aircraft>();
+  for (const item of aircraft) {
+    const icaoHex = item.icaoHex.trim().toUpperCase();
+    if (!unique.has(icaoHex)) unique.set(icaoHex, { ...item, icaoHex });
+  }
+  return [...unique.values()];
+}
+
+function isAircraftUniqueViolation(error: unknown): boolean {
+  const visited = new Set<unknown>();
+  let current = error;
+  while (current && typeof current === "object" && !visited.has(current)) {
+    visited.add(current);
+    const candidate = current as { sqlState?: unknown; code?: unknown; constraint?: unknown; cause?: unknown };
+    const sqlState = candidate.sqlState ?? candidate.code;
+    if (sqlState === "23505" && candidate.constraint === "aircraft_icaoHex_key") return true;
+    current = candidate.cause;
+  }
+  return false;
+}
+
+async function retryAircraftUniqueViolation<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt === 0 && isAircraftUniqueViolation(error)) continue;
+      throw error;
+    }
+  }
+  throw new Error("Unreachable aircraft history retry state");
+}
+
 async function pruneHistoryIfDue(database: NonNullable<ReturnType<typeof getPrisma>>): Promise<void> {
   const now = Date.now();
   const maintenanceDue = now - lastFlightMaintenanceRunAt >= Math.max(getHistorySampleIntervalMs(), 5 * 60_000);
@@ -119,12 +153,12 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
   const database = getPrisma();
   if (!database) return;
 
-  await runWithConcurrency(aircraft, 8, async (item) => {
+  await runWithConcurrency(uniqueAircraftByHex(aircraft), 8, async (item) => {
     if (item.lat === null || item.lon === null) return;
     const latitude = item.lat;
     const longitude = item.lon;
     const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime());
-    await database.transaction(async (transaction) => {
+    await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const dbAircraft = await schema.Aircraft.where({ icaoHex: item.icaoHex }).upsert({
         update: {
@@ -209,7 +243,7 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
         ...(item.track === null ? {} : { track: item.track }),
         ...(item.verticalRate === null ? {} : { verticalRate: item.verticalRate }),
       });
-    });
+    }));
   });
 
   await pruneHistoryIfDue(database);
