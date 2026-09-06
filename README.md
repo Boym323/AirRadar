@@ -1,6 +1,6 @@
 # AirRadar
 
-AirRadar is a personal, dark-mode ADS-B radar UI for a local [`readsb`](https://github.com/wiedehopf/readsb) receiver. It keeps the live aircraft state in RAM, samples history to PostgreSQL, and streams snapshots to the browser over Server-Sent Events (SSE).
+AirRadar is a personal, dark-mode ADS-B radar UI for a local [`readsb`](https://github.com/wiedehopf/readsb) receiver. It keeps the live aircraft state in RAM, samples history to PostgreSQL, and streams snapshots to the browser over Server-Sent Events (SSE). The map remains usable on desktop, iPhone and Android when optional data sources are unavailable.
 
 ## Quick start — demo mode
 
@@ -48,6 +48,21 @@ Prisma 8 currently requires Node.js 22.18 or newer. The repository pins the Pris
 
 Without `DATABASE_URL`, the app still works fully in demo mode. History falls back to the in-memory trail and `/api/health` reports the database as `not_configured`.
 
+## Optional enrichment and ATC data
+
+The integrations below are optional. A provider failure is negatively cached and never stops the readsb polling loop:
+
+| Capability | Provider | Configuration | Cost / key |
+| --- | --- | --- | --- |
+| Aircraft metadata | [ADSBDB](https://github.com/mrjackwills/adsbdb) | `ADSBDB_ENABLED=true` and optional `ADSBDB_BASE_URL` | Free community API, no key |
+| Callsign airline and origin/destination | ADSBDB | Same as above | Free community API, no key |
+| Scheduled/actual/estimated times, filed route and waypoints | [FlightAware AeroAPI](https://www.flightaware.com/commercial/aeroapi/v4/documentation) | `FLIGHTAWARE_API_KEY=…` | Optional commercial service; key stays server-side |
+| ATC sectors and transmitters | AirRadar sample provider | No configuration | Included sample data; replace with a maintained/licensed AIP dataset for production |
+
+ADSBDB lookups are keyed by ICAO hex or callsign and cached for hours to a day; they are never made on every ADS-B update. FlightAware is disabled when `FLIGHTAWARE_API_KEY` is empty. Missing keys therefore do not reduce live radar functionality. Route lines are schematic references, not filed flight plans; the orange solid trail is the observed ADS-B trail.
+
+The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled sample ATC layer is available at `/api/atc/sectors` and can be replaced by a provider without changing the UI resolver.
+
 ## Useful commands
 
 ```bash
@@ -68,6 +83,8 @@ npm run prisma:verify   # verify the configured database
 - `GET /api/aircraft` — current state snapshot
 - `GET /api/stream` — SSE stream of `snapshot` events
 - `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback
+- `GET /api/airports` — configured airport catalog or bundled fallback catalog
+- `GET /api/atc/sectors` — ATC sector and transmitter map data
 - `GET /api/health` — application, database, readsb and live-state health
 
 ## Production deployment
@@ -90,6 +107,6 @@ Optional server-side contracts are defined for `AircraftMetadataProvider`, `Flig
 
 `Flight` represents a flight instance, not a callsign. A new instance is opened when the callsign changes or the continuity gap is exceeded; the ICAO address remains the aircraft identity and registration/callsign are observations.
 
-The ATC service already models multi-polygon sectors, vertical limits, validity, country, callsign, primary/alternate frequencies and source. Its resolver performs point-in-polygon plus altitude/time matching. The project intentionally does not ship AIP data yet; a future AIP-backed `AtcSectorProvider` can replace the empty provider without changing the resolver or frontend.
+The ATC service models multi-polygon sectors, vertical limits, validity, country, callsign, service, primary/alternate frequencies and source. Its resolver performs point-in-polygon plus altitude/time matching and reports a probable sector only. It never claims to know the aircraft’s actually tuned frequency.
 
-The MVP intentionally does not ship populated AIP/FlightAware data, global ADS-B, RTL-airband ingestion, push notifications or coverage heatmaps.
+The project intentionally does not claim a definitive AIP dataset, actual tuned radio frequency, global ADS-B coverage, RTL-airband ingestion, push notifications or coverage heatmaps.

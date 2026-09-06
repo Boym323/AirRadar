@@ -1,6 +1,7 @@
 import type { AircraftProvider } from "@/lib/server/provider";
 import type { Aircraft, ProviderSnapshot, ReceiverPosition } from "@/lib/aircraft/types";
 import { destinationPoint, haversineDistanceKm, initialBearing } from "@/lib/geo";
+import { airportFromCode } from "@/lib/server/airport-catalog";
 
 interface MockFlight {
   hex: string;
@@ -39,6 +40,7 @@ export class MockReadsbProvider implements AircraftProvider {
       receiver: this.receiver,
       fetchedAt: new Date(now).toISOString(),
       provider: "mock",
+      messagesPerSecond: 18.4,
     };
   }
 
@@ -63,6 +65,7 @@ export class MockReadsbProvider implements AircraftProvider {
       track: (initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) + 90) % 360,
       verticalRate: index === 2 ? Math.round(600 + Math.sin(elapsedSeconds / 9) * 220) : flight.verticalRate,
       squawk: ["1234", "4521", "2631", "1001", "6510", "2256"][index],
+      emergency: index === 5 ? "" : null,
       rssi: -3 - (index * 1.4) - Math.abs(Math.sin(elapsedSeconds / 10 + flight.phase)),
       messages: Math.round(15800 + elapsedSeconds * (index + 1) * 1.8),
       lastSeen: recordedAt,
@@ -71,6 +74,32 @@ export class MockReadsbProvider implements AircraftProvider {
       distanceKm,
       bearing,
       trail: [{ lat, lon, recordedAt }],
+      enrichment: flight.callsign === "UAE139" ? {
+        metadata: {
+          registration: flight.registration,
+          registrationCountry: "United Arab Emirates",
+          registrationCountryCode: "AE",
+          aircraftType: "A380-861",
+          icaoTypeCode: flight.type,
+          aircraftDescription: flight.description,
+          operator: "Emirates",
+          manufacturer: "Airbus",
+          source: "demo",
+          retrievedAt: recordedAt,
+        },
+        route: {
+          callsign,
+          airline: "Emirates",
+          airlineIcao: "UAE",
+          airlineIata: "EK",
+          origin: "OMDB",
+          destination: "LKPR",
+          originAirport: airportFromCode("OMDB"),
+          destinationAirport: airportFromCode("LKPR"),
+          source: "demo",
+          retrievedAt: recordedAt,
+        },
+      } : undefined,
     };
   }
 }

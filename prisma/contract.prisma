@@ -2,7 +2,12 @@ model Aircraft {
   id           Int      @id @default(autoincrement())
   icaoHex      String   @unique
   registration String?
+  registrationCountry String?
+  registrationCountryCode String?
   aircraftType String?
+  manufacturer String?
+  model String?
+  operator String?
   createdAt    DateTime @default(now())
      updatedAt    DateTime @default(now())
   flights      Flight[]
@@ -13,6 +18,13 @@ model Flight {
   instanceKey String          @unique
   aircraftId Int
   callsign   String?
+  registration String?
+  aircraftType String?
+  airline String?
+  origin String?
+  destination String?
+  maxAltitude Int?
+  minDistanceKm Float?
   startTime  DateTime         @default(now())
   lastSeenAt DateTime         @default(now())
   endTime    DateTime?
@@ -21,6 +33,55 @@ model Flight {
 
   @@index([aircraftId, startTime])
   @@index([aircraftId, endTime, lastSeenAt])
+}
+
+model Airport {
+  id        Int    @id @default(autoincrement())
+  icao      String @unique
+  iata      String?
+  name      String
+  city      String?
+  country   String?
+  latitude  Float
+  longitude Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@index([iata])
+  @@index([country])
+}
+
+model AtcSector {
+  id                String @id
+  name              String
+  polygonJson       String
+  lowerAltitudeFt   Int?
+  upperAltitudeFt   Int?
+  atcCallsign       String?
+  service           String?
+  primaryFrequencyMhz Float?
+  alternateFrequenciesJson String?
+  country           String?
+  source            String
+  validFrom         DateTime?
+  validTo           DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now())
+
+  @@index([country])
+  @@index([validFrom, validTo])
+}
+
+model AtcTransmitter {
+  id           String @id
+  name         String
+  latitude     Float
+  longitude    Float
+  service      String?
+  frequencyMhz Float
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
 }
 
 model FlightPosition {

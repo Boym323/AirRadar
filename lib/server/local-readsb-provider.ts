@@ -24,6 +24,8 @@ export class LocalReadsbProvider implements AircraftProvider {
   readonly name = "readsb" as const;
   private currentReceiver: ReceiverPosition;
   private lastReceiverCheckAt = 0;
+  private lastMessageCount: number | null = null;
+  private lastMessageAt: number | null = null;
 
   constructor(
     private readonly baseUrl: string,
@@ -50,11 +52,20 @@ export class LocalReadsbProvider implements AircraftProvider {
     }
 
     const fetchedAt = new Date(now).toISOString();
+    const messageCount = typeof aircraftResponse.messages === "number"
+      ? aircraftResponse.messages
+      : typeof aircraftResponse.messages === "string" ? Number(aircraftResponse.messages) : null;
+    const messagesPerSecond = messageCount !== null && Number.isFinite(messageCount) && this.lastMessageCount !== null && this.lastMessageAt !== null
+      ? Math.max(0, (messageCount - this.lastMessageCount) / Math.max((now - this.lastMessageAt) / 1000, 0.001))
+      : null;
+    this.lastMessageCount = messageCount !== null && Number.isFinite(messageCount) ? messageCount : this.lastMessageCount;
+    this.lastMessageAt = now;
     return {
       aircraft: normalizeAircraftResponse(aircraftResponse, this.currentReceiver, new Date(fetchedAt)),
       receiver: this.currentReceiver,
       fetchedAt,
       provider: "readsb",
+      messagesPerSecond,
     };
   }
 }

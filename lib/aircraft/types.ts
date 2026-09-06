@@ -1,3 +1,6 @@
+import type { AtcAssignment } from "@/lib/atc/types";
+import type { Airport } from "@/lib/airports/types";
+
 export type AircraftSource = "ADS-B" | "MLAT" | "TIS-B" | "UNKNOWN";
 
 export interface ReceiverPosition {
@@ -8,7 +11,10 @@ export interface ReceiverPosition {
 
 export interface AircraftMetadata {
   registration: string | null;
+  registrationCountry: string | null;
+  registrationCountryCode: string | null;
   aircraftType: string | null;
+  icaoTypeCode: string | null;
   aircraftDescription: string | null;
   operator: string | null;
   manufacturer: string | null;
@@ -19,8 +25,12 @@ export interface AircraftMetadata {
 export interface FlightRoute {
   callsign: string;
   airline: string | null;
+  airlineIcao: string | null;
+  airlineIata: string | null;
   origin: string | null;
   destination: string | null;
+  originAirport: Airport | null;
+  destinationAirport: Airport | null;
   source: string;
   retrievedAt: string;
 }
@@ -28,7 +38,9 @@ export interface FlightRoute {
 export interface FlightPlan {
   callsign: string;
   scheduledDeparture: string | null;
+  actualDeparture: string | null;
   scheduledArrival: string | null;
+  estimatedArrival: string | null;
   filedRoute: string | null;
   waypoints: string[];
   source: string;
@@ -54,6 +66,7 @@ export interface Aircraft {
   track: number | null;
   verticalRate: number | null;
   squawk: string | null;
+  emergency: string | null;
   rssi: number | null;
   messages: number | null;
   lastSeen: string;
@@ -63,6 +76,7 @@ export interface Aircraft {
   bearing: number | null;
   trail: TrailPoint[];
   enrichment?: AircraftEnrichment;
+  atc?: AtcAssignment | null;
 }
 
 /** The wire representation intentionally omits the in-memory trail by default. */
@@ -79,6 +93,7 @@ export interface ProviderSnapshot {
   receiver: ReceiverPosition;
   fetchedAt: string;
   provider: string;
+  messagesPerSecond?: number | null;
 }
 
 export interface StateSnapshot {
@@ -97,7 +112,11 @@ export interface StateSnapshot {
 
 export interface RadarStats {
   currentAircraft: number;
+  aircraftSeenToday: number;
   uniqueAircraftToday: number;
   maxConcurrentAircraft: number;
   maxDistanceKm: number;
+  aircraftTypes: Array<{ name: string; count: number }>;
+  airlines: Array<{ name: string; count: number }>;
+  messagesPerSecond: number | null;
 }

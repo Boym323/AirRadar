@@ -19,6 +19,8 @@ sudo -u airradar npm run build
 
 `DATABASE_URL` must be present in `/var/www/airradar/.env` before `prisma:deploy`. If PostgreSQL is intentionally disabled, omit it; demo mode and the in-memory history fallback still work.
 
+Optional enrichment is configured in the same server-only `.env`: set `ADSBDB_ENABLED=true` for free, keyless aircraft metadata and route lookups, and/or set `FLIGHTAWARE_API_KEY` for the optional commercial flight-plan adapter. Never use a `NEXT_PUBLIC_*` variable for these values. If either provider or PostgreSQL is offline, live readsb polling continues and the UI degrades gracefully.
+
 After installing dependencies and building as that user, install `airradar.service` into `/etc/systemd/system/` and run:
 
 ```bash

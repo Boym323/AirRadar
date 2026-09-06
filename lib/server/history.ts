@@ -7,8 +7,16 @@ export interface HistoryResponse {
   flight: {
     id: number | null;
     callsign: string | null;
+    registration: string | null;
+    aircraftType: string | null;
+    airline: string | null;
+    origin: string | null;
+    destination: string | null;
     startedAt: string | null;
     endedAt: string | null;
+    lastSeenAt: string | null;
+    maxAltitude: number | null;
+    minDistanceKm: number | null;
   } | null;
   positions: Array<{
     recordedAt: string;
@@ -66,14 +74,24 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
       const schema = transaction.orm.public;
       const dbAircraft = await schema.Aircraft.where({ icaoHex: item.icaoHex }).upsert({
         update: {
-          registration: item.registration,
+          registration: item.registration ?? item.enrichment?.metadata?.registration ?? null,
+          registrationCountry: item.enrichment?.metadata?.registrationCountry,
+          registrationCountryCode: item.enrichment?.metadata?.registrationCountryCode,
           aircraftType: item.aircraftType,
+          manufacturer: item.enrichment?.metadata?.manufacturer,
+          model: item.enrichment?.metadata?.aircraftDescription,
+          operator: item.enrichment?.metadata?.operator,
           updatedAt: recordedAt,
         },
         create: {
           icaoHex: item.icaoHex,
-          registration: item.registration,
+          registration: item.registration ?? item.enrichment?.metadata?.registration ?? null,
+          registrationCountry: item.enrichment?.metadata?.registrationCountry,
+          registrationCountryCode: item.enrichment?.metadata?.registrationCountryCode,
           aircraftType: item.aircraftType,
+          manufacturer: item.enrichment?.metadata?.manufacturer,
+          model: item.enrichment?.metadata?.aircraftDescription,
+          operator: item.enrichment?.metadata?.operator,
           updatedAt: recordedAt,
         },
       });
@@ -97,12 +115,28 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
           aircraftId: dbAircraft.id,
           instanceKey: `${item.icaoHex}:${recordedAt.getTime()}`,
           callsign: item.callsign,
+          registration: item.registration,
+          aircraftType: item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
+          airline: item.enrichment?.route?.airline ?? null,
+          origin: item.enrichment?.route?.origin ?? null,
+          destination: item.enrichment?.route?.destination ?? null,
+          maxAltitude: item.altitude,
+          minDistanceKm: item.distanceKm,
           startTime: recordedAt,
           lastSeenAt: recordedAt,
         });
       } else {
         await schema.Flight.where({ id: flight.id }).update({
           callsign: flight.callsign ?? item.callsign,
+          registration: flight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
+          aircraftType: flight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
+          airline: flight.airline ?? item.enrichment?.route?.airline,
+          origin: flight.origin ?? item.enrichment?.route?.origin,
+          destination: flight.destination ?? item.enrichment?.route?.destination,
+          maxAltitude: Math.max(flight.maxAltitude ?? 0, item.altitude ?? 0) || null,
+          minDistanceKm: Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
+            ? null
+            : Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY),
           lastSeenAt: recordedAt,
         });
       }
@@ -144,10 +178,18 @@ export async function getAircraftHistory(hex: string, fallback: Aircraft | null)
         return {
           source: "postgres",
           flight: {
-            id: flight.id,
-            callsign: flight.callsign,
-            startedAt: flight.startTime.toISOString(),
-            endedAt: flight.endTime?.toISOString() ?? null,
+          id: flight.id,
+          callsign: flight.callsign,
+          registration: flight.registration,
+          aircraftType: flight.aircraftType,
+          airline: flight.airline,
+          origin: flight.origin,
+          destination: flight.destination,
+          startedAt: flight.startTime.toISOString(),
+          endedAt: flight.endTime?.toISOString() ?? null,
+          lastSeenAt: flight.lastSeenAt.toISOString(),
+          maxAltitude: flight.maxAltitude,
+          minDistanceKm: flight.minDistanceKm,
           },
           positions: positions.reverse().map((position) => ({
             recordedAt: position.recordedAt.toISOString(),
@@ -167,7 +209,20 @@ export async function getAircraftHistory(hex: string, fallback: Aircraft | null)
   return {
     source: "memory",
     flight: fallback
-      ? { id: null, callsign: fallback.callsign, startedAt: fallback.lastSeen, endedAt: null }
+      ? {
+          id: null,
+          callsign: fallback.callsign,
+          registration: fallback.registration ?? fallback.enrichment?.metadata?.registration ?? null,
+          aircraftType: fallback.enrichment?.metadata?.icaoTypeCode ?? fallback.aircraftType,
+          airline: fallback.enrichment?.route?.airline ?? null,
+          origin: fallback.enrichment?.route?.origin ?? null,
+          destination: fallback.enrichment?.route?.destination ?? null,
+          startedAt: fallback.trail[0]?.recordedAt ?? fallback.lastSeen,
+          endedAt: null,
+          lastSeenAt: fallback.lastSeen,
+          maxAltitude: fallback.altitude,
+          minDistanceKm: fallback.distanceKm,
+        }
       : null,
     positions: fallback?.trail.map((position) => ({
       recordedAt: position.recordedAt,

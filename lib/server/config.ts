@@ -40,3 +40,16 @@ export function getMaxProviderRetryIntervalMs(): number {
 export function getReceiverRefreshIntervalMs(): number {
   return Math.max(60_000, envNumber("RECEIVER_REFRESH_INTERVAL_MS", 5 * 60_000));
 }
+
+export function isAdsbDbEnabled(): boolean {
+  return process.env.ADSBDB_ENABLED?.trim().toLowerCase() === "true";
+}
+
+export function getAdsbDbBaseUrl(): string {
+  return process.env.ADSBDB_BASE_URL?.trim() || "https://api.adsbdb.com/v0";
+}
+
+export function getFlightAwareApiKey(): string | null {
+  const key = process.env.FLIGHTAWARE_API_KEY?.trim();
+  return key || null;
+}

@@ -50,6 +50,11 @@ function text(value: unknown): string | null {
   return trimmed.length ? trimmed : null;
 }
 
+function emergency(value: unknown): string | null {
+  const normalized = text(value)?.toLowerCase() ?? null;
+  return normalized && normalized !== "none" && normalized !== "unknown" ? normalized : null;
+}
+
 function sourceFor(raw: RawReadsbAircraft): AircraftSource {
   const explicit = text(raw.type)?.toLowerCase();
   if (explicit?.includes("mlat") || raw.mlat === true) return "MLAT";
@@ -88,6 +93,7 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
     track: numeric(raw.track),
     verticalRate: numeric(raw.geom_rate) ?? numeric(raw.baro_rate),
     squawk: text(raw.squawk),
+    emergency: emergency(raw.emergency),
     rssi: numeric(raw.rssi),
     messages: numeric(raw.messages),
     lastSeen,

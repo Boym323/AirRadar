@@ -11,6 +11,7 @@ export interface AtcSector {
   id: string;
   name: string;
   atcCallsign: string | null;
+  service?: string | null;
   polygons: SectorPolygon[];
   lowerAltitudeFt: number | null;
   upperAltitudeFt: number | null;
@@ -19,6 +20,30 @@ export interface AtcSector {
   validTo: string | null;
   country: string | null;
   source: string;
+}
+
+export interface AtcAssignment {
+  sectorId: string;
+  name: string;
+  service: string | null;
+  callsign: string | null;
+  primaryFrequencyMhz: number | null;
+  alternateFrequenciesMhz: number[];
+  lowerAltitudeFt: number | null;
+  upperAltitudeFt: number | null;
+  country: string | null;
+  source: string;
+  confidence: "inside" | "boundary";
+}
+
+export interface AtcTransmitter {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  service: string | null;
+  frequencyMhz: number;
+  notes: string | null;
 }
 
 export interface AtcSectorMatch {

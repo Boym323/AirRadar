@@ -1,4 +1,4 @@
-import type { AtcLookup, AtcSector, AtcSectorMatch, Coordinate } from "@/lib/atc/types";
+import type { AtcAssignment, AtcLookup, AtcSector, AtcSectorMatch, Coordinate } from "@/lib/atc/types";
 import type { AtcSectorProvider } from "@/lib/server/provider";
 
 export class EmptyAtcSectorProvider implements AtcSectorProvider {
@@ -7,6 +7,23 @@ export class EmptyAtcSectorProvider implements AtcSectorProvider {
   async getSectors(): Promise<AtcSector[]> {
     return [];
   }
+}
+
+export function assignmentFromMatch(match: AtcSectorMatch): AtcAssignment {
+  const primary = match.sector.frequencies.find((frequency) => frequency.isPrimary) ?? match.sector.frequencies[0] ?? null;
+  return {
+    sectorId: match.sector.id,
+    name: match.sector.name,
+    service: match.sector.service ?? match.sector.atcCallsign,
+    callsign: match.sector.atcCallsign,
+    primaryFrequencyMhz: primary?.frequencyMhz ?? null,
+    alternateFrequenciesMhz: match.sector.frequencies.filter((frequency) => frequency !== primary).map((frequency) => frequency.frequencyMhz),
+    lowerAltitudeFt: match.sector.lowerAltitudeFt,
+    upperAltitudeFt: match.sector.upperAltitudeFt,
+    country: match.sector.country,
+    source: match.sector.source,
+    confidence: match.confidence,
+  };
 }
 
 function pointOnSegment(point: Coordinate, start: Coordinate, end: Coordinate): boolean {
@@ -73,6 +90,10 @@ export class AtcSectorService {
       .filter((match): match is AtcSectorMatch => match !== null)
       .sort((a, b) => (a.sector.upperAltitudeFt ?? Number.POSITIVE_INFINITY) - (b.sector.upperAltitudeFt ?? Number.POSITIVE_INFINITY));
     return matches[0] ?? null;
+  }
+
+  async getAll(): Promise<AtcSector[]> {
+    return this.getSectors();
   }
 
   invalidate(): void {
