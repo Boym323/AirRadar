@@ -25,26 +25,45 @@ function matchesLike(value: unknown, pattern: string): boolean {
 }
 
 class FakeCollection {
-  constructor(private readonly rows: Row[], private readonly kind: "Aircraft" | "Flight" | "FlightPosition") {}
+  constructor(
+    private readonly rows: Row[],
+    private readonly kind: "Aircraft" | "Flight" | "FlightPosition",
+    private readonly onAll?: () => void,
+    private readonly onIn?: () => void,
+  ) {}
+
+  private fieldsFor(row: Row): Row {
+    return new Proxy({}, {
+      get: (_target, property: string) => {
+        if (property === "aircraft") {
+          return {
+            some: (predicate: (fields: Row) => boolean) => predicate(this.fieldsFor((row.aircraft ?? {}) as Row)),
+          };
+        }
+        return {
+          ilike: (pattern: string) => matchesLike(row[property], pattern),
+          in: (values: unknown[]) => {
+            this.onIn?.();
+            return values.includes(row[property]);
+          },
+          gte: (value: unknown) => comparable(row[property]) >= comparable(value),
+          lt: (value: unknown) => comparable(row[property]) < comparable(value),
+          asc: () => undefined,
+          desc: () => undefined,
+        };
+      },
+    });
+  }
 
   where(filter: Row | ((fields: Row) => boolean)): FakeCollection {
     const filtered = typeof filter === "function"
-      ? this.rows.filter((row) => filter(new Proxy({}, {
-          get: (_target, property: string) => ({
-            ilike: (pattern: string) => matchesLike(row[property], pattern),
-            in: (values: unknown[]) => values.includes(row[property]),
-            gte: (value: unknown) => comparable(row[property]) >= comparable(value),
-            lt: (value: unknown) => comparable(row[property]) < comparable(value),
-            asc: () => undefined,
-            desc: () => undefined,
-          }),
-        })))
+      ? this.rows.filter((row) => filter(this.fieldsFor(row)))
       : this.rows.filter((row) => Object.entries(filter).every(([key, value]) => row[key] === value));
-    return new FakeCollection(filtered, this.kind);
+    return new FakeCollection(filtered, this.kind, this.onAll, this.onIn);
   }
 
   select(...fields: string[]): FakeCollection {
-    return new FakeCollection(this.rows.map((row) => Object.fromEntries(fields.map((field) => [field, row[field]]))), this.kind);
+    return new FakeCollection(this.rows.map((row) => Object.fromEntries(fields.map((field) => [field, row[field]]))), this.kind, this.onAll, this.onIn);
   }
 
   include(): FakeCollection {
@@ -57,14 +76,15 @@ class FakeCollection {
       if (this.kind === "Flight") return comparable(b.startTime) - comparable(a.startTime) || Number(b.id) - Number(a.id);
       return 0;
     });
-    return new FakeCollection(sorted, this.kind);
+    return new FakeCollection(sorted, this.kind, this.onAll, this.onIn);
   }
 
   limit(value: number): FakeCollection {
-    return new FakeCollection(this.rows.slice(0, value), this.kind);
+    return new FakeCollection(this.rows.slice(0, value), this.kind, this.onAll, this.onIn);
   }
 
   async all(): Promise<Row[]> {
+    this.onAll?.();
     return this.rows;
   }
 
@@ -73,12 +93,12 @@ class FakeCollection {
   }
 }
 
-function fakeDatabase({ aircraft, flights, positions = [] }: { aircraft: Row[]; flights: Row[]; positions?: Row[] }) {
+function fakeDatabase({ aircraft, flights, positions = [], onAircraftAll, onIn }: { aircraft: Row[]; flights: Row[]; positions?: Row[]; onAircraftAll?: () => void; onIn?: () => void }) {
   return {
     orm: {
       public: {
-        Aircraft: new FakeCollection(aircraft, "Aircraft"),
-        Flight: new FakeCollection(flights, "Flight"),
+        Aircraft: new FakeCollection(aircraft, "Aircraft", onAircraftAll, onIn),
+        Flight: new FakeCollection(flights, "Flight", undefined, onIn),
         FlightPosition: new FakeCollection(positions, "FlightPosition"),
       },
     },
@@ -146,10 +166,41 @@ describe("flight history v2", () => {
     expect(result.flights.map((item) => item.icaoHex)).toEqual(["DEF456"]);
   });
 
+  it("searches a historical flight registration", async () => {
+    const historical = { ...flight(1, "2026-09-07T10:00:00Z", "UAE139"), registration: "HIST-REG" };
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights: [historical, flight(2, "2026-09-07T09:00:00Z", "CSA001", 2)] }) as never);
+    const result = await listHistoryFlights({ query: "hist-reg", now: new Date("2026-09-07T12:00:00Z") });
+    expect(result.flights.map((item) => item.id)).toEqual([1]);
+  });
+
   it("searches by ICAO hex", async () => {
     vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights: [flight(1, "2026-09-07T10:00:00Z", "UAE139"), flight(2, "2026-09-07T09:00:00Z", "CSA001", 2)] }) as never);
     const result = await listHistoryFlights({ query: "def456", now: new Date("2026-09-07T12:00:00Z") });
     expect(result.flights.map((item) => item.icaoHex)).toEqual(["DEF456"]);
+  });
+
+  it("keeps fuzzy search relational and bounded without materializing Aircraft ids", async () => {
+    const aircraftAll = vi.fn(() => { throw new Error("Aircraft.all() must not be used for fuzzy search"); });
+    const inCalls = vi.fn();
+    const largeAircraft = Array.from({ length: 10_000 }, (_, index) => ({
+      id: index + 1,
+      icaoHex: index === 0 ? "ABC123" : index.toString(16).padStart(6, "0").slice(-6).toUpperCase(),
+      registration: index === 0 ? "OK-ABC" : `N-${index}`,
+      aircraftType: "A320",
+    }));
+    const flights = Array.from({ length: 150 }, (_, index) => flight(index + 1, `2026-09-07T${String(10 + Math.floor(index / 60)).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}:00Z`, `AIR-${index + 1}`));
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft: largeAircraft, flights, onAircraftAll: aircraftAll, onIn: inCalls }) as never);
+    const result = await listHistoryFlights({ query: "air", limit: 500, now: new Date("2026-09-07T23:00:00Z") });
+    expect(result.limit).toBe(100);
+    expect(result.flights).toHaveLength(100);
+    expect(aircraftAll).not.toHaveBeenCalled();
+    expect(inCalls).not.toHaveBeenCalled();
+  });
+
+  it("treats an empty search as the normal bounded range query", async () => {
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights: [flight(1, "2026-09-07T10:00:00Z", "ONE"), flight(2, "2026-09-07T09:00:00Z", "TWO", 2)] }) as never);
+    const result = await listHistoryFlights({ query: " %% ", now: new Date("2026-09-07T12:00:00Z") });
+    expect(result.flights.map((item) => item.id)).toEqual([1, 2]);
   });
 
   it("returns 400 for an invalid flight id", async () => {

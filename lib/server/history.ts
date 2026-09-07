@@ -168,17 +168,6 @@ function orderFlightSummaries(flights: HistoryFlightSummary[]): HistoryFlightSum
   });
 }
 
-async function matchingAircraftIds(
-  schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"],
-  pattern: string,
-): Promise<number[]> {
-  const [hexMatches, registrationMatches] = await Promise.all([
-    schema.Aircraft.where((aircraft) => aircraft.icaoHex.ilike(pattern)).select("id").all(),
-    schema.Aircraft.where((aircraft) => aircraft.registration.ilike(pattern)).select("id").all(),
-  ]);
-  return [...new Set([...hexMatches, ...registrationMatches].map((aircraft) => aircraft.id))];
-}
-
 async function queryFlightSummaries(
   schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"],
   from: Date | null,
@@ -228,15 +217,14 @@ export async function listHistoryFlights(options: {
     }
 
     const pattern = searchPattern(search);
-    const aircraftIds = await matchingAircraftIds(schema, pattern);
-    const [callsignMatches, aircraftMatches] = await Promise.all([
+    const [callsignMatches, flightRegistrationMatches, aircraftRegistrationMatches, hexMatches] = await Promise.all([
       queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.callsign.ilike(pattern))),
-      aircraftIds.length
-        ? queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.aircraftId.in(aircraftIds)))
-        : Promise.resolve([]),
+      queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.registration.ilike(pattern))),
+      queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.aircraft.some((aircraft) => aircraft.registration.ilike(pattern)))),
+      queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.aircraft.some((aircraft) => aircraft.icaoHex.ilike(pattern)))),
     ]);
     const unique = new Map<number, HistoryFlightSummary>();
-    for (const flight of [...callsignMatches, ...aircraftMatches]) unique.set(flight.id, flight);
+    for (const flight of [...callsignMatches, ...flightRegistrationMatches, ...aircraftRegistrationMatches, ...hexMatches]) unique.set(flight.id, flight);
     return { flights: orderFlightSummaries([...unique.values()]).slice(0, limit), range, limit };
   } catch {
     throw new HistoryDatabaseUnavailableError();
