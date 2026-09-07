@@ -53,6 +53,16 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
   stats: { currentAircraft: 0, aircraftSeenToday: 0, uniqueAircraftToday: 0, maxConcurrentAircraft: 0, maxDistanceKm: 0, aircraftTypes: [], airlines: [], messagesPerSecond: null },
 };
 
+const MIN_AIRCRAFT_ANIMATION_MS = 650;
+const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
+
+interface AircraftMotionTiming {
+  lat: number;
+  lon: number;
+  receivedAt: number;
+  durationMs: number;
+}
+
 const MAP_STYLE: StyleSpecification = {
   version: 8,
   glyphs: "/fonts/{fontstack}/{range}.pbf",
@@ -304,6 +314,8 @@ export function AirRadarApp() {
   const receiverMarkerRef = useRef<maplibregl.Marker | null>(null);
   const aircraftMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const animationFramesRef = useRef<Map<string, number>>(new Map());
+  const aircraftMotionTimingRef = useRef<Map<string, AircraftMotionTiming>>(new Map());
+  const aircraftAnimationTargetsRef = useRef<Map<string, [number, number]>>(new Map());
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
@@ -416,6 +428,8 @@ export function AirRadarApp() {
     mapRef.current = map;
     const animationFrames = animationFramesRef.current;
     const aircraftMarkers = aircraftMarkersRef.current;
+    const aircraftMotionTiming = aircraftMotionTimingRef.current;
+    const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
     const liveTrails = liveTrailsRef.current;
 
     map.on("load", () => {
@@ -476,6 +490,8 @@ export function AirRadarApp() {
     return () => {
       for (const frame of animationFrames.values()) cancelAnimationFrame(frame);
       animationFrames.clear();
+      aircraftMotionTiming.clear();
+      aircraftAnimationTargets.clear();
       receiverMarkerRef.current?.remove();
       receiverMarkerRef.current = null;
       for (const marker of aircraftMarkers.values()) marker.remove();
@@ -540,13 +556,19 @@ export function AirRadarApp() {
         focusedAircraftRef.current = selectedHex;
       }
     }
+    const aircraftMotionTiming = aircraftMotionTimingRef.current;
+    const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
     const currentHexes = new Set<string>();
-    const animate = (hex: string, marker: maplibregl.Marker, target: [number, number]) => {
+    const animate = (hex: string, marker: maplibregl.Marker, target: [number, number], duration: number) => {
       const previousFrame = animationFramesRef.current.get(hex);
       if (previousFrame) cancelAnimationFrame(previousFrame);
       const start = marker.getLngLat();
+      if (Math.abs(start.lng - target[0]) < 0.000001 && Math.abs(start.lat - target[1]) < 0.000001) {
+        marker.setLngLat(target);
+        animationFramesRef.current.delete(hex);
+        return;
+      }
       const startedAt = performance.now();
-      const duration = 850;
       const frame = (timestamp: number) => {
         const progress = Math.min(1, (timestamp - startedAt) / duration);
         const eased = progress * (2 - progress);
@@ -567,6 +589,7 @@ export function AirRadarApp() {
       if (aircraft.lat === null || aircraft.lon === null) continue;
       currentHexes.add(aircraft.icaoHex);
       let marker = aircraftMarkersRef.current.get(aircraft.icaoHex);
+      const target: [number, number] = [aircraft.lon, aircraft.lat];
       if (!marker) {
         const root = document.createElement("div");
         root.className = "aircraft-marker";
@@ -589,11 +612,33 @@ export function AirRadarApp() {
           }
         });
         marker = new maplibregl.Marker({ element: root, anchor: "center", rotationAlignment: "map" })
-          .setLngLat([aircraft.lon, aircraft.lat])
+          .setLngLat(target)
           .addTo(map);
         aircraftMarkersRef.current.set(aircraft.icaoHex, marker);
+        aircraftAnimationTargets.set(aircraft.icaoHex, target);
+        aircraftMotionTiming.set(aircraft.icaoHex, {
+          lat: aircraft.lat,
+          lon: aircraft.lon,
+          receivedAt: performance.now(),
+          durationMs: MIN_AIRCRAFT_ANIMATION_MS,
+        });
       } else {
-        animate(aircraft.icaoHex, marker, [aircraft.lon, aircraft.lat]);
+        const previousTiming = aircraftMotionTiming.get(aircraft.icaoHex);
+        const positionChanged = !previousTiming ||
+          Math.abs(previousTiming.lat - aircraft.lat) > 0.000001 ||
+          Math.abs(previousTiming.lon - aircraft.lon) > 0.000001;
+        let durationMs = previousTiming?.durationMs ?? MIN_AIRCRAFT_ANIMATION_MS;
+        if (positionChanged) {
+          const now = performance.now();
+          const elapsed = previousTiming ? now - previousTiming.receivedAt : durationMs;
+          durationMs = Math.min(MAX_AIRCRAFT_ANIMATION_MS, Math.max(MIN_AIRCRAFT_ANIMATION_MS, elapsed));
+          aircraftMotionTiming.set(aircraft.icaoHex, { lat: aircraft.lat, lon: aircraft.lon, receivedAt: now, durationMs });
+        }
+        const previousTarget = aircraftAnimationTargets.get(aircraft.icaoHex);
+        if (!previousTarget || Math.abs(previousTarget[0] - target[0]) > 0.000001 || Math.abs(previousTarget[1] - target[1]) > 0.000001) {
+          animate(aircraft.icaoHex, marker, target, durationMs);
+          aircraftAnimationTargets.set(aircraft.icaoHex, target);
+        }
       }
       const root = marker.getElement();
       root.setAttribute("aria-label", labelForAircraft(aircraft));
@@ -620,6 +665,8 @@ export function AirRadarApp() {
         const frame = animationFramesRef.current.get(hex);
         if (frame) cancelAnimationFrame(frame);
         animationFramesRef.current.delete(hex);
+        aircraftMotionTiming.delete(hex);
+        aircraftAnimationTargets.delete(hex);
         marker.remove();
         aircraftMarkersRef.current.delete(hex);
       }
