@@ -153,15 +153,17 @@ button { cursor: pointer; }
 
 .aircraft-marker { cursor: pointer; }
 .aircraft-marker.selected { z-index: 1; }
-.aircraft-plane { width: 36px; height: 36px; display: grid; place-items: center; color: var(--mint); background: transparent; border: 0; box-shadow: none; line-height: 1; transition: color .18s, filter .18s; }
-.aircraft-plane svg, .aircraft-row-icon svg { width: 27px; height: 27px; fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.aircraft-plane .aircraft-glyph-asset { width: 34px; height: 34px; object-fit: contain; pointer-events: none; filter: brightness(0) saturate(100%) invert(76%) sepia(61%) saturate(579%) hue-rotate(122deg) brightness(91%) contrast(88%); }
+.aircraft-plane { width: 28px; height: 28px; display: grid; place-items: center; color: var(--mint); background: transparent; border: 0; box-shadow: none; line-height: 1; transition: color .18s, filter .18s; }
+.aircraft-plane svg, .aircraft-row-icon svg { fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.aircraft-plane svg { width: 23px; height: 23px; }
+.aircraft-row-icon svg { width: 20px; height: 20px; }
+.aircraft-plane .aircraft-glyph-asset { width: 27px; height: 27px; object-fit: contain; pointer-events: none; filter: brightness(0) saturate(100%) invert(76%) sepia(61%) saturate(579%) hue-rotate(122deg) brightness(91%) contrast(88%); }
 .aircraft-row-icon .aircraft-glyph-asset { width: 21px; height: 21px; object-fit: contain; pointer-events: none; filter: brightness(0) saturate(100%) invert(76%) sepia(61%) saturate(579%) hue-rotate(122deg) brightness(91%) contrast(88%); }
-.aircraft-plane[data-kind="a380"] svg { width: 35px; height: 35px; }
-.aircraft-plane[data-kind="a330"] svg, .aircraft-plane[data-kind="a350"] svg, .aircraft-plane[data-kind="b747"] svg { width: 32px; height: 32px; }
-.aircraft-plane[data-kind="glider"] svg { width: 31px; }
+.aircraft-plane[data-kind="a380"] svg { width: 29px; height: 29px; }
+.aircraft-plane[data-kind="a330"] svg, .aircraft-plane[data-kind="a350"] svg, .aircraft-plane[data-kind="b747"] svg { width: 26px; height: 26px; }
+.aircraft-plane[data-kind="glider"] svg { width: 26px; }
 .aircraft-glyph-helicopter, .aircraft-glyph-drone, .aircraft-glyph-turboprop { fill: none; }
-.aircraft-plane[data-kind="ground"] svg { width: 18px; }
+.aircraft-plane[data-kind="ground"] svg { width: 16px; }
 .aircraft-marker.selected .aircraft-plane { color: var(--amber); filter: drop-shadow(0 0 6px rgba(243, 185, 95, .72)); }
 .aircraft-marker.watchlisted .aircraft-plane { filter: drop-shadow(0 0 6px rgba(243, 185, 95, .82)); }
 .aircraft-marker.selected .aircraft-glyph-asset { filter: brightness(0) saturate(100%) invert(81%) sepia(52%) saturate(652%) hue-rotate(344deg) brightness(101%) contrast(91%); }
