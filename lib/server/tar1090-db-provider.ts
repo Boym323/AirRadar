@@ -83,6 +83,7 @@ export class Tar1090DbProvider implements AircraftMetadataProvider {
     this.databaseFolderRequest = this.fetchDatabaseFolder()
       .catch(() => null)
       .then((folder) => {
+        if (this.databaseFolder !== undefined && this.databaseFolder !== folder) this.blockCache.clear();
         this.databaseFolder = folder;
         this.databaseFolderExpiresAt = Date.now() + DATABASE_FOLDER_TTL_MS;
         return folder;

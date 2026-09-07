@@ -219,8 +219,7 @@ check_repository() {
     dirty_status="$(git_cmd status --porcelain)"
     while IFS= read -r status_line; do
       [[ -z "${status_line}" ]] && continue
-      [[ "${status_line:0:2}" == "??" ]] && continue
-      error "Working tree contains tracked or staged changes:"
+      error "Working tree contains tracked, staged, or untracked changes:"
       printf '%s\n' "${dirty_status}" >&2
       die "Refusing to update a dirty production checkout. Use --allow-dirty to release the current working tree without updating from origin."
     done <<< "${dirty_status}"
@@ -328,11 +327,11 @@ run_release_steps() {
   log "Running tests"
   npm test
 
-  log "Applying database migrations"
-  npm run prisma:deploy
-
   log "Building production app"
   npm run build
+
+  log "Applying database migrations"
+  npm run prisma:deploy
 }
 
 health_check_once() {
@@ -354,7 +353,7 @@ health_check_once() {
     const fs = require("node:fs");
     const body = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
     if (!body || typeof body !== "object" || Array.isArray(body)) process.exit(1);
-    if (body.application?.status !== "ok") process.exit(2);
+    if (body.application?.status !== "ok" || body.status !== "ok") process.exit(2);
     process.stdout.write(`status=${body.status ?? "unknown"} application=${body.application.status}`);
   ' "${response_file}")"; then
     rm -f -- "${response_file}"

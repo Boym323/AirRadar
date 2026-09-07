@@ -210,7 +210,7 @@ npm run atc:status:cz # compare imported Czech effective date with AIM
 
 - `GET /api/aircraft` — current state snapshot
 - `GET /api/stream` — SSE stream of `snapshot` events
-- `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback
+- `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback (ICAO hex, or readsb's `~`-prefixed six-digit identifier)
 - `GET /api/airports` — configured airport catalog or bundled fallback catalog
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
 - `GET /api/health` — application, database, readsb, ATC dataset and live-state health

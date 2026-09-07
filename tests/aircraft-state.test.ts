@@ -2,10 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
-import type { ProviderSnapshot } from "@/lib/aircraft/types";
+import type { Aircraft, AircraftEnrichment, ProviderSnapshot } from "@/lib/aircraft/types";
 import { EnrichmentService } from "@/lib/server/enrichment-cache";
 import { AtcSectorService, EmptyAtcSectorProvider } from "@/lib/server/atc-sector-service";
 import type { AircraftProvider } from "@/lib/server/provider";
+import type { AtcSector, AtcSectorMatch } from "@/lib/atc/types";
 
 const services: AircraftStateService[] = [];
 
@@ -14,6 +15,26 @@ afterEach(async () => {
 });
 
 describe("aircraft state service", () => {
+  function atcMatch(sectorId: string): AtcSectorMatch {
+    const sector: AtcSector = {
+      id: sectorId,
+      name: sectorId,
+      atcCallsign: sectorId,
+      service: "ACC",
+      polygons: [[[13, 49], [16, 49], [16, 51], [13, 51], [13, 49]]],
+      lowerAltitudeFt: null,
+      upperAltitudeFt: null,
+      frequencies: [{ frequencyMhz: 127.35, label: sectorId, isPrimary: true }],
+      validFrom: null,
+      validTo: null,
+      country: "CZ",
+      source: "test",
+      sourceReference: "test://atc",
+      lastVerifiedAt: "2026-01-01T00:00:00.000Z",
+    };
+    return { sector, confidence: "inside" };
+  }
+
   it("keeps trails in server memory but omits them from live wire snapshots", async () => {
     const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
     services.push(service);
@@ -62,6 +83,38 @@ describe("aircraft state service", () => {
     expect(current?.enrichment?.route).toBeUndefined();
   });
 
+  it("does not attach a slow enrichment result to a newer observation", async () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const observedAt = new Date();
+    const first = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 }, receiver, observedAt);
+    const second = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14.02 }, receiver, new Date(observedAt.getTime() + 1000));
+    if (!first || !second) throw new Error("test aircraft could not be normalized");
+    const enrichmentFor = (operator: string): AircraftEnrichment => ({ metadata: {
+      registration: null, registrationCountry: null, registrationCountryCode: null, aircraftType: null,
+      icaoTypeCode: null, aircraftDescription: null, operator, manufacturer: null, source: "test",
+      retrievedAt: new Date().toISOString(),
+    } });
+    let releaseOld!: (value: AircraftEnrichment) => void;
+    const oldResult = new Promise<AircraftEnrichment>((resolve) => { releaseOld = resolve; });
+    const enrichment = {
+      hasProviders: true,
+      needsEnrichment: () => true,
+      enrich: vi.fn((item: Aircraft) => item.lon === 14 ? oldResult : Promise.resolve(enrichmentFor("NEW"))),
+    } as unknown as EnrichmentService;
+    const service = new AircraftStateService(new MockReadsbProvider(receiver), enrichment, new AtcSectorService(new EmptyAtcSectorProvider()));
+    const internal = service as unknown as { applySnapshot: (value: ProviderSnapshot) => void; enrichSnapshot: (value: ProviderSnapshot) => Promise<void> };
+    const firstSnapshot: ProviderSnapshot = { aircraft: [first], receiver, fetchedAt: observedAt.toISOString(), provider: "test" };
+    const secondSnapshot: ProviderSnapshot = { aircraft: [second], receiver, fetchedAt: new Date(observedAt.getTime() + 1000).toISOString(), provider: "test" };
+    internal.applySnapshot(firstSnapshot);
+    const staleEnrichment = internal.enrichSnapshot(firstSnapshot);
+    internal.applySnapshot(secondSnapshot);
+    await internal.enrichSnapshot(secondSnapshot);
+    expect(service.getAircraft("ABC123")?.enrichment?.metadata?.operator).toBe("NEW");
+    releaseOld(enrichmentFor("OLD"));
+    await staleEnrichment;
+    expect(service.getAircraft("ABC123")?.enrichment?.metadata?.operator).toBe("NEW");
+  });
+
   it("counts unique aircraft once and resets daily maxima at midnight", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T21:59:00Z"));
@@ -100,5 +153,55 @@ describe("aircraft state service", () => {
     expect(internal.atcResolutionKeys.has("ABC123")).toBe(true);
     internal.applySnapshot({ ...snapshot, aircraft: [] });
     expect(internal.atcResolutionKeys.has("ABC123")).toBe(false);
+  });
+
+  it("does not let a slow ATC lookup overwrite a newer position result", async () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const first = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 }, receiver);
+    const second = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14.02 }, receiver);
+    if (!first || !second) throw new Error("test aircraft could not be normalized");
+    let releaseFirst!: (match: AtcSectorMatch) => void;
+    const firstLookup = new Promise<AtcSectorMatch>((resolve) => { releaseFirst = resolve; });
+    const lookup = vi.fn(({ longitude }: { longitude: number }) => longitude < 14.01 ? firstLookup : Promise.resolve(atcMatch("NEW")));
+    const service = new AircraftStateService(
+      new MockReadsbProvider(receiver),
+      new EnrichmentService({}),
+      { lookup } as unknown as AtcSectorService,
+    );
+    const internal = service as unknown as { applySnapshot: (value: ProviderSnapshot) => void; resolveAtc: (value: ProviderSnapshot) => Promise<void> };
+    const firstSnapshot: ProviderSnapshot = { aircraft: [first], receiver, fetchedAt: new Date().toISOString(), provider: "test" };
+    const secondSnapshot: ProviderSnapshot = { aircraft: [second], receiver, fetchedAt: new Date().toISOString(), provider: "test" };
+    internal.applySnapshot(firstSnapshot);
+    const staleResolution = internal.resolveAtc(firstSnapshot);
+    internal.applySnapshot(secondSnapshot);
+    await internal.resolveAtc(secondSnapshot);
+    expect(service.getAircraft("ABC123")?.atc?.sectorId).toBe("NEW");
+    releaseFirst(atcMatch("OLD"));
+    await staleResolution;
+    expect(service.getAircraft("ABC123")?.atc?.sectorId).toBe("NEW");
+  });
+
+  it("retries ATC after a transient lookup failure", async () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const aircraft = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 }, receiver);
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+    const lookup = vi.fn()
+      .mockRejectedValueOnce(new Error("database offline"))
+      .mockResolvedValueOnce(atcMatch("RETRY"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const service = new AircraftStateService(
+      new MockReadsbProvider(receiver),
+      new EnrichmentService({}),
+      { lookup } as unknown as AtcSectorService,
+    );
+    const internal = service as unknown as { applySnapshot: (value: ProviderSnapshot) => void; resolveAtc: (value: ProviderSnapshot) => Promise<void>; atcResolutionKeys: Map<string, string> };
+    const snapshot: ProviderSnapshot = { aircraft: [aircraft], receiver, fetchedAt: new Date().toISOString(), provider: "test" };
+    internal.applySnapshot(snapshot);
+    await internal.resolveAtc(snapshot);
+    expect(internal.atcResolutionKeys.has("ABC123")).toBe(false);
+    await internal.resolveAtc(snapshot);
+    expect(service.getAircraft("ABC123")?.atc?.sectorId).toBe("RETRY");
+    expect(lookup).toHaveBeenCalledTimes(2);
+    errorSpy.mockRestore();
   });
 });

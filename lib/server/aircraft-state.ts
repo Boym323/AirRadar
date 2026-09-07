@@ -45,6 +45,11 @@ function mergeEnrichment(
   return Object.keys(merged).length ? merged : undefined;
 }
 
+function atcResolutionKey(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude">): string | null {
+  if (aircraft.lat === null || aircraft.lon === null) return null;
+  return `${aircraft.lat.toFixed(2)}:${aircraft.lon.toFixed(2)}:${aircraft.altitude === null ? "unknown" : Math.round(aircraft.altitude / 1000)}`;
+}
+
 export class AircraftStateService {
   private readonly provider: AircraftProvider;
   private readonly aircraft = new Map<string, Aircraft>();
@@ -182,7 +187,9 @@ export class AircraftStateService {
       const trail = this.updateTrail(previous, incoming);
       const sameCallsign = previous?.callsign === incoming.callsign;
       const enrichment = mergeEnrichment(previous?.enrichment, incoming.enrichment, sameCallsign);
-      const atc = previous?.callsign === incoming.callsign ? previous.atc : incoming.atc;
+      // ATC is assigned from position/altitude, not callsign. Preserve a
+      // still-valid estimate across an observation callsign change.
+      const atc = previous?.atc ?? incoming.atc;
       this.aircraft.set(incoming.icaoHex, { ...incoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
       this.seenToday.set(incoming.icaoHex, today);
       if ((incoming.distanceKm ?? 0) > this.stats.maxDistanceKm) {
@@ -312,7 +319,9 @@ export class AircraftStateService {
     for (const result of results) {
       if (result.status !== "fulfilled" || !result.value.enrichment) continue;
       const current = this.aircraft.get(result.value.item.icaoHex);
-      if (!current || current.callsign !== result.value.item.callsign) continue;
+      // A slow provider response belongs to one observation. Do not attach it
+      // to a newer observation of the same callsign/hex.
+      if (!current || current.callsign !== result.value.item.callsign || current.lastSeen !== result.value.item.lastSeen) continue;
       const enrichment = mergeEnrichment(current.enrichment, result.value.enrichment, true);
       if (!enrichment) continue;
       this.aircraft.set(current.icaoHex, { ...current, enrichment });
@@ -338,23 +347,35 @@ export class AircraftStateService {
   }
 
   private async resolveAtc(snapshot: ProviderSnapshot): Promise<void> {
+    const failures: string[] = [];
     const results = await Promise.all(snapshot.aircraft.map(async (incoming) => {
-      if (incoming.lat === null || incoming.lon === null) return { incoming, assignment: null };
-      if (!this.aircraft.has(incoming.icaoHex)) return { incoming, assignment: null };
-      const key = `${incoming.lat.toFixed(2)}:${incoming.lon.toFixed(2)}:${incoming.altitude === null ? "unknown" : Math.round(incoming.altitude / 1000)}`;
-      if (this.atcResolutionKeys.get(incoming.icaoHex) === key) return { incoming, assignment: this.aircraft.get(incoming.icaoHex)?.atc ?? null };
+      const key = atcResolutionKey(incoming);
+      if (!key || !this.aircraft.has(incoming.icaoHex)) return { incoming, key, assignment: null, resolved: false };
+      if (this.atcResolutionKeys.get(incoming.icaoHex) === key) return { incoming, key, assignment: this.aircraft.get(incoming.icaoHex)?.atc ?? null, resolved: true };
       this.atcResolutionKeys.set(incoming.icaoHex, key);
-      const match = await this.atc.lookup({ latitude: incoming.lat, longitude: incoming.lon, altitudeFt: incoming.altitude, observedAt: new Date(snapshot.fetchedAt) });
-      if (!this.aircraft.has(incoming.icaoHex)) {
-        this.atcResolutionKeys.delete(incoming.icaoHex);
-        return { incoming, assignment: null };
+      try {
+        const match = await this.atc.lookup({ latitude: incoming.lat!, longitude: incoming.lon!, altitudeFt: incoming.altitude, observedAt: new Date(snapshot.fetchedAt) });
+        if (!this.aircraft.has(incoming.icaoHex)) {
+          if (this.atcResolutionKeys.get(incoming.icaoHex) === key) this.atcResolutionKeys.delete(incoming.icaoHex);
+          return { incoming, key, assignment: null, resolved: false };
+        }
+        return { incoming, key, assignment: match ? assignmentFromMatch(match) : null, resolved: true };
+      } catch {
+        // Do not permanently memoize a transient ATC/database failure. The
+        // next snapshot must be allowed to retry this aircraft.
+        if (this.atcResolutionKeys.get(incoming.icaoHex) === key) this.atcResolutionKeys.delete(incoming.icaoHex);
+        failures.push(incoming.icaoHex);
+        return { incoming, key, assignment: null, resolved: false };
       }
-      return { incoming, assignment: match ? assignmentFromMatch(match) : null };
     }));
+    if (failures.length) console.error(`AirRadar ATC resolution failed for ${failures.length} aircraft`);
     let changed = false;
     for (const result of results) {
       const current = this.aircraft.get(result.incoming.icaoHex);
-      if (!current || current.callsign !== result.incoming.callsign) continue;
+      // A slower lookup from an older position must never overwrite a newer
+      // result. The coarse key is intentional throttling; a changed key is a
+      // new resolution generation.
+      if (!result.resolved || !current || current.callsign !== result.incoming.callsign || atcResolutionKey(current) !== result.key) continue;
       if (JSON.stringify(current.atc) === JSON.stringify(result.assignment)) continue;
       this.aircraft.set(current.icaoHex, { ...current, atc: result.assignment });
       changed = true;

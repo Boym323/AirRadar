@@ -14,7 +14,7 @@ describe("readsb normalization", () => {
   });
 
   it("ignores malformed entries without an ICAO hex", () => {
-    expect(normalizeAircraftResponse({ aircraft: [{ flight: "NOHEX" }] }, { lat: 50, lon: 14, name: "Test" })).toEqual([]);
+    expect(normalizeAircraftResponse({ aircraft: [{ hex: "not-an-address", flight: "NOHEX" }] }, { lat: 50, lon: 14, name: "Test" })).toEqual([]);
   });
 
   it("keeps readsb source and independent barometric/geometric fields", () => {

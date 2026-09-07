@@ -1,5 +1,6 @@
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import type { Aircraft, AircraftSource, ReceiverPosition } from "@/lib/aircraft/types";
+import { normalizeAircraftIdentifier } from "@/lib/aircraft/identity";
 
 export interface RawReadsbAircraft {
   hex?: unknown;
@@ -81,7 +82,7 @@ function isOnGround(raw: RawReadsbAircraft): boolean {
 }
 
 export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosition, now = new Date()): Aircraft | null {
-  const icaoHex = text(raw.hex)?.toUpperCase();
+  const icaoHex = normalizeAircraftIdentifier(raw.hex);
   if (!icaoHex) return null;
 
   const lat = coordinate(raw.lat, -90, 90);

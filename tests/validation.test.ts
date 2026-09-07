@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { normalizeIcaoHex } from "@/lib/server/validation";
 
 describe("public aircraft identifier validation", () => {
-  it.each([["abc123", "ABC123"], [" 896139 ", "896139"]])("normalizes valid ICAO hex %j", (value, expected) => {
+  it.each([["abc123", "ABC123"], [" 896139 ", "896139"], ["~abc123", "~ABC123"]])("normalizes valid readsb aircraft identifier %j", (value, expected) => {
     expect(normalizeIcaoHex(value)).toBe(expected);
   });
 

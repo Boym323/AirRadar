@@ -160,26 +160,28 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
     const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime());
     await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
+      const metadata = item.enrichment?.metadata;
       const dbAircraft = await schema.Aircraft.upsert({
         // Prisma 8 defaults conflict resolution to the primary key. Aircraft
         // identity is ICAO hex, so use its unique constraint explicitly.
         conflictOn: { icaoHex: item.icaoHex },
         update: {
-          registration: item.registration ?? item.enrichment?.metadata?.registration ?? null,
-          registrationCountry: item.enrichment?.metadata?.registrationCountry,
-          registrationCountryCode: item.enrichment?.metadata?.registrationCountryCode,
-          aircraftType: item.aircraftType,
-          manufacturer: item.enrichment?.metadata?.manufacturer,
-          model: item.enrichment?.metadata?.aircraftDescription,
-          operator: item.enrichment?.metadata?.operator,
+          // Missing live fields must not erase the durable catalog value.
+          registration: item.registration ?? metadata?.registration ?? undefined,
+          registrationCountry: metadata?.registrationCountry ?? undefined,
+          registrationCountryCode: metadata?.registrationCountryCode ?? undefined,
+          aircraftType: item.aircraftType ?? metadata?.icaoTypeCode ?? undefined,
+          manufacturer: metadata?.manufacturer ?? undefined,
+          model: metadata?.aircraftDescription ?? undefined,
+          operator: metadata?.operator ?? undefined,
           updatedAt: recordedAtInstant,
         },
         create: {
           icaoHex: item.icaoHex,
-          registration: item.registration ?? item.enrichment?.metadata?.registration ?? null,
+          registration: item.registration ?? metadata?.registration ?? null,
           registrationCountry: item.enrichment?.metadata?.registrationCountry,
           registrationCountryCode: item.enrichment?.metadata?.registrationCountryCode,
-          aircraftType: item.aircraftType,
+          aircraftType: item.aircraftType ?? metadata?.icaoTypeCode,
           manufacturer: item.enrichment?.metadata?.manufacturer,
           model: item.enrichment?.metadata?.aircraftDescription,
           operator: item.enrichment?.metadata?.operator,
@@ -210,7 +212,7 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
           aircraftId: dbAircraft.id,
           instanceKey: `${item.icaoHex}:${recordedAt.getTime()}`,
           callsign: item.callsign,
-          registration: item.registration,
+          registration: item.registration ?? metadata?.registration,
           aircraftType: item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
           airline: item.enrichment?.route?.airline ?? null,
           origin: item.enrichment?.route?.origin ?? null,

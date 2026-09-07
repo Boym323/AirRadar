@@ -13,8 +13,8 @@ AirRadar requires Node.js 22.18+ because it uses the Prisma 8 contract-based Pos
 cd /var/www/airradar
 sudo -u airradar npm ci
 sudo -u airradar npm run prisma:generate
-sudo -u airradar npm run prisma:deploy
 sudo -u airradar npm run build
+sudo -u airradar npm run prisma:deploy
 ```
 
 `DATABASE_URL` must be present in `/var/www/airradar/.env` before `prisma:deploy`. If PostgreSQL is intentionally disabled, omit it; demo mode and the in-memory history fallback still work.

@@ -626,7 +626,7 @@ export function AirRadarApp() {
       : { type: "FeatureCollection", features: [] });
     const routeSource = map.getSource("selected-route") as GeoJSONSource | undefined;
     routeSource?.setData(createRouteGeoJSON(selected?.enrichment?.route, Boolean(selected?.enrichment?.route)));
-  }, [isWatchlisted, snapshot.aircraft, snapshot.receiver.lat, selectedHex, mapReady, selectAircraft]);
+  }, [isWatchlisted, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const map = mapRef.current;
