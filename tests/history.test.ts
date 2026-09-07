@@ -62,6 +62,54 @@ describe("historical flight maintenance", () => {
     expect(transactionAttempts).toBe(2);
   });
 
+  it("reports partial batch failures without rejecting successful aircraft", async () => {
+    const recordedAt = new Date("2026-01-01T12:00:00Z");
+    const makeAircraft = (hex: string) => normalizeAircraft(
+      { hex, flight: "TEST123", lat: 50, lon: 14 },
+      { lat: 50, lon: 14, name: "Test" },
+      recordedAt,
+    );
+    const successful = makeAircraft("ABC123");
+    const failed = makeAircraft("DEF456");
+    if (!successful || !failed) throw new Error("test aircraft could not be normalized");
+
+    const upsert = vi.fn().mockImplementation(async ({ conflictOn }: { conflictOn: { icaoHex: string } }) => {
+      if (conflictOn.icaoHex === "DEF456") throw new Error("simulated aircraft failure");
+      return { id: 42 };
+    });
+    const flightWhere = vi.fn().mockImplementation((filter: Record<string, unknown>) => {
+      if ("aircraftId" in filter) {
+        return {
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+          }),
+        };
+      }
+      if ("id" in filter) return { update: vi.fn().mockResolvedValue(undefined) };
+      return { where: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }) };
+    });
+    const database = {
+      orm: {
+        public: {
+          Aircraft: { upsert },
+          Flight: { where: flightWhere, create: vi.fn().mockResolvedValue({ id: 8 }) },
+          FlightPosition: {
+            create: vi.fn().mockResolvedValue({ id: 99 }),
+            where: vi.fn().mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) }),
+          },
+        },
+      },
+      transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(database),
+    };
+    vi.mocked(getPrisma).mockReturnValue(database as never);
+
+    const result = await recordAircraftSnapshot([successful, failed], recordedAt);
+
+    expect(new Set(result.succeeded)).toEqual(new Set(["ABC123"]));
+    expect(new Set(result.failed)).toEqual(new Set(["DEF456"]));
+    expect(upsert).toHaveBeenCalledTimes(2);
+  });
+
   it("uses lastSeenAt as the end time after the continuity gap", () => {
     const lastSeenAt = new Date("2026-01-01T12:00:00Z");
     const now = new Date("2026-01-01T12:02:01Z");

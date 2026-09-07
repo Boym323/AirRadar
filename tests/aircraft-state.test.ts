@@ -10,7 +10,10 @@ import type { AtcSector, AtcSectorMatch } from "@/lib/atc/types";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 
 vi.mock("@/lib/server/history", () => ({
-  recordAircraftSnapshot: vi.fn().mockResolvedValue(undefined),
+  recordAircraftSnapshot: vi.fn().mockImplementation((aircraft: Aircraft[]) => Promise.resolve({
+    succeeded: aircraft.map((item) => item.icaoHex),
+    failed: [],
+  })),
 }));
 
 const services: AircraftStateService[] = [];
@@ -105,6 +108,153 @@ describe("aircraft state service", () => {
     internal.applySnapshot(later);
     await internal.persistHistory(later);
     expect(historyWrites()).toHaveLength(2);
+  });
+
+  it("uses fetchedAt for history cadence when a snapshot is delayed", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("HISTORY_SAMPLE_INTERVAL_MS", "20000");
+    const base = new Date("2026-09-07T12:00:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      persistHistory: (snapshot: ProviderSnapshot) => Promise<void>;
+    };
+    const makeSnapshot = (at: Date, lon: number): ProviderSnapshot => {
+      const aircraft = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon }, receiver, at);
+      if (!aircraft) throw new Error("test aircraft could not be normalized");
+      return { aircraft: [aircraft], receiver, fetchedAt: at.toISOString(), provider: "test" };
+    };
+    const historyWrites = () => vi.mocked(recordAircraftSnapshot).mock.calls.filter(([aircraft]) => aircraft.length > 0);
+
+    vi.mocked(recordAircraftSnapshot).mockClear();
+    await internal.persistHistory(makeSnapshot(base, 14));
+
+    vi.setSystemTime(new Date(base.getTime() + 21_000));
+    await internal.persistHistory(makeSnapshot(new Date(base.getTime() + 6_000), 14.01));
+    expect(historyWrites()).toHaveLength(1);
+
+    vi.setSystemTime(new Date(base.getTime() + 24_000));
+    await internal.persistHistory(makeSnapshot(new Date(base.getTime() + 21_000), 14.02));
+    expect(historyWrites()).toHaveLength(2);
+    expect(historyWrites()[1]?.[1]).toEqual(new Date(base.getTime() + 21_000));
+  });
+
+  it("keeps queued observation fields paired with its fetchedAt", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("HISTORY_SAMPLE_INTERVAL_MS", "20000");
+    const base = new Date("2026-09-07T12:00:00.000Z");
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const queuedAt = new Date(base.getTime() + 6_000);
+    const currentAt = new Date(base.getTime() + 21_000);
+    const queued = normalizeAircraft(
+      { hex: "ABC123", flight: "TEST123", lat: 50, lon: 14, alt_baro: 10_000 },
+      receiver,
+      queuedAt,
+    );
+    const current = normalizeAircraft(
+      { hex: "ABC123", flight: "TEST123", lat: 50, lon: 14.2, alt_baro: 18_000 },
+      receiver,
+      currentAt,
+    );
+    if (!queued || !current) throw new Error("test aircraft could not be normalized");
+    vi.setSystemTime(currentAt);
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      applySnapshot: (snapshot: ProviderSnapshot) => void;
+      persistHistory: (snapshot: ProviderSnapshot) => Promise<void>;
+    };
+    internal.applySnapshot({ aircraft: [current], receiver, fetchedAt: currentAt.toISOString(), provider: "test" });
+    vi.mocked(recordAircraftSnapshot).mockClear();
+
+    await internal.persistHistory({ aircraft: [queued], receiver, fetchedAt: queuedAt.toISOString(), provider: "test" });
+
+    const persisted = vi.mocked(recordAircraftSnapshot).mock.calls[0]?.[0]?.[0];
+    expect(vi.mocked(recordAircraftSnapshot).mock.calls[0]?.[1]).toEqual(queuedAt);
+    expect(persisted).toMatchObject({ callsign: "TEST123", lon: 14, altitude: 10_000 });
+    expect(persisted?.lon).not.toBe(14.2);
+    expect(persisted?.altitude).not.toBe(18_000);
+  });
+
+  it("does not copy callsign-bound enrichment from a newer callsign", async () => {
+    vi.useFakeTimers();
+    const base = new Date("2026-09-07T12:00:00.000Z");
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const queuedAt = new Date(base.getTime() + 6_000);
+    const currentAt = new Date(base.getTime() + 21_000);
+    const queued = normalizeAircraft({ hex: "ABC123", flight: "OLD123", lat: 50, lon: 14 }, receiver, queuedAt);
+    const current = normalizeAircraft({ hex: "ABC123", flight: "NEW123", lat: 50, lon: 14.2 }, receiver, currentAt);
+    if (!queued || !current) throw new Error("test aircraft could not be normalized");
+    current.enrichment = {
+      metadata: {
+        registration: "OK-ABC", registrationCountry: null, registrationCountryCode: null,
+        aircraftType: "A320", icaoTypeCode: "A320", aircraftDescription: "Airbus A320", operator: "Test Air",
+        manufacturer: "Airbus", source: "test", retrievedAt: currentAt.toISOString(),
+      },
+      route: {
+        callsign: "NEW123", airline: "New Air", airlineIcao: null, airlineIata: null,
+        origin: "LKPR", destination: "EDDF", originAirport: null, destinationAirport: null,
+        source: "test", retrievedAt: currentAt.toISOString(),
+      },
+    };
+    vi.setSystemTime(currentAt);
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      applySnapshot: (snapshot: ProviderSnapshot) => void;
+      persistHistory: (snapshot: ProviderSnapshot) => Promise<void>;
+    };
+    internal.applySnapshot({ aircraft: [current], receiver, fetchedAt: currentAt.toISOString(), provider: "test" });
+    vi.mocked(recordAircraftSnapshot).mockClear();
+
+    await internal.persistHistory({ aircraft: [queued], receiver, fetchedAt: queuedAt.toISOString(), provider: "test" });
+
+    const persisted = vi.mocked(recordAircraftSnapshot).mock.calls[0]?.[0]?.[0];
+    expect(persisted?.callsign).toBe("OLD123");
+    expect(persisted?.enrichment?.route).toBeUndefined();
+    expect(persisted?.enrichment?.metadata).toMatchObject({ registration: "OK-ABC", manufacturer: "Airbus" });
+  });
+
+  it("advances history cadence only for aircraft whose write succeeded", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("HISTORY_SAMPLE_INTERVAL_MS", "20000");
+    const base = new Date("2026-09-07T12:00:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const makeAircraft = (hex: string): Aircraft => {
+      const aircraft = normalizeAircraft({ hex, flight: hex, lat: 50, lon: 14 }, receiver, base);
+      if (!aircraft) throw new Error("test aircraft could not be normalized");
+      return aircraft;
+    };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      persistHistory: (snapshot: ProviderSnapshot) => Promise<void>;
+      lastHistorySample: Map<string, number>;
+    };
+    const aircraft = [makeAircraft("ABC123"), makeAircraft("DEF456")];
+    const snapshot = (at: Date): ProviderSnapshot => ({ aircraft, receiver, fetchedAt: at.toISOString(), provider: "test" });
+    vi.mocked(recordAircraftSnapshot).mockClear();
+    vi.mocked(recordAircraftSnapshot).mockResolvedValueOnce({ succeeded: ["ABC123"], failed: ["DEF456"] });
+    await internal.persistHistory(snapshot(base));
+    expect(internal.lastHistorySample.has("ABC123")).toBe(true);
+    expect(internal.lastHistorySample.has("DEF456")).toBe(false);
+
+    const later = new Date(base.getTime() + 20_000);
+    vi.setSystemTime(later);
+    await internal.persistHistory(snapshot(later));
+    expect(vi.mocked(recordAircraftSnapshot).mock.calls[1]?.[0]?.map((item) => item.icaoHex)).toEqual(["ABC123", "DEF456"]);
+  });
+
+  it("skips history without writing when fetchedAt is invalid", async () => {
+    const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
+    const persistHistory = (service as unknown as { persistHistory: (snapshot: ProviderSnapshot) => Promise<void> }).persistHistory;
+    vi.mocked(recordAircraftSnapshot).mockClear();
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await persistHistory({ aircraft: [], receiver: { lat: 50, lon: 14, name: "Test" }, fetchedAt: "invalid", provider: "test" });
+
+    expect(recordAircraftSnapshot).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith("AirRadar history snapshot skipped: invalid fetchedAt");
+    error.mockRestore();
   });
 
   it("stores observation metadata in each RAM trail point", () => {

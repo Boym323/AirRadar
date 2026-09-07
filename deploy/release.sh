@@ -415,9 +415,9 @@ print_dry_run_plan() {
   log "Dry run; no repository update, dependency installation, migrations, build, restart, or health checks will run."
   log "Current commit: ${OLD_SHA}"
   if (( WORKTREE_DIRTY == 1 )); then
-    log "Planned release: preserve the current working tree, npm ci, Prisma generate, lint, typecheck, tests, Prisma deploy, build, restart, local health, public health."
+    log "Planned release: preserve the current working tree, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, restart, local health, public health."
   else
-    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, npm ci, Prisma generate, lint, typecheck, tests, Prisma deploy, build, restart, local health, public health."
+    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, restart, local health, public health."
   fi
 }
 

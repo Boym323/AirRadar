@@ -45,6 +45,27 @@ function mergeEnrichment(
   return Object.keys(merged).length ? merged : undefined;
 }
 
+function historyAircraftForSnapshot(snapshotItem: Aircraft, current: Aircraft | undefined): Aircraft {
+  if (!current) return snapshotItem;
+
+  const sameCallsign = current.callsign === snapshotItem.callsign;
+  const metadata = snapshotItem.enrichment?.metadata ?? current.enrichment?.metadata;
+  const route = snapshotItem.enrichment?.route ?? (sameCallsign ? current.enrichment?.route : undefined);
+  const flightPlan = snapshotItem.enrichment?.flightPlan ?? (sameCallsign ? current.enrichment?.flightPlan : undefined);
+  const enrichment: AircraftEnrichment = {};
+  if (metadata) enrichment.metadata = metadata;
+  if (route) enrichment.route = route;
+  if (flightPlan) enrichment.flightPlan = flightPlan;
+
+  return {
+    ...snapshotItem,
+    registration: snapshotItem.registration ?? current.registration,
+    aircraftType: snapshotItem.aircraftType ?? current.aircraftType,
+    aircraftDescription: snapshotItem.aircraftDescription ?? current.aircraftDescription,
+    ...(Object.keys(enrichment).length ? { enrichment } : {}),
+  };
+}
+
 function atcResolutionKey(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude">): string | null {
   if (aircraft.lat === null || aircraft.lon === null) return null;
   return `${aircraft.lat.toFixed(2)}:${aircraft.lon.toFixed(2)}:${aircraft.altitude === null ? "unknown" : Math.round(aircraft.altitude / 1000)}`;
@@ -251,15 +272,27 @@ export class AircraftStateService {
   }
 
   private async persistHistory(snapshot: ProviderSnapshot): Promise<void> {
+    const sampledAt = Date.parse(snapshot.fetchedAt);
+    if (!Number.isFinite(sampledAt)) {
+      console.error("AirRadar history snapshot skipped: invalid fetchedAt");
+      return;
+    }
+
     const now = Date.now();
-    const due = snapshot.aircraft.map((item) => this.aircraft.get(item.icaoHex) ?? item).filter((item) => {
-      const previous = this.lastHistorySample.get(item.icaoHex) ?? 0;
-      return now - previous >= getHistorySampleIntervalMs();
-    });
+    const due = snapshot.aircraft
+      .map((item) => historyAircraftForSnapshot(item, this.aircraft.get(item.icaoHex)))
+      .filter((item) => item.lat !== null && item.lon !== null)
+      .filter((item) => {
+        const previous = this.lastHistorySample.get(item.icaoHex);
+        return previous === undefined || sampledAt - previous >= getHistorySampleIntervalMs();
+      });
     if (due.length) {
       try {
-        await recordAircraftSnapshot(due, new Date(snapshot.fetchedAt));
-        for (const item of due) this.lastHistorySample.set(item.icaoHex, now);
+        const result = await recordAircraftSnapshot(due, new Date(sampledAt));
+        for (const icaoHex of result.succeeded) this.lastHistorySample.set(icaoHex, sampledAt);
+        if (result.failed.length) {
+          console.error(`AirRadar history persistence failed for ${result.failed.length} aircraft`);
+        }
       } catch (error) {
         // History is best-effort and must never make a healthy receiver look offline.
         console.error("AirRadar history persistence failed", error);

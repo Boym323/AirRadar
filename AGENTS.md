@@ -149,8 +149,8 @@ Optional commercial enrichment. It is disabled when `FLIGHTAWARE_API_KEY` is emp
 
 - `prisma/contract.prisma` is the schema source of truth.
 - `prisma.config.ts` defines the Prisma 8 PostgreSQL workflow.
-- Use checked-in migrations under `migrations/app/`; the current app migration
-  is `migrations/app/20260906T1546_initial/`.
+- Checked-in forward migrations under `migrations/app/` are the migration source
+  of truth.
 - Generated contract artifacts are disposable outputs and are ignored by git.
 - Never reset, recreate, or destructively migrate a production database unless
   explicitly requested.

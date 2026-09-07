@@ -29,6 +29,11 @@ export interface HistoryResponse {
   }>;
 }
 
+export interface RecordAircraftSnapshotResult {
+  succeeded: string[];
+  failed: string[];
+}
+
 let lastRetentionRunAt = 0;
 let lastFlightMaintenanceRunAt = 0;
 
@@ -149,16 +154,29 @@ export async function closeStaleFlights(
   });
 }
 
-export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: Date): Promise<void> {
+export async function recordAircraftSnapshot(
+  aircraft: Aircraft[],
+  recordedAt: Date,
+): Promise<RecordAircraftSnapshotResult> {
   const database = getPrisma();
-  if (!database) return;
+  if (!database) {
+    return {
+      succeeded: uniqueAircraftByHex(aircraft)
+        .filter((item) => item.lat !== null && item.lon !== null)
+        .map((item) => item.icaoHex),
+      failed: [],
+    };
+  }
+
+  const result: RecordAircraftSnapshotResult = { succeeded: [], failed: [] };
 
   await runWithConcurrency(uniqueAircraftByHex(aircraft), 8, async (item) => {
     if (item.lat === null || item.lon === null) return;
     const latitude = item.lat;
     const longitude = item.lon;
-    const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime());
-    await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
+    try {
+      const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime());
+      await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const metadata = item.enrichment?.metadata;
       const dbAircraft = await schema.Aircraft.upsert({
@@ -248,10 +266,16 @@ export async function recordAircraftSnapshot(aircraft: Aircraft[], recordedAt: D
         ...(item.track === null ? {} : { track: item.track }),
         ...(item.verticalRate === null ? {} : { verticalRate: item.verticalRate }),
       });
-    }));
+      }));
+      result.succeeded.push(item.icaoHex);
+    } catch {
+      // History is best-effort; one aircraft must not reject the other writes.
+      result.failed.push(item.icaoHex);
+    }
   });
 
   await pruneHistoryIfDue(database);
+  return result;
 }
 
 export async function getAircraftHistory(hex: string, fallback: Aircraft | null): Promise<HistoryResponse> {
