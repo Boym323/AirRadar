@@ -1,6 +1,11 @@
 import "temporal-polyfill/full/global";
 import type { Aircraft } from "@/lib/aircraft/types";
-import { getFlightContinuityGapMs, getHistoryRetentionDays, getHistorySampleIntervalMs } from "@/lib/server/config";
+import {
+  getAppTimezone,
+  getFlightContinuityGapMs,
+  getHistoryRetentionDays,
+  getHistorySampleIntervalMs,
+} from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 
 export interface HistoryResponse {
@@ -34,6 +39,48 @@ export interface RecordAircraftSnapshotResult {
   failed: string[];
 }
 
+export const HISTORY_POSITION_LIMIT = 2_000;
+export const HISTORY_FLIGHT_LIMIT = 100;
+
+export type HistoryFlightRange = "today" | "yesterday" | "7d";
+
+export interface HistoryFlightSummary {
+  id: number;
+  icaoHex: string;
+  callsign: string | null;
+  registration: string | null;
+  aircraftType: string | null;
+  airline: string | null;
+  origin: string | null;
+  destination: string | null;
+  startTime: string;
+  endTime: string | null;
+  lastSeenAt: string;
+  maxAltitude: number | null;
+  minDistanceKm: number | null;
+}
+
+export interface HistoryFlightDetail {
+  flight: HistoryFlightSummary;
+  positions: Array<{
+    recordedAt: string;
+    lat: number;
+    lon: number;
+    altitude: number | null;
+    groundSpeed: number | null;
+    track: number | null;
+    verticalRate: number | null;
+  }>;
+  truncated: boolean;
+}
+
+export class HistoryDatabaseUnavailableError extends Error {
+  constructor() {
+    super("History database unavailable");
+    this.name = "HistoryDatabaseUnavailableError";
+  }
+}
+
 let lastRetentionRunAt = 0;
 let lastFlightMaintenanceRunAt = 0;
 
@@ -47,6 +94,187 @@ function timestampAsInstant(value: Temporal.Instant | Date): Temporal.Instant {
 
 function timestampAsIso(value: Temporal.Instant | Date): string {
   return timestampAsInstant(value).toString();
+}
+
+function localDayStart(date: Date, daysBefore = 0): Date {
+  const zoned = Temporal.Instant.fromEpochMilliseconds(date.getTime())
+    .toZonedDateTimeISO(getAppTimezone())
+    .startOfDay();
+  return timestampAsDate(zoned.subtract({ days: daysBefore }).toInstant());
+}
+
+export function normalizeHistoryRange(value: string | null | undefined): HistoryFlightRange {
+  return value === "today" || value === "yesterday" || value === "7d" ? value : "7d";
+}
+
+export function historyRangeBounds(
+  range: HistoryFlightRange,
+  now = new Date(),
+): { from: Date; to: Date } {
+  const todayStart = localDayStart(now);
+  if (range === "yesterday") {
+    return { from: localDayStart(now, 1), to: todayStart };
+  }
+  if (range === "today") {
+    return { from: todayStart, to: now };
+  }
+  return { from: localDayStart(now, 6), to: now };
+}
+
+function normalizeSearch(value: string | null | undefined): string {
+  return (value ?? "").trim().replace(/[%_]/g, "").replace(/\s+/g, " ").toUpperCase();
+}
+
+function searchPattern(value: string): string {
+  return `%${value}%`;
+}
+
+function flightSummaryFromRow(row: {
+  id: number;
+  callsign: string | null;
+  registration: string | null;
+  aircraftType: string | null;
+  airline: string | null;
+  origin: string | null;
+  destination: string | null;
+  maxAltitude: number | null;
+  minDistanceKm: number | null;
+  startTime: Temporal.Instant | Date;
+  lastSeenAt: Temporal.Instant | Date;
+  endTime: Temporal.Instant | Date | null;
+  aircraft: { icaoHex: string; registration: string | null; aircraftType: string | null };
+}): HistoryFlightSummary {
+  return {
+    id: row.id,
+    icaoHex: row.aircraft.icaoHex,
+    callsign: row.callsign,
+    registration: row.registration ?? row.aircraft.registration,
+    aircraftType: row.aircraftType ?? row.aircraft.aircraftType,
+    airline: row.airline,
+    origin: row.origin,
+    destination: row.destination,
+    startTime: timestampAsIso(row.startTime),
+    endTime: row.endTime ? timestampAsIso(row.endTime) : null,
+    lastSeenAt: timestampAsIso(row.lastSeenAt),
+    maxAltitude: row.maxAltitude,
+    minDistanceKm: row.minDistanceKm,
+  };
+}
+
+function orderFlightSummaries(flights: HistoryFlightSummary[]): HistoryFlightSummary[] {
+  return flights.sort((a, b) => {
+    const startDifference = Date.parse(b.startTime) - Date.parse(a.startTime);
+    return startDifference || b.id - a.id;
+  });
+}
+
+async function matchingAircraftIds(
+  schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"],
+  pattern: string,
+): Promise<number[]> {
+  const [hexMatches, registrationMatches] = await Promise.all([
+    schema.Aircraft.where((aircraft) => aircraft.icaoHex.ilike(pattern)).select("id").all(),
+    schema.Aircraft.where((aircraft) => aircraft.registration.ilike(pattern)).select("id").all(),
+  ]);
+  return [...new Set([...hexMatches, ...registrationMatches].map((aircraft) => aircraft.id))];
+}
+
+async function queryFlightSummaries(
+  schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"],
+  from: Date | null,
+  to: Date | null,
+  limit: number,
+  extra?: (query: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"]["Flight"]) => NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"]["Flight"],
+): Promise<HistoryFlightSummary[]> {
+  let query = schema.Flight;
+  if (from) query = query.where((flight) => flight.startTime.gte(Temporal.Instant.fromEpochMilliseconds(from.getTime())));
+  if (to) query = query.where((flight) => flight.startTime.lt(Temporal.Instant.fromEpochMilliseconds(to.getTime())));
+  if (extra) query = extra(query);
+  const rows = await query
+    .orderBy([(flight) => flight.startTime.desc(), (flight) => flight.id.desc()])
+    .include("aircraft", (aircraft) => aircraft.select("icaoHex", "registration", "aircraftType"))
+    .limit(limit)
+    .all();
+  return rows.map(flightSummaryFromRow);
+}
+
+export async function listHistoryFlights(options: {
+  range?: HistoryFlightRange;
+  query?: string | null;
+  icaoHex?: string | null;
+  limit?: number;
+  now?: Date;
+} = {}): Promise<{ flights: HistoryFlightSummary[]; range: HistoryFlightRange; limit: number }> {
+  const database = getPrisma();
+  if (!database) throw new HistoryDatabaseUnavailableError();
+
+  const range = normalizeHistoryRange(options.range);
+  const limit = Math.min(Math.max(Math.trunc(options.limit ?? HISTORY_FLIGHT_LIMIT), 1), HISTORY_FLIGHT_LIMIT);
+  const exactHex = options.icaoHex?.trim().toUpperCase() || null;
+  const search = normalizeSearch(options.query);
+  try {
+    const schema = database.orm.public;
+    if (exactHex) {
+      const aircraft = await schema.Aircraft.where({ icaoHex: exactHex }).first();
+      if (!aircraft) return { flights: [], range, limit };
+      const flights = await queryFlightSummaries(schema, null, null, limit, (query) => query.where({ aircraftId: aircraft.id }));
+      return { flights: orderFlightSummaries(flights).slice(0, limit), range, limit };
+    }
+
+    const { from, to } = historyRangeBounds(range, options.now);
+    if (!search) {
+      const flights = await queryFlightSummaries(schema, from, to, limit);
+      return { flights: orderFlightSummaries(flights), range, limit };
+    }
+
+    const pattern = searchPattern(search);
+    const aircraftIds = await matchingAircraftIds(schema, pattern);
+    const [callsignMatches, aircraftMatches] = await Promise.all([
+      queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.callsign.ilike(pattern))),
+      aircraftIds.length
+        ? queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.aircraftId.in(aircraftIds)))
+        : Promise.resolve([]),
+    ]);
+    const unique = new Map<number, HistoryFlightSummary>();
+    for (const flight of [...callsignMatches, ...aircraftMatches]) unique.set(flight.id, flight);
+    return { flights: orderFlightSummaries([...unique.values()]).slice(0, limit), range, limit };
+  } catch {
+    throw new HistoryDatabaseUnavailableError();
+  }
+}
+
+export async function getHistoryFlight(id: number): Promise<HistoryFlightDetail | null> {
+  const database = getPrisma();
+  if (!database) throw new HistoryDatabaseUnavailableError();
+  try {
+    const schema = database.orm.public;
+    const row = await schema.Flight
+      .where({ id })
+      .include("aircraft", (aircraft) => aircraft.select("icaoHex", "registration", "aircraftType"))
+      .first();
+    if (!row) return null;
+    const positionRows = await schema.FlightPosition
+      .where({ flightId: id })
+      .orderBy((position) => position.recordedAt.asc())
+      .limit(HISTORY_POSITION_LIMIT + 1)
+      .all();
+    const truncated = positionRows.length > HISTORY_POSITION_LIMIT;
+    return {
+      flight: flightSummaryFromRow(row),
+      truncated,
+      positions: positionRows.slice(0, HISTORY_POSITION_LIMIT).map((position) => ({
+        recordedAt: timestampAsIso(position.recordedAt),
+        lat: position.lat,
+        lon: position.lon,
+        altitude: position.altitude,
+        groundSpeed: position.groundSpeed,
+        track: position.track,
+        verticalRate: position.verticalRate,
+      })),
+    };
+  } catch {
+    throw new HistoryDatabaseUnavailableError();
+  }
 }
 
 async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {

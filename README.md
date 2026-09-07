@@ -210,6 +210,9 @@ npm run atc:status:cz # compare imported Czech effective date with AIM
 
 - `GET /api/aircraft` — current state snapshot
 - `GET /api/stream` — SSE stream of `snapshot` events
+- `GET /api/history/flights?range=today|yesterday|7d&q=...&limit=...` — bounded PostgreSQL flight-instance list, newest first; searches callsign, registration and ICAO hex server-side
+- `GET /api/history/flights?hex=...&limit=1` — latest flight instance for the legacy `/history?hex=...` deep link
+- `GET /api/history/flights/:id` — one flight instance with chronologically ordered sampled positions, capped at 2,000 positions and reported as `truncated` when needed
 - `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback (ICAO hex, or readsb's `~`-prefixed six-digit identifier)
 - `GET /api/airports` — configured airport catalog or bundled fallback catalog
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
