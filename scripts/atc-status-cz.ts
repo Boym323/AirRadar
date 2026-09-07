@@ -4,6 +4,7 @@ import { BkgGermanyPolandBoundaryProvider } from "../lib/atc/bkg-boundary";
 import { AuthoritativeBoundaryResolver } from "../lib/atc/boundary-resolver";
 import { CuzkStateBoundaryProvider } from "../lib/atc/cz-boundary";
 import { fetchCurrentCzEaip, mergeCzAd2AtcResults, parseCzEaipAd2AtcAirspace, parseCzEaipEnr21 } from "../lib/atc/cz-eaip";
+import { evaluateCzEaipDiagnosticPolicy } from "../lib/atc/cz-eaip-policy";
 import { createAtcDatabase, existingAtcRows } from "../lib/atc/import-db";
 import { planAtcImport, validateAtcImportDocument } from "../lib/atc/import-format";
 import { compareAtcSectorIds, determineAtcDatasetStatus } from "../lib/atc/status";
@@ -23,6 +24,7 @@ async function main(): Promise<void> {
   const dataset = validateAtcImportDocument(parsed.document);
   const database = createAtcDatabase();
   const rows = database ? await existingAtcRows(database) : null;
+  const policy = evaluateCzEaipDiagnosticPolicy({ diagnostics: parsed.diagnostics, databaseAvailable: database !== null, existingSectors: rows?.sectors });
   const czechEaipSectors = rows?.sectors
     .filter((sector) => sector.sourceReference.includes("aim.rlp.cz")) ?? [];
   const comparison = compareAtcSectorIds(
@@ -48,7 +50,12 @@ async function main(): Promise<void> {
   console.log("ATC Czech dataset");
   console.log(`Database status: ${rows ? rows.sectors.length || rows.transmitters.length ? "configured" : "empty" : "unavailable"}`);
   console.log(`Database sectors: ${rows?.sectors.length ?? 0}`);
-  console.log(`Current valid sectors: ${comparison.expectedIds.length}`);
+  console.log(`Current persistable valid sectors: ${comparison.expectedIds.length}`);
+  console.log(`Source-limited rows: ${policy.sourceLimited.length}`);
+  for (const diagnostic of policy.sourceLimited) console.log(`  source-limited ${diagnostic.objectType}: ${diagnostic.name} — ${diagnostic.reason ?? "unknown"}`);
+  console.log(`Blocking supported rows: ${policy.blockingSupportedRows.length}`);
+  for (const diagnostic of policy.historicalRegressions) console.log(`  BLOCKING previously imported source-limited row: ${diagnostic.name}`);
+  for (const diagnostic of policy.historyUnknown) console.log(`  BLOCKING source-limited row with unavailable database history: ${diagnostic.name}`);
   console.log(`Stored Czech eAIP sector IDs: ${comparison.storedIds.length}`);
   console.log(`Matching sector IDs: ${comparison.matchingIds.length}`);
   console.log(`Missing sector IDs: ${comparison.missingIds.length}`);

@@ -5,6 +5,7 @@ import { BKG_VG25_ATTRIBUTION, BKG_VG25_WFS_URL } from "./bkg-boundary";
 import { type BoundaryResolver, type StateBoundaryReference } from "./boundary-resolver";
 import { CZ_CUZK_DATA50_METADATA_URL, CZ_CUZK_DATA50_QUERY_URL, type StateBoundaryResolution } from "./cz-boundary";
 import { aviationCoordinateToDecimal, densifyArc, type ArcDirection } from "./cz-geometry";
+import { classifyMissingCzEaipStableId, CZ_EAIP_MISSING_ID_REASON, type CzEaipDiagnosticClassification } from "./cz-eaip-policy";
 
 export const CZ_EAIP_ENR21_URL = "https://aim.rlp.cz/eaip/html/eAIP/LK-ENR-2.1-en-GB.html";
 export const CZ_EAIP_GEN02_URL = "https://aim.rlp.cz/ais_data/aip/data/valid/g0-2.html";
@@ -28,6 +29,7 @@ export interface CzEaipSectorDiagnostic {
   stableId: string | null;
   objectType: CzAtcObjectType;
   status: "accepted" | "skipped";
+  classification: CzEaipDiagnosticClassification;
   reason?: string;
   boundaryError?: string;
   boundaryResolutions?: StateBoundaryResolution[];
@@ -51,6 +53,8 @@ export interface CzEaipParseResult {
     accOperationalDetected: number;
     valid: number;
     skipped: number;
+    sourceLimitedRows: number;
+    blockingSupportedRows: number;
     classification: Record<CzAtcObjectType, number>;
   };
 }
@@ -99,6 +103,7 @@ interface ParsedBoundary {
   boundaryResolutions: StateBoundaryResolution[];
   events: BoundaryEvent[];
   lateralReference: string | null;
+  lateralReferenceCandidates: string[];
   constituentReferences: string[];
 }
 
@@ -113,6 +118,8 @@ interface ParsedRow {
   lowerAltitude: ImportAltitude | null;
   upperAltitude: ImportAltitude | null;
   boundary: ParsedBoundary;
+  annotationParams: string[];
+  missingStableId: boolean;
   skipReason?: string;
   boundaryError?: string;
 }
@@ -226,10 +233,14 @@ function parseArc($: CheerioAPI, paragraph: Parameters<CheerioAPI>[0]): ArcEvent
 
 function parseBoundary($: CheerioAPI, cell: Parameters<CheerioAPI>[0]): ParsedBoundary {
   const cellText = normalizedText($(cell).text());
-  const references = $(cell).find(".SD").map((_, element) => normalizedText($(element).text())).get().filter((value) => /^SECTOR /.test(value));
   const name = $(cell).find("strong .SD").first().text().trim();
-  const uniqueReferences = [...new Set(references.filter((value) => value !== name))];
-  const lateralReference = /lateral limits same as/i.test(cellText) ? uniqueReferences[0] ?? null : null;
+  const references = sourceTokens($, cell)
+    .filter((token) => token.param.startsWith("TAIRSPACE;TXT_NAME;"))
+    .map((token) => token.value)
+    .filter((value) => value !== name);
+  const uniqueReferences = [...new Set(references)];
+  const lateralReferenceCandidates = /lateral limits same as/i.test(cellText) ? uniqueReferences : [];
+  const lateralReference = lateralReferenceCandidates.length === 1 ? lateralReferenceCandidates[0] : null;
   const constituentReferences = /consists of:/i.test(cellText) ? uniqueReferences : [];
   const events: BoundaryEvent[] = [];
   const borderNames: string[] = [];
@@ -255,6 +266,7 @@ function parseBoundary($: CheerioAPI, cell: Parameters<CheerioAPI>[0]): ParsedBo
     boundaryResolutions: [],
     events,
     lateralReference,
+    lateralReferenceCandidates,
     constituentReferences,
   };
 }
@@ -481,19 +493,24 @@ function stableId($: CheerioAPI, cell: Parameters<CheerioAPI>[0], prefix = "LKAA
   return numeric ? `${prefix}-AIP-${numeric}` : null;
 }
 
-function parseRow($: CheerioAPI, rowNode: Parameters<CheerioAPI>[0]): ParsedRow | null {
+function parseRow($: CheerioAPI, rowNode: Parameters<CheerioAPI>[0], geometryOnly = false): ParsedRow | null {
   const cells = $(rowNode).children("td").toArray();
-  if (cells.length < 4) return null;
+  if (cells.length < 4 && !geometryOnly) return null;
   const first = $(cells[0]);
   const name = normalizedText(first.find("strong .SD").first().text());
   if (!name) return null;
-  const unit = sourceValue($, $(cells[1]), "TUNIT", "TXT_NAME") ?? (normalizedText($(cells[1]).text()).split(";")[0] || null);
-  const callsign = sourceValue($, $(cells[2]), "TCALLSIGN_DETAIL", "TXT_CALL_SIGN") ?? null;
+  const unitCell = cells[1] ? $(cells[1]) : null;
+  const callsignCell = cells[2] ? $(cells[2]) : null;
+  const unit = unitCell ? sourceValue($, unitCell, "TUNIT", "TXT_NAME") ?? (normalizedText(unitCell.text()).split(";")[0] || null) : null;
+  const callsign = callsignCell ? sourceValue($, callsignCell, "TCALLSIGN_DETAIL", "TXT_CALL_SIGN") ?? null : null;
   const objectType = classifyRow(name, unit, callsign);
   const boundary = parseBoundary($, first);
   const vertical = parseVerticalLimits($, first);
-  const parsedFrequencies = parseFrequencies($, $(rowNode));
+  const parsedFrequencies = cells.length >= 4 ? parseFrequencies($, $(rowNode)) : { primary: null, frequencies: [] };
   const id = stableId($, first);
+  const annotationParams = sourceTokens($, first)
+    .filter((token) => token.param.toUpperCase().startsWith("TAIRSPACE;ANNOTATION:"))
+    .map((token) => token.param);
   const parsedRow: ParsedRow = {
     name,
     stableId: id,
@@ -505,9 +522,95 @@ function parseRow($: CheerioAPI, rowNode: Parameters<CheerioAPI>[0]): ParsedRow 
     lowerAltitude: vertical.lower,
     upperAltitude: vertical.upper,
     boundary,
+    annotationParams,
+    missingStableId: importableObjectType(objectType) && !id,
   };
-  if (importableObjectType(objectType) && !id) parsedRow.skipReason = "missing stable source identifier";
   return parsedRow;
+}
+
+function copyReferencedGeometry(source: ParsedRow, target: ParsedRow): void {
+  source.boundary.polygons = target.boundary.polygons;
+  source.boundary.directGeometry = target.boundary.directGeometry;
+  source.boundary.boundaryResolutions = target.boundary.boundaryResolutions;
+}
+
+/** Resolve explicit lateral-geometry references with an iterative DFS. */
+function resolveLateralReferences(rows: ParsedRow[]): void {
+  const byName = new Map<string, ParsedRow[]>();
+  for (const row of rows) byName.set(row.name, [...(byName.get(row.name) ?? []), row]);
+  const state = new Map<string, "visiting" | "resolved" | "blocked">();
+  const failure = new Map<string, string>();
+  type Frame = { row: ParsedRow; entered: boolean };
+
+  const block = (row: ParsedRow, reason: string): void => {
+    row.boundaryError = reason;
+    row.skipReason = reason;
+    state.set(row.name, "blocked");
+    failure.set(row.name, reason);
+  };
+
+  for (const root of rows.filter((row) => row.boundary.lateralReferenceCandidates.length > 0)) {
+    if (root.boundary.directGeometry || state.get(root.name)) continue;
+    const stack: Frame[] = [{ row: root, entered: false }];
+    while (stack.length) {
+      const frame = stack.at(-1)!;
+      const row = frame.row;
+      if (!frame.entered) {
+        frame.entered = true;
+        state.set(row.name, "visiting");
+        if (row.boundary.lateralReferenceCandidates.length !== 1 || !row.boundary.lateralReference) {
+          block(row, `lateral geometry reference is ambiguous: ${row.boundary.lateralReferenceCandidates.join(", ") || "none"}`);
+          stack.pop();
+          continue;
+        }
+        const matches = byName.get(row.boundary.lateralReference) ?? [];
+        if (!matches.length) {
+          block(row, `lateral geometry reference not found: ${row.boundary.lateralReference}`);
+          stack.pop();
+          continue;
+        }
+        if (matches.length > 1) {
+          block(row, `lateral geometry reference is ambiguous: ${row.boundary.lateralReference}`);
+          stack.pop();
+          continue;
+        }
+        const target = matches[0];
+        const targetState = state.get(target.name);
+        if (targetState === "visiting") {
+          const cycleStart = stack.findIndex((item) => item.row.name === target.name);
+          const cycle = [...stack.slice(Math.max(0, cycleStart)).map((item) => item.row.name), target.name];
+          const reason = `lateral geometry reference cycle: ${cycle.join(" -> ")}`;
+          const firstCycleFrame = Math.max(0, cycleStart);
+          for (const cycleFrame of stack.slice(firstCycleFrame)) block(cycleFrame.row, reason);
+          stack.length = firstCycleFrame;
+          continue;
+        }
+        if (targetState === "blocked") {
+          block(row, `lateral geometry reference is blocked: ${target.name}${failure.get(target.name) ? ` (${failure.get(target.name)})` : ""}`);
+          stack.pop();
+          continue;
+        }
+        if (targetState === "resolved" || target.boundary.directGeometry) {
+          copyReferencedGeometry(row, target);
+          state.set(row.name, "resolved");
+          stack.pop();
+          continue;
+        }
+        stack.push({ row: target, entered: false });
+        continue;
+      }
+
+      const targetName = row.boundary.lateralReference;
+      const target = targetName ? byName.get(targetName)?.[0] : undefined;
+      if (target && state.get(target.name) === "resolved") {
+        copyReferencedGeometry(row, target);
+        state.set(row.name, "resolved");
+      } else {
+        block(row, `lateral geometry reference is blocked: ${targetName ?? "unknown"}${targetName && failure.get(targetName) ? ` (${failure.get(targetName)})` : ""}`);
+      }
+      stack.pop();
+    }
+  }
 }
 
 function segmentIntersects(a: Coordinate, b: Coordinate, c: Coordinate, d: Coordinate): boolean {
@@ -574,6 +677,15 @@ function polygonMetrics(polygons: Coordinate[][]): CzPolygonMetric[] {
   return polygons.map(polygonMetric);
 }
 
+function skippedClassification(row: ParsedRow): CzEaipDiagnosticClassification {
+  if (row.skipReason === "unsupported airspace object type") return "unsupported";
+  if (row.skipReason === "aggregate sector row; constituent sectors are imported separately") return "aggregate";
+  if (row.missingStableId && row.skipReason === CZ_EAIP_MISSING_ID_REASON) {
+    return classifyMissingCzEaipStableId({ name: row.name, objectType: row.objectType, annotationParams: row.annotationParams });
+  }
+  return "parser_blocker";
+}
+
 function publicationName(publication: CzPublicationMetadata): string {
   const amendments = [publication.aipAmendment ? `AIP AMDT ${publication.aipAmendment}` : null, publication.airacAmendment ? `AIRAC AIP AMDT ${publication.airacAmendment}` : null].filter(Boolean);
   return `AIM ŘLP ČR eAIP ENR 2.1${amendments.length ? ` — ${amendments.join("; ")}` : ""}`;
@@ -589,6 +701,37 @@ function parseRows($: CheerioAPI): ParsedRow[] {
   const table = $("table").filter((_, candidate) => /Lateral limits/i.test(normalizedText($(candidate).find("th").first().text()))).first();
   if (!table.length) throw new CzEaipParseError(["ENR 2.1 operational airspace table was not found"]);
   return table.find("tbody > tr").toArray().map((row) => parseRow($, $(row))).filter((row): row is ParsedRow => row !== null);
+}
+
+/**
+ * Resolve only explicitly referenced geometry rows that live outside the
+ * operational table. They remain geometry-only helpers and are never added to
+ * the import document or its diagnostics.
+ */
+function parseReferencedRows($: CheerioAPI, primaryRows: ParsedRow[]): ParsedRow[] {
+  const primaryNames = new Set(primaryRows.map((row) => row.name));
+  const pending = new Set(primaryRows.flatMap((row) => [
+    ...row.boundary.lateralReferenceCandidates,
+    ...row.boundary.constituentReferences,
+  ]));
+  const parsed = new Map<string, ParsedRow>();
+  const sourceRows = $("tr").toArray();
+  while (pending.size) {
+    const requested = new Set(pending);
+    pending.clear();
+    for (const rowNode of sourceRows) {
+      const first = $(rowNode).children("td").first();
+      const name = normalizedText(first.find("strong .SD").first().text());
+      if (!name || primaryNames.has(name) || !requested.has(name) || parsed.has(name)) continue;
+      const row = parseRow($, $(rowNode), true);
+      if (!row) continue;
+      parsed.set(row.name, row);
+      for (const reference of [...row.boundary.lateralReferenceCandidates, ...row.boundary.constituentReferences]) {
+        if (!primaryNames.has(reference) && !parsed.has(reference)) pending.add(reference);
+      }
+    }
+  }
+  return [...parsed.values()];
 }
 
 function sameAltitude(left: ImportAltitude | null, right: ImportAltitude | null): boolean {
@@ -633,13 +776,15 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
     effectiveDate: publicationFromGen02.effectiveDate ?? effectiveDate,
   };
   const rows = parseRows($);
+  const referencedRows = parseReferencedRows($, rows);
+  const allRows = [...rows, ...referencedRows];
   const classification = { ACC_OPERATIONAL_SECTOR: 0, FIC_SECTOR: 0, TMA: 0, CTA: 0, CTR: 0, OTHER: 0 } satisfies Record<CzAtcObjectType, number>;
   for (const row of rows) classification[row.objectType] += 1;
   const accRows = rows.filter((row) => row.objectType === "ACC_OPERATIONAL_SECTOR");
   if (!accRows.length) throw new CzEaipParseError(["No PRAHA ACC operational sector rows were found"]);
   const candidateRows = rows.filter((row) => importableObjectType(row.objectType));
   inheritLogicalVerticalLimits(candidateRows);
-  for (const row of candidateRows) {
+  for (const row of allRows) {
     try {
       assembleBoundary(row.boundary, row.name, options.boundaryResolver);
     } catch (error) {
@@ -648,7 +793,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
       row.skipReason = row.boundaryError;
     }
   }
-  const byName = new Map(candidateRows.map((row) => [row.name, row]));
+  resolveLateralReferences(allRows);
   const diagnostics: CzEaipSectorDiagnostic[] = [];
   const accepted: AtcImportSector[] = [];
   const lastVerifiedAt = options.lastVerifiedAt ?? new Date().toISOString();
@@ -656,7 +801,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
 
   for (const row of rows) {
     if (!importableObjectType(row.objectType)) {
-      diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "skipped", reason: "unsupported airspace object type" });
+      diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "skipped", classification: "unsupported", reason: "unsupported airspace object type" });
       continue;
     }
     if (!row.skipReason) {
@@ -664,18 +809,6 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
         row.skipReason = "aggregate sector row; constituent sectors are imported separately";
       } else if (row.boundary.borderSegments.length && !options.boundaryResolver) {
         row.skipReason = `state-border segment requires authoritative geometry (${row.boundary.borderNames.join(", ")})`;
-      } else if (!row.boundary.directGeometry && row.boundary.lateralReference) {
-        const target = byName.get(row.boundary.lateralReference);
-        if (!target) row.skipReason = `lateral geometry reference not found: ${row.boundary.lateralReference}`;
-        else if (target.boundaryError) {
-          row.boundaryError = `Referenced sector ${row.boundary.lateralReference} is blocked: ${target.boundaryError}`;
-          row.skipReason = `lateral geometry reference is blocked: ${row.boundary.lateralReference}`;
-        }
-        else if (!target.boundary.directGeometry) row.skipReason = `lateral geometry reference is unsupported: ${row.boundary.lateralReference}`;
-        else {
-          row.boundary.polygons = target.boundary.polygons;
-          row.boundary.boundaryResolutions = target.boundary.boundaryResolutions;
-        }
       } else if (!row.boundary.directGeometry) {
         row.skipReason = "missing explicit or resolvable lateral geometry";
       }
@@ -687,8 +820,9 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
       const geometryIssue = row.boundary.polygons.map((polygon) => validatePolygon(row.name, polygon)).find((issue): issue is string => issue !== null);
       if (geometryIssue) row.skipReason = geometryIssue;
     }
+    if (!row.skipReason && row.missingStableId) row.skipReason = CZ_EAIP_MISSING_ID_REASON;
     if (row.skipReason) {
-      diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "skipped", reason: row.skipReason, boundaryError: row.boundaryError, boundaryResolutions: row.boundary.boundaryResolutions, polygonMetrics: polygonMetrics(row.boundary.polygons) });
+      diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "skipped", classification: skippedClassification(row), reason: row.skipReason, boundaryError: row.boundaryError, boundaryResolutions: row.boundary.boundaryResolutions, polygonMetrics: polygonMetrics(row.boundary.polygons) });
       continue;
     }
     accepted.push({
@@ -703,11 +837,13 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
       primaryFrequencyMhz: row.primaryFrequencyMhz,
       alternateFrequencies: row.frequencies.filter((frequency) => frequency.frequencyMhz !== row.primaryFrequencyMhz || frequency.label === "Reserve"),
     });
-    diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "accepted", boundaryResolutions: row.boundary.boundaryResolutions, polygonMetrics: polygonMetrics(row.boundary.polygons) });
+    diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "accepted", classification: "persistable", boundaryResolutions: row.boundary.boundaryResolutions, polygonMetrics: polygonMetrics(row.boundary.polygons) });
   }
 
   if (!accepted.length) throw new CzEaipParseError(["No valid importable ATC sector geometry was produced", ...candidateRows.map((row) => `${row.name}: ${row.skipReason ?? "unknown parser rejection"}`)]);
   const skipped = diagnostics.filter((diagnostic) => diagnostic.status === "skipped").length;
+  const sourceLimitedRows = diagnostics.filter((diagnostic) => diagnostic.classification === "source_limitation").length;
+  const blockingSupportedRows = diagnostics.filter((diagnostic) => diagnostic.classification === "parser_blocker").length;
   return {
     document: {
       schemaVersion: 1,
@@ -719,7 +855,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
     effectiveDate,
     publicationDate,
     diagnostics,
-    counts: { accOperationalDetected: accRows.length, valid: accepted.length, skipped, classification },
+    counts: { accOperationalDetected: accRows.length, valid: accepted.length, skipped, sourceLimitedRows, blockingSupportedRows, classification },
   };
 }
 
@@ -857,6 +993,7 @@ export function parseCzEaipAd2AtcAirspace(html: string, options: { lastVerifiedA
     stableId: stableAd2AirspaceId(airportIcao, name),
     objectType: "CTR",
     status: skipReason ? "skipped" : "accepted",
+    classification: skipReason ? "parser_blocker" : "persistable",
     ...(skipReason ? { reason: skipReason } : {}),
     polygonMetrics: polygonMetrics(boundary.polygons),
   };
@@ -908,6 +1045,8 @@ export function mergeCzAd2AtcResults(result: CzEaipParseResult, additional: CzAd
       ...result.counts,
       valid: result.counts.valid + sectors.length - result.document.sectors.length,
       skipped: result.counts.skipped + additional.filter((item) => item.diagnostic.status === "skipped").length,
+      sourceLimitedRows: result.counts.sourceLimitedRows + additional.filter((item) => item.diagnostic.classification === "source_limitation").length,
+      blockingSupportedRows: result.counts.blockingSupportedRows + additional.filter((item) => item.diagnostic.classification === "parser_blocker").length,
       classification,
     },
   };

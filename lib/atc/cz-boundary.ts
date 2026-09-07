@@ -93,6 +93,13 @@ interface QueueItem {
   distance: number;
 }
 
+interface LocalBoundaryEdge {
+  to: string;
+  distanceKm: number;
+  featureId: string;
+  geometryKey: string;
+}
+
 function normalizedText(value: string): string {
   return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -292,10 +299,21 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
     const coordinates = new Map<string, Coordinate>([...this.nodes.values()].map((node) => [node.id, node.coordinate]));
     coordinates.set(startId, start.point);
     coordinates.set(endId, end.point);
-    const adjacency = new Map<string, Array<{ to: string; distanceKm: number; featureId: string }>>();
+    const adjacency = new Map<string, LocalBoundaryEdge[]>();
+    const geometryKey = (from: string, to: string, distanceKm: number): string => {
+      const first = coordinates.get(from);
+      const second = coordinates.get(to);
+      if (!first || !second) return `${from}|${to}|${distanceKm}`;
+      const firstKey = nodeKey(first);
+      const secondKey = nodeKey(second);
+      return firstKey < secondKey
+        ? `${firstKey}|${secondKey}|${distanceKm.toFixed(12)}`
+        : `${secondKey}|${firstKey}|${distanceKm.toFixed(12)}`;
+    };
     const addEdge = (from: string, to: string, distanceKm: number, featureId: string): void => {
-      adjacency.set(from, [...(adjacency.get(from) ?? []), { to, distanceKm, featureId }]);
-      adjacency.set(to, [...(adjacency.get(to) ?? []), { to: from, distanceKm, featureId }]);
+      const edgeGeometryKey = geometryKey(from, to, distanceKm);
+      adjacency.set(from, [...(adjacency.get(from) ?? []), { to, distanceKm, featureId, geometryKey: edgeGeometryKey }]);
+      adjacency.set(to, [...(adjacency.get(to) ?? []), { to: from, distanceKm, featureId, geometryKey: edgeGeometryKey }]);
     };
     for (const edge of this.edges) {
       if (allowed.has(edge.classification)) addEdge(edge.from, edge.to, edge.lengthKm, edge.featureId);
@@ -343,22 +361,8 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
         }
       }
     }
-    const countShortestPaths = (id: string, visited: Set<string>): number => {
-      if (id === endId) return 1;
-      visited.add(id);
-      let count = 0;
-      for (const edge of adjacency.get(id) ?? []) {
-        if (visited.has(edge.to)) continue;
-        const startDistance = distances.get(id);
-        const endDistance = reverseDistances.get(edge.to);
-        if (startDistance === undefined || endDistance === undefined || Math.abs(startDistance + edge.distanceKm + endDistance - distance) > 1e-8) continue;
-        count = Math.min(2, count + countShortestPaths(edge.to, visited));
-        if (count > 1) break;
-      }
-      visited.delete(id);
-      return count;
-    };
-    if (countShortestPaths(startId, new Set()) > 1) throw new CuzkBoundaryError("More than one equally short authoritative state-boundary path exists between AIP endpoints");
+    const shortestPathCount = this.countShortestPaths(adjacency, distances, reverseDistances, startId, endId, distance, coordinates);
+    if (shortestPathCount > 1) throw new CuzkBoundaryError("More than one equally short authoritative state-boundary path exists between AIP endpoints");
     const reversed: Coordinate[] = [];
     const featureIds = new Set<string>();
     let current = endId;
@@ -372,6 +376,96 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
     }
     reversed.reverse();
     return { coordinates: reversed, distanceKm: distance, featureIds };
+  }
+
+  /**
+   * Count shortest paths without enumerating them. The shortest-path corridor
+   * is reduced to a DAG after contracting zero-length connections. This keeps
+   * node snaps and duplicate topology finite while preserving genuine
+   * equal-length geographic alternatives as ambiguity.
+   */
+  private countShortestPaths(
+    adjacency: Map<string, LocalBoundaryEdge[]>,
+    distances: Map<string, number>,
+    reverseDistances: Map<string, number>,
+    startId: string,
+    endId: string,
+    shortestDistance: number,
+    coordinates: Map<string, Coordinate>,
+  ): number {
+    const ids = [...coordinates.keys()];
+    const parent = new Map<string, string>(ids.map((id) => [id, id]));
+    const find = (id: string): string => {
+      let root = id;
+      while (parent.get(root) !== root) root = parent.get(root)!;
+      let current = id;
+      while (parent.get(current) !== current) {
+        const next = parent.get(current)!;
+        parent.set(current, root);
+        current = next;
+      }
+      return root;
+    };
+    const union = (left: string, right: string): void => {
+      const leftRoot = find(left);
+      const rightRoot = find(right);
+      if (leftRoot !== rightRoot) parent.set(rightRoot, leftRoot);
+    };
+    const onShortestCorridor = (from: string, edge: LocalBoundaryEdge): boolean => {
+      const fromDistance = distances.get(from);
+      const toDistance = reverseDistances.get(edge.to);
+      return fromDistance !== undefined
+        && toDistance !== undefined
+        && Math.abs(fromDistance + edge.distanceKm + toDistance - shortestDistance) <= 1e-8;
+    };
+
+    // A zero-length edge can connect a snap point to an existing node, or two
+    // identical topology copies. Contract only zero edges that participate in
+    // the shortest corridor; unrelated zero components must not affect count.
+    for (const [from, edges] of adjacency) {
+      for (const edge of edges) {
+        if (edge.distanceKm <= 1e-12 && onShortestCorridor(from, edge)) union(from, edge.to);
+      }
+    }
+
+    const componentDistance = new Map<string, number>();
+    for (const [id, distanceFromStart] of distances) {
+      const component = find(id);
+      componentDistance.set(component, Math.min(componentDistance.get(component) ?? Number.POSITIVE_INFINITY, distanceFromStart));
+    }
+    const startComponent = find(startId);
+    const endComponent = find(endId);
+    const outgoing = new Map<string, Map<string, Set<string>>>();
+    for (const [from, edges] of adjacency) {
+      for (const edge of edges) {
+        if (!onShortestCorridor(from, edge)) continue;
+        const fromComponent = find(from);
+        const toComponent = find(edge.to);
+        if (fromComponent === toComponent) continue;
+        const fromDistance = componentDistance.get(fromComponent);
+        const toDistance = componentDistance.get(toComponent);
+        if (fromDistance === undefined || toDistance === undefined || toDistance <= fromDistance + 1e-9) continue;
+        const destinations = outgoing.get(fromComponent) ?? new Map<string, Set<string>>();
+        const geometries = destinations.get(toComponent) ?? new Set<string>();
+        geometries.add(edge.geometryKey);
+        destinations.set(toComponent, geometries);
+        outgoing.set(fromComponent, destinations);
+      }
+    }
+
+    const orderedComponents = [...componentDistance.entries()]
+      .sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0]))
+      .map(([component]) => component);
+    const ways = new Map<string, number>([[startComponent, 1]]);
+    for (const component of orderedComponents) {
+      const currentWays = ways.get(component) ?? 0;
+      if (!currentWays) continue;
+      for (const [destination, geometries] of outgoing.get(component) ?? []) {
+        const multiplicity = Math.min(2, geometries.size);
+        ways.set(destination, Math.min(2, (ways.get(destination) ?? 0) + currentWays * multiplicity));
+      }
+    }
+    return ways.get(endComponent) ?? 0;
   }
 }
 

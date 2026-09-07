@@ -111,6 +111,10 @@ Generated files under `generated/` are outputs, not the database schema source o
 - Imported ATC rows retain source/reference, validity and last-verification
   provenance; `data/atc/` and `npm run atc:import` are the import workflow
   sources.
+- Czech eAIP rows without a durable authoritative ID are blocking by default.
+  Only explicitly audited source-limited rows may be classified as
+  `source_limitation`; they remain blocking when database history is unknown or
+  shows the same object was previously imported. Annotation values are not IDs.
 - Czech production ACC ATC data is derived from the official AIM/eAIP source
   through the explicit sync pipeline; it is not a runtime dependency. AIP
   semantics select reconstructed state-boundary geometry: Czech national

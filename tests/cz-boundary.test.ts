@@ -59,6 +59,35 @@ describe("ČÚZK state-boundary graph", () => {
     expect(result.coordinates.at(-1)?.[0]).toBeCloseTo(0.002, 6);
   });
 
+  it("handles a long unique authoritative path without recursive stack growth", () => {
+    const coordinates = Array.from({ length: 12_001 }, (_, index) => [index * 0.001, 0] as [number, number]);
+    const provider = new InMemoryStateBoundaryProvider([boundaryFeature("long", coordinates)]);
+    const result = provider.getBoundarySegment({ start: [0, 0], end: [12, 0] });
+    expect(result.coordinates[0]).toEqual([0, 0]);
+    expect(result.coordinates.at(-1)).toEqual([12, 0]);
+    expect(result.coordinates.length).toBe(12_001);
+  });
+
+  it("treats duplicate-identical topology as one authoritative path", () => {
+    const coordinates: [number, number][] = [[0, 0], [0.01, 0], [0.02, 0]];
+    const provider = new InMemoryStateBoundaryProvider([
+      boundaryFeature("duplicate-a", coordinates),
+      boundaryFeature("duplicate-b", coordinates),
+    ]);
+    const result = provider.getBoundarySegment({ start: [0.002, 0], end: [0.018, 0] });
+    expect(result.coordinates[0][0]).toBeCloseTo(0.002, 6);
+    expect(result.coordinates.at(-1)?.[0]).toBeCloseTo(0.018, 6);
+  });
+
+  it("handles same-edge snaps and a zero-distance node snap", () => {
+    const provider = new InMemoryStateBoundaryProvider([boundaryFeature("snaps", [[0, 0], [0.01, 0], [0.02, 0]])]);
+    const sameEdge = provider.getBoundarySegment({ start: [0.002, 0], end: [0.008, 0] });
+    expect(sameEdge.coordinates).toEqual([[0.002, 0], [0.008, 0]]);
+    const nodeSnap = provider.getBoundarySegment({ start: [0.01, 0], end: [0.018, 0] });
+    expect(nodeSnap.coordinates[0]).toEqual([0.01, 0]);
+    expect(nodeSnap.startSnapDistanceKm).toBe(0);
+  });
+
   it("fails for ambiguous and disconnected authoritative paths instead of using a straight line", () => {
     const ambiguous = new InMemoryStateBoundaryProvider([
       boundaryFeature("diamond-upper", [[0, 0], [0.005, 0.005], [0.01, 0]]),

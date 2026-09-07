@@ -189,7 +189,12 @@ and LKKV, discovers the effective date and published AIP/AIRAC amendment
 metadata, and has no runtime dependency on AIM. Concrete ACC/FIC/TMA/CTA rows
 are imported only when their published geometry, limits and frequencies pass
 the existing validation rules; aggregate or unsupported rows are reported and
-skipped.
+skipped. A row with no authoritative stable source identifier is blocking by
+default. Only the explicitly audited current source-limited rows are reported
+as `source_limitation` and excluded from the persistable dataset; they remain
+blocking if database history is unavailable or already contains the same Czech
+eAIP object. Annotation parameters are provenance evidence only and are never
+used as synthetic import IDs.
 For a lateral `state boundary` construct, ENR 2.1 remains authoritative for
 the sector meaning, endpoints, ordering, vertical limits, callsign and
 frequencies; the missing boundary polyline is resolved from the official
