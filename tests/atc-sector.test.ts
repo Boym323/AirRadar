@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AtcSectorService, matchSector } from "@/lib/server/atc-sector-service";
-import type { AtcSector, SectorPolygon } from "@/lib/atc/types";
+import { AtcSectorService, matchSector, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
+import type { AtcAssignment, AtcSector, SectorPolygon } from "@/lib/atc/types";
 
 const sector: AtcSector = {
   id: "LKAA-TMA",
@@ -57,9 +57,46 @@ describe("ATC sector matching", () => {
   it("returns all overlaps in deterministic service/vertical priority order", async () => {
     const acc: AtcSector = { ...sector, id: "ACC", name: "Area control", service: "ACC", atcCallsign: "ACC", lowerAltitudeFt: null, upperAltitudeFt: null };
     const approach: AtcSector = { ...sector, id: "APP", service: "APP" };
-    const service = new AtcSectorService({ name: "test", getSectors: async () => [acc, approach] });
+    const tower: AtcSector = { ...sector, id: "CTR", name: "Test CTR", service: "TWR", lowerAltitudeFt: 0, upperAltitudeFt: 5000 };
+    const service = new AtcSectorService({ name: "test", getSectors: async () => [acc, approach, tower] });
     const matches = await service.lookupAll({ latitude: 50.5, longitude: 14.5, altitudeFt: 8000, observedAt: new Date("2026-09-15T12:00:00Z") });
     expect(matches.map((match) => match.sector.id)).toEqual(["APP", "ACC"]);
     await expect(service.lookup({ latitude: 50.5, longitude: 14.5, altitudeFt: 8000, observedAt: new Date("2026-09-15T12:00:00Z") })).resolves.toMatchObject({ sector: { id: "APP" } });
+    const lowAltitudeMatches = await service.lookupAll({ latitude: 50.5, longitude: 14.5, altitudeFt: 4000, observedAt: new Date("2026-09-15T12:00:00Z") });
+    expect(lowAltitudeMatches.map((match) => match.sector.id)).toEqual(["CTR", "APP", "ACC"]);
+    await expect(service.lookup({ latitude: 50.5, longitude: 14.5, altitudeFt: 4000, observedAt: new Date("2026-09-15T12:00:00Z") })).resolves.toMatchObject({ sector: { id: "CTR" } });
+  });
+
+  it("keeps altitude confidence unknown when an AGL limit cannot be compared to MSL", () => {
+    const aglSector: AtcSector = { ...sector, lowerAltitudeReference: "AGL", upperAltitudeReference: "FL" };
+    expect(matchSector(aglSector, { latitude: 50.5, longitude: 14.5, altitudeFt: 500 })).toMatchObject({ altitudeConfidence: "unknown" });
+    expect(matchSector(aglSector, { latitude: 50.5, longitude: 14.5, altitudeFt: 12501 })).toBeNull();
+  });
+
+  it("aggregates frequencies from probable assignments and deduplicates per aircraft", () => {
+    const assignment = (sectorId: string, name: string): AtcAssignment => ({
+      sectorId,
+      name,
+      service: "APP",
+      callsign: "PRAGUE RADAR",
+      primaryFrequencyMhz: 118.1,
+      alternateFrequenciesMhz: [118.1, 119.2],
+      lowerAltitudeFt: 3000,
+      upperAltitudeFt: 12500,
+      lowerAltitudeReference: "AMSL",
+      upperAltitudeReference: "FL",
+      country: "CZ",
+      source: "test",
+      sourceReference: "test://atc",
+      validFrom: null,
+      validTo: null,
+      lastVerifiedAt: "2026-09-01T00:00:00.000Z",
+      confidence: "inside",
+    });
+    const alternateCallsign = { ...assignment("C", "TMA III"), callsign: "ALTERNATE RADAR" };
+    expect(summarizeRelevantAtcFrequencies([assignment("A", "TMA I"), assignment("B", "TMA II"), alternateCallsign, null])).toEqual([
+      { frequencyMhz: 118.1, service: "APP", callsign: "ALTERNATE RADAR / PRAGUE RADAR", sector: "TMA I / TMA II / TMA III", aircraftCount: 3 },
+      { frequencyMhz: 119.2, service: "APP", callsign: "ALTERNATE RADAR / PRAGUE RADAR", sector: "TMA I / TMA II / TMA III", aircraftCount: 3 },
+    ]);
   });
 });

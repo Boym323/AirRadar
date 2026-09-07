@@ -44,6 +44,8 @@ export interface AtcAssignment {
   validTo: string | null;
   lastVerifiedAt: string;
   confidence: "inside" | "boundary";
+  /** AGL limits cannot be compared with an MSL aircraft altitude without terrain data. */
+  altitudeConfidence?: "matched" | "unknown";
 }
 
 export interface AtcTransmitter {
@@ -80,6 +82,16 @@ export interface AtcDataResponse {
 export interface AtcSectorMatch {
   sector: AtcSector;
   confidence: "inside" | "boundary";
+  /** Position can still match when the published altitude reference is not comparable. */
+  altitudeConfidence?: "matched" | "unknown";
+}
+
+export interface AtcFrequencySummary {
+  frequencyMhz: number;
+  service: string | null;
+  callsign: string | null;
+  sector: string;
+  aircraftCount: number;
 }
 
 export interface AtcActivity {

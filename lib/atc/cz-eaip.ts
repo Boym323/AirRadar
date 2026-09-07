@@ -8,11 +8,14 @@ import { aviationCoordinateToDecimal, densifyArc, type ArcDirection } from "./cz
 
 export const CZ_EAIP_ENR21_URL = "https://aim.rlp.cz/eaip/html/eAIP/LK-ENR-2.1-en-GB.html";
 export const CZ_EAIP_GEN02_URL = "https://aim.rlp.cz/ais_data/aip/data/valid/g0-2.html";
+export const CZ_EAIP_AD2_URL = "https://aim.rlp.cz/eaip/html/eAIP/LK-AD-2.{icao}-en-GB.html";
+/** Civil aerodromes whose official AD 2.17/2.18 pages publish controlled CTR data. */
+export const CZ_CIVIL_CONTROLLED_AERODROMES = ["LKPR", "LKTB", "LKMT", "LKKV"] as const;
 export const CZ_ATC_SOURCE_REFERENCE = `${CZ_EAIP_ENR21_URL} | Czech boundary geometry: ${CZ_CUZK_DATA50_QUERY_URL} | metadata: ${CZ_CUZK_DATA50_METADATA_URL} | Germany–Poland boundary geometry: ${BKG_VG25_WFS_URL} (${BKG_VG25_ATTRIBUTION})`;
 const AUTHORITATIVE_HOST = "aim.rlp.cz";
 const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
 
-export type CzAtcObjectType = "ACC_OPERATIONAL_SECTOR" | "FIC_SECTOR" | "TMA" | "CTA" | "OTHER";
+export type CzAtcObjectType = "ACC_OPERATIONAL_SECTOR" | "FIC_SECTOR" | "TMA" | "CTA" | "CTR" | "OTHER";
 
 export interface CzPublicationMetadata {
   aipAmendment: string | null;
@@ -52,9 +55,14 @@ export interface CzEaipParseResult {
   };
 }
 
+export interface CzAd2AtcParseResult {
+  document: AtcImportDocument;
+  diagnostic: CzEaipSectorDiagnostic;
+}
+
 export class CzEaipParseError extends Error {
   constructor(readonly issues: string[]) {
-    super(`Czech eAIP ENR 2.1 parse failed:\n${issues.map((issue) => `- ${issue}`).join("\n")}`);
+    super(`Czech eAIP parse failed:\n${issues.map((issue) => `- ${issue}`).join("\n")}`);
     this.name = "CzEaipParseError";
   }
 }
@@ -68,7 +76,8 @@ interface SourceToken {
 interface ArcEvent {
   direction: ArcDirection;
   radiusNm: number;
-  center: Coordinate;
+  center: Coordinate | null;
+  centerReference: string | null;
 }
 
 interface StateBoundaryEvent {
@@ -196,14 +205,19 @@ function parseArc($: CheerioAPI, paragraph: Parameters<CheerioAPI>[0]): ArcEvent
   const radiusToken = findToken(tokens, "VAL_RADIUS_ARC", "TAIRSPACE_VERTEX");
   const centerLatitude = findToken(tokens, "GEO_LAT_ARC", "TAIRSPACE_VERTEX");
   const centerLongitude = findToken(tokens, "GEO_LONG_ARC", "TAIRSPACE_VERTEX");
-  if (!radiusToken || !centerLatitude || !centerLongitude) throw new CzEaipParseError([`Arc ${directionToken.value} is missing radius or center`]);
+  const centerReferenceToken = tokens.find((token) => token.param.startsWith("TDME;CODE_ID;"));
+  const centerReference = centerReferenceToken ? paramValue(centerReferenceToken.param) : null;
+  if (!radiusToken || !centerLatitude || (!centerLongitude && !centerReference)) throw new CzEaipParseError([`Arc ${directionToken.value} is missing radius or authoritative center`]);
   const radiusNm = Number(radiusToken.value);
   if (!Number.isFinite(radiusNm) || radiusNm <= 0) throw new CzEaipParseError([`Arc ${directionToken.value} has invalid radius ${radiusToken.value}`]);
   try {
     return {
       direction: directionToken.value.toUpperCase() as ArcDirection,
       radiusNm,
-      center: [aviationCoordinateToDecimal(centerLongitude.value), aviationCoordinateToDecimal(centerLatitude.value)],
+      center: centerLongitude
+        ? [aviationCoordinateToDecimal(centerLongitude.value), aviationCoordinateToDecimal(centerLatitude.value)]
+        : null,
+      centerReference,
     };
   } catch (error) {
     throw new CzEaipParseError([error instanceof Error ? error.message : String(error)]);
@@ -261,6 +275,7 @@ function formatStateBoundaryReference(reference: StateBoundaryReference): string
 
 function assembleBoundary(boundary: ParsedBoundary, name: string, provider?: BoundaryResolver): void {
   const coordinates: Coordinate[] = [];
+  const arcCenters = new Map<string, Coordinate>();
   let pendingArc: ArcEvent | null = null;
   let pendingBorder: StateBoundaryEvent | null = null;
   const resolutions: StateBoundaryResolution[] = [];
@@ -269,7 +284,10 @@ function assembleBoundary(boundary: ParsedBoundary, name: string, provider?: Bou
       if (pendingArc) {
         const start = coordinates.at(-1);
         if (!start) throw new CzEaipParseError([`Arc in ${name || "unnamed airspace"} has no start point`]);
-        appendUniqueCoordinates(coordinates, densifyArc({ start, end: event.coordinate, ...pendingArc }).slice(1));
+        const center = pendingArc.center ?? (pendingArc.centerReference ? arcCenters.get(pendingArc.centerReference) ?? null : null);
+        if (!center) throw new CzEaipParseError([`Arc in ${name || "unnamed airspace"} has no resolvable authoritative center`]);
+        if (pendingArc.centerReference) arcCenters.set(pendingArc.centerReference, center);
+        appendUniqueCoordinates(coordinates, densifyArc({ start, end: event.coordinate, center, direction: pendingArc.direction, radiusNm: pendingArc.radiusNm }).slice(1));
         pendingArc = null;
       } else if (pendingBorder) {
         const start = coordinates.pop();
@@ -437,18 +455,30 @@ function classifyRow(name: string, unit: string | null, callsign: string | null)
   const normalizedCallsign = callsign?.toUpperCase() ?? "";
   if (normalizedName.startsWith("SECTOR") && normalizedUnit.includes("PRAHA ACC") && normalizedCallsign.includes("PRAHA RADAR")) return "ACC_OPERATIONAL_SECTOR";
   if (normalizedName.startsWith("SECTOR") && (normalizedUnit.includes("FIC") || normalizedCallsign.includes("INFORMATION"))) return "FIC_SECTOR";
-  if (normalizedName.startsWith("TMA") || normalizedName.startsWith("MTMA")) return "TMA";
+  if (normalizedName.startsWith("TMA")) return "TMA";
   if (normalizedName.startsWith("CTA")) return "CTA";
   return "OTHER";
 }
 
-function stableId($: CheerioAPI, cell: Parameters<CheerioAPI>[0]): string | null {
+function serviceForObjectType(objectType: CzAtcObjectType, unit: string | null): string | null {
+  if (objectType === "ACC_OPERATIONAL_SECTOR" || objectType === "CTA") return "ACC";
+  if (objectType === "FIC_SECTOR") return "FIS";
+  if (objectType === "TMA") return "APP";
+  if (objectType === "CTR") return "TWR";
+  return unit;
+}
+
+function importableObjectType(objectType: CzAtcObjectType): boolean {
+  return objectType !== "OTHER";
+}
+
+function stableId($: CheerioAPI, cell: Parameters<CheerioAPI>[0], prefix = "LKAA"): string | null {
   const values = $(cell).find(".SD").map((_, element) => normalizedText($(element).text())).get();
-  const official = values.find((value) => /^LKAA[A-Z0-9]+$/.test(value));
+  const official = values.find((value) => new RegExp(`^${prefix}[A-Z0-9]+$`).test(value));
   if (official) return official;
   const sourceObject = $(cell).find(".sdParams").map((_, element) => normalizedText($(element).text())).get().find((param) => param.startsWith("TAIRSPACE;TXT_NAME;"));
   const numeric = sourceObject ? paramValue(sourceObject) : null;
-  return numeric ? `LKAA-AIP-${numeric}` : null;
+  return numeric ? `${prefix}-AIP-${numeric}` : null;
 }
 
 function parseRow($: CheerioAPI, rowNode: Parameters<CheerioAPI>[0]): ParsedRow | null {
@@ -476,7 +506,7 @@ function parseRow($: CheerioAPI, rowNode: Parameters<CheerioAPI>[0]): ParsedRow 
     upperAltitude: vertical.upper,
     boundary,
   };
-  if (objectType === "ACC_OPERATIONAL_SECTOR" && !id) parsedRow.skipReason = "missing stable source identifier";
+  if (importableObjectType(objectType) && !id) parsedRow.skipReason = "missing stable source identifier";
   return parsedRow;
 }
 
@@ -603,12 +633,13 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
     effectiveDate: publicationFromGen02.effectiveDate ?? effectiveDate,
   };
   const rows = parseRows($);
-  const classification = { ACC_OPERATIONAL_SECTOR: 0, FIC_SECTOR: 0, TMA: 0, CTA: 0, OTHER: 0 } satisfies Record<CzAtcObjectType, number>;
+  const classification = { ACC_OPERATIONAL_SECTOR: 0, FIC_SECTOR: 0, TMA: 0, CTA: 0, CTR: 0, OTHER: 0 } satisfies Record<CzAtcObjectType, number>;
   for (const row of rows) classification[row.objectType] += 1;
   const accRows = rows.filter((row) => row.objectType === "ACC_OPERATIONAL_SECTOR");
   if (!accRows.length) throw new CzEaipParseError(["No PRAHA ACC operational sector rows were found"]);
-  inheritLogicalVerticalLimits(accRows);
-  for (const row of accRows) {
+  const candidateRows = rows.filter((row) => importableObjectType(row.objectType));
+  inheritLogicalVerticalLimits(candidateRows);
+  for (const row of candidateRows) {
     try {
       assembleBoundary(row.boundary, row.name, options.boundaryResolver);
     } catch (error) {
@@ -617,13 +648,17 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
       row.skipReason = row.boundaryError;
     }
   }
-  const byName = new Map(accRows.map((row) => [row.name, row]));
+  const byName = new Map(candidateRows.map((row) => [row.name, row]));
   const diagnostics: CzEaipSectorDiagnostic[] = [];
   const accepted: AtcImportSector[] = [];
   const lastVerifiedAt = options.lastVerifiedAt ?? new Date().toISOString();
   const sourceName = `${publicationName(publication)}${options.boundaryResolver ? " + authoritative boundary geometry" : ""}`;
 
-  for (const row of accRows) {
+  for (const row of rows) {
+    if (!importableObjectType(row.objectType)) {
+      diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "skipped", reason: "unsupported airspace object type" });
+      continue;
+    }
     if (!row.skipReason) {
       if (row.boundary.constituentReferences.length) {
         row.skipReason = "aggregate sector row; constituent sectors are imported separately";
@@ -660,7 +695,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
       id: row.stableId!,
       name: row.name,
       atcCallsign: row.callsign,
-      service: "ACC",
+      service: serviceForObjectType(row.objectType, row.unit),
       country: "CZ",
       polygons: row.boundary.polygons,
       lowerAltitude: row.lowerAltitude,
@@ -671,7 +706,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
     diagnostics.push({ name: row.name, stableId: row.stableId, objectType: row.objectType, status: "accepted", boundaryResolutions: row.boundary.boundaryResolutions, polygonMetrics: polygonMetrics(row.boundary.polygons) });
   }
 
-  if (!accepted.length) throw new CzEaipParseError(["No valid PRAHA ACC operational sector geometry was produced", ...accRows.map((row) => `${row.name}: ${row.skipReason ?? "unknown parser rejection"}`)]);
+  if (!accepted.length) throw new CzEaipParseError(["No valid importable ATC sector geometry was produced", ...candidateRows.map((row) => `${row.name}: ${row.skipReason ?? "unknown parser rejection"}`)]);
   const skipped = diagnostics.filter((diagnostic) => diagnostic.status === "skipped").length;
   return {
     document: {
@@ -685,6 +720,196 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
     publicationDate,
     diagnostics,
     counts: { accOperationalDetected: accRows.length, valid: accepted.length, skipped, classification },
+  };
+}
+
+interface ParsedCommunicationFrequency {
+  frequencyMhz: number;
+  label: string | null;
+  priority: number;
+  order: number;
+}
+
+interface ParsedCommunicationGroup {
+  service: string;
+  callsign: string | null;
+  frequencies: ParsedCommunicationFrequency[];
+  order: number;
+}
+
+function communicationFrequencyLabel(value: string): string | null {
+  const normalized = normalizedText(value).toUpperCase();
+  if (normalized.includes("EMERGENCY")) return "Emergency";
+  if (normalized.includes("SUPPLEMENTARY")) return "Supplementary";
+  return null;
+}
+
+function communicationFrequencyPriority(rowText: string, label: string | null): number {
+  if (label === "Emergency") return 100;
+  if (/\bH24\b/.test(rowText)) return 0;
+  if (label === "Supplementary") return 2;
+  if (/\b(?:HO|HX)\b/.test(rowText)) return 1;
+  return 3;
+}
+
+/** Reads the row-spanned AD 2.18 table without guessing which service owns a frequency. */
+function parseCommunicationGroups($: CheerioAPI, table: Parameters<CheerioAPI>[0]): ParsedCommunicationGroup[] {
+  const groups = new Map<string, ParsedCommunicationGroup>();
+  let currentService: string | null = null;
+  let currentCallsign: string | null = null;
+  let order = 0;
+  for (const row of $(table).find("tbody > tr").toArray()) {
+    const rowNode = $(row);
+    const tokens = sourceTokens($, rowNode);
+    const service = tokens.find((token) => token.param.startsWith("TSERVICE;CODE_TYPE;"))?.value ?? null;
+    if (service) currentService = service;
+    const callsign = tokens.find((token) => token.param.startsWith("TCALLSIGN_DETAIL;TXT_CALL_SIGN;"))?.value ?? null;
+    if (callsign) currentCallsign = callsign;
+    const frequencyTokens = tokensForKey(tokens, "VAL_FREQ_TRANS", "TFREQUENCY");
+    if (!currentService || !frequencyTokens.length) continue;
+    const serviceKey = normalizedText(currentService).toUpperCase();
+    const callsignKey = normalizedText(currentCallsign ?? "").toUpperCase();
+    const key = `${serviceKey}|${callsignKey}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = { service: currentService, callsign: currentCallsign, frequencies: [], order: order++ };
+      groups.set(key, group);
+    }
+    const rowText = normalizedText(rowNode.text()).toUpperCase();
+    for (const token of frequencyTokens) {
+      const frequencyMhz = Number(token.value.replace(",", "."));
+      if (!Number.isFinite(frequencyMhz) || frequencyMhz >= 300) continue;
+      const id = paramValue(token.param);
+      const codeType = id === null
+        ? null
+        : tokens.find((candidate) => candidate.param === `TFREQUENCY;CODE_TYPE;${id}`)?.value ?? null;
+      const label = communicationFrequencyLabel(`${codeType ?? ""} ${rowText}`);
+      if (label === "Emergency") continue;
+      if (!group.frequencies.some((item) => item.frequencyMhz === frequencyMhz)) {
+        group.frequencies.push({ frequencyMhz, label, priority: communicationFrequencyPriority(rowText, label), order: group.frequencies.length });
+      }
+    }
+  }
+  return [...groups.values()];
+}
+
+function chooseCommunicationGroup(groups: ParsedCommunicationGroup[]): ParsedCommunicationGroup | null {
+  return groups
+    .filter((group) => group.frequencies.length > 0)
+    .sort((left, right) => {
+      const servicePriority = (value: string): number => /^(TWR|TOWER)$/i.test(normalizedText(value)) ? 0 : /^(APP|APPROACH)$/i.test(normalizedText(value)) ? 1 : 2;
+      return servicePriority(left.service) - servicePriority(right.service)
+        || (left.callsign ?? "").localeCompare(right.callsign ?? "")
+        || left.order - right.order;
+    })[0] ?? null;
+}
+
+function stableAd2AirspaceId(airportIcao: string, name: string): string {
+  const slug = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return `CZ-${airportIcao}-${slug}`;
+}
+
+/** Parses one official civil AD 2.17/2.18 page into a single CTR sector. */
+export function parseCzEaipAd2AtcAirspace(html: string, options: { lastVerifiedAt?: string } = {}): CzAd2AtcParseResult {
+  const $ = load(html, { xmlMode: true });
+  const section = $("div[id$='-AD-2.17']").first();
+  const communicationSection = $("div[id$='-AD-2.18']").first();
+  if (!section.length || !communicationSection.length) throw new CzEaipParseError(["AD 2.17/2.18 ATS airspace or communication section was not found"]);
+  const sectionId = section.attr("id") ?? "";
+  const airportIcao = /^([A-Z0-9]{4})-AD-2\.17$/i.exec(sectionId)?.[1]?.toUpperCase();
+  if (!airportIcao) throw new CzEaipParseError([`AD 2.17 has no stable aerodrome identifier: ${sectionId || "missing id"}`]);
+  const effectiveDate = extractEffectiveDate($);
+  const sourceReference = `${CZ_EAIP_AD2_URL.replace("{icao}", airportIcao)}#${airportIcao}-AD-2.17 | ${CZ_EAIP_AD2_URL.replace("{icao}", airportIcao)}#${airportIcao}-AD-2.18`;
+  const table = section.find("table").first();
+  const rows = table.find("tbody > tr").toArray();
+  const designationRow = rows.find((row) => /Designation and lateral limits/i.test(normalizedText($(row).children("td").eq(1).text())));
+  const verticalRow = rows.find((row) => /Vertical limits/i.test(normalizedText($(row).children("td").eq(1).text())));
+  const callsignRow = rows.find((row) => /ATS unit call sign/i.test(normalizedText($(row).children("td").eq(1).text())));
+  const designationCell = designationRow ? $(designationRow).children("td").eq(2) : null;
+  const name = designationCell ? normalizedText(designationCell.find("strong .SD").first().text()) : "";
+  if (!designationCell || !name) throw new CzEaipParseError([`${airportIcao} AD 2.17 is missing the ATS airspace designation`]);
+  if (!/^CTR\s/i.test(name)) throw new CzEaipParseError([`${airportIcao} AD 2.17 does not publish a civil CTR designation: ${name}`]);
+  const boundary = parseBoundary($, designationCell);
+  try {
+    assembleBoundary(boundary, name);
+  } catch (error) {
+    throw error instanceof CzEaipParseError ? error : new CzEaipParseError([String(error)]);
+  }
+  const vertical = verticalRow ? parseVerticalLimits($, $(verticalRow).children("td").eq(2)) : { lower: null, upper: null };
+  const groups = chooseCommunicationGroup(parseCommunicationGroups($, communicationSection.find("table").first()));
+  const callsigns = callsignRow
+    ? sourceTokens($, $(callsignRow).children("td").eq(2)).filter((token) => token.param.startsWith("TCALLSIGN_DETAIL;")).map((token) => token.value)
+    : [];
+  const callsign = callsigns.find((value) => /\b(?:TOWER|TWR)\b/i.test(value)) ?? groups?.callsign ?? callsigns[0] ?? null;
+  const orderedFrequencies = groups?.frequencies.slice().sort((left, right) => left.priority - right.priority || left.order - right.order) ?? [];
+  const primary = orderedFrequencies[0] ?? null;
+  const skipReason = !boundary.polygons.length
+    ? "missing valid lateral geometry"
+    : vertical.lower === null
+      ? "missing lower vertical limit"
+      : vertical.upper === null
+        ? "missing upper vertical limit"
+        : !primary
+          ? "missing civil ATS frequency"
+          : boundary.polygons.map((polygon) => validatePolygon(name, polygon)).find((issue): issue is string => issue !== null) ?? null;
+  const diagnostic: CzEaipSectorDiagnostic = {
+    name,
+    stableId: stableAd2AirspaceId(airportIcao, name),
+    objectType: "CTR",
+    status: skipReason ? "skipped" : "accepted",
+    ...(skipReason ? { reason: skipReason } : {}),
+    polygonMetrics: polygonMetrics(boundary.polygons),
+  };
+  if (skipReason) return {
+    diagnostic,
+    document: { schemaVersion: 1, source: { name: `AIM ŘLP ČR eAIP AD 2-${airportIcao}`, reference: sourceReference, effectiveDate, lastVerifiedAt: options.lastVerifiedAt ?? new Date().toISOString() }, sectors: [], transmitters: [] },
+  };
+  return {
+    diagnostic,
+    document: {
+      schemaVersion: 1,
+      source: { name: `AIM ŘLP ČR eAIP AD 2-${airportIcao}`, reference: sourceReference, effectiveDate, lastVerifiedAt: options.lastVerifiedAt ?? new Date().toISOString() },
+      sectors: [{
+        id: stableAd2AirspaceId(airportIcao, name),
+        name,
+        atcCallsign: callsign,
+        service: "TWR",
+        country: "CZ",
+        polygons: boundary.polygons,
+        lowerAltitude: vertical.lower,
+        upperAltitude: vertical.upper,
+        primaryFrequencyMhz: primary.frequencyMhz,
+        alternateFrequencies: orderedFrequencies.slice(1).map((frequency) => ({ frequencyMhz: frequency.frequencyMhz, label: frequency.label })),
+        sourceReference,
+        validFrom: effectiveDate,
+      }],
+      transmitters: [],
+    },
+  };
+}
+
+export function mergeCzAd2AtcResults(result: CzEaipParseResult, additional: CzAd2AtcParseResult[]): CzEaipParseResult {
+  for (const item of additional) {
+    const effectiveDate = item.document.source.effectiveDate;
+    if (effectiveDate !== result.effectiveDate) {
+      throw new CzEaipParseError([`AD 2 effective date ${effectiveDate} does not match ENR 2.1 effective date ${result.effectiveDate}`]);
+    }
+  }
+  const diagnostics = [...result.diagnostics, ...additional.map((item) => item.diagnostic)];
+  const sectors = [...result.document.sectors, ...additional.flatMap((item) => item.document.sectors)];
+  const sourceReferences = [result.document.source.reference, ...additional.map((item) => item.document.source.reference)];
+  const classification = { ...result.counts.classification };
+  classification.CTR += additional.length;
+  return {
+    ...result,
+    document: { ...result.document, source: { ...result.document.source, reference: sourceReferences.join(" | ") }, sectors },
+    diagnostics,
+    counts: {
+      ...result.counts,
+      valid: result.counts.valid + sectors.length - result.document.sectors.length,
+      skipped: result.counts.skipped + additional.filter((item) => item.diagnostic.status === "skipped").length,
+      classification,
+    },
   };
 }
 
@@ -702,7 +927,11 @@ export async function fetchOfficialCzEaip(url: string): Promise<string> {
   return new TextDecoder().decode(bytes);
 }
 
-export async function fetchCurrentCzEaip(): Promise<{ enr21Html: string; publicationHtml: string }> {
-  const [enr21Html, publicationHtml] = await Promise.all([fetchOfficialCzEaip(CZ_EAIP_ENR21_URL), fetchOfficialCzEaip(CZ_EAIP_GEN02_URL)]);
-  return { enr21Html, publicationHtml };
+export async function fetchCurrentCzEaip(): Promise<{ enr21Html: string; publicationHtml: string; ad2Html: Array<{ airportIcao: string; html: string }> }> {
+  const [enr21Html, publicationHtml, ...ad2Html] = await Promise.all([
+    fetchOfficialCzEaip(CZ_EAIP_ENR21_URL),
+    fetchOfficialCzEaip(CZ_EAIP_GEN02_URL),
+    ...CZ_CIVIL_CONTROLLED_AERODROMES.map(async (airportIcao) => ({ airportIcao, html: await fetchOfficialCzEaip(CZ_EAIP_AD2_URL.replace("{icao}", airportIcao)) })),
+  ]);
+  return { enr21Html, publicationHtml, ad2Html };
 }

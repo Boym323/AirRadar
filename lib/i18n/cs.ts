@@ -147,6 +147,7 @@ export const cs = {
   atc: {
     defaultService: "ATC",
     estimate: "Odhad ATC",
+    probableRelevant: "Pravděpodobně relevantní ATC",
     sector: "ATC sektor",
     transmitter: "ATC vysílač",
     sectorService: "Sektor / služba",
@@ -161,6 +162,8 @@ export const cs = {
     lastVerified: "Naposledy ověřeno",
     confidence: "Shoda",
     confidenceValues: { inside: "Uvnitř sektoru", boundary: "Na hranici sektoru" },
+    altitudeConfidence: "Jistota výškové shody",
+    altitudeConfidenceValues: { matched: "Výšková shoda", unknown: "Výšku nelze spolehlivě porovnat" },
     probableFrequency: "Pravděpodobná frekvence podle pozice a výšky. ADS-B nehlásí frekvenci ATC naladěnou v letadle.",
     noMatchingSector: "Pro aktuální pozici a výšku nebyl nalezen odpovídající sektor.",
     noProductionData: "Produkční ATC data nejsou k dispozici.",

@@ -903,6 +903,7 @@ export function AirRadarApp() {
               </DetailSection>
               <DetailSection title={t.atc.estimate}>
                 {selectedAircraft.atc ? <>
+                  <div className="detail-atc-probable">{t.atc.probableRelevant}</div>
                   <DetailItem label={t.atc.sectorService} value={`${selectedAircraft.atc.name} · ${formatAtcService(selectedAircraft.atc.service || selectedAircraft.atc.callsign)}`} />
                   <DetailItem label={t.atc.primaryFrequency} value={formatAtcFrequency(selectedAircraft.atc.primaryFrequencyMhz)} />
                   <DetailItem label={t.atc.alternates} value={selectedAircraft.atc.alternateFrequenciesMhz.map((frequency) => formatAtcFrequency(frequency)).join(", ") || t.common.emptyValue} />
@@ -914,6 +915,7 @@ export function AirRadarApp() {
                   <DetailItem label={t.atc.validTo} value={formatDateTime(selectedAircraft.atc.validTo)} />
                   <DetailItem label={t.atc.lastVerified} value={formatDateTime(selectedAircraft.atc.lastVerifiedAt)} />
                   <DetailItem label={t.atc.confidence} value={formatAtcConfidence(selectedAircraft.atc.confidence)} />
+                  {selectedAircraft.atc.altitudeConfidence === "unknown" && <DetailItem label={t.atc.altitudeConfidence} value={t.atc.altitudeConfidenceValues.unknown} />}
                   <div className="detail-disclaimer">{t.atc.probableFrequency}</div>
                 </> : <div className="detail-disclaimer">{t.atc.noMatchingSector}</div>}
               </DetailSection>

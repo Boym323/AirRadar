@@ -157,14 +157,20 @@ function datasetMetadata(
   sectors: AtcSector[],
   transmitters: AtcTransmitter[],
 ): AtcDatasetMetadata {
-  const first = sectors[0] ?? null;
-  const firstTransmitter = transmitters[0] ?? null;
+  const rows = [...sectors, ...transmitters];
+  const sources = [...new Set(rows.map((row) => row.source))];
+  const references = [...new Set(rows.map((row) => row.sourceReference))];
+  const effectiveDates = [...new Set(rows.map((row) => row.validFrom).filter((value): value is string => value !== null))];
+  const lastVerifiedAt = rows
+    .map((row) => row.lastVerifiedAt)
+    .sort((left, right) => Date.parse(left) - Date.parse(right))
+    .at(-1) ?? null;
   return {
     status,
-    source: first?.source ?? firstTransmitter?.source ?? null,
-    sourceReference: first?.sourceReference ?? firstTransmitter?.sourceReference ?? null,
-    effectiveDate: first?.validFrom ?? firstTransmitter?.validFrom ?? null,
-    lastVerifiedAt: first?.lastVerifiedAt ?? firstTransmitter?.lastVerifiedAt ?? null,
+    source: sources.length === 1 ? sources[0] : sources.length > 1 ? "multiple sources" : null,
+    sourceReference: references.length === 1 ? references[0] : null,
+    effectiveDate: effectiveDates.length === 1 ? effectiveDates[0] : null,
+    lastVerifiedAt,
     sectorCount: sectors.length,
     transmitterCount: transmitters.length,
   };

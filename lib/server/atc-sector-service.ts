@@ -1,4 +1,4 @@
-import type { AtcAssignment, AtcLookup, AtcSector, AtcSectorMatch, Coordinate } from "@/lib/atc/types";
+import type { AtcAssignment, AtcFrequencySummary, AtcLookup, AtcSector, AtcSectorMatch, Coordinate } from "@/lib/atc/types";
 import type { AtcSectorProvider } from "@/lib/server/provider";
 
 export class EmptyAtcSectorProvider implements AtcSectorProvider {
@@ -29,6 +29,7 @@ export function assignmentFromMatch(match: AtcSectorMatch): AtcAssignment {
     validTo: match.sector.validTo,
     lastVerifiedAt: match.sector.lastVerifiedAt,
     confidence: match.confidence,
+    altitudeConfidence: match.altitudeConfidence ?? "matched",
   };
 }
 
@@ -64,23 +65,30 @@ function isValidAt(sector: AtcSector, observedAt: Date): boolean {
   return time >= validFrom && time <= validTo;
 }
 
-function containsAltitude(sector: AtcSector, altitudeFt: number | null): boolean {
-  if (altitudeFt === null) return true;
-  return (sector.lowerAltitudeFt === null || altitudeFt >= sector.lowerAltitudeFt)
-    && (sector.upperAltitudeFt === null || altitudeFt <= sector.upperAltitudeFt);
+function containsAltitude(sector: AtcSector, altitudeFt: number | null): { matches: boolean; confidence: "matched" | "unknown" } {
+  if (altitudeFt === null) return { matches: true, confidence: "unknown" };
+  const lowerComparable = sector.lowerAltitudeReference !== "AGL";
+  const upperComparable = sector.upperAltitudeReference !== "AGL";
+  return {
+    matches: (!lowerComparable || sector.lowerAltitudeFt === null || altitudeFt >= sector.lowerAltitudeFt)
+      && (!upperComparable || sector.upperAltitudeFt === null || altitudeFt <= sector.upperAltitudeFt),
+    confidence: lowerComparable && upperComparable ? "matched" : "unknown",
+  };
 }
 
 export function matchSector(sector: AtcSector, lookup: AtcLookup): AtcSectorMatch | null {
   const observedAt = lookup.observedAt ?? new Date();
-  if (!isValidAt(sector, observedAt) || !containsAltitude(sector, lookup.altitudeFt)) return null;
+  if (!isValidAt(sector, observedAt)) return null;
+  const altitude = containsAltitude(sector, lookup.altitudeFt);
+  if (!altitude.matches) return null;
   const point: Coordinate = [lookup.longitude, lookup.latitude];
   let confidence: AtcSectorMatch["confidence"] | null = null;
   for (const polygon of sector.polygons) {
     const result = pointInPolygon(point, polygon);
-    if (result === "boundary") return { sector, confidence: result };
+    if (result === "boundary") return { sector, confidence: result, altitudeConfidence: altitude.confidence };
     if (result === "inside") confidence = result;
   }
-  return confidence ? { sector, confidence } : null;
+  return confidence ? { sector, confidence, altitudeConfidence: altitude.confidence } : null;
 }
 
 function servicePriority(service: string | null | undefined): number {
@@ -110,6 +118,55 @@ export function compareAtcMatches(a: AtcSectorMatch, b: AtcSectorMatch): number 
   if (lowerDifference !== 0) return lowerDifference;
   if (a.confidence !== b.confidence) return a.confidence === "boundary" ? -1 : 1;
   return a.sector.id.localeCompare(b.sector.id);
+}
+
+function normalizedActivityLabel(value: string | null): string {
+  return value?.trim().toUpperCase() ?? "";
+}
+
+/**
+ * Aggregates only already-resolved probable ATC assignments. It deliberately
+ * does not imply that an aircraft is transmitting or listening on a frequency.
+ */
+export function summarizeRelevantAtcFrequencies(assignments: ReadonlyArray<AtcAssignment | null | undefined>): AtcFrequencySummary[] {
+  const summaries = new Map<string, Omit<AtcFrequencySummary, "callsign" | "sector"> & { callsigns: Set<string>; sectors: Set<string> }>();
+  for (const assignment of assignments) {
+    if (!assignment) continue;
+    const frequencies = [assignment.primaryFrequencyMhz, ...assignment.alternateFrequenciesMhz]
+      .filter((frequency): frequency is number => Number.isFinite(frequency));
+    const seenForAssignment = new Set<number>();
+    for (const frequency of frequencies) {
+      if (seenForAssignment.has(frequency)) continue;
+      seenForAssignment.add(frequency);
+      const service = assignment.service;
+      const key = `${frequency.toFixed(3)}|${normalizedActivityLabel(service ?? assignment.callsign)}`;
+      const summary = summaries.get(key);
+      if (summary) {
+        summary.aircraftCount += 1;
+        if (assignment.callsign) summary.callsigns.add(assignment.callsign);
+        summary.sectors.add(assignment.name);
+      } else {
+        summaries.set(key, {
+          frequencyMhz: frequency,
+          service,
+          aircraftCount: 1,
+          callsigns: assignment.callsign ? new Set([assignment.callsign]) : new Set(),
+          sectors: new Set([assignment.name]),
+        });
+      }
+    }
+  }
+  return [...summaries.values()]
+    .map(({ callsigns, sectors, ...summary }) => ({
+      ...summary,
+      callsign: callsigns.size ? [...callsigns].sort((a, b) => a.localeCompare(b)).join(" / ") : null,
+      sector: [...sectors].sort((a, b) => a.localeCompare(b)).join(" / "),
+    }))
+    .sort((a, b) => b.aircraftCount - a.aircraftCount
+      || a.frequencyMhz - b.frequencyMhz
+      || (a.service ?? "").localeCompare(b.service ?? "")
+      || (a.callsign ?? "").localeCompare(b.callsign ?? "")
+      || a.sector.localeCompare(b.sector));
 }
 
 export class AtcSectorService {

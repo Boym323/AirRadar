@@ -157,7 +157,7 @@ ATC matches are always probable candidates based on position, normalized
 barometric/geometric altitude and UTC validity. ADS-B does not report the
 aircraft's actual tuned ATC frequency.
 
-For Czech ACC data, use the official eAIP sync rather than a hand-maintained
+For Czech ATC data, use the official eAIP sync rather than a hand-maintained
 snapshot:
 
 ```bash
@@ -166,8 +166,13 @@ npm run atc:sync:cz
 npm run atc:status:cz
 ```
 
-The sync obtains ENR 2.1 from AIM ŘLP ČR, discovers the effective date and
-published AIP/AIRAC amendment metadata, and has no runtime dependency on AIM.
+The sync obtains ENR 2.1 and GEN 0.2 from AIM ŘLP ČR, adds civil CTR geometry
+and communications from the official AD 2.17/2.18 pages for LKPR, LKTB, LKMT
+and LKKV, discovers the effective date and published AIP/AIRAC amendment
+metadata, and has no runtime dependency on AIM. Concrete ACC/FIC/TMA/CTA rows
+are imported only when their published geometry, limits and frequencies pass
+the existing validation rules; aggregate or unsupported rows are reported and
+skipped.
 For a lateral `state boundary` construct, ENR 2.1 remains authoritative for
 the sector meaning, endpoints, ordering, vertical limits, callsign and
 frequencies; the missing boundary polyline is resolved from the official
@@ -187,6 +192,10 @@ are sync-time sources only; live radar has no runtime dependency on either.
 The complete parse, geometry resolution and validation finish before the
 transaction, so a failed source or unresolved boundary leaves the database
 unchanged.
+The current public eAIP pages do not provide an authoritative ATC transmitter
+location source, so the sync reports
+`no authoritative transmitter-location source found` and imports zero
+transmitters.
 
 ## Useful commands
 

@@ -3,7 +3,7 @@ import "dotenv/config";
 import { BkgGermanyPolandBoundaryProvider } from "../lib/atc/bkg-boundary";
 import { AuthoritativeBoundaryResolver } from "../lib/atc/boundary-resolver";
 import { CuzkBoundaryError, CuzkStateBoundaryProvider } from "../lib/atc/cz-boundary";
-import { fetchCurrentCzEaip, parseCzEaipEnr21 } from "../lib/atc/cz-eaip";
+import { fetchCurrentCzEaip, mergeCzAd2AtcResults, parseCzEaipAd2AtcAirspace, parseCzEaipEnr21 } from "../lib/atc/cz-eaip";
 import { validateAtcImportDocument } from "../lib/atc/import-format";
 import { runAtcImport } from "../lib/atc/import-db";
 
@@ -15,31 +15,25 @@ function dryRunArgument(): boolean {
 
 function printDiagnostics(result: ReturnType<typeof parseCzEaipEnr21>): void {
   const skipped = result.diagnostics.filter((diagnostic) => diagnostic.status === "skipped");
-  console.log(`ACC operational sectors detected: ${result.counts.accOperationalDetected}`);
-  console.log(`ACC sectors valid: ${result.counts.valid}`);
-  console.log(`ACC sectors skipped: ${result.counts.skipped}`);
+  const categories = new Map<string, number>();
+  for (const diagnostic of result.diagnostics) categories.set(diagnostic.objectType, (categories.get(diagnostic.objectType) ?? 0) + 1);
+  const frequencies = new Set(result.document.sectors.flatMap((sector) => [sector.primaryFrequencyMhz, ...(sector.alternateFrequencies ?? []).map((frequency) => frequency.frequencyMhz)]).filter((frequency): frequency is number => frequency !== null && frequency !== undefined));
+  const importedByType = new Map<string, number>();
+  for (const diagnostic of result.diagnostics.filter((item) => item.status === "accepted")) importedByType.set(diagnostic.objectType, (importedByType.get(diagnostic.objectType) ?? 0) + 1);
+  const reasonCounts = new Map<string, number>();
+  for (const diagnostic of skipped) {
+    const reason = diagnostic.reason ?? "unknown";
+    reasonCounts.set(`${diagnostic.objectType}: ${reason}`, (reasonCounts.get(`${diagnostic.objectType}: ${reason}`) ?? 0) + 1);
+  }
+  console.log(`Dataset: total parsed ${result.diagnostics.length}; valid ${result.document.sectors.length}; skipped ${skipped.length}; unsupported ${skipped.filter((item) => item.reason === "unsupported airspace object type").length}; unique frequencies ${frequencies.size}`);
+  console.log(`Breakdown: ACC=${importedByType.get("ACC_OPERATIONAL_SECTOR") ?? 0}/${categories.get("ACC_OPERATIONAL_SECTOR") ?? 0}, TMA=${importedByType.get("TMA") ?? 0}/${categories.get("TMA") ?? 0}, CTR=${importedByType.get("CTR") ?? 0}/${categories.get("CTR") ?? 0}, other=${(importedByType.get("FIC_SECTOR") ?? 0) + (importedByType.get("CTA") ?? 0)}/${(categories.get("FIC_SECTOR") ?? 0) + (categories.get("CTA") ?? 0) + (categories.get("OTHER") ?? 0)}`);
+  for (const [reason, count] of reasonCounts) console.log(`  skipped ${count}× ${reason}`);
   console.log(`Classification: ${Object.entries(result.counts.classification).map(([key, value]) => `${key}=${value}`).join(", ")}`);
-  for (const sector of result.document.sectors) {
-    const alternate = sector.alternateFrequencies?.map((frequency) => `${frequency.frequencyMhz}${frequency.label ? ` (${frequency.label})` : ""}`).join(", ") || "none";
-    console.log(`  accepted ${sector.id}: ${sector.name}; ${sector.lowerAltitude ?? "?"}–${sector.upperAltitude ?? "?"}; primary ${sector.primaryFrequencyMhz}; alternate ${alternate}`);
-  }
-  for (const diagnostic of skipped) console.log(`  skipped ${diagnostic.name}: ${diagnostic.reason}`);
   for (const diagnostic of skipped.filter((item) => item.boundaryError)) console.log(`  boundary ${diagnostic.name}: blocked; ${diagnostic.boundaryError}`);
-  for (const diagnostic of result.diagnostics.filter((item) => item.status === "accepted" && item.polygonMetrics?.length)) {
-    const metrics = diagnostic.polygonMetrics ?? [];
-    const box = metrics.reduce((current, metric) => ({
-      west: Math.min(current.west, metric.boundingBox.west),
-      south: Math.min(current.south, metric.boundingBox.south),
-      east: Math.max(current.east, metric.boundingBox.east),
-      north: Math.max(current.north, metric.boundingBox.north),
-    }), { west: Number.POSITIVE_INFINITY, south: Number.POSITIVE_INFINITY, east: Number.NEGATIVE_INFINITY, north: Number.NEGATIVE_INFINITY });
-    console.log(`  geometry ${diagnostic.name}: ${metrics.length} ring(s), ${metrics.reduce((sum, metric) => sum + metric.vertexCount, 0)} vertices; ${metrics.reduce((sum, metric) => sum + metric.areaSquareKm, 0).toFixed(1)} km²; max segment ${Math.max(...metrics.map((metric) => metric.maxSegmentKm)).toFixed(3)} km; bbox ${box.west.toFixed(5)},${box.south.toFixed(5)}–${box.east.toFixed(5)},${box.north.toFixed(5)}`);
-  }
-  for (const diagnostic of result.diagnostics.filter((item) => item.boundaryResolutions?.length)) {
-    for (const resolution of diagnostic.boundaryResolutions ?? []) {
-      console.log(`  boundary ${diagnostic.name}: ${resolution.semantic ?? "unknown semantic"}; ${resolution.provider ?? "unknown"}; snap ${resolution.startSnapDistanceKm.toFixed(3)} km/${resolution.endSnapDistanceKm.toFixed(3)} km; ${resolution.vertexCount} vertices; ${resolution.pathLengthKm.toFixed(3)} km path; max segment ${resolution.maxSegmentLengthKm.toFixed(3)} km; features ${resolution.featureIds.join(",")}`);
-    }
-  }
+  const metrics = result.diagnostics.flatMap((diagnostic) => diagnostic.status === "accepted" ? diagnostic.polygonMetrics ?? [] : []);
+  if (metrics.length) console.log(`Geometry: ${metrics.length} validated ring(s), ${metrics.reduce((sum, metric) => sum + metric.vertexCount, 0)} vertices, ${metrics.reduce((sum, metric) => sum + metric.areaSquareKm, 0).toFixed(1)} km² total`);
+  const resolutions = result.diagnostics.flatMap((diagnostic) => diagnostic.boundaryResolutions ?? []);
+  if (resolutions.length) console.log(`Authoritative boundary geometry: ${resolutions.length} segment resolution(s); max endpoint snap ${Math.max(...resolutions.map((resolution) => Math.max(resolution.startSnapDistanceKm, resolution.endSnapDistanceKm))).toFixed(3)} km`);
 }
 
 async function main(): Promise<void> {
@@ -47,16 +41,22 @@ async function main(): Promise<void> {
   const source = await fetchCurrentCzEaip();
   const boundaryResolver = new AuthoritativeBoundaryResolver(new CuzkStateBoundaryProvider(), new BkgGermanyPolandBoundaryProvider());
   await boundaryResolver.load();
-  const parsed = parseCzEaipEnr21(source.enr21Html, { publicationHtml: source.publicationHtml, boundaryResolver });
+  const parsedEnr21 = parseCzEaipEnr21(source.enr21Html, { publicationHtml: source.publicationHtml, boundaryResolver });
+  const parsedAd2 = source.ad2Html.map(({ html }) => parseCzEaipAd2AtcAirspace(html));
+  const parsed = mergeCzAd2AtcResults(parsedEnr21, parsedAd2);
   const dataset = validateAtcImportDocument(parsed.document);
   console.log(`Official source: ${dataset.source.reference}`);
   console.log(`Publication effective: ${parsed.effectiveDate}; published: ${parsed.publicationDate ?? "unknown"}`);
   console.log(`Detected amendments: ${parsed.publication.aipAmendment ?? "unknown"}; AIRAC ${parsed.publication.airacAmendment ?? "unknown"}`);
   printDiagnostics(parsed);
-  const unsupported = parsed.diagnostics.filter((diagnostic) => diagnostic.status === "skipped" && !diagnostic.reason?.startsWith("aggregate sector row"));
+  const unsupported = parsed.diagnostics.filter((diagnostic) => diagnostic.status === "skipped"
+    && diagnostic.objectType !== "OTHER"
+    && !diagnostic.reason?.startsWith("aggregate sector row"));
   if (!dryRun && unsupported.length) {
-    throw new Error(`SYNC FAILED: ${unsupported.length} ACC sector(s) have unsupported source constructs; no database changes were written.`);
+    throw new Error(`SYNC FAILED: ${unsupported.length} supported ATC row(s) have unsupported source constructs; no database changes were written.`);
   }
+  console.log(`Import preview: sectors ${dataset.sectors.length}; transmitters ${dataset.transmitters.length}`);
+  if (dataset.transmitters.length === 0) console.log("no authoritative transmitter-location source found");
   await runAtcImport(dataset, { dryRun });
 }
 

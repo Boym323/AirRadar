@@ -32,15 +32,15 @@ function normalizeLongitude(value: number): number {
   return normalized === -180 && value > 0 ? 180 : normalized;
 }
 
-/** Convert compact aviation DMS such as 495454.10N or 0150731.76E. */
+/** Convert aviation DMS such as 495454.10N, 0150731.76E or 012 43 29,00 E. */
 export function aviationCoordinateToDecimal(value: string): number {
-  const normalized = value.trim().toUpperCase();
-  const match = /^(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])$/.exec(normalized);
+  const normalized = value.trim().toUpperCase().replace(/,/g, ".");
+  const match = /^(?:(\d{2,3})(\d{2})(\d{2}(?:\.\d+)?)([NSEW])|(\d{2,3})\s+(\d{2})\s+(\d{2}(?:\.\d+)?)\s*([NSEW]))$/.exec(normalized);
   if (!match) throw new Error(`Invalid aviation coordinate: ${value}`);
-  const degreesPart = Number(match[1]);
-  const minutes = Number(match[2]);
-  const seconds = Number(match[3]);
-  const hemisphere = match[4];
+  const degreesPart = Number(match[1] ?? match[5]);
+  const minutes = Number(match[2] ?? match[6]);
+  const seconds = Number(match[3] ?? match[7]);
+  const hemisphere = match[4] ?? match[8];
   const maximumDegrees = hemisphere === "N" || hemisphere === "S" ? 90 : 180;
   if (minutes >= 60 || seconds >= 60 || degreesPart > maximumDegrees || (degreesPart === maximumDegrees && (minutes !== 0 || seconds !== 0))) {
     throw new Error(`Aviation coordinate out of range: ${value}`);

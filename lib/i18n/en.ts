@@ -149,6 +149,7 @@ export const en = {
   atc: {
     defaultService: "ATC",
     estimate: "ATC estimate",
+    probableRelevant: "Probably relevant ATC",
     sector: "ATC sector",
     transmitter: "ATC transmitter",
     sectorService: "Sector / service",
@@ -163,6 +164,8 @@ export const en = {
     lastVerified: "Last verified",
     confidence: "Match",
     confidenceValues: { inside: "Inside sector", boundary: "On sector boundary" },
+    altitudeConfidence: "Altitude match confidence",
+    altitudeConfidenceValues: { matched: "Altitude matched", unknown: "Altitude cannot be compared reliably" },
     probableFrequency: "Probable frequency based on position and altitude. ADS-B does not report the aircraft’s tuned ATC frequency.",
     noMatchingSector: "No matching sector for the current position and altitude.",
     noProductionData: "Production ATC data is unavailable.",

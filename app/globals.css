@@ -143,6 +143,7 @@ button { cursor: pointer; }
 .detail-section { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 11px; }
 .detail-section h3 { margin: 0; color: var(--mint); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
 .detail-section .detail-grid { margin-top: 11px; }
+.detail-atc-probable { grid-column: 1 / -1; color: var(--mint); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
 .detail-disclaimer { grid-column: 1 / -1; color: var(--muted); font-size: 10px; line-height: 1.45; padding: 8px; border-left: 2px solid var(--amber); background: rgba(243, 185, 95, .06); }
 .watchlist-actions { margin-top: 12px; }
 .detail-item-label { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }

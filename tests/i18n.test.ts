@@ -25,4 +25,10 @@ describe("localization", () => {
     expect(formatNumber(1234.5, 1)).toBe("1 234,5");
     expect(formatDateTime("not-a-date")).toBe("—");
   });
+
+  it("labels ATC matches as probable and disclaims the tuned frequency", () => {
+    expect(getTranslations().atc.probableRelevant).toContain("Pravděpodobně relevantní");
+    expect(getTranslations().atc.probableFrequency).toContain("naladěnou");
+    expect(getTranslations("en").atc.probableFrequency).toContain("tuned ATC frequency");
+  });
 });
