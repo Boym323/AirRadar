@@ -58,6 +58,9 @@ Normal production releases use `deploy/release.sh`; bypass it only for debugging
 - `AircraftStateService` owns live state in RAM, polling, stale cleanup,
   derived distance/bearing, bounded trails, statistics, enrichment updates,
   ATC resolution, and history sampling.
+- Production live state and history sampling are single-process; multiple Node
+  workers would duplicate polling and history sampling unless the architecture
+  changes.
 - The browser consumes AirRadar APIs only. `/api/stream` publishes snapshots
   over SSE; it is intentionally not a WebSocket endpoint.
 - PostgreSQL stores sampled history, imported ATC/airport data and the optional

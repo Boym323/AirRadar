@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import { getPrisma } from "@/lib/server/db";
-import { closeStaleFlights, recordAircraftSnapshot, staleFlightEndTime } from "@/lib/server/history";
+import { closeStaleFlights, getAircraftHistory, recordAircraftSnapshot, staleFlightEndTime } from "@/lib/server/history";
 
 vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn() }));
 
@@ -67,6 +67,30 @@ describe("historical flight maintenance", () => {
     const now = new Date("2026-01-01T12:02:01Z");
     expect(staleFlightEndTime(lastSeenAt, now, 120_000)).toEqual(lastSeenAt);
     expect(staleFlightEndTime(lastSeenAt, new Date("2026-01-01T12:02:00Z"), 120_000)).toBeNull();
+  });
+
+  it("returns observation metadata from each RAM history trail point", async () => {
+    const aircraft = normalizeAircraft(
+      { hex: "ABC123", flight: "TEST123", lat: 50, lon: 14, alt_baro: 18_000, gs: 350, track: 270 },
+      { lat: 50, lon: 14, name: "Test" },
+      new Date("2026-01-01T12:00:06Z"),
+    );
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+    const fallback = {
+      ...aircraft,
+      trail: [
+        { lat: 50, lon: 14, recordedAt: "2026-01-01T12:00:00Z", altitude: 8_000, groundSpeed: 250, track: 90 },
+        { lat: 50, lon: 14.01, recordedAt: "2026-01-01T12:00:03Z", altitude: 12_000, groundSpeed: 300, track: 180 },
+        { lat: 50, lon: 14.02, recordedAt: "2026-01-01T12:00:06Z", altitude: 18_000, groundSpeed: 350, track: 270 },
+      ],
+    };
+
+    const history = await getAircraftHistory("ABC123", fallback);
+
+    expect(history.source).toBe("memory");
+    expect(history.positions.map((position) => position.altitude)).toEqual([8_000, 12_000, 18_000]);
+    expect(history.positions.map((position) => position.groundSpeed)).toEqual([250, 300, 350]);
+    expect(history.positions.map((position) => position.track)).toEqual([90, 180, 270]);
   });
 
   it("closes open stale flights without using the cleanup time as endTime", async () => {

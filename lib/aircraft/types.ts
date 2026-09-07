@@ -104,6 +104,10 @@ export interface TrailPoint {
   lat: number;
   lon: number;
   recordedAt: string;
+  /** Observation values captured at the same time as this trail position. */
+  altitude: number | null;
+  groundSpeed: number | null;
+  track: number | null;
 }
 
 export interface ProviderSnapshot {

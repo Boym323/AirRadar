@@ -7,10 +7,17 @@ import { EnrichmentService } from "@/lib/server/enrichment-cache";
 import { AtcSectorService, EmptyAtcSectorProvider } from "@/lib/server/atc-sector-service";
 import type { AircraftProvider } from "@/lib/server/provider";
 import type { AtcSector, AtcSectorMatch } from "@/lib/atc/types";
+import { recordAircraftSnapshot } from "@/lib/server/history";
+
+vi.mock("@/lib/server/history", () => ({
+  recordAircraftSnapshot: vi.fn().mockResolvedValue(undefined),
+}));
 
 const services: AircraftStateService[] = [];
 
 afterEach(async () => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
   await Promise.all(services.splice(0).map((service) => service.stop()));
 });
 
@@ -45,6 +52,100 @@ describe("aircraft state service", () => {
     expect(compact.aircraft[0].trail).toBeUndefined();
     expect(full.aircraft[0].trail).toHaveLength(1);
     expect(service.getAircraft(full.aircraft[0].icaoHex)?.trail).toHaveLength(1);
+  });
+
+  it("keeps the history sample throttle across a short disappearance", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("HISTORY_SAMPLE_INTERVAL_MS", "20000");
+    const base = new Date("2026-09-07T12:00:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      applySnapshot: (snapshot: ProviderSnapshot) => void;
+      persistHistory: (snapshot: ProviderSnapshot) => Promise<void>;
+    };
+    const snapshot = (aircraft: Aircraft[], at: Date): ProviderSnapshot => ({
+      aircraft,
+      receiver,
+      fetchedAt: at.toISOString(),
+      provider: "test",
+    });
+    const makeAircraft = (at: Date, lon = 14): Aircraft => {
+      const aircraft = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon }, receiver, at);
+      if (!aircraft) throw new Error("test aircraft could not be normalized");
+      return aircraft;
+    };
+    const historyWrites = () => vi.mocked(recordAircraftSnapshot).mock.calls.filter(([aircraft]) => aircraft.length > 0);
+
+    vi.mocked(recordAircraftSnapshot).mockClear();
+    const firstAt = new Date(base);
+    const first = makeAircraft(firstAt);
+    const firstSnapshot = snapshot([first], firstAt);
+    internal.applySnapshot(firstSnapshot);
+    await internal.persistHistory(firstSnapshot);
+    expect(historyWrites()).toHaveLength(1);
+
+    const disappearedAt = new Date(base.getTime() + 3_000);
+    vi.setSystemTime(disappearedAt);
+    const disappeared = snapshot([], disappearedAt);
+    internal.applySnapshot(disappeared);
+    await internal.persistHistory(disappeared);
+
+    const reappearedAt = new Date(base.getTime() + 6_000);
+    vi.setSystemTime(reappearedAt);
+    const reappeared = snapshot([makeAircraft(reappearedAt, 14.01)], reappearedAt);
+    internal.applySnapshot(reappeared);
+    await internal.persistHistory(reappeared);
+    expect(historyWrites()).toHaveLength(1);
+
+    const laterAt = new Date(base.getTime() + 21_000);
+    vi.setSystemTime(laterAt);
+    const later = snapshot([makeAircraft(laterAt, 14.02)], laterAt);
+    internal.applySnapshot(later);
+    await internal.persistHistory(later);
+    expect(historyWrites()).toHaveLength(2);
+  });
+
+  it("stores observation metadata in each RAM trail point", () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const applySnapshot = (aircraft: Aircraft): void => {
+      (service as unknown as { applySnapshot: (snapshot: ProviderSnapshot) => void }).applySnapshot({
+        aircraft: [aircraft],
+        receiver,
+        fetchedAt: aircraft.lastSeen,
+        provider: "test",
+      });
+    };
+    const observations = [
+      { at: "2026-09-07T12:00:00.000Z", lon: 14, altitude: 8_000, groundSpeed: 250, track: 90 },
+      { at: "2026-09-07T12:00:03.000Z", lon: 14.01, altitude: 12_000, groundSpeed: 300, track: 180 },
+      { at: "2026-09-07T12:00:06.000Z", lon: 14.02, altitude: 18_000, groundSpeed: 350, track: 270 },
+    ];
+    for (const observation of observations) {
+      const aircraft = normalizeAircraft({
+        hex: "ABC123",
+        flight: "TEST123",
+        lat: 50,
+        lon: observation.lon,
+        alt_baro: observation.altitude,
+        gs: observation.groundSpeed,
+        track: observation.track,
+      }, receiver, new Date(observation.at));
+      if (!aircraft) throw new Error("test aircraft could not be normalized");
+      applySnapshot(aircraft);
+    }
+
+    expect(service.getAircraft("ABC123")?.trail.map((point) => ({
+      altitude: point.altitude,
+      groundSpeed: point.groundSpeed,
+      track: point.track,
+    }))).toEqual([
+      { altitude: 8_000, groundSpeed: 250, track: 90 },
+      { altitude: 12_000, groundSpeed: 300, track: 180 },
+      { altitude: 18_000, groundSpeed: 350, track: 270 },
+    ]);
   });
 
   it("keeps hex-bound metadata when the same aircraft changes callsign", async () => {

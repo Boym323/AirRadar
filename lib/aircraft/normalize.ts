@@ -90,6 +90,8 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
   const baroAltitude = numeric(raw.alt_baro);
   const geomAltitude = numeric(raw.alt_geom);
   const altitude = baroAltitude ?? geomAltitude;
+  const groundSpeed = numeric(raw.gs);
+  const track = numeric(raw.track);
   const distanceKm = lat !== null && lon !== null ? haversineDistanceKm(receiver.lat, receiver.lon, lat, lon) : null;
   const bearing = lat !== null && lon !== null ? initialBearing(receiver.lat, receiver.lon, lat, lon) : null;
   const seenSecondsValue = numeric(raw.seen);
@@ -109,8 +111,8 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
     altitude,
     baroAltitude,
     geomAltitude,
-    groundSpeed: numeric(raw.gs),
-    track: numeric(raw.track),
+    groundSpeed,
+    track,
     verticalRate: numeric(raw.baro_rate) ?? numeric(raw.geom_rate),
     baroRate: numeric(raw.baro_rate),
     geomRate: numeric(raw.geom_rate),
@@ -127,7 +129,7 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
     onGround: isOnGround(raw),
     distanceKm,
     bearing,
-    trail: lat !== null && lon !== null ? [{ lat, lon, recordedAt: now.toISOString() }] : [],
+    trail: lat !== null && lon !== null ? [{ lat, lon, recordedAt: now.toISOString(), altitude, groundSpeed, track }] : [],
   };
 }
 

@@ -230,7 +230,6 @@ export class AircraftStateService {
   private removeAircraft(hex: string): void {
     this.aircraft.delete(hex);
     this.atcResolutionKeys.delete(hex);
-    this.lastHistorySample.delete(hex);
   }
 
   private updateTrail(previous: Aircraft | undefined, incoming: Aircraft): TrailPoint[] {
@@ -239,7 +238,14 @@ export class AircraftStateService {
     const canAppend = incoming.lat !== null && incoming.lon !== null &&
       (!last || Math.abs(last.lat - incoming.lat) > 0.00001 || Math.abs(last.lon - incoming.lon) > 0.00001);
     const next = canAppend && incoming.lat !== null && incoming.lon !== null
-      ? [...previousTrail, { lat: incoming.lat, lon: incoming.lon, recordedAt: incoming.lastSeen }]
+      ? [...previousTrail, {
+          lat: incoming.lat,
+          lon: incoming.lon,
+          recordedAt: incoming.lastSeen,
+          altitude: incoming.altitude,
+          groundSpeed: incoming.groundSpeed,
+          track: incoming.track,
+        }]
       : previousTrail;
     return next.slice(-80);
   }

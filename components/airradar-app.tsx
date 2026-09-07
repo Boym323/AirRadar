@@ -370,7 +370,14 @@ export function AirRadarApp() {
             const trail = liveTrailsRef.current.get(aircraft.icaoHex) ?? [];
             const previous = trail[trail.length - 1];
             if (!previous || Math.abs(previous.lat - aircraft.lat) > 0.00001 || Math.abs(previous.lon - aircraft.lon) > 0.00001) {
-              trail.push({ lat: aircraft.lat, lon: aircraft.lon, recordedAt: aircraft.lastSeen });
+              trail.push({
+                lat: aircraft.lat,
+                lon: aircraft.lon,
+                recordedAt: aircraft.lastSeen,
+                altitude: aircraft.altitude,
+                groundSpeed: aircraft.groundSpeed,
+                track: aircraft.track,
+              });
               liveTrailsRef.current.set(aircraft.icaoHex, trail.slice(-80));
             }
           }

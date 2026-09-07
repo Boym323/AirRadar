@@ -52,6 +52,9 @@ export class MockReadsbProvider implements AircraftProvider {
     const distanceKm = haversineDistanceKm(this.receiver.lat, this.receiver.lon, lat, lon);
     const callsign = flight.callsign;
     const recordedAt = new Date(now).toISOString();
+    const altitude = Math.round(flight.altitude + Math.sin(elapsedSeconds / 25 + flight.phase) * 120);
+    const groundSpeed = Math.round(flight.speedKts + Math.sin(elapsedSeconds / 12 + flight.phase) * 4);
+    const track = (initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) + 90) % 360;
     return {
       icaoHex: flight.hex,
       callsign,
@@ -60,11 +63,11 @@ export class MockReadsbProvider implements AircraftProvider {
       aircraftDescription: flight.description,
       lat,
       lon,
-      altitude: Math.round(flight.altitude + Math.sin(elapsedSeconds / 25 + flight.phase) * 120),
-      baroAltitude: Math.round(flight.altitude + Math.sin(elapsedSeconds / 25 + flight.phase) * 120),
-      geomAltitude: Math.round(flight.altitude + Math.sin(elapsedSeconds / 25 + flight.phase) * 120),
-      groundSpeed: Math.round(flight.speedKts + Math.sin(elapsedSeconds / 12 + flight.phase) * 4),
-      track: (initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) + 90) % 360,
+      altitude,
+      baroAltitude: altitude,
+      geomAltitude: altitude,
+      groundSpeed,
+      track,
       verticalRate: index === 2 ? Math.round(600 + Math.sin(elapsedSeconds / 9) * 220) : flight.verticalRate,
       baroRate: index === 2 ? Math.round(600 + Math.sin(elapsedSeconds / 9) * 220) : flight.verticalRate,
       geomRate: index === 2 ? Math.round(600 + Math.sin(elapsedSeconds / 9) * 220) : flight.verticalRate,
@@ -81,7 +84,7 @@ export class MockReadsbProvider implements AircraftProvider {
       onGround: false,
       distanceKm,
       bearing,
-      trail: [{ lat, lon, recordedAt }],
+      trail: [{ lat, lon, recordedAt, altitude, groundSpeed, track }],
       enrichment: flight.callsign === "UAE139" ? {
         metadata: {
           registration: flight.registration,

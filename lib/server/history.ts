@@ -325,9 +325,9 @@ export async function getAircraftHistory(hex: string, fallback: Aircraft | null)
       recordedAt: position.recordedAt,
       lat: position.lat,
       lon: position.lon,
-      altitude: fallback.altitude,
-      groundSpeed: fallback.groundSpeed,
-      track: fallback.track,
+      altitude: position.altitude,
+      groundSpeed: position.groundSpeed,
+      track: position.track,
     })) ?? [],
   };
 }
