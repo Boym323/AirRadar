@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, StyleSpecification } from "maplibre-gl";
@@ -192,8 +193,42 @@ const AIRCRAFT_GLYPH_PATHS: Record<AircraftMarkerKind, string> = {
   ground: "M10 11h12l3 8v5H7v-5l3-8Zm1 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z",
 };
 
+// These are the filenames shipped by AircraftShapesSVG. Keeping the allowlist
+// here prevents a missing or malformed provider value from creating a 404 (or
+// an arbitrary URL) in every aircraft marker.
+const AIRCRAFT_ICON_CODES = new Set([
+  "A10", "A124", "A19N", "A20N", "A21N", "A225", "A306", "A310", "A318", "A320", "A321", "A332", "A333", "A337", "A338", "A339", "A342", "A343", "A345", "A346", "A359", "A35K", "A388", "A3ST", "A4", "A400", "AJET", "AN12", "AN26", "AS21", "AS32", "AS65", "AT45", "AT75", "ATP", "B190", "B29", "B350", "B38M", "B39M", "B52", "B703", "B712", "B722", "B733", "B734", "B735", "B737", "B738", "B739", "B742", "B744", "B748", "B74S", "B752", "B753", "B762", "B763", "B764", "B772", "B773", "B779", "B77L", "B77W", "B788", "B789", "B78X", "BALL", "BCS1", "BCS3", "BLCF", "BN2P", "C130", "C160", "C17", "C172", "C2", "C208", "C25B", "C295", "C5M", "C750", "CL2T", "CN35", "CRJ2", "CRJ7", "CRJ9", "CRJX", "D228", "D328", "DA42", "DC10", "DC3", "DC87", "DH8C", "DH8D", "DO27", "DO28", "E170", "E195", "E300", "E35L", "E390", "E3CF", "E3TF", "E737", "E8", "EC20", "EC35", "EC45", "EUFI", "F15", "F16", "F18H", "F18S", "F22", "F35", "F406", "F5", "F50", "FA7X", "GAZL", "GL5T", "GLF6", "GYRO", "H47", "H60", "H64", "HAWK", "HUNT", "IL62", "IL76", "J328", "K35E", "KC2", "KC46", "L159", "LJ35", "LYNX", "M326", "MD11", "MI24", "MIRA", "MRF1", "NH90", "P1", "P180", "P28A", "P3", "P8", "PA46", "PC12", "PC6T", "PC9", "Q4", "R135", "R44", "RFAL", "RJ85", "S61", "SB39", "SC7", "SF25", "SF34", "SGUP", "SR22", "ST75", "SU95", "T204", "T38", "TIGR", "U2", "VF35",
+]);
+
+function aircraftTypeCode(aircraft: Pick<AircraftView, "aircraftType" | "enrichment">): string {
+  return (aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType ?? "").toUpperCase().replaceAll("-", "");
+}
+
+function aircraftIconAsset(aircraft: Pick<AircraftView, "aircraftType" | "enrichment">): string | null {
+  const type = aircraftTypeCode(aircraft);
+  // A few common provider codes have no standalone drawing in the upstream
+  // catalogue; use the closest airframe silhouette instead of falling back to
+  // the generic marker.
+  const aliases: Record<string, string> = {
+    A319: "A320",
+    C25A: "C25B",
+    C30J: "C130",
+    C340: "DA42",
+    C56X: "C25B",
+    C68A: "C208",
+    E190: "E195",
+    E295: "E195",
+    GALX: "GLF6",
+    GLF5: "GLF6",
+    BE40: "C25B",
+    M20P: "PA46",
+  };
+  const code = aliases[type] ?? type;
+  return AIRCRAFT_ICON_CODES.has(code) ? `/aircraft-icons/${code}.svg` : null;
+}
+
 function aircraftMarkerKind(aircraft: Pick<AircraftView, "category" | "aircraftType" | "enrichment">): AircraftMarkerKind {
-  const type = (aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType ?? "").toUpperCase().replaceAll("-", "");
+  const type = aircraftTypeCode(aircraft);
   if (["A318", "A319", "A320", "A321", "A19N", "A20N", "A21N"].includes(type)) return "a320";
   if (/^(BCS1|BCS3|A221|A223)/.test(type)) return "a220";
   if (/^(A306|A310|A342|A343|A345|A346)/.test(type)) return "a330";
@@ -226,7 +261,17 @@ function AircraftGlyph({ kind = "airplane" }: { kind?: AircraftMarkerKind }) {
   return <svg className={`aircraft-glyph aircraft-glyph-${kind}`} viewBox="0 0 32 32" aria-hidden="true"><path d={AIRCRAFT_GLYPH_PATHS[kind]} /></svg>;
 }
 
-function aircraftGlyphMarkup(kind: AircraftMarkerKind): string {
+function AircraftIcon({ aircraft }: { aircraft: AircraftView }) {
+  const asset = aircraftIconAsset(aircraft);
+  return asset
+    ? <Image className="aircraft-glyph aircraft-glyph-asset" src={asset} alt="" width={21} height={21} draggable={false} unoptimized />
+    : <AircraftGlyph kind={aircraftMarkerKind(aircraft)} />;
+}
+
+function aircraftGlyphMarkup(aircraft: AircraftView): string {
+  const asset = aircraftIconAsset(aircraft);
+  if (asset) return `<img class="aircraft-glyph aircraft-glyph-asset" src="${asset}" alt="" draggable="false" />`;
+  const kind = aircraftMarkerKind(aircraft);
   return `<svg class="aircraft-glyph aircraft-glyph-${kind}" viewBox="0 0 32 32" aria-hidden="true"><path d="${AIRCRAFT_GLYPH_PATHS[kind]}" /></svg>`;
 }
 
@@ -525,7 +570,9 @@ export function AirRadarApp() {
         plane.className = "aircraft-plane";
         const markerKind = aircraftMarkerKind(aircraft);
         plane.dataset.kind = markerKind;
-        plane.innerHTML = aircraftGlyphMarkup(markerKind);
+        const iconAsset = aircraftIconAsset(aircraft);
+        plane.dataset.iconAsset = iconAsset ?? "fallback";
+        plane.innerHTML = aircraftGlyphMarkup(aircraft);
         root.appendChild(plane);
         root.addEventListener("click", () => selectAircraft(aircraft.icaoHex));
         root.addEventListener("keydown", (event) => {
@@ -549,9 +596,11 @@ export function AirRadarApp() {
       const plane = root.querySelector<HTMLElement>(".aircraft-plane");
       if (plane) {
         const markerKind = aircraftMarkerKind(aircraft);
-        if (plane.dataset.kind !== markerKind) {
+        const iconAsset = aircraftIconAsset(aircraft);
+        if (plane.dataset.kind !== markerKind || plane.dataset.iconAsset !== (iconAsset ?? "fallback")) {
           plane.dataset.kind = markerKind;
-          plane.innerHTML = aircraftGlyphMarkup(markerKind);
+          plane.dataset.iconAsset = iconAsset ?? "fallback";
+          plane.innerHTML = aircraftGlyphMarkup(aircraft);
         }
       }
       // readsb's track is clockwise from geographic north. Let MapLibre apply
@@ -764,7 +813,7 @@ export function AirRadarApp() {
               </div>
             ) : filteredAircraft.map((aircraft) => (
               <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""}`} aria-pressed={selectedHex === aircraft.icaoHex} onClick={() => selectAircraft(aircraft.icaoHex)}>
-                <span className="aircraft-row-icon"><AircraftGlyph kind={aircraftMarkerKind(aircraft)} /></span>
+                <span className="aircraft-row-icon"><AircraftIcon aircraft={aircraft} /></span>
                 <span className="aircraft-row-main">
                   <span className="aircraft-row-name">{labelForAircraft(aircraft)} {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge">{aircraft.emergency}</span>} <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}</span></span>
                   <span className="aircraft-row-meta"><span>{aircraft.icaoHex}</span><span>{formatAltitude(aircraft.altitude)}</span><span>{formatSpeed(aircraft.groundSpeed)}</span><span>{formatTrack(aircraft.track)}</span></span>
