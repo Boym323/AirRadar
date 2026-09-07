@@ -21,6 +21,7 @@ export const en = {
     connecting: "Connecting",
   },
   radar: {
+    panelOptions: "Filters, watchlist and statistics",
     receiverName: "AirRadar receiver",
     receiverPosition: "Receiver position",
     liveAirPicture: "Live air picture",

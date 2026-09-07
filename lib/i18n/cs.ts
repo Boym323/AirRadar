@@ -19,10 +19,11 @@ export const cs = {
     connecting: "Připojování",
   },
   radar: {
+    panelOptions: "Filtry, sledované a statistiky",
     receiverName: "Přijímač AirRadar",
     receiverPosition: "Pozice přijímače",
     liveAirPicture: "Živý přehled provozu",
-    aircraftInRange: "letadla v dosahu",
+    aircraftInRange: "v dosahu",
     aircraftNearby: "Letadla v okolí",
     visibleAircraft: (visible: string, total: string) => `Zobrazeno ${visible} z ${total}`,
     expandAircraftPanel: "Rozbalit panel s letadly",
