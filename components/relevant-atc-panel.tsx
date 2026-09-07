@@ -6,16 +6,19 @@ import type { AtcFrequencySummary } from "@/lib/atc/types";
 import { displayedRelevantAtcFrequencies, MAX_DISPLAYED_RELEVANT_ATC_FREQUENCIES, relevantAtcFrequencyKey } from "@/lib/atc/relevant-frequencies";
 
 interface RelevantAtcPanelProps {
-  summaries: ReadonlyArray<AtcFrequencySummary>;
+  summaries?: ReadonlyArray<AtcFrequencySummary>;
   onOpen?: () => void;
 }
 
 export function RelevantAtcPanel({ summaries, onOpen }: RelevantAtcPanelProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const first = summaries[0];
-  const selected = summaries.find((summary) => relevantAtcFrequencyKey(summary) === selectedKey) ?? null;
-  const displayed = displayedRelevantAtcFrequencies(summaries, showAll);
+  // Keep the client compatible with a rolling deployment where an older
+  // server can still emit a snapshot without this optional field.
+  const availableSummaries = summaries ?? [];
+  const first = availableSummaries[0];
+  const selected = availableSummaries.find((summary) => relevantAtcFrequencyKey(summary) === selectedKey) ?? null;
+  const displayed = displayedRelevantAtcFrequencies(availableSummaries, showAll);
 
   function select(summary: AtcFrequencySummary): void {
     setSelectedKey(relevantAtcFrequencyKey(summary));
@@ -28,7 +31,7 @@ export function RelevantAtcPanel({ summaries, onOpen }: RelevantAtcPanelProps) {
         <div className="atc-panel-kicker">{t.atc.relevantTitle}</div>
         {first ? <button type="button" className="atc-mobile-entry" onClick={() => select(first)}>
           <strong>{formatAtcFrequency(first.frequencyMhz)} · {first.callsign ?? formatAtcService(first.service)}</strong>
-          {summaries.length > 1 && <span>{t.atc.relevantMoreFrequencies(formatNumber(summaries.length - 1))}</span>}
+          {availableSummaries.length > 1 && <span>{t.atc.relevantMoreFrequencies(formatNumber(availableSummaries.length - 1))}</span>}
         </button> : <div className="atc-panel-empty">{t.atc.relevantEmpty}</div>}
       </div>
 
@@ -42,7 +45,7 @@ export function RelevantAtcPanel({ summaries, onOpen }: RelevantAtcPanelProps) {
         </div>
         <p className="atc-panel-disclaimer">{t.atc.relevantDisclaimer}</p>
 
-        {summaries.length === 0 ? <div className="atc-panel-empty">{t.atc.relevantEmpty}</div> : <>
+        {availableSummaries.length === 0 ? <div className="atc-panel-empty">{t.atc.relevantEmpty}</div> : <>
           <div className="atc-frequency-list">
             {displayed.map((summary) => {
               const key = relevantAtcFrequencyKey(summary);
@@ -64,7 +67,7 @@ export function RelevantAtcPanel({ summaries, onOpen }: RelevantAtcPanelProps) {
               </button>;
             })}
           </div>
-          {summaries.length > MAX_DISPLAYED_RELEVANT_ATC_FREQUENCIES && <button type="button" className="atc-show-all" onClick={() => setShowAll((value) => !value)}>
+          {availableSummaries.length > MAX_DISPLAYED_RELEVANT_ATC_FREQUENCIES && <button type="button" className="atc-show-all" onClick={() => setShowAll((value) => !value)}>
             {showAll ? t.atc.relevantHideAll : t.atc.relevantShowAll}
           </button>}
         </>}

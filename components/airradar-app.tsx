@@ -45,7 +45,7 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
   relevantAtcFrequencies: [],
   receiver: EMPTY_RECEIVER,
   fetchedAt: new Date(0).toISOString(),
-  provider: "mock",
+  provider: "connecting",
   sourceOnline: false,
   lastSourceUpdate: null,
   sourceError: null,
@@ -738,7 +738,8 @@ export function AirRadarApp() {
   }, [airborneOnly, airlineFilter, altitudeFilter, countryFilter, distanceFilter, emergencyOnly, isWatchlisted, search, snapshot.aircraft, sortBy, typeFilter, watchlistOnly]);
 
   const isDemo = snapshot.provider === "mock";
-  const statusOffline = !isDemo && !snapshot.sourceOnline;
+  const hasSourceSnapshot = snapshot.lastSourceUpdate !== null;
+  const statusOffline = !isDemo && hasSourceSnapshot && !snapshot.sourceOnline;
 
   return (
     <main className="radar-shell">
