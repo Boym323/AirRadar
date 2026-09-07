@@ -31,6 +31,7 @@ import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, FlightRoute, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
+import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
 const EMPTY_RECEIVER: PublicReceiverPosition = { lat: null, lon: null, name: t.radar.receiverName };
@@ -41,6 +42,7 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
 };
 const EMPTY_SNAPSHOT: PublicStateSnapshot = {
   aircraft: [],
+  relevantAtcFrequencies: [],
   receiver: EMPTY_RECEIVER,
   fetchedAt: new Date(0).toISOString(),
   provider: "mock",
@@ -790,6 +792,7 @@ export function AirRadarApp() {
                 {mobileCompact ? "↑" : "↓"}
               </button>
             </div>
+          <RelevantAtcPanel summaries={snapshot.relevantAtcFrequencies} onOpen={() => setMobileCompact(false)} />
           <div className="sidebar-browse">
           <div className="sidebar-header">
             <div className="search-wrap">

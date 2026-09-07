@@ -12,6 +12,7 @@ export interface AtcSector {
   name: string;
   atcCallsign: string | null;
   service?: string | null;
+  airspaceType?: string | null;
   polygons: SectorPolygon[];
   lowerAltitudeFt: number | null;
   upperAltitudeFt: number | null;
@@ -30,6 +31,7 @@ export interface AtcAssignment {
   sectorId: string;
   name: string;
   service: string | null;
+  airspaceType?: string | null;
   callsign: string | null;
   primaryFrequencyMhz: number | null;
   alternateFrequenciesMhz: number[];
@@ -90,8 +92,21 @@ export interface AtcFrequencySummary {
   frequencyMhz: number;
   service: string | null;
   callsign: string | null;
+  airspaceType: string | null;
   sector: string;
   aircraftCount: number;
+  confidence: AtcFrequencyConfidenceSummary;
+  source: string | null;
+  aircraftLabels: string[];
+  additionalAircraftCount: number;
+}
+
+export interface AtcFrequencyConfidenceSummary {
+  level: "high" | "medium" | "low";
+  positionInside: number;
+  positionBoundary: number;
+  altitudeMatched: number;
+  altitudeUnknown: number;
 }
 
 export interface AtcActivity {

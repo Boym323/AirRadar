@@ -1,4 +1,4 @@
-import type { AtcAssignment } from "@/lib/atc/types";
+import type { AtcAssignment, AtcFrequencySummary } from "@/lib/atc/types";
 import type { Airport } from "@/lib/airports/types";
 
 export type AircraftSource = "ADS-B" | "MLAT" | "TIS-B" | "Mode-S" | "UNKNOWN";
@@ -120,6 +120,7 @@ export interface ProviderSnapshot {
 
 export interface StateSnapshot {
   aircraft: AircraftView[];
+  relevantAtcFrequencies: AtcFrequencySummary[];
   receiver: ReceiverPosition;
   fetchedAt: string;
   provider: string;

@@ -12,7 +12,7 @@ import { recordAircraftSnapshot } from "@/lib/server/history";
 import { createAircraftProvider, createEnrichmentService } from "@/lib/server/providers";
 import type { EnrichmentService } from "@/lib/server/enrichment-cache";
 import type { AircraftProvider } from "@/lib/server/provider";
-import { assignmentFromMatch, AtcSectorService } from "@/lib/server/atc-sector-service";
+import { assignmentFromMatch, AtcSectorService, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
 import { createAtcSectorProvider } from "@/lib/server/providers";
 
 type Listener = (snapshot: StateSnapshot) => void;
@@ -136,6 +136,11 @@ export class AircraftStateService {
       });
     return {
       aircraft,
+      relevantAtcFrequencies: summarizeRelevantAtcFrequencies(aircraft.map((item) => ({
+        aircraftId: item.icaoHex,
+        label: item.callsign ?? item.registration ?? item.icaoHex,
+        assignment: item.atc,
+      }))),
       receiver: this.currentReceiver,
       fetchedAt: this.lastSourceUpdate ?? new Date().toISOString(),
       provider: this.provider.name,

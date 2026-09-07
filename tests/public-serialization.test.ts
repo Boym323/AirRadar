@@ -13,6 +13,18 @@ function snapshot(): StateSnapshot {
       lastSeen: "2026-09-06T12:00:00.000Z", source: "ADS-B", sourceType: "adsb_icao", onGround: false,
       distanceKm: 15.25, bearing: 123.4, trail: [],
     }],
+    relevantAtcFrequencies: [{
+      frequencyMhz: 127.35,
+      service: "ACC",
+      callsign: "PRAHA RADAR",
+      airspaceType: null,
+      sector: "Praha",
+      aircraftCount: 1,
+      confidence: { level: "high", positionInside: 1, positionBoundary: 0, altitudeMatched: 1, altitudeUnknown: 0 },
+      source: "AIP ČR",
+      aircraftLabels: ["TEST123"],
+      additionalAircraftCount: 0,
+    }],
     receiver: { lat: 50.123456, lon: 14.654321, name: "Test receiver" },
     fetchedAt: "2026-09-06T12:00:00.000Z",
     provider: "readsb",
@@ -47,6 +59,13 @@ describe("public snapshot serialization", () => {
 
   it("uses the same safe transformation shape for repeated API/SSE serialization", () => {
     expect(toPublicStateSnapshot(snapshot(), "hidden")).toEqual(toPublicStateSnapshot(snapshot(), "hidden"));
+  });
+
+  it("publishes only the public relevant-frequency summary, not internal sector data", () => {
+    const value = toPublicStateSnapshot(snapshot(), "hidden");
+    expect(value.relevantAtcFrequencies[0]).toMatchObject({ frequencyMhz: 127.35, callsign: "PRAHA RADAR", aircraftCount: 1 });
+    expect(JSON.stringify(value.relevantAtcFrequencies)).not.toContain("sectorId");
+    expect(JSON.stringify(value.relevantAtcFrequencies)).not.toContain("polygon");
   });
 });
 

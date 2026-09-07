@@ -40,6 +40,7 @@ export function toPublicStateSnapshot(
 ): PublicStateSnapshot {
   return {
     aircraft: snapshot.aircraft,
+    relevantAtcFrequencies: snapshot.relevantAtcFrequencies,
     receiver: toPublicReceiverPosition(snapshot.receiver, mode),
     fetchedAt: snapshot.fetchedAt,
     provider: snapshot.provider,

@@ -29,6 +29,8 @@ describe("localization", () => {
   it("labels ATC matches as probable and disclaims the tuned frequency", () => {
     expect(getTranslations().atc.probableRelevant).toContain("Pravděpodobně relevantní");
     expect(getTranslations().atc.probableFrequency).toContain("naladěnou");
+    expect(getTranslations().atc.relevantDisclaimer).toContain("ADS-B nehlásí");
     expect(getTranslations("en").atc.probableFrequency).toContain("tuned ATC frequency");
+    expect(getTranslations("en").atc.relevantDisclaimer).toContain("actually tuned");
   });
 });
