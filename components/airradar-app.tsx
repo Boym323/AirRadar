@@ -32,6 +32,7 @@ import type { AircraftView, FlightRoute, PublicReceiverPosition, PublicStateSnap
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
+import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
 const EMPTY_RECEIVER: PublicReceiverPosition = { lat: null, lon: null, name: t.radar.receiverName };
@@ -40,6 +41,10 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
   transmitters: [],
   metadata: { status: "unavailable", source: null, sourceReference: null, effectiveDate: null, lastVerifiedAt: null, sectorCount: 0, transmitterCount: 0 },
 };
+
+interface PublicAlertStatus {
+  enabled: boolean;
+}
 const EMPTY_SNAPSHOT: PublicStateSnapshot = {
   aircraft: [],
   relevantAtcFrequencies: [],
@@ -308,6 +313,7 @@ export function AirRadarApp() {
   const [airports, setAirports] = useState<Airport[]>([]);
   const [atcData, setAtcData] = useState<AtcDataResponse>(EMPTY_ATC_DATA);
   const [streamConnected, setStreamConnected] = useState(false);
+  const [serverAlertsEnabled, setServerAlertsEnabled] = useState<boolean | null>(null);
   const [mobileCompact, setMobileCompact] = useState(true);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -338,6 +344,10 @@ export function AirRadarApp() {
       .then((response) => response.ok ? response.json() as Promise<Airport[]> : null)
       .then((data) => { if (data) setAirports(data); })
       .catch(() => undefined);
+    void fetch("/api/health", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() as Promise<{ alerts?: PublicAlertStatus }> : null)
+      .then((data) => { if (data?.alerts) setServerAlertsEnabled(data.alerts.enabled); })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -347,12 +357,8 @@ export function AirRadarApp() {
   const isWatchlisted = useCallback((aircraft: AircraftView) => watchlist.some((rule) => {
     const value = rule.value.trim().toUpperCase();
     if (!value) return false;
-    if (rule.kind === "icao") return aircraft.icaoHex === value;
-    if (rule.kind === "registration") return (aircraft.registration ?? aircraft.enrichment?.metadata?.registration)?.toUpperCase() === value;
-    if (rule.kind === "callsign") return aircraft.callsign?.toUpperCase() === value;
-    if (rule.kind === "pattern") return Boolean(aircraft.callsign && new RegExp(`^${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replaceAll("\\*", ".*")}$`, "i").test(aircraft.callsign));
-    if (rule.kind === "type") return (aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType)?.toUpperCase() === value;
-    return airlineForAircraft(aircraft)?.toUpperCase() === value;
+    const type = normalizeAircraftRuleType(rule.kind);
+    return type ? matchesAircraftRule(aircraft, { type, value }) : false;
   }), [watchlist]);
 
   function addWatchlistRule(event: React.FormEvent<HTMLFormElement>) {
@@ -760,6 +766,7 @@ export function AirRadarApp() {
             <span className="status-dot" />
             {statusOffline ? t.status.receiverOffline : isDemo ? t.status.mockReceiver : streamConnected ? t.status.liveReceiver : t.status.connecting}
           </span>
+          {serverAlertsEnabled !== null && <span className="alert-status">{serverAlertsEnabled ? t.status.serverAlertsActive : t.status.serverAlertsDisabled}</span>}
         </div>
       </header>
 

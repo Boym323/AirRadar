@@ -19,6 +19,8 @@ export const en = {
     mockReceiver: "Mock receiver",
     liveReceiver: "Live receiver",
     connecting: "Connecting",
+    serverAlertsActive: "Server alerts active",
+    serverAlertsDisabled: "Server alerts disabled",
   },
   radar: {
     panelOptions: "Filters, watchlist and statistics",

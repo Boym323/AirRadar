@@ -131,6 +131,7 @@ button { cursor: pointer; }
 .stats-breakdowns > div { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px; margin-top: 7px; }
 .stats-breakdowns strong { color: var(--text); grid-column: 1 / -1; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
 .watchlist-box { margin-top: 10px; color: var(--muted); font-size: 11px; }
+.alert-status { color: var(--muted); font-size: 10px; }
 .watchlist-box summary { cursor: pointer; color: var(--text); }
 .watchlist-box summary span { color: var(--muted); margin-left: 4px; }
 .watchlist-form { display: grid; grid-template-columns: auto 1fr auto; gap: 5px; margin-top: 8px; }

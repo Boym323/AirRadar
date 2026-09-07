@@ -27,7 +27,7 @@ export async function GET(): Promise<Response> {
     }
   }
   const atc = (await getAtcData()).metadata;
-  return Response.json(toPublicHealthResponse(snapshot, database, undefined, atc), {
+  return Response.json(toPublicHealthResponse(snapshot, database, undefined, atc, service.getAlertStatus()), {
     headers: { "Cache-Control": "no-store" },
   });
 }

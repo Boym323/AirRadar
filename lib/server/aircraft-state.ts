@@ -14,6 +14,8 @@ import type { EnrichmentService } from "@/lib/server/enrichment-cache";
 import type { AircraftProvider } from "@/lib/server/provider";
 import { assignmentFromMatch, AtcSectorService, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
 import { createAtcSectorProvider } from "@/lib/server/providers";
+import { AlertEngine } from "@/lib/server/alert-engine";
+import type { AlertStatus } from "@/lib/server/alert-engine";
 
 type Listener = (snapshot: StateSnapshot) => void;
 
@@ -89,6 +91,7 @@ export class AircraftStateService {
   private pendingHistorySnapshot: ProviderSnapshot | null = null;
   private readonly enrichment: EnrichmentService;
   private readonly atc: AtcSectorService;
+  private readonly alerts: AlertEngine;
   private readonly atcResolutionKeys = new Map<string, string>();
   private observationDate = dayKey(new Date(), getAppTimezone());
 
@@ -96,10 +99,12 @@ export class AircraftStateService {
     provider: AircraftProvider = createAircraftProvider(),
     enrichment: EnrichmentService = createEnrichmentService(),
     atc: AtcSectorService = new AtcSectorService(createAtcSectorProvider()),
+    alerts: AlertEngine = new AlertEngine(),
   ) {
     this.provider = provider;
     this.enrichment = enrichment;
     this.atc = atc;
+    this.alerts = alerts;
   }
 
   start(): void {
@@ -158,6 +163,10 @@ export class AircraftStateService {
     return this.provider.name;
   }
 
+  getAlertStatus(): AlertStatus {
+    return this.alerts.getStatus();
+  }
+
   getAircraft(icaoHex: string): Aircraft | null {
     return this.aircraft.get(icaoHex.toUpperCase()) ?? null;
   }
@@ -198,6 +207,7 @@ export class AircraftStateService {
 
   private applySnapshot(snapshot: ProviderSnapshot): void {
     this.currentReceiver = snapshot.receiver;
+    const previousAircraft = new Map(this.aircraft);
     const today = dayKey(new Date(), getAppTimezone());
     if (today !== this.observationDate) {
       this.observationDate = today;
@@ -243,6 +253,7 @@ export class AircraftStateService {
     }
     this.stats.aircraftTypes = [...typeCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
     this.stats.airlines = [...airlineCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+    this.alerts.observe(previousAircraft, this.aircraft);
   }
 
   private removeStaleAircraft(): void {
@@ -368,7 +379,9 @@ export class AircraftStateService {
       if (!current || current.callsign !== result.value.item.callsign || current.lastSeen !== result.value.item.lastSeen) continue;
       const enrichment = mergeEnrichment(current.enrichment, result.value.enrichment, true);
       if (!enrichment) continue;
-      this.aircraft.set(current.icaoHex, { ...current, enrichment });
+      const updated = { ...current, enrichment };
+      this.aircraft.set(current.icaoHex, updated);
+      this.alerts.observe(new Map([[current.icaoHex, current]]), [updated]);
       changed = true;
     }
     if (changed) {

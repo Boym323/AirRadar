@@ -66,6 +66,9 @@ Normal production releases use `deploy/release.sh`; bypass it only for debugging
 - PostgreSQL stores sampled history, imported ATC/airport data and the optional
   aircraft metadata catalog, not every ADS-B update. Live radar must remain
   useful without PostgreSQL.
+- Server alert rules are explicit startup configuration in `data/alerts.json`,
+  separate from the browser `localStorage` watchlist; alert evaluation reuses
+  the existing single-process snapshot flow and has no database table or auth.
 - Optional enrichment is server-side and isolated from the readsb polling loop.
 
 ## Sources of truth

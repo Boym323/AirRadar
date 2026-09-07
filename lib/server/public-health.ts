@@ -1,5 +1,6 @@
 import type { StateSnapshot } from "@/lib/aircraft/types";
 import type { AtcDatasetMetadata } from "@/lib/atc/types";
+import type { AlertStatus } from "@/lib/server/alert-engine";
 
 export interface HealthDatabaseStatus {
   status: "ok" | "offline" | "not_configured";
@@ -24,6 +25,7 @@ export interface PublicHealthResponse {
   aircraftCount: number;
   lastReadsbUpdate: string | null;
   atc: AtcDatasetMetadata;
+  alerts: AlertStatus;
   checkedAt: string;
 }
 
@@ -40,6 +42,7 @@ export function toPublicHealthResponse(
     sectorCount: 0,
     transmitterCount: 0,
   },
+  alerts: AlertStatus = { status: "disabled", enabled: false, notifier: "noop", ruleCount: 0 },
 ): PublicHealthResponse {
   const readsbStatus: "ok" | "offline" | "demo" = snapshot.provider === "mock"
     ? "demo"
@@ -72,6 +75,7 @@ export function toPublicHealthResponse(
     aircraftCount: snapshot.aircraft.length,
     lastReadsbUpdate: snapshot.lastReadsbUpdate,
     atc,
+    alerts,
     checkedAt,
   };
 }

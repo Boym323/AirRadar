@@ -74,6 +74,7 @@ Persistence boundaries are intentional:
 | `AircraftMetadataCache` and `AircraftMetadataSync` | PostgreSQL | Persistent catalog; refreshed at most once per day with conditional HTTP validation |
 | ADSBDB / FlightAware enrichment cache | Process memory with TTL and negative caching | Rebuilt after restart; live radar is independent |
 | Watchlist rules | Browser `localStorage` | Persists in that browser; not a shared database list |
+| Server alert rules | `data/alerts.json` | Loaded at process start; intentionally separate from browser watchlist |
 | Live statistics | Process memory, derived from current process observations | Rebuilt after restart; historical positions remain in PostgreSQL |
 | ATC data | Sample constants in demo; PostgreSQL `AtcSector`/`AtcTransmitter` in production | Sample is never used for a configured real receiver |
 
@@ -110,6 +111,22 @@ ADSBDB lookups are keyed by ICAO hex or callsign and cached for hours to a day; 
 The tar1090 metadata lookup is best-effort and uses a PostgreSQL catalog mirrored in RAM. The catalog checks `AIRCRAFT_METADATA_URL` once per day (with ETag validation) and keeps the previous dataset when GitHub is unavailable. The local tar1090 `databaseFolder` blocks remain an immediate fallback when PostgreSQL or the catalog is unavailable. If the configured page is plain readsb, AirRadar continues with the fields present in `aircraft.json`. When both tar1090 metadata and ADSBDB are enabled, non-empty fields from ADSBDB take precedence and missing fields are filled from the local catalog/fallback.
 
 For the first production deployment, keep `FLIGHTAWARE_API_KEY=` empty. If a key is configured later, the current architecture can request flight plans for currently tracked aircraft that have a callsign; these are AeroAPI requests and may incur commercial charges. The key is used only server-side. The optional FlightAware route lookup is best-effort, so a route failure does not discard the basic flight-plan times or filed route.
+
+## Server-side alerts
+
+Server alerts are independent of the browser `localStorage` watchlist. Configure them explicitly in `data/alerts.json`; the file is read once when the process starts and a restart applies changes. No user accounts, authentication, database table or CRUD API are involved.
+
+```json
+[
+  { "id": "a380", "enabled": true, "type": "aircraftType", "value": "A388" },
+  { "id": "emirates", "enabled": true, "type": "callsignPattern", "value": "UAE*" },
+  { "id": "nearby-a380", "enabled": true, "type": "aircraftType", "value": "A388", "maxDistanceKm": 150 }
+]
+```
+
+Supported rule types are `icaoHex`, `registration`, `callsign`, `callsignPattern`, `aircraftType` and `airline`. The same `*` wildcard semantics are used by the browser and server matching. Invalid rules are skipped and logged without stopping the radar. Arrival conditions are evaluated in the existing `AircraftStateService` snapshot flow, aggregated per aircraft, and deduplicated in bounded RAM. `ALERT_COOLDOWN_MS` defaults to two hours and has a one-minute minimum. Optional explicit emergency transitions use `ALERT_EMERGENCY_ENABLED=true` and only the parsed `aircraft.emergency` field.
+
+Pushover is the first optional notifier. Set `PUSHOVER_ENABLED=true`, `PUSHOVER_USER_KEY` and `PUSHOVER_API_TOKEN` in the server-only `.env`. Delivery is asynchronous, bounded and best-effort; one retry is attempted for network/5xx failures. Missing credentials produce a no-op notifier and do not affect live tracking. `/api/health` exposes only safe alert status, notifier name and rule count.
 
 `APP_TIMEZONE` controls the local day used by live daily statistics and defaults to `Europe/Prague`.
 
@@ -225,7 +242,7 @@ npm run atc:status:cz # compare imported Czech effective date with AIM
 - `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback (ICAO hex, or readsb's `~`-prefixed six-digit identifier)
 - `GET /api/airports` — configured airport catalog or bundled fallback catalog
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
-- `GET /api/health` — application, database, readsb, ATC dataset and live-state health
+- `GET /api/health` — application, database, readsb, ATC dataset, live-state and safe alerting health
 
 ## Production deployment
 
@@ -290,6 +307,6 @@ Optional server-side contracts are defined for `AircraftMetadataProvider`, `Flig
 
 The ATC service models multi-polygon sectors, vertical limits, validity, country, callsign, service, primary/alternate frequencies and source. Its resolver performs point-in-polygon plus altitude/time matching and reports a probable sector only. It never claims to know the aircraft’s actually tuned frequency.
 
-The project intentionally does not claim a definitive AIP dataset, actual tuned radio frequency, global ADS-B coverage, RTL-airband ingestion, push notifications or coverage heatmaps.
+The project intentionally does not claim a definitive AIP dataset, actual tuned radio frequency, global ADS-B coverage, RTL-airband ingestion, arbitrary notification-channel support or coverage heatmaps.
 
 For receivers regularly tracking several hundred aircraft, review mobile performance before replacing DOM markers; the next targeted optimization would be a GeoJSON source with a MapLibre symbol layer.

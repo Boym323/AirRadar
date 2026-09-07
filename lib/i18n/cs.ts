@@ -17,6 +17,8 @@ export const cs = {
     mockReceiver: "Simulovaný přijímač",
     liveReceiver: "Živý přijímač",
     connecting: "Připojování",
+    serverAlertsActive: "Serverová upozornění: aktivní",
+    serverAlertsDisabled: "Serverová upozornění: vypnutá",
   },
   radar: {
     panelOptions: "Filtry, sledované a statistiky",

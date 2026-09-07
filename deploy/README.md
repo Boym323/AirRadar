@@ -38,6 +38,8 @@ by `airradar` but not world-readable (`chmod 640` with an appropriate group).
 
 Optional enrichment is configured in the same server-only `.env`: set `ADSBDB_ENABLED=true` for free, keyless aircraft metadata and route lookups. Keep `FLIGHTAWARE_API_KEY=` empty for the first production deployment; if configured, the current architecture may perform paid AeroAPI flight-plan lookups for currently tracked aircraft with callsigns. Never use a `NEXT_PUBLIC_*` variable for these values. If either provider or PostgreSQL is offline, live readsb polling continues and the UI degrades gracefully.
 
+Optional server alerts use the checked-in `data/alerts.json` file and are separate from the browser watchlist. Configure Pushover only with server-side `PUSHOVER_ENABLED`, `PUSHOVER_USER_KEY` and `PUSHOVER_API_TOKEN`; never expose these as `NEXT_PUBLIC_*` variables. Alert delivery is best-effort and does not block readsb polling.
+
 After installing dependencies and building as that user, install `airradar.service` into `/etc/systemd/system/` and run:
 
 ```bash

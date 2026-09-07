@@ -99,6 +99,14 @@ export function getReceiverRefreshIntervalMs(): number {
   return Math.max(60_000, envNumber("RECEIVER_REFRESH_INTERVAL_MS", 5 * 60_000));
 }
 
+export function getAlertCooldownMs(): number {
+  return Math.max(60_000, envNumber("ALERT_COOLDOWN_MS", 2 * 60 * 60_000));
+}
+
+export function isEmergencyAlertEnabled(): boolean {
+  return process.env.ALERT_EMERGENCY_ENABLED?.trim().toLowerCase() === "true";
+}
+
 export function isAdsbDbEnabled(): boolean {
   return process.env.ADSBDB_ENABLED?.trim().toLowerCase() === "true";
 }
