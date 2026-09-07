@@ -108,6 +108,8 @@ describe("aircraft state service", () => {
   });
 
   it("stores observation metadata in each RAM trail point", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-07T12:00:06.000Z"));
     const receiver = { lat: 50, lon: 14, name: "Test" };
     const service = new AircraftStateService(new MockReadsbProvider(receiver));
     const applySnapshot = (aircraft: Aircraft): void => {
