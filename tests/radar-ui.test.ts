@@ -71,8 +71,16 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("checked={showAircraft}");
     expect(appSource).toContain("checked={showAirports}");
     expect(appSource).toContain("checked={showAtc}");
-    expect(appSource.match(/\bfetch\(/g)).toHaveLength(4);
+    expect(appSource.match(/\bfetch\(/g)).toHaveLength(5);
     expect(appSource).toContain("/api/aircraft/${encodeURIComponent(selectedHex)}");
+    expect(appSource).toContain("/api/history/${encodeURIComponent(selectedHex)}");
+  });
+
+  it("keeps one existing SSE stream and does not add trail polling", () => {
+    expect(appSource.match(/new EventSource\(/g)).toHaveLength(1);
+    expect(appSource).not.toContain("setInterval(");
+    expect(appSource).toContain("selected-trail-line");
+    expect(appSource).toContain('geometry: { type: "LineString"');
   });
 
   it("keeps CZ and EN layer labels in the existing i18n dictionaries", () => {

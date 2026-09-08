@@ -28,13 +28,14 @@ import {
 } from "@/lib/i18n";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, FlightRoute, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
+import { appendTrailPoint, boundTrailPoints, selectedTrail, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import { AirportWeatherDisclosure } from "@/components/airport-weather";
 import { AircraftRecentFlights } from "@/components/aircraft-detail-v2";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
-import type { AircraftDetailResponse } from "@/lib/server/history";
+import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
@@ -312,6 +313,7 @@ export function AirRadarApp() {
   const [aircraftDetail, setAircraftDetail] = useState<AircraftDetailResponse | null>(null);
   const [aircraftDetailLoading, setAircraftDetailLoading] = useState(false);
   const [aircraftDetailError, setAircraftDetailError] = useState<string | null>(null);
+  const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[] } | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
   const [altitudeFilter, setAltitudeFilter] = useState("all");
@@ -346,6 +348,7 @@ export function AirRadarApp() {
   const aircraftMotionTimingRef = useRef<Map<string, AircraftMotionTiming>>(new Map());
   const aircraftAnimationTargetsRef = useRef<Map<string, [number, number]>>(new Map());
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
+  const selectedHexRef = useRef<string | null>(null);
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
@@ -392,9 +395,14 @@ export function AirRadarApp() {
   }
 
   const selectAircraft = useCallback((hex: string) => {
+    selectedHexRef.current = hex;
     setSelectedHex(hex);
     setMobileCompact(false);
   }, []);
+
+  useEffect(() => {
+    selectedHexRef.current = selectedHex;
+  }, [selectedHex]);
 
   useEffect(() => {
     if (!selectedHex) {
@@ -425,31 +433,43 @@ export function AirRadarApp() {
   }, [selectedHex]);
 
   useEffect(() => {
+    setSelectedHistoryTrail(null);
+    if (!selectedHex) return;
+    let active = true;
+    void fetch(`/api/history/${encodeURIComponent(selectedHex)}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Aircraft trail history unavailable");
+        return (await response.json()) as HistoryResponse & { icaoHex?: string };
+      })
+      .then((history) => {
+        if (active && (!history.icaoHex || history.icaoHex.toUpperCase() === selectedHex.toUpperCase())) {
+          setSelectedHistoryTrail({ icaoHex: selectedHex.toUpperCase(), points: boundTrailPoints(history.positions, Date.now()) });
+        }
+      })
+      .catch(() => {
+        // Live session points remain available when history is unavailable.
+      });
+    return () => { active = false; };
+  }, [selectedHex]);
+
+  useEffect(() => {
     let active = true;
     const source = new EventSource("/api/stream");
     const onSnapshot = (event: Event) => {
       try {
         const next = JSON.parse((event as MessageEvent<string>).data) as PublicStateSnapshot;
         if (active) {
-          const currentHexes = new Set(next.aircraft.map((aircraft) => aircraft.icaoHex));
-          for (const hex of liveTrailsRef.current.keys()) {
-            if (!currentHexes.has(hex)) liveTrailsRef.current.delete(hex);
-          }
+          const now = Date.now();
           for (const aircraft of next.aircraft) {
-            if (aircraft.lat === null || aircraft.lon === null) continue;
+            const point = trailPointFromAircraft(aircraft);
+            if (!point) continue;
             const trail = liveTrailsRef.current.get(aircraft.icaoHex) ?? [];
-            const previous = trail[trail.length - 1];
-            if (!previous || Math.abs(previous.lat - aircraft.lat) > 0.00001 || Math.abs(previous.lon - aircraft.lon) > 0.00001) {
-              trail.push({
-                lat: aircraft.lat,
-                lon: aircraft.lon,
-                recordedAt: aircraft.lastSeen,
-                altitude: aircraft.altitude,
-                groundSpeed: aircraft.groundSpeed,
-                track: aircraft.track,
-              });
-              liveTrailsRef.current.set(aircraft.icaoHex, trail.slice(-80));
-            }
+            liveTrailsRef.current.set(aircraft.icaoHex, appendTrailPoint(trail, point, now));
+          }
+          for (const [hex, trail] of liveTrailsRef.current) {
+            const bounded = boundTrailPoints(trail, now);
+            if (bounded.length || hex === selectedHexRef.current) liveTrailsRef.current.set(hex, bounded);
+            else liveTrailsRef.current.delete(hex);
           }
           setSnapshot(next);
           setStreamConnected(true);
@@ -653,6 +673,10 @@ export function AirRadarApp() {
       animationFramesRef.current.set(hex, requestAnimationFrame(frame));
     };
 
+    const historySnapshot = selectedHistoryTrail;
+    const historyTrail = historySnapshot && historySnapshot.icaoHex === selectedHex?.toUpperCase() ? historySnapshot.points : [];
+    const selectedTrailForMap = selectedTrail(liveTrailsRef.current, selectedHex, historyTrail, Date.now());
+
     for (const aircraft of snapshot.aircraft) {
       if (aircraft.lat === null || aircraft.lon === null) continue;
       currentHexes.add(aircraft.icaoHex);
@@ -732,6 +756,12 @@ export function AirRadarApp() {
 
     for (const [hex, marker] of aircraftMarkersRef.current) {
       if (!currentHexes.has(hex)) {
+        if (hex === selectedHex && selectedTrailForMap.length > 0) {
+          const lastKnown = selectedTrailForMap[selectedTrailForMap.length - 1];
+          marker.setLngLat([lastKnown.lon, lastKnown.lat]);
+          marker.getElement().style.visibility = showAircraft ? "visible" : "hidden";
+          continue;
+        }
         const frame = animationFramesRef.current.get(hex);
         if (frame) cancelAnimationFrame(frame);
         animationFramesRef.current.delete(hex);
@@ -743,14 +773,13 @@ export function AirRadarApp() {
     }
 
     const selected = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex);
-    const selectedTrail = selectedHex ? liveTrailsRef.current.get(selectedHex) : null;
     const trailSource = map.getSource("selected-trail") as GeoJSONSource | undefined;
-    trailSource?.setData(selected && selectedTrail && selectedTrail.length > 1
-      ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: selectedTrail.map((point) => [point.lon, point.lat]) } }
+    trailSource?.setData(selectedTrailForMap.length > 1
+      ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
       : { type: "FeatureCollection", features: [] });
     const routeSource = map.getSource("selected-route") as GeoJSONSource | undefined;
     routeSource?.setData(createRouteGeoJSON(selected?.enrichment?.route, Boolean(selected?.enrichment?.route)));
-  }, [isWatchlisted, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [isWatchlisted, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const map = mapRef.current;
