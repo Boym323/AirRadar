@@ -76,6 +76,12 @@ function CoverageChart({ buckets }: { buckets: ReceiverStatisticsResponse["cover
           <text x="150" y="294" textAnchor="middle">S</text>
           <text x="14" y="154">W</text>
         </g>
+        <g className="coverage-degree-labels" aria-hidden="true">
+          <text x="150" y="28" textAnchor="middle">0°</text>
+          <text x="296" y="166" textAnchor="end">90°</text>
+          <text x="150" y="286" textAnchor="middle">180°</text>
+          <text x="4" y="166">270°</text>
+        </g>
         {maxDistanceKm > 0 && <g className="coverage-ring-labels" aria-hidden="true">
           {rings.map((ratio) => <text key={ratio} x="154" y={150 - coverageRingRadius(ratio) + 4}>{formatDistance(maxDistanceKm * ratio)}</text>)}
         </g>}
