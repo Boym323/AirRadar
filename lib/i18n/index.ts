@@ -49,6 +49,17 @@ export function formatTrack(value: number | null | undefined, dictionary: Locale
   return value === null || value === undefined ? dictionary.common.emptyValue : `${Math.round(value).toString().padStart(3, "0")}°`;
 }
 
+export function formatWeatherVisibility(
+  meters: number | null | undefined,
+  greaterThan = false,
+  dictionary: LocaleDictionary = t,
+): string {
+  if (meters === null || meters === undefined || !Number.isFinite(meters)) return dictionary.common.emptyValue;
+  const kilometers = meters / 1000;
+  const digits = kilometers < 1 ? 1 : kilometers < 10 ? 1 : 0;
+  return `${greaterThan ? `${formatNumber(kilometers, 0, dictionary.locale)}+` : formatNumber(kilometers, digits, dictionary.locale)} km`;
+}
+
 export function formatCoordinate(value: number, dictionary: LocaleDictionary = t): string {
   return new Intl.NumberFormat(dictionary.locale, { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(value);
 }

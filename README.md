@@ -54,7 +54,7 @@ server-side.
 
 The request-response API endpoints have a small bounded in-memory fixed-window
 limiter per endpoint: aircraft 60/minute, history 30/minute, airports
-30/minute, ATC sectors 30/minute, statistics 12/minute and health 60/minute. It is intentionally
+30/minute, weather 30/minute, ATC sectors 30/minute, statistics 12/minute and health 60/minute. It is intentionally
 global to this single Node instance rather than trusting `X-Forwarded-For` from
 the reverse proxy. `/api/stream` is excluded so long-lived SSE connections and
 their heartbeat/coalescing behavior are not interrupted. The limiter is not a
@@ -73,6 +73,7 @@ Persistence boundaries are intentional:
 | `Aircraft`, `Flight`, `FlightPosition` and sampled history | PostgreSQL | Persistent; never reset by AirRadar startup |
 | `AircraftMetadataCache` and `AircraftMetadataSync` | PostgreSQL | Persistent catalog; refreshed at most once per day with conditional HTTP validation |
 | ADSBDB / FlightAware enrichment cache | Process memory with TTL and negative caching | Rebuilt after restart; live radar is independent |
+| AviationWeather.gov METAR / TAF | Process memory with bounded 5/15-minute TTL cache and stale-if-error window | Never persisted; live weather is fetched on demand for an opened flight-detail airport |
 | Watchlist rules | Browser `localStorage` | Persists in that browser; not a shared database list |
 | Server alert rules | `data/alerts.json` | Loaded at process start; intentionally separate from browser watchlist |
 | Daily receiver statistics | PostgreSQL `ReceiverDailyStats`, `ReceiverDailyAircraft`, `ReceiverDailyCoverage` plus bounded RAM aggregation | Continues after restart; current live count and messages/s remain process/live values |
@@ -252,6 +253,7 @@ npm run atc:status:cz # compare imported Czech effective date with AIM
 - `GET /api/history/flights/:id` — one flight instance with chronologically ordered sampled positions, capped at 2,000 positions and reported as `truncated` when needed
 - `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback (ICAO hex, or readsb's `~`-prefixed six-digit identifier)
 - `GET /api/airports` — configured airport catalog or bundled fallback catalog
+- `GET /api/weather/airport/:icao` — on-demand AviationWeather.gov METAR/TAF for a canonical airport ICAO; returns `404` for unknown airports and `200` with nullable products when reports are unavailable
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
 - `GET /api/statistics` — today's receiver aggregate, 36 ten-degree coverage buckets and top aircraft types/airlines; exact receiver coordinates are never included
 - `GET /api/health` — application, database, readsb, ATC dataset, live-state and safe alerting health

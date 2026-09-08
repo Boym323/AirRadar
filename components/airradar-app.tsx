@@ -32,6 +32,7 @@ import type { AircraftView, FlightRoute, PublicReceiverPosition, PublicStateSnap
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
+import { AirportWeatherDisclosure } from "@/components/airport-weather";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
@@ -907,6 +908,8 @@ export function AirRadarApp() {
                 <DetailItem label={t.route.originDestination} value={selectedAircraft.enrichment.route.originAirport && selectedAircraft.enrichment.route.destinationAirport ? `${airportCodes(selectedAircraft.enrichment.route.originAirport)} → ${airportCodes(selectedAircraft.enrichment.route.destinationAirport)}` : selectedAircraft.enrichment.route.origin && selectedAircraft.enrichment.route.destination ? `${selectedAircraft.enrichment.route.origin} → ${selectedAircraft.enrichment.route.destination}` : t.route.notAvailable} />
                 {selectedAircraft.enrichment.route.originAirport && selectedAircraft.enrichment.route.destinationAirport && <div className="detail-registration">{selectedAircraft.enrichment.route.originAirport.city || selectedAircraft.enrichment.route.originAirport.name} → {selectedAircraft.enrichment.route.destinationAirport.city || selectedAircraft.enrichment.route.destinationAirport.name}</div>}
               </div>}
+              {selectedAircraft.enrichment?.route?.originAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.originAirport} />}
+              {selectedAircraft.enrichment?.route?.destinationAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.destinationAirport} />}
               <div className="detail-registration">{[selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || selectedAircraft.aircraftType, selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration].filter(Boolean).join(" · ")}</div>
               <DetailSection title={t.aircraft.liveAdsb}>
                 <DetailItem label={t.aircraft.altitude} value={formatAltitude(selectedAircraft.altitude)} />

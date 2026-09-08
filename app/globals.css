@@ -168,6 +168,26 @@ button { cursor: pointer; }
 .detail-panel { border-top: 1px solid var(--line); flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: rgba(8, 17, 29, .34); }
 .detail-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 17px 17px; }
 .detail-route { margin: 4px 0 10px; }
+.weather-card { margin-top: 10px; border: 1px solid rgba(55, 214, 192, .2); border-radius: 9px; background: rgba(17, 35, 55, .45); overflow: hidden; }
+.weather-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 11px; text-align: left; color: var(--text); background: transparent; border: 0; }
+.weather-toggle:hover { background: rgba(55, 214, 192, .07); }
+.weather-toggle > span:first-child { min-width: 0; display: grid; gap: 3px; }
+.weather-toggle strong { color: var(--mint); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+.weather-toggle span span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 11px; }
+.weather-content { padding: 0 11px 11px; }
+.weather-meta { color: var(--muted); font-size: 9px; line-height: 1.45; overflow-wrap: anywhere; }
+.weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; margin-top: 10px; }
+.weather-value { min-width: 0; }
+.weather-value span { display: block; color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.weather-value strong { display: block; margin-top: 3px; color: var(--text); font-size: 12px; overflow-wrap: anywhere; }
+.weather-unavailable, .weather-error { color: var(--muted); font-size: 10px; line-height: 1.45; padding-top: 9px; }
+.weather-error { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--red); }
+.weather-retry { flex: 0 0 auto; min-height: 32px; padding: 5px 8px; color: var(--mint); background: transparent; border: 1px solid rgba(55, 214, 192, .3); border-radius: 6px; font-size: 10px; }
+.weather-stale { margin-top: 8px; padding: 6px 8px; color: var(--amber); background: rgba(243, 185, 95, .08); border-left: 2px solid var(--amber); font-size: 9px; }
+.weather-raw { margin-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+.weather-raw summary { cursor: pointer; padding: 8px 0 5px; color: var(--mint); }
+.weather-raw pre { margin: 0; color: var(--text); font: inherit; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+.weather-forecast { margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
 .detail-heading { flex-shrink: 0; padding: 15px 17px 10px; background: var(--panel); display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .detail-callsign { font-weight: 800; font-size: 19px; letter-spacing: -.03em; }
 .detail-registration { color: var(--muted); font-size: 11px; margin-top: 4px; }

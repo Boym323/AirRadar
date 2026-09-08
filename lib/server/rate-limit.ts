@@ -78,6 +78,7 @@ export const PUBLIC_RATE_LIMITS = {
   aircraft: { limit: 60, windowMs: 60_000 },
   history: { limit: 30, windowMs: 60_000 },
   airports: { limit: 30, windowMs: 60_000 },
+  weather: { limit: 30, windowMs: 60_000 },
   atcSectors: { limit: 30, windowMs: 60_000 },
   health: { limit: 60, windowMs: 60_000 },
   statistics: { limit: 12, windowMs: 60_000 },
