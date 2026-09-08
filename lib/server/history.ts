@@ -39,6 +39,11 @@ export interface RecordAircraftSnapshotResult {
   failed: string[];
 }
 
+export interface HistoryPersistenceStatus {
+  lastSuccessfulWriteAt: string | null;
+  failureCount: number;
+}
+
 export const HISTORY_POSITION_LIMIT = 2_000;
 export const HISTORY_FLIGHT_LIMIT = 100;
 export const AIRCRAFT_RECENT_FLIGHT_LIMIT = 10;
@@ -100,6 +105,16 @@ export class HistoryDatabaseUnavailableError extends Error {
 
 let lastRetentionRunAt = 0;
 let lastFlightMaintenanceRunAt = 0;
+let lastSuccessfulHistoryWriteAt: string | null = null;
+let historyPersistenceFailureCount = 0;
+
+/** Read-only runtime health for the existing history persistence lane. */
+export function getHistoryPersistenceStatus(): HistoryPersistenceStatus {
+  return {
+    lastSuccessfulWriteAt: lastSuccessfulHistoryWriteAt,
+    failureCount: historyPersistenceFailureCount,
+  };
+}
 
 function timestampAsDate(value: Temporal.Instant | Date): Date {
   return value instanceof Date ? value : new Date(value.epochMilliseconds);
@@ -545,6 +560,9 @@ export async function recordAircraftSnapshot(
       result.failed.push(item.icaoHex);
     }
   });
+
+  if (result.succeeded.length) lastSuccessfulHistoryWriteAt = new Date().toISOString();
+  if (result.failed.length) historyPersistenceFailureCount += result.failed.length;
 
   await pruneHistoryIfDue(database);
   return result;

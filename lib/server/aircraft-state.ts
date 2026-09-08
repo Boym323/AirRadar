@@ -15,7 +15,7 @@ import { createAtcSectorProvider } from "@/lib/server/providers";
 import { AlertEngine } from "@/lib/server/alert-engine";
 import type { AlertStatus } from "@/lib/server/alert-engine";
 import { loadAlertConfig } from "@/lib/server/alert-config";
-import { ReceiverStatistics } from "@/lib/server/statistics";
+import { ReceiverStatistics, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 
 type Listener = (snapshot: StateSnapshot) => void;
 
@@ -197,6 +197,10 @@ export class AircraftStateService {
 
   getStatistics(): ReceiverStatisticsResponse {
     return this.statistics.getResponse(this.aircraft.size, this.messagesPerSecond);
+  }
+
+  getStatisticsPersistenceStatus(): ReceiverStatisticsPersistenceStatus {
+    return this.statistics.getPersistenceStatus();
   }
 
   async getStatisticsRange(range: ReceiverStatisticsRange): Promise<ReceiverStatisticsRangeResponse> {

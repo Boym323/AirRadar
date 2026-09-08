@@ -925,10 +925,12 @@ export function AirRadarApp() {
           </div>
         </div>
         <GlobalSearch />
+        <Link className="mobile-system-link" href="/system" aria-label={t.system.title}>⚙</Link>
         <nav className="topbar-nav" aria-label={t.statistics.navigation}>
           <Link href="/watchlist">{t.watchlist.title}</Link>
           <Link href="/statistics">{t.statistics.title}</Link>
           <Link href="/history">{t.history.title}</Link>
+          <Link href="/system">{t.system.title}</Link>
         </nav>
         <div className="topbar-meta">
           <span className="topbar-receiver"><span className="topbar-receiver-label">{t.status.receiverLabel}</span><span className="topbar-receiver-name">{snapshot.receiver.name}</span></span>

@@ -272,6 +272,7 @@ feedback tools only; production release validation remains authoritative in
 - `GET|POST /api/watchlist` — list or create validated server alert rules, including the effective cooldown and safe current matching state
 - `PATCH|DELETE /api/watchlist/:id` — update, enable/disable or delete one server alert rule
 - `GET /api/health` — application, database, readsb, ATC dataset, live-state and safe alerting health
+- `GET /api/system/status` — bounded read-only system overview for the `/system` page; reports runtime, receiver, persistence, statistics, local ATC, weather cache, alerts and airport catalog status without secrets or receiver coordinates
 
 ## Production deployment
 

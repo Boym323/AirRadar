@@ -37,6 +37,12 @@ export interface ReceiverStatisticsPersistence {
   save(snapshot: ReceiverStatisticsPersistenceSnapshot): Promise<void>;
 }
 
+export interface ReceiverStatisticsPersistenceStatus {
+  status: "ok" | "degraded" | "disabled";
+  lastSuccessfulWriteAt: string | null;
+  failureCount: number;
+}
+
 interface DirtyAircraftRecord {
   record: DailyAircraftStatisticsRecord;
   version: number;
@@ -246,6 +252,7 @@ export class ReceiverStatistics {
   private activeWrite: Promise<void> | null = null;
   private readonly queuedWrites = new Map<string, PendingStatisticsWrite>();
   private persistenceFailureCount = 0;
+  private lastSuccessfulPersistenceAt: string | null = null;
   private loaded = false;
 
   constructor(options: ReceiverStatisticsOptions = {}) {
@@ -272,6 +279,7 @@ export class ReceiverStatistics {
       // Do not overwrite a persisted aggregate with an empty one after a
       // transient database outage during startup.
       this.persistenceEnabled = false;
+      this.persistenceFailureCount += 1;
       this.loaded = true;
       console.error("AirRadar statistics load failed", error);
     }
@@ -331,6 +339,17 @@ export class ReceiverStatistics {
       aircraftTypes: sortBreakdown(this.typeCounts),
       airlines: sortBreakdown(this.airlineCounts),
       messagesPerSecond,
+    };
+  }
+
+  getPersistenceStatus(): ReceiverStatisticsPersistenceStatus {
+    if (!this.persistence) {
+      return { status: "disabled", lastSuccessfulWriteAt: null, failureCount: 0 };
+    }
+    return {
+      status: this.persistenceFailureCount ? "degraded" : "ok",
+      lastSuccessfulWriteAt: this.lastSuccessfulPersistenceAt,
+      failureCount: this.persistenceFailureCount,
     };
   }
 
@@ -556,6 +575,7 @@ export class ReceiverStatistics {
     if (!this.persistence) return;
     const write = this.persistence.save(pending.snapshot)
       .then(() => {
+        this.lastSuccessfulPersistenceAt = new Date(this.clock().getTime()).toISOString();
         for (const [hex, version] of pending.aircraftVersions) {
           if (this.dirtyAircraft.get(hex)?.version === version) this.dirtyAircraft.delete(hex);
         }
