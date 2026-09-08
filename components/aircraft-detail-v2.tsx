@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 import { aircraftAirportHref, aircraftFlightHref, aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
-import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryRange, AircraftHistorySummary, HistoryFlightSummary } from "@/lib/server/history";
+import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryAirportCount, AircraftHistoryRange, AircraftHistorySummary, AircraftLifetimeStats, HistoryFlightSummary } from "@/lib/server/history";
 import { formatAltitude, formatDateTime, formatNumber, formatSpeed, formatTrack, t } from "@/lib/i18n";
 
 function valueOrEmpty(value: string | null | undefined): string {
@@ -172,6 +172,32 @@ export function AircraftRecentFlights({
   );
 }
 
+function LifetimeAirportList({ entries }: { entries: AircraftHistoryAirportCount[] }): ReactNode {
+  if (!entries.length) return <span>{t.common.emptyValue}</span>;
+  return <ol className="aircraft-history-list">{entries.map((entry) => <li key={entry.airport.icaoCode}><HistoryAirportLink airport={entry.airport} /><strong>{formatNumber(entry.count)}×</strong></li>)}</ol>;
+}
+
+export function AircraftLifetimeStatsCard({ stats }: { stats: AircraftLifetimeStats | null }) {
+  const hasHistory = Boolean(stats && stats.flightCount > 0);
+  return <section className="aircraft-card aircraft-lifetime-card" aria-labelledby="aircraft-lifetime-title">
+    <h2 id="aircraft-lifetime-title">{t.history.lifetimeStats}</h2>
+    {!hasHistory || !stats ? <div className="aircraft-history-empty">{t.history.lifetimeStatsEmpty}</div> : <>
+      <div className="aircraft-history-stats">
+        <DetailValue label={t.history.firstEverObserved}>{formatDateTime(stats.firstObservedAt)}</DetailValue>
+        <DetailValue label={t.history.lastObserved}>{formatDateTime(stats.lastObservedAt)}</DetailValue>
+        <DetailValue label={t.history.totalFlightInstances}>{formatNumber(stats.flightCount)}</DetailValue>
+        <DetailValue label={t.history.activeDays}>{formatNumber(stats.activeDays)}</DetailValue>
+      </div>
+      <div className="aircraft-history-lists aircraft-lifetime-lists">
+        <div><h3>{t.history.topCallsigns}</h3>{stats.topCallsigns.length ? <ol className="aircraft-history-list">{stats.topCallsigns.map((entry) => <li key={entry.callsign}><span>{entry.callsign}</span><strong>{formatNumber(entry.count)}×</strong></li>)}</ol> : <div className="aircraft-history-empty">{t.common.emptyValue}</div>}</div>
+        <div><h3>{t.history.topOrigins}</h3><LifetimeAirportList entries={stats.topOrigins} /></div>
+        <div><h3>{t.history.topDestinations}</h3><LifetimeAirportList entries={stats.topDestinations} /></div>
+        <div><h3>{t.history.topRoutes}</h3>{stats.topRoutes.length ? <ol className="aircraft-history-list">{stats.topRoutes.map((route) => <li key={`${route.origin.icaoCode}-${route.destination.icaoCode}`}><span><HistoryAirportLink airport={route.origin} /> <span aria-hidden="true">→</span> <HistoryAirportLink airport={route.destination} /></span><strong>{formatNumber(route.count)}×</strong></li>)}</ol> : <div className="aircraft-history-empty">{t.common.emptyValue}</div>}</div>
+      </div>
+    </>}
+  </section>;
+}
+
 function AircraftPhotoCard({ icaoHex, registration }: { icaoHex: string; registration: string | null | undefined }) {
   const [result, setResult] = useState<AircraftPhotoApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -304,6 +330,8 @@ export function AircraftDetailV2({
         </div>
 
         <AircraftHistorySummaryCard icaoHex={icaoHex} summary={detail?.historySummary ?? null} />
+
+        <AircraftLifetimeStatsCard stats={detail?.lifetimeStats ?? null} />
 
         <section className="aircraft-card aircraft-recent-card" aria-label={t.history.recentFlights}>
           <AircraftRecentFlights recentFlights={detail?.recentFlights ?? []} loading={loading} error={error} />

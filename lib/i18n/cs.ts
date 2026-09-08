@@ -478,6 +478,13 @@ export const cs = {
     topRoutes: "Nejčastější trasy",
     aircraftHistoryEmpty: "V tomto období nebylo letadlo zachyceno.",
     aircraftHistoryLoadFailed: "Historický přehled letadla se nepodařilo načíst.",
+    lifetimeStats: "Statistiky za celou historii přijímače",
+    lifetimeStatsEmpty: "Pro toto letadlo zatím nejsou uloženy žádné historické Flight instance.",
+    firstEverObserved: "První zachycení vůbec",
+    lastObserved: "Poslední zachycení",
+    totalFlightInstances: "Celkem Flight instancí",
+    topOrigins: "Nejčastější odlety",
+    topDestinations: "Nejčastější přílety",
   },
   system: {
     title: "Systém",

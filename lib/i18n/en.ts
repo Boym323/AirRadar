@@ -480,6 +480,13 @@ export const en = {
     topRoutes: "Top routes",
     aircraftHistoryEmpty: "The aircraft was not captured in this period.",
     aircraftHistoryLoadFailed: "Aircraft history could not be loaded.",
+    lifetimeStats: "Lifetime receiver history",
+    lifetimeStatsEmpty: "No historical Flight instances are stored for this aircraft yet.",
+    firstEverObserved: "First ever observed",
+    lastObserved: "Last observed",
+    totalFlightInstances: "Total Flight instances",
+    topOrigins: "Top origins",
+    topDestinations: "Top destinations",
   },
   system: {
     title: "System",

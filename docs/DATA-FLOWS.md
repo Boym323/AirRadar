@@ -66,6 +66,12 @@ and never calls an external provider. Recent links use canonical airport ICAO,
 aircraft ICAO hex, and the existing flight-history detail route. This is
 receiver-observed traffic, not a complete airport traffic count.
 
+Aircraft detail lifetime statistics read only the aircraft's `Flight` rows via
+the existing `(aircraftId, startTime)` index. They count retained Flight
+instances, local active days, callsigns, resolved origins/destinations, and
+routes. They deliberately do not scan `FlightPosition`; sampled positions
+remain owned by the bounded per-flight playback endpoint.
+
 ## Statistics and coverage
 
 `ReceiverStatistics.observe()` runs after each applied snapshot. It counts

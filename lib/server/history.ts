@@ -101,6 +101,11 @@ export interface AircraftHistoryAirport {
   iataCode: string | null;
 }
 
+export interface AircraftHistoryAirportCount {
+  airport: AircraftHistoryAirport;
+  count: number;
+}
+
 export interface AircraftHistoryCallsignCount {
   callsign: string;
   count: number;
@@ -124,10 +129,22 @@ export interface AircraftHistorySummary {
   topDestination: AircraftHistoryAirport | null;
 }
 
+export interface AircraftLifetimeStats {
+  firstObservedAt: string | null;
+  lastObservedAt: string | null;
+  flightCount: number;
+  activeDays: number;
+  topCallsigns: AircraftHistoryCallsignCount[];
+  topOrigins: AircraftHistoryAirportCount[];
+  topDestinations: AircraftHistoryAirportCount[];
+  topRoutes: AircraftHistoryRouteCount[];
+}
+
 export interface AircraftDetailResponse {
   aircraft: AircraftDetailMetadata | null;
   recentFlights: HistoryFlightSummary[];
   historySummary: AircraftHistorySummary;
+  lifetimeStats: AircraftLifetimeStats;
 }
 
 export class HistoryDatabaseUnavailableError extends Error {
@@ -373,6 +390,19 @@ function emptyAircraftHistorySummary(range: AircraftHistoryRange): AircraftHisto
   };
 }
 
+function emptyAircraftLifetimeStats(): AircraftLifetimeStats {
+  return {
+    firstObservedAt: null,
+    lastObservedAt: null,
+    flightCount: 0,
+    activeDays: 0,
+    topCallsigns: [],
+    topOrigins: [],
+    topDestinations: [],
+    topRoutes: [],
+  };
+}
+
 function normalizedHistoryText(value: string | null | undefined): string | null {
   const normalized = value?.trim().toUpperCase() ?? "";
   return normalized || null;
@@ -539,6 +569,78 @@ async function getAircraftHistorySummary(
 }
 
 /**
+ * Lifetime statistics intentionally read Flight instances only. Flight has
+ * the indexed `(aircraftId, startTime)` access path and is retained after
+ * sampled FlightPosition retention; no unbounded position scan is needed.
+ */
+async function getAircraftLifetimeStats(
+  schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"],
+  aircraftId: number,
+  now: Date,
+): Promise<AircraftLifetimeStats> {
+  const stats = emptyAircraftLifetimeStats();
+  const flights = await schema.Flight
+    .where({ aircraftId })
+    .orderBy((flight) => flight.startTime.asc())
+    .select("startTime", "lastSeenAt", "callsign", "origin", "destination")
+    .all();
+  stats.flightCount = flights.length;
+  if (!flights.length) return stats;
+
+  const airportCodes = flights
+    .flatMap((flight) => [flight.origin, flight.destination])
+    .filter((code): code is string => Boolean(code));
+  const airports = await resolveHistoryAirports(schema, airportCodes);
+  const callsigns = new Map<string, number>();
+  const origins = new Map<string, number>();
+  const destinations = new Map<string, number>();
+  const routes = new Map<string, AircraftHistoryRouteCount>();
+  const activeDays = new Set<string>();
+  const from = new Date(0);
+  let firstObservedAt: Date | null = null;
+  let lastObservedAt: Date | null = null;
+
+  for (const flight of flights) {
+    const startTime = timestampAsDate(flight.startTime);
+    const lastSeenAt = timestampAsDate(flight.lastSeenAt);
+    if (!firstObservedAt || startTime < firstObservedAt) firstObservedAt = startTime;
+    if (!lastObservedAt || lastSeenAt > lastObservedAt) lastObservedAt = lastSeenAt;
+    addFlightActiveDays(activeDays, startTime, lastSeenAt, from, now);
+
+    const callsign = normalizedHistoryText(flight.callsign);
+    if (callsign) addCount(callsigns, callsign);
+    const origin = flight.origin ? airports.get(normalizedHistoryText(flight.origin) ?? "") : undefined;
+    const destination = flight.destination ? airports.get(normalizedHistoryText(flight.destination) ?? "") : undefined;
+    if (origin) addCount(origins, origin.icaoCode);
+    if (destination) addCount(destinations, destination.icaoCode);
+    if (origin && destination) {
+      const key = `${origin.icaoCode}:${destination.icaoCode}`;
+      const route = routes.get(key);
+      if (route) route.count += 1;
+      else routes.set(key, { origin, destination, count: 1 });
+    }
+  }
+
+  const airportCounts = (counts: Map<string, number>): AircraftHistoryAirportCount[] => sortedCounts(counts)
+    .flatMap(({ key, count }) => {
+      const airport = airports.get(key);
+      return airport ? [{ airport, count }] : [];
+    });
+  stats.firstObservedAt = firstObservedAt ? timestampAsIso(firstObservedAt) : null;
+  stats.lastObservedAt = lastObservedAt ? timestampAsIso(lastObservedAt) : null;
+  stats.activeDays = activeDays.size;
+  stats.topCallsigns = sortedCounts(callsigns).map(({ key, count }) => ({ callsign: key, count }));
+  stats.topOrigins = airportCounts(origins);
+  stats.topDestinations = airportCounts(destinations);
+  stats.topRoutes = [...routes.values()]
+    .sort((a, b) => b.count - a.count
+      || a.origin.icaoCode.localeCompare(b.origin.icaoCode)
+      || a.destination.icaoCode.localeCompare(b.destination.icaoCode))
+    .slice(0, 5);
+  return stats;
+}
+
+/**
  * Returns durable aircraft metadata, a deliberately small recent-flight
  * summary and a bounded Flight-instance history summary. FlightPosition is
  * not queried here; playback remains behind the existing per-flight detail
@@ -555,7 +657,7 @@ export async function getAircraftDetail(
     const schema = database.orm.public;
     const historyRange = normalizeAircraftHistoryRange(options.historyRange);
     const aircraft = await schema.Aircraft.where({ icaoHex: icaoHex.toUpperCase() }).first();
-    if (!aircraft) return { aircraft: null, recentFlights: [], historySummary: emptyAircraftHistorySummary(historyRange) };
+    if (!aircraft) return { aircraft: null, recentFlights: [], historySummary: emptyAircraftHistorySummary(historyRange), lifetimeStats: emptyAircraftLifetimeStats() };
 
     const flights = await schema.Flight
       .where({ aircraftId: aircraft.id })
@@ -566,6 +668,9 @@ export async function getAircraftDetail(
     const historySummary = options.includeHistorySummary === false
       ? emptyAircraftHistorySummary(historyRange)
       : await getAircraftHistorySummary(schema, aircraft.id, historyRange, options.now ?? new Date());
+    const lifetimeStats = options.includeHistorySummary === false
+      ? emptyAircraftLifetimeStats()
+      : await getAircraftLifetimeStats(schema, aircraft.id, options.now ?? new Date());
 
     return {
       aircraft: {
@@ -580,6 +685,7 @@ export async function getAircraftDetail(
       },
       recentFlights: orderFlightSummaries(flights.map(flightSummaryFromRow)).slice(0, AIRCRAFT_RECENT_FLIGHT_LIMIT),
       historySummary,
+      lifetimeStats,
     };
   } catch {
     throw new HistoryDatabaseUnavailableError();

@@ -310,6 +310,8 @@ button { cursor: pointer; }
 .aircraft-history-empty { margin-top: 17px; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .aircraft-history-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 19px; padding-top: 15px; border-top: 1px solid var(--line); }
 .aircraft-history-lists h3 { margin: 0; color: var(--mint); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+.aircraft-lifetime-card { grid-column: 1 / -1; }
+.aircraft-lifetime-lists { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .aircraft-history-list { display: grid; gap: 0; margin: 8px 0 0; padding: 0; list-style: none; }
 .aircraft-history-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 7px 0; border-top: 1px solid rgba(153,181,207,.1); font-size: 11px; }
 .aircraft-history-list li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
