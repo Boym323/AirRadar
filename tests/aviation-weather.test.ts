@@ -181,6 +181,80 @@ describe("AviationWeatherProvider", () => {
   });
 });
 
+describe("AviationWeatherCache", () => {
+  it("serves a fresh entry without invoking the loader again", async () => {
+    const cache = new AviationWeatherCache();
+    const loader = vi.fn().mockResolvedValue("fresh value");
+
+    await cache.get("metar", "LKPR", loader, { ttlMs: 60_000 });
+    await cache.get("metar", "LKPR", loader, { ttlMs: 60_000 });
+
+    expect(loader).toHaveBeenCalledOnce();
+  });
+
+  it("coalesces concurrent lookups for one product and airport", async () => {
+    let release!: (value: string) => void;
+    const loader = vi.fn(() => new Promise<string>((resolve) => {
+      release = resolve;
+    }));
+    const cache = new AviationWeatherCache();
+
+    const first = cache.get("metar", "LKPR", loader, { ttlMs: 60_000 });
+    const second = cache.get("metar", "LKPR", loader, { ttlMs: 60_000 });
+    expect(loader).toHaveBeenCalledOnce();
+
+    release("shared value");
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      { value: "shared value", stale: false, failed: false },
+      { value: "shared value", stale: false, failed: false },
+    ]);
+  });
+
+  it("evicts the least recently used airport while retaining a bounded product cache", async () => {
+    const cache = new AviationWeatherCache(2);
+    const loader = vi.fn().mockResolvedValue("value");
+    const options = { ttlMs: 60_000 };
+
+    await cache.get("metar", "LKPR", loader, options);
+    await cache.get("taf", "LKPR", loader, options);
+    await cache.get("metar", "EDDF", loader, options);
+    await cache.get("taf", "EDDF", loader, options);
+    await cache.get("metar", "LOWW", loader, options);
+
+    expect(cache.airportCount()).toBe(2);
+    expect(cache.size()).toBe(3);
+
+    const callsBeforeEvictedLookup = loader.mock.calls.length;
+    await cache.get("metar", "LKPR", loader, options);
+    expect(loader).toHaveBeenCalledTimes(callsBeforeEvictedLookup + 1);
+    expect(cache.airportCount()).toBe(2);
+    expect(cache.size()).toBeLessThanOrEqual(4);
+  });
+
+  it("returns a successful stale value only inside the one-hour stale window", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const cache = new AviationWeatherCache();
+    let calls = 0;
+    const loader = vi.fn(async () => {
+      calls += 1;
+      if (calls === 1) return "fresh value";
+      throw new Error("upstream down");
+    });
+
+    await cache.get("metar", "LKPR", loader, { ttlMs: 100 });
+    vi.setSystemTime(101);
+    await expect(cache.get("metar", "LKPR", loader, { ttlMs: 100 })).resolves.toEqual({
+      value: "fresh value", stale: true, failed: false,
+    });
+
+    vi.setSystemTime(100 + 60 * 60_000 + 1);
+    await expect(cache.get("metar", "LKPR", loader, { ttlMs: 100 })).resolves.toEqual({
+      value: null, stale: false, failed: true,
+    });
+  });
+});
+
 describe("weather airport API", () => {
   it("uses the central resolver canonical ICAO and does not query arbitrary input upstream", async () => {
     const resolve = vi.fn().mockResolvedValue(airport);
@@ -199,6 +273,68 @@ describe("weather airport API", () => {
     const airportResolver = { resolve: vi.fn().mockResolvedValue(null) };
     await expect(getWeatherAirportResponse(new Request("http://localhost"), "ZZZZ", { airportResolver })).resolves.toMatchObject({ status: 404 });
     await expect(getWeatherAirportResponse(new Request("http://localhost"), "PRG", { airportResolver })).resolves.toMatchObject({ status: 400 });
+  });
+
+  it("returns the public weather DTO without receiver coordinates, secrets, or upstream fields", async () => {
+    const result = await getWeatherAirportResponse(new Request("http://localhost"), "LKPR", {
+      airportResolver: { resolve: vi.fn().mockResolvedValue(airport) },
+      weatherProvider: {
+        getAirportWeather: vi.fn().mockResolvedValue({
+          icaoCode: "LKPR",
+          metar: null,
+          taf: null,
+          fetchedAt: "2026-09-08T08:00:00.000Z",
+          stale: false,
+        }),
+      },
+    });
+
+    expect(result.status).toBe(200);
+    const body = await result.json();
+    expect(body).toMatchObject({
+      airport: { icaoCode: "LKPR", latitude: airport.latitude, longitude: airport.longitude },
+      metar: null,
+      taf: null,
+      stale: false,
+    });
+    expect(body).not.toHaveProperty("receiver");
+    expect(body).not.toHaveProperty("DATABASE_URL");
+    expect(JSON.stringify(body)).not.toContain("DATABASE_URL");
+    expect(JSON.stringify(body)).not.toContain("upstream");
+  });
+
+  it("returns a 200 response when only one weather product is available", async () => {
+    const result = await getWeatherAirportResponse(new Request("http://localhost"), "LKPR", {
+      airportResolver: { resolve: vi.fn().mockResolvedValue(airport) },
+      weatherProvider: {
+        getAirportWeather: vi.fn().mockResolvedValue({
+          icaoCode: "LKPR",
+          metar: {
+            rawText: "METAR LKPR 080800Z 19005KT CAVOK",
+            observationTime: "2026-09-08T08:00:00.000Z",
+            temperatureC: 23,
+            dewpointC: 14,
+            windDirectionDeg: 190,
+            windVariable: false,
+            windSpeedKt: 5,
+            windGustKt: null,
+            visibilityMeters: 10_000,
+            visibilityGreaterThan: false,
+            altimeterHpa: 1016,
+            flightCategory: "VFR",
+          },
+          taf: null,
+          fetchedAt: "2026-09-08T08:00:00.000Z",
+          stale: false,
+        }),
+      },
+    });
+
+    expect(result.status).toBe(200);
+    await expect(result.json()).resolves.toMatchObject({
+      metar: { rawText: "METAR LKPR 080800Z 19005KT CAVOK" },
+      taf: null,
+    });
   });
 
   it("returns 503 for a provider failure without exposing its error", async () => {

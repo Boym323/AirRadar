@@ -57,6 +57,26 @@ describe("aircraft state service", () => {
     expect(service.getAircraft(full.aircraft[0].icaoHex)?.trail).toHaveLength(1);
   });
 
+  it("does not trigger AviationWeather fetches during the live poll and subscription path", async () => {
+    vi.stubEnv("READSB_BASE_URL", "");
+    vi.stubEnv("ADSBDB_ENABLED", "false");
+    vi.stubEnv("FLIGHTAWARE_API_KEY", "");
+    vi.stubEnv("ATC_SAMPLE_ENABLED", "true");
+    const fetcher = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("weather fetch must be explicit"));
+    const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
+    services.push(service);
+    let notifications = 0;
+    const unsubscribe = service.subscribe(() => {
+      notifications += 1;
+    });
+
+    await service.waitForReady();
+    unsubscribe();
+
+    expect(notifications).toBeGreaterThan(0);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("keeps the history sample throttle across a short disappearance", async () => {
     vi.useFakeTimers();
     vi.stubEnv("HISTORY_SAMPLE_INTERVAL_MS", "20000");
