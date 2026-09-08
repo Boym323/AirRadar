@@ -64,8 +64,12 @@ Normal production releases use `deploy/release.sh`; bypass it only for debugging
 - The browser consumes AirRadar APIs only. `/api/stream` publishes snapshots
   over SSE; it is intentionally not a WebSocket endpoint.
 - PostgreSQL stores sampled history, imported ATC/airport data and the optional
-  aircraft metadata catalog, not every ADS-B update. Live radar must remain
-  useful without PostgreSQL.
+  aircraft metadata catalog plus aggregated receiver daily statistics, not every
+  ADS-B update. Live radar must remain useful without PostgreSQL.
+- Receiver daily statistics are local-day (`APP_TIMEZONE`) aggregates with one
+  row per daily aircraft and fixed 10-degree coverage rows; RAM aggregation is
+  flushed best-effort on a throttled cadence and is not a per-poll database
+  write.
 - Server alert rules are explicit startup configuration in `data/alerts.json`,
   separate from the browser `localStorage` watchlist; alert evaluation reuses
   the existing single-process snapshot flow and has no database table or auth.

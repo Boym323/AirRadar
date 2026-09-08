@@ -1,0 +1,281 @@
+[
+  {
+    "id": "table.receiverDailyAircraft",
+    "label": "Create table \"receiverDailyAircraft\"",
+    "summary": "Creates table \"receiverDailyAircraft\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "receiverDailyAircraft"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"receiverDailyAircraft\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyAircraft\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"receiverDailyAircraft\"",
+        "sql": "CREATE TABLE \"public\".\"receiverDailyAircraft\" (\n  \"aircraftType\" text,\n  \"airline\" text,\n  \"date\" text NOT NULL,\n  \"icaoHex\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"date\", \"icaoHex\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"receiverDailyAircraft\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyAircraft\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.receiverDailyCoverage",
+    "label": "Create table \"receiverDailyCoverage\"",
+    "summary": "Creates table \"receiverDailyCoverage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "receiverDailyCoverage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"receiverDailyCoverage\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyCoverage\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"receiverDailyCoverage\"",
+        "sql": "CREATE TABLE \"public\".\"receiverDailyCoverage\" (\n  \"azimuthBucket\" int4 NOT NULL,\n  \"date\" text NOT NULL,\n  \"maxDistanceKm\" float8 NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"date\", \"azimuthBucket\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"receiverDailyCoverage\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyCoverage\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.receiverDailyStats",
+    "label": "Create table \"receiverDailyStats\"",
+    "summary": "Creates table \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"receiverDailyStats\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyStats\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"receiverDailyStats\"",
+        "sql": "CREATE TABLE \"public\".\"receiverDailyStats\" (\n  \"date\" text NOT NULL,\n  \"maxConcurrentAircraft\" int4 DEFAULT 0 NOT NULL,\n  \"maxDistanceAt\" timestamptz,\n  \"maxDistanceIcaoHex\" text,\n  \"maxDistanceKm\" float8 DEFAULT 0 NOT NULL,\n  \"uniqueAircraftCount\" int4 DEFAULT 0 NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"date\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"receiverDailyStats\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyStats\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.receiverDailyAircraft.receiverDailyAircraft_date_idx_b4ca319c",
+    "label": "Create index \"receiverDailyAircraft_date_idx_b4ca319c\" on \"receiverDailyAircraft\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "receiverDailyAircraft_date_idx_b4ca319c",
+        "table": "receiverDailyAircraft"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"receiverDailyAircraft_date_idx_b4ca319c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyAircraft_date_idx_b4ca319c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"receiverDailyAircraft_date_idx_b4ca319c\"",
+        "sql": "CREATE INDEX \"receiverDailyAircraft_date_idx_b4ca319c\" ON \"public\".\"receiverDailyAircraft\" (\"date\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"receiverDailyAircraft_date_idx_b4ca319c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyAircraft_date_idx_b4ca319c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.receiverDailyCoverage.receiverDailyCoverage_date_idx_b4ca319c",
+    "label": "Create index \"receiverDailyCoverage_date_idx_b4ca319c\" on \"receiverDailyCoverage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "receiverDailyCoverage_date_idx_b4ca319c",
+        "table": "receiverDailyCoverage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"receiverDailyCoverage_date_idx_b4ca319c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyCoverage_date_idx_b4ca319c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"receiverDailyCoverage_date_idx_b4ca319c\"",
+        "sql": "CREATE INDEX \"receiverDailyCoverage_date_idx_b4ca319c\" ON \"public\".\"receiverDailyCoverage\" (\"date\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"receiverDailyCoverage_date_idx_b4ca319c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyCoverage_date_idx_b4ca319c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.receiverDailyAircraft.receiverDailyAircraft_date_fkey",
+    "label": "Add foreign key \"receiverDailyAircraft_date_fkey\" on \"receiverDailyAircraft\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "receiverDailyAircraft_date_fkey",
+        "table": "receiverDailyAircraft"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"receiverDailyAircraft_date_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "receiverDailyAircraft_date_fkey",
+          "public",
+          "\"public\".\"receiverDailyAircraft\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"receiverDailyAircraft_date_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyAircraft\"\nADD CONSTRAINT \"receiverDailyAircraft_date_fkey\"\nFOREIGN KEY (\"date\")\nREFERENCES \"public\".\"receiverDailyStats\" (\"date\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"receiverDailyAircraft_date_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "receiverDailyAircraft_date_fkey",
+          "public",
+          "\"public\".\"receiverDailyAircraft\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.receiverDailyCoverage.receiverDailyCoverage_date_fkey",
+    "label": "Add foreign key \"receiverDailyCoverage_date_fkey\" on \"receiverDailyCoverage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "receiverDailyCoverage_date_fkey",
+        "table": "receiverDailyCoverage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"receiverDailyCoverage_date_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "receiverDailyCoverage_date_fkey",
+          "public",
+          "\"public\".\"receiverDailyCoverage\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"receiverDailyCoverage_date_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyCoverage\"\nADD CONSTRAINT \"receiverDailyCoverage_date_fkey\"\nFOREIGN KEY (\"date\")\nREFERENCES \"public\".\"receiverDailyStats\" (\"date\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"receiverDailyCoverage_date_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "receiverDailyCoverage_date_fkey",
+          "public",
+          "\"public\".\"receiverDailyCoverage\""
+        ]
+      }
+    ]
+  }
+]

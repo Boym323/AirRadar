@@ -147,3 +147,24 @@ export interface RadarStats {
   airlines: Array<{ name: string; count: number }>;
   messagesPerSecond: number | null;
 }
+
+export interface ReceiverStatisticsResponse {
+  date: string;
+  timezone: string;
+  live: {
+    aircraftCount: number;
+    messagesPerSecond: number | null;
+  };
+  daily: {
+    uniqueAircraft: number;
+    maxConcurrentAircraft: number;
+    maxDistanceKm: number;
+  };
+  coverage: Array<{
+    bearingFrom: number;
+    bearingTo: number;
+    maxDistanceKm: number;
+  }>;
+  topAircraftTypes: Array<{ name: string; count: number }>;
+  topAirlines: Array<{ name: string; count: number }>;
+}

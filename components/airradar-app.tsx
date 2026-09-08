@@ -757,6 +757,10 @@ export function AirRadarApp() {
             <div className="brand-subtitle">{t.brand.subtitle}</div>
           </div>
         </div>
+        <nav className="topbar-nav" aria-label={t.statistics.navigation}>
+          <Link href="/statistics">{t.statistics.title}</Link>
+          <Link href="/history">{t.history.title}</Link>
+        </nav>
         <div className="topbar-meta">
           <span>{snapshot.receiver.name} · {snapshot.receiver.lat === null || snapshot.receiver.lon === null
             ? t.common.unavailable

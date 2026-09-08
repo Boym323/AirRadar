@@ -54,7 +54,7 @@ server-side.
 
 The request-response API endpoints have a small bounded in-memory fixed-window
 limiter per endpoint: aircraft 60/minute, history 30/minute, airports
-30/minute, ATC sectors 30/minute and health 60/minute. It is intentionally
+30/minute, ATC sectors 30/minute, statistics 12/minute and health 60/minute. It is intentionally
 global to this single Node instance rather than trusting `X-Forwarded-For` from
 the reverse proxy. `/api/stream` is excluded so long-lived SSE connections and
 their heartbeat/coalescing behavior are not interrupted. The limiter is not a
@@ -75,7 +75,7 @@ Persistence boundaries are intentional:
 | ADSBDB / FlightAware enrichment cache | Process memory with TTL and negative caching | Rebuilt after restart; live radar is independent |
 | Watchlist rules | Browser `localStorage` | Persists in that browser; not a shared database list |
 | Server alert rules | `data/alerts.json` | Loaded at process start; intentionally separate from browser watchlist |
-| Live statistics | Process memory, derived from current process observations | Rebuilt after restart; historical positions remain in PostgreSQL |
+| Daily receiver statistics | PostgreSQL `ReceiverDailyStats`, `ReceiverDailyAircraft`, `ReceiverDailyCoverage` plus bounded RAM aggregation | Continues after restart; current live count and messages/s remain process/live values |
 | ATC data | Sample constants in demo; PostgreSQL `AtcSector`/`AtcTransmitter` in production | Sample is never used for a configured real receiver |
 
 The project uses the Prisma 8 contract-based PostgreSQL workflow. `prisma/contract.prisma` is the source of truth, `prisma.config.ts` defines the PostgreSQL target, and `generated/prisma8/` contains generated runtime contract artifacts. The checked-in migration lives under `migrations/app/`.
@@ -247,6 +247,7 @@ npm run atc:status:cz # compare imported Czech effective date with AIM
 - `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback (ICAO hex, or readsb's `~`-prefixed six-digit identifier)
 - `GET /api/airports` — configured airport catalog or bundled fallback catalog
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
+- `GET /api/statistics` — today's receiver aggregate, 36 ten-degree coverage buckets and top aircraft types/airlines; exact receiver coordinates are never included
 - `GET /api/health` — application, database, readsb, ATC dataset, live-state and safe alerting health
 
 ## Production deployment
@@ -304,7 +305,7 @@ appropriate server/http context and keep `/api/stream` exempt.
 
 ## Architecture
 
-The browser talks only to AirRadar APIs. `AircraftProvider` is the stable server-side abstraction; `LocalReadsbProvider` and `MockReadsbProvider` implement it. `AircraftStateService` owns the in-memory map, derived distance/bearing, bounded trails, statistics, polling, stale-target cleanup and sampling. SSE coalesces snapshots for slow clients, so a disconnected or slow browser cannot grow a server-side queue.
+The browser talks only to AirRadar APIs. `AircraftProvider` is the stable server-side abstraction; `LocalReadsbProvider` and `MockReadsbProvider` implement it. `AircraftStateService` owns the in-memory map, derived distance/bearing, bounded trails, polling, stale-target cleanup and sampling. `ReceiverStatistics` owns the current local-day aggregate, per-ICAO type/airline accounting and fixed 36-bucket coverage; it flushes changed rows to PostgreSQL at most every 30 seconds and best-effort on shutdown. SSE coalesces snapshots for slow clients, so a disconnected or slow browser cannot grow a server-side queue.
 
 Optional server-side contracts are defined for `AircraftMetadataProvider`, `FlightRouteProvider`, `FlightPlanProvider`, `ExternalAdsbProvider`, `AtcSectorProvider` and `AtcActivityProvider`. The enrichment cache uses normalized keys, positive/negative TTLs and in-flight request coalescing; no provider is called when no integration is configured. The frontend receives normalized data and never selects a provider.
 

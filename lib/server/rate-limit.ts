@@ -80,6 +80,7 @@ export const PUBLIC_RATE_LIMITS = {
   airports: { limit: 30, windowMs: 60_000 },
   atcSectors: { limit: 30, windowMs: 60_000 },
   health: { limit: 60, windowMs: 60_000 },
+  statistics: { limit: 12, windowMs: 60_000 },
 } as const;
 
 export function checkPublicRateLimit(scope: keyof typeof PUBLIC_RATE_LIMITS): RateLimitResult {

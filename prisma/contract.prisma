@@ -43,6 +43,39 @@ model AircraftMetadataSync {
   updatedAt     DateTime @default(now())
 }
 
+model ReceiverDailyStats {
+  date                  String   @id
+  uniqueAircraftCount   Int      @default(0)
+  maxConcurrentAircraft Int      @default(0)
+  maxDistanceKm         Float    @default(0)
+  maxDistanceIcaoHex    String?
+  maxDistanceAt         DateTime?
+  updatedAt             DateTime @default(now())
+  aircraft              ReceiverDailyAircraft[]
+  coverage              ReceiverDailyCoverage[]
+}
+
+model ReceiverDailyAircraft {
+  date         String
+  icaoHex      String
+  aircraftType String?
+  airline      String?
+  updatedAt    DateTime @default(now())
+  dailyStats   ReceiverDailyStats @relation(fields: [date], references: [date], onDelete: Cascade)
+
+  @@id([date, icaoHex])
+}
+
+model ReceiverDailyCoverage {
+  date          String
+  azimuthBucket Int
+  maxDistanceKm Float
+  updatedAt     DateTime @default(now())
+  dailyStats    ReceiverDailyStats @relation(fields: [date], references: [date], onDelete: Cascade)
+
+  @@id([date, azimuthBucket])
+}
+
 model Flight {
   id         Int              @id @default(autoincrement())
   instanceKey String          @unique
