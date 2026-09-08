@@ -224,7 +224,7 @@ button { cursor: pointer; }
 .history-link { color: var(--mint); text-decoration: none; }
 .history-link:hover { text-decoration: underline; }
 
-.aircraft-marker { position: relative; width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; z-index: 2; }
+.aircraft-marker { width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; z-index: 2; }
 .aircraft-marker.selected { z-index: 30; }
 .aircraft-marker.watchlisted { z-index: 8; outline: 1px solid rgba(243,185,95,.72); outline-offset: 3px; border-radius: 50%; }
 .aircraft-marker.emergency { z-index: 12; outline: 1px solid rgba(251,113,133,.9); outline-offset: 3px; border-radius: 50%; }

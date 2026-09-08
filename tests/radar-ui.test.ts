@@ -12,6 +12,8 @@ import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");
+const globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+const maplibreCss = readFileSync(new URL("../node_modules/maplibre-gl/dist/maplibre-gl.css", import.meta.url), "utf8");
 
 describe("radar UI polish helpers", () => {
   it("changes airport visibility deterministically by zoom", () => {
@@ -37,6 +39,26 @@ describe("radar UI polish helpers", () => {
       "watchlisted",
       "emergency",
     ]);
+  });
+
+  it("keeps MapLibre in control of DOM marker positioning", () => {
+    const aircraftRule = globalCss.match(/\.aircraft-marker\s*\{([^}]*)\}/)?.[1] ?? "";
+    const receiverRule = globalCss.match(/\.receiver-marker\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(maplibreCss).toContain(".maplibregl-marker");
+    expect(maplibreCss).toMatch(/\.maplibregl-marker\{[^}]*position:absolute/);
+    expect(aircraftRule).not.toMatch(/\bposition\s*:/);
+    expect(aircraftRule).not.toMatch(/\btransform\s*:/);
+    expect(receiverRule).not.toMatch(/\bposition\s*:/);
+    expect(receiverRule).not.toMatch(/\btransform\s*:/);
+  });
+
+  it("keeps aircraft visual effects off the MapLibre root", () => {
+    expect(globalCss).toContain(".aircraft-marker.selected::before");
+    expect(globalCss).toContain("position: absolute");
+    expect(globalCss).toMatch(/\.aircraft-marker:hover \.aircraft-plane[^}]*transform:\s*scale/);
+    expect(globalCss).toMatch(/\.aircraft-marker\.selected \.aircraft-plane[^}]*transform:\s*scale/);
+    expect(appSource).toContain("const target: [number, number] = [aircraft.lon, aircraft.lat]");
+    expect(appSource).toContain("setLngLat([receiver.lon, receiver.lat])");
   });
 
   it("keeps ATC collapsed/expanded state accessible and mobile-collapsed by default", () => {
