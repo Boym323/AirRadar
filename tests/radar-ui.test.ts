@@ -83,6 +83,13 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain('geometry: { type: "LineString"');
   });
 
+  it("keeps radar keyboard shortcuts out of editable controls", () => {
+    expect(appSource).toContain("searchInputRef.current?.focus()");
+    expect(appSource).toContain('event.key.toLowerCase() === "f"');
+    expect(appSource).toContain("setSelectedHex(null);");
+    expect(appSource).toContain("isEditableTarget(event.target)");
+  });
+
   it("keeps selection details while hiding filtered map overlays and supports a client reset", () => {
     expect(appSource).toContain("filterAircraftForMap(snapshot.aircraft, mapFilters)");
     expect(appSource).toContain("const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some");

@@ -376,6 +376,7 @@ export function AirRadarApp() {
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
   const [mapReady, setMapReady] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     try {
@@ -419,6 +420,34 @@ export function AirRadarApp() {
     setDistanceFilter("all");
     setWatchlistOnly(false);
     setSortBy("distance");
+  }, []);
+
+  useEffect(() => {
+    function isEditableTarget(target: EventTarget | null): boolean {
+      const element = target instanceof HTMLElement ? target : null;
+      if (!element) return false;
+      return element instanceof HTMLInputElement
+        || element instanceof HTMLTextAreaElement
+        || element instanceof HTMLSelectElement
+        || element.isContentEditable;
+    }
+
+    function handleKeyboardShortcut(event: KeyboardEvent): void {
+      if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
+      if (event.key === "/") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setFiltersOpen((current) => !current);
+      } else if (event.key === "Escape") {
+        setFiltersOpen(false);
+        setSelectedHex(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyboardShortcut);
+    return () => window.removeEventListener("keydown", handleKeyboardShortcut);
   }, []);
 
   function addWatchlistRule(event: React.FormEvent<HTMLFormElement>) {
@@ -1010,7 +1039,7 @@ export function AirRadarApp() {
           <div className="sidebar-header">
             <div className="search-wrap">
               <span className="search-icon" aria-hidden="true">⌕</span>
-              <input className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.search.placeholder} aria-label={t.search.aircraftLabel} />
+              <input ref={searchInputRef} className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.search.placeholder} aria-label={t.search.aircraftLabel} />
             </div>
             <div className="radar-options">
               <button type="button" className="filter-button" aria-expanded={filtersOpen} aria-controls="map-filters-panel" onClick={() => setFiltersOpen((value) => !value)}>
