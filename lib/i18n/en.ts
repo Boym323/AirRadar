@@ -200,6 +200,10 @@ export const en = {
     airlines: "Airlines",
     secondary: (unique: string, maximum: string, messages: string) => `Unique aircraft: ${unique} · Maximum simultaneous: ${maximum} · Messages/s: ${messages}`,
   },
+  logbook: {
+    newAircraft: "NEW",
+    newAircraftReason: "This ICAO hex was first observed in the receiver history today.",
+  },
   statistics: {
     title: "Receiver statistics",
     subtitle: "PERFORMANCE OF YOUR ADS-B RECEIVER",

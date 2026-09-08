@@ -10,6 +10,7 @@ import {
 import { airportFromCode } from "@/lib/server/airport-catalog";
 import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport-resolver";
 import { getPrisma } from "@/lib/server/db";
+import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/server/logbook";
 
 export interface HistoryResponse {
   source: "postgres" | "memory";
@@ -145,6 +146,7 @@ export interface AircraftDetailResponse {
   recentFlights: HistoryFlightSummary[];
   historySummary: AircraftHistorySummary;
   lifetimeStats: AircraftLifetimeStats;
+  logbook: AircraftLogbookStatus;
 }
 
 export class HistoryDatabaseUnavailableError extends Error {
@@ -403,6 +405,10 @@ function emptyAircraftLifetimeStats(): AircraftLifetimeStats {
   };
 }
 
+function emptyAircraftLogbook(): AircraftLogbookStatus {
+  return { labels: [], isNew: false, firstObservedAt: null };
+}
+
 function normalizedHistoryText(value: string | null | undefined): string | null {
   const normalized = value?.trim().toUpperCase() ?? "";
   return normalized || null;
@@ -657,7 +663,7 @@ export async function getAircraftDetail(
     const schema = database.orm.public;
     const historyRange = normalizeAircraftHistoryRange(options.historyRange);
     const aircraft = await schema.Aircraft.where({ icaoHex: icaoHex.toUpperCase() }).first();
-    if (!aircraft) return { aircraft: null, recentFlights: [], historySummary: emptyAircraftHistorySummary(historyRange), lifetimeStats: emptyAircraftLifetimeStats() };
+    if (!aircraft) return { aircraft: null, recentFlights: [], historySummary: emptyAircraftHistorySummary(historyRange), lifetimeStats: emptyAircraftLifetimeStats(), logbook: emptyAircraftLogbook() };
 
     const flights = await schema.Flight
       .where({ aircraftId: aircraft.id })
@@ -671,6 +677,9 @@ export async function getAircraftDetail(
     const lifetimeStats = options.includeHistorySummary === false
       ? emptyAircraftLifetimeStats()
       : await getAircraftLifetimeStats(schema, aircraft.id, options.now ?? new Date());
+    const logbook = options.includeHistorySummary === false
+      ? emptyAircraftLogbook()
+      : classifyAircraftLogbook(lifetimeStats, options.now ?? new Date());
 
     return {
       aircraft: {
@@ -686,6 +695,7 @@ export async function getAircraftDetail(
       recentFlights: orderFlightSummaries(flights.map(flightSummaryFromRow)).slice(0, AIRCRAFT_RECENT_FLIGHT_LIMIT),
       historySummary,
       lifetimeStats,
+      logbook,
     };
   } catch {
     throw new HistoryDatabaseUnavailableError();

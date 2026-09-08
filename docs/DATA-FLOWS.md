@@ -72,6 +72,10 @@ instances, local active days, callsigns, resolved origins/destinations, and
 routes. They deliberately do not scan `FlightPosition`; sampled positions
 remain owned by the bounded per-flight playback endpoint.
 
+The aircraft detail NEW label is based on the first persisted Flight
+instance's local `APP_TIMEZONE` day matching the current day. RAM presence is
+not used, so restarting the process cannot create a false first observation.
+
 ## Statistics and coverage
 
 `ReceiverStatistics.observe()` runs after each applied snapshot. It counts

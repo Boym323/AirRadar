@@ -294,8 +294,11 @@ export function AircraftDetailV2({
         <Link className="back-link" href={backLink}>{t.history.backToRadar}</Link>
         <div className="aircraft-page-kicker">{t.history.aircraftDetail}</div>
         <h1>{icaoHex}</h1>
-        <div className={`aircraft-status ${liveAircraft ? "live" : "offline"}`}>
-          {liveAircraft ? t.status.liveReceiver : t.aircraft.notCurrentlyInRange}
+        <div className="aircraft-status-row">
+          <div className={`aircraft-status ${liveAircraft ? "live" : "offline"}`}>
+            {liveAircraft ? t.status.liveReceiver : t.aircraft.notCurrentlyInRange}
+          </div>
+          {detail?.logbook.isNew && <div className="aircraft-logbook-badge" title={t.logbook.newAircraftReason}>{t.logbook.newAircraft}</div>}
         </div>
       </header>
 

@@ -198,6 +198,10 @@ export const cs = {
     airlines: "Letecké společnosti",
     secondary: (unique: string, maximum: string, messages: string) => `Unikátních letadel: ${unique} · Maximum současně: ${maximum} · Zpráv/s: ${messages}`,
   },
+  logbook: {
+    newAircraft: "NOVĚ ZACHYCENO",
+    newAircraftReason: "První historické zachycení tohoto ICAO hexu dnes.",
+  },
   statistics: {
     title: "Statistiky přijímače",
     subtitle: "VÝKON VLASTNÍHO ADS-B PŘIJÍMAČE",
