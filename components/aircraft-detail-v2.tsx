@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
+import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 import { aircraftAirportHref, aircraftHistoryHref, aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
 import type { AircraftDetailResponse, HistoryFlightSummary } from "@/lib/server/history";
 import { formatAltitude, formatDateTime, formatSpeed, formatTrack, t } from "@/lib/i18n";
@@ -75,6 +76,71 @@ export function AircraftRecentFlights({
   );
 }
 
+function AircraftPhotoCard({ icaoHex, registration }: { icaoHex: string; registration: string | null | undefined }) {
+  const [result, setResult] = useState<AircraftPhotoApiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [imageFailed, setImageFailed] = useState(false);
+  const lookupHex = icaoHex === t.common.emptyValue ? null : icaoHex;
+
+  useEffect(() => {
+    if (!lookupHex) {
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    setResult(null);
+    setImageFailed(false);
+    void fetch(`/api/aircraft/${encodeURIComponent(lookupHex)}/photo`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("aircraft photo request failed");
+        return await response.json() as AircraftPhotoApiResponse;
+      })
+      .then((value) => {
+        if (active) setResult(value);
+      })
+      .catch(() => {
+        if (active) setResult(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [lookupHex]);
+
+  const photo: AircraftPhoto | null = result?.photo ?? null;
+  if (!lookupHex || imageFailed || (!loading && (!result?.enabled || !photo))) return null;
+
+  const identity = registration?.trim() || lookupHex;
+  return (
+    <section className="aircraft-card aircraft-photo-card" aria-labelledby="aircraft-photo-title">
+      <h2 id="aircraft-photo-title">{t.aircraft.photoTitle}</h2>
+      {loading || !photo ? <div className="detail-disclaimer">{t.common.loading}</div> : (
+        <>
+          <a className="aircraft-photo-link" href={photo.sourceUrl} target="_blank" rel="noreferrer">
+            {/* The server validates this URL against the Planespotters host allowlist. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="aircraft-photo-thumbnail"
+              src={photo.thumbnailUrl}
+              alt={`${t.aircraft.photoAlt} ${identity}`}
+              loading="lazy"
+              onError={() => setImageFailed(true)}
+            />
+          </a>
+          <div className="aircraft-photo-attribution">
+            <span>{photo.attribution ?? t.aircraft.photoPhotographerUnknown}</span>
+            <span aria-hidden="true"> · </span>
+            <a href={photo.sourceUrl} target="_blank" rel="noreferrer">{t.aircraft.photoSource}</a>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 export function AircraftDetailV2({
   detail,
   liveAircraft,
@@ -112,31 +178,34 @@ export function AircraftDetailV2({
       </header>
 
       <div className="aircraft-page-layout">
-        <section className="aircraft-card" aria-labelledby="aircraft-information-title">
-          <h2 id="aircraft-information-title">{t.history.aircraftDetail}</h2>
-          <div className="detail-grid aircraft-detail-grid">
-            <DetailValue label={t.aircraft.icaoHex}>{icaoHex}</DetailValue>
-            <DetailValue label={t.aircraft.registration}>{valueOrEmpty(registration)}</DetailValue>
-            <DetailValue label={t.aircraft.currentCallsign}>{valueOrEmpty(liveAircraft?.callsign)}</DetailValue>
-            <DetailValue label={t.aircraft.aircraftType}>{valueOrEmpty(aircraftType)}</DetailValue>
-            <DetailValue label={t.aircraft.manufacturer}>{valueOrEmpty(manufacturer)}</DetailValue>
-            <DetailValue label={t.aircraft.modelType}>{valueOrEmpty(model)}</DetailValue>
-            <DetailValue label={t.aircraft.operator}>{valueOrEmpty(operator)}</DetailValue>
-            <DetailValue label={t.aircraft.registrationCountry}>{valueOrEmpty(registrationCountry)}</DetailValue>
-          </div>
-          <div className="watchlist-actions"><Link className="primary-button" href={watchlistHref}>{t.watchlist.followAircraft}</Link></div>
+        <div className="aircraft-primary-column">
+          <section className="aircraft-card" aria-labelledby="aircraft-information-title">
+            <h2 id="aircraft-information-title">{t.history.aircraftDetail}</h2>
+            <div className="detail-grid aircraft-detail-grid">
+              <DetailValue label={t.aircraft.icaoHex}>{icaoHex}</DetailValue>
+              <DetailValue label={t.aircraft.registration}>{valueOrEmpty(registration)}</DetailValue>
+              <DetailValue label={t.aircraft.currentCallsign}>{valueOrEmpty(liveAircraft?.callsign)}</DetailValue>
+              <DetailValue label={t.aircraft.aircraftType}>{valueOrEmpty(aircraftType)}</DetailValue>
+              <DetailValue label={t.aircraft.manufacturer}>{valueOrEmpty(manufacturer)}</DetailValue>
+              <DetailValue label={t.aircraft.modelType}>{valueOrEmpty(model)}</DetailValue>
+              <DetailValue label={t.aircraft.operator}>{valueOrEmpty(operator)}</DetailValue>
+              <DetailValue label={t.aircraft.registrationCountry}>{valueOrEmpty(registrationCountry)}</DetailValue>
+            </div>
+            <div className="watchlist-actions"><Link className="primary-button" href={watchlistHref}>{t.watchlist.followAircraft}</Link></div>
 
-          <section className="detail-section" aria-labelledby="aircraft-live-title">
-            <h3 id="aircraft-live-title">{t.aircraft.liveAdsb}</h3>
-            {liveAircraft ? (
-              <div className="detail-grid">
-                <DetailValue label={t.aircraft.altitude}>{formatAltitude(liveAircraft.altitude)}</DetailValue>
-                <DetailValue label={t.aircraft.groundSpeed}>{formatSpeed(liveAircraft.groundSpeed)}</DetailValue>
-                <DetailValue label={t.aircraft.track}>{formatTrack(liveAircraft.track)}</DetailValue>
-              </div>
-            ) : <div className="detail-disclaimer">{t.aircraft.notCurrentlyInRange}</div>}
+            <section className="detail-section" aria-labelledby="aircraft-live-title">
+              <h3 id="aircraft-live-title">{t.aircraft.liveAdsb}</h3>
+              {liveAircraft ? (
+                <div className="detail-grid">
+                  <DetailValue label={t.aircraft.altitude}>{formatAltitude(liveAircraft.altitude)}</DetailValue>
+                  <DetailValue label={t.aircraft.groundSpeed}>{formatSpeed(liveAircraft.groundSpeed)}</DetailValue>
+                  <DetailValue label={t.aircraft.track}>{formatTrack(liveAircraft.track)}</DetailValue>
+                </div>
+              ) : <div className="detail-disclaimer">{t.aircraft.notCurrentlyInRange}</div>}
+            </section>
           </section>
-        </section>
+          <AircraftPhotoCard icaoHex={icaoHex} registration={registration} />
+        </div>
 
         <section className="aircraft-card aircraft-recent-card" aria-label={t.history.recentFlights}>
           <AircraftRecentFlights recentFlights={detail?.recentFlights ?? []} loading={loading} error={error} />

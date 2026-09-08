@@ -250,6 +250,10 @@ export const cs = {
     operator: "Provozovatel",
     registrationCountry: "Země registrace",
     notCurrentlyInRange: "Nyní není v dosahu",
+    photoTitle: "Fotografie letadla",
+    photoAlt: "Fotografie letadla",
+    photoSource: "Zdroj: Planespotters.net",
+    photoPhotographerUnknown: "Autor neuveden",
   },
   route: {
     airline: "Letecká společnost",

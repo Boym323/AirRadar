@@ -48,14 +48,14 @@ not redacted.
 
 Application responses include `nosniff`, strict referrer and permissions
 policies, clickjacking protection and a CSP that permits the MapLibre blob
-worker and OpenStreetMap tiles. Live endpoints are not cached; catalog data is
-short-lived cacheable data. Public response errors are generic and secrets stay
-server-side.
+worker, OpenStreetMap tiles and the explicit Planespotters thumbnail hosts.
+Live endpoints are not cached; catalog data is short-lived cacheable data.
+Public response errors are generic and secrets stay server-side.
 
 The request-response API endpoints have a small bounded in-memory fixed-window
 limiter per endpoint: aircraft 60/minute, history 30/minute, airports
-30/minute, weather 30/minute, ATC sectors 30/minute, statistics 12/minute,
-search 60/minute and health 60/minute. It is intentionally
+30/minute, weather 30/minute, ATC sectors 30/minute, aircraft photos
+30/minute, statistics 12/minute, search 60/minute and health 60/minute. It is intentionally
 global to this single Node instance rather than trusting `X-Forwarded-For` from
 the reverse proxy. `/api/stream` is excluded so long-lived SSE connections and
 their heartbeat/coalescing behavior are not interrupted. The limiter is not a
@@ -75,6 +75,7 @@ Persistence boundaries are intentional:
 | `AircraftMetadataCache` and `AircraftMetadataSync` | PostgreSQL | Persistent catalog; refreshed at most once per day with conditional HTTP validation |
 | ADSBDB / FlightAware enrichment cache | Process memory with TTL and negative caching | Rebuilt after restart; live radar is independent |
 | AviationWeather.gov METAR / TAF | Process memory with bounded 5/15-minute TTL cache and stale-if-error window | Never persisted; live weather is fetched on demand for an opened flight-detail airport |
+| Aircraft photo metadata | Process memory with bounded 24-hour positive / 1-hour negative cache | Fetched only for an opened aircraft detail when `AIRCRAFT_PHOTOS_ENABLED=true`; image bytes are loaded by the browser |
 | Watchlist rules | Browser `localStorage` | Persists in that browser; not a shared database list |
 | Server alert rules | `data/alerts.json` | Shared by alert engine and `/watchlist`; intentionally separate from browser watchlist |
 | Daily receiver statistics | PostgreSQL `ReceiverDailyStats`, `ReceiverDailyAircraft`, `ReceiverDailyCoverage` plus bounded RAM aggregation | Continues after restart; current live count and messages/s remain process/live values |
@@ -107,6 +108,7 @@ The integrations below are optional. A provider failure is negatively cached and
 | Callsign airline and origin/destination | ADSBDB | Same as above | Free community API, no key |
 | Scheduled/actual/estimated times, filed route and waypoints | [FlightAware AeroAPI](https://www.flightaware.com/commercial/aeroapi/v4/documentation) | `FLIGHTAWARE_API_KEY=…` | Optional commercial service; key stays server-side |
 | ATC sectors and transmitters | Demo constants / PostgreSQL import | `ATC_SAMPLE_ENABLED` | Demo sample only; production uses an explicitly synced authoritative dataset |
+| Aircraft photos | [Planespotters.net public API](https://www.planespotters.net/) | `AIRCRAFT_PHOTOS_ENABLED=true` | No key; disabled by default and isolated from live polling/SSE |
 
 ADSBDB lookups are keyed by ICAO hex or callsign and cached for hours to a day; the cache coalesces concurrent requests and negatively caches misses, so the provider is not queried on every realtime update. FlightAware is disabled when `FLIGHTAWARE_API_KEY` is empty. Missing keys therefore do not reduce live radar functionality. Route lines are schematic references, not filed flight plans; the orange solid trail is the observed ADS-B trail.
 

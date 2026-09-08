@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
         { key: "X-Frame-Options", value: "DENY" },
         // MapLibre needs a blob worker; OSM is the only external map origin.
         // Next.js production runtime currently needs inline bootstrap/style code.
-        { key: "Content-Security-Policy", value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self' https://tile.openstreetmap.org; worker-src 'self' blob:; child-src blob:; font-src 'self' data:;" },
+        { key: "Content-Security-Policy", value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://t.plnspttrs.net https://www.planespotters.net; connect-src 'self' https://tile.openstreetmap.org; worker-src 'self' blob:; child-src blob:; font-src 'self' data:;" },
       ],
     }];
   },

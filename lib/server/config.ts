@@ -111,6 +111,10 @@ export function isAdsbDbEnabled(): boolean {
   return process.env.ADSBDB_ENABLED?.trim().toLowerCase() === "true";
 }
 
+export function isAircraftPhotosEnabled(): boolean {
+  return process.env.AIRCRAFT_PHOTOS_ENABLED?.trim().toLowerCase() === "true";
+}
+
 export function getAdsbDbBaseUrl(): string {
   return process.env.ADSBDB_BASE_URL?.trim() || "https://api.adsbdb.com/v0";
 }

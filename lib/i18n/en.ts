@@ -252,6 +252,10 @@ export const en = {
     operator: "Operator",
     registrationCountry: "Registration country",
     notCurrentlyInRange: "Not currently in range",
+    photoTitle: "Aircraft photo",
+    photoAlt: "Aircraft photo",
+    photoSource: "Source: Planespotters.net",
+    photoPhotographerUnknown: "Photographer not listed",
   },
   route: {
     airline: "Airline",

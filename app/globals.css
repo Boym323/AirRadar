@@ -274,10 +274,17 @@ button { cursor: pointer; }
 .aircraft-status { display: inline-flex; margin-top: 9px; padding: 6px 9px; border: 1px solid rgba(55,214,192,.3); border-radius: 999px; color: var(--mint); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
 .aircraft-status.offline { border-color: rgba(243,185,95,.3); color: var(--amber); }
 .aircraft-page-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 520px); gap: 16px; align-items: start; }
+.aircraft-primary-column { display: grid; gap: 16px; min-width: 0; }
 .aircraft-card { min-width: 0; padding: 18px 19px 20px; border: 1px solid var(--line); border-radius: 14px; background: rgba(13,25,39,.8); overflow: hidden; }
 .aircraft-card > h2 { margin: 0; color: var(--text); font-size: 15px; letter-spacing: -.02em; }
 .aircraft-card .detail-grid { margin-top: 15px; }
 .aircraft-card .detail-section:first-child { margin-top: 18px; }
+.aircraft-photo-card { padding-bottom: 15px; }
+.aircraft-photo-link { display: block; margin-top: 13px; border-radius: 9px; overflow: hidden; background: rgba(17,35,55,.48); }
+.aircraft-photo-thumbnail { display: block; width: 100%; max-height: 280px; object-fit: cover; }
+.aircraft-photo-attribution { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 8px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.aircraft-photo-attribution a { color: var(--mint); text-decoration: none; }
+.aircraft-photo-attribution a:hover { text-decoration: underline; }
 .aircraft-recent-card { padding: 0 19px 20px; }
 .aircraft-recent-card .detail-section { border-top: 0; margin-top: 0; padding-top: 18px; }
 .aircraft-recent-flight-list { display: grid; gap: 8px; margin-top: 11px; }
@@ -560,6 +567,7 @@ button { cursor: pointer; }
   .airport-page { padding: 20px 12px 32px; }
   .aircraft-page { padding: 20px 12px 32px; }
   .aircraft-page-layout { grid-template-columns: 1fr; }
+  .aircraft-primary-column { gap: 12px; }
   .aircraft-card { padding-left: 15px; padding-right: 15px; }
   .aircraft-recent-card { padding-left: 15px; padding-right: 15px; }
   .airport-layout { grid-template-columns: 1fr; }
