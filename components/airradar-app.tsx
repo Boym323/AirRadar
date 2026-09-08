@@ -4,10 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
-import type { GeoJSONSource, StyleSpecification } from "maplibre-gl";
+import type { FilterSpecification, GeoJSONSource, StyleSpecification } from "maplibre-gl";
 import { circleCoordinates } from "@/lib/geo";
 import {
-  aircraftInRange,
   formatAge,
   formatAltitude,
   formatAtcFrequency,
@@ -34,6 +33,8 @@ import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import { AirportWeatherDisclosure } from "@/components/airport-weather";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
+import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
+import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
 const EMPTY_RECEIVER: PublicReceiverPosition = { lat: null, lon: null, name: t.radar.receiverName };
@@ -83,8 +84,8 @@ const MAP_STYLE: StyleSpecification = {
     },
   },
   layers: [
-    { id: "background", type: "background", paint: { "background-color": "#0b1725" } },
-    { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.58, "raster-saturation": -0.8, "raster-contrast": 0.1 } },
+    { id: "background", type: "background", paint: { "background-color": "#091522" } },
+    { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.62, "raster-saturation": -0.74, "raster-contrast": 0.16, "raster-brightness-min": 0.06, "raster-brightness-max": 0.9 } },
   ],
 };
 
@@ -137,15 +138,20 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean) {
   };
 }
 
-function createAirportGeoJSON(airports: Airport[], visible: boolean) {
+function createAirportGeoJSON(airports: Airport[], importantAirportCodes: ReadonlySet<string>) {
   const unique = new Map(airports.map((airport) => [airport.icaoCode, airport]));
   return {
     type: "FeatureCollection" as const,
-    features: visible ? [...unique.values()].map((airport) => ({
+    features: [...unique.values()].map((airport) => ({
       type: "Feature" as const,
-      properties: { code: airport.iataCode ? `${airport.iataCode}/${airport.icaoCode}` : airport.icaoCode, name: airport.name },
+      properties: {
+        code: airport.iataCode ? `${airport.iataCode}/${airport.icaoCode}` : airport.icaoCode,
+        name: airport.name,
+        tier: airportVisibilityTier(airport),
+        important: importantAirportCodes.has(airport.icaoCode),
+      },
       geometry: { type: "Point" as const, coordinates: [airport.longitude, airport.latitude] },
-    })) : [],
+    })),
   };
 }
 
@@ -309,8 +315,12 @@ export function AirRadarApp() {
   const [watchlist, setWatchlist] = useState<Array<{ kind: string; value: string }>>([]);
   const [watchlistKind, setWatchlistKind] = useState("callsign");
   const [watchlistValue, setWatchlistValue] = useState("");
+  const [showAircraft, setShowAircraft] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
   const [showAirports, setShowAirports] = useState(true);
+  const [showSignificantAirports, setShowSignificantAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSignificant);
+  const [showSmallAirports, setShowSmallAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSmall);
+  const [showHeliports, setShowHeliports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showHeliports);
   const [airports, setAirports] = useState<Airport[]>([]);
   const [atcData, setAtcData] = useState<AtcDataResponse>(EMPTY_ATC_DATA);
   const [streamConnected, setStreamConnected] = useState(false);
@@ -328,6 +338,7 @@ export function AirRadarApp() {
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
+  const [mapZoom, setMapZoom] = useState(7.4);
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -459,9 +470,9 @@ export function AirRadarApp() {
       map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "name"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#d7caff", "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
       map.addSource("atc-transmitters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": "#f3b95f", "circle-radius": 5, "circle-stroke-color": "#08111d", "circle-stroke-width": 1.5 } });
-      map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([], false) });
-      map.addLayer({ id: "route-airports-circle", type: "circle", source: "route-airports", paint: { "circle-color": "#f3b95f", "circle-radius": 5, "circle-stroke-color": "#08111d", "circle-stroke-width": 1.5 } });
-      map.addLayer({ id: "route-airports-label", type: "symbol", source: "route-airports", layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 1.2] }, paint: { "text-color": "#f5d494", "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
+      map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([], new Set()) });
+      map.addLayer({ id: "route-airports-circle", type: "circle", source: "route-airports", paint: { "circle-color": "#d2b56f", "circle-opacity": 0.72, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 3, 12, 4.5], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.2 } });
+      map.addLayer({ id: "route-airports-label", type: "symbol", source: "route-airports", layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 8, 10, 9, 13, 10], "text-offset": [0, 1.1], "text-padding": 7, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#cfbd8b", "text-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.52, 10, 0.72, 13, 0.82], "text-halo-color": "#08111d", "text-halo-width": 0.7 } });
       map.on("click", "atc-sectors-fill", (event) => {
         const feature = event.features?.[0];
         if (!feature) return;
@@ -493,6 +504,7 @@ export function AirRadarApp() {
       });
       map.on("mouseenter", "atc-transmitters-circle", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "atc-transmitters-circle", () => { map.getCanvas().style.cursor = ""; });
+      map.on("zoomend", () => setMapZoom(map.getZoom()));
       setMapReady(true);
     });
 
@@ -601,7 +613,7 @@ export function AirRadarApp() {
       const target: [number, number] = [aircraft.lon, aircraft.lat];
       if (!marker) {
         const root = document.createElement("div");
-        root.className = "aircraft-marker";
+        root.className = aircraftMarkerClassNames({ selected: false, watchlisted: false, emergency: false }).join(" ");
         root.setAttribute("role", "button");
         root.setAttribute("tabindex", "0");
         root.setAttribute("aria-label", labelForAircraft(aircraft));
@@ -654,6 +666,8 @@ export function AirRadarApp() {
       root.setAttribute("aria-pressed", String(aircraft.icaoHex === selectedHex));
       root.classList.toggle("selected", aircraft.icaoHex === selectedHex);
       root.classList.toggle("watchlisted", isWatchlisted(aircraft));
+      root.classList.toggle("emergency", Boolean(aircraft.emergency));
+      root.style.visibility = showAircraft ? "visible" : "hidden";
       const plane = root.querySelector<HTMLElement>(".aircraft-plane");
       if (plane) {
         const markerKind = aircraftMarkerKind(aircraft);
@@ -689,7 +703,7 @@ export function AirRadarApp() {
       : { type: "FeatureCollection", features: [] });
     const routeSource = map.getSource("selected-route") as GeoJSONSource | undefined;
     routeSource?.setData(createRouteGeoJSON(selected?.enrichment?.route, Boolean(selected?.enrichment?.route)));
-  }, [isWatchlisted, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [isWatchlisted, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -709,12 +723,35 @@ export function AirRadarApp() {
       const route = aircraft.enrichment?.route;
       return [route?.originAirport, route?.destinationAirport].filter((airport): airport is Airport => Boolean(airport));
     });
+    const importantAirportCodes = new Set(routeAirports.map((airport) => airport.icaoCode));
     const airportSource = map.getSource("route-airports") as GeoJSONSource | undefined;
-    airportSource?.setData(createAirportGeoJSON([...airports, ...routeAirports], showAirports));
+    airportSource?.setData(createAirportGeoJSON([...airports, ...routeAirports], importantAirportCodes));
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
-  }, [airports, atcData, mapReady, showAirports, showAtc, snapshot.aircraft]);
+  }, [airports, atcData, mapReady, showAtc, snapshot.aircraft]);
+
+  const airportLayerVisibility = useMemo<AirportLayerVisibility>(() => ({
+    showAirports,
+    showSignificant: showSignificantAirports,
+    showSmall: showSmallAirports,
+    showHeliports,
+  }), [showAirports, showHeliports, showSignificantAirports, showSmallAirports]);
+  const airportFilter = useMemo(
+    () => airportVisibilityFilter(mapZoom, airportLayerVisibility) as FilterSpecification,
+    [airportLayerVisibility, mapZoom],
+  );
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    for (const layer of ["route-airports-circle", "route-airports-label"] as const) {
+      if (map.getLayer(layer)) {
+        map.setFilter(layer, airportFilter);
+        map.setLayoutProperty(layer, "visibility", showAirports ? "visible" : "none");
+      }
+    }
+  }, [airportFilter, mapReady, showAirports]);
 
   const selectedAircraft = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) ?? null;
   const filterOptions = useMemo(() => ({
@@ -747,6 +784,8 @@ export function AirRadarApp() {
   const isDemo = snapshot.provider === "mock";
   const hasSourceSnapshot = snapshot.lastSourceUpdate !== null;
   const statusOffline = !isDemo && hasSourceSnapshot && !snapshot.sourceOnline;
+  const receiverStatusLabel = statusOffline ? t.status.receiverOffline : isDemo ? t.status.mockReceiver : streamConnected ? t.status.liveReceiver : t.status.connecting;
+  const receiverStatusShort = statusOffline ? t.status.offlineShort : isDemo ? t.status.demoShort : streamConnected ? t.status.liveShort : t.status.connectingShort;
 
   return (
     <main className="radar-shell">
@@ -763,15 +802,18 @@ export function AirRadarApp() {
           <Link href="/history">{t.history.title}</Link>
         </nav>
         <div className="topbar-meta">
-          <span>{snapshot.receiver.name} · {snapshot.receiver.lat === null || snapshot.receiver.lon === null
-            ? t.common.unavailable
-            : `${snapshot.receiver.lat.toFixed(4)}, ${snapshot.receiver.lon.toFixed(4)}`}</span>
-          <span className={`mode-pill ${isDemo ? "" : "hidden"}`}>{t.brand.demoMode}</span>
-          <span className={`status-pill ${statusOffline ? "offline" : isDemo ? "demo" : ""}`}>
+          <span className="topbar-receiver"><span className="topbar-receiver-label">{t.status.receiverLabel}</span><span className="topbar-receiver-name">{snapshot.receiver.name}</span></span>
+          <span className={`status-pill ${statusOffline ? "offline" : isDemo ? "demo" : ""}`} title={receiverStatusLabel} aria-label={receiverStatusLabel}>
             <span className="status-dot" />
-            {statusOffline ? t.status.receiverOffline : isDemo ? t.status.mockReceiver : streamConnected ? t.status.liveReceiver : t.status.connecting}
+            {receiverStatusShort}
           </span>
-          {serverAlertsEnabled !== null && <span className="alert-status">{serverAlertsEnabled ? t.status.serverAlertsActive : t.status.serverAlertsDisabled}</span>}
+          <details className="topbar-secondary-status">
+            <summary>{t.status.secondaryStatus}</summary>
+            <div>
+              <span>{snapshot.receiver.lat === null || snapshot.receiver.lon === null ? t.common.unavailable : `${snapshot.receiver.lat.toFixed(4)}, ${snapshot.receiver.lon.toFixed(4)}`}</span>
+              {serverAlertsEnabled !== null && <span>{serverAlertsEnabled ? t.status.serverAlertsActive : t.status.serverAlertsDisabled}</span>}
+            </div>
+          </details>
         </div>
       </header>
 
@@ -779,9 +821,10 @@ export function AirRadarApp() {
         <div className="map-panel">
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
-            <div className="map-overlay-card">
-              <div className="map-overlay-title">{t.radar.liveAirPicture}</div>
-              <div className="map-overlay-value">{aircraftInRange(snapshot.aircraft.length)}</div>
+            <div className="map-overlay-card map-summary-card">
+              <div className="map-summary-item"><strong>{formatNumber(snapshot.stats.currentAircraft)}</strong><span>{t.stats.trackingNow}</span></div>
+              <div className="map-summary-item"><strong>{snapshot.stats.messagesPerSecond === null ? t.common.emptyValue : `${formatNumber(snapshot.stats.messagesPerSecond, 1)}/s`}</strong><span>{t.statistics.messagesPerSecond}</span></div>
+              <div className="map-summary-item"><strong>{formatDistance(snapshot.stats.maxDistanceKm)}</strong><span>{t.stats.maxDistance}</span></div>
             </div>
             {snapshot.receiver.lat !== null && snapshot.receiver.lon !== null && <div className="map-overlay-card range-legend">
               <span><i className="legend-dot" /> 25 km</span>
@@ -792,6 +835,17 @@ export function AirRadarApp() {
               <span><i className="legend-line observed" /> {t.radar.adsbTrail}</span>
               <span><i className="legend-line planned" /> {t.radar.routeReference}</span>
             </div>}
+            <details className="map-layers">
+              <summary>{t.layers.title}</summary>
+              <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
+                <label><input type="checkbox" checked={showAircraft} onChange={(event) => setShowAircraft(event.target.checked)} /> {t.layers.aircraft}</label>
+                <label><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> {t.layers.airports}</label>
+                <label className="map-layer-sublevel"><input type="checkbox" checked={showSignificantAirports} disabled={!showAirports} onChange={(event) => setShowSignificantAirports(event.target.checked)} /> {t.layers.significantAirports}</label>
+                <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>
+                <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
+                <label><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {t.layers.atc}</label>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -805,7 +859,6 @@ export function AirRadarApp() {
                 {mobileCompact ? "↑" : "↓"}
               </button>
             </div>
-          <RelevantAtcPanel summaries={snapshot.relevantAtcFrequencies} onOpen={() => setMobileCompact(false)} />
           <div className="sidebar-browse">
           <div className="sidebar-header">
             <div className="search-wrap">
@@ -846,10 +899,6 @@ export function AirRadarApp() {
               <label className="filter-toggle"><input type="checkbox" checked={emergencyOnly} onChange={(event) => setEmergencyOnly(event.target.checked)} /> {t.filters.emergencyOnly}</label>
               <label className="filter-toggle"><input type="checkbox" checked={watchlistOnly} onChange={(event) => setWatchlistOnly(event.target.checked)} /> {t.filters.watchlistOnly}</label>
             </div>
-            <div className="map-toggles">
-              <label><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> {t.filters.airports}</label>
-              <label><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {t.filters.atcSectors}</label>
-            </div>
             <details className="watchlist-box">
               <summary>{t.watchlist.title} <span>{watchlistSummary(watchlist.length)}</span></summary>
               <form onSubmit={addWatchlistRule} className="watchlist-form">
@@ -874,6 +923,8 @@ export function AirRadarApp() {
             </details>
             </details>
           </div>
+
+          <RelevantAtcPanel summaries={snapshot.relevantAtcFrequencies} expanded={!mobileCompact} onOpen={() => setMobileCompact(false)} />
 
           <div className="aircraft-list">
             {filteredAircraft.length === 0 ? (

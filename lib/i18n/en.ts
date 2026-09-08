@@ -15,6 +15,12 @@ export const en = {
     demoMode: "DEMO MODE",
   },
   status: {
+    receiverLabel: "Receiver",
+    secondaryStatus: "More status",
+    liveShort: "LIVE",
+    offlineShort: "OFFLINE",
+    demoShort: "DEMO",
+    connectingShort: "CONNECTING",
     receiverOffline: "Receiver offline",
     mockReceiver: "Mock receiver",
     liveReceiver: "Live receiver",
@@ -38,6 +44,15 @@ export const en = {
     waitingForTrafficDescription: "The radar will keep retrying the data source.",
     noMatchingAircraft: "No matching aircraft",
     noMatchingAircraftDescription: "Try clearing a filter or changing your search.",
+  },
+  layers: {
+    title: "Map layers",
+    aircraft: "Aircraft",
+    airports: "Airports",
+    atc: "ATC",
+    significantAirports: "Significant airports",
+    smallAirports: "Small airports",
+    heliports: "Heliports",
   },
   search: {
     placeholder: "Search callsign, registration, ICAO…",

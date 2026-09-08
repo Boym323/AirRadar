@@ -3,19 +3,20 @@
 import { useState } from "react";
 import { aircraftCount, formatAtcFrequency, formatAtcService, formatNumber, t } from "@/lib/i18n";
 import type { AtcFrequencySummary } from "@/lib/atc/types";
-import { displayedRelevantAtcFrequencies, MAX_DISPLAYED_RELEVANT_ATC_FREQUENCIES, relevantAtcFrequencyKey } from "@/lib/atc/relevant-frequencies";
+import { displayedRelevantAtcFrequencies, MAX_DISPLAYED_RELEVANT_ATC_FREQUENCIES, relevantAtcFrequencyKey, uniqueRelevantAtcFrequencies } from "@/lib/atc/relevant-frequencies";
 
 interface RelevantAtcPanelProps {
   summaries?: ReadonlyArray<AtcFrequencySummary>;
   onOpen?: () => void;
+  expanded?: boolean;
 }
 
-export function RelevantAtcPanel({ summaries, onOpen }: RelevantAtcPanelProps) {
+export function RelevantAtcPanel({ summaries, onOpen, expanded = true }: RelevantAtcPanelProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   // Keep the client compatible with a rolling deployment where an older
   // server can still emit a snapshot without this optional field.
-  const availableSummaries = summaries ?? [];
+  const availableSummaries = uniqueRelevantAtcFrequencies(summaries ?? []);
   const first = availableSummaries[0];
   const selected = availableSummaries.find((summary) => relevantAtcFrequencyKey(summary) === selectedKey) ?? null;
   const displayed = displayedRelevantAtcFrequencies(availableSummaries, showAll);
@@ -29,13 +30,13 @@ export function RelevantAtcPanel({ summaries, onOpen }: RelevantAtcPanelProps) {
     <section className="atc-relevance-panel" aria-label={t.atc.relevantTitle}>
       <div className="atc-panel-mobile-summary">
         <div className="atc-panel-kicker">{t.atc.relevantTitle}</div>
-        {first ? <button type="button" className="atc-mobile-entry" onClick={() => select(first)}>
+        {first ? <button type="button" className="atc-mobile-entry" aria-expanded={expanded} aria-controls="atc-panel-content" onClick={() => select(first)}>
           <strong>{formatAtcFrequency(first.frequencyMhz)} · {first.callsign ?? formatAtcService(first.service)}</strong>
           {availableSummaries.length > 1 && <span>{t.atc.relevantMoreFrequencies(formatNumber(availableSummaries.length - 1))}</span>}
         </button> : <div className="atc-panel-empty">{t.atc.relevantEmpty}</div>}
       </div>
 
-      <div className="atc-panel-content">
+      <div id="atc-panel-content" className="atc-panel-content">
         <div className="atc-panel-heading">
           <div>
             <h2>{t.atc.relevantTitle}</h2>

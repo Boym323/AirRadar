@@ -13,6 +13,12 @@ export const cs = {
     demoMode: "DEMO REŽIM",
   },
   status: {
+    receiverLabel: "Přijímač",
+    secondaryStatus: "Další stav",
+    liveShort: "ŽIVĚ",
+    offlineShort: "OFFLINE",
+    demoShort: "DEMO",
+    connectingShort: "PŘIPOJOVÁNÍ",
     receiverOffline: "Přijímač je offline",
     mockReceiver: "Simulovaný přijímač",
     liveReceiver: "Živý přijímač",
@@ -36,6 +42,15 @@ export const cs = {
     waitingForTrafficDescription: "Radar bude dál zkoušet načíst data ze zdroje.",
     noMatchingAircraft: "Žádná odpovídající letadla",
     noMatchingAircraftDescription: "Zkuste zrušit některý filtr nebo změnit vyhledávání.",
+  },
+  layers: {
+    title: "Vrstvy mapy",
+    aircraft: "Letadla",
+    airports: "Letiště",
+    atc: "ATC",
+    significantAirports: "Významná letiště",
+    smallAirports: "Malá letiště",
+    heliports: "Heliporty",
   },
   search: {
     placeholder: "Hledat volací znak, registraci, ICAO…",

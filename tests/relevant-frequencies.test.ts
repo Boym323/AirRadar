@@ -18,11 +18,16 @@ function summary(frequencyMhz: number): AtcFrequencySummary {
 }
 
 describe("relevant ATC frequency UI helpers", () => {
-  it("limits the collapsed UI to five entries and preserves order", () => {
+  it("limits the collapsed UI to three entries and preserves order", () => {
     const values = Array.from({ length: 7 }, (_, index) => summary(118 + index / 10));
     expect(displayedRelevantAtcFrequencies(values)).toHaveLength(MAX_DISPLAYED_RELEVANT_ATC_FREQUENCIES);
-    expect(displayedRelevantAtcFrequencies(values).map((item) => item.frequencyMhz)).toEqual(values.slice(0, 5).map((item) => item.frequencyMhz));
+    expect(displayedRelevantAtcFrequencies(values).map((item) => item.frequencyMhz)).toEqual(values.slice(0, 3).map((item) => item.frequencyMhz));
     expect(displayedRelevantAtcFrequencies(values, true)).toHaveLength(7);
+  });
+
+  it("deduplicates the compact list by frequency and ATC identity", () => {
+    const duplicate = summary(127.35);
+    expect(displayedRelevantAtcFrequencies([duplicate, duplicate, summary(127.45)])).toHaveLength(2);
   });
 
   it("builds a stable logical identity from frequency and ATC service identity", () => {
