@@ -1,4 +1,5 @@
 import type { AtcAssignment, AtcFrequencySummary, AtcLookup, AtcSector, AtcSectorMatch, Coordinate } from "@/lib/atc/types";
+import { isSupportedAtcFrequencyMhz } from "@/lib/atc/frequency-policy";
 import type { AtcSectorProvider } from "@/lib/server/provider";
 
 export class EmptyAtcSectorProvider implements AtcSectorProvider {
@@ -10,7 +11,8 @@ export class EmptyAtcSectorProvider implements AtcSectorProvider {
 }
 
 export function assignmentFromMatch(match: AtcSectorMatch): AtcAssignment {
-  const primary = match.sector.frequencies.find((frequency) => frequency.isPrimary) ?? match.sector.frequencies[0] ?? null;
+  const frequencies = match.sector.frequencies.filter((frequency) => isSupportedAtcFrequencyMhz(frequency.frequencyMhz));
+  const primary = frequencies.find((frequency) => frequency.isPrimary) ?? frequencies[0] ?? null;
   return {
     sectorId: match.sector.id,
     name: match.sector.name,
@@ -18,7 +20,7 @@ export function assignmentFromMatch(match: AtcSectorMatch): AtcAssignment {
     airspaceType: match.sector.airspaceType ?? null,
     callsign: match.sector.atcCallsign,
     primaryFrequencyMhz: primary?.frequencyMhz ?? null,
-    alternateFrequenciesMhz: match.sector.frequencies.filter((frequency) => frequency !== primary).map((frequency) => frequency.frequencyMhz),
+    alternateFrequenciesMhz: frequencies.filter((frequency) => frequency !== primary).map((frequency) => frequency.frequencyMhz),
     lowerAltitudeFt: match.sector.lowerAltitudeFt,
     upperAltitudeFt: match.sector.upperAltitudeFt,
     lowerAltitudeReference: match.sector.lowerAltitudeReference ?? null,
@@ -180,7 +182,7 @@ export function summarizeRelevantAtcFrequencies(input: ReadonlyArray<AtcAssigned
     const assignment = item.assignment;
     if (!assignment) continue;
     const frequencies = [assignment.primaryFrequencyMhz, ...assignment.alternateFrequenciesMhz]
-      .filter((frequency): frequency is number => typeof frequency === "number" && Number.isFinite(frequency) && frequency > 0);
+      .filter((frequency): frequency is number => typeof frequency === "number" && isSupportedAtcFrequencyMhz(frequency));
     const seenForAssignment = new Set<number>();
     for (const frequency of frequencies) {
       if (seenForAssignment.has(frequency)) continue;

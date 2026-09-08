@@ -185,4 +185,17 @@ describe("ATC sector matching", () => {
     expect(summarizeRelevantAtcFrequencies([])).toEqual([]);
     expect(summarizeRelevantAtcFrequencies([{ aircraftId: "A", label: "A", assignment: { ...({ primaryFrequencyMhz: 0 } as AtcAssignment), alternateFrequenciesMhz: [] } }])).toEqual([]);
   });
+
+  it("excludes frequencies at or above 140 MHz from relevant ATC summaries", () => {
+    const result = summarizeRelevantAtcFrequencies([{
+      aircraftId: "A",
+      label: "A",
+      assignment: {
+        ...baseAssignment("A", "Test sector"),
+        primaryFrequencyMhz: 127.35,
+        alternateFrequenciesMhz: [136.975, 137, 140, 335.6, 378.75],
+      },
+    }]);
+    expect(result.map((item) => item.frequencyMhz)).toEqual([127.35, 136.975]);
+  });
 });

@@ -15,8 +15,10 @@ sector. Frequencies are numeric MHz values with at most three decimal places.
 Altitude values are normalized during import: use a number for feet AMSL,
 `1000 AGL`, `SFC`, `FL245`-style flight levels, or `UNL` for an open upper
 limit. AGL/FL/SFC/UNL references are retained on the imported sector. Do not
-put local unit conversion logic into the resolver. Frequencies may include
-VHF and explicitly published UHF values up to 400 MHz.
+put local unit conversion logic into the resolver. ATC frequencies must be
+civil aviation VHF voice frequencies from 118.000 through 136.975 MHz;
+the 108.000-117.975 MHz navigation allocation and UHF/ILS-related values
+are excluded from the ATC layer.
 
 The row-level `sourceReference`, `lastVerifiedAt`, `validFrom`, and `validTo`
 fields may override the source defaults. `validTo: null` means no known end.

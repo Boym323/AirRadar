@@ -1,4 +1,5 @@
 import type { AtcDataResponse, AtcDatasetMetadata, AtcSector, AtcTransmitter } from "@/lib/atc/types";
+import { isSupportedAtcFrequencyMhz } from "@/lib/atc/frequency-policy";
 import type { AtcSectorProvider } from "@/lib/server/provider";
 import { getPrisma } from "@/lib/server/db";
 
@@ -90,20 +91,22 @@ function polygonsFromJson(value: string): AtcSector["polygons"] {
 }
 
 function frequenciesFromRecord(primary: number | null, alternateJson: string | null): AtcSector["frequencies"] {
-  const frequencies: AtcSector["frequencies"] = primary === null ? [] : [{ frequencyMhz: primary, label: null, isPrimary: true }];
+  const frequencies: AtcSector["frequencies"] = primary !== null && isSupportedAtcFrequencyMhz(primary)
+    ? [{ frequencyMhz: primary, label: null, isPrimary: true }]
+    : [];
   const alternate = jsonValue(alternateJson);
   if (!Array.isArray(alternate)) return frequencies;
   for (const value of alternate) {
     const frequency = typeof value === "number" ? value : value && typeof value === "object"
       ? finiteNumber((value as Record<string, unknown>).frequencyMhz)
       : null;
-    if (frequency === null) continue;
+    if (frequency === null || !isSupportedAtcFrequencyMhz(frequency)) continue;
     const label = value && typeof value === "object" && typeof (value as Record<string, unknown>).label === "string"
       ? (value as Record<string, unknown>).label as string
       : null;
     frequencies.push({ frequencyMhz: frequency, label, isPrimary: false });
   }
-  return frequencies;
+  return frequencies.map((frequency, index) => ({ ...frequency, isPrimary: index === 0 }));
 }
 
 function storedSector(record: {
@@ -204,7 +207,7 @@ export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
         validFrom: transmitter.validFrom?.toString() ?? null,
         validTo: transmitter.validTo?.toString() ?? null,
         lastVerifiedAt: transmitter.lastVerifiedAt.toString(),
-      })).filter((transmitter) => validAt(transmitter.validFrom, transmitter.validTo));
+    })).filter((transmitter) => isSupportedAtcFrequencyMhz(transmitter.frequencyMhz) && validAt(transmitter.validFrom, transmitter.validTo));
     return { sectors, transmitters, metadata: datasetMetadata(sectors.length || transmitters.length ? "configured" : "empty", sectors, transmitters) };
   } catch (error) {
     console.error("AirRadar stored ATC data unavailable", error);

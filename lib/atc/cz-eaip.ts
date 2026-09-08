@@ -5,6 +5,7 @@ import { BKG_VG25_ATTRIBUTION, BKG_VG25_WFS_URL } from "./bkg-boundary";
 import { type BoundaryResolver, type StateBoundaryReference } from "./boundary-resolver";
 import { CZ_CUZK_DATA50_METADATA_URL, CZ_CUZK_DATA50_QUERY_URL, type StateBoundaryResolution } from "./cz-boundary";
 import { aviationCoordinateToDecimal, densifyArc, type ArcDirection } from "./cz-geometry";
+import { isSupportedAtcFrequencyMhz } from "./frequency-policy";
 import { classifyMissingCzEaipStableId, CZ_EAIP_MISSING_ID_REASON, type CzEaipDiagnosticClassification } from "./cz-eaip-policy";
 
 export const CZ_EAIP_ENR21_URL = "https://aim.rlp.cz/eaip/html/eAIP/LK-ENR-2.1-en-GB.html";
@@ -448,7 +449,7 @@ function parseFrequencies($: CheerioAPI, cell: Parameters<CheerioAPI>[0]): { pri
   const reserveIds = new Set(tokens.filter((token) => token.param.startsWith("TFREQUENCY;CODE_TYPE;") && /reserve/i.test(token.value)).map((token) => paramValue(token.param)));
   const frequencies = tokensForKey(tokens, "VAL_FREQ_TRANS", "TFREQUENCY").flatMap((token) => {
     const value = Number(token.value.replace(",", "."));
-    if (!Number.isFinite(value)) return [];
+    if (!isSupportedAtcFrequencyMhz(value)) return [];
     const id = paramValue(token.param);
     const isReserve = id !== null && reserveIds.has(id);
     return [{ frequencyMhz: value, label: isReserve ? "Reserve" : null }];
@@ -914,7 +915,7 @@ function parseCommunicationGroups($: CheerioAPI, table: Parameters<CheerioAPI>[0
     const rowText = normalizedText(rowNode.text()).toUpperCase();
     for (const token of frequencyTokens) {
       const frequencyMhz = Number(token.value.replace(",", "."));
-      if (!Number.isFinite(frequencyMhz) || frequencyMhz >= 300) continue;
+      if (!isSupportedAtcFrequencyMhz(frequencyMhz)) continue;
       const id = paramValue(token.param);
       const codeType = id === null
         ? null

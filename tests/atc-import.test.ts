@@ -36,14 +36,28 @@ describe("ATC import format", () => {
     expect(result.sectors[0].validFrom).toBe("2026-09-01T00:00:00.000Z");
   });
 
-  it("retains AGL/flight-level references and published UHF alternates", () => {
+  it("retains AGL/flight-level references", () => {
     const document = structuredClone(validDocument) as typeof validDocument;
     document.sectors[0].lowerAltitude = "1000 AGL";
     document.sectors[0].upperAltitude = "FL125";
-    document.sectors[0].alternateFrequencies = [{ frequencyMhz: 378.75, label: "Reserve" }];
     const result = validateAtcImportDocument(document);
     expect(result.sectors[0]).toMatchObject({ lowerAltitudeFt: 1000, lowerAltitudeReference: "AGL", upperAltitudeFt: 12500, upperAltitudeReference: "FL" });
-    expect(result.sectors[0].alternateFrequencies).toEqual([{ frequencyMhz: 378.75, label: "Reserve" }]);
+  });
+
+  it("rejects UHF alternates", () => {
+    const document = structuredClone(validDocument) as typeof validDocument;
+    document.sectors[0].alternateFrequencies = [{ frequencyMhz: 378.75, label: "Reserve" }];
+    expect(() => validateAtcImportDocument(document)).toThrow(/between 118\.000 and 136\.975 MHz/);
+  });
+
+  it("rejects navigation frequencies below ATC VHF and accepts the upper channel limit", () => {
+    const navigation = structuredClone(validDocument) as typeof validDocument;
+    navigation.sectors[0].primaryFrequencyMhz = 117.975;
+    expect(() => validateAtcImportDocument(navigation)).toThrow(/between 118\.000 and 136\.975 MHz/);
+
+    const upperLimit = structuredClone(validDocument) as typeof validDocument;
+    upperLimit.sectors[0].primaryFrequencyMhz = 136.975;
+    expect(validateAtcImportDocument(upperLimit).sectors[0].primaryFrequencyMhz).toBe(136.975);
   });
 
   it("rejects invalid coordinates, frequencies, polygons and ranges before writing", () => {

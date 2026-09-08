@@ -1,3 +1,5 @@
+import { ATC_MAX_FREQUENCY_MHZ, ATC_MIN_FREQUENCY_MHZ, isSupportedAtcFrequencyMhz } from "./frequency-policy";
+
 export type ImportAltitude = number | "SFC" | "UNL" | `FL${number}` | `${number} AGL`;
 export type ImportAltitudeReference = "AMSL" | "AGL" | "FL" | "SFC" | "UNL";
 
@@ -327,9 +329,9 @@ function altitude(value: unknown, path: string, issues: string[], boundary: "low
 function frequency(value: unknown, path: string, issues: string[]): number | null {
   const result = finiteNumber(value, path, issues);
   if (result === null) return null;
-  if (result < 108 || result > 400) issues.push(`${path} must be between 108.000 and 400.000 MHz`);
+  if (!isSupportedAtcFrequencyMhz(result)) issues.push(`${path} must be between ${ATC_MIN_FREQUENCY_MHZ.toFixed(3)} and ${ATC_MAX_FREQUENCY_MHZ.toFixed(3)} MHz`);
   if (Math.abs(result * 1000 - Math.round(result * 1000)) > 1e-7) issues.push(`${path} must have at most three decimal places`);
-  return result >= 108 && result <= 400 && Math.abs(result * 1000 - Math.round(result * 1000)) <= 1e-7 ? result : null;
+  return isSupportedAtcFrequencyMhz(result) && Math.abs(result * 1000 - Math.round(result * 1000)) <= 1e-7 ? result : null;
 }
 
 function textOrNull(value: unknown, path: string, issues: string[]): string | null {
