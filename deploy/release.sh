@@ -14,6 +14,10 @@ readonly HEALTH_ATTEMPTS=15
 readonly HEALTH_DELAY_SECONDS=2
 readonly PUBLIC_HEALTH_ATTEMPTS=3
 readonly PUBLIC_HEALTH_DELAY_SECONDS=2
+readonly SYSTEMD_UNIT_SOURCE="${APP_DIR}/deploy/airradar.service"
+readonly EXPECTED_SYSTEMD_UNIT_NAME="${SERVICE_NAME}.service"
+readonly EXPECTED_PRODUCTION_ENTRYPOINT="${APP_DIR}/scripts/start-production.mjs"
+readonly EXPECTED_ENVIRONMENT_FILE="${APP_DIR}/.env"
 
 DEPLOY_BRANCH="main"
 DRY_RUN=0
@@ -25,6 +29,8 @@ ERROR_REPORTED=0
 DIAGNOSTICS_PRINTED=0
 HEALTH_SUMMARY=""
 WORKTREE_DIRTY=0
+SYSTEMD_UNIT_DESTINATION=""
+SYSTEMD_UNIT_CHANGED=0
 STARTED_AT="$(date --iso-8601=seconds)"
 STARTED_EPOCH="$(date +%s)"
 
@@ -230,7 +236,7 @@ check_permissions() {
   if (( EUID != 0 )); then
     require_command sudo
     if ! sudo -n -v >/dev/null 2>&1; then
-      die "This release needs root or passwordless sudo for systemctl restart ${SERVICE_NAME}."
+      die "This release needs root or passwordless sudo for systemd unit deployment and systemctl restart ${SERVICE_NAME}."
     fi
   fi
 }
@@ -245,6 +251,11 @@ preflight() {
   require_command systemctl
   require_command curl
   require_command flock
+  require_command systemd-analyze
+  require_command install
+  require_command mktemp
+  require_command cmp
+  require_command mv
   check_repository
   check_node_version
   check_permissions
@@ -334,6 +345,135 @@ run_release_steps() {
   npm run prisma:deploy
 }
 
+validate_repository_systemd_unit() {
+  local unit_source="$1"
+
+  [[ -f "${unit_source}" ]] || die "Missing repository systemd unit: ${unit_source}"
+  [[ ! -L "${unit_source}" ]] || die "Repository systemd unit must not be a symlink: ${unit_source}"
+
+  log "Validating repository systemd unit: ${unit_source}"
+  if ! run_privileged systemd-analyze verify -- "${unit_source}"; then
+    die "Repository systemd unit validation failed: ${unit_source}"
+  fi
+}
+
+validate_systemd_unit_destination() {
+  local destination="$1"
+  local destination_directory
+
+  case "${destination}" in
+    /etc/systemd/system/${EXPECTED_SYSTEMD_UNIT_NAME}|/usr/lib/systemd/system/${EXPECTED_SYSTEMD_UNIT_NAME}|/lib/systemd/system/${EXPECTED_SYSTEMD_UNIT_NAME})
+      ;;
+    *)
+      die "Unsupported or non-persistent systemd FragmentPath for ${SERVICE_NAME}: ${destination}"
+      ;;
+  esac
+
+  destination_directory="$(dirname -- "${destination}")"
+  [[ -d "${destination_directory}" ]] || die "Systemd unit destination directory does not exist: ${destination_directory}"
+  if ! run_privileged test -w "${destination_directory}"; then
+    die "Systemd unit destination directory is not writable: ${destination_directory}"
+  fi
+  [[ ! -L "${destination}" ]] || die "Systemd unit destination must not be a symlink: ${destination}"
+  [[ ! -e "${destination}" || -f "${destination}" ]] || die "Systemd unit destination is not a regular file: ${destination}"
+}
+
+resolve_systemd_unit_destination() {
+  local fragment_path
+
+  if ! fragment_path="$(run_privileged systemctl show "${SERVICE_NAME}" -p FragmentPath --value)"; then
+    die "Could not determine FragmentPath for ${SERVICE_NAME}."
+  fi
+  [[ -n "${fragment_path}" ]] || die "systemd returned an empty FragmentPath for ${SERVICE_NAME}."
+
+  validate_systemd_unit_destination "${fragment_path}"
+  SYSTEMD_UNIT_DESTINATION="${fragment_path}"
+  log "Systemd unit destination: ${SYSTEMD_UNIT_DESTINATION}"
+}
+
+show_loaded_unit_property() {
+  local property_name="$1"
+
+  run_privileged systemctl show "${SERVICE_NAME}" -p "${property_name}" --value
+}
+
+verify_loaded_systemd_unit_contract() {
+  local exec_start kill_mode kill_signal working_directory environment_files environment_file
+
+  log "Verifying loaded ${SERVICE_NAME}.service contract"
+  exec_start="$(show_loaded_unit_property ExecStart)" || die "Could not read loaded ExecStart for ${SERVICE_NAME}."
+  kill_mode="$(show_loaded_unit_property KillMode)" || die "Could not read loaded KillMode for ${SERVICE_NAME}."
+  kill_signal="$(show_loaded_unit_property KillSignal)" || die "Could not read loaded KillSignal for ${SERVICE_NAME}."
+  working_directory="$(show_loaded_unit_property WorkingDirectory)" || die "Could not read loaded WorkingDirectory for ${SERVICE_NAME}."
+  environment_files="$(show_loaded_unit_property EnvironmentFiles)" || die "Could not read loaded EnvironmentFiles for ${SERVICE_NAME}."
+
+  if [[ -z "${environment_files}" ]]; then
+    environment_file="$(show_loaded_unit_property EnvironmentFile)" || die "Could not read loaded EnvironmentFile for ${SERVICE_NAME}."
+  else
+    environment_file="${environment_files}"
+  fi
+
+  [[ "${exec_start}" == *"${EXPECTED_PRODUCTION_ENTRYPOINT}"* ]] || die "Loaded ExecStart does not use ${EXPECTED_PRODUCTION_ENTRYPOINT}."
+  [[ "${exec_start}" != *"npm run start"* ]] || die "Loaded ExecStart still uses npm run start."
+  [[ "${kill_mode}" == "control-group" ]] || die "Loaded KillMode is ${kill_mode}; expected control-group."
+  [[ "${kill_signal}" == "SIGTERM" || "${kill_signal}" == "15" ]] || die "Loaded KillSignal is ${kill_signal}; expected SIGTERM."
+  [[ "${working_directory}" == "${APP_DIR}" ]] || die "Loaded WorkingDirectory is ${working_directory}; expected ${APP_DIR}."
+  [[ "${environment_file}" == *"${EXPECTED_ENVIRONMENT_FILE}"* ]] || die "Loaded EnvironmentFile does not include ${EXPECTED_ENVIRONMENT_FILE}."
+}
+
+install_systemd_unit() {
+  local unit_source="$1"
+  local destination="$2"
+  local destination_directory temporary_unit=""
+
+  destination_directory="$(dirname -- "${destination}")"
+  if ! temporary_unit="$(run_privileged mktemp --tmpdir="${destination_directory}" ".${EXPECTED_SYSTEMD_UNIT_NAME}.XXXXXX")"; then
+    die "Could not create temporary systemd unit beside ${destination}."
+  fi
+
+  if ! run_privileged install -o root -g root -m 0644 -- "${unit_source}" "${temporary_unit}"; then
+    run_privileged rm -f -- "${temporary_unit}" || true
+    die "Could not install repository systemd unit to ${destination}."
+  fi
+
+  if ! run_privileged mv -f -- "${temporary_unit}" "${destination}"; then
+    run_privileged rm -f -- "${temporary_unit}" || true
+    die "Could not activate installed systemd unit at ${destination}."
+  fi
+}
+
+deploy_systemd_unit() {
+  local unit_source="${1:-${SYSTEMD_UNIT_SOURCE}}"
+  local destination_status
+
+  validate_repository_systemd_unit "${unit_source}"
+  resolve_systemd_unit_destination
+
+  if [[ -f "${SYSTEMD_UNIT_DESTINATION}" ]]; then
+    if cmp --silent -- "${unit_source}" "${SYSTEMD_UNIT_DESTINATION}"; then
+      SYSTEMD_UNIT_CHANGED=0
+      log "Systemd unit unchanged"
+    else
+      destination_status="$?"
+      [[ "${destination_status}" == "1" ]] || die "Could not compare repository and installed systemd units."
+      SYSTEMD_UNIT_CHANGED=1
+    fi
+  else
+    SYSTEMD_UNIT_CHANGED=1
+  fi
+
+  if (( SYSTEMD_UNIT_CHANGED == 1 )); then
+    log "Systemd unit updated"
+    install_systemd_unit "${unit_source}" "${SYSTEMD_UNIT_DESTINATION}"
+    if ! run_privileged systemctl daemon-reload; then
+      die "systemd daemon-reload failed; refusing to restart ${SERVICE_NAME}."
+    fi
+    log "Systemd daemon reloaded"
+  fi
+
+  verify_loaded_systemd_unit_contract
+}
+
 health_check_once() {
   local url="$1"
   local response_file http_code summary
@@ -393,9 +533,6 @@ check_health_with_retries() {
 }
 
 restart_and_check() {
-  log "Verifying installed ${SERVICE_NAME}.service"
-  run_privileged systemctl cat "${SERVICE_NAME}.service" >/dev/null || die "Installed ${SERVICE_NAME}.service could not be read."
-
   log "Restarting ${SERVICE_NAME}.service"
   RESTART_ATTEMPTED=1
   run_privileged systemctl restart "${SERVICE_NAME}"
@@ -415,9 +552,9 @@ print_dry_run_plan() {
   log "Dry run; no repository update, dependency installation, migrations, build, restart, or health checks will run."
   log "Current commit: ${OLD_SHA}"
   if (( WORKTREE_DIRTY == 1 )); then
-    log "Planned release: preserve the current working tree, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, restart, local health, public health."
+    log "Planned release: preserve the current working tree, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
   else
-    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, restart, local health, public health."
+    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
   fi
 }
 
@@ -436,9 +573,12 @@ main() {
   fi
   update_repository
   run_release_steps
+  deploy_systemd_unit
   restart_and_check
 
   log "Release successful"
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
