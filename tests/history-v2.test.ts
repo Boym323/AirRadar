@@ -9,7 +9,7 @@ import {
   listHistoryFlights,
 } from "@/lib/server/history";
 import type { HistoryFlightSummary } from "@/lib/server/history";
-import { aircraftAirportHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
+import { aircraftAirportHref, aircraftFlightHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
 import { getPrisma } from "@/lib/server/db";
 import { playbackSampleAt, playbackTimeRange, type PlaybackPosition } from "@/lib/history/playback";
 
@@ -144,6 +144,7 @@ describe("flight history v2", () => {
   it("builds the airport and existing playback links from bounded flight data", () => {
     expect(aircraftAirportHref("LKPR")).toBe("/airports/LKPR");
     expect(aircraftHistoryHref(42)).toBe("/history?flightId=42");
+    expect(aircraftFlightHref(42)).toBe("/flights/42");
   });
 
   it("loads aircraft detail by ICAO identity with at most ten recent flights", async () => {

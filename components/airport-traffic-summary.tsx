@@ -10,7 +10,7 @@ import type {
   AirportTrafficRouteCount,
   AirportTrafficSummary,
 } from "@/lib/airport-traffic/types";
-import { aircraftAirportHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
+import { aircraftAirportHref, aircraftFlightHref } from "@/lib/aircraft/detail-links";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 
 function airportLabel(airport: AirportTrafficAirport | null): string {
@@ -160,7 +160,7 @@ export function AirportTrafficSummary({ airport }: { airport: Airport }) {
                 <small>{flight.aircraft.icaoHex}</small>
               </Link>
               <span className="airport-traffic-counterpart">{airportLink(flight.otherAirport)}</span>
-              <Link className="airport-traffic-history-link" href={aircraftHistoryHref(flight.id)} aria-label={`${t.airportTraffic.viewFlight}: ${flight.id}`}>↗</Link>
+              <Link className="airport-traffic-history-link" href={aircraftFlightHref(flight.id)} aria-label={`${t.airportTraffic.viewFlight}: ${flight.id}`}>↗</Link>
             </li>)}
           </ol>
         </section>

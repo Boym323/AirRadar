@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET as getAirportTraffic } from "@/app/api/airports/[icao]/traffic/route";
 import type { Airport } from "@/lib/airports/types";
-import { aircraftAirportHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
+import { aircraftAirportHref, aircraftFlightHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
 import { getTranslations } from "@/lib/i18n";
 import {
   AIRPORT_TRAFFIC_RECENT_LIMIT,
@@ -262,6 +262,7 @@ describe("airport traffic summary v1", () => {
     expect(invalidResponse.status).toBe(400);
     expect(aircraftAirportHref("EDDF")).toBe("/airports/EDDF");
     expect(aircraftHistoryHref(42)).toBe("/history?flightId=42");
+    expect(aircraftFlightHref(42)).toBe("/flights/42");
   });
 
   it("keeps Czech and English airport traffic copy available", () => {
@@ -269,6 +270,6 @@ describe("airport traffic summary v1", () => {
     expect(getTranslations("en").airportTraffic).toMatchObject({ title: "Observed receiver traffic", rangeThirtyDays: "30 days" });
     const componentSource = readFileSync(new URL("../components/airport-traffic-summary.tsx", import.meta.url), "utf8");
     expect(componentSource).toContain("/aircraft/${encodeURIComponent(item.icaoHex)}");
-    expect(componentSource).toContain("aircraftHistoryHref(flight.id)");
+    expect(componentSource).toContain("aircraftFlightHref(flight.id)");
   });
 });

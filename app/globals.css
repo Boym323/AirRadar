@@ -402,6 +402,12 @@ button { cursor: pointer; }
 .history-page { min-height: 100svh; padding: 28px max(20px, calc((100vw - 1100px) / 2)); }
 .history-page-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
 .history-page h1 { margin: 0; font-size: 27px; letter-spacing: -.04em; }
+.flight-page { min-height: 100svh; max-width: 1180px; margin: 0 auto; padding: 28px 20px 42px; }
+.flight-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+.flight-page-header h1 { margin: 8px 0 0; max-width: 780px; font-size: clamp(25px, 4vw, 38px); letter-spacing: -.04em; overflow-wrap: anywhere; }
+.flight-page-subtitle { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+.flight-detail-card { overflow: hidden; }
+.history-detail-route { display: inline-flex; align-items: center; gap: 6px; }
 .back-link { color: var(--mint); text-decoration: none; font-size: 12px; }
 .history-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: rgba(13,25,39,.8); }
 .history-card-header { padding: 18px; border-bottom: 1px solid var(--line); }
@@ -635,6 +641,8 @@ button { cursor: pointer; }
   .mobile-collapse { display: inline-grid !important; }
   .detail-panel { max-height: none; }
   .history-page { padding: 20px 12px; }
+  .flight-page { padding: 20px 12px 32px; }
+  .flight-page-header { align-items: flex-start; flex-direction: column; gap: 13px; margin-bottom: 18px; }
   .airport-page { padding: 20px 12px 32px; }
   .aircraft-page { padding: 20px 12px 32px; }
   .aircraft-page-layout { grid-template-columns: 1fr; }
