@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type { MetarObservation, TafForecast } from "@/lib/weather/types";
 import { formatDateTime, formatNumber, formatSpeed, formatTrack, formatWeatherVisibility, t } from "@/lib/i18n";
 
-interface AirportWeatherResponse {
+export interface AirportWeatherResponse {
   airport: Airport;
   metar: MetarObservation | null;
   taf: TafForecast | null;
@@ -36,27 +36,59 @@ function WeatherReports({ weather }: { weather: AirportWeatherResponse }) {
   return <>
     {weather.stale && <div className="weather-stale" role="status">{t.weather.staleData}</div>}
     <div className="weather-meta">{t.weather.observation}: {formatDateTime(metar?.observationTime)} · {weather.fetchedAt ? formatDateTime(weather.fetchedAt) : t.common.emptyValue}</div>
-    {metar && <div className="weather-grid">
+    {metar && <>
+      <div className="weather-report-heading">{t.weather.metar}</div>
+      <div className="weather-grid">
       <WeatherValue label={t.weather.wind} value={windLabel(metar)} />
       <WeatherValue label={t.weather.visibility} value={formatWeatherVisibility(metar.visibilityMeters, metar.visibilityGreaterThan)} />
       <WeatherValue label={t.weather.temperature} value={metar.temperatureC === null ? t.common.emptyValue : `${formatNumber(metar.temperatureC, 0)} °C`} />
       <WeatherValue label={t.weather.dewpoint} value={metar.dewpointC === null ? t.common.emptyValue : `${formatNumber(metar.dewpointC, 0)} °C`} />
       <WeatherValue label={t.weather.qnh} value={metar.altimeterHpa === null ? t.common.emptyValue : `${formatNumber(metar.altimeterHpa, 0)} hPa`} />
-      {metar.flightCategory && <WeatherValue label="VFR / IFR" value={metar.flightCategory} />}
-    </div>}
+      {metar.flightCategory && <WeatherValue label={t.weather.flightCategory} value={metar.flightCategory} />}
+      </div>
+    </>}
     {!metar && !taf && <div className="weather-unavailable">{t.weather.unavailableData}</div>}
     {metar?.rawText && <details className="weather-raw">
       <summary>{t.weather.metar}</summary>
       <pre>{metar.rawText}</pre>
     </details>}
     {taf && <div className="weather-forecast">
-      <div className="weather-meta">{t.weather.forecast}: {formatDateTime(taf.issueTime)} · {formatDateTime(taf.validFrom)}–{formatDateTime(taf.validTo)}</div>
+      <div className="weather-report-heading">{t.weather.taf}</div>
+      <div className="weather-meta">{t.weather.forecast}: {formatDateTime(taf.issueTime)} · {t.weather.validity}: {formatDateTime(taf.validFrom)}–{formatDateTime(taf.validTo)}</div>
       {taf.rawText && <details className="weather-raw">
         <summary>{t.weather.taf}</summary>
         <pre>{taf.rawText}</pre>
       </details>}
     </div>}
   </>;
+}
+
+export function AirportWeatherPanel({ airport }: { airport: Airport }) {
+  const [weather, setWeather] = useState<AirportWeatherResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  const loadWeather = useCallback(async () => {
+    setLoading(true);
+    setFailed(false);
+    try {
+      const response = await fetch(`/api/weather/airport/${encodeURIComponent(airport.icaoCode)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("weather request failed");
+      setWeather(await response.json() as AirportWeatherResponse);
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [airport.icaoCode]);
+
+  useEffect(() => { void loadWeather(); }, [loadWeather]);
+
+  return <div className="airport-weather-panel">
+    {loading && <div className="weather-unavailable">{t.common.loading}</div>}
+    {!loading && failed && <div className="weather-error" role="alert"><span>{t.weather.loadFailed}</span><button type="button" className="weather-retry" onClick={() => void loadWeather()}>{t.weather.retry}</button></div>}
+    {!loading && !failed && weather && <WeatherReports weather={weather} />}
+  </div>;
 }
 
 export function AirportWeatherDisclosure({ airport }: { airport: Airport }) {

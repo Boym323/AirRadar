@@ -112,6 +112,10 @@ function airportCodes(airport: Airport): string {
   return airport.iataCode ? `${airport.iataCode}/${airport.icaoCode}` : airport.icaoCode;
 }
 
+function AirportRouteLink({ airport }: { airport: Airport }) {
+  return <Link className="airport-link" href={`/airports/${encodeURIComponent(airport.icaoCode)}`}>{airportCodes(airport)}</Link>;
+}
+
 function createAtcGeoJSON(sectors: AtcSector[], visible: boolean) {
   return {
     type: "FeatureCollection" as const,
@@ -146,6 +150,7 @@ function createAirportGeoJSON(airports: Airport[], importantAirportCodes: Readon
       type: "Feature" as const,
       properties: {
         code: airport.iataCode ? `${airport.iataCode}/${airport.icaoCode}` : airport.icaoCode,
+        icao: airport.icaoCode,
         name: airport.name,
         tier: airportVisibilityTier(airport),
         important: importantAirportCodes.has(airport.icaoCode),
@@ -504,6 +509,15 @@ export function AirRadarApp() {
       });
       map.on("mouseenter", "atc-transmitters-circle", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "atc-transmitters-circle", () => { map.getCanvas().style.cursor = ""; });
+      const openAirport = (event: maplibregl.MapLayerMouseEvent) => {
+        const icao = event.features?.[0]?.properties?.icao;
+        if (typeof icao === "string" && /^[A-Z]{4}$/.test(icao)) window.location.assign(`/airports/${encodeURIComponent(icao)}`);
+      };
+      for (const layer of ["route-airports-circle", "route-airports-label"] as const) {
+        map.on("click", layer, openAirport);
+        map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
+      }
       map.on("zoomend", () => setMapZoom(map.getZoom()));
       setMapReady(true);
     });
@@ -956,8 +970,16 @@ export function AirRadarApp() {
               </div>
               <div className="detail-content">
               {selectedAircraft.enrichment?.route && <div className="detail-route">
-                <DetailItem label={t.route.originDestination} value={selectedAircraft.enrichment.route.originAirport && selectedAircraft.enrichment.route.destinationAirport ? `${airportCodes(selectedAircraft.enrichment.route.originAirport)} → ${airportCodes(selectedAircraft.enrichment.route.destinationAirport)}` : selectedAircraft.enrichment.route.origin && selectedAircraft.enrichment.route.destination ? `${selectedAircraft.enrichment.route.origin} → ${selectedAircraft.enrichment.route.destination}` : t.route.notAvailable} />
-                {selectedAircraft.enrichment.route.originAirport && selectedAircraft.enrichment.route.destinationAirport && <div className="detail-registration">{selectedAircraft.enrichment.route.originAirport.city || selectedAircraft.enrichment.route.originAirport.name} → {selectedAircraft.enrichment.route.destinationAirport.city || selectedAircraft.enrichment.route.destinationAirport.name}</div>}
+                <DetailItem label={t.route.originDestination} value={<span className="route-airport-links">
+                  {selectedAircraft.enrichment.route.originAirport ? <AirportRouteLink airport={selectedAircraft.enrichment.route.originAirport} /> : selectedAircraft.enrichment.route.origin || t.route.notAvailable}
+                  {" → "}
+                  {selectedAircraft.enrichment.route.destinationAirport ? <AirportRouteLink airport={selectedAircraft.enrichment.route.destinationAirport} /> : selectedAircraft.enrichment.route.destination || t.route.notAvailable}
+                </span>} />
+                <div className="detail-registration">
+                  {selectedAircraft.enrichment.route.originAirport ? <Link className="airport-link" href={`/airports/${encodeURIComponent(selectedAircraft.enrichment.route.originAirport.icaoCode)}`}>{selectedAircraft.enrichment.route.originAirport.city || selectedAircraft.enrichment.route.originAirport.name}</Link> : selectedAircraft.enrichment.route.origin || t.route.notAvailable}
+                  {" → "}
+                  {selectedAircraft.enrichment.route.destinationAirport ? <Link className="airport-link" href={`/airports/${encodeURIComponent(selectedAircraft.enrichment.route.destinationAirport.icaoCode)}`}>{selectedAircraft.enrichment.route.destinationAirport.city || selectedAircraft.enrichment.route.destinationAirport.name}</Link> : selectedAircraft.enrichment.route.destination || t.route.notAvailable}
+                </div>
               </div>}
               {selectedAircraft.enrichment?.route?.originAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.originAirport} />}
               {selectedAircraft.enrichment?.route?.destinationAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.destinationAirport} />}
@@ -1035,7 +1057,7 @@ export function AirRadarApp() {
   );
 }
 
-function DetailItem({ label, value }: { label: string; value: string }) {
+function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
   if (value === t.common.emptyValue) return null;
   return <div><div className="detail-item-label">{label}</div><div className="detail-item-value">{value}</div></div>;
 }
