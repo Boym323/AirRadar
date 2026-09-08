@@ -14,7 +14,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma contract emit && next build",
+    "build": "node scripts/version.mjs write-build-metadata && prisma contract emit && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "prisma contract emit && next typegen && tsc --noEmit",

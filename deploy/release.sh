@@ -16,6 +16,7 @@ readonly HEALTH_DELAY_SECONDS=2
 readonly PUBLIC_HEALTH_ATTEMPTS=3
 readonly PUBLIC_HEALTH_DELAY_SECONDS=2
 readonly SYSTEMD_UNIT_SOURCE="${APP_DIR}/deploy/airradar.service"
+readonly VERSION_SCRIPT="${APP_DIR}/scripts/version.mjs"
 readonly EXPECTED_SYSTEMD_UNIT_NAME="${SERVICE_NAME}.service"
 readonly EXPECTED_PRODUCTION_ENTRYPOINT="${APP_DIR}/scripts/start-production.mjs"
 readonly EXPECTED_ENVIRONMENT_FILE="${APP_DIR}/.env"
@@ -32,6 +33,9 @@ HEALTH_SUMMARY=""
 WORKTREE_DIRTY=0
 SYSTEMD_UNIT_DESTINATION=""
 SYSTEMD_UNIT_CHANGED=0
+RELEASE_VERSION=""
+RELEASE_TAG=""
+RELEASE_BUILD_TIME=""
 STARTED_AT="$(date --iso-8601=seconds)"
 STARTED_EPOCH="$(date +%s)"
 
@@ -210,6 +214,7 @@ check_repository() {
   [[ -f "${APP_DIR}/package.json" ]] || die "Missing ${APP_DIR}/package.json."
   [[ -f "${APP_DIR}/package-lock.json" ]] || die "Missing ${APP_DIR}/package-lock.json; npm ci cannot run safely."
   [[ -f "${APP_DIR}/deploy/airradar.service" ]] || die "Missing ${APP_DIR}/deploy/airradar.service."
+  [[ -f "${VERSION_SCRIPT}" ]] || die "Missing ${VERSION_SCRIPT}."
   [[ -f "${APP_DIR}/.env" ]] || die "Missing ${APP_DIR}/.env."
 
   git_root="$(git_cmd rev-parse --show-toplevel 2>/dev/null)" || die "${APP_DIR} is not a Git repository."
@@ -343,6 +348,21 @@ update_repository() {
   log "New commit: ${NEW_SHA}"
 }
 
+prepare_release_version() {
+  local resolved_version
+
+  resolved_version="$(node "${VERSION_SCRIPT}" resolve-release-version)" || die "Could not resolve the release version."
+  [[ "${resolved_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Version helper returned an invalid release version: ${resolved_version}"
+
+  RELEASE_VERSION="${resolved_version}"
+  RELEASE_TAG="v${RELEASE_VERSION}"
+  export AIRRADAR_VERSION="${RELEASE_VERSION}"
+  export AIRRADAR_TAG="${RELEASE_TAG}"
+  export AIRRADAR_COMMIT="${NEW_SHA}"
+  export AIRRADAR_CHANNEL="development"
+  log "Release version candidate: ${RELEASE_VERSION} (${RELEASE_TAG})"
+}
+
 run_release_steps() {
   log "Installing dependencies"
   npm ci
@@ -361,6 +381,8 @@ run_release_steps() {
 
   log "Building production app"
   acquire_build_lock
+  RELEASE_BUILD_TIME="$(date --utc --iso-8601=seconds)"
+  export AIRRADAR_BUILD_TIME="${RELEASE_BUILD_TIME}"
   npm run build
   release_build_lock
 
@@ -564,7 +586,23 @@ restart_and_check() {
   fi
 
   check_health_with_retries "Local" "${LOCAL_HEALTH_URL}" "${HEALTH_ATTEMPTS}" "${HEALTH_DELAY_SECONDS}" 1
-  check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 0
+  check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
+}
+
+create_release_tag() {
+  local tag_ref="refs/tags/${RELEASE_TAG}"
+
+  if git_cmd tag --points-at HEAD | awk -v expected="${RELEASE_TAG}" '$0 == expected { found = 1 } END { exit found ? 0 : 1 }'; then
+    log "Release tag already exists on HEAD; reusing ${RELEASE_TAG}"
+    return 0
+  fi
+
+  if git_cmd show-ref --verify --quiet "${tag_ref}"; then
+    die "Release tag ${RELEASE_TAG} already exists but does not point at HEAD."
+  fi
+
+  git_cmd tag "${RELEASE_TAG}" HEAD
+  log "Created release tag: ${RELEASE_TAG}"
 }
 
 print_dry_run_plan() {
@@ -595,11 +633,13 @@ main() {
     detect_worktree_changes
   fi
   update_repository
+  prepare_release_version
   run_release_steps
   deploy_systemd_unit
   restart_and_check
+  create_release_tag
 
-  log "Release successful"
+  log "Release successful: ${RELEASE_TAG}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

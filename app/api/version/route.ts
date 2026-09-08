@@ -1,0 +1,13 @@
+import { getPublicVersion } from "@/lib/server/version";
+import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export async function GET(): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("version");
+  if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+  return Response.json(getPublicVersion(), {
+    headers: { "Cache-Control": "no-store" },
+  });
+}

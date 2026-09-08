@@ -48,6 +48,12 @@ sudo systemctl enable --now airradar
 sudo journalctl -u airradar -f
 ```
 
+Normal production releases should use `deploy/release.sh`. It calculates the
+next version in the current `package.json` major/minor series, writes ignored
+build metadata before `next build`, and creates the matching Git tag only after
+the build, migrations, restart and both health checks pass. Release retries on
+the same commit reuse the same tag.
+
 Nginx Proxy Manager should proxy to `http://192.168.1.142:3000`. The reverse proxy is separate from the AirRadar LXC, so do not use its own `127.0.0.1`. For long-lived SSE responses, turn off proxy buffering (or add `X-Accel-Buffering: no`, which AirRadar already sends) and use a generous read timeout.
 
 AirRadar uses Server-Sent Events, not WebSocket. In the Proxy Host **Advanced** field add:

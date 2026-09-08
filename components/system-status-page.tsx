@@ -106,8 +106,11 @@ export function SystemStatusPage() {
 
     {data && <div className="system-grid">
       <Card title={dictionary.system.application} status={data.application.status} dictionary={dictionary}>
+        <Field label={dictionary.system.applicationName} value={data.application.name} />
         <Field label={dictionary.system.version} value={data.application.version ?? dictionary.system.notAvailable} />
         <Field label={dictionary.system.commit} value={data.application.commit ?? dictionary.system.notAvailable} />
+        <Field label={dictionary.system.buildTime} value={formatDateTime(data.application.buildTime, dictionary)} />
+        <Field label={dictionary.system.channel} value={data.application.channel} />
         <Field label={dictionary.system.uptime} value={formatUptime(data.application.uptimeSeconds, dictionary)} />
         <Field label={dictionary.system.node} value={data.application.nodeVersion} />
         <Field label={dictionary.system.next} value={data.application.nextVersion ?? dictionary.system.notAvailable} />

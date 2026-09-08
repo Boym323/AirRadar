@@ -80,6 +80,7 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     const value = build();
     expect(value.status).toBe("ok");
     expect(value.application.status).toBe("ok");
+    expect(value.application).toMatchObject({ name: "AirRadar", channel: "development" });
     expect(value.receiver.readsb).toMatchObject({ status: "ok", online: true, aircraftCount: 1, messagesPerSecond: 486.2 });
     expect(value.database).toMatchObject({ status: "ok", connected: true });
     expect(value.statistics).toMatchObject({ uniqueAircraftToday: 12, maxConcurrentToday: 4, coverageBucketCount: 36, coverageBucketsWithData: 1 });
@@ -146,6 +147,7 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(getTranslations("cs").system.pageTitle).toBe("Stav systému");
     expect(getTranslations("en").system.pageTitle).toBe("System status");
     expect(pageSource).toContain('fetch("/api/system/status"');
+    expect(pageSource).toContain("data.application.name");
     expect(stylesSource).toContain(".system-grid { display: grid; grid-template-columns: repeat(2");
     expect(stylesSource).toContain(".system-grid { grid-template-columns: 1fr;");
   });

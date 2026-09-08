@@ -1,4 +1,3 @@
-import appPackage from "../../package.json" with { type: "json" };
 import nextPackage from "next/package.json" with { type: "json" };
 import type { AtcDataResponse } from "@/lib/atc/types";
 import type { ReceiverStatisticsResponse, StateSnapshot } from "@/lib/aircraft/types";
@@ -11,6 +10,7 @@ import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-pr
 import type { AlertStatus } from "@/lib/server/alert-engine";
 import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
+import { getBuildMetadata } from "@/lib/server/version";
 
 export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
 
@@ -22,6 +22,8 @@ export interface SystemStatusResponse {
     name: "AirRadar";
     version: string | null;
     commit: string | null;
+    buildTime: string | null;
+    channel: string;
     uptimeSeconds: number;
     nodeVersion: string;
     nextVersion: string | null;
@@ -129,7 +131,7 @@ export interface SystemStatusBuildInput {
     airports: number;
   };
   now?: Date;
-  runtime?: Partial<Pick<SystemStatusResponse["application"], "version" | "commit" | "nodeVersion" | "nextVersion" | "environment" | "timezone">> & {
+  runtime?: Partial<Pick<SystemStatusResponse["application"], "version" | "commit" | "buildTime" | "channel" | "nodeVersion" | "nextVersion" | "environment" | "timezone">> & {
     uptimeSeconds?: number;
     startedAt?: string;
   };
@@ -196,25 +198,21 @@ function safeDateKey(value: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "unknown";
 }
 
-function safeCommit(): string | null {
-  for (const name of ["GIT_COMMIT", "SOURCE_COMMIT", "VERCEL_GIT_COMMIT_SHA"]) {
-    const value = process.env[name]?.trim();
-    const commit = safeCommitValue(value);
-    if (commit) return commit;
-  }
-  return null;
-}
-
 function applicationRuntime(now: Date, runtime: SystemStatusBuildInput["runtime"]): SystemStatusResponse["application"] {
+  const build = getBuildMetadata();
   const uptimeSeconds = nonNegativeNumber(runtime?.uptimeSeconds ?? process.uptime());
   const startedAt = safeTimestamp(runtime?.startedAt) ?? new Date(now.getTime() - uptimeSeconds * 1000).toISOString();
-  const version = runtime?.version === undefined ? (typeof appPackage.version === "string" ? appPackage.version : null) : runtime.version;
+  const version = runtime?.version === undefined ? build.version : runtime.version;
+  const commit = runtime?.commit === undefined ? build.shortCommit ?? build.commit : runtime.commit;
+  const buildTime = runtime?.buildTime === undefined ? build.buildTime : runtime.buildTime;
   const nextVersion = runtime?.nextVersion === undefined ? (typeof nextPackage.version === "string" ? nextPackage.version : null) : runtime.nextVersion;
   return {
     status: "ok",
     name: "AirRadar",
     version: safeVersion(version),
-    commit: runtime?.commit === undefined ? safeCommit() : safeCommitValue(runtime.commit),
+    commit: safeCommitValue(commit),
+    buildTime: safeTimestamp(buildTime),
+    channel: safeLabel(runtime?.channel, build.channel),
     uptimeSeconds: Math.min(uptimeSeconds, 31_536_000_000),
     nodeVersion: safeLabel(runtime?.nodeVersion, process.version),
     nextVersion: safeVersion(nextVersion),

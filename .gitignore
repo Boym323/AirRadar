@@ -4,6 +4,7 @@ node_modules.stale*/
 out/
 coverage/
 generated/
+generated/build-version.json
 data/atc/generated/
 *.log
 .env*

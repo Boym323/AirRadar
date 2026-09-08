@@ -83,6 +83,7 @@ export const PUBLIC_RATE_LIMITS = {
   health: { limit: 60, windowMs: 60_000 },
   statistics: { limit: 12, windowMs: 60_000 },
   systemStatus: { limit: 12, windowMs: 60_000 },
+  version: { limit: 60, windowMs: 60_000 },
   search: { limit: 60, windowMs: 60_000 },
   watchlist: { limit: 60, windowMs: 60_000 },
 } as const;

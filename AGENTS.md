@@ -40,7 +40,7 @@ These are deployment conventions used by the current installation; they are not 
 - Timezone: `Europe/Prague`
 
 Repository-backed deployment artifacts are in `deploy/`. The service runs as the unprivileged `airradar` user and binds Next.js to the production LAN address `192.168.1.142:3000` for the separate reverse proxy. Production starts `scripts/start-production.mjs` directly so the Next server is systemd's `MainPID`; the wrapper registers AirRadar shutdown ownership before Next startup and disables Next's competing signal handler.
-Normal production releases use `deploy/release.sh`; bypass it only for debugging or recovery.
+Normal production releases use `deploy/release.sh`; bypass it only for debugging or recovery. The script calculates a `vMAJOR.MINOR.PATCH` candidate under the existing release flock, writes ignored build metadata before the build, and creates the matching tag only after build, migrations, restart, local health and public health all pass. It never runs `npm version` or changes package manifests; repeating a release for the same HEAD reuses its tag.
 
 ## Tech stack
 
@@ -63,6 +63,8 @@ Normal production releases use `deploy/release.sh`; bypass it only for debugging
   changes.
 - The browser consumes AirRadar APIs only. `/api/stream` publishes snapshots
   over SSE; it is intentionally not a WebSocket endpoint.
+- `/api/version` publishes only safe release build metadata; generated metadata
+  is written to ignored `generated/build-version.json` before production builds.
 - PostgreSQL stores sampled history, imported ATC/airport data and the optional
   aircraft metadata catalog plus aggregated receiver daily statistics, not every
   ADS-B update. Live radar must remain useful without PostgreSQL.

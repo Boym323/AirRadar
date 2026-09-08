@@ -273,6 +273,7 @@ feedback tools only; production release validation remains authoritative in
 - `PATCH|DELETE /api/watchlist/:id` — update, enable/disable or delete one server alert rule
 - `GET /api/health` — application, database, readsb, ATC dataset, live-state and safe alerting health
 - `GET /api/system/status` — bounded read-only system overview for the `/system` page; reports runtime, receiver, persistence, statistics, local ATC, weather cache, alerts and airport catalog status without secrets or receiver coordinates
+- `GET /api/version` — public build metadata: release version, short commit, build time and channel
 
 ## Production deployment
 
@@ -298,7 +299,7 @@ cd /var/www/airradar
 sudo ./deploy/release.sh
 ```
 
-The script acquires a release lock, rejects tracked or staged working-tree changes, updates the current branch with a fast-forward-only Git operation, runs `npm ci`, Prisma generation, lint, typecheck, tests, Prisma migrations and the production build, then restarts `airradar.service` and checks local and public health. To test and release uncommitted changes, use `sudo ./deploy/release.sh --allow-dirty`; this preserves the current working tree and skips the update from `origin` to avoid overwriting or conflicting with local changes. Use `sudo ./deploy/release.sh --dry-run` to run preflight checks and print the plan without changing the checkout or service. A non-`main` checkout must be explicitly selected with `--branch`.
+The script acquires a release lock, rejects tracked or staged working-tree changes, updates the current branch with a fast-forward-only Git operation, calculates the next `vMAJOR.MINOR.PATCH` candidate from `package.json` and existing tags, runs `npm ci`, Prisma generation, lint, typecheck, tests, Prisma migrations and the production build, then restarts `airradar.service` and checks local and public health. Only after every release check passes does it create the Git tag. Repeating a release for the same HEAD reuses its existing release tag; a failed release leaves the candidate untagged and therefore reusable on retry. Build metadata is written to the ignored `generated/build-version.json`; `package.json` and `package-lock.json` are not changed by releases. To test and release uncommitted changes, use `sudo ./deploy/release.sh --allow-dirty`; this preserves the current working tree and skips the update from `origin` to avoid overwriting or conflicting with local changes. Use `sudo ./deploy/release.sh --dry-run` to run preflight checks and print the plan without changing the checkout or service. A non-`main` checkout must be explicitly selected with `--branch`.
 
 The script does not automatically roll back Git code or database migrations after a post-restart failure. This avoids returning code to a state that may be incompatible with an already-applied migration; inspect the diagnostics and perform a compatibility-aware recovery manually.
 
