@@ -67,7 +67,14 @@ proxy_set_header X-Forwarded-Proto $scheme;
 
 The browser's `EventSource` automatically reconnects after a proxy or network interruption. Keep the standard Proxy Host websocket toggle optional; it is not needed for `/api/stream`.
 
-The service runs as the unprivileged `airradar` user. Verify the resolved Node path with `command -v npm` before installing the unit; if Node is installed outside `/usr/bin`, adjust `ExecStart` to that absolute npm path. Useful checks:
+The service runs as the unprivileged `airradar` user. It starts
+`scripts/start-production.mjs` directly so systemd tracks the Node/Next server
+as `MainPID`, without an npm or shell parent that could exit before application
+cleanup. The wrapper registers the AirRadar shutdown coordinator before
+starting Next and sets `NEXT_MANUAL_SIG_HANDLE=1`, leaving one signal owner.
+Verify the resolved Node path with `command -v node` before installing the
+unit; if Node is installed outside `/usr/bin`, adjust `ExecStart` to that
+absolute path. Useful checks:
 
 ```bash
 sudo systemctl status airradar

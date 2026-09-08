@@ -268,6 +268,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now airradar
 ```
 
+The unit starts `scripts/start-production.mjs` directly. The wrapper registers
+the AirRadar shutdown coordinator in the Next server process and disables
+Next's competing signal handler, so systemd's `KillMode=control-group` can
+wait for the application cleanup without an npm/sh parent process exiting
+first. Each process start emits one `[shutdown] coordinator registered pid=...`
+proof log.
+
 For normal production releases, use the release script from the application directory:
 
 ```bash

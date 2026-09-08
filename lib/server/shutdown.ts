@@ -71,6 +71,8 @@ const globalForShutdown = globalThis as unknown as {
   airRadarShutdownRegistered?: boolean;
 };
 
+type SignalProcess = Pick<NodeJS.Process, "pid" | "ppid" | "listeners" | "removeListener" | "once" | "kill">;
+
 export function getShutdownCoordinator() {
   globalForShutdown.airRadarShutdown ??= createShutdownCoordinator({
     stopAircraft: (deadline) => getAircraftStateService().stop({ deadline, closeStatistics: false, closeProvider: false }),
@@ -85,24 +87,28 @@ export function shutdown(): Promise<void> {
   return getShutdownCoordinator().shutdown();
 }
 
-export function registerShutdownCoordinator(): void {
+export function registerShutdownCoordinator(
+  signalProcess: SignalProcess = process,
+  shutdownHandler: () => Promise<void> = shutdown,
+): void {
   if (globalForShutdown.airRadarShutdownRegistered) return;
-  globalForShutdown.airRadarShutdownRegistered = true;
   // Next's production start-server installs SIGTERM/SIGINT handlers which
   // call process.exit(0). Take ownership so application cleanup can finish;
   // the signal is re-delivered after cleanup below.
-  for (const listener of process.listeners("SIGTERM")) process.removeListener("SIGTERM", listener);
-  for (const listener of process.listeners("SIGINT")) process.removeListener("SIGINT", listener);
+  for (const listener of signalProcess.listeners("SIGTERM")) signalProcess.removeListener("SIGTERM", listener);
+  for (const listener of signalProcess.listeners("SIGINT")) signalProcess.removeListener("SIGINT", listener);
   const handleSignal = (signal: NodeJS.Signals) => {
     console.info(`[shutdown] received ${signal}`);
-    void shutdown().then(() => {
-      process.removeListener("SIGTERM", onSigterm);
-      process.removeListener("SIGINT", onSigint);
-      process.kill(process.pid, signal);
+    void shutdownHandler().then(() => {
+      signalProcess.removeListener("SIGTERM", onSigterm);
+      signalProcess.removeListener("SIGINT", onSigint);
+      signalProcess.kill(signalProcess.pid, signal);
     });
   };
   const onSigterm = () => handleSignal("SIGTERM");
   const onSigint = () => handleSignal("SIGINT");
-  process.once("SIGTERM", onSigterm);
-  process.once("SIGINT", onSigint);
+  signalProcess.once("SIGTERM", onSigterm);
+  signalProcess.once("SIGINT", onSigint);
+  globalForShutdown.airRadarShutdownRegistered = true;
+  console.info(`[shutdown] coordinator registered pid=${signalProcess.pid} ppid=${signalProcess.ppid}`);
 }

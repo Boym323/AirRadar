@@ -39,7 +39,7 @@ These are deployment conventions used by the current installation; they are not 
 - Default UI locale: `cs-CZ`
 - Timezone: `Europe/Prague`
 
-Repository-backed deployment artifacts are in `deploy/`. The service runs as the unprivileged `airradar` user and binds Next.js to the production LAN address `192.168.1.142:3000` for the separate reverse proxy.
+Repository-backed deployment artifacts are in `deploy/`. The service runs as the unprivileged `airradar` user and binds Next.js to the production LAN address `192.168.1.142:3000` for the separate reverse proxy. Production starts `scripts/start-production.mjs` directly so the Next server is systemd's `MainPID`; the wrapper registers AirRadar shutdown ownership before Next startup and disables Next's competing signal handler.
 Normal production releases use `deploy/release.sh`; bypass it only for debugging or recovery.
 
 ## Tech stack
