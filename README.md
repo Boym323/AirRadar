@@ -233,6 +233,9 @@ npm run dev          # local development
 npm run lint         # ESLint
 npm run typecheck    # strict TypeScript
 npm run test         # Vitest unit tests
+npm run test:changed # tests affected by changed files; may select none in a clean tree
+npm run test:targeted -- tests/aviation-weather.test.ts # selected test files
+npm run test:full    # complete Vitest suite
 npm run build        # Prisma generate + production build
 npm run start        # production server
 npm run prisma:generate # emit Prisma 8 contract artifacts
@@ -243,6 +246,12 @@ npm run atc:import -- --dry-run data/atc/cz-atc.json # validate/preview ATC data
 npm run atc:sync:cz -- --dry-run # preview current official Czech ACC data
 npm run atc:status:cz # compare imported Czech effective date with AIM
 ```
+
+During development, use `test:targeted` for a focused change and
+`test:changed` for Vitest's affected-file selection. Run `test:full` (or
+`npm test`) before completing a relevant task. These shortcuts are development
+feedback tools only; production release validation remains authoritative in
+`deploy/release.sh`.
 
 ## API
 

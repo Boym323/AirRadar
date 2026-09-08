@@ -215,6 +215,15 @@ Use `npm ci` in a clean environment or before a complete dependency check.
 Never claim a gate passed unless it was actually run. If a gate cannot run,
 state that clearly.
 
+For the development feedback loop, use `npm run test:targeted -- <test-file>`
+for a focused change or `npm run test:changed` for Vitest's affected-file
+selection. `npm run test:full` and `npm test` both run the complete suite.
+Targeted or changed tests never replace the full suite for production
+validation. `deploy/release.sh` remains the authoritative release workflow
+and retains all current gates. A previous full-gate pass is stale after
+source, test, package, build, or deployment changes; release.sh validates the
+current state again.
+
 ## Documentation maintenance
 
 Update `AGENTS.md` only when a durable architectural, operational, or
