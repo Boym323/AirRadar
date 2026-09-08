@@ -16,6 +16,7 @@ import {
 import type { HistoryFlightDetail } from "@/lib/server/history";
 import { playbackSampleAt, playbackTimeRange, type PlaybackPosition, type PlaybackSample } from "@/lib/history/playback";
 import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
+import { FlightProfile } from "@/components/flight-profile";
 
 const HISTORY_MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -266,6 +267,7 @@ export function FlightDetailPanel({ detail }: { detail: HistoryFlightDetail }) {
         <>
           {detail.truncated && <div className="history-note history-truncated">{t.history.playbackTruncated}</div>}
           <FlightPlayback positions={detail.positions} />
+          <FlightProfile positions={detail.positions} />
         </>
       ) : <div className="history-note">{t.history.flightWithoutPositions}</div>}
     </div>

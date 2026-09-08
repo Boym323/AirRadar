@@ -12,6 +12,7 @@ import type { HistoryFlightSummary } from "@/lib/server/history";
 import { aircraftAirportHref, aircraftFlightHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
 import { getPrisma } from "@/lib/server/db";
 import { playbackSampleAt, playbackTimeRange, type PlaybackPosition } from "@/lib/history/playback";
+import { buildFlightProfileSeries } from "@/components/flight-profile";
 
 vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn() }));
 
@@ -141,6 +142,18 @@ afterEach(() => {
 });
 
 describe("flight history v2", () => {
+  it("builds profiles from available sampled values without inventing missing data", () => {
+    const positions = [
+      { recordedAt: "2026-09-08T10:00:00Z", lat: 50, lon: 14, altitude: 10_000, groundSpeed: 220, track: 90, verticalRate: null },
+      { recordedAt: "2026-09-08T10:00:20Z", lat: 50.1, lon: 14.1, altitude: null, groundSpeed: 240, track: 91, verticalRate: 800 },
+      { recordedAt: "2026-09-08T10:00:40Z", lat: 50.2, lon: 14.2, altitude: 12_000, groundSpeed: null, track: 92, verticalRate: -400 },
+    ];
+
+    expect(buildFlightProfileSeries(positions, "altitude").map((point) => point.value)).toEqual([10_000, 12_000]);
+    expect(buildFlightProfileSeries(positions, "groundSpeed").map((point) => point.value)).toEqual([220, 240]);
+    expect(buildFlightProfileSeries(positions, "verticalRate").map((point) => point.value)).toEqual([800, -400]);
+  });
+
   it("builds the airport and existing playback links from bounded flight data", () => {
     expect(aircraftAirportHref("LKPR")).toBe("/airports/LKPR");
     expect(aircraftHistoryHref(42)).toBe("/history?flightId=42");
