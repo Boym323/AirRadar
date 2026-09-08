@@ -433,7 +433,10 @@ button { cursor: pointer; }
 .statistics-range-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
 .statistics-range-tabs button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 11px; cursor: pointer; }
 .statistics-range-tabs button.active { border-color: rgba(55,214,192,.55); color: var(--mint); background: rgba(55,214,192,.1); }
-.statistics-date { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; margin-bottom: 12px; }
+.statistics-date-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.statistics-date { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.statistics-export-button { flex: 0 0 auto; min-height: 34px; padding: 7px 10px; font-size: 10px; }
+.statistics-export-button:disabled { cursor: not-allowed; opacity: .55; }
 .statistics-overview { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .statistics-stat-card, .statistics-card { border: 1px solid var(--line); border-radius: 14px; background: rgba(13,25,39,.8); }
 .statistics-stat-card { padding: 16px; min-width: 0; }
@@ -671,6 +674,7 @@ button { cursor: pointer; }
   .history-map { height: 230px; }
   .history-table { display: block; overflow-x: auto; white-space: nowrap; }
   .statistics-page { padding-top: 20px; }
+  .statistics-date-row { align-items: flex-start; flex-direction: column; gap: 8px; }
   .statistics-page-header { align-items: flex-start; flex-direction: column; gap: 14px; }
   .statistics-nav { justify-content: flex-start; gap: 12px; }
   .watchlist-page-header { flex-direction: row; gap: 12px; }

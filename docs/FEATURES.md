@@ -12,7 +12,7 @@ whether an operator has configured an optional provider.
 | `/flights/:id` | Standalone captured-flight detail with aircraft and airport links, observed sampled trail, bounded playback, and altitude/speed/vertical-rate profiles. | Production with PostgreSQL history. |
 | `/airports/:icao` | Airport detail, MapLibre location map, catalog metadata, on-demand weather, and 7/30-day observed receiver traffic summary. | Production; traffic uses persisted Flight instances, catalog fallback works, weather optional. |
 | `/history` | Bounded flight-instance search/list, sampled position detail, playback map. | Production; PostgreSQL feature, no live-polling dependency. |
-| `/statistics` | Today/7-day/30-day receiver aggregate, trends, and coverage visualization. | Production; today is RAM-backed, ranges use daily PostgreSQL aggregates. |
+| `/statistics` | Today/7-day/30-day receiver aggregate, trends, coverage visualization, and bounded CSV export. | Production; today is RAM-backed, ranges use daily PostgreSQL aggregates. |
 | `/watchlist` | Server alert-rule editor and current matching state. | Production; shared `data/alerts.json`, no auth/user accounts. |
 | `/system` | Sanitized runtime, receiver, persistence, statistics, ATC, weather, alerts, and airport status. | Production read-only diagnostics. |
 

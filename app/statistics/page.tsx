@@ -15,6 +15,7 @@ import {
   coverageRingRadius,
 } from "@/lib/statistics-coverage";
 import { formatDistance, formatNumber, t } from "@/lib/i18n";
+import { statisticsCsv } from "@/lib/statistics-csv";
 
 type StatisticsPageData = ReceiverStatisticsResponse | ReceiverStatisticsRangeResponse;
 type SelectedRange = "today" | "7d" | "30d";
@@ -357,6 +358,17 @@ export default function StatisticsPage() {
   const rangeData = data && isRangeResponse(data) ? data : null;
   const summary = rangeData?.period.summary ?? data?.daily;
 
+  function exportCsv(): void {
+    if (!data) return;
+    const blob = new Blob([statisticsCsv(data)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `airradar-statistics-${range}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <main className="history-page statistics-page">
       <header className="history-page-header statistics-page-header">
@@ -373,10 +385,13 @@ export default function StatisticsPage() {
       {error && <div className="statistics-error">{t.statistics.requestFailed}</div>}
       {!data && !error && <div className="statistics-card statistics-loading">{t.common.loading}</div>}
       {data && summary && <>
-        <div className="statistics-date">
-          {rangeData
-            ? <>{t.statistics.periodLabel(rangeData.period.days)} · {rangeData.period.from} → {rangeData.period.to} · {data.timezone}</>
-            : <>{t.statistics.today} · {data.date} · {data.timezone}</>}
+        <div className="statistics-date-row">
+          <div className="statistics-date">
+            {rangeData
+              ? <>{t.statistics.periodLabel(rangeData.period.days)} · {rangeData.period.from} → {rangeData.period.to} · {data.timezone}</>
+              : <>{t.statistics.today} · {data.date} · {data.timezone}</>}
+          </div>
+          <button type="button" className="primary-button statistics-export-button" onClick={exportCsv} disabled={!data}>{t.statistics.exportCsv}</button>
         </div>
         <section className="statistics-overview">
           <SummaryCard label={t.statistics.currentAircraft} value={formatNumber(data.live.aircraftCount)} />

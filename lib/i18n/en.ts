@@ -222,6 +222,7 @@ export const en = {
     airlines: "Airlines",
     insufficientData: "Not enough data for today yet.",
     requestFailed: "Statistics could not be loaded.",
+    exportCsv: "Export CSV",
   },
   aircraft: {
     liveAdsb: "Live ADS-B",

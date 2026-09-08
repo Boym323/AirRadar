@@ -220,6 +220,7 @@ export const cs = {
     airlines: "Aerolinky",
     insufficientData: "Pro dnešek zatím nemáme dost dat.",
     requestFailed: "Statistiky se nepodařilo načíst.",
+    exportCsv: "Exportovat CSV",
   },
   aircraft: {
     liveAdsb: "Živé ADS-B",
