@@ -75,6 +75,11 @@ remain owned by the bounded per-flight playback endpoint.
 The aircraft detail NEW label is based on the first persisted Flight
 instance's local `APP_TIMEZONE` day matching the current day. RAM presence is
 not used, so restarting the process cannot create a false first observation.
+The RARE label is shown for a non-new aircraft with one to three retained
+Flight instances. The RETURNING label is shown when the latest persisted Flight
+starts at least 30 full days after the previous Flight's last observation.
+These thresholds are explicit V1 rules, and the detail tooltip explains the
+stored evidence behind each label; no provider inference is involved.
 
 ## Statistics and coverage
 

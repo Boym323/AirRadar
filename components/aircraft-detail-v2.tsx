@@ -299,6 +299,8 @@ export function AircraftDetailV2({
             {liveAircraft ? t.status.liveReceiver : t.aircraft.notCurrentlyInRange}
           </div>
           {detail?.logbook.isNew && <div className="aircraft-logbook-badge" title={t.logbook.newAircraftReason}>{t.logbook.newAircraft}</div>}
+          {detail?.logbook.isRare && <div className="aircraft-logbook-badge rare" title={t.logbook.rareAircraftReason(detail.lifetimeStats.flightCount)}>{t.logbook.rareAircraft}</div>}
+          {detail?.logbook.isReturning && <div className="aircraft-logbook-badge returning" title={t.logbook.returningAircraftReason(detail.logbook.returningGapDays ?? 0)}>{t.logbook.returningAircraft}</div>}
         </div>
       </header>
 

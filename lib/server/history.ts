@@ -139,6 +139,7 @@ export interface AircraftLifetimeStats {
   topOrigins: AircraftHistoryAirportCount[];
   topDestinations: AircraftHistoryAirportCount[];
   topRoutes: AircraftHistoryRouteCount[];
+  returningGapDays: number | null;
 }
 
 export interface AircraftDetailResponse {
@@ -402,11 +403,12 @@ function emptyAircraftLifetimeStats(): AircraftLifetimeStats {
     topOrigins: [],
     topDestinations: [],
     topRoutes: [],
+    returningGapDays: null,
   };
 }
 
 function emptyAircraftLogbook(): AircraftLogbookStatus {
-  return { labels: [], isNew: false, firstObservedAt: null };
+  return { labels: [], isNew: false, isRare: false, isReturning: false, firstObservedAt: null, returningGapDays: null };
 }
 
 function normalizedHistoryText(value: string | null | undefined): string | null {
@@ -588,12 +590,16 @@ async function getAircraftLifetimeStats(
   const flights = await schema.Flight
     .where({ aircraftId })
     .orderBy((flight) => flight.startTime.asc())
-    .select("startTime", "lastSeenAt", "callsign", "origin", "destination")
+    .select("id", "startTime", "lastSeenAt", "callsign", "origin", "destination")
     .all();
-  stats.flightCount = flights.length;
-  if (!flights.length) return stats;
+  const orderedFlights = [...flights].sort((a, b) => {
+    const startDifference = timestampAsDate(a.startTime).getTime() - timestampAsDate(b.startTime).getTime();
+    return startDifference || Number(a.id ?? 0) - Number(b.id ?? 0);
+  });
+  stats.flightCount = orderedFlights.length;
+  if (!orderedFlights.length) return stats;
 
-  const airportCodes = flights
+  const airportCodes = orderedFlights
     .flatMap((flight) => [flight.origin, flight.destination])
     .filter((code): code is string => Boolean(code));
   const airports = await resolveHistoryAirports(schema, airportCodes);
@@ -606,7 +612,7 @@ async function getAircraftLifetimeStats(
   let firstObservedAt: Date | null = null;
   let lastObservedAt: Date | null = null;
 
-  for (const flight of flights) {
+  for (const flight of orderedFlights) {
     const startTime = timestampAsDate(flight.startTime);
     const lastSeenAt = timestampAsDate(flight.lastSeenAt);
     if (!firstObservedAt || startTime < firstObservedAt) firstObservedAt = startTime;
@@ -643,6 +649,12 @@ async function getAircraftLifetimeStats(
       || a.origin.icaoCode.localeCompare(b.origin.icaoCode)
       || a.destination.icaoCode.localeCompare(b.destination.icaoCode))
     .slice(0, 5);
+  if (orderedFlights.length >= 2) {
+    const previousFlight = orderedFlights[orderedFlights.length - 2];
+    const latestFlight = orderedFlights[orderedFlights.length - 1];
+    const gapMs = timestampAsDate(latestFlight.startTime).getTime() - timestampAsDate(previousFlight.lastSeenAt).getTime();
+    if (Number.isFinite(gapMs) && gapMs >= 0) stats.returningGapDays = Math.floor(gapMs / (24 * 60 * 60 * 1000));
+  }
   return stats;
 }
 

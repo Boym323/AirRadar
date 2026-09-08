@@ -201,6 +201,10 @@ export const cs = {
   logbook: {
     newAircraft: "NOVĚ ZACHYCENO",
     newAircraftReason: "První historické zachycení tohoto ICAO hexu dnes.",
+    rareAircraft: "ZŘÍDKA ZACHYCENO",
+    rareAircraftReason: (count: number) => `V historii jsou zatím jen ${count} zachycené Flight instance.`,
+    returningAircraft: "NÁVRAT",
+    returningAircraftReason: (days: number) => `Návrat po nejméně ${days} dnech od předchozí Flight instance.`,
   },
   statistics: {
     title: "Statistiky přijímače",

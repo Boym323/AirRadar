@@ -203,6 +203,10 @@ export const en = {
   logbook: {
     newAircraft: "NEW",
     newAircraftReason: "This ICAO hex was first observed in the receiver history today.",
+    rareAircraft: "RARE",
+    rareAircraftReason: (count: number) => `Only ${count} Flight instances are stored in the receiver history so far.`,
+    returningAircraft: "RETURNING",
+    returningAircraftReason: (days: number) => `Returned after at least ${days} days since the previous Flight instance.`,
   },
   statistics: {
     title: "Receiver statistics",

@@ -230,6 +230,7 @@ describe("flight history v2", () => {
       topDestination: { icaoCode: "OMDB", iataCode: "DXB" },
       topRoutes: [{ origin: { icaoCode: "LKPR" }, destination: { icaoCode: "OMDB" }, count: 2 }],
     });
+    expect(result.lifetimeStats.returningGapDays).toBe(6);
     expect(inCalls).toHaveBeenCalledTimes(8);
   });
 
