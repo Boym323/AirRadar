@@ -7,7 +7,7 @@ whether an operator has configured an optional provider.
 
 | Route | Purpose | Production status |
 | --- | --- | --- |
-| `/` | Live MapLibre radar, aircraft list/filtering, selected aircraft detail, live trail, route/airport/ATC overlays, keyboard shortcuts, SSE connection state. | Production core; readsb or demo provider. |
+| `/` | Live MapLibre radar, aircraft list/filtering, selected aircraft detail, live trail, route/airport/ATC overlays, keyboard shortcuts, SSE connection state, and a compact ADS-B logbook summary. | Production core; readsb or demo provider. |
 | `/aircraft/:hex` | Durable aircraft metadata, recent flight instances, 7/30-day summary, lifetime Flight-instance statistics, NEW/RARE/RETURNING logbook status, and optional photo. | Production; PostgreSQL required for durable detail, photo optional. |
 | `/flights/:id` | Standalone captured-flight detail with aircraft and airport links, observed sampled trail, bounded playback, and altitude/speed/vertical-rate profiles. | Production with PostgreSQL history. |
 | `/airports/:icao` | Airport detail, MapLibre location map, catalog metadata, on-demand weather, and 7/30-day observed receiver traffic summary. | Production; traffic uses persisted Flight instances, catalog fallback works, weather optional. |
@@ -35,6 +35,7 @@ whether an operator has configured an optional provider.
 | `GET /api/atc/sectors` | ATC sectors/transmitters plus provenance metadata. | Production with imported data; demo sample only in demo/explicit opt-in. |
 | `GET /api/statistics` | Today or bounded 7d/30d aggregate/trend/coverage response. | Production; ranges need daily DB data. |
 | `GET /api/reception-records` | Today, lifetime, and top complete daily maximum-distance records with aircraft, registration, bearing, and timestamp. | Production; historical records require the V1 bearing field, while live memory remains available without PostgreSQL. |
+| `GET /api/logbook/summary` | One compact dashboard read for live count, today’s durable NEW/RARE/RETURNING counts, watchlisted live aircraft, interesting aircraft, and reception records. | Production; durable logbook labels require PostgreSQL, live radar remains independent. |
 | `GET /api/watchlist` | Server alert rules, cooldown, and safe current matches. | Production. |
 | `POST /api/watchlist` | Validate and atomically create a server alert rule. | Production. |
 | `PATCH /api/watchlist/:id` | Update or enable/disable one rule. | Production. |

@@ -149,3 +149,10 @@ path reports the aircraft's actual tuned frequency.
   Fleet identities. One receiver snapshot supplies live/offline state, while
   one shared 30-day `Flight` query supplies the 7/30-day counts and route
   rankings; no second live poller is created.
+
+The home-page logbook summary is a separate, page-scoped `GET
+/api/logbook/summary` fetch. It uses the current state service snapshot for
+live and watchlist counts, then batches today’s persisted Flight identities and
+their lifetime Flight rows to classify NEW/RARE/RETURNING aircraft. It is not
+called for each SSE event and shows zero durable labels when PostgreSQL is
+unavailable rather than treating a process restart as a new observation.

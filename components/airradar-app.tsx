@@ -49,6 +49,7 @@ import {
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
 import { GlobalSearch } from "@/components/global-search";
+import { LogbookSummary } from "@/components/logbook-summary";
 import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   filterAircraftForMap,
@@ -972,6 +973,7 @@ export function AirRadarApp() {
         <Link className="mobile-system-link" href="/system" aria-label={t.system.title}>⚙</Link>
         <nav className="topbar-nav" aria-label={t.statistics.navigation}>
           <Link href="/watchlist">{t.watchlist.title}</Link>
+          <Link href="/fleet">{t.fleet.title}</Link>
           <Link href="/statistics">{t.statistics.title}</Link>
           <Link href="/history">{t.history.title}</Link>
           <Link href="/system">{t.system.title}</Link>
@@ -1035,6 +1037,7 @@ export function AirRadarApp() {
                 {mobileCompact ? "↑" : "↓"}
               </button>
             </div>
+          <LogbookSummary />
           <div className="sidebar-browse">
           <div className="sidebar-header">
             <div className="search-wrap">

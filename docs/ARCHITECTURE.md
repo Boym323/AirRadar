@@ -17,6 +17,7 @@ one global AircraftStateService
   ├─ async enrichment and ATC resolution
   ├─ async sampled history persistence
   ├─ daily ReceiverStatistics aggregate
+  ├─ page-scoped logbook summary read
   ├─ AlertEngine
   └─ listeners
         ├─ GET /api/aircraft
@@ -51,6 +52,9 @@ independent lanes:
   explicitly estimates.
 - `ReceiverStatistics` maintains the current local-day aggregate in RAM and
   persists only changed aggregate, aircraft, and coverage rows.
+- `logbook-summary.ts` builds one bounded dashboard response from the current
+  day’s Flight identities plus one batched lifetime read. It is requested once
+  by the home page and is not part of SSE serialization or the poll loop.
 - `history.ts` turns snapshots into `Aircraft`, `Flight`, and
   `FlightPosition` records at the configured sampling interval. It is not a
   per-ADS-B-message log.

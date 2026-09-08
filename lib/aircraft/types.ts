@@ -191,6 +191,29 @@ export interface ReceiverReceptionRecord {
   bearing: number;
 }
 
+export type LogbookLabel = "new" | "rare" | "returning";
+
+export interface LogbookInterestingAircraft {
+  icaoHex: string;
+  labels: LogbookLabel[];
+  flightCount: number;
+  returningGapDays: number | null;
+}
+
+export interface LogbookSummaryResponse {
+  source: "postgres" | "memory" | "unavailable";
+  generatedAt: string;
+  liveAircraft: number;
+  uniqueAircraftToday: number;
+  newAircraftToday: number;
+  rareAircraftToday: number;
+  returningAircraftToday: number;
+  watchlistedLiveAircraft: number;
+  interestingAircraft: LogbookInterestingAircraft[];
+  todayReceptionRecord: ReceiverReceptionRecord | null;
+  lifetimeReceptionRecord: ReceiverReceptionRecord | null;
+}
+
 export interface ReceiverReceptionRecordsResponse {
   source: "postgres" | "memory" | "unavailable";
   today: ReceiverReceptionRecord | null;
