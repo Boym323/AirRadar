@@ -188,6 +188,10 @@ export const en = {
   route: {
     airline: "Airline",
     originDestination: "Origin → destination",
+    context: "Route context",
+    originToCurrent: "Origin → current position",
+    currentToDestination: "Current position → destination",
+    contextDisclaimer: "Connections show only the direction between airports and the current position, not the actual flown route.",
     airports: "Airports",
     source: "Route source",
     notAvailable: "Not available",

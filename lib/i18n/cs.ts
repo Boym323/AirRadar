@@ -186,6 +186,10 @@ export const cs = {
   route: {
     airline: "Letecká společnost",
     originDestination: "Odlet → přílet",
+    context: "Kontextová trasa",
+    originToCurrent: "Odlet → aktuální poloha",
+    currentToDestination: "Aktuální poloha → přílet",
+    contextDisclaimer: "Spojení ukazuje pouze směr mezi letišti a aktuální polohou, nikoli skutečně proletěnou trasu.",
     airports: "Letiště",
     source: "Zdroj trasy",
     notAvailable: "Nedostupná",

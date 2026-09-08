@@ -27,7 +27,7 @@ import {
   watchlistSummary,
 } from "@/lib/i18n";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
-import type { AircraftView, FlightRoute, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
+import type { AircraftView, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { appendTrailPoint, boundTrailPoints, selectedTrail, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
@@ -38,6 +38,16 @@ import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/w
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
+import {
+  createRouteAirportGeoJSON,
+  createRouteGeoJSON,
+  ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID,
+  ROUTE_V2_AIRPORT_LABEL_LAYER_ID,
+  ROUTE_V2_AIRPORT_SOURCE_ID,
+  ROUTE_V2_COMPLETED_LAYER_ID,
+  ROUTE_V2_REMAINING_LAYER_ID,
+  ROUTE_V2_SOURCE_ID,
+} from "@/lib/route-visualization";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
 const EMPTY_RECEIVER: PublicReceiverPosition = { lat: null, lon: null, name: t.radar.receiverName };
@@ -112,11 +122,37 @@ function formatAtcLimit(feet: number | null, reference: string | null | undefine
 }
 
 function airportCodes(airport: Airport): string {
-  return airport.iataCode ? `${airport.iataCode}/${airport.icaoCode}` : airport.icaoCode;
+  const icao = airport.icaoCode.trim().toUpperCase();
+  const iata = airport.iataCode?.trim().toUpperCase();
+  return iata ? `${iata} · ${icao}` : icao;
 }
 
 function AirportRouteLink({ airport }: { airport: Airport }) {
-  return <Link className="airport-link" href={`/airports/${encodeURIComponent(airport.icaoCode)}`}>{airportCodes(airport)}</Link>;
+  const icao = airport.icaoCode.trim().toUpperCase();
+  const href = `/airports/${encodeURIComponent(airport.icaoCode)}` as `/airports/${string}`;
+  const canonicalHref = `/airports/${encodeURIComponent(icao)}` as `/airports/${string}`;
+  return <Link className="airport-link" href={airport.icaoCode === icao ? href : canonicalHref}>{airportCodes(airport)}</Link>;
+}
+
+function RouteContextRow({ aircraft, route }: { aircraft: AircraftView; route: NonNullable<AircraftView["enrichment"]>["route"] }) {
+  if (!route) return null;
+  const origin = route.originAirport
+    ? <AirportRouteLink airport={route.originAirport} />
+    : route.origin || t.route.notAvailable;
+  const destination = route.destinationAirport
+    ? <AirportRouteLink airport={route.destinationAirport} />
+    : route.destination || t.route.notAvailable;
+  return <div className="route-context-block">
+    <div className="detail-item-label">{t.route.context}</div>
+    <div className="route-context-row" aria-label={t.route.context}>
+      <span className="route-context-endpoint">{origin}</span>
+      <span className="route-context-arrow" aria-hidden="true">→</span>
+      <span className="route-context-current">{aircraft.callsign || aircraft.icaoHex}</span>
+      <span className="route-context-arrow" aria-hidden="true">→</span>
+      <span className="route-context-endpoint">{destination}</span>
+    </div>
+    <div className="route-disclaimer">{t.route.contextDisclaimer}</div>
+  </div>;
 }
 
 function createAtcGeoJSON(sectors: AtcSector[], visible: boolean) {
@@ -145,8 +181,10 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean) {
   };
 }
 
-function createAirportGeoJSON(airports: Airport[], importantAirportCodes: ReadonlySet<string>) {
-  const unique = new Map(airports.map((airport) => [airport.icaoCode, airport]));
+function createAirportGeoJSON(airports: Airport[], excludedAirportCodes: ReadonlySet<string> = new Set()) {
+  const unique = new Map(airports
+    .filter((airport) => !excludedAirportCodes.has(airport.icaoCode.trim().toUpperCase()))
+    .map((airport) => [airport.icaoCode, airport]));
   return {
     type: "FeatureCollection" as const,
     features: [...unique.values()].map((airport) => ({
@@ -156,24 +194,10 @@ function createAirportGeoJSON(airports: Airport[], importantAirportCodes: Readon
         icao: airport.icaoCode,
         name: airport.name,
         tier: airportVisibilityTier(airport),
-        important: importantAirportCodes.has(airport.icaoCode),
+        important: false,
       },
       geometry: { type: "Point" as const, coordinates: [airport.longitude, airport.latitude] },
     })),
-  };
-}
-
-function createRouteGeoJSON(route: FlightRoute | undefined, visible: boolean) {
-  const origin = route?.originAirport;
-  const destination = route?.destinationAirport;
-  if (!visible || !origin || !destination) return { type: "FeatureCollection" as const, features: [] };
-  return {
-    type: "FeatureCollection" as const,
-    features: [{
-      type: "Feature" as const,
-      properties: { routeType: "published-route-reference" },
-      geometry: { type: "LineString" as const, coordinates: [[origin.longitude, origin.latitude], [destination.longitude, destination.latitude]] },
-    }],
   };
 }
 
@@ -520,17 +544,33 @@ export function AirRadarApp() {
       });
       map.addSource("selected-trail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "selected-trail-line", type: "line", source: "selected-trail", paint: { "line-color": "#f3b95f", "line-opacity": 0.85, "line-width": 2.5 } });
-      map.addSource("selected-route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({ id: "selected-route-line", type: "line", source: "selected-route", paint: { "line-color": "#a7b6c7", "line-opacity": 0.72, "line-width": 2, "line-dasharray": [2, 3] } });
+      map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: ROUTE_V2_COMPLETED_LAYER_ID,
+        type: "line",
+        source: ROUTE_V2_SOURCE_ID,
+        filter: ["==", ["get", "segment"], "completed"],
+        paint: { "line-color": "#d2b56f", "line-opacity": 0.62, "line-width": 2, "line-dasharray": [1.5, 2.5] },
+      });
+      map.addLayer({
+        id: ROUTE_V2_REMAINING_LAYER_ID,
+        type: "line",
+        source: ROUTE_V2_SOURCE_ID,
+        filter: ["==", ["get", "segment"], "remaining"],
+        paint: { "line-color": "#a7b6c7", "line-opacity": 0.68, "line-width": 2, "line-dasharray": [2, 3] },
+      });
       map.addSource("atc-sectors", { type: "geojson", data: createAtcGeoJSON([], false) });
       map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": "#8068ff", "fill-opacity": 0.09 } });
       map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": "#a990ff", "line-opacity": 0.6, "line-width": 1.2, "line-dasharray": [2, 2] } });
       map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "name"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#d7caff", "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
       map.addSource("atc-transmitters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": "#f3b95f", "circle-radius": 5, "circle-stroke-color": "#08111d", "circle-stroke-width": 1.5 } });
-      map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([], new Set()) });
+      map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([]) });
       map.addLayer({ id: "route-airports-circle", type: "circle", source: "route-airports", paint: { "circle-color": "#d2b56f", "circle-opacity": 0.72, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 3, 12, 4.5], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.2 } });
       map.addLayer({ id: "route-airports-label", type: "symbol", source: "route-airports", layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 8, 10, 9, 13, 10], "text-offset": [0, 1.1], "text-padding": 7, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#cfbd8b", "text-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.52, 10, 0.72, 13, 0.82], "text-halo-color": "#08111d", "text-halo-width": 0.7 } });
+      map.addSource(ROUTE_V2_AIRPORT_SOURCE_ID, { type: "geojson", data: createRouteAirportGeoJSON(null) });
+      map.addLayer({ id: ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, type: "circle", source: ROUTE_V2_AIRPORT_SOURCE_ID, paint: { "circle-color": "#37d6c0", "circle-opacity": 0.92, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4.5, 12, 6], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.8 } });
+      map.addLayer({ id: ROUTE_V2_AIRPORT_LABEL_LAYER_ID, type: "symbol", source: ROUTE_V2_AIRPORT_SOURCE_ID, layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 10, 10, 13, 11], "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#72e5d3", "text-opacity": 0.9, "text-halo-color": "#08111d", "text-halo-width": 1 } });
       map.on("click", "atc-sectors-fill", (event) => {
         const feature = event.features?.[0];
         if (!feature) return;
@@ -564,9 +604,9 @@ export function AirRadarApp() {
       map.on("mouseleave", "atc-transmitters-circle", () => { map.getCanvas().style.cursor = ""; });
       const openAirport = (event: maplibregl.MapLayerMouseEvent) => {
         const icao = event.features?.[0]?.properties?.icao;
-        if (typeof icao === "string" && /^[A-Z]{4}$/.test(icao)) window.location.assign(`/airports/${encodeURIComponent(icao)}`);
+        if (typeof icao === "string" && /^[A-Z0-9]{4}$/.test(icao)) window.location.assign(`/airports/${encodeURIComponent(icao)}`);
       };
-      for (const layer of ["route-airports-circle", "route-airports-label"] as const) {
+      for (const layer of ["route-airports-circle", "route-airports-label", ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, ROUTE_V2_AIRPORT_LABEL_LAYER_ID] as const) {
         map.on("click", layer, openAirport);
         map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
@@ -777,8 +817,13 @@ export function AirRadarApp() {
     trailSource?.setData(selectedTrailForMap.length > 1
       ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
       : { type: "FeatureCollection", features: [] });
-    const routeSource = map.getSource("selected-route") as GeoJSONSource | undefined;
-    routeSource?.setData(createRouteGeoJSON(selected?.enrichment?.route, Boolean(selected?.enrichment?.route)));
+    const routeSource = map.getSource(ROUTE_V2_SOURCE_ID) as GeoJSONSource | undefined;
+    routeSource?.setData(createRouteGeoJSON(
+      selected?.enrichment?.route,
+      selected && selected.lat !== null && selected.lon !== null ? { lat: selected.lat, lon: selected.lon } : null,
+    ));
+    const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
+    routeAirportSource?.setData(createRouteAirportGeoJSON(selected?.enrichment?.route));
   }, [isWatchlisted, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
@@ -795,17 +840,20 @@ export function AirRadarApp() {
         geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
       })) : [],
     });
-    const routeAirports = snapshot.aircraft.flatMap((aircraft) => {
-      const route = aircraft.enrichment?.route;
-      return [route?.originAirport, route?.destinationAirport].filter((airport): airport is Airport => Boolean(airport));
-    });
-    const importantAirportCodes = new Set(routeAirports.map((airport) => airport.icaoCode));
+    const selectedRoute = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex)?.enrichment?.route;
+    const selectedRouteAirportCodes = new Set(
+      [selectedRoute?.originAirport?.icaoCode, selectedRoute?.destinationAirport?.icaoCode]
+        .filter((icao): icao is string => Boolean(icao))
+        .map((icao) => icao.trim().toUpperCase()),
+    );
     const airportSource = map.getSource("route-airports") as GeoJSONSource | undefined;
-    airportSource?.setData(createAirportGeoJSON([...airports, ...routeAirports], importantAirportCodes));
+    airportSource?.setData(createAirportGeoJSON(airports, selectedRouteAirportCodes));
+    const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
+    routeAirportSource?.setData(createRouteAirportGeoJSON(selectedRoute));
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
-  }, [airports, atcData, mapReady, showAtc, snapshot.aircraft]);
+  }, [airports, atcData, mapReady, selectedHex, showAtc, snapshot.aircraft]);
 
   const airportLayerVisibility = useMemo<AirportLayerVisibility>(() => ({
     showAirports,
@@ -910,8 +958,9 @@ export function AirRadarApp() {
               <span><i className="legend-dot" /> 100 km</span>
             </div>}
             {selectedAircraft?.enrichment?.route && <div className="map-overlay-card layer-legend">
-              <span><i className="legend-line observed" /> {t.radar.adsbTrail}</span>
-              <span><i className="legend-line planned" /> {t.radar.routeReference}</span>
+              <span><i className="legend-line completed" /> {t.route.originToCurrent}</span>
+              <span><i className="legend-line remaining" /> {t.route.currentToDestination}</span>
+              <small>{t.route.contextDisclaimer}</small>
             </div>}
             <details className="map-layers">
               <summary>{t.layers.title}</summary>
@@ -1033,18 +1082,7 @@ export function AirRadarApp() {
                 <button className="close-button" onClick={() => setSelectedHex(null)} aria-label={t.history.closeAircraftDetails}>×</button>
               </div>
               {selectedAircraft ? <div className="detail-content">
-              {selectedAircraft.enrichment?.route && <div className="detail-route">
-                <DetailItem label={t.route.originDestination} value={<span className="route-airport-links">
-                  {selectedAircraft.enrichment.route.originAirport ? <AirportRouteLink airport={selectedAircraft.enrichment.route.originAirport} /> : selectedAircraft.enrichment.route.origin || t.route.notAvailable}
-                  {" → "}
-                  {selectedAircraft.enrichment.route.destinationAirport ? <AirportRouteLink airport={selectedAircraft.enrichment.route.destinationAirport} /> : selectedAircraft.enrichment.route.destination || t.route.notAvailable}
-                </span>} />
-                <div className="detail-registration">
-                  {selectedAircraft.enrichment.route.originAirport ? <Link className="airport-link" href={`/airports/${encodeURIComponent(selectedAircraft.enrichment.route.originAirport.icaoCode)}`}>{selectedAircraft.enrichment.route.originAirport.city || selectedAircraft.enrichment.route.originAirport.name}</Link> : selectedAircraft.enrichment.route.origin || t.route.notAvailable}
-                  {" → "}
-                  {selectedAircraft.enrichment.route.destinationAirport ? <Link className="airport-link" href={`/airports/${encodeURIComponent(selectedAircraft.enrichment.route.destinationAirport.icaoCode)}`}>{selectedAircraft.enrichment.route.destinationAirport.city || selectedAircraft.enrichment.route.destinationAirport.name}</Link> : selectedAircraft.enrichment.route.destination || t.route.notAvailable}
-                </div>
-              </div>}
+              {selectedAircraft.enrichment?.route && <div className="detail-route"><RouteContextRow aircraft={selectedAircraft} route={selectedAircraft.enrichment.route} /></div>}
               {selectedAircraft.enrichment?.route?.originAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.originAirport} />}
               {selectedAircraft.enrichment?.route?.destinationAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.destinationAirport} />}
               <DetailSection title={t.history.aircraftDetail}>

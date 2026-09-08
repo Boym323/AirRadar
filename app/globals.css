@@ -85,8 +85,9 @@ button { cursor: pointer; }
 .legend-dot { width: 7px; height: 7px; border: 1px solid var(--mint); border-radius: 50%; }
 .layer-legend { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 10px; }
 .layer-legend span { display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
-.legend-line { width: 16px; border-top: 2px solid var(--amber); }
-.legend-line.planned { border-top-color: #a7b6c7; border-top-style: dashed; }
+.layer-legend small { flex-basis: 100%; color: var(--muted); font-size: 9px; line-height: 1.35; }
+.legend-line { width: 16px; border-top: 2px dashed var(--amber); }
+.legend-line.remaining { border-top-color: #a7b6c7; }
 .map-layers { position: relative; margin-left: auto; pointer-events: auto; }
 .map-layers > summary { cursor: pointer; list-style: none; color: var(--text); font-size: 10px; font-weight: 700; }
 .map-layers > summary::-webkit-details-marker { display: none; }
@@ -185,6 +186,12 @@ button { cursor: pointer; }
 .detail-panel { border-top: 1px solid var(--line); flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: rgba(8, 17, 29, .34); }
 .detail-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 17px 17px; }
 .detail-route { margin: 4px 0 10px; }
+.route-context-block { min-width: 0; }
+.route-context-row { min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; color: var(--text); font-size: 12px; line-height: 1.35; }
+.route-context-endpoint { min-width: 0; overflow-wrap: anywhere; }
+.route-context-current { color: var(--amber); font-weight: 700; }
+.route-context-arrow { color: var(--muted); }
+.route-disclaimer { margin-top: 6px; color: var(--muted); font-size: 9px; line-height: 1.4; }
 .weather-card { margin-top: 10px; border: 1px solid rgba(55, 214, 192, .2); border-radius: 9px; background: rgba(17, 35, 55, .45); overflow: hidden; }
 .weather-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 11px; text-align: left; color: var(--text); background: transparent; border: 0; }
 .weather-toggle:hover { background: rgba(55, 214, 192, .07); }
