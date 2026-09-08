@@ -48,6 +48,7 @@ import {
   ROUTE_V2_REMAINING_LAYER_ID,
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
+import { GlobalSearch } from "@/components/global-search";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
 const EMPTY_RECEIVER: PublicReceiverPosition = { lat: null, lon: null, name: t.radar.receiverName };
@@ -923,6 +924,7 @@ export function AirRadarApp() {
             <div className="brand-subtitle">{t.brand.subtitle}</div>
           </div>
         </div>
+        <GlobalSearch />
         <nav className="topbar-nav" aria-label={t.statistics.navigation}>
           <Link href="/statistics">{t.statistics.title}</Link>
           <Link href="/history">{t.history.title}</Link>

@@ -57,6 +57,13 @@ export const en = {
   search: {
     placeholder: "Search callsign, registration, ICAO…",
     aircraftLabel: "Search aircraft",
+    globalPlaceholder: "Search aircraft and airports…",
+    globalLabel: "Global search",
+    aircraftResults: "Aircraft",
+    airportResults: "Airports",
+    loading: "Searching…",
+    noResults: "No results",
+    requestFailed: "Search is unavailable",
   },
   filters: {
     sortLabel: "Sort aircraft",

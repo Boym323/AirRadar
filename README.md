@@ -54,7 +54,8 @@ server-side.
 
 The request-response API endpoints have a small bounded in-memory fixed-window
 limiter per endpoint: aircraft 60/minute, history 30/minute, airports
-30/minute, weather 30/minute, ATC sectors 30/minute, statistics 12/minute and health 60/minute. It is intentionally
+30/minute, weather 30/minute, ATC sectors 30/minute, statistics 12/minute,
+search 60/minute and health 60/minute. It is intentionally
 global to this single Node instance rather than trusting `X-Forwarded-For` from
 the reverse proxy. `/api/stream` is excluded so long-lived SSE connections and
 their heartbeat/coalescing behavior are not interrupted. The limiter is not a
@@ -262,6 +263,7 @@ feedback tools only; production release validation remains authoritative in
 - `GET /api/history/flights/:id` — one flight instance with chronologically ordered sampled positions, capped at 2,000 positions and reported as `truncated` when needed
 - `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback (ICAO hex, or readsb's `~`-prefixed six-digit identifier)
 - `GET /api/airports` — configured airport catalog or bundled fallback catalog
+- `GET /api/search?q=...` — bounded global search over the live aircraft RAM snapshot and the airport catalog; queries require 2–64 characters and return at most 12 safe aircraft/airport results
 - `GET /api/weather/airport/:icao` — on-demand AviationWeather.gov METAR/TAF for a canonical airport ICAO; returns `404` for unknown airports and `200` with nullable products when reports are unavailable
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
 - `GET /api/statistics` — today's receiver aggregate by default (`range=today`), or a bounded `range=7d|30d` response built from daily statistics with period summary, daily trends and 36 ten-degree coverage buckets; exact receiver coordinates are never included

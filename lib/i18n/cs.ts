@@ -55,6 +55,13 @@ export const cs = {
   search: {
     placeholder: "Hledat volací znak, registraci, ICAO…",
     aircraftLabel: "Hledat letadla",
+    globalPlaceholder: "Hledat letadla a letiště…",
+    globalLabel: "Globální vyhledávání",
+    aircraftResults: "Letadla",
+    airportResults: "Letiště",
+    loading: "Vyhledávání…",
+    noResults: "Nic nenalezeno",
+    requestFailed: "Vyhledávání není dostupné",
   },
   filters: {
     sortLabel: "Řadit letadla",
