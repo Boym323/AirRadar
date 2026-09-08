@@ -1,6 +1,20 @@
 # AirRadar
 
-AirRadar is a personal, dark-mode ADS-B radar UI for a local [`readsb`](https://github.com/wiedehopf/readsb) receiver. It keeps the live aircraft state in RAM, samples history to PostgreSQL, and streams snapshots to the browser over Server-Sent Events (SSE). The map remains usable on desktop, iPhone and Android when optional data sources are unavailable.
+AirRadar is a personal dark-mode ADS-B radar for a local [`readsb`](https://github.com/wiedehopf/readsb) receiver. It keeps live aircraft state in RAM, samples history to PostgreSQL, and streams snapshots to the browser over Server-Sent Events (SSE). The map remains useful when optional data sources are unavailable.
+
+## Documentation
+
+The compact agent entry point is [`AGENTS.md`](AGENTS.md). Read it first and
+then only the linked document relevant to the task; do not assume the whole
+`docs/` tree is required.
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — ownership and boundaries
+- [`docs/DATA-FLOWS.md`](docs/DATA-FLOWS.md) — live, history, statistics, and enrichment flows
+- [`docs/RUNTIME-INVARIANTS.md`](docs/RUNTIME-INVARIANTS.md) — behavior and safety contracts
+- [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — local work, tests, worktrees, and agents
+- [`docs/RELEASE.md`](docs/RELEASE.md) — authoritative production release procedure
+- [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md) — source provenance, security, and licensing
+- [`docs/FEATURES.md`](docs/FEATURES.md) — routes/API and production status
 
 ## Quick start — demo mode
 
@@ -14,11 +28,14 @@ npm run prisma:generate
 npm run dev
 ```
 
-Open <http://localhost:3000>. The mock provider generates UAE139 / Emirates A380, Lufthansa, Ryanair and other moving traffic around the configured receiver position.
+Open <http://localhost:3000>. The mock provider generates moving sample
+traffic around the configured receiver position. PostgreSQL is optional in
+demo mode; history uses the in-memory trail when it is not configured.
 
 ## Connect readsb
 
-Set the base URL of the readsb/tar1090 web root. AirRadar reads `/data/aircraft.json` and optionally `/data/receiver.json`. When the web root is tar1090, it also discovers and reads tar1090's hashed static aircraft database to fill registration, ICAO type code and type description:
+Set the base URL of the readsb/tar1090 web root. AirRadar appends the data
+paths; do not include `/data/aircraft.json` in the variable.
 
 ```dotenv
 READSB_BASE_URL=http://192.168.1.50:8080
@@ -26,328 +43,143 @@ RECEIVER_LAT=50.0755
 RECEIVER_LON=14.4378
 ```
 
-For a tar1090 installation mounted below a path, include that path, for example
-`http://192.168.1.50/tar1090`; do not include `/data/aircraft.json` in
-`READSB_BASE_URL`. The adapter preserves the readsb fields `alt_baro`,
-`alt_geom`, `baro_rate`, `geom_rate`, `seen`, `seen_pos`, `category`,
-`messages`, and `rssi`. It exposes the derived `altitude`/`verticalRate` as
-well as the individual values, and maps readsb `type` to a display source while
-retaining the exact value as `sourceType`.
+The adapter reads `/data/aircraft.json` and optionally `/data/receiver.json`,
+preserves raw barometric/geometric fields, and derives altitude/vertical rate,
+distance, and bearing. Polling retries with bounded backoff; a receiver outage
+does not take down the UI or API.
 
-The polling loop retries automatically. If readsb goes away, the UI and API stay alive and report `Receiver offline`.
+## PostgreSQL
 
-## Public deployment / security
-
-The public API uses same-origin access; no wildcard CORS policy is enabled. The
-receiver's exact coordinates are kept server-side for distance, bearing and
-coverage calculations, but are not exposed by default. Set
-`PUBLIC_RECEIVER_POSITION_MODE` to `approximate` (default, deterministic
-two-decimal coordinates), `hidden` (no public receiver coordinates), or
-`exact` only when deliberately publishing the location. Aircraft positions are
-not redacted.
-
-Application responses include `nosniff`, strict referrer and permissions
-policies, clickjacking protection and a CSP that permits the MapLibre blob
-worker, OpenStreetMap tiles and the explicit Planespotters thumbnail hosts.
-Live endpoints are not cached; catalog data is short-lived cacheable data.
-Public response errors are generic and secrets stay server-side.
-
-The request-response API endpoints have a small bounded in-memory fixed-window
-limiter per endpoint: aircraft 60/minute, history 30/minute, airports
-30/minute, weather 30/minute, ATC sectors 30/minute, aircraft photos
-30/minute, statistics 12/minute, search 60/minute and health 60/minute. It is intentionally
-global to this single Node instance rather than trusting `X-Forwarded-For` from
-the reverse proxy. `/api/stream` is excluded so long-lived SSE connections and
-their heartbeat/coalescing behavior are not interrupted. The limiter is not a
-replacement for an upstream network policy; if Nginx Proxy Manager is used for
-additional limiting, apply it at the server/http layer and exempt
-`/api/stream`.
-
-## PostgreSQL and Prisma
-
-Live state is never written on every ADS-B update. The state service samples each aircraft at the configured interval (20 seconds by default), writes positions with bounded concurrency, and stores `Aircraft`, `Flight`, and `FlightPosition` records. `HISTORY_RETENTION_DAYS` (30 by default) removes old position samples periodically.
-
-Persistence boundaries are intentional:
-
-| Data | Storage | Restart behavior |
-| --- | --- | --- |
-| `Aircraft`, `Flight`, `FlightPosition` and sampled history | PostgreSQL | Persistent; never reset by AirRadar startup |
-| `AircraftMetadataCache` and `AircraftMetadataSync` | PostgreSQL | Persistent catalog; refreshed at most once per day with conditional HTTP validation |
-| ADSBDB / FlightAware enrichment cache | Process memory with TTL and negative caching | Rebuilt after restart; live radar is independent |
-| AviationWeather.gov METAR / TAF | Process memory with bounded 5/15-minute TTL cache and stale-if-error window | Never persisted; live weather is fetched on demand for an opened flight-detail airport |
-| Aircraft photo metadata | Process memory with bounded 24-hour positive / 1-hour negative cache | Fetched only for an opened aircraft detail when `AIRCRAFT_PHOTOS_ENABLED=true`; image bytes are loaded by the browser |
-| Watchlist rules | Browser `localStorage` | Persists in that browser; not a shared database list |
-| Server alert rules | `data/alerts.json` | Shared by alert engine and `/watchlist`; intentionally separate from browser watchlist |
-| Daily receiver statistics | PostgreSQL `ReceiverDailyStats`, `ReceiverDailyAircraft`, `ReceiverDailyCoverage` plus bounded RAM aggregation | Continues after restart; current live count and messages/s remain process/live values |
-| ATC data | Sample constants in demo; PostgreSQL `AtcSector`/`AtcTransmitter` in production | Sample is never used for a configured real receiver |
-
-The project uses the Prisma 8 contract-based PostgreSQL workflow. `prisma/contract.prisma` is the source of truth, `prisma.config.ts` defines the PostgreSQL target, and `generated/prisma8/` contains generated runtime contract artifacts. The checked-in migration lives under `migrations/app/`.
+The schema source is `prisma/contract.prisma`; checked-in forward migrations
+are under `migrations/app/`. Live state is not written for every ADS-B update:
+the service samples positions and stores `Aircraft`, `Flight`, and
+`FlightPosition` records. Daily receiver statistics, airport/ATC reference
+data, and the optional aircraft metadata catalog have separate tables. See
+[`docs/DATA-FLOWS.md`](docs/DATA-FLOWS.md) and
+[`docs/RUNTIME-INVARIANTS.md`](docs/RUNTIME-INVARIANTS.md) for persistence
+semantics.
 
 ```bash
-# Example local database
 createdb airradar
-
-# Set DATABASE_URL in .env, then:
+# Set DATABASE_URL in .env
 npm run prisma:generate
 npm run prisma:deploy
 npm run dev
 ```
 
-Prisma 8 currently requires Node.js 22.18 or newer. The repository pins the Prisma 8 release candidates used by this MVP and enforces the requirement through `engines` and `.nvmrc`.
+Without `DATABASE_URL`, live radar remains available and `/api/health` reports
+the database as `not_configured`.
 
-Without `DATABASE_URL`, the app still works fully in demo mode. History falls back to the in-memory trail and `/api/health` reports the database as `not_configured`.
+## Optional integrations
 
-## Optional enrichment and ATC data
+All optional providers are server-side, bounded, and isolated from readsb
+polling. Configure them in the server-only `.env`; never use
+`NEXT_PUBLIC_*` for credentials.
 
-The integrations below are optional. A provider failure is negatively cached and never stops the readsb polling loop:
+| Capability | Configuration | Default |
+| --- | --- | --- |
+| ADSBDB metadata/routes | `ADSBDB_ENABLED=true` | Disabled |
+| tar1090 aircraft catalog | `AIRCRAFT_METADATA_URL` when using a tar1090 root | Best effort, daily conditional sync |
+| FlightAware flight plans | `FLIGHTAWARE_API_KEY` | Disabled; commercial/possibly billable |
+| AviationWeather.gov METAR/TAF | No key; opened airport/flight detail | On demand |
+| Planespotters aircraft photos | `AIRCRAFT_PHOTOS_ENABLED=true` | Disabled |
+| Server alerts/Pushover | `data/alerts.json`, `PUSHOVER_ENABLED=true` plus server credentials | Rules/no-op notifier until explicitly configured |
 
-| Capability | Provider | Configuration | Cost / key |
-| --- | --- | --- | --- |
-| Aircraft metadata | tar1090 static database + PostgreSQL cache | Automatic when `READSB_BASE_URL` points to a tar1090 web root; daily catalog sync uses `AIRCRAFT_METADATA_URL` | Local metadata; no key |
-| Aircraft metadata | [ADSBDB](https://github.com/mrjackwills/adsbdb) | `ADSBDB_ENABLED=true` and optional `ADSBDB_BASE_URL` | Free community API, no key |
-| Callsign airline and origin/destination | ADSBDB | Same as above | Free community API, no key |
-| Scheduled/actual/estimated times, filed route and waypoints | [FlightAware AeroAPI](https://www.flightaware.com/commercial/aeroapi/v4/documentation) | `FLIGHTAWARE_API_KEY=…` | Optional commercial service; key stays server-side |
-| ATC sectors and transmitters | Demo constants / PostgreSQL import | `ATC_SAMPLE_ENABLED` | Demo sample only; production uses an explicitly synced authoritative dataset |
-| Aircraft photos | [Planespotters.net public API](https://www.planespotters.net/) | `AIRCRAFT_PHOTOS_ENABLED=true` | No key; disabled by default and isolated from live polling/SSE |
+Source, licensing, URL allowlists, cache behavior, and operational limits are
+in [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md). Route airport metadata is
+resolved through the PostgreSQL catalog, then valid provider coordinates, then
+the small bundled fallback catalog.
 
-ADSBDB lookups are keyed by ICAO hex or callsign and cached for hours to a day; the cache coalesces concurrent requests and negatively caches misses, so the provider is not queried on every realtime update. FlightAware is disabled when `FLIGHTAWARE_API_KEY` is empty. Missing keys therefore do not reduce live radar functionality. Route lines are schematic references, not filed flight plans; the orange solid trail is the observed ADS-B trail.
+## ATC and airport data
 
-The tar1090 metadata lookup is best-effort and uses a PostgreSQL catalog mirrored in RAM. The catalog checks `AIRCRAFT_METADATA_URL` once per day (with ETag validation) and keeps the previous dataset when GitHub is unavailable. The local tar1090 `databaseFolder` blocks remain an immediate fallback when PostgreSQL or the catalog is unavailable. If the configured page is plain readsb, AirRadar continues with the fields present in `aircraft.json`. When both tar1090 metadata and ADSBDB are enabled, non-empty fields from ADSBDB take precedence and missing fields are filled from the local catalog/fallback.
-
-For the first production deployment, keep `FLIGHTAWARE_API_KEY=` empty. If a key is configured later, the current architecture can request flight plans for currently tracked aircraft that have a callsign; these are AeroAPI requests and may incur commercial charges. The key is used only server-side. The optional FlightAware route lookup is best-effort, so a route failure does not discard the basic flight-plan times or filed route.
-
-## Server-side alerts
-
-Server alerts are independent of the browser `localStorage` watchlist. Configure them explicitly in `data/alerts.json`, or manage the same rules at `/watchlist` through the server-side watchlist API. The file is read at process start and reloaded after a validated UI update; no user accounts, authentication or database table are involved.
-
-```json
-[
-  { "id": "a380", "enabled": true, "type": "aircraftType", "value": "A388" },
-  { "id": "emirates", "enabled": true, "type": "callsignPattern", "value": "UAE*" },
-  { "id": "nearby-a380", "enabled": true, "type": "aircraftType", "value": "A388", "maxDistanceKm": 150 }
-]
-```
-
-Supported rule types are `icaoHex`, `registration`, `callsign`, `callsignPattern`, `aircraftType` and `airline`. The same `*` wildcard semantics are used by the browser and server matching. Invalid rules are skipped and logged without stopping the radar. Arrival conditions are evaluated in the existing `AircraftStateService` snapshot flow, aggregated per aircraft, and deduplicated in bounded RAM. `ALERT_COOLDOWN_MS` defaults to two hours and has a one-minute minimum. Optional explicit emergency transitions use `ALERT_EMERGENCY_ENABLED=true` and only the parsed `aircraft.emergency` field.
-
-The web UI validates and atomically writes only the configured alerts file. ICAO values are normalized to uppercase, registrations are trimmed and uppercased, distance limits must be positive, and duplicate IDs are rejected; separate IDs with the same matching condition retain the existing aggregation semantics. The UI displays the server-wide cooldown and a safe current matching summary, but does not introduce per-rule cooldowns or change alert delivery behavior. `/api/watchlist` supports `GET` and `POST`; `/api/watchlist/:id` supports `PATCH` and `DELETE`.
-
-Pushover is the first optional notifier. Set `PUSHOVER_ENABLED=true`, `PUSHOVER_USER_KEY` and `PUSHOVER_API_TOKEN` in the server-only `.env`. Delivery is asynchronous, bounded and best-effort; one retry is attempted for network/5xx failures. Missing credentials produce a no-op notifier and do not affect live tracking. `/api/health` exposes only safe alert status, notifier name and rule count.
-
-`APP_TIMEZONE` controls the local day used by live daily statistics and defaults to `Europe/Prague`.
-
-## Localization
-
-The user interface defaults to Czech (`cs-CZ`).
-Visible UI strings are centralized under `lib/i18n`.
-Source code, API names, database schema and technical documentation remain in English.
-
-The database contract includes `Airport`, `AtcSector` and `AtcTransmitter` models. The bundled ATC layer is explicitly demo-only (`AirRadar sample data`) and is selected only without `READSB_BASE_URL` (or with the explicit `ATC_SAMPLE_ENABLED=true`). In production set `ATC_SAMPLE_ENABLED=false`; `/api/atc/sectors` and the resolver then use imported PostgreSQL data, or an empty layer if no verified dataset has been imported. Store sector rings as JSON `[[[lon, lat], ...]]` in `AtcSector.polygonJson` and alternate frequencies as JSON `[{"frequencyMhz": 127.35, "label": "..."}]` in `alternateFrequenciesJson`, with source, altitude reference and validity recorded on each row. The current Czech AIP-derived dataset is generated locally by the explicit sync workflow and is not bundled.
-
-### Airport catalog
-
-The map uses the local PostgreSQL `Airport` catalog when it has rows, with a
-small bundled fallback otherwise. Populate it from the public-domain,
-daily-updated [OurAirports dataset](https://ourairports.com/data/):
+Sample ATC is automatic only in demo mode. With a real receiver, imported
+PostgreSQL data is used unless `ATC_SAMPLE_ENABLED=true` is explicitly set.
+ATC assignments are probable position/altitude/time matches and never claim
+the aircraft's actual tuned frequency.
 
 ```bash
 npm run airports:import -- --dry-run
 npm run airports:import
-```
-
-The import downloads `airports.csv`, validates coordinates and ICAO codes, and
-upserts by ICAO without deleting existing rows. It includes medium and large
-airports worldwide, plus small airports, heliports and seaplane bases in Czechia
-and neighbouring Austria, Germany, Poland and Slovakia. Pass another CSV URL as
-the final argument only when deliberately importing a compatible snapshot.
-
-ADSBDB route enrichment uses the server-side airport resolver: it checks the
-PostgreSQL catalog by exact ICAO and then IATA, falls back to valid provider
-coordinates and finally the bundled sample catalog. This resolves airport
-metadata only; route identity remains the code supplied by ADSBDB, preferring a
-canonical ICAO when the catalog provides one.
-
-ATC reference data can be loaded from the versioned JSON format documented in
-[`data/atc/README.md`](data/atc/README.md):
-
-```bash
 npm run atc:import -- --dry-run data/atc/cz-atc.json
 npm run atc:import -- data/atc/cz-atc.json
-```
-
-The importer validates the complete document before writing, normalizes
-`SFC`/`FLxxx`/`UNL` altitude semantics, preserves aviation frequency precision,
-and commits sector/transmitter upserts plus same-source obsolescence in one
-transaction. Every imported row retains source name, reference, effective
-validity, altitude reference and last-verification metadata. It never changes
-aircraft history.
-The resolver cache is process-local; restart the service after an import.
-ATC matches are always probable candidates based on position, normalized
-barometric/geometric altitude and UTC validity. ADS-B does not report the
-aircraft's actual tuned ATC frequency.
-
-For Czech ATC data, use the official eAIP sync rather than a hand-maintained
-snapshot:
-
-```bash
 npm run atc:sync:cz -- --dry-run
 npm run atc:sync:cz
 npm run atc:status:cz
 ```
 
-The sync obtains ENR 2.1 and GEN 0.2 from AIM ŘLP ČR, adds civil CTR geometry
-and communications from the official AD 2.17/2.18 pages for LKPR, LKTB, LKMT
-and LKKV, discovers the effective date and published AIP/AIRAC amendment
-metadata, and has no runtime dependency on AIM. Concrete ACC/FIC/TMA/CTA rows
-are imported only when their published geometry, limits and frequencies pass
-the existing validation rules; aggregate or unsupported rows are reported and
-skipped. A row with no authoritative stable source identifier is blocking by
-default. Only the explicitly audited current source-limited rows are reported
-as `source_limitation` and excluded from the persistable dataset; they remain
-blocking if database history is unavailable or already contains the same Czech
-eAIP object. Annotation parameters are provenance evidence only and are never
-used as synthetic import IDs.
-For a lateral `state boundary` construct, ENR 2.1 remains authoritative for
-the sector meaning, endpoints, ordering, vertical limits, callsign and
-frequencies; the missing boundary polyline is resolved from the official
-[ČÚZK Data50 service](https://ags.cuzk.gov.cz/arcgis/rest/services/DATA50/MapServer)
-and its [metadata record](https://geoportal.gov.cz/php/micka/record/basic/CZ-CUZK-DATA50-V?dlang=eng).
-The sync fetches that dataset once, accepts an endpoint snap only at or below
-the explicit 0.5 km production tolerance, and uses a connected
-state-boundary graph (including the Germany–Poland tripoint). It fails on
-ambiguity, disconnection, excessive snap distance or invalid
-polygon geometry. It never creates a straight-line or other guessed
-boundary; if the authoritative path intersects a generalized AIP walk, the
-walk is polygonized into validated rings without adding geometry. Data50 is
-attributed as ČÚZK Data50 under [CC BY 4.0](https://cuzk.gov.cz/Predpisy/Podminky-poskytovani-prostor-dat-a-sitovych-sluzeb/Podminky-poskytovani-prostorovych-dat-CUZK.aspx). AIM and ČÚZK
-are sync-time sources only; live radar has no runtime dependency on either.
-`state boundary with Germany/Poland/Austria/Slovakia` selects ČÚZK Data50 for Czech national-border geometry. `state boundary Germany - Poland` instead selects the official [BKG VG25 WFS](https://sgx.geodatenzentrum.de/wfs_vg25) layer `vg25:vg25_li` for the Germany–Poland international border. BKG VG25 attribution: © Bundesamt für Kartographie und Geodäsie (BKG), VG25, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+The import and Czech eAIP boundary rules are documented in
+[`data/atc/README.md`](data/atc/README.md) and
+[`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md). AIM/eAIP, ČÚZK Data50, and BKG
+VG25 are sync-time inputs; the live service has no dependency on those hosts.
 
-The complete parse, geometry resolution and validation finish before the
-transaction, so a failed source or unresolved boundary leaves the database
-unchanged.
-The current public eAIP pages do not provide an authoritative ATC transmitter
-location source, so the sync reports
-`no authoritative transmitter-location source found` and imports zero
-transmitters.
+## Alerts and watchlists
+
+The `/watchlist` page and `/api/watchlist` manage shared server alert rules in
+`data/alerts.json`; updates are validated and atomically written. Rules support
+ICAO hex, registration, callsign, callsign pattern, aircraft type, airline,
+and optional maximum distance. Alert transitions use one server-wide cooldown
+and bounded asynchronous notification delivery.
+
+The live map's browser watchlist is a separate `localStorage` filter. It is
+not a shared server rule and does not send notifications.
 
 ## Useful commands
 
 ```bash
-npm run dev          # local development
-npm run lint         # ESLint
-npm run typecheck    # strict TypeScript
-npm run test         # Vitest unit tests
-npm run test:changed # tests affected by changed files; may select none in a clean tree
-npm run test:targeted -- tests/aviation-weather.test.ts # selected test files
-npm run test:full    # complete Vitest suite
-npm run build        # Prisma generate + production build
-npm run start        # production server
-npm run prisma:generate # emit Prisma 8 contract artifacts
-npm run prisma:migrate  # plan a new migration from the contract
-npm run prisma:deploy   # apply pending migrations
-npm run prisma:verify   # verify the configured database
-npm run atc:import -- --dry-run data/atc/cz-atc.json # validate/preview ATC data
-npm run atc:sync:cz -- --dry-run # preview current official Czech ACC data
-npm run atc:status:cz # compare imported Czech effective date with AIM
+npm run dev
+npm run lint
+npm run typecheck
+npm run test:targeted -- tests/aircraft-state.test.ts
+npm run test:changed
+npm test                         # complete Vitest suite
+npm run build
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:deploy
+npm run prisma:verify
+npm run start
 ```
 
-During development, use `test:targeted` for a focused change and
-`test:changed` for Vitest's affected-file selection. Run `test:full` (or
-`npm test`) before completing a relevant task. These shortcuts are development
-feedback tools only; production release validation remains authoritative in
-`deploy/release.sh`.
+Use [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for targeted/changed/full
+testing and [`docs/RELEASE.md`](docs/RELEASE.md) for production validation.
 
-## API
+## Public deployment and security
 
-- `GET /api/aircraft` — current state snapshot
-- `GET /api/aircraft/:hex?range=7d|30d` — safe aircraft metadata, up to ten recent flight instances and a bounded Flight-instance history summary (30 days by default; includes Prague-local active days, top callsigns and resolved airport routes)
-- `GET /api/stream` — SSE stream of `snapshot` events
-- `GET /api/history/flights?range=today|yesterday|7d&q=...&limit=...` — bounded PostgreSQL flight-instance list, newest first; searches callsign, registration and ICAO hex server-side
-- `GET /api/history/flights?hex=...&limit=1` — latest flight instance for the legacy `/history?hex=...` deep link
-- `GET /api/history/flights/:id` — one flight instance with chronologically ordered sampled positions, capped at 2,000 positions and reported as `truncated` when needed
-- `GET /api/history/:hex` — PostgreSQL history or RAM trail fallback (ICAO hex, or readsb's `~`-prefixed six-digit identifier)
-- `GET /api/airports` — configured airport catalog or bundled fallback catalog
-- `GET /api/search?q=...` — bounded global search over the live aircraft RAM snapshot and the airport catalog; queries require 2–64 characters and return at most 12 safe aircraft/airport results
-- `GET /api/weather/airport/:icao` — on-demand AviationWeather.gov METAR/TAF for a canonical airport ICAO; returns `404` for unknown airports and `200` with nullable products when reports are unavailable
-- `GET /api/atc/sectors` — ATC sector and transmitter map data
-- `GET /api/statistics` — today's receiver aggregate by default (`range=today`), or a bounded `range=7d|30d` response built from daily statistics with period summary, daily trends, 36 ten-degree coverage buckets, populated-bucket coverage analysis and an explicit today-vs-period coverage comparison; exact receiver coordinates are never included
-- `GET|POST /api/watchlist` — list or create validated server alert rules, including the effective cooldown and safe current matching state
-- `PATCH|DELETE /api/watchlist/:id` — update, enable/disable or delete one server alert rule
-- `GET /api/health` — application, database, readsb, ATC dataset, live-state and safe alerting health
-- `GET /api/system/status` — bounded read-only system overview for the `/system` page; reports runtime, receiver, persistence, statistics, local ATC, weather cache, alerts and airport catalog status without secrets or receiver coordinates
-- `GET /api/version` — public build metadata: release version, short commit, build time and channel
+The configured production hostname is <https://airradar.pomykal.cz>.
+The public API is same-origin; no wildcard CORS policy is enabled. Exact
+receiver coordinates remain server-side by default. Set
+`PUBLIC_RECEIVER_POSITION_MODE` to `approximate` (default), `hidden`, or
+`exact` only when deliberately publishing the location. Public DTOs replace
+raw provider errors and never expose secrets.
+
+Request/response APIs use bounded fixed-window limiting; `/api/stream` is
+excluded so SSE heartbeat/coalescing is not interrupted. The proxy must use
+HTTP/1.1, disable buffering/cache for SSE, and set a long read timeout. See
+[`deploy/README.md`](deploy/README.md) for systemd installation and the full
+Nginx Proxy Manager configuration.
 
 ## Production deployment
 
-`deploy/airradar.service` is a systemd unit for `/var/www/airradar`. Put the production `.env` in the project directory and install the unit during initial setup:
+The service runs as the unprivileged `airradar` user. The systemd unit starts
+`scripts/start-production.mjs` directly so systemd tracks the actual Node/Next
+process; the wrapper registers graceful shutdown ownership and waits for a
+complete build. Do not use `npm run start` as a replacement for the production
+unit without understanding that lifecycle contract.
 
-```bash
-sudo cp deploy/airradar.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now airradar
+Normal releases use [`deploy/release.sh`](deploy/release.sh), whose
+authoritative procedure is [`docs/RELEASE.md`](docs/RELEASE.md). It performs
+the full quality gates, migrations, restart, local/public health checks, and
+only then creates the automatic version tag. It never runs as part of ordinary
+development or documentation work.
+
+## Architecture summary
+
+```text
+RTL-SDR / readsb → LocalReadsbProvider → AircraftStateService RAM
+                 → SSE → Next.js / MapLibre UI
+                 → sampled positions → PostgreSQL
 ```
 
-The unit starts `scripts/start-production.mjs` directly. The wrapper registers
-the AirRadar shutdown coordinator in the Next server process and disables
-Next's competing signal handler, so systemd's `KillMode=control-group` can
-wait for the application cleanup without an npm/sh parent process exiting
-first. Each process start emits one `[shutdown] coordinator registered pid=...`
-proof log.
-
-For normal production releases, use the release script from the application directory:
-
-```bash
-cd /var/www/airradar
-sudo ./deploy/release.sh
-```
-
-The script acquires a release lock, rejects tracked or staged working-tree changes, updates the current branch with a fast-forward-only Git operation, calculates the next `vMAJOR.MINOR.PATCH` candidate from `package.json` and existing tags, runs `npm ci`, Prisma generation, lint, typecheck, tests, Prisma migrations and the production build, then restarts `airradar.service` and checks local and public health. Only after every release check passes does it create the Git tag. Repeating a release for the same HEAD reuses its existing release tag; a failed release leaves the candidate untagged and therefore reusable on retry. Build metadata is written to the ignored `generated/build-version.json`; `package.json` and `package-lock.json` are not changed by releases. To test and release uncommitted changes, use `sudo ./deploy/release.sh --allow-dirty`; this preserves the current working tree and skips the update from `origin` to avoid overwriting or conflicting with local changes. Use `sudo ./deploy/release.sh --dry-run` to run preflight checks and print the plan without changing the checkout or service. A non-`main` checkout must be explicitly selected with `--branch`.
-
-The script does not automatically roll back Git code or database migrations after a post-restart failure. This avoids returning code to a state that may be incompatible with an already-applied migration; inspect the diagnostics and perform a compatibility-aware recovery manually.
-
-For emergency diagnostics:
-
-```bash
-sudo systemctl status airradar
-sudo journalctl -u airradar -n 100 --no-pager
-```
-
-Configure Nginx Proxy Manager to proxy the public hostname to `192.168.1.142:3000`. AirRadar uses SSE, not WebSocket. In the Proxy Host **Advanced** field (directives are applied inside the proxy location), use:
-
-```nginx
-proxy_http_version 1.1;
-proxy_buffering off;
-proxy_cache off;
-proxy_read_timeout 1h;
-proxy_send_timeout 1h;
-proxy_set_header Connection "";
-proxy_set_header Host $host;
-proxy_set_header X-Real-IP $remote_addr;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-proxy_set_header X-Forwarded-Proto $scheme;
-client_max_body_size 1m;
-```
-
-The application does not use forwarded headers as a client identity for rate
-limiting. Nginx Proxy Manager's location-level Advanced field cannot safely
-declare a shared `limit_req_zone`; configure any extra proxy rate limit in the
-appropriate server/http context and keep `/api/stream` exempt.
-
-`/api/stream` already sends `Content-Type: text/event-stream`,
-`Cache-Control: no-cache, no-transform`, `Connection: keep-alive`, and
-`X-Accel-Buffering: no`. WebSocket support is not required for this endpoint.
-
-## Architecture
-
-The browser talks only to AirRadar APIs. `AircraftProvider` is the stable server-side abstraction; `LocalReadsbProvider` and `MockReadsbProvider` implement it. `AircraftStateService` owns the in-memory map, derived distance/bearing, bounded trails, polling, stale-target cleanup and sampling. `ReceiverStatistics` owns the current local-day aggregate, per-ICAO type/airline accounting and fixed 36-bucket coverage; it flushes changed rows to PostgreSQL at most every 30 seconds and best-effort on shutdown. SSE coalesces snapshots for slow clients, so a disconnected or slow browser cannot grow a server-side queue.
-
-Optional server-side contracts are defined for `AircraftMetadataProvider`, `FlightRouteProvider`, `FlightPlanProvider`, `ExternalAdsbProvider`, `AtcSectorProvider` and `AtcActivityProvider`. The enrichment cache uses normalized keys, positive/negative TTLs and in-flight request coalescing; no provider is called when no integration is configured. The frontend receives normalized data and never selects a provider.
-
-`Flight` represents a flight instance, not a callsign. A new instance is opened when the callsign changes or the continuity gap is exceeded; the ICAO address remains the aircraft identity and registration/callsign are observations.
-
-The ATC service models multi-polygon sectors, vertical limits, validity, country, callsign, service, primary/alternate frequencies and source. Its resolver performs point-in-polygon plus altitude/time matching and reports a probable sector only. It never claims to know the aircraft’s actually tuned frequency.
-
-The project intentionally does not claim a definitive AIP dataset, actual tuned radio frequency, global ADS-B coverage, RTL-airband ingestion, arbitrary notification-channel support or coverage heatmaps.
-
-For receivers regularly tracking several hundred aircraft, review mobile performance before replacing DOM markers; the next targeted optimization would be a GeoJSON source with a MapLibre symbol layer.
+For the complete current implementation, read
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
+[`docs/RUNTIME-INVARIANTS.md`](docs/RUNTIME-INVARIANTS.md).

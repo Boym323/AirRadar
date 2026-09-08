@@ -1,0 +1,33 @@
+# Data sources
+
+The running radar is deliberately useful without optional external services.
+Source provenance is retained where the data is imported or returned to the
+browser. “Production status” and configuration are summarized in
+[FEATURES.md](FEATURES.md); this document records source and safety/licensing
+constraints.
+
+| Source | Use and boundary | Security / licensing constraint |
+| --- | --- | --- |
+| Local `readsb` / tar1090 web root | `LocalReadsbProvider` reads `/data/aircraft.json` and optionally `/data/receiver.json`; the configured web root also enables tar1090 static lookup. | Keep the URL on the intended receiver/LAN. Do not put a data-file path in `READSB_BASE_URL`. Provider errors stay server-side and live operation must tolerate outages. |
+| `MockReadsbProvider` | Deterministic demo traffic when `READSB_BASE_URL` is empty. | Sample data is not operational traffic or evidence of coverage. |
+| ADSBDB | Optional ICAO metadata and callsign route/airline enrichment at `https://api.adsbdb.com/v0`; no key. | Community service: follow its current terms and fair-use limits. Calls are server-side, cached/negative-cached, concurrency-limited, and must never block live polling. Do not treat route data as authoritative filed flight data. |
+| tar1090-db / `AIRCRAFT_METADATA_URL` | Local hashed tar1090 blocks are an immediate fallback; a compressed CSV catalog is fetched from the configured source (default is the upstream GitHub raw URL), stored in PostgreSQL, mirrored in RAM, and checked at most daily with ETag. | Validate size/content before persistence and retain source/version provenance. Upstream dataset terms apply; do not infer a license not supplied by the upstream. A failed sync keeps the previous catalog. |
+| FlightAware AeroAPI | Optional paid flight-plan times, filed route, and best-effort waypoints using `FLIGHTAWARE_API_KEY`. | Commercial/possibly billable. Keep the key only in server `.env`; never use `NEXT_PUBLIC_*` or expose raw responses. Disabled when empty, concurrency is 2, and route failure must not discard basic plan data. |
+| OurAirports | `https://davidmegginson.github.io/ourairports-data/airports.csv` populates the `Airport` catalog through `npm run airports:import`. The parser keeps large/medium airports worldwide plus regional Czech/neighbouring-country entries. | The dataset is documented as public domain by OurAirports; retain the source URL and verify current terms before redistribution. Import validates ICAO/coordinates and upserts without deleting existing rows. |
+| Airport resolver / bundled catalog | Resolver order is local PostgreSQL exact ICAO, local IATA, valid provider coordinates, then the six-entry bundled emergency/demo catalog. | Normalize ICAO/IATA and validate coordinates. Provider-supplied route airport metadata is untrusted input and cannot create arbitrary links or invalid map coordinates. |
+| AviationWeather.gov | On-demand METAR/TAF JSON from `https://aviationweather.gov/api/data/metar` and `/taf` for a canonical airport ICAO. | Server-side fetch with a bounded timeout, explicit User-Agent, validation, no persistence, product TTLs (5/15 minutes), bounded LRU, and stale-if-error. The UI displays report text as source data; weather availability must not affect radar. |
+| Planespotters.net | Optional aircraft photo metadata from `https://api.planespotters.net/pub/photos/hex/...` and registration fallback. Browser loads the returned thumbnail/source URLs. | Disabled by default. Only HTTPS URLs on `t.plnspttrs.net` and `www.planespotters.net` are accepted. The server caches metadata, not image bytes, for bounded positive/negative TTLs. Preserve photographer/source attribution; photos remain subject to the photographer/Planespotters rights and terms. |
+| Czech AIM/eAIP | Sync-time source for Czech ATC semantics, ENR 2.1, GEN 0.2 amendment metadata, and selected AD 2.17/2.18 pages. | Use only the official AIM/eAIP host in `npm run atc:sync:cz`; record effective/amendment metadata. It is not a runtime dependency and no hand-maintained snapshot is silently authoritative. |
+| ČÚZK Data50 | Sync-time WGS84 state-boundary geometry for Czech national-border constructs; official service and metadata are linked in `data/atc/README.md`. | Attribute as ČÚZK Data50, CC BY 4.0, and retain the source reference. Endpoint snap tolerance is at most 0.5 km; ambiguity/disconnection/invalid geometry blocks import. |
+| BKG VG25 | Sync-time `vg25:vg25_li` geometry for the Germany–Poland international border. | Attribute © Bundesamt für Kartographie und Geodäsie (BKG), VG25, CC BY 4.0. Use the fixed HTTPS WFS source; no guessed straight-line boundary. |
+| Imported ATC JSON / PostgreSQL | `data/atc/*.json` defines the import format; production runtime reads `AtcSector`/`AtcTransmitter`. Sample constants are only for demo/explicit opt-in. | Validate the whole document before one transaction; stable IDs, source/reference, validity, altitude reference, and last verification are mandatory provenance. ATC is probable context, never the aircraft's actual tuned frequency. The Czech sync currently does not invent transmitter locations when no authoritative source exists. |
+| OpenStreetMap raster tiles | MapLibre styles request `https://tile.openstreetmap.org/{z}/{x}/{y}.png` from the browser. | Keep `© OpenStreetMap contributors` attribution and comply with the current OSM tile usage policy; do not assume the public tile endpoint is an unrestricted bulk tile service. OSM data is ODbL; tile-service terms still apply. |
+| AircraftShapesSVG | Type-specific marker SVGs in `public/aircraft-icons/`, from the upstream project named in that directory. | GPL-3.0 applies; the upstream license is shipped. Local stroke-width changes are modifications, and new distribution must preserve applicable GPL notices/source obligations. |
+| Bundled Open Sans SDF glyphs | Local MapLibre label glyphs in `public/fonts/`, from the MapLibre demo/OpenMapTiles font source. | Apache 2.0 applies and is shipped as `LICENSE-Open-Sans.txt`; retain attribution/license when distributing. |
+| Pushover | Optional server-side notifier at `https://api.pushover.net/1/messages.json`. | External commercial service/API. Keep user key and API token server-only, use only after explicit enablement, and treat delivery as asynchronous best effort with bounded retry. |
+
+ATC and airport imports are operator actions, not hidden runtime downloads by
+the live poller. `data/atc/README.md`, the source links above, and upstream
+terms remain the final references for a new import. When legal terms or a
+provider policy changes, update this document and the relevant source metadata
+before enabling the integration.

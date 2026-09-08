@@ -1,246 +1,39 @@
-# AirRadar Agent Guide
+# AirRadar agent index
 
-## Project purpose
+AirRadar is a Next.js/TypeScript ADS-B radar. Before working, read this file
+and then only the linked document(s) relevant to the task. Do not
+automatically read the whole `docs/` tree. Verify the current implementation
+in `app/`, `components/`, `lib/`, `scripts/`, `deploy/`, and `prisma/` before
+writing or changing documentation.
 
-AirRadar is a private ADS-B radar backed by a local `readsb` receiver.
+## Authoritative documentation
 
-Primary flow:
+- [Architecture](docs/ARCHITECTURE.md) — ownership and component boundaries
+- [Data flows](docs/DATA-FLOWS.md) — live, history, statistics, enrichment
+- [Runtime invariants](docs/RUNTIME-INVARIANTS.md) — rules that must not break
+- [Development](docs/DEVELOPMENT.md) — tests, worktrees, and agent parallelism
+- [Release](docs/RELEASE.md) — authoritative production release procedure
+- [Data sources](docs/DATA-SOURCES.md) — provenance, security, and licensing
+- [Features](docs/FEATURES.md) — current routes/API and production status
 
-```text
-RTL-SDR / readsb
-→ LocalReadsbProvider
-→ AircraftStateService RAM
-→ SSE
-→ Next.js / MapLibre UI
-```
+## Non-negotiable rules
 
-History flow:
+- ICAO hex is aircraft identity; callsign is an observation. Live state and
+  the single `AircraftStateService` poller stay in one Node process.
+- The live path is `readsb → RAM → SSE`; PostgreSQL receives sampled history,
+  reference/catalog data, and aggregated daily statistics. Database and
+  optional enrichment failures must not stop live radar.
+- `/api/stream` is SSE, not WebSocket. Delivery stays bounded/coalesced and
+  heartbeat behavior must be preserved. Public serialization must not leak
+  secrets, raw provider errors, or exact receiver coordinates by default.
+- ATC results are probable position/altitude/time matches, never proof of the
+  aircraft's tuned frequency. Sample ATC is demo-only unless explicitly
+  enabled; production data is imported and provenance is retained.
+- Do not reset or destructively migrate a production database. Do not run a
+  release unless the user explicitly requests it; follow `docs/RELEASE.md`.
+- Keep user-facing strings in `lib/i18n/`; established aviation terms remain
+  technical terms. Documentation and source code are English.
 
-```text
-AircraftStateService
-→ sampled positions
-→ PostgreSQL
-```
-
-Keep this file as compact execution context for coding agents; human-facing
-technical documentation is in `README.md`.
-
-## Production and runtime
-
-These are deployment conventions used by the current installation; they are not all defined by repository files:
-
-- Production URL: `https://airradar.pomykal.cz`
-- Application path: `/var/www/airradar`
-- Runtime: Debian LXC
-- Process manager: systemd
-- Reverse proxy: Nginx Proxy Manager
-- Database: PostgreSQL
-- Live source: real `readsb` receiver
-- Default UI locale: `cs-CZ`
-- Timezone: `Europe/Prague`
-
-Repository-backed deployment artifacts are in `deploy/`. The service runs as the unprivileged `airradar` user and binds Next.js to the production LAN address `192.168.1.142:3000` for the separate reverse proxy. Production starts `scripts/start-production.mjs` directly so the Next server is systemd's `MainPID`; the wrapper registers AirRadar shutdown ownership before Next startup and disables Next's competing signal handler.
-Normal production releases use `deploy/release.sh`; bypass it only for debugging or recovery. The script calculates a `vMAJOR.MINOR.PATCH` candidate under the existing release flock, writes ignored build metadata before the build, and creates the matching tag only after build, migrations, restart, local health and public health all pass. It never runs `npm version` or changes package manifests; repeating a release for the same HEAD reuses its tag.
-
-## Tech stack
-
-- Next.js App Router, React, TypeScript
-- MapLibre GL and Tailwind CSS
-- PostgreSQL with the Prisma 8 contract workflow
-- Server-Sent Events (SSE)
-- Vitest
-- Node.js `>=22.18.0`, npm `>=10`
-
-## Architecture
-
-- `AircraftProvider` is the server-side provider boundary. The live provider
-  is `LocalReadsbProvider`; empty `READSB_BASE_URL` selects the mock provider.
-- `AircraftStateService` owns live state in RAM, polling, stale cleanup,
-  derived distance/bearing, bounded trails, statistics, enrichment updates,
-  ATC resolution, and history sampling.
-- Production live state and history sampling are single-process; multiple Node
-  workers would duplicate polling and history sampling unless the architecture
-  changes.
-- The browser consumes AirRadar APIs only. `/api/stream` publishes snapshots
-  over SSE; it is intentionally not a WebSocket endpoint.
-- `/api/version` publishes only safe release build metadata; generated metadata
-  is written to ignored `generated/build-version.json` before production builds.
-- PostgreSQL stores sampled history, imported ATC/airport data and the optional
-  aircraft metadata catalog plus aggregated receiver daily statistics, not every
-  ADS-B update. Live radar must remain useful without PostgreSQL.
-- Receiver daily statistics are local-day (`APP_TIMEZONE`) aggregates with one
-  row per daily aircraft and fixed 10-degree coverage rows; RAM aggregation is
-  flushed best-effort on a throttled cadence and is not a per-poll database
-  write.
-- Server alert rules are explicit startup configuration in `data/alerts.json`,
-  separate from the browser `localStorage` watchlist; alert evaluation reuses
-  the existing single-process snapshot flow and has no database table or auth.
-- Optional enrichment is server-side and isolated from the readsb polling loop.
-
-## Sources of truth
-
-Prefer the relevant source below instead of searching for duplicated details:
-
-- Human technical documentation: `README.md`
-- Environment options: `.env.example`
-- Database schema: `prisma/contract.prisma`
-- Prisma target and contract output: `prisma.config.ts`
-- Database migrations: `migrations/app/`
-- Production code: `app/`, `components/`, `lib/`
-- User-facing translations: `lib/i18n/`
-- Deployment artifacts and proxy/service notes: `deploy/`
-- API routes: `app/api/`
-
-Generated files under `generated/` are outputs, not the database schema source of truth. Do not copy complete schemas, API payloads, env files, routes, or test inventories into this guide.
-
-## Core invariants
-
-- ICAO hex is aircraft identity. Callsign is an observation and may change.
-- A `Flight` is a flight instance, not a callsign.
-- On a continuity gap, close the old flight with `endTime = old lastSeenAt`;
-  do not move the old `lastSeenAt` forward. Open the new flight at current
-  `recordedAt`.
-- On an immediate callsign change, preserve the current implementation: close
-  the old instance at current `recordedAt` and open a new instance.
-- Derived altitude and vertical rate prefer barometric, then geometric
-  fallback; preserve raw barometric and geometric values.
-- Live aircraft state belongs in RAM. PostgreSQL stores sampled history and
-  durable reference/catalog data, not every ADS-B update.
-- PostgreSQL or optional enrichment failure must not stop live radar. One slow
-  or disconnected SSE client must not affect other clients.
-- SSE delivery is bounded/coalesced: slow clients keep only the latest pending
-  snapshot rather than building an unbounded queue.
-- ATC assignment is probable, based on position/altitude/time; never claim the
-  aircraft's actual tuned frequency.
-- Sample ATC data is automatic only in demo mode. With a real receiver it must
-  be explicitly enabled and never appear silently.
-- Imported ATC rows retain source/reference, validity and last-verification
-  provenance; `data/atc/` and `npm run atc:import` are the import workflow
-  sources.
-- Czech eAIP rows without a durable authoritative ID are blocking by default.
-  Only explicitly audited source-limited rows may be classified as
-  `source_limitation`; they remain blocking when database history is unknown or
-  shows the same object was previously imported. Annotation values are not IDs.
-- Czech production ACC ATC data is derived from the official AIM/eAIP source
-  through the explicit sync pipeline; it is not a runtime dependency. AIP
-  semantics select reconstructed state-boundary geometry: Czech national
-  borders use ČÚZK Data50 and the Germany–Poland international border uses
-  BKG VG25. Endpoint snapping is production-safe only at or below 0.5 km,
-  and unresolved or invalid geometry fails before the import
-  transaction.
-- Public APIs must not expose exact receiver coordinates unless explicitly
-  configured; internal receiver coordinates remain exact for calculations.
-- Public DTOs must not contain secrets, raw provider errors, or other internal
-  connection details.
-- SSE must not be broken by rate limiting or security middleware; preserve
-  bounded/coalesced delivery and heartbeat behavior.
-
-## Data providers
-
-### readsb
-
-`LocalReadsbProvider` expects the readsb/tar1090 web-root base URL and reads:
-
-- `/data/aircraft.json`
-- `/data/receiver.json`
-
-Do not put either data file path into `READSB_BASE_URL`. The adapter prefers barometric over geometric values while retaining both raw values.
-
-### ADSBDB
-
-Optional, keyless enrichment; enable with `ADSBDB_ENABLED=true`. Metadata is keyed by ICAO hex; route data is keyed by normalized callsign and UTC date. The total concurrency budget for the same ADSBDB provider instance is `6`. Failures and misses are cached and must not break live polling.
-
-### tar1090 database
-
-When `READSB_BASE_URL` points to a tar1090 web root, AirRadar enriches aircraft by ICAO hex from a PostgreSQL catalog mirrored in RAM. The catalog checks `AIRCRAFT_METADATA_URL` once per day with ETag validation; the hashed tar1090 database folder remains the immediate fallback. A plain readsb root, unavailable database or failed sync leaves live polling unaffected. If ADSBDB is also enabled, its non-empty metadata fields take precedence and the catalog fills missing values.
-
-### FlightAware
-
-Optional commercial enrichment. It is disabled when `FLIGHTAWARE_API_KEY` is empty and should not be enabled by default. The key is server-side only and requests may incur charges. Concurrency budget is `2`. Route waypoint lookup is best-effort; a `/route` failure must not discard basic FlightPlan data.
-
-## Database and migrations
-
-- `prisma/contract.prisma` is the schema source of truth.
-- `prisma.config.ts` defines the Prisma 8 PostgreSQL workflow.
-- Checked-in forward migrations under `migrations/app/` are the migration source
-  of truth.
-- Generated contract artifacts are disposable outputs and are ignored by git.
-- Never reset, recreate, or destructively migrate a production database unless
-  explicitly requested.
-
-## Localization
-
-- User-facing UI is Czech by default (`cs-CZ`). Centralize UI strings in `lib/i18n/`; use an existing translation key instead of hardcoding a label.
-- Source code, API names, database schema, environment variable names, server
-  logs, and technical documentation are English.
-- Do not forcibly translate established technical terms such as `ADS-B`,
-  `MLAT`, `TIS-B`, `ICAO`, `IATA`, `ATC`, `Squawk`, `RSSI`, `readsb`,
-  `ADSBDB`, and `FlightAware`.
-
-## Security and operations
-
-- Keep secrets only in server-side `.env`; never put them in `NEXT_PUBLIC_*` variables.
-- Never commit a real `.env`, credentials, database URLs, or API keys.
-- `FLIGHTAWARE_API_KEY` is server-side only. Public APIs may expose receiver
-  and live-radar information, so security changes require deliberate review.
-- For full systemd, Nginx Proxy Manager, and SSE proxy settings, see
-  `README.md` and `deploy/README.md`.
-
-## Do not change casually
-
-Do not replace or redesign these without a concrete requirement:
-
-- SSE with WebSockets
-- MapLibre or the provider abstractions
-- RAM live-state architecture
-- Prisma contract workflow
-- PostgreSQL sampled-history model
-- `lib/i18n/` structure
-
-Do not add Redis, Redux, queues, microservices, or another framework merely as
-preventive architecture. A GeoJSON/MapLibre symbol-layer marker optimization
-is a future profiling-led change, not a default redesign.
-
-## Quality gates
-
-Run the relevant checks and report exactly what ran:
-
-```bash
-npm run prisma:generate
-npm run lint
-npm run typecheck
-npm test
-npm run build
-```
-
-Use `npm ci` in a clean environment or before a complete dependency check.
-Never claim a gate passed unless it was actually run. If a gate cannot run,
-state that clearly.
-
-For the development feedback loop, use `npm run test:targeted -- <test-file>`
-for a focused change or `npm run test:changed` for Vitest's affected-file
-selection. `npm run test:full` and `npm test` both run the complete suite.
-Targeted or changed tests never replace the full suite for production
-validation. `deploy/release.sh` remains the authoritative release workflow
-and retains all current gates. A previous full-gate pass is stale after
-source, test, package, build, or deployment changes; release.sh validates the
-current state again.
-
-## Documentation maintenance
-
-Update `AGENTS.md` only when a durable architectural, operational, or
-development rule changes. Do not turn it into a changelog; omit temporary
-bugs, one-off fixes, commit SHAs, test counts, and incidental implementation
-details.
-
-- Env variable change: update `.env.example` and, when user-relevant,
-  `README.md`.
-- Architecture change: update `README.md`; update this guide if a durable
-  invariant or source of truth changes.
-- UI translation structure: update this guide only when its rules or source of
-  truth changes.
-- API change: update the API section in `README.md`.
-- Database schema change: update the contract and migrations; update README
-  only when the architectural use of the database changes.
-
-`README.md` remains complete human-facing documentation; `AGENTS.md` remains compact agent context and points to sources of truth.
+`README.md` is the human-facing entry point. The documents above are the
+compact agent context; update `AGENTS.md` only when a durable rule or source
+of truth changes.
