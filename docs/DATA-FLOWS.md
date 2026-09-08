@@ -121,3 +121,9 @@ path reports the aircraft's actual tuned frequency.
   atomically updates the same file and reloads the shared `AlertEngine`.
   Separately, the map's browser watchlist is a localStorage filter and is not
   a server notification rule.
+- `/fleet` derives its identities from the same server watchlist, keeping only
+  `icaoHex` rules and deduplicating by normalized ICAO hex. Callsign,
+  registration, pattern, type, and airline rules are observation filters, not
+  Fleet identities. One receiver snapshot supplies live/offline state, while
+  one shared 30-day `Flight` query supplies the 7/30-day counts and route
+  rankings; no second live poller is created.

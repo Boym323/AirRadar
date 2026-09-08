@@ -14,6 +14,7 @@ whether an operator has configured an optional provider.
 | `/history` | Bounded flight-instance search/list, sampled position detail, playback map. | Production; PostgreSQL feature, no live-polling dependency. |
 | `/statistics` | Today/7-day/30-day receiver aggregate, trends, coverage visualization, and bounded CSV export. | Production; today is RAM-backed, ranges use daily PostgreSQL aggregates. |
 | `/watchlist` | Server alert-rule editor and current matching state. | Production; shared `data/alerts.json`, no auth/user accounts. |
+| `/fleet` | Concrete aircraft from ICAO watchlist rules, live/offline state, recent observed-flight counts, routes/airports, and lazy photos. | Production; non-identity watchlist rules are omitted, PostgreSQL history is optional. |
 | `/system` | Sanitized runtime, receiver, persistence, statistics, ATC, weather, alerts, and airport status. | Production read-only diagnostics. |
 
 ## APIs

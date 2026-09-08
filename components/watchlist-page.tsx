@@ -278,6 +278,7 @@ export function WatchlistPage() {
           <p className="statistics-subtitle">{dictionary.watchlist.pageSubtitle}</p>
         </div>
         <nav className="watchlist-nav" aria-label={dictionary.watchlist.navigation}>
+          <Link className="secondary-button" href="/fleet">{dictionary.watchlist.fleet}</Link>
           <button type="button" className="language-button" onClick={() => setLocale((current) => current === "cs" ? "en" : "cs")} aria-label={locale === "cs" ? "English" : "Čeština"}>{locale === "cs" ? "EN" : "CZ"}</button>
         </nav>
       </header>
