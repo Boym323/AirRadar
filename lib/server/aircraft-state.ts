@@ -75,6 +75,8 @@ export class AircraftStateService {
   private consecutiveFailures = 0;
   private historyWriteActive = false;
   private pendingHistorySnapshot: ProviderSnapshot | null = null;
+  private historyDrainPromise: Promise<void> | null = null;
+  private shuttingDown = false;
   private readonly enrichment: EnrichmentService;
   private readonly atc: AtcSectorService;
   private readonly alerts: AlertEngine;
@@ -96,7 +98,7 @@ export class AircraftStateService {
   }
 
   start(): void {
-    if (this.running) return;
+    if (this.running || this.shuttingDown) return;
     this.running = true;
     this.statisticsReady = this.statistics.load().catch((error) => {
       // Statistics are optional; a load failure must not prevent the first
@@ -112,13 +114,39 @@ export class AircraftStateService {
     await this.initialRefresh;
   }
 
-  async stop(): Promise<void> {
+  async stop(options: { deadline?: number; closeStatistics?: boolean; closeProvider?: boolean } = {}): Promise<void> {
+    this.shuttingDown = true;
     this.running = false;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    await this.initialRefresh;
-    await this.statistics.close();
-    await this.provider.close?.();
+    const deadline = options.deadline ?? Number.POSITIVE_INFINITY;
+    await this.awaitUntil(this.initialRefresh, deadline);
+    await this.awaitUntil(this.drainHistory(), deadline);
+    if (options.closeStatistics !== false) await this.awaitUntil(this.statistics.close(), deadline);
+    if (options.closeProvider !== false) await this.awaitUntil(this.provider.close?.(), deadline);
+  }
+
+  async closeStatistics(): Promise<void> { await this.statistics.close(); }
+
+  async closeProvider(): Promise<void> { await this.provider.close?.(); }
+
+  private async awaitUntil<T>(promise: Promise<T> | void | null, deadline: number): Promise<void> {
+    if (!promise) return;
+    if (!Number.isFinite(deadline)) {
+      await promise;
+      return;
+    }
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      await Promise.race([
+        Promise.resolve(promise).then(() => undefined),
+        new Promise<void>((resolve) => { timer = setTimeout(resolve, remaining); }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   subscribe(listener: Listener): () => void {
@@ -173,6 +201,7 @@ export class AircraftStateService {
   private currentReceiver = getReceiverPosition();
 
   private async refresh(): Promise<void> {
+    if (!this.running) return;
     if (this.refreshing) return;
     this.refreshing = true;
     try {
@@ -182,7 +211,7 @@ export class AircraftStateService {
       this.lastError = null;
       this.consecutiveFailures = 0;
       this.notify();
-      this.queueHistory(snapshot);
+      if (this.running) this.queueHistory(snapshot);
       void this.enrichSnapshot(snapshot);
       void this.resolveAtc(snapshot).catch((error) => {
         // ATC is optional enrichment; a provider failure must never affect live tracking.
@@ -225,7 +254,7 @@ export class AircraftStateService {
       if (!currentHexes.has(hex)) this.removeAircraft(hex);
     }
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
-    this.statistics.observe([...this.aircraft.values()], this.currentReceiver, new Date());
+    if (!this.shuttingDown) this.statistics.observe([...this.aircraft.values()], this.currentReceiver, new Date());
     this.alerts.observe(previousAircraft, this.aircraft);
   }
 
@@ -297,10 +326,11 @@ export class AircraftStateService {
   }
 
   private queueHistory(snapshot: ProviderSnapshot): void {
+    if (!this.running) return;
     this.pendingHistorySnapshot = snapshot;
     if (this.historyWriteActive) return;
     this.historyWriteActive = true;
-    void this.drainHistoryQueue();
+    this.historyDrainPromise = this.drainHistoryQueue();
   }
 
   private async drainHistoryQueue(): Promise<void> {
@@ -316,8 +346,12 @@ export class AircraftStateService {
       }
     } finally {
       this.historyWriteActive = false;
-      if (this.pendingHistorySnapshot) this.queueHistory(this.pendingHistorySnapshot);
+      if (this.pendingHistorySnapshot && this.running) this.queueHistory(this.pendingHistorySnapshot);
     }
+  }
+
+  private drainHistory(): Promise<void> {
+    return this.historyDrainPromise ?? Promise.resolve();
   }
 
   private notify(): void {
@@ -360,7 +394,7 @@ export class AircraftStateService {
       for (const result of results) {
         if (result.status !== "fulfilled" || !result.value.enrichment) continue;
         const updated = this.aircraft.get(result.value.item.icaoHex);
-        if (updated) this.statistics.observe([updated], this.currentReceiver, new Date());
+        if (updated && !this.shuttingDown) this.statistics.observe([updated], this.currentReceiver, new Date());
       }
       this.notify();
     }

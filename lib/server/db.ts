@@ -12,6 +12,7 @@ function createDatabase() {
 
 type AirRadarDatabase = ReturnType<typeof createDatabase>;
 const globalForPrisma = globalThis as unknown as { airRadarDb?: AirRadarDatabase };
+let prismaClosed = false;
 
 export function isDatabaseConfigured(): boolean {
   return Boolean(process.env.DATABASE_URL?.trim());
@@ -19,6 +20,16 @@ export function isDatabaseConfigured(): boolean {
 
 export function getPrisma(): AirRadarDatabase | null {
   if (!isDatabaseConfigured()) return null;
+  if (prismaClosed) return null;
   globalForPrisma.airRadarDb ??= createDatabase();
   return globalForPrisma.airRadarDb;
+}
+
+export async function closePrisma(): Promise<void> {
+  if (prismaClosed) return;
+  prismaClosed = true;
+  const database = globalForPrisma.airRadarDb;
+  if (!database) return;
+  await database.close();
+  delete globalForPrisma.airRadarDb;
 }
