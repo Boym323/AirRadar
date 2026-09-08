@@ -94,6 +94,13 @@ describe("receiver statistics ranges", () => {
     expect(result.coverage[0]?.maxDistanceKm).toBe(120);
     expect(result.coverage[1]?.maxDistanceKm).toBe(90);
     expect(result.coverage[2]?.maxDistanceKm).toBe(70);
+    expect(result.coverageSummary).toMatchObject({
+      maxDistanceKm: 120,
+      maxBearing: 4,
+      populatedBuckets: 3,
+      averageDistanceKm: (120 + 90 + 70) / 3,
+    });
+    expect(result.coverageSummary.bestDirections.map((item) => item.bearingFrom)).toEqual([0, 10, 20]);
     expect(result.coverageTrend[1]?.maxDistanceKm).toBeNull();
     expect(result.coverageTrend[6]?.maxDistanceKm).toBe(70);
   });
@@ -167,6 +174,7 @@ describe("receiver statistics ranges", () => {
     expect(result.summary).toEqual({ uniqueAircraft: 0, maxConcurrentAircraft: 0, maxDistanceKm: 0 });
     expect(result.trend.every((point) => point.uniqueAircraft === null)).toBe(true);
     expect(result.coverage.every((bucket) => bucket.maxDistanceKm === 0)).toBe(true);
+    expect(result.coverageSummary).toMatchObject({ maxBearing: null, populatedBuckets: 0, averageDistanceKm: null, bestDirections: [] });
   });
 
   it("provides translated range and tooltip copy in Czech and English", () => {

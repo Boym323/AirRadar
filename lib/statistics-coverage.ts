@@ -1,16 +1,50 @@
+import type {
+  ReceiverStatisticsCoverageBucket,
+  ReceiverStatisticsCoverageSummary,
+} from "@/lib/aircraft/types";
+
 export const COVERAGE_BUCKET_SIZE_DEGREES = 10;
 export const COVERAGE_BUCKET_COUNT = 360 / COVERAGE_BUCKET_SIZE_DEGREES;
 
-export interface CoverageChartBucket {
-  bearingFrom: number;
-  bearingTo: number;
-  maxDistanceKm: number;
-}
+export type CoverageChartBucket = ReceiverStatisticsCoverageBucket;
 
 export interface CoverageChartPoint {
   x: number;
   y: number;
   bucket: CoverageChartBucket;
+}
+
+/**
+ * Summarize only populated receiver coverage buckets. A zero-distance bucket
+ * means that no usable receiver observation populated that bearing and must
+ * not lower the average.
+ */
+export function summarizeCoverage(
+  buckets: CoverageChartBucket[],
+  bestDirectionCount = 5,
+): ReceiverStatisticsCoverageSummary {
+  const populated = buckets
+    .filter((bucket) => Number.isFinite(bucket.maxDistanceKm) && bucket.maxDistanceKm > 0)
+    .map((bucket) => ({ ...bucket, maxDistanceKm: bucket.maxDistanceKm }))
+    .sort((a, b) => b.maxDistanceKm - a.maxDistanceKm || a.bearingFrom - b.bearingFrom);
+  const maximum = populated[0];
+  if (!maximum) {
+    return {
+      maxDistanceKm: 0,
+      maxBearing: null,
+      populatedBuckets: 0,
+      averageDistanceKm: null,
+      bestDirections: [],
+    };
+  }
+
+  return {
+    maxDistanceKm: maximum.maxDistanceKm,
+    maxBearing: Math.floor((maximum.bearingFrom + maximum.bearingTo - 1) / 2),
+    populatedBuckets: populated.length,
+    averageDistanceKm: populated.reduce((sum, bucket) => sum + bucket.maxDistanceKm, 0) / populated.length,
+    bestDirections: populated.slice(0, Math.min(5, Math.max(0, Math.trunc(bestDirectionCount)))),
+  };
 }
 
 export function coverageChartPoints(

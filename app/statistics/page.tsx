@@ -3,11 +3,17 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type {
+  ReceiverStatisticsCoverageSummary,
   ReceiverStatisticsRangeResponse,
   ReceiverStatisticsResponse,
   ReceiverStatisticsTrendPoint,
 } from "@/lib/aircraft/types";
-import { coverageChartPoints, coveragePolygonPath, coverageRingRadius } from "@/lib/statistics-coverage";
+import {
+  COVERAGE_BUCKET_COUNT,
+  coverageChartPoints,
+  coveragePolygonPath,
+  coverageRingRadius,
+} from "@/lib/statistics-coverage";
 import { formatDistance, formatNumber, t } from "@/lib/i18n";
 
 type StatisticsPageData = ReceiverStatisticsResponse | ReceiverStatisticsRangeResponse;
@@ -60,7 +66,9 @@ function CoverageChart({ buckets }: { buckets: ReceiverStatisticsResponse["cover
             onMouseEnter={() => setSelectedBucket(index)}
             onFocus={() => setSelectedBucket(index)}
             onClick={() => setSelectedBucket(index)}
-          />
+          >
+            <title>{`${t.statistics.azimuth(point.bucket.bearingFrom, point.bucket.bearingTo)} · ${formatDistance(point.bucket.maxDistanceKm)}`}</title>
+          </circle>
         ) : null)}
         <g className="coverage-labels" aria-hidden="true">
           <text x="150" y="14" textAnchor="middle">N</text>
@@ -79,6 +87,69 @@ function CoverageChart({ buckets }: { buckets: ReceiverStatisticsResponse["cover
             ? <span>{t.statistics.coverageHint}</span>
             : <span>{t.statistics.insufficientData}</span>}
       </div>
+    </div>
+  );
+}
+
+function coverageDistance(summary: ReceiverStatisticsCoverageSummary): string {
+  return summary.populatedBuckets > 0 ? formatDistance(summary.maxDistanceKm) : t.common.emptyValue;
+}
+
+function CoverageAnalysis({
+  summary,
+  todaySummary,
+  range,
+}: {
+  summary: ReceiverStatisticsCoverageSummary;
+  todaySummary: ReceiverStatisticsCoverageSummary;
+  range: SelectedRange;
+}) {
+  const rangeLabel = range === "7d" ? t.statistics.rangeSevenDays : t.statistics.rangeThirtyDays;
+
+  return (
+    <div className="coverage-analysis">
+      <div className="coverage-summary-grid">
+        <div className="coverage-summary-item">
+          <span>{t.statistics.coverageMaxDistance}</span>
+          <strong>{coverageDistance(summary)}</strong>
+        </div>
+        <div className="coverage-summary-item">
+          <span>{t.statistics.coverageMaxBearing}</span>
+          <strong>{summary.maxBearing === null ? t.common.emptyValue : `${String(summary.maxBearing).padStart(3, "0")}°`}</strong>
+        </div>
+        <div className="coverage-summary-item">
+          <span>{t.statistics.coveragePopulatedBuckets}</span>
+          <strong>{`${formatNumber(summary.populatedBuckets)} / ${COVERAGE_BUCKET_COUNT}`}</strong>
+        </div>
+        <div className="coverage-summary-item">
+          <span>{t.statistics.coverageAverageDistance}</span>
+          <strong>{formatDistance(summary.averageDistanceKm)}</strong>
+        </div>
+      </div>
+
+      <section className="coverage-best-directions" aria-labelledby="coverage-best-directions-title">
+        <h3 id="coverage-best-directions-title">{t.statistics.bestDirections}</h3>
+        {summary.bestDirections.length > 0 ? (
+          <ol className="statistics-ranking">
+            {summary.bestDirections.map((item) => (
+              <li key={item.bearingFrom}>
+                <span>{t.statistics.azimuth(item.bearingFrom, item.bearingTo)}</span>
+                <strong>{formatDistance(item.maxDistanceKm)}</strong>
+              </li>
+            ))}
+          </ol>
+        ) : <p className="statistics-empty">{t.statistics.insufficientData}</p>}
+      </section>
+
+      {range !== "today" && (
+        <section className="coverage-comparison" aria-labelledby="coverage-comparison-title">
+          <h3 id="coverage-comparison-title">{t.statistics.coverageComparison}</h3>
+          <dl>
+            <div><dt>{t.statistics.rangeToday}</dt><dd>{coverageDistance(todaySummary)}</dd></div>
+            <div><dt>{rangeLabel}</dt><dd>{coverageDistance(summary)}</dd></div>
+          </dl>
+        </section>
+      )}
     </div>
   );
 }
@@ -184,9 +255,19 @@ function TrendChart({
   );
 }
 
-function RangeSelector({ value, onChange }: { value: SelectedRange; onChange: (range: SelectedRange) => void }) {
+function RangeSelector({
+  value,
+  onChange,
+  className = "statistics-range-tabs",
+  ariaLabel = t.statistics.rangeSelector,
+}: {
+  value: SelectedRange;
+  onChange: (range: SelectedRange) => void;
+  className?: string;
+  ariaLabel?: string;
+}) {
   return (
-    <div className="statistics-range-tabs" role="tablist" aria-label={t.statistics.rangeSelector}>
+    <div className={className} role="tablist" aria-label={ariaLabel}>
       {(["today", "7d", "30d"] as const).map((range) => (
         <button
           key={range}
@@ -283,7 +364,6 @@ export default function StatisticsPage() {
         </nav>
       </header>
 
-      <RangeSelector value={range} onChange={setRange} />
       {error && <div className="statistics-error">{t.statistics.requestFailed}</div>}
       {!data && !error && <div className="statistics-card statistics-loading">{t.common.loading}</div>}
       {data && summary && <>
@@ -305,8 +385,24 @@ export default function StatisticsPage() {
         {rangeData && <RangeCharts data={rangeData} />}
 
         <section className="statistics-card coverage-card">
-          <div className="statistics-card-header"><h2>{t.statistics.coverage}</h2><span>{rangeData ? t.statistics.periodCoverageDescription : t.statistics.coverageDescription}</span></div>
+          <div className="statistics-card-header coverage-card-header">
+            <div className="coverage-card-heading">
+              <h2>{t.statistics.coverage}</h2>
+              <span>{rangeData ? t.statistics.periodCoverageDescription : t.statistics.coverageDescription}</span>
+            </div>
+            <RangeSelector
+              value={range}
+              onChange={setRange}
+              className="statistics-range-tabs coverage-range-tabs"
+              ariaLabel={t.statistics.coverageRangeSelector}
+            />
+          </div>
           <CoverageChart buckets={data.coverage} />
+          <CoverageAnalysis
+            summary={rangeData?.period.coverageSummary ?? data.coverageSummary}
+            todaySummary={rangeData?.todayCoverageSummary ?? data.coverageSummary}
+            range={range}
+          />
         </section>
 
         {!rangeData && <div className="statistics-ranking-grid">

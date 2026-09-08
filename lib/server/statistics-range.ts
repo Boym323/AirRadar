@@ -1,11 +1,16 @@
 import "temporal-polyfill/full/global";
 import type {
   ReceiverStatisticsCoverageTrendPoint,
+  ReceiverStatisticsCoverageBucket,
   ReceiverStatisticsRange,
   ReceiverStatisticsRangeData,
   ReceiverStatisticsTrendPoint,
 } from "@/lib/aircraft/types";
-import { COVERAGE_BUCKET_COUNT, COVERAGE_BUCKET_SIZE_DEGREES } from "@/lib/statistics-coverage";
+import {
+  COVERAGE_BUCKET_COUNT,
+  COVERAGE_BUCKET_SIZE_DEGREES,
+  summarizeCoverage,
+} from "@/lib/statistics-coverage";
 import { dayKey } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 import type { DailyAircraftStatisticsRecord, DailyCoverageStatisticsRecord } from "@/lib/server/statistics";
@@ -161,7 +166,7 @@ export function aggregateReceiverStatisticsRange(options: {
   timezone: string;
   rows: ReceiverStatisticsRangeRows;
   currentDay?: CurrentDayStatisticsSnapshot;
-}): ReceiverStatisticsRangeData & { coverage: Array<{ bearingFrom: number; bearingTo: number; maxDistanceKm: number }> } {
+}): ReceiverStatisticsRangeData & { coverage: ReceiverStatisticsCoverageBucket[] } {
   const bounds = statisticsRangeBounds(options.range, options.now, options.timezone);
   const dates = dateKeys(bounds.from, bounds.days);
   const statsByDate = new Map<string, ReceiverDailyStatsRangeRow>();
@@ -235,6 +240,12 @@ export function aggregateReceiverStatisticsRange(options: {
 
   const statsRows = [...statsByDate.values()];
   const hasData = statsRows.length > 0 || aircraftRows.length > 0 || coverageByBucket.size > 0;
+  const coverage = Array.from({ length: COVERAGE_BUCKET_COUNT }, (_, bucket): ReceiverStatisticsCoverageBucket => ({
+    bearingFrom: bucket * COVERAGE_BUCKET_SIZE_DEGREES,
+    bearingTo: (bucket + 1) * COVERAGE_BUCKET_SIZE_DEGREES,
+    maxDistanceKm: coverageByBucket.get(bucket) ?? 0,
+  }));
+
   return {
     range: options.range,
     days: bounds.days,
@@ -248,11 +259,8 @@ export function aggregateReceiverStatisticsRange(options: {
     },
     trend,
     coverageTrend,
-    coverage: Array.from({ length: COVERAGE_BUCKET_COUNT }, (_, bucket) => ({
-      bearingFrom: bucket * COVERAGE_BUCKET_SIZE_DEGREES,
-      bearingTo: (bucket + 1) * COVERAGE_BUCKET_SIZE_DEGREES,
-      maxDistanceKm: coverageByBucket.get(bucket) ?? 0,
-    })),
+    coverageSummary: summarizeCoverage(coverage),
+    coverage,
   };
 }
 
@@ -261,7 +269,7 @@ export async function getReceiverStatisticsRange(options: {
   now: Date;
   timezone: string;
   currentDay?: CurrentDayStatisticsSnapshot;
-}): Promise<ReceiverStatisticsRangeData & { coverage: Array<{ bearingFrom: number; bearingTo: number; maxDistanceKm: number }> }> {
+}): Promise<ReceiverStatisticsRangeData & { coverage: ReceiverStatisticsCoverageBucket[] }> {
   const bounds = statisticsRangeBounds(options.range, options.now, options.timezone);
   const rows = await loadReceiverStatisticsRangeRows(bounds.from, bounds.toExclusive);
   return aggregateReceiverStatisticsRange({ ...options, rows });

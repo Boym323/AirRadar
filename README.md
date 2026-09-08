@@ -270,7 +270,7 @@ feedback tools only; production release validation remains authoritative in
 - `GET /api/search?q=...` — bounded global search over the live aircraft RAM snapshot and the airport catalog; queries require 2–64 characters and return at most 12 safe aircraft/airport results
 - `GET /api/weather/airport/:icao` — on-demand AviationWeather.gov METAR/TAF for a canonical airport ICAO; returns `404` for unknown airports and `200` with nullable products when reports are unavailable
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
-- `GET /api/statistics` — today's receiver aggregate by default (`range=today`), or a bounded `range=7d|30d` response built from daily statistics with period summary, daily trends and 36 ten-degree coverage buckets; exact receiver coordinates are never included
+- `GET /api/statistics` — today's receiver aggregate by default (`range=today`), or a bounded `range=7d|30d` response built from daily statistics with period summary, daily trends, 36 ten-degree coverage buckets, populated-bucket coverage analysis and an explicit today-vs-period coverage comparison; exact receiver coordinates are never included
 - `GET|POST /api/watchlist` — list or create validated server alert rules, including the effective cooldown and safe current matching state
 - `PATCH|DELETE /api/watchlist/:id` — update, enable/disable or delete one server alert rule
 - `GET /api/health` — application, database, readsb, ATC dataset, live-state and safe alerting health

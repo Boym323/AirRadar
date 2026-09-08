@@ -160,13 +160,26 @@ export interface ReceiverStatisticsResponse {
     maxConcurrentAircraft: number;
     maxDistanceKm: number;
   };
-  coverage: Array<{
-    bearingFrom: number;
-    bearingTo: number;
-    maxDistanceKm: number;
-  }>;
+  coverage: ReceiverStatisticsCoverageBucket[];
+  coverageSummary: ReceiverStatisticsCoverageSummary;
   topAircraftTypes: Array<{ name: string; count: number }>;
   topAirlines: Array<{ name: string; count: number }>;
+}
+
+export interface ReceiverStatisticsCoverageBucket {
+  /** The lower bound is inclusive; bearingTo is the existing exclusive upper bound. */
+  bearingFrom: number;
+  bearingTo: number;
+  maxDistanceKm: number;
+}
+
+export interface ReceiverStatisticsCoverageSummary {
+  maxDistanceKm: number;
+  /** Representative whole-degree bearing for the bucket with the maximum. */
+  maxBearing: number | null;
+  populatedBuckets: number;
+  averageDistanceKm: number | null;
+  bestDirections: ReceiverStatisticsCoverageBucket[];
 }
 
 export type ReceiverStatisticsRange = "7d" | "30d";
@@ -196,8 +209,11 @@ export interface ReceiverStatisticsRangeData {
   };
   trend: ReceiverStatisticsTrendPoint[];
   coverageTrend: ReceiverStatisticsCoverageTrendPoint[];
+  coverageSummary: ReceiverStatisticsCoverageSummary;
 }
 
 export interface ReceiverStatisticsRangeResponse extends ReceiverStatisticsResponse {
+  /** Coverage summary for the current local day, used by the range comparison. */
+  todayCoverageSummary: ReceiverStatisticsCoverageSummary;
   period: ReceiverStatisticsRangeData;
 }

@@ -44,6 +44,7 @@ function statistics() {
     live: { aircraftCount: 1, messagesPerSecond: 486.2 },
     daily: { uniqueAircraft: 12, maxConcurrentAircraft: 4, maxDistanceKm: 150.5 },
     coverage: Array.from({ length: 36 }, (_, index) => ({ bearingFrom: index * 10, bearingTo: index * 10 + 10, maxDistanceKm: index === 2 ? 150.5 : 0 })),
+    coverageSummary: { maxDistanceKm: 150.5, maxBearing: 24, populatedBuckets: 1, averageDistanceKm: 150.5, bestDirections: [{ bearingFrom: 20, bearingTo: 30, maxDistanceKm: 150.5 }] },
     topAircraftTypes: [],
     topAirlines: [],
   };

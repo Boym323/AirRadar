@@ -4,7 +4,7 @@ import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import type { Aircraft, ReceiverPosition } from "@/lib/aircraft/types";
 import { ReceiverStatistics } from "@/lib/server/statistics";
 import type { ReceiverStatisticsPersistence, ReceiverStatisticsPersistenceSnapshot } from "@/lib/server/statistics";
-import { coverageChartPoints, coveragePolygonPath } from "@/lib/statistics-coverage";
+import { coverageChartPoints, coveragePolygonPath, summarizeCoverage } from "@/lib/statistics-coverage";
 
 const receiver: ReceiverPosition = { lat: 50, lon: 14, name: "Test" };
 
@@ -109,6 +109,24 @@ describe("receiver statistics", () => {
     expect(stats.getResponse(1, null).coverage[12]?.maxDistanceKm).toBe(274);
   });
 
+  it("summarizes populated coverage buckets and returns the five best directions", () => {
+    const result = summarizeCoverage([
+      { bearingFrom: 0, bearingTo: 10, maxDistanceKm: 100 },
+      { bearingFrom: 230, bearingTo: 240, maxDistanceKm: 448 },
+      { bearingFrom: 240, bearingTo: 250, maxDistanceKm: 461 },
+      { bearingFrom: 250, bearingTo: 260, maxDistanceKm: 442 },
+      { bearingFrom: 10, bearingTo: 20, maxDistanceKm: 0 },
+    ]);
+    expect(result).toMatchObject({
+      maxDistanceKm: 461,
+      maxBearing: 244,
+      populatedBuckets: 4,
+      averageDistanceKm: 362.75,
+    });
+    expect(result.bestDirections.map((item) => item.bearingFrom)).toEqual([240, 230, 250, 0]);
+    expect(summarizeCoverage([])).toMatchObject({ maxBearing: null, populatedBuckets: 0, averageDistanceKm: null, bestDirections: [] });
+  });
+
   it("ignores invalid positions without excluding unique observation", () => {
     const stats = new ReceiverStatistics({ persistence: null });
     const invalidZero = aircraft("C0DE00", 0, 0, { distanceKm: 999 });
@@ -171,8 +189,8 @@ describe("receiver statistics", () => {
     const response = new ReceiverStatistics({ persistence: null }).getResponse(0, null);
     expect(response).toMatchObject({ daily: { uniqueAircraft: 0, maxConcurrentAircraft: 0, maxDistanceKm: 0 }, coverage: expect.any(Array) });
     expect(response.coverage).toHaveLength(36);
-    expect(JSON.stringify(response)).not.toContain("lat");
-    expect(JSON.stringify(response)).not.toContain("lon");
+    expect(JSON.stringify(response)).not.toContain('"lat"');
+    expect(JSON.stringify(response)).not.toContain('"lon"');
   });
 
   it("does not create a broken polar path for no data and keeps north at the top", () => {

@@ -1,7 +1,7 @@
 import "temporal-polyfill/full/global";
-import type { Aircraft, RadarStats, ReceiverPosition, ReceiverStatisticsRange, ReceiverStatisticsRangeResponse, ReceiverStatisticsResponse } from "@/lib/aircraft/types";
+import type { Aircraft, RadarStats, ReceiverPosition, ReceiverStatisticsCoverageBucket, ReceiverStatisticsRange, ReceiverStatisticsRangeResponse, ReceiverStatisticsResponse } from "@/lib/aircraft/types";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
-import { COVERAGE_BUCKET_COUNT, COVERAGE_BUCKET_SIZE_DEGREES } from "@/lib/statistics-coverage";
+import { COVERAGE_BUCKET_COUNT, COVERAGE_BUCKET_SIZE_DEGREES, summarizeCoverage } from "@/lib/statistics-coverage";
 import { dayKey, getAppTimezone } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 import { getReceiverStatisticsRange } from "@/lib/server/statistics-range";
@@ -355,6 +355,7 @@ export class ReceiverStatistics {
 
   getResponse(currentAircraft: number, messagesPerSecond: number | null): ReceiverStatisticsResponse {
     this.ensureDay(this.clock());
+    const coverage = this.getCoverage();
     return {
       date: this.currentDate,
       timezone: this.timezone,
@@ -364,11 +365,8 @@ export class ReceiverStatistics {
         maxConcurrentAircraft: this.maxConcurrentAircraft,
         maxDistanceKm: this.maxDistanceKm,
       },
-      coverage: Array.from({ length: COVERAGE_BUCKET_COUNT }, (_, azimuthBucket) => ({
-        bearingFrom: azimuthBucket * COVERAGE_BUCKET_SIZE_DEGREES,
-        bearingTo: (azimuthBucket + 1) * COVERAGE_BUCKET_SIZE_DEGREES,
-        maxDistanceKm: this.coverage.get(azimuthBucket) ?? 0,
-      })),
+      coverage,
+      coverageSummary: summarizeCoverage(coverage),
       topAircraftTypes: sortBreakdown(this.typeCounts).slice(0, 10),
       topAirlines: sortBreakdown(this.airlineCounts).slice(0, 10),
     };
@@ -386,7 +384,13 @@ export class ReceiverStatistics {
       timezone: this.timezone,
       currentDay: this.getCurrentDaySnapshot(),
     });
-    return { ...current, coverage: period.coverage, period };
+    return {
+      ...current,
+      coverage: period.coverage,
+      coverageSummary: period.coverageSummary,
+      todayCoverageSummary: current.coverageSummary,
+      period,
+    };
   }
 
   getCurrentDaySnapshot(): CurrentDayStatisticsSnapshot {
@@ -402,6 +406,14 @@ export class ReceiverStatistics {
         maxDistanceKm: this.coverage.get(azimuthBucket) ?? 0,
       })),
     };
+  }
+
+  private getCoverage(): ReceiverStatisticsCoverageBucket[] {
+    return Array.from({ length: COVERAGE_BUCKET_COUNT }, (_, azimuthBucket) => ({
+      bearingFrom: azimuthBucket * COVERAGE_BUCKET_SIZE_DEGREES,
+      bearingTo: (azimuthBucket + 1) * COVERAGE_BUCKET_SIZE_DEGREES,
+      maxDistanceKm: this.coverage.get(azimuthBucket) ?? 0,
+    }));
   }
 
   async close(): Promise<void> {
