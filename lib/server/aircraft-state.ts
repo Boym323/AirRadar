@@ -14,6 +14,7 @@ import { assignmentFromMatch, AtcSectorService, summarizeRelevantAtcFrequencies 
 import { createAtcSectorProvider } from "@/lib/server/providers";
 import { AlertEngine } from "@/lib/server/alert-engine";
 import type { AlertStatus } from "@/lib/server/alert-engine";
+import { loadAlertConfig } from "@/lib/server/alert-config";
 import { ReceiverStatistics } from "@/lib/server/statistics";
 
 type Listener = (snapshot: StateSnapshot) => void;
@@ -188,6 +189,10 @@ export class AircraftStateService {
 
   getAlertStatus(): AlertStatus {
     return this.alerts.getStatus();
+  }
+
+  reloadAlertConfig(): void {
+    this.alerts.reload(loadAlertConfig());
   }
 
   getStatistics(): ReceiverStatisticsResponse {

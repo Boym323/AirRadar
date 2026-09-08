@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
-import { aircraftAirportHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
+import { aircraftAirportHref, aircraftHistoryHref, aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
 import type { AircraftDetailResponse, HistoryFlightSummary } from "@/lib/server/history";
 import { formatAltitude, formatDateTime, formatSpeed, formatTrack, t } from "@/lib/i18n";
 
@@ -98,6 +98,7 @@ export function AircraftDetailV2({
   const operator = metadata?.operator ?? databaseAircraft?.operator;
   const registrationCountry = metadata?.registrationCountryCode ?? metadata?.registrationCountry ?? databaseAircraft?.registrationCountryCode ?? databaseAircraft?.registrationCountry;
   const backLink = backHref === "/history" ? "/history" : "/";
+  const watchlistHref = icaoHex === t.common.emptyValue ? "/watchlist" : aircraftWatchlistHref(icaoHex, registration);
 
   return (
     <main className="aircraft-page">
@@ -123,6 +124,7 @@ export function AircraftDetailV2({
             <DetailValue label={t.aircraft.operator}>{valueOrEmpty(operator)}</DetailValue>
             <DetailValue label={t.aircraft.registrationCountry}>{valueOrEmpty(registrationCountry)}</DetailValue>
           </div>
+          <div className="watchlist-actions"><Link className="primary-button" href={watchlistHref}>{t.watchlist.followAircraft}</Link></div>
 
           <section className="detail-section" aria-labelledby="aircraft-live-title">
             <h3 id="aircraft-live-title">{t.aircraft.liveAdsb}</h3>

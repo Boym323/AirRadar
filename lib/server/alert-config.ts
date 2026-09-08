@@ -5,9 +5,12 @@ import {
   normalizeAircraftRuleType,
   type AircraftRuleType,
 } from "@/lib/aircraft/watchlist";
+import { normalizeIcaoHex } from "@/lib/server/validation";
 
 export interface AlertRule {
   id: string;
+  /** Optional for backwards compatibility with the original alerts.json format. */
+  name?: string;
   enabled: boolean;
   type: AircraftRuleType;
   value: string;
@@ -20,7 +23,7 @@ export interface AlertConfig {
   path: string;
 }
 
-function configPath(): string {
+export function getAlertConfigPath(): string {
   const configured = process.env.ALERTS_CONFIG_PATH?.trim() || "data/alerts.json";
   return isAbsolute(configured) ? configured : resolve(process.cwd(), configured);
 }
@@ -45,7 +48,10 @@ export function parseAlertRules(input: unknown): { rules: AlertRule[]; errors: s
     const id = typeof record.id === "string" ? record.id.trim() : "";
     const enabled = record.enabled;
     const type = typeof record.type === "string" ? normalizeAircraftRuleType(record.type) : null;
-    const value = typeof record.value === "string" ? record.value.trim() : "";
+    const rawValue = typeof record.value === "string" ? record.value.trim() : "";
+    const value = type === "icaoHex" ? normalizeIcaoHex(rawValue) ?? rawValue : rawValue.toUpperCase();
+    const rawName = typeof record.name === "string" ? record.name.trim() : "";
+    const name = rawName || id;
     let valid = true;
 
     if (!id) {
@@ -67,6 +73,10 @@ export function parseAlertRules(input: unknown): { rules: AlertRule[]; errors: s
       issue(errors, `${path}.value must be a non-empty string`);
       valid = false;
     }
+    if (type === "icaoHex" && !normalizeIcaoHex(rawValue)) {
+      issue(errors, `${path}.value must be a valid ICAO hex`);
+      valid = false;
+    }
     if (type === "callsignPattern" && !isValidWildcardPattern(value)) {
       issue(errors, `${path}.value contains an invalid wildcard pattern`);
       valid = false;
@@ -74,8 +84,8 @@ export function parseAlertRules(input: unknown): { rules: AlertRule[]; errors: s
 
     let maxDistanceKm: number | undefined;
     if (record.maxDistanceKm !== undefined) {
-      if (typeof record.maxDistanceKm !== "number" || !Number.isFinite(record.maxDistanceKm) || record.maxDistanceKm < 0) {
-        issue(errors, `${path}.maxDistanceKm must be a non-negative finite number`);
+      if (typeof record.maxDistanceKm !== "number" || !Number.isFinite(record.maxDistanceKm) || record.maxDistanceKm <= 0) {
+        issue(errors, `${path}.maxDistanceKm must be a positive finite number; non-negative zero is not allowed`);
         valid = false;
       } else {
         maxDistanceKm = record.maxDistanceKm;
@@ -84,14 +94,14 @@ export function parseAlertRules(input: unknown): { rules: AlertRule[]; errors: s
 
     if (!valid || !type || typeof enabled !== "boolean") return;
     ids.add(id);
-    rules.push({ id, enabled, type, value, ...(maxDistanceKm === undefined ? {} : { maxDistanceKm }) });
+    rules.push({ id, name, enabled, type, value, ...(maxDistanceKm === undefined ? {} : { maxDistanceKm }) });
   });
 
   return { rules, errors };
 }
 
 export function loadAlertConfig(): AlertConfig {
-  const path = configPath();
+  const path = getAlertConfigPath();
   if (!existsSync(path)) return { rules: [], errors: [], path };
   try {
     const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;

@@ -33,8 +33,8 @@ function isEmergency(aircraft: Aircraft | undefined): boolean {
 }
 
 export class AlertEngine {
-  private readonly rules: AlertRule[];
-  private readonly configErrors: string[];
+  private rules: AlertRule[];
+  private configErrors: string[];
   private readonly notifier: AlertNotifier;
   private readonly cooldownMs: number;
   private readonly now: () => number;
@@ -50,6 +50,16 @@ export class AlertEngine {
     this.notifier = options.notifier ?? createAlertNotifier();
     this.cooldownMs = options.cooldownMs ?? getAlertCooldownMs();
     this.now = options.now ?? Date.now;
+  }
+
+  /**
+   * Replace the configured rules after a validated alerts.json update. The
+   * deduplication cache is deliberately retained so a UI edit cannot bypass
+   * the existing transition and cooldown semantics.
+   */
+  reload(config = loadAlertConfig()): void {
+    this.rules = config.rules.filter((rule) => rule.enabled);
+    this.configErrors = config.errors;
   }
 
   getStatus(): AlertStatus {

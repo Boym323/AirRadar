@@ -926,6 +926,7 @@ export function AirRadarApp() {
         </div>
         <GlobalSearch />
         <nav className="topbar-nav" aria-label={t.statistics.navigation}>
+          <Link href="/watchlist">{t.watchlist.title}</Link>
           <Link href="/statistics">{t.statistics.title}</Link>
           <Link href="/history">{t.history.title}</Link>
         </nav>

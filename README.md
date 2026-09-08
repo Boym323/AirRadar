@@ -76,7 +76,7 @@ Persistence boundaries are intentional:
 | ADSBDB / FlightAware enrichment cache | Process memory with TTL and negative caching | Rebuilt after restart; live radar is independent |
 | AviationWeather.gov METAR / TAF | Process memory with bounded 5/15-minute TTL cache and stale-if-error window | Never persisted; live weather is fetched on demand for an opened flight-detail airport |
 | Watchlist rules | Browser `localStorage` | Persists in that browser; not a shared database list |
-| Server alert rules | `data/alerts.json` | Loaded at process start; intentionally separate from browser watchlist |
+| Server alert rules | `data/alerts.json` | Shared by alert engine and `/watchlist`; intentionally separate from browser watchlist |
 | Daily receiver statistics | PostgreSQL `ReceiverDailyStats`, `ReceiverDailyAircraft`, `ReceiverDailyCoverage` plus bounded RAM aggregation | Continues after restart; current live count and messages/s remain process/live values |
 | ATC data | Sample constants in demo; PostgreSQL `AtcSector`/`AtcTransmitter` in production | Sample is never used for a configured real receiver |
 
@@ -116,7 +116,7 @@ For the first production deployment, keep `FLIGHTAWARE_API_KEY=` empty. If a key
 
 ## Server-side alerts
 
-Server alerts are independent of the browser `localStorage` watchlist. Configure them explicitly in `data/alerts.json`; the file is read once when the process starts and a restart applies changes. No user accounts, authentication, database table or CRUD API are involved.
+Server alerts are independent of the browser `localStorage` watchlist. Configure them explicitly in `data/alerts.json`, or manage the same rules at `/watchlist` through the server-side watchlist API. The file is read at process start and reloaded after a validated UI update; no user accounts, authentication or database table are involved.
 
 ```json
 [
@@ -127,6 +127,8 @@ Server alerts are independent of the browser `localStorage` watchlist. Configure
 ```
 
 Supported rule types are `icaoHex`, `registration`, `callsign`, `callsignPattern`, `aircraftType` and `airline`. The same `*` wildcard semantics are used by the browser and server matching. Invalid rules are skipped and logged without stopping the radar. Arrival conditions are evaluated in the existing `AircraftStateService` snapshot flow, aggregated per aircraft, and deduplicated in bounded RAM. `ALERT_COOLDOWN_MS` defaults to two hours and has a one-minute minimum. Optional explicit emergency transitions use `ALERT_EMERGENCY_ENABLED=true` and only the parsed `aircraft.emergency` field.
+
+The web UI validates and atomically writes only the configured alerts file. ICAO values are normalized to uppercase, registrations are trimmed and uppercased, distance limits must be positive, and duplicate IDs are rejected; separate IDs with the same matching condition retain the existing aggregation semantics. The UI displays the server-wide cooldown and a safe current matching summary, but does not introduce per-rule cooldowns or change alert delivery behavior. `/api/watchlist` supports `GET` and `POST`; `/api/watchlist/:id` supports `PATCH` and `DELETE`.
 
 Pushover is the first optional notifier. Set `PUSHOVER_ENABLED=true`, `PUSHOVER_USER_KEY` and `PUSHOVER_API_TOKEN` in the server-only `.env`. Delivery is asynchronous, bounded and best-effort; one retry is attempted for network/5xx failures. Missing credentials produce a no-op notifier and do not affect live tracking. `/api/health` exposes only safe alert status, notifier name and rule count.
 
@@ -267,6 +269,8 @@ feedback tools only; production release validation remains authoritative in
 - `GET /api/weather/airport/:icao` — on-demand AviationWeather.gov METAR/TAF for a canonical airport ICAO; returns `404` for unknown airports and `200` with nullable products when reports are unavailable
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
 - `GET /api/statistics` — today's receiver aggregate by default (`range=today`), or a bounded `range=7d|30d` response built from daily statistics with period summary, daily trends and 36 ten-degree coverage buckets; exact receiver coordinates are never included
+- `GET|POST /api/watchlist` — list or create validated server alert rules, including the effective cooldown and safe current matching state
+- `PATCH|DELETE /api/watchlist/:id` — update, enable/disable or delete one server alert rule
 - `GET /api/health` — application, database, readsb, ATC dataset, live-state and safe alerting health
 
 ## Production deployment
