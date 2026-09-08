@@ -36,8 +36,10 @@ describe("localization", () => {
 
   it("provides aircraft detail v2 copy in Czech and English", () => {
     expect(getTranslations().history.recentFlights).toBe("Poslední lety");
+    expect(getTranslations().history.aircraftHistory).toBe("Historie letadla");
     expect(getTranslations().aircraft.notCurrentlyInRange).toBe("Nyní není v dosahu");
     expect(getTranslations("en").history.recentFlights).toBe("Recent flights");
+    expect(getTranslations("en").history.aircraftHistory).toBe("Aircraft history");
     expect(getTranslations("en").aircraft.notCurrentlyInRange).toBe("Not currently in range");
   });
 });

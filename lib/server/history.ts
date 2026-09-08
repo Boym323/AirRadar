@@ -1,11 +1,14 @@
 import "temporal-polyfill/full/global";
 import type { Aircraft } from "@/lib/aircraft/types";
 import {
+  dayKey,
   getAppTimezone,
   getFlightContinuityGapMs,
   getHistoryRetentionDays,
   getHistorySampleIntervalMs,
 } from "@/lib/server/config";
+import { airportFromCode } from "@/lib/server/airport-catalog";
+import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport-resolver";
 import { getPrisma } from "@/lib/server/db";
 
 export interface HistoryResponse {
@@ -91,9 +94,40 @@ export interface AircraftDetailMetadata {
   operator: string | null;
 }
 
+export type AircraftHistoryRange = "7d" | "30d";
+
+export interface AircraftHistoryAirport {
+  icaoCode: string;
+  iataCode: string | null;
+}
+
+export interface AircraftHistoryCallsignCount {
+  callsign: string;
+  count: number;
+}
+
+export interface AircraftHistoryRouteCount {
+  origin: AircraftHistoryAirport;
+  destination: AircraftHistoryAirport;
+  count: number;
+}
+
+export interface AircraftHistorySummary {
+  range: AircraftHistoryRange;
+  flightCount: number;
+  activeDays: number;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+  topCallsigns: AircraftHistoryCallsignCount[];
+  topRoutes: AircraftHistoryRouteCount[];
+  topOrigin: AircraftHistoryAirport | null;
+  topDestination: AircraftHistoryAirport | null;
+}
+
 export interface AircraftDetailResponse {
   aircraft: AircraftDetailMetadata | null;
   recentFlights: HistoryFlightSummary[];
+  historySummary: AircraftHistorySummary;
 }
 
 export class HistoryDatabaseUnavailableError extends Error {
@@ -151,6 +185,17 @@ export function historyRangeBounds(
     return { from: todayStart, to: now };
   }
   return { from: localDayStart(now, 6), to: now };
+}
+
+export function normalizeAircraftHistoryRange(value: string | null | undefined): AircraftHistoryRange {
+  return value === "7d" ? "7d" : "30d";
+}
+
+export function aircraftHistoryRangeBounds(
+  range: AircraftHistoryRange,
+  now = new Date(),
+): { from: Date; to: Date } {
+  return { from: localDayStart(now, range === "7d" ? 6 : 29), to: now };
 }
 
 function normalizeSearch(value: string | null | undefined): string {
@@ -297,19 +342,220 @@ export async function getHistoryFlight(id: number): Promise<HistoryFlightDetail 
   }
 }
 
+interface AircraftHistoryAirportRow {
+  icao: string;
+  iata: string | null;
+  latitude: number;
+  longitude: number;
+}
+
+interface AircraftHistoryAirportField {
+  in(values: string[]): unknown;
+}
+
+interface AircraftHistoryAirportCollection {
+  where(predicate: (airport: { icao: AircraftHistoryAirportField; iata: AircraftHistoryAirportField }) => unknown): {
+    all(): Promise<AircraftHistoryAirportRow[]>;
+  };
+}
+
+function emptyAircraftHistorySummary(range: AircraftHistoryRange): AircraftHistorySummary {
+  return {
+    range,
+    flightCount: 0,
+    activeDays: 0,
+    firstSeenAt: null,
+    lastSeenAt: null,
+    topCallsigns: [],
+    topRoutes: [],
+    topOrigin: null,
+    topDestination: null,
+  };
+}
+
+function normalizedHistoryText(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toUpperCase() ?? "";
+  return normalized || null;
+}
+
+function historyAirportFromRow(row: AircraftHistoryAirportRow): AircraftHistoryAirport | null {
+  const icaoCode = normalizeAirportIcao(row.icao);
+  if (!icaoCode || !Number.isFinite(row.latitude) || !Number.isFinite(row.longitude)
+    || row.latitude < -90 || row.latitude > 90 || row.longitude < -180 || row.longitude > 180) {
+    return null;
+  }
+  return { icaoCode, iataCode: normalizeAirportIata(row.iata) };
+}
+
+function historyAirportFromCatalogCode(code: string): AircraftHistoryAirport | null {
+  const airport = airportFromCode(code);
+  if (!airport) return null;
+  const icaoCode = normalizeAirportIcao(airport.icaoCode);
+  if (!icaoCode) return null;
+  return { icaoCode, iataCode: normalizeAirportIata(airport.iataCode) };
+}
+
+async function resolveHistoryAirports(
+  schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"],
+  codes: string[],
+): Promise<Map<string, AircraftHistoryAirport>> {
+  const normalizedCodes = [...new Set(codes
+    .map((code) => normalizedHistoryText(code))
+    .filter((code): code is string => Boolean(normalizeAirportIcao(code) ?? normalizeAirportIata(code))))];
+  const airports = new Map<string, AircraftHistoryAirport>();
+
+  // Keep the bundled catalog as the same bounded emergency fallback used by
+  // the existing airport resolver. Database values replace it below.
+  for (const code of normalizedCodes) {
+    const airport = historyAirportFromCatalogCode(code);
+    if (!airport) continue;
+    airports.set(code, airport);
+    airports.set(airport.icaoCode, airport);
+    if (airport.iataCode) airports.set(airport.iataCode, airport);
+  }
+
+  const airportTable = (schema as unknown as { Airport?: AircraftHistoryAirportCollection }).Airport;
+  if (!airportTable || normalizedCodes.length === 0) return airports;
+
+  try {
+    const [icaoRows, iataRows] = await Promise.all([
+      airportTable.where((airport) => airport.icao.in(normalizedCodes)).all(),
+      airportTable.where((airport) => airport.iata.in(normalizedCodes)).all(),
+    ]);
+    for (const row of [...icaoRows, ...iataRows]) {
+      const airport = historyAirportFromRow(row);
+      if (!airport) continue;
+      airports.set(airport.icaoCode, airport);
+      if (airport.iataCode) airports.set(airport.iataCode, airport);
+    }
+  } catch {
+    // Airport metadata is optional for the history summary. Keep any
+    // bundled fallback values and omit unresolved route entries on failure.
+  }
+  return airports;
+}
+
+function addCount(map: Map<string, number>, key: string): void {
+  map.set(key, (map.get(key) ?? 0) + 1);
+}
+
+function sortedCounts(map: Map<string, number>): Array<{ key: string; count: number }> {
+  return [...map.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+    .slice(0, 5);
+}
+
+function addFlightActiveDays(
+  days: Set<string>,
+  start: Date,
+  lastSeen: Date,
+  from: Date,
+  to: Date,
+): void {
+  const startMilliseconds = Math.max(start.getTime(), from.getTime());
+  const endMilliseconds = Math.min(lastSeen.getTime(), to.getTime());
+  if (!Number.isFinite(startMilliseconds) || !Number.isFinite(endMilliseconds) || startMilliseconds > endMilliseconds) return;
+
+  const timezone = getAppTimezone();
+  let cursor = Temporal.Instant.fromEpochMilliseconds(startMilliseconds).toZonedDateTimeISO(timezone).startOfDay();
+  const lastDay = Temporal.Instant.fromEpochMilliseconds(endMilliseconds).toZonedDateTimeISO(timezone).startOfDay();
+  while (Temporal.Instant.compare(cursor.toInstant(), lastDay.toInstant()) <= 0) {
+    days.add(dayKey(new Date(cursor.toInstant().epochMilliseconds), timezone));
+    cursor = cursor.add({ days: 1 });
+  }
+}
+
+async function getAircraftHistorySummary(
+  schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"],
+  aircraftId: number,
+  range: AircraftHistoryRange,
+  now: Date,
+): Promise<AircraftHistorySummary> {
+  const summary = emptyAircraftHistorySummary(range);
+  const { from, to } = aircraftHistoryRangeBounds(range, now);
+  const fromInstant = Temporal.Instant.fromEpochMilliseconds(from.getTime());
+  const toInstant = Temporal.Instant.fromEpochMilliseconds(to.getTime());
+  const flights = await schema.Flight
+    .where({ aircraftId })
+    .where((flight) => flight.startTime.gte(fromInstant))
+    .where((flight) => flight.startTime.lt(toInstant))
+    .all();
+
+  summary.flightCount = flights.length;
+  if (flights.length === 0) return summary;
+
+  const callsigns = new Map<string, number>();
+  const origins = new Map<string, number>();
+  const destinations = new Map<string, number>();
+  const routes = new Map<string, { origin: AircraftHistoryAirport; destination: AircraftHistoryAirport; count: number }>();
+  const activeDays = new Set<string>();
+  const airportCodes = flights
+    .flatMap((flight) => [flight.origin, flight.destination])
+    .filter((code): code is string => Boolean(code));
+  const airports = await resolveHistoryAirports(schema, airportCodes);
+  let firstSeenAt: Date | null = null;
+  let lastSeenAt: Date | null = null;
+
+  for (const flight of flights) {
+    const startTime = timestampAsDate(flight.startTime);
+    const flightLastSeenAt = timestampAsDate(flight.lastSeenAt);
+    const boundedLastSeenAt = new Date(Math.min(flightLastSeenAt.getTime(), to.getTime()));
+    if (!firstSeenAt || startTime < firstSeenAt) firstSeenAt = startTime;
+    if (!lastSeenAt || boundedLastSeenAt > lastSeenAt) lastSeenAt = boundedLastSeenAt;
+    addFlightActiveDays(activeDays, startTime, boundedLastSeenAt, from, to);
+
+    const callsign = normalizedHistoryText(flight.callsign);
+    if (callsign) addCount(callsigns, callsign);
+
+    const originCode = normalizedHistoryText(flight.origin);
+    const destinationCode = normalizedHistoryText(flight.destination);
+    const origin = originCode ? airports.get(originCode) : undefined;
+    const destination = destinationCode ? airports.get(destinationCode) : undefined;
+    if (origin) addCount(origins, origin.icaoCode);
+    if (destination) addCount(destinations, destination.icaoCode);
+    if (origin && destination) {
+      const routeKey = `${origin.icaoCode}:${destination.icaoCode}`;
+      const current = routes.get(routeKey);
+      if (current) current.count += 1;
+      else routes.set(routeKey, { origin, destination, count: 1 });
+    }
+  }
+
+  summary.activeDays = activeDays.size;
+  summary.firstSeenAt = firstSeenAt ? timestampAsIso(firstSeenAt) : null;
+  summary.lastSeenAt = lastSeenAt ? timestampAsIso(lastSeenAt) : null;
+  summary.topCallsigns = sortedCounts(callsigns).map(({ key, count }) => ({ callsign: key, count }));
+  const topOrigins = sortedCounts(origins);
+  const topDestinations = sortedCounts(destinations);
+  summary.topOrigin = topOrigins[0]?.key ? airports.get(topOrigins[0].key) ?? null : null;
+  summary.topDestination = topDestinations[0]?.key ? airports.get(topDestinations[0].key) ?? null : null;
+  summary.topRoutes = [...routes.values()]
+    .sort((a, b) => b.count - a.count
+      || a.origin.icaoCode.localeCompare(b.origin.icaoCode)
+      || a.destination.icaoCode.localeCompare(b.destination.icaoCode))
+    .slice(0, 5);
+  return summary;
+}
+
 /**
- * Returns durable aircraft metadata and a deliberately small recent-flight
- * summary. FlightPosition is not queried here; playback remains behind the
- * existing per-flight detail endpoint.
+ * Returns durable aircraft metadata, a deliberately small recent-flight
+ * summary and a bounded Flight-instance history summary. FlightPosition is
+ * not queried here; playback remains behind the existing per-flight detail
+ * endpoint.
  */
-export async function getAircraftDetail(icaoHex: string): Promise<AircraftDetailResponse> {
+export async function getAircraftDetail(
+  icaoHex: string,
+  options: { historyRange?: AircraftHistoryRange; now?: Date; includeHistorySummary?: boolean } = {},
+): Promise<AircraftDetailResponse> {
   const database = getPrisma();
   if (!database) throw new HistoryDatabaseUnavailableError();
 
   try {
     const schema = database.orm.public;
+    const historyRange = normalizeAircraftHistoryRange(options.historyRange);
     const aircraft = await schema.Aircraft.where({ icaoHex: icaoHex.toUpperCase() }).first();
-    if (!aircraft) return { aircraft: null, recentFlights: [] };
+    if (!aircraft) return { aircraft: null, recentFlights: [], historySummary: emptyAircraftHistorySummary(historyRange) };
 
     const flights = await schema.Flight
       .where({ aircraftId: aircraft.id })
@@ -317,6 +563,9 @@ export async function getAircraftDetail(icaoHex: string): Promise<AircraftDetail
       .include("aircraft", (relatedAircraft) => relatedAircraft.select("icaoHex", "registration", "aircraftType"))
       .limit(AIRCRAFT_RECENT_FLIGHT_LIMIT)
       .all();
+    const historySummary = options.includeHistorySummary === false
+      ? emptyAircraftHistorySummary(historyRange)
+      : await getAircraftHistorySummary(schema, aircraft.id, historyRange, options.now ?? new Date());
 
     return {
       aircraft: {
@@ -330,6 +579,7 @@ export async function getAircraftDetail(icaoHex: string): Promise<AircraftDetail
         operator: aircraft.operator,
       },
       recentFlights: orderFlightSummaries(flights.map(flightSummaryFromRow)).slice(0, AIRCRAFT_RECENT_FLIGHT_LIMIT),
+      historySummary,
     };
   } catch {
     throw new HistoryDatabaseUnavailableError();

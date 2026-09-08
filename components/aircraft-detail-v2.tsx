@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 import { aircraftAirportHref, aircraftHistoryHref, aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
-import type { AircraftDetailResponse, HistoryFlightSummary } from "@/lib/server/history";
-import { formatAltitude, formatDateTime, formatSpeed, formatTrack, t } from "@/lib/i18n";
+import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryRange, AircraftHistorySummary, HistoryFlightSummary } from "@/lib/server/history";
+import { formatAltitude, formatDateTime, formatNumber, formatSpeed, formatTrack, t } from "@/lib/i18n";
 
 function valueOrEmpty(value: string | null | undefined): string {
   return value || t.common.emptyValue;
@@ -32,6 +32,102 @@ function AirportCodeLink({ code }: { code: string | null }): ReactNode {
 
 function DetailValue({ label, children }: { label: string; children: ReactNode }) {
   return <div><div className="detail-item-label">{label}</div><div className="detail-item-value">{children}</div></div>;
+}
+
+function HistoryAirportLink({ airport }: { airport: AircraftHistoryAirport | null }): ReactNode {
+  if (!airport) return <span>{t.common.emptyValue}</span>;
+  return <Link className="airport-link" href={aircraftAirportHref(airport.icaoCode)}>{airport.iataCode ?? airport.icaoCode}</Link>;
+}
+
+export function AircraftHistorySummaryCard({
+  icaoHex,
+  summary,
+}: {
+  icaoHex: string;
+  summary: AircraftHistorySummary | null;
+}) {
+  const [range, setRange] = useState<AircraftHistoryRange>(summary?.range ?? "30d");
+  const [currentSummary, setCurrentSummary] = useState<AircraftHistorySummary | null>(summary);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(0);
+
+  useEffect(() => {
+    setRange(summary?.range ?? "30d");
+    setCurrentSummary(summary);
+    setError(null);
+  }, [summary]);
+
+  async function selectRange(nextRange: AircraftHistoryRange): Promise<void> {
+    if (nextRange === range || icaoHex === t.common.emptyValue) return;
+    const id = ++requestId.current;
+    setRange(nextRange);
+    setLoading(true);
+    setError(null);
+    setCurrentSummary(null);
+    try {
+      const response = await fetch(`/api/aircraft/${encodeURIComponent(icaoHex)}?range=${nextRange}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(t.history.aircraftHistoryLoadFailed);
+      const result = await response.json() as AircraftDetailResponse;
+      if (id !== requestId.current) return;
+      setCurrentSummary(result.historySummary ?? null);
+    } catch (requestError) {
+      if (id === requestId.current) setError(requestError instanceof Error ? requestError.message : t.history.aircraftHistoryLoadFailed);
+    } finally {
+      if (id === requestId.current) setLoading(false);
+    }
+  }
+
+  const days = range === "7d" ? 7 : 30;
+  const hasFlights = Boolean(currentSummary && currentSummary.flightCount > 0);
+  return (
+    <section className="aircraft-card aircraft-history-card" aria-labelledby="aircraft-history-title" aria-busy={loading}>
+      <div className="aircraft-history-header">
+        <div>
+          <h2 id="aircraft-history-title">{t.history.aircraftHistory}</h2>
+          <div className="aircraft-history-period">{t.history.periodLabel(days)}</div>
+        </div>
+        <div className="aircraft-history-range" role="group" aria-label={t.history.aircraftHistory}>
+          <button type="button" className={range === "7d" ? "active" : ""} aria-pressed={range === "7d"} onClick={() => void selectRange("7d")}>{t.history.rangeSevenDays}</button>
+          <button type="button" className={range === "30d" ? "active" : ""} aria-pressed={range === "30d"} onClick={() => void selectRange("30d")}>{t.history.rangeThirtyDays}</button>
+        </div>
+      </div>
+
+      {loading ? <div className="detail-disclaimer">{t.common.loading}</div> : error ? <div className="detail-disclaimer">{error}</div> : !hasFlights ? (
+        <div className="aircraft-history-empty">{t.history.aircraftHistoryEmpty}</div>
+      ) : currentSummary ? (
+        <>
+          <div className="aircraft-history-stats">
+            <DetailValue label={t.history.capturedFlights}>{formatNumber(currentSummary.flightCount)}</DetailValue>
+            <DetailValue label={t.history.activeDays}>{formatNumber(currentSummary.activeDays)}</DetailValue>
+            <DetailValue label={t.history.firstCapture}>{formatDateTime(currentSummary.firstSeenAt)}</DetailValue>
+            <DetailValue label={t.history.lastCapture}>{formatDateTime(currentSummary.lastSeenAt)}</DetailValue>
+            <DetailValue label={t.history.mostFrequentCallsign}>{currentSummary.topCallsigns[0]?.callsign ?? t.common.emptyValue}</DetailValue>
+            <DetailValue label={t.history.mostFrequentOrigin}><HistoryAirportLink airport={currentSummary.topOrigin} /></DetailValue>
+            <DetailValue label={t.history.mostFrequentDestination}><HistoryAirportLink airport={currentSummary.topDestination} /></DetailValue>
+          </div>
+
+          <div className="aircraft-history-lists">
+            {currentSummary.topCallsigns.length > 0 && <div>
+              <h3>{t.history.topCallsigns}</h3>
+              <ol className="aircraft-history-list">
+                {currentSummary.topCallsigns.map((entry) => <li key={entry.callsign}><span>{entry.callsign}</span><strong>{formatNumber(entry.count)}×</strong></li>)}
+              </ol>
+            </div>}
+            {currentSummary.topRoutes.length > 0 && <div>
+              <h3>{t.history.topRoutes}</h3>
+              <ol className="aircraft-history-list">
+                {currentSummary.topRoutes.map((route) => <li key={`${route.origin.icaoCode}-${route.destination.icaoCode}`}>
+                  <span><HistoryAirportLink airport={route.origin} /> <span aria-hidden="true">→</span> <HistoryAirportLink airport={route.destination} /></span>
+                  <strong>{formatNumber(route.count)}×</strong>
+                </li>)}
+              </ol>
+            </div>}
+          </div>
+        </>
+      ) : null}
+    </section>
+  );
 }
 
 export function AircraftRecentFlights({
@@ -206,6 +302,8 @@ export function AircraftDetailV2({
           </section>
           <AircraftPhotoCard icaoHex={icaoHex} registration={registration} />
         </div>
+
+        <AircraftHistorySummaryCard icaoHex={icaoHex} summary={detail?.historySummary ?? null} />
 
         <section className="aircraft-card aircraft-recent-card" aria-label={t.history.recentFlights}>
           <AircraftRecentFlights recentFlights={detail?.recentFlights ?? []} loading={loading} error={error} />

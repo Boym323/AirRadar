@@ -1,4 +1,4 @@
-import { getAircraftDetail, HistoryDatabaseUnavailableError } from "@/lib/server/history";
+import { getAircraftDetail, HistoryDatabaseUnavailableError, normalizeAircraftHistoryRange } from "@/lib/server/history";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { normalizeIcaoHex } from "@/lib/server/validation";
 
@@ -8,7 +8,7 @@ function noStoreHeaders(): HeadersInit {
   return { "Cache-Control": "no-store" };
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
+export async function GET(request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
   const rateLimit = checkPublicRateLimit("aircraft");
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
@@ -25,7 +25,8 @@ export async function GET(_request: Request, context: { params: Promise<{ hex: s
   }
 
   try {
-    return Response.json(await getAircraftDetail(icaoHex), { headers: noStoreHeaders() });
+    const range = normalizeAircraftHistoryRange(new URL(request.url).searchParams.get("range"));
+    return Response.json(await getAircraftDetail(icaoHex, { historyRange: range }), { headers: noStoreHeaders() });
   } catch (error) {
     if (error instanceof HistoryDatabaseUnavailableError) {
       return Response.json({ error: "Aircraft history is temporarily unavailable" }, { status: 503, headers: noStoreHeaders() });

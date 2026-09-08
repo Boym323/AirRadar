@@ -27,7 +27,7 @@ async function existingRegistration(icaoHex: string): Promise<string | null> {
   }
 
   try {
-    const detail = await getAircraftDetail(icaoHex);
+    const detail = await getAircraftDetail(icaoHex, { includeHistorySummary: false });
     return detail.aircraft?.registration?.trim() || null;
   } catch {
     // PostgreSQL is optional for live radar and for photo lookup.

@@ -32,7 +32,7 @@ function matchesLike(value: unknown, pattern: string): boolean {
 class FakeCollection {
   constructor(
     private readonly rows: Row[],
-    private readonly kind: "Aircraft" | "Flight" | "FlightPosition",
+    private readonly kind: "Aircraft" | "Flight" | "FlightPosition" | "Airport",
     private readonly onAll?: () => void,
     private readonly onIn?: () => void,
   ) {}
@@ -98,13 +98,14 @@ class FakeCollection {
   }
 }
 
-function fakeDatabase({ aircraft, flights, positions = [], onAircraftAll, onIn }: { aircraft: Row[]; flights: Row[]; positions?: Row[]; onAircraftAll?: () => void; onIn?: () => void }) {
+function fakeDatabase({ aircraft, flights, positions = [], airports = [], onAircraftAll, onIn }: { aircraft: Row[]; flights: Row[]; positions?: Row[]; airports?: Row[]; onAircraftAll?: () => void; onIn?: () => void }) {
   return {
     orm: {
       public: {
         Aircraft: new FakeCollection(aircraft, "Aircraft", onAircraftAll, onIn),
         Flight: new FakeCollection(flights, "Flight", undefined, onIn),
         FlightPosition: new FakeCollection(positions, "FlightPosition"),
+        Airport: new FakeCollection(airports, "Airport", undefined, onIn),
       },
     },
   };
@@ -184,7 +185,38 @@ describe("flight history v2", () => {
     await expect(getAircraftDetail("ABC123")).resolves.toMatchObject({
       aircraft: { icaoHex: "ABC123" },
       recentFlights: [],
+      historySummary: { range: "30d", flightCount: 0, topCallsigns: [], topRoutes: [], firstSeenAt: null, lastSeenAt: null },
     });
+  });
+
+  it("summarizes bounded Flight instances with Prague days, normalized callsigns and batched airports", async () => {
+    const inCalls = vi.fn();
+    const now = new Date("2026-09-08T12:00:00Z");
+    const flights = [
+      { ...flight(1, "2026-09-08T10:00:00Z", " aee512 "), lastSeenAt: new Date("2026-09-08T11:00:00Z"), origin: "PRG", destination: "DXB" },
+      { ...flight(2, "2026-09-02T00:30:00Z", "AEE512"), lastSeenAt: new Date("2026-09-02T01:00:00Z"), origin: "LKPR", destination: "OMDB" },
+      { ...flight(3, "2026-09-01T21:59:00Z", "OUTSIDE"), lastSeenAt: new Date("2026-09-01T22:00:00Z"), origin: "PRG", destination: "DXB" },
+    ];
+    const airports = [
+      { icao: "LKPR", iata: "PRG", latitude: 50.1, longitude: 14.3 },
+      { icao: "OMDB", iata: "DXB", latitude: 25.2, longitude: 55.4 },
+    ];
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights, airports, onIn: inCalls }) as never);
+
+    const result = await getAircraftDetail("abc123", { historyRange: "7d", now });
+
+    expect(result.historySummary).toMatchObject({
+      range: "7d",
+      flightCount: 2,
+      activeDays: 2,
+      firstSeenAt: "2026-09-02T00:30:00Z",
+      lastSeenAt: "2026-09-08T11:00:00Z",
+      topCallsigns: [{ callsign: "AEE512", count: 2 }],
+      topOrigin: { icaoCode: "LKPR", iataCode: "PRG" },
+      topDestination: { icaoCode: "OMDB", iataCode: "DXB" },
+      topRoutes: [{ origin: { icaoCode: "LKPR" }, destination: { icaoCode: "OMDB" }, count: 2 }],
+    });
+    expect(inCalls).toHaveBeenCalledTimes(4);
   });
 
   it("lists flights newest-first", async () => {

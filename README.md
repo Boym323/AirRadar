@@ -261,6 +261,7 @@ feedback tools only; production release validation remains authoritative in
 ## API
 
 - `GET /api/aircraft` — current state snapshot
+- `GET /api/aircraft/:hex?range=7d|30d` — safe aircraft metadata, up to ten recent flight instances and a bounded Flight-instance history summary (30 days by default; includes Prague-local active days, top callsigns and resolved airport routes)
 - `GET /api/stream` — SSE stream of `snapshot` events
 - `GET /api/history/flights?range=today|yesterday|7d&q=...&limit=...` — bounded PostgreSQL flight-instance list, newest first; searches callsign, registration and ICAO hex server-side
 - `GET /api/history/flights?hex=...&limit=1` — latest flight instance for the legacy `/history?hex=...` deep link
