@@ -5,6 +5,7 @@ readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly APP_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd -P)"
 readonly EXPECTED_APP_DIR="/var/www/airradar"
 readonly LOCK_FILE="/var/lock/airradar-release.lock"
+readonly BUILD_LOCK_FILE="/run/lock/airradar-build.lock"
 readonly SERVICE_NAME="airradar"
 readonly PUBLIC_HEALTH_URL="https://airradar.pomykal.cz/api/health"
 # The service binds to the production LAN address so the separate Nginx Proxy
@@ -271,6 +272,26 @@ acquire_lock() {
   log "Release lock acquired: ${LOCK_FILE}"
 }
 
+acquire_build_lock() {
+  if [[ ! -e "${BUILD_LOCK_FILE}" ]]; then
+    run_privileged install -o root -g root -m 0666 /dev/null "${BUILD_LOCK_FILE}" || die "Cannot create build lock ${BUILD_LOCK_FILE}."
+  else
+    run_privileged chmod 0666 "${BUILD_LOCK_FILE}" || die "Cannot make build lock accessible to ${SERVICE_NAME}: ${BUILD_LOCK_FILE}."
+  fi
+
+  exec 8>>"${BUILD_LOCK_FILE}" || die "Cannot open build lock ${BUILD_LOCK_FILE}."
+  if ! flock -n 8; then
+    die "Another AirRadar production build is already running."
+  fi
+  log "Build lock acquired: ${BUILD_LOCK_FILE}"
+}
+
+release_build_lock() {
+  flock -u 8 || true
+  exec 8>&-
+  log "Build lock released: ${BUILD_LOCK_FILE}"
+}
+
 detect_worktree_changes() {
   local dirty_status
 
@@ -339,7 +360,9 @@ run_release_steps() {
   npm test
 
   log "Building production app"
+  acquire_build_lock
   npm run build
+  release_build_lock
 
   log "Applying database migrations"
   npm run prisma:deploy
