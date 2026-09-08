@@ -155,6 +155,12 @@ airports worldwide, plus small airports, heliports and seaplane bases in Czechia
 and neighbouring Austria, Germany, Poland and Slovakia. Pass another CSV URL as
 the final argument only when deliberately importing a compatible snapshot.
 
+ADSBDB route enrichment uses the server-side airport resolver: it checks the
+PostgreSQL catalog by exact ICAO and then IATA, falls back to valid provider
+coordinates and finally the bundled sample catalog. This resolves airport
+metadata only; route identity remains the code supplied by ADSBDB, preferring a
+canonical ICAO when the catalog provides one.
+
 ATC reference data can be loaded from the versioned JSON format documented in
 [`data/atc/README.md`](data/atc/README.md):
 

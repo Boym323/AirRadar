@@ -1,6 +1,12 @@
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
-import { airportFromCode } from "@/lib/server/airport-catalog";
+import {
+  defaultAirportResolver,
+  normalizeAirportIata,
+  normalizeAirportIcao,
+  type AirportProviderMetadata,
+  type AirportResolverLike,
+} from "@/lib/server/airport-resolver";
 import type { AircraftMetadataProvider, FlightRouteProvider } from "@/lib/server/provider";
 
 interface AdsbDbResponse {
@@ -30,22 +36,39 @@ function numberValue(record: Record<string, unknown> | undefined, key: string): 
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function airport(record: Record<string, unknown> | null): Airport | null {
+interface ResolvedRouteAirport {
+  airport: Airport | null;
+  routeCode: string | null;
+}
+
+function airportMetadata(record: Record<string, unknown> | null): AirportProviderMetadata | null {
   if (!record) return null;
-  const icaoCode = value(record, "icao_code", "icao", "icaoCode");
-  const iataCode = value(record, "iata_code", "iata", "iataCode");
-  const latitude = numberValue(record, "latitude");
-  const longitude = numberValue(record, "longitude");
-  const fallback = airportFromCode(icaoCode ?? iataCode);
-  if (latitude === null || longitude === null) return fallback;
   return {
-    icaoCode: icaoCode ?? fallback?.icaoCode ?? "UNKNOWN",
-    iataCode: iataCode ?? fallback?.iataCode ?? null,
-    name: value(record, "name") ?? fallback?.name ?? (icaoCode ?? iataCode ?? "Unknown airport"),
-    city: value(record, "municipality", "city") ?? fallback?.city ?? null,
-    country: value(record, "country_name", "country") ?? fallback?.country ?? null,
-    latitude,
-    longitude,
+    icaoCode: value(record, "icao_code", "icao", "icaoCode"),
+    iataCode: value(record, "iata_code", "iata", "iataCode"),
+    name: value(record, "name"),
+    city: value(record, "municipality", "city"),
+    country: value(record, "country_name", "country"),
+    latitude: numberValue(record, "latitude"),
+    longitude: numberValue(record, "longitude"),
+  };
+}
+
+async function airport(record: Record<string, unknown> | null, resolver: AirportResolverLike): Promise<ResolvedRouteAirport> {
+  const metadata = airportMetadata(record);
+  const icaoCode = normalizeAirportIcao(metadata?.icaoCode);
+  const iataCode = normalizeAirportIata(metadata?.iataCode);
+  if (!metadata || (!icaoCode && !iataCode)) return { airport: null, routeCode: null };
+
+  let resolved: Airport | null = null;
+  try {
+    resolved = await resolver.resolve({ icaoCode, iataCode, providerAirport: metadata });
+  } catch {
+    // A resolver implementation is an optional enrichment dependency.
+  }
+  return {
+    airport: resolved,
+    routeCode: resolved?.icaoCode ?? icaoCode ?? iataCode,
   };
 }
 
@@ -70,7 +93,10 @@ async function fetchAdsbDb<T>(baseUrl: string, path: string): Promise<T | null> 
 export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProvider {
   readonly name = "adsbdb";
 
-  constructor(private readonly baseUrl = "https://api.adsbdb.com/v0") {}
+  constructor(
+    private readonly baseUrl = "https://api.adsbdb.com/v0",
+    private readonly airportResolver: AirportResolverLike = defaultAirportResolver,
+  ) {}
 
   async getMetadata(icaoHex: string): Promise<AircraftMetadata | null> {
     const payload = await fetchAdsbDb<AdsbDbResponse>(this.baseUrl, `/aircraft/${encodeURIComponent(icaoHex.toLowerCase())}`);
@@ -99,20 +125,19 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
     const route = response.flightroute;
     if (!route) return null;
     const airline = nested(route, "airline");
-    const originAirport = airport(nested(route, "origin"));
-    const destinationAirport = airport(nested(route, "destination"));
+    const origin = await airport(nested(route, "origin"), this.airportResolver);
+    const destination = await airport(nested(route, "destination"), this.airportResolver);
     return {
       callsign: value(route, "callsign") ?? callsign.trim().toUpperCase(),
       airline: value(airline ?? undefined, "name"),
       airlineIcao: value(airline ?? undefined, "icao_code", "icao"),
       airlineIata: value(airline ?? undefined, "iata_code", "iata"),
-      origin: originAirport?.icaoCode ?? null,
-      destination: destinationAirport?.icaoCode ?? null,
-      originAirport,
-      destinationAirport,
+      origin: origin.routeCode,
+      destination: destination.routeCode,
+      originAirport: origin.airport,
+      destinationAirport: destination.airport,
       source: this.name,
       retrievedAt: observedAt.toISOString(),
     };
   }
 }
-
