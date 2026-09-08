@@ -1,0 +1,125 @@
+[
+  {
+    "id": "column.public.receiverDailyStats.maxDistanceBearing",
+    "label": "Add column \"maxDistanceBearing\" to \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "maxDistanceBearing",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"maxDistanceBearing\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxDistanceBearing"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"maxDistanceBearing\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyStats\" ADD COLUMN \"maxDistanceBearing\" float8"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"maxDistanceBearing\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxDistanceBearing"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.receiverDailyStats.maxDistanceRegistration",
+    "label": "Add column \"maxDistanceRegistration\" to \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "maxDistanceRegistration",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"maxDistanceRegistration\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxDistanceRegistration"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"maxDistanceRegistration\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyStats\" ADD COLUMN \"maxDistanceRegistration\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"maxDistanceRegistration\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxDistanceRegistration"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.receiverDailyStats.receiverDailyStats_maxDistanceKm_idx_61c7213a",
+    "label": "Create index \"receiverDailyStats_maxDistanceKm_idx_61c7213a\" on \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "receiverDailyStats_maxDistanceKm_idx_61c7213a",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"receiverDailyStats_maxDistanceKm_idx_61c7213a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyStats_maxDistanceKm_idx_61c7213a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"receiverDailyStats_maxDistanceKm_idx_61c7213a\"",
+        "sql": "CREATE INDEX \"receiverDailyStats_maxDistanceKm_idx_61c7213a\" ON \"public\".\"receiverDailyStats\" (\"maxDistanceKm\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"receiverDailyStats_maxDistanceKm_idx_61c7213a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyStats_maxDistanceKm_idx_61c7213a\""
+        ]
+      }
+    ]
+  }
+]

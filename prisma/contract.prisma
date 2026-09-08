@@ -49,10 +49,14 @@ model ReceiverDailyStats {
   maxConcurrentAircraft Int      @default(0)
   maxDistanceKm         Float    @default(0)
   maxDistanceIcaoHex    String?
+  maxDistanceBearing    Float?
+  maxDistanceRegistration String?
   maxDistanceAt         DateTime?
   updatedAt             DateTime @default(now())
   aircraft              ReceiverDailyAircraft[]
   coverage              ReceiverDailyCoverage[]
+
+  @@index([maxDistanceKm])
 }
 
 model ReceiverDailyAircraft {

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type {
+  ReceiverReceptionRecord,
+  ReceiverReceptionRecordsResponse,
   ReceiverStatisticsCoverageSummary,
   ReceiverStatisticsRangeResponse,
   ReceiverStatisticsResponse,
@@ -14,7 +16,7 @@ import {
   coveragePolygonPath,
   coverageRingRadius,
 } from "@/lib/statistics-coverage";
-import { formatDistance, formatNumber, t } from "@/lib/i18n";
+import { formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { statisticsCsv } from "@/lib/statistics-csv";
 
 type StatisticsPageData = ReceiverStatisticsResponse | ReceiverStatisticsRangeResponse;
@@ -172,6 +174,65 @@ function Ranking({ title, items }: { title: string; items: Array<{ name: string;
       {items.length ? <ol className="statistics-ranking">{items.map((item) => <li key={item.name}><span>{item.name}</span><strong>{formatNumber(item.count)}</strong></li>)}</ol> : <p className="statistics-empty">{t.statistics.insufficientData}</p>}
     </section>
   );
+}
+
+function ReceptionRecordContent({ record }: { record: ReceiverReceptionRecord }) {
+  return <>
+    <div className="reception-record-heading">
+      <Link href={`/aircraft/${encodeURIComponent(record.icaoHex)}`}>{record.icaoHex}</Link>
+      <strong>{formatDistance(record.distanceKm)}</strong>
+    </div>
+    <div className="reception-record-meta">
+      <span>{t.statistics.recordRegistration}: {record.registration ?? t.common.emptyValue}</span>
+      <span>{t.statistics.recordBearing}: {formatTrack(record.bearing)}</span>
+      <span>{t.statistics.recordObservedAt}: {formatDateTime(record.recordedAt)}</span>
+    </div>
+  </>;
+}
+
+function ReceptionRecord({ record }: { record: ReceiverReceptionRecord }) {
+  return <li className="reception-record"><ReceptionRecordContent record={record} /></li>;
+}
+
+function ReceptionRecordsCard() {
+  const [data, setData] = useState<ReceiverReceptionRecordsResponse | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/reception-records", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("reception records request failed");
+        return await response.json() as ReceiverReceptionRecordsResponse;
+      })
+      .then((next) => {
+        if (!active) return;
+        setData(next);
+        setFailed(false);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => { active = false; };
+  }, []);
+
+  return <section className="statistics-card reception-records-card" aria-labelledby="reception-records-title">
+    <div className="statistics-card-header">
+      <div>
+        <h2 id="reception-records-title">{t.statistics.receptionRecords}</h2>
+        <span>{t.statistics.receptionRecordsDescription}</span>
+      </div>
+    </div>
+    {failed ? <p className="statistics-empty">{t.statistics.receptionRecordsEmpty}</p> : !data ? <p className="statistics-empty">{t.common.loading}</p> : <>
+      {data.lifetime ? <div className="reception-record-featured">
+        <div><span>{t.statistics.todayReceptionRecord}</span>{data.today ? <div className="reception-record"><ReceptionRecordContent record={data.today} /></div> : <p className="statistics-empty">{t.statistics.receptionRecordsEmpty}</p>}</div>
+        <div><span>{t.statistics.lifetimeReceptionRecord}</span><div className="reception-record"><ReceptionRecordContent record={data.lifetime} /></div></div>
+      </div> : <p className="statistics-empty">{t.statistics.receptionRecordsEmpty}</p>}
+      {data.top.length > 0 && <div className="reception-records-top"><h3>{t.statistics.topReceptionRecords}</h3><ol>{data.top.map((record) => <ReceptionRecord key={`${record.date}-${record.icaoHex}`} record={record} />)}</ol></div>}
+      {data.source === "unavailable" && <p className="statistics-empty reception-records-note">{t.statistics.receptionRecordsUnavailable}</p>}
+      <p className="statistics-empty reception-records-note">{t.statistics.receptionRecordsLegacyNote}</p>
+    </>}
+  </section>;
 }
 
 function chartSegments(points: ReceiverStatisticsTrendPoint[], metric: TrendMetric, width: number, height: number, padding: number, maximum: number): string[] {
@@ -431,6 +492,7 @@ export default function StatisticsPage() {
           <Ranking title={t.statistics.airlines} items={data.topAirlines} />
         </div>}
       </>}
+      <ReceptionRecordsCard />
     </main>
   );
 }

@@ -182,6 +182,23 @@ export interface ReceiverStatisticsCoverageSummary {
   bestDirections: ReceiverStatisticsCoverageBucket[];
 }
 
+export interface ReceiverReceptionRecord {
+  date: string;
+  distanceKm: number;
+  icaoHex: string;
+  registration: string | null;
+  recordedAt: string;
+  bearing: number;
+}
+
+export interface ReceiverReceptionRecordsResponse {
+  source: "postgres" | "memory" | "unavailable";
+  today: ReceiverReceptionRecord | null;
+  lifetime: ReceiverReceptionRecord | null;
+  top: ReceiverReceptionRecord[];
+  historicalRecordCount: number;
+}
+
 export type ReceiverStatisticsRange = "7d" | "30d";
 
 export interface ReceiverStatisticsTrendPoint {

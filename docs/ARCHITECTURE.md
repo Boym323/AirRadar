@@ -71,7 +71,10 @@ PostgreSQL is optional for live operation. When configured, it stores:
 - imported `Airport`, `AtcSector`, and `AtcTransmitter` reference data;
 - the optional tar1090 `AircraftMetadataCache` and sync state; and
 - `ReceiverDailyStats`, `ReceiverDailyAircraft`, and
-  `ReceiverDailyCoverage` aggregates.
+  `ReceiverDailyCoverage` aggregates. `ReceiverDailyStats` also stores the
+  complete V1 maximum-distance record metadata (bearing and registration when
+  available); legacy rows without bearing remain valid aggregate statistics,
+  not complete reception records.
 
 Process memory holds live aircraft, trails, enrichment caches, ATC resolver
 cache, weather cache, photo metadata cache, and alert deduplication. The

@@ -8,12 +8,13 @@ import { coverageChartPoints, coveragePolygonPath, summarizeCoverage } from "@/l
 
 const receiver: ReceiverPosition = { lat: 50, lon: 14, name: "Test" };
 
-function aircraft(hex: string, lat = 50, lon = 14, options: { type?: string; airline?: string; bearing?: number; distanceKm?: number } = {}): Aircraft {
+function aircraft(hex: string, lat = 50, lon = 14, options: { type?: string; airline?: string; bearing?: number; distanceKm?: number; registration?: string } = {}): Aircraft {
   const value = normalizeAircraft({ hex, flight: hex, lat, lon }, receiver, new Date("2026-09-08T12:00:00.000Z"));
   if (!value) throw new Error("aircraft could not be normalized");
   value.aircraftType = options.type ?? null;
   value.bearing = options.bearing ?? value.bearing;
   value.distanceKm = options.distanceKm ?? value.distanceKm;
+  value.registration = options.registration ?? null;
   if (options.airline) {
     value.enrichment = {
       route: {
@@ -89,6 +90,20 @@ describe("receiver statistics", () => {
     const response = stats.getResponse(2, 486);
     expect(response.daily).toMatchObject({ maxConcurrentAircraft: 2, maxDistanceKm: 312.4 });
     expect(response.live).toEqual({ aircraftCount: 2, messagesPerSecond: 486 });
+    expect(stats.getDailyReceptionRecord()).toMatchObject({ distanceKm: 312.4, icaoHex: "BBB002", bearing: expect.any(Number), registration: null });
+  });
+
+  it("persists the best reception record with its bearing and registration", async () => {
+    const persistence = new FakePersistence();
+    const at = new Date("2026-09-08T12:00:00.000Z");
+    const stats = new ReceiverStatistics({ persistence, flushIntervalMs: 1, clock: () => at });
+    stats.observe([aircraft("ABC001", 50, 14, { distanceKm: 123.4, bearing: 271, registration: " OK-ABC " })], receiver, at);
+    await stats.close();
+    expect(persistence.saves[0]).toMatchObject({ maxDistanceKm: 123.4, maxDistanceIcaoHex: "ABC001", maxDistanceBearing: 271, maxDistanceRegistration: "OK-ABC" });
+
+    const restarted = new ReceiverStatistics({ persistence, clock: () => at });
+    await restarted.load();
+    expect(restarted.getDailyReceptionRecord()).toMatchObject({ distanceKm: 123.4, icaoHex: "ABC001", bearing: 271, registration: "OK-ABC" });
   });
 
   it("puts north and the 359 degree edge in the expected buckets", () => {

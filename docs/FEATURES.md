@@ -12,7 +12,7 @@ whether an operator has configured an optional provider.
 | `/flights/:id` | Standalone captured-flight detail with aircraft and airport links, observed sampled trail, bounded playback, and altitude/speed/vertical-rate profiles. | Production with PostgreSQL history. |
 | `/airports/:icao` | Airport detail, MapLibre location map, catalog metadata, on-demand weather, and 7/30-day observed receiver traffic summary. | Production; traffic uses persisted Flight instances, catalog fallback works, weather optional. |
 | `/history` | Bounded flight-instance search/list, sampled position detail, playback map. | Production; PostgreSQL feature, no live-polling dependency. |
-| `/statistics` | Today/7-day/30-day receiver aggregate, trends, coverage visualization, and bounded CSV export. | Production; today is RAM-backed, ranges use daily PostgreSQL aggregates. |
+| `/statistics` | Today/7-day/30-day receiver aggregate, trends, coverage visualization, reception records, and bounded CSV export. | Production; today is RAM-backed, ranges and complete historical records use daily PostgreSQL aggregates. |
 | `/watchlist` | Server alert-rule editor and current matching state. | Production; shared `data/alerts.json`, no auth/user accounts. |
 | `/fleet` | Concrete aircraft from ICAO watchlist rules, live/offline state, recent observed-flight counts, routes/airports, and lazy photos. | Production; non-identity watchlist rules are omitted, PostgreSQL history is optional. |
 | `/system` | Sanitized runtime, receiver, persistence, statistics, ATC, weather, alerts, and airport status. | Production read-only diagnostics. |
@@ -34,6 +34,7 @@ whether an operator has configured an optional provider.
 | `GET /api/weather/airport/:icao` | Canonical-airport AviationWeather.gov METAR/TAF. | Optional external data; on-demand and cached. |
 | `GET /api/atc/sectors` | ATC sectors/transmitters plus provenance metadata. | Production with imported data; demo sample only in demo/explicit opt-in. |
 | `GET /api/statistics` | Today or bounded 7d/30d aggregate/trend/coverage response. | Production; ranges need daily DB data. |
+| `GET /api/reception-records` | Today, lifetime, and top complete daily maximum-distance records with aircraft, registration, bearing, and timestamp. | Production; historical records require the V1 bearing field, while live memory remains available without PostgreSQL. |
 | `GET /api/watchlist` | Server alert rules, cooldown, and safe current matches. | Production. |
 | `POST /api/watchlist` | Validate and atomically create a server alert rule. | Production. |
 | `PATCH /api/watchlist/:id` | Update or enable/disable one rule. | Production. |

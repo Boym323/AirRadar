@@ -96,6 +96,13 @@ shutdown. Startup loads the current local-day aggregate. Range responses for
 day, produce daily trends, period summary, and populated-bucket coverage
 summary. Statistics never publish exact receiver coordinates.
 
+The maximum-distance observation also retains its normalized ICAO hex, bearing,
+timestamp, and registration when available. `/api/reception-records` reads up
+to ten persisted daily rows with a valid V1 bearing and merges the current RAM
+day. It returns the best daily records and lifetime maximum without scanning
+`FlightPosition`; legacy daily rows that predate the bearing field are excluded
+from the complete-record list and called out in the UI.
+
 ## ATC flow
 
 `GET /api/atc/sectors` returns the active sector/transmitter dataset. In demo

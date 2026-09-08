@@ -21,12 +21,23 @@ export interface DailyCoverageStatisticsRecord {
   maxDistanceKm: number;
 }
 
+export interface ReceiverDailyReceptionRecord {
+  date: string;
+  distanceKm: number;
+  icaoHex: string;
+  registration: string | null;
+  recordedAt: string;
+  bearing: number;
+}
+
 export interface ReceiverStatisticsPersistenceSnapshot {
   date: string;
   uniqueAircraftCount: number;
   maxConcurrentAircraft: number;
   maxDistanceKm: number;
   maxDistanceIcaoHex: string | null;
+  maxDistanceBearing: number | null;
+  maxDistanceRegistration: string | null;
   maxDistanceAt: Date | null;
   aircraft: DailyAircraftStatisticsRecord[];
   coverage: DailyCoverageStatisticsRecord[];
@@ -127,6 +138,8 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
       maxConcurrentAircraft: aggregate.maxConcurrentAircraft,
       maxDistanceKm: aggregate.maxDistanceKm,
       maxDistanceIcaoHex: aggregate.maxDistanceIcaoHex,
+      maxDistanceBearing: aggregate.maxDistanceBearing,
+      maxDistanceRegistration: aggregate.maxDistanceRegistration,
       maxDistanceAt: timestampAsDate(aggregate.maxDistanceAt),
       aircraft: aircraft.map((item) => ({
         icaoHex: item.icaoHex,
@@ -152,6 +165,8 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
           maxConcurrentAircraft: snapshot.maxConcurrentAircraft,
           maxDistanceKm: snapshot.maxDistanceKm,
           maxDistanceIcaoHex: snapshot.maxDistanceIcaoHex,
+          maxDistanceBearing: snapshot.maxDistanceBearing,
+          maxDistanceRegistration: snapshot.maxDistanceRegistration,
           maxDistanceAt: snapshot.maxDistanceAt
             ? Temporal.Instant.fromEpochMilliseconds(snapshot.maxDistanceAt.getTime())
             : null,
@@ -163,6 +178,8 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
           maxConcurrentAircraft: snapshot.maxConcurrentAircraft,
           maxDistanceKm: snapshot.maxDistanceKm,
           maxDistanceIcaoHex: snapshot.maxDistanceIcaoHex,
+          maxDistanceBearing: snapshot.maxDistanceBearing,
+          maxDistanceRegistration: snapshot.maxDistanceRegistration,
           maxDistanceAt: snapshot.maxDistanceAt
             ? Temporal.Instant.fromEpochMilliseconds(snapshot.maxDistanceAt.getTime())
             : null,
@@ -244,6 +261,8 @@ export class ReceiverStatistics {
   private maxConcurrentAircraft = 0;
   private maxDistanceKm = 0;
   private maxDistanceIcaoHex: string | null = null;
+  private maxDistanceBearing: number | null = null;
+  private maxDistanceRegistration: string | null = null;
   private maxDistanceAt: Date | null = null;
   private version = 0;
   private aggregateDirtyVersion: number | null = null;
@@ -315,8 +334,17 @@ export class ReceiverStatistics {
       if (distanceKm > this.maxDistanceKm) {
         this.maxDistanceKm = distanceKm;
         this.maxDistanceIcaoHex = icaoHex;
+        this.maxDistanceBearing = bearing;
+        this.maxDistanceRegistration = cleanValue(item.registration) ?? cleanValue(item.enrichment?.metadata?.registration);
         this.maxDistanceAt = new Date(observedAt);
         this.markAggregateDirty();
+      } else if (distanceKm === this.maxDistanceKm && this.maxDistanceIcaoHex === icaoHex) {
+        const registration = cleanValue(item.registration) ?? cleanValue(item.enrichment?.metadata?.registration);
+        if (this.maxDistanceBearing !== bearing || (registration !== null && this.maxDistanceRegistration !== registration)) {
+          this.maxDistanceBearing = bearing;
+          this.maxDistanceRegistration = registration ?? this.maxDistanceRegistration;
+          this.markAggregateDirty();
+        }
       }
 
       const azimuthBucket = Math.min(COVERAGE_BUCKET_COUNT - 1, Math.floor(bearing / COVERAGE_BUCKET_SIZE_DEGREES));
@@ -339,6 +367,19 @@ export class ReceiverStatistics {
       aircraftTypes: sortBreakdown(this.typeCounts),
       airlines: sortBreakdown(this.airlineCounts),
       messagesPerSecond,
+    };
+  }
+
+  getDailyReceptionRecord(): ReceiverDailyReceptionRecord | null {
+    this.ensureDay(this.clock());
+    if (this.maxDistanceKm <= 0 || !this.maxDistanceIcaoHex || !this.maxDistanceAt || this.maxDistanceBearing === null) return null;
+    return {
+      date: this.currentDate,
+      distanceKm: this.maxDistanceKm,
+      icaoHex: this.maxDistanceIcaoHex,
+      registration: this.maxDistanceRegistration,
+      recordedAt: this.maxDistanceAt.toISOString(),
+      bearing: this.maxDistanceBearing,
     };
   }
 
@@ -444,6 +485,8 @@ export class ReceiverStatistics {
     this.maxConcurrentAircraft = 0;
     this.maxDistanceKm = 0;
     this.maxDistanceIcaoHex = null;
+    this.maxDistanceBearing = null;
+    this.maxDistanceRegistration = null;
     this.maxDistanceAt = null;
     this.aggregateDirtyVersion = null;
     this.lastFlushAttemptAt = this.clock().getTime();
@@ -484,7 +527,13 @@ export class ReceiverStatistics {
     if (snapshot.maxDistanceKm > this.maxDistanceKm) {
       this.maxDistanceKm = snapshot.maxDistanceKm;
       this.maxDistanceIcaoHex = snapshot.maxDistanceIcaoHex;
+      this.maxDistanceBearing = snapshot.maxDistanceBearing;
+      this.maxDistanceRegistration = snapshot.maxDistanceRegistration;
       this.maxDistanceAt = snapshot.maxDistanceAt;
+    } else if (snapshot.maxDistanceKm === this.maxDistanceKm && this.maxDistanceIcaoHex === snapshot.maxDistanceIcaoHex) {
+      this.maxDistanceBearing ??= snapshot.maxDistanceBearing;
+      this.maxDistanceRegistration ??= snapshot.maxDistanceRegistration;
+      this.maxDistanceAt ??= snapshot.maxDistanceAt;
     }
     for (const item of snapshot.aircraft) {
       const icaoHex = normalizedHex(item.icaoHex);
@@ -552,6 +601,8 @@ export class ReceiverStatistics {
       maxConcurrentAircraft: this.maxConcurrentAircraft,
       maxDistanceKm: this.maxDistanceKm,
       maxDistanceIcaoHex: this.maxDistanceIcaoHex,
+      maxDistanceBearing: this.maxDistanceBearing,
+      maxDistanceRegistration: this.maxDistanceRegistration,
       maxDistanceAt: this.maxDistanceAt ? new Date(this.maxDistanceAt) : null,
       aircraft: [...this.dirtyAircraft.values()].map((item) => ({ ...item.record })),
       coverage: [...this.dirtyCoverage.values()].map((item) => ({ ...item.record })),
