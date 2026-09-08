@@ -151,6 +151,7 @@ export const en = {
   aircraft: {
     liveAdsb: "Live ADS-B",
     registration: "Registration",
+    currentCallsign: "Current flight callsign",
     aircraftType: "Aircraft type",
     unknownType: "unknown type",
     unknownAirline: "Airline unknown",
@@ -182,6 +183,7 @@ export const en = {
     year: "Year",
     operator: "Operator",
     registrationCountry: "Registration country",
+    notCurrentlyInRange: "Not currently in range",
   },
   route: {
     airline: "Airline",
@@ -323,6 +325,12 @@ export const en = {
     closeAircraftDetails: "Close aircraft details",
     noPositions: "No sampled positions found for this aircraft yet.",
     trailMap: "Flight trail map",
+    recentFlights: "Recent flights",
+    recentFlightsEmpty: "No flights are stored for this aircraft yet.",
+    recentFlightsLoadFailed: "Recent flights could not be loaded.",
+    duration: "Flight duration",
+    detailFlight: "Open flight detail",
+    aircraftDetail: "Aircraft detail",
   },
   counts: {
     aircraft: { one: "aircraft", few: "aircraft", many: "aircraft" },

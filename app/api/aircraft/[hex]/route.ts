@@ -1,0 +1,35 @@
+import { getAircraftDetail, HistoryDatabaseUnavailableError } from "@/lib/server/history";
+import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
+import { normalizeIcaoHex } from "@/lib/server/validation";
+
+export const dynamic = "force-dynamic";
+
+function noStoreHeaders(): HeadersInit {
+  return { "Cache-Control": "no-store" };
+}
+
+export async function GET(_request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("aircraft");
+  if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+
+  const { hex: rawHex } = await context.params;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(rawHex);
+  } catch {
+    return Response.json({ error: "Invalid aircraft identifier" }, { status: 400, headers: noStoreHeaders() });
+  }
+  const icaoHex = normalizeIcaoHex(decoded);
+  if (!icaoHex) {
+    return Response.json({ error: "Invalid aircraft identifier" }, { status: 400, headers: noStoreHeaders() });
+  }
+
+  try {
+    return Response.json(await getAircraftDetail(icaoHex), { headers: noStoreHeaders() });
+  } catch (error) {
+    if (error instanceof HistoryDatabaseUnavailableError) {
+      return Response.json({ error: "Aircraft history is temporarily unavailable" }, { status: 503, headers: noStoreHeaders() });
+    }
+    return Response.json({ error: "Aircraft detail could not be loaded" }, { status: 500, headers: noStoreHeaders() });
+  }
+}

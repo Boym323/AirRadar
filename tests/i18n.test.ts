@@ -33,4 +33,11 @@ describe("localization", () => {
     expect(getTranslations("en").atc.probableFrequency).toContain("tuned ATC frequency");
     expect(getTranslations("en").atc.relevantDisclaimer).toContain("actually tuned");
   });
+
+  it("provides aircraft detail v2 copy in Czech and English", () => {
+    expect(getTranslations().history.recentFlights).toBe("Poslední lety");
+    expect(getTranslations().aircraft.notCurrentlyInRange).toBe("Nyní není v dosahu");
+    expect(getTranslations("en").history.recentFlights).toBe("Recent flights");
+    expect(getTranslations("en").aircraft.notCurrentlyInRange).toBe("Not currently in range");
+  });
 });

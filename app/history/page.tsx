@@ -257,7 +257,7 @@ function FlightDetail({ detail, error, loading }: { detail: HistoryFlightDetail 
       <div className="history-detail-heading">
         <div>
           <div className="history-detail-callsign">{flight.callsign || t.history.unknownCallsign}</div>
-          <div className="history-detail-registration">{flight.icaoHex} · {flight.registration || t.common.emptyValue}</div>
+          <div className="history-detail-registration"><Link className="history-link" href={`/aircraft/${encodeURIComponent(flight.icaoHex)}`}>{flight.icaoHex}</Link> · {flight.registration || t.common.emptyValue}</div>
         </div>
         <span className="history-detail-badge">{flight.aircraftType || t.aircraft.unknownAircraftType}</span>
       </div>

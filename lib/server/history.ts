@@ -41,6 +41,7 @@ export interface RecordAircraftSnapshotResult {
 
 export const HISTORY_POSITION_LIMIT = 2_000;
 export const HISTORY_FLIGHT_LIMIT = 100;
+export const AIRCRAFT_RECENT_FLIGHT_LIMIT = 10;
 
 export type HistoryFlightRange = "today" | "yesterday" | "7d";
 
@@ -72,6 +73,22 @@ export interface HistoryFlightDetail {
     verticalRate: number | null;
   }>;
   truncated: boolean;
+}
+
+export interface AircraftDetailMetadata {
+  icaoHex: string;
+  registration: string | null;
+  registrationCountry: string | null;
+  registrationCountryCode: string | null;
+  aircraftType: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  operator: string | null;
+}
+
+export interface AircraftDetailResponse {
+  aircraft: AircraftDetailMetadata | null;
+  recentFlights: HistoryFlightSummary[];
 }
 
 export class HistoryDatabaseUnavailableError extends Error {
@@ -259,6 +276,45 @@ export async function getHistoryFlight(id: number): Promise<HistoryFlightDetail 
         track: position.track,
         verticalRate: position.verticalRate,
       })),
+    };
+  } catch {
+    throw new HistoryDatabaseUnavailableError();
+  }
+}
+
+/**
+ * Returns durable aircraft metadata and a deliberately small recent-flight
+ * summary. FlightPosition is not queried here; playback remains behind the
+ * existing per-flight detail endpoint.
+ */
+export async function getAircraftDetail(icaoHex: string): Promise<AircraftDetailResponse> {
+  const database = getPrisma();
+  if (!database) throw new HistoryDatabaseUnavailableError();
+
+  try {
+    const schema = database.orm.public;
+    const aircraft = await schema.Aircraft.where({ icaoHex: icaoHex.toUpperCase() }).first();
+    if (!aircraft) return { aircraft: null, recentFlights: [] };
+
+    const flights = await schema.Flight
+      .where({ aircraftId: aircraft.id })
+      .orderBy([(flight) => flight.startTime.desc(), (flight) => flight.id.desc()])
+      .include("aircraft", (relatedAircraft) => relatedAircraft.select("icaoHex", "registration", "aircraftType"))
+      .limit(AIRCRAFT_RECENT_FLIGHT_LIMIT)
+      .all();
+
+    return {
+      aircraft: {
+        icaoHex: aircraft.icaoHex,
+        registration: aircraft.registration,
+        registrationCountry: aircraft.registrationCountry,
+        registrationCountryCode: aircraft.registrationCountryCode,
+        aircraftType: aircraft.aircraftType,
+        manufacturer: aircraft.manufacturer,
+        model: aircraft.model,
+        operator: aircraft.operator,
+      },
+      recentFlights: orderFlightSummaries(flights.map(flightSummaryFromRow)).slice(0, AIRCRAFT_RECENT_FLIGHT_LIMIT),
     };
   } catch {
     throw new HistoryDatabaseUnavailableError();

@@ -32,7 +32,9 @@ import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import { AirportWeatherDisclosure } from "@/components/airport-weather";
+import { AircraftRecentFlights } from "@/components/aircraft-detail-v2";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
+import type { AircraftDetailResponse } from "@/lib/server/history";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
@@ -307,6 +309,9 @@ function aircraftGlyphMarkup(aircraft: AircraftView): string {
 export function AirRadarApp() {
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
+  const [aircraftDetail, setAircraftDetail] = useState<AircraftDetailResponse | null>(null);
+  const [aircraftDetailLoading, setAircraftDetailLoading] = useState(false);
+  const [aircraftDetailError, setAircraftDetailError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
   const [altitudeFilter, setAltitudeFilter] = useState("all");
@@ -390,6 +395,34 @@ export function AirRadarApp() {
     setSelectedHex(hex);
     setMobileCompact(false);
   }, []);
+
+  useEffect(() => {
+    if (!selectedHex) {
+      setAircraftDetail(null);
+      setAircraftDetailLoading(false);
+      setAircraftDetailError(null);
+      return;
+    }
+    let active = true;
+    setAircraftDetail(null);
+    setAircraftDetailLoading(true);
+    setAircraftDetailError(null);
+    void fetch(`/api/aircraft/${encodeURIComponent(selectedHex)}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(t.history.recentFlightsLoadFailed);
+        return (await response.json()) as AircraftDetailResponse;
+      })
+      .then((result) => {
+        if (active) setAircraftDetail(result);
+      })
+      .catch((error: unknown) => {
+        if (active) setAircraftDetailError(error instanceof Error ? error.message : t.history.recentFlightsLoadFailed);
+      })
+      .finally(() => {
+        if (active) setAircraftDetailLoading(false);
+      });
+    return () => { active = false; };
+  }, [selectedHex]);
 
   useEffect(() => {
     let active = true;
@@ -768,6 +801,8 @@ export function AirRadarApp() {
   }, [airportFilter, mapReady, showAirports]);
 
   const selectedAircraft = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) ?? null;
+  const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
+  const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
   const filterOptions = useMemo(() => ({
     airlines: [...new Set(snapshot.aircraft.map(airlineForAircraft).filter((value): value is string => Boolean(value)))].sort(),
     types: [...new Set(snapshot.aircraft.map((aircraft) => aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType).filter((value): value is string => Boolean(value)))].sort(),
@@ -960,15 +995,15 @@ export function AirRadarApp() {
 
           </div>
 
-          {selectedAircraft && (
-            <div className="detail-panel" key={selectedAircraft.icaoHex}>
+          {(selectedAircraft || selectedDatabaseAircraft) && (
+            <div className="detail-panel" key={selectedIdentity}>
               <div className="detail-heading">
-                <div><div className="detail-callsign">{labelForAircraft(selectedAircraft)}</div>
-                  {airlineForAircraft(selectedAircraft) && <div className="detail-registration">{airlineForAircraft(selectedAircraft)}</div>}
+                <div><div className="detail-callsign">{selectedIdentity}</div>
+                  <div className="detail-registration">{selectedAircraft ? `${t.history.flight}: ${selectedAircraft.callsign || t.history.unknownCallsign}` : t.aircraft.notCurrentlyInRange}</div>
                 </div>
                 <button className="close-button" onClick={() => setSelectedHex(null)} aria-label={t.history.closeAircraftDetails}>×</button>
               </div>
-              <div className="detail-content">
+              {selectedAircraft ? <div className="detail-content">
               {selectedAircraft.enrichment?.route && <div className="detail-route">
                 <DetailItem label={t.route.originDestination} value={<span className="route-airport-links">
                   {selectedAircraft.enrichment.route.originAirport ? <AirportRouteLink airport={selectedAircraft.enrichment.route.originAirport} /> : selectedAircraft.enrichment.route.origin || t.route.notAvailable}
@@ -983,7 +1018,16 @@ export function AirRadarApp() {
               </div>}
               {selectedAircraft.enrichment?.route?.originAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.originAirport} />}
               {selectedAircraft.enrichment?.route?.destinationAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.destinationAirport} />}
-              <div className="detail-registration">{[selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || selectedAircraft.aircraftType, selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration].filter(Boolean).join(" · ")}</div>
+              <DetailSection title={t.history.aircraftDetail}>
+                <DetailItem label={t.aircraft.icaoHex} value={selectedAircraft.icaoHex} />
+                <DetailItem label={t.aircraft.registration} value={selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || selectedDatabaseAircraft?.registration || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.currentCallsign} value={selectedAircraft.callsign || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.aircraftType} value={selectedAircraft.enrichment?.metadata?.icaoTypeCode || selectedAircraft.aircraftType || selectedDatabaseAircraft?.aircraftType || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.manufacturer} value={selectedAircraft.enrichment?.metadata?.manufacturer || selectedDatabaseAircraft?.manufacturer || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.modelType} value={selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || selectedDatabaseAircraft?.model || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.operator} value={selectedAircraft.enrichment?.metadata?.operator || selectedDatabaseAircraft?.operator || t.common.emptyValue} />
+                <DetailItem label={t.aircraft.registrationCountry} value={registrationCountryForAircraft(selectedAircraft) || selectedDatabaseAircraft?.registrationCountryCode || selectedDatabaseAircraft?.registrationCountry || t.common.emptyValue} />
+              </DetailSection>
               <DetailSection title={t.aircraft.liveAdsb}>
                 <DetailItem label={t.aircraft.altitude} value={formatAltitude(selectedAircraft.altitude)} />
                 <DetailItem label={t.aircraft.groundSpeed} value={formatSpeed(selectedAircraft.groundSpeed)} />
@@ -1038,6 +1082,7 @@ export function AirRadarApp() {
                 <DetailItem label={t.route.source} value={selectedAircraft.enrichment?.route?.source || t.common.emptyValue} />
               </DetailSection>
               </details>
+              <AircraftRecentFlights recentFlights={aircraftDetail?.recentFlights ?? []} loading={aircraftDetailLoading} error={aircraftDetailError} />
               {selectedAircraft.enrichment?.flightPlan && <DetailSection title={t.flightPlan.title}>
                 <DetailItem label={t.flightPlan.scheduledDeparture} value={selectedAircraft.enrichment.flightPlan.scheduledDeparture || t.common.emptyValue} />
                 <DetailItem label={t.flightPlan.actualDeparture} value={selectedAircraft.enrichment.flightPlan.actualDeparture || t.common.emptyValue} />
@@ -1047,8 +1092,22 @@ export function AirRadarApp() {
                 <DetailItem label={t.flightPlan.waypoints} value={selectedAircraft.enrichment.flightPlan.waypoints.join(" · ") || t.common.emptyValue} />
               </DetailSection>}
               <div className="watchlist-actions"><button className="watchlist-add" onClick={() => setWatchlist((current) => current.some((rule) => rule.kind === "icao" && rule.value === selectedAircraft.icaoHex) ? current : [...current, { kind: "icao", value: selectedAircraft.icaoHex }])}>{isWatchlisted(selectedAircraft) ? t.watchlist.onWatchlist : t.watchlist.addIcao}</button></div>
-              <div className="detail-footer"><span>{t.history.lastSeen} {formatTime(selectedAircraft.lastSeen)}</span><Link className="history-link" href={`/history?hex=${selectedAircraft.icaoHex}`}>{t.history.viewHistory} →</Link></div>
-              </div>
+              <div className="detail-footer"><span>{t.history.lastSeen} {formatTime(selectedAircraft.lastSeen)}</span><span><Link className="history-link" href={`/aircraft/${encodeURIComponent(selectedAircraft.icaoHex)}`}>{t.history.aircraftDetail} →</Link> <Link className="history-link" href={`/history?hex=${selectedAircraft.icaoHex}`}>{t.history.viewHistory} →</Link></span></div>
+              </div> : <div className="detail-content">
+                <div className="detail-disclaimer aircraft-offline-notice">{t.aircraft.notCurrentlyInRange}</div>
+                <DetailSection title={t.history.aircraftDetail}>
+                  <DetailItem label={t.aircraft.icaoHex} value={selectedIdentity || t.common.emptyValue} />
+                  <DetailItem label={t.aircraft.registration} value={selectedDatabaseAircraft?.registration || t.common.emptyValue} />
+                  <DetailItem label={t.aircraft.currentCallsign} value={t.common.emptyValue} />
+                  <DetailItem label={t.aircraft.aircraftType} value={selectedDatabaseAircraft?.aircraftType || t.common.emptyValue} />
+                  <DetailItem label={t.aircraft.manufacturer} value={selectedDatabaseAircraft?.manufacturer || t.common.emptyValue} />
+                  <DetailItem label={t.aircraft.modelType} value={selectedDatabaseAircraft?.model || t.common.emptyValue} />
+                  <DetailItem label={t.aircraft.operator} value={selectedDatabaseAircraft?.operator || t.common.emptyValue} />
+                  <DetailItem label={t.aircraft.registrationCountry} value={selectedDatabaseAircraft?.registrationCountryCode || selectedDatabaseAircraft?.registrationCountry || t.common.emptyValue} />
+                </DetailSection>
+                <AircraftRecentFlights recentFlights={aircraftDetail?.recentFlights ?? []} loading={aircraftDetailLoading} error={aircraftDetailError} />
+                <div className="detail-footer"><Link className="history-link" href={`/aircraft/${encodeURIComponent(selectedIdentity || "")}`}>{t.history.aircraftDetail} →</Link></div>
+              </div>}
             </div>
           )}
         </aside>

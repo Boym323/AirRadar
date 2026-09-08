@@ -67,11 +67,12 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("const [mobileCompact, setMobileCompact] = useState(true)");
   });
 
-  it("exposes the layer state and does not add a UI network request", () => {
+  it("exposes the layer state and keeps aircraft detail loading bounded", () => {
     expect(appSource).toContain("checked={showAircraft}");
     expect(appSource).toContain("checked={showAirports}");
     expect(appSource).toContain("checked={showAtc}");
-    expect(appSource.match(/\bfetch\(/g)).toHaveLength(3);
+    expect(appSource.match(/\bfetch\(/g)).toHaveLength(4);
+    expect(appSource).toContain("/api/aircraft/${encodeURIComponent(selectedHex)}");
   });
 
   it("keeps CZ and EN layer labels in the existing i18n dictionaries", () => {

@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET as getFlight } from "@/app/api/history/flights/[id]/route";
+import { GET as getAircraftDetailRoute } from "@/app/api/aircraft/[hex]/route";
 import {
+  AIRCRAFT_RECENT_FLIGHT_LIMIT,
+  getAircraftDetail,
   getHistoryFlight,
   HISTORY_POSITION_LIMIT,
   listHistoryFlights,
 } from "@/lib/server/history";
+import type { HistoryFlightSummary } from "@/lib/server/history";
+import { aircraftAirportHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
 import { getPrisma } from "@/lib/server/db";
 import { playbackSampleAt, playbackTimeRange, type PlaybackPosition } from "@/lib/history/playback";
 
@@ -135,6 +140,53 @@ afterEach(() => {
 });
 
 describe("flight history v2", () => {
+  it("builds the airport and existing playback links from bounded flight data", () => {
+    expect(aircraftAirportHref("LKPR")).toBe("/airports/LKPR");
+    expect(aircraftHistoryHref(42)).toBe("/history?flightId=42");
+  });
+
+  it("loads aircraft detail by ICAO identity with at most ten recent flights", async () => {
+    const aircraftWithMetadata = [
+      { ...aircraft[0], registrationCountry: "Czech Republic", registrationCountryCode: "CZ", manufacturer: "Airbus", model: "A320-214", operator: "Test Air" },
+      aircraft[1],
+    ];
+    const flights = Array.from({ length: AIRCRAFT_RECENT_FLIGHT_LIMIT + 2 }, (_, index) => ({
+      ...flight(index + 1, `2026-09-0${Math.min(9, 1 + Math.floor(index / 3))}T${String(10 + index).padStart(2, "0")}:00:00Z`, `SAME${index}`, 1),
+      aircraft: { icaoHex: "ABC123", registration: "OK-ABC", aircraftType: "A320" },
+    }));
+    flights.push({ ...flight(99, "2026-09-08T12:00:00Z", "SAME0", 2), aircraft: { icaoHex: "DEF456", registration: "N-DEF", aircraftType: "PC12" } });
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft: aircraftWithMetadata, flights }) as never);
+
+    const result = await getAircraftDetail("abc123");
+
+    expect(result.aircraft).toMatchObject({ icaoHex: "ABC123", manufacturer: "Airbus", operator: "Test Air" });
+    expect(result.recentFlights).toHaveLength(AIRCRAFT_RECENT_FLIGHT_LIMIT);
+    expect(result.recentFlights.every((item) => item.icaoHex === "ABC123")).toBe(true);
+    expect(result.recentFlights.every((item) => item.callsign !== "SAME0" || item.icaoHex === "ABC123")).toBe(true);
+  });
+
+  it("serves bounded aircraft detail through the ICAO route and never reads positions", async () => {
+    const positionAll = vi.fn();
+    const database = fakeDatabase({ aircraft, flights: [flight(1, "2026-09-08T10:00:00Z", "TEST123")] });
+    database.orm.public.FlightPosition = new FakeCollection([], "FlightPosition", positionAll);
+    vi.mocked(getPrisma).mockReturnValue(database as never);
+
+    const response = await getAircraftDetailRoute(new Request("http://localhost/api/aircraft/abc123"), { params: Promise.resolve({ hex: "abc123" }) });
+    const body = await response.json() as { recentFlights: HistoryFlightSummary[] };
+
+    expect(response.status).toBe(200);
+    expect(body.recentFlights).toHaveLength(1);
+    expect(positionAll).not.toHaveBeenCalled();
+  });
+
+  it("returns empty history for a known aircraft without flights", async () => {
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights: [] }) as never);
+    await expect(getAircraftDetail("ABC123")).resolves.toMatchObject({
+      aircraft: { icaoHex: "ABC123" },
+      recentFlights: [],
+    });
+  });
+
   it("lists flights newest-first", async () => {
     vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights: [flight(1, "2026-09-05T10:00:00Z", "OLD"), flight(2, "2026-09-07T10:00:00Z", "NEW", 2)] }) as never);
     const result = await listHistoryFlights({ range: "7d", now: new Date("2026-09-07T12:00:00Z") });

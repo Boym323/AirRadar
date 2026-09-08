@@ -149,6 +149,7 @@ export const cs = {
   aircraft: {
     liveAdsb: "Živé ADS-B",
     registration: "Registrace",
+    currentCallsign: "Callsign aktuálního letu",
     aircraftType: "Typ letadla",
     unknownType: "neznámý typ",
     unknownAirline: "Letecká společnost neuvedena",
@@ -180,6 +181,7 @@ export const cs = {
     year: "Rok",
     operator: "Provozovatel",
     registrationCountry: "Země registrace",
+    notCurrentlyInRange: "Nyní není v dosahu",
   },
   route: {
     airline: "Letecká společnost",
@@ -321,6 +323,12 @@ export const cs = {
     closeAircraftDetails: "Zavřít detail letadla",
     noPositions: "Pro toto letadlo zatím nebyly nalezeny žádné zaznamenané pozice.",
     trailMap: "Mapa letové trasy",
+    recentFlights: "Poslední lety",
+    recentFlightsEmpty: "Pro toto letadlo zatím nejsou uloženy žádné lety.",
+    recentFlightsLoadFailed: "Poslední lety se nepodařilo načíst.",
+    duration: "Délka letu",
+    detailFlight: "Otevřít detail letu",
+    aircraftDetail: "Detail letadla",
   },
   counts: {
     aircraft: { one: "letadlo", few: "letadla", many: "letadel" },
