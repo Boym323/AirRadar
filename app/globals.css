@@ -150,8 +150,26 @@ button { cursor: pointer; }
 .atc-mobile-entry { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; padding: 0; text-align: left; color: var(--text); background: transparent; border: 0; }
 .atc-mobile-entry strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--amber); font-size: 11px; font-variant-numeric: tabular-nums; }
 .atc-mobile-entry span { flex: 0 0 auto; color: var(--muted); font-size: 9px; }
-.radar-options { margin-top: 8px; font-size: 11px; color: var(--muted); }
+.radar-options { position: relative; margin-top: 8px; font-size: 11px; color: var(--muted); }
 .radar-options > summary, .detail-more > summary { cursor: pointer; padding: 10px 0; }
+.filter-button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; padding: 7px 10px; border: 1px solid rgba(55, 214, 192, .32); border-radius: 8px; background: rgba(55, 214, 192, .08); color: var(--text); font-size: 11px; font-weight: 700; cursor: pointer; }
+.filter-button:hover, .filter-button[aria-expanded="true"] { border-color: rgba(55, 214, 192, .62); background: rgba(55, 214, 192, .14); }
+.filter-active-dot { color: var(--mint); font-size: 9px; }
+.map-filters-panel { position: absolute; z-index: 6; top: calc(100% + 7px); right: 0; width: min(340px, calc(100vw - 40px)); max-height: min(72vh, 620px); overflow-y: auto; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(8, 17, 29, .98); box-shadow: 0 14px 30px rgba(0, 0, 0, .38); color: var(--text); }
+.map-filter-group { display: grid; gap: 8px; margin: 0; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(153, 181, 207, .12); }
+.map-filter-group:first-child { padding-top: 0; border-top: 0; }
+.map-filter-group legend { padding: 0; color: var(--mint); font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.map-filter-choice-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.map-filter-choice-row label { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 5px 8px; border: 1px solid rgba(153, 181, 207, .14); border-radius: 7px; background: rgba(17, 35, 55, .7); color: var(--text); font-size: 10px; }
+.map-filter-choice-row input, .map-filter-group input[type="checkbox"] { accent-color: var(--mint); }
+.map-filter-fields, .map-filter-legacy-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.map-filter-field { min-width: 0; display: grid; gap: 4px; color: var(--muted); font-size: 9px; }
+.map-filter-field-wide { grid-column: 1 / -1; }
+.map-filter-field input, .map-filter-field select { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 7px; background: #132438; color: var(--text); padding: 7px 8px; outline: none; font-size: 11px; }
+.map-filter-field input:focus, .map-filter-field select:focus { border-color: rgba(55, 214, 192, .65); box-shadow: 0 0 0 3px rgba(55, 214, 192, .08); }
+.map-filter-group .filter-toggle { grid-column: auto; min-height: 30px; }
+.filter-reset-button { width: 100%; min-height: 32px; margin-top: 11px; border: 1px solid rgba(243, 185, 95, .34); border-radius: 7px; background: rgba(243, 185, 95, .09); color: var(--amber); font-size: 10px; font-weight: 700; cursor: pointer; }
+.filter-reset-button:hover { background: rgba(243, 185, 95, .16); }
 .search-input { width: 100%; border: 1px solid var(--line); background: rgba(8, 17, 29, .75); color: var(--text); border-radius: 9px; padding: 10px 12px 10px 35px; outline: none; font-size: 12px; }
 .search-input:focus { border-color: rgba(55, 214, 192, .65); box-shadow: 0 0 0 3px rgba(55, 214, 192, .08); }
 .search-icon { position: absolute; left: 12px; top: 9px; color: var(--muted); width: 15px; }
@@ -520,6 +538,15 @@ button { cursor: pointer; }
   .aircraft-row-meta { flex-wrap: wrap; gap: 4px 7px; }
   .filter-select, .search-input, .watchlist-form input, .watchlist-form select { min-height: 44px; font-size: 16px; }
   .filter-toggle { min-height: 44px; display: flex; align-items: center; gap: 8px; }
+  .radar-options { position: static; }
+  .filter-button { min-height: 44px; font-size: 16px; }
+  .map-filters-panel { position: static; width: auto; max-height: none; overflow: visible; margin-top: 7px; padding: 12px 10px; border-radius: 10px; box-shadow: none; }
+  .map-filter-choice-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .map-filter-choice-row label { min-height: 44px; font-size: 14px; }
+  .map-filter-choice-row label:first-child { grid-column: 1 / -1; }
+  .map-filter-field { font-size: 11px; }
+  .map-filter-field input, .map-filter-field select { min-height: 44px; font-size: 16px; }
+  .filter-reset-button { min-height: 44px; font-size: 14px; }
   .radar-options summary, .watchlist-box summary, .stats-breakdowns summary, .detail-more summary { min-height: 44px; align-content: center; }
   .watchlist-form { grid-template-columns: minmax(0, 1fr) auto; }
   .watchlist-form select { grid-column: 1 / -1; }

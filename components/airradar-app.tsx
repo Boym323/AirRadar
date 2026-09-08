@@ -49,6 +49,12 @@ import {
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
 import { GlobalSearch } from "@/components/global-search";
+import {
+  DEFAULT_MAP_AIRCRAFT_FILTERS,
+  filterAircraftForMap,
+  isMapAircraftFilterActive,
+  type MapAircraftFilters,
+} from "@/lib/aircraft/map-filters";
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
 const EMPTY_RECEIVER: PublicReceiverPosition = { lat: null, lon: null, name: t.radar.receiverName };
@@ -105,10 +111,6 @@ const MAP_STYLE: StyleSpecification = {
 
 function labelForAircraft(aircraft: AircraftView): string {
   return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
-}
-
-function airlineForAircraft(aircraft: AircraftView): string | null {
-  return aircraft.enrichment?.route?.airline ?? aircraft.enrichment?.metadata?.operator ?? null;
 }
 
 function registrationCountryForAircraft(aircraft: AircraftView): string | null {
@@ -341,14 +343,10 @@ export function AirRadarApp() {
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[] } | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
-  const [altitudeFilter, setAltitudeFilter] = useState("all");
   const [distanceFilter, setDistanceFilter] = useState("all");
-  const [airborneOnly, setAirborneOnly] = useState(false);
-  const [airlineFilter, setAirlineFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [countryFilter, setCountryFilter] = useState("all");
-  const [emergencyOnly, setEmergencyOnly] = useState(false);
   const [watchlistOnly, setWatchlistOnly] = useState(false);
+  const [mapFilters, setMapFilters] = useState<MapAircraftFilters>(DEFAULT_MAP_AIRCRAFT_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [watchlist, setWatchlist] = useState<Array<{ kind: string; value: string }>>([]);
   const [watchlistKind, setWatchlistKind] = useState("callsign");
   const [watchlistValue, setWatchlistValue] = useState("");
@@ -410,6 +408,18 @@ export function AirRadarApp() {
     const type = normalizeAircraftRuleType(rule.kind);
     return type ? matchesAircraftRule(aircraft, { type, value }) : false;
   }), [watchlist]);
+
+  function updateMapFilter<Key extends keyof MapAircraftFilters>(key: Key, value: MapAircraftFilters[Key]) {
+    setMapFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  const resetMapFilters = useCallback(() => {
+    setMapFilters(DEFAULT_MAP_AIRCRAFT_FILTERS);
+    setSearch("");
+    setDistanceFilter("all");
+    setWatchlistOnly(false);
+    setSortBy("distance");
+  }, []);
 
   function addWatchlistRule(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -661,6 +671,26 @@ export function AirRadarApp() {
     }
   }, [mapReady, snapshot.provider, snapshot.receiver]);
 
+  const mapFilteredAircraft = useMemo(
+    () => filterAircraftForMap(snapshot.aircraft, mapFilters),
+    [mapFilters, snapshot.aircraft],
+  );
+  const filteredAircraft = useMemo(() => {
+    const query = search.trim().toUpperCase();
+    const filtered = mapFilteredAircraft.filter((aircraft) => {
+      const searchable = [aircraft.callsign, aircraft.registration, aircraft.enrichment?.metadata?.registration, aircraft.icaoHex].filter(Boolean).join(" ").toUpperCase();
+      if (query && !searchable.includes(query)) return false;
+      if (distanceFilter !== "all" && (aircraft.distanceKm === null || aircraft.distanceKm > Number(distanceFilter))) return false;
+      if (watchlistOnly && !isWatchlisted(aircraft)) return false;
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      if (sortBy === "callsign") return labelForAircraft(a).localeCompare(labelForAircraft(b));
+      if (sortBy === "altitude") return (b.altitude ?? -Infinity) - (a.altitude ?? -Infinity);
+      return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+    });
+  }, [distanceFilter, isWatchlisted, mapFilteredAircraft, search, sortBy, watchlistOnly]);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -714,11 +744,13 @@ export function AirRadarApp() {
       animationFramesRef.current.set(hex, requestAnimationFrame(frame));
     };
 
+    const selectedAircraftInSnapshot = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex);
+    const selectedAircraftVisible = Boolean(selectedAircraftInSnapshot && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedHex));
     const historySnapshot = selectedHistoryTrail;
-    const historyTrail = historySnapshot && historySnapshot.icaoHex === selectedHex?.toUpperCase() ? historySnapshot.points : [];
-    const selectedTrailForMap = selectedTrail(liveTrailsRef.current, selectedHex, historyTrail, Date.now());
+    const historyTrail = selectedAircraftVisible && historySnapshot && historySnapshot.icaoHex === selectedHex?.toUpperCase() ? historySnapshot.points : [];
+    const selectedTrailForMap = selectedAircraftVisible ? selectedTrail(liveTrailsRef.current, selectedHex, historyTrail, Date.now()) : [];
 
-    for (const aircraft of snapshot.aircraft) {
+    for (const aircraft of filteredAircraft) {
       if (aircraft.lat === null || aircraft.lon === null) continue;
       currentHexes.add(aircraft.icaoHex);
       let marker = aircraftMarkersRef.current.get(aircraft.icaoHex);
@@ -797,7 +829,7 @@ export function AirRadarApp() {
 
     for (const [hex, marker] of aircraftMarkersRef.current) {
       if (!currentHexes.has(hex)) {
-        if (hex === selectedHex && selectedTrailForMap.length > 0) {
+        if (hex === selectedHex && selectedAircraftVisible && selectedTrailForMap.length > 0) {
           const lastKnown = selectedTrailForMap[selectedTrailForMap.length - 1];
           marker.setLngLat([lastKnown.lon, lastKnown.lat]);
           marker.getElement().style.visibility = showAircraft ? "visible" : "hidden";
@@ -813,11 +845,14 @@ export function AirRadarApp() {
       }
     }
 
-    const selected = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex);
+    const selected = selectedAircraftVisible ? selectedAircraftInSnapshot : undefined;
     const trailSource = map.getSource("selected-trail") as GeoJSONSource | undefined;
     trailSource?.setData(selectedTrailForMap.length > 1
       ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
       : { type: "FeatureCollection", features: [] });
+    for (const layer of ["selected-trail-line", ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID, ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, ROUTE_V2_AIRPORT_LABEL_LAYER_ID] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none");
+    }
     const routeSource = map.getSource(ROUTE_V2_SOURCE_ID) as GeoJSONSource | undefined;
     routeSource?.setData(createRouteGeoJSON(
       selected?.enrichment?.route,
@@ -825,7 +860,7 @@ export function AirRadarApp() {
     ));
     const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
     routeAirportSource?.setData(createRouteAirportGeoJSON(selected?.enrichment?.route));
-  }, [isWatchlisted, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [filteredAircraft, isWatchlisted, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -881,32 +916,12 @@ export function AirRadarApp() {
   const selectedAircraft = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) ?? null;
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
-  const filterOptions = useMemo(() => ({
-    airlines: [...new Set(snapshot.aircraft.map(airlineForAircraft).filter((value): value is string => Boolean(value)))].sort(),
-    types: [...new Set(snapshot.aircraft.map((aircraft) => aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType).filter((value): value is string => Boolean(value)))].sort(),
-    countries: [...new Set(snapshot.aircraft.map(registrationCountryForAircraft).filter((value): value is string => Boolean(value)))].sort(),
-  }), [snapshot.aircraft]);
-  const filteredAircraft = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const filtered = snapshot.aircraft.filter((aircraft) => {
-      const searchable = [aircraft.callsign, aircraft.registration, aircraft.icaoHex].filter(Boolean).join(" ").toLowerCase();
-      if (query && !searchable.includes(query)) return false;
-      if (airborneOnly && aircraft.onGround) return false;
-      if (altitudeFilter !== "all" && (aircraft.altitude === null || aircraft.altitude < Number(altitudeFilter))) return false;
-      if (distanceFilter !== "all" && (aircraft.distanceKm === null || aircraft.distanceKm > Number(distanceFilter))) return false;
-      if (airlineFilter !== "all" && airlineForAircraft(aircraft) !== airlineFilter) return false;
-      if (typeFilter !== "all" && (aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType) !== typeFilter) return false;
-      if (countryFilter !== "all" && registrationCountryForAircraft(aircraft) !== countryFilter) return false;
-      if (emergencyOnly && !aircraft.emergency) return false;
-      if (watchlistOnly && !isWatchlisted(aircraft)) return false;
-      return true;
-    });
-    return filtered.sort((a, b) => {
-      if (sortBy === "callsign") return labelForAircraft(a).localeCompare(labelForAircraft(b));
-      if (sortBy === "altitude") return (b.altitude ?? -Infinity) - (a.altitude ?? -Infinity);
-      return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
-    });
-  }, [airborneOnly, airlineFilter, altitudeFilter, countryFilter, distanceFilter, emergencyOnly, isWatchlisted, search, snapshot.aircraft, sortBy, typeFilter, watchlistOnly]);
+
+  const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
+  const hasActiveMapFilters = isMapAircraftFilterActive(mapFilters)
+    || search.trim() !== ""
+    || distanceFilter !== "all"
+    || watchlistOnly;
 
   const isDemo = snapshot.provider === "mock";
   const hasSourceSnapshot = snapshot.lastSourceUpdate !== null;
@@ -962,7 +977,7 @@ export function AirRadarApp() {
               <span><i className="legend-dot" /> 50 km</span>
               <span><i className="legend-dot" /> 100 km</span>
             </div>}
-            {selectedAircraft?.enrichment?.route && <div className="map-overlay-card layer-legend">
+            {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <div className="map-overlay-card layer-legend">
               <span><i className="legend-line completed" /> {t.route.originToCurrent}</span>
               <span><i className="legend-line remaining" /> {t.route.currentToDestination}</span>
               <small>{t.route.contextDisclaimer}</small>
@@ -997,40 +1012,53 @@ export function AirRadarApp() {
               <span className="search-icon" aria-hidden="true">⌕</span>
               <input className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.search.placeholder} aria-label={t.search.aircraftLabel} />
             </div>
-            <details className="radar-options">
-              <summary>{t.radar.panelOptions}</summary>
-            <div className="filters">
-              <select className="filter-select" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label={t.filters.sortLabel}>
-                <option value="distance">{t.filters.sortDistance}</option>
-                <option value="altitude">{t.filters.sortAltitude}</option>
-                <option value="callsign">{t.filters.sortCallsign}</option>
-              </select>
-              <select className="filter-select" value={altitudeFilter} onChange={(event) => setAltitudeFilter(event.target.value)} aria-label={t.filters.minimumAltitude}>
-                <option value="all">{t.filters.altitudeAll}</option>
-                <option value="10000">{t.filters.altitudeAbove10k}</option>
-                <option value="30000">{t.filters.altitudeAbove30k}</option>
-              </select>
-              <select className="filter-select" value={distanceFilter} onChange={(event) => setDistanceFilter(event.target.value)} aria-label={t.filters.maximumDistance}>
-                <option value="all">{t.filters.distanceAll}</option>
-                <option value="25">{t.filters.distanceWithin25}</option>
-                <option value="75">{t.filters.distanceWithin75}</option>
-              </select>
-              <select className="filter-select" value={airlineFilter} onChange={(event) => setAirlineFilter(event.target.value)} aria-label={t.filters.airline}>
-                <option value="all">{t.filters.airlineAll}</option>
-                {filterOptions.airlines.map((airline) => <option key={airline} value={airline}>{airline}</option>)}
-              </select>
-              <select className="filter-select" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} aria-label={t.filters.aircraftType}>
-                <option value="all">{t.filters.aircraftTypeAll}</option>
-                {filterOptions.types.map((type) => <option key={type} value={type}>{type}</option>)}
-              </select>
-              <select className="filter-select" value={countryFilter} onChange={(event) => setCountryFilter(event.target.value)} aria-label={t.filters.registration}>
-                <option value="all">{t.filters.registrationAll}</option>
-                {filterOptions.countries.map((country) => <option key={country} value={country}>{country}</option>)}
-              </select>
-              <label className="filter-toggle"><input type="checkbox" checked={airborneOnly} onChange={(event) => setAirborneOnly(event.target.checked)} /> {t.filters.airborneOnly}</label>
-              <label className="filter-toggle"><input type="checkbox" checked={emergencyOnly} onChange={(event) => setEmergencyOnly(event.target.checked)} /> {t.filters.emergencyOnly}</label>
-              <label className="filter-toggle"><input type="checkbox" checked={watchlistOnly} onChange={(event) => setWatchlistOnly(event.target.checked)} /> {t.filters.watchlistOnly}</label>
-            </div>
+            <div className="radar-options">
+              <button type="button" className="filter-button" aria-expanded={filtersOpen} aria-controls="map-filters-panel" onClick={() => setFiltersOpen((value) => !value)}>
+                <span>{t.filters.title}</span>
+                {hasActiveMapFilters && <span className="filter-active-dot" aria-label={t.filters.reset}>●</span>}
+              </button>
+              {filtersOpen && <div id="map-filters-panel" className="map-filters-panel" role="region" aria-label={t.filters.title}>
+                <fieldset className="map-filter-group">
+                  <legend>{t.filters.status}</legend>
+                  <div className="map-filter-choice-row">
+                    <label><input type="radio" name="aircraft-status" value="all" checked={mapFilters.status === "all"} onChange={(event) => updateMapFilter("status", event.target.value as MapAircraftFilters["status"])} /> {t.filters.statusAll}</label>
+                    <label><input type="radio" name="aircraft-status" value="airborne" checked={mapFilters.status === "airborne"} onChange={(event) => updateMapFilter("status", event.target.value as MapAircraftFilters["status"])} /> {t.filters.statusAirborne}</label>
+                    <label><input type="radio" name="aircraft-status" value="onGround" checked={mapFilters.status === "onGround"} onChange={(event) => updateMapFilter("status", event.target.value as MapAircraftFilters["status"])} /> {t.filters.statusOnGround}</label>
+                  </div>
+                </fieldset>
+                <fieldset className="map-filter-group">
+                  <legend>{t.filters.altitude}</legend>
+                  <div className="map-filter-fields">
+                    <label className="map-filter-field"><span>{t.filters.minimumAltitudeInput}</span><input type="number" inputMode="numeric" min="0" step="100" value={mapFilters.minAltitude} onChange={(event) => updateMapFilter("minAltitude", event.target.value)} /></label>
+                    <label className="map-filter-field"><span>{t.filters.maximumAltitudeInput}</span><input type="number" inputMode="numeric" min="0" step="100" value={mapFilters.maxAltitude} onChange={(event) => updateMapFilter("maxAltitude", event.target.value)} /></label>
+                  </div>
+                </fieldset>
+                <fieldset className="map-filter-group">
+                  <legend>{t.filters.identity}</legend>
+                  <div className="map-filter-fields">
+                    <label className="map-filter-field"><span>{t.filters.callsign}</span><input value={mapFilters.callsign} onChange={(event) => updateMapFilter("callsign", event.target.value.toUpperCase())} autoComplete="off" /></label>
+                    <label className="map-filter-field"><span>{t.filters.registrationInput}</span><input value={mapFilters.registration} onChange={(event) => updateMapFilter("registration", event.target.value.toUpperCase())} autoComplete="off" /></label>
+                    <label className="map-filter-field map-filter-field-wide"><span>{t.filters.icaoHexInput}</span><input value={mapFilters.icaoHex} onChange={(event) => updateMapFilter("icaoHex", event.target.value.toUpperCase())} autoComplete="off" /></label>
+                  </div>
+                </fieldset>
+                <fieldset className="map-filter-group">
+                  <legend>{t.filters.aircraft}</legend>
+                  <div className="map-filter-fields">
+                    <label className="map-filter-field"><span>{t.filters.aircraftType}</span><input value={mapFilters.aircraftType} onChange={(event) => updateMapFilter("aircraftType", event.target.value)} autoComplete="off" /></label>
+                    <label className="map-filter-field"><span>{t.filters.operator}</span><input value={mapFilters.operator} onChange={(event) => updateMapFilter("operator", event.target.value)} autoComplete="off" /></label>
+                  </div>
+                </fieldset>
+                <fieldset className="map-filter-group">
+                  <legend>{t.filters.special}</legend>
+                  <label className="filter-toggle"><input type="checkbox" checked={mapFilters.emergencyOnly} onChange={(event) => updateMapFilter("emergencyOnly", event.target.checked)} /> {t.filters.emergencyOnly}</label>
+                  <label className="filter-toggle"><input type="checkbox" checked={watchlistOnly} onChange={(event) => setWatchlistOnly(event.target.checked)} /> {t.filters.watchlistOnly}</label>
+                </fieldset>
+                <div className="map-filter-legacy-row">
+                  <label className="map-filter-field"><span>{t.filters.sortLabel}</span><select className="filter-select" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}><option value="distance">{t.filters.sortDistance}</option><option value="altitude">{t.filters.sortAltitude}</option><option value="callsign">{t.filters.sortCallsign}</option></select></label>
+                  <label className="map-filter-field"><span>{t.filters.maximumDistance}</span><select className="filter-select" value={distanceFilter} onChange={(event) => setDistanceFilter(event.target.value)}><option value="all">{t.filters.distanceAll}</option><option value="25">{t.filters.distanceWithin25}</option><option value="75">{t.filters.distanceWithin75}</option></select></label>
+                </div>
+                <button type="button" className="filter-reset-button" onClick={resetMapFilters}>{t.filters.reset}</button>
+              </div>}
             <details className="watchlist-box">
               <summary>{t.watchlist.title} <span>{watchlistSummary(watchlist.length)}</span></summary>
               <form onSubmit={addWatchlistRule} className="watchlist-form">
@@ -1053,7 +1081,7 @@ export function AirRadarApp() {
               <div><strong>{t.stats.aircraftTypes}</strong>{snapshot.stats.aircraftTypes.length ? snapshot.stats.aircraftTypes.slice(0, 5).map((item) => <span key={item.name}>{item.name} · {formatNumber(item.count)}</span>) : <span>{t.common.emptyValue}</span>}</div>
               <div><strong>{t.stats.airlines}</strong>{snapshot.stats.airlines.length ? snapshot.stats.airlines.slice(0, 5).map((item) => <span key={item.name}>{item.name} · {formatNumber(item.count)}</span>) : <span>{t.common.emptyValue}</span>}</div>
             </details>
-            </details>
+          </div>
           </div>
 
           <RelevantAtcPanel summaries={snapshot.relevantAtcFrequencies} expanded={!mobileCompact} onOpen={() => setMobileCompact(false)} />

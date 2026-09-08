@@ -83,6 +83,16 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain('geometry: { type: "LineString"');
   });
 
+  it("keeps selection details while hiding filtered map overlays and supports a client reset", () => {
+    expect(appSource).toContain("filterAircraftForMap(snapshot.aircraft, mapFilters)");
+    expect(appSource).toContain("const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some");
+    expect(appSource).toContain("selectedAircraftVisible ? selectedTrail");
+    expect(appSource).toContain("selectedAircraftVisible ? selectedAircraftInSnapshot");
+    expect(appSource).toContain('map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none")');
+    expect(appSource).toContain("resetMapFilters");
+    expect(appSource).toContain("setMapFilters(DEFAULT_MAP_AIRCRAFT_FILTERS)");
+  });
+
   it("keeps CZ and EN layer labels in the existing i18n dictionaries", () => {
     expect(getTranslations("cs").layers).toMatchObject({ aircraft: "Letadla", airports: "Letiště", atc: "ATC", heliports: "Heliporty" });
     expect(getTranslations("en").layers).toMatchObject({ aircraft: "Aircraft", airports: "Airports", atc: "ATC", heliports: "Heliports" });
