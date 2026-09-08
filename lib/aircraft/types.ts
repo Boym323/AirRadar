@@ -168,3 +168,36 @@ export interface ReceiverStatisticsResponse {
   topAircraftTypes: Array<{ name: string; count: number }>;
   topAirlines: Array<{ name: string; count: number }>;
 }
+
+export type ReceiverStatisticsRange = "7d" | "30d";
+
+export interface ReceiverStatisticsTrendPoint {
+  date: string;
+  uniqueAircraft: number | null;
+  maxConcurrentAircraft: number | null;
+  maxDistanceKm: number | null;
+}
+
+export interface ReceiverStatisticsCoverageTrendPoint {
+  date: string;
+  maxDistanceKm: number | null;
+}
+
+export interface ReceiverStatisticsRangeData {
+  range: ReceiverStatisticsRange;
+  days: number;
+  from: string;
+  to: string;
+  hasData: boolean;
+  summary: {
+    uniqueAircraft: number;
+    maxConcurrentAircraft: number;
+    maxDistanceKm: number;
+  };
+  trend: ReceiverStatisticsTrendPoint[];
+  coverageTrend: ReceiverStatisticsCoverageTrendPoint[];
+}
+
+export interface ReceiverStatisticsRangeResponse extends ReceiverStatisticsResponse {
+  period: ReceiverStatisticsRangeData;
+}

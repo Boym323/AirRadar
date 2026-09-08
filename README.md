@@ -264,7 +264,7 @@ feedback tools only; production release validation remains authoritative in
 - `GET /api/airports` — configured airport catalog or bundled fallback catalog
 - `GET /api/weather/airport/:icao` — on-demand AviationWeather.gov METAR/TAF for a canonical airport ICAO; returns `404` for unknown airports and `200` with nullable products when reports are unavailable
 - `GET /api/atc/sectors` — ATC sector and transmitter map data
-- `GET /api/statistics` — today's receiver aggregate, 36 ten-degree coverage buckets and top aircraft types/airlines; exact receiver coordinates are never included
+- `GET /api/statistics` — today's receiver aggregate by default (`range=today`), or a bounded `range=7d|30d` response built from daily statistics with period summary, daily trends and 36 ten-degree coverage buckets; exact receiver coordinates are never included
 - `GET /api/health` — application, database, readsb, ATC dataset, live-state and safe alerting health
 
 ## Production deployment

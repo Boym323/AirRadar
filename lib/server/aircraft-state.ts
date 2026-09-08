@@ -1,4 +1,4 @@
-import type { Aircraft, AircraftEnrichment, ProviderSnapshot, ReceiverStatisticsResponse, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
+import type { Aircraft, AircraftEnrichment, ProviderSnapshot, ReceiverStatisticsRange, ReceiverStatisticsRangeResponse, ReceiverStatisticsResponse, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import {
   getAircraftStaleAfterMs,
   getHistorySampleIntervalMs,
@@ -192,6 +192,10 @@ export class AircraftStateService {
 
   getStatistics(): ReceiverStatisticsResponse {
     return this.statistics.getResponse(this.aircraft.size, this.messagesPerSecond);
+  }
+
+  async getStatisticsRange(range: ReceiverStatisticsRange): Promise<ReceiverStatisticsRangeResponse> {
+    return this.statistics.getRangeResponse(this.aircraft.size, this.messagesPerSecond, range);
   }
 
   getAircraft(icaoHex: string): Aircraft | null {

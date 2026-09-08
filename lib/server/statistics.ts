@@ -1,9 +1,11 @@
 import "temporal-polyfill/full/global";
-import type { Aircraft, RadarStats, ReceiverPosition, ReceiverStatisticsResponse } from "@/lib/aircraft/types";
+import type { Aircraft, RadarStats, ReceiverPosition, ReceiverStatisticsRange, ReceiverStatisticsRangeResponse, ReceiverStatisticsResponse } from "@/lib/aircraft/types";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import { COVERAGE_BUCKET_COUNT, COVERAGE_BUCKET_SIZE_DEGREES } from "@/lib/statistics-coverage";
 import { dayKey, getAppTimezone } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
+import { getReceiverStatisticsRange } from "@/lib/server/statistics-range";
+import type { CurrentDayStatisticsSnapshot } from "@/lib/server/statistics-range";
 
 export { COVERAGE_BUCKET_COUNT, COVERAGE_BUCKET_SIZE_DEGREES } from "@/lib/statistics-coverage";
 export const STATISTICS_FLUSH_INTERVAL_MS = 30_000;
@@ -350,6 +352,36 @@ export class ReceiverStatistics {
       })),
       topAircraftTypes: sortBreakdown(this.typeCounts).slice(0, 10),
       topAirlines: sortBreakdown(this.airlineCounts).slice(0, 10),
+    };
+  }
+
+  async getRangeResponse(
+    currentAircraft: number,
+    messagesPerSecond: number | null,
+    range: ReceiverStatisticsRange,
+  ): Promise<ReceiverStatisticsRangeResponse> {
+    const current = this.getResponse(currentAircraft, messagesPerSecond);
+    const period = await getReceiverStatisticsRange({
+      range,
+      now: this.clock(),
+      timezone: this.timezone,
+      currentDay: this.getCurrentDaySnapshot(),
+    });
+    return { ...current, coverage: period.coverage, period };
+  }
+
+  getCurrentDaySnapshot(): CurrentDayStatisticsSnapshot {
+    this.ensureDay(this.clock());
+    return {
+      date: this.currentDate,
+      uniqueAircraftCount: this.uniqueAircraftCount,
+      maxConcurrentAircraft: this.maxConcurrentAircraft,
+      maxDistanceKm: this.maxDistanceKm,
+      aircraft: [...this.aircraft.values()].map((item) => ({ ...item })),
+      coverage: Array.from({ length: COVERAGE_BUCKET_COUNT }, (_, azimuthBucket) => ({
+        azimuthBucket,
+        maxDistanceKm: this.coverage.get(azimuthBucket) ?? 0,
+      })),
     };
   }
 
