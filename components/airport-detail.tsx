@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Airport } from "@/lib/airports/types";
 import { AirportMap } from "@/components/airport-map";
+import { AirportTrafficSummary } from "@/components/airport-traffic-summary";
 import { AirportWeatherPanel } from "@/components/airport-weather";
 import { formatCoordinate, t } from "@/lib/i18n";
 
@@ -35,6 +36,8 @@ export function AirportDetail({ airport }: { airport: Airport }) {
             <div><dt>{t.airport.coordinates}</dt><dd>{formatCoordinate(airport.latitude)}, {formatCoordinate(airport.longitude)}</dd></div>
           </dl>
         </section>
+
+        <AirportTrafficSummary airport={airport} />
 
         <section className="airport-card" aria-labelledby="airport-weather-title">
           <h2 id="airport-weather-title">{t.weather.title}</h2>

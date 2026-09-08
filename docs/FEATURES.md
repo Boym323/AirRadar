@@ -9,7 +9,7 @@ whether an operator has configured an optional provider.
 | --- | --- | --- |
 | `/` | Live MapLibre radar, aircraft list/filtering, selected aircraft detail, live trail, route/airport/ATC overlays, SSE connection state. | Production core; readsb or demo provider. |
 | `/aircraft/:hex` | Durable aircraft metadata, recent flight instances, bounded history summary, and optional photo. | Production; PostgreSQL required for durable detail, photo optional. |
-| `/airports/:icao` | Airport detail, MapLibre location map, catalog metadata, on-demand weather. | Production; catalog fallback works, weather optional. |
+| `/airports/:icao` | Airport detail, MapLibre location map, catalog metadata, on-demand weather, and 7/30-day observed receiver traffic summary. | Production; traffic uses persisted Flight instances, catalog fallback works, weather optional. |
 | `/history` | Bounded flight-instance search/list, sampled position detail, playback map. | Production; PostgreSQL feature, no live-polling dependency. |
 | `/statistics` | Today/7-day/30-day receiver aggregate, trends, and coverage visualization. | Production; today is RAM-backed, ranges use daily PostgreSQL aggregates. |
 | `/watchlist` | Server alert-rule editor and current matching state. | Production; shared `data/alerts.json`, no auth/user accounts. |
@@ -27,6 +27,7 @@ whether an operator has configured an optional provider.
 | `GET /api/history/flights` | Bounded flight list by local range, search, or exact hex. | Production with PostgreSQL. |
 | `GET /api/history/flights/:id` | One flight instance and capped sampled positions. | Production with PostgreSQL. |
 | `GET /api/airports` | PostgreSQL airport catalog or bundled fallback catalog. | Production with import/fallback. |
+| `GET /api/airports/:icao/traffic?range=7d\|30d` | Bounded airport traffic summary from persisted Flights captured by this receiver, including route, aircraft, callsign, and recent-traffic rankings. | Production when PostgreSQL history is configured; default range is 30 days. |
 | `GET /api/search?q=` | Bounded global live-aircraft and airport search. | Production. |
 | `GET /api/weather/airport/:icao` | Canonical-airport AviationWeather.gov METAR/TAF. | Optional external data; on-demand and cached. |
 | `GET /api/atc/sectors` | ATC sectors/transmitters plus provenance metadata. | Production with imported data; demo sample only in demo/explicit opt-in. |

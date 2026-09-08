@@ -48,6 +48,24 @@ older than `HISTORY_RETENTION_DAYS`. It never resets the database. Flight list
 and detail endpoints query PostgreSQL with bounded limits; flight detail caps
 positions and reports truncation.
 
+## Airport traffic summary
+
+`GET /api/airports/:icao/traffic` resolves the canonical airport, then reads
+only persisted `Flight` instances whose `startTime` falls inside the selected
+7-day or 30-day calendar window in `APP_TIMEZONE` (30 days by default). Two
+bounded route predicates cover origin and destination; rows are deduplicated by
+`Flight.id`, so a flight cannot inflate the total when both fields reference
+the airport. The response aggregates departures, arrivals, unique aircraft by
+ICAO identity, active local days, first/last capture, top callsigns, and capped
+route/aircraft/recent-flight lists.
+
+Route airport metadata is loaded in batched ICAO/IATA queries with the bundled
+catalog as a fallback. Missing route metadata is omitted from route rankings,
+not inferred from `FlightPosition`; the summary never reads `FlightPosition`
+and never calls an external provider. Recent links use canonical airport ICAO,
+aircraft ICAO hex, and the existing flight-history detail route. This is
+receiver-observed traffic, not a complete airport traffic count.
+
 ## Statistics and coverage
 
 `ReceiverStatistics.observe()` runs after each applied snapshot. It counts
