@@ -141,10 +141,21 @@ function HistoryMap({ positions, sample }: { positions: PlaybackPosition[]; samp
     if (markerPlaneRef.current && sample.track !== null) markerPlaneRef.current.style.transform = `rotate(${sample.track}deg)`;
   }, [sample]);
 
-  return <div ref={containerRef} className="history-map" aria-label={t.history.trailMap} />;
+  return <div className="history-observed-path">
+    <div className="history-path-heading"><strong>{t.history.observedPath}</strong><span>{t.history.observedPathDescription}</span></div>
+    <div ref={containerRef} className="history-map" aria-label={t.history.trailMap} />
+  </div>;
 }
 
-function FlightPlayback({ positions }: { positions: PlaybackPosition[] }) {
+function PlaybackRouteContext({ flight }: { flight: HistoryFlightDetail["flight"] }) {
+  if (!flight.origin && !flight.destination) return null;
+  return <div className="history-route-context">
+    <div><span>{t.history.routeContext}</span><strong>{flight.origin ? <AirportCodeLink code={flight.origin} /> : t.common.emptyValue} <span aria-hidden="true">→</span> {flight.destination ? <AirportCodeLink code={flight.destination} /> : t.common.emptyValue}</strong></div>
+    <p>{t.history.routeContextDescription}</p>
+  </div>;
+}
+
+function FlightPlayback({ positions, flight }: { positions: PlaybackPosition[]; flight: HistoryFlightDetail["flight"] }) {
   const range = useMemo(() => playbackTimeRange(positions), [positions]);
   const start = range?.start ?? 0;
   const end = range?.end ?? 0;
@@ -208,7 +219,7 @@ function FlightPlayback({ positions }: { positions: PlaybackPosition[] }) {
           <label className="history-speed-label">
             <span>{t.history.playbackSpeed}</span>
             <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))}>
-              {[1, 4, 10].map((value) => <option key={value} value={value}>{value}×</option>)}
+              {[0.5, 1, 2, 4, 10].map((value) => <option key={value} value={value}>{value}×</option>)}
             </select>
           </label>
         </div>
@@ -222,12 +233,14 @@ function FlightPlayback({ positions }: { positions: PlaybackPosition[] }) {
           onChange={(event) => setTime(Number(event.target.value))}
           aria-label={t.history.playback}
         />
-        <div className="history-playback-range"><span>{formatTime(new Date(start).toISOString())}</span><span>{formatTime(new Date(end).toISOString())}</span></div>
+        <div className="history-playback-range"><span>{t.history.start}: {formatDateTime(new Date(start).toISOString())}</span><span>{t.history.end}: {formatDateTime(new Date(end).toISOString())}</span></div>
         <div className="history-playback-readout">
+          <div><span>{t.history.currentPoint}</span><strong>{sample.index + 1} / {positions.length}</strong></div>
           <div><span>{t.aircraft.altitude}</span><strong>{formatAltitude(sample.altitude)}</strong></div>
           <div><span>{t.aircraft.groundSpeed}</span><strong>{formatSpeed(sample.groundSpeed)}</strong></div>
           <div><span>{t.aircraft.track}</span><strong>{formatTrack(sample.track)}</strong></div>
         </div>
+        <PlaybackRouteContext flight={flight} />
       </div>
     </div>
   );
@@ -266,7 +279,7 @@ export function FlightDetailPanel({ detail }: { detail: HistoryFlightDetail }) {
       {detail.positions.length ? (
         <>
           {detail.truncated && <div className="history-note history-truncated">{t.history.playbackTruncated}</div>}
-          <FlightPlayback positions={detail.positions} />
+          <FlightPlayback positions={detail.positions} flight={flight} />
           <FlightProfile positions={detail.positions} />
         </>
       ) : <div className="history-note">{t.history.flightWithoutPositions}</div>}
