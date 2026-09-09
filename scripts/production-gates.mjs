@@ -129,6 +129,9 @@ async function main() {
     const watchlistMutation = await get("/api/watchlist", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
     if (watchlistMutation.status !== 401) throw new Error("Watchlist mutation was not protected");
     const sseSnapshotBytes = await assertSseLifecycle();
+    const afterSse = await get("/api/system/status");
+    const afterSsePayload = await afterSse.json();
+    if (!afterSse.ok || afterSsePayload.runtime?.activeSseClients !== 0) throw new Error("SSE client cleanup failed");
     await assertBrowserSmoke();
     console.log(`[production-gates] measured first SSE event bytes=${sseSnapshotBytes}, airports bytes=${staticPayloadBytes["/api/airports"]}, ATC bytes=${staticPayloadBytes["/api/atc/sectors"]}`);
     console.log("[production-gates] built server, SSE, caching, auth, PWA, migration, and diagnostics checks passed");

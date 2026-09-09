@@ -26,4 +26,17 @@ describe("bounded request limiter", () => {
     expect(getRateLimitClientKey(new Request("http://localhost", { headers: { "x-forwarded-for": "198.51.100.20" } }))).toBe("anonymous");
     expect(getRateLimitClientKey(new Request("http://localhost", { headers: { "x-real-ip": "not-an-ip" } }))).toBe("anonymous");
   });
+
+  it("keeps client buckets isolated while retaining bounded eviction", () => {
+    const limiter = new BoundedRateLimiter(2);
+    const policy = { limit: 1, windowMs: 60_000 };
+    const clientA = getRateLimitClientKey(new Request("http://localhost", { headers: { "x-real-ip": "192.0.2.10" } }));
+    const clientB = getRateLimitClientKey(new Request("http://localhost", { headers: { "x-real-ip": "192.0.2.11" } }));
+
+    expect(limiter.consume(`aircraft:${clientA}`, policy, 0).allowed).toBe(true);
+    expect(limiter.consume(`aircraft:${clientA}`, policy, 1).allowed).toBe(false);
+    expect(limiter.consume(`aircraft:${clientB}`, policy, 1).allowed).toBe(true);
+    limiter.consume("aircraft:192.0.2.12", policy, 1);
+    expect(limiter.size()).toBe(2);
+  });
 });
