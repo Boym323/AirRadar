@@ -71,7 +71,7 @@ function build(overrides: Partial<Parameters<typeof buildSystemStatus>[0]> = {})
     airportData: { rowCount: 5886, fallbackRowCount: 6 },
     weather: { entries: 2, airports: 1 },
     now: checkedAt,
-    runtime: { version: "0.1.0", commit: "abcdef1234567", uptimeSeconds: 120, startedAt: "2026-09-08T11:58:00.000Z" },
+    runtime: { version: "0.1.0", commit: "abcdef1234567", channel: "development", uptimeSeconds: 120, startedAt: "2026-09-08T11:58:00.000Z" },
     ...overrides,
   });
 }
