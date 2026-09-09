@@ -245,3 +245,9 @@ Changes since v1.0.3:
 Changes since v1.0.4:
 
 - fix: handle stale network positions and improve aircraft merging logic (e3fcc215)
+
+## [1.0.6] - 2026-09-09
+
+Changes since v1.0.5:
+
+- feat: add User-Agent header to ADSB.lol requests (5bac7791)
