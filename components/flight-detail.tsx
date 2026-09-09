@@ -155,7 +155,7 @@ function PlaybackRouteContext({ flight }: { flight: HistoryFlightDetail["flight"
   </div>;
 }
 
-function FlightPlayback({ positions, flight }: { positions: PlaybackPosition[]; flight: HistoryFlightDetail["flight"] }) {
+function FlightPlayback({ positions, flight, onPlaybackChange }: { positions: PlaybackPosition[]; flight: HistoryFlightDetail["flight"]; onPlaybackChange: (timestamp: number) => void }) {
   const range = useMemo(() => playbackTimeRange(positions), [positions]);
   const start = range?.start ?? 0;
   const end = range?.end ?? 0;
@@ -167,8 +167,9 @@ function FlightPlayback({ positions, flight }: { positions: PlaybackPosition[]; 
   useEffect(() => {
     playbackRef.current = start;
     setPlaybackAt(start);
+    onPlaybackChange(start);
     setPlaying(false);
-  }, [start, end]);
+  }, [end, onPlaybackChange, start]);
 
   useEffect(() => {
     if (!playing || !range || end <= start) return;
@@ -179,6 +180,7 @@ function FlightPlayback({ positions, flight }: { positions: PlaybackPosition[]; 
       previousFrame = now;
       playbackRef.current = next;
       setPlaybackAt(next);
+      onPlaybackChange(next);
       if (next >= end) {
         setPlaying(false);
         return;
@@ -187,7 +189,7 @@ function FlightPlayback({ positions, flight }: { positions: PlaybackPosition[]; 
     };
     animationFrame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animationFrame);
-  }, [end, playing, range, speed, start]);
+  }, [end, onPlaybackChange, playing, range, speed, start]);
 
   const sample = useMemo(() => playbackSampleAt(positions, playbackAt), [positions, playbackAt]);
   if (!range || !sample) return <div className="history-note">{t.history.flightWithoutPositions}</div>;
@@ -196,6 +198,7 @@ function FlightPlayback({ positions, flight }: { positions: PlaybackPosition[]; 
     const next = Math.min(end, Math.max(start, value));
     playbackRef.current = next;
     setPlaybackAt(next);
+    onPlaybackChange(next);
     if (next < end) setPlaying(false);
   }
 
@@ -253,6 +256,7 @@ function AirportCodeLink({ code }: { code: string | null }) {
 
 export function FlightDetailPanel({ detail }: { detail: HistoryFlightDetail }) {
   const { flight } = detail;
+  const [playbackAt, setPlaybackAt] = useState<number | null>(null);
   const route = flight.origin && flight.destination ? (
     <>
       <AirportCodeLink code={flight.origin} /> <span aria-hidden="true">→</span> <AirportCodeLink code={flight.destination} />
@@ -279,8 +283,8 @@ export function FlightDetailPanel({ detail }: { detail: HistoryFlightDetail }) {
       {detail.positions.length ? (
         <>
           {detail.truncated && <div className="history-note history-truncated">{t.history.playbackTruncated}</div>}
-          <FlightPlayback positions={detail.positions} flight={flight} />
-          <FlightProfile positions={detail.positions} />
+          <FlightPlayback positions={detail.positions} flight={flight} onPlaybackChange={setPlaybackAt} />
+          <FlightProfile positions={detail.positions} playbackAt={playbackAt} />
         </>
       ) : <div className="history-note">{t.history.flightWithoutPositions}</div>}
     </div>

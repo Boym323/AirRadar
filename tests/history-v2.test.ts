@@ -12,7 +12,7 @@ import type { HistoryFlightSummary } from "@/lib/server/history";
 import { aircraftAirportHref, aircraftFlightHref, aircraftHistoryHref } from "@/lib/aircraft/detail-links";
 import { getPrisma } from "@/lib/server/db";
 import { playbackSampleAt, playbackTimeRange, type PlaybackPosition } from "@/lib/history/playback";
-import { buildFlightProfileSeries } from "@/components/flight-profile";
+import { buildFlightProfileSeries, flightProfilePlaybackX } from "@/components/flight-profile";
 
 vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn() }));
 
@@ -353,5 +353,14 @@ describe("flight history v2", () => {
     expect(playbackSampleAt(positions, range!.start)).toMatchObject({ lat: 50, lon: 14, index: 0 });
     expect(playbackSampleAt(positions, range!.end)).toMatchObject({ lat: 51, lon: 15, index: 1 });
     expect(playbackSampleAt(positions, range!.start + 30_000)).toMatchObject({ lat: 50.5, lon: 14.5 });
+  });
+
+  it("maps one playback timestamp to a synchronized SVG profile marker", () => {
+    const series = buildFlightProfileSeries([
+      { recordedAt: "2026-01-01T12:00:00Z", lat: 50, lon: 14, altitude: 8_000, groundSpeed: 200, track: 90, verticalRate: null },
+      { recordedAt: "2026-01-01T12:01:00Z", lat: 51, lon: 15, altitude: 10_000, groundSpeed: 220, track: 100, verticalRate: null },
+    ], "altitude");
+    expect(flightProfilePlaybackX(series, Date.parse("2026-01-01T12:00:30Z"))).toBe(340);
+    expect(flightProfilePlaybackX(series, null)).toBeNull();
   });
 });

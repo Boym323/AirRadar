@@ -31,6 +31,7 @@ interface ProfileChartProps {
   series: FlightProfileSeriesPoint[];
   color: string;
   unit: string;
+  playbackAt?: number | null;
 }
 
 function chartCoordinates(series: FlightProfileSeriesPoint[]): Array<{ x: number; y: number; value: number }> {
@@ -61,7 +62,16 @@ function chartCoordinates(series: FlightProfileSeriesPoint[]): Array<{ x: number
   });
 }
 
-function ProfileChart({ title, series, color, unit }: ProfileChartProps) {
+export function flightProfilePlaybackX(series: FlightProfileSeriesPoint[], playbackAt: number | null | undefined): number | null {
+  if (!series.length || playbackAt === null || playbackAt === undefined) return null;
+  const firstTime = Date.parse(series[0].recordedAt);
+  const lastTime = Date.parse(series[series.length - 1].recordedAt);
+  if (!Number.isFinite(firstTime) || !Number.isFinite(lastTime) || lastTime <= firstTime || !Number.isFinite(playbackAt)) return null;
+  const plotWidth = CHART_WIDTH - PADDING.left - PADDING.right;
+  return PADDING.left + Math.min(1, Math.max(0, (playbackAt - firstTime) / (lastTime - firstTime))) * plotWidth;
+}
+
+function ProfileChart({ title, series, color, unit, playbackAt }: ProfileChartProps) {
   const coordinates = chartCoordinates(series);
   if (!coordinates.length) return <div className="flight-profile-empty">{t.history.profileNoData}</div>;
 
@@ -72,6 +82,7 @@ function ProfileChart({ title, series, color, unit }: ProfileChartProps) {
   const lower = minimum - padding;
   const upper = maximum + padding;
   const points = coordinates.map((coordinate) => `${coordinate.x},${coordinate.y}`).join(" ");
+  const playbackX = flightProfilePlaybackX(series, playbackAt);
   const axisLabel = `${formatNumber(maximum, 0)}${unit} – ${formatNumber(minimum, 0)}${unit}`;
 
   return (
@@ -93,12 +104,13 @@ function ProfileChart({ title, series, color, unit }: ProfileChartProps) {
         })}
         <polyline points={points} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         {coordinates.length === 1 && <circle cx={coordinates[0].x} cy={coordinates[0].y} r="4" fill={color} />}
+        {playbackX !== null && <line x1={playbackX} x2={playbackX} y1={PADDING.top} y2={CHART_HEIGHT - PADDING.bottom} className="flight-profile-playback-marker" />}
       </svg>
     </div>
   );
 }
 
-export function FlightProfile({ positions }: { positions: HistoryFlightDetail["positions"] }): ReactNode {
+export function FlightProfile({ positions, playbackAt }: { positions: HistoryFlightDetail["positions"]; playbackAt?: number | null }): ReactNode {
   const altitude = buildFlightProfileSeries(positions, "altitude");
   const speed = buildFlightProfileSeries(positions, "groundSpeed");
   const verticalRate = buildFlightProfileSeries(positions, "verticalRate");
@@ -107,9 +119,9 @@ export function FlightProfile({ positions }: { positions: HistoryFlightDetail["p
     <section className="flight-profiles" aria-labelledby="flight-profiles-title">
       <h2 id="flight-profiles-title">{t.history.profilesTitle}</h2>
       <div className="flight-profile-grid">
-        <ProfileChart title={t.history.altitudeProfile} series={altitude} color="#f3b95f" unit=" ft" />
-        <ProfileChart title={t.history.speedProfile} series={speed} color="#37d6c0" unit=" kt" />
-        <ProfileChart title={t.history.verticalRateProfile} series={verticalRate} color="#9b8cff" unit=" fpm" />
+        <ProfileChart title={t.history.altitudeProfile} series={altitude} color="#f3b95f" unit=" ft" playbackAt={playbackAt} />
+        <ProfileChart title={t.history.speedProfile} series={speed} color="#37d6c0" unit=" kt" playbackAt={playbackAt} />
+        <ProfileChart title={t.history.verticalRateProfile} series={verticalRate} color="#9b8cff" unit=" fpm" playbackAt={playbackAt} />
       </div>
     </section>
   );

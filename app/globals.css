@@ -893,6 +893,7 @@ button { cursor: pointer; }
 .flight-profile-chart-heading span { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
 .flight-profile-svg { display: block; width: 100%; height: 150px; margin-top: 8px; overflow: visible; }
 .flight-profile-grid-line { stroke: rgba(153,181,207,.16); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.flight-profile-playback-marker { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; pointer-events: none; }
 .flight-profile-axis-label { fill: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
 .flight-profile-empty { padding: 16px 2px; color: var(--muted); font-size: 11px; }
 
