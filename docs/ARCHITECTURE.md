@@ -19,6 +19,7 @@ one global AircraftStateService
   ├─ daily ReceiverStatistics aggregate
   ├─ page-scoped logbook summary read
   ├─ AlertEngine
+  │   └─ append-only alert event ledger (`data/alert-events.jsonl`)
   └─ listeners
         ├─ GET /api/aircraft
         ├─ GET /api/stream (SSE)
@@ -59,7 +60,10 @@ independent lanes:
   `FlightPosition` records at the configured sampling interval. It is not a
   per-ADS-B-message log.
 - `AlertEngine` evaluates server rules on snapshot transitions and sends
-  bounded, asynchronous notifications.
+  bounded, asynchronous notifications. It also records detected events and
+  notification outcomes separately in a safe append-only JSONL ledger. Durable
+  NEW events are accepted only from successful first-Flight history writes;
+  reception-record events are compared after persisted statistics startup.
 
 The live snapshot is built from the RAM map and is sorted by distance. A
 provider failure clears message-rate availability, removes stale aircraft, and
@@ -81,9 +85,12 @@ PostgreSQL is optional for live operation. When configured, it stores:
   not complete reception records.
 
 Process memory holds live aircraft, trails, enrichment caches, ATC resolver
-cache, weather cache, photo metadata cache, and alert deduplication. The
+cache, weather cache, photo metadata cache, reception-record baselines, and
+alert deduplication. The
 browser's watchlist is stored in that browser's `localStorage`; server alert
-rules are stored in `data/alerts.json`, not in PostgreSQL.
+rules are stored in `data/alerts.json`, not in PostgreSQL. Alert history is
+stored as append-only safe event/status lines in `data/alert-events.jsonl` and
+is read from a bounded tail with bounded pagination.
 
 ## Browser and API boundary
 
@@ -98,6 +105,11 @@ The live map is a MapLibre map with DOM markers keyed by ICAO hex and GeoJSON
 overlays. Route visualization is a separate Route V2 namespace. See
 [Runtime invariants](RUNTIME-INVARIANTS.md#maplibre-namespaces-and-cleanup)
 for the complete ownership list and cleanup contract.
+
+Recap pages are page-scoped reads. They merge the existing daily receiver
+aggregates with bounded `Flight` instance queries and one batched aircraft
+metadata lookup; they never read `FlightPosition`, start a poller, or open an
+SSE connection.
 
 ## Process lifecycle
 

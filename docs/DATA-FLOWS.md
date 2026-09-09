@@ -21,6 +21,24 @@
    provider refresh. An enrichment result is applied only if it still belongs
    to the same aircraft observation.
 
+## Alerts and alert history
+
+Server watchlist, emergency, new-aircraft, and reception-record transitions
+are evaluated by the shared `AlertEngine`. A detected event is first written
+as safe metadata to the append-only `data/alert-events.jsonl` ledger. Notifier
+delivery is a separate asynchronous lane and appends `attempted`, `delivered`,
+`failed`, or `disabled` status lines; raw provider payloads, credentials, and
+delivery errors are not persisted. `GET /api/alerts` folds the status lines
+into a bounded paginated DTO.
+
+The NEW transition is emitted only by `recordAircraftSnapshot()` after a
+successful transaction creates the aircraft's first durable `Flight` instance.
+An in-memory restart or an `Aircraft` row without a Flight cannot create a NEW
+alert. Reception-record transitions are evaluated only after the daily
+statistics aggregate is ready and compare the current daily maximum with the
+loaded daily/lifetime baselines. Stable event IDs prevent the same record from
+being emitted twice in one process.
+
 The live radar page creates one `EventSource`, maintains a bounded client-side
 live trail, animates MapLibre DOM markers, and reconnects through the browser's
 `EventSource` behavior after a network interruption. The statistics page has
@@ -158,3 +176,14 @@ live and watchlist counts, then batches today’s persisted Flight identities an
 their lifetime Flight rows to classify NEW/RARE/RETURNING aircraft. It is not
 called for each SSE event and shows zero durable labels when PostgreSQL is
 unavailable rather than treating a process restart as a new observation.
+
+## Receiver recaps
+
+`GET /api/recap?range=daily|weekly` is a page-scoped read in Europe/Prague
+local time. It reads the selected date range from `ReceiverDailyStats` and
+`ReceiverDailyAircraft`, reads at most `RECAP_FLIGHT_LIMIT` Flight instances,
+and resolves aircraft metadata in one batched query. Weekly comparison reads
+the preceding seven aggregate/Flight windows. Missing aggregate rows remain
+missing in the response rather than becoming zeroes. Recaps do not scan
+`FlightPosition`, make provider requests, create another EventSource, or add
+another polling loop.
