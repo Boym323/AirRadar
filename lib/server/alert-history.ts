@@ -1,4 +1,4 @@
-import { appendFile, mkdir, open, stat } from "node:fs/promises";
+import { appendFile, mkdir, open, rename, stat, unlink } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Aircraft } from "@/lib/aircraft/types";
 import { getRuntimeStatePath } from "@/lib/server/runtime-state";
@@ -63,6 +63,8 @@ interface NotificationLine {
 const MAX_PAGE_SIZE = 100;
 const MAX_READ_BYTES = 2_000_000;
 const MAX_LINE_LENGTH = 8_000;
+export const ALERT_LEDGER_MAX_BYTES = 8_000_000;
+export const ALERT_LEDGER_RETENTION_BYTES = 2_000_000;
 
 export function getAlertHistoryPath(): string {
   return getRuntimeStatePath("alert-events.jsonl");
@@ -150,7 +152,10 @@ function pageFromLines(lines: Iterable<unknown>, options: { page?: number; pageS
 export class JsonlAlertHistoryStore {
   private writeQueue: Promise<void> = Promise.resolve();
 
-  constructor(private readonly path = getAlertHistoryPath()) {}
+  constructor(
+    private readonly path = getAlertHistoryPath(),
+    private readonly retention = { maxBytes: ALERT_LEDGER_MAX_BYTES, retentionBytes: ALERT_LEDGER_RETENTION_BYTES },
+  ) {}
 
   recordDetected(detection: AlertHistoryDetection): Promise<void> {
     const line: DetectionLine = { kind: "detected", entry: entryFromDetection(detection) };
@@ -172,9 +177,40 @@ export class JsonlAlertHistoryStore {
     const operation = this.writeQueue.then(async () => {
       await mkdir(dirname(this.path), { recursive: true });
       await appendFile(this.path, `${JSON.stringify(line)}\n`, { encoding: "utf8", mode: 0o600 });
+      await this.compactIfNeeded();
     });
     this.writeQueue = operation.catch(() => undefined);
     return operation;
+  }
+
+  private async compactIfNeeded(): Promise<void> {
+    const size = (await stat(this.path)).size;
+    if (size <= this.retention.maxBytes) return;
+    const start = Math.max(0, size - this.retention.retentionBytes);
+    const handle = await open(this.path, "r");
+    let text = "";
+    try {
+      const buffer = Buffer.alloc(size - start);
+      await handle.read(buffer, 0, buffer.length, start);
+      text = buffer.toString("utf8");
+    } finally {
+      await handle.close();
+    }
+    const firstLineEnd = text.indexOf("\n");
+    const retained = start > 0 && firstLineEnd >= 0 ? text.slice(firstLineEnd + 1) : text;
+    const temporaryPath = `${this.path}.${process.pid}.compact.tmp`;
+    try {
+      const temporary = await open(temporaryPath, "wx", 0o600);
+      try {
+        await temporary.writeFile(retained, "utf8");
+        await temporary.sync();
+      } finally {
+        await temporary.close();
+      }
+      await rename(temporaryPath, this.path);
+    } finally {
+      await unlink(temporaryPath).catch(() => undefined);
+    }
   }
 
   private async readTail(): Promise<unknown[]> {

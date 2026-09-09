@@ -64,4 +64,13 @@ describe("alert history", () => {
     vi.stubEnv("ALERT_HISTORY_PATH", "/tmp/not-an-airradar-state-file.jsonl");
     expect(getAlertHistoryPath()).toBe("/var/lib/airradar/alert-events.jsonl");
   });
+
+  it("rotates the physical JSONL ledger while retaining a bounded tail", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
+    directories.push(directory);
+    const path = join(directory, "events.jsonl");
+    const store = new JsonlAlertHistoryStore(path, { maxBytes: 700, retentionBytes: 300 });
+    for (let index = 0; index < 20; index += 1) await store.recordNotification(`notification-${index}`, "attempted");
+    expect((await stat(path)).size).toBeLessThanOrEqual(700);
+  });
 });
