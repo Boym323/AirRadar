@@ -176,3 +176,29 @@ Changes since v0.1.12:
 - docs: document batch 4 product flows (fdebe871)
 - fix: bound alert event deduplication (6a8e10c3)
 - fix: persist runtime alert state outside source tree (8898a796)
+
+## [1.0.0-rc.1] - 2026-09-09
+
+Changes since v0.1.13:
+
+- fix: bound aircraft metadata catalog memory (6b32fe38)
+- perf: optimize recap queries (d1a7d48d)
+- perf: compact live stream and bound SSE clients (82088886)
+- fix: scope public rate limits per client (9e4167ad)
+- fix: protect watchlist mutations (49774910)
+- feat: expose bounded runtime diagnostics (91402c90)
+- fix: bound alert ledger growth (f687960f)
+- chore: prepare stable release metadata (14d4e32e)
+- fix: improve PWA and accessibility basics (f55b1af2)
+- test: add production stability gates (c91a8d13)
+- ops: document backup and recovery (dfb480e9)
+- chore: mark production builds with stable channel (8ffb5f8c)
+- test: report production payload measurements (35b73966)
+- fix: report metadata catalog diagnostics (2a237a47)
+- test: stabilize release channel fixture (5e3f0f67)
+- fix: bound tar1090 metadata fallback cache (f201265c)
+- fix: report process cgroup memory diagnostics (def27a1c)
+- test: cover SSE cleanup and client rate isolation (24f24d96)
+- docs: document bounded metadata and memory diagnostics (c246715d)
+- test: stabilize browser accessibility gate (33b6ef0e)
+- feat: support release candidate deployments (b07ecf4c)
