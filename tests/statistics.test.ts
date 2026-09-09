@@ -7,6 +7,7 @@ import type { ReceiverStatisticsPersistence, ReceiverStatisticsPersistenceSnapsh
 import { coverageChartPoints, coveragePolygonPath, summarizeCoverage } from "@/lib/statistics-coverage";
 
 const receiver: ReceiverPosition = { lat: 50, lon: 14, name: "Test" };
+const fixtureClock = () => new Date("2026-09-08T12:00:00.000Z");
 
 function aircraft(hex: string, lat = 50, lon = 14, options: { type?: string; airline?: string; bearing?: number; distanceKm?: number; registration?: string } = {}): Aircraft {
   const value = normalizeAircraft({ hex, flight: hex, lat, lon }, receiver, new Date("2026-09-08T12:00:00.000Z"));
@@ -69,18 +70,18 @@ describe("receiver statistics", () => {
 
   it("counts an ICAO hex once per day and recovers it after restart", async () => {
     const persistence = new FakePersistence();
-    const first = new ReceiverStatistics({ timezone: "Europe/Prague", persistence, flushIntervalMs: 1 });
+    const first = new ReceiverStatistics({ timezone: "Europe/Prague", persistence, flushIntervalMs: 1, clock: fixtureClock });
     const at = new Date("2026-09-08T12:00:00.000Z");
     first.observe([aircraft("AAA001")], receiver, at);
     first.observe([aircraft("AAA001")], receiver, new Date(at.getTime() + 2));
     await first.close();
-    const restarted = new ReceiverStatistics({ timezone: "Europe/Prague", persistence });
+    const restarted = new ReceiverStatistics({ timezone: "Europe/Prague", persistence, clock: fixtureClock });
     await restarted.load();
     expect(restarted.getResponse(0, null).daily.uniqueAircraft).toBe(1);
   });
 
   it("tracks maximum concurrency and maximum distance", () => {
-    const stats = new ReceiverStatistics({ persistence: null });
+    const stats = new ReceiverStatistics({ persistence: null, clock: fixtureClock });
     const at = new Date("2026-09-08T12:00:00.000Z");
     stats.observe([aircraft("AAA001", 50, 14, { distanceKm: 20 })], receiver, at);
     stats.observe([
@@ -107,7 +108,7 @@ describe("receiver statistics", () => {
   });
 
   it("puts north and the 359 degree edge in the expected buckets", () => {
-    const stats = new ReceiverStatistics({ persistence: null });
+    const stats = new ReceiverStatistics({ persistence: null, clock: fixtureClock });
     const at = new Date("2026-09-08T12:00:00.000Z");
     stats.observe([aircraft("ABC001", 51, 14, { bearing: 0, distanceKm: 100 })], receiver, at);
     stats.observe([aircraft("ABC002", 50, 14, { bearing: 359, distanceKm: 120 })], receiver, new Date(at.getTime() + 1_000));
@@ -117,7 +118,7 @@ describe("receiver statistics", () => {
   });
 
   it("only increases coverage maxima", () => {
-    const stats = new ReceiverStatistics({ persistence: null });
+    const stats = new ReceiverStatistics({ persistence: null, clock: fixtureClock });
     const at = new Date("2026-09-08T12:00:00.000Z");
     stats.observe([aircraft("AAA001", 50, 14, { bearing: 120, distanceKm: 274 })], receiver, at);
     stats.observe([aircraft("AAA001", 50, 14, { bearing: 120, distanceKm: 12 })], receiver, new Date(at.getTime() + 1_000));
@@ -143,7 +144,7 @@ describe("receiver statistics", () => {
   });
 
   it("ignores invalid positions without excluding unique observation", () => {
-    const stats = new ReceiverStatistics({ persistence: null });
+    const stats = new ReceiverStatistics({ persistence: null, clock: fixtureClock });
     const invalidZero = aircraft("C0DE00", 0, 0, { distanceKm: 999 });
     const invalidNaN = aircraft("C0DE01", 50, 14, { distanceKm: Number.NaN, bearing: Number.NaN });
     invalidNaN.lat = Number.NaN;
@@ -155,7 +156,7 @@ describe("receiver statistics", () => {
   });
 
   it("counts types and airlines once, then moves a late enrichment", () => {
-    const stats = new ReceiverStatistics({ persistence: null });
+    const stats = new ReceiverStatistics({ persistence: null, clock: fixtureClock });
     const at = new Date("2026-09-08T12:00:00.000Z");
     stats.observe([aircraft("AAA001", 50, 14, { type: "A320", airline: "Test Air" })], receiver, at);
     stats.observe([aircraft("AAA001", 50, 14, { type: "A320", airline: "Test Air" })], receiver, new Date(at.getTime() + 1_000));
@@ -193,7 +194,7 @@ describe("receiver statistics", () => {
     const persistence = new FakePersistence();
     persistence.fail = true;
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const stats = new ReceiverStatistics({ persistence, flushIntervalMs: 1 });
+    const stats = new ReceiverStatistics({ persistence, flushIntervalMs: 1, clock: fixtureClock });
     stats.observe([aircraft("AAA001")], receiver, new Date("2026-09-08T12:00:00.000Z"));
     await stats.close();
     expect(stats.getResponse(1, 12).daily.uniqueAircraft).toBe(1);
