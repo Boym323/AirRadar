@@ -62,6 +62,10 @@ function typeLabel(dictionary: LocaleDictionary, type: RuleType): string {
 
 function translatedError(dictionary: LocaleDictionary, error: unknown, action: "load" | "save" | "delete"): string {
   if (error instanceof ApiError) {
+    if (error.code === "auth_required") return dictionary.watchlist.authRequired;
+    if (error.code === "auth_unavailable") return dictionary.watchlist.authUnavailable;
+    if (error.code === "auth_failed") return dictionary.watchlist.authFailed;
+    if (error.code === "csrf_rejected") return dictionary.watchlist.csrfRejected;
     if (error.code === "invalid_icao") return dictionary.watchlist.invalidIcao;
     if (error.code === "invalid_distance") return dictionary.watchlist.invalidDistance;
     if (error.code === "invalid_cooldown") return dictionary.watchlist.invalidCooldown;
@@ -158,6 +162,18 @@ export function WatchlistPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prefill, setPrefill] = useState<{ icaoHex: string | null; registration: string | null }>({ icaoHex: null, registration: null });
+  const [authConfigured, setAuthConfigured] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authToken, setAuthToken] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+
+  const loadAuth = useCallback(async () => {
+    const response = await fetch("/api/watchlist/session", { cache: "no-store" });
+    if (!response.ok) return;
+    const result = await response.json() as { configured?: boolean; authenticated?: boolean };
+    setAuthConfigured(result.configured === true);
+    setAuthenticated(result.authenticated === true);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -179,8 +195,39 @@ export function WatchlistPage() {
       const type: RuleType = icaoHex ? "icaoHex" : "registration";
       setForm({ ...emptyForm(), name: `${typeLabel(dictionary, type)} ${value}`, type, value });
     }
+    void loadAuth().catch(() => undefined);
     void load();
-  }, [dictionary, load]);
+  }, [dictionary, load, loadAuth]);
+
+  const signIn = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAuthBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/watchlist/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: authToken }),
+      });
+      await readResponse(response);
+      setAuthenticated(true);
+      setAuthToken("");
+    } catch (requestError) {
+      setError(translatedError(dictionary, requestError, "save"));
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const signOut = async () => {
+    setAuthBusy(true);
+    try {
+      await fetch("/api/watchlist/session", { method: "DELETE" });
+      setAuthenticated(false);
+    } finally {
+      setAuthBusy(false);
+    }
+  };
 
   const submitCreate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -284,6 +331,15 @@ export function WatchlistPage() {
       </header>
 
       {error && <div className="statistics-error" role="alert">{error}</div>}
+
+      {authConfigured && <section className="statistics-card watchlist-auth-card" aria-labelledby="watchlist-auth-title">
+        <div className="statistics-card-header"><h2 id="watchlist-auth-title">{dictionary.watchlist.authTitle}</h2>{authenticated && <button type="button" className="secondary-button" onClick={() => void signOut()} disabled={authBusy}>{dictionary.watchlist.signOut}</button>}</div>
+        {authenticated ? <p>{dictionary.watchlist.authenticated}</p> : <form className="watchlist-auth-form" onSubmit={signIn}>
+          <p>{dictionary.watchlist.authDescription}</p>
+          <label><span>{dictionary.watchlist.adminToken}</span><input type="password" autoComplete="current-password" required value={authToken} onChange={(event) => setAuthToken(event.target.value)} /></label>
+          <button className="primary-button" type="submit" disabled={authBusy}>{dictionary.watchlist.signIn}</button>
+        </form>}
+      </section>}
 
       {prefill.icaoHex || prefill.registration ? <section className="watchlist-prefill" aria-label={dictionary.watchlist.prefilled}>
         <strong>{dictionary.watchlist.prefilled}</strong>

@@ -1,6 +1,7 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { watchlistValidationResponse } from "@/lib/server/watchlist-api";
+import { requireWatchlistMutation } from "@/lib/server/watchlist-auth";
 import {
   deleteWatchlistRule,
   isJsonRecord,
@@ -43,6 +44,8 @@ async function resolveId(context: { params: Promise<{ id: string }> }): Promise<
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
   const rateLimit = checkPublicRateLimit("watchlist", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+  const authorization = requireWatchlistMutation(request);
+  if (authorization) return authorization;
   const id = await resolveId(context);
   if (!id) return notFoundResponse();
   const body = await readBody(request);
@@ -64,6 +67,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
   const rateLimit = checkPublicRateLimit("watchlist", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+  const authorization = requireWatchlistMutation(request);
+  if (authorization) return authorization;
   const id = await resolveId(context);
   if (!id) return notFoundResponse();
   try {

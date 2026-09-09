@@ -127,3 +127,8 @@ export function getFlightAwareApiKey(): string | null {
   const key = process.env.FLIGHTAWARE_API_KEY?.trim();
   return key || null;
 }
+
+export function getWatchlistAdminToken(): string | null {
+  const token = process.env.WATCHLIST_ADMIN_TOKEN?.trim();
+  return token || null;
+}

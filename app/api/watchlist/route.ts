@@ -1,6 +1,7 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { watchlistValidationResponse } from "@/lib/server/watchlist-api";
+import { requireWatchlistMutation } from "@/lib/server/watchlist-auth";
 import {
   createWatchlistRule,
   isJsonRecord,
@@ -36,6 +37,8 @@ export async function GET(request: Request): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   const rateLimit = checkPublicRateLimit("watchlist", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+  const authorization = requireWatchlistMutation(request);
+  if (authorization) return authorization;
   const body = await readBody(request);
   if (body instanceof Response) return body;
   try {
