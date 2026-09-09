@@ -202,3 +202,10 @@ Changes since v0.1.13:
 - docs: document bounded metadata and memory diagnostics (c246715d)
 - test: stabilize browser accessibility gate (33b6ef0e)
 - feat: support release candidate deployments (b07ecf4c)
+
+## [1.0.0-rc.2] - 2026-09-09
+
+Changes since v1.0.0-rc.1:
+
+- fix: cap tar1090 fallback cache by bytes (4a84ee1b)
+- test: support release candidate production gates (f45e98c1)
