@@ -25,6 +25,8 @@ readonly RUNTIME_STATE_DIRECTORY="/var/lib/airradar"
 readonly LEGACY_ALERT_CONFIG_PATH="${APP_DIR}/data/alerts.json"
 
 DEPLOY_BRANCH="main"
+RELEASE_MODE="stable"
+RELEASE_BUILD_CHANNEL="production"
 DRY_RUN=0
 ALLOW_DIRTY=0
 OLD_SHA=""
@@ -48,6 +50,7 @@ Usage: sudo ./deploy/release.sh [options]
 
 Options:
   --branch BRANCH  Release the current checkout of BRANCH instead of main.
+  --channel MODE    Release channel: stable (default) or rc.
   --allow-dirty    Release uncommitted changes without updating from origin.
   --dry-run        Run preflight checks and print the release plan only.
   --help           Show this help.
@@ -149,6 +152,23 @@ parse_args() {
       --branch)
         (( $# >= 2 )) || die "--branch requires a branch name."
         DEPLOY_BRANCH="$2"
+        shift 2
+        ;;
+      --channel)
+        (( $# >= 2 )) || die "--channel requires stable or rc."
+        case "$2" in
+          stable)
+            RELEASE_MODE="stable"
+            RELEASE_BUILD_CHANNEL="production"
+            ;;
+          rc)
+            RELEASE_MODE="rc"
+            RELEASE_BUILD_CHANNEL="release-candidate"
+            ;;
+          *)
+            die "Unsupported release channel: $2 (expected stable or rc)."
+            ;;
+        esac
         shift 2
         ;;
       --dry-run)
@@ -355,16 +375,20 @@ update_repository() {
 prepare_release_version() {
   local resolved_version
 
-  resolved_version="$(node "${VERSION_SCRIPT}" resolve-release-version)" || die "Could not resolve the release version."
-  [[ "${resolved_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Version helper returned an invalid release version: ${resolved_version}"
+  resolved_version="$(node "${VERSION_SCRIPT}" resolve-release-version --channel "${RELEASE_MODE}")" || die "Could not resolve the release version."
+  if [[ "${RELEASE_MODE}" == "rc" ]]; then
+    [[ "${resolved_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-rc\.[1-9][0-9]*$ ]] || die "Version helper returned an invalid RC version: ${resolved_version}"
+  else
+    [[ "${resolved_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || die "Version helper returned an invalid stable version: ${resolved_version}"
+  fi
 
   RELEASE_VERSION="${resolved_version}"
   RELEASE_TAG="v${RELEASE_VERSION}"
   export AIRRADAR_VERSION="${RELEASE_VERSION}"
   export AIRRADAR_TAG="${RELEASE_TAG}"
   export AIRRADAR_COMMIT="${NEW_SHA}"
-  export AIRRADAR_CHANNEL="production"
-  log "Release version candidate: ${RELEASE_VERSION} (${RELEASE_TAG})"
+  export AIRRADAR_CHANNEL="${RELEASE_BUILD_CHANNEL}"
+  log "Release version candidate: ${RELEASE_VERSION} (${RELEASE_TAG}), channel=${RELEASE_BUILD_CHANNEL}"
 }
 
 generate_release_changelog() {
@@ -662,6 +686,8 @@ restart_and_check() {
 create_release_tag() {
   local tag_ref="refs/tags/${RELEASE_TAG}"
 
+  [[ "${RELEASE_TAG}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$ ]] || die "Refusing to create non-canonical release tag: ${RELEASE_TAG}"
+
   if git_cmd tag --points-at HEAD | awk -v expected="${RELEASE_TAG}" '$0 == expected { found = 1 } END { exit found ? 0 : 1 }'; then
     log "Release tag already exists on HEAD; reusing ${RELEASE_TAG}"
     return 0
@@ -676,12 +702,21 @@ create_release_tag() {
 }
 
 print_dry_run_plan() {
+  local resolved_version
+
   OLD_SHA="$(git_cmd rev-parse HEAD)"
   if (( ALLOW_DIRTY == 1 )); then
     detect_worktree_changes
   fi
+  resolved_version="$(node "${VERSION_SCRIPT}" resolve-release-version --channel "${RELEASE_MODE}")" || die "Could not resolve the dry-run release version."
+  if [[ "${RELEASE_MODE}" == "rc" ]]; then
+    [[ "${resolved_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-rc\.[1-9][0-9]*$ ]] || die "Version helper returned an invalid dry-run RC version: ${resolved_version}"
+  else
+    [[ "${resolved_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || die "Version helper returned an invalid dry-run stable version: ${resolved_version}"
+  fi
   log "Dry run; no repository update, dependency installation, migrations, build, restart, or health checks will run."
   log "Current commit: ${OLD_SHA}"
+  log "Candidate: version=${resolved_version} tag=v${resolved_version} channel=${RELEASE_BUILD_CHANNEL}"
   if (( WORKTREE_DIRTY == 1 )); then
     log "Planned release: preserve the current working tree, resolve version, generate/commit changelog, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
   else

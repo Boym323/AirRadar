@@ -19,7 +19,7 @@ export interface PublicVersionResponse {
 }
 
 const BUILD_METADATA_PATH = join(process.cwd(), "generated", "build-version.json");
-const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
+const VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-rc\.[1-9]\d*)?$/;
 const COMMIT_PATTERN = /^[0-9a-f]{7,64}$/i;
 const CHANNEL_PATTERN = /^[a-z0-9._-]{1,32}$/i;
 
@@ -40,7 +40,7 @@ function fallbackMetadata(): BuildMetadata {
   };
 }
 
-function parseBuildMetadata(value: unknown): BuildMetadata | null {
+export function parseBuildMetadata(value: unknown): BuildMetadata | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const candidate = value as Partial<BuildMetadata>;
   if (typeof candidate.version !== "string" || !VERSION_PATTERN.test(candidate.version)) return null;
@@ -49,6 +49,8 @@ function parseBuildMetadata(value: unknown): BuildMetadata | null {
   if (candidate.shortCommit !== null && (typeof candidate.shortCommit !== "string" || !COMMIT_PATTERN.test(candidate.shortCommit))) return null;
   if (candidate.buildTime !== null && (typeof candidate.buildTime !== "string" || !Number.isFinite(Date.parse(candidate.buildTime)))) return null;
   if (typeof candidate.channel !== "string" || !CHANNEL_PATTERN.test(candidate.channel)) return null;
+  const isReleaseCandidate = candidate.version.includes("-rc.");
+  if (isReleaseCandidate !== (candidate.channel === "release-candidate")) return null;
   return {
     version: candidate.version,
     tag: candidate.tag,

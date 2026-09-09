@@ -14,11 +14,31 @@ cd /var/www/airradar
 sudo ./deploy/release.sh
 ```
 
+The default release channel is stable. Release candidates use the same gates,
+locks, migration workflow, systemd deployment, restart, and health checks, but
+are explicitly selected with:
+
+```bash
+sudo ./deploy/release.sh --channel rc
+```
+
+An RC is tagged as `vMAJOR.MINOR.PATCH-rc.N` and reports channel
+`release-candidate`. RC tags do not consume the stable version: after
+`v1.0.0-rc.1` and `v1.0.0-rc.2`, the first stable release remains `v1.0.0`.
+An unsuccessful RC does not consume its number because the tag is created only
+after deployment and health checks pass. Stable releases remain the default;
+the stable release should be performed only after RC validation is complete.
+
 The default branch is `main`. `--branch BRANCH` is required to release another
 named branch deliberately. `--allow-dirty` preserves the current dirty
 checkout, skips the origin update, and is for exceptional controlled use.
-`--dry-run` performs preflight and prints the plan; it does not update Git,
-install dependencies, migrate, build, restart, or health-check.
+`--dry-run` performs preflight and prints the plan and resolved candidate; it
+does not update Git, install dependencies, migrate, build, restart, or
+health-check. To inspect an RC candidate without mutations, use:
+
+```bash
+sudo ./deploy/release.sh --channel rc --dry-run
+```
 
 ## Exact release order
 
@@ -30,10 +50,13 @@ install dependencies, migrate, build, restart, or health-check.
 2. It acquires `/var/lock/airradar-release.lock`. A clean checkout is fetched
    and updated only by fast-forward; divergent history is rejected. A dirty
    allowed checkout is kept as-is.
-3. `scripts/version.mjs` resolves a `vMAJOR.MINOR.PATCH` candidate from the
-   `package.json` major/minor series and existing tags. A release tag already
-   on `HEAD` is reused. The script exports release metadata for the build; it
-   does not run `npm version` and does not change package manifests.
+3. `scripts/version.mjs` resolves either a stable `vMAJOR.MINOR.PATCH`
+   candidate or, only with `--channel rc`, a canonical
+   `vMAJOR.MINOR.PATCH-rc.N` candidate. Stable resolution ignores RC tags;
+   RC numbering considers only RC tags for the exact base release. A matching
+   release tag already on `HEAD` is reused. The script exports release metadata
+   for the build; it does not run `npm version` and does not change package
+   manifests.
 4. `scripts/changelog.mjs` generates the new `CHANGELOG.md` section from Git
    commits since the previous release tag. If changed, the release commits it
    automatically before continuing.
