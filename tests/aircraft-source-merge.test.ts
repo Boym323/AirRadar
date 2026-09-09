@@ -89,6 +89,53 @@ describe("aircraft source merge", () => {
     expect(value?.provenance).toMatchObject({ seenLocal: true, seenNetwork: true, positionOrigin: "adsblol" });
   });
 
+  it("keeps local-only aircraft when their position is stale or unavailable", () => {
+    const localAircraft = [
+      make("AAA001", "local", { seen: 0.5, seen_pos: 0.5 }),
+      make("BBB002", "local", { seen: 0.5, seen_pos: 20 }),
+      make("CCC003", "local", { lat: null, lon: null, seen: 0.2, seen_pos: null }),
+      make("DDD004", "local", { seen: 0.5, seen_pos: 0.5 }),
+    ];
+    const local = new Map(localAircraft.map((aircraft) => [aircraft.icaoHex, aircraft]));
+    const merged = mergeAircraftMaps(local, new Map(), receiver, options);
+
+    expect(new Set(merged.map((aircraft) => aircraft.icaoHex))).toEqual(new Set(local.keys()));
+    expect(merged).toHaveLength(local.size);
+    expect(merged.find((aircraft) => aircraft.icaoHex === "BBB002")).toMatchObject({
+      lat: 50.1,
+      lon: 14.1,
+      origin: "local",
+      provenance: { seenLocal: true, seenNetwork: false, positionOrigin: "local" },
+    });
+    expect(merged.find((aircraft) => aircraft.icaoHex === "CCC003")).toMatchObject({
+      lat: null,
+      lon: null,
+      origin: "local",
+      provenance: { seenLocal: true, seenNetwork: false, positionOrigin: null },
+    });
+  });
+
+  it("merges the complete local/network identity union in linear time", () => {
+    const localAircraft = ["AAA001", "BBB002", "CCC003", "DDD004"].map((hex) => make(hex, "local"));
+    const networkAircraft = ["CCC003", "DDD004", "EEE005", "FFF006"].map((hex) => make(hex, "adsblol"));
+    const local = new Map(localAircraft.map((aircraft) => [aircraft.icaoHex, aircraft]));
+    const network = new Map(networkAircraft.map((aircraft) => [aircraft.icaoHex, aircraft]));
+    const merged = mergeAircraftMaps(local, network, receiver, options);
+    const mergedIds = new Set(merged.map((aircraft) => aircraft.icaoHex));
+
+    expect(mergedIds).toEqual(new Set(["AAA001", "BBB002", "CCC003", "DDD004", "EEE005", "FFF006"]));
+    expect(merged).toHaveLength(6);
+    for (const id of local.keys()) expect(mergedIds.has(id)).toBe(true);
+    expect(merged.length).toBeGreaterThanOrEqual(local.size);
+    expect(coverageStats(local, network, merged.length)).toEqual({
+      displayedAircraft: 6,
+      localAircraft: 4,
+      networkAircraft: 4,
+      networkOnlyAircraft: 2,
+      seenByBoth: 2,
+    });
+  });
+
   it("preserves emergency from a fresh network observation and keeps non-ICAO identity separate", () => {
     const local = make("~ABC123", "local");
     const network = make("ABC123", "adsblol", { emergency: "7700" });

@@ -85,9 +85,10 @@ provider failure clears message-rate availability, removes stale aircraft, and
 uses bounded retry backoff; it does not discard still-fresh aircraft or stop
 the process.
 The local and network maps remain separate until the requested coverage mode is
-serialized. Extended coverage is a display/read path only: network-only
-aircraft do not affect local daily aggregates, sampled history, alerts,
-enrichment, ATC resolution, or local receiver health.
+serialized. Extended coverage is a display/read path only and is the true
+local/network identity union; local aircraft are retained even without a fresh
+usable position. Network-only aircraft do not affect local daily aggregates,
+sampled history, alerts, enrichment, ATC resolution, or local receiver health.
 
 ## Persistence boundaries
 

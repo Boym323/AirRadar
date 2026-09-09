@@ -157,6 +157,74 @@ describe("aircraft state service", () => {
     expect(networkProvider.getSnapshot).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps local aircraft without a usable position in extended snapshots", () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const positioned = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, seen: 0.5, seen_pos: 0.5 }, receiver);
+    const noPosition = normalizeAircraft({ hex: "DEF456", flight: "LOCAL456", alt_baro: 12_000, seen: 0.2, seen_pos: null }, receiver);
+    if (!positioned || !noPosition) throw new Error("test aircraft could not be normalized");
+    const service = new AircraftStateService(
+      new MockReadsbProvider(receiver),
+      new EnrichmentService({}),
+      new AtcSectorService(new EmptyAtcSectorProvider()),
+      undefined,
+      undefined,
+      {
+        name: "adsb.lol",
+        start: vi.fn(),
+        getSnapshot: vi.fn(async () => ({ aircraft: [], fetchedAt: null, provider: "adsb.lol" })),
+        getDiagnostics: () => ({
+          enabled: false,
+          status: "disabled" as const,
+          lastAttemptAt: null,
+          lastSuccessAt: null,
+          latencyMs: null,
+          consecutiveFailures: 0,
+          aircraftCount: 0,
+          positionedAircraftCount: 0,
+          mlatAircraftCount: 0,
+          radiusNm: 250,
+          pollIntervalMs: 10_000,
+          retryAfterMs: null,
+        }),
+        stop: vi.fn(async () => undefined),
+      },
+    );
+    const internal = service as unknown as { applySnapshot: (snapshot: ProviderSnapshot) => void };
+    internal.applySnapshot({ aircraft: [positioned, noPosition], receiver, fetchedAt: new Date().toISOString(), provider: "readsb" });
+
+    const local = service.getSnapshot();
+    const extended = service.getSnapshot({ coverage: "extended" });
+    const localIds = new Set(local.aircraft.map((aircraft) => aircraft.icaoHex));
+    const extendedIds = new Set(extended.aircraft.map((aircraft) => aircraft.icaoHex));
+
+    expect(localIds).toEqual(new Set(["ABC123", "DEF456"]));
+    for (const id of localIds) expect(extendedIds.has(id)).toBe(true);
+    expect(extended.aircraft).toHaveLength(local.aircraft.length);
+    expect(extended.aircraft.find((aircraft) => aircraft.icaoHex === "DEF456")).toMatchObject({ lat: null, lon: null });
+    expect(extended.coverageStats).toMatchObject({ displayedAircraft: 2, localAircraft: 2, networkAircraft: 0, networkOnlyAircraft: 0 });
+  });
+
+  it("degrades extended coverage to exactly local after network state is cleared", () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 }, receiver);
+    const network = normalizeAircraft({ hex: "DEF456", flight: "NETWORK456", lat: 50.2, lon: 14.2, seen: 0, seen_pos: 0 }, receiver);
+    if (!local || !network) throw new Error("test aircraft could not be normalized");
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      applySnapshot: (snapshot: ProviderSnapshot) => void;
+      applyNetworkSnapshot: (snapshot: { aircraft: Aircraft[]; fetchedAt: string | null; provider: string }) => void;
+    };
+    const fetchedAt = new Date().toISOString();
+    internal.applySnapshot({ aircraft: [local], receiver, fetchedAt, provider: "readsb" });
+    internal.applyNetworkSnapshot({ aircraft: [network], fetchedAt, provider: "adsb.lol" });
+    expect(service.getSnapshot({ coverage: "extended" }).aircraft.map((item) => item.icaoHex).sort()).toEqual(["ABC123", "DEF456"]);
+
+    internal.applyNetworkSnapshot({ aircraft: [], fetchedAt, provider: "adsb.lol" });
+    const degraded = service.getSnapshot({ coverage: "extended" });
+    expect(degraded.aircraft.map((item) => item.icaoHex)).toEqual(["ABC123"]);
+    expect(degraded.coverageStats).toMatchObject({ displayedAircraft: 1, localAircraft: 1, networkAircraft: 0, networkOnlyAircraft: 0 });
+  });
+
   it("keeps the history sample throttle across a short disappearance", async () => {
     vi.useFakeTimers();
     vi.stubEnv("HISTORY_SAMPLE_INTERVAL_MS", "20000");

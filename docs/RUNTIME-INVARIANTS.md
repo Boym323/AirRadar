@@ -96,13 +96,18 @@ These are behavior and safety contracts for changes to the current system.
   and safe diagnostics. `Retry-After` is honored for HTTP 429 responses.
 - Local and network observations are held in separate maps. The default live
   coverage is local; extended coverage explicitly merges by normalized ICAO
-  identity and never mutates the local map or local health state.
+  identity and never mutates the local map or local health state. Extended is
+  the true observation union: every local aircraft ID is present in extended,
+  including observations without a fresh usable position.
 - Merge arbitration is explicit: a position candidate must have valid `lat`
   and `lon` plus fresh `seen_pos`; a fresh usable local position wins before a
   network position is considered, and network is the extended fallback when
-  local position is missing or stale. Source type is only a tie-break within
-  an origin. Local descriptive fields and receiver-local RSSI/message counters
-  remain authoritative. Network-only aircraft have null local measurements.
+  local position is missing or stale. If no fresh candidate exists, the local
+  last-known position is retained when usable; an aircraft with no position is
+  still retained with nullable coordinates. Source type is only a tie-break
+  within an origin. Local descriptive fields and receiver-local RSSI/message
+  counters remain authoritative. Network-only aircraft have null local
+  measurements.
 - Network-only observations are excluded from PostgreSQL history, daily
   statistics/coverage, alerts, metadata enrichment, and ATC resolution. Public
   output includes safe source/provenance and ADSB.lol ODbL attribution, but no

@@ -79,6 +79,37 @@ describe("public snapshot serialization", () => {
     expect(toPublicStateSnapshot(snapshot(), "hidden")).toEqual(toPublicStateSnapshot(snapshot(), "hidden"));
   });
 
+  it("preserves the local subset in both API and live SSE serialization", () => {
+    const localOnly = {
+      ...snapshot().aircraft[0],
+      icaoHex: "DEF456",
+      callsign: "LOCAL456",
+      lat: null,
+      lon: null,
+      altitude: 12_000,
+      seenPosSeconds: null,
+      distanceKm: null,
+      bearing: null,
+    };
+    const local = { ...snapshot(), aircraft: [localOnly], coverageStats: {
+      displayedAircraft: 1, localAircraft: 1, networkAircraft: 0, networkOnlyAircraft: 0, seenByBoth: 0,
+    } };
+    const extended = { ...snapshot(), aircraft: [localOnly, snapshot().aircraft[0]], coverageStats: {
+      displayedAircraft: 2, localAircraft: 1, networkAircraft: 1, networkOnlyAircraft: 1, seenByBoth: 0,
+    } };
+    const localIds = new Set(local.aircraft.map((aircraft) => aircraft.icaoHex));
+
+    for (const wire of [
+      toPublicStateSnapshot(extended, "hidden"),
+      toPublicLiveStateSnapshot(extended, "hidden"),
+    ]) {
+      const wireIds = new Set(wire.aircraft.map((aircraft) => aircraft.icaoHex));
+      for (const id of localIds) expect(wireIds.has(id)).toBe(true);
+      expect(wire.aircraft).toHaveLength(2);
+      expect(wire.coverageStats?.displayedAircraft).toBeGreaterThanOrEqual(local.aircraft.length);
+    }
+  });
+
   it("publishes only the public relevant-frequency summary, not internal sector data", () => {
     const value = toPublicStateSnapshot(snapshot(), "hidden");
     expect(value.relevantAtcFrequencies[0]).toMatchObject({ frequencyMhz: 127.35, callsign: "PRAHA RADAR", aircraftCount: 1 });

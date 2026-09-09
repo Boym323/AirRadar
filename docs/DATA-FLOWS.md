@@ -142,8 +142,12 @@ request timeout, maximum aircraft count, stale threshold, and exponential
 retry capped by configuration. A 429 response honors `Retry-After` when
 present. The merger deduplicates by normalized ICAO hex and treats an
 observation as a position candidate only when both coordinates are valid and
-`seen_pos` is fresh. A fresh usable local position wins before network
-freshness is considered; network position is the extended fallback. Displayed
+`seen_pos` is fresh. Aircraft existence is separate from position usability:
+the extended result is the full local/network identity union, so local
+aircraft without a fresh position are retained. A fresh usable local position
+wins before network freshness is considered; network position is the extended
+fallback. If neither source has a fresh position, the local last-known
+position is retained when usable, otherwise coordinates remain null. Displayed
 network-only aircraft are marked with source provenance; they do not enter
 history, local daily statistics, alerts, metadata enrichment, ATC resolution,
 or the local receiver health state. Public UI/API output includes ADSB.lol and

@@ -197,29 +197,37 @@ export function mergeAircraftObservations(
 ): Aircraft | null {
   if (!local && !network) return null;
   const now = options.now ?? Date.now();
-  const position = selectPositionObservation(local, network, options, now);
-  if (!position) return null;
+  // Aircraft existence is based on an observation, not on whether that
+  // observation currently has a fresh usable position. Position arbitration
+  // is a separate concern: use a fresh candidate when available, otherwise
+  // preserve the local observation's last known position (or the network
+  // observation for a network-only aircraft).
+  const base = local ?? network!;
+  const selectedPosition = selectPositionObservation(local, network, options, now);
+  const fallbackPosition = hasUsablePosition(base) ? base : undefined;
+  const kinematics = selectedPosition ?? base;
+  const position = selectedPosition ?? fallbackPosition;
   const emergencyObservation = selectedEmergencyObservation(local, network, options, now);
-  const lat = position.lat;
-  const lon = position.lon;
+  const lat = position?.lat ?? null;
+  const lon = position?.lon ?? null;
   const distanceKm = lat !== null && lon !== null ? haversineDistanceKm(receiver.lat, receiver.lon, lat, lon) : null;
   const bearing = lat !== null && lon !== null ? initialBearing(receiver.lat, receiver.lon, lat, lon) : null;
   const merged: Aircraft = {
-    icaoHex: position.icaoHex,
+    icaoHex: base.icaoHex,
     callsign: nonEmpty(local?.callsign, network?.callsign),
     registration: nonEmpty(local?.registration, network?.registration),
     aircraftType: nonEmpty(local?.aircraftType, network?.aircraftType),
     aircraftDescription: nonEmpty(local?.aircraftDescription, network?.aircraftDescription),
     lat,
     lon,
-    altitude: position.altitude,
-    baroAltitude: position.baroAltitude,
-    geomAltitude: position.geomAltitude,
-    groundSpeed: position.groundSpeed,
-    track: position.track,
-    verticalRate: position.verticalRate,
-    baroRate: position.baroRate,
-    geomRate: position.geomRate,
+    altitude: kinematics.altitude,
+    baroAltitude: kinematics.baroAltitude,
+    geomAltitude: kinematics.geomAltitude,
+    groundSpeed: kinematics.groundSpeed,
+    track: kinematics.track,
+    verticalRate: kinematics.verticalRate,
+    baroRate: kinematics.baroRate,
+    geomRate: kinematics.geomRate,
     squawk: selectedSquawk(local, network, options, now, emergencyObservation),
     category: nonEmpty(local?.category, network?.category),
     emergency: selectedEmergency(local, network, options, now),
@@ -227,16 +235,16 @@ export function mergeAircraftObservations(
     // aircraft deliberately expose neither value.
     rssi: local ? local.rssi : null,
     messages: local ? local.messages : null,
-    seenSeconds: position.seenSeconds,
-    seenPosSeconds: position.seenPosSeconds,
-    lastSeen: position.lastSeen,
-    source: position.source,
+    seenSeconds: kinematics.seenSeconds,
+    seenPosSeconds: kinematics.seenPosSeconds,
+    lastSeen: kinematics.lastSeen,
+    source: kinematics.source,
     distanceKm,
     bearing,
-    origin: originOf(position),
+    origin: originOf(kinematics),
     provenance: provenance(local, network, position),
-    sourceType: position.sourceType,
-    onGround: position.onGround,
+    sourceType: kinematics.sourceType,
+    onGround: kinematics.onGround,
     trail: selectedTrail(position),
   };
   if (local?.enrichment) merged.enrichment = local.enrichment;
@@ -254,9 +262,19 @@ export function mergeAircraftMaps(
 ): Aircraft[] {
   const keys = new Set([...local.keys(), ...network.keys()]);
   const merged: Aircraft[] = [];
+  const mergedKeys = new Set<string>();
   for (const key of keys) {
     const value = mergeAircraftObservations(local.get(key), network.get(key), receiver, options);
-    if (value) merged.push(value);
+    if (value) {
+      merged.push(value);
+      mergedKeys.add(key);
+    }
+  }
+  if (process.env.NODE_ENV !== "production") {
+    const missingLocal = [...local.keys()].filter((key) => !mergedKeys.has(key));
+    if (missingLocal.length) {
+      console.error(`[aircraft-merge] local observations missing from extended result: ${missingLocal.join(",")}`);
+    }
   }
   return merged;
 }
