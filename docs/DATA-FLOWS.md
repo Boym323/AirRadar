@@ -25,7 +25,8 @@
 
 Server watchlist, emergency, new-aircraft, and reception-record transitions
 are evaluated by the shared `AlertEngine`. A detected event is first written
-as safe metadata to the append-only `data/alert-events.jsonl` ledger. Notifier
+as safe metadata to the append-only runtime-state ledger
+(`/var/lib/airradar/alert-events.jsonl` in production). Notifier
 delivery is a separate asynchronous lane and appends `attempted`, `delivered`,
 `failed`, or `disabled` status lines; raw provider payloads, credentials, and
 delivery errors are not persisted. `GET /api/alerts` folds the status lines
@@ -159,8 +160,12 @@ path reports the aircraft's actual tuned frequency.
 - `/api/airports` serves the PostgreSQL airport catalog when non-empty and the
   bundled six-airport fallback otherwise. `GET /api/search` searches live RAM
   aircraft and the airport catalog with bounded input/results.
-- Server alert rules are read from `data/alerts.json`; the watchlist API
-  atomically updates the same file and reloads the shared `AlertEngine`.
+- Server alert rules are read from the runtime state directory
+  (`/var/lib/airradar/alerts.json` in production); the watchlist API atomically
+  updates that file and reloads the shared `AlertEngine`. Local development
+  uses `data/alerts.json`, and the production loader can read that tracked file
+  only as a one-time legacy fallback before migration. The two files are never
+  used as concurrent writable stores.
   Separately, the map's browser watchlist is a localStorage filter and is not
   a server notification rule.
 - `/fleet` derives its identities from the same server watchlist, keeping only

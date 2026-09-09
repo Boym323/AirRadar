@@ -1,6 +1,7 @@
 import { appendFile, mkdir, open, stat } from "node:fs/promises";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { dirname } from "node:path";
 import type { Aircraft } from "@/lib/aircraft/types";
+import { getRuntimeStatePath } from "@/lib/server/runtime-state";
 
 export type AlertHistoryEventType = "watchlist" | "new_aircraft" | "reception_record" | "emergency";
 export type AlertNotificationStatus = "pending" | "attempted" | "delivered" | "failed" | "disabled";
@@ -64,8 +65,7 @@ const MAX_READ_BYTES = 2_000_000;
 const MAX_LINE_LENGTH = 8_000;
 
 export function getAlertHistoryPath(): string {
-  const configured = process.env.ALERT_HISTORY_PATH?.trim() || "data/alert-events.jsonl";
-  return isAbsolute(configured) ? configured : resolve(process.cwd(), configured);
+  return getRuntimeStatePath("alert-events.jsonl");
 }
 
 function cleanText(value: string | null | undefined, maximum = 120): string | null {
@@ -121,6 +121,28 @@ function lineFromUnknown(value: unknown): DetectionLine | NotificationLine | nul
   return null;
 }
 
+function pageFromLines(lines: Iterable<unknown>, options: { page?: number; pageSize?: number }): AlertHistoryPage {
+  const entries = new Map<string, AlertHistoryEntry>();
+  for (const line of lines) {
+    const parsed = lineFromUnknown(line);
+    if (!parsed) continue;
+    if (parsed.kind === "detected") {
+      const entry = parsed.entry;
+      if (entry && typeof entry.id === "string" && entry.aircraft && typeof entry.detectedAt === "string") entries.set(entry.id, entry);
+      continue;
+    }
+    const entry = entries.get(parsed.id);
+    if (!entry) continue;
+    entry.notificationStatus = parsed.status;
+    entry.notificationAttemptedAt = parsed.at;
+  }
+  const all = [...entries.values()].sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
+  const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), MAX_PAGE_SIZE);
+  const page = Math.max(Math.trunc(options.page ?? 0), 0);
+  const items = all.slice(page * pageSize, (page + 1) * pageSize);
+  return { items, page, pageSize, nextPage: (page + 1) * pageSize < all.length ? page + 1 : null };
+}
+
 /**
  * Small append-only JSONL history. Detection and delivery are separate lines;
  * listing folds the status lines into a bounded, safe public DTO.
@@ -143,25 +165,7 @@ export class JsonlAlertHistoryStore {
   async list(options: { page?: number; pageSize?: number } = {}): Promise<AlertHistoryPage> {
     await this.writeQueue;
     const lines = await this.readTail();
-    const entries = new Map<string, AlertHistoryEntry>();
-    for (const line of lines) {
-      const parsed = lineFromUnknown(line);
-      if (!parsed) continue;
-      if (parsed.kind === "detected") {
-        const entry = parsed.entry;
-        if (entry && typeof entry.id === "string" && entry.aircraft && typeof entry.detectedAt === "string") entries.set(entry.id, entry);
-        continue;
-      }
-      const entry = entries.get(parsed.id);
-      if (!entry) continue;
-      entry.notificationStatus = parsed.status;
-      entry.notificationAttemptedAt = parsed.at;
-    }
-    const all = [...entries.values()].sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
-    const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), MAX_PAGE_SIZE);
-    const page = Math.max(Math.trunc(options.page ?? 0), 0);
-    const items = all.slice(page * pageSize, (page + 1) * pageSize);
-    return { items, page, pageSize, nextPage: (page + 1) * pageSize < all.length ? page + 1 : null };
+    return pageFromLines(lines, options);
   }
 
   private enqueue(line: DetectionLine | NotificationLine): Promise<void> {
@@ -198,8 +202,30 @@ export class JsonlAlertHistoryStore {
   }
 }
 
-export function createAlertHistoryStore(): JsonlAlertHistoryStore {
-  return new JsonlAlertHistoryStore();
+/**
+ * Vitest-created state services must not write to either production or
+ * checkout state. Each default test engine receives its own memory ledger;
+ * JSONL tests inject an isolated temporary path explicitly.
+ */
+export class MemoryAlertHistoryStore {
+  private readonly lines: Array<DetectionLine | NotificationLine> = [];
+
+  async recordDetected(detection: AlertHistoryDetection): Promise<void> {
+    this.lines.push({ kind: "detected", entry: entryFromDetection(detection) });
+  }
+
+  async recordNotification(id: string, status: AlertNotificationStatus, at = new Date().toISOString()): Promise<void> {
+    this.lines.push({ kind: "notification", id: id.slice(0, 180), status, at: validTimestamp(at) });
+  }
+
+  async list(options: { page?: number; pageSize?: number } = {}): Promise<AlertHistoryPage> {
+    return pageFromLines(this.lines, options);
+  }
+}
+
+export function createAlertHistoryStore(): JsonlAlertHistoryStore | MemoryAlertHistoryStore {
+  const isTestRuntime = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+  return isTestRuntime ? new MemoryAlertHistoryStore() : new JsonlAlertHistoryStore();
 }
 
 export async function listAlertHistory(options: { page?: number; pageSize?: number } = {}): Promise<AlertHistoryPage> {

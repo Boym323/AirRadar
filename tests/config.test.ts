@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getPublicReceiverPositionMode, getReceiverPosition } from "@/lib/server/config";
 import { getAtcData } from "@/lib/server/providers";
+import { getAlertConfigPath } from "@/lib/server/alert-config";
+import { getRuntimeStateDirectory, getRuntimeStatePath } from "@/lib/server/runtime-state";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -59,5 +61,13 @@ describe("numeric environment configuration", () => {
     expect(data.sectors).toEqual([]);
     expect(data.transmitters).toEqual([]);
     expect(data.metadata.status).toBe("unavailable");
+  });
+
+  it("resolves production mutable state under the systemd state directory", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ALERTS_CONFIG_PATH", "/tmp/arbitrary-alerts.json");
+    expect(getRuntimeStateDirectory()).toBe("/var/lib/airradar");
+    expect(getRuntimeStatePath("alerts.json")).toBe("/var/lib/airradar/alerts.json");
+    expect(getAlertConfigPath()).toBe("/var/lib/airradar/alerts.json");
   });
 });

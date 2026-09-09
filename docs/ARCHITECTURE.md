@@ -19,7 +19,7 @@ one global AircraftStateService
   ├─ daily ReceiverStatistics aggregate
   ├─ page-scoped logbook summary read
   ├─ AlertEngine
-  │   └─ append-only alert event ledger (`data/alert-events.jsonl`)
+  │   └─ append-only alert event ledger (`/var/lib/airradar/alert-events.jsonl` in production)
   └─ listeners
         ├─ GET /api/aircraft
         ├─ GET /api/stream (SSE)
@@ -88,9 +88,12 @@ Process memory holds live aircraft, trails, enrichment caches, ATC resolver
 cache, weather cache, photo metadata cache, reception-record baselines, and
 alert deduplication. The
 browser's watchlist is stored in that browser's `localStorage`; server alert
-rules are stored in `data/alerts.json`, not in PostgreSQL. Alert history is
-stored as append-only safe event/status lines in `data/alert-events.jsonl` and
-is read from a bounded tail with bounded pagination.
+rules are stored in the runtime state directory (`/var/lib/airradar/alerts.json`
+in production), not in PostgreSQL. Alert history is stored as append-only safe
+event/status lines in `/var/lib/airradar/alert-events.jsonl` in production and
+is read from a bounded tail with bounded pagination. Local development keeps
+the equivalent files under `data/`; the tracked `data/alerts.json` is only a
+legacy migration source when the production state file does not yet exist.
 
 ## Browser and API boundary
 

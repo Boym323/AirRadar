@@ -83,7 +83,7 @@ polling. Configure them in the server-only `.env`; never use
 | FlightAware flight plans | `FLIGHTAWARE_API_KEY` | Disabled; commercial/possibly billable |
 | AviationWeather.gov METAR/TAF | No key; opened airport/flight detail | On demand |
 | Planespotters aircraft photos | `AIRCRAFT_PHOTOS_ENABLED=true` | Disabled |
-| Server alerts/Pushover | `data/alerts.json`, `PUSHOVER_ENABLED=true` plus server credentials | Rules/no-op notifier until explicitly configured |
+| Server alerts/Pushover | `/var/lib/airradar/alerts.json` in production, `PUSHOVER_ENABLED=true` plus server credentials | Rules/no-op notifier until explicitly configured |
 
 Source, licensing, URL allowlists, cache behavior, and operational limits are
 in [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md). Route airport metadata is
@@ -115,7 +115,8 @@ VG25 are sync-time inputs; the live service has no dependency on those hosts.
 ## Alerts and watchlists
 
 The `/watchlist` page and `/api/watchlist` manage shared server alert rules in
-`data/alerts.json`; updates are validated and atomically written. Rules support
+`/var/lib/airradar/alerts.json` in production (`data/alerts.json` locally);
+updates are validated and atomically written. Rules support
 ICAO hex, registration, callsign, callsign pattern, aircraft type, airline,
 and optional maximum distance. Alert transitions use one server-wide cooldown
 and bounded asynchronous notification delivery.

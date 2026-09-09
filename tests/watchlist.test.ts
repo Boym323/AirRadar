@@ -16,6 +16,7 @@ import {
 import type { StateSnapshot } from "@/lib/aircraft/types";
 
 let directory: string;
+let configPath: string;
 
 function snapshot(): StateSnapshot {
   return {
@@ -37,7 +38,7 @@ function snapshot(): StateSnapshot {
 
 beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), "airradar-watchlist-"));
-  vi.stubEnv("ALERTS_CONFIG_PATH", join(directory, "alerts.json"));
+  configPath = join(directory, "alerts.json");
   vi.stubEnv("ALERT_COOLDOWN_MS", "30000");
 });
 
@@ -48,44 +49,44 @@ afterEach(async () => {
 
 describe("server watchlist management", () => {
   it("lists and creates rules with normalized values", async () => {
-    expect(await listWatchlistRules()).toEqual([]);
-    const created = await createWatchlistRule({ id: "plane", name: " Test plane ", type: "icao", value: " abc123 ", enabled: true });
+    expect(await listWatchlistRules(configPath)).toEqual([]);
+    const created = await createWatchlistRule({ id: "plane", name: " Test plane ", type: "icao", value: " abc123 ", enabled: true }, configPath);
     expect(created).toMatchObject({ id: "plane", name: "Test plane", type: "icaoHex", value: "ABC123", enabled: true });
-    expect((await listWatchlistRules())).toHaveLength(1);
+    expect((await listWatchlistRules(configPath))).toHaveLength(1);
   });
 
   it("updates and toggles enabled state without changing the rule id", async () => {
-    await createWatchlistRule({ id: "plane", name: "Plane", type: "icaoHex", value: "ABC123" });
-    const disabled = await updateWatchlistRule("plane", { enabled: false, value: "abc123" });
+    await createWatchlistRule({ id: "plane", name: "Plane", type: "icaoHex", value: "ABC123" }, configPath);
+    const disabled = await updateWatchlistRule("plane", { enabled: false, value: "abc123" }, configPath);
     expect(disabled).toMatchObject({ id: "plane", enabled: false, value: "ABC123" });
-    expect((await updateWatchlistRule("plane", { enabled: true })).enabled).toBe(true);
+    expect((await updateWatchlistRule("plane", { enabled: true }, configPath)).enabled).toBe(true);
   });
 
   it("deletes a rule", async () => {
-    await createWatchlistRule({ id: "plane", name: "Plane", type: "icaoHex", value: "ABC123" });
-    await deleteWatchlistRule("plane");
-    expect(await listWatchlistRules()).toEqual([]);
+    await createWatchlistRule({ id: "plane", name: "Plane", type: "icaoHex", value: "ABC123" }, configPath);
+    await deleteWatchlistRule("plane", configPath);
+    expect(await listWatchlistRules(configPath)).toEqual([]);
   });
 
   it("rejects invalid ICAO, distance and cooldown values", async () => {
-    await expect(createWatchlistRule({ name: "bad", type: "icaoHex", value: "not-hex" })).rejects.toMatchObject({ code: "invalid_icao" });
-    await expect(createWatchlistRule({ name: "bad", type: "callsign", value: "TEST", maxDistanceKm: 0 })).rejects.toMatchObject({ code: "invalid_distance" });
+    await expect(createWatchlistRule({ name: "bad", type: "icaoHex", value: "not-hex" }, configPath)).rejects.toMatchObject({ code: "invalid_icao" });
+    await expect(createWatchlistRule({ name: "bad", type: "callsign", value: "TEST", maxDistanceKm: 0 }, configPath)).rejects.toMatchObject({ code: "invalid_distance" });
     expect(getAlertCooldownMs()).toBe(60_000);
-    await expect(createWatchlistRule({ name: "bad", type: "callsign", value: "TEST", cooldownMs: 59_999 })).rejects.toMatchObject({ code: "invalid_cooldown" });
-    await expect(createWatchlistRule({ name: "ok", type: "callsign", value: "TEST", cooldownMs: 60_000 })).resolves.toBeTruthy();
+    await expect(createWatchlistRule({ name: "bad", type: "callsign", value: "TEST", cooldownMs: 59_999 }, configPath)).rejects.toMatchObject({ code: "invalid_cooldown" });
+    await expect(createWatchlistRule({ name: "ok", type: "callsign", value: "TEST", cooldownMs: 60_000 }, configPath)).resolves.toBeTruthy();
   });
 
   it("keeps duplicate handling aligned with current id semantics", async () => {
-    await createWatchlistRule({ id: "same", name: "One", type: "callsign", value: "TEST" });
-    await expect(createWatchlistRule({ id: "same", name: "Duplicate", type: "callsign", value: "TEST" })).rejects.toMatchObject({ code: "duplicate_rule" });
-    await createWatchlistRule({ id: "other", name: "Same condition", type: "callsign", value: "TEST" });
-    expect((await listWatchlistRules()).map((rule) => rule.id)).toEqual(["same", "other"]);
+    await createWatchlistRule({ id: "same", name: "One", type: "callsign", value: "TEST" }, configPath);
+    await expect(createWatchlistRule({ id: "same", name: "Duplicate", type: "callsign", value: "TEST" }, configPath)).rejects.toMatchObject({ code: "duplicate_rule" });
+    await createWatchlistRule({ id: "other", name: "Same condition", type: "callsign", value: "TEST" }, configPath);
+    expect((await listWatchlistRules(configPath)).map((rule) => rule.id)).toEqual(["same", "other"]);
   });
 
   it("persists atomically and serializes concurrent writes", async () => {
     await Promise.all([
-      createWatchlistRule({ id: "one", name: "One", type: "callsign", value: "ONE" }),
-      createWatchlistRule({ id: "two", name: "Two", type: "callsign", value: "TWO" }),
+      createWatchlistRule({ id: "one", name: "One", type: "callsign", value: "ONE" }, configPath),
+      createWatchlistRule({ id: "two", name: "Two", type: "callsign", value: "TWO" }, configPath),
     ]);
     const source = await readFile(join(directory, "alerts.json"), "utf8");
     expect(JSON.parse(source)).toHaveLength(2);
@@ -93,7 +94,7 @@ describe("server watchlist management", () => {
   });
 
   it("exposes only safe current matching state", async () => {
-    const rule = await createWatchlistRule({ id: "plane", name: "Plane", type: "icaoHex", value: "abc123" });
+    const rule = await createWatchlistRule({ id: "plane", name: "Plane", type: "icaoHex", value: "abc123" }, configPath);
     const response = toPublicWatchlistResponse([rule], snapshot());
     expect(response.rules[0]?.currentState).toMatchObject({ status: "matching", aircraft: [{ icaoHex: "ABC123", registration: "OK-TEST", callsign: "TEST123" }] });
     const serialized = JSON.stringify(response);

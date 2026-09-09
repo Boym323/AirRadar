@@ -13,8 +13,8 @@ whether an operator has configured an optional provider.
 | `/airports/:icao` | Airport detail, MapLibre location map, catalog metadata, nearby local airports, on-demand weather, and 7/30-day observed receiver traffic summary. | Production; traffic and nearby airports use local persisted/catalog data, weather optional. |
 | `/history` | Bounded flight-instance search/list, sampled position detail, playback map. | Production; PostgreSQL feature, no live-polling dependency. |
 | `/statistics` | Today/7-day/30-day receiver aggregate, current-versus-previous period comparison, trends, coverage visualization, reception records, and bounded CSV export. | Production; today is RAM-backed, ranges and comparisons use bounded daily PostgreSQL aggregates. |
-| `/watchlist` | Server alert-rule editor and current matching state. | Production; shared `data/alerts.json`, no auth/user accounts. |
-| `/alerts` | Bounded history of detected alert events and notification outcomes. | Production; safe append-only JSONL ledger, notifier payloads excluded. |
+| `/watchlist` | Server alert-rule editor and current matching state. | Production; shared `/var/lib/airradar/alerts.json` state file, no auth/user accounts. |
+| `/alerts` | Bounded history of detected alert events and notification outcomes. | Production; safe append-only `/var/lib/airradar/alert-events.jsonl` ledger, notifier payloads excluded. |
 | `/recap/daily` | Daily receiver recap with Prague-local boundaries and partial-day labeling. | Production when PostgreSQL history/aggregates are available. |
 | `/recap/weekly` | Seven-day receiver recap with bounded comparison to the preceding seven days. | Production when PostgreSQL history/aggregates are available. |
 | `/fleet` | Concrete aircraft from ICAO watchlist rules, live/offline state, recent observed-flight counts, routes/airports, and lazy photos. | Production; non-identity watchlist rules are omitted, PostgreSQL history is optional. |

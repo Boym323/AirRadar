@@ -21,6 +21,8 @@ readonly CHANGELOG_SCRIPT="${APP_DIR}/scripts/changelog.mjs"
 readonly EXPECTED_SYSTEMD_UNIT_NAME="${SERVICE_NAME}.service"
 readonly EXPECTED_PRODUCTION_ENTRYPOINT="${APP_DIR}/scripts/start-production.mjs"
 readonly EXPECTED_ENVIRONMENT_FILE="${APP_DIR}/.env"
+readonly RUNTIME_STATE_DIRECTORY="/var/lib/airradar"
+readonly LEGACY_ALERT_CONFIG_PATH="${APP_DIR}/data/alerts.json"
 
 DEPLOY_BRANCH="main"
 DRY_RUN=0
@@ -465,6 +467,7 @@ show_loaded_unit_property() {
 
 verify_loaded_systemd_unit_contract() {
   local exec_start kill_mode kill_signal working_directory environment_files environment_file
+  local state_directory state_directory_mode protect_system
 
   log "Verifying loaded ${SERVICE_NAME}.service contract"
   exec_start="$(show_loaded_unit_property ExecStart)" || die "Could not read loaded ExecStart for ${SERVICE_NAME}."
@@ -472,6 +475,9 @@ verify_loaded_systemd_unit_contract() {
   kill_signal="$(show_loaded_unit_property KillSignal)" || die "Could not read loaded KillSignal for ${SERVICE_NAME}."
   working_directory="$(show_loaded_unit_property WorkingDirectory)" || die "Could not read loaded WorkingDirectory for ${SERVICE_NAME}."
   environment_files="$(show_loaded_unit_property EnvironmentFiles)" || die "Could not read loaded EnvironmentFiles for ${SERVICE_NAME}."
+  state_directory="$(show_loaded_unit_property StateDirectory)" || die "Could not read loaded StateDirectory for ${SERVICE_NAME}."
+  state_directory_mode="$(show_loaded_unit_property StateDirectoryMode)" || die "Could not read loaded StateDirectoryMode for ${SERVICE_NAME}."
+  protect_system="$(show_loaded_unit_property ProtectSystem)" || die "Could not read loaded ProtectSystem for ${SERVICE_NAME}."
 
   if [[ -z "${environment_files}" ]]; then
     environment_file="$(show_loaded_unit_property EnvironmentFile)" || die "Could not read loaded EnvironmentFile for ${SERVICE_NAME}."
@@ -485,6 +491,49 @@ verify_loaded_systemd_unit_contract() {
   [[ "${kill_signal}" == "SIGTERM" || "${kill_signal}" == "15" ]] || die "Loaded KillSignal is ${kill_signal}; expected SIGTERM."
   [[ "${working_directory}" == "${APP_DIR}" ]] || die "Loaded WorkingDirectory is ${working_directory}; expected ${APP_DIR}."
   [[ "${environment_file}" == *"${EXPECTED_ENVIRONMENT_FILE}"* ]] || die "Loaded EnvironmentFile does not include ${EXPECTED_ENVIRONMENT_FILE}."
+  [[ "${state_directory}" == "airradar" || "${state_directory}" == "${RUNTIME_STATE_DIRECTORY}" ]] || die "Loaded StateDirectory is ${state_directory}; expected airradar."
+  [[ "${state_directory_mode}" == "0750" || "${state_directory_mode}" == "488" ]] || die "Loaded StateDirectoryMode is ${state_directory_mode}; expected 0750."
+  [[ "${protect_system}" == "strict" ]] || die "Loaded ProtectSystem is ${protect_system}; expected strict."
+}
+
+migrate_legacy_alert_config() {
+  local legacy_path="${1:-${LEGACY_ALERT_CONFIG_PATH}}"
+  local state_directory="${2:-${RUNTIME_STATE_DIRECTORY}}"
+  local target_path="${state_directory}/alerts.json"
+  local temporary_path=""
+
+  [[ -f "${legacy_path}" ]] || {
+    log "No legacy alert config found; state-directory config will be created on demand."
+    return 0
+  }
+
+  if run_privileged test -e "${target_path}"; then
+    log "Runtime alert config already exists; preserving it: ${target_path}"
+    return 0
+  fi
+
+  run_privileged install -d -o airradar -g airradar -m 0750 -- "${state_directory}" \
+    || die "Could not create runtime state directory ${state_directory}."
+  if run_privileged test -e "${target_path}"; then
+    log "Runtime alert config appeared during migration; preserving it: ${target_path}"
+    return 0
+  fi
+
+  temporary_path="$(run_privileged mktemp --tmpdir="${state_directory}" '.alerts.json.migration.XXXXXX')" \
+    || die "Could not create a temporary alert config in ${state_directory}."
+  if ! run_privileged install -o airradar -g airradar -m 0600 -- "${legacy_path}" "${temporary_path}"; then
+    run_privileged rm -f -- "${temporary_path}" || true
+    die "Could not copy the legacy alert config to ${state_directory}."
+  fi
+  if ! run_privileged mv -n -- "${temporary_path}" "${target_path}"; then
+    run_privileged rm -f -- "${temporary_path}" || true
+    die "Could not activate the migrated alert config at ${target_path}."
+  fi
+  run_privileged rm -f -- "${temporary_path}" || true
+
+  run_privileged test -e "${target_path}" \
+    || die "Alert config migration did not create ${target_path}."
+  log "Migrated legacy alert config to ${target_path}; future writes use the state directory."
 }
 
 install_systemd_unit() {
@@ -658,6 +707,7 @@ main() {
   generate_release_changelog
   run_release_steps
   deploy_systemd_unit
+  migrate_legacy_alert_config
   restart_and_check
   create_release_tag
 

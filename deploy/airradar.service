@@ -14,6 +14,8 @@ Environment=NODE_ENV=production
 # process.exit-based start-server handler in the same process.
 Environment=NEXT_MANUAL_SIG_HANDLE=1
 ExecStart=/usr/bin/node /var/www/airradar/scripts/start-production.mjs start --hostname 192.168.1.142 --port 3000
+StateDirectory=airradar
+StateDirectoryMode=0750
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=20

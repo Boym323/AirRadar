@@ -182,10 +182,9 @@ function persistedRule(rule: AlertRule): Record<string, unknown> {
   };
 }
 
-let writeQueue: Promise<void> = Promise.resolve();
+const writeQueues = new Map<string, Promise<void>>();
 
-async function writeAlertConfigAtomically(rules: AlertRule[]): Promise<void> {
-  const targetPath = getAlertConfigPath();
+async function writeAlertConfigAtomically(targetPath: string, rules: AlertRule[]): Promise<void> {
   const directory = dirname(targetPath);
   await mkdir(directory, { recursive: true });
   const temporaryPath = join(directory, `.${basename(targetPath)}.${process.pid}.${randomUUID()}.tmp`);
@@ -204,49 +203,54 @@ async function writeAlertConfigAtomically(rules: AlertRule[]): Promise<void> {
   }
 }
 
-async function withWriteLock<T>(operation: () => Promise<T>): Promise<T> {
-  const result = writeQueue.then(operation, operation);
-  writeQueue = result.then(() => undefined, () => undefined);
+async function withWriteLock<T>(targetPath: string, operation: () => Promise<T>): Promise<T> {
+  const previous = writeQueues.get(targetPath) ?? Promise.resolve();
+  const result = previous.then(operation, operation);
+  const settled = result.then(() => undefined, () => undefined);
+  writeQueues.set(targetPath, settled);
+  void settled.then(() => {
+    if (writeQueues.get(targetPath) === settled) writeQueues.delete(targetPath);
+  });
   return result;
 }
 
-async function currentRules(): Promise<AlertRule[]> {
-  return loadAlertConfig().rules;
+function currentRules(path: string): AlertRule[] {
+  return loadAlertConfig(path).rules;
 }
 
-export async function listWatchlistRules(): Promise<AlertRule[]> {
-  return currentRules();
+export async function listWatchlistRules(path = getAlertConfigPath()): Promise<AlertRule[]> {
+  return currentRules(path);
 }
 
-export async function createWatchlistRule(input: WatchlistRuleInput): Promise<AlertRule> {
-  return withWriteLock(async () => {
-    const rules = await currentRules();
+export async function createWatchlistRule(input: WatchlistRuleInput, path = getAlertConfigPath()): Promise<AlertRule> {
+  return withWriteLock(path, async () => {
+    const rules = currentRules(path);
     const rule = normalizeWatchlistRule(input, undefined, rules);
-    await writeAlertConfigAtomically([...rules, rule]);
+    await writeAlertConfigAtomically(path, [...rules, rule]);
     return rule;
   });
 }
 
-export async function updateWatchlistRule(id: string, input: WatchlistRuleInput): Promise<AlertRule> {
-  return withWriteLock(async () => {
-    const rules = await currentRules();
+export async function updateWatchlistRule(id: string, input: WatchlistRuleInput, path = getAlertConfigPath()): Promise<AlertRule> {
+  return withWriteLock(path, async () => {
+    const rules = currentRules(path);
     const index = rules.findIndex((rule) => rule.id === id);
     if (index < 0) throw new WatchlistNotFoundError();
     if (provided(input, "id") && input.id !== id) throw new WatchlistValidationError("invalid_rule");
     const rule = normalizeWatchlistRule(input, rules[index], rules);
     const next = rules.slice();
     next[index] = rule;
-    await writeAlertConfigAtomically(next);
+    await writeAlertConfigAtomically(path, next);
     return rule;
   });
 }
 
-export async function deleteWatchlistRule(id: string): Promise<void> {
-  return withWriteLock(async () => {
-    const rules = await currentRules();
+export async function deleteWatchlistRule(id: string, path = getAlertConfigPath()): Promise<void> {
+  return withWriteLock(path, async () => {
+    const rules = currentRules(path);
     const next = rules.filter((rule) => rule.id !== id);
     if (next.length === rules.length) throw new WatchlistNotFoundError();
-    await writeAlertConfigAtomically(next);
+    await writeAlertConfigAtomically(path, next);
   });
 }
 

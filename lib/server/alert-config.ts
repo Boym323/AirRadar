@@ -1,11 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
-import { isAbsolute, resolve } from "node:path";
 import {
   isValidWildcardPattern,
   normalizeAircraftRuleType,
   type AircraftRuleType,
 } from "@/lib/aircraft/watchlist";
 import { normalizeIcaoHex } from "@/lib/server/validation";
+import { getLegacyRuntimeStatePath, getRuntimeStatePath } from "@/lib/server/runtime-state";
 
 export interface AlertRule {
   id: string;
@@ -24,8 +24,7 @@ export interface AlertConfig {
 }
 
 export function getAlertConfigPath(): string {
-  const configured = process.env.ALERTS_CONFIG_PATH?.trim() || "data/alerts.json";
-  return isAbsolute(configured) ? configured : resolve(process.cwd(), configured);
+  return getRuntimeStatePath("alerts.json");
 }
 
 function issue(errors: string[], message: string): void {
@@ -100,11 +99,14 @@ export function parseAlertRules(input: unknown): { rules: AlertRule[]; errors: s
   return { rules, errors };
 }
 
-export function loadAlertConfig(): AlertConfig {
-  const path = getAlertConfigPath();
-  if (!existsSync(path)) return { rules: [], errors: [], path };
+export function loadAlertConfig(path = getAlertConfigPath()): AlertConfig {
+  // A legacy checkout config is read only while the state-directory copy is
+  // absent. All writes target `path`, so this never creates two active stores.
+  const legacyPath = path === getAlertConfigPath() ? getLegacyRuntimeStatePath("alerts.json") : null;
+  const sourcePath = existsSync(path) ? path : legacyPath && existsSync(legacyPath) ? legacyPath : null;
+  if (!sourcePath) return { rules: [], errors: [], path };
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    const parsed = JSON.parse(readFileSync(sourcePath, "utf8")) as unknown;
     const result = parseAlertRules(parsed);
     if (result.errors.length) console.error(`AirRadar alerts config invalid: ${result.errors.join("; ")}`);
     return { ...result, path };

@@ -62,7 +62,11 @@ fake_run_privileged() {
       "${RM_COMMAND}" "$@"
       ;;
     test)
-      [[ "${1:-}" == "-w" && -w "${2:-}" ]]
+      case "${1:-}" in
+        -w) [[ -w "${2:-}" ]] ;;
+        -e) [[ -e "${2:-}" ]] ;;
+        *) return 1 ;;
+      esac
       ;;
     systemctl)
       case "${1:-}" in
@@ -102,6 +106,15 @@ fake_run_privileged() {
               ;;
             EnvironmentFile)
               printf '%s\n' "${PROJECT_DIR}/.env"
+              ;;
+            StateDirectory)
+              printf 'airradar\n'
+              ;;
+            StateDirectoryMode)
+              printf '0750\n'
+              ;;
+            ProtectSystem)
+              printf 'strict\n'
               ;;
             *)
               return 1
@@ -302,6 +315,21 @@ test_verification_failure() {
   FAKE_BAD_CONTRACT=0
 }
 
+test_legacy_alert_config_migration() {
+  local legacy_path="${TEST_ROOT}/legacy-alerts.json"
+  local state_directory="${TEST_ROOT}/runtime-state"
+  local target_path="${state_directory}/alerts.json"
+
+  printf '[{"id":"preserve","enabled":true,"type":"callsign","value":"TEST"}]\n' > "${legacy_path}"
+  migrate_legacy_alert_config "${legacy_path}" "${state_directory}"
+  assert_file_equals "${legacy_path}" "${target_path}"
+  [[ "$(stat -c '%a' "${target_path}")" == "600" ]] || fail "Migrated alert config is not mode 0600"
+
+  printf '[]\n' > "${legacy_path}"
+  migrate_legacy_alert_config "${legacy_path}" "${state_directory}"
+  grep -Fq 'preserve' "${target_path}" || fail "Existing runtime alert config was overwritten"
+}
+
 attempt_changed_release() {
   deploy_systemd_unit "${CURRENT_SOURCE:-${SOURCE_UNIT}}"
   restart_and_check
@@ -324,5 +352,6 @@ CURRENT_SOURCE="${TEST_ROOT}/reload-failure-source.service"
 test_daemon_reload_failure
 CURRENT_SOURCE="${TEST_ROOT}/verification-failure-source.service"
 test_verification_failure
+test_legacy_alert_config_migration
 
 printf 'release systemd unit tests passed\n'

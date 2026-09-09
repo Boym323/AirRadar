@@ -3,7 +3,7 @@ import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import type { Aircraft, ProviderSnapshot, StateSnapshot } from "@/lib/aircraft/types";
 import { matchesAircraftRule } from "@/lib/aircraft/watchlist";
 import { parseAlertRules, type AlertRule } from "@/lib/server/alert-config";
-import { AlertEngine } from "@/lib/server/alert-engine";
+import { AlertEngine, type AlertEngineOptions } from "@/lib/server/alert-engine";
 import type { AlertNotifier, AircraftAlert } from "@/lib/server/alert-notifier";
 import { NoopAlertNotifier } from "@/lib/server/alert-notifier";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
@@ -28,6 +28,17 @@ function recordingNotifier(): AlertNotifier & { calls: AircraftAlert[] } {
   return { name: "test", enabled: true, calls, send: vi.fn(async (alert: AircraftAlert) => { calls.push(alert); }) };
 }
 
+function testHistory(): NonNullable<AlertEngineOptions["history"]> {
+  return {
+    recordDetected: vi.fn(async () => undefined),
+    recordNotification: vi.fn(async () => undefined),
+  };
+}
+
+function createTestAlertEngine(options: AlertEngineOptions = {}): AlertEngine {
+  return new AlertEngine({ ...options, history: options.history ?? testHistory() });
+}
+
 async function flushAlerts(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
@@ -40,7 +51,7 @@ afterEach(() => {
 describe("server alerts", () => {
   it("alerts on the first condition match", async () => {
     const notifier = recordingNotifier();
-    const engine = new AlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier });
+    const engine = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier });
     engine.observe([], [aircraft()]);
     await flushAlerts();
     expect(notifier.calls).toHaveLength(1);
@@ -48,7 +59,7 @@ describe("server alerts", () => {
 
   it("does not alert again on the next poll", async () => {
     const notifier = recordingNotifier();
-    const engine = new AlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier });
+    const engine = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier });
     const first = aircraft();
     engine.observe([], [first]);
     engine.observe([first], [aircraft()]);
@@ -59,7 +70,7 @@ describe("server alerts", () => {
   it("does not alert after a short disappear/reappear", async () => {
     let now = 0;
     const notifier = recordingNotifier();
-    const engine = new AlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier, cooldownMs: 7_200_000, now: () => now });
+    const engine = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier, cooldownMs: 7_200_000, now: () => now });
     const first = aircraft();
     engine.observe([], [first]);
     engine.observe([first], []);
@@ -72,7 +83,7 @@ describe("server alerts", () => {
   it("alerts again after the cooldown", async () => {
     let now = 0;
     const notifier = recordingNotifier();
-    const engine = new AlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier, cooldownMs: 7_200_000, now: () => now });
+    const engine = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier, cooldownMs: 7_200_000, now: () => now });
     engine.observe([], [aircraft()]);
     now = 7_200_001;
     engine.observe([], [aircraft()]);
@@ -82,7 +93,7 @@ describe("server alerts", () => {
 
   it("alerts on a false to true max-distance transition", async () => {
     const notifier = recordingNotifier();
-    const engine = new AlertEngine({ rules: [rule("a380-near", "aircraftType", "A388", 150)], notifier });
+    const engine = createTestAlertEngine({ rules: [rule("a380-near", "aircraftType", "A388", 150)], notifier });
     const far = aircraft("ABC123", { aircraftType: "A388", distanceKm: 220 });
     const near = aircraft("ABC123", { aircraftType: "A388", distanceKm: 149 });
     engine.observe([], [far]);
@@ -94,7 +105,7 @@ describe("server alerts", () => {
   it("aggregates multiple matching rules into one aircraft alert", async () => {
     const notifier = recordingNotifier();
     const value = aircraft("ABC123", { callsign: "UAE139", registration: "A6-EVN", aircraftType: "A388" });
-    const engine = new AlertEngine({ rules: [
+    const engine = createTestAlertEngine({ rules: [
       rule("uae", "callsignPattern", "UAE*"),
       rule("a380", "aircraftType", "A388"),
       rule("registration", "registration", "A6-EVN"),
@@ -142,7 +153,7 @@ describe("server alerts", () => {
   it("does nothing with a disabled notifier", async () => {
     const send = vi.fn();
     const notifier: AlertNotifier = { name: "disabled", enabled: false, send };
-    const engine = new AlertEngine({ rules: [rule("uae", "callsign", "UAE139")], notifier });
+    const engine = createTestAlertEngine({ rules: [rule("uae", "callsign", "UAE139")], notifier });
     engine.observe([], [aircraft()]);
     await flushAlerts();
     expect(send).not.toHaveBeenCalled();
@@ -151,7 +162,7 @@ describe("server alerts", () => {
   it("does not let notifier failure affect AircraftStateService", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const notifier: AlertNotifier = { name: "test", enabled: true, send: vi.fn().mockRejectedValue(new Error("network")) };
-    const engine = new AlertEngine({ rules: [rule("uae", "callsign", "UAE139")], notifier });
+    const engine = createTestAlertEngine({ rules: [rule("uae", "callsign", "UAE139")], notifier });
     const service = new AircraftStateService(new MockReadsbProvider(receiver), undefined, undefined, engine);
     const value = aircraft();
     value.lastSeen = new Date().toISOString();
@@ -167,7 +178,7 @@ describe("server alerts", () => {
   it("alerts once on an explicit emergency transition", async () => {
     vi.stubEnv("ALERT_EMERGENCY_ENABLED", "true");
     const notifier = recordingNotifier();
-    const engine = new AlertEngine({ notifier });
+    const engine = createTestAlertEngine({ notifier });
     const normal = aircraft();
     const emergency = aircraft("ABC123", { emergency: "general" });
     engine.observe([], [normal]);
@@ -193,7 +204,7 @@ describe("server alerts", () => {
 
   it("cleans expired dedup cache entries", () => {
     let now = 0;
-    const engine = new AlertEngine({ rules: [rule("uae", "callsign", "UAE139")], notifier: new NoopAlertNotifier(), cooldownMs: 1000, now: () => now });
+    const engine = createTestAlertEngine({ rules: [rule("uae", "callsign", "UAE139")], notifier: new NoopAlertNotifier(), cooldownMs: 1000, now: () => now });
     engine.observe([], [aircraft()]);
     const internal = engine as unknown as { dedupCache: Map<string, number> };
     expect(internal.dedupCache.size).toBeGreaterThan(0);

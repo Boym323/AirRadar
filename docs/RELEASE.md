@@ -46,8 +46,12 @@ install dependencies, migrate, build, restart, or health-check.
    are forward migrations; never reset or recreate a production database.
 8. It validates the repository systemd unit, compares/installs it atomically
    at the loaded persistent FragmentPath, daemon-reloads only when changed,
-   and verifies the loaded unit contract: direct production entrypoint,
-   expected working directory/environment, SIGTERM, and `control-group`.
+   verifies the loaded unit contract: direct production entrypoint, expected
+   working directory/environment, SIGTERM, `control-group`, `StateDirectory=airradar`,
+   `StateDirectoryMode=0750`, and `ProtectSystem=strict`, then performs a
+   non-destructive legacy alert-config migration if needed. The migration never
+   overwrites `/var/lib/airradar/alerts.json`; the old alert-event ledger is
+   never copied.
 9. It restarts `airradar.service`, requires the service to be active, checks
    the local health URL with retries, and checks the public health URL with
    retries.
@@ -74,6 +78,8 @@ The wrapper registers the shutdown coordinator in the Next process and sets
 `NEXT_MANUAL_SIG_HANDLE=1`, so systemd tracks the actual Node process as
 `MainPID` and the application owns cleanup. The service uses
 `KillMode=control-group`, `KillSignal=SIGTERM`, and a bounded stop timeout.
+`StateDirectory=airradar` gives the service user persistent `/var/lib/airradar`
+storage while `ProtectSystem=strict` keeps the source checkout read-only.
 
 ## Reverse proxy and health
 

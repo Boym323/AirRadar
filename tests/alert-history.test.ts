@@ -1,10 +1,15 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { JsonlAlertHistoryStore } from "@/lib/server/alert-history";
+import { getAlertHistoryPath, JsonlAlertHistoryStore } from "@/lib/server/alert-history";
 
-afterEach(() => vi.unstubAllEnvs());
+const directories: string[] = [];
+
+afterEach(async () => {
+  vi.unstubAllEnvs();
+  await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
+});
 
 const aircraft = {
   icaoHex: "ABC123",
@@ -17,6 +22,7 @@ const aircraft = {
 describe("alert history", () => {
   it("appends safe event and delivery lines and folds the latest status", async () => {
     const directory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
+    directories.push(directory);
     const path = join(directory, "events.jsonl");
     const store = new JsonlAlertHistoryStore(path);
     await store.recordDetected({ id: "new:ABC123", detectedAt: "2026-09-08T12:00:00Z", type: "new_aircraft", reason: "new", aircraft });
@@ -27,15 +33,35 @@ describe("alert history", () => {
     expect(result.items).toHaveLength(1);
     expect(result.items[0]).toMatchObject({ id: "new:ABC123", notificationStatus: "failed", aircraft: { icaoHex: "ABC123", registration: "OK-ABC" } });
     expect(await readFile(path, "utf8")).not.toContain("secret");
+    expect((await stat(path)).mode & 0o777).toBe(0o600);
   });
 
   it("returns bounded pages", async () => {
     const directory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
+    directories.push(directory);
     const store = new JsonlAlertHistoryStore(join(directory, "events.jsonl"));
     for (let index = 0; index < 3; index += 1) {
       await store.recordDetected({ id: `watchlist:${index}`, detectedAt: `2026-09-08T12:0${index}:00Z`, type: "watchlist", reason: "watchlisted", aircraft });
     }
     expect(await store.list({ page: 0, pageSize: 2 })).toMatchObject({ page: 0, pageSize: 2, nextPage: 1, items: expect.any(Array) });
     expect(await store.list({ page: 1, pageSize: 2 })).toMatchObject({ page: 1, nextPage: null });
+  });
+
+  it("reloads from the same persistent file and isolates separate ledgers", async () => {
+    const firstDirectory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
+    const secondDirectory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
+    directories.push(firstDirectory, secondDirectory);
+    const firstPath = join(firstDirectory, "events.jsonl");
+    const first = new JsonlAlertHistoryStore(firstPath);
+    await first.recordDetected({ id: "first", detectedAt: "2026-09-08T12:00:00Z", type: "watchlist", reason: "watchlisted", aircraft });
+
+    expect((await new JsonlAlertHistoryStore(firstPath).list()).items.map((entry) => entry.id)).toEqual(["first"]);
+    expect((await new JsonlAlertHistoryStore(join(secondDirectory, "events.jsonl")).list()).items).toEqual([]);
+  });
+
+  it("uses the fixed production state path instead of an arbitrary environment path", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ALERT_HISTORY_PATH", "/tmp/not-an-airradar-state-file.jsonl");
+    expect(getAlertHistoryPath()).toBe("/var/lib/airradar/alert-events.jsonl");
   });
 });

@@ -38,7 +38,13 @@ by `airradar` but not world-readable (`chmod 640` with an appropriate group).
 
 Optional enrichment is configured in the same server-only `.env`: set `ADSBDB_ENABLED=true` for free, keyless aircraft metadata and route lookups. Keep `FLIGHTAWARE_API_KEY=` empty for the first production deployment; if configured, the current architecture may perform paid AeroAPI flight-plan lookups for currently tracked aircraft with callsigns. Never use a `NEXT_PUBLIC_*` variable for these values. If either provider or PostgreSQL is offline, live readsb polling continues and the UI degrades gracefully.
 
-Optional server alerts use the checked-in `data/alerts.json` file and are separate from the browser watchlist. Configure Pushover only with server-side `PUSHOVER_ENABLED`, `PUSHOVER_USER_KEY` and `PUSHOVER_API_TOKEN`; never expose these as `NEXT_PUBLIC_*` variables. Alert delivery is best-effort and does not block readsb polling.
+Optional server alerts use `/var/lib/airradar/alerts.json`, a persistent file
+created in the systemd-managed state directory. The checked-in `data/alerts.json`
+is retained only as a legacy migration source and is never written by the
+production service. Configure Pushover only with server-side
+`PUSHOVER_ENABLED`, `PUSHOVER_USER_KEY` and `PUSHOVER_API_TOKEN`; never expose
+these as `NEXT_PUBLIC_*` variables. Alert delivery is best-effort and does not
+block readsb polling. The alert ledger is `/var/lib/airradar/alert-events.jsonl`.
 
 After installing dependencies and building as that user, install `airradar.service` into `/etc/systemd/system/` and run:
 
@@ -52,7 +58,10 @@ Normal production releases should use `deploy/release.sh`. It calculates the
 next version in the current `package.json` major/minor series, writes ignored
 build metadata before `next build`, and creates the matching Git tag only after
 the build, migrations, restart and both health checks pass. Release retries on
-the same commit reuse the same tag.
+the same commit reuse the same tag. When the runtime alert config does not yet
+exist, the release script creates `/var/lib/airradar` with service ownership
+and copies `data/alerts.json` into it without overwriting an existing runtime
+file. The old alert-event ledger is never migrated.
 
 Nginx Proxy Manager should proxy to `http://192.168.1.142:3000`. The reverse proxy is separate from the AirRadar LXC, so do not use its own `127.0.0.1`. For long-lived SSE responses, turn off proxy buffering (or add `X-Accel-Buffering: no`, which AirRadar already sends) and use a generous read timeout.
 
