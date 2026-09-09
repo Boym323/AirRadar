@@ -431,6 +431,7 @@ export class ReceiverStatistics {
       coverageSummary: period.coverageSummary,
       todayCoverageSummary: current.coverageSummary,
       period,
+      comparison: period.comparison,
     };
   }
 

@@ -1,6 +1,8 @@
 import "temporal-polyfill/full/global";
 import type {
   ReceiverStatisticsCoverageTrendPoint,
+  ReceiverStatisticsComparison,
+  ReceiverStatisticsComparisonPeriod,
   ReceiverStatisticsCoverageBucket,
   ReceiverStatisticsRange,
   ReceiverStatisticsRangeData,
@@ -38,6 +40,13 @@ export interface ReceiverStatisticsRangeRows {
   coverage: ReceiverDailyCoverageRangeRow[];
 }
 
+export interface StatisticsRangeBounds {
+  from: string;
+  to: string;
+  toExclusive: string;
+  days: number;
+}
+
 export interface CurrentDayStatisticsSnapshot {
   date: string;
   uniqueAircraftCount: number;
@@ -62,7 +71,7 @@ export function statisticsRangeBounds(
   range: ReceiverStatisticsRange,
   now: Date,
   timezone: string,
-): { from: string; to: string; toExclusive: string; days: number } {
+): StatisticsRangeBounds {
   const days = statisticsRangeDays(range);
   const to = dayKey(now, timezone);
   const localDate = Temporal.PlainDate.from(to);
@@ -166,8 +175,9 @@ export function aggregateReceiverStatisticsRange(options: {
   timezone: string;
   rows: ReceiverStatisticsRangeRows;
   currentDay?: CurrentDayStatisticsSnapshot;
+  bounds?: StatisticsRangeBounds;
 }): ReceiverStatisticsRangeData & { coverage: ReceiverStatisticsCoverageBucket[] } {
-  const bounds = statisticsRangeBounds(options.range, options.now, options.timezone);
+  const bounds = options.bounds ?? statisticsRangeBounds(options.range, options.now, options.timezone);
   const dates = dateKeys(bounds.from, bounds.days);
   const statsByDate = new Map<string, ReceiverDailyStatsRangeRow>();
   const aircraftRows = options.rows.aircraft.filter((row) => dates.includes(row.date));
@@ -269,8 +279,35 @@ export async function getReceiverStatisticsRange(options: {
   now: Date;
   timezone: string;
   currentDay?: CurrentDayStatisticsSnapshot;
-}): Promise<ReceiverStatisticsRangeData & { coverage: ReceiverStatisticsCoverageBucket[] }> {
+}): Promise<ReceiverStatisticsRangeData & { coverage: ReceiverStatisticsCoverageBucket[]; comparison: ReceiverStatisticsComparison }> {
   const bounds = statisticsRangeBounds(options.range, options.now, options.timezone);
-  const rows = await loadReceiverStatisticsRangeRows(bounds.from, bounds.toExclusive);
-  return aggregateReceiverStatisticsRange({ ...options, rows });
+  const previousTo = Temporal.PlainDate.from(bounds.from).subtract({ days: 1 });
+  const previousBounds: StatisticsRangeBounds = {
+    from: previousTo.subtract({ days: bounds.days - 1 }).toString(),
+    to: previousTo.toString(),
+    toExclusive: bounds.from,
+    days: bounds.days,
+  };
+  const [rows, previousRows] = await Promise.all([
+    loadReceiverStatisticsRangeRows(bounds.from, bounds.toExclusive),
+    loadReceiverStatisticsRangeRows(previousBounds.from, previousBounds.toExclusive),
+  ]);
+  const period = aggregateReceiverStatisticsRange({ ...options, rows, bounds });
+  const previous = aggregateReceiverStatisticsRange({ ...options, rows: previousRows, currentDay: undefined, bounds: previousBounds });
+
+  function comparisonPeriod(data: ReceiverStatisticsRangeData & { coverage: ReceiverStatisticsCoverageBucket[] }): ReceiverStatisticsComparisonPeriod {
+    const metricIsPresent = (metric: "uniqueAircraft" | "maxConcurrentAircraft" | "maxDistanceKm"): boolean => data.trend.some((point) => point[metric] !== null)
+      || metric === "uniqueAircraft" && data.summary.uniqueAircraft > 0;
+    return {
+      from: data.from,
+      to: data.to,
+      hasData: data.hasData,
+      uniqueAircraft: metricIsPresent("uniqueAircraft") ? data.summary.uniqueAircraft : null,
+      maxConcurrentAircraft: metricIsPresent("maxConcurrentAircraft") ? data.summary.maxConcurrentAircraft : null,
+      maxDistanceKm: metricIsPresent("maxDistanceKm") ? data.summary.maxDistanceKm : null,
+      coverageMaxDistanceKm: data.coverageSummary.populatedBuckets > 0 ? data.coverageSummary.maxDistanceKm : null,
+    };
+  }
+
+  return { ...period, comparison: { current: comparisonPeriod(period), previous: comparisonPeriod(previous) } };
 }

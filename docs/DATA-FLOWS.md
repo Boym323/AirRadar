@@ -93,8 +93,10 @@ are excluded from coverage.
 Only dirty rows are flushed to PostgreSQL on a throttle and again during
 shutdown. Startup loads the current local-day aggregate. Range responses for
 `7d` and `30d` read the three daily statistics tables, merge the current RAM
-day, produce daily trends, period summary, and populated-bucket coverage
-summary. Statistics never publish exact receiver coordinates.
+day, produce daily trends, period summary, populated-bucket coverage summary,
+and a comparison against the immediately preceding equal-length local period.
+Comparison fields remain unavailable when that specific aggregate is missing;
+statistics never publish exact receiver coordinates.
 
 The maximum-distance observation also retains its normalized ICAO hex, bearing,
 timestamp, and registration when available. `/api/reception-records` reads up

@@ -252,8 +252,24 @@ export interface ReceiverStatisticsRangeData {
   coverageSummary: ReceiverStatisticsCoverageSummary;
 }
 
+export interface ReceiverStatisticsComparisonPeriod {
+  from: string;
+  to: string;
+  hasData: boolean;
+  uniqueAircraft: number | null;
+  maxConcurrentAircraft: number | null;
+  maxDistanceKm: number | null;
+  coverageMaxDistanceKm: number | null;
+}
+
+export interface ReceiverStatisticsComparison {
+  current: ReceiverStatisticsComparisonPeriod;
+  previous: ReceiverStatisticsComparisonPeriod;
+}
+
 export interface ReceiverStatisticsRangeResponse extends ReceiverStatisticsResponse {
   /** Coverage summary for the current local day, used by the range comparison. */
   todayCoverageSummary: ReceiverStatisticsCoverageSummary;
   period: ReceiverStatisticsRangeData;
+  comparison: ReceiverStatisticsComparison;
 }

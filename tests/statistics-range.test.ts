@@ -175,6 +175,31 @@ describe("receiver statistics ranges", () => {
     expect(result.trend.every((point) => point.uniqueAircraft === null)).toBe(true);
     expect(result.coverage.every((bucket) => bucket.maxDistanceKm === 0)).toBe(true);
     expect(result.coverageSummary).toMatchObject({ maxBearing: null, populatedBuckets: 0, averageDistanceKm: null, bestDirections: [] });
+    expect(result.comparison.current.uniqueAircraft).toBeNull();
+    expect(result.comparison.previous.maxDistanceKm).toBeNull();
+  });
+
+  it("compares bounded current and previous local periods without percentages", async () => {
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({
+      stats: [
+        { date: "2026-09-08", uniqueAircraftCount: 2, maxConcurrentAircraft: 2, maxDistanceKm: 150 },
+        { date: "2026-09-01", uniqueAircraftCount: 1, maxConcurrentAircraft: 1, maxDistanceKm: 80 },
+      ],
+      aircraft: [
+        { date: "2026-09-08", icaoHex: "AAA111", aircraftType: null, airline: null },
+        { date: "2026-09-08", icaoHex: "BBB222", aircraftType: null, airline: null },
+        { date: "2026-09-01", icaoHex: "CCC333", aircraftType: null, airline: null },
+      ],
+      coverage: [
+        { date: "2026-09-08", azimuthBucket: 0, maxDistanceKm: 150 },
+        { date: "2026-09-01", azimuthBucket: 0, maxDistanceKm: 80 },
+      ],
+    }) as never);
+    const result = await getReceiverStatisticsRange({ range: "7d", now: new Date("2026-09-08T20:00:00.000Z"), timezone: "Europe/Prague" });
+    expect(result.comparison).toEqual({
+      current: { from: "2026-09-02", to: "2026-09-08", hasData: true, uniqueAircraft: 2, maxConcurrentAircraft: 2, maxDistanceKm: 150, coverageMaxDistanceKm: 150 },
+      previous: { from: "2026-08-26", to: "2026-09-01", hasData: true, uniqueAircraft: 1, maxConcurrentAircraft: 1, maxDistanceKm: 80, coverageMaxDistanceKm: 80 },
+    });
   });
 
   it("provides translated range and tooltip copy in Czech and English", () => {

@@ -6,6 +6,7 @@ import type {
   ReceiverReceptionRecord,
   ReceiverReceptionRecordsResponse,
   ReceiverStatisticsCoverageSummary,
+  ReceiverStatisticsComparison,
   ReceiverStatisticsRangeResponse,
   ReceiverStatisticsResponse,
   ReceiverStatisticsTrendPoint,
@@ -165,6 +166,34 @@ function CoverageAnalysis({
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return <div className="statistics-stat-card"><div className="statistics-stat-value">{value}</div><div className="statistics-stat-label">{label}</div></div>;
+}
+
+function PeriodComparison({ comparison }: { comparison: ReceiverStatisticsComparison }) {
+  const currentLabel = `${comparison.current.from} → ${comparison.current.to}`;
+  const previousLabel = `${comparison.previous.from} → ${comparison.previous.to}`;
+  const displayValue = (value: number | null, distance = false) => value === null
+    ? t.common.emptyValue
+    : distance ? formatDistance(value) : formatNumber(value);
+
+  return <section className="statistics-card statistics-period-comparison" aria-labelledby="statistics-period-comparison-title">
+    <div className="statistics-card-header">
+      <div className="coverage-card-heading">
+        <h2 id="statistics-period-comparison-title">{t.statistics.periodComparison}</h2>
+        <span>{t.statistics.periodComparisonDescription}</span>
+      </div>
+    </div>
+    <div className="statistics-period-comparison-scroll">
+      <table className="statistics-comparison-table">
+        <thead><tr><th>{t.statistics.comparisonMetric}</th><th>{t.statistics.comparisonCurrent}<small>{currentLabel}</small></th><th>{t.statistics.comparisonPrevious}<small>{previousLabel}</small></th></tr></thead>
+        <tbody>
+          <tr><th>{t.statistics.periodUniqueAircraft}</th><td>{displayValue(comparison.current.uniqueAircraft)}</td><td>{displayValue(comparison.previous.uniqueAircraft)}</td></tr>
+          <tr><th>{t.statistics.periodMaxConcurrent}</th><td>{displayValue(comparison.current.maxConcurrentAircraft)}</td><td>{displayValue(comparison.previous.maxConcurrentAircraft)}</td></tr>
+          <tr><th>{t.statistics.periodMaxDistance}</th><td>{displayValue(comparison.current.maxDistanceKm, true)}</td><td>{displayValue(comparison.previous.maxDistanceKm, true)}</td></tr>
+          <tr><th>{t.statistics.coverageMaxDistance}</th><td>{displayValue(comparison.current.coverageMaxDistanceKm, true)}</td><td>{displayValue(comparison.previous.coverageMaxDistanceKm, true)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>;
 }
 
 function Ranking({ title, items }: { title: string; items: Array<{ name: string; count: number }> }) {
@@ -464,6 +493,7 @@ export default function StatisticsPage() {
 
         {((rangeData && !rangeData.period.hasData) || (!rangeData && data.daily.uniqueAircraft === 0)) && <div className="statistics-empty-banner">{rangeData ? t.statistics.insufficientPeriodData : t.statistics.insufficientData}</div>}
 
+        {rangeData && <PeriodComparison comparison={rangeData.comparison} />}
         {rangeData && <RangeCharts data={rangeData} />}
 
         <section className="statistics-card coverage-card">
