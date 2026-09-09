@@ -215,3 +215,9 @@ Changes since v1.0.0-rc.1:
 Changes since v1.0.0-rc.2:
 
 - No user-facing changes.
+
+## [1.0.1] - 2026-09-09
+
+Changes since v1.0.0:
+
+- feat: integrate Geist font and enhance aircraft detail display (378a8c15)
