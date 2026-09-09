@@ -6,6 +6,7 @@ coverage/
 generated/
 generated/build-version.json
 data/atc/generated/
+data/alert-events.jsonl
 *.log
 .env*
 !.env.example

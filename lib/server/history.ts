@@ -41,6 +41,8 @@ export interface HistoryResponse {
 export interface RecordAircraftSnapshotResult {
   succeeded: string[];
   failed: string[];
+  /** ICAO identities whose first durable Flight instance was created. */
+  newAircraft?: string[];
 }
 
 export interface HistoryPersistenceStatus {
@@ -833,7 +835,7 @@ export async function recordAircraftSnapshot(
     };
   }
 
-  const result: RecordAircraftSnapshotResult = { succeeded: [], failed: [] };
+  const result: RecordAircraftSnapshotResult = { succeeded: [], failed: [], newAircraft: [] };
 
   await runWithConcurrency(uniqueAircraftByHex(aircraft), 8, async (item) => {
     if (item.lat === null || item.lon === null) return;
@@ -841,7 +843,7 @@ export async function recordAircraftSnapshot(
     const longitude = item.lon;
     try {
       const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime());
-      await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
+      const wasNewAircraft = await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const metadata = item.enrichment?.metadata;
       const dbAircraft = await schema.Aircraft.upsert({
@@ -872,6 +874,15 @@ export async function recordAircraftSnapshot(
         },
       });
 
+      // A first-ever alert must be based on a durable Flight, not on a
+      // process-local Aircraft row. The optional capability check keeps the
+      // narrow fake persistence adapters used by tests backwards compatible.
+      const priorFlightsQuery = schema.Flight.where({ aircraftId: dbAircraft.id }) as unknown as {
+        limit?: (value: number) => { all(): Promise<unknown[]> };
+      };
+      const priorFlights = typeof priorFlightsQuery.limit === "function"
+        ? await priorFlightsQuery.limit(1).all()
+        : null;
       let flight = await schema.Flight
         .where({ aircraftId: dbAircraft.id })
         .where({ endTime: null })
@@ -883,6 +894,7 @@ export async function recordAircraftSnapshot(
         flight && recordedAt.getTime() - timestampAsDate(flight.lastSeenAt).getTime() > getFlightContinuityGapMs(),
       );
 
+      const firstDurableFlight = priorFlights !== null && priorFlights.length === 0 && !flight;
       if (!flight || callsignChanged || continuityBroken) {
         if (flight) {
           await schema.Flight.where({ id: flight.id }).update(
@@ -931,8 +943,10 @@ export async function recordAircraftSnapshot(
         ...(item.track === null ? {} : { track: item.track }),
         ...(item.verticalRate === null ? {} : { verticalRate: item.verticalRate }),
       });
+      return firstDurableFlight;
       }));
       result.succeeded.push(item.icaoHex);
+      if (wasNewAircraft) result.newAircraft?.push(item.icaoHex);
     } catch {
       // History is best-effort; one aircraft must not reject the other writes.
       result.failed.push(item.icaoHex);

@@ -3,6 +3,8 @@ import { matchesAircraftRule } from "@/lib/aircraft/watchlist";
 import { loadAlertConfig, type AlertRule } from "@/lib/server/alert-config";
 import { getAlertCooldownMs, isEmergencyAlertEnabled } from "@/lib/server/config";
 import { createAlertNotifier, type AlertNotifier, type AircraftAlert } from "@/lib/server/alert-notifier";
+import { createAlertHistoryStore, type AlertHistoryReason, type AlertHistoryRecordValue, type AlertHistoryEventType, type JsonlAlertHistoryStore } from "@/lib/server/alert-history";
+import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
 
 const MAX_DEDUP_ENTRIES = 10_000;
 const MAX_PENDING_ALERTS = 32;
@@ -21,6 +23,7 @@ export interface AlertEngineOptions {
   notifier?: AlertNotifier;
   cooldownMs?: number;
   now?: () => number;
+  history?: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
 }
 
 function aircraftMap(value: ReadonlyMap<string, Aircraft> | ReadonlyArray<Aircraft>): ReadonlyMap<string, Aircraft> {
@@ -38,10 +41,13 @@ export class AlertEngine {
   private readonly notifier: AlertNotifier;
   private readonly cooldownMs: number;
   private readonly now: () => number;
+  private readonly history: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
   private readonly dedupCache = new Map<string, number>();
   private readonly pending: AircraftAlert[] = [];
   private activeDeliveries = 0;
   private deliveryError = false;
+  private sequence = 0;
+  private readonly permanentEvents = new Set<string>();
 
   constructor(options: AlertEngineOptions = {}) {
     const config = options.rules ? { rules: options.rules, errors: options.configErrors ?? [] } : loadAlertConfig();
@@ -50,6 +56,7 @@ export class AlertEngine {
     this.notifier = options.notifier ?? createAlertNotifier();
     this.cooldownMs = options.cooldownMs ?? getAlertCooldownMs();
     this.now = options.now ?? Date.now;
+    this.history = options.history ?? createAlertHistoryStore();
   }
 
   /**
@@ -86,17 +93,40 @@ export class AlertEngine {
       if (transitionedRules.length && this.isAvailable(`aircraft:${aircraft.icaoHex}`, now)) {
         this.reserve(`aircraft:${aircraft.icaoHex}`, now);
         for (const rule of transitionedRules) this.reserve(`rule:${rule.id}:${aircraft.icaoHex}`, now);
-        this.enqueue({ aircraft, matchedRules: transitionedRules, emergency: false, priority: "normal" });
+        this.enqueue({ aircraft, matchedRules: transitionedRules, emergency: false, priority: "normal", type: "watchlist", reason: "watchlisted" });
       }
 
       if (isEmergencyAlertEnabled() && isEmergency(aircraft) && !isEmergency(prior)) {
         const key = `emergency:${aircraft.icaoHex}`;
         if (this.isAvailable(key, now)) {
           this.reserve(key, now);
-          this.enqueue({ aircraft, matchedRules: [], emergency: true, priority: "high" });
+          this.enqueue({ aircraft, matchedRules: [], emergency: true, priority: "high", type: "emergency", reason: "emergency" });
         }
       }
     }
+  }
+
+  /** Called only after durable history confirms that a first Flight exists. */
+  observeNewAircraft(aircraft: Aircraft): void {
+    const id = `new:${aircraft.icaoHex.toUpperCase()}`;
+    if (this.permanentEvents.has(id)) return;
+    this.permanentEvents.add(id);
+    this.enqueue({ aircraft, matchedRules: [], emergency: false, priority: "normal", type: "new_aircraft", reason: "new", eventId: id });
+  }
+
+  /** Called only on a genuine in-memory record transition. */
+  observeReceptionRecord(scope: "daily" | "lifetime", current: ReceiverDailyReceptionRecord, previous: ReceiverDailyReceptionRecord | null): void {
+    const id = `record:${scope}:${current.date}:${current.icaoHex}:${current.distanceKm.toFixed(3)}:${current.recordedAt}`;
+    if (this.permanentEvents.has(id)) return;
+    this.permanentEvents.add(id);
+    const record: AlertHistoryRecordValue = {
+      scope,
+      distanceKm: current.distanceKm,
+      bearing: current.bearing,
+      recordedAt: current.recordedAt,
+      previousDistanceKm: previous?.distanceKm ?? null,
+    };
+    this.enqueue({ aircraft: aircraftFromRecord(current), matchedRules: [], emergency: false, priority: "normal", type: "reception_record", reason: "record", eventId: id, record });
   }
 
   cleanupDedupCache(now = this.now()): void {
@@ -134,11 +164,16 @@ export class AlertEngine {
   }
 
   private enqueue(alert: AircraftAlert): void {
+    const type: AlertHistoryEventType = alert.type ?? (alert.emergency ? "emergency" : "watchlist");
+    const reason: AlertHistoryReason = alert.reason ?? (alert.emergency ? "emergency" : "watchlisted");
+    const eventId = alert.eventId ?? `${type}:${alert.aircraft.icaoHex}:${this.now()}:${this.sequence++}`;
+    void this.history.recordDetected({ id: eventId, detectedAt: new Date(this.now()).toISOString(), type, reason, aircraft: alert.aircraft, record: alert.record }).catch(() => undefined);
     if (this.pending.length >= MAX_PENDING_ALERTS) {
       console.error(`AirRadar alert dropped: provider=${this.notifier.name} reason=queue_full`);
+      void this.history.recordNotification(eventId, "failed").catch(() => undefined);
       return;
     }
-    this.pending.push(alert);
+    this.pending.push({ ...alert, eventId, type, reason });
     this.drain();
   }
 
@@ -155,11 +190,17 @@ export class AlertEngine {
   }
 
   private async deliver(alert: AircraftAlert): Promise<void> {
-    if (!this.notifier.enabled) return;
+    const eventId = alert.eventId;
+    if (!this.notifier.enabled) {
+      if (eventId) void this.history.recordNotification(eventId, "disabled").catch(() => undefined);
+      return;
+    }
+    if (eventId) void this.history.recordNotification(eventId, "attempted").catch(() => undefined);
     let lastError: unknown;
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         await this.notifier.send(alert);
+        if (eventId) void this.history.recordNotification(eventId, "delivered").catch(() => undefined);
         this.deliveryError = false;
         console.info(`AirRadar alert sent: ruleCount=${alert.matchedRules.length} aircraft=${alert.aircraft.icaoHex}`);
         return;
@@ -173,6 +214,41 @@ export class AlertEngine {
       ? String(lastError.status)
       : "network";
     this.deliveryError = true;
+    if (eventId) void this.history.recordNotification(eventId, "failed").catch(() => undefined);
     console.error(`AirRadar alert delivery failed: provider=${this.notifier.name} status=${status}`);
   }
+}
+
+function aircraftFromRecord(record: ReceiverDailyReceptionRecord): Aircraft {
+  return {
+    icaoHex: record.icaoHex,
+    callsign: null,
+    registration: record.registration,
+    aircraftType: null,
+    aircraftDescription: null,
+    lat: null,
+    lon: null,
+    altitude: null,
+    baroAltitude: null,
+    geomAltitude: null,
+    groundSpeed: null,
+    track: null,
+    verticalRate: null,
+    baroRate: null,
+    geomRate: null,
+    squawk: null,
+    category: null,
+    emergency: null,
+    rssi: null,
+    messages: null,
+    seenSeconds: null,
+    seenPosSeconds: null,
+    lastSeen: record.recordedAt,
+    source: "UNKNOWN",
+    sourceType: null,
+    onGround: false,
+    distanceKm: record.distanceKm,
+    bearing: record.bearing,
+    trail: [],
+  };
 }

@@ -1,11 +1,18 @@
 import type { Aircraft } from "@/lib/aircraft/types";
 import type { AlertRule } from "@/lib/server/alert-config";
+import type { AlertHistoryReason, AlertHistoryRecordValue, AlertHistoryEventType } from "@/lib/server/alert-history";
+
+export type { AlertHistoryReason, AlertHistoryRecordValue, AlertHistoryEventType };
 
 export interface AircraftAlert {
   aircraft: Aircraft;
   matchedRules: AlertRule[];
   emergency: boolean;
   priority: "normal" | "high";
+  type?: AlertHistoryEventType;
+  reason?: AlertHistoryReason;
+  eventId?: string;
+  record?: AlertHistoryRecordValue;
 }
 
 export interface AlertNotifier {

@@ -56,6 +56,7 @@ function LinkNav({ dictionary, locale, onLocaleChange }: { dictionary: LocaleDic
     <Link href="/statistics">{dictionary.statistics.title}</Link>
     <Link href="/history">{dictionary.history.title}</Link>
     <Link href="/watchlist">{dictionary.watchlist.title}</Link>
+    <Link href="/alerts">{dictionary.alerts.title}</Link>
     <button type="button" className="language-button" onClick={onLocaleChange} aria-label={locale === "cs" ? "English" : "Čeština"}>{locale === "cs" ? "EN" : "CZ"}</button>
   </nav>;
 }
@@ -176,6 +177,15 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.source} value={data.airportData.source === "database" ? dictionary.system.databaseSource : data.airportData.source === "fallback" ? dictionary.system.fallbackSource : dictionary.system.unavailable} />
         <Field label={dictionary.system.databaseRows} value={data.airportData.rowCount === null ? dictionary.system.notAvailable : `${data.airportData.rowCountIsLowerBound ? "≥ " : ""}${formatNumber(data.airportData.rowCount, 0, dictionary.locale)}`} />
         {data.airportData.fallbackRowCount !== null && <Field label={dictionary.system.fallbackRows} value={formatNumber(data.airportData.fallbackRowCount, 0, dictionary.locale)} />}
+      </Card>
+
+      <Card title={dictionary.system.dataSources} status={data.dataSources.ourAirports.status} dictionary={dictionary}>
+        <Field label={dictionary.system.adsbdb} value={<StatusBadge status={data.dataSources.adsbdb.status} dictionary={dictionary} />} />
+        <Field label={dictionary.system.enabled} value={data.dataSources.adsbdb.enabled ? dictionary.system.configured : dictionary.system.disabled} />
+        <Field label={dictionary.system.photos} value={<StatusBadge status={data.dataSources.aircraftPhotos.status} dictionary={dictionary} />} />
+        <Field label={dictionary.system.enabled} value={data.dataSources.aircraftPhotos.enabled ? dictionary.system.configured : dictionary.system.disabled} />
+        <Field label={dictionary.system.ourAirports} value={<StatusBadge status={data.dataSources.ourAirports.status} dictionary={dictionary} />} />
+        <Field label={dictionary.system.enabled} value={data.dataSources.ourAirports.enabled ? dictionary.system.configured : dictionary.system.disabled} />
       </Card>
     </div>}
   </main>;

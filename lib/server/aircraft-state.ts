@@ -16,6 +16,7 @@ import { AlertEngine } from "@/lib/server/alert-engine";
 import type { AlertStatus } from "@/lib/server/alert-engine";
 import { loadAlertConfig } from "@/lib/server/alert-config";
 import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
+import { getReceptionRecords } from "@/lib/server/reception-records";
 
 type Listener = (snapshot: StateSnapshot) => void;
 
@@ -83,6 +84,8 @@ export class AircraftStateService {
   private readonly alerts: AlertEngine;
   private readonly statistics: ReceiverStatistics;
   private readonly atcResolutionKeys = new Map<string, string>();
+  private lifetimeReceptionRecord: ReceiverDailyReceptionRecord | null = null;
+  private lifetimeReceptionRecordLoaded = false;
 
   constructor(
     provider: AircraftProvider = createAircraftProvider(),
@@ -106,6 +109,7 @@ export class AircraftStateService {
       // live provider refresh.
       console.error("AirRadar statistics startup failed", error);
     });
+    void this.loadLifetimeReceptionRecord();
     const refresh = this.refresh();
     this.initialRefresh = Promise.all([this.statisticsReady, refresh]).then(() => undefined);
   }
@@ -207,6 +211,10 @@ export class AircraftStateService {
     return this.statistics.getDailyReceptionRecord();
   }
 
+  getStatisticsCurrentDaySnapshot() {
+    return this.statistics.getCurrentDaySnapshot();
+  }
+
   async getStatisticsRange(range: ReceiverStatisticsRange): Promise<ReceiverStatisticsRangeResponse> {
     return this.statistics.getRangeResponse(this.aircraft.size, this.messagesPerSecond, range);
   }
@@ -254,6 +262,7 @@ export class AircraftStateService {
   private applySnapshot(snapshot: ProviderSnapshot): void {
     this.currentReceiver = snapshot.receiver;
     const previousAircraft = new Map(this.aircraft);
+    const previousDailyRecord = this.statistics.getDailyReceptionRecord();
     const currentHexes = new Set<string>();
     for (const incoming of snapshot.aircraft) {
       if (Date.parse(incoming.lastSeen) < Date.now() - getAircraftStaleAfterMs()) continue;
@@ -272,6 +281,15 @@ export class AircraftStateService {
     }
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) this.statistics.observe([...this.aircraft.values()], this.currentReceiver, new Date());
+    const currentDailyRecord = this.statistics.getDailyReceptionRecord();
+    if (currentDailyRecord && (!previousDailyRecord || currentDailyRecord.distanceKm > previousDailyRecord.distanceKm)) {
+      this.alerts.observeReceptionRecord("daily", currentDailyRecord, previousDailyRecord);
+    }
+    if (currentDailyRecord && (!this.lifetimeReceptionRecord || currentDailyRecord.distanceKm > this.lifetimeReceptionRecord.distanceKm)) {
+      const previousLifetimeRecord = this.lifetimeReceptionRecord;
+      this.lifetimeReceptionRecord = currentDailyRecord;
+      if (this.lifetimeReceptionRecordLoaded) this.alerts.observeReceptionRecord("lifetime", currentDailyRecord, previousLifetimeRecord);
+    }
     this.alerts.observe(previousAircraft, this.aircraft);
   }
 
@@ -324,6 +342,10 @@ export class AircraftStateService {
       try {
         const result = await recordAircraftSnapshot(due, new Date(sampledAt));
         for (const icaoHex of result.succeeded) this.lastHistorySample.set(icaoHex, sampledAt);
+        for (const icaoHex of result.newAircraft ?? []) {
+          const current = this.aircraft.get(icaoHex);
+          if (current) this.alerts.observeNewAircraft(current);
+        }
         if (result.failed.length) {
           console.error(`AirRadar history persistence failed for ${result.failed.length} aircraft`);
         }
@@ -339,6 +361,23 @@ export class AircraftStateService {
     const cleanupBefore = now - Math.max(getHistorySampleIntervalMs() * 2, 60 * 60_000);
     for (const [hex, sampledAt] of this.lastHistorySample) {
       if (sampledAt < cleanupBefore && !this.aircraft.has(hex)) this.lastHistorySample.delete(hex);
+    }
+  }
+
+  private async loadLifetimeReceptionRecord(): Promise<void> {
+    try {
+      const records = await getReceptionRecords(null);
+      this.lifetimeReceptionRecord = records.lifetime;
+      this.lifetimeReceptionRecordLoaded = true;
+      const current = this.statistics.getDailyReceptionRecord();
+      if (current && (!this.lifetimeReceptionRecord || current.distanceKm > this.lifetimeReceptionRecord.distanceKm)) {
+        const previous = this.lifetimeReceptionRecord;
+        this.lifetimeReceptionRecord = current;
+        this.alerts.observeReceptionRecord("lifetime", current, previous);
+      }
+    } catch {
+      // Reception records are optional and must never affect live refresh.
+      this.lifetimeReceptionRecordLoaded = true;
     }
   }
 
