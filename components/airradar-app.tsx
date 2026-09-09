@@ -979,7 +979,7 @@ export function AirRadarApp() {
         <div className="brand">
           <LogoMark />
           <div>
-            <div className="brand-title">AirRadar</div>
+            <h1 className="brand-title">AirRadar</h1>
             <div className="brand-subtitle">{t.brand.subtitle}</div>
           </div>
         </div>
