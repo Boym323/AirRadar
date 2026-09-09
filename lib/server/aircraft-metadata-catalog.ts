@@ -402,7 +402,7 @@ export class AircraftMetadataCatalog implements AircraftMetadataProvider {
       hotCacheSize: this.hotCache.size,
       hotCacheLimit: METADATA_HOT_CACHE_MAX_ENTRIES,
       syncInFlight: this.syncInFlight !== null,
-      catalogRecordCount: null,
+      catalogRecordCount: this.storedRecordCount,
     };
   }
 
