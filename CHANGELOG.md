@@ -227,3 +227,9 @@ Changes since v1.0.0:
 Changes since v1.0.1:
 
 - feat: Add ADS-B LOL provider and integrate network diagnostics (1e34569e)
+
+## [1.0.3] - 2026-09-09
+
+Changes since v1.0.2:
+
+- fix: make ADSB.lol arbitration and polling independent (28fccfec)
