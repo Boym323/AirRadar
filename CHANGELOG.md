@@ -251,3 +251,9 @@ Changes since v1.0.4:
 Changes since v1.0.5:
 
 - feat: add User-Agent header to ADSB.lol requests (5bac7791)
+
+## [1.0.7] - 2026-09-09
+
+Changes since v1.0.6:
+
+- Add new aircraft icons and sync script for tar1090 (47918dc5)
