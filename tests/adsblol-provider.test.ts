@@ -56,6 +56,9 @@ describe("AdsbLolProvider", () => {
 
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(String(fetcher.mock.calls[0]?.[0])).toBe("https://api.adsb.lol/v2/lat/49.22/lon/17.67/dist/250");
+    expect(fetcher.mock.calls[0]?.[1]).toMatchObject({
+      headers: { Accept: "application/json", "User-Agent": expect.stringContaining("AirRadar/") },
+    });
     expect(snapshot.aircraft).toHaveLength(1);
     expect(snapshot.aircraft[0]).toMatchObject({ icaoHex: "ABC123", origin: "adsblol", callsign: "TEST123" });
     expect(value.getDiagnostics()).toMatchObject({ status: "online", aircraftCount: 1, positionedAircraftCount: 1 });

@@ -2,6 +2,7 @@ import type { RawReadsbAircraft, RawReadsbAircraftResponse } from "@/lib/aircraf
 import { normalizeAircraftIdentifier } from "@/lib/aircraft/identity";
 import { normalizeNetworkAircraftResponse } from "@/lib/aircraft/normalize";
 import { isFreshPosition } from "@/lib/aircraft/source-merge";
+import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 import type { Aircraft, NetworkProviderDiagnostics, NetworkProviderStatus, ReceiverPosition } from "@/lib/aircraft/types";
 import type { NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import {
@@ -233,6 +234,10 @@ export class AdsbLolProvider implements NetworkAircraftProvider {
       const response = await fetch(endpoint(this.baseUrl, this.receiver, this.radiusNm), {
         cache: "no-store",
         signal: controller.signal,
+        headers: {
+          Accept: "application/json",
+          "User-Agent": getAirRadarUserAgent("ADSB.lol"),
+        },
       });
       if (response.status === 429) {
         throw new AdsbLolProviderError("rate_limited", "rate limited", retryAfterMilliseconds(response.headers.get("retry-after")));
