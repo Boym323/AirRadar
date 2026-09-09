@@ -27,6 +27,7 @@ import {
 } from "@/lib/i18n";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
+import { TAR1090_ICON_CODES } from "@/lib/aircraft/tar1090-icon-map";
 import { appendTrailPoint, boundTrailPoints, selectedTrail, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
@@ -290,6 +291,7 @@ function aircraftIconAsset(aircraft: Pick<AircraftView, "aircraftType" | "enrich
     M20P: "PA46",
   };
   const code = aliases[type] ?? type;
+  if (TAR1090_ICON_CODES.has(code)) return `/aircraft-icons-tar1090/${code}.svg`;
   return AIRCRAFT_ICON_CODES.has(code) ? `/aircraft-icons/${code}.svg` : null;
 }
 

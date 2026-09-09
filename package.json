@@ -26,6 +26,7 @@
     "test:production": "node scripts/production-gates.mjs",
     "test:production:browser": "RUN_BROWSER_GATE=1 node scripts/production-gates.mjs",
     "test:watch": "vitest",
+    "icons:sync:tar1090": "node scripts/sync-tar1090-icons.mjs",
     "prisma:generate": "prisma contract emit",
     "prisma:migrate": "prisma migration plan --name init",
     "prisma:deploy": "prisma db migrate",
