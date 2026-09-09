@@ -5,8 +5,8 @@ import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit
 
 export const dynamic = "force-dynamic";
 
-export async function GET(): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("airports");
+export async function GET(request: Request): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("airports", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const database = getPrisma();
   if (database) {

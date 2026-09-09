@@ -41,7 +41,7 @@ async function resolveId(context: { params: Promise<{ id: string }> }): Promise<
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("watchlist");
+  const rateLimit = checkPublicRateLimit("watchlist", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const id = await resolveId(context);
   if (!id) return notFoundResponse();
@@ -61,8 +61,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 }
 
-export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("watchlist");
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("watchlist", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const id = await resolveId(context);
   if (!id) return notFoundResponse();

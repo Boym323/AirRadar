@@ -14,7 +14,7 @@ function parseRange(value: string | null): ReceiverStatisticsRange | null {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("statistics");
+  const rateLimit = checkPublicRateLimit("statistics", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   const service = getAircraftStateService();

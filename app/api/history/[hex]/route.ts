@@ -5,9 +5,9 @@ import { normalizeIcaoHex } from "@/lib/server/validation";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
+export async function GET(request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
   const { hex } = await context.params;
-  const rateLimit = checkPublicRateLimit("history");
+  const rateLimit = checkPublicRateLimit("history", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   let decodedHex: string;
   try {

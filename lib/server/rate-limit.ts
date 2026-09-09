@@ -17,8 +17,8 @@ interface Bucket extends RateLimitPolicy {
 }
 
 /**
- * Small process-local fixed-window limiter. It deliberately limits scopes,
- * rather than trusting forwarded client IP headers from an unknown proxy.
+ * Small process-local fixed-window limiter. Keys are bounded so an attacker
+ * cannot turn client identity into an unbounded in-memory map.
  */
 export class BoundedRateLimiter {
   private readonly buckets = new Map<string, Bucket>();
@@ -72,7 +72,7 @@ export class BoundedRateLimiter {
   }
 }
 
-export const publicRateLimiter = new BoundedRateLimiter(8);
+export const publicRateLimiter = new BoundedRateLimiter(512);
 
 export const PUBLIC_RATE_LIMITS = {
   aircraft: { limit: 60, windowMs: 60_000 },
@@ -94,8 +94,18 @@ export const PUBLIC_RATE_LIMITS = {
   watchlist: { limit: 60, windowMs: 60_000 },
 } as const;
 
-export function checkPublicRateLimit(scope: keyof typeof PUBLIC_RATE_LIMITS): RateLimitResult {
-  return publicRateLimiter.consume(scope, PUBLIC_RATE_LIMITS[scope]);
+/**
+ * The production reverse proxy overwrites X-Real-IP. X-Forwarded-For is
+ * intentionally ignored because direct clients can forge it. Requests that
+ * do not arrive through the trusted proxy share the bounded anonymous bucket.
+ */
+export function getRateLimitClientKey(request: Request): string {
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  return realIp && isIP(realIp) ? realIp : "anonymous";
+}
+
+export function checkPublicRateLimit(scope: keyof typeof PUBLIC_RATE_LIMITS, request: Request): RateLimitResult {
+  return publicRateLimiter.consume(`${scope}:${getRateLimitClientKey(request)}`, PUBLIC_RATE_LIMITS[scope]);
 }
 
 export function rateLimitResponse(result: RateLimitResult): Response {
@@ -112,3 +122,4 @@ export function rateLimitResponse(result: RateLimitResult): Response {
     },
   );
 }
+import { isIP } from "node:net";

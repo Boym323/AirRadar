@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("alertHistory");
+  const rateLimit = checkPublicRateLimit("alertHistory", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const url = new URL(request.url);
   const page = Number(url.searchParams.get("page") ?? "0");

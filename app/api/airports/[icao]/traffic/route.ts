@@ -10,7 +10,7 @@ function noStoreHeaders(): HeadersInit {
 }
 
 export async function GET(request: Request, context: { params: Promise<{ icao: string }> }): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("airportTraffic");
+  const rateLimit = checkPublicRateLimit("airportTraffic", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   const { icao: rawIcao } = await context.params;

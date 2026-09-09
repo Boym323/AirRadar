@@ -6,8 +6,8 @@ import { listWatchlistRules } from "@/lib/server/watchlist-store";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("logbookSummary");
+export async function GET(request: Request): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("logbookSummary", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const service = getAircraftStateService();
   await service.waitForReady();

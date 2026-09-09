@@ -9,7 +9,7 @@ function noStoreHeaders(): HeadersInit {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("history");
+  const rateLimit = checkPublicRateLimit("history", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   const url = new URL(request.url);

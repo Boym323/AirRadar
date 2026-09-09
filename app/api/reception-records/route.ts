@@ -4,8 +4,8 @@ import { getReceptionRecords } from "@/lib/server/reception-records";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("receptionRecords");
+export async function GET(request: Request): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("receptionRecords", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const service = getAircraftStateService();
   await service.waitForReady();

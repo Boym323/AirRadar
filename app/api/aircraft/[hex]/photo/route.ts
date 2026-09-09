@@ -35,8 +35,8 @@ async function existingRegistration(icaoHex: string): Promise<string | null> {
   }
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("aircraftPhoto");
+export async function GET(request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("aircraftPhoto", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   if (!isAircraftPhotosEnabled()) {

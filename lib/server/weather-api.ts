@@ -12,7 +12,7 @@ export async function getWeatherAirportResponse(
   rawIcao: unknown,
   dependencies: WeatherRouteDependencies = {},
 ): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("weather");
+  const rateLimit = checkPublicRateLimit("weather", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   const requestedIcao = normalizeAirportIcao(rawIcao);

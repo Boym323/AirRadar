@@ -6,8 +6,8 @@ import { getAtcData } from "@/lib/server/providers";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("health");
+export async function GET(request: Request): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("health", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const service = getAircraftStateService();
   await service.waitForReady();

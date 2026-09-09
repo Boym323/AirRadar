@@ -4,7 +4,7 @@ import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("search");
+  const rateLimit = checkPublicRateLimit("search", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   const rawQuery = new URL(request.url).searchParams.get("q");

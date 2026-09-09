@@ -10,7 +10,7 @@ function noStoreHeaders(): HeadersInit {
 }
 
 export async function GET(request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("aircraft");
+  const rateLimit = checkPublicRateLimit("aircraft", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   const { hex: rawHex } = await context.params;

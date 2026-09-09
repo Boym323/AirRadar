@@ -19,8 +19,8 @@ function parseFlightId(value: string): number | null {
   return Number.isSafeInteger(id) && id <= 2_147_483_647 ? id : null;
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("history");
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("history", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   const { id: rawId } = await context.params;

@@ -5,7 +5,7 @@ import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("recap");
+  const rateLimit = checkPublicRateLimit("recap", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const range = new URL(request.url).searchParams.get("range") === "weekly" ? "weekly" : "daily";
   const service = getAircraftStateService();

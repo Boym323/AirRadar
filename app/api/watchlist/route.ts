@@ -25,8 +25,8 @@ async function readBody(request: Request): Promise<WatchlistRuleInput | Response
   }
 }
 
-export async function GET(): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("watchlist");
+export async function GET(request: Request): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("watchlist", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const service = getAircraftStateService();
   await service.waitForReady();
@@ -34,7 +34,7 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const rateLimit = checkPublicRateLimit("watchlist");
+  const rateLimit = checkPublicRateLimit("watchlist", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const body = await readBody(request);
   if (body instanceof Response) return body;
