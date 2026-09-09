@@ -161,3 +161,18 @@ Changes since v0.1.10:
 Changes since v0.1.11:
 
 - fix: ensure fetch-tags is set to true for changelog tests (69faa806)
+
+## [0.1.13] - 2026-09-09
+
+Changes since v0.1.12:
+
+- feat: enhance backfillChangelog to support release dates and commits (eefc3360)
+- feat: persist product alert events (df19de6d)
+- feat: explain interesting live aircraft (24c21923)
+- feat: add daily and weekly receiver recaps (c3cae270)
+- feat: expand system source status (7bab251e)
+- fix: polish application UX (e72b3146)
+- fix: make record alerts restart safe (9e394397)
+- docs: document batch 4 product flows (fdebe871)
+- fix: bound alert event deduplication (6a8e10c3)
+- fix: persist runtime alert state outside source tree (8898a796)
