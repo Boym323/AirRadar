@@ -7,6 +7,7 @@ import {
   type StateBoundaryResolution,
 } from "./cz-boundary";
 import type { Coordinate } from "./types";
+import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 
 export const BKG_VG25_WFS_URL = "https://sgx.geodatenzentrum.de/wfs_vg25";
 export const BKG_VG25_FEATURE_TYPE = "vg25:vg25_li";
@@ -63,7 +64,7 @@ export async function fetchBkgVg25NationalBoundaryFeatures(): Promise<StateBound
   url.searchParams.set("CQL_FILTER", "agz=1");
   url.searchParams.set("srsName", "EPSG:4326");
   url.searchParams.set("outputFormat", "application/json");
-  const response = await fetch(url, { signal: AbortSignal.timeout(60_000), headers: { Accept: "application/geo+json,application/json", "User-Agent": "AirRadar BKG VG25 boundary sync/1.0" } });
+  const response = await fetch(url, { signal: AbortSignal.timeout(60_000), headers: { Accept: "application/geo+json,application/json", "User-Agent": getAirRadarUserAgent("BKG-VG25-boundary-sync") } });
   if (!response.ok) throw new CuzkBoundaryError(`BKG VG25 request failed with HTTP ${response.status}`);
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength > MAX_SOURCE_BYTES) throw new CuzkBoundaryError("BKG VG25 response exceeds the safety size limit");

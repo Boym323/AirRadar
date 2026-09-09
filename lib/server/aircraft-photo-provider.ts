@@ -1,6 +1,6 @@
-import appPackage from "../../package.json" with { type: "json" };
 import { normalizeIcaoHex } from "@/lib/server/validation";
 import type { AircraftPhoto } from "@/lib/aircraft/photo";
+import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 
 export const AIRCRAFT_PHOTO_TTLS = {
   positiveMs: 24 * 60 * 60_000,
@@ -11,7 +11,7 @@ export const AIRCRAFT_PHOTO_TTLS = {
 
 export const PLANESPOTTERS_API_BASE_URL = "https://api.planespotters.net";
 export const PLANESPOTTERS_ALLOWED_HOSTS = new Set(["t.plnspttrs.net", "www.planespotters.net"]);
-export const AIRCRAFT_PHOTO_USER_AGENT = `AirRadar/${typeof appPackage.version === "string" ? appPackage.version : "0.0.0"} (+https://airradar.pomykal.cz)`;
+export const AIRCRAFT_PHOTO_USER_AGENT = getAirRadarUserAgent("aircraft-photo");
 
 interface PhotoCacheEntry {
   value: AircraftPhoto | null;

@@ -363,7 +363,7 @@ prepare_release_version() {
   export AIRRADAR_VERSION="${RELEASE_VERSION}"
   export AIRRADAR_TAG="${RELEASE_TAG}"
   export AIRRADAR_COMMIT="${NEW_SHA}"
-  export AIRRADAR_CHANNEL="development"
+  export AIRRADAR_CHANNEL="production"
   log "Release version candidate: ${RELEASE_VERSION} (${RELEASE_TAG})"
 }
 

@@ -7,6 +7,7 @@ import { CZ_CUZK_DATA50_METADATA_URL, CZ_CUZK_DATA50_QUERY_URL, type StateBounda
 import { aviationCoordinateToDecimal, densifyArc, type ArcDirection } from "./cz-geometry";
 import { isSupportedAtcFrequencyMhz } from "./frequency-policy";
 import { classifyMissingCzEaipStableId, CZ_EAIP_MISSING_ID_REASON, type CzEaipDiagnosticClassification } from "./cz-eaip-policy";
+import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 
 export const CZ_EAIP_ENR21_URL = "https://aim.rlp.cz/eaip/html/eAIP/LK-ENR-2.1-en-GB.html";
 export const CZ_EAIP_GEN02_URL = "https://aim.rlp.cz/ais_data/aip/data/valid/g0-2.html";
@@ -1060,7 +1061,7 @@ function assertOfficialUrl(url: string): void {
 
 export async function fetchOfficialCzEaip(url: string): Promise<string> {
   assertOfficialUrl(url);
-  const response = await fetch(url, { signal: AbortSignal.timeout(30_000), headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "AirRadar Czech eAIP sync/1.0" } });
+  const response = await fetch(url, { signal: AbortSignal.timeout(30_000), headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": getAirRadarUserAgent("Czech-eAIP-sync") } });
   if (!response.ok) throw new Error(`Official eAIP request failed with HTTP ${response.status}`);
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength > MAX_SOURCE_BYTES) throw new Error("Official eAIP response exceeds the safety size limit");

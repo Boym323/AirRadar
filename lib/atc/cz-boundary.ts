@@ -1,4 +1,5 @@
 import type { Coordinate } from "./types";
+import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 
 export const CZ_CUZK_DATA50_QUERY_URL = "https://ags.cuzk.gov.cz/arcgis/rest/services/DATA50/MapServer/0/query";
 export const CZ_CUZK_DATA50_METADATA_URL = "https://geoportal.gov.cz/php/micka/record/basic/CZ-CUZK-DATA50-V?dlang=eng";
@@ -479,7 +480,7 @@ export async function fetchCuzkData50BoundaryFeatures(): Promise<StateBoundaryFe
   url.searchParams.set("f", "geojson");
   const response = await fetch(url, {
     signal: AbortSignal.timeout(60_000),
-    headers: { Accept: "application/geo+json,application/json", "User-Agent": "AirRadar Czech state-boundary sync/1.0" },
+    headers: { Accept: "application/geo+json,application/json", "User-Agent": getAirRadarUserAgent("Czech-state-boundary-sync") },
   });
   if (!response.ok) throw new CuzkBoundaryError(`ČÚZK Data50 request failed with HTTP ${response.status}`);
   const bytes = new Uint8Array(await response.arrayBuffer());

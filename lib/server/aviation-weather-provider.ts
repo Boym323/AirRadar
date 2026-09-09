@@ -1,7 +1,8 @@
 import type { AirportWeather, MetarObservation, TafForecast } from "@/lib/weather/types";
+import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 
 export const AVIATION_WEATHER_BASE_URL = "https://aviationweather.gov";
-export const AVIATION_WEATHER_USER_AGENT = "AirRadar/0.1.0 (+https://airradar.pomykal.cz)";
+export const AVIATION_WEATHER_USER_AGENT = getAirRadarUserAgent("aviation-weather");
 
 export const AVIATION_WEATHER_TTLS = {
   metarMs: 5 * 60_000,

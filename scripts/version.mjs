@@ -96,7 +96,7 @@ function buildVersionFromEnvironment(packageVersion) {
 
 function safeChannel(value) {
   const channel = value?.trim();
-  if (!channel) return "development";
+  if (!channel) return process.env.NODE_ENV === "production" ? "production" : "development";
   if (!/^[a-z0-9._-]{1,32}$/i.test(channel)) throw new Error(`Unsupported build channel: ${value}`);
   return channel;
 }

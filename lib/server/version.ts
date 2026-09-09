@@ -36,7 +36,7 @@ function fallbackMetadata(): BuildMetadata {
     commit,
     shortCommit: commit?.slice(0, 8) ?? null,
     buildTime: null,
-    channel: "development",
+    channel: process.env.NODE_ENV === "production" ? "production" : "development",
   };
 }
 

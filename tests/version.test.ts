@@ -13,6 +13,14 @@ describe("automatic release versioning", () => {
     });
   });
 
+  it("supports the first stable 1.0.0 release series without creating a tag", () => {
+    expect(resolveReleaseVersion({ packageVersion: "1.0.0", headTags: [], seriesTags: ["v0.1.13"] })).toEqual({
+      version: "1.0.0",
+      tag: "v1.0.0",
+      reused: false,
+    });
+  });
+
   it("increments only the highest tag in the package series", () => {
     expect(resolveReleaseVersion({
       packageVersion: "0.1.0",
