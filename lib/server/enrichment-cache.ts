@@ -91,6 +91,14 @@ export class ProviderCache {
     this.inFlight.clear();
   }
 
+  size(): number {
+    return this.entries.size;
+  }
+
+  limit(): number {
+    return this.maxEntries;
+  }
+
   private evictIfNeeded(): void {
     if (this.entries.size <= this.maxEntries) return;
     const oldest = this.entries.keys().next().value;
@@ -144,6 +152,18 @@ export class EnrichmentService {
 
   get hasProviders(): boolean {
     return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute || this.providers.flightPlan);
+  }
+
+  getDiagnostics(): { providerCacheEntries: number; providerCacheLimit: number; metadata: { hotCacheSize: number; hotCacheLimit: number; catalogRecordCount: number | null } | null } {
+    const metadataProvider = this.providers.aircraftMetadata;
+    const diagnostics = metadataProvider && "getDiagnostics" in metadataProvider && typeof metadataProvider.getDiagnostics === "function"
+      ? metadataProvider.getDiagnostics() as { hotCacheSize: number; hotCacheLimit: number; catalogRecordCount: number | null }
+      : null;
+    return {
+      providerCacheEntries: this.cache.size(),
+      providerCacheLimit: this.cache.limit(),
+      metadata: diagnostics,
+    };
   }
 
   needsEnrichment(aircraft: Aircraft, existing: AircraftEnrichment | undefined): boolean {

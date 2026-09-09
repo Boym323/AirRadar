@@ -21,6 +21,12 @@ function formatCount(value: number | null, dictionary: LocaleDictionary): string
   return value === null ? dictionary.system.notAvailable : formatNumber(value, 0, dictionary.locale);
 }
 
+function formatBytes(value: number | null, dictionary: LocaleDictionary): string {
+  if (value === null) return dictionary.system.notAvailable;
+  if (value < 1024 * 1024) return `${formatNumber(value / 1024, 1, dictionary.locale)} KiB`;
+  return `${formatNumber(value / (1024 * 1024), 1, dictionary.locale)} MiB`;
+}
+
 function formatStatus(status: SystemStatus | "demo", dictionary: LocaleDictionary): string {
   return dictionary.system.statusLabels[status];
 }
@@ -118,6 +124,16 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.environment} value={data.application.environment} />
         <Field label={dictionary.system.timezone} value={data.application.timezone} />
         <Field label={dictionary.system.startTime} value={formatDateTime(data.application.startedAt, dictionary)} />
+      </Card>
+
+      <Card title={dictionary.system.runtime} status={data.application.status} dictionary={dictionary}>
+        <Field label={dictionary.system.processRss} value={formatBytes(data.runtime.processRssBytes, dictionary)} />
+        <Field label={dictionary.system.heapUsed} value={formatBytes(data.runtime.heapUsedBytes, dictionary)} />
+        <Field label={dictionary.system.cgroupMemory} value={data.runtime.cgroupMemoryMaxBytes === null ? formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary) : `${formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary)} / ${formatBytes(data.runtime.cgroupMemoryMaxBytes, dictionary)}`} />
+        <Field label={dictionary.system.sseClients} value={`${formatNumber(data.runtime.activeSseClients, 0, dictionary.locale)} / ${formatNumber(data.runtime.sseClientLimit, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.aircraftState} value={formatCount(data.runtime.aircraftCount, dictionary)} />
+        <Field label={dictionary.system.metadataCache} value={data.runtime.metadataHotCacheLimit === null ? formatCount(data.runtime.metadataHotCacheSize, dictionary) : `${formatCount(data.runtime.metadataHotCacheSize, dictionary)} / ${formatCount(data.runtime.metadataHotCacheLimit, dictionary)}`} />
+        <Field label={dictionary.system.providerCache} value={data.runtime.providerCacheLimit === null ? formatCount(data.runtime.providerCacheEntries, dictionary) : `${formatCount(data.runtime.providerCacheEntries, dictionary)} / ${formatCount(data.runtime.providerCacheLimit, dictionary)}`} />
       </Card>
 
       <Card title={dictionary.system.receiver} status={data.receiver.readsb.status} dictionary={dictionary}>

@@ -198,6 +198,20 @@ export class AircraftStateService {
     return this.provider.name;
   }
 
+  getDiagnostics(): {
+    aircraftCount: number;
+    listenerCount: number;
+    running: boolean;
+    enrichment: ReturnType<EnrichmentService["getDiagnostics"]>;
+  } {
+    return {
+      aircraftCount: this.aircraft.size,
+      listenerCount: this.listeners.size,
+      running: this.running,
+      enrichment: this.enrichment.getDiagnostics(),
+    };
+  }
+
   getAlertStatus(): AlertStatus {
     return this.alerts.getStatus();
   }

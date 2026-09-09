@@ -94,6 +94,8 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
       aircraftPhotos: { status: "disabled", enabled: false, provider: "Planespotters photos" },
       ourAirports: { status: "ok", enabled: true, provider: "OurAirports / bundled catalog" },
     });
+    expect(value.runtime).toMatchObject({ sseClientLimit: 128, activeSseClients: 0 });
+    expect(value.runtime.processRssBytes).toBeGreaterThan(0);
   });
 
   it("reports readsb offline without exposing its provider error", () => {

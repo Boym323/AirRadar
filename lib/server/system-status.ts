@@ -11,6 +11,7 @@ import type { AlertStatus } from "@/lib/server/alert-engine";
 import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getBuildMetadata } from "@/lib/server/version";
+import { readRuntimeDiagnostics, type RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 
 export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
 
@@ -113,6 +114,7 @@ export interface SystemStatusResponse {
     aircraftPhotos: SystemDataSourceStatus;
     ourAirports: SystemDataSourceStatus;
   };
+  runtime: RuntimeDiagnostics;
 }
 
 export interface SystemDataSourceStatus {
@@ -147,6 +149,7 @@ export interface SystemStatusBuildInput {
   runtime?: Partial<Pick<SystemStatusResponse["application"], "version" | "commit" | "buildTime" | "channel" | "nodeVersion" | "nextVersion" | "environment" | "timezone">> & {
     uptimeSeconds?: number;
     startedAt?: string;
+    diagnostics?: Partial<RuntimeDiagnostics>;
   };
 }
 
@@ -379,6 +382,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       aircraftPhotos: configuredSource(isAircraftPhotosEnabled(), "Planespotters photos"),
       ourAirports: configuredSource(airportSource !== "unavailable", "OurAirports / bundled catalog", airportStatus),
     },
+    runtime: readRuntimeDiagnostics(input.runtime?.diagnostics),
   };
 }
 
@@ -426,6 +430,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     entries: defaultAviationWeatherProvider.cacheSize(),
     airports: defaultAviationWeatherProvider.cacheAirportCount(),
   };
+  const serviceDiagnostics = "getDiagnostics" in service && typeof service.getDiagnostics === "function" ? service.getDiagnostics() : null;
   return buildSystemStatus({
     snapshot,
     statistics: service.getStatistics(),
@@ -440,5 +445,16 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       rowCountIsLowerBound: database.airportRowCountIsLowerBound,
     },
     weather,
+    runtime: {
+      diagnostics: serviceDiagnostics ? {
+        aircraftCount: serviceDiagnostics.aircraftCount,
+        listenerCount: serviceDiagnostics.listenerCount,
+        metadataHotCacheSize: serviceDiagnostics.enrichment.metadata?.hotCacheSize ?? null,
+        metadataHotCacheLimit: serviceDiagnostics.enrichment.metadata?.hotCacheLimit ?? null,
+        metadataCatalogRecordCount: serviceDiagnostics.enrichment.metadata?.catalogRecordCount ?? null,
+        providerCacheEntries: serviceDiagnostics.enrichment.providerCacheEntries,
+        providerCacheLimit: serviceDiagnostics.enrichment.providerCacheLimit,
+      } : undefined,
+    },
   });
 }
