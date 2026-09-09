@@ -199,4 +199,18 @@ describe("aircraft metadata catalog", () => {
       registration: "TC-JVK", icaoTypeCode: "B738", aircraftDescription: "BOEING 737-800",
     });
   });
+
+  it("keeps the local tar1090 block cache bounded and coalesced", async () => {
+    const fetchMock = vi.fn().mockImplementation((input: string) => new Response(
+      input.endsWith("/") ? 'let databaseFolder = "db-test";' : "{}",
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new Tar1090DbProvider("http://receiver.local/tar1090");
+    await expect(provider.getMetadata("4BAACB")).resolves.toBeNull();
+    await expect(provider.getMetadata("4BAACB")).resolves.toBeNull();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(provider.getDiagnostics()).toEqual({ blockCacheSize: 1, blockCacheLimit: 4_096 });
+  });
 });

@@ -8,6 +8,9 @@ import { getAircraftMetadataUrl } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 import { Tar1090DbProvider } from "@/lib/server/tar1090-db-provider";
 import type { AircraftMetadataProvider } from "@/lib/server/provider";
+import { BoundedTtlLruCache } from "@/lib/server/bounded-cache";
+
+export { BoundedTtlLruCache } from "@/lib/server/bounded-cache";
 
 const SOURCE = "tar1090-db";
 const SYNC_ID = "tar1090-db";
@@ -17,42 +20,6 @@ const MAX_DECOMPRESSED_BYTES = 80 * 1024 * 1024;
 export const METADATA_HOT_CACHE_MAX_ENTRIES = 4_096;
 export const METADATA_HOT_CACHE_TTL_MS = 24 * 60 * 60_000;
 export const METADATA_IMPORT_BATCH_SIZE = 2_000;
-
-export class BoundedTtlLruCache<T> {
-  private readonly entries = new Map<string, { value: T; expiresAt: number }>();
-
-  constructor(private readonly maxEntries: number, private readonly ttlMs: number) {}
-
-  get(key: string, now = Date.now()): T | undefined {
-    const entry = this.entries.get(key);
-    if (!entry) return undefined;
-    if (entry.expiresAt <= now) {
-      this.entries.delete(key);
-      return undefined;
-    }
-    this.entries.delete(key);
-    this.entries.set(key, entry);
-    return entry.value;
-  }
-
-  set(key: string, value: T, now = Date.now()): void {
-    this.entries.delete(key);
-    this.entries.set(key, { value, expiresAt: now + this.ttlMs });
-    while (this.entries.size > this.maxEntries) {
-      const oldest = this.entries.keys().next().value;
-      if (oldest === undefined) break;
-      this.entries.delete(oldest);
-    }
-  }
-
-  clear(): void {
-    this.entries.clear();
-  }
-
-  get size(): number {
-    return this.entries.size;
-  }
-}
 
 interface AircraftMetadataRecord {
   icaoHex: string;
