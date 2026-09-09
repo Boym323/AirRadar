@@ -52,6 +52,12 @@ These are behavior and safety contracts for changes to the current system.
   it must never create an unbounded queue.
 - A disconnected listener is removed without affecting other listeners or the
   provider loop. Do not apply request rate limiting to this long-lived route.
+- Active SSE clients are capped per Node process; capacity rejection is a
+  safe bounded `503` with `Retry-After`, and every accepted connection
+  releases its slot on abort/cancel/close.
+- The live SSE DTO omits full metadata and flight-plan enrichment. Selected
+  aircraft detail loads that data lazily; route context required by the map
+  remains available in the live DTO.
 - Public serialization must remove raw provider errors and must not expose
   exact receiver coordinates unless `PUBLIC_RECEIVER_POSITION_MODE=exact` is
   deliberately configured.

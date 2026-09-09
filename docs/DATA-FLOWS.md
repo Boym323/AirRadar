@@ -186,9 +186,9 @@ unavailable rather than treating a process restart as a new observation.
 
 `GET /api/recap?range=daily|weekly` is a page-scoped read in Europe/Prague
 local time. It reads the selected date range from `ReceiverDailyStats` and
-`ReceiverDailyAircraft`, reads at most `RECAP_FLIGHT_LIMIT` Flight instances,
-and resolves aircraft metadata in one batched query. Weekly comparison reads
-the preceding seven aggregate/Flight windows. Missing aggregate rows remain
-missing in the response rather than becoming zeroes. Recaps do not scan
-`FlightPosition`, make provider requests, create another EventSource, or add
-another polling loop.
+`ReceiverDailyAircraft`, computes Flight counts/routes/types in the database,
+and fetches at most first/latest lifetime rows per aircraft for labels. Weekly
+comparison reads the preceding seven aggregate windows without lifetime
+enrichment. Missing aggregate rows remain missing in the response rather than
+becoming zeroes. Recaps do not scan `FlightPosition`, make provider requests,
+create another EventSource, or add another polling loop.
