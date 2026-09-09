@@ -69,18 +69,19 @@ export function updateChangelog({ version, date, existing = "", previousTag = la
   return `${prefix.trimEnd()}\n\n${entry}\n`;
 }
 
-export function backfillChangelog({ existing = "", tags = releaseTags() }) {
+export function backfillChangelog({ existing = "", tags = releaseTags(), releases = {} }) {
   const missingEntries = [];
   for (let index = 0; index < tags.length; index += 1) {
     const tag = tags[index];
     const version = tagVersion(tag);
     if (existing.includes(`## [${version}]`)) continue;
     const previousTag = tags[index + 1] ?? null;
+    const release = releases[tag];
     missingEntries.push(createChangelogEntry({
       version,
-      date: tagDate(tag),
+      date: release?.date ?? tagDate(tag),
       previousTag,
-      commits: commitsBetween(previousTag, tag),
+      commits: release?.commits ?? commitsBetween(previousTag, tag),
     }));
   }
   if (!missingEntries.length) return existing;

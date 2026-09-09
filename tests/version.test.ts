@@ -60,16 +60,15 @@ describe("automatic changelog generation", () => {
   });
 
   it("backfills missing tagged releases in descending order", () => {
-    expect(backfillChangelog({
+    const backfilled = backfillChangelog({
       existing: "# Changelog\n\nAll notable changes to AirRadar are documented here.\n",
       tags: ["v0.1.2", "v0.1.1"],
-    })).toContain("## [0.1.1]");
-    expect(backfillChangelog({
-      existing: "# Changelog\n\nAll notable changes to AirRadar are documented here.\n",
-      tags: ["v0.1.2", "v0.1.1"],
-    }).indexOf("## [0.1.2]")).toBeLessThan(backfillChangelog({
-      existing: "# Changelog\n\nAll notable changes to AirRadar are documented here.\n",
-      tags: ["v0.1.2", "v0.1.1"],
-    }).indexOf("## [0.1.1]"));
+      releases: {
+        "v0.1.2": { date: "2026-09-02", commits: [] },
+        "v0.1.1": { date: "2026-09-01", commits: [] },
+      },
+    });
+    expect(backfilled).toContain("## [0.1.1]");
+    expect(backfilled.indexOf("## [0.1.2]")).toBeLessThan(backfilled.indexOf("## [0.1.1]"));
   });
 });
