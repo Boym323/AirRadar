@@ -233,3 +233,9 @@ Changes since v1.0.1:
 Changes since v1.0.2:
 
 - fix: make ADSB.lol arbitration and polling independent (28fccfec)
+
+## [1.0.4] - 2026-09-09
+
+Changes since v1.0.3:
+
+- fix: retain local aircraft in extended coverage even when position is stale or unavailable (4295f1bc)
