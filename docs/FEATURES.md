@@ -7,7 +7,7 @@ whether an operator has configured an optional provider.
 
 | Route | Purpose | Production status |
 | --- | --- | --- |
-| `/` | Live MapLibre radar, aircraft list/filtering, selected aircraft detail, live trail, route/airport/ATC overlays, optional receiver range rings, keyboard shortcuts, SSE connection state, and a compact ADS-B logbook summary. | Production core; readsb or demo provider. |
+| `/` | Live MapLibre radar, aircraft list/filtering, selected aircraft detail, live trail, route/airport/ATC overlays, optional receiver range rings and aircraft color modes, keyboard shortcuts, SSE connection state, and a compact ADS-B logbook summary. | Production core; readsb or demo provider. |
 | `/aircraft/:hex` | Durable aircraft metadata, recent flight instances, 7/30-day summary, lifetime Flight-instance statistics, NEW/RARE/RETURNING logbook status, and optional photo. | Production; PostgreSQL required for durable detail, photo optional. |
 | `/flights/:id` | Standalone captured-flight detail with aircraft and airport links, observed sampled trail, bounded playback, and altitude/speed/vertical-rate profiles. | Production with PostgreSQL history. |
 | `/airports/:icao` | Airport detail, MapLibre location map, catalog metadata, nearby local airports, on-demand weather, and 7/30-day observed receiver traffic summary. | Production; traffic and nearby airports use local persisted/catalog data, weather optional. |

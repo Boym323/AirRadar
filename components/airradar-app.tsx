@@ -38,6 +38,7 @@ import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/histo
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
+import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
 import {
   createRouteAirportGeoJSON,
   createRouteGeoJSON,
@@ -343,6 +344,7 @@ export function AirRadarApp() {
   const [watchlistKind, setWatchlistKind] = useState("callsign");
   const [watchlistValue, setWatchlistValue] = useState("");
   const [showAircraft, setShowAircraft] = useState(true);
+  const [colorMode, setColorMode] = useState<AircraftColorMode>("default");
   const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
   const [showAirports, setShowAirports] = useState(true);
@@ -846,6 +848,9 @@ export function AirRadarApp() {
           plane.dataset.iconAsset = iconAsset ?? "fallback";
           plane.innerHTML = aircraftGlyphMarkup(aircraft);
         }
+        const color = aircraftColor(aircraft, colorMode);
+        if (color) plane.style.setProperty("--aircraft-color", color);
+        else plane.style.removeProperty("--aircraft-color");
       }
       // readsb's track is clockwise from geographic north. Let MapLibre apply
       // it in map coordinates, so it remains correct when the user rotates map.
@@ -885,7 +890,7 @@ export function AirRadarApp() {
     ));
     const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
     routeAirportSource?.setData(createRouteAirportGeoJSON(selected?.enrichment?.route));
-  }, [filteredAircraft, isWatchlisted, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [colorMode, filteredAircraft, isWatchlisted, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1001,6 +1006,12 @@ export function AirRadarApp() {
             {showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null && <div className="map-overlay-card range-legend">
               {RANGE_RING_RADII_KM.map((radiusKm) => <span key={radiusKm}><i className="legend-dot" /> {radiusKm} km</span>)}
             </div>}
+            {colorMode !== "default" && <div className="map-overlay-card color-mode-legend">
+              <strong>{t.layers.colorModes[colorMode]}</strong>
+              <span><i className="color-legend-swatch low" /> {t.layers.colorLegendLow}</span>
+              <span><i className="color-legend-swatch high" /> {t.layers.colorLegendHigh}</span>
+              <span><i className="color-legend-swatch fallback" /> {t.layers.colorLegendFallback}</span>
+            </div>}
             {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <div className="map-overlay-card layer-legend">
               <span><i className="legend-line completed" /> {t.route.originToCurrent}</span>
               <span><i className="legend-line remaining" /> {t.route.currentToDestination}</span>
@@ -1011,6 +1022,12 @@ export function AirRadarApp() {
               <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
                 <label><input type="checkbox" checked={showAircraft} onChange={(event) => setShowAircraft(event.target.checked)} /> {t.layers.aircraft}</label>
                 <label><input type="checkbox" checked={showRangeRings} onChange={(event) => setShowRangeRings(event.target.checked)} /> {t.layers.rangeRings}</label>
+                <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => setColorMode(event.target.value as AircraftColorMode)}>
+                  <option value="default">{t.layers.colorModes.default}</option>
+                  <option value="altitude">{t.layers.colorModes.altitude}</option>
+                  <option value="speed">{t.layers.colorModes.speed}</option>
+                  <option value="verticalRate">{t.layers.colorModes.verticalRate}</option>
+                </select></label>
                 <label><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> {t.layers.airports}</label>
                 <label className="map-layer-sublevel"><input type="checkbox" checked={showSignificantAirports} disabled={!showAirports} onChange={(event) => setShowSignificantAirports(event.target.checked)} /> {t.layers.significantAirports}</label>
                 <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>

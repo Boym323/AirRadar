@@ -97,6 +97,13 @@ button { cursor: pointer; }
 .range-legend { display: flex; gap: 12px; align-items: center; color: var(--muted); font-size: 11px; }
 .range-legend span { display: inline-flex; gap: 5px; align-items: center; }
 .legend-dot { width: 7px; height: 7px; border: 1px solid var(--mint); border-radius: 50%; }
+.color-mode-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 10px; }
+.color-mode-legend strong { color: var(--text); font-size: 10px; }
+.color-mode-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.color-legend-swatch { width: 9px; height: 9px; display: inline-block; border-radius: 50%; }
+.color-legend-swatch.low { background: #37d6c0; }
+.color-legend-swatch.high { background: #f3b95f; }
+.color-legend-swatch.fallback { background: #90a4b8; }
 .layer-legend { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 10px; }
 .layer-legend span { display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
 .layer-legend small { flex-basis: 100%; color: var(--muted); font-size: 9px; line-height: 1.35; }
@@ -109,6 +116,8 @@ button { cursor: pointer; }
 .map-layers-menu { position: absolute; z-index: 4; top: calc(100% + 8px); right: 0; min-width: 175px; display: grid; gap: 7px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: rgba(8,17,29,.96); box-shadow: 0 12px 24px rgba(0,0,0,.3); color: var(--text); font-size: 10px; }
 .map-layers-menu label { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
 .map-layers-menu input { accent-color: var(--mint); }
+.map-layer-mode { flex-direction: column; align-items: stretch !important; gap: 4px !important; padding-top: 4px; border-top: 1px solid rgba(153,181,207,.12); }
+.map-layer-mode select { min-height: 30px; border: 1px solid var(--line); border-radius: 6px; background: #132438; color: var(--text); padding: 5px 7px; font-size: 10px; }
 .map-layer-sublevel { padding-left: 14px; color: var(--muted); }
 
 .sidebar { background: rgba(13, 25, 39, .97); border-left: 1px solid var(--line); min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
@@ -438,7 +447,7 @@ button { cursor: pointer; }
 .aircraft-marker.watchlisted { z-index: 8; outline: 1px solid rgba(243,185,95,.72); outline-offset: 3px; border-radius: 50%; }
 .aircraft-marker.emergency { z-index: 12; outline: 1px solid rgba(251,113,133,.9); outline-offset: 3px; border-radius: 50%; }
 .aircraft-marker.selected::before { content: ""; position: absolute; inset: 1px; border: 2px solid var(--amber); border-radius: 50%; box-shadow: 0 0 0 4px rgba(243,185,95,.14), 0 0 14px rgba(243,185,95,.5); pointer-events: none; }
-.aircraft-plane { width: 31px; height: 31px; display: grid; place-items: center; color: var(--mint); background: transparent; border: 0; box-shadow: none; line-height: 1; transition: color .18s, filter .18s, transform .18s; }
+.aircraft-plane { width: 31px; height: 31px; display: grid; place-items: center; color: var(--aircraft-color, var(--mint)); background: transparent; border: 0; box-shadow: none; line-height: 1; transition: color .18s, filter .18s, transform .18s; }
 .aircraft-marker:hover .aircraft-plane, .aircraft-marker:focus-visible .aircraft-plane { transform: scale(1.1); }
 .aircraft-plane svg, .aircraft-row-icon svg { fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .aircraft-plane svg { width: 23px; height: 23px; }
