@@ -86,6 +86,8 @@ export class AircraftStateService {
   private readonly atcResolutionKeys = new Map<string, string>();
   private lifetimeReceptionRecord: ReceiverDailyReceptionRecord | null = null;
   private lifetimeReceptionRecordLoaded = false;
+  private lastEvaluatedDailyReceptionRecord: ReceiverDailyReceptionRecord | null = null;
+  private receptionEvaluationPending = false;
 
   constructor(
     provider: AircraftProvider = createAircraftProvider(),
@@ -104,11 +106,16 @@ export class AircraftStateService {
   start(): void {
     if (this.running || this.shuttingDown) return;
     this.running = true;
-    this.statisticsReady = this.statistics.load().catch((error) => {
-      // Statistics are optional; a load failure must not prevent the first
-      // live provider refresh.
-      console.error("AirRadar statistics startup failed", error);
-    });
+    this.statisticsReady = this.statistics.load()
+      .catch((error) => {
+        // Statistics are optional; a load failure must not prevent the first
+        // live provider refresh.
+        console.error("AirRadar statistics startup failed", error);
+      })
+      .then(() => {
+        this.lastEvaluatedDailyReceptionRecord = this.statistics.getDailyReceptionRecord();
+        this.scheduleReceptionRecordEvaluation();
+      });
     void this.loadLifetimeReceptionRecord();
     const refresh = this.refresh();
     this.initialRefresh = Promise.all([this.statisticsReady, refresh]).then(() => undefined);
@@ -262,7 +269,6 @@ export class AircraftStateService {
   private applySnapshot(snapshot: ProviderSnapshot): void {
     this.currentReceiver = snapshot.receiver;
     const previousAircraft = new Map(this.aircraft);
-    const previousDailyRecord = this.statistics.getDailyReceptionRecord();
     const currentHexes = new Set<string>();
     for (const incoming of snapshot.aircraft) {
       if (Date.parse(incoming.lastSeen) < Date.now() - getAircraftStaleAfterMs()) continue;
@@ -281,15 +287,7 @@ export class AircraftStateService {
     }
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) this.statistics.observe([...this.aircraft.values()], this.currentReceiver, new Date());
-    const currentDailyRecord = this.statistics.getDailyReceptionRecord();
-    if (currentDailyRecord && (!previousDailyRecord || currentDailyRecord.distanceKm > previousDailyRecord.distanceKm)) {
-      this.alerts.observeReceptionRecord("daily", currentDailyRecord, previousDailyRecord);
-    }
-    if (currentDailyRecord && (!this.lifetimeReceptionRecord || currentDailyRecord.distanceKm > this.lifetimeReceptionRecord.distanceKm)) {
-      const previousLifetimeRecord = this.lifetimeReceptionRecord;
-      this.lifetimeReceptionRecord = currentDailyRecord;
-      if (this.lifetimeReceptionRecordLoaded) this.alerts.observeReceptionRecord("lifetime", currentDailyRecord, previousLifetimeRecord);
-    }
+    this.scheduleReceptionRecordEvaluation();
     this.alerts.observe(previousAircraft, this.aircraft);
   }
 
@@ -369,16 +367,34 @@ export class AircraftStateService {
       const records = await getReceptionRecords(null);
       this.lifetimeReceptionRecord = records.lifetime;
       this.lifetimeReceptionRecordLoaded = true;
-      const current = this.statistics.getDailyReceptionRecord();
-      if (current && (!this.lifetimeReceptionRecord || current.distanceKm > this.lifetimeReceptionRecord.distanceKm)) {
-        const previous = this.lifetimeReceptionRecord;
-        this.lifetimeReceptionRecord = current;
-        this.alerts.observeReceptionRecord("lifetime", current, previous);
-      }
+      this.scheduleReceptionRecordEvaluation();
     } catch {
       // Reception records are optional and must never affect live refresh.
       this.lifetimeReceptionRecordLoaded = true;
+      this.scheduleReceptionRecordEvaluation();
     }
+  }
+
+  private scheduleReceptionRecordEvaluation(): void {
+    this.receptionEvaluationPending = true;
+    const ready = this.statisticsReady;
+    if (!ready) return;
+    void ready.then(() => {
+      if (!this.receptionEvaluationPending) return;
+      this.receptionEvaluationPending = false;
+      const current = this.statistics.getDailyReceptionRecord();
+      const previousDaily = this.lastEvaluatedDailyReceptionRecord;
+      if (current && (!previousDaily || current.date !== previousDaily.date || current.distanceKm > previousDaily.distanceKm)) {
+        this.alerts.observeReceptionRecord("daily", current, previousDaily?.date === current.date ? previousDaily : null);
+      }
+      this.lastEvaluatedDailyReceptionRecord = current;
+      if (current && this.lifetimeReceptionRecordLoaded
+        && (!this.lifetimeReceptionRecord || current.distanceKm > this.lifetimeReceptionRecord.distanceKm)) {
+        const previousLifetime = this.lifetimeReceptionRecord;
+        this.lifetimeReceptionRecord = current;
+        this.alerts.observeReceptionRecord("lifetime", current, previousLifetime);
+      }
+    });
   }
 
   private queueHistory(snapshot: ProviderSnapshot): void {
