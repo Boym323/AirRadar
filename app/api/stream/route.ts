@@ -1,5 +1,6 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
-import { toPublicStateSnapshot } from "@/lib/server/public-serialization";
+import { toPublicLiveStateSnapshot } from "@/lib/server/public-serialization";
+import { acquireSseClient } from "@/lib/server/sse-capacity";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,6 +10,13 @@ function event(name: string, payload: unknown): string {
 }
 
 export async function GET(request: Request): Promise<Response> {
+  const releaseSseClient = acquireSseClient();
+  if (!releaseSseClient) {
+    return new Response("SSE capacity reached", {
+      status: 503,
+      headers: { "Cache-Control": "no-store", "Retry-After": "15" },
+    });
+  }
   const encoder = new TextEncoder();
   const service = getAircraftStateService();
   let closed = false;
@@ -20,6 +28,7 @@ export async function GET(request: Request): Promise<Response> {
   const close = () => {
     if (closed) return;
     closed = true;
+    releaseSseClient();
     unsubscribe();
     if (heartbeat) clearInterval(heartbeat);
     heartbeat = null;
@@ -35,7 +44,7 @@ export async function GET(request: Request): Promise<Response> {
       controllerRef = controller;
       const send = (snapshot: ReturnType<typeof service.getSnapshot>) => {
         if (closed) return;
-        const chunk = encoder.encode(event("snapshot", toPublicStateSnapshot(snapshot)));
+        const chunk = encoder.encode(event("snapshot", toPublicLiveStateSnapshot(snapshot)));
         if ((controller.desiredSize ?? 0) > 0) {
           try {
             controller.enqueue(chunk);

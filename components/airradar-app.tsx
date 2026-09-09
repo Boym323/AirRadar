@@ -381,11 +381,11 @@ export function AirRadarApp() {
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
     }
-    void fetch("/api/atc/sectors", { cache: "no-store" })
+    void fetch("/api/atc/sectors", { cache: "force-cache" })
       .then((response) => response.ok ? response.json() as Promise<AtcDataResponse> : null)
       .then((data) => { if (data) setAtcData(data); })
       .catch(() => undefined);
-    void fetch("/api/airports", { cache: "no-store" })
+    void fetch("/api/airports", { cache: "force-cache" })
       .then((response) => response.ok ? response.json() as Promise<Airport[]> : null)
       .then((data) => { if (data) setAirports(data); })
       .catch(() => undefined);
@@ -954,7 +954,10 @@ export function AirRadarApp() {
     }
   }, [airportFilter, mapReady, showAirports]);
 
-  const selectedAircraft = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) ?? null;
+  const selectedAircraftSnapshot = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) ?? null;
+  const selectedAircraft = selectedAircraftSnapshot && aircraftDetail?.liveEnrichment
+    ? { ...selectedAircraftSnapshot, enrichment: aircraftDetail.liveEnrichment }
+    : selectedAircraftSnapshot;
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
 

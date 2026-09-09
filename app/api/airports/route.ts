@@ -21,11 +21,11 @@ export async function GET(): Promise<Response> {
           country: airport.country,
           latitude: airport.latitude,
           longitude: airport.longitude,
-        })), { headers: { "Cache-Control": "public, max-age=300" } });
+        })), { headers: { "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" } });
       }
     } catch {
       // The catalog is still useful when the optional database is offline.
     }
   }
-  return Response.json(SAMPLE_AIRPORTS, { headers: { "Cache-Control": "public, max-age=300" } });
+  return Response.json(SAMPLE_AIRPORTS, { headers: { "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" } });
 }

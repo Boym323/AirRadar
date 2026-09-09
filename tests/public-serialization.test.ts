@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StateSnapshot } from "@/lib/aircraft/types";
-import { toPublicStateSnapshot } from "@/lib/server/public-serialization";
+import { toPublicLiveStateSnapshot, toPublicStateSnapshot } from "@/lib/server/public-serialization";
 import { toPublicHealthResponse } from "@/lib/server/public-health";
 
 function snapshot(): StateSnapshot {
@@ -12,6 +12,24 @@ function snapshot(): StateSnapshot {
       category: null, emergency: null, rssi: null, messages: null, seenSeconds: 0, seenPosSeconds: 0,
       lastSeen: "2026-09-06T12:00:00.000Z", source: "ADS-B", sourceType: "adsb_icao", onGround: false,
       distanceKm: 15.25, bearing: 123.4, trail: [],
+      enrichment: {
+        metadata: {
+          registration: null, registrationCountry: null, registrationCountryCode: null,
+          aircraftType: null, icaoTypeCode: "A320", aircraftDescription: "Airbus A320",
+          operator: "Test Air", manufacturer: "Airbus", source: "test", retrievedAt: "2026-09-06T12:00:00.000Z",
+          flags: "test", year: "2020",
+        },
+        route: {
+          callsign: "TEST123", airline: "Test Air", airlineIcao: "TST", airlineIata: "TS",
+          origin: null, destination: null, originAirport: null, destinationAirport: null,
+          source: "test", retrievedAt: "2026-09-06T12:00:00.000Z",
+        },
+        flightPlan: {
+          callsign: "TEST123", scheduledDeparture: null, actualDeparture: null,
+          scheduledArrival: null, estimatedArrival: null, filedRoute: "LONG ROUTE",
+          waypoints: ["A", "B"], source: "test", retrievedAt: "2026-09-06T12:00:00.000Z",
+        },
+      },
     }],
     relevantAtcFrequencies: [{
       frequencyMhz: 127.35,
@@ -66,6 +84,15 @@ describe("public snapshot serialization", () => {
     expect(value.relevantAtcFrequencies[0]).toMatchObject({ frequencyMhz: 127.35, callsign: "PRAHA RADAR", aircraftCount: 1 });
     expect(JSON.stringify(value.relevantAtcFrequencies)).not.toContain("sectorId");
     expect(JSON.stringify(value.relevantAtcFrequencies)).not.toContain("polygon");
+  });
+
+  it("keeps full metadata and flight plans out of the live feed", () => {
+    const value = toPublicLiveStateSnapshot(snapshot(), "hidden");
+    expect(value.aircraft[0].enrichment).toEqual({
+      route: snapshot().aircraft[0].enrichment?.route,
+    });
+    expect(JSON.stringify(value)).not.toContain("LONG ROUTE");
+    expect(JSON.stringify(value)).not.toContain("Airbus A320");
   });
 });
 

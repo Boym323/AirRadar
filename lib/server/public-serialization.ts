@@ -1,4 +1,5 @@
 import type {
+  AircraftView,
   PublicReceiverPosition,
   PublicStateSnapshot,
   ReceiverPosition,
@@ -52,4 +53,21 @@ export function toPublicStateSnapshot(
     lastError: publicSourceError(snapshot.readsbOnline),
     stats: snapshot.stats,
   };
+}
+
+/**
+ * The live feed contains only fields needed for the map and list. Full
+ * metadata and flight plans remain available from the selected-aircraft API.
+ */
+export function toPublicLiveStateSnapshot(
+  snapshot: StateSnapshot,
+  mode: PublicReceiverPositionMode = getPublicReceiverPositionMode(),
+): PublicStateSnapshot {
+  const aircraft: AircraftView[] = snapshot.aircraft.map((item) => {
+    const route = item.enrichment?.route;
+    const liveEnrichment = route ? { route } : undefined;
+    const { enrichment: _enrichment, ...rest } = item;
+    return { ...rest, ...(liveEnrichment ? { enrichment: liveEnrichment } : {}) };
+  });
+  return toPublicStateSnapshot({ ...snapshot, aircraft }, mode);
 }

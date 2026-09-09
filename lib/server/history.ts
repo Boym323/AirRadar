@@ -1,5 +1,5 @@
 import "temporal-polyfill/full/global";
-import type { Aircraft } from "@/lib/aircraft/types";
+import type { Aircraft, AircraftEnrichment } from "@/lib/aircraft/types";
 import {
   dayKey,
   getAppTimezone,
@@ -146,6 +146,7 @@ export interface AircraftLifetimeStats {
 
 export interface AircraftDetailResponse {
   aircraft: AircraftDetailMetadata | null;
+  liveEnrichment?: AircraftEnrichment;
   recentFlights: HistoryFlightSummary[];
   historySummary: AircraftHistorySummary;
   lifetimeStats: AircraftLifetimeStats;
