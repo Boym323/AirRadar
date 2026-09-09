@@ -43,6 +43,7 @@ npm run lint
 npm run typecheck
 npm test
 npm run build
+npm run test:production
 ```
 
 `typecheck` emits the Prisma contract and Next typegen. `build` writes ignored
@@ -50,6 +51,18 @@ build metadata, emits the Prisma contract, and runs `next build`. A previous
 full-gate pass is stale after source, test, package, build, migration, or
 deployment changes. Report exactly which commands ran; never imply a skipped
 gate passed.
+
+`test:production` starts the completed build in an isolated demo-mode child
+process and checks HTTP health, `/api/version`, homepage accessibility basics,
+SSE connect/snapshot/disconnect, static payload caching, watchlist mutation
+authorization, runtime diagnostics, PWA manifest behavior, and additive
+migration source. It does not apply migrations or contact production
+providers. The optional browser variant adds desktop/mobile Playwright smoke
+checks when a browser is installed:
+
+```bash
+npm run test:production:browser
+```
 
 Documentation-only changes that do not touch code, package files, schema,
 migrations, or build configuration do not require the build/full suite unless

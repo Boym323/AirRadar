@@ -66,8 +66,7 @@ export function toPublicLiveStateSnapshot(
   const aircraft: AircraftView[] = snapshot.aircraft.map((item) => {
     const route = item.enrichment?.route;
     const liveEnrichment = route ? { route } : undefined;
-    const { enrichment: _enrichment, ...rest } = item;
-    return { ...rest, ...(liveEnrichment ? { enrichment: liveEnrichment } : {}) };
+    return { ...item, enrichment: liveEnrichment };
   });
   return toPublicStateSnapshot({ ...snapshot, aircraft }, mode);
 }
