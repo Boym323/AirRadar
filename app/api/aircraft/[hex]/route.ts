@@ -2,6 +2,7 @@ import { getAircraftDetail, HistoryDatabaseUnavailableError, normalizeAircraftHi
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { normalizeIcaoHex } from "@/lib/server/validation";
+import { parseCoverage } from "@/lib/server/coverage";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +27,11 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
   }
 
   try {
-    const range = normalizeAircraftHistoryRange(new URL(request.url).searchParams.get("range"));
+    const searchParams = new URL(request.url).searchParams;
+    const range = normalizeAircraftHistoryRange(searchParams.get("range"));
+    const coverage = parseCoverage(searchParams.get("coverage"));
     const detail = await getAircraftDetail(icaoHex, { historyRange: range });
-    const liveEnrichment = getAircraftStateService().getAircraft(icaoHex)?.enrichment;
+    const liveEnrichment = getAircraftStateService().getAircraft(icaoHex, coverage)?.enrichment;
     return Response.json({ ...detail, ...(liveEnrichment ? { liveEnrichment } : {}) }, { headers: noStoreHeaders() });
   } catch (error) {
     if (error instanceof HistoryDatabaseUnavailableError) {

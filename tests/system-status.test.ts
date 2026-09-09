@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { StateSnapshot } from "@/lib/aircraft/types";
+import type { NetworkProviderDiagnostics, StateSnapshot } from "@/lib/aircraft/types";
 import type { AtcDataResponse } from "@/lib/atc/types";
 import { getTranslations } from "@/lib/i18n";
 import { buildSystemStatus } from "@/lib/server/system-status";
@@ -105,6 +105,30 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(value.receiver.readsb.status).toBe("offline");
     expect(value.receiver.readsb.lastSnapshot).toBeNull();
     expect(JSON.stringify(value)).not.toContain("postgresql://");
+  });
+
+  it("keeps optional network degradation separate from local receiver health", () => {
+    const diagnostics: NetworkProviderDiagnostics = {
+      enabled: true,
+      status: "rate_limited",
+      lastAttemptAt: checkedAt.toISOString(),
+      lastSuccessAt: null,
+      latencyMs: 4000,
+      consecutiveFailures: 2,
+      aircraftCount: 0,
+      positionedAircraftCount: 0,
+      mlatAircraftCount: 0,
+      radiusNm: 250,
+      pollIntervalMs: 10_000,
+      retryAfterMs: 60_000,
+    };
+    const networkDegraded = build({ adsbLol: diagnostics });
+    expect(networkDegraded.status).toBe("ok");
+    expect(networkDegraded.adsbLol).toMatchObject({ status: "degraded", rateLimited: true, retryAfterMs: 60_000 });
+
+    const localOffline = build({ snapshot: snapshot(false), adsbLol: { ...diagnostics, status: "online" } });
+    expect(localOffline.status).toBe("degraded");
+    expect(localOffline.receiver.readsb.status).toBe("offline");
   });
 
   it("reports database unavailable while keeping the live status shape", () => {

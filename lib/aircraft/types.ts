@@ -2,6 +2,16 @@ import type { AtcAssignment, AtcFrequencySummary } from "@/lib/atc/types";
 import type { Airport } from "@/lib/airports/types";
 
 export type AircraftSource = "ADS-B" | "MLAT" | "TIS-B" | "Mode-S" | "UNKNOWN";
+export type AircraftDataOrigin = "local" | "adsblol";
+
+export interface AircraftProvenance {
+  seenLocal: boolean;
+  seenNetwork: boolean;
+  lastLocalSeen: string | null;
+  lastNetworkSeen: string | null;
+  positionOrigin: AircraftDataOrigin | null;
+  positionSource: AircraftSource;
+}
 
 export interface ReceiverPosition {
   lat: number;
@@ -88,6 +98,9 @@ export interface Aircraft {
   seenPosSeconds: number | null;
   lastSeen: string;
   source: AircraftSource;
+  /** Observation origin; optional for compatibility with older test fixtures. */
+  origin?: AircraftDataOrigin;
+  provenance?: AircraftProvenance;
   sourceType: string | null;
   onGround: boolean;
   distanceKm: number | null;
@@ -118,6 +131,47 @@ export interface ProviderSnapshot {
   messagesPerSecond?: number | null;
 }
 
+export type CoverageMode = "local" | "extended";
+
+export interface CoverageStats {
+  displayedAircraft: number;
+  localAircraft: number;
+  networkAircraft: number;
+  networkOnlyAircraft: number;
+  seenByBoth: number;
+}
+
+export type NetworkProviderStatus =
+  | "disabled"
+  | "online"
+  | "stale"
+  | "timeout"
+  | "rate_limited"
+  | "http_error"
+  | "invalid_response";
+
+export interface NetworkProviderDiagnostics {
+  enabled: boolean;
+  status: NetworkProviderStatus;
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  latencyMs: number | null;
+  consecutiveFailures: number;
+  aircraftCount: number;
+  positionedAircraftCount: number;
+  mlatAircraftCount: number;
+  radiusNm: number;
+  pollIntervalMs: number;
+  retryAfterMs: number | null;
+}
+
+export interface SourceStatusSnapshot {
+  local: {
+    online: boolean;
+  };
+  adsbLol: NetworkProviderDiagnostics;
+}
+
 export interface StateSnapshot {
   aircraft: AircraftView[];
   relevantAtcFrequencies: AtcFrequencySummary[];
@@ -131,6 +185,8 @@ export interface StateSnapshot {
   lastReadsbUpdate: string | null;
   lastError: string | null;
   stats: RadarStats;
+  sources?: SourceStatusSnapshot;
+  coverageStats?: CoverageStats;
 }
 
 export interface PublicStateSnapshot extends Omit<StateSnapshot, "receiver"> {

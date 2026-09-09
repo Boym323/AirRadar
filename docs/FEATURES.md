@@ -7,7 +7,7 @@ whether an operator has configured an optional provider.
 
 | Route | Purpose | Production status |
 | --- | --- | --- |
-| `/` | Live MapLibre radar, aircraft list/filtering, selected aircraft detail, zoom-aware aircraft labels, live trail, route/airport/ATC overlays, optional receiver range rings and aircraft color modes, keyboard shortcuts, SSE connection state, and a compact ADS-B logbook summary. | Production core; readsb or demo provider. |
+| `/` | Live MapLibre radar, aircraft list/filtering, selected aircraft detail, zoom-aware aircraft labels, live trail, route/airport/ATC overlays, optional receiver range rings and aircraft color modes, keyboard shortcuts, SSE connection state, and a compact ADS-B logbook summary. Optional LOCAL/EXTENDED coverage switch combines local readsb with RAM-only ADSB.lol network observations. | Production core; readsb or demo provider. Extended coverage is optional and disabled by default. |
 | `/aircraft/:hex` | Durable aircraft metadata, recent flight instances, 7/30-day summary, lifetime Flight-instance statistics, NEW/RARE/RETURNING logbook status, and optional photo. | Production; PostgreSQL required for durable detail, photo optional. |
 | `/flights/:id` | Standalone captured-flight detail with aircraft and airport links, clearly labeled observed sampled path versus airport route context, bounded playback, and altitude/speed/vertical-rate profiles synchronized to the playback timeline. | Production with PostgreSQL history. |
 | `/airports/:icao` | Airport detail, MapLibre location map, catalog metadata, nearby local airports, on-demand weather, and 7/30-day observed receiver traffic summary. | Production; traffic and nearby airports use local persisted/catalog data, weather optional. |
@@ -24,10 +24,10 @@ whether an operator has configured an optional provider.
 
 | Method and route | Purpose | Production status |
 | --- | --- | --- |
-| `GET /api/aircraft` | Current safe snapshot. | Production core. |
-| `GET /api/aircraft/:hex` | Safe durable metadata, recent flights, and 7d/30d history summary. | Production when PostgreSQL is configured. |
+| `GET /api/aircraft?coverage=local\|extended` | Current safe snapshot; default is local for backward compatibility. | Production core. |
+| `GET /api/aircraft/:hex?coverage=local\|extended` | Safe durable metadata, recent flights, and 7d/30d history summary; selected live enrichment follows the requested coverage view. | Production when PostgreSQL is configured. |
 | `GET /api/aircraft/:hex/photo` | Optional Planespotters photo metadata; returns disabled/empty safely. | Optional, disabled by default. |
-| `GET /api/stream` | Coalesced `snapshot` events over Server-Sent Events. | Production core; not WebSocket. |
+| `GET /api/stream?coverage=local\|extended` | Coalesced `snapshot` events over Server-Sent Events; default is local and each client receives a selected coverage view from one shared state service. | Production core; not WebSocket. |
 | `GET /api/history/:hex` | PostgreSQL latest history or bounded RAM trail fallback. | Production/degraded gracefully without DB. |
 | `GET /api/history/flights` | Bounded flight list by local range, search, or exact hex. | Production with PostgreSQL. |
 | `GET /api/history/flights/:id` | One flight instance and capped sampled positions. | Production with PostgreSQL. |

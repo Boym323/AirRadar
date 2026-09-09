@@ -87,6 +87,26 @@ These are behavior and safety contracts for changes to the current system.
   effort, and flushes during orderly shutdown. Current live aircraft count and
   messages/second remain process/live values.
 
+## Extended network coverage
+
+- `AdsbLolProvider` is optional and uses only the public geographic ADSB.lol
+  API. It must not use `re-api`, BEAST/TCP, or any second live-ingest path.
+- The provider has one in-flight request, bounded timeout/retry/backoff,
+  response validation, bounded aircraft/trail state, stale-if-error behavior,
+  and safe diagnostics. `Retry-After` is honored for HTTP 429 responses.
+- Local and network observations are held in separate maps. The default live
+  coverage is local; extended coverage explicitly merges by normalized ICAO
+  identity and never mutates the local map or local health state.
+- Merge arbitration is explicit: position uses freshest valid observation,
+  ties within one second prefer local ADS-B, then local MLAT, network ADS-B,
+  network MLAT; local descriptive fields and receiver-local RSSI/message
+  counters remain authoritative. Network-only aircraft have null local
+  measurements.
+- Network-only observations are excluded from PostgreSQL history, daily
+  statistics/coverage, alerts, metadata enrichment, and ATC resolution. Public
+  output includes safe source/provenance and ADSB.lol ODbL attribution, but no
+  raw provider errors or exact receiver coordinates by default.
+
 ## ATC
 
 - ATC assignment is a probable candidate based on aircraft position,

@@ -1,4 +1,5 @@
-import { getAdsbDbBaseUrl, getFlightAwareApiKey, getReceiverPosition, isAdsbDbEnabled, shouldUseSampleAtcData } from "@/lib/server/config";
+import { getAdsbDbBaseUrl, getFlightAwareApiKey, getReceiverPosition, isAdsbDbEnabled, isAdsbLolEnabled, isReadsbConfigured, shouldUseSampleAtcData } from "@/lib/server/config";
+import { AdsbLolProvider } from "@/lib/server/adsblol-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
 import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
 import { EnrichmentService } from "@/lib/server/enrichment-cache";
@@ -6,7 +7,7 @@ import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { AircraftMetadataCatalog } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
-import type { AircraftMetadataDiagnostics, AircraftMetadataProvider, AircraftProvider, FlightRouteProvider, ProviderRegistry } from "@/lib/server/provider";
+import type { AircraftMetadataDiagnostics, AircraftMetadataProvider, AircraftProvider, FlightRouteProvider, NetworkAircraftProvider, ProviderRegistry } from "@/lib/server/provider";
 import { DatabaseAtcSectorProvider, getStoredAtcData, SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS, SampleAtcSectorProvider } from "@/lib/server/atc-data";
 import type { AtcDataResponse } from "@/lib/atc/types";
 
@@ -15,6 +16,12 @@ export function createAircraftProvider(): AircraftProvider {
   return baseUrl
     ? new LocalReadsbProvider(baseUrl, getReceiverPosition())
     : new MockReadsbProvider(getReceiverPosition());
+}
+
+export function createNetworkAircraftProvider(): NetworkAircraftProvider {
+  // Demo mode remains deterministic. Extended coverage is opt-in and only
+  // starts when a real local receiver is configured.
+  return new AdsbLolProvider(getReceiverPosition(), { enabled: isAdsbLolEnabled() && isReadsbConfigured() });
 }
 
 /** Combines metadata sources while keeping the first non-empty value per field. */

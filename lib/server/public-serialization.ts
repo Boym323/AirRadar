@@ -30,6 +30,28 @@ function publicSourceError(online: boolean): string | null {
   return online ? null : "Receiver unavailable";
 }
 
+function publicSources(snapshot: StateSnapshot): PublicStateSnapshot["sources"] {
+  const network = snapshot.sources?.adsbLol;
+  if (!network) return undefined;
+  return {
+    local: { online: Boolean(snapshot.sources?.local.online) },
+    adsbLol: {
+      enabled: Boolean(network.enabled),
+      status: network.status,
+      lastAttemptAt: network.lastAttemptAt,
+      lastSuccessAt: network.lastSuccessAt,
+      latencyMs: Number.isFinite(network.latencyMs) && (network.latencyMs ?? 0) >= 0 ? network.latencyMs : null,
+      consecutiveFailures: Math.max(0, Math.min(1_000_000, Math.trunc(network.consecutiveFailures))),
+      aircraftCount: Math.max(0, Math.min(10_000, Math.trunc(network.aircraftCount))),
+      positionedAircraftCount: Math.max(0, Math.min(10_000, Math.trunc(network.positionedAircraftCount))),
+      mlatAircraftCount: Math.max(0, Math.min(10_000, Math.trunc(network.mlatAircraftCount))),
+      radiusNm: Math.max(0, Math.min(250, Math.trunc(network.radiusNm))),
+      pollIntervalMs: Math.max(0, Math.min(86_400_000, Math.trunc(network.pollIntervalMs))),
+      retryAfterMs: network.retryAfterMs === null ? null : Math.max(0, Math.min(86_400_000, Math.trunc(network.retryAfterMs))),
+    },
+  };
+}
+
 /**
  * Converts the internal state into the only snapshot shape allowed on the
  * public API and SSE wire. Internal coordinates and raw provider errors never
@@ -52,6 +74,8 @@ export function toPublicStateSnapshot(
     lastReadsbUpdate: snapshot.lastReadsbUpdate,
     lastError: publicSourceError(snapshot.readsbOnline),
     stats: snapshot.stats,
+    sources: publicSources(snapshot),
+    coverageStats: snapshot.coverageStats,
   };
 }
 

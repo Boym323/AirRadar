@@ -14,6 +14,7 @@ LocalReadsbProvider (or MockReadsbProvider when READSB_BASE_URL is empty)
         ▼
 one global AircraftStateService
   ├─ RAM aircraft map, stale cleanup, distance/bearing, bounded live trails
+  ├─ optional AdsbLolProvider → separate network RAM map and explicit merge
   ├─ async enrichment and ATC resolution
   ├─ async sampled history persistence
   ├─ daily ReceiverStatistics aggregate
@@ -36,6 +37,10 @@ evaluation, statistics observation, and history sampling.
 The server-side provider boundary is `AircraftProvider`. The configured local
 provider fetches the readsb/tar1090 web root; the empty base URL selects the
 deterministic demo provider. The frontend never selects a provider.
+`NetworkAircraftProvider` is a separate optional boundary for live-only
+coverage. `AdsbLolProvider` calls the public ADSB.lol geographic v2 endpoint,
+keeps its validated snapshot in RAM, and never enters the local history,
+statistics, alert, enrichment, or ATC input lanes.
 
 ## Server ownership
 
@@ -45,6 +50,12 @@ independent lanes:
 - `LocalReadsbProvider` normalizes raw readsb observations into the shared
   `Aircraft` shape. It prefers barometric altitude/rate, retains geometric
   values, and computes distance/bearing from the internal receiver position.
+- `AdsbLolProvider` is opt-in, bounded, and non-overlapping. It validates the
+  public response, applies timeout/rate-limit/backoff handling, keeps a
+  stale-if-error network snapshot, and exposes sanitized diagnostics. Its
+  aircraft are merged with local observations only when an extended live
+  snapshot is requested; local observations win metadata and local receiver
+  measurements while position arbitration uses freshness and source priority.
 - `EnrichmentService` invokes configured metadata, route, and flight-plan
   providers asynchronously. It uses normalized keys, positive/negative TTLs,
   in-flight coalescing, and bounded concurrency.
@@ -69,6 +80,10 @@ The live snapshot is built from the RAM map and is sorted by distance. A
 provider failure clears message-rate availability, removes stale aircraft, and
 uses bounded retry backoff; it does not discard still-fresh aircraft or stop
 the process.
+The local and network maps remain separate until the requested coverage mode is
+serialized. Extended coverage is a display/read path only: network-only
+aircraft do not affect local daily aggregates, sampled history, alerts,
+enrichment, ATC resolution, or local receiver health.
 
 ## Persistence boundaries
 
@@ -112,6 +127,11 @@ limiting. SSE has a separate bounded active-client capacity guard and keeps
 only the newest pending snapshot for a slow connection. Full metadata and
 flight plans are loaded lazily for selected aircraft; route context needed by
 the map remains in the compact live snapshot.
+`coverage=local|extended` is accepted by the live aircraft, selected-aircraft,
+and SSE endpoints. The default is `local`; `extended` includes validated,
+fresh ADSB.lol observations and publishes provider status, source provenance,
+and ODbL attribution without exposing raw provider errors or exact receiver
+coordinates.
 
 The live map is a MapLibre map with DOM markers keyed by ICAO hex and GeoJSON
 overlays. Route visualization is a separate Route V2 namespace. See

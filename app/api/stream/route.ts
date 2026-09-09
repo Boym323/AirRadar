@@ -1,6 +1,7 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { toPublicLiveStateSnapshot } from "@/lib/server/public-serialization";
 import { acquireSseClient } from "@/lib/server/sse-capacity";
+import { parseCoverage } from "@/lib/server/coverage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,6 +20,7 @@ export async function GET(request: Request): Promise<Response> {
   }
   const encoder = new TextEncoder();
   const service = getAircraftStateService();
+  const coverage = parseCoverage(new URL(request.url).searchParams.get("coverage"));
   let closed = false;
   let heartbeat: ReturnType<typeof setInterval> | null = null;
   let unsubscribe: () => void = () => undefined;
@@ -56,8 +58,8 @@ export async function GET(request: Request): Promise<Response> {
           pending = chunk;
         }
       };
-      unsubscribe = service.subscribe(send);
-      send(service.getSnapshot());
+      unsubscribe = service.subscribe(send, { coverage });
+      send(service.getSnapshot({ coverage }));
       heartbeat = setInterval(() => {
         if (closed) return;
         try {

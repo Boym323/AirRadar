@@ -95,6 +95,51 @@ export function getMaxProviderRetryIntervalMs(): number {
   return Math.max(getPollIntervalMs(), envNumber("READSB_MAX_RETRY_INTERVAL_MS", 30_000));
 }
 
+export function isAdsbLolEnabled(): boolean {
+  return process.env.ADSBLOL_ENABLED?.trim().toLowerCase() === "true";
+}
+
+function boundedInteger(name: string, fallback: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, Math.trunc(envNumber(name, fallback))));
+}
+
+export function getAdsbLolBaseUrl(): string {
+  const configured = process.env.ADSBLOL_BASE_URL?.trim();
+  if (!configured) return "https://api.adsb.lol";
+  try {
+    const url = new URL(configured);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "https://api.adsb.lol";
+    if (url.hostname.toLowerCase().replace(/\.$/, "") === "re-api.adsb.lol") return "https://api.adsb.lol";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return "https://api.adsb.lol";
+  }
+}
+
+export function getAdsbLolRadiusNm(): number {
+  return boundedInteger("ADSBLOL_RADIUS_NM", 250, 0, 250);
+}
+
+export function getAdsbLolPollIntervalMs(): number {
+  return boundedInteger("ADSBLOL_POLL_INTERVAL_MS", 10_000, 5_000, 24 * 60 * 60_000);
+}
+
+export function getAdsbLolRequestTimeoutMs(): number {
+  return boundedInteger("ADSBLOL_REQUEST_TIMEOUT_MS", 4_000, 500, 60_000);
+}
+
+export function getAdsbLolStaleAfterMs(): number {
+  return boundedInteger("ADSBLOL_STALE_AFTER_MS", 30_000, 5_000, 24 * 60 * 60_000);
+}
+
+export function getAdsbLolMaxRetryIntervalMs(): number {
+  return Math.max(getAdsbLolPollIntervalMs(), boundedInteger("ADSBLOL_MAX_RETRY_INTERVAL_MS", 60_000, 5_000, 24 * 60 * 60_000));
+}
+
+export function getAdsbLolMaxAircraft(): number {
+  return boundedInteger("ADSBLOL_MAX_AIRCRAFT", 3_000, 1, 3_000);
+}
+
 export function getReceiverRefreshIntervalMs(): number {
   return Math.max(60_000, envNumber("RECEIVER_REFRESH_INTERVAL_MS", 5 * 60_000));
 }

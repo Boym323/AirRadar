@@ -35,6 +35,8 @@ export interface RawReadsbAircraftResponse {
   now?: unknown;
   messages?: unknown;
   aircraft?: RawReadsbAircraft[];
+  /** ADSB.lol's public v2 response names the same array `ac`. */
+  ac?: RawReadsbAircraft[];
 }
 
 function numeric(value: unknown): number | null {
@@ -125,12 +127,53 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
     seenPosSeconds,
     lastSeen,
     source: sourceFor(raw),
+    origin: "local",
+    provenance: {
+      seenLocal: true,
+      seenNetwork: false,
+      lastLocalSeen: lastSeen,
+      lastNetworkSeen: null,
+      positionOrigin: "local",
+      positionSource: sourceFor(raw),
+    },
     sourceType: text(raw.type),
     onGround: isOnGround(raw),
     distanceKm,
     bearing,
     trail: lat !== null && lon !== null ? [{ lat, lon, recordedAt: now.toISOString(), altitude, groundSpeed, track }] : [],
   };
+}
+
+export function normalizeNetworkAircraft(
+  raw: RawReadsbAircraft,
+  receiver: ReceiverPosition,
+  now = new Date(),
+): Aircraft | null {
+  const normalized = normalizeAircraft(raw, receiver, now);
+  if (!normalized) return null;
+  return {
+    ...normalized,
+    origin: "adsblol",
+    provenance: {
+      seenLocal: false,
+      seenNetwork: true,
+      lastLocalSeen: null,
+      lastNetworkSeen: normalized.lastSeen,
+      positionOrigin: "adsblol",
+      positionSource: normalized.source,
+    },
+  };
+}
+
+function normalizeRows(
+  rows: RawReadsbAircraft[],
+  receiver: ReceiverPosition,
+  now: Date,
+  network: boolean,
+): Aircraft[] {
+  return rows
+    .map((raw) => network ? normalizeNetworkAircraft(raw, receiver, now) : normalizeAircraft(raw, receiver, now))
+    .filter((aircraft): aircraft is Aircraft => aircraft !== null);
 }
 
 export function normalizeAircraftResponse(
@@ -141,7 +184,19 @@ export function normalizeAircraftResponse(
   const generatedAt = numeric(response.now);
   const observedAt = generatedAt !== null ? new Date(generatedAt * 1000) : now;
   const normalizationTime = Number.isNaN(observedAt.getTime()) ? now : observedAt;
-  return (Array.isArray(response.aircraft) ? response.aircraft : [])
-    .map((raw) => normalizeAircraft(raw, receiver, normalizationTime))
-    .filter((aircraft): aircraft is Aircraft => aircraft !== null);
+  return normalizeRows(Array.isArray(response.aircraft) ? response.aircraft : [], receiver, normalizationTime, false);
+}
+
+export function normalizeNetworkAircraftResponse(
+  response: RawReadsbAircraftResponse,
+  receiver: ReceiverPosition,
+  now = new Date(),
+): Aircraft[] {
+  const generatedAt = numeric(response.now);
+  const milliseconds = generatedAt !== null
+    ? (generatedAt > 100_000_000_000 ? generatedAt : generatedAt * 1000)
+    : now.getTime();
+  const observedAt = new Date(milliseconds);
+  const normalizationTime = Number.isNaN(observedAt.getTime()) ? now : observedAt;
+  return normalizeRows(Array.isArray(response.ac) ? response.ac : [], receiver, normalizationTime, true);
 }

@@ -5,7 +5,9 @@ import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import type { Aircraft, AircraftEnrichment, ProviderSnapshot } from "@/lib/aircraft/types";
 import { EnrichmentService } from "@/lib/server/enrichment-cache";
 import { AtcSectorService, EmptyAtcSectorProvider } from "@/lib/server/atc-sector-service";
-import type { AircraftProvider } from "@/lib/server/provider";
+import { AlertEngine } from "@/lib/server/alert-engine";
+import type { AircraftAlert } from "@/lib/server/alert-notifier";
+import type { AircraftProvider, NetworkAircraftProvider } from "@/lib/server/provider";
 import type { AtcSector, AtcSectorMatch } from "@/lib/atc/types";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 
@@ -75,6 +77,84 @@ describe("aircraft state service", () => {
 
     expect(notifications).toBeGreaterThan(0);
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("keeps network-only coverage out of local statistics and history", async () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, messages: 10 }, receiver);
+    const network = normalizeAircraft({ hex: "DEF456", flight: "NETWORK456", lat: 50.2, lon: 14.2 }, receiver);
+    if (!local || !network) throw new Error("test aircraft could not be normalized");
+    const networkObservation = {
+      ...network,
+      origin: "adsblol" as const,
+      provenance: {
+        seenLocal: false,
+        seenNetwork: true,
+        lastLocalSeen: null,
+        lastNetworkSeen: network.lastSeen,
+        positionOrigin: "adsblol" as const,
+        positionSource: network.source,
+      },
+    };
+    const localProvider: AircraftProvider = {
+      name: "readsb",
+      getSnapshot: async () => ({ aircraft: [local], receiver, fetchedAt: new Date().toISOString(), provider: "readsb" }),
+    };
+    const networkProvider: NetworkAircraftProvider = {
+      name: "adsb.lol",
+      start: vi.fn(),
+      getSnapshot: vi.fn(async () => ({ aircraft: [networkObservation], fetchedAt: new Date().toISOString(), provider: "adsb.lol" })),
+      getDiagnostics: () => ({
+        enabled: true,
+        status: "online" as const,
+        lastAttemptAt: new Date().toISOString(),
+        lastSuccessAt: new Date().toISOString(),
+        latencyMs: 20,
+        consecutiveFailures: 0,
+        aircraftCount: 1,
+        positionedAircraftCount: 1,
+        mlatAircraftCount: 0,
+        radiusNm: 250,
+        pollIntervalMs: 10_000,
+        retryAfterMs: null,
+      }),
+      stop: vi.fn(async () => undefined),
+    };
+    vi.mocked(recordAircraftSnapshot).mockClear();
+    const alertSend = vi.fn(async (alert: AircraftAlert) => { void alert; });
+    const alerts = new AlertEngine({
+      rules: [{ id: "network-watch", enabled: true, type: "callsignPattern", value: "NETWORK*" }],
+      notifier: { name: "test", enabled: true, send: alertSend },
+      history: { recordDetected: vi.fn(async () => undefined), recordNotification: vi.fn(async () => undefined) },
+    });
+    const service = new AircraftStateService(
+      localProvider,
+      new EnrichmentService({}),
+      new AtcSectorService(new EmptyAtcSectorProvider()),
+      alerts,
+      undefined,
+      networkProvider,
+    );
+    services.push(service);
+
+    await service.waitForReady();
+    const localSnapshot = service.getSnapshot();
+    const extendedSnapshot = service.getSnapshot({ coverage: "extended" });
+    await service.stop();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(localSnapshot.aircraft.map((item) => item.icaoHex)).toEqual(["ABC123"]);
+    expect(extendedSnapshot.aircraft.map((item) => item.icaoHex).sort()).toEqual(["ABC123", "DEF456"]);
+    expect(extendedSnapshot.coverageStats).toMatchObject({ localAircraft: 1, networkAircraft: 1, networkOnlyAircraft: 1 });
+    expect(service.getStatistics().live.aircraftCount).toBe(1);
+    const persistedAircraft = vi.mocked(recordAircraftSnapshot).mock.calls
+      .map(([aircraft]) => aircraft)
+      .filter((aircraft) => aircraft.length > 0)
+      .flat();
+    expect(persistedAircraft.map((item) => item.icaoHex)).toEqual(["ABC123"]);
+    expect(alertSend.mock.calls.some(([alert]) => alert.aircraft.icaoHex === "DEF456")).toBe(false);
+    expect(alertSend.mock.calls.some(([alert]) => alert.type === "watchlist")).toBe(false);
+    expect(networkProvider.getSnapshot).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the history sample throttle across a short disappearance", async () => {

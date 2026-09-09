@@ -13,13 +13,21 @@
    stale threshold, updates the RAM map by ICAO identity, appends a changed
    position to a bounded trail, and removes aircraft absent from the current
    snapshot. A failed poll removes only entries that have become stale.
-4. The service notifies listeners with a snapshot. `GET /api/aircraft` waits
+4. When enabled, `AdsbLolProvider` independently polls the public ADSB.lol
+   geographic endpoint using the receiver position and configured radius. It
+   validates and normalizes the response into a separate bounded network map;
+   timeout, HTTP, malformed-response, and rate-limit failures retain only a
+   bounded stale network snapshot and never mark the local receiver offline.
+5. The service notifies listeners with a snapshot. `GET /api/aircraft` waits
    for the first refresh and returns the safe public DTO. `GET /api/stream`
-   subscribes once and sends named `snapshot` SSE events.
-5. Metadata/routes/flight plans, ATC assignments, statistics, and alerts run
+   subscribes once and sends named `snapshot` SSE events. `coverage=extended`
+   explicitly merges the local and network RAM maps; `coverage=local` remains
+   the default.
+6. Metadata/routes/flight plans, ATC assignments, statistics, and alerts run
    from the same snapshot flow but are asynchronous and isolated from the
-   provider refresh. An enrichment result is applied only if it still belongs
-   to the same aircraft observation.
+   local provider refresh. An enrichment result is applied only if it still
+   belongs to the same local aircraft observation. Network-only observations
+   are not persisted, enriched, assigned ATC, or evaluated by alerts.
 
 ## Alerts and alert history
 
@@ -123,6 +131,20 @@ to ten persisted daily rows with a valid V1 bearing and merges the current RAM
 day. It returns the best daily records and lifetime maximum without scanning
 `FlightPosition`; legacy daily rows that predate the bearing field are excluded
 from the complete-record list and called out in the UI.
+
+## Extended coverage
+
+The optional `AdsbLolProvider` is a live display source only. It uses
+`/v2/lat/{lat}/lon/{lon}/dist/{radius}`, with a bounded radius/poll interval,
+request timeout, maximum aircraft count, stale threshold, and exponential
+retry capped by configuration. A 429 response honors `Retry-After` when
+present. The merger deduplicates by normalized ICAO hex, prefers local
+descriptive fields and local RSSI/message counters, and chooses position by
+position age with a one-second tie window and source priority. Displayed
+network-only aircraft are marked with source provenance; they do not enter
+history, local daily statistics, alerts, metadata enrichment, ATC resolution,
+or the local receiver health state. Public UI/API output includes ADSB.lol and
+ODbL 1.0 attribution.
 
 ## ATC flow
 

@@ -1,6 +1,6 @@
 import nextPackage from "next/package.json" with { type: "json" };
 import type { AtcDataResponse } from "@/lib/atc/types";
-import type { ReceiverStatisticsResponse, StateSnapshot } from "@/lib/aircraft/types";
+import type { NetworkProviderDiagnostics, ReceiverStatisticsResponse, StateSnapshot } from "@/lib/aircraft/types";
 import { getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled } from "@/lib/server/config";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getHistoryPersistenceStatus, type HistoryPersistenceStatus } from "@/lib/server/history";
@@ -44,6 +44,23 @@ export interface SystemStatusResponse {
       lastSnapshot: string | null;
       snapshotAgeSeconds: number | null;
     };
+  };
+  adsbLol: {
+    status: SystemStatus;
+    enabled: boolean;
+    endpoint: "Public API";
+    license: "ODbL 1.0";
+    radiusNm: number;
+    pollIntervalMs: number;
+    lastAttemptAt: string | null;
+    lastSuccessAt: string | null;
+    latencyMs: number | null;
+    aircraftCount: number;
+    positionedAircraftCount: number;
+    mlatAircraftCount: number;
+    consecutiveFailures: number;
+    rateLimited: boolean;
+    retryAfterMs: number | null;
   };
   database: {
     status: "ok" | "offline" | "disabled";
@@ -145,6 +162,7 @@ export interface SystemStatusBuildInput {
     entries: number;
     airports: number;
   };
+  adsbLol?: NetworkProviderDiagnostics;
   now?: Date;
   runtime?: Partial<Pick<SystemStatusResponse["application"], "version" | "commit" | "buildTime" | "channel" | "nodeVersion" | "nextVersion" | "environment" | "timezone">> & {
     uptimeSeconds?: number;
@@ -159,6 +177,7 @@ export interface SystemStatusServiceLike {
   getStatistics(): ReceiverStatisticsResponse;
   getStatisticsPersistenceStatus(): ReceiverStatisticsPersistenceStatus;
   getAlertStatus(): AlertStatus;
+  getNetworkDiagnostics?(): NetworkProviderDiagnostics;
 }
 
 interface DatabaseProbe {
@@ -276,6 +295,45 @@ function configuredSource(enabled: boolean, provider: string, status: SystemStat
   return { status, enabled, provider, lastSuccessAt: null, lastError: null };
 }
 
+function adsbLolStatus(diagnostics: NetworkProviderDiagnostics | undefined): SystemStatus {
+  if (!diagnostics?.enabled) return "disabled";
+  return diagnostics.status === "online" ? "ok" : "degraded";
+}
+
+function adsbLolResponse(diagnostics: NetworkProviderDiagnostics | undefined): SystemStatusResponse["adsbLol"] {
+  const value = diagnostics ?? {
+    enabled: false,
+    status: "disabled" as const,
+    lastAttemptAt: null,
+    lastSuccessAt: null,
+    latencyMs: null,
+    consecutiveFailures: 0,
+    aircraftCount: 0,
+    positionedAircraftCount: 0,
+    mlatAircraftCount: 0,
+    radiusNm: 0,
+    pollIntervalMs: 0,
+    retryAfterMs: null,
+  };
+  return {
+    status: adsbLolStatus(value),
+    enabled: value.enabled,
+    endpoint: "Public API",
+    license: "ODbL 1.0",
+    radiusNm: nonNegativeInteger(value.radiusNm, 250),
+    pollIntervalMs: nonNegativeInteger(value.pollIntervalMs, 86_400_000),
+    lastAttemptAt: safeTimestamp(value.lastAttemptAt),
+    lastSuccessAt: safeTimestamp(value.lastSuccessAt),
+    latencyMs: value.latencyMs === null ? null : nonNegativeInteger(value.latencyMs, 86_400_000),
+    aircraftCount: nonNegativeInteger(value.aircraftCount, 10_000),
+    positionedAircraftCount: nonNegativeInteger(value.positionedAircraftCount, 10_000),
+    mlatAircraftCount: nonNegativeInteger(value.mlatAircraftCount, 10_000),
+    consecutiveFailures: nonNegativeInteger(value.consecutiveFailures, 1_000_000),
+    rateLimited: value.status === "rate_limited",
+    retryAfterMs: value.retryAfterMs === null ? null : nonNegativeInteger(value.retryAfterMs, 86_400_000),
+  };
+}
+
 export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusResponse {
   const now = input.now ?? new Date();
   const application = applicationRuntime(now, input.runtime);
@@ -326,6 +384,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
         snapshotAgeSeconds: ageSeconds(lastSnapshot, now),
       },
     },
+    adsbLol: adsbLolResponse(input.adsbLol),
     database: {
       status: input.database.status,
       connected: input.database.connected,
@@ -445,6 +504,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       rowCountIsLowerBound: database.airportRowCountIsLowerBound,
     },
     weather,
+    adsbLol: service.getNetworkDiagnostics?.(),
     runtime: {
       diagnostics: serviceDiagnostics ? {
         aircraftCount: serviceDiagnostics.aircraftCount,

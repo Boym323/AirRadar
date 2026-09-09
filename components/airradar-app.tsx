@@ -26,7 +26,7 @@ import {
   watchlistSummary,
 } from "@/lib/i18n";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
-import type { AircraftView, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
+import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { appendTrailPoint, boundTrailPoints, selectedTrail, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
@@ -114,6 +114,16 @@ const MAP_STYLE: StyleSpecification = {
 
 function labelForAircraft(aircraft: AircraftView): string {
   return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
+}
+
+function aircraftDataSourceLabel(aircraft: AircraftView): string {
+  const provenance = aircraft.provenance;
+  if (provenance?.seenLocal && provenance.seenNetwork) return t.aircraft.localAndNetwork;
+  return aircraft.origin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver;
+}
+
+function aircraftPositionSourceLabel(aircraft: AircraftView): string {
+  return `${aircraftDataSourceLabel(aircraft)} · ${aircraft.source}`;
 }
 
 function registrationCountryForAircraft(aircraft: AircraftView): string | null {
@@ -355,6 +365,7 @@ export function AirRadarApp() {
   const [airports, setAirports] = useState<Airport[]>([]);
   const [atcData, setAtcData] = useState<AtcDataResponse>(EMPTY_ATC_DATA);
   const [streamConnected, setStreamConnected] = useState(false);
+  const [coverage, setCoverage] = useState<CoverageMode>("local");
   const [serverAlertsEnabled, setServerAlertsEnabled] = useState<boolean | null>(null);
   const [mobileCompact, setMobileCompact] = useState(true);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -378,6 +389,8 @@ export function AirRadarApp() {
     try {
       const stored = window.localStorage.getItem("airradar-watchlist");
       if (stored) setWatchlist(JSON.parse(stored) as Array<{ kind: string; value: string }>);
+      const storedCoverage = window.localStorage.getItem("airradar-coverage");
+      if (storedCoverage === "extended" || storedCoverage === "local") setCoverage(storedCoverage);
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
     }
@@ -399,12 +412,19 @@ export function AirRadarApp() {
     try { window.localStorage.setItem("airradar-watchlist", JSON.stringify(watchlist)); } catch { /* optional */ }
   }, [watchlist]);
 
+  useEffect(() => {
+    try { window.localStorage.setItem("airradar-coverage", coverage); } catch { /* optional */ }
+  }, [coverage]);
+
   const isWatchlisted = useCallback((aircraft: AircraftView) => watchlist.some((rule) => {
     const value = rule.value.trim().toUpperCase();
     if (!value) return false;
     const type = normalizeAircraftRuleType(rule.kind);
     return type ? matchesAircraftRule(aircraft, { type, value }) : false;
   }), [watchlist]);
+
+  const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
+  const activeCoverage: CoverageMode = networkEnabled ? coverage : "local";
 
   function updateMapFilter<Key extends keyof MapAircraftFilters>(key: Key, value: MapAircraftFilters[Key]) {
     setMapFilters((current) => ({ ...current, [key]: value }));
@@ -475,7 +495,7 @@ export function AirRadarApp() {
     setAircraftDetail(null);
     setAircraftDetailLoading(true);
     setAircraftDetailError(null);
-    void fetch(`/api/aircraft/${encodeURIComponent(selectedHex)}`, { cache: "no-store" })
+    void fetch(`/api/aircraft/${encodeURIComponent(selectedHex)}?coverage=${activeCoverage}`, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error(t.history.recentFlightsLoadFailed);
         return (await response.json()) as AircraftDetailResponse;
@@ -490,7 +510,7 @@ export function AirRadarApp() {
         if (active) setAircraftDetailLoading(false);
       });
     return () => { active = false; };
-  }, [selectedHex]);
+  }, [activeCoverage, selectedHex]);
 
   useEffect(() => {
     setSelectedHistoryTrail(null);
@@ -514,7 +534,7 @@ export function AirRadarApp() {
 
   useEffect(() => {
     let active = true;
-    const source = new EventSource("/api/stream");
+    const source = new EventSource(`/api/stream?coverage=${activeCoverage}`);
     const onSnapshot = (event: Event) => {
       try {
         const next = JSON.parse((event as MessageEvent<string>).data) as PublicStateSnapshot;
@@ -546,7 +566,7 @@ export function AirRadarApp() {
       source.removeEventListener("snapshot", onSnapshot);
       source.close();
     };
-  }, []);
+  }, [activeCoverage]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -986,6 +1006,18 @@ export function AirRadarApp() {
   const statusOffline = !isDemo && hasSourceSnapshot && !snapshot.sourceOnline;
   const receiverStatusLabel = statusOffline ? t.status.receiverOffline : isDemo ? t.status.mockReceiver : streamConnected ? t.status.liveReceiver : t.status.connecting;
   const receiverStatusShort = statusOffline ? t.status.offlineShort : isDemo ? t.status.demoShort : streamConnected ? t.status.liveShort : t.status.connectingShort;
+  const displayedAircraftCount = snapshot.coverageStats?.displayedAircraft ?? snapshot.stats.currentAircraft;
+  const networkStatus = snapshot.sources?.adsbLol.status;
+  const networkNotice = activeCoverage === "extended" && networkStatus === "rate_limited"
+    ? t.radar.networkRateLimited
+    : activeCoverage === "extended" && networkStatus && ["timeout", "http_error", "invalid_response", "stale"].includes(networkStatus)
+      ? t.radar.networkUnavailable
+      : null;
+
+  function chooseCoverage(nextCoverage: CoverageMode): void {
+    if (!networkEnabled && nextCoverage === "extended") return;
+    setCoverage(nextCoverage);
+  }
 
   return (
     <main className="radar-shell">
@@ -1049,10 +1081,12 @@ export function AirRadarApp() {
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
             <div className="map-overlay-card map-summary-card">
-              <div className="map-summary-item"><strong>{formatNumber(snapshot.stats.currentAircraft)}</strong><span>{t.stats.trackingNow}</span></div>
+              <div className="map-summary-item"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
               <div className="map-summary-item"><strong>{snapshot.stats.messagesPerSecond === null ? t.common.emptyValue : `${formatNumber(snapshot.stats.messagesPerSecond, 1)}/s`}</strong><span>{t.statistics.messagesPerSecond}</span></div>
               <div className="map-summary-item"><strong>{formatDistance(snapshot.stats.maxDistanceKm)}</strong><span>{t.stats.maxDistance}</span></div>
             </div>
+            {networkNotice && <div className="map-overlay-card network-notice">{networkNotice}</div>}
+            {networkEnabled && <div className="map-overlay-card network-attribution">{t.radar.networkAttribution}</div>}
             {showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null && <div className="map-overlay-card range-legend">
               {RANGE_RING_RADII_KM.map((radiusKm) => <span key={radiusKm}><i className="legend-dot" /> {radiusKm} km</span>)}
             </div>}
@@ -1093,6 +1127,11 @@ export function AirRadarApp() {
               <div>
                 <div className="sidebar-title">{t.radar.aircraftNearby}</div>
                 <div className="sidebar-count">{visibleAircraft(filteredAircraft.length, snapshot.aircraft.length)}</div>
+                {networkEnabled && <div className="coverage-switch" role="group" aria-label={t.radar.coverageExtended}>
+                  <button type="button" className={activeCoverage === "local" ? "active" : ""} aria-pressed={activeCoverage === "local"} onClick={() => chooseCoverage("local")}>{t.radar.coverageLocal}</button>
+                  <button type="button" className={activeCoverage === "extended" ? "active" : ""} aria-pressed={activeCoverage === "extended"} onClick={() => chooseCoverage("extended")}>{t.radar.coverageExtended}</button>
+                </div>}
+                {activeCoverage === "extended" && snapshot.coverageStats && <div className="coverage-subcount">{t.radar.localOnlyCount(formatNumber(snapshot.coverageStats.localAircraft))} · {t.radar.networkOnlyCount(formatNumber(snapshot.coverageStats.networkOnlyAircraft))}</div>}
               </div>
               <button className="icon-button mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-expanded={!mobileCompact} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
                 {mobileCompact ? "↑" : "↓"}
@@ -1164,7 +1203,7 @@ export function AirRadarApp() {
               {watchlist.length > 0 && <div className="watchlist-rules">{watchlist.map((rule) => <button key={`${rule.kind}-${rule.value}`} type="button" onClick={() => setWatchlist((current) => current.filter((item) => item !== rule))}>{watchlistKindLabel(rule.kind)}: {rule.value} ×</button>)}</div>}
             </details>
             <div className="stats-row">
-              <div className="stat-card"><div className="stat-value">{formatNumber(snapshot.stats.currentAircraft)}</div><div className="stat-label">{t.stats.trackingNow}</div></div>
+              <div className="stat-card"><div className="stat-value">{formatNumber(displayedAircraftCount)}</div><div className="stat-label">{t.stats.trackingNow}</div></div>
               <div className="stat-card"><div className="stat-value">{formatNumber(snapshot.stats.aircraftSeenToday)}</div><div className="stat-label">{t.stats.seenToday}</div></div>
               <div className="stat-card"><div className="stat-value">{formatDistance(snapshot.stats.maxDistanceKm)}</div><div className="stat-label">{t.stats.maxDistance}</div></div>
             </div>
@@ -1189,7 +1228,7 @@ export function AirRadarApp() {
               <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""} ${aircraft.emergency ? "emergency" : ""}`} aria-pressed={selectedHex === aircraft.icaoHex} onClick={() => selectAircraft(aircraft.icaoHex)}>
                 <span className="aircraft-row-icon"><AircraftIcon aircraft={aircraft} /></span>
                 <span className="aircraft-row-main">
-                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
+                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> <span className="source-badge">{aircraftPositionSourceLabel(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
                   <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}{aircraft.registration || aircraft.enrichment?.metadata?.registration ? ` · ${aircraft.registration || aircraft.enrichment?.metadata?.registration}` : ""}</span>
                   <span className="aircraft-row-meta"><span><b>{formatAltitude(aircraft.altitude)}</b></span><span><b>{formatSpeed(aircraft.groundSpeed)}</b></span><span><b>{formatTrack(aircraft.track)}</b></span><span className="aircraft-row-hex">{aircraft.icaoHex}</span></span>
                 </span>
@@ -1238,6 +1277,9 @@ export function AirRadarApp() {
                 <DetailItem label={t.aircraft.distance} value={formatDistance(selectedAircraft.distanceKm)} />
                 <DetailItem label={t.aircraft.squawk} value={selectedAircraft.squawk || t.common.emptyValue} />
                 <DetailItem label={t.aircraft.source} value={selectedAircraft.source} />
+                <DetailItem label={t.aircraft.dataSource} value={aircraftDataSourceLabel(selectedAircraft)} />
+                <DetailItem label={t.aircraft.positionSource} value={aircraftPositionSourceLabel(selectedAircraft)} />
+                <DetailItem label={t.aircraft.lastObservation} value={formatAge(selectedAircraft.seenSeconds)} />
               </DetailSection>
               <DetailSection title={t.atc.estimate}>
                 {selectedAircraft.atc ? <>

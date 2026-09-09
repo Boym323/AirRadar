@@ -119,6 +119,8 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .map-summary-item { display: grid; gap: 2px; min-width: 0; }
 .map-summary-item strong { font-size: 14px; font-variant-numeric: tabular-nums; }
 .map-summary-item span { color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .07em; white-space: nowrap; }
+.network-notice, .network-attribution { color: var(--muted); font-size: 10px; }
+.network-attribution { color: var(--text-secondary); }
 .map-overlay-title { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
 .map-overlay-value { font-size: 14px; font-weight: 700; margin-top: 3px; }
 .range-legend { display: flex; gap: 12px; align-items: center; color: var(--muted); font-size: 11px; }
@@ -184,6 +186,10 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .sidebar-heading { padding: 16px 18px 8px; flex-shrink: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .sidebar-title { font-size: 16px; font-weight: 700; }
 .sidebar-count { color: var(--mint); font-size: 13px; font-variant-numeric: tabular-nums; }
+.coverage-switch { display: inline-flex; gap: 3px; margin-top: 6px; }
+.coverage-switch button { min-height: 24px; padding: 3px 7px; border: 1px solid rgba(153,181,207,.2); border-radius: 4px; color: var(--muted); background: transparent; font-size: 9px; font-weight: 750; letter-spacing: .08em; }
+.coverage-switch button.active { color: var(--mint); border-color: rgba(55,214,192,.48); background: rgba(55,214,192,.08); }
+.coverage-subcount { margin-top: 5px; color: var(--muted); font-size: 9px; }
 .search-wrap { position: relative; margin-top: 4px; }
 .sidebar-browse { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .sidebar.has-selection .sidebar-browse { flex: 0 1 35%; }
@@ -1082,6 +1088,7 @@ button, input, select, textarea { color-scheme: dark; }
 .aircraft-row-main { display: grid; gap: 2px; }
 .aircraft-row-topline { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .aircraft-row-name { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-geist-mono), monospace; font-size: 14px; font-weight: 650; letter-spacing: -.02em; }
+.source-badge { flex: 0 0 auto; color: var(--muted); font-size: 8px; font-weight: 650; letter-spacing: .03em; white-space: nowrap; }
 .aircraft-row-type { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 11px; }
 .aircraft-row-meta { align-items: baseline; gap: 8px; margin-top: 3px; color: var(--text-muted); font-family: var(--font-geist-mono), monospace; font-size: 11px; }
 .aircraft-row-meta b { color: var(--text-primary); font-weight: 550; }

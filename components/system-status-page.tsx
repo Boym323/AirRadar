@@ -145,6 +145,22 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.snapshotAge} value={data.receiver.readsb.snapshotAgeSeconds === null ? dictionary.system.notAvailable : `${formatNumber(data.receiver.readsb.snapshotAgeSeconds, 0, dictionary.locale)} ${dictionary.system.seconds}`} />
       </Card>
 
+      <Card title={dictionary.system.networkCoverage} status={data.adsbLol.status} dictionary={dictionary}>
+        <Field label={dictionary.system.provider} value={data.adsbLol.endpoint} />
+        <Field label={dictionary.system.license} value={data.adsbLol.license} />
+        <Field label={dictionary.system.enabled} value={data.adsbLol.enabled ? dictionary.system.configured : dictionary.system.disabled} />
+        <Field label={dictionary.system.radius} value={`${formatNumber(data.adsbLol.radiusNm, 0, dictionary.locale)} NM`} />
+        <Field label={dictionary.system.polling} value={`${formatNumber(data.adsbLol.pollIntervalMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />
+        <Field label={dictionary.system.lastSnapshot} value={formatDateTime(data.adsbLol.lastSuccessAt, dictionary)} />
+        <Field label={dictionary.system.latency} value={data.adsbLol.latencyMs === null ? dictionary.system.notAvailable : `${formatNumber(data.adsbLol.latencyMs, 0, dictionary.locale)} ms`} />
+        <Field label={dictionary.system.aircraftVisible} value={formatNumber(data.adsbLol.aircraftCount, 0, dictionary.locale)} />
+        <Field label={dictionary.system.positionedAircraft} value={formatNumber(data.adsbLol.positionedAircraftCount, 0, dictionary.locale)} />
+        <Field label={dictionary.system.mlatAircraft} value={formatNumber(data.adsbLol.mlatAircraftCount, 0, dictionary.locale)} />
+        <Field label={dictionary.system.failures} value={formatNumber(data.adsbLol.consecutiveFailures, 0, dictionary.locale)} />
+        <Field label={dictionary.system.rateLimited} value={data.adsbLol.rateLimited ? dictionary.system.configured : dictionary.system.disabled} />
+        {data.adsbLol.retryAfterMs !== null && <Field label={dictionary.system.retryAfter} value={`${formatNumber(data.adsbLol.retryAfterMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />}
+      </Card>
+
       <Card title={dictionary.system.database} status={data.database.status} dictionary={dictionary}>
         <Field label={dictionary.system.database} value={data.database.connected ? dictionary.system.connected : formatStatus(data.database.status, dictionary)} />
         <Field label={dictionary.system.historyPersistence} value={<StatusBadge status={data.database.history.status} dictionary={dictionary} />} />

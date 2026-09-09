@@ -48,6 +48,65 @@ preserves raw barometric/geometric fields, and derives altitude/vertical rate,
 distance, and bearing. Polling retries with bounded backoff; a receiver outage
 does not take down the UI or API.
 
+## ADSB.lol Extended Coverage
+
+AirRadar can optionally add live network coverage from the public
+`https://api.adsb.lol` HTTP API. It uses the documented geographic endpoint
+`/v2/lat/{latitude}/lon/{longitude}/dist/{radius_nm}`; the current public
+OpenAPI schema caps the radius at 250 NM. AirRadar never uses `re-api`, BEAST,
+or a direct ADSB.lol TCP stream.
+
+Enable it only alongside a configured real readsb receiver:
+
+```dotenv
+ADSBLOL_ENABLED=true
+ADSBLOL_BASE_URL=https://api.adsb.lol
+ADSBLOL_RADIUS_NM=250
+ADSBLOL_POLL_INTERVAL_MS=10000
+ADSBLOL_REQUEST_TIMEOUT_MS=4000
+ADSBLOL_STALE_AFTER_MS=30000
+ADSBLOL_MAX_RETRY_INTERVAL_MS=60000
+ADSBLOL_MAX_AIRCRAFT=3000
+```
+
+The default is conservative: one server-side poll every 10 seconds, bounded
+to 3,000 aircraft, with a 4-second timeout. The server uses the precise
+receiver coordinates for the upstream query, while the existing public
+receiver-coordinate privacy mode remains unchanged.
+
+The radar defaults to `LOCAL`, showing only observations from the local
+receiver. `EXTENDED` combines local and network observations by normalized
+ICAO identity, shows a single aircraft marker, and labels the selected
+position source. Freshness is considered before source priority, so a fresh
+local observation wins when appropriate and a fresh ADSB.lol position can
+temporarily replace a stale local position. Network trails remain bounded and
+in memory.
+
+Network observations are not local receiver evidence: they are never written
+to `FlightPosition`, never create local `Flight` history, never affect daily
+receiver statistics or reception records, and never use network RSSI/message
+counts as local measurements. Existing local enrichment, ATC matching, and
+default push-alert semantics remain local-only; network-only aircraft do not
+trigger an enrichment fan-out or push notification.
+
+The public API is dynamically rate-limited. AirRadar sends no per-browser
+requests, never overlaps ADSB.lol requests, honors `Retry-After` on HTTP 429,
+and otherwise uses bounded backoff up to `ADSBLOL_MAX_RETRY_INTERVAL_MS`.
+Failed polls keep the last valid network snapshot until the stale timeout;
+local radar, history, and statistics continue independently. `/system` shows
+the network provider status, last attempt/success, latency, aircraft and MLAT
+counts, polling interval, radius, and rate-limit state.
+
+Smoke test the public endpoint with operator-supplied coordinates (do not put
+the private receiver location in documentation):
+
+```bash
+curl -sS 'https://api.adsb.lol/v2/lat/LAT/lon/LON/dist/100' | jq '.total'
+```
+
+ADSB.lol publishes its API and public data under ODbL 1.0. Keep the in-app
+ADSB.lol attribution and comply with the current [ODbL terms](https://opendatacommons.org/licenses/odbl/1-0/).
+
 ## PostgreSQL
 
 The schema source is `prisma/contract.prisma`; checked-in forward migrations

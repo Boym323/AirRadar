@@ -1,15 +1,16 @@
-import type { Aircraft, AircraftEnrichment, ProviderSnapshot, ReceiverStatisticsRange, ReceiverStatisticsRangeResponse, ReceiverStatisticsResponse, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
+import type { Aircraft, AircraftEnrichment, CoverageMode, ProviderSnapshot, ReceiverStatisticsRange, ReceiverStatisticsRangeResponse, ReceiverStatisticsResponse, StateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import {
   getAircraftStaleAfterMs,
+  getAdsbLolStaleAfterMs,
   getHistorySampleIntervalMs,
   getMaxProviderRetryIntervalMs,
   getPollIntervalMs,
   getReceiverPosition,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
-import { createAircraftProvider, createEnrichmentService } from "@/lib/server/providers";
+import { createAircraftProvider, createEnrichmentService, createNetworkAircraftProvider } from "@/lib/server/providers";
 import type { EnrichmentService } from "@/lib/server/enrichment-cache";
-import type { AircraftProvider } from "@/lib/server/provider";
+import type { AircraftProvider, NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import { assignmentFromMatch, AtcSectorService, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
 import { createAtcSectorProvider } from "@/lib/server/providers";
 import { AlertEngine } from "@/lib/server/alert-engine";
@@ -17,8 +18,9 @@ import type { AlertStatus } from "@/lib/server/alert-engine";
 import { loadAlertConfig } from "@/lib/server/alert-config";
 import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { getReceptionRecords } from "@/lib/server/reception-records";
+import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
 
-type Listener = (snapshot: StateSnapshot) => void;
+type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
 function mergeEnrichment(
   previous: AircraftEnrichment | undefined,
@@ -63,7 +65,11 @@ function atcResolutionKey(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude">):
 
 export class AircraftStateService {
   private readonly provider: AircraftProvider;
-  private readonly aircraft = new Map<string, Aircraft>();
+  private readonly networkProvider: NetworkAircraftProvider;
+  private readonly localAircraft = new Map<string, Aircraft>();
+  /** Compatibility alias for local-only internals and existing tests. */
+  private readonly aircraft = this.localAircraft;
+  private readonly networkAircraft = new Map<string, Aircraft>();
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -95,17 +101,20 @@ export class AircraftStateService {
     atc: AtcSectorService = new AtcSectorService(createAtcSectorProvider()),
     alerts: AlertEngine = new AlertEngine(),
     statistics: ReceiverStatistics = new ReceiverStatistics(),
+    networkProvider: NetworkAircraftProvider = createNetworkAircraftProvider(),
   ) {
     this.provider = provider;
     this.enrichment = enrichment;
     this.atc = atc;
     this.alerts = alerts;
     this.statistics = statistics;
+    this.networkProvider = networkProvider;
   }
 
   start(): void {
     if (this.running || this.shuttingDown) return;
     this.running = true;
+    this.networkProvider.start();
     this.statisticsReady = this.statistics.load()
       .catch((error) => {
         // Statistics are optional; a load failure must not prevent the first
@@ -135,12 +144,20 @@ export class AircraftStateService {
     await this.awaitUntil(this.initialRefresh, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
     if (options.closeStatistics !== false) await this.awaitUntil(this.statistics.close(), deadline);
-    if (options.closeProvider !== false) await this.awaitUntil(this.provider.close?.(), deadline);
+    if (options.closeProvider !== false) await this.awaitUntil(this.closeProviders(), deadline);
   }
 
   async closeStatistics(): Promise<void> { await this.statistics.close(); }
 
-  async closeProvider(): Promise<void> { await this.provider.close?.(); }
+  async closeProvider(): Promise<void> { await this.closeProviders(); }
+
+  private async closeProviders(): Promise<void> {
+    try {
+      await this.provider.close?.();
+    } finally {
+      await this.networkProvider.stop();
+    }
+  }
 
   private async awaitUntil<T>(promise: Promise<T> | void | null, deadline: number): Promise<void> {
     if (!promise) return;
@@ -161,19 +178,35 @@ export class AircraftStateService {
     }
   }
 
-  subscribe(listener: Listener): () => void {
+  subscribe(listener: (snapshot: StateSnapshot) => void, options: { coverage?: CoverageMode } = {}): () => void {
     this.start();
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    const entry: Listener = { callback: listener, coverage: options.coverage ?? "local" };
+    this.listeners.add(entry);
+    return () => this.listeners.delete(entry);
   }
 
-  getSnapshot(options: { includeTrails?: boolean } = {}): StateSnapshot {
-    const aircraft = Array.from(this.aircraft.values())
+  getSnapshot(options: { coverage?: CoverageMode; includeTrails?: boolean } = {}): StateSnapshot {
+    const coverage = options.coverage ?? "local";
+    const aircraft = (coverage === "extended"
+      ? mergeAircraftMaps(this.localAircraft, this.networkAircraft, this.currentReceiver, {
+          localStaleAfterMs: getAircraftStaleAfterMs(),
+          networkStaleAfterMs: getAdsbLolStaleAfterMs(),
+        })
+      : Array.from(this.localAircraft.values()))
       .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
       .map((item) => {
         if (options.includeTrails) return { ...item, trail: item.trail.slice() };
         return { ...item, trail: undefined };
       });
+    const displayedCoverageStats = coverage === "extended"
+      ? coverageStats(this.localAircraft, this.networkAircraft, aircraft.length)
+      : {
+          displayedAircraft: aircraft.length,
+          localAircraft: this.localAircraft.size,
+          networkAircraft: 0,
+          networkOnlyAircraft: 0,
+          seenByBoth: 0,
+        };
     return {
       aircraft,
       relevantAtcFrequencies: summarizeRelevantAtcFrequencies(aircraft.map((item) => ({
@@ -190,7 +223,12 @@ export class AircraftStateService {
       readsbOnline: this.lastSourceUpdate !== null && this.lastError === null,
       lastReadsbUpdate: this.lastSourceUpdate,
       lastError: this.lastError,
-      stats: this.statistics.getRadarStats(this.aircraft.size, this.messagesPerSecond),
+      stats: this.statistics.getRadarStats(this.localAircraft.size, this.messagesPerSecond),
+      sources: {
+        local: { online: this.lastSourceUpdate !== null && this.lastError === null },
+        adsbLol: this.networkProvider.getDiagnostics(),
+      },
+      coverageStats: displayedCoverageStats,
     };
   }
 
@@ -203,12 +241,14 @@ export class AircraftStateService {
     listenerCount: number;
     running: boolean;
     enrichment: ReturnType<EnrichmentService["getDiagnostics"]>;
+    network: ReturnType<NetworkAircraftProvider["getDiagnostics"]>;
   } {
     return {
       aircraftCount: this.aircraft.size,
       listenerCount: this.listeners.size,
       running: this.running,
       enrichment: this.enrichment.getDiagnostics(),
+      network: this.networkProvider.getDiagnostics(),
     };
   }
 
@@ -221,7 +261,7 @@ export class AircraftStateService {
   }
 
   getStatistics(): ReceiverStatisticsResponse {
-    return this.statistics.getResponse(this.aircraft.size, this.messagesPerSecond);
+    return this.statistics.getResponse(this.localAircraft.size, this.messagesPerSecond);
   }
 
   getStatisticsPersistenceStatus(): ReceiverStatisticsPersistenceStatus {
@@ -237,11 +277,20 @@ export class AircraftStateService {
   }
 
   async getStatisticsRange(range: ReceiverStatisticsRange): Promise<ReceiverStatisticsRangeResponse> {
-    return this.statistics.getRangeResponse(this.aircraft.size, this.messagesPerSecond, range);
+    return this.statistics.getRangeResponse(this.localAircraft.size, this.messagesPerSecond, range);
   }
 
-  getAircraft(icaoHex: string): Aircraft | null {
-    return this.aircraft.get(icaoHex.toUpperCase()) ?? null;
+  getAircraft(icaoHex: string, coverage: CoverageMode = "local"): Aircraft | null {
+    const normalized = icaoHex.toUpperCase();
+    if (coverage === "local") return this.localAircraft.get(normalized) ?? null;
+    return mergeAircraftMaps(this.localAircraft, this.networkAircraft, this.currentReceiver, {
+      localStaleAfterMs: getAircraftStaleAfterMs(),
+      networkStaleAfterMs: getAdsbLolStaleAfterMs(),
+    }).find((item) => item.icaoHex === normalized) ?? null;
+  }
+
+  getNetworkDiagnostics() {
+    return this.networkProvider.getDiagnostics();
   }
 
   private currentReceiver = getReceiverPosition();
@@ -251,24 +300,37 @@ export class AircraftStateService {
     if (this.refreshing) return;
     this.refreshing = true;
     try {
-      const snapshot = await this.provider.getSnapshot();
-      this.applySnapshot(snapshot);
-      this.lastSourceUpdate = snapshot.fetchedAt;
+      let localSnapshot: ProviderSnapshot | null = null;
+      try {
+      localSnapshot = await this.provider.getSnapshot();
+      this.applySnapshot(localSnapshot);
+      this.lastSourceUpdate = localSnapshot.fetchedAt;
       this.lastError = null;
       this.consecutiveFailures = 0;
+      } catch (error) {
+        this.lastError = error instanceof Error ? error.message : "Unknown aircraft provider error";
+        this.messagesPerSecond = null;
+        this.consecutiveFailures += 1;
+        this.removeStaleAircraft();
+      }
+
+      try {
+        const networkSnapshot = await this.networkProvider.getSnapshot();
+        this.applyNetworkSnapshot(networkSnapshot);
+      } catch {
+        // The optional provider owns its bounded stale state and diagnostics.
+        // A network failure must never change local receiver health.
+      }
+
       this.notify();
-      if (this.running) this.queueHistory(snapshot);
-      void this.enrichSnapshot(snapshot);
-      void this.resolveAtc(snapshot).catch((error) => {
-        // ATC is optional enrichment; a provider failure must never affect live tracking.
-        console.error("AirRadar ATC resolution failed", error);
-      });
-    } catch (error) {
-      this.lastError = error instanceof Error ? error.message : "Unknown aircraft provider error";
-      this.messagesPerSecond = null;
-      this.consecutiveFailures += 1;
-      this.removeStaleAircraft();
-      this.notify();
+      if (localSnapshot && this.running) {
+        this.queueHistory(localSnapshot);
+        void this.enrichSnapshot(localSnapshot);
+        void this.resolveAtc(localSnapshot).catch((error) => {
+          // ATC is optional enrichment; a provider failure must never affect live tracking.
+          console.error("AirRadar ATC resolution failed", error);
+        });
+      }
     } finally {
       this.refreshing = false;
       if (this.running) {
@@ -282,27 +344,42 @@ export class AircraftStateService {
 
   private applySnapshot(snapshot: ProviderSnapshot): void {
     this.currentReceiver = snapshot.receiver;
-    const previousAircraft = new Map(this.aircraft);
+    const previousAircraft = new Map(this.localAircraft);
     const currentHexes = new Set<string>();
     for (const incoming of snapshot.aircraft) {
       if (Date.parse(incoming.lastSeen) < Date.now() - getAircraftStaleAfterMs()) continue;
       currentHexes.add(incoming.icaoHex);
-      const previous = this.aircraft.get(incoming.icaoHex);
-      const trail = this.updateTrail(previous, incoming);
+      const localIncoming = { ...incoming, origin: "local" as const };
+      const previous = this.localAircraft.get(incoming.icaoHex);
+      const trail = this.updateTrail(previous, localIncoming);
       const sameCallsign = previous?.callsign === incoming.callsign;
       const enrichment = mergeEnrichment(previous?.enrichment, incoming.enrichment, sameCallsign);
       // ATC is assigned from position/altitude, not callsign. Preserve a
       // still-valid estimate across an observation callsign change.
       const atc = previous?.atc ?? incoming.atc;
-      this.aircraft.set(incoming.icaoHex, { ...incoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
+      this.localAircraft.set(incoming.icaoHex, { ...localIncoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
     }
-    for (const hex of this.aircraft.keys()) {
+    for (const hex of this.localAircraft.keys()) {
       if (!currentHexes.has(hex)) this.removeAircraft(hex);
     }
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
-    if (!this.shuttingDown) this.statistics.observe([...this.aircraft.values()], this.currentReceiver, new Date());
+    if (!this.shuttingDown) this.statistics.observe([...this.localAircraft.values()], this.currentReceiver, new Date());
     this.scheduleReceptionRecordEvaluation();
-    this.alerts.observe(previousAircraft, this.aircraft);
+    this.alerts.observe(previousAircraft, this.localAircraft);
+  }
+
+  private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {
+    const currentHexes = new Set<string>();
+    for (const incoming of snapshot.aircraft) {
+      currentHexes.add(incoming.icaoHex);
+      const networkIncoming = { ...incoming, origin: "adsblol" as const };
+      const previous = this.networkAircraft.get(incoming.icaoHex);
+      const trail = this.updateTrail(previous, networkIncoming, 120);
+      this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
+    }
+    for (const hex of this.networkAircraft.keys()) {
+      if (!currentHexes.has(hex)) this.networkAircraft.delete(hex);
+    }
   }
 
   private removeStaleAircraft(): void {
@@ -317,7 +394,7 @@ export class AircraftStateService {
     this.atcResolutionKeys.delete(hex);
   }
 
-  private updateTrail(previous: Aircraft | undefined, incoming: Aircraft): TrailPoint[] {
+  private updateTrail(previous: Aircraft | undefined, incoming: Aircraft, limit = 80): TrailPoint[] {
     const previousTrail = previous?.trail ?? [];
     const last = previousTrail[previousTrail.length - 1];
     const canAppend = incoming.lat !== null && incoming.lon !== null &&
@@ -332,7 +409,7 @@ export class AircraftStateService {
           track: incoming.track,
         }]
       : previousTrail;
-    return next.slice(-80);
+    return next.slice(-limit);
   }
 
   private async persistHistory(snapshot: ProviderSnapshot): Promise<void> {
@@ -441,10 +518,9 @@ export class AircraftStateService {
   }
 
   private notify(): void {
-    const snapshot = this.getSnapshot();
     for (const listener of this.listeners) {
       try {
-        listener(snapshot);
+        listener.callback(this.getSnapshot({ coverage: listener.coverage }));
       } catch {
         // A disconnected SSE client must not break the polling loop for everyone else.
         this.listeners.delete(listener);
