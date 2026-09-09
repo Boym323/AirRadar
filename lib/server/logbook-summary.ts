@@ -2,6 +2,7 @@ import "temporal-polyfill/full/global";
 import type {
   AircraftView,
   LogbookInterestingAircraft,
+  LogbookInterestingReason,
   LogbookSummaryResponse,
   RadarStats,
   ReceiverReceptionRecordsResponse,
@@ -54,20 +55,61 @@ export function buildLogbookSummary(options: {
 }): LogbookSummaryResponse {
   const now = options.now ?? new Date();
   const rules = enabledRules(options.rules);
-  const statuses = options.evidence.flatMap((item) => {
+  const statusByHex = new Map<string, LogbookInterestingAircraft>();
+  for (const item of options.evidence) {
     const status = classifyAircraftLogbook(item, now, getAppTimezone());
-    return status.labels.length ? [{
+    if (!status.labels.length) continue;
+    statusByHex.set(item.icaoHex, {
       icaoHex: item.icaoHex,
       labels: status.labels,
+      reasons: status.labels as LogbookInterestingReason[],
       flightCount: item.flightCount,
       returningGapDays: status.returningGapDays,
-    }] : [];
-  });
-  const isInteresting = (item: LogbookInterestingAircraft): boolean => item.labels.length > 0;
-  const score = (item: LogbookInterestingAircraft): number => item.labels.reduce((total, label) => total + (label === "new" ? 10 : label === "returning" ? 2 : 1), 0);
+      isLive: false,
+      callsign: null,
+      registration: null,
+      aircraftType: null,
+      distanceKm: null,
+    });
+  }
+  for (const aircraft of options.liveAircraft) {
+    const existing = statusByHex.get(aircraft.icaoHex);
+    const reasons = new Set<LogbookInterestingReason>(existing?.reasons ?? []);
+    if (rules.some((rule) => matchesAircraftRule(aircraft, rule))) reasons.add("watchlisted");
+    if (aircraft.emergency) reasons.add("emergency");
+    const record = options.reception.today;
+    if (record && aircraft.distanceKm !== null && aircraft.distanceKm >= record.distanceKm * 0.9) reasons.add("record");
+    if (!reasons.size) continue;
+    const labels = existing?.labels ?? [];
+    statusByHex.set(aircraft.icaoHex, {
+      icaoHex: aircraft.icaoHex,
+      labels,
+      reasons: [...reasons],
+      flightCount: existing?.flightCount ?? 0,
+      returningGapDays: existing?.returningGapDays ?? null,
+      isLive: true,
+      callsign: aircraft.callsign,
+      registration: aircraft.registration ?? aircraft.enrichment?.metadata?.registration ?? null,
+      aircraftType: aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType,
+      distanceKm: aircraft.distanceKm,
+    });
+  }
+  const statuses = [...statusByHex.values()];
+  for (const item of statuses) {
+    const live = options.liveAircraft.find((aircraft) => aircraft.icaoHex === item.icaoHex);
+    if (live) {
+      item.isLive = true;
+      item.callsign = live.callsign;
+      item.registration = live.registration ?? live.enrichment?.metadata?.registration ?? null;
+      item.aircraftType = live.enrichment?.metadata?.icaoTypeCode ?? live.aircraftType;
+      item.distanceKm = live.distanceKm;
+    }
+  }
+  const isInteresting = (item: LogbookInterestingAircraft): boolean => item.reasons.length > 0;
+  const score = (item: LogbookInterestingAircraft): number => item.reasons.reduce((total, reason) => total + (reason === "new" ? 10 : reason === "emergency" ? 9 : reason === "watchlisted" ? 6 : reason === "record" ? 5 : reason === "returning" ? 2 : 1), 0);
   const interestingAircraft = statuses
     .filter(isInteresting)
-    .sort((a, b) => score(b) - score(a) || b.flightCount - a.flightCount || a.icaoHex.localeCompare(b.icaoHex))
+    .sort((a, b) => score(b) - score(a) || Number(b.isLive) - Number(a.isLive) || b.flightCount - a.flightCount || a.icaoHex.localeCompare(b.icaoHex))
     .slice(0, 8);
 
   return {

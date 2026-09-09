@@ -192,12 +192,19 @@ export interface ReceiverReceptionRecord {
 }
 
 export type LogbookLabel = "new" | "rare" | "returning";
+export type LogbookInterestingReason = LogbookLabel | "record" | "watchlisted" | "emergency";
 
 export interface LogbookInterestingAircraft {
   icaoHex: string;
   labels: LogbookLabel[];
+  reasons: LogbookInterestingReason[];
   flightCount: number;
   returningGapDays: number | null;
+  isLive: boolean;
+  callsign: string | null;
+  registration: string | null;
+  aircraftType: string | null;
+  distanceKm: number | null;
 }
 
 export interface LogbookSummaryResponse {
@@ -212,6 +219,53 @@ export interface LogbookSummaryResponse {
   interestingAircraft: LogbookInterestingAircraft[];
   todayReceptionRecord: ReceiverReceptionRecord | null;
   lifetimeReceptionRecord: ReceiverReceptionRecord | null;
+}
+
+export interface RecapRankingItem {
+  name: string;
+  count: number;
+}
+
+export interface RecapRouteItem {
+  origin: string;
+  destination: string;
+  count: number;
+}
+
+export interface RecapInterestingItem {
+  icaoHex: string;
+  callsign: string | null;
+  registration: string | null;
+  reason: LogbookInterestingReason;
+}
+
+export interface ReceiverRecapComparison {
+  hasData: boolean;
+  uniqueAircraft: number | null;
+  observedFlights: number | null;
+  maxDistanceKm: number | null;
+}
+
+export interface ReceiverRecapResponse {
+  source: "postgres" | "unavailable";
+  range: "daily" | "weekly";
+  from: string;
+  to: string;
+  timezone: string;
+  isCurrentDay: boolean;
+  hasData: boolean;
+  uniqueAircraft: number | null;
+  observedFlights: number | null;
+  newAircraft: number | null;
+  rareOrReturning: number | null;
+  maxDistanceKm: number | null;
+  coverageKm: number | null;
+  topAircraftTypes: RecapRankingItem[];
+  topRoutes: RecapRouteItem[];
+  interestingAircraft: RecapInterestingItem[];
+  bestReception: ReceiverReceptionRecord | null;
+  alertCount: number | null;
+  comparison: ReceiverRecapComparison | null;
 }
 
 export interface ReceiverReceptionRecordsResponse {
