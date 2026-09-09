@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, StyleSpecification } from "maplibre-gl";
-import { circleCoordinates } from "@/lib/geo";
 import {
   formatAge,
   formatAltitude,
@@ -38,6 +37,7 @@ import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/w
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
+import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import {
   createRouteAirportGeoJSON,
   createRouteGeoJSON,
@@ -205,15 +205,6 @@ function createAirportGeoJSON(airports: Airport[], excludedAirportCodes: Readonl
   };
 }
 
-function createRangeGeoJSON(receiver: ReceiverPosition) {
-  const features = [25, 50, 100].map((radiusKm) => ({
-    type: "Feature" as const,
-    properties: { radiusKm },
-    geometry: { type: "LineString" as const, coordinates: circleCoordinates(receiver.lat, receiver.lon, radiusKm) },
-  }));
-  return { type: "FeatureCollection" as const, features };
-}
-
 function LogoMark() {
   return (
     <svg className="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
@@ -352,6 +343,7 @@ export function AirRadarApp() {
   const [watchlistKind, setWatchlistKind] = useState("callsign");
   const [watchlistValue, setWatchlistValue] = useState("");
   const [showAircraft, setShowAircraft] = useState(true);
+  const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
   const [showAirports, setShowAirports] = useState(true);
   const [showSignificantAirports, setShowSignificantAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSignificant);
@@ -678,10 +670,12 @@ export function AirRadarApp() {
     const receiver = snapshot.receiver;
     receiverRef.current = receiver;
     const rings = map.getSource("range-rings") as GeoJSONSource | undefined;
+    const rangeLayer = map.getLayer("range-rings-line");
     if (receiver.lat === null || receiver.lon === null) {
       receiverMarkerRef.current?.remove();
       receiverMarkerRef.current = null;
       rings?.setData({ type: "FeatureCollection", features: [] });
+      if (rangeLayer) map.setLayoutProperty("range-rings-line", "visibility", "none");
       return;
     }
     const receiverWithCoordinates: ReceiverPosition = { name: receiver.name, lat: receiver.lat, lon: receiver.lon };
@@ -694,12 +688,13 @@ export function AirRadarApp() {
         .addTo(map);
     }
     receiverMarkerRef.current?.setLngLat([receiver.lon, receiver.lat]);
-    rings?.setData(createRangeGeoJSON(receiverWithCoordinates));
+    rings?.setData(createRangeRingsGeoJSON(receiverWithCoordinates, showRangeRings ? RANGE_RING_RADII_KM : []));
+    if (rangeLayer) map.setLayoutProperty("range-rings-line", "visibility", showRangeRings ? "visible" : "none");
     if (shouldRecenterOnReceiver(snapshot.provider, centeredReceiverRef.current, receiver)) {
       map.jumpTo({ center: [receiver.lon, receiver.lat] });
       centeredReceiverRef.current = receiverWithCoordinates;
     }
-  }, [mapReady, snapshot.provider, snapshot.receiver]);
+  }, [mapReady, showRangeRings, snapshot.provider, snapshot.receiver]);
 
   const mapFilteredAircraft = useMemo(
     () => filterAircraftForMap(snapshot.aircraft, mapFilters),
@@ -1003,10 +998,8 @@ export function AirRadarApp() {
               <div className="map-summary-item"><strong>{snapshot.stats.messagesPerSecond === null ? t.common.emptyValue : `${formatNumber(snapshot.stats.messagesPerSecond, 1)}/s`}</strong><span>{t.statistics.messagesPerSecond}</span></div>
               <div className="map-summary-item"><strong>{formatDistance(snapshot.stats.maxDistanceKm)}</strong><span>{t.stats.maxDistance}</span></div>
             </div>
-            {snapshot.receiver.lat !== null && snapshot.receiver.lon !== null && <div className="map-overlay-card range-legend">
-              <span><i className="legend-dot" /> 25 km</span>
-              <span><i className="legend-dot" /> 50 km</span>
-              <span><i className="legend-dot" /> 100 km</span>
+            {showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null && <div className="map-overlay-card range-legend">
+              {RANGE_RING_RADII_KM.map((radiusKm) => <span key={radiusKm}><i className="legend-dot" /> {radiusKm} km</span>)}
             </div>}
             {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <div className="map-overlay-card layer-legend">
               <span><i className="legend-line completed" /> {t.route.originToCurrent}</span>
@@ -1017,6 +1010,7 @@ export function AirRadarApp() {
               <summary>{t.layers.title}</summary>
               <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
                 <label><input type="checkbox" checked={showAircraft} onChange={(event) => setShowAircraft(event.target.checked)} /> {t.layers.aircraft}</label>
+                <label><input type="checkbox" checked={showRangeRings} onChange={(event) => setShowRangeRings(event.target.checked)} /> {t.layers.rangeRings}</label>
                 <label><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> {t.layers.airports}</label>
                 <label className="map-layer-sublevel"><input type="checkbox" checked={showSignificantAirports} disabled={!showAirports} onChange={(event) => setShowSignificantAirports(event.target.checked)} /> {t.layers.significantAirports}</label>
                 <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>

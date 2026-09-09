@@ -16,6 +16,7 @@ const searchSource = readFileSync(new URL("../components/global-search.tsx", imp
 const serverSearchSource = readFileSync(new URL("../lib/server/search.ts", import.meta.url), "utf8");
 const flightPageSource = readFileSync(new URL("../app/flights/[id]/page.tsx", import.meta.url), "utf8");
 const flightDetailSource = readFileSync(new URL("../components/flight-detail.tsx", import.meta.url), "utf8");
+const rangeRingsSource = readFileSync(new URL("../lib/range-rings.ts", import.meta.url), "utf8");
 
 const origin = {
   icaoCode: "LKPR",
@@ -103,6 +104,13 @@ describe("feature integration", () => {
     expect(searchSource).not.toContain("EventSource");
     expect(searchSource).not.toContain("/api/stream");
     expect(searchSource).toContain("SEARCH_DEBOUNCE_MS = 220");
+  });
+
+  it("keeps range rings optional and within the public receiver privacy boundary", () => {
+    expect(rangeRingsSource).toContain("50, 100, 200, 300, 400");
+    expect(radarSource).toContain("showRangeRings");
+    expect(radarSource).toContain("snapshot.receiver.lat === null || snapshot.receiver.lon === null");
+    expect(radarSource.match(/new EventSource\(/g)).toHaveLength(1);
   });
 
   it("keeps aircraft and airport result navigation canonical", () => {

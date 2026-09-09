@@ -48,6 +48,7 @@ export const en = {
   layers: {
     title: "Map layers",
     aircraft: "Aircraft",
+    rangeRings: "Receiver range rings",
     airports: "Airports",
     atc: "ATC",
     significantAirports: "Significant airports",

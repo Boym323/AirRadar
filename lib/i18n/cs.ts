@@ -46,6 +46,7 @@ export const cs = {
   layers: {
     title: "Vrstvy mapy",
     aircraft: "Letadla",
+    rangeRings: "Kruhy dosahu přijímače",
     airports: "Letiště",
     atc: "ATC",
     significantAirports: "Významná letiště",
