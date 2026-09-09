@@ -39,6 +39,7 @@ import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_V
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
+import { aircraftMapLabel } from "@/lib/aircraft/map-labels";
 import {
   createRouteAirportGeoJSON,
   createRouteGeoJSON,
@@ -796,6 +797,10 @@ export function AirRadarApp() {
         plane.dataset.iconAsset = iconAsset ?? "fallback";
         plane.innerHTML = aircraftGlyphMarkup(aircraft);
         root.appendChild(plane);
+        const label = document.createElement("div");
+        label.className = "aircraft-label";
+        label.setAttribute("aria-hidden", "true");
+        root.appendChild(label);
         root.addEventListener("click", () => selectAircraft(aircraft.icaoHex));
         root.addEventListener("keydown", (event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -852,6 +857,12 @@ export function AirRadarApp() {
         if (color) plane.style.setProperty("--aircraft-color", color);
         else plane.style.removeProperty("--aircraft-color");
       }
+      const label = root.querySelector<HTMLElement>(".aircraft-label");
+      if (label) {
+        const labelText = aircraftMapLabel(aircraft, mapZoom, formatAltitude(aircraft.altitude));
+        label.textContent = labelText ?? "";
+        label.hidden = labelText === null;
+      }
       // readsb's track is clockwise from geographic north. Let MapLibre apply
       // it in map coordinates, so it remains correct when the user rotates map.
       if (aircraft.track !== null) marker.setRotation(aircraft.track);
@@ -890,7 +901,7 @@ export function AirRadarApp() {
     ));
     const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
     routeAirportSource?.setData(createRouteAirportGeoJSON(selected?.enrichment?.route));
-  }, [colorMode, filteredAircraft, isWatchlisted, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const map = mapRef.current;

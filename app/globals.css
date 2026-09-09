@@ -459,6 +459,8 @@ button { cursor: pointer; }
 .aircraft-plane[data-kind="glider"] svg { width: 26px; }
 .aircraft-glyph-helicopter, .aircraft-glyph-drone, .aircraft-glyph-turboprop { fill: none; }
 .aircraft-plane[data-kind="ground"] svg { width: 16px; }
+.aircraft-label { position: absolute; top: 28px; left: 50%; max-width: 130px; transform: translateX(-50%); padding: 2px 4px; border: 1px solid rgba(153,181,207,.16); border-radius: 4px; background: rgba(8,17,29,.82); color: var(--text); font-size: 8px; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; text-overflow: ellipsis; overflow: hidden; }
+.aircraft-marker.selected .aircraft-label { border-color: rgba(243,185,95,.42); color: var(--amber); }
 .aircraft-marker.selected .aircraft-plane { color: var(--amber); filter: drop-shadow(0 0 7px rgba(243, 185, 95, .84)); transform: scale(1.12); }
 .aircraft-marker.watchlisted .aircraft-plane { filter: drop-shadow(0 0 6px rgba(243, 185, 95, .82)); }
 .aircraft-marker.selected .aircraft-glyph-asset { filter: brightness(0) saturate(100%) invert(81%) sepia(52%) saturate(652%) hue-rotate(344deg) brightness(101%) contrast(91%); }
