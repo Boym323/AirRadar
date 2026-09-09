@@ -6,8 +6,6 @@ import { getPrisma } from "@/lib/server/db";
 import { listAlertHistory } from "@/lib/server/alert-history";
 import { getReceptionRecords } from "@/lib/server/reception-records";
 
-export const RECAP_FLIGHT_LIMIT = 10_000;
-export const RECAP_HISTORY_FLIGHT_LIMIT = 10_000;
 const RECAP_RANKING_LIMIT = 5;
 const RECAP_INTERESTING_LIMIT = 8;
 
@@ -25,11 +23,37 @@ interface RecapFlightRow {
   lastSeenAt: Temporal.Instant | Date;
 }
 
+interface RecapFlightAggregate {
+  aircraftId: number;
+  count: number;
+}
+
+interface RecapRouteAggregate {
+  origin: string | null;
+  destination: string | null;
+  count: number;
+}
+
+interface RecapTypeAggregate {
+  aircraftType: string | null;
+  count: number;
+}
+
+interface RecapLifetimeRow {
+  startTime: Temporal.Instant | Date;
+  lastSeenAt: Temporal.Instant | Date;
+}
+
 interface RecapAircraftRow {
   id: number;
   icaoHex: string;
   registration: string | null;
   aircraftType: string | null;
+  flights: {
+    first: RecapLifetimeRow[];
+    recent: RecapFlightRow[];
+    total: number;
+  };
 }
 
 interface RecapDailyStatsRow {
@@ -83,18 +107,13 @@ function rankings(map: Map<string, number>): RecapRankingItem[] {
     .slice(0, RECAP_RANKING_LIMIT);
 }
 
-function routes(flights: RecapFlightRow[]): RecapRouteItem[] {
-  const counts = new Map<string, RecapRouteItem>();
-  for (const flight of flights) {
-    const origin = flight.origin?.trim().toUpperCase();
-    const destination = flight.destination?.trim().toUpperCase();
-    if (!origin || !destination) continue;
-    const key = `${origin}:${destination}`;
-    const current = counts.get(key);
-    if (current) current.count += 1;
-    else counts.set(key, { origin, destination, count: 1 });
-  }
-  return [...counts.values()]
+function aggregateRoutes(routes: RecapRouteAggregate[]): RecapRouteItem[] {
+  return routes
+    .flatMap((route) => {
+      const origin = route.origin?.trim().toUpperCase();
+      const destination = route.destination?.trim().toUpperCase();
+      return origin && destination ? [{ origin, destination, count: route.count }] : [];
+    })
     .sort((a, b) => b.count - a.count || `${a.origin}:${a.destination}`.localeCompare(`${b.origin}:${b.destination}`))
     .slice(0, RECAP_RANKING_LIMIT);
 }
@@ -128,7 +147,16 @@ function emptyRecap(range: RecapRange, now: Date, source: ReceiverRecapResponse[
   };
 }
 
-async function loadRows(schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"], from: Date, to: Date) {
+interface RecapRows {
+  stats: RecapDailyStatsRow[];
+  aircraft: RecapDailyAircraftRow[];
+  flightAggregates: RecapFlightAggregate[];
+  routeAggregates: RecapRouteAggregate[];
+  typeAggregates: RecapTypeAggregate[];
+  aircraftRows: RecapAircraftRow[];
+}
+
+async function loadRows(schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"], from: Date, to: Date, includeLifetime = true): Promise<RecapRows> {
   const fromInstant = Temporal.Instant.fromEpochMilliseconds(from.getTime());
   const toInstant = Temporal.Instant.fromEpochMilliseconds(to.getTime());
   const stats = await schema.ReceiverDailyStats
@@ -140,13 +168,51 @@ async function loadRows(schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]
     .where((row) => row.date.lt(dayKey(to)))
     .select("date", "icaoHex", "aircraftType")
     .all() as RecapDailyAircraftRow[];
-  const flights = await schema.Flight
+  const flightAggregates = await schema.Flight
     .where((row) => row.startTime.gte(fromInstant))
     .where((row) => row.startTime.lt(toInstant))
-    .orderBy((row) => row.startTime.desc())
-    .limit(RECAP_FLIGHT_LIMIT)
-    .all() as RecapFlightRow[];
-  return { stats, aircraft, flights };
+    .groupBy("aircraftId")
+    .aggregate((aggregate) => ({ count: aggregate.count() })) as RecapFlightAggregate[];
+  const [routeAggregates, typeAggregates] = await Promise.all([
+    schema.Flight
+      .where((row) => row.startTime.gte(fromInstant))
+      .where((row) => row.startTime.lt(toInstant))
+      .groupBy("origin", "destination")
+      .aggregate((aggregate) => ({ count: aggregate.count() })) as Promise<RecapRouteAggregate[]>,
+    schema.Flight
+      .where((row) => row.startTime.gte(fromInstant))
+      .where((row) => row.startTime.lt(toInstant))
+      .groupBy("aircraftType")
+      .aggregate((aggregate) => ({ count: aggregate.count() })) as Promise<RecapTypeAggregate[]>,
+  ]);
+  const aircraftIds = flightAggregates.map((flight) => flight.aircraftId);
+  let aircraftRows: RecapAircraftRow[] = [];
+  if (aircraftIds.length) {
+    const aircraftQuery = schema.Aircraft
+      .where((aircraft) => aircraft.id.in(aircraftIds))
+      .select("id", "icaoHex", "registration", "aircraftType");
+    if (includeLifetime) {
+      // Each aircraft contributes at most three lifetime rows to the
+      // application: first, latest, and previous. The database still owns
+      // the full history and uses the (aircraftId, startTime) index.
+      aircraftRows = await aircraftQuery
+        .include("flights", (flights) => flights.combine({
+          first: flights
+            .orderBy([(flight) => flight.startTime.asc(), (flight) => flight.id.asc()])
+            .limit(1)
+            .select("startTime", "lastSeenAt"),
+          recent: flights
+            .orderBy([(flight) => flight.startTime.desc(), (flight) => flight.id.desc()])
+            .limit(2)
+            .select("id", "callsign", "registration", "aircraftType", "origin", "destination", "startTime", "lastSeenAt"),
+          total: flights.count(),
+        }))
+        .all() as unknown as RecapAircraftRow[];
+    } else {
+      aircraftRows = await aircraftQuery.all() as unknown as RecapAircraftRow[];
+    }
+  }
+  return { stats, aircraft, flightAggregates, routeAggregates, typeAggregates, aircraftRows };
 }
 
 function mergeCurrentDay(rows: { stats: RecapDailyStatsRow[]; aircraft: RecapDailyAircraftRow[] }, currentDay: {
@@ -172,15 +238,16 @@ function mergeCurrentDay(rows: { stats: RecapDailyStatsRow[]; aircraft: RecapDai
   }
 }
 
-function compareRows(rows: { stats: RecapDailyStatsRow[]; flights: RecapFlightRow[]; aircraft: RecapDailyAircraftRow[] }): ReceiverRecapComparison {
+function compareRows(rows: RecapRows): ReceiverRecapComparison {
   const unique = new Set(rows.aircraft.map((item) => item.icaoHex.toUpperCase()));
-  for (const flight of rows.flights) unique.add(String(flight.aircraftId));
+  for (const aircraft of rows.aircraftRows) unique.add(aircraft.icaoHex.toUpperCase());
   const maxDistance = rows.stats.map((row) => finite(row.maxDistanceKm)).filter((value): value is number => value !== null);
-  const hasData = unique.size > 0 || rows.flights.length > 0 || rows.stats.length > 0;
+  const observedFlights = rows.flightAggregates.reduce((total, flight) => total + flight.count, 0);
+  const hasData = unique.size > 0 || observedFlights > 0 || rows.stats.length > 0;
   return {
     hasData,
     uniqueAircraft: hasData ? unique.size : null,
-    observedFlights: hasData ? rows.flights.length : null,
+    observedFlights: hasData ? observedFlights : null,
     maxDistanceKm: maxDistance.length ? Math.max(...maxDistance) : null,
   };
 }
@@ -191,55 +258,40 @@ async function buildPeriod(
   now: Date,
   currentDay?: { date: string; uniqueAircraftCount: number; maxConcurrentAircraft: number; maxDistanceKm: number; aircraft: Array<{ icaoHex: string; aircraftType: string | null }> },
   todayRecord?: ReceiverDailyReceptionRecord | null,
-): Promise<{ response: ReceiverRecapResponse; rows: { stats: RecapDailyStatsRow[]; aircraft: RecapDailyAircraftRow[]; flights: RecapFlightRow[] } }> {
+): Promise<{ response: ReceiverRecapResponse; rows: RecapRows }> {
   const bounds = recapPeriodBounds(range, now);
   const rows = await loadRows(schema, bounds.from, bounds.to);
   mergeCurrentDay(rows, currentDay && currentDay.date >= bounds.fromKey && currentDay.date <= bounds.toKey ? currentDay : undefined);
-  const aircraftIds = [...new Set(rows.flights.map((flight) => flight.aircraftId))];
-  const aircraftRows = aircraftIds.length
-    ? await schema.Aircraft.where((aircraft) => aircraft.id.in(aircraftIds)).select("id", "icaoHex", "registration", "aircraftType").all() as RecapAircraftRow[]
-    : [];
-  const aircraftById = new Map(aircraftRows.map((aircraft) => [aircraft.id, aircraft]));
   const unique = new Set(rows.aircraft.map((item) => item.icaoHex.trim().toUpperCase()).filter(Boolean));
-  for (const flight of rows.flights) {
-    const aircraft = aircraftById.get(flight.aircraftId);
-    if (aircraft) unique.add(aircraft.icaoHex.trim().toUpperCase());
-  }
+  for (const aircraft of rows.aircraftRows) unique.add(aircraft.icaoHex.trim().toUpperCase());
   const types = new Map<string, number>();
   for (const item of rows.aircraft) increment(types, item.aircraftType);
-  for (const flight of rows.flights) increment(types, flight.aircraftType ?? aircraftById.get(flight.aircraftId)?.aircraftType);
-  const maxDistances = rows.stats.map((row) => finite(row.maxDistanceKm)).filter((value): value is number => value !== null);
-  const hasData = unique.size > 0 || rows.flights.length > 0 || rows.stats.length > 0;
-
-  // This lifetime query is capped. It is only used to explain recap labels;
-  // no position table is touched and no provider is called.
-  const lifetime = aircraftIds.length
-    ? await schema.Flight.where((flight) => flight.aircraftId.in(aircraftIds)).orderBy((flight) => flight.startTime.asc()).limit(RECAP_HISTORY_FLIGHT_LIMIT).select("aircraftId", "startTime", "lastSeenAt").all() as Array<{ aircraftId: number; startTime: Temporal.Instant | Date; lastSeenAt: Temporal.Instant | Date }>
-    : [];
-  const lifetimeByAircraft = new Map<number, Array<{ start: Date; lastSeen: Date }>>();
-  for (const flight of lifetime) {
-    const list = lifetimeByAircraft.get(flight.aircraftId) ?? [];
-    list.push({ start: timestamp(flight.startTime), lastSeen: timestamp(flight.lastSeenAt) });
-    lifetimeByAircraft.set(flight.aircraftId, list);
+  for (const type of rows.typeAggregates) {
+    if (type.aircraftType) {
+      const key = type.aircraftType.trim().toUpperCase();
+      types.set(key, (types.get(key) ?? 0) + type.count);
+    }
   }
+  const maxDistances = rows.stats.map((row) => finite(row.maxDistanceKm)).filter((value): value is number => value !== null);
+  const observedFlights = rows.flightAggregates.reduce((total, flight) => total + flight.count, 0);
+  const hasData = unique.size > 0 || observedFlights > 0 || rows.stats.length > 0;
   const interesting: RecapInterestingItem[] = [];
   const seenInteresting = new Set<string>();
-  for (const flight of rows.flights) {
-    const aircraft = aircraftById.get(flight.aircraftId);
-    if (!aircraft) continue;
-    const history = (lifetimeByAircraft.get(flight.aircraftId) ?? []).sort((a, b) => a.start.getTime() - b.start.getTime());
-    const first = history[0];
-    const previous = history.at(-2);
-    const latest = history.at(-1);
+  for (const aircraft of rows.aircraftRows) {
+    const first = aircraft.flights.first[0];
+    const latest = aircraft.flights.recent[0];
+    const previous = aircraft.flights.recent[1];
+    if (!latest) continue;
+    const firstStart = first ? timestamp(first.startTime) : null;
     const reasons: Array<{ reason: RecapInterestingItem["reason"]; priority: number }> = [];
-    if (first && dayKey(first.start) >= bounds.fromKey && dayKey(first.start) <= bounds.toKey) reasons.push({ reason: "new", priority: 10 });
-    if (history.length > 0 && history.length <= 3 && !(first && dayKey(first.start) >= bounds.fromKey && dayKey(first.start) <= bounds.toKey)) reasons.push({ reason: "rare", priority: 3 });
-    if (previous && latest && Math.floor((latest.start.getTime() - previous.lastSeen.getTime()) / 86_400_000) >= 30) reasons.push({ reason: "returning", priority: 4 });
+    if (firstStart && dayKey(firstStart) >= bounds.fromKey && dayKey(firstStart) <= bounds.toKey) reasons.push({ reason: "new", priority: 10 });
+    if (aircraft.flights.total > 0 && aircraft.flights.total <= 3 && !(firstStart && dayKey(firstStart) >= bounds.fromKey && dayKey(firstStart) <= bounds.toKey)) reasons.push({ reason: "rare", priority: 3 });
+    if (previous && Math.floor((timestamp(latest.startTime).getTime() - timestamp(previous.lastSeenAt).getTime()) / 86_400_000) >= 30) reasons.push({ reason: "returning", priority: 4 });
     for (const item of reasons.sort((a, b) => b.priority - a.priority)) {
       const key = `${aircraft.icaoHex}:${item.reason}`;
       if (seenInteresting.has(key)) continue;
       seenInteresting.add(key);
-      interesting.push({ icaoHex: aircraft.icaoHex.trim().toUpperCase(), callsign: flight.callsign, registration: flight.registration ?? aircraft.registration, reason: item.reason });
+      interesting.push({ icaoHex: aircraft.icaoHex.trim().toUpperCase(), callsign: latest.callsign, registration: latest.registration ?? aircraft.registration, reason: item.reason });
     }
   }
   interesting.sort((a, b) => a.reason.localeCompare(b.reason) || a.icaoHex.localeCompare(b.icaoHex));
@@ -258,13 +310,13 @@ async function buildPeriod(
     isCurrentDay: bounds.isCurrentDay,
     hasData,
     uniqueAircraft: hasData ? unique.size : null,
-    observedFlights: hasData ? rows.flights.length : null,
+    observedFlights: hasData ? observedFlights : null,
     newAircraft: hasData ? new Set(interesting.filter((item) => item.reason === "new").map((item) => item.icaoHex)).size : null,
     rareOrReturning: hasData ? new Set(interesting.filter((item) => item.reason === "rare" || item.reason === "returning").map((item) => item.icaoHex)).size : null,
     maxDistanceKm: maxDistances.length ? Math.max(...maxDistances) : null,
     coverageKm: maxDistances.length ? Math.max(...maxDistances) : null,
     topAircraftTypes: rankings(types),
-    topRoutes: routes(rows.flights),
+    topRoutes: aggregateRoutes(rows.routeAggregates),
     interestingAircraft: interesting.slice(0, RECAP_INTERESTING_LIMIT),
     bestReception,
     alertCount,
@@ -283,7 +335,7 @@ export async function getReceiverRecap(
   try {
     const current = await buildPeriod(database.orm.public, range, now, options.currentDay, options.todayRecord);
     if (range === "weekly") {
-      const previous = await loadRows(database.orm.public, previousBounds(range, now).from, previousBounds(range, now).to);
+      const previous = await loadRows(database.orm.public, previousBounds(range, now).from, previousBounds(range, now).to, false);
       current.response.comparison = compareRows(previous);
     }
     return current.response;

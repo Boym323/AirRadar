@@ -100,6 +100,8 @@ model Flight {
 
   @@index([aircraftId, startTime])
   @@index([aircraftId, endTime, lastSeenAt])
+  @@index([startTime, origin])
+  @@index([startTime, destination])
 }
 
 model Airport {

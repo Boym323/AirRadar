@@ -1,0 +1,80 @@
+[
+  {
+    "id": "index.flight.flight_startTime_destination_idx_abea9f87",
+    "label": "Create index \"flight_startTime_destination_idx_abea9f87\" on \"flight\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flight_startTime_destination_idx_abea9f87",
+        "table": "flight"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flight_startTime_destination_idx_abea9f87\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_startTime_destination_idx_abea9f87\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flight_startTime_destination_idx_abea9f87\"",
+        "sql": "CREATE INDEX \"flight_startTime_destination_idx_abea9f87\" ON \"public\".\"flight\" (\"startTime\", \"destination\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flight_startTime_destination_idx_abea9f87\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_startTime_destination_idx_abea9f87\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.flight.flight_startTime_origin_idx_ace20491",
+    "label": "Create index \"flight_startTime_origin_idx_ace20491\" on \"flight\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flight_startTime_origin_idx_ace20491",
+        "table": "flight"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flight_startTime_origin_idx_ace20491\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_startTime_origin_idx_ace20491\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flight_startTime_origin_idx_ace20491\"",
+        "sql": "CREATE INDEX \"flight_startTime_origin_idx_ace20491\" ON \"public\".\"flight\" (\"startTime\", \"origin\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flight_startTime_origin_idx_ace20491\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flight_startTime_origin_idx_ace20491\""
+        ]
+      }
+    ]
+  }
+]
