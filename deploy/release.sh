@@ -17,6 +17,7 @@ readonly PUBLIC_HEALTH_ATTEMPTS=3
 readonly PUBLIC_HEALTH_DELAY_SECONDS=2
 readonly SYSTEMD_UNIT_SOURCE="${APP_DIR}/deploy/airradar.service"
 readonly VERSION_SCRIPT="${APP_DIR}/scripts/version.mjs"
+readonly CHANGELOG_SCRIPT="${APP_DIR}/scripts/changelog.mjs"
 readonly EXPECTED_SYSTEMD_UNIT_NAME="${SERVICE_NAME}.service"
 readonly EXPECTED_PRODUCTION_ENTRYPOINT="${APP_DIR}/scripts/start-production.mjs"
 readonly EXPECTED_ENVIRONMENT_FILE="${APP_DIR}/.env"
@@ -215,6 +216,7 @@ check_repository() {
   [[ -f "${APP_DIR}/package-lock.json" ]] || die "Missing ${APP_DIR}/package-lock.json; npm ci cannot run safely."
   [[ -f "${APP_DIR}/deploy/airradar.service" ]] || die "Missing ${APP_DIR}/deploy/airradar.service."
   [[ -f "${VERSION_SCRIPT}" ]] || die "Missing ${VERSION_SCRIPT}."
+  [[ -f "${CHANGELOG_SCRIPT}" ]] || die "Missing ${CHANGELOG_SCRIPT}."
   [[ -f "${APP_DIR}/.env" ]] || die "Missing ${APP_DIR}/.env."
 
   git_root="$(git_cmd rev-parse --show-toplevel 2>/dev/null)" || die "${APP_DIR} is not a Git repository."
@@ -361,6 +363,25 @@ prepare_release_version() {
   export AIRRADAR_COMMIT="${NEW_SHA}"
   export AIRRADAR_CHANNEL="development"
   log "Release version candidate: ${RELEASE_VERSION} (${RELEASE_TAG})"
+}
+
+generate_release_changelog() {
+  local release_date
+
+  release_date="$(date --utc +%F)"
+  log "Generating changelog for ${RELEASE_TAG}"
+  node "${CHANGELOG_SCRIPT}" generate "${RELEASE_VERSION}" "${release_date}"
+
+  if git_cmd diff --quiet -- CHANGELOG.md; then
+    log "Changelog unchanged"
+    return 0
+  fi
+
+  git_cmd add -- CHANGELOG.md
+  git_cmd commit -m "docs: update changelog for ${RELEASE_TAG}"
+  NEW_SHA="$(git_cmd rev-parse HEAD)"
+  export AIRRADAR_COMMIT="${NEW_SHA}"
+  log "Changelog committed at ${NEW_SHA}"
 }
 
 run_release_steps() {
@@ -613,9 +634,9 @@ print_dry_run_plan() {
   log "Dry run; no repository update, dependency installation, migrations, build, restart, or health checks will run."
   log "Current commit: ${OLD_SHA}"
   if (( WORKTREE_DIRTY == 1 )); then
-    log "Planned release: preserve the current working tree, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
+    log "Planned release: preserve the current working tree, resolve version, generate/commit changelog, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
   else
-    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
+    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, resolve version, generate/commit changelog, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
   fi
 }
 
@@ -634,6 +655,7 @@ main() {
   fi
   update_repository
   prepare_release_version
+  generate_release_changelog
   run_release_steps
   deploy_systemd_unit
   restart_and_check

@@ -34,21 +34,24 @@ install dependencies, migrate, build, restart, or health-check.
    `package.json` major/minor series and existing tags. A release tag already
    on `HEAD` is reused. The script exports release metadata for the build; it
    does not run `npm version` and does not change package manifests.
-4. It runs `npm ci`, `npm run prisma:generate`, `npm run lint`,
+4. `scripts/changelog.mjs` generates the new `CHANGELOG.md` section from Git
+   commits since the previous release tag. If changed, the release commits it
+   automatically before continuing.
+5. It runs `npm ci`, `npm run prisma:generate`, `npm run lint`,
    `npm run typecheck`, and `npm test`.
-5. It acquires `/run/lock/airradar-build.lock`, writes ignored
+6. It acquires `/run/lock/airradar-build.lock`, writes ignored
    `generated/build-version.json`, and runs `npm run build`. The build lock is
    released after the build.
-6. It runs `npm run prisma:deploy` against the configured database. Migrations
+7. It runs `npm run prisma:deploy` against the configured database. Migrations
    are forward migrations; never reset or recreate a production database.
-7. It validates the repository systemd unit, compares/installs it atomically
+8. It validates the repository systemd unit, compares/installs it atomically
    at the loaded persistent FragmentPath, daemon-reloads only when changed,
    and verifies the loaded unit contract: direct production entrypoint,
    expected working directory/environment, SIGTERM, and `control-group`.
-8. It restarts `airradar.service`, requires the service to be active, checks
+9. It restarts `airradar.service`, requires the service to be active, checks
    the local health URL with retries, and checks the public health URL with
    retries.
-9. Only after every required check passes does it create the resolved Git tag.
+10. Only after every required check passes does it create the resolved Git tag.
 
 A failed post-restart release prints systemd/journal diagnostics and does not
 automatically roll back Git code or database migrations. Recovery must account

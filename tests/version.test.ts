@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error The release helper is runtime-only ESM consumed by Node.
 import { resolveReleaseVersion } from "../scripts/version.mjs";
+// @ts-expect-error The changelog helper is runtime-only ESM consumed by Node.
+import { createChangelogEntry, updateChangelog } from "../scripts/changelog.mjs";
 
 describe("automatic release versioning", () => {
   it("starts a package major/minor series at patch zero", () => {
@@ -33,5 +35,27 @@ describe("automatic release versioning", () => {
       headTags: ["v0.1.18"],
       seriesTags: ["v0.1.18"],
     })).toEqual({ version: "0.2.0", tag: "v0.2.0", reused: false });
+  });
+});
+
+describe("automatic changelog generation", () => {
+  it("creates a release section from commits", () => {
+    expect(createChangelogEntry({
+      version: "0.1.10",
+      date: "2026-09-09",
+      previousTag: "v0.1.9",
+      commits: [{ hash: "abc1234", subject: "feat: add changelog" }],
+    })).toBe("## [0.1.10] - 2026-09-09\n\nChanges since v0.1.9:\n\n- feat: add changelog (abc1234)");
+  });
+
+  it("does not duplicate an existing release section", () => {
+    const existing = "# Changelog\n\n## [0.1.10] - 2026-09-09\n";
+    expect(updateChangelog({
+      version: "0.1.10",
+      date: "2026-09-09",
+      existing,
+      previousTag: "v0.1.9",
+      commits: [],
+    })).toBe(existing);
   });
 });

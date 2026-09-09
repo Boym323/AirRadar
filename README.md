@@ -169,8 +169,10 @@ unit without understanding that lifecycle contract.
 Normal releases use [`deploy/release.sh`](deploy/release.sh), whose
 authoritative procedure is [`docs/RELEASE.md`](docs/RELEASE.md). It performs
 the full quality gates, migrations, restart, local/public health checks, and
-only then creates the automatic version tag. It never runs as part of ordinary
-development or documentation work.
+only then creates the automatic version tag. During the release it also
+generates [`CHANGELOG.md`](CHANGELOG.md) from commits since the previous
+release tag and commits the generated section. It never runs as part of
+ordinary development or documentation work.
 
 ## Architecture summary
 
