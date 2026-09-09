@@ -67,11 +67,20 @@ async function assertBrowserSmoke() {
       const page = await browser.newPage({ viewport });
       await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
       await page.locator("h1").first().waitFor({ state: "visible" });
+      // MapLibre controls and React controls settle asynchronously after the
+      // shell heading. Poll for the complete accessible DOM before asserting
+      // so the smoke test does not race the first client render.
+      await page.waitForFunction(() => {
+        const mapReady = Boolean(document.querySelector(".maplibregl-ctrl-zoom-in"));
+        const imagesReady = [...document.images].every((image) => image.hasAttribute("alt"));
+        const buttonsReady = [...document.querySelectorAll("button")].every((button) => Boolean(button.textContent?.trim() || button.getAttribute("aria-label")));
+        return mapReady && imagesReady && buttonsReady;
+      });
       const accessibility = await page.evaluate(() => ({
-        missingImageAlt: [...document.images].filter((image) => !image.alt).length,
+        missingImageAlt: [...document.images].filter((image) => !image.hasAttribute("alt")).length,
         unnamedButtons: [...document.querySelectorAll("button")].filter((button) => !button.textContent?.trim() && !button.getAttribute("aria-label")).length,
       }));
-      if (accessibility.missingImageAlt || accessibility.unnamedButtons) throw new Error(`Basic accessibility check failed at ${viewport.width}px`);
+      if (accessibility.missingImageAlt || accessibility.unnamedButtons) throw new Error(`Basic accessibility check failed at ${viewport.width}px: ${JSON.stringify(accessibility)}`);
       await page.close();
     }
   } finally {
