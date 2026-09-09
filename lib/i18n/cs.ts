@@ -382,6 +382,7 @@ export const cs = {
     position: "Pozice",
     source: "Zdroj",
     dataSource: "Datový zdroj",
+    seenBy: "Zachyceno přes",
     positionSource: "Zdroj pozice",
     localReceiver: "LOKÁLNÍ RECEIVER",
     networkReceiver: "ADSB.lol",

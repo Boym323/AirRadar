@@ -68,6 +68,13 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("setLngLat([receiver.lon, receiver.lat])");
   });
 
+  it("shows seen-by and position provenance as separate signals", () => {
+    expect(appSource).toContain("label={t.aircraft.seenBy}");
+    expect(appSource).toContain("aircraft.provenance?.positionOrigin");
+    expect(appSource).toContain("aircraft.provenance?.positionSource");
+    expect(appSource).not.toContain("`${aircraftDataSourceLabel(aircraft)} · ${aircraft.source}`");
+  });
+
   it("keeps ATC collapsed/expanded state accessible and mobile-collapsed by default", () => {
     expect(atcSource).toContain("aria-expanded={expanded}");
     expect(appSource).toContain("expanded={!mobileCompact}");

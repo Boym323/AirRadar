@@ -13,11 +13,13 @@
    stale threshold, updates the RAM map by ICAO identity, appends a changed
    position to a bounded trail, and removes aircraft absent from the current
    snapshot. A failed poll removes only entries that have become stale.
-4. When enabled, `AdsbLolProvider` independently polls the public ADSB.lol
-   geographic endpoint using the receiver position and configured radius. It
-   validates and normalizes the response into a separate bounded network map;
-   timeout, HTTP, malformed-response, and rate-limit failures retain only a
-   bounded stale network snapshot and never mark the local receiver offline.
+4. When enabled, the service runs the `AdsbLolProvider` network lane on its own
+   schedule, independent of local readsb retries. The provider polls the public
+   ADSB.lol geographic endpoint using the receiver position and configured
+   radius, validates and normalizes the response into a separate bounded
+   network map, and retains only a bounded stale network snapshot after
+   timeout, HTTP, malformed-response, or rate-limit failures. These failures
+   never mark the local receiver offline.
 5. The service notifies listeners with a snapshot. `GET /api/aircraft` waits
    for the first refresh and returns the safe public DTO. `GET /api/stream`
    subscribes once and sends named `snapshot` SSE events. `coverage=extended`
@@ -138,9 +140,10 @@ The optional `AdsbLolProvider` is a live display source only. It uses
 `/v2/lat/{lat}/lon/{lon}/dist/{radius}`, with a bounded radius/poll interval,
 request timeout, maximum aircraft count, stale threshold, and exponential
 retry capped by configuration. A 429 response honors `Retry-After` when
-present. The merger deduplicates by normalized ICAO hex, prefers local
-descriptive fields and local RSSI/message counters, and chooses position by
-position age with a one-second tie window and source priority. Displayed
+present. The merger deduplicates by normalized ICAO hex and treats an
+observation as a position candidate only when both coordinates are valid and
+`seen_pos` is fresh. A fresh usable local position wins before network
+freshness is considered; network position is the extended fallback. Displayed
 network-only aircraft are marked with source provenance; they do not enter
 history, local daily statistics, alerts, metadata enrichment, ATC resolution,
 or the local receiver health state. Public UI/API output includes ADSB.lol and

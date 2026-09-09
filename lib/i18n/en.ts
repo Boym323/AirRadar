@@ -384,6 +384,7 @@ export const en = {
     position: "Position",
     source: "Source",
     dataSource: "Data source",
+    seenBy: "Seen by",
     positionSource: "Position source",
     localReceiver: "LOCAL RECEIVER",
     networkReceiver: "ADSB.lol",

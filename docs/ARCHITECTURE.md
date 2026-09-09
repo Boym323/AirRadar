@@ -28,11 +28,12 @@ one global AircraftStateService
 ```
 
 `getAircraftStateService()` stores one service in `globalThis`. `start()` is
-idempotent: it loads statistics and starts the first refresh; later refreshes
-are scheduled by a single `setTimeout`. `subscribe()` and `waitForReady()` are
-the entry points used by routes. The production architecture is intentionally
-single-process: multiple Node workers would duplicate polling, alert
-evaluation, statistics observation, and history sampling.
+idempotent: it loads statistics and starts the first local and network refresh;
+the two lanes schedule their later refreshes independently. `subscribe()` and
+`waitForReady()` are the entry points used by routes. The production
+architecture is intentionally single-process: multiple Node workers would
+duplicate polling, alert evaluation, statistics observation, and history
+sampling.
 
 The server-side provider boundary is `AircraftProvider`. The configured local
 provider fetches the readsb/tar1090 web root; the empty base URL selects the
@@ -50,12 +51,15 @@ independent lanes:
 - `LocalReadsbProvider` normalizes raw readsb observations into the shared
   `Aircraft` shape. It prefers barometric altitude/rate, retains geometric
   values, and computes distance/bearing from the internal receiver position.
-- `AdsbLolProvider` is opt-in, bounded, and non-overlapping. It validates the
-  public response, applies timeout/rate-limit/backoff handling, keeps a
-  stale-if-error network snapshot, and exposes sanitized diagnostics. Its
-  aircraft are merged with local observations only when an extended live
-  snapshot is requested; local observations win metadata and local receiver
-  measurements while position arbitration uses freshness and source priority.
+- `AdsbLolProvider` is opt-in, bounded, and non-overlapping. The state service
+  invokes its network lane on the ADSB.lol schedule independently of the local
+  retry loop; the provider validates the public response, applies
+  timeout/rate-limit/backoff handling, keeps a stale-if-error network snapshot,
+  and exposes sanitized diagnostics. Its aircraft are merged with local
+  observations only when an extended live snapshot is requested; local
+  observations win metadata and local receiver measurements while position
+  arbitration gives a fresh usable local position priority over network
+  freshness.
 - `EnrichmentService` invokes configured metadata, route, and flight-plan
   providers asynchronously. It uses normalized keys, positive/negative TTLs,
   in-flight coalescing, and bounded concurrency.

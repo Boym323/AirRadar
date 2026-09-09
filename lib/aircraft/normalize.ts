@@ -133,7 +133,7 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
       seenNetwork: false,
       lastLocalSeen: lastSeen,
       lastNetworkSeen: null,
-      positionOrigin: "local",
+      positionOrigin: lat !== null && lon !== null && seenPosSeconds !== null ? "local" : null,
       positionSource: sourceFor(raw),
     },
     sourceType: text(raw.type),
@@ -159,7 +159,7 @@ export function normalizeNetworkAircraft(
       seenNetwork: true,
       lastLocalSeen: null,
       lastNetworkSeen: normalized.lastSeen,
-      positionOrigin: "adsblol",
+      positionOrigin: normalized.provenance?.positionOrigin === "local" ? "adsblol" : null,
       positionSource: normalized.source,
     },
   };

@@ -123,7 +123,9 @@ function aircraftDataSourceLabel(aircraft: AircraftView): string {
 }
 
 function aircraftPositionSourceLabel(aircraft: AircraftView): string {
-  return `${aircraftDataSourceLabel(aircraft)} · ${aircraft.source}`;
+  const positionOrigin = aircraft.provenance?.positionOrigin ?? aircraft.origin;
+  const originLabel = positionOrigin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver;
+  return `${originLabel} · ${aircraft.provenance?.positionSource ?? aircraft.source}`;
 }
 
 function registrationCountryForAircraft(aircraft: AircraftView): string | null {
@@ -1277,7 +1279,7 @@ export function AirRadarApp() {
                 <DetailItem label={t.aircraft.distance} value={formatDistance(selectedAircraft.distanceKm)} />
                 <DetailItem label={t.aircraft.squawk} value={selectedAircraft.squawk || t.common.emptyValue} />
                 <DetailItem label={t.aircraft.source} value={selectedAircraft.source} />
-                <DetailItem label={t.aircraft.dataSource} value={aircraftDataSourceLabel(selectedAircraft)} />
+                <DetailItem label={t.aircraft.seenBy} value={aircraftDataSourceLabel(selectedAircraft)} />
                 <DetailItem label={t.aircraft.positionSource} value={aircraftPositionSourceLabel(selectedAircraft)} />
                 <DetailItem label={t.aircraft.lastObservation} value={formatAge(selectedAircraft.seenSeconds)} />
               </DetailSection>

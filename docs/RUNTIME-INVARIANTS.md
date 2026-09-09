@@ -33,9 +33,9 @@ These are behavior and safety contracts for changes to the current system.
 ## Single state owner
 
 - `getAircraftStateService()` returns one `globalThis` service per Node
-  process. Its one poller owns RAM live state, stale cleanup, trails,
-  statistics observation, alert transitions, ATC requests, and history
-  sampling.
+  process. Its local and optional network poll loops share that one state
+  owner; the local loop owns local stale cleanup, trails, statistics
+  observation, alert transitions, ATC requests, and history sampling.
 - Polling must not be duplicated by a second API route, browser timer, worker,
   or external integration. Optional enrichment is asynchronous and failures
   are contained.
@@ -97,11 +97,12 @@ These are behavior and safety contracts for changes to the current system.
 - Local and network observations are held in separate maps. The default live
   coverage is local; extended coverage explicitly merges by normalized ICAO
   identity and never mutates the local map or local health state.
-- Merge arbitration is explicit: position uses freshest valid observation,
-  ties within one second prefer local ADS-B, then local MLAT, network ADS-B,
-  network MLAT; local descriptive fields and receiver-local RSSI/message
-  counters remain authoritative. Network-only aircraft have null local
-  measurements.
+- Merge arbitration is explicit: a position candidate must have valid `lat`
+  and `lon` plus fresh `seen_pos`; a fresh usable local position wins before a
+  network position is considered, and network is the extended fallback when
+  local position is missing or stale. Source type is only a tie-break within
+  an origin. Local descriptive fields and receiver-local RSSI/message counters
+  remain authoritative. Network-only aircraft have null local measurements.
 - Network-only observations are excluded from PostgreSQL history, daily
   statistics/coverage, alerts, metadata enrichment, and ATC resolution. Public
   output includes safe source/provenance and ADSB.lol ODbL attribution, but no

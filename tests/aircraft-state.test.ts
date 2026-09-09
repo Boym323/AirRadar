@@ -81,8 +81,8 @@ describe("aircraft state service", () => {
 
   it("keeps network-only coverage out of local statistics and history", async () => {
     const receiver = { lat: 50, lon: 14, name: "Test" };
-    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, messages: 10 }, receiver);
-    const network = normalizeAircraft({ hex: "DEF456", flight: "NETWORK456", lat: 50.2, lon: 14.2 }, receiver);
+    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, messages: 10, seen: 0, seen_pos: 0 }, receiver);
+    const network = normalizeAircraft({ hex: "DEF456", flight: "NETWORK456", lat: 50.2, lon: 14.2, seen: 0, seen_pos: 0 }, receiver);
     if (!local || !network) throw new Error("test aircraft could not be normalized");
     const networkObservation = {
       ...network,
@@ -556,5 +556,165 @@ describe("aircraft state service", () => {
     expect(service.getAircraft("ABC123")?.atc?.sectorId).toBe("RETRY");
     expect(lookup).toHaveBeenCalledTimes(2);
     errorSpy.mockRestore();
+  });
+
+  it("polls network coverage on its own timer while local polling is in backoff", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("READSB_POLL_INTERVAL_MS", "30000");
+    const base = new Date("2026-09-09T16:00:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const localGetSnapshot = vi.fn(async () => { throw new Error("readsb offline"); });
+    const localProvider: AircraftProvider = { name: "readsb", getSnapshot: localGetSnapshot };
+    const networkAircraft = normalizeAircraft({ hex: "DEF456", flight: "NETWORK456", lat: 50.2, lon: 14.2, seen: 0, seen_pos: 0 }, receiver, base);
+    if (!networkAircraft) throw new Error("test aircraft could not be normalized");
+    const networkObservation = { ...networkAircraft, origin: "adsblol" as const };
+    const networkGetSnapshot = vi.fn(async () => ({ aircraft: [networkObservation], fetchedAt: base.toISOString(), provider: "adsb.lol" }));
+    const diagnostics = {
+      enabled: true,
+      status: "online" as const,
+      lastAttemptAt: base.toISOString(),
+      lastSuccessAt: base.toISOString(),
+      latencyMs: 1,
+      consecutiveFailures: 0,
+      aircraftCount: 1,
+      positionedAircraftCount: 1,
+      mlatAircraftCount: 0,
+      radiusNm: 250,
+      pollIntervalMs: 10_000,
+      retryAfterMs: null,
+    };
+    const networkProvider: NetworkAircraftProvider = {
+      name: "adsb.lol",
+      start: vi.fn(),
+      getSnapshot: networkGetSnapshot,
+      getDiagnostics: () => diagnostics,
+      getNextPollDelayMs: () => 10_000,
+      stop: vi.fn(async () => undefined),
+    };
+    const service = new AircraftStateService(
+      localProvider,
+      new EnrichmentService({}),
+      new AtcSectorService(new EmptyAtcSectorProvider()),
+      undefined,
+      undefined,
+      networkProvider,
+    );
+    services.push(service);
+
+    await service.waitForReady();
+    expect(localGetSnapshot).toHaveBeenCalledTimes(1);
+    expect(networkGetSnapshot).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    expect(localGetSnapshot).toHaveBeenCalledTimes(1);
+    expect(networkGetSnapshot).toHaveBeenCalledTimes(3);
+    expect(service.getSnapshot({ coverage: "extended" }).aircraft.map((item) => item.icaoHex)).toContain("DEF456");
+  });
+
+  it("keeps local polling running when the network provider fails", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("READSB_POLL_INTERVAL_MS", "3000");
+    const base = new Date("2026-09-09T16:00:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const localAircraft = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 }, receiver, base);
+    if (!localAircraft) throw new Error("test aircraft could not be normalized");
+    const localGetSnapshot = vi.fn(async () => ({ aircraft: [localAircraft], receiver, fetchedAt: new Date().toISOString(), provider: "readsb" }));
+    const networkGetSnapshot = vi.fn(async () => { throw new Error("ADSB.lol offline"); });
+    const networkProvider: NetworkAircraftProvider = {
+      name: "adsb.lol",
+      start: vi.fn(),
+      getSnapshot: networkGetSnapshot,
+      getDiagnostics: () => ({
+        enabled: true,
+        status: "http_error" as const,
+        lastAttemptAt: null,
+        lastSuccessAt: null,
+        latencyMs: null,
+        consecutiveFailures: 1,
+        aircraftCount: 0,
+        positionedAircraftCount: 0,
+        mlatAircraftCount: 0,
+        radiusNm: 250,
+        pollIntervalMs: 10_000,
+        retryAfterMs: null,
+      }),
+      getNextPollDelayMs: () => 10_000,
+      stop: vi.fn(async () => undefined),
+    };
+    const service = new AircraftStateService(
+      { name: "readsb", getSnapshot: localGetSnapshot },
+      new EnrichmentService({}),
+      new AtcSectorService(new EmptyAtcSectorProvider()),
+      undefined,
+      undefined,
+      networkProvider,
+    );
+    services.push(service);
+
+    await service.waitForReady();
+    await vi.advanceTimersByTimeAsync(9_000);
+
+    expect(localGetSnapshot.mock.calls.length).toBeGreaterThanOrEqual(4);
+    expect(networkGetSnapshot).toHaveBeenCalledTimes(1);
+    expect(service.getSnapshot().aircraft.map((item) => item.icaoHex)).toEqual(["ABC123"]);
+  });
+
+  it("stops both polling loops and prevents post-shutdown publishing", async () => {
+    vi.useFakeTimers();
+    const base = new Date("2026-09-09T16:00:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const aircraft = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14, seen: 0, seen_pos: 0 }, receiver, base);
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+    const localGetSnapshot = vi.fn(async () => ({ aircraft: [aircraft], receiver, fetchedAt: new Date().toISOString(), provider: "readsb" }));
+    const networkGetSnapshot = vi.fn(async () => ({ aircraft: [], fetchedAt: new Date().toISOString(), provider: "adsb.lol" }));
+    const networkStop = vi.fn(async () => undefined);
+    const networkProvider: NetworkAircraftProvider = {
+      name: "adsb.lol",
+      start: vi.fn(),
+      getSnapshot: networkGetSnapshot,
+      getDiagnostics: () => ({
+        enabled: true,
+        status: "online" as const,
+        lastAttemptAt: null,
+        lastSuccessAt: null,
+        latencyMs: null,
+        consecutiveFailures: 0,
+        aircraftCount: 0,
+        positionedAircraftCount: 0,
+        mlatAircraftCount: 0,
+        radiusNm: 250,
+        pollIntervalMs: 1000,
+        retryAfterMs: null,
+      }),
+      getNextPollDelayMs: () => 1000,
+      stop: networkStop,
+    };
+    const service = new AircraftStateService(
+      { name: "readsb", getSnapshot: localGetSnapshot },
+      new EnrichmentService({}),
+      new AtcSectorService(new EmptyAtcSectorProvider()),
+      undefined,
+      undefined,
+      networkProvider,
+    );
+    services.push(service);
+    let notifications = 0;
+    service.subscribe(() => { notifications += 1; });
+    await service.waitForReady();
+    const notificationsAtStop = notifications;
+    const localCallsAtStop = localGetSnapshot.mock.calls.length;
+    const networkCallsAtStop = networkGetSnapshot.mock.calls.length;
+
+    await service.stop();
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(localGetSnapshot.mock.calls.length).toBe(localCallsAtStop);
+    expect(networkGetSnapshot.mock.calls.length).toBe(networkCallsAtStop);
+    expect(notifications).toBe(notificationsAtStop);
+    expect(networkStop).toHaveBeenCalledOnce();
   });
 });

@@ -1,6 +1,7 @@
 import type { RawReadsbAircraft, RawReadsbAircraftResponse } from "@/lib/aircraft/normalize";
 import { normalizeAircraftIdentifier } from "@/lib/aircraft/identity";
 import { normalizeNetworkAircraftResponse } from "@/lib/aircraft/normalize";
+import { hasUsablePosition } from "@/lib/aircraft/source-merge";
 import type { Aircraft, NetworkProviderDiagnostics, NetworkProviderStatus, ReceiverPosition } from "@/lib/aircraft/types";
 import type { NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import {
@@ -170,7 +171,7 @@ export class AdsbLolProvider implements NetworkAircraftProvider {
   getDiagnostics(): NetworkProviderDiagnostics {
     const now = Date.now();
     const active = this.networkAircraft.filter((item) => this.isFresh(item, now));
-    const positioned = active.filter((item) => item.lat !== null && item.lon !== null);
+    const positioned = active.filter((item) => hasUsablePosition(item));
     const mlat = active.filter((item) => item.source === "MLAT");
     const lastSuccess = this.lastSuccessAt ? Date.parse(this.lastSuccessAt) : Number.NaN;
     const status = this.status === "online" && Number.isFinite(lastSuccess) && now - lastSuccess > this.staleAfterMs
@@ -190,6 +191,11 @@ export class AdsbLolProvider implements NetworkAircraftProvider {
       pollIntervalMs: this.pollIntervalMs,
       retryAfterMs: this.retryAfterMs,
     });
+  }
+
+  getNextPollDelayMs(): number {
+    if (!this.enabled) return this.pollIntervalMs;
+    return Math.max(0, this.nextPollAt - Date.now());
   }
 
   async stop(): Promise<void> {

@@ -77,7 +77,9 @@ export class AircraftStateService {
   private lastError: string | null = null;
   private running = false;
   private refreshing = false;
+  private networkRefreshing = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private networkTimer: ReturnType<typeof setTimeout> | null = null;
   private initialRefresh: Promise<void> | null = null;
   private statisticsReady: Promise<void> | null = null;
   private consecutiveFailures = 0;
@@ -94,6 +96,7 @@ export class AircraftStateService {
   private lifetimeReceptionRecordLoaded = false;
   private lastEvaluatedDailyReceptionRecord: ReceiverDailyReceptionRecord | null = null;
   private receptionEvaluationPending = false;
+  private networkStopPromise: Promise<void> | null = null;
 
   constructor(
     provider: AircraftProvider = createAircraftProvider(),
@@ -128,6 +131,7 @@ export class AircraftStateService {
     void this.loadLifetimeReceptionRecord();
     const refresh = this.refresh();
     this.initialRefresh = Promise.all([this.statisticsReady, refresh]).then(() => undefined);
+    void this.refreshNetwork();
   }
 
   async waitForReady(): Promise<void> {
@@ -140,8 +144,13 @@ export class AircraftStateService {
     this.running = false;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
+    if (this.networkTimer) clearTimeout(this.networkTimer);
+    this.networkTimer = null;
+    this.provider.abort?.();
+    const networkStop = this.stopNetworkProvider();
     const deadline = options.deadline ?? Number.POSITIVE_INFINITY;
     await this.awaitUntil(this.initialRefresh, deadline);
+    await this.awaitUntil(networkStop, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
     if (options.closeStatistics !== false) await this.awaitUntil(this.statistics.close(), deadline);
     if (options.closeProvider !== false) await this.awaitUntil(this.closeProviders(), deadline);
@@ -155,8 +164,13 @@ export class AircraftStateService {
     try {
       await this.provider.close?.();
     } finally {
-      await this.networkProvider.stop();
+      await this.stopNetworkProvider();
     }
+  }
+
+  private stopNetworkProvider(): Promise<void> {
+    this.networkStopPromise ??= this.networkProvider.stop();
+    return this.networkStopPromise;
   }
 
   private async awaitUntil<T>(promise: Promise<T> | void | null, deadline: number): Promise<void> {
@@ -303,6 +317,7 @@ export class AircraftStateService {
       let localSnapshot: ProviderSnapshot | null = null;
       try {
       localSnapshot = await this.provider.getSnapshot();
+      if (!this.running) return;
       this.applySnapshot(localSnapshot);
       this.lastSourceUpdate = localSnapshot.fetchedAt;
       this.lastError = null;
@@ -314,14 +329,7 @@ export class AircraftStateService {
         this.removeStaleAircraft();
       }
 
-      try {
-        const networkSnapshot = await this.networkProvider.getSnapshot();
-        this.applyNetworkSnapshot(networkSnapshot);
-      } catch {
-        // The optional provider owns its bounded stale state and diagnostics.
-        // A network failure must never change local receiver health.
-      }
-
+      if (!this.running) return;
       this.notify();
       if (localSnapshot && this.running) {
         this.queueHistory(localSnapshot);
@@ -338,6 +346,31 @@ export class AircraftStateService {
           ? Math.min(getMaxProviderRetryIntervalMs(), getPollIntervalMs() * 2 ** Math.min(this.consecutiveFailures - 1, 4))
           : getPollIntervalMs();
         this.timer = setTimeout(() => void this.refresh(), delay);
+      }
+    }
+  }
+
+  private async refreshNetwork(): Promise<void> {
+    if (!this.running || this.networkRefreshing) return;
+    this.networkRefreshing = true;
+    try {
+      const networkSnapshot = await this.networkProvider.getSnapshot();
+      // stop() may have happened while the provider request was pending. The
+      // result is deliberately discarded so shutdown cannot publish a state.
+      if (!this.running) return;
+      this.applyNetworkSnapshot(networkSnapshot);
+      this.notify();
+    } catch {
+      // The optional provider owns its bounded stale state and diagnostics.
+      // A network failure must never change local receiver health.
+    } finally {
+      this.networkRefreshing = false;
+      if (this.running && this.networkProvider.getDiagnostics().enabled) {
+        const delay = this.networkProvider.getNextPollDelayMs?.() ?? this.networkProvider.getDiagnostics().pollIntervalMs;
+        this.networkTimer = setTimeout(() => {
+          this.networkTimer = null;
+          void this.refreshNetwork();
+        }, Number.isFinite(delay) && delay >= 0 ? delay : getAdsbLolStaleAfterMs());
       }
     }
   }
@@ -538,6 +571,7 @@ export class AircraftStateService {
       item,
       enrichment: await this.enrichment.enrich(item, new Date(snapshot.fetchedAt)),
     })));
+    if (this.shuttingDown) return;
     let changed = false;
     for (const result of results) {
       if (result.status !== "fulfilled" || !result.value.enrichment) continue;
@@ -552,7 +586,7 @@ export class AircraftStateService {
       this.alerts.observe(new Map([[current.icaoHex, current]]), [updated]);
       changed = true;
     }
-    if (changed) {
+    if (changed && !this.shuttingDown) {
       for (const result of results) {
         if (result.status !== "fulfilled" || !result.value.enrichment) continue;
         const updated = this.aircraft.get(result.value.item.icaoHex);
@@ -584,6 +618,7 @@ export class AircraftStateService {
         return { incoming, key, assignment: null, resolved: false };
       }
     }));
+    if (this.shuttingDown) return;
     if (failures.length) console.error(`AirRadar ATC resolution failed for ${failures.length} aircraft`);
     let changed = false;
     for (const result of results) {
@@ -596,7 +631,7 @@ export class AircraftStateService {
       this.aircraft.set(current.icaoHex, { ...current, atc: result.assignment });
       changed = true;
     }
-    if (changed) this.notify();
+    if (changed && !this.shuttingDown) this.notify();
   }
 }
 

@@ -8,24 +8,13 @@ function endpoint(baseUrl: string, path: string): string {
   return new URL(path.replace(/^\//, ""), base).toString();
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 2500);
-  try {
-    const response = await fetch(url, { cache: "no-store", signal: controller.signal });
-    if (!response.ok) throw new Error(`readsb returned HTTP ${response.status}`);
-    return (await response.json()) as T;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 export class LocalReadsbProvider implements AircraftProvider {
   readonly name = "readsb" as const;
   private currentReceiver: ReceiverPosition;
   private lastReceiverCheckAt = 0;
   private lastMessageCount: number | null = null;
   private lastMessageAt: number | null = null;
+  private controller: AbortController | null = null;
 
   constructor(
     private readonly baseUrl: string,
@@ -35,12 +24,12 @@ export class LocalReadsbProvider implements AircraftProvider {
   }
 
   async getSnapshot(): Promise<ProviderSnapshot> {
-    const aircraftResponse = await fetchJson<RawReadsbAircraftResponse>(endpoint(this.baseUrl, "/data/aircraft.json"));
+    const aircraftResponse = await this.fetchJson<RawReadsbAircraftResponse>(endpoint(this.baseUrl, "/data/aircraft.json"));
     const now = Date.now();
     if (now - this.lastReceiverCheckAt >= getReceiverRefreshIntervalMs()) {
       this.lastReceiverCheckAt = now;
       try {
-        const receiverResponse = await fetchJson<Record<string, unknown>>(endpoint(this.baseUrl, "/data/receiver.json"));
+        const receiverResponse = await this.fetchJson<Record<string, unknown>>(endpoint(this.baseUrl, "/data/receiver.json"));
         const lat = Number(receiverResponse.lat);
         const lon = Number(receiverResponse.lon);
         if (Number.isFinite(lat) && lat >= -90 && lat <= 90 && Number.isFinite(lon) && lon >= -180 && lon <= 180) {
@@ -67,5 +56,28 @@ export class LocalReadsbProvider implements AircraftProvider {
       provider: "readsb",
       messagesPerSecond,
     };
+  }
+
+  abort(): void {
+    this.controller?.abort();
+    this.controller = null;
+  }
+
+  async close(): Promise<void> {
+    this.abort();
+  }
+
+  private async fetchJson<T>(url: string): Promise<T> {
+    const controller = new AbortController();
+    this.controller = controller;
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    try {
+      const response = await fetch(url, { cache: "no-store", signal: controller.signal });
+      if (!response.ok) throw new Error(`readsb returned HTTP ${response.status}`);
+      return (await response.json()) as T;
+    } finally {
+      clearTimeout(timeout);
+      if (this.controller === controller) this.controller = null;
+    }
   }
 }

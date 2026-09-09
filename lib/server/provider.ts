@@ -4,6 +4,8 @@ import type { AtcActivity, AtcSector } from "@/lib/atc/types";
 export interface AircraftProvider {
   readonly name: string;
   getSnapshot(): Promise<ProviderSnapshot>;
+  /** Cancel an in-flight read without necessarily closing provider resources. */
+  abort?(): void;
   close?(): Promise<void>;
 }
 
@@ -23,6 +25,8 @@ export interface NetworkAircraftProvider {
   start(): void;
   getSnapshot(): Promise<NetworkAircraftSnapshot>;
   getDiagnostics(): NetworkProviderDiagnostics;
+  /** Delay until the provider may perform its next upstream attempt. */
+  getNextPollDelayMs?(): number;
   stop(): Promise<void>;
 }
 

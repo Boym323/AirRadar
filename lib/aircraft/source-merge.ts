@@ -9,6 +9,8 @@ import type {
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 
 const POSITION_TIE_MS = 1_000;
+const EMERGENCY_TIE_MS = 1_000;
+const SQUAWK_TIE_MS = 1_000;
 
 function originOf(aircraft: Aircraft): AircraftDataOrigin {
   return aircraft.origin ?? "local";
@@ -18,38 +20,61 @@ function finiteAge(value: number | null): number | null {
   return value !== null && Number.isFinite(value) && value >= 0 ? value * 1000 : null;
 }
 
-/** Estimate when the reported position was observed; seen_pos is preferred. */
+/** A position is usable only when both coordinates pass the geographic bounds. */
+export function hasUsablePosition(aircraft: Pick<Aircraft, "lat" | "lon">): boolean {
+  return typeof aircraft.lat === "number" && Number.isFinite(aircraft.lat) && aircraft.lat >= -90 && aircraft.lat <= 90
+    && typeof aircraft.lon === "number" && Number.isFinite(aircraft.lon) && aircraft.lon >= -180 && aircraft.lon <= 180;
+}
+
+/** Estimate when the reported position was observed; seen_pos is required. */
 export function positionObservedAt(aircraft: Pick<Aircraft, "lastSeen" | "seenSeconds" | "seenPosSeconds">): number | null {
   const lastSeen = Date.parse(aircraft.lastSeen);
   if (!Number.isFinite(lastSeen)) return null;
-  const seen = finiteAge(aircraft.seenSeconds);
   const seenPos = finiteAge(aircraft.seenPosSeconds);
-  if (seen !== null && seenPos !== null) return lastSeen + Math.max(0, seen - seenPos);
-  return lastSeen;
+  if (seenPos === null) return null;
+  const seen = finiteAge(aircraft.seenSeconds);
+  // lastSeen is the timestamp of the last message. When seen is available,
+  // move back to the provider snapshot time before applying seen_pos. If it
+  // is not available, lastSeen - seen_pos is the conservative approximation.
+  return seen === null ? lastSeen - seenPos : lastSeen + seen - seenPos;
 }
 
 export function positionAgeMs(aircraft: Pick<Aircraft, "lastSeen" | "seenSeconds" | "seenPosSeconds">, now = Date.now()): number {
+  const reportedAge = finiteAge(aircraft.seenPosSeconds);
+  if (reportedAge === null) return Number.POSITIVE_INFINITY;
   const observedAt = positionObservedAt(aircraft);
-  return observedAt === null ? Number.POSITIVE_INFINITY : Math.max(0, now - observedAt);
+  return observedAt === null ? reportedAge : Math.max(reportedAge, Math.max(0, now - observedAt));
 }
 
 function messageAgeMs(aircraft: Aircraft, now: number): number {
-  const seen = finiteAge(aircraft.seenSeconds);
   const lastSeen = Date.parse(aircraft.lastSeen);
-  if (seen !== null) return seen;
-  return Number.isFinite(lastSeen) ? Math.max(0, now - lastSeen) : Number.POSITIVE_INFINITY;
+  const seen = finiteAge(aircraft.seenSeconds);
+  const elapsed = Number.isFinite(lastSeen) ? Math.max(0, now - lastSeen) : null;
+  if (elapsed === null) return seen ?? Number.POSITIVE_INFINITY;
+  return Math.max(elapsed, seen ?? 0);
 }
 
-function sourceRank(aircraft: Aircraft): number {
-  const local = originOf(aircraft) === "local";
-  if (local && aircraft.source === "ADS-B") return 50;
-  if (local && aircraft.source === "MLAT") return 40;
-  if (!local && aircraft.source === "ADS-B") return 30;
-  if (!local && aircraft.source === "MLAT") return 20;
-  return local ? 10 : 0;
+function sourceTypeRank(aircraft: Aircraft): number {
+  if (aircraft.source === "ADS-B") return 4;
+  if (aircraft.source === "MLAT") return 3;
+  if (aircraft.source === "TIS-B") return 2;
+  if (aircraft.source === "Mode-S") return 1;
+  return 0;
 }
 
-function isFresh(aircraft: Aircraft, staleAfterMs: number, now: number): boolean {
+function originRank(aircraft: Aircraft): number {
+  return originOf(aircraft) === "local" ? 1 : 0;
+}
+
+function compareObservationFreshness(left: Aircraft, right: Aircraft, now: number, tieMs: number): number {
+  const ageDifference = messageAgeMs(left, now) - messageAgeMs(right, now);
+  if (Math.abs(ageDifference) > tieMs) return ageDifference;
+  const originDifference = originRank(right) - originRank(left);
+  if (originDifference !== 0) return originDifference;
+  return sourceTypeRank(right) - sourceTypeRank(left);
+}
+
+function isFreshObservation(aircraft: Aircraft, staleAfterMs: number, now: number): boolean {
   const age = messageAgeMs(aircraft, now);
   return Number.isFinite(age) && age <= staleAfterMs;
 }
@@ -62,19 +87,25 @@ function staleAfterFor(
   return originOf(aircraft) === "local" ? localStaleAfterMs : networkStaleAfterMs;
 }
 
-function choosePositionObservation(
+export function isFreshPosition(aircraft: Aircraft, staleAfterMs: number, now = Date.now()): boolean {
+  return hasUsablePosition(aircraft) && positionAgeMs(aircraft, now) <= staleAfterMs;
+}
+
+export function selectPositionObservation(
   local: Aircraft | undefined,
   network: Aircraft | undefined,
   options: { localStaleAfterMs: number; networkStaleAfterMs: number },
   now: number,
 ): Aircraft | undefined {
-  const candidates = [local, network].filter((item): item is Aircraft => Boolean(item));
-  const fresh = candidates.filter((item) => isFresh(item, staleAfterFor(item, options.localStaleAfterMs, options.networkStaleAfterMs), now));
-  return fresh.sort((left, right) => {
-    const ageDifference = positionAgeMs(left, now) - positionAgeMs(right, now);
-    if (Math.abs(ageDifference) > POSITION_TIE_MS) return ageDifference;
-    return sourceRank(right) - sourceRank(left);
-  })[0];
+  // Provenance is the first arbitration boundary: a fresh usable local
+  // position is authoritative even when the network position is newer.
+  const localCandidates = local && isFreshPosition(local, options.localStaleAfterMs, now) ? [local] : [];
+  if (localCandidates.length) {
+    return localCandidates.sort((left, right) => compareObservationFreshness(left, right, now, POSITION_TIE_MS))[0];
+  }
+
+  const networkCandidates = network && isFreshPosition(network, options.networkStaleAfterMs, now) ? [network] : [];
+  return networkCandidates.sort((left, right) => compareObservationFreshness(left, right, now, POSITION_TIE_MS))[0];
 }
 
 function nonEmpty<T>(local: T | null | undefined, network: T | null | undefined): T | null {
@@ -93,17 +124,60 @@ function provenance(local: Aircraft | undefined, network: Aircraft | undefined, 
   };
 }
 
+function emergencyValue(aircraft: Aircraft): string | null {
+  const value = aircraft.emergency?.trim().toLowerCase();
+  return value && value !== "none" && value !== "unknown" ? value : null;
+}
+
+function selectedEmergencyObservation(
+  local: Aircraft | undefined,
+  network: Aircraft | undefined,
+  options: { localStaleAfterMs: number; networkStaleAfterMs: number },
+  now: number,
+): Aircraft | undefined {
+  const fresh = [local, network]
+    .filter((item): item is Aircraft => item !== undefined
+      && isFreshObservation(item, staleAfterFor(item, options.localStaleAfterMs, options.networkStaleAfterMs), now)
+      && emergencyValue(item) !== null)
+    .sort((left, right) => compareObservationFreshness(left, right, now, EMERGENCY_TIE_MS));
+  return fresh[0];
+}
+
 function selectedEmergency(
   local: Aircraft | undefined,
   network: Aircraft | undefined,
   options: { localStaleAfterMs: number; networkStaleAfterMs: number },
   now: number,
 ): string | null {
+  const selected = selectedEmergencyObservation(local, network, options, now);
+  return selected ? emergencyValue(selected) : null;
+}
+
+function squawkValue(aircraft: Aircraft): string | null {
+  const value = aircraft.squawk?.trim();
+  return value || null;
+}
+
+function isEmergencySquawk(value: string | null): boolean {
+  return value === "7500" || value === "7600" || value === "7700";
+}
+
+function selectedSquawk(
+  local: Aircraft | undefined,
+  network: Aircraft | undefined,
+  options: { localStaleAfterMs: number; networkStaleAfterMs: number },
+  now: number,
+  emergencyObservation: Aircraft | undefined,
+): string | null {
+  const emergencySquawk = emergencyObservation ? squawkValue(emergencyObservation) : null;
+  if (isEmergencySquawk(emergencySquawk)) return emergencySquawk;
+
   const fresh = [local, network]
     .filter((item): item is Aircraft => item !== undefined
-      && isFresh(item, staleAfterFor(item, options.localStaleAfterMs, options.networkStaleAfterMs), now))
-    .sort((left, right) => messageAgeMs(left, now) - messageAgeMs(right, now));
-  return fresh[0]?.emergency ?? null;
+      && isFreshObservation(item, staleAfterFor(item, options.localStaleAfterMs, options.networkStaleAfterMs), now)
+      && squawkValue(item) !== null)
+    .sort((left, right) => compareObservationFreshness(left, right, now, SQUAWK_TIE_MS));
+  return fresh[0] ? squawkValue(fresh[0]) : null;
 }
 
 function selectedTrail(position: Aircraft | undefined): TrailPoint[] {
@@ -123,8 +197,9 @@ export function mergeAircraftObservations(
 ): Aircraft | null {
   if (!local && !network) return null;
   const now = options.now ?? Date.now();
-  const position = choosePositionObservation(local, network, options, now);
+  const position = selectPositionObservation(local, network, options, now);
   if (!position) return null;
+  const emergencyObservation = selectedEmergencyObservation(local, network, options, now);
   const lat = position.lat;
   const lon = position.lon;
   const distanceKm = lat !== null && lon !== null ? haversineDistanceKm(receiver.lat, receiver.lon, lat, lon) : null;
@@ -145,7 +220,7 @@ export function mergeAircraftObservations(
     verticalRate: position.verticalRate,
     baroRate: position.baroRate,
     geomRate: position.geomRate,
-    squawk: position.squawk,
+    squawk: selectedSquawk(local, network, options, now, emergencyObservation),
     category: nonEmpty(local?.category, network?.category),
     emergency: selectedEmergency(local, network, options, now),
     // RSSI and message counts are receiver-local measurements. Network-only
