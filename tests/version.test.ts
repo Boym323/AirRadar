@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 // @ts-expect-error The release helper is runtime-only ESM consumed by Node.
 import { resolveReleaseVersion } from "../scripts/version.mjs";
 // @ts-expect-error The changelog helper is runtime-only ESM consumed by Node.
-import { createChangelogEntry, updateChangelog } from "../scripts/changelog.mjs";
+import { backfillChangelog, createChangelogEntry, updateChangelog } from "../scripts/changelog.mjs";
 
 describe("automatic release versioning", () => {
   it("starts a package major/minor series at patch zero", () => {
@@ -57,5 +57,19 @@ describe("automatic changelog generation", () => {
       previousTag: "v0.1.9",
       commits: [],
     })).toBe(existing);
+  });
+
+  it("backfills missing tagged releases in descending order", () => {
+    expect(backfillChangelog({
+      existing: "# Changelog\n\nAll notable changes to AirRadar are documented here.\n",
+      tags: ["v0.1.2", "v0.1.1"],
+    })).toContain("## [0.1.1]");
+    expect(backfillChangelog({
+      existing: "# Changelog\n\nAll notable changes to AirRadar are documented here.\n",
+      tags: ["v0.1.2", "v0.1.1"],
+    }).indexOf("## [0.1.2]")).toBeLessThan(backfillChangelog({
+      existing: "# Changelog\n\nAll notable changes to AirRadar are documented here.\n",
+      tags: ["v0.1.2", "v0.1.1"],
+    }).indexOf("## [0.1.1]"));
   });
 });
