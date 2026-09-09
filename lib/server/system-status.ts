@@ -1,7 +1,7 @@
 import nextPackage from "next/package.json" with { type: "json" };
 import type { AtcDataResponse } from "@/lib/atc/types";
 import type { ReceiverStatisticsResponse, StateSnapshot } from "@/lib/aircraft/types";
-import { getAppTimezone } from "@/lib/server/config";
+import { getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled } from "@/lib/server/config";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getHistoryPersistenceStatus, type HistoryPersistenceStatus } from "@/lib/server/history";
 import { getAtcData } from "@/lib/server/providers";
@@ -108,6 +108,19 @@ export interface SystemStatusResponse {
     bounded: true;
     rowCountIsLowerBound: boolean;
   };
+  dataSources: {
+    adsbdb: SystemDataSourceStatus;
+    aircraftPhotos: SystemDataSourceStatus;
+    ourAirports: SystemDataSourceStatus;
+  };
+}
+
+export interface SystemDataSourceStatus {
+  status: SystemStatus;
+  enabled: boolean;
+  provider: string;
+  lastSuccessAt: string | null;
+  lastError: null;
 }
 
 export interface SystemStatusBuildInput {
@@ -256,6 +269,10 @@ function atcStatus(
   return { status: current ? "ok" : "degraded", configured: true, freshness: current ? "current" : "stale" };
 }
 
+function configuredSource(enabled: boolean, provider: string, status: SystemStatus = enabled ? "ok" : "disabled"): SystemDataSourceStatus {
+  return { status, enabled, provider, lastSuccessAt: null, lastError: null };
+}
+
 export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusResponse {
   const now = input.now ?? new Date();
   const application = applicationRuntime(now, input.runtime);
@@ -354,6 +371,13 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       fallbackRowCount,
       bounded: true,
       rowCountIsLowerBound: Boolean(input.airportData.rowCountIsLowerBound),
+    },
+    dataSources: {
+      // These are configuration-safe states. Opening /system never probes an
+      // optional upstream provider and therefore exposes no raw error detail.
+      adsbdb: configuredSource(isAdsbDbEnabled(), "ADSBDB enrichment"),
+      aircraftPhotos: configuredSource(isAircraftPhotosEnabled(), "Planespotters photos"),
+      ourAirports: configuredSource(airportSource !== "unavailable", "OurAirports / bundled catalog", airportStatus),
     },
   };
 }

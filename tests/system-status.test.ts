@@ -89,6 +89,11 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(value.weather).toMatchObject({ enabled: true, cache: { status: "warm", entries: 2 } });
     expect(value.alerts).toMatchObject({ status: "ok", enabled: true, ruleCount: 2 });
     expect(value.airportData).toMatchObject({ source: "database", rowCount: 5886, bounded: true });
+    expect(value.dataSources).toMatchObject({
+      adsbdb: { status: "disabled", enabled: false, provider: "ADSBDB enrichment" },
+      aircraftPhotos: { status: "disabled", enabled: false, provider: "Planespotters photos" },
+      ourAirports: { status: "ok", enabled: true, provider: "OurAirports / bundled catalog" },
+    });
   });
 
   it("reports readsb offline without exposing its provider error", () => {
