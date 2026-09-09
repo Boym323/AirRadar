@@ -155,3 +155,9 @@ Changes since v0.1.10:
 - feat: sync flight profiles with playback (1f83f61b)
 - feat: compare receiver statistics periods (9e3efcba)
 - fix: keep period comparison at response boundary (d3f64cd9)
+
+## [0.1.12] - 2026-09-09
+
+Changes since v0.1.11:
+
+- fix: ensure fetch-tags is set to true for changelog tests (69faa806)
