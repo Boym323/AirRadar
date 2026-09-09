@@ -239,3 +239,9 @@ Changes since v1.0.2:
 Changes since v1.0.3:
 
 - fix: retain local aircraft in extended coverage even when position is stale or unavailable (4295f1bc)
+
+## [1.0.5] - 2026-09-09
+
+Changes since v1.0.4:
+
+- fix: handle stale network positions and improve aircraft merging logic (e3fcc215)
