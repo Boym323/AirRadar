@@ -133,3 +133,11 @@ Changes since v0.1.0:
 - feat: implement watchlist management API and UI (088c40c3)
 - feat: add system status API and frontend page (fad9afc3)
 - feat: add versioning API and build metadata management (db0b013f)
+
+## [0.1.10] - 2026-09-09
+
+Changes since v0.1.9:
+
+- feat: implement automatic changelog generation and update release procedure (e36116ef)
+- feat: add backfill functionality to changelog generation script and update tests (63d64408)
+- fix: correct indentation for fetch-depth in CI workflow (d5471c36)
