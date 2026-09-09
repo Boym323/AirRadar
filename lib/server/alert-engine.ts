@@ -47,7 +47,7 @@ export class AlertEngine {
   private activeDeliveries = 0;
   private deliveryError = false;
   private sequence = 0;
-  private readonly permanentEvents = new Set<string>();
+  private readonly permanentEvents = new Map<string, number>();
 
   constructor(options: AlertEngineOptions = {}) {
     const config = options.rules ? { rules: options.rules, errors: options.configErrors ?? [] } : loadAlertConfig();
@@ -110,7 +110,7 @@ export class AlertEngine {
   observeNewAircraft(aircraft: Aircraft): void {
     const id = `new:${aircraft.icaoHex.toUpperCase()}`;
     if (this.permanentEvents.has(id)) return;
-    this.permanentEvents.add(id);
+    this.rememberPermanentEvent(id);
     this.enqueue({ aircraft, matchedRules: [], emergency: false, priority: "normal", type: "new_aircraft", reason: "new", eventId: id });
   }
 
@@ -118,7 +118,7 @@ export class AlertEngine {
   observeReceptionRecord(scope: "daily" | "lifetime", current: ReceiverDailyReceptionRecord, previous: ReceiverDailyReceptionRecord | null): void {
     const id = `record:${scope}:${current.date}:${current.icaoHex}:${current.distanceKm.toFixed(3)}:${current.recordedAt}`;
     if (this.permanentEvents.has(id)) return;
-    this.permanentEvents.add(id);
+    this.rememberPermanentEvent(id);
     const record: AlertHistoryRecordValue = {
       scope,
       distanceKm: current.distanceKm,
@@ -144,6 +144,15 @@ export class AlertEngine {
   private isAvailable(key: string, now: number): boolean {
     const lastAlert = this.dedupCache.get(key);
     return lastAlert === undefined || now - lastAlert >= this.cooldownMs;
+  }
+
+  private rememberPermanentEvent(id: string): void {
+    this.permanentEvents.set(id, this.now());
+    while (this.permanentEvents.size > MAX_DEDUP_ENTRIES) {
+      const oldest = this.permanentEvents.keys().next().value as string | undefined;
+      if (!oldest) break;
+      this.permanentEvents.delete(oldest);
+    }
   }
 
   private reserve(key: string, now: number): void {
