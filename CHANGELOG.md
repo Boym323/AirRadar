@@ -141,3 +141,17 @@ Changes since v0.1.9:
 - feat: implement automatic changelog generation and update release procedure (e36116ef)
 - feat: add backfill functionality to changelog generation script and update tests (63d64408)
 - fix: correct indentation for fetch-depth in CI workflow (d5471c36)
+
+## [0.1.11] - 2026-09-09
+
+Changes since v0.1.10:
+
+- feat: add nearby airports (96db59a6)
+- feat: add airport traffic heatmap (d3991c93)
+- feat: add receiver range rings (541e7ba4)
+- feat: add aircraft map color modes (3dc6bc2f)
+- feat: improve radar labels (f364c227)
+- feat: improve history playback (30b7eeee)
+- feat: sync flight profiles with playback (1f83f61b)
+- feat: compare receiver statistics periods (9e3efcba)
+- fix: keep period comparison at response boundary (d3f64cd9)
