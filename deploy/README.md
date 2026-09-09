@@ -32,6 +32,14 @@ FLIGHTAWARE_API_KEY=
 APP_TIMEZONE=Europe/Prague
 ```
 
+`WATCHLIST_ADMIN_TOKEN` is the exact server-side secret used to authorize
+watchlist rule mutations. It is required for those mutations, must not use a
+default or placeholder in production, and must never be exposed through a
+`NEXT_PUBLIC_*` variable. If it is missing, watchlist mutations fail closed
+with HTTP 503; configure it in the server-only `.env` before enabling the
+feature. The production smoke gate uses a test-only token in its isolated child
+process and does not configure or modify the production `.env`.
+
 Use the actual readsb/tar1090 web root in `READSB_BASE_URL`; AirRadar appends
 `/data/aircraft.json` and `/data/receiver.json`. Keep the real `.env` readable
 by `airradar` but not world-readable (`chmod 640` with an appropriate group).

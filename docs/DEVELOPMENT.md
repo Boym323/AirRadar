@@ -64,6 +64,11 @@ checks when a browser is installed:
 npm run test:production:browser
 ```
 
+The production gate accepts only `1.0.0/production` or a canonical
+`1.0.0-rc.N/release-candidate` build. It detects either pair by default; set
+`PRODUCTION_GATE_CHANNEL=stable` or `PRODUCTION_GATE_CHANNEL=rc` to require a
+specific pair.
+
 Documentation-only changes that do not touch code, package files, schema,
 migrations, or build configuration do not require the build/full suite unless
 the user asks for it. Still run relevant lightweight checks such as link
