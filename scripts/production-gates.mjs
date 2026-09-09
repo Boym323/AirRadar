@@ -43,6 +43,8 @@ async function assertSseLifecycle() {
     controller.abort();
   }
   if (!received.includes("event: snapshot") || !received.includes("data:")) throw new Error("SSE did not deliver a snapshot");
+  const firstEvent = received.split("\n\n", 1)[0] + "\n\n";
+  return Buffer.byteLength(firstEvent);
 }
 
 function assertMigrationSource() {
@@ -114,8 +116,11 @@ async function main() {
     const manifest = await get("/manifest.webmanifest");
     const manifestPayload = await manifest.json();
     if (manifestPayload.orientation) throw new Error("Manifest still forces an orientation");
+    const staticPayloadBytes = {};
     for (const path of ["/api/airports", "/api/atc/sectors"]) {
       const response = await get(path);
+      const body = await response.arrayBuffer();
+      staticPayloadBytes[path] = body.byteLength;
       if (!response.ok || !response.headers.get("cache-control")?.includes("max-age=300")) throw new Error(`Static payload cache smoke failed for ${path}`);
     }
     const system = await get("/api/system/status");
@@ -123,8 +128,9 @@ async function main() {
     if (!Number.isFinite(systemPayload.runtime?.processRssBytes)) throw new Error("Runtime diagnostics smoke failed");
     const watchlistMutation = await get("/api/watchlist", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
     if (watchlistMutation.status !== 401) throw new Error("Watchlist mutation was not protected");
-    await assertSseLifecycle();
+    const sseSnapshotBytes = await assertSseLifecycle();
     await assertBrowserSmoke();
+    console.log(`[production-gates] measured first SSE event bytes=${sseSnapshotBytes}, airports bytes=${staticPayloadBytes["/api/airports"]}, ATC bytes=${staticPayloadBytes["/api/atc/sectors"]}`);
     console.log("[production-gates] built server, SSE, caching, auth, PWA, migration, and diagnostics checks passed");
   } catch (error) {
     const detail = logs.join("").slice(-4_000);
