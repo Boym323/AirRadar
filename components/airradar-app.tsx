@@ -981,6 +981,19 @@ export function AirRadarApp() {
           </div>
         </div>
         <GlobalSearch />
+        <details className="mobile-main-nav">
+          <summary aria-label={t.system.navigation}>☰</summary>
+          <nav aria-label={t.statistics.navigation}>
+            <Link href="/alerts">{t.alerts.title}</Link>
+            <Link href="/recap/daily">{t.recap.daily}</Link>
+            <Link href="/recap/weekly">{t.recap.weekly}</Link>
+            <Link href="/watchlist">{t.watchlist.title}</Link>
+            <Link href="/fleet">{t.fleet.title}</Link>
+            <Link href="/statistics">{t.statistics.title}</Link>
+            <Link href="/history">{t.history.title}</Link>
+            <Link href="/system">{t.system.title}</Link>
+          </nav>
+        </details>
         <Link className="mobile-system-link" href="/system" aria-label={t.system.title}>⚙</Link>
         <nav className="topbar-nav" aria-label={t.statistics.navigation}>
           <Link href="/alerts">{t.alerts.title}</Link>

@@ -66,6 +66,7 @@ button { cursor: pointer; }
 .global-search-item-secondary { color: var(--muted); font-size: 10px; }
 .global-search-status { padding: 13px 12px; color: var(--muted); font-size: 11px; }
 .mobile-system-link { display: none; }
+.mobile-main-nav { display: none; }
 .topbar-nav { display: flex; align-items: center; gap: 18px; margin-left: auto; margin-right: 24px; }
 .topbar-nav a { color: var(--text); font-size: 12px; font-weight: 600; text-decoration: none; }
 .topbar-nav a:hover { color: var(--mint); }
@@ -771,6 +772,12 @@ button { cursor: pointer; }
   .topbar { height: 62px; padding: 0 14px; }
   .brand-subtitle, .topbar-receiver, .topbar-secondary-status { display: none; }
   .topbar-nav { display: none; }
+  .mobile-main-nav { position: relative; display: block; flex: 0 0 auto; }
+  .mobile-main-nav > summary { display: grid; place-items: center; width: 44px; height: 44px; cursor: pointer; list-style: none; color: var(--mint); font-size: 21px; }
+  .mobile-main-nav > summary::-webkit-details-marker { display: none; }
+  .mobile-main-nav > nav { position: absolute; z-index: 20; top: calc(100% + 8px); right: 0; display: grid; min-width: 170px; padding: 7px; border: 1px solid var(--line); border-radius: 10px; background: rgba(8,17,29,.98); box-shadow: 0 14px 30px rgba(0,0,0,.38); }
+  .mobile-main-nav > nav a { min-height: 40px; display: flex; align-items: center; padding: 8px 10px; color: var(--text); font-size: 12px; text-decoration: none; }
+  .mobile-main-nav > nav a:hover { background: rgba(55,214,192,.1); color: var(--mint); }
   .mobile-system-link { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto; color: var(--mint); font-size: 20px; text-decoration: none; }
   .global-search { flex: 1 1 auto; min-width: 0; margin: 0 8px; }
   .global-search-input { min-height: 44px; padding-right: 8px; font-size: 16px; }

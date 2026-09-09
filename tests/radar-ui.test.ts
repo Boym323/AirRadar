@@ -41,6 +41,13 @@ describe("radar UI polish helpers", () => {
     ]);
   });
 
+  it("keeps all primary routes reachable from the mobile radar header", () => {
+    expect(appSource).toContain("mobile-main-nav");
+    expect(appSource).toContain('href="/alerts"');
+    expect(appSource).toContain('href="/recap/daily"');
+    expect(globalCss).toContain(".mobile-main-nav > nav");
+  });
+
   it("keeps MapLibre in control of DOM marker positioning", () => {
     const aircraftRule = globalCss.match(/\.aircraft-marker\s*\{([^}]*)\}/)?.[1] ?? "";
     const receiverRule = globalCss.match(/\.receiver-marker\s*\{([^}]*)\}/)?.[1] ?? "";
