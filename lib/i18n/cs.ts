@@ -371,6 +371,11 @@ export const cs = {
     noRouteData: "Trasa nemá dost údajů.",
     empty: "V tomto období nebyl zachycen žádný provoz související s tímto letištěm.",
     loadFailed: "Přehled provozu se nepodařilo načíst.",
+    heatmapTitle: "Zachycený provoz podle místního času",
+    heatmapDescription: "Zachycené Flight instance podle dne a hodiny v časové zóně Europe/Prague.",
+    heatmapLegend: "Legenda heatmapy provozu",
+    heatmapNoData: "V tomto období není k dispozici žádný zachycený přílet ani odlet s časovým bodem.",
+    heatmapDays: ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"],
   },
   weather: {
     title: "Počasí",

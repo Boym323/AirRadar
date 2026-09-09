@@ -373,6 +373,11 @@ export const en = {
     noRouteData: "Not enough route data.",
     empty: "No traffic related to this airport was captured in this period.",
     loadFailed: "Airport traffic could not be loaded.",
+    heatmapTitle: "Observed traffic by local time",
+    heatmapDescription: "Captured Flight instances grouped by Europe/Prague day and hour.",
+    heatmapLegend: "Traffic heatmap legend",
+    heatmapNoData: "No captured arrival or departure has a time cell in this period.",
+    heatmapDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   },
   weather: {
     title: "Weather",

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type {
   AirportTrafficAirport,
+  AirportTrafficHeatmapCell,
   AirportTrafficRange,
   AirportTrafficRouteCount,
   AirportTrafficSummary,
@@ -49,6 +50,46 @@ function routeList(
 
 function dataRow(label: string, value: ReactNode): ReactNode {
   return <div className="airport-traffic-data-row"><dt>{label}</dt><dd>{value}</dd></div>;
+}
+
+function heatmapCellLabel(cell: AirportTrafficHeatmapCell): string {
+  return `${t.airportTraffic.heatmapDays[cell.dayOfWeek - 1]} ${String(cell.hour).padStart(2, "0")}:00 · ${t.airportTraffic.departure} ${cell.departures} · ${t.airportTraffic.arrival} ${cell.arrivals}`;
+}
+
+function TrafficHeatmap({ summary }: { summary: AirportTrafficSummary }): ReactNode {
+  const cells = new Map(summary.heatmap.cells.map((cell) => [`${cell.dayOfWeek}:${cell.hour}`, cell]));
+  const hasData = summary.heatmap.maxCount > 0;
+  return <section className="airport-traffic-heatmap" aria-labelledby="airport-traffic-heatmap-title">
+    <div className="airport-traffic-heatmap-heading">
+      <div>
+        <h3 id="airport-traffic-heatmap-title">{t.airportTraffic.heatmapTitle}</h3>
+        <p>{t.airportTraffic.heatmapDescription}</p>
+      </div>
+      <div className="airport-traffic-heatmap-legend" aria-label={t.airportTraffic.heatmapLegend}>
+        <span><i className="heatmap-legend-arrival" /> {t.airportTraffic.arrival}</span>
+        <span><i className="heatmap-legend-departure" /> {t.airportTraffic.departure}</span>
+      </div>
+    </div>
+    {!hasData ? <div className="airport-traffic-empty-list">{t.airportTraffic.heatmapNoData}</div> : <div className="airport-traffic-heatmap-scroll">
+      <div className="airport-traffic-heatmap-grid" role="img" aria-label={t.airportTraffic.heatmapTitle}>
+        <div className="airport-traffic-heatmap-corner" />
+        {Array.from({ length: 24 }, (_, hour) => <span key={hour} className="airport-traffic-heatmap-hour">{String(hour).padStart(2, "0")}</span>)}
+        {Array.from({ length: 7 }, (_, dayIndex) => <Fragment key={dayIndex}>
+          <span className="airport-traffic-heatmap-day">{t.airportTraffic.heatmapDays[dayIndex]}</span>
+          {Array.from({ length: 24 }, (_, hour) => {
+            const cell = cells.get(`${dayIndex + 1}:${hour}`) ?? { dayOfWeek: dayIndex + 1, hour, arrivals: 0, departures: 0 };
+            const total = cell.arrivals + cell.departures;
+            const arrivalOpacity = cell.arrivals ? 0.22 + (cell.arrivals / summary.heatmap.maxCount) * 0.7 : 0;
+            const departureOpacity = cell.departures ? 0.22 + (cell.departures / summary.heatmap.maxCount) * 0.7 : 0;
+            const background = total === 0
+              ? "rgba(153,181,207,.04)"
+              : `linear-gradient(to top, rgba(55,214,192,${arrivalOpacity}), rgba(243,185,95,${departureOpacity}))`;
+            return <span key={hour} className="airport-traffic-heatmap-cell" title={heatmapCellLabel(cell)} aria-label={heatmapCellLabel(cell)} style={{ background }} />;
+          })}
+        </Fragment>)}
+      </div>
+    </div>}
+  </section>;
 }
 
 export function AirportTrafficSummary({ airport }: { airport: Airport }) {
@@ -164,6 +205,7 @@ export function AirportTrafficSummary({ airport }: { airport: Airport }) {
             </li>)}
           </ol>
         </section>
+        <TrafficHeatmap summary={summary} />
       </>}
     </div>
   </section>;

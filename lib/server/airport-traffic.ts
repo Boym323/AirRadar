@@ -4,6 +4,7 @@ import type {
   AirportTrafficAircraftCount,
   AirportTrafficAirport,
   AirportTrafficCallsignCount,
+  AirportTrafficHeatmapCell,
   AirportTrafficRange,
   AirportTrafficRecentFlight,
   AirportTrafficRouteCount,
@@ -149,6 +150,10 @@ async function resolveTrafficAirports(
 }
 
 function emptyTrafficSummary(range: AirportTrafficRange): AirportTrafficSummary {
+  const cells: AirportTrafficHeatmapCell[] = [];
+  for (let dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek += 1) {
+    for (let hour = 0; hour < 24; hour += 1) cells.push({ dayOfWeek, hour, arrivals: 0, departures: 0 });
+  }
   return {
     range,
     flights: 0,
@@ -163,7 +168,18 @@ function emptyTrafficSummary(range: AirportTrafficRange): AirportTrafficSummary 
     topAircraft: [],
     topCallsigns: [],
     recentTraffic: [],
+    heatmap: { cells, maxCount: 0 },
   };
+}
+
+function heatmapCell(cells: Map<string, AirportTrafficHeatmapCell>, date: Date): AirportTrafficHeatmapCell {
+  const zoned = Temporal.Instant.fromEpochMilliseconds(date.getTime()).toZonedDateTimeISO(getAppTimezone());
+  const key = `${zoned.dayOfWeek}:${zoned.hour}`;
+  const existing = cells.get(key);
+  if (existing) return existing;
+  const created = { dayOfWeek: zoned.dayOfWeek, hour: zoned.hour, arrivals: 0, departures: 0 };
+  cells.set(key, created);
+  return created;
 }
 
 function addCount(map: Map<string, number>, key: string): void {
@@ -322,6 +338,7 @@ export async function getAirportTrafficSummary(
     const destinations = new Map<string, number>();
     const callsigns = new Map<string, number>();
     const aircraft = new Map<string, AirportTrafficAircraftCount>();
+    const heatmapCells = new Map<string, AirportTrafficHeatmapCell>();
     const activeDays = new Set<string>();
     const routeCodes = relevantFlights
       .flatMap((flight) => [flight.origin, flight.destination])
@@ -342,6 +359,9 @@ export async function getAirportTrafficSummary(
       const arrival = flightAirportMatch(flight.destination, targetCodeSet);
       if (departure) summary.departures += 1;
       if (arrival) summary.arrivals += 1;
+      const cell = heatmapCell(heatmapCells, startTime);
+      if (departure) cell.departures += 1;
+      if (arrival) cell.arrivals += 1;
 
       const callsign = normalizedText(flight.callsign);
       if (callsign) addCount(callsigns, callsign);
@@ -362,6 +382,11 @@ export async function getAirportTrafficSummary(
     summary.topAircraft = topAircraft(aircraft);
     summary.topCallsigns = topCallsigns(callsigns);
     summary.recentTraffic = recentTraffic(relevantFlights, targetCodeSet, airports);
+    const cells = emptyTrafficSummary(range).heatmap.cells.map((emptyCell) => heatmapCells.get(`${emptyCell.dayOfWeek}:${emptyCell.hour}`) ?? emptyCell);
+    summary.heatmap = {
+      cells,
+      maxCount: Math.max(...cells.map((cell) => cell.arrivals + cell.departures), 0),
+    };
     return summary;
   } catch (error) {
     if (error instanceof AirportTrafficDatabaseUnavailableError) throw error;

@@ -182,6 +182,9 @@ describe("airport traffic summary v1", () => {
     expect(result.topCallsigns).toHaveLength(5);
     expect(result.recentTraffic).toHaveLength(AIRPORT_TRAFFIC_RECENT_LIMIT);
     expect(result.recentTraffic[0]).toMatchObject({ id: 1, direction: "departure", otherAirport: { icaoCode: "EDDF" } });
+    expect(result.heatmap.cells).toHaveLength(7 * 24);
+    expect(result.heatmap.cells.find((cell) => cell.dayOfWeek === 2 && cell.hour === 10)).toMatchObject({ arrivals: 1, departures: 2 });
+    expect(result.heatmap.maxCount).toBeGreaterThan(0);
     expect(result.recentTraffic.find((item) => item.id === 4)?.otherAirport).toBeNull();
     expect(result.topDestinations.some((item) => item.airport.icaoCode === "ZZZZ")).toBe(false);
     expect(result.topDestinations).toHaveLength(AIRPORT_TRAFFIC_TOP_LIMIT);
@@ -244,6 +247,7 @@ describe("airport traffic summary v1", () => {
       topAircraft: [],
       topCallsigns: [],
       recentTraffic: [],
+      heatmap: { maxCount: 0 },
     });
     expect(readFileSync(new URL("../lib/server/airport-traffic.ts", import.meta.url), "utf8")).not.toContain("FlightPosition");
     expect(readFileSync(new URL("../lib/server/airport-traffic.ts", import.meta.url), "utf8")).not.toContain("fetch(");

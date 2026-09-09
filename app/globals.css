@@ -399,6 +399,21 @@ button { cursor: pointer; }
 .airport-traffic-recent { margin-top: 19px; padding-top: 15px; border-top: 1px solid var(--line); }
 .airport-traffic-recent-list { display: grid; gap: 0; margin: 8px 0 0; padding: 0; list-style: none; }
 .airport-traffic-recent-list li { display: grid; grid-template-columns: minmax(98px, auto) auto minmax(70px, 1fr) minmax(105px, 1fr) minmax(70px, .8fr) auto; align-items: center; gap: 8px; min-width: 0; padding: 8px 0; border-top: 1px solid rgba(153,181,207,.1); color: var(--muted); font-size: 10px; }
+.airport-traffic-heatmap { margin-top: 19px; padding-top: 15px; border-top: 1px solid var(--line); }
+.airport-traffic-heatmap-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.airport-traffic-heatmap-heading h3 { margin: 0; color: var(--mint); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+.airport-traffic-heatmap-heading p { margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.35; }
+.airport-traffic-heatmap-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; color: var(--muted); font-size: 9px; }
+.airport-traffic-heatmap-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.airport-traffic-heatmap-legend i { width: 8px; height: 8px; display: inline-block; border-radius: 2px; }
+.heatmap-legend-arrival { background: var(--mint); }
+.heatmap-legend-departure { background: var(--amber); }
+.airport-traffic-heatmap-scroll { overflow-x: auto; margin-top: 11px; padding-bottom: 4px; }
+.airport-traffic-heatmap-grid { display: grid; grid-template-columns: 30px repeat(24, minmax(12px, 1fr)); gap: 2px; min-width: 440px; align-items: center; }
+.airport-traffic-heatmap-corner, .airport-traffic-heatmap-hour, .airport-traffic-heatmap-day { color: var(--muted); font-size: 8px; font-variant-numeric: tabular-nums; }
+.airport-traffic-heatmap-hour { text-align: center; }
+.airport-traffic-heatmap-day { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.airport-traffic-heatmap-cell { width: 100%; min-height: 18px; border: 1px solid rgba(153,181,207,.08); border-radius: 2px; }
 .airport-traffic-recent-list time { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .airport-traffic-direction { color: var(--amber); font-size: 9px; font-weight: 700; text-transform: uppercase; }
 .airport-traffic-direction.arrival { color: var(--mint); }

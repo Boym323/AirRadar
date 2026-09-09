@@ -23,6 +23,13 @@ export interface AirportTrafficCallsignCount extends AirportTrafficCount {
   callsign: string;
 }
 
+export interface AirportTrafficHeatmapCell {
+  dayOfWeek: number;
+  hour: number;
+  arrivals: number;
+  departures: number;
+}
+
 export type AirportTrafficDirection = "arrival" | "departure";
 
 export interface AirportTrafficRecentFlight {
@@ -51,4 +58,8 @@ export interface AirportTrafficSummary {
   topAircraft: AirportTrafficAircraftCount[];
   topCallsigns: AirportTrafficCallsignCount[];
   recentTraffic: AirportTrafficRecentFlight[];
+  heatmap: {
+    cells: AirportTrafficHeatmapCell[];
+    maxCount: number;
+  };
 }
