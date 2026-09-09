@@ -6,12 +6,14 @@ import { AirportMap } from "@/components/airport-map";
 import { AirportTrafficSummary } from "@/components/airport-traffic-summary";
 import { AirportWeatherPanel } from "@/components/airport-weather";
 import { formatCoordinate, t } from "@/lib/i18n";
+import { formatDistance, formatTrack } from "@/lib/i18n";
+import type { NearbyAirport } from "@/lib/server/nearby-airports";
 
 function value(value: string | null): string {
   return value || t.common.emptyValue;
 }
 
-export function AirportDetail({ airport }: { airport: Airport }) {
+export function AirportDetail({ airport, nearbyAirports = [] }: { airport: Airport; nearbyAirports?: NearbyAirport[] }) {
   const airportCodes = airport.iataCode ? `${airport.iataCode} · ${airport.icaoCode}` : airport.icaoCode;
   const location = [airport.city, airport.country].filter(Boolean).join(" · ");
 
@@ -38,6 +40,20 @@ export function AirportDetail({ airport }: { airport: Airport }) {
         </section>
 
         <AirportTrafficSummary airport={airport} />
+
+        <section className="airport-card airport-nearby-card" aria-labelledby="airport-nearby-title">
+          <h2 id="airport-nearby-title">{t.airport.nearbyTitle}</h2>
+          <p className="airport-nearby-description">{t.airport.nearbyDescription}</p>
+          {nearbyAirports.length === 0 ? <div className="airport-traffic-message">{t.airport.nearbyEmpty}</div> : <ol className="airport-nearby-list">
+            {nearbyAirports.map((item) => <li key={item.airport.icaoCode}>
+              <Link className="airport-nearby-name" href={`/airports/${encodeURIComponent(item.airport.icaoCode)}`}>
+                <span>{item.airport.iataCode ? `${item.airport.iataCode} · ` : ""}{item.airport.icaoCode}</span>
+                <small>{item.airport.name}</small>
+              </Link>
+              <span className="airport-nearby-meta"><span>{formatDistance(item.distanceKm)}</span><span>{formatTrack(item.bearing)}</span></span>
+            </li>)}
+          </ol>}
+        </section>
 
         <section className="airport-card" aria-labelledby="airport-weather-title">
           <h2 id="airport-weather-title">{t.weather.title}</h2>

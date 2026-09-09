@@ -343,6 +343,9 @@ export const cs = {
     country: "Stát",
     coordinates: "Souřadnice",
     map: "Mapa letiště",
+    nearbyTitle: "Nejbližší letiště",
+    nearbyDescription: "Nejbližší letiště z lokálního katalogu, měřeno od tohoto letiště.",
+    nearbyEmpty: "Nejsou k dispozici žádná okolní letiště.",
   },
   airportTraffic: {
     title: "Provoz zachycený přijímačem",

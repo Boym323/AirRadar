@@ -345,6 +345,9 @@ export const en = {
     country: "Country",
     coordinates: "Coordinates",
     map: "Airport map",
+    nearbyTitle: "Nearby airports",
+    nearbyDescription: "Closest airports in the local catalog, measured from this airport.",
+    nearbyEmpty: "No nearby airports are available.",
   },
   airportTraffic: {
     title: "Observed receiver traffic",

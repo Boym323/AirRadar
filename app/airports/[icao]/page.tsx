@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AirportDetail } from "@/components/airport-detail";
 import { resolveAirportDetail } from "@/lib/server/airport-detail";
+import { getNearbyAirports } from "@/lib/server/nearby-airports";
 
 export const dynamic = "force-dynamic";
 
@@ -17,5 +18,6 @@ export default async function AirportPage({ params }: { params: Promise<{ icao: 
   const { icao } = await params;
   const airport = await resolveAirportDetail(icao);
   if (!airport) notFound();
-  return <AirportDetail airport={airport} />;
+  const nearbyAirports = await getNearbyAirports(airport);
+  return <AirportDetail airport={airport} nearbyAirports={nearbyAirports} />;
 }
