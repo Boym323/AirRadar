@@ -419,19 +419,20 @@ export class ReceiverStatistics {
     range: ReceiverStatisticsRange,
   ): Promise<ReceiverStatisticsRangeResponse> {
     const current = this.getResponse(currentAircraft, messagesPerSecond);
-    const period = await getReceiverStatisticsRange({
+    const rangeResponse = await getReceiverStatisticsRange({
       range,
       now: this.clock(),
       timezone: this.timezone,
       currentDay: this.getCurrentDaySnapshot(),
     });
+    const { comparison, ...period } = rangeResponse;
     return {
       ...current,
       coverage: period.coverage,
       coverageSummary: period.coverageSummary,
       todayCoverageSummary: current.coverageSummary,
       period,
-      comparison: period.comparison,
+      comparison,
     };
   }
 
