@@ -89,9 +89,9 @@ resolver cache, weather cache, photo metadata cache, reception-record
 baselines, and alert deduplication. Tar1090 metadata is indexed in PostgreSQL
 and only a bounded hot LRU is held in RAM; synchronization streams and
 batch-writes the catalog without materializing the dataset in application
-memory. The local tar1090 prefix-block fallback is also bounded to a 4096-entry
-15-minute LRU/TTL cache, so repeated source lookups cannot grow process memory
-without a bound. The
+memory. The local tar1090 prefix-block fallback is also bounded to 4,096
+entries, 64 MiB, and a 15-minute LRU/TTL window, so repeated source lookups
+cannot grow process memory without a practical byte bound. The
 browser's watchlist is stored in that browser's `localStorage`; server alert
 rules are stored in the runtime state directory (`/var/lib/airradar/alerts.json`
 in production), not in PostgreSQL. Alert history is stored as append-only safe
@@ -119,8 +119,9 @@ overlays. Route visualization is a separate Route V2 namespace. See
 for the complete ownership list and cleanup contract.
 
 `/api/system/status` exposes sanitized process RSS/heap/external/ArrayBuffer
-metrics, the active SSE count and limit, metadata cache counts, and the cgroup
-memory values for the current process cgroup when the host exposes them.
+metrics, kernel RSS splits, the active SSE count and limit, metadata cache
+counts, the byte-bounded tar1090 fallback cache, and the cgroup memory values
+for the current process cgroup when the host exposes them.
 
 Recap pages are page-scoped reads. They merge the existing daily receiver
 aggregates with database-side `Flight` aggregates and bounded first/latest

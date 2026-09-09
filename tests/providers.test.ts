@@ -3,7 +3,7 @@ import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { AircraftMetadataCatalog, parseAircraftMetadataCsv } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
-import { Tar1090DbProvider } from "@/lib/server/tar1090-db-provider";
+import { TAR1090_BLOCK_CACHE_MAX_BYTES, Tar1090DbProvider } from "@/lib/server/tar1090-db-provider";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -211,6 +211,33 @@ describe("aircraft metadata catalog", () => {
     await expect(provider.getMetadata("4BAACB")).resolves.toBeNull();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(provider.getDiagnostics()).toEqual({ blockCacheSize: 1, blockCacheLimit: 4_096 });
+    expect(provider.getDiagnostics()).toMatchObject({
+      blockCacheSize: 1,
+      blockCacheLimit: 4_096,
+      blockCacheBytesLimit: 64 * 1024 * 1024,
+    });
+    expect(provider.getDiagnostics().blockCacheBytes).toBeGreaterThan(0);
+  });
+
+  it("enforces a byte bound when many large tar1090 blocks are requested", async () => {
+    const filler = "x".repeat(2 * 1024 * 1024);
+    const fetchMock = vi.fn().mockImplementation((input: string) => {
+      if (input.endsWith("/")) return new Response('let databaseFolder = "db-test";');
+      const blockKey = input.match(/\/([^/]+)\.js$/)?.[1] ?? "";
+      const payload = blockKey.length === 6
+        ? { "": ["OK-TEST", "A320", "00", "Airbus A320"], filler: `${filler}${blockKey}` }
+        : { children: [..."0123456789ABCDEF"].map((suffix) => `${blockKey}${suffix}`), filler: `${filler}${blockKey}` };
+      return new Response(JSON.stringify(payload));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new Tar1090DbProvider("http://receiver.local/tar1090");
+    for (let index = 0; index < 40; index += 1) {
+      await expect(provider.getMetadata(index.toString(16).padStart(6, "0"))).resolves.toMatchObject({ registration: "OK-TEST" });
+    }
+
+    const diagnostics = provider.getDiagnostics();
+    expect(diagnostics.blockCacheBytes).toBeLessThanOrEqual(TAR1090_BLOCK_CACHE_MAX_BYTES);
+    expect(diagnostics.blockCacheSize).toBeLessThan(45);
   });
 });

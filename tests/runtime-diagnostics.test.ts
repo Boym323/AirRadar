@@ -14,6 +14,9 @@ describe("runtime memory diagnostics", () => {
   it("returns safe process memory fields without requiring cgroup support", () => {
     const diagnostics = readRuntimeDiagnostics();
     expect(diagnostics.processRssBytes).toBeGreaterThan(0);
+    expect(diagnostics.processRssAnonBytes).toBeGreaterThan(0);
+    expect(diagnostics.processRssFileBytes).toBeGreaterThanOrEqual(0);
+    expect(diagnostics.processPrivateDirtyBytes).toBeGreaterThan(0);
     expect(diagnostics.heapUsedBytes).toBeGreaterThan(0);
     expect(diagnostics.activeSseClients).toBeGreaterThanOrEqual(0);
   });

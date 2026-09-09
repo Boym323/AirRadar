@@ -1,5 +1,5 @@
 import type { Aircraft, AircraftEnrichment } from "@/lib/aircraft/types";
-import type { ProviderRegistry } from "@/lib/server/provider";
+import type { AircraftMetadataDiagnostics, ProviderRegistry } from "@/lib/server/provider";
 
 export const ENRICHMENT_TTLS = {
   metadataMs: 24 * 60 * 60_000,
@@ -154,10 +154,16 @@ export class EnrichmentService {
     return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute || this.providers.flightPlan);
   }
 
-  getDiagnostics(): { providerCacheEntries: number; providerCacheLimit: number; metadata: { hotCacheSize: number; hotCacheLimit: number; catalogRecordCount: number | null } | null } {
+  getDiagnostics(): { providerCacheEntries: number; providerCacheLimit: number; metadata: AircraftMetadataDiagnostics | null } {
     const metadataProvider = this.providers.aircraftMetadata;
-    const diagnostics = metadataProvider && "getDiagnostics" in metadataProvider && typeof metadataProvider.getDiagnostics === "function"
-      ? metadataProvider.getDiagnostics() as { hotCacheSize: number; hotCacheLimit: number; catalogRecordCount: number | null }
+    const candidate = metadataProvider && "getDiagnostics" in metadataProvider && typeof metadataProvider.getDiagnostics === "function"
+      ? metadataProvider.getDiagnostics()
+      : null;
+    const diagnostics = candidate && typeof candidate === "object"
+      && typeof candidate.hotCacheSize === "number"
+      && typeof candidate.hotCacheLimit === "number"
+      && (candidate.catalogRecordCount === null || typeof candidate.catalogRecordCount === "number")
+      ? candidate as AircraftMetadataDiagnostics
       : null;
     return {
       providerCacheEntries: this.cache.size(),

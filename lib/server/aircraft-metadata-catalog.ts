@@ -364,12 +364,26 @@ export class AircraftMetadataCatalog implements AircraftMetadataProvider {
     this.hotCache.set(hex, record);
   }
 
-  getDiagnostics(): { hotCacheSize: number; hotCacheLimit: number; syncInFlight: boolean; catalogRecordCount: number | null } {
+  getDiagnostics(): {
+    hotCacheSize: number;
+    hotCacheLimit: number;
+    syncInFlight: boolean;
+    catalogRecordCount: number | null;
+    fallbackCacheSize: number | null;
+    fallbackCacheLimit: number | null;
+    fallbackCacheBytes: number | null;
+    fallbackCacheBytesLimit: number | null;
+  } {
+    const fallbackDiagnostics = this.fallback?.getDiagnostics() ?? null;
     return {
       hotCacheSize: this.hotCache.size,
       hotCacheLimit: METADATA_HOT_CACHE_MAX_ENTRIES,
       syncInFlight: this.syncInFlight !== null,
       catalogRecordCount: this.storedRecordCount,
+      fallbackCacheSize: fallbackDiagnostics?.blockCacheSize ?? null,
+      fallbackCacheLimit: fallbackDiagnostics?.blockCacheLimit ?? null,
+      fallbackCacheBytes: fallbackDiagnostics?.blockCacheBytes ?? null,
+      fallbackCacheBytesLimit: fallbackDiagnostics?.blockCacheBytesLimit ?? null,
     };
   }
 

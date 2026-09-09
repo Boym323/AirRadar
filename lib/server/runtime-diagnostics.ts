@@ -3,6 +3,9 @@ import { getActiveSseClientCount, MAX_SSE_CLIENTS } from "@/lib/server/sse-capac
 
 export interface RuntimeDiagnostics {
   processRssBytes: number;
+  processRssAnonBytes: number | null;
+  processRssFileBytes: number | null;
+  processPrivateDirtyBytes: number | null;
   heapUsedBytes: number;
   heapTotalBytes: number;
   externalBytes: number;
@@ -16,6 +19,10 @@ export interface RuntimeDiagnostics {
   metadataHotCacheSize: number | null;
   metadataHotCacheLimit: number | null;
   metadataCatalogRecordCount: number | null;
+  metadataFallbackCacheSize: number | null;
+  metadataFallbackCacheLimit: number | null;
+  metadataFallbackCacheBytes: number | null;
+  metadataFallbackCacheBytesLimit: number | null;
   providerCacheEntries: number | null;
   providerCacheLimit: number | null;
 }
@@ -48,6 +55,34 @@ function processCgroupText(): string | null {
   }
 }
 
+function procMemoryValue(text: string, key: string): number | null {
+  const match = text.match(new RegExp(`^${key}:\\s+(\\d+)\\s+kB$`, "m"));
+  if (!match) return null;
+  const value = Number(match[1]) * 1024;
+  return Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function readProcMemory(): Pick<RuntimeDiagnostics, "processRssAnonBytes" | "processRssFileBytes" | "processPrivateDirtyBytes"> {
+  let status: string;
+  try {
+    status = readFileSync("/proc/self/status", "utf8");
+  } catch {
+    return { processRssAnonBytes: null, processRssFileBytes: null, processPrivateDirtyBytes: null };
+  }
+
+  let processPrivateDirtyBytes: number | null = null;
+  try {
+    processPrivateDirtyBytes = procMemoryValue(readFileSync("/proc/self/smaps_rollup", "utf8"), "Private_Dirty");
+  } catch {
+    // smaps_rollup is optional in restricted containers.
+  }
+  return {
+    processRssAnonBytes: procMemoryValue(status, "RssAnon"),
+    processRssFileBytes: procMemoryValue(status, "RssFile"),
+    processPrivateDirtyBytes,
+  };
+}
+
 function safeCgroupPath(value: string): string | null {
   const path = value.trim();
   if (!path || !path.startsWith("/") || path.includes("..") || !/^\/[A-Za-z0-9._/-]+$/.test(path)) return null;
@@ -73,6 +108,7 @@ export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}):
   const memory = process.memoryUsage();
   return {
     processRssBytes: nonNegative(memory.rss),
+    ...readProcMemory(),
     heapUsedBytes: nonNegative(memory.heapUsed),
     heapTotalBytes: nonNegative(memory.heapTotal),
     externalBytes: nonNegative(memory.external),
@@ -86,6 +122,10 @@ export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}):
     metadataHotCacheSize: null,
     metadataHotCacheLimit: null,
     metadataCatalogRecordCount: null,
+    metadataFallbackCacheSize: null,
+    metadataFallbackCacheLimit: null,
+    metadataFallbackCacheBytes: null,
+    metadataFallbackCacheBytesLimit: null,
     providerCacheEntries: null,
     providerCacheLimit: null,
     ...extra,

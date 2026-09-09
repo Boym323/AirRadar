@@ -6,7 +6,7 @@ import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { AircraftMetadataCatalog } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
-import type { AircraftMetadataProvider, AircraftProvider, FlightRouteProvider, ProviderRegistry } from "@/lib/server/provider";
+import type { AircraftMetadataDiagnostics, AircraftMetadataProvider, AircraftProvider, FlightRouteProvider, ProviderRegistry } from "@/lib/server/provider";
 import { DatabaseAtcSectorProvider, getStoredAtcData, SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS, SampleAtcSectorProvider } from "@/lib/server/atc-data";
 import type { AtcDataResponse } from "@/lib/atc/types";
 
@@ -43,6 +43,21 @@ class CombinedMetadataProvider implements AircraftMetadataProvider {
     }
     return merged;
   }
+
+  getDiagnostics(): AircraftMetadataDiagnostics | null {
+    for (const provider of this.providers) {
+      const candidate = "getDiagnostics" in provider && typeof provider.getDiagnostics === "function"
+        ? provider.getDiagnostics()
+        : null;
+      if (candidate && typeof candidate === "object"
+        && typeof candidate.hotCacheSize === "number"
+        && typeof candidate.hotCacheLimit === "number"
+        && (candidate.catalogRecordCount === null || typeof candidate.catalogRecordCount === "number")) {
+        return candidate as AircraftMetadataDiagnostics;
+      }
+    }
+    return null;
+  }
 }
 
 /** Keeps the shared ADSBDB metadata/route concurrency budget when both sources are enabled. */
@@ -56,6 +71,10 @@ class CombinedAdsbDbProvider implements AircraftMetadataProvider, FlightRoutePro
 
   getMetadata(icaoHex: string): Promise<AircraftMetadata | null> {
     return this.metadata.getMetadata(icaoHex);
+  }
+
+  getDiagnostics(): AircraftMetadataDiagnostics | null {
+    return this.metadata.getDiagnostics();
   }
 
   getRoute(callsign: string, observedAt: Date): Promise<FlightRoute | null> {

@@ -16,6 +16,16 @@ export interface AircraftMetadataProvider {
   getMetadata(icaoHex: string): Promise<AircraftMetadata | null>;
 }
 
+export interface AircraftMetadataDiagnostics {
+  hotCacheSize: number;
+  hotCacheLimit: number;
+  catalogRecordCount: number | null;
+  fallbackCacheSize?: number;
+  fallbackCacheLimit?: number;
+  fallbackCacheBytes?: number;
+  fallbackCacheBytesLimit?: number;
+}
+
 export interface FlightRouteProvider {
   readonly name: string;
   getRoute(callsign: string, observedAt: Date): Promise<FlightRoute | null>;

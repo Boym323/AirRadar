@@ -7,6 +7,7 @@ type Tar1090DatabaseRecord = unknown[];
 const DATABASE_FOLDER_TTL_MS = 15 * 60_000;
 export const TAR1090_BLOCK_CACHE_MAX_ENTRIES = 4_096;
 export const TAR1090_BLOCK_CACHE_TTL_MS = 15 * 60_000;
+export const TAR1090_BLOCK_CACHE_MAX_BYTES = 64 * 1024 * 1024;
 
 function endpoint(baseUrl: string, path: string): string {
   const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -43,10 +44,19 @@ export class Tar1090DbProvider implements AircraftMetadataProvider {
   private databaseFolder: string | null | undefined;
   private databaseFolderExpiresAt = 0;
   private databaseFolderRequest: Promise<string | null> | null = null;
-  private readonly blockCache = new BoundedTtlLruCache<Promise<Tar1090DatabaseBlock | null>>(
+  private readonly blockCache = new BoundedTtlLruCache<Tar1090DatabaseBlock>(
     TAR1090_BLOCK_CACHE_MAX_ENTRIES,
     TAR1090_BLOCK_CACHE_TTL_MS,
+    TAR1090_BLOCK_CACHE_MAX_BYTES,
+    (block) => {
+      try {
+        return Buffer.byteLength(JSON.stringify(block));
+      } catch {
+        return 1;
+      }
+    },
   );
+  private readonly blockInFlight = new Map<string, Promise<Tar1090DatabaseBlock | null>>();
 
   constructor(private readonly baseUrl: string) {}
 
@@ -117,17 +127,29 @@ export class Tar1090DbProvider implements AircraftMetadataProvider {
   private loadBlock(folder: string, blockKey: string): Promise<Tar1090DatabaseBlock | null> {
     const cacheKey = `${folder}/${blockKey}`;
     const cached = this.blockCache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) return Promise.resolve(cached);
+    const inFlight = this.blockInFlight.get(cacheKey);
+    if (inFlight) return inFlight;
 
-    const request = this.fetchBlock(folder, blockKey).catch(() => null);
-    this.blockCache.set(cacheKey, request);
+    const request = this.fetchBlock(folder, blockKey)
+      .catch(() => null)
+      .then((block) => {
+        if (block) this.blockCache.set(cacheKey, block);
+        return block;
+      })
+      .finally(() => {
+        this.blockInFlight.delete(cacheKey);
+      });
+    this.blockInFlight.set(cacheKey, request);
     return request;
   }
 
-  getDiagnostics(): { blockCacheSize: number; blockCacheLimit: number } {
+  getDiagnostics(): { blockCacheSize: number; blockCacheLimit: number; blockCacheBytes: number; blockCacheBytesLimit: number } {
     return {
       blockCacheSize: this.blockCache.size,
       blockCacheLimit: TAR1090_BLOCK_CACHE_MAX_ENTRIES,
+      blockCacheBytes: this.blockCache.weightBytes,
+      blockCacheBytesLimit: TAR1090_BLOCK_CACHE_MAX_BYTES,
     };
   }
 
