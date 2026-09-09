@@ -209,3 +209,9 @@ Changes since v1.0.0-rc.1:
 
 - fix: cap tar1090 fallback cache by bytes (4a84ee1b)
 - test: support release candidate production gates (f45e98c1)
+
+## [1.0.0] - 2026-09-09
+
+Changes since v1.0.0-rc.2:
+
+- No user-facing changes.
