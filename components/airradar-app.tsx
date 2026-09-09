@@ -107,8 +107,8 @@ const MAP_STYLE: StyleSpecification = {
     },
   },
   layers: [
-    { id: "background", type: "background", paint: { "background-color": "#091522" } },
-    { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.62, "raster-saturation": -0.74, "raster-contrast": 0.16, "raster-brightness-min": 0.06, "raster-brightness-max": 0.9 } },
+    { id: "background", type: "background", paint: { "background-color": "#07111d" } },
+    { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.44, "raster-saturation": -1, "raster-contrast": 0.22, "raster-brightness-min": 0.025, "raster-brightness-max": 0.68, "raster-hue-rotate": 8 } },
   ],
 };
 
@@ -966,6 +966,20 @@ export function AirRadarApp() {
     || search.trim() !== ""
     || distanceFilter !== "all"
     || watchlistOnly;
+  const activeFilterCount = [
+    mapFilters.status !== "all",
+    mapFilters.minAltitude.trim() !== "",
+    mapFilters.maxAltitude.trim() !== "",
+    mapFilters.callsign.trim() !== "",
+    mapFilters.registration.trim() !== "",
+    mapFilters.icaoHex.trim() !== "",
+    mapFilters.aircraftType.trim() !== "",
+    mapFilters.operator.trim() !== "",
+    mapFilters.emergencyOnly,
+    search.trim() !== "",
+    distanceFilter !== "all",
+    watchlistOnly,
+  ].filter(Boolean).length;
 
   const isDemo = snapshot.provider === "mock";
   const hasSourceSnapshot = snapshot.lastSourceUpdate !== null;
@@ -999,13 +1013,20 @@ export function AirRadarApp() {
         </details>
         <Link className="mobile-system-link" href="/system" aria-label={t.system.title}>⚙</Link>
         <nav className="topbar-nav" aria-label={t.statistics.navigation}>
-          <Link href="/alerts">{t.alerts.title}</Link>
-          <Link href="/recap/daily">{t.recap.daily}</Link>
-          <Link href="/watchlist">{t.watchlist.title}</Link>
-          <Link href="/fleet">{t.fleet.title}</Link>
-          <Link href="/statistics">{t.statistics.title}</Link>
-          <Link href="/history">{t.history.title}</Link>
-          <Link href="/system">{t.system.title}</Link>
+          <Link className="topbar-nav-primary" href="/">{t.radar.liveAirPicture}</Link>
+          <Link className="topbar-nav-primary" href="/history">{t.history.title}</Link>
+          <Link className="topbar-nav-primary" href="/statistics">{t.statistics.title}</Link>
+          <Link className="topbar-nav-primary" href="/fleet">{t.fleet.title}</Link>
+          <details className="topbar-nav-more">
+            <summary>{t.common.more}</summary>
+            <div>
+              <Link href="/alerts">{t.alerts.title}</Link>
+              <Link href="/recap/daily">{t.recap.daily}</Link>
+              <Link href="/recap/weekly">{t.recap.weekly}</Link>
+              <Link href="/watchlist">{t.watchlist.title}</Link>
+              <Link href="/system">{t.system.title}</Link>
+            </div>
+          </details>
         </nav>
         <div className="topbar-meta">
           <span className="topbar-receiver"><span className="topbar-receiver-label">{t.status.receiverLabel}</span><span className="topbar-receiver-name">{snapshot.receiver.name}</span></span>
@@ -1086,8 +1107,8 @@ export function AirRadarApp() {
             </div>
             <div className="radar-options">
               <button type="button" className="filter-button" aria-expanded={filtersOpen} aria-controls="map-filters-panel" onClick={() => setFiltersOpen((value) => !value)}>
-                <span>{t.filters.title}</span>
-                {hasActiveMapFilters && <span className="filter-active-dot" aria-label={t.filters.reset}>●</span>}
+                <span>{t.filters.title}{hasActiveMapFilters ? ` · ${activeFilterCount}` : ""}</span>
+                {hasActiveMapFilters && <span className="filter-active-dot" aria-label={t.filters.reset}>ACTIVE</span>}
               </button>
               {filtersOpen && <div id="map-filters-panel" className="map-filters-panel" role="region" aria-label={t.filters.title}>
                 <fieldset className="map-filter-group">
@@ -1165,11 +1186,12 @@ export function AirRadarApp() {
                 {snapshot.aircraft.length === 0 ? t.radar.waitingForTrafficDescription : t.radar.noMatchingAircraftDescription}
               </div>
             ) : filteredAircraft.map((aircraft) => (
-              <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""}`} aria-pressed={selectedHex === aircraft.icaoHex} onClick={() => selectAircraft(aircraft.icaoHex)}>
+              <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""} ${aircraft.emergency ? "emergency" : ""}`} aria-pressed={selectedHex === aircraft.icaoHex} onClick={() => selectAircraft(aircraft.icaoHex)}>
                 <span className="aircraft-row-icon"><AircraftIcon aircraft={aircraft} /></span>
                 <span className="aircraft-row-main">
-                  <span className="aircraft-row-name">{labelForAircraft(aircraft)} {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge">{aircraft.emergency}</span>} <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}</span></span>
-                  <span className="aircraft-row-meta"><span>{aircraft.icaoHex}</span><span>{formatAltitude(aircraft.altitude)}</span><span>{formatSpeed(aircraft.groundSpeed)}</span><span>{formatTrack(aircraft.track)}</span></span>
+                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
+                  <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}{aircraft.registration || aircraft.enrichment?.metadata?.registration ? ` · ${aircraft.registration || aircraft.enrichment?.metadata?.registration}` : ""}</span>
+                  <span className="aircraft-row-meta"><span><b>{formatAltitude(aircraft.altitude)}</b></span><span><b>{formatSpeed(aircraft.groundSpeed)}</b></span><span><b>{formatTrack(aircraft.track)}</b></span><span className="aircraft-row-hex">{aircraft.icaoHex}</span></span>
                 </span>
                 <span className="aircraft-row-distance">{formatDistance(aircraft.distanceKm)}</span>
               </button>
@@ -1181,13 +1203,22 @@ export function AirRadarApp() {
           {(selectedAircraft || selectedDatabaseAircraft) && (
             <div className="detail-panel" key={selectedIdentity}>
               <div className="detail-heading">
-                <div><div className="detail-callsign">{selectedIdentity}</div>
-                  <div className="detail-registration">{selectedAircraft ? `${t.history.flight}: ${selectedAircraft.callsign || t.history.unknownCallsign}` : t.aircraft.notCurrentlyInRange}</div>
+                <div><div className="detail-eyebrow">{t.history.aircraftDetail}</div><div className="detail-callsign">{selectedAircraft ? labelForAircraft(selectedAircraft) : selectedIdentity}</div>
+                  <div className="detail-registration">{selectedAircraft ? `${selectedAircraft.icaoHex} · ${selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || t.common.emptyValue}` : t.aircraft.notCurrentlyInRange}</div>
                 </div>
                 <button className="close-button" onClick={() => setSelectedHex(null)} aria-label={t.history.closeAircraftDetails}>×</button>
               </div>
               {selectedAircraft ? <div className="detail-content">
-              {selectedAircraft.enrichment?.route && <div className="detail-route"><RouteContextRow aircraft={selectedAircraft} route={selectedAircraft.enrichment.route} /></div>}
+              <div className="detail-hero">
+                {selectedAircraft.enrichment?.route && <div className="detail-hero-route"><RouteContextRow aircraft={selectedAircraft} route={selectedAircraft.enrichment.route} /></div>}
+                <div className="detail-hero-type">{selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || selectedAircraft.enrichment?.metadata?.icaoTypeCode || selectedAircraft.aircraftType || t.aircraft.unknownType}</div>
+                <div className="detail-hero-metrics">
+                  <div><strong>{formatAltitude(selectedAircraft.altitude)}</strong><span>{t.aircraft.altitude}</span></div>
+                  <div><strong>{formatSpeed(selectedAircraft.groundSpeed)}</strong><span>{t.aircraft.groundSpeed}</span></div>
+                  <div><strong>{formatTrack(selectedAircraft.track)}</strong><span>{t.aircraft.track}</span></div>
+                  <div><strong>{selectedAircraft.verticalRate === null ? t.common.emptyValue : `${selectedAircraft.verticalRate > 0 ? "+" : ""}${formatNumber(selectedAircraft.verticalRate)} ft/min`}</strong><span>{t.aircraft.verticalRate}</span></div>
+                </div>
+              </div>
               {selectedAircraft.enrichment?.route?.originAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.originAirport} />}
               {selectedAircraft.enrichment?.route?.destinationAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.destinationAirport} />}
               <DetailSection title={t.history.aircraftDetail}>

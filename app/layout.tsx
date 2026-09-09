@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
@@ -17,7 +19,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="cs">
+    <html lang="cs" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
         {children}
         <PwaRegister />

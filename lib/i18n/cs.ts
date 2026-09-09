@@ -7,6 +7,7 @@ export const cs = {
     unavailable: "Nedostupné",
     notReported: "Neuvedeno",
     unlimited: "neomezená",
+    more: "Další",
   },
   brand: {
     subtitle: "OSOBNÍ PŘEHLED O PROVOZU ADS-B",

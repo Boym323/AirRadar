@@ -285,6 +285,8 @@ export function AircraftDetailV2({
   const manufacturer = metadata?.manufacturer ?? databaseAircraft?.manufacturer;
   const operator = metadata?.operator ?? databaseAircraft?.operator;
   const registrationCountry = metadata?.registrationCountryCode ?? metadata?.registrationCountry ?? databaseAircraft?.registrationCountryCode ?? databaseAircraft?.registrationCountry;
+  const callsign = liveAircraft?.callsign || t.history.unknownCallsign;
+  const route = liveAircraft?.enrichment?.route ?? null;
   const backLink = backHref === "/history" ? "/history" : "/";
   const watchlistHref = icaoHex === t.common.emptyValue ? "/watchlist" : aircraftWatchlistHref(icaoHex, registration);
 
@@ -302,7 +304,22 @@ export function AircraftDetailV2({
           {detail?.logbook.isRare && <div className="aircraft-logbook-badge rare" title={t.logbook.rareAircraftReason(detail.lifetimeStats.flightCount)}>{t.logbook.rareAircraft}</div>}
           {detail?.logbook.isReturning && <div className="aircraft-logbook-badge returning" title={t.logbook.returningAircraftReason(detail.logbook.returningGapDays ?? 0)}>{t.logbook.returningAircraft}</div>}
         </div>
+        <div className="aircraft-page-identity"><span>{icaoHex}</span>{registration && <span>{registration}</span>}{aircraftType && <span>{aircraftType}</span>}</div>
+        {route && <div className="aircraft-page-route" aria-label={t.route.originDestination}>
+          <span>{route.originAirport?.iataCode || route.originAirport?.icaoCode || route.origin || t.common.emptyValue}</span>
+          <span aria-hidden="true">→</span>
+          <strong>{callsign}</strong>
+          <span aria-hidden="true">→</span>
+          <span>{route.destinationAirport?.iataCode || route.destinationAirport?.icaoCode || route.destination || t.common.emptyValue}</span>
+        </div>}
       </header>
+
+      {liveAircraft && <section className="aircraft-live-hero" aria-label={t.aircraft.liveAdsb}>
+        <div><strong>{formatAltitude(liveAircraft.altitude)}</strong><span>{t.aircraft.altitude}</span></div>
+        <div><strong>{formatSpeed(liveAircraft.groundSpeed)}</strong><span>{t.aircraft.groundSpeed}</span></div>
+        <div><strong>{formatTrack(liveAircraft.track)}</strong><span>{t.aircraft.track}</span></div>
+        <div><strong>{liveAircraft.verticalRate === null ? t.common.emptyValue : `${liveAircraft.verticalRate > 0 ? "+" : ""}${formatNumber(liveAircraft.verticalRate)} ft/min`}</strong><span>{t.aircraft.verticalRate}</span></div>
+      </section>}
 
       <div className="aircraft-page-layout">
         <div className="aircraft-primary-column">

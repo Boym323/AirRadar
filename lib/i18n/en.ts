@@ -9,6 +9,7 @@ export const en = {
     unavailable: "Unavailable",
     notReported: "Not reported",
     unlimited: "unlimited",
+    more: "More",
   },
   brand: {
     subtitle: "PERSONAL ADS-B SITUATIONAL AWARENESS",
