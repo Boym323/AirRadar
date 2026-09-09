@@ -69,6 +69,18 @@ describe("AdsbLolProvider", () => {
     expect(value.getDiagnostics().status).toBe("online");
   });
 
+  it("does not count stale network positions as positioned aircraft", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(payload([
+      aircraft({ seen: 0.2, seen_pos: 90 }),
+    ])), { status: 200 })));
+    const value = provider();
+
+    const snapshot = await value.getSnapshot();
+
+    expect(snapshot.aircraft).toHaveLength(1);
+    expect(value.getDiagnostics()).toMatchObject({ aircraftCount: 1, positionedAircraftCount: 0 });
+  });
+
   it("skips malformed aircraft entries and invalid coordinates", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(payload([
       aircraft(),

@@ -123,6 +123,7 @@ function aircraftDataSourceLabel(aircraft: AircraftView): string {
 }
 
 function aircraftPositionSourceLabel(aircraft: AircraftView): string {
+  if (aircraft.lat === null || aircraft.lon === null) return t.common.emptyValue;
   const positionOrigin = aircraft.provenance?.positionOrigin ?? aircraft.origin;
   const originLabel = positionOrigin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver;
   return `${originLabel} · ${aircraft.provenance?.positionSource ?? aircraft.source}`;

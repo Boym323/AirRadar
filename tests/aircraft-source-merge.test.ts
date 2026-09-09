@@ -89,6 +89,52 @@ describe("aircraft source merge", () => {
     expect(value?.provenance).toMatchObject({ seenLocal: true, seenNetwork: true, positionOrigin: "adsblol" });
   });
 
+  it("keeps a live network-only aircraft but clears its stale position", () => {
+    const staleNetwork = make("ABC123", "adsblol", { seen: 1, seen_pos: 90, lat: 50.12, lon: 14.12 });
+    const value = mergeAircraftObservations(undefined, staleNetwork, receiver, options);
+
+    expect(value).toMatchObject({
+      icaoHex: "ABC123",
+      lat: null,
+      lon: null,
+      origin: "adsblol",
+      seenSeconds: 1,
+      seenPosSeconds: 90,
+    });
+    expect(value?.provenance).toMatchObject({
+      seenLocal: false,
+      seenNetwork: true,
+      positionOrigin: null,
+      positionSource: "UNKNOWN",
+    });
+  });
+
+  it("uses a fresh network-only position and reports network provenance", () => {
+    const freshNetwork = make("ABC123", "adsblol", { seen: 1, seen_pos: 2, lat: 50.12, lon: 14.12 });
+    const value = mergeAircraftObservations(undefined, freshNetwork, receiver, options);
+
+    expect(value).toMatchObject({ lat: 50.12, lon: 14.12, origin: "adsblol" });
+    expect(value?.provenance).toMatchObject({ positionOrigin: "adsblol", positionSource: "MLAT" });
+  });
+
+  it("keeps local last-known position semantics when both positions are stale", () => {
+    const staleLocal = make("ABC123", "local", { seen: 1, seen_pos: 20, lat: 50.11, lon: 14.11 });
+    const staleNetwork = make("ABC123", "adsblol", { seen: 1, seen_pos: 90, lat: 50.12, lon: 14.12 });
+    const value = mergeAircraftObservations(staleLocal, staleNetwork, receiver, options);
+
+    expect(value).toMatchObject({ lat: 50.11, lon: 14.11, origin: "local" });
+    expect(value?.provenance).toMatchObject({ positionOrigin: "local", positionSource: "ADS-B" });
+  });
+
+  it("does not use stale network coordinates when local position is missing", () => {
+    const local = make("ABC123", "local", { lat: null, lon: null, seen: 1, seen_pos: null });
+    const staleNetwork = make("ABC123", "adsblol", { seen: 1, seen_pos: 90, lat: 50.12, lon: 14.12 });
+    const value = mergeAircraftObservations(local, staleNetwork, receiver, options);
+
+    expect(value).toMatchObject({ lat: null, lon: null, origin: "local" });
+    expect(value?.provenance).toMatchObject({ positionOrigin: null, positionSource: "UNKNOWN" });
+  });
+
   it("keeps local-only aircraft when their position is stale or unavailable", () => {
     const localAircraft = [
       make("AAA001", "local", { seen: 0.5, seen_pos: 0.5 }),

@@ -200,11 +200,12 @@ export function mergeAircraftObservations(
   // Aircraft existence is based on an observation, not on whether that
   // observation currently has a fresh usable position. Position arbitration
   // is a separate concern: use a fresh candidate when available, otherwise
-  // preserve the local observation's last known position (or the network
-  // observation for a network-only aircraft).
+  // preserve only the local observation's last known position. A network
+  // observation must never re-enter through this fallback after its stale
+  // position was rejected by selectPositionObservation().
   const base = local ?? network!;
   const selectedPosition = selectPositionObservation(local, network, options, now);
-  const fallbackPosition = hasUsablePosition(base) ? base : undefined;
+  const fallbackPosition = local && hasUsablePosition(local) ? local : undefined;
   const kinematics = selectedPosition ?? base;
   const position = selectedPosition ?? fallbackPosition;
   const emergencyObservation = selectedEmergencyObservation(local, network, options, now);

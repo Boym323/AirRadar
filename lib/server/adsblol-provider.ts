@@ -1,7 +1,7 @@
 import type { RawReadsbAircraft, RawReadsbAircraftResponse } from "@/lib/aircraft/normalize";
 import { normalizeAircraftIdentifier } from "@/lib/aircraft/identity";
 import { normalizeNetworkAircraftResponse } from "@/lib/aircraft/normalize";
-import { hasUsablePosition } from "@/lib/aircraft/source-merge";
+import { isFreshPosition } from "@/lib/aircraft/source-merge";
 import type { Aircraft, NetworkProviderDiagnostics, NetworkProviderStatus, ReceiverPosition } from "@/lib/aircraft/types";
 import type { NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import {
@@ -171,7 +171,7 @@ export class AdsbLolProvider implements NetworkAircraftProvider {
   getDiagnostics(): NetworkProviderDiagnostics {
     const now = Date.now();
     const active = this.networkAircraft.filter((item) => this.isFresh(item, now));
-    const positioned = active.filter((item) => hasUsablePosition(item));
+    const positioned = active.filter((item) => isFreshPosition(item, this.staleAfterMs, now));
     const mlat = active.filter((item) => item.source === "MLAT");
     const lastSuccess = this.lastSuccessAt ? Date.parse(this.lastSuccessAt) : Number.NaN;
     const status = this.status === "online" && Number.isFinite(lastSuccess) && now - lastSuccess > this.staleAfterMs
