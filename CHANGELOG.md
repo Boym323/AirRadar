@@ -221,3 +221,9 @@ Changes since v1.0.0-rc.2:
 Changes since v1.0.0:
 
 - feat: integrate Geist font and enhance aircraft detail display (378a8c15)
+
+## [1.0.2] - 2026-09-09
+
+Changes since v1.0.1:
+
+- feat: Add ADS-B LOL provider and integrate network diagnostics (1e34569e)
