@@ -25,10 +25,11 @@ interface RouteCountRow {
   count: number;
 }
 
-interface AircraftCountryRow {
+interface AircraftMetadataRow {
   id: number;
   registrationCountry: string | null;
   registrationCountryCode: string | null;
+  operator?: string | null;
 }
 
 export interface StatisticsTrafficRows {
@@ -36,7 +37,7 @@ export interface StatisticsTrafficRows {
   aircraftTypes: NamedCountRow[];
   airlines: NamedCountRow[];
   routes: RouteCountRow[];
-  countries: AircraftCountryRow[];
+  countries: AircraftMetadataRow[];
 }
 
 export interface StatisticsTrafficBounds {
@@ -96,7 +97,7 @@ function rankingFromRows(rows: NamedCountRow[]): StatisticsTrafficRankingItem[] 
   return ranking(counts);
 }
 
-function countryLabel(row: AircraftCountryRow): string | null {
+function countryLabel(row: AircraftMetadataRow): string | null {
   const code = normalizeCode(row.registrationCountryCode);
   const country = normalizeName(row.registrationCountry);
   if (code && country && code.localeCompare(country, undefined, { sensitivity: "accent" }) !== 0) return `${code} · ${country}`;
@@ -137,11 +138,14 @@ export function aggregateStatisticsTrafficRows(options: {
   }
 
   const countries = new Map<string, number>();
+  const operators = new Map<string, number>();
   for (const aircraft of options.rows.countries) {
     const flightCount = aircraftCounts.get(aircraft.id) ?? 0;
     if (flightCount <= 0) continue;
     const label = countryLabel(aircraft);
     if (label) countries.set(label, (countries.get(label) ?? 0) + flightCount);
+    const operator = normalizeName(aircraft.operator);
+    if (operator) operators.set(operator, (operators.get(operator) ?? 0) + flightCount);
   }
 
   return {
@@ -154,6 +158,7 @@ export function aggregateStatisticsTrafficRows(options: {
     observedFlights,
     topAircraftTypes: rankingFromRows(options.rows.aircraftTypes),
     topAirlines: rankingFromRows(options.rows.airlines),
+    topOperators: ranking(operators),
     topRoutes: [...routeCounts.values()]
       .sort((a, b) => b.count - a.count || `${a.origin}:${a.destination}`.localeCompare(`${b.origin}:${b.destination}`))
       .slice(0, STATISTICS_TRAFFIC_RANKING_LIMIT),
@@ -175,6 +180,7 @@ function unavailableTraffic(range: StatisticsTrafficRange, now: Date, timezone: 
     observedFlights: null,
     topAircraftTypes: [],
     topAirlines: [],
+    topOperators: [],
     topRoutes: [],
     topOrigins: [],
     topDestinations: [],
@@ -185,8 +191,8 @@ function unavailableTraffic(range: StatisticsTrafficRange, now: Date, timezone: 
 /**
  * Read persisted receiver-observed Flight instances only. The four Flight
  * queries are date-bounded to at most 30 local days and run in parallel. The
- * final Aircraft lookup exists only to label registration countries. This
- * function never reads FlightPosition.
+ * final Aircraft lookup labels registration countries and durable catalog
+ * operators. This function never reads FlightPosition.
  */
 export async function getStatisticsTraffic(
   range: StatisticsTrafficRange,
@@ -212,8 +218,8 @@ export async function getStatisticsTraffic(
     const countries = aircraftIds.length
       ? await schema.Aircraft
           .where((row) => row.id.in(aircraftIds))
-          .select("id", "registrationCountry", "registrationCountryCode")
-          .all() as AircraftCountryRow[]
+          .select("id", "registrationCountry", "registrationCountryCode", "operator")
+          .all() as AircraftMetadataRow[]
       : [];
 
     return aggregateStatisticsTrafficRows({
