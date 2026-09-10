@@ -175,6 +175,16 @@ as a metadata replacement. Invalid, absent, or expired data remains
 fail-closed (`UNKNOWN = HIDE`). Set `OGN_SOFTRF_DDB_ENABLED=false` to disable
 it.
 
+The snapshot is maintained by the separate
+`airradar-ogn-softrf-update.service`/timer, not by the Next.js runtime. The
+updater selects only a successful `lyusupov/SoftRF` aircraft-database workflow,
+uses the artifact's `created_at` as `generatedAt`, validates the archive and
+SQLite schema in a temporary directory, and performs a same-filesystem atomic
+replacement. See [`deploy/README.md`](deploy/README.md) for bootstrap,
+verification, and rollback commands. Set `OGN_SOFTRF_UPDATE_ENABLED=false` to
+disable the updater; `OGN_SOFTRF_GITHUB_TOKEN` is only needed when GitHub
+requires authentication for artifact downloads.
+
 The implementation accepts the current v1 FLARM, OGN tracker, FANET, SafeSky,
 PilotAware, and ADS-L TOCALL variants that have a safe airborne interpretation;
 `OGADSB`, ground/weather/status, delayed, and unknown variants are counted and

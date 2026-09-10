@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic AirRadar SoftRF OGN snapshot update
+
+[Timer]
+OnCalendar=*-*-* 03,09,15,21:20:00
+RandomizedDelaySec=15m
+Persistent=true
+Unit=airradar-ogn-softrf-update.service
+
+[Install]
+WantedBy=timers.target

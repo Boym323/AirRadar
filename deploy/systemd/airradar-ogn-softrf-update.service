@@ -1,0 +1,21 @@
+[Unit]
+Description=Update AirRadar SoftRF OGN snapshot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=airradar
+Group=airradar
+WorkingDirectory=/var/www/airradar
+EnvironmentFile=-/var/www/airradar/.env
+ExecStart=/usr/bin/node /var/www/airradar/scripts/update-ogn-softrf.mjs
+StateDirectory=airradar
+StateDirectoryMode=0750
+UMask=027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+StandardOutput=journal
+StandardError=journal

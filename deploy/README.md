@@ -62,6 +62,54 @@ sudo systemctl enable --now airradar
 sudo journalctl -u airradar -f
 ```
 
+## SoftRF OGN snapshot updater
+
+The SoftRF updater is a separate `Type=oneshot` service. It finds the latest
+successful `lyusupov/SoftRF` `adb.yml` workflow run, validates its `Data`
+artifact and SQLite database in a temporary directory, then replaces
+`/var/lib/airradar/ogn/softrf/ogn.db` and its sidecar with same-filesystem
+renames. It does not restart AirRadar. A failed download or validation leaves
+the active snapshot unchanged. The artifact's GitHub `created_at` is retained
+as `generatedAt`; the updater never uses the local download time.
+
+Install the checked-in units and bootstrap the snapshot manually:
+
+```bash
+sudo install -o root -g root -m 0644 deploy/systemd/airradar-ogn-softrf-update.service /etc/systemd/system/
+sudo install -o root -g root -m 0644 deploy/systemd/airradar-ogn-softrf-update.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start airradar-ogn-softrf-update.service
+sudo systemctl enable --now airradar-ogn-softrf-update.timer
+```
+
+Set `OGN_SOFTRF_GITHUB_TOKEN` in `/var/www/airradar/.env` only if the GitHub
+artifact endpoint requires authentication. Keep both updater and runtime
+configuration server-side; enable the runtime fallback separately with
+`OGN_ENABLED=true` and `OGN_SOFTRF_DDB_ENABLED=true`.
+
+Check the result without exposing database contents:
+
+```bash
+sudo systemctl status airradar-ogn-softrf-update.service --no-pager
+sudo journalctl -u airradar-ogn-softrf-update.service -n 50 --no-pager
+sudo stat -c '%A %U:%G %s %n' /var/lib/airradar/ogn/softrf/ogn.db /var/lib/airradar/ogn/softrf/ogn.db.meta.json
+sudo sha256sum /var/lib/airradar/ogn/softrf/ogn.db
+curl -fsS http://192.168.1.142:3000/api/system/status | jq '.ogn.ddb.softRf, .ogn.ddb.source'
+```
+
+Expected runtime diagnostics after enabling OGN and reloading the snapshot are
+`ogn.ddb.softRf.valid: true`, `ogn.ddb.softRf.recordCount` greater than 30,000
+for the current upstream artifact, and `ogn.ddb.source: "softrf"` when the
+official OGN DDB has no usable resolution. A missing, expired, or invalid
+snapshot remains fail-closed.
+
+Rollback is operator-controlled: stop and disable the timer, then restore a
+known-good `ogn.db` and matching `ogn.db.meta.json` pair into temporary files
+under `/var/lib/airradar/ogn/softrf/` and rename the database followed by the
+sidecar. If no known-good pair exists, stop the timer and remove only the two
+snapshot files; AirRadar will report the fallback unavailable and hide
+unresolved OGN targets.
+
 Normal production releases should use `deploy/release.sh`. It calculates the
 next version in the current `package.json` major/minor series, writes ignored
 build metadata before an isolated `next build`, activates the completed build
