@@ -59,6 +59,10 @@ written through a single debounced atomic writer. It contains no OGN packets,
 coordinates, positions, or history. Production systemd already provisions the
 default directory with `StateDirectory=airradar`; persistence failures are
 best-effort and cannot stop live OGN or ADS-B processing.
+When enabled, the same resolver also loads a local SoftRF `ogn.db` read-only
+snapshot into a bounded in-memory whitelist. SoftRF is consulted only after
+live OGN DDB and the official cache, and its invalid/expired entries never
+make an unresolved device public.
 
 ## Server ownership
 

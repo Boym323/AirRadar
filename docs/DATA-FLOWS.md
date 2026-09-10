@@ -91,6 +91,15 @@ resolution. DDB responses are indexed only by exact device type and ID, so a
 same-ID record under another type is not used. The old full-table loader
 remains only as an explicit compatibility/debug `refresh()` path.
 
+When an official resolution is unavailable, the resolver may consult an
+explicitly enabled local SoftRF `ogn.db` SQLite snapshot. It validates the
+read-only `devices` schema, mtime age, row count, and privacy flag types once,
+then keeps only `type + id` rows with `track=1` and `ident=1` in memory. The
+SoftRF dataset is a whitelist below live OGN DDB and the official persistent
+cache; it supplies no metadata, is never queried per APRS packet, and expires
+after its configured TTL. A bad refresh leaves the prior valid in-memory
+snapshot intact.
+
 APRS `CSE/SPD` speed is already in knots and is stored directly in
 `groundSpeedKt`, regardless of source TOCALL. Privacy is fail-closed per
 device while its resolution is unresolved, with packet no-tracking and DDB

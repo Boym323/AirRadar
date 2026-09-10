@@ -99,6 +99,7 @@ export interface SystemStatusResponse {
     reconnects: number;
     configurationError: string | null;
     ddb: {
+      source: "live" | "cache" | "softrf" | "unavailable";
       status: OgnProviderDiagnostics["ddb"]["status"];
       strategy: OgnProviderDiagnostics["ddb"]["strategy"];
       representation: OgnProviderDiagnostics["ddb"]["representation"];
@@ -124,6 +125,8 @@ export interface SystemStatusResponse {
       lastAttemptAt: string | null;
       lastRefreshAt: string | null;
       lastSuccessAt: string | null;
+      lastPrimarySuccessAt: string | null;
+      lastPrimaryError: string | null;
       lastHttpStatus: number | null;
       ageMs: number | null;
       failures: number;
@@ -135,6 +138,14 @@ export interface SystemStatusResponse {
       aircraftTypeAvailable: boolean;
       stale: boolean;
       persistence: OgnDdbPersistenceDiagnostics;
+      softRf: {
+        enabled: boolean;
+        valid: boolean;
+        recordCount: number;
+        ageMs: number | null;
+        lastLoadAt: string | null;
+        lastLoadError: string | null;
+      };
     };
   };
   database: {
@@ -451,6 +462,16 @@ function safeDdbCacheFile(value: string): string {
     : "/var/lib/airradar/ogn-ddb-cache-v1.json";
 }
 
+function safeDdbError(value: string | null | undefined): string | null {
+  return value && (/^HTTP [1-5][0-9]{2}$/.test(value) || value === "TIMEOUT" || value === "INVALID_RESPONSE" || value === "UNAVAILABLE")
+    ? value
+    : null;
+}
+
+function safeDdbSource(value: string | undefined): "live" | "cache" | "softrf" | "unavailable" {
+  return value === "live" || value === "cache" || value === "softrf" || value === "unavailable" ? value : "unavailable";
+}
+
 function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemStatusResponse["ogn"] {
   const value = diagnostics ?? {
     enabled: false,
@@ -486,11 +507,12 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
     reconnects: 0,
     configurationError: null,
     ddb: {
+      source: "unavailable" as const,
       status: "disabled" as const, strategy: "targeted" as const, representation: null, mode: null, endpoint: "https://ddb.glidernet.org/download/", entries: 0,
       cacheEntries: 0, positiveEntries: 0, negativeEntries: 0, pendingKeys: 0, queuedIds: 0, inFlight: false,
       requests: 0, successfulRequests: 0, failedRequests: 0, batchCount: 0, lastBatchSize: null,
       cacheHits: 0, cacheMisses: 0, evictions: 0, unexpectedRecords: 0, conflictingRecords: 0,
-      lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
+      lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastPrimarySuccessAt: null, lastPrimaryError: null, lastHttpStatus: null, ageMs: null,
       failures: 0, fallbackCount: 0, fallbackUsed: false, rateLimited: false, retryAfterMs: null, nextRetryAt: null,
       aircraftTypeAvailable: false, stale: true,
       persistence: {
@@ -498,6 +520,7 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
         diskEntriesLoaded: 0, diskEntriesRejected: 0, lastLoadAt: null, lastLoadError: null, dirty: false,
         lastSaveAt: null, lastSaveEntries: 0, lastSaveError: null, writes: 0,
       },
+      softRf: { enabled: false, valid: false, recordCount: 0, ageMs: null, lastLoadAt: null, lastLoadError: null },
     },
   };
   const sourceCounts: Record<string, number> = {};
@@ -545,6 +568,7 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
       ? value.configurationError
       : null,
     ddb: {
+      source: safeDdbSource(value.ddb.source),
       status: value.ddb.status,
       strategy: value.ddb.strategy,
       representation: value.ddb.representation,
@@ -570,6 +594,8 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
       lastAttemptAt: safeTimestamp(value.ddb.lastAttemptAt),
       lastRefreshAt: safeTimestamp(value.ddb.lastRefreshAt),
       lastSuccessAt: safeTimestamp(value.ddb.lastSuccessAt),
+      lastPrimarySuccessAt: safeTimestamp(value.ddb.lastPrimarySuccessAt),
+      lastPrimaryError: safeDdbError(value.ddb.lastPrimaryError),
       lastHttpStatus: value.ddb.lastHttpStatus === null ? null : nonNegativeInteger(value.ddb.lastHttpStatus, 599),
       ageMs: value.ddb.ageMs === null ? null : nonNegativeInteger(value.ddb.ageMs, 30 * 24 * 60 * 60_000),
       failures: nonNegativeInteger(value.ddb.failures, 10_000_000),
@@ -593,6 +619,14 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
         lastSaveEntries: nonNegativeInteger(value.ddb.persistence.lastSaveEntries, 100_000),
         lastSaveError: value.ddb.persistence.lastSaveError && /^[A-Z0-9_]+$/.test(value.ddb.persistence.lastSaveError) ? value.ddb.persistence.lastSaveError : null,
         writes: nonNegativeInteger(value.ddb.persistence.writes, 10_000_000),
+      },
+      softRf: {
+        enabled: Boolean(value.ddb.softRf?.enabled),
+        valid: Boolean(value.ddb.softRf?.valid),
+        recordCount: nonNegativeInteger(value.ddb.softRf?.recordCount ?? 0, 1_000_000),
+        ageMs: value.ddb.softRf?.ageMs === null || value.ddb.softRf?.ageMs === undefined ? null : nonNegativeInteger(value.ddb.softRf.ageMs, 366 * 24 * 60 * 60_000),
+        lastLoadAt: safeTimestamp(value.ddb.softRf?.lastLoadAt),
+        lastLoadError: value.ddb.softRf?.lastLoadError && /^[A-Z0-9_]+$/.test(value.ddb.softRf.lastLoadError) ? value.ddb.softRf.lastLoadError : null,
       },
     },
   };

@@ -3,6 +3,7 @@ import { chmod, mkdir, open, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import type { OgnDdbDiagnostics, OgnDdbEntry, OgnDdbPersistenceDiagnostics, OgnDdbResolution } from "@/lib/ogn/types";
 import { getAirRadarUserAgent } from "@/lib/server/user-agent";
+import { SoftRfDdb, type SoftRfDdbDiagnostics } from "@/lib/ogn/softrf";
 
 export const DEFAULT_OGN_DDB_URL = "https://ddb.glidernet.org/download/?j=1&t=1";
 export const DEFAULT_OGN_DDB_FALLBACK_URL = "https://ddb.glidernet.org/download/?j=1";
@@ -25,6 +26,7 @@ const MAX_PERSISTENT_CACHE_BYTES = 16 * 1024 * 1024;
 const PERSISTENCE_FUTURE_SKEW_MS = 5 * 60_000;
 const DEFAULT_PERSISTENCE_DEBOUNCE_MS = 3_000;
 const DEFAULT_PERSISTENCE_FLUSH_TIMEOUT_MS = 2_000;
+const SOFTRF_REFRESH_CHECK_MS = 5 * 60_000;
 const DEFAULT_PERSISTENCE_FILE = "/var/lib/airradar/ogn-ddb-cache-v1.json";
 const DEVICE_ID_PATTERN = /^[A-F0-9]{6}$/;
 const DEVICE_TYPES = new Set(["F", "I", "O"]);
@@ -47,6 +49,9 @@ export interface OgnDdbOptions {
   cacheFile?: string;
   persistenceDebounceMs?: number;
   persistenceFlushTimeoutMs?: number;
+  softrfEnabled?: boolean;
+  softrfPath?: string;
+  softrfMaxAgeHours?: number;
   fetcher?: typeof fetch;
   now?: () => number;
 }
@@ -62,6 +67,7 @@ interface CachedDdbResolution {
   status: "found" | "missing";
   entry?: OgnDdbEntry;
   resolvedAt: number;
+  source?: "live" | "cache";
 }
 
 interface PersistentDdbFile {
@@ -292,6 +298,7 @@ export class OgnDdb {
   private readonly cacheFile: string;
   private readonly persistenceDebounceMs: number;
   private readonly persistenceFlushTimeoutMs: number;
+  private readonly softRf: SoftRfDdb;
   private readonly fetcher: typeof fetch;
   private readonly now: () => number;
   private readonly endpoint: string;
@@ -325,6 +332,7 @@ export class OgnDdb {
   private conflictingRecords = 0;
   private running = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private softRfRefreshTimer: ReturnType<typeof setInterval> | null = null;
   private inFlight: Promise<void> | null = null;
   private activeController: AbortController | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -343,6 +351,9 @@ export class OgnDdb {
   private status: OgnDdbDiagnostics["status"] = "offline";
   private strategy: OgnDdbDiagnostics["strategy"] = "targeted";
   private representation: "rich" | "base" | null = null;
+  private lastPrimarySuccessAt: number | null = null;
+  private lastPrimaryError: string | null = null;
+  private lastLoggedPrimaryError: string | null = null;
 
   constructor(options: OgnDdbOptions = {}) {
     this.url = sanitizeDdbUrl(options.url ?? DEFAULT_OGN_DDB_URL);
@@ -364,6 +375,12 @@ export class OgnDdb {
     this.cacheFile = options.cacheFile ?? DEFAULT_PERSISTENCE_FILE;
     this.persistenceDebounceMs = boundedInteger(options.persistenceDebounceMs ?? DEFAULT_PERSISTENCE_DEBOUNCE_MS, 0, 60_000);
     this.persistenceFlushTimeoutMs = boundedInteger(options.persistenceFlushTimeoutMs ?? DEFAULT_PERSISTENCE_FLUSH_TIMEOUT_MS, 100, 30_000);
+    this.softRf = new SoftRfDdb({
+      enabled: options.softrfEnabled ?? false,
+      path: options.softrfPath,
+      maxAgeHours: options.softrfMaxAgeHours,
+      now: options.now,
+    });
     this.fetcher = options.fetcher ?? fetch;
     this.now = options.now ?? Date.now;
     this.endpoint = this.endpointFromUrl(this.url);
@@ -375,6 +392,11 @@ export class OgnDdb {
     if (this.running) return;
     this.running = true;
     this.status = this.hasUsableResolution() ? "online" : "idle";
+    if (this.softRf.getDiagnostics().enabled) {
+      this.softRfRefreshTimer = setInterval(() => {
+        if (this.softRf.refreshIfChanged()) this.notifyListeners();
+      }, SOFTRF_REFRESH_CHECK_MS);
+    }
     this.schedulePump();
   }
 
@@ -382,6 +404,8 @@ export class OgnDdb {
     this.running = false;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
+    if (this.softRfRefreshTimer) clearInterval(this.softRfRefreshTimer);
+    this.softRfRefreshTimer = null;
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = null;
     this.nextRetryAt = null;
@@ -416,15 +440,22 @@ export class OgnDdb {
     const resolution = this.readResolution(key);
     if (resolution.status === "unresolved") this.cacheMisses += 1;
     else this.cacheHits += 1;
-    if (resolution.status === "found") return { status: "found", entry: resolution.entry, resolvedAt: resolution.resolvedAt, expiresAt: resolution.resolvedAt + this.maxStaleMs };
-    if (resolution.status === "missing") return { status: "missing", resolvedAt: resolution.resolvedAt, expiresAt: resolution.resolvedAt + this.negativeTtlMs };
-    return resolution;
+    if (resolution.status === "found") return { status: "found", entry: resolution.entry, resolvedAt: resolution.resolvedAt, expiresAt: resolution.resolvedAt + this.maxStaleMs, source: resolution.source };
+    if (resolution.status === "missing") return { status: "missing", resolvedAt: resolution.resolvedAt, expiresAt: resolution.resolvedAt + this.negativeTtlMs, source: resolution.source };
+    return this.softRf.getResolution(deviceType, deviceId);
   }
 
   /** Compatibility lookup for callers that only need a positive record. */
   lookup(deviceType: "F" | "I" | "O", deviceId: string): OgnDdbEntry | null {
     const resolution = this.getResolution(deviceType, deviceId);
     return resolution.status === "found" ? resolution.entry : null;
+  }
+
+  /** Explicit maintenance hook; it never runs on the APRS packet path. */
+  refreshSoftRf(): boolean {
+    const loaded = this.softRf.reload();
+    if (loaded) this.notifyListeners();
+    return loaded;
   }
 
   /** Diagnostics-only aggregate; privacy decisions never use this global value. */
@@ -451,8 +482,11 @@ export class OgnDdb {
     const positiveEntries = [...this.cache.values()].filter((value) => value.status === "found").length;
     const negativeEntries = this.cache.size - positiveEntries;
     const usable = this.hasUsableResolution();
+    const source = this.activeSource();
+    const softRf: SoftRfDdbDiagnostics = this.softRf.getDiagnostics();
     return {
-      status: this.status === "online" && !usable ? "stale" : this.status,
+      source,
+      status: this.status === "online" && !usable ? "stale" : this.status === "offline" && source === "softrf" ? "degraded" : this.status,
       strategy: this.strategy,
       representation: this.representation,
       mode: this.currentMode,
@@ -477,6 +511,8 @@ export class OgnDdb {
       lastAttemptAt: this.lastAttemptAt === null ? null : new Date(this.lastAttemptAt).toISOString(),
       lastRefreshAt: this.lastAttemptAt === null ? null : new Date(this.lastAttemptAt).toISOString(),
       lastSuccessAt: this.lastSuccessAt === null ? null : new Date(this.lastSuccessAt).toISOString(),
+      lastPrimarySuccessAt: this.lastPrimarySuccessAt === null ? null : new Date(this.lastPrimarySuccessAt).toISOString(),
+      lastPrimaryError: this.lastPrimaryError,
       lastHttpStatus: this.lastHttpStatus,
       ageMs,
       failures: this.failures,
@@ -488,6 +524,7 @@ export class OgnDdb {
       aircraftTypeAvailable: this.aircraftTypeAvailable,
       stale: !usable,
       persistence: this.getPersistenceDiagnostics(),
+      softRf,
     };
   }
 
@@ -591,7 +628,7 @@ export class OgnDdb {
     }
     for (const [key, resolution] of parsedEntries) {
       if (duplicateKeys.has(key)) continue;
-      this.putResolution(key, resolution);
+      this.putResolution(key, resolution, "cache");
       this.diskEntriesLoaded += 1;
     }
     this.loadedFromDisk = true;
@@ -714,7 +751,7 @@ export class OgnDdb {
       // absent key is a proven miss until that snapshot exceeds max-stale.
       // Normal targeted runtime never sets bulkCompleteAt.
       if (this.bulkCompleteAt !== null && this.now() - this.bulkCompleteAt <= this.maxStaleMs) {
-        return { status: "missing", resolvedAt: this.bulkCompleteAt, expiresAt: this.bulkCompleteAt + this.maxStaleMs };
+        return { status: "missing", resolvedAt: this.bulkCompleteAt, expiresAt: this.bulkCompleteAt + this.maxStaleMs, source: "live" };
       }
       return { status: "unresolved" };
     }
@@ -722,8 +759,8 @@ export class OgnDdb {
     const valid = cached.status === "found" ? age <= this.maxStaleMs : age < this.negativeTtlMs;
     if (!valid) return { status: "unresolved" };
     this.touch(key, cached);
-    if (cached.status === "found" && cached.entry) return { status: "found", entry: cached.entry, resolvedAt: cached.resolvedAt, expiresAt: cached.resolvedAt + this.maxStaleMs };
-    return { status: "missing", resolvedAt: cached.resolvedAt, expiresAt: cached.resolvedAt + this.negativeTtlMs };
+    if (cached.status === "found" && cached.entry) return { status: "found", entry: cached.entry, resolvedAt: cached.resolvedAt, expiresAt: cached.resolvedAt + this.maxStaleMs, source: cached.source };
+    return { status: "missing", resolvedAt: cached.resolvedAt, expiresAt: cached.resolvedAt + this.negativeTtlMs, source: cached.source };
   }
 
   private touch(key: string, value: CachedDdbResolution): void {
@@ -731,9 +768,9 @@ export class OgnDdb {
     this.cache.set(key, value);
   }
 
-  private putResolution(key: string, resolution: CachedDdbResolution): void {
+  private putResolution(key: string, resolution: CachedDdbResolution, source: "live" | "cache" = "live"): void {
     this.cache.delete(key);
-    this.cache.set(key, resolution);
+    this.cache.set(key, { ...resolution, source });
     while (this.cache.size > this.cacheMaxEntries) {
       const oldest = this.cache.keys().next().value as string | undefined;
       if (!oldest) break;
@@ -806,6 +843,8 @@ export class OgnDdb {
     this.status = "loading";
     this.rateLimited = false;
     this.retryAfterMs = null;
+    const previousSource = this.activeSource();
+    const previousError = this.lastPrimaryError;
     try {
       const requestedIds = [...new Set(keys.map((key) => key.slice(2)))];
       const controller = new AbortController();
@@ -831,6 +870,9 @@ export class OgnDdb {
       this.representation = loaded.mode === "targeted-rich-json" ? "rich" : "base";
       this.aircraftTypeAvailable ||= loaded.snapshot.aircraftTypeAvailable;
       this.lastSuccessAt = this.now();
+      this.lastPrimarySuccessAt = this.lastSuccessAt;
+      this.lastPrimaryError = null;
+      this.lastLoggedPrimaryError = null;
       this.failures = 0;
       this.successfulRequests += 1;
       this.status = "online";
@@ -838,6 +880,7 @@ export class OgnDdb {
       this.rateLimited = false;
       this.retryAfterMs = null;
       this.nextRetryAt = null;
+      if (previousError && previousSource !== "live") console.info(`[ogn-ddb] primary recovered: switching source ${previousSource} -> live`);
       this.notifyListeners();
     } catch (error) {
       this.failures += 1;
@@ -846,11 +889,10 @@ export class OgnDdb {
       this.rateLimited = rateLimitError !== null;
       this.retryAfterMs = rateLimitError?.retryAfterMs ?? null;
       this.nextRetryAt = this.now() + this.getFailureRetryDelay(error);
+      this.lastPrimaryError = this.primaryErrorCode(error);
       this.status = this.hasUsableResolution() ? "stale" : "offline";
       this.requeue(keys);
-      if (this.running && !(error instanceof DOMException && error.name === "AbortError")) {
-        console.error(`AirRadar OGN DDB targeted request failed (${this.failures})`);
-      }
+      this.reportPrimaryFailure();
     }
   }
 
@@ -893,6 +935,8 @@ export class OgnDdb {
     this.nextRetryAt = null;
     this.rateLimited = false;
     this.retryAfterMs = null;
+    const previousSource = this.activeSource();
+    const previousError = this.lastPrimaryError;
     const controller = new AbortController();
     this.activeController = controller;
     const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
@@ -917,11 +961,15 @@ export class OgnDdb {
       this.representation = loaded.mode === "rich-json" ? "rich" : "base";
       this.aircraftTypeAvailable = loaded.snapshot.aircraftTypeAvailable;
       this.lastSuccessAt = resolvedAt;
+      this.lastPrimarySuccessAt = resolvedAt;
+      this.lastPrimaryError = null;
+      this.lastLoggedPrimaryError = null;
       this.failures = 0;
       this.successfulRequests += 1;
       this.status = "online";
       this.fallbackUsed = loaded.mode === "base-json";
       this.markPersistenceDirty();
+      if (previousError && previousSource !== "live") console.info(`[ogn-ddb] primary recovered: switching source ${previousSource} -> live`);
       this.notifyListeners();
     } catch (error) {
       this.failures += 1;
@@ -930,8 +978,9 @@ export class OgnDdb {
       this.rateLimited = rateLimitError !== null;
       this.retryAfterMs = rateLimitError?.retryAfterMs ?? null;
       if (this.running) this.nextRetryAt = this.now() + this.getFailureRetryDelay(error);
+      this.lastPrimaryError = this.primaryErrorCode(error);
       this.status = this.hasUsableResolution() ? "stale" : "offline";
-      if (this.running) console.error(`AirRadar OGN DDB refresh failed (${this.failures})`);
+      this.reportPrimaryFailure();
     } finally {
       clearTimeout(timeout);
       if (this.activeController === controller) this.activeController = null;
@@ -949,6 +998,36 @@ export class OgnDdb {
       if (isResolutionEntry(value) && this.now() - value.resolvedAt <= this.maxStaleMs) return true;
     }
     return false;
+  }
+
+  private activeSource(): "live" | "cache" | "softrf" | "unavailable" {
+    let hasCache = false;
+    for (const value of this.cache.values()) {
+      const age = this.now() - value.resolvedAt;
+      const valid = value.status === "found" ? age <= this.maxStaleMs : age < this.negativeTtlMs;
+      if (!valid) continue;
+      if (value.source === "live") return "live";
+      if (value.source === "cache") hasCache = true;
+    }
+    if (hasCache) return "cache";
+    if (this.softRf.getDiagnostics().valid) return "softrf";
+    return "unavailable";
+  }
+
+  private primaryErrorCode(error: unknown): string {
+    if (error instanceof DdbLoadError && error.httpStatus !== null) return `HTTP ${error.httpStatus}`;
+    if (error instanceof DOMException && error.name === "AbortError") return "TIMEOUT";
+    if (error instanceof DdbLoadError) return "INVALID_RESPONSE";
+    return "UNAVAILABLE";
+  }
+
+  private reportPrimaryFailure(): void {
+    if (!this.running || !this.lastPrimaryError || this.lastPrimaryError === this.lastLoggedPrimaryError) return;
+    this.lastLoggedPrimaryError = this.lastPrimaryError;
+    console.warn(`[ogn-ddb] primary unavailable: ${this.lastPrimaryError}`);
+    const source = this.activeSource();
+    if (source === "cache") console.info("[ogn-ddb] using persistent official cache");
+    else if (source === "softrf") console.info(`[ogn-ddb] using SoftRF fallback: ${this.softRf.getDiagnostics().recordCount} devices`);
   }
 
   private primaryUrl(): string {

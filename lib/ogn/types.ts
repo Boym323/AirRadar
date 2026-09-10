@@ -136,6 +136,7 @@ export interface OgnProviderDiagnostics {
 }
 
 export interface OgnDdbDiagnostics {
+  source?: "live" | "cache" | "softrf" | "unavailable";
   status: "disabled" | "idle" | "loading" | "online" | "stale" | "offline" | "rate-limited" | "degraded";
   strategy: "targeted" | "bulk-compatibility";
   representation: "rich" | "base" | null;
@@ -161,6 +162,8 @@ export interface OgnDdbDiagnostics {
   lastAttemptAt: string | null;
   lastRefreshAt: string | null;
   lastSuccessAt: string | null;
+  lastPrimarySuccessAt?: string | null;
+  lastPrimaryError?: string | null;
   lastHttpStatus: number | null;
   ageMs: number | null;
   failures: number;
@@ -172,6 +175,14 @@ export interface OgnDdbDiagnostics {
   aircraftTypeAvailable: boolean;
   stale: boolean;
   persistence: OgnDdbPersistenceDiagnostics;
+  softRf?: {
+    enabled: boolean;
+    valid: boolean;
+    recordCount: number;
+    ageMs: number | null;
+    lastLoadAt: string | null;
+    lastLoadError: string | null;
+  };
 }
 
 export interface OgnDdbPersistenceDiagnostics {
@@ -203,8 +214,8 @@ export interface OgnPrivacyInput {
 
 export type OgnDdbResolution =
   | { status: "unresolved" }
-  | { status: "found"; entry: OgnDdbEntry; resolvedAt: number; expiresAt?: number }
-  | { status: "missing"; resolvedAt: number; expiresAt?: number };
+  | { status: "found"; entry: OgnDdbEntry; resolvedAt: number; expiresAt?: number; source?: "live" | "cache" | "softrf" }
+  | { status: "missing"; resolvedAt: number; expiresAt?: number; source?: "live" | "cache" };
 
 export interface OgnDdbEntry {
   deviceType: "F" | "I" | "O";

@@ -61,6 +61,9 @@ export class OgnStateService {
       maxPendingKeys: this.config.maxTargets,
       persistCache: this.config.enabled && this.config.ddbPersistCache,
       cacheFile: this.config.ddbCacheFile,
+      softrfEnabled: this.config.enabled && this.config.softrfDdbEnabled,
+      softrfPath: this.config.softrfDdbPath,
+      softrfMaxAgeHours: this.config.softrfDdbMaxAgeHours,
     });
     this.provider = options.provider ?? new OgnProvider({
       config: this.config,

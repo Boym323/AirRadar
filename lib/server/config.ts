@@ -10,6 +10,7 @@ import {
   DEFAULT_OGN_DDB_NEGATIVE_TTL_MS,
   DEFAULT_OGN_DDB_URL,
 } from "@/lib/ogn/ddb";
+import { DEFAULT_OGN_SOFTRF_DDB_MAX_AGE_HOURS, DEFAULT_OGN_SOFTRF_DDB_PATH } from "@/lib/ogn/softrf";
 
 export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/wiedehopf/tar1090-db/refs/heads/csv/aircraft.csv.gz";
@@ -210,6 +211,9 @@ export interface OgnConfig {
   ddbCacheMaxEntries?: number;
   ddbPersistCache?: boolean;
   ddbCacheFile?: string;
+  softrfDdbEnabled?: boolean;
+  softrfDdbPath?: string;
+  softrfDdbMaxAgeHours?: number;
   maxTargets: number;
   configurationError: string | null;
 }
@@ -330,6 +334,21 @@ export function getOgnDdbUrl(): string {
   }
 }
 
+export function isOgnSoftRfDdbEnabled(): boolean {
+  return process.env.OGN_SOFTRF_DDB_ENABLED?.trim().toLowerCase() === "true";
+}
+
+export function getOgnSoftRfDdbPath(): string {
+  const configured = process.env.OGN_SOFTRF_DDB_PATH?.trim();
+  return configured && configured.length <= 4_096 && path.isAbsolute(configured) && !/[\0\r\n]/.test(configured)
+    ? configured
+    : DEFAULT_OGN_SOFTRF_DDB_PATH;
+}
+
+export function getOgnSoftRfDdbMaxAgeHours(): number {
+  return boundedInteger("OGN_SOFTRF_DDB_MAX_AGE_HOURS", DEFAULT_OGN_SOFTRF_DDB_MAX_AGE_HOURS, 1, 24 * 365);
+}
+
 export function getOgnMaxTargets(): number {
   return boundedInteger("OGN_MAX_TARGETS", 5_000, 1, 20_000);
 }
@@ -348,6 +367,9 @@ export function getOgnConfig(): OgnConfig {
   const ddbCacheMaxEntries = getOgnDdbCacheMaxEntries();
   const ddbPersistCache = isOgnDdbPersistenceEnabled();
   const ddbCacheFile = getOgnDdbCacheFile();
+  const softrfDdbEnabled = isOgnSoftRfDdbEnabled();
+  const softrfDdbPath = getOgnSoftRfDdbPath();
+  const softrfDdbMaxAgeHours = getOgnSoftRfDdbMaxAgeHours();
   const ddbUrl = getOgnDdbUrl();
   const errors: string[] = [];
   const host = process.env.OGN_HOST?.trim();
@@ -388,6 +410,9 @@ export function getOgnConfig(): OgnConfig {
     ddbCacheMaxEntries,
     ddbPersistCache,
     ddbCacheFile,
+    softrfDdbEnabled,
+    softrfDdbPath,
+    softrfDdbMaxAgeHours,
     maxTargets: getOgnMaxTargets(),
     configurationError: errors.length ? `Invalid OGN configuration: ${errors.join(", ")}` : null,
   };
