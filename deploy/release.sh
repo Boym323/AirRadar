@@ -25,6 +25,7 @@ readonly RUNTIME_STATE_DIRECTORY="/var/lib/airradar"
 readonly LEGACY_ALERT_CONFIG_PATH="${APP_DIR}/data/alerts.json"
 readonly RELEASE_BUILD_DIR=".next-release-${BASHPID}"
 readonly RELEASE_BUILD_BACKUP_DIR=".next-release-backup-${BASHPID}"
+readonly BUILD_SOURCE_SNAPSHOT_DIR="/tmp/airradar-release-sources-${BASHPID}"
 
 DEPLOY_BRANCH="main"
 RELEASE_MODE="stable"
@@ -44,6 +45,7 @@ SYSTEMD_UNIT_CHANGED=0
 RELEASE_VERSION=""
 RELEASE_TAG=""
 RELEASE_BUILD_TIME=""
+BUILD_SOURCE_SNAPSHOT_CREATED=0
 STARTED_AT="$(date --iso-8601=seconds)"
 STARTED_EPOCH="$(date +%s)"
 
@@ -133,6 +135,9 @@ on_exit() {
   local exit_code="$?"
 
   trap - EXIT
+  if (( BUILD_SOURCE_SNAPSHOT_CREATED == 1 )); then
+    restore_build_source_files || true
+  fi
   if (( SERVICE_STOPPED == 1 )); then
     error "Service was left stopped by an interrupted release; attempting to start it."
     run_privileged systemctl start "${SERVICE_NAME}" || true
@@ -149,6 +154,24 @@ on_exit() {
   fi
   print_summary || true
   exit "${exit_code}"
+}
+
+snapshot_build_source_files() {
+  mkdir -p -- "${BUILD_SOURCE_SNAPSHOT_DIR}"
+  cp -- "${APP_DIR}/next-env.d.ts" "${BUILD_SOURCE_SNAPSHOT_DIR}/next-env.d.ts"
+  cp -- "${APP_DIR}/tsconfig.json" "${BUILD_SOURCE_SNAPSHOT_DIR}/tsconfig.json"
+  BUILD_SOURCE_SNAPSHOT_CREATED=1
+}
+
+restore_build_source_files() {
+  if (( BUILD_SOURCE_SNAPSHOT_CREATED == 0 )); then
+    return 0
+  fi
+
+  cp -- "${BUILD_SOURCE_SNAPSHOT_DIR}/next-env.d.ts" "${APP_DIR}/next-env.d.ts"
+  cp -- "${BUILD_SOURCE_SNAPSHOT_DIR}/tsconfig.json" "${APP_DIR}/tsconfig.json"
+  rm -rf -- "${BUILD_SOURCE_SNAPSHOT_DIR}"
+  BUILD_SOURCE_SNAPSHOT_CREATED=0
 }
 
 trap 'on_error "$?" "$LINENO"' ERR
@@ -432,10 +455,16 @@ run_release_steps() {
   RELEASE_BUILD_TIME="$(date --utc --iso-8601=seconds)"
   export AIRRADAR_BUILD_TIME="${RELEASE_BUILD_TIME}"
   rm -rf -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
+  snapshot_build_source_files
   if ! NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" npm run build; then
+    restore_build_source_files || true
     release_build_lock
     die "Production build failed; the active .next directory was not changed."
   fi
+  restore_build_source_files || {
+    release_build_lock
+    die "Could not restore source files modified by the production build."
+  }
   [[ -f "${APP_DIR}/${RELEASE_BUILD_DIR}/BUILD_ID" ]] || {
     release_build_lock
     die "Production build completed without ${RELEASE_BUILD_DIR}/BUILD_ID."
