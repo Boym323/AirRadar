@@ -37,6 +37,13 @@ function emptyState(): AlertEnginePersistentState {
   return { dedup: [], permanent: [], ruleLastTriggered: [] };
 }
 
+function validTimestamp(timestamp: unknown): timestamp is number {
+  return typeof timestamp === "number"
+    && Number.isFinite(timestamp)
+    && timestamp >= 0
+    && Number.isFinite(new Date(timestamp).getTime());
+}
+
 function sanitizeEntries(value: unknown): Array<[string, number]> {
   if (!Array.isArray(value)) return [];
   const entries: Array<[string, number]> = [];
@@ -44,7 +51,7 @@ function sanitizeEntries(value: unknown): Array<[string, number]> {
     if (!Array.isArray(item) || item.length !== 2) continue;
     const [key, timestamp] = item;
     if (typeof key !== "string" || !key || key.length > MAX_KEY_LENGTH) continue;
-    if (typeof timestamp !== "number" || !Number.isFinite(timestamp) || timestamp < 0) continue;
+    if (!validTimestamp(timestamp)) continue;
     entries.push([key, timestamp]);
   }
   return entries;
