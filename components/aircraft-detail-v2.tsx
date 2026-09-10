@@ -5,8 +5,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 import { aircraftAirportHref, aircraftFlightHref, aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
-import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryAirportCount, AircraftHistoryRange, AircraftHistorySummary, AircraftLifetimeStats, HistoryFlightSummary } from "@/lib/server/history";
-import { formatAltitude, formatDateTime, formatNumber, formatSpeed, formatTrack, t } from "@/lib/i18n";
+import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryAirportCount, AircraftHistoryRange, AircraftHistorySummary, AircraftLifetimeStats, HistoryFlightSummary, HistoryResponse } from "@/lib/server/history";
+import { formatAge, formatAltitude, formatDateTime, formatDistance, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
 import { FlightRouteWeather } from "@/components/airport-weather";
 
 function valueOrEmpty(value: string | null | undefined): string {
@@ -26,6 +26,18 @@ function flightDuration(flight: HistoryFlightSummary): string {
   return `${hours} h ${remainingMinutes} min`;
 }
 
+function durationBetween(startValue: string | null | undefined, endValue: string | null | undefined): string {
+  if (!startValue || !endValue) return t.common.emptyValue;
+  const start = Date.parse(startValue);
+  const end = Date.parse(endValue);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return t.common.emptyValue;
+  const minutes = Math.max(0, Math.round((end - start) / 60_000));
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (!hours) return `${remainingMinutes} min`;
+  return `${hours} h ${remainingMinutes} min`;
+}
+
 function AirportCodeLink({ code }: { code: string | null }): ReactNode {
   if (!code) return <span>{t.common.emptyValue}</span>;
   return <Link className="airport-link" href={aircraftAirportHref(code)}>{code}</Link>;
@@ -35,9 +47,73 @@ function DetailValue({ label, children }: { label: string; children: ReactNode }
   return <div><div className="detail-item-label">{label}</div><div className="detail-item-value">{children}</div></div>;
 }
 
+type AltitudeChartPoint = Pick<HistoryResponse["positions"][number], "recordedAt" | "altitude">;
+
+function uniqueAltitudePoints(points: AltitudeChartPoint[]): AltitudeChartPoint[] {
+  const byTimestamp = new Map<string, AltitudeChartPoint>();
+  for (const point of points) {
+    if (point.altitude === null || !Number.isFinite(point.altitude) || !Number.isFinite(Date.parse(point.recordedAt))) continue;
+    byTimestamp.set(point.recordedAt, point);
+  }
+  return [...byTimestamp.values()].sort((a, b) => Date.parse(a.recordedAt) - Date.parse(b.recordedAt));
+}
+
+export function AircraftAltitudeChart({
+  points,
+  livePoint,
+  loading = false,
+}: {
+  points: AltitudeChartPoint[];
+  livePoint?: AltitudeChartPoint | null;
+  loading?: boolean;
+}) {
+  const allPoints = uniqueAltitudePoints(livePoint ? [...points, livePoint] : points);
+  const anchor = allPoints.at(-1)?.recordedAt ? Date.parse(allPoints.at(-1)!.recordedAt) : Date.now();
+  const chartPoints = allPoints.filter((point) => Date.parse(point.recordedAt) >= anchor - 30 * 60_000);
+  const values = chartPoints.map((point) => point.altitude as number);
+  const min = values.length ? Math.min(...values) : 0;
+  const max = values.length ? Math.max(...values) : 1;
+  const span = Math.max(1, max - min);
+  const width = 360;
+  const height = 120;
+  const horizontalPadding = 8;
+  const verticalPadding = 10;
+  const polyline = chartPoints.map((point, index) => {
+    const x = chartPoints.length <= 1
+      ? width / 2
+      : horizontalPadding + (index / (chartPoints.length - 1)) * (width - horizontalPadding * 2);
+    const y = height - verticalPadding - (((point.altitude as number) - min) / span) * (height - verticalPadding * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+
+  return <section className="aircraft-card aircraft-altitude-card" aria-labelledby="aircraft-altitude-title" aria-busy={loading}>
+    <div className="aircraft-chart-heading">
+      <div>
+        <h2 id="aircraft-altitude-title">{t.aircraft.altitudeChart}</h2>
+        <span>{chartPoints.length ? `${formatAltitude(min)} – ${formatAltitude(max)}` : t.aircraft.chartNoData}</span>
+      </div>
+      {loading && <span className="aircraft-chart-loading">{t.common.loading}</span>}
+    </div>
+    {chartPoints.length > 0 ? <svg className="aircraft-altitude-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t.aircraft.altitudeChart}>
+      <line x1="8" x2="352" y1="10" y2="10" />
+      <line x1="8" x2="352" y1="60" y2="60" />
+      <line x1="8" x2="352" y1="110" y2="110" />
+      <polyline points={polyline} />
+    </svg> : <div className="aircraft-chart-empty">{t.aircraft.chartNoData}</div>}
+    {chartPoints.length > 0 && <div className="aircraft-chart-meta"><span>{formatTime(chartPoints[0].recordedAt)}</span><span>{chartPoints.length} {t.aircraft.positions.toLowerCase()}</span><span>{formatTime(chartPoints.at(-1)?.recordedAt)}</span></div>}
+  </section>;
+}
+
 function HistoryAirportLink({ airport }: { airport: AircraftHistoryAirport | null }): ReactNode {
   if (!airport) return <span>{t.common.emptyValue}</span>;
   return <Link className="airport-link" href={aircraftAirportHref(airport.icaoCode)}>{airport.iataCode ?? airport.icaoCode}</Link>;
+}
+
+function RouteEndpoint({ code, airport }: { code: string | null; airport: NonNullable<NonNullable<AircraftView["enrichment"]>["route"]>["originAirport"] }): ReactNode {
+  if (!code && !airport) return <span>{t.common.emptyValue}</span>;
+  const label = airport?.iataCode || airport?.icaoCode || code || t.common.emptyValue;
+  const name = airport?.name;
+  return <span className="aircraft-route-endpoint"><strong>{airport ? <Link className="airport-link" href={aircraftAirportHref(airport.icaoCode)}>{label}</Link> : label}</strong>{name && <small>{name}</small>}</span>;
 }
 
 export function AircraftHistorySummaryCard({
@@ -288,15 +364,51 @@ export function AircraftDetailV2({
   const registrationCountry = metadata?.registrationCountryCode ?? metadata?.registrationCountry ?? databaseAircraft?.registrationCountryCode ?? databaseAircraft?.registrationCountry;
   const callsign = liveAircraft?.callsign || t.history.unknownCallsign;
   const route = liveAircraft?.enrichment?.route ?? null;
+  const flightPlan = liveAircraft?.enrichment?.flightPlan ?? null;
   const backLink = backHref === "/history" ? "/history" : "/";
   const watchlistHref = icaoHex === t.common.emptyValue ? "/watchlist" : aircraftWatchlistHref(icaoHex, registration);
+  const [flightHistory, setFlightHistory] = useState<HistoryResponse | null>(null);
+  const [flightHistoryLoading, setFlightHistoryLoading] = useState(false);
+
+  useEffect(() => {
+    if (icaoHex === t.common.emptyValue) return;
+    let active = true;
+    setFlightHistory(null);
+    setFlightHistoryLoading(true);
+    void fetch(`/api/history/${encodeURIComponent(icaoHex)}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("aircraft history unavailable");
+        return await response.json() as HistoryResponse;
+      })
+      .then((result) => {
+        if (active) setFlightHistory(result);
+      })
+      .catch(() => {
+        if (active) setFlightHistory(null);
+      })
+      .finally(() => {
+        if (active) setFlightHistoryLoading(false);
+      });
+    return () => { active = false; };
+  }, [icaoHex]);
+
+  const firstSeen = flightHistory?.flight?.startedAt ?? detail?.historySummary.firstSeenAt ?? null;
+  const lastSeen = liveAircraft?.lastSeen ?? flightHistory?.flight?.lastSeenAt ?? detail?.historySummary.lastSeenAt ?? null;
+  const livePoint = liveAircraft && liveAircraft.lat !== null && liveAircraft.altitude !== null
+    ? { recordedAt: liveAircraft.lastSeen, altitude: liveAircraft.altitude }
+    : null;
+  const historyPoints = flightHistory?.positions ?? [];
+  const sessionPoints = liveAircraft?.trail ?? [];
+  const positionCount = historyPoints.length || sessionPoints.length;
+  const title = liveAircraft?.callsign || registration || icaoHex;
+  const sourceLabel = liveAircraft?.origin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver;
 
   return (
     <main className="aircraft-page">
       <header className="aircraft-page-header">
         <Link className="back-link" href={backLink}>{t.history.backToRadar}</Link>
         <div className="aircraft-page-kicker">{t.history.aircraftDetail}</div>
-        <h1>{icaoHex}</h1>
+        <h1>{title}</h1>
         <div className="aircraft-status-row">
           <div className={`aircraft-status ${liveAircraft ? "live" : "offline"}`}>
             {liveAircraft ? t.status.liveReceiver : t.aircraft.notCurrentlyInRange}
@@ -306,6 +418,7 @@ export function AircraftDetailV2({
           {detail?.logbook.isReturning && <div className="aircraft-logbook-badge returning" title={t.logbook.returningAircraftReason(detail.logbook.returningGapDays ?? 0)}>{t.logbook.returningAircraft}</div>}
         </div>
         <div className="aircraft-page-identity"><span>{icaoHex}</span>{registration && <span>{registration}</span>}{aircraftType && <span>{aircraftType}</span>}</div>
+        <div className="aircraft-page-subtitle">{[manufacturer, model].filter(Boolean).join(" ") || t.aircraft.unknownAircraftType}{operator ? ` · ${operator}` : ""}</div>
         {route && <div className="aircraft-page-route" aria-label={t.route.originDestination}>
           <span>{route.originAirport?.iataCode || route.originAirport?.icaoCode || route.origin || t.common.emptyValue}</span>
           <span aria-hidden="true">→</span>
@@ -313,6 +426,7 @@ export function AircraftDetailV2({
           <span aria-hidden="true">→</span>
           <span>{route.destinationAirport?.iataCode || route.destinationAirport?.icaoCode || route.destination || t.common.emptyValue}</span>
         </div>}
+        <div className="aircraft-page-live-status"><span>{t.aircraft.statusAdsb}</span><span>{liveAircraft ? t.aircraft.updatedAgo(formatAge(liveAircraft.seenSeconds)) : t.aircraft.notCurrentlyInRange}</span></div>
       </header>
 
       {liveAircraft && <section className="aircraft-live-hero" aria-label={t.aircraft.liveAdsb}>
@@ -327,7 +441,7 @@ export function AircraftDetailV2({
       <div className="aircraft-page-layout">
         <div className="aircraft-primary-column">
           <section className="aircraft-card" aria-labelledby="aircraft-information-title">
-            <h2 id="aircraft-information-title">{t.history.aircraftDetail}</h2>
+            <h2 id="aircraft-information-title">{t.aircraft.flightData}</h2>
             <div className="detail-grid aircraft-detail-grid">
               <DetailValue label={t.aircraft.icaoHex}>{icaoHex}</DetailValue>
               <DetailValue label={t.aircraft.registration}>{valueOrEmpty(registration)}</DetailValue>
@@ -337,22 +451,64 @@ export function AircraftDetailV2({
               <DetailValue label={t.aircraft.modelType}>{valueOrEmpty(model)}</DetailValue>
               <DetailValue label={t.aircraft.operator}>{valueOrEmpty(operator)}</DetailValue>
               <DetailValue label={t.aircraft.registrationCountry}>{valueOrEmpty(registrationCountry)}</DetailValue>
+              <DetailValue label={t.aircraft.squawk}>{valueOrEmpty(liveAircraft?.squawk)}</DetailValue>
+              <DetailValue label={t.aircraft.emergency}>{valueOrEmpty(liveAircraft?.emergency)}</DetailValue>
+              <DetailValue label={t.aircraft.source}>{valueOrEmpty(liveAircraft?.sourceType ?? liveAircraft?.source)}</DetailValue>
             </div>
             <div className="watchlist-actions"><Link className="primary-button" href={watchlistHref}>{t.watchlist.followAircraft}</Link></div>
 
             <section className="detail-section" aria-labelledby="aircraft-live-title">
-              <h3 id="aircraft-live-title">{t.aircraft.liveAdsb}</h3>
+              <h3 id="aircraft-live-title">{t.aircraft.movement}</h3>
               {liveAircraft ? (
                 <div className="detail-grid">
                   <DetailValue label={t.aircraft.altitude}>{formatAltitude(liveAircraft.altitude)}</DetailValue>
                   <DetailValue label={t.aircraft.groundSpeed}>{formatSpeed(liveAircraft.groundSpeed)}</DetailValue>
                   <DetailValue label={t.aircraft.track}>{formatTrack(liveAircraft.track)}</DetailValue>
+                  <DetailValue label={t.aircraft.distance}>{formatDistance(liveAircraft.distanceKm)}</DetailValue>
                   <DetailValue label={t.aircraft.squawk}>{valueOrEmpty(liveAircraft.squawk)}</DetailValue>
+                  <DetailValue label={t.aircraft.emergency}>{valueOrEmpty(liveAircraft.emergency)}</DetailValue>
                 </div>
               ) : <div className="detail-disclaimer">{t.aircraft.notCurrentlyInRange}</div>}
             </section>
+
+            <section className="detail-section" aria-labelledby="aircraft-provenance-title">
+              <h3 id="aircraft-provenance-title">{t.aircraft.provenance}</h3>
+              <div className="detail-grid">
+                <DetailValue label={t.aircraft.aircraftSource}>{valueOrEmpty(metadata?.source)}</DetailValue>
+                <DetailValue label={t.aircraft.routeSource}>{valueOrEmpty(route?.source ?? flightPlan?.source)}</DetailValue>
+                <DetailValue label={t.aircraft.positionSourceLabel}>{sourceLabel}</DetailValue>
+              </div>
+            </section>
           </section>
+          {(route || flightPlan) && <section className="aircraft-card aircraft-route-card" aria-labelledby="aircraft-route-title">
+            <h2 id="aircraft-route-title">{t.route.originDestination}</h2>
+            {route && <div className="aircraft-route-endpoints">
+              <RouteEndpoint code={route.origin} airport={route.originAirport} />
+              <span className="aircraft-route-arrow" aria-hidden="true">↓</span>
+              <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
+            </div>}
+            {flightPlan && <div className="detail-grid aircraft-flight-plan-grid">
+              <DetailValue label={t.flightPlan.scheduledDeparture}>{valueOrEmpty(flightPlan.scheduledDeparture)}</DetailValue>
+              <DetailValue label={t.flightPlan.actualDeparture}>{valueOrEmpty(flightPlan.actualDeparture)}</DetailValue>
+              <DetailValue label={t.flightPlan.scheduledArrival}>{valueOrEmpty(flightPlan.scheduledArrival)}</DetailValue>
+              <DetailValue label={t.flightPlan.estimatedArrival}>{valueOrEmpty(flightPlan.estimatedArrival)}</DetailValue>
+              <DetailValue label={t.flightPlan.filedRoute}>{valueOrEmpty(flightPlan.filedRoute)}</DetailValue>
+              <DetailValue label={t.flightPlan.waypoints}>{flightPlan.waypoints.length ? flightPlan.waypoints.join(" · ") : t.common.emptyValue}</DetailValue>
+            </div>}
+            <div className="detail-disclaimer">{t.aircraft.routeDisclaimer}</div>
+          </section>}
           <AircraftPhotoCard icaoHex={icaoHex} registration={registration} />
+          <AircraftAltitudeChart points={[...historyPoints, ...sessionPoints]} livePoint={livePoint} loading={flightHistoryLoading} />
+          <section className="aircraft-card aircraft-timeline-card" aria-labelledby="aircraft-timeline-title">
+            <h2 id="aircraft-timeline-title">{t.aircraft.flightData}</h2>
+            <div className="aircraft-history-stats">
+              <DetailValue label={t.aircraft.firstSeen}>{formatTime(firstSeen)}</DetailValue>
+              <DetailValue label={t.aircraft.trackedFor}>{durationBetween(firstSeen, lastSeen)}</DetailValue>
+              <DetailValue label={t.aircraft.lastUpdate}>{liveAircraft ? formatAge(liveAircraft.seenSeconds) : formatTime(lastSeen)}</DetailValue>
+              <DetailValue label={t.aircraft.positions}>{formatNumber(positionCount)}</DetailValue>
+            </div>
+            <div className="aircraft-trail-actions"><Link className="primary-button" href={`/history?hex=${encodeURIComponent(icaoHex)}`}>{t.aircraft.showFullTrail}</Link></div>
+          </section>
         </div>
 
         <AircraftHistorySummaryCard icaoHex={icaoHex} summary={detail?.historySummary ?? null} />

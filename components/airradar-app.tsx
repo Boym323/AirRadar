@@ -33,7 +33,7 @@ import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import { FlightRouteWeather } from "@/components/airport-weather";
-import { AircraftRecentFlights } from "@/components/aircraft-detail-v2";
+import { AircraftAltitudeChart, AircraftRecentFlights } from "@/components/aircraft-detail-v2";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { SigmetSnapshot } from "@/lib/weather/types";
@@ -417,7 +417,7 @@ export function AirRadarApp() {
   const [aircraftDetail, setAircraftDetail] = useState<AircraftDetailResponse | null>(null);
   const [aircraftDetailLoading, setAircraftDetailLoading] = useState(false);
   const [aircraftDetailError, setAircraftDetailError] = useState<string | null>(null);
-  const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[] } | null>(null);
+  const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
   const [distanceFilter, setDistanceFilter] = useState("all");
@@ -629,6 +629,13 @@ export function AirRadarApp() {
     setMobileCompact(false);
   }, []);
 
+  function centerSelectedAircraft(): void {
+    const map = mapRef.current;
+    const aircraft = snapshot.aircraft.find((item) => item.icaoHex === selectedHex);
+    if (!map || !aircraft || aircraft.lat === null || aircraft.lon === null) return;
+    map.easeTo({ center: [aircraft.lon, aircraft.lat], padding: { top: 70, bottom: 40, left: 40, right: 40 }, duration: 350 });
+  }
+
   useEffect(() => {
     selectedHexRef.current = selectedHex;
   }, [selectedHex]);
@@ -672,7 +679,7 @@ export function AirRadarApp() {
       })
       .then((history) => {
         if (active && (!history.icaoHex || history.icaoHex.toUpperCase() === selectedHex.toUpperCase())) {
-          setSelectedHistoryTrail({ icaoHex: selectedHex.toUpperCase(), points: boundTrailPoints(history.positions, Date.now()) });
+          setSelectedHistoryTrail({ icaoHex: selectedHex.toUpperCase(), flight: history.flight, points: boundTrailPoints(history.positions, Date.now()) });
         }
       })
       .catch(() => {
@@ -1530,6 +1537,15 @@ export function AirRadarApp() {
                   <div><strong>{selectedAircraft.verticalRate === null ? t.common.emptyValue : `${selectedAircraft.verticalRate > 0 ? "+" : ""}${formatNumber(selectedAircraft.verticalRate)} ft/min`}</strong><span>{t.aircraft.verticalRate}</span></div>
                 </div>
               </div>
+              <AircraftAltitudeChart
+                points={selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail.points : []}
+                livePoint={selectedAircraft.altitude === null ? null : { recordedAt: selectedAircraft.lastSeen, altitude: selectedAircraft.altitude }}
+              />
+              <DetailSection title={t.aircraft.flightData}>
+                <DetailItem label={t.aircraft.firstSeen} value={selectedHistoryTrail?.flight?.startedAt ? formatTime(selectedHistoryTrail.flight.startedAt) : t.common.emptyValue} />
+                <DetailItem label={t.aircraft.lastUpdate} value={formatAge(selectedAircraft.seenSeconds)} />
+                <DetailItem label={t.aircraft.positions} value={selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? formatNumber(selectedHistoryTrail.points.length) : t.common.emptyValue} />
+              </DetailSection>
               {selectedAircraft.enrichment?.route && <FlightRouteWeather originAirport={selectedAircraft.enrichment.route.originAirport} destinationAirport={selectedAircraft.enrichment.route.destinationAirport} />}
               <DetailSection title={t.history.aircraftDetail}>
                 <DetailItem label={t.aircraft.icaoHex} value={selectedAircraft.icaoHex} />
@@ -1608,6 +1624,10 @@ export function AirRadarApp() {
                 <DetailItem label={t.flightPlan.waypoints} value={selectedAircraft.enrichment.flightPlan.waypoints.join(" · ") || t.common.emptyValue} />
               </DetailSection>}
               <div className="watchlist-actions"><button className="watchlist-add" onClick={() => setWatchlist((current) => current.some((rule) => rule.kind === "icao" && rule.value === selectedAircraft.icaoHex) ? current : [...current, { kind: "icao", value: selectedAircraft.icaoHex }])}>{isWatchlisted(selectedAircraft) ? t.watchlist.onWatchlist : t.watchlist.addIcao}</button></div>
+              <div className="aircraft-trail-actions">
+                <Link className="history-link" href={`/history?hex=${encodeURIComponent(selectedAircraft.icaoHex)}`}>{t.aircraft.showFullTrail}</Link>
+                <button className="history-link aircraft-center-button" type="button" onClick={centerSelectedAircraft}>{t.aircraft.centerOnAircraft}</button>
+              </div>
               <div className="detail-footer"><span>{t.history.lastSeen} {formatTime(selectedAircraft.lastSeen)}</span><span><Link className="history-link" href={`/aircraft/${encodeURIComponent(selectedAircraft.icaoHex)}`}>{t.history.aircraftDetail} →</Link> <Link className="history-link" href={`/history?hex=${selectedAircraft.icaoHex}`}>{t.history.viewHistory} →</Link></span></div>
               </div> : <div className="detail-content">
                 <div className="detail-disclaimer aircraft-offline-notice">{t.aircraft.notCurrentlyInRange}</div>
