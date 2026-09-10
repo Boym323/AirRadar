@@ -160,17 +160,18 @@ export function aggregateCoverageIntelligence(options: {
   const hourOfDay = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
   const exactHours = new Map<string, number>();
   if (options.flightRowsComplete) {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: options.timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      hourCycle: "h23",
+    });
     for (const timestamp of options.flightStartTimes) {
       const parsed = Date.parse(timestamp);
       if (!Number.isFinite(parsed)) continue;
-      const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: options.timezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        hourCycle: "h23",
-      }).formatToParts(new Date(parsed));
+      const parts = formatter.formatToParts(new Date(parsed));
       const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
       const hour = Number(part("hour"));
       if (!Number.isInteger(hour) || hour < 0 || hour > 23) continue;
