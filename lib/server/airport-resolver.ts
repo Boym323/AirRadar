@@ -19,6 +19,7 @@ export interface AirportResolveInput {
 }
 
 export interface AirportDatabaseRow {
+  id?: number;
   icao: string;
   iata: string | null;
   name: string;
@@ -26,13 +27,18 @@ export interface AirportDatabaseRow {
   country: string | null;
   latitude: number;
   longitude: number;
+  type?: string | null;
+  elevationFt?: number | null;
+  scheduledService?: boolean | null;
+  region?: string | null;
+  localCode?: string | null;
 }
 
 export interface AirportDatabase {
   orm: {
     public: {
       Airport: {
-        where(filter: { icao?: string; iata?: string }): {
+        where(filter: { id?: number; icao?: string; iata?: string; ourAirportsId?: number }): {
           first(): Promise<AirportDatabaseRow | null>;
         };
       };
@@ -75,7 +81,7 @@ function airportFromDatabase(row: AirportDatabaseRow | null): Airport | null {
   if (!row || !validCoordinatePair(row.latitude, row.longitude)) return null;
   const icaoCode = normalizeAirportIcao(row.icao);
   if (!icaoCode) return null;
-  return {
+  const airport: Airport = {
     icaoCode,
     iataCode: normalizeAirportIata(row.iata),
     name: row.name,
@@ -84,6 +90,12 @@ function airportFromDatabase(row: AirportDatabaseRow | null): Airport | null {
     latitude: row.latitude,
     longitude: row.longitude,
   };
+  if (row.type !== undefined) airport.type = row.type;
+  if (row.elevationFt !== undefined) airport.elevationFt = row.elevationFt;
+  if (row.scheduledService !== undefined) airport.scheduledService = row.scheduledService;
+  if (row.region !== undefined) airport.region = row.region;
+  if (row.localCode !== undefined) airport.localCode = row.localCode;
+  return airport;
 }
 
 function airportFromProvider(

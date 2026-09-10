@@ -6,4 +6,9 @@ export interface Airport {
   country: string | null;
   latitude: number;
   longitude: number;
+  type?: string | null;
+  elevationFt?: number | null;
+  scheduledService?: boolean | null;
+  region?: string | null;
+  localCode?: string | null;
 }

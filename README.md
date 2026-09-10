@@ -190,12 +190,30 @@ the aircraft's actual tuned frequency.
 ```bash
 npm run airports:import -- --dry-run
 npm run airports:import
+npm run airports:sync -- --dry-run
+npm run airports:sync
+# reproducible local input:
+npm run airports:sync -- --dir ./data/ourairports --dry-run
 npm run atc:import -- --dry-run data/atc/cz-atc.json
 npm run atc:import -- data/atc/cz-atc.json
 npm run atc:sync:cz -- --dry-run
 npm run atc:sync:cz
 npm run atc:status:cz
 ```
+
+`airports:sync` downloads the current official OurAirports open-data files
+(`airports.csv`, `runways.csv`, `airport-frequencies.csv`, and `navaids.csv`)
+with a timeout and AirRadar User-Agent, validates all headers and rows before
+opening one database transaction, and supports `--dry-run`. Runways and
+frequencies are limited to the selected AirRadar airport catalog; navaids are
+kept worldwide. A failed or undersized feed cannot prune existing
+infrastructure. The existing `airports:import` remains a backward-compatible
+core-only importer and never deletes airport rows.
+
+Airport infrastructure data: OurAirports, Public Domain. The data is
+community-sourced and has no guarantee of accuracy or fitness for use. AirRadar
+is an informational/reference display, not a certified navigation database;
+verify operational aviation data with official sources.
 
 The import and Czech eAIP boundary rules are documented in
 [`data/atc/README.md`](data/atc/README.md) and

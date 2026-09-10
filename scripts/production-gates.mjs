@@ -98,6 +98,11 @@ function assertMigrationSource() {
   if (manifest.from !== "03aa657ab742b58e9acb95c3556a50f3ab7ec364cd0aeee203514e8688912ee2") throw new Error("Recap migration is not based on the current applied contract");
   const operations = JSON.parse(readFileSync(`${directory}/ops.json`, "utf8"));
   if (operations.length !== 2 || operations.some((operation) => operation.operationClass !== "additive")) throw new Error("Recap migration is not additive-only");
+  const airportDirectory = "migrations/app/20260910T0535_airport_data_v2";
+  const airportManifest = JSON.parse(readFileSync(`${airportDirectory}/migration.json`, "utf8"));
+  if (airportManifest.from !== "e05c22fd90a750642d9e212984e8b9d0797d81c37a9754fb29eebf0e50c82a08") throw new Error("Airport Data v2 migration is not based on the current applied contract");
+  const airportOperations = JSON.parse(readFileSync(`${airportDirectory}/ops.json`, "utf8"));
+  if (airportOperations.length < 1 || airportOperations.some((operation) => operation.operationClass !== "additive")) throw new Error("Airport Data v2 migration is not additive-only");
 }
 
 async function assertBrowserSmoke() {

@@ -32,6 +32,7 @@
     "prisma:deploy": "prisma db migrate",
     "prisma:verify": "prisma db verify",
     "airports:import": "jiti scripts/airports-import.ts",
+    "airports:sync": "jiti scripts/airports-sync.ts",
     "atc:import": "jiti scripts/atc-import.ts",
     "atc:sync:cz": "jiti scripts/atc-sync-cz.ts",
     "atc:status:cz": "jiti scripts/atc-status-cz.ts",

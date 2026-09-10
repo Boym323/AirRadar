@@ -96,7 +96,7 @@ PostgreSQL is optional for live operation. When configured, it stores:
 
 - durable `Aircraft` identity/catalog rows and `Flight` instances;
 - sampled `FlightPosition` rows with retention cleanup;
-- imported `Airport`, `AtcSector`, and `AtcTransmitter` reference data;
+- imported `Airport`, `AirportRunway`, `AirportFrequency`, `Navaid`, `AtcSector`, and `AtcTransmitter` reference data;
 - the optional tar1090 `AircraftMetadataCache` and sync state; and
 - `ReceiverDailyStats`, `ReceiverDailyAircraft`, and
   `ReceiverDailyCoverage` aggregates. `ReceiverDailyStats` also stores the
@@ -142,6 +142,14 @@ The live map is a MapLibre map with DOM markers keyed by ICAO hex and GeoJSON
 overlays. Route visualization is a separate Route V2 namespace. See
 [Runtime invariants](RUNTIME-INVARIANTS.md#maplibre-namespaces-and-cleanup)
 for the complete ownership list and cleanup contract.
+
+Airport infrastructure is an offline maintenance path. OurAirports source
+identity (`ourAirportsId` and `ourAirportsIdent`) is kept separately from the
+canonical AirRadar `Airport.icao`. Runways and communication frequencies join
+through source `ident` and are stored only for selected local airports;
+worldwide navaids retain an optional association through the same source key.
+The airport page loads core metadata and the three bounded infrastructure
+collections server-side; the browser never downloads upstream CSV files.
 
 ### Aviation Weather
 

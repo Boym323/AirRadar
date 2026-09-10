@@ -496,6 +496,27 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .airport-nearby-name span { font-size: 11px; font-weight: 700; }
 .airport-nearby-name small { color: var(--muted); font-size: 9px; }
 .airport-nearby-meta { display: flex; flex: 0 0 auto; gap: 9px; color: var(--amber); font-size: 10px; font-variant-numeric: tabular-nums; }
+.airport-data-source { margin: 12px 0 0; color: var(--muted); font-size: 10px; }
+.airport-infrastructure-empty { padding: 18px 19px 20px; color: var(--muted); font-size: 11px; }
+.airport-runway-list, .airport-frequency-list, .airport-navaid-list { display: grid; gap: 0; padding: 15px 19px 19px; }
+.airport-runway, .airport-frequency, .airport-navaid { min-width: 0; border-top: 1px solid rgba(153,181,207,.1); }
+.airport-runway:first-child, .airport-frequency:first-child, .airport-navaid:first-child { border-top: 0; }
+.airport-runway { padding: 11px 0; }
+.airport-runway.is-closed { opacity: .72; }
+.airport-runway-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: var(--font-geist-mono), monospace; }
+.airport-runway-heading strong { color: var(--text); font-size: 12px; }
+.airport-data-badge { color: var(--warning); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.airport-runway-meta { display: flex; flex-wrap: wrap; gap: 5px 13px; margin-top: 5px; color: var(--muted); font-size: 11px; }
+.airport-runway-meta span:first-child, .airport-frequency-value { color: var(--warning); font-family: var(--font-geist-mono), monospace; font-variant-numeric: tabular-nums; }
+.airport-runway-ends { display: flex; flex-wrap: wrap; gap: 9px 18px; margin-top: 8px; color: var(--muted); font-size: 10px; }
+.airport-runway-ends div { display: flex; flex-wrap: wrap; gap: 7px; }
+.airport-runway-ends strong { color: var(--accent); font-family: var(--font-geist-mono), monospace; }
+.airport-frequency, .airport-navaid { display: grid; grid-template-columns: minmax(48px, .5fr) minmax(95px, 1fr) minmax(0, 2fr); gap: 6px 12px; padding: 10px 0; align-items: baseline; }
+.airport-frequency strong, .airport-navaid strong, .airport-navaid span:nth-child(3) { font-family: var(--font-geist-mono), monospace; font-variant-numeric: tabular-nums; }
+.airport-frequency strong, .airport-navaid strong { color: var(--accent); }
+.airport-frequency small, .airport-navaid small { grid-column: 1 / -1; min-width: 0; color: var(--muted); overflow-wrap: anywhere; }
+.airport-navaid { grid-template-columns: minmax(48px, .5fr) minmax(75px, 1fr) minmax(95px, 1fr) minmax(80px, 1fr); }
+.airport-navaid span { color: var(--muted); font-size: 11px; }
 
 .aircraft-marker { width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; z-index: 2; }
 .aircraft-marker.selected { z-index: 30; }
@@ -901,6 +922,10 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .airport-map { height: 260px; }
   .airport-info-grid { grid-template-columns: 1fr 1fr; padding-left: 15px; padding-right: 15px; }
   .airport-card > h2 { padding-left: 15px; padding-right: 15px; }
+  .airport-runway-list, .airport-frequency-list, .airport-navaid-list { padding-left: 15px; padding-right: 15px; }
+  .airport-frequency, .airport-navaid { grid-template-columns: minmax(46px, .6fr) minmax(0, 1fr); }
+  .airport-frequency .airport-frequency-value, .airport-navaid span:nth-child(3), .airport-navaid span:nth-child(4) { grid-column: 2; }
+  .airport-navaid small { grid-column: 1 / -1; }
   .airport-weather-panel { padding-left: 15px; padding-right: 15px; }
   .airport-traffic-header { flex-direction: column; padding-left: 15px; padding-right: 15px; }
   .airport-traffic-range { width: 100%; }

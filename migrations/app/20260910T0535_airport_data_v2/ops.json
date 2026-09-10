@@ -1,0 +1,974 @@
+[
+  {
+    "id": "table.airportFrequency",
+    "label": "Create table \"airportFrequency\"",
+    "summary": "Creates table \"airportFrequency\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "airportFrequency"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"airportFrequency\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportFrequency\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"airportFrequency\"",
+        "sql": "CREATE TABLE \"public\".\"airportFrequency\" (\n  \"airportId\" int4 NOT NULL,\n  \"description\" text,\n  \"frequencyMhz\" float8 NOT NULL,\n  \"id\" int4 NOT NULL,\n  \"sourceAirportIdent\" text NOT NULL,\n  \"type\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"airportFrequency\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportFrequency\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.airportRunway",
+    "label": "Create table \"airportRunway\"",
+    "summary": "Creates table \"airportRunway\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "airportRunway"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"airportRunway\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportRunway\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"airportRunway\"",
+        "sql": "CREATE TABLE \"public\".\"airportRunway\" (\n  \"airportId\" int4 NOT NULL,\n  \"closed\" bool,\n  \"heDisplacedThresholdFt\" int4,\n  \"heElevationFt\" int4,\n  \"heHeadingDegT\" float8,\n  \"heIdent\" text,\n  \"heLatitude\" float8,\n  \"heLongitude\" float8,\n  \"id\" int4 NOT NULL,\n  \"leDisplacedThresholdFt\" int4,\n  \"leElevationFt\" int4,\n  \"leHeadingDegT\" float8,\n  \"leIdent\" text,\n  \"leLatitude\" float8,\n  \"leLongitude\" float8,\n  \"lengthFt\" int4,\n  \"lighted\" bool,\n  \"sourceAirportIdent\" text NOT NULL,\n  \"surface\" text,\n  \"widthFt\" int4,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"airportRunway\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportRunway\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.navaid",
+    "label": "Create table \"navaid\"",
+    "summary": "Creates table \"navaid\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "navaid"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"navaid\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"navaid\"",
+        "sql": "CREATE TABLE \"public\".\"navaid\" (\n  \"associatedAirportId\" int4,\n  \"associatedAirportIdent\" text,\n  \"country\" text,\n  \"dmeChannel\" text,\n  \"dmeElevationFt\" int4,\n  \"dmeFrequencyKhz\" int4,\n  \"dmeLatitude\" float8,\n  \"dmeLongitude\" float8,\n  \"elevationFt\" int4,\n  \"filename\" text NOT NULL,\n  \"frequencyKhz\" int4,\n  \"id\" int4 NOT NULL,\n  \"ident\" text NOT NULL,\n  \"latitude\" float8 NOT NULL,\n  \"longitude\" float8 NOT NULL,\n  \"magneticVariationDeg\" float8,\n  \"name\" text NOT NULL,\n  \"power\" text,\n  \"slavedVariationDeg\" float8,\n  \"type\" text NOT NULL,\n  \"usageType\" text,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"navaid\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.airport.elevationFt",
+    "label": "Add column \"elevationFt\" to \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "elevationFt",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"elevationFt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "elevationFt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"elevationFt\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD COLUMN \"elevationFt\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"elevationFt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "elevationFt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.airport.localCode",
+    "label": "Add column \"localCode\" to \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "localCode",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"localCode\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "localCode"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"localCode\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD COLUMN \"localCode\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"localCode\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "localCode"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.airport.ourAirportsId",
+    "label": "Add column \"ourAirportsId\" to \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "ourAirportsId",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"ourAirportsId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "ourAirportsId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"ourAirportsId\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD COLUMN \"ourAirportsId\" int4"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"ourAirportsId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "ourAirportsId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.airport.ourAirportsIdent",
+    "label": "Add column \"ourAirportsIdent\" to \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "ourAirportsIdent",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"ourAirportsIdent\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "ourAirportsIdent"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"ourAirportsIdent\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD COLUMN \"ourAirportsIdent\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"ourAirportsIdent\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "ourAirportsIdent"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.airport.region",
+    "label": "Add column \"region\" to \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "region",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"region\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "region"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"region\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD COLUMN \"region\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"region\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "region"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.airport.scheduledService",
+    "label": "Add column \"scheduledService\" to \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "scheduledService",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"scheduledService\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "scheduledService"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"scheduledService\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD COLUMN \"scheduledService\" bool"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"scheduledService\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "scheduledService"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.airport.type",
+    "label": "Add column \"type\" to \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "type",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"type\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "type"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"type\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD COLUMN \"type\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"type\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "airport",
+          "type"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.airport.airport_ourAirportsId_key",
+    "label": "Add unique constraint on \"airport\" (ourAirportsId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "airport_ourAirportsId_key",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"airport_ourAirportsId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airport_ourAirportsId_key",
+          "public",
+          "\"public\".\"airport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"airport_ourAirportsId_key\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD CONSTRAINT \"airport_ourAirportsId_key\" UNIQUE (\"ourAirportsId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"airport_ourAirportsId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airport_ourAirportsId_key",
+          "public",
+          "\"public\".\"airport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.airport.airport_ourAirportsIdent_key",
+    "label": "Add unique constraint on \"airport\" (ourAirportsIdent)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "airport_ourAirportsIdent_key",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"airport_ourAirportsIdent_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airport_ourAirportsIdent_key",
+          "public",
+          "\"public\".\"airport\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"airport_ourAirportsIdent_key\"",
+        "sql": "ALTER TABLE \"public\".\"airport\" ADD CONSTRAINT \"airport_ourAirportsIdent_key\" UNIQUE (\"ourAirportsIdent\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"airport_ourAirportsIdent_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airport_ourAirportsIdent_key",
+          "public",
+          "\"public\".\"airport\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.airport.airport_ourAirportsIdent_idx_b72bfeea",
+    "label": "Create index \"airport_ourAirportsIdent_idx_b72bfeea\" on \"airport\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "airport_ourAirportsIdent_idx_b72bfeea",
+        "table": "airport"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"airport_ourAirportsIdent_idx_b72bfeea\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airport_ourAirportsIdent_idx_b72bfeea\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"airport_ourAirportsIdent_idx_b72bfeea\"",
+        "sql": "CREATE INDEX \"airport_ourAirportsIdent_idx_b72bfeea\" ON \"public\".\"airport\" (\"ourAirportsIdent\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"airport_ourAirportsIdent_idx_b72bfeea\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airport_ourAirportsIdent_idx_b72bfeea\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.airportFrequency.airportFrequency_airportId_frequencyMhz_idx_d45a97a4",
+    "label": "Create index \"airportFrequency_airportId_frequencyMhz_idx_d45a97a4\" on \"airportFrequency\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "airportFrequency_airportId_frequencyMhz_idx_d45a97a4",
+        "table": "airportFrequency"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"airportFrequency_airportId_frequencyMhz_idx_d45a97a4\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportFrequency_airportId_frequencyMhz_idx_d45a97a4\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"airportFrequency_airportId_frequencyMhz_idx_d45a97a4\"",
+        "sql": "CREATE INDEX \"airportFrequency_airportId_frequencyMhz_idx_d45a97a4\" ON \"public\".\"airportFrequency\" (\"airportId\", \"frequencyMhz\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"airportFrequency_airportId_frequencyMhz_idx_d45a97a4\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportFrequency_airportId_frequencyMhz_idx_d45a97a4\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.airportFrequency.airportFrequency_airportId_idx_63ab39d3",
+    "label": "Create index \"airportFrequency_airportId_idx_63ab39d3\" on \"airportFrequency\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "airportFrequency_airportId_idx_63ab39d3",
+        "table": "airportFrequency"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"airportFrequency_airportId_idx_63ab39d3\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportFrequency_airportId_idx_63ab39d3\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"airportFrequency_airportId_idx_63ab39d3\"",
+        "sql": "CREATE INDEX \"airportFrequency_airportId_idx_63ab39d3\" ON \"public\".\"airportFrequency\" (\"airportId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"airportFrequency_airportId_idx_63ab39d3\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportFrequency_airportId_idx_63ab39d3\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.airportRunway.airportRunway_airportId_idx_63ab39d3",
+    "label": "Create index \"airportRunway_airportId_idx_63ab39d3\" on \"airportRunway\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "airportRunway_airportId_idx_63ab39d3",
+        "table": "airportRunway"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"airportRunway_airportId_idx_63ab39d3\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportRunway_airportId_idx_63ab39d3\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"airportRunway_airportId_idx_63ab39d3\"",
+        "sql": "CREATE INDEX \"airportRunway_airportId_idx_63ab39d3\" ON \"public\".\"airportRunway\" (\"airportId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"airportRunway_airportId_idx_63ab39d3\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"airportRunway_airportId_idx_63ab39d3\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navaid.navaid_associatedAirportId_idx_47ae9e2f",
+    "label": "Create index \"navaid_associatedAirportId_idx_47ae9e2f\" on \"navaid\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "navaid_associatedAirportId_idx_47ae9e2f",
+        "table": "navaid"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"navaid_associatedAirportId_idx_47ae9e2f\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_associatedAirportId_idx_47ae9e2f\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"navaid_associatedAirportId_idx_47ae9e2f\"",
+        "sql": "CREATE INDEX \"navaid_associatedAirportId_idx_47ae9e2f\" ON \"public\".\"navaid\" (\"associatedAirportId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"navaid_associatedAirportId_idx_47ae9e2f\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_associatedAirportId_idx_47ae9e2f\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navaid.navaid_country_idx_c3994778",
+    "label": "Create index \"navaid_country_idx_c3994778\" on \"navaid\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "navaid_country_idx_c3994778",
+        "table": "navaid"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"navaid_country_idx_c3994778\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_country_idx_c3994778\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"navaid_country_idx_c3994778\"",
+        "sql": "CREATE INDEX \"navaid_country_idx_c3994778\" ON \"public\".\"navaid\" (\"country\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"navaid_country_idx_c3994778\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_country_idx_c3994778\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navaid.navaid_ident_idx_b731c50f",
+    "label": "Create index \"navaid_ident_idx_b731c50f\" on \"navaid\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "navaid_ident_idx_b731c50f",
+        "table": "navaid"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"navaid_ident_idx_b731c50f\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_ident_idx_b731c50f\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"navaid_ident_idx_b731c50f\"",
+        "sql": "CREATE INDEX \"navaid_ident_idx_b731c50f\" ON \"public\".\"navaid\" (\"ident\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"navaid_ident_idx_b731c50f\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_ident_idx_b731c50f\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navaid.navaid_latitude_longitude_idx_cf6c2b2c",
+    "label": "Create index \"navaid_latitude_longitude_idx_cf6c2b2c\" on \"navaid\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "navaid_latitude_longitude_idx_cf6c2b2c",
+        "table": "navaid"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"navaid_latitude_longitude_idx_cf6c2b2c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_latitude_longitude_idx_cf6c2b2c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"navaid_latitude_longitude_idx_cf6c2b2c\"",
+        "sql": "CREATE INDEX \"navaid_latitude_longitude_idx_cf6c2b2c\" ON \"public\".\"navaid\" (\"latitude\", \"longitude\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"navaid_latitude_longitude_idx_cf6c2b2c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_latitude_longitude_idx_cf6c2b2c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navaid.navaid_type_idx_b6b604ea",
+    "label": "Create index \"navaid_type_idx_b6b604ea\" on \"navaid\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "navaid_type_idx_b6b604ea",
+        "table": "navaid"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"navaid_type_idx_b6b604ea\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_type_idx_b6b604ea\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"navaid_type_idx_b6b604ea\"",
+        "sql": "CREATE INDEX \"navaid_type_idx_b6b604ea\" ON \"public\".\"navaid\" (\"type\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"navaid_type_idx_b6b604ea\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navaid_type_idx_b6b604ea\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.airportFrequency.airportFrequency_airportId_fkey",
+    "label": "Add foreign key \"airportFrequency_airportId_fkey\" on \"airportFrequency\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "airportFrequency_airportId_fkey",
+        "table": "airportFrequency"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"airportFrequency_airportId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airportFrequency_airportId_fkey",
+          "public",
+          "\"public\".\"airportFrequency\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"airportFrequency_airportId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"airportFrequency\"\nADD CONSTRAINT \"airportFrequency_airportId_fkey\"\nFOREIGN KEY (\"airportId\")\nREFERENCES \"public\".\"airport\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"airportFrequency_airportId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airportFrequency_airportId_fkey",
+          "public",
+          "\"public\".\"airportFrequency\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.airportRunway.airportRunway_airportId_fkey",
+    "label": "Add foreign key \"airportRunway_airportId_fkey\" on \"airportRunway\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "airportRunway_airportId_fkey",
+        "table": "airportRunway"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"airportRunway_airportId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airportRunway_airportId_fkey",
+          "public",
+          "\"public\".\"airportRunway\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"airportRunway_airportId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"airportRunway\"\nADD CONSTRAINT \"airportRunway_airportId_fkey\"\nFOREIGN KEY (\"airportId\")\nREFERENCES \"public\".\"airport\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"airportRunway_airportId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "airportRunway_airportId_fkey",
+          "public",
+          "\"public\".\"airportRunway\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.navaid.navaid_associatedAirportId_fkey",
+    "label": "Add foreign key \"navaid_associatedAirportId_fkey\" on \"navaid\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "navaid_associatedAirportId_fkey",
+        "table": "navaid"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"navaid_associatedAirportId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "navaid_associatedAirportId_fkey",
+          "public",
+          "\"public\".\"navaid\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"navaid_associatedAirportId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"navaid\"\nADD CONSTRAINT \"navaid_associatedAirportId_fkey\"\nFOREIGN KEY (\"associatedAirportId\")\nREFERENCES \"public\".\"airport\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"navaid_associatedAirportId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "navaid_associatedAirportId_fkey",
+          "public",
+          "\"public\".\"navaid\""
+        ]
+      }
+    ]
+  }
+]

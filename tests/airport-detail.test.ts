@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { Airport } from "@/lib/airports/types";
 import { resolveAirportDetail } from "@/lib/server/airport-detail";
+import type { AirportInfrastructure } from "@/lib/airports/infrastructure";
 
 const pageSource = readFileSync(new URL("../app/airports/[icao]/page.tsx", import.meta.url), "utf8");
 const detailSource = readFileSync(new URL("../components/airport-detail.tsx", import.meta.url), "utf8");
@@ -64,5 +65,25 @@ describe("airport detail V1", () => {
     expect(stylesSource).toContain(".airport-map { height: 260px");
     expect(stylesSource).toContain("white-space: pre-wrap");
     expect(stylesSource).toContain("overflow-wrap: anywhere");
+  });
+
+  it("renders infrastructure sections and safe empty states", async () => {
+    const infrastructure: AirportInfrastructure = {
+      runways: [{ id: 1, airportId: 1, sourceAirportIdent: "LKPR", lengthFt: 12188, widthFt: 148, surface: "UNKNOWN", lighted: true, closed: false, leIdent: "06", leLatitude: 50.1, leLongitude: 14.2, leElevationFt: 1200, leHeadingDegT: 60, leDisplacedThresholdFt: null, heIdent: "24", heLatitude: 50.11, heLongitude: 14.21, heElevationFt: 1200, heHeadingDegT: 240, heDisplacedThresholdFt: null }],
+      frequencies: [{ id: 2, airportId: 1, sourceAirportIdent: "LKPR", type: "TWR", description: "Tower", frequencyMhz: 118.705 }],
+      navaids: [{ id: 3, filename: "Prague_VOR", ident: "PRG", name: "Prague", type: "VOR-DME", frequencyKhz: 115300, latitude: 50.1, longitude: 14.2, elevationFt: 1200, country: "CZ", dmeFrequencyKhz: 115300, dmeChannel: "100X", dmeLatitude: 50.1, dmeLongitude: 14.2, dmeElevationFt: 1200, slavedVariationDeg: null, magneticVariationDeg: null, usageType: "BOTH", power: "HIGH", associatedAirportId: 1, associatedAirportIdent: "LKPR" }],
+    };
+    const markup = renderToStaticMarkup(createElement((await import("@/components/airport-detail")).AirportDetail, { airport: prague, infrastructure }));
+    expect(markup).toContain("airport-runways-title");
+    expect(markup).toContain("airport-frequencies-title");
+    expect(markup).toContain("airport-navaids-title");
+    expect(markup).toContain("118.705 MHz");
+    expect(markup).toContain("115.300 MHz");
+    expect(markup).toContain("OurAirports");
+
+    const emptyMarkup = renderToStaticMarkup(createElement((await import("@/components/airport-detail")).AirportDetail, { airport: prague }));
+    expect(emptyMarkup).toContain("Nejsou k dispozici údaje o drahách");
+    expect(emptyMarkup).toContain("Nejsou k dispozici údaje o frekvencích");
+    expect(emptyMarkup).toContain("Nejsou k dispozici údaje o navigačních bodech");
   });
 });

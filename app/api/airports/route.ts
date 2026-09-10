@@ -21,6 +21,7 @@ export async function GET(request: Request): Promise<Response> {
           country: airport.country,
           latitude: airport.latitude,
           longitude: airport.longitude,
+          ...(airport.type !== undefined ? { type: airport.type, elevationFt: airport.elevationFt, scheduledService: airport.scheduledService, region: airport.region, localCode: airport.localCode } : {}),
         })), { headers: { "Cache-Control": "public, max-age=300, stale-while-revalidate=3600" } });
       }
     } catch {

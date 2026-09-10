@@ -166,7 +166,7 @@ function rankAirports(airports: readonly Airport[], query: string): Scored<Airpo
 function airportFromDatabase(row: AirportDatabaseRow | null): Airport | null {
   if (!row || !Number.isFinite(row.latitude) || !Number.isFinite(row.longitude)) return null;
   if (!/^[A-Z]{4}$/i.test(row.icao)) return null;
-  return {
+  const airport: Airport = {
     icaoCode: row.icao.trim().toUpperCase(),
     iataCode: row.iata?.trim() ? row.iata.trim().toUpperCase() : null,
     name: row.name,
@@ -175,6 +175,12 @@ function airportFromDatabase(row: AirportDatabaseRow | null): Airport | null {
     latitude: row.latitude,
     longitude: row.longitude,
   };
+  if (row.type !== undefined) airport.type = row.type;
+  if (row.elevationFt !== undefined) airport.elevationFt = row.elevationFt;
+  if (row.scheduledService !== undefined) airport.scheduledService = row.scheduledService;
+  if (row.region !== undefined) airport.region = row.region;
+  if (row.localCode !== undefined) airport.localCode = row.localCode;
+  return airport;
 }
 
 function airportRowsToCatalog(rows: readonly AirportDatabaseRow[]): Airport[] {

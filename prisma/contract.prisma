@@ -105,19 +105,101 @@ model Flight {
 }
 
 model Airport {
-  id        Int    @id @default(autoincrement())
-  icao      String @unique
-  iata      String?
-  name      String
-  city      String?
-  country   String?
-  latitude  Float
-  longitude Float
+  id                Int      @id @default(autoincrement())
+  icao              String   @unique
+  iata              String?
+  name              String
+  city              String?
+  country           String?
+  latitude          Float
+  longitude         Float
+  ourAirportsId     Int?     @unique
+  ourAirportsIdent  String?  @unique
+  type              String?
+  elevationFt       Int?
+  scheduledService  Boolean?
+  region            String?
+  localCode         String?
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
+  runways           AirportRunway[]
+  frequencies       AirportFrequency[]
+  associatedNavaids Navaid[]
+
   @@index([iata])
   @@index([country])
+  @@index([ourAirportsIdent])
+}
+
+model AirportRunway {
+  id                     Int      @id
+  airportId              Int
+  sourceAirportIdent     String
+  lengthFt               Int?
+  widthFt                Int?
+  surface                String?
+  lighted                Boolean?
+  closed                 Boolean?
+  leIdent                String?
+  leLatitude             Float?
+  leLongitude            Float?
+  leElevationFt          Int?
+  leHeadingDegT          Float?
+  leDisplacedThresholdFt Int?
+  heIdent                String?
+  heLatitude             Float?
+  heLongitude            Float?
+  heElevationFt          Int?
+  heHeadingDegT          Float?
+  heDisplacedThresholdFt Int?
+  airport                Airport  @relation(fields: [airportId], references: [id], onDelete: Cascade)
+
+  @@index([airportId])
+}
+
+model AirportFrequency {
+  id                 Int      @id
+  airportId          Int
+  sourceAirportIdent String
+  type               String
+  description        String?
+  frequencyMhz       Float
+  airport            Airport  @relation(fields: [airportId], references: [id], onDelete: Cascade)
+
+  @@index([airportId])
+  @@index([airportId, frequencyMhz])
+}
+
+model Navaid {
+  id                     Int      @id
+  filename               String
+  ident                  String
+  name                   String
+  type                   String
+  frequencyKhz           Int?
+  latitude               Float
+  longitude              Float
+  elevationFt            Int?
+  country                String?
+  dmeFrequencyKhz        Int?
+  dmeChannel             String?
+  dmeLatitude            Float?
+  dmeLongitude           Float?
+  dmeElevationFt         Int?
+  slavedVariationDeg     Float?
+  magneticVariationDeg   Float?
+  usageType              String?
+  power                  String?
+  associatedAirportId    Int?
+  associatedAirportIdent String?
+  associatedAirport      Airport? @relation(fields: [associatedAirportId], references: [id], onDelete: SetNull)
+
+  @@index([ident])
+  @@index([type])
+  @@index([country])
+  @@index([associatedAirportId])
+  @@index([latitude, longitude])
 }
 
 model AtcSector {
