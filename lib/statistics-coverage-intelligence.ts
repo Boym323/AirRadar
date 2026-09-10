@@ -183,7 +183,7 @@ export function aggregateCoverageIntelligence(options: {
     ? [...exactHours.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] ?? null
     : null;
 
-  const validStats = options.statsRows.filter((row) => Number.isFinite(row.maxConcurrentAircraft) && row.maxConcurrentAircraft >= 0);
+  const validStats = options.statsRows.filter((row) => Number.isFinite(row.maxConcurrentAircraft) && row.maxConcurrentAircraft > 0);
   const peak = [...validStats].sort((a, b) => b.maxConcurrentAircraft - a.maxConcurrentAircraft || a.date.localeCompare(b.date))[0] ?? null;
   const farthest = [...options.statsRows]
     .filter((row) => finiteDistance(row.maxDistanceKm) !== null && row.maxDistanceIcaoHex && row.maxDistanceBearing !== null && Number.isFinite(row.maxDistanceBearing) && row.maxDistanceAt)
