@@ -13,9 +13,10 @@ provider, or read `FlightPosition`.
 The response combines:
 
 - `ReceiverDailyCoverage` for 36 fixed 10-degree azimuth buckets;
-- `ReceiverDailyStats` for peak concurrent aircraft and complete farthest
-  reception metadata;
-- the current RAM `ReceiverStatistics` day when it contains live data;
+- `ReceiverDailyCoverageAltitude` for 36 azimuth buckets × 4 altitude bands;
+- `ReceiverDailyStats` for peak concurrent aircraft, farthest reception,
+  receiver-message totals and fastest-aircraft records;
+- current in-process receiver aggregates when they contain live data;
 - bounded `Flight.startTime` rows for local-hour traffic distribution; and
 - one bounded `Flight.maxAltitude` ranking for the highest observed flight.
 
@@ -24,9 +25,9 @@ not affect the live radar.
 
 ## Coverage reliability
 
-Existing daily coverage stores one maximum receiver-to-aircraft distance per
-10-degree azimuth bucket. V1.4B therefore calculates robust range statistics
-across **daily maxima**, not across individual ADS-B position samples.
+Daily coverage stores one maximum receiver-to-aircraft distance per 10-degree
+azimuth bucket. V1.4B therefore calculates robust range statistics across
+**daily maxima**, not across individual ADS-B position samples.
 
 For each sector and selected 7-day or 30-day period the endpoint returns:
 
@@ -44,6 +45,74 @@ The current local day may replace persisted values only when the in-process
 statistics singleton has real observations. A newly constructed or empty RAM
 aggregate must never erase a valid persisted current-day aggregate.
 
+## Altitude-band coverage
+
+The advanced receiver sidecar records a maximum distance for each of 144 fixed
+cells per local day: 36 azimuth sectors × 4 altitude bands.
+
+The band mapping is intentionally stable:
+
+- band 0: 0 <= altitude < 5,000 ft;
+- band 1: 5,000 <= altitude < 15,000 ft;
+- band 2: 15,000 <= altitude < 30,000 ft;
+- band 3: altitude >= 30,000 ft.
+
+Aircraft without a finite non-negative altitude are not included in an
+altitude band. The public visualization uses nearest-rank P95 of the daily
+maximum distance for each band/sector cell, plus the absolute range maximum.
+It never derives this view by scanning `FlightPosition`.
+
+## Receiver messages
+
+The local readsb provider already receives the top-level cumulative
+`aircraft.json.messages` counter. The advanced sidecar consumes that same value;
+it does not perform another HTTP request.
+
+For each day it persists:
+
+- `receiverMessagesCount`: accumulated daily message deltas; and
+- `receiverMessagesRawLast`: the last readsb cumulative value used as the
+  restart-safe baseline.
+
+A normal increase adds `current - previous`. If the cumulative value decreases,
+AirRadar treats it as a readsb reset and adds the new post-reset value. The
+persisted raw baseline allows an AirRadar application restart to continue the
+same day's count without double-counting the whole readsb process lifetime.
+
+Existing historical rows remain `NULL`. The first deployment day can be
+partial because AirRadar cannot reconstruct the already elapsed part of that
+day without scanning another historical source. A local-midnight boundary is
+accurate to the normal snapshot cadence.
+
+## Fastest-aircraft record
+
+The speed record is receiver-observed and comes only from the current local
+readsb snapshot. A candidate must:
+
+- have a valid local position and receiver distance/bearing;
+- be airborne; and
+- have finite ground speed from 30 through 800 kt inclusive.
+
+The upper bound prevents one malformed ADS-B value from becoming a permanent
+record. Speed, ICAO, registration, callsign and timestamp are stored as one
+coherent record. No historical ground-speed scan or backfill is performed.
+
+## Persistence and live-path isolation
+
+Advanced receiver aggregation is a small sidecar fed by the same normalized
+local readsb snapshot as the live radar. It has **no timer and no poller**.
+Database work is queued asynchronously so `LocalReadsbProvider.getSnapshot()`
+does not wait for PostgreSQL.
+
+Writes are opportunistically throttled to the existing 30-second statistics
+cadence. `provider.close()` waits for the queue and requests a final flush.
+Altitude rows are written only for cells whose maximum increased. The maximum
+in-memory altitude state is 144 rows for one day.
+
+The new columns are nullable and the new altitude table is additive. Existing
+receiver-statistics writes do not update these new columns, so the two aggregate
+lanes cannot erase each other's values.
+
 ## Hour-of-day traffic
 
 The hour-of-day chart counts persisted receiver-observed `Flight` instances by
@@ -59,21 +128,27 @@ movements, departures, or arrivals.
 
 ## Records
 
-V1.4B exposes range-scoped records that already have durable aggregate support:
+V1.4B exposes range-scoped receiver records without `FlightPosition` scans:
 
 - peak simultaneous aircraft from `ReceiverDailyStats.maxConcurrentAircraft`;
-- farthest complete reception record from the existing daily distance record;
+- farthest complete reception from the existing daily distance record;
+- fastest plausible local aircraft from the new daily aggregate; and
 - highest observed Flight from `Flight.maxAltitude`.
 
-The implementation does not query historical ground speed from
-`FlightPosition`, so it does not expose a fastest-flight record yet.
+## Migration and rollback
 
-## Deferred schema-dependent analytics
+The approved V1.4B schema change is additive:
 
-The current schema cannot persist altitude-band coverage, historical receiver
-message counters, or a safe range-scoped fastest-flight record without adding
-new aggregate fields/tables. Those features are intentionally deferred until a
-separate additive schema/migration design is reviewed and approved.
+- one new `ReceiverDailyCoverageAltitude` table with primary key
+  `(date, azimuthBucket, altitudeBand)` and a cascading foreign key to
+  `ReceiverDailyStats(date)`;
+- nullable message-counter fields on `ReceiverDailyStats`; and
+- nullable fastest-aircraft fields on `ReceiverDailyStats`.
 
-A future design should continue to aggregate during normal snapshot processing
-rather than deriving dashboards by scanning retained `FlightPosition` rows.
+There is no historical backfill and no new index required for the bounded
+altitude query because the composite primary key is date-leading.
+
+Application rollback does not require an immediate database rollback. An older
+AirRadar build ignores the new nullable columns and table. If schema cleanup is
+ever desired, it should be a separate later migration after the application
+rollback is proven stable.
