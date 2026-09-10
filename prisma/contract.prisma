@@ -9,7 +9,7 @@ model Aircraft {
   model String?
   operator String?
   createdAt    DateTime @default(now())
-     updatedAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
   flights      Flight[]
 }
 
@@ -44,17 +44,25 @@ model AircraftMetadataSync {
 }
 
 model ReceiverDailyStats {
-  date                  String   @id
-  uniqueAircraftCount   Int      @default(0)
-  maxConcurrentAircraft Int      @default(0)
-  maxDistanceKm         Float    @default(0)
-  maxDistanceIcaoHex    String?
-  maxDistanceBearing    Float?
-  maxDistanceRegistration String?
-  maxDistanceAt         DateTime?
-  updatedAt             DateTime @default(now())
-  aircraft              ReceiverDailyAircraft[]
-  coverage              ReceiverDailyCoverage[]
+  date                        String   @id
+  uniqueAircraftCount         Int      @default(0)
+  maxConcurrentAircraft       Int      @default(0)
+  maxDistanceKm               Float    @default(0)
+  maxDistanceIcaoHex          String?
+  maxDistanceBearing          Float?
+  maxDistanceRegistration     String?
+  maxDistanceAt               DateTime?
+  receiverMessagesCount       Float?
+  receiverMessagesRawLast     Float?
+  maxGroundSpeedKt            Float?
+  maxGroundSpeedIcaoHex       String?
+  maxGroundSpeedRegistration  String?
+  maxGroundSpeedCallsign      String?
+  maxGroundSpeedAt            DateTime?
+  updatedAt                   DateTime @default(now())
+  aircraft                    ReceiverDailyAircraft[]
+  coverage                    ReceiverDailyCoverage[]
+  coverageAltitude            ReceiverDailyCoverageAltitude[]
 
   @@index([maxDistanceKm])
 }
@@ -78,6 +86,17 @@ model ReceiverDailyCoverage {
   dailyStats    ReceiverDailyStats @relation(fields: [date], references: [date], onDelete: Cascade)
 
   @@id([date, azimuthBucket])
+}
+
+model ReceiverDailyCoverageAltitude {
+  date          String
+  azimuthBucket Int
+  altitudeBand  Int
+  maxDistanceKm Float
+  updatedAt     DateTime @default(now())
+  dailyStats    ReceiverDailyStats @relation(fields: [date], references: [date], onDelete: Cascade)
+
+  @@id([date, azimuthBucket, altitudeBand])
 }
 
 model Flight {
