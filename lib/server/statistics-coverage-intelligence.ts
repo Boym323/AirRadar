@@ -1,12 +1,14 @@
 import "temporal-polyfill/full/global";
 import { getAppTimezone } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
+import { getReceiverAdvancedStatistics } from "@/lib/server/receiver-advanced-statistics";
 import { getReceiverStatistics } from "@/lib/server/statistics";
 import { statisticsRangeBounds } from "@/lib/server/statistics-range";
 import { mergeCurrentDayStats } from "@/lib/statistics-coverage-current-day";
 import {
   aggregateCoverageIntelligence,
   COVERAGE_INTELLIGENCE_FLIGHT_LIMIT,
+  type CoverageIntelligenceDailyAltitudeCoverageRow,
   type CoverageIntelligenceDailyCoverageRow,
   type CoverageIntelligenceDailyStatsRow,
   type CoverageIntelligenceHighestFlight,
@@ -52,16 +54,18 @@ function unavailable(range: CoverageIntelligenceRange, now: Date, timezone: stri
       sectors: [],
       bestReliableP95: null,
     },
+    altitudeCoverage: { methodology: "daily-max-p95", bands: [] },
+    messages: { observedDays: 0, total: null },
     hourly: { complete: false, observedFlights: 0, bins: [], busiestHour: null },
-    records: { peakConcurrent: null, farthestReception: null, highestFlight: null },
+    records: { peakConcurrent: null, farthestReception: null, fastestAircraft: null, highestFlight: null },
   };
 }
 
 /**
  * Build receiver intelligence without reading FlightPosition. Daily coverage
- * is bounded to 36 azimuth buckets × at most 30 days. Flight.startTime reads
- * are capped; if the cap is exceeded, hourly statistics fail closed instead
- * of presenting a partial ranking as complete.
+ * is bounded to 36 azimuth buckets × at most 30 days and altitude coverage to
+ * 36 × 4 buckets × 30 days. Flight.startTime reads are capped; if the cap is
+ * exceeded, hourly statistics fail closed instead of presenting partial data.
  */
 export async function getCoverageIntelligence(
   range: CoverageIntelligenceRange,
@@ -76,14 +80,17 @@ export async function getCoverageIntelligence(
   try {
     let coverageQuery = schema.ReceiverDailyCoverage.where((row) => row.date.gte(bounds.from));
     coverageQuery = coverageQuery.where((row) => row.date.lt(bounds.toExclusive));
+    let altitudeCoverageQuery = schema.ReceiverDailyCoverageAltitude.where((row) => row.date.gte(bounds.from));
+    altitudeCoverageQuery = altitudeCoverageQuery.where((row) => row.date.lt(bounds.toExclusive));
     let statsQuery = schema.ReceiverDailyStats.where((row) => row.date.gte(bounds.from));
     statsQuery = statsQuery.where((row) => row.date.lt(bounds.toExclusive));
     const boundedFlights = () => schema.Flight
       .where((flight) => flight.startTime.gte(bounds.fromInstant))
       .where((flight) => flight.startTime.lt(bounds.toExclusiveInstant));
 
-    const [coverageRaw, statsRaw, flightStartsRaw, highestRaw] = await Promise.all([
+    const [coverageRaw, altitudeCoverageRaw, statsRaw, flightStartsRaw, highestRaw] = await Promise.all([
       coverageQuery.all(),
+      altitudeCoverageQuery.all(),
       statsQuery.all(),
       boundedFlights()
         .orderBy((flight) => flight.startTime.asc())
@@ -107,6 +114,16 @@ export async function getCoverageIntelligence(
       });
     }
 
+    const altitudeCoverageByKey = new Map<string, CoverageIntelligenceDailyAltitudeCoverageRow>();
+    for (const row of altitudeCoverageRaw) {
+      altitudeCoverageByKey.set(`${row.date}:${row.azimuthBucket}:${row.altitudeBand}`, {
+        date: row.date,
+        azimuthBucket: row.azimuthBucket,
+        altitudeBand: row.altitudeBand,
+        maxDistanceKm: row.maxDistanceKm,
+      });
+    }
+
     const statsByDate = new Map<string, CoverageIntelligenceDailyStatsRow>();
     for (const row of statsRaw) {
       statsByDate.set(row.date, {
@@ -117,12 +134,17 @@ export async function getCoverageIntelligence(
         maxDistanceRegistration: row.maxDistanceRegistration,
         maxDistanceBearing: row.maxDistanceBearing,
         maxDistanceAt: row.maxDistanceAt ? instantIso(row.maxDistanceAt) : null,
+        receiverMessagesCount: row.receiverMessagesCount,
+        maxGroundSpeedKt: row.maxGroundSpeedKt,
+        maxGroundSpeedIcaoHex: row.maxGroundSpeedIcaoHex,
+        maxGroundSpeedRegistration: row.maxGroundSpeedRegistration,
+        maxGroundSpeedCallsign: row.maxGroundSpeedCallsign,
+        maxGroundSpeedAt: row.maxGroundSpeedAt ? instantIso(row.maxGroundSpeedAt) : null,
       });
     }
 
-    // Keep the current day at RAM freshness instead of waiting for the normal
-    // statistics persistence flush. Never let a newly constructed/empty RAM
-    // instance erase a valid persisted current-day aggregate.
+    // Keep the original receiver aggregates at RAM freshness. This merge keeps
+    // reception distance/identity metadata coherent and never lowers a DB max.
     const statistics = getReceiverStatistics();
     const current = statistics.getCurrentDaySnapshot();
     const currentHasData = current.uniqueAircraftCount > 0
@@ -158,6 +180,49 @@ export async function getCoverageIntelligence(
       }));
     }
 
+    // Advanced aggregates are also kept in RAM between their throttled 30 s
+    // writes. Overlay only monotonic maxima/current counters for today's date.
+    const advanced = getReceiverAdvancedStatistics().getSnapshot(now);
+    if (advanced.date >= bounds.from && advanced.date < bounds.toExclusive) {
+      for (const row of advanced.altitudeCoverage) {
+        if (row.maxDistanceKm <= 0) continue;
+        const key = `${advanced.date}:${row.azimuthBucket}:${row.altitudeBand}`;
+        const persisted = altitudeCoverageByKey.get(key);
+        altitudeCoverageByKey.set(key, {
+          date: advanced.date,
+          azimuthBucket: row.azimuthBucket,
+          altitudeBand: row.altitudeBand,
+          maxDistanceKm: Math.max(row.maxDistanceKm, persisted?.maxDistanceKm ?? 0),
+        });
+      }
+      const persisted = statsByDate.get(advanced.date) ?? {
+        date: advanced.date,
+        maxConcurrentAircraft: 0,
+        maxDistanceKm: 0,
+        maxDistanceIcaoHex: null,
+        maxDistanceRegistration: null,
+        maxDistanceBearing: null,
+        maxDistanceAt: null,
+        receiverMessagesCount: null,
+        maxGroundSpeedKt: null,
+        maxGroundSpeedIcaoHex: null,
+        maxGroundSpeedRegistration: null,
+        maxGroundSpeedCallsign: null,
+        maxGroundSpeedAt: null,
+      };
+      const currentFastestWins = advanced.fastest !== null
+        && (persisted.maxGroundSpeedKt === null || advanced.fastest.speedKt > persisted.maxGroundSpeedKt);
+      statsByDate.set(advanced.date, {
+        ...persisted,
+        receiverMessagesCount: advanced.receiverMessagesCount ?? persisted.receiverMessagesCount,
+        maxGroundSpeedKt: currentFastestWins ? advanced.fastest!.speedKt : persisted.maxGroundSpeedKt,
+        maxGroundSpeedIcaoHex: currentFastestWins ? advanced.fastest!.icaoHex : persisted.maxGroundSpeedIcaoHex,
+        maxGroundSpeedRegistration: currentFastestWins ? advanced.fastest!.registration : persisted.maxGroundSpeedRegistration,
+        maxGroundSpeedCallsign: currentFastestWins ? advanced.fastest!.callsign : persisted.maxGroundSpeedCallsign,
+        maxGroundSpeedAt: currentFastestWins ? advanced.fastest!.recordedAt : persisted.maxGroundSpeedAt,
+      });
+    }
+
     const highestRow = highestRaw[0] ?? null;
     const highestFlight: CoverageIntelligenceHighestFlight | null = highestRow && highestRow.maxAltitude !== null ? {
       flightId: highestRow.id,
@@ -177,6 +242,7 @@ export async function getCoverageIntelligence(
       timezone,
       generatedAt: now.toISOString(),
       coverageRows: [...coverageByKey.values()],
+      altitudeCoverageRows: [...altitudeCoverageByKey.values()],
       statsRows: [...statsByDate.values()],
       flightStartTimes: flightStarts,
       flightRowsComplete,
