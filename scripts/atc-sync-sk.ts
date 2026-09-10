@@ -64,16 +64,24 @@ async function main(): Promise<void> {
   const database = createAtcDatabase();
   const existing = database ? await existingAtcRows(database) : null;
   const existingSlovak = existing?.sectors.filter((sector) => sector.source === SK_EAIP_SOURCE_NAME) ?? [];
-  const currentlySourceLimited = new Set(parsed.diagnostics.filter((diagnostic) => diagnostic.status === "skipped").map((diagnostic) => `SK-${diagnostic.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100)}`));
-  const destructiveRegression = existingSlovak.filter((sector) => currentlySourceLimited.has(sector.id));
-  if (!dryRun && destructiveRegression.length) {
-    throw new Error(`SYNC FAILED: ${destructiveRegression.length} previously imported Slovak sector(s) are source-limited in the current parse (${destructiveRegression.map((sector) => sector.id).join(", ")}). Existing production rows remain unchanged.`);
+  const missingPreviouslyImported = existingSlovak.filter((sector) => !importedIds.has(sector.id));
+
+  // v1 policy is deliberately conservative: a current parse may add/update
+  // Slovak sectors, but it may not automatically expire a sector that was
+  // successfully imported before. An actual AIP deletion/rename therefore
+  // requires explicit operator review instead of being indistinguishable from
+  // an upstream markup/parser/boundary-provider regression.
+  if (!dryRun && missingPreviouslyImported.length) {
+    throw new Error(`SYNC FAILED: current parse would obsolete ${missingPreviouslyImported.length} previously imported Slovak sector(s): ${missingPreviouslyImported.map((sector) => sector.id).join(", ")}. Review the AIP change explicitly; existing production rows remain unchanged.`);
   }
 
   console.log(`Official source: ${dataset.source.reference}`);
   console.log(`AIP effective date: ${parsed.effectiveDate}`);
   printDiagnostics(parsed);
   console.log(`Import preview: sectors ${dataset.sectors.length}; transmitters ${dataset.transmitters.length}`);
+  if (missingPreviouslyImported.length) {
+    console.log(`REVIEW REQUIRED before apply: ${missingPreviouslyImported.length} stored Slovak sector(s) are absent from the current persistable dataset.`);
+  }
   console.log("Published airspace is imported with runtime activation UNKNOWN; no operational activation is inferred.");
   console.log("no authoritative transmitter-location source found");
   await runAtcImport(dataset, { dryRun, database });
