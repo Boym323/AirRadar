@@ -30,4 +30,18 @@ describe("airport nearby ADS-B traffic", () => {
     expect(classifyAirportTraffic({ track: 90, verticalRate: 0 }, 10, 180, 10.05)).toBe("overflying");
     expect(classifyAirportTraffic({ track: null, verticalRate: null }, 10, 180, 12)).toBe("unknown");
   });
+
+  it("allows descent during an approach and stays conservative for a strong climb", () => {
+    expect(classifyAirportTraffic({ track: 180, verticalRate: -1_500 }, 10, 180, 12)).toBe("approaching");
+    expect(classifyAirportTraffic({ track: 180, verticalRate: 0 }, 10, 180, 12)).toBe("approaching");
+    expect(classifyAirportTraffic({ track: 180, verticalRate: 1_800 }, 10, 180, 12)).toBe("unknown");
+  });
+
+  it("does not infer an approach from distance trend without a compatible heading", () => {
+    expect(classifyAirportTraffic({ track: 90, verticalRate: -800 }, 10, 180, 12)).toBe("unknown");
+  });
+
+  it("classifies an aircraft climbing away from the airport as departing", () => {
+    expect(classifyAirportTraffic({ track: 0, verticalRate: 900 }, 12, 180, 10)).toBe("departing");
+  });
 });
