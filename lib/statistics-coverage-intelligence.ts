@@ -6,6 +6,13 @@ export interface CoverageIntelligenceDailyCoverageRow {
   maxDistanceKm: number;
 }
 
+export interface CoverageIntelligenceDailyAltitudeCoverageRow {
+  date: string;
+  azimuthBucket: number;
+  altitudeBand: number;
+  maxDistanceKm: number;
+}
+
 export interface CoverageIntelligenceDailyStatsRow {
   date: string;
   maxConcurrentAircraft: number;
@@ -14,6 +21,12 @@ export interface CoverageIntelligenceDailyStatsRow {
   maxDistanceRegistration: string | null;
   maxDistanceBearing: number | null;
   maxDistanceAt: string | null;
+  receiverMessagesCount: number | null;
+  maxGroundSpeedKt: number | null;
+  maxGroundSpeedIcaoHex: string | null;
+  maxGroundSpeedRegistration: string | null;
+  maxGroundSpeedCallsign: string | null;
+  maxGroundSpeedAt: string | null;
 }
 
 export interface CoverageIntelligenceHighestFlight {
@@ -35,6 +48,23 @@ export interface CoverageIntelligenceSector {
   p99DailyMaxDistanceKm: number | null;
   maxDistanceKm: number | null;
   reliable: boolean;
+}
+
+export interface CoverageIntelligenceAltitudeSector {
+  bearingFrom: number;
+  bearingTo: number;
+  observedDays: number;
+  p95DailyMaxDistanceKm: number | null;
+  maxDistanceKm: number | null;
+}
+
+export interface CoverageIntelligenceAltitudeBand {
+  id: number;
+  minFt: number;
+  maxFt: number | null;
+  observedDays: number;
+  maxDistanceKm: number | null;
+  sectors: CoverageIntelligenceAltitudeSector[];
 }
 
 export interface CoverageIntelligenceHourBin {
@@ -66,6 +96,14 @@ export interface CoverageIntelligenceResponse {
       distanceKm: number;
     } | null;
   };
+  altitudeCoverage: {
+    methodology: "daily-max-p95";
+    bands: CoverageIntelligenceAltitudeBand[];
+  };
+  messages: {
+    observedDays: number;
+    total: number | null;
+  };
   hourly: {
     complete: boolean;
     observedFlights: number;
@@ -82,6 +120,14 @@ export interface CoverageIntelligenceResponse {
       bearing: number;
       recordedAt: string;
     } | null;
+    fastestAircraft: {
+      date: string;
+      speedKt: number;
+      icaoHex: string;
+      registration: string | null;
+      callsign: string | null;
+      recordedAt: string;
+    } | null;
     highestFlight: CoverageIntelligenceHighestFlight | null;
   };
 }
@@ -89,6 +135,12 @@ export interface CoverageIntelligenceResponse {
 export const COVERAGE_INTELLIGENCE_BUCKET_COUNT = 36;
 export const COVERAGE_INTELLIGENCE_BUCKET_DEGREES = 10;
 export const COVERAGE_INTELLIGENCE_FLIGHT_LIMIT = 20_000;
+export const COVERAGE_INTELLIGENCE_ALTITUDE_BANDS = [
+  { id: 0, minFt: 0, maxFt: 5_000 },
+  { id: 1, minFt: 5_000, maxFt: 15_000 },
+  { id: 2, minFt: 15_000, maxFt: 30_000 },
+  { id: 3, minFt: 30_000, maxFt: null },
+] as const;
 
 export function parseCoverageIntelligenceRange(value: string | null | undefined): CoverageIntelligenceRange | null {
   return value === "7d" || value === "30d" ? value : null;
@@ -96,6 +148,10 @@ export function parseCoverageIntelligenceRange(value: string | null | undefined)
 
 function finiteDistance(value: number): number | null {
   return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function finiteNonNegative(value: number | null): number | null {
+  return value !== null && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
 function nearestRank(values: number[], percentile: number): number | null {
@@ -113,6 +169,41 @@ function median(values: number[]): number | null {
   return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
 }
 
+function aggregateAltitudeCoverage(rows: CoverageIntelligenceDailyAltitudeCoverageRow[]): CoverageIntelligenceAltitudeBand[] {
+  return COVERAGE_INTELLIGENCE_ALTITUDE_BANDS.map((band) => {
+    const sectorValues = Array.from({ length: COVERAGE_INTELLIGENCE_BUCKET_COUNT }, () => new Map<string, number>());
+    const observedDates = new Set<string>();
+    for (const row of rows) {
+      if (row.altitudeBand !== band.id) continue;
+      if (!Number.isInteger(row.azimuthBucket) || row.azimuthBucket < 0 || row.azimuthBucket >= COVERAGE_INTELLIGENCE_BUCKET_COUNT) continue;
+      const distance = finiteDistance(row.maxDistanceKm);
+      if (distance === null) continue;
+      const perDay = sectorValues[row.azimuthBucket]!;
+      perDay.set(row.date, Math.max(perDay.get(row.date) ?? 0, distance));
+      observedDates.add(row.date);
+    }
+    const sectors = sectorValues.map((perDay, bucket): CoverageIntelligenceAltitudeSector => {
+      const values = [...perDay.values()];
+      return {
+        bearingFrom: bucket * COVERAGE_INTELLIGENCE_BUCKET_DEGREES,
+        bearingTo: (bucket + 1) * COVERAGE_INTELLIGENCE_BUCKET_DEGREES,
+        observedDays: values.length,
+        p95DailyMaxDistanceKm: nearestRank(values, 0.95),
+        maxDistanceKm: values.length ? Math.max(...values) : null,
+      };
+    });
+    const maxima = sectors.map((sector) => sector.maxDistanceKm).filter((value): value is number => value !== null);
+    return {
+      id: band.id,
+      minFt: band.minFt,
+      maxFt: band.maxFt,
+      observedDays: observedDates.size,
+      maxDistanceKm: maxima.length ? Math.max(...maxima) : null,
+      sectors,
+    };
+  });
+}
+
 export function aggregateCoverageIntelligence(options: {
   range: CoverageIntelligenceRange;
   from: string;
@@ -120,6 +211,7 @@ export function aggregateCoverageIntelligence(options: {
   timezone: string;
   generatedAt: string;
   coverageRows: CoverageIntelligenceDailyCoverageRow[];
+  altitudeCoverageRows?: CoverageIntelligenceDailyAltitudeCoverageRow[];
   statsRows: CoverageIntelligenceDailyStatsRow[];
   flightStartTimes: string[];
   flightRowsComplete: boolean;
@@ -189,6 +281,12 @@ export function aggregateCoverageIntelligence(options: {
   const farthest = [...options.statsRows]
     .filter((row) => finiteDistance(row.maxDistanceKm) !== null && row.maxDistanceIcaoHex && row.maxDistanceBearing !== null && Number.isFinite(row.maxDistanceBearing) && row.maxDistanceAt)
     .sort((a, b) => b.maxDistanceKm - a.maxDistanceKm || a.date.localeCompare(b.date))[0] ?? null;
+  const fastest = [...options.statsRows]
+    .filter((row) => finiteDistance(row.maxGroundSpeedKt ?? 0) !== null && row.maxGroundSpeedIcaoHex && row.maxGroundSpeedAt)
+    .sort((a, b) => (b.maxGroundSpeedKt ?? 0) - (a.maxGroundSpeedKt ?? 0) || a.date.localeCompare(b.date))[0] ?? null;
+  const messageRows = options.statsRows
+    .map((row) => finiteNonNegative(row.receiverMessagesCount))
+    .filter((value): value is number => value !== null);
 
   return {
     source: "postgres",
@@ -209,6 +307,14 @@ export function aggregateCoverageIntelligence(options: {
         distanceKm: best.p95DailyMaxDistanceKm,
       } : null,
     },
+    altitudeCoverage: {
+      methodology: "daily-max-p95",
+      bands: aggregateAltitudeCoverage(options.altitudeCoverageRows ?? []),
+    },
+    messages: {
+      observedDays: messageRows.length,
+      total: messageRows.length ? messageRows.reduce((sum, value) => sum + value, 0) : null,
+    },
     hourly: {
       complete: options.flightRowsComplete,
       observedFlights: options.flightStartTimes.length,
@@ -224,6 +330,14 @@ export function aggregateCoverageIntelligence(options: {
         registration: farthest.maxDistanceRegistration,
         bearing: farthest.maxDistanceBearing!,
         recordedAt: farthest.maxDistanceAt!,
+      } : null,
+      fastestAircraft: fastest ? {
+        date: fastest.date,
+        speedKt: fastest.maxGroundSpeedKt!,
+        icaoHex: fastest.maxGroundSpeedIcaoHex!,
+        registration: fastest.maxGroundSpeedRegistration,
+        callsign: fastest.maxGroundSpeedCallsign,
+        recordedAt: fastest.maxGroundSpeedAt!,
       } : null,
       highestFlight: options.highestFlight,
     },
