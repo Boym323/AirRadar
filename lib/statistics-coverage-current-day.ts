@@ -59,5 +59,11 @@ export function mergeCurrentDayStats(options: {
     maxDistanceRegistration: selected?.registration ?? null,
     maxDistanceBearing: selected?.bearing ?? null,
     maxDistanceAt: selected?.recordedAt ?? null,
+    receiverMessagesCount: options.persisted?.receiverMessagesCount ?? null,
+    maxGroundSpeedKt: options.persisted?.maxGroundSpeedKt ?? null,
+    maxGroundSpeedIcaoHex: options.persisted?.maxGroundSpeedIcaoHex ?? null,
+    maxGroundSpeedRegistration: options.persisted?.maxGroundSpeedRegistration ?? null,
+    maxGroundSpeedCallsign: options.persisted?.maxGroundSpeedCallsign ?? null,
+    maxGroundSpeedAt: options.persisted?.maxGroundSpeedAt ?? null,
   };
 }
