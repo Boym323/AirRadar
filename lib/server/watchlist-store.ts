@@ -43,6 +43,7 @@ export interface PublicWatchlistRule {
   value: string;
   maxDistanceKm?: number;
   cooldownMs: number;
+  lastTriggeredAt: string | null;
   currentState: WatchlistCurrentState;
 }
 
@@ -273,7 +274,11 @@ function currentState(rule: AlertRule, snapshot: StateSnapshot): WatchlistCurren
   };
 }
 
-export function toPublicWatchlistResponse(rules: AlertRule[], snapshot: StateSnapshot): PublicWatchlistResponse {
+export function toPublicWatchlistResponse(
+  rules: AlertRule[],
+  snapshot: StateSnapshot,
+  lastTriggeredByRule: ReadonlyMap<string, string> = new Map(),
+): PublicWatchlistResponse {
   const cooldownMs = getAlertCooldownMs();
   return {
     rules: rules.map((rule) => ({
@@ -284,6 +289,7 @@ export function toPublicWatchlistResponse(rules: AlertRule[], snapshot: StateSna
       value: rule.value,
       ...(rule.maxDistanceKm === undefined ? {} : { maxDistanceKm: rule.maxDistanceKm }),
       cooldownMs,
+      lastTriggeredAt: lastTriggeredByRule.get(rule.id) ?? null,
       currentState: currentState(rule, snapshot),
     })),
     cooldownMs,
