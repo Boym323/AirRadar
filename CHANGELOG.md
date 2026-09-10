@@ -291,3 +291,10 @@ Changes since v1.0.10:
 Changes since v1.0.11:
 
 - fix: update OgnStateService to use a fixed timestamp for testing (8e367fae)
+
+## [1.0.13] - 2026-09-10
+
+Changes since v1.0.12:
+
+- docs: update recovery runbook to reflect new migration details and safety checks (1c77b204)
+- feat: enhance OGN privacy handling and DDB integration (f0aec448)
