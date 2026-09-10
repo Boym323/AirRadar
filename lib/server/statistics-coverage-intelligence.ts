@@ -13,22 +13,6 @@ import {
   type CoverageIntelligenceResponse,
 } from "@/lib/statistics-coverage-intelligence";
 
-interface FlightStartRow {
-  startTime: Temporal.Instant | Date;
-}
-
-interface HighestFlightRow {
-  id: number;
-  callsign: string | null;
-  registration: string | null;
-  maxAltitude: number | null;
-  startTime: Temporal.Instant | Date;
-  aircraft: {
-    icaoHex: string;
-    registration: string | null;
-  };
-}
-
 function instantIso(value: Temporal.Instant | Date): string {
   return value instanceof Date ? value.toISOString() : value.toString();
 }
@@ -104,13 +88,13 @@ export async function getCoverageIntelligence(
         .orderBy((flight) => flight.startTime.asc())
         .select("startTime")
         .limit(COVERAGE_INTELLIGENCE_FLIGHT_LIMIT + 1)
-        .all() as Promise<FlightStartRow[]>,
+        .all(),
       boundedFlights()
         .where((flight) => flight.maxAltitude.gt(0))
         .orderBy([(flight) => flight.maxAltitude.desc(), (flight) => flight.startTime.desc()])
         .include("aircraft", (aircraft) => aircraft.select("icaoHex", "registration"))
         .limit(1)
-        .all() as Promise<HighestFlightRow[]>,
+        .all(),
     ]);
 
     const coverageByKey = new Map<string, CoverageIntelligenceDailyCoverageRow>();
