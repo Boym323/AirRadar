@@ -143,6 +143,22 @@ overlays. Route visualization is a separate Route V2 namespace. See
 [Runtime invariants](RUNTIME-INVARIANTS.md#maplibre-namespaces-and-cleanup)
 for the complete ownership list and cleanup contract.
 
+### Aviation Weather
+
+`AviationWeatherProvider` is an optional, independent server-side subsystem.
+It reads only official Aviation Weather Center METAR, TAF, and SIGMET
+endpoints. The provider has its own bounded in-process cache, request timeout,
+negative entries, in-flight coalescing, stale-if-error policy, and rate-limit
+backoff. It is not part of `AircraftStateService`, readsb polling, aircraft
+serialization, SSE, history, statistics, or PostgreSQL persistence.
+
+The weather API accepts only canonical airport ICAO codes. The browser renders
+normalized METAR/TAF data in airport and flight detail, while the optional
+SIGMET GeoJSON is fetched on demand into the `aviation-sigmet` MapLibre source.
+The SIGMET layer is disabled initially and its DOM popups use text-only safe
+properties. Weather diagnostics are read-only and are included in `/system`
+without probing the upstream provider.
+
 `/api/system/status` exposes sanitized process RSS/heap/external/ArrayBuffer
 metrics, kernel RSS splits, the active SSE count and limit, metadata cache
 counts, the byte-bounded tar1090 fallback cache, and the cgroup memory values

@@ -140,7 +140,7 @@ polling. Configure them in the server-only `.env`; never use
 | ADSBDB metadata/routes | `ADSBDB_ENABLED=true` | Disabled |
 | tar1090 aircraft catalog | `AIRCRAFT_METADATA_URL` when using a tar1090 root | Best effort, daily conditional sync |
 | FlightAware flight plans | `FLIGHTAWARE_API_KEY` | Disabled; commercial/possibly billable |
-| AviationWeather.gov METAR/TAF | No key; opened airport/flight detail | On demand |
+| AviationWeather.gov METAR/TAF/SIGMET | No key; server-side AWC integration | Disabled; opt-in |
 | Planespotters aircraft photos | `AIRCRAFT_PHOTOS_ENABLED=true` | Disabled |
 | Server alerts/Pushover | `/var/lib/airradar/alerts.json` in production, `PUSHOVER_ENABLED=true` plus server credentials | Rules/no-op notifier until explicitly configured |
 
@@ -148,6 +148,37 @@ Source, licensing, URL allowlists, cache behavior, and operational limits are
 in [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md). Route airport metadata is
 resolved through the PostgreSQL catalog, then valid provider coordinates, then
 the small bundled fallback catalog.
+
+### Aviation Weather
+
+The optional Aviation Weather integration is server-side only and uses the
+official Aviation Weather Center APIs. Enable it explicitly:
+
+```bash
+AVIATION_WEATHER_ENABLED=true
+AVIATION_WEATHER_USER_AGENT="AirRadar/<version> (+https://example.invalid/contact)"
+```
+
+`/api/weather/airport/:icao` and the bounded batch form
+`/api/weather/airport?icao=ICAO1,ICAO2` expose canonical-ICAO METAR/TAF data;
+`/api/weather/sigmet` exposes current worldwide international SIGMETs plus the
+CONUS domestic dataset. The radar SIGMET layer is off by default and loads only
+after the operator enables it. Flight-detail weather requests the destination
+first and then the origin in one batch request.
+
+The provider uses HTTPS AWC endpoints, a custom User-Agent, bounded timeout,
+per-product TTLs (METAR 5 minutes, TAF 10 minutes, SIGMET 5 minutes), bounded
+RAM-only caches, negative caching, in-flight coalescing, stale-if-error,
+`Retry-After` backoff, and safe handling of `204 No Content`. It never writes
+weather to PostgreSQL, changes aircraft SSE payloads, delays readsb, or feeds
+history/statistics. Public responses contain canonical normalized fields only;
+upstream errors and credentials are not serialized. The provider is subject to
+AWC's published request and result limits, so production UI fetches are
+on-demand and the SIGMET layer refreshes at a bounded cadence.
+
+Operational counters and cache/provider state are visible on `/system`. See
+[`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md) for provenance and the complete
+configuration list.
 
 ## ATC and airport data
 

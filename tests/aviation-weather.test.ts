@@ -79,12 +79,13 @@ describe("AviationWeatherProvider", () => {
     const provider = providerWith(new Response(null, { status: 204 }), response(tafPayload));
     const result = await provider.getAirportWeather("LKPR");
     expect(result.metar).toBeNull();
-    expect(result.taf).toEqual({
+    expect(result.taf).toMatchObject({
       rawText: tafPayload[0].rawTAF,
       issueTime: "2026-09-08T08:00:00.000Z",
       validFrom: "2026-09-08T09:00:00.000Z",
       validTo: "2026-09-09T15:00:00.000Z",
     });
+    expect(result.taf?.periods).toHaveLength(0);
   });
 
   it("supports a METAR-only or TAF-only partial result", async () => {
@@ -101,6 +102,20 @@ describe("AviationWeatherProvider", () => {
     const provider = providerWith(response([{ ...metarPayload[0], wdir: "VRB", visib: 3 }]), new Response(null, { status: 204 }));
     await expect(provider.getAirportWeather("LKPR")).resolves.toMatchObject({
       metar: { windDirectionDeg: null, windVariable: true, visibilityMeters: statuteMilesToMeters(3), visibilityGreaterThan: false },
+    });
+  });
+
+  it("normalizes structured METAR clouds, weather tokens, coordinates and fractional visibility", async () => {
+    const provider = providerWith(response([{ ...metarPayload[0], visib: "M1/4", clouds: [{ cover: "BKN", base: 800 }], wxString: "-RA BR", lat: 50.1, lon: 14.2 }]), new Response(null, { status: 204 }));
+    await expect(provider.getAirportWeather("LKPR")).resolves.toMatchObject({
+      metar: {
+        visibilityMeters: Math.round(0.25 * 1609.344),
+        visibilityLessThan: true,
+        clouds: [{ cover: "BKN", baseFtAgl: 800 }],
+        weather: ["-RA", "BR"],
+        latitude: 50.1,
+        longitude: 14.2,
+      },
     });
   });
 

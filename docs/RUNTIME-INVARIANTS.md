@@ -41,6 +41,10 @@ These are behavior and safety contracts for changes to the current system.
   are contained.
 - PostgreSQL, catalog, weather, photo, and notifier failures must degrade the
   relevant feature without stopping live readsb refresh.
+- Aviation Weather is independent of live state: it may not add work to the
+  readsb poller, alter `/api/stream`, enqueue history/statistics writes, or
+  persist its RAM cache. Only canonical four-letter ICAO codes may reach its
+  airport endpoints; IATA is never guessed into a weather request.
 
 ## SSE
 
@@ -143,10 +147,11 @@ The `AirRadarApp` map owns its map instance, controls, DOM markers, animation
 frames, event listeners, and dynamic source data. Its generic IDs are:
 
 - sources `range-rings`, `selected-trail`, `atc-sectors`,
-  `atc-transmitters`, `route-airports`; layers `range-rings-line`,
+  `atc-transmitters`, `route-airports`, `aviation-sigmet`; layers `range-rings-line`,
   `selected-trail-line`, `atc-sectors-fill`, `atc-sectors-line`,
   `atc-sectors-label`, `atc-transmitters-circle`,
-  `route-airports-circle`, `route-airports-label`;
+  `route-airports-circle`, `route-airports-label`, `aviation-sigmet-fill`,
+  `aviation-sigmet-line`;
 - Route V2 constants in `lib/route-visualization.ts`: sources
   `selected-route-v2` and `selected-route-airports-v2`; layers
   `selected-route-completed`, `selected-route-remaining`,

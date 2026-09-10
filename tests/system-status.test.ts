@@ -131,6 +131,28 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(localOffline.receiver.readsb.status).toBe("offline");
   });
 
+  it("reports weather diagnostics without promoting an optional provider failure to system health", () => {
+    const value = build({ weather: {
+      enabled: true,
+      status: "rate_limited",
+      entries: 4,
+      airports: 2,
+      lastAttemptAt: checkedAt.toISOString(),
+      lastSuccessAt: null,
+      lastLatencyMs: 900,
+      requests: 6,
+      failures: 2,
+      consecutiveFailures: 2,
+      cacheHits: 3,
+      cacheMisses: 4,
+      activeSigmets: 7,
+      sigmetStale: true,
+      retryAfterMs: 30_000,
+    } });
+    expect(value.status).toBe("ok");
+    expect(value.weather).toMatchObject({ status: "degraded", requests: 6, failures: 2, activeSigmets: 7, sigmetStale: true, retryAfterMs: 30_000 });
+  });
+
   it("reports database unavailable while keeping the live status shape", () => {
     const value = build({ database: { status: "offline", connected: false }, airportData: { rowCount: null, fallbackRowCount: 6 } });
     expect(value.database).toMatchObject({ status: "offline", connected: false });

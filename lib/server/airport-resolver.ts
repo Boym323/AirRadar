@@ -96,13 +96,11 @@ function airportFromProvider(
 
   const providerIcao = normalizedIcao ?? normalizeAirportIcao(provider.icaoCode);
   const providerIata = normalizedIata ?? normalizeAirportIata(provider.iataCode);
-  const code = providerIcao ?? providerIata;
+  // IATA is route/display metadata only. Weather and airport identity require ICAO.
+  const code = providerIcao;
   if (!code) return null;
 
   return {
-    // Airport keeps the historical public shape. When an upstream route only
-    // supplies IATA, that code remains the safe route fallback until a
-    // canonical ICAO can be resolved from the database.
     icaoCode: code,
     iataCode: providerIata,
     name: textValue(provider.name) ?? code,

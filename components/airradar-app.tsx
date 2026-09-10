@@ -32,10 +32,11 @@ import { appendTrailPoint, boundTrailPoints, selectedTrail, trailPointFromAircra
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
-import { AirportWeatherDisclosure } from "@/components/airport-weather";
+import { FlightRouteWeather } from "@/components/airport-weather";
 import { AircraftRecentFlights } from "@/components/aircraft-detail-v2";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
+import type { SigmetSnapshot } from "@/lib/weather/types";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
@@ -67,6 +68,7 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
   transmitters: [],
   metadata: { status: "unavailable", source: null, sourceReference: null, effectiveDate: null, lastVerifiedAt: null, sectorCount: 0, transmitterCount: 0 },
 };
+const EMPTY_SIGMET_DATA: SigmetSnapshot = { type: "FeatureCollection", features: [], fetchedAt: new Date(0).toISOString(), stale: false };
 
 interface PublicAlertStatus {
   enabled: boolean;
@@ -363,6 +365,8 @@ export function AirRadarApp() {
   const [colorMode, setColorMode] = useState<AircraftColorMode>("default");
   const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
+  const [showSigmet, setShowSigmet] = useState(false);
+  const [sigmetData, setSigmetData] = useState<SigmetSnapshot>(EMPTY_SIGMET_DATA);
   const [showAirports, setShowAirports] = useState(true);
   const [showSignificantAirports, setShowSignificantAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSignificant);
   const [showSmallAirports, setShowSmallAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSmall);
@@ -396,6 +400,7 @@ export function AirRadarApp() {
       if (stored) setWatchlist(JSON.parse(stored) as Array<{ kind: string; value: string }>);
       const storedCoverage = window.localStorage.getItem("airradar-coverage");
       if (storedCoverage === "extended" || storedCoverage === "local") setCoverage(storedCoverage);
+      setShowSigmet(window.localStorage.getItem("airradar-sigmet-layer") === "true");
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
     }
@@ -420,6 +425,38 @@ export function AirRadarApp() {
   useEffect(() => {
     try { window.localStorage.setItem("airradar-coverage", coverage); } catch { /* optional */ }
   }, [coverage]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("airradar-sigmet-layer", String(showSigmet)); } catch { /* optional */ }
+  }, [showSigmet]);
+
+  useEffect(() => {
+    if (!showSigmet) {
+      setSigmetData(EMPTY_SIGMET_DATA);
+      return;
+    }
+    const controller = new AbortController();
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async (): Promise<void> => {
+      try {
+        const response = await fetch("/api/weather/sigmet", { cache: "no-store", signal: controller.signal });
+        if (!response.ok) throw new Error("SIGMET request failed");
+        const data = await response.json() as Partial<SigmetSnapshot> & { enabled?: boolean; available?: boolean };
+        if (active) setSigmetData(data.enabled === false || data.available === false || data.type !== "FeatureCollection" ? EMPTY_SIGMET_DATA : data as SigmetSnapshot);
+      } catch {
+        if (active) setSigmetData(EMPTY_SIGMET_DATA);
+      } finally {
+        if (active) timer = setTimeout(() => { void load(); }, 5 * 60_000);
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+      controller.abort();
+      if (timer) clearTimeout(timer);
+    };
+  }, [showSigmet]);
 
   const isWatchlisted = useCallback((aircraft: AircraftView) => watchlist.some((rule) => {
     const value = rule.value.trim().toUpperCase();
@@ -629,6 +666,26 @@ export function AirRadarApp() {
       map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([]) });
       map.addLayer({ id: "route-airports-circle", type: "circle", source: "route-airports", paint: { "circle-color": "#d2b56f", "circle-opacity": 0.72, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 3, 12, 4.5], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.2 } });
       map.addLayer({ id: "route-airports-label", type: "symbol", source: "route-airports", layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 8, 10, 9, 13, 10], "text-offset": [0, 1.1], "text-padding": 7, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#cfbd8b", "text-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.52, 10, 0.72, 13, 0.82], "text-halo-color": "#08111d", "text-halo-width": 0.7 } });
+      map.addSource("aviation-sigmet", { type: "geojson", data: EMPTY_SIGMET_DATA as unknown as GeoJSON.FeatureCollection });
+      map.addLayer({ id: "aviation-sigmet-fill", type: "fill", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "fill-color": "#f3b95f", "fill-opacity": 0.08 } });
+      map.addLayer({ id: "aviation-sigmet-line", type: "line", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "line-color": "#f3b95f", "line-opacity": 0.68, "line-width": 1.2 } });
+      map.on("click", "aviation-sigmet-fill", (event) => {
+        const feature = event.features?.[0];
+        if (!feature) return;
+        const properties = feature.properties ?? {};
+        const content = document.createElement("div");
+        content.className = "map-popup";
+        const title = document.createElement("strong");
+        title.textContent = String(properties.hazard ?? properties.phenomenon ?? t.layers.sigmet);
+        const body = document.createElement("span");
+        const lower = properties.lowerFt == null ? t.common.emptyValue : `FL${Math.round(Number(properties.lowerFt) / 100)}`;
+        const upper = properties.upperFt == null ? t.common.emptyValue : `FL${Math.round(Number(properties.upperFt) / 100)}`;
+        body.textContent = `${t.layers.sigmet} · ${String(properties.qualifier ?? t.common.emptyValue)} · ${lower}–${upper} · ${String(properties.firName ?? properties.firId ?? t.common.emptyValue)} · ${t.weather.validity}: ${String(properties.validFrom ?? t.common.emptyValue)}–${String(properties.validTo ?? t.common.emptyValue)}`;
+        content.append(title, body);
+        new maplibregl.Popup({ closeButton: true, maxWidth: "300px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
+      });
+      map.on("mouseenter", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = ""; });
       map.addSource(ROUTE_V2_AIRPORT_SOURCE_ID, { type: "geojson", data: createRouteAirportGeoJSON(null) });
       map.addLayer({ id: ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, type: "circle", source: ROUTE_V2_AIRPORT_SOURCE_ID, paint: { "circle-color": "#37d6c0", "circle-opacity": 0.92, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4.5, 12, 6], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.8 } });
       map.addLayer({ id: ROUTE_V2_AIRPORT_LABEL_LAYER_ID, type: "symbol", source: ROUTE_V2_AIRPORT_SOURCE_ID, layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 10, 10, 13, 11], "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#72e5d3", "text-opacity": 0.9, "text-halo-color": "#08111d", "text-halo-width": 1 } });
@@ -723,6 +780,16 @@ export function AirRadarApp() {
       centeredReceiverRef.current = receiverWithCoordinates;
     }
   }, [mapReady, showRangeRings, snapshot.provider, snapshot.receiver]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const source = map.getSource("aviation-sigmet") as GeoJSONSource | undefined;
+    source?.setData(sigmetData as unknown as GeoJSON.FeatureCollection);
+    for (const layer of ["aviation-sigmet-fill", "aviation-sigmet-line"] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showSigmet ? "visible" : "none");
+    }
+  }, [mapReady, showSigmet, sigmetData]);
 
   const mapFilteredAircraft = useMemo(
     () => filterAircraftForMap(snapshot.aircraft, mapFilters),
@@ -1122,6 +1189,7 @@ export function AirRadarApp() {
                 <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>
                 <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
                 <label><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {t.layers.atc}</label>
+                <label><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>
               </div>
             </details>
           </div>
@@ -1263,8 +1331,7 @@ export function AirRadarApp() {
                   <div><strong>{selectedAircraft.verticalRate === null ? t.common.emptyValue : `${selectedAircraft.verticalRate > 0 ? "+" : ""}${formatNumber(selectedAircraft.verticalRate)} ft/min`}</strong><span>{t.aircraft.verticalRate}</span></div>
                 </div>
               </div>
-              {selectedAircraft.enrichment?.route?.originAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.originAirport} />}
-              {selectedAircraft.enrichment?.route?.destinationAirport && <AirportWeatherDisclosure airport={selectedAircraft.enrichment.route.destinationAirport} />}
+              {selectedAircraft.enrichment?.route && <FlightRouteWeather originAirport={selectedAircraft.enrichment.route.originAirport} destinationAirport={selectedAircraft.enrichment.route.destinationAirport} />}
               <DetailSection title={t.history.aircraftDetail}>
                 <DetailItem label={t.aircraft.icaoHex} value={selectedAircraft.icaoHex} />
                 <DetailItem label={t.aircraft.registration} value={selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || selectedDatabaseAircraft?.registration || t.common.emptyValue} />

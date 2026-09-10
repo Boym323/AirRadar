@@ -197,6 +197,16 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.enabled} value={data.weather.enabled ? dictionary.system.configured : dictionary.system.disabled} />
         <Field label={dictionary.system.cache} value={`${data.weather.cache.status === "warm" ? dictionary.system.cacheWarm : dictionary.system.cacheEmpty} · ${formatNumber(data.weather.cache.entries, 0, dictionary.locale)} ${dictionary.system.entries}`} />
         <Field label={dictionary.system.airports} value={formatNumber(data.weather.cache.airports, 0, dictionary.locale)} />
+        <Field label={dictionary.system.lastAttempt} value={formatDateTime(data.weather.lastAttemptAt, dictionary)} />
+        <Field label={dictionary.system.lastSuccess} value={formatDateTime(data.weather.lastSuccessAt, dictionary)} />
+        <Field label={dictionary.system.latency} value={data.weather.latencyMs === null ? dictionary.system.notAvailable : `${formatNumber(data.weather.latencyMs, 0, dictionary.locale)} ms`} />
+        <Field label={dictionary.system.requests} value={formatNumber(data.weather.requests, 0, dictionary.locale)} />
+        <Field label={dictionary.system.failures} value={formatNumber(data.weather.failures, 0, dictionary.locale)} />
+        <Field label={dictionary.system.cacheHits} value={formatNumber(data.weather.cacheHits, 0, dictionary.locale)} />
+        <Field label={dictionary.system.cacheMisses} value={formatNumber(data.weather.cacheMisses, 0, dictionary.locale)} />
+        <Field label={dictionary.system.activeSigmets} value={formatNumber(data.weather.activeSigmets, 0, dictionary.locale)} />
+        <Field label={dictionary.system.sigmetFreshness} value={data.weather.sigmetStale ? dictionary.system.stale : dictionary.system.current} />
+        {data.weather.retryAfterMs !== null && <Field label={dictionary.system.retryAfter} value={`${formatNumber(data.weather.retryAfterMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />}
       </Card>
 
       <Card title={dictionary.system.alerts} status={data.alerts.status} dictionary={dictionary}>

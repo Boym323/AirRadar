@@ -7,6 +7,7 @@ import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/pho
 import { aircraftAirportHref, aircraftFlightHref, aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
 import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryAirportCount, AircraftHistoryRange, AircraftHistorySummary, AircraftLifetimeStats, HistoryFlightSummary } from "@/lib/server/history";
 import { formatAltitude, formatDateTime, formatNumber, formatSpeed, formatTrack, t } from "@/lib/i18n";
+import { FlightRouteWeather } from "@/components/airport-weather";
 
 function valueOrEmpty(value: string | null | undefined): string {
   return value || t.common.emptyValue;
@@ -320,6 +321,8 @@ export function AircraftDetailV2({
         <div><strong>{formatTrack(liveAircraft.track)}</strong><span>{t.aircraft.track}</span></div>
         <div><strong>{liveAircraft.verticalRate === null ? t.common.emptyValue : `${liveAircraft.verticalRate > 0 ? "+" : ""}${formatNumber(liveAircraft.verticalRate)} ft/min`}</strong><span>{t.aircraft.verticalRate}</span></div>
       </section>}
+
+      {route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
 
       <div className="aircraft-page-layout">
         <div className="aircraft-primary-column">

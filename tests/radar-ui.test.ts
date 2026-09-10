@@ -85,7 +85,7 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("checked={showAircraft}");
     expect(appSource).toContain("checked={showAirports}");
     expect(appSource).toContain("checked={showAtc}");
-    expect(appSource.match(/\bfetch\(/g)).toHaveLength(5);
+    expect(appSource.match(/\bfetch\(/g)).toHaveLength(6);
     expect(appSource).toContain("/api/aircraft/${encodeURIComponent(selectedHex)}");
     expect(appSource).toContain("/api/history/${encodeURIComponent(selectedHex)}");
   });

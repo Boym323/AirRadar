@@ -1,8 +1,10 @@
 import type { ReceiverPosition } from "@/lib/aircraft/types";
 import { t } from "@/lib/i18n";
+import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 
 export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/wiedehopf/tar1090-db/refs/heads/csv/aircraft.csv.gz";
+export const DEFAULT_AVIATION_WEATHER_BASE_URL = "https://aviationweather.gov";
 
 export type PublicReceiverPositionMode = "exact" | "approximate" | "hidden";
 
@@ -171,6 +173,54 @@ export function getAircraftMetadataUrl(): string {
 export function getFlightAwareApiKey(): string | null {
   const key = process.env.FLIGHTAWARE_API_KEY?.trim();
   return key || null;
+}
+
+export function isAviationWeatherEnabled(): boolean {
+  return process.env.AVIATION_WEATHER_ENABLED?.trim().toLowerCase() === "true";
+}
+
+function boundedMilliseconds(name: string, fallback: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, Math.trunc(envNumber(name, fallback))));
+}
+
+export function getAviationWeatherBaseUrl(): string {
+  const configured = process.env.AVIATION_WEATHER_BASE_URL?.trim();
+  if (!configured) return DEFAULT_AVIATION_WEATHER_BASE_URL;
+  try {
+    const url = new URL(configured);
+    if (url.protocol !== "https:" || url.hostname.toLowerCase().replace(/\.$/, "") !== "aviationweather.gov") {
+      return DEFAULT_AVIATION_WEATHER_BASE_URL;
+    }
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return DEFAULT_AVIATION_WEATHER_BASE_URL;
+  }
+}
+
+export function getAviationWeatherRequestTimeoutMs(): number {
+  return boundedMilliseconds("AVIATION_WEATHER_REQUEST_TIMEOUT_MS", 5_000, 500, 60_000);
+}
+
+export function getAviationWeatherMetarTtlMs(): number {
+  return boundedMilliseconds("AVIATION_WEATHER_METAR_TTL_MS", 5 * 60_000, 1_000, 24 * 60 * 60_000);
+}
+
+export function getAviationWeatherTafTtlMs(): number {
+  return boundedMilliseconds("AVIATION_WEATHER_TAF_TTL_MS", 10 * 60_000, 1_000, 24 * 60 * 60_000);
+}
+
+export function getAviationWeatherSigmetTtlMs(): number {
+  return boundedMilliseconds("AVIATION_WEATHER_SIGMET_TTL_MS", 5 * 60_000, 1_000, 24 * 60 * 60_000);
+}
+
+export function getAviationWeatherStaleIfErrorMs(): number {
+  return boundedMilliseconds("AVIATION_WEATHER_STALE_IF_ERROR_MS", 30 * 60_000, 1_000, 7 * 24 * 60 * 60_000);
+}
+
+export function getAviationWeatherUserAgent(): string {
+  const configured = process.env.AVIATION_WEATHER_USER_AGENT?.trim();
+  if (configured && configured.length <= 200 && !/[\r\n]/.test(configured)) return configured;
+  return getAirRadarUserAgent("aviation-weather");
 }
 
 export function getWatchlistAdminToken(): string | null {

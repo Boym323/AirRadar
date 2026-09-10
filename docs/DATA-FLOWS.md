@@ -178,10 +178,15 @@ path reports the aircraft's actual tuned frequency.
   exact ICAO, then IATA, then valid provider coordinates, then the small
   bundled catalog. This resolves display metadata; the provider's route code
   remains the route identity unless a canonical catalog ICAO is available.
-- `GET /api/weather/airport/:icao` first resolves a canonical airport and then
-  fetches METAR and TAF from AviationWeather.gov on demand. The provider uses
-  separate product TTLs, in-flight coalescing, a bounded airport LRU, and
-  stale-if-error behavior; weather is never persisted.
+- Aviation Weather is an independent optional flow. `GET
+  /api/weather/airport/:icao` and the bounded `?icao=ICAO1,ICAO2` form resolve
+  canonical ICAO airports before fetching METAR/TAF from AviationWeather.gov.
+  `GET /api/weather/sigmet` combines the worldwide international SIGMET feed
+  with the CONUS domestic feed, validates Polygon/MultiPolygon GeoJSON, filters
+  to currently valid records, and returns a safe normalized FeatureCollection.
+  Separate product TTLs, negative entries, in-flight coalescing, bounded RAM
+  caches, stale-if-error, timeout, and `Retry-After` backoff protect the
+  upstream. Weather is never persisted or included in aircraft SSE.
 - `GET /api/aircraft/:hex/photo` validates the aircraft identity, looks up
   Planespotters metadata by hex and, only when that is empty, by registration.
   The browser loads the allowed HTTPS thumbnail directly; image bytes do not

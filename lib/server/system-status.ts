@@ -1,12 +1,12 @@
 import nextPackage from "next/package.json" with { type: "json" };
 import type { AtcDataResponse } from "@/lib/atc/types";
 import type { NetworkProviderDiagnostics, ReceiverStatisticsResponse, StateSnapshot } from "@/lib/aircraft/types";
-import { getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled } from "@/lib/server/config";
+import { getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getHistoryPersistenceStatus, type HistoryPersistenceStatus } from "@/lib/server/history";
 import { getAtcData } from "@/lib/server/providers";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
-import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
+import { defaultAviationWeatherProvider, type AviationWeatherDiagnostics } from "@/lib/server/aviation-weather-provider";
 import type { AlertStatus } from "@/lib/server/alert-engine";
 import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
@@ -110,6 +110,17 @@ export interface SystemStatusResponse {
       entries: number;
       airports: number;
     };
+    lastAttemptAt: string | null;
+    lastSuccessAt: string | null;
+    latencyMs: number | null;
+    requests: number;
+    failures: number;
+    consecutiveFailures: number;
+    cacheHits: number;
+    cacheMisses: number;
+    activeSigmets: number;
+    sigmetStale: boolean;
+    retryAfterMs: number | null;
     lastProviderError: null;
   };
   alerts: {
@@ -158,10 +169,7 @@ export interface SystemStatusBuildInput {
     fallbackRowCount: number | null;
     rowCountIsLowerBound?: boolean;
   };
-  weather?: {
-    entries: number;
-    airports: number;
-  };
+  weather?: Partial<AviationWeatherDiagnostics> & { entries?: number; airports?: number };
   adsbLol?: NetworkProviderDiagnostics;
   now?: Date;
   runtime?: Partial<Pick<SystemStatusResponse["application"], "version" | "commit" | "buildTime" | "channel" | "nodeVersion" | "nextVersion" | "environment" | "timezone">> & {
@@ -334,6 +342,14 @@ function adsbLolResponse(diagnostics: NetworkProviderDiagnostics | undefined): S
   };
 }
 
+function weatherStatus(value: SystemStatusBuildInput["weather"]): SystemStatus {
+  if (!value) return "disabled";
+  if (value?.status === "disabled" || value?.enabled === false) return "disabled";
+  if (value?.status === "offline") return "offline";
+  if (value?.status === "degraded" || value?.status === "rate_limited") return "degraded";
+  return "ok";
+}
+
 export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusResponse {
   const now = input.now ?? new Date();
   const application = applicationRuntime(now, input.runtime);
@@ -343,8 +359,10 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
   const sourceStatus = isDemo ? "demo" : input.snapshot.readsbOnline ? "live" : "offline";
   const receiverStatus: SystemStatus = isDemo || input.snapshot.readsbOnline ? "ok" : "offline";
   const atcFreshness = atcStatus(input.atc.metadata, input.database.status, now);
-  const weatherEntries = nonNegativeInteger(input.weather?.entries ?? 0, 512);
+  const weatherEntries = nonNegativeInteger(input.weather?.entries ?? (input.weather?.metarEntries ?? 0) + (input.weather?.tafEntries ?? 0), 512);
   const weatherAirports = nonNegativeInteger(input.weather?.airports ?? 0, 256);
+  const weatherEnabled = input.weather?.enabled ?? input.weather?.entries !== undefined;
+  const weatherState = weatherStatus(input.weather);
   const airportRowCount = input.airportData.rowCount === null ? null : nonNegativeInteger(input.airportData.rowCount, AIRPORT_STATUS_QUERY_LIMIT);
   const fallbackRowCount = input.airportData.fallbackRowCount === null ? null : nonNegativeInteger(input.airportData.fallbackRowCount, AIRPORT_STATUS_QUERY_LIMIT);
   const usingDatabaseAirports = airportRowCount !== null && airportRowCount > 0 && !input.airportData.rowCountIsLowerBound;
@@ -414,10 +432,21 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       comparison: { matching: null, missing: null, extra: null, blocking: null },
     },
     weather: {
-      status: "ok",
-      enabled: true,
+      status: weatherState,
+      enabled: weatherEnabled,
       provider: "AviationWeather",
       cache: { status: weatherEntries ? "warm" : "empty", entries: weatherEntries, airports: weatherAirports },
+      lastAttemptAt: safeTimestamp(input.weather?.lastAttemptAt),
+      lastSuccessAt: safeTimestamp(input.weather?.lastSuccessAt),
+      latencyMs: input.weather?.lastLatencyMs === undefined || input.weather.lastLatencyMs === null ? null : nonNegativeInteger(input.weather.lastLatencyMs, 86_400_000),
+      requests: nonNegativeInteger(input.weather?.requests ?? 0, 10_000_000),
+      failures: nonNegativeInteger(input.weather?.failures ?? 0, 10_000_000),
+      consecutiveFailures: nonNegativeInteger(input.weather?.consecutiveFailures ?? 0, 1_000_000),
+      cacheHits: nonNegativeInteger(input.weather?.cacheHits ?? 0, 10_000_000),
+      cacheMisses: nonNegativeInteger(input.weather?.cacheMisses ?? 0, 10_000_000),
+      activeSigmets: nonNegativeInteger(input.weather?.activeSigmets ?? 0, 10_000),
+      sigmetStale: Boolean(input.weather?.sigmetStale),
+      retryAfterMs: input.weather?.retryAfterMs === undefined || input.weather.retryAfterMs === null ? null : nonNegativeInteger(input.weather.retryAfterMs, 86_400_000),
       lastProviderError: null,
     },
     alerts: {
@@ -485,10 +514,10 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
   const atc = database.status === "ok" || snapshot.provider === "mock"
     ? await getAtcData().catch(() => unavailableAtcData)
     : unavailableAtcData;
-  const weather = {
-    entries: defaultAviationWeatherProvider.cacheSize(),
-    airports: defaultAviationWeatherProvider.cacheAirportCount(),
-  };
+  const providerWeather = defaultAviationWeatherProvider.getDiagnostics();
+  const weather = isAviationWeatherEnabled()
+    ? providerWeather
+    : { ...providerWeather, enabled: false, status: "disabled" as const };
   const serviceDiagnostics = "getDiagnostics" in service && typeof service.getDiagnostics === "function" ? service.getDiagnostics() : null;
   return buildSystemStatus({
     snapshot,

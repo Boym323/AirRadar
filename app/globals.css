@@ -308,6 +308,12 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .weather-meta { color: var(--muted); font-size: 9px; line-height: 1.45; overflow-wrap: anywhere; }
 .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; margin-top: 10px; }
 .weather-report-heading { margin-top: 12px; color: var(--mint); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.weather-report-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.weather-category { display: inline-flex; align-items: center; padding: 2px 5px; border-radius: 4px; color: var(--text); background: rgba(167, 182, 199, .16); font-size: 9px; letter-spacing: .04em; }
+.weather-category-vfr { color: #72e5d3; background: rgba(55, 214, 192, .13); }
+.weather-category-mvfr { color: #8bc4ff; background: rgba(91, 157, 232, .16); }
+.weather-category-ifr { color: #f3b95f; background: rgba(243, 185, 95, .16); }
+.weather-category-lifr { color: #ff8a91; background: rgba(255, 99, 113, .16); }
 .weather-value { min-width: 0; }
 .weather-value span { display: block; color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
 .weather-value strong { display: block; margin-top: 3px; color: var(--text); font-size: 12px; overflow-wrap: anywhere; }
@@ -319,6 +325,21 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .weather-raw summary { cursor: pointer; padding: 8px 0 5px; color: var(--mint); }
 .weather-raw pre { margin: 0; color: var(--text); font: inherit; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
 .weather-forecast { margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
+.weather-taf-timeline { display: grid; gap: 8px; margin-top: 8px; }
+.weather-taf-period { padding: 7px 8px; border-left: 2px solid var(--line); background: rgba(9, 24, 39, .22); }
+.weather-taf-period-header { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 9px; }
+.weather-taf-period-header strong { color: var(--text); }
+.weather-taf-period .weather-grid { margin-top: 7px; }
+.route-weather-card { margin: 10px 0 0; border: 1px solid rgba(55, 214, 192, .2); border-radius: 9px; background: rgba(17, 35, 55, .45); overflow: hidden; }
+.route-weather-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 11px; border-bottom: 1px solid var(--line); }
+.route-weather-heading strong { color: var(--mint); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+.route-weather-heading span { color: var(--muted); font-size: 9px; }
+.route-weather-airport { padding: 0 11px 11px; }
+.route-weather-airport + .route-weather-airport { border-top: 1px solid var(--line); }
+.route-weather-airport-heading { display: flex; align-items: baseline; gap: 8px; padding-top: 10px; }
+.route-weather-airport-heading strong { color: var(--text); font-size: 12px; }
+.route-weather-airport-heading span { color: var(--muted); font-size: 9px; }
+.route-weather-airport .weather-report-heading { margin-top: 8px; }
 .detail-heading { flex-shrink: 0; padding: 15px 17px 10px; background: var(--panel); display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .detail-callsign { font-weight: 800; font-size: 19px; letter-spacing: -.03em; }
 .detail-registration { color: var(--muted); font-size: 11px; margin-top: 4px; }
@@ -873,6 +894,7 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .aircraft-history-range button { flex: 1; min-height: 44px; }
   .aircraft-history-lists { grid-template-columns: 1fr; gap: 15px; }
   .aircraft-recent-card { padding-left: 15px; padding-right: 15px; }
+  .route-weather-heading, .route-weather-airport-heading, .weather-taf-period-header { align-items: flex-start; flex-direction: column; }
   .airport-layout { grid-template-columns: 1fr; }
   .airport-map-card { order: -1; }
   .airport-map { height: 260px; }

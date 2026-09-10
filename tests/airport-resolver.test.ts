@@ -162,4 +162,9 @@ describe("central airport resolver", () => {
     expect(route?.originAirport?.icaoCode).toBe("LKTB");
     expect(route?.destinationAirport?.icaoCode).toBe("EDDF");
   });
+
+  it("does not manufacture an ICAO identity from an unresolved IATA-only provider object", async () => {
+    const resolver = new AirportResolver(() => null);
+    await expect(resolver.resolve({ providerAirport: { iataCode: "ZZZ", name: "Unknown", latitude: 10, longitude: 20 } })).resolves.toBeNull();
+  });
 });

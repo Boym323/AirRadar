@@ -52,6 +52,13 @@ describe("airport weather disclosure", () => {
     expect(componentSource).toContain("<summary>");
   });
 
+  it("batches destination-first route weather and aborts stale selections", () => {
+    expect(componentSource).toContain("/api/weather/airport?icao=");
+    expect(componentSource).toContain("const controller = new AbortController();");
+    expect(componentSource).toContain("controller.abort();");
+    expect(componentSource).toContain("[destinationAirport, originAirport]");
+  });
+
   it("keeps raw METAR/TAF text safely wrappable on narrow layouts", () => {
     const rawTextRule = stylesSource.match(/\.weather-raw pre\s*\{([^}]*)\}/)?.[1] ?? "";
 

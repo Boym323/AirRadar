@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getPublicReceiverPositionMode, getReceiverPosition } from "@/lib/server/config";
+import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getAviationWeatherBaseUrl, getAviationWeatherRequestTimeoutMs, getAviationWeatherUserAgent, getPublicReceiverPositionMode, getReceiverPosition, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAtcData } from "@/lib/server/providers";
 import { getAlertConfigPath } from "@/lib/server/alert-config";
 import { getRuntimeStateDirectory, getRuntimeStatePath } from "@/lib/server/runtime-state";
@@ -7,6 +7,19 @@ import { getRuntimeStateDirectory, getRuntimeStatePath } from "@/lib/server/runt
 afterEach(() => vi.unstubAllEnvs());
 
 describe("numeric environment configuration", () => {
+  it("keeps Aviation Weather opt-in and constrains its server-side settings", () => {
+    vi.stubEnv("AVIATION_WEATHER_ENABLED", "false");
+    expect(isAviationWeatherEnabled()).toBe(false);
+    vi.stubEnv("AVIATION_WEATHER_ENABLED", "true");
+    vi.stubEnv("AVIATION_WEATHER_BASE_URL", "http://internal.example");
+    vi.stubEnv("AVIATION_WEATHER_REQUEST_TIMEOUT_MS", "1");
+    vi.stubEnv("AVIATION_WEATHER_USER_AGENT", "AirRadar test");
+    expect(isAviationWeatherEnabled()).toBe(true);
+    expect(getAviationWeatherBaseUrl()).toBe("https://aviationweather.gov");
+    expect(getAviationWeatherRequestTimeoutMs()).toBe(500);
+    expect(getAviationWeatherUserAgent()).toBe("AirRadar test");
+  });
+
   it.each(["", "   ", "not-a-number"])('uses the coordinate fallback for %j', (value) => {
     vi.stubEnv("RECEIVER_LAT", value);
     vi.stubEnv("RECEIVER_LON", value);
