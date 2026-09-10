@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { formatDateTime, formatDistance, formatNumber, formatTrack } from "@/lib/i18n";
 import { statisticsCoverageIntelligenceText as text } from "@/lib/i18n/statistics-coverage-intelligence";
 import type {
+  CoverageIntelligenceAltitudeBand,
   CoverageIntelligenceRange,
   CoverageIntelligenceResponse,
   CoverageIntelligenceSector,
@@ -21,6 +22,12 @@ function SummaryMetric({ label, value, detail }: { label: string; value: string;
 
 function sectorLabel(sector: Pick<CoverageIntelligenceSector, "bearingFrom" | "bearingTo">): string {
   return `${String(sector.bearingFrom).padStart(3, "0")}°–${String(sector.bearingTo).padStart(3, "0")}°`;
+}
+
+function altitudeBandLabel(band: Pick<CoverageIntelligenceAltitudeBand, "minFt" | "maxFt">): string {
+  return band.maxFt === null
+    ? `${formatNumber(band.minFt)}+ ft`
+    : `${formatNumber(band.minFt)}–${formatNumber(band.maxFt)} ft`;
 }
 
 export default function StatisticsCoverageIntelligence() {
@@ -77,6 +84,16 @@ export default function StatisticsCoverageIntelligence() {
             <SummaryMetric label={text.reliableSectors} value={`${formatNumber(data.coverage.reliableSectors)} / 36`} detail={`≥ ${data.coverage.requiredReliableDays} d`} />
             <SummaryMetric label={text.peakConcurrent} value={data.records.peakConcurrent ? formatNumber(data.records.peakConcurrent.count) : "—"} detail={data.records.peakConcurrent?.date} />
             <SummaryMetric
+              label={text.receiverMessages}
+              value={data.messages.total !== null ? formatNumber(data.messages.total) : "—"}
+              detail={data.messages.observedDays ? `${data.messages.observedDays} ${text.messageDays}` : undefined}
+            />
+            <SummaryMetric
+              label={text.fastestAircraft}
+              value={data.records.fastestAircraft ? `${formatNumber(data.records.fastestAircraft.speedKt)} kt` : "—"}
+              detail={data.records.fastestAircraft?.callsign ?? data.records.fastestAircraft?.registration ?? data.records.fastestAircraft?.icaoHex}
+            />
+            <SummaryMetric
               label={text.busiestHour}
               value={data.hourly.busiestHour ? formatNumber(data.hourly.busiestHour.count) : "—"}
               detail={data.hourly.busiestHour ? `${data.hourly.busiestHour.localHour.replace("T", " ")} · ${text.observedFlights}` : undefined}
@@ -114,6 +131,36 @@ export default function StatisticsCoverageIntelligence() {
               <p className={styles.note}>{text.methodNote}</p>
             </section>
 
+            <section className={styles.section} aria-labelledby="coverage-altitude-title">
+              <div className={styles.sectionHeader}>
+                <div><h3 id="coverage-altitude-title">{text.altitudeCoverageTitle}</h3><p>{text.altitudeCoverageDescription}</p></div>
+              </div>
+              <div className={styles.altitudeBands}>
+                {data.altitudeCoverage.bands.map((band) => {
+                  const maxP95 = Math.max(...band.sectors.map((sector) => sector.p95DailyMaxDistanceKm ?? 0), 0);
+                  return <div className={styles.altitudeBand} key={band.id}>
+                    <div className={styles.altitudeBandHeader}>
+                      <strong>{altitudeBandLabel(band)}</strong>
+                      <span>{band.observedDays} {text.altitudeObservedDays} · {formatDistance(band.maxDistanceKm)}</span>
+                    </div>
+                    <div className={styles.azimuthStrip} role="img" aria-label={`${altitudeBandLabel(band)} · ${text.altitudeDirectionHint}`}>
+                      {band.sectors.map((sector) => {
+                        const value = sector.p95DailyMaxDistanceKm;
+                        const opacity = value !== null && maxP95 > 0 ? Math.max(0.16, value / maxP95) : 0.05;
+                        return <span
+                          key={sector.bearingFrom}
+                          className={styles.azimuthCell}
+                          style={{ opacity }}
+                          title={`${sectorLabel(sector)} · P95 ${formatDistance(value)} · ${sector.observedDays} d`}
+                        />;
+                      })}
+                    </div>
+                  </div>;
+                })}
+              </div>
+              <p className={styles.note}>{text.altitudeDirectionHint}</p>
+            </section>
+
             <section className={styles.section} aria-labelledby="coverage-hourly-title">
               <div className={styles.sectionHeader}><div><h3 id="coverage-hourly-title">{text.hourlyTitle}</h3><p>{text.hourlyDescription}</p></div></div>
               {!data.hourly.complete ? <p className={styles.status}>{text.incompleteHourly}</p> : data.hourly.bins.length ? <div className={styles.hourChart} role="img" aria-label={text.hourlyTitle}>
@@ -125,7 +172,7 @@ export default function StatisticsCoverageIntelligence() {
               </div> : <p className={styles.status}>{text.noData}</p>}
             </section>
 
-            {(data.records.highestFlight || data.records.farthestReception) && <section className={`${styles.section} ${styles.records}`}>
+            {(data.records.highestFlight || data.records.farthestReception || data.records.fastestAircraft) && <section className={`${styles.section} ${styles.records}`}>
               {data.records.highestFlight && <div>
                 <span>{text.highestFlight}</span>
                 <strong><Link href={`/flights/${data.records.highestFlight.flightId}`}>{data.records.highestFlight.callsign ?? data.records.highestFlight.icaoHex}</Link> · {formatNumber(data.records.highestFlight.maxAltitudeFt)} ft</strong>
@@ -136,7 +183,13 @@ export default function StatisticsCoverageIntelligence() {
                 <strong><Link href={`/aircraft/${encodeURIComponent(data.records.farthestReception.icaoHex)}`}>{data.records.farthestReception.icaoHex}</Link> · {formatDistance(data.records.farthestReception.distanceKm)}</strong>
                 <small>{formatTrack(data.records.farthestReception.bearing)} · {formatDateTime(data.records.farthestReception.recordedAt)}</small>
               </div>}
+              {data.records.fastestAircraft && <div>
+                <span>{text.fastestAircraft}</span>
+                <strong><Link href={`/aircraft/${encodeURIComponent(data.records.fastestAircraft.icaoHex)}`}>{data.records.fastestAircraft.callsign ?? data.records.fastestAircraft.icaoHex}</Link> · {formatNumber(data.records.fastestAircraft.speedKt)} kt</strong>
+                <small>{data.records.fastestAircraft.registration ?? data.records.fastestAircraft.icaoHex} · {formatDateTime(data.records.fastestAircraft.recordedAt)}</small>
+              </div>}
             </section>}
+            <p className={styles.note}>{text.messageNote} {text.fastestNote}</p>
           </div>
         </> : null}
       </section>
