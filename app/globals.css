@@ -567,7 +567,7 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .map-popup { display: grid; gap: 4px; color: #102132; font-size: 11px; }
 .map-popup span { color: #405466; line-height: 1.35; overflow-wrap: anywhere; }
 
-.history-page { min-height: 100svh; padding: 28px max(20px, calc((100vw - 1100px) / 2)); }
+.history-page { min-height: 100svh; width: min(100%, 1600px); margin: 0 auto; padding: 28px 24px 42px; }
 .history-page-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
 .history-page h1 { margin: 0; font-size: 27px; letter-spacing: -.04em; }
 .flight-page { min-height: 100svh; max-width: 1180px; margin: 0 auto; padding: 28px 20px 42px; }
@@ -1273,7 +1273,11 @@ button, input, select, textarea { color-scheme: dark; }
 
 /* Secondary pages share the radar's compact operations-console language. */
 .history-page, .flight-page, .aircraft-page, .airport-page, .statistics-page, .watchlist-page, .fleet-page, .system-page { padding-top: 30px; }
-.history-page, .flight-page, .aircraft-page, .airport-page { max-width: 1240px; }
+.history-page, .flight-page, .aircraft-page, .airport-page, .statistics-page, .watchlist-page, .fleet-page, .system-page {
+  width: min(100%, 1600px);
+  max-width: none;
+  margin-inline: auto;
+}
 .history-page h1, .flight-page-header h1, .aircraft-page-header h1, .airport-page-header h1, .statistics-page h1, .watchlist-page-header h1, .fleet-page-header h1, .system-page h1 { color: var(--text-primary); letter-spacing: -.045em; }
 .brand-subtitle, .statistics-subtitle, .flight-page-subtitle, .airport-page-header p { color: var(--text-muted); }
 .back-link, .history-link, .airport-link, .fleet-nav a, .system-nav a { color: var(--accent); }
