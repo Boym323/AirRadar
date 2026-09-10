@@ -1,0 +1,97 @@
+import { describe, expect, it, vi } from "vitest";
+import { parseOgnPosition } from "@/lib/ogn/aprs-parser";
+import { OgnDdb } from "@/lib/ogn/ddb";
+import type { OgnConfig } from "@/lib/server/config";
+import { OgnStateService } from "@/lib/server/ogn-state";
+import { OGN_FIXTURES } from "@/tests/fixtures/ogn-packets";
+
+const receiver = { lat: 50.0755, lon: 14.4378, name: "Test receiver" };
+const config: OgnConfig = {
+  enabled: true,
+  host: "aprs.glidernet.org",
+  port: 14580,
+  radiusKm: 250,
+  connectTimeoutMs: 1_000,
+  keepaliveMs: 240_000,
+  staleAfterMs: 15_000,
+  removeAfterMs: 60_000,
+  maxPacketAgeMs: 120_000,
+  reconnectMinMs: 1_000,
+  reconnectMaxMs: 2_000,
+  ddbRefreshMs: 60_000,
+  ddbMaxStaleMs: 86_400_000,
+  maxTargets: 5_000,
+  configurationError: null,
+};
+
+function diagnosticProvider() {
+  return {
+    start: vi.fn(),
+    stop: vi.fn().mockResolvedValue(undefined),
+    getDiagnostics: vi.fn(() => ({
+      enabled: true, status: "online" as const, host: config.host, port: config.port, radiusKm: config.radiusKm,
+      connectedAt: null, lastActivityAt: null, lastPacketAt: null, lastAircraftPacketAt: null, loginAcknowledged: true,
+      packets: 0, positionPackets: 0, canonicalPositionUpdates: 0, duplicatePackets: 0, malformed: 0, droppedAdsb: 0,
+      droppedGroundStatus: 0, droppedStatus: 0, droppedDelayed: 0, droppedPrivacy: 0, droppedStale: 0, droppedCapacity: 0,
+      unknownTocall: 0, sourceCounts: {}, unknownTocalls: [], activeTargets: 0, freshTargets: 0, staleTargets: 0,
+      ddb: { status: "disabled" as const, entries: 0, lastRefreshAt: null, lastSuccessAt: null, ageMs: null, failures: 0, stale: true },
+      reconnects: 0, configurationError: null,
+    })),
+  };
+}
+
+async function ddbWith(entry: Record<string, unknown>) {
+  const ddb = new OgnDdb({ fetcher: vi.fn().mockResolvedValue(new Response(JSON.stringify({ devices: [entry] }))) as unknown as typeof fetch, refreshMs: 60_000 });
+  await ddb.refresh();
+  return ddb;
+}
+
+function position(at = "2026-09-10T11:49:00.000Z") {
+  const parsed = parseOgnPosition(OGN_FIXTURES.ognTracker, { now: new Date(at) });
+  return { ...parsed.position, receivedAt: at };
+}
+
+const ddbEntry = { device_type: "F", device_id: "8E20F0", aircraft_model: "ASW 20", registration: "OK-TEST", cn: "42", tracked: "Y", identified: "Y", aircraft_type: 1 };
+
+describe("OGN state service", () => {
+  it("holds targets outside ADS-B state, deduplicates by address type/address, and does not roll back", async () => {
+    const ddb = await ddbWith(ddbEntry);
+    const service = new OgnStateService({ config, ddb, receiver, provider: diagnosticProvider() as never });
+    const first = position();
+    service.ingest(first);
+    service.ingest({ ...first, latitude: 49, lastReceiver: "OTHER" });
+    service.ingest({ ...first, observedAt: "2026-09-10T11:48:00.000Z", latitude: 49, lastReceiver: "OLDER" });
+
+    const snapshot = service.getSnapshot();
+    expect(snapshot.targets).toHaveLength(1);
+    expect(snapshot.targets[0]).toMatchObject({ address: "8E20F0", latitude: first.latitude, registration: "OK-TEST", lastReceiver: "OTHER" });
+    expect(service.getDiagnostics()).toMatchObject({ canonicalPositionUpdates: 1, duplicatePackets: 2, activeTargets: 1, freshTargets: 1 });
+  });
+
+  it("fails closed before DDB availability and re-applies privacy after an atomic refresh", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ devices: [ddbEntry] })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ devices: [{ ...ddbEntry, identified: "N" }] })));
+    const ddb = new OgnDdb({ fetcher: fetcher as unknown as typeof fetch, refreshMs: 60_000 });
+    const service = new OgnStateService({ config, ddb, receiver, provider: diagnosticProvider() as never });
+    service.ingest(position());
+    expect(service.getSnapshot().targets).toEqual([]);
+
+    await ddb.refresh();
+    expect(service.getSnapshot().targets).toHaveLength(1);
+    await ddb.refresh();
+    expect(service.getSnapshot().targets[0]).toMatchObject({ identityVisible: false, address: null, registration: null, senderCallsign: null });
+  });
+
+  it("expires RAM targets without persisting them", async () => {
+    let clock = Date.parse("2026-09-10T11:49:00.000Z");
+    const ddb = await ddbWith(ddbEntry);
+    const service = new OgnStateService({ config, ddb, receiver, now: () => clock, provider: diagnosticProvider() as never });
+    service.ingest(position(new Date(clock).toISOString()));
+    expect(service.getSnapshot().targets).toHaveLength(1);
+    clock += config.removeAfterMs + 1;
+    (service as unknown as { removeExpired: () => void }).removeExpired();
+    expect(service.getSnapshot().targets).toEqual([]);
+    expect(service.getDiagnostics().droppedStale).toBe(1);
+  });
+});

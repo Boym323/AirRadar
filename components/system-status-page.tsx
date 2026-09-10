@@ -166,6 +166,25 @@ export function SystemStatusPage() {
         {data.adsbLol.retryAfterMs !== null && <Field label={dictionary.system.retryAfter} value={`${formatNumber(data.adsbLol.retryAfterMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />}
       </Card>
 
+      <Card title={dictionary.system.ogn} status={data.ogn.status} dictionary={dictionary}>
+        <Field label={dictionary.system.provider} value={`${data.ogn.host}:${data.ogn.port} · ${data.ogn.radiusKm} km`} />
+        <Field label={dictionary.system.enabled} value={data.ogn.enabled ? dictionary.system.configured : dictionary.system.disabled} />
+        <Field label={dictionary.system.connection} value={data.ogn.providerStatus} />
+        <Field label={dictionary.system.login} value={data.ogn.loginAcknowledged ? dictionary.system.connected : dictionary.system.notAvailable} />
+        <Field label={dictionary.system.packets} value={formatNumber(data.ogn.packets, 0, dictionary.locale)} />
+        <Field label={dictionary.system.positionPackets} value={formatNumber(data.ogn.positionPackets, 0, dictionary.locale)} />
+        <Field label={dictionary.system.canonicalUpdates} value={formatNumber(data.ogn.canonicalPositionUpdates, 0, dictionary.locale)} />
+        <Field label={dictionary.system.duplicates} value={formatNumber(data.ogn.duplicatePackets, 0, dictionary.locale)} />
+        <Field label={dictionary.system.malformed} value={formatNumber(data.ogn.malformed, 0, dictionary.locale)} />
+        <Field label={dictionary.system.dropped} value={`${formatNumber(data.ogn.droppedPrivacy + data.ogn.droppedDelayed + data.ogn.droppedAdsb + data.ogn.droppedGroundStatus + data.ogn.droppedStatus, 0, dictionary.locale)} · ADS-B ${formatNumber(data.ogn.droppedAdsb, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.activeTargets} value={`${formatNumber(data.ogn.activeTargets, 0, dictionary.locale)} · ${dictionary.system.freshTargets} ${formatNumber(data.ogn.freshTargets, 0, dictionary.locale)} · ${dictionary.system.staleTargets} ${formatNumber(data.ogn.staleTargets, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.lastPacket} value={formatDateTime(data.ogn.lastPacketAt, dictionary)} />
+        <Field label={dictionary.system.reconnects} value={formatNumber(data.ogn.reconnects, 0, dictionary.locale)} />
+        <Field label={dictionary.system.ddb} value={`${data.ogn.ddb.status} · ${formatNumber(data.ogn.ddb.entries, 0, dictionary.locale)} ${dictionary.system.entries}`} />
+        <Field label={dictionary.system.ddbRefresh} value={formatDateTime(data.ogn.ddb.lastSuccessAt, dictionary)} />
+        {data.ogn.configurationError && <Field label={dictionary.system.configurationError} value={data.ogn.configurationError} />}
+      </Card>
+
       <Card title={dictionary.system.database} status={data.database.status} dictionary={dictionary}>
         <Field label={dictionary.system.database} value={data.database.connected ? dictionary.system.connected : formatStatus(data.database.status, dictionary)} />
         <Field label={dictionary.system.historyPersistence} value={<StatusBadge status={data.database.history.status} dictionary={dictionary} />} />

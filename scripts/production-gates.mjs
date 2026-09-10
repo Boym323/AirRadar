@@ -152,6 +152,7 @@ async function main() {
       ATC_SAMPLE_ENABLED: "true",
       ADSBDB_ENABLED: "false",
       AIRCRAFT_PHOTOS_ENABLED: "false",
+      OGN_ENABLED: "false",
       FLIGHTAWARE_API_KEY: "",
       WATCHLIST_ADMIN_TOKEN: "production-gate-token",
       AIRRADAR_CHANNEL: gateChannel === "rc" ? "release-candidate" : "production",
@@ -187,6 +188,9 @@ async function main() {
     const system = await get("/api/system/status");
     const systemPayload = await system.json();
     if (!Number.isFinite(systemPayload.runtime?.processRssBytes)) throw new Error("Runtime diagnostics smoke failed");
+    const ognState = await get("/api/ogn/state");
+    const ognStatePayload = await ognState.json();
+    if (!ognState.ok || ognStatePayload.enabled !== false || !Array.isArray(ognStatePayload.targets) || ognStatePayload.targets.length !== 0) throw new Error("Disabled OGN state smoke failed");
     const watchlistMutation = await get("/api/watchlist", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
     if (watchlistMutation.status !== 401) throw new Error("Watchlist mutation was not protected");
     const sseSnapshotBytes = await assertSseLifecycle();

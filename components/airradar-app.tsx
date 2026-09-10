@@ -37,6 +37,7 @@ import { AircraftRecentFlights } from "@/components/aircraft-detail-v2";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { SigmetSnapshot } from "@/lib/weather/types";
+import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
@@ -69,6 +70,7 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
   metadata: { status: "unavailable", source: null, sourceReference: null, effectiveDate: null, lastVerifiedAt: null, sectorCount: 0, transmitterCount: 0 },
 };
 const EMPTY_SIGMET_DATA: SigmetSnapshot = { type: "FeatureCollection", features: [], fetchedAt: new Date(0).toISOString(), stale: false };
+const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled", fetchedAt: new Date(0).toISOString(), targets: [] };
 
 interface PublicAlertStatus {
   enabled: boolean;
@@ -223,6 +225,29 @@ function createAirportGeoJSON(airports: Airport[], excludedAirportCodes: Readonl
   };
 }
 
+function ognTargetLabel(target: OgnTargetView): string {
+  if (target.identityVisible) return target.registration || target.competitionNumber || target.model || target.senderCallsign || target.aircraftType.toUpperCase();
+  return target.aircraftType.toUpperCase();
+}
+
+function createOgnGeoJSON(targets: OgnTargetView[], selectedId: string | null = null) {
+  return {
+    type: "FeatureCollection" as const,
+    features: targets
+      .filter((target) => Number.isFinite(target.latitude) && Number.isFinite(target.longitude))
+      .map((target) => ({
+        type: "Feature" as const,
+        properties: {
+          id: target.id,
+          label: ognTargetLabel(target),
+          stale: target.stale,
+          selected: target.id === selectedId,
+        },
+        geometry: { type: "Point" as const, coordinates: [target.longitude, target.latitude] },
+      })),
+  };
+}
+
 function LogoMark() {
   return (
     <svg className="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
@@ -370,6 +395,10 @@ function aircraftGlyphMarkup(aircraft: AircraftView): string {
 
 export function AirRadarApp() {
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
+  const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
+  const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
+  const [showOgn, setShowOgn] = useState(false);
+  const [selectedOgnId, setSelectedOgnId] = useState<string | null>(null);
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
   const [aircraftDetail, setAircraftDetail] = useState<AircraftDetailResponse | null>(null);
   const [aircraftDetailLoading, setAircraftDetailLoading] = useState(false);
@@ -426,6 +455,7 @@ export function AirRadarApp() {
       const storedCoverage = window.localStorage.getItem("airradar-coverage");
       if (storedCoverage === "extended" || storedCoverage === "local") setCoverage(storedCoverage);
       setShowSigmet(window.localStorage.getItem("airradar-sigmet-layer") === "true");
+      setShowOgn(window.localStorage.getItem("airradar-ogn-layer") === "true");
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
     }
@@ -441,6 +471,15 @@ export function AirRadarApp() {
       .then((response) => response.ok ? response.json() as Promise<{ alerts?: PublicAlertStatus }> : null)
       .then((data) => { if (data?.alerts) setServerAlertsEnabled(data.alerts.enabled); })
       .catch(() => undefined);
+    void fetch("/api/ogn/state", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() as Promise<OgnStateSnapshot> : null)
+      .then((data) => {
+        if (!data) return;
+        setOgnSnapshot(data);
+        setOgnEnabled(data.enabled);
+        if (!data.enabled) setShowOgn(false);
+      })
+      .catch(() => setOgnEnabled(false));
   }, []);
 
   useEffect(() => {
@@ -454,6 +493,10 @@ export function AirRadarApp() {
   useEffect(() => {
     try { window.localStorage.setItem("airradar-sigmet-layer", String(showSigmet)); } catch { /* optional */ }
   }, [showSigmet]);
+
+  useEffect(() => {
+    try { window.localStorage.setItem("airradar-ogn-layer", String(showOgn)); } catch { /* optional */ }
+  }, [showOgn]);
 
   useEffect(() => {
     const generation = ++sigmetGenerationRef.current;
@@ -535,6 +578,7 @@ export function AirRadarApp() {
       } else if (event.key === "Escape") {
         setFiltersOpen(false);
         setSelectedHex(null);
+        setSelectedOgnId(null);
       }
     }
 
@@ -552,7 +596,15 @@ export function AirRadarApp() {
 
   const selectAircraft = useCallback((hex: string) => {
     selectedHexRef.current = hex;
+    setSelectedOgnId(null);
     setSelectedHex(hex);
+    setMobileCompact(false);
+  }, []);
+
+  const selectOgn = useCallback((id: string) => {
+    selectedHexRef.current = null;
+    setSelectedHex(null);
+    setSelectedOgnId(id);
     setMobileCompact(false);
   }, []);
 
@@ -645,6 +697,26 @@ export function AirRadarApp() {
   }, [activeCoverage]);
 
   useEffect(() => {
+    if (ognEnabled !== true) return;
+    let active = true;
+    const source = new EventSource("/api/ogn/stream");
+    const onSnapshot = (event: Event) => {
+      try {
+        const next = JSON.parse((event as MessageEvent<string>).data) as OgnStateSnapshot;
+        if (active && next.enabled) setOgnSnapshot(next);
+      } catch {
+        // Ignore malformed events and allow EventSource to reconnect.
+      }
+    };
+    source.addEventListener("snapshot", onSnapshot);
+    return () => {
+      active = false;
+      source.removeEventListener("snapshot", onSnapshot);
+      source.close();
+    };
+  }, [ognEnabled]);
+
+  useEffect(() => {
     if (!mapContainerRef.current) return;
     const startingReceiver = receiverRef.current.lat === null || receiverRef.current.lon === null
       ? DEMO_RECEIVER
@@ -673,6 +745,27 @@ export function AirRadarApp() {
         type: "line",
         source: "range-rings",
         paint: { "line-color": "#37d6c0", "line-opacity": 0.24, "line-width": 1, "line-dasharray": [2, 3] },
+      });
+      map.addSource("ogn-targets", { type: "geojson", data: createOgnGeoJSON([]) });
+      map.addLayer({
+        id: "ogn-targets-circle",
+        type: "circle",
+        source: "ogn-targets",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": "#66d8cf",
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 4, 9, 6, 14, 8],
+          "circle-opacity": ["case", ["get", "stale"], 0.42, 0.92],
+          "circle-stroke-color": "#07111d",
+          "circle-stroke-width": ["case", ["get", "selected"], 2.8, 1.4],
+        },
+      });
+      map.addLayer({
+        id: "ogn-targets-label",
+        type: "symbol",
+        source: "ogn-targets",
+        layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 1.15], "text-padding": 5, "text-optional": true },
+        paint: { "text-color": "#9de8df", "text-opacity": ["case", ["get", "stale"], 0.45, 0.9], "text-halo-color": "#07111d", "text-halo-width": 1 },
       });
       map.addSource("selected-trail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "selected-trail-line", type: "line", source: "selected-trail", paint: { "line-color": "#f3b95f", "line-opacity": 0.85, "line-width": 2.5 } });
@@ -720,6 +813,18 @@ export function AirRadarApp() {
       });
       map.on("mouseenter", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = ""; });
+      map.on("click", "ogn-targets-circle", (event) => {
+        const id = event.features?.[0]?.properties?.id;
+        if (typeof id === "string" && id.length <= 80) selectOgn(id);
+      });
+      map.on("click", "ogn-targets-label", (event) => {
+        const id = event.features?.[0]?.properties?.id;
+        if (typeof id === "string" && id.length <= 80) selectOgn(id);
+      });
+      map.on("mouseenter", "ogn-targets-circle", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseenter", "ogn-targets-label", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "ogn-targets-circle", () => { map.getCanvas().style.cursor = ""; });
+      map.on("mouseleave", "ogn-targets-label", () => { map.getCanvas().style.cursor = ""; });
       map.addSource(ROUTE_V2_AIRPORT_SOURCE_ID, { type: "geojson", data: createRouteAirportGeoJSON(null) });
       map.addLayer({ id: ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, type: "circle", source: ROUTE_V2_AIRPORT_SOURCE_ID, paint: { "circle-color": "#37d6c0", "circle-opacity": 0.92, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4.5, 12, 6], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.8 } });
       map.addLayer({ id: ROUTE_V2_AIRPORT_LABEL_LAYER_ID, type: "symbol", source: ROUTE_V2_AIRPORT_SOURCE_ID, layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 10, 10, 13, 11], "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#72e5d3", "text-opacity": 0.9, "text-halo-color": "#08111d", "text-halo-width": 1 } });
@@ -781,7 +886,7 @@ export function AirRadarApp() {
       mapRef.current = null;
       setMapReady(false);
     };
-  }, []);
+  }, [selectAircraft, selectOgn]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -824,6 +929,16 @@ export function AirRadarApp() {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showSigmet && sigmetEnabled === true ? "visible" : "none");
     }
   }, [mapReady, showSigmet, sigmetData, sigmetEnabled]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const source = map.getSource("ogn-targets") as GeoJSONSource | undefined;
+    source?.setData(createOgnGeoJSON(ognSnapshot.targets, selectedOgnId));
+    for (const layer of ["ogn-targets-circle", "ogn-targets-label"] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showOgn && ognEnabled === true ? "visible" : "none");
+    }
+  }, [mapReady, ognEnabled, ognSnapshot.targets, selectedOgnId, showOgn]);
 
   const mapFilteredAircraft = useMemo(
     () => filterAircraftForMap(snapshot.aircraft, mapFilters),
@@ -1085,6 +1200,7 @@ export function AirRadarApp() {
     ? { ...selectedAircraftSnapshot, enrichment: aircraftDetail.liveEnrichment }
     : selectedAircraftSnapshot;
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
+  const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
 
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
@@ -1211,6 +1327,7 @@ export function AirRadarApp() {
               <summary>{t.layers.title}</summary>
               <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
                 <label><input type="checkbox" checked={showAircraft} onChange={(event) => setShowAircraft(event.target.checked)} /> {t.layers.aircraft}</label>
+                {ognEnabled === true && <label><input type="checkbox" checked={showOgn} onChange={(event) => setShowOgn(event.target.checked)} /> {t.layers.ogn}</label>}
                 <label><input type="checkbox" checked={showRangeRings} onChange={(event) => setShowRangeRings(event.target.checked)} /> {t.layers.rangeRings}</label>
                 <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => setColorMode(event.target.value as AircraftColorMode)}>
                   <option value="default">{t.layers.colorModes.default}</option>
@@ -1229,7 +1346,7 @@ export function AirRadarApp() {
           </div>
         </div>
 
-        <aside className={`sidebar ${mobileCompact ? "compact" : ""} ${selectedAircraft ? "has-selection" : ""}`}>
+        <aside className={`sidebar ${mobileCompact ? "compact" : ""} ${selectedAircraft || selectedOgnTarget ? "has-selection" : ""}`}>
           <div className="sidebar-heading">
               <div>
                 <div className="sidebar-title">{t.radar.aircraftNearby}</div>
@@ -1325,6 +1442,21 @@ export function AirRadarApp() {
 
           <RelevantAtcPanel summaries={snapshot.relevantAtcFrequencies} expanded={!mobileCompact} onOpen={() => setMobileCompact(false)} />
 
+          {ognEnabled === true && <section className="ogn-list-section" aria-label={t.ogn.title}>
+            <div className="ogn-list-heading"><strong>{t.ogn.title}</strong><span>{t.ogn.count(formatNumber(ognSnapshot.targets.length))}</span></div>
+            {ognSnapshot.targets.length === 0 ? <div className="ogn-empty">{t.ogn.empty}</div> : <div className="ogn-list">
+              {ognSnapshot.targets.map((target) => <button key={target.id} type="button" className={`ogn-row ${selectedOgnId === target.id ? "selected" : ""}`} aria-pressed={selectedOgnId === target.id} onClick={() => selectOgn(target.id)}>
+                <span className="ogn-row-icon" aria-hidden="true">◈</span>
+                <span className="ogn-row-main">
+                  <span className="ogn-row-topline"><span className="ogn-row-name">{ognTargetLabel(target)}</span> <span className="ogn-source-badge">{t.ogn.badge} · {t.ogn.trackingSources[target.trackingSource]}</span> {target.stale && <span className="ogn-stale-badge">{t.ogn.stale}</span>}</span>
+                  <span className="ogn-row-type">{target.identityVisible && target.model ? `${target.aircraftType} · ${target.model}` : target.aircraftType}</span>
+                  <span className="ogn-row-meta"><span><b>{formatAltitude(target.altitudeFt)}</b></span><span><b>{formatSpeed(target.groundSpeedKt)}</b></span><span><b>{formatTrack(target.trackDeg)}</b></span></span>
+                </span>
+                <span className="ogn-row-distance">{formatDistance(target.distanceKm)}</span>
+              </button>)}
+            </div>}
+          </section>}
+
           <div className="aircraft-list">
             {filteredAircraft.length === 0 ? (
               <div className="empty-list">
@@ -1346,15 +1478,15 @@ export function AirRadarApp() {
 
           </div>
 
-          {(selectedAircraft || selectedDatabaseAircraft) && (
-            <div className="detail-panel" key={selectedIdentity}>
+          {(selectedAircraft || selectedDatabaseAircraft || selectedOgnTarget) && (
+            <div className="detail-panel" key={selectedOgnTarget ? `ogn-${selectedOgnTarget.id}` : selectedIdentity}>
               <div className="detail-heading">
-                <div><div className="detail-eyebrow">{t.history.aircraftDetail}</div><div className="detail-callsign">{selectedAircraft ? labelForAircraft(selectedAircraft) : selectedIdentity}</div>
-                  <div className="detail-registration">{selectedAircraft ? `${selectedAircraft.icaoHex} · ${selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || t.common.emptyValue}` : t.aircraft.notCurrentlyInRange}</div>
+                <div><div className="detail-eyebrow">{selectedOgnTarget ? t.ogn.title : t.history.aircraftDetail}</div><div className="detail-callsign">{selectedOgnTarget ? ognTargetLabel(selectedOgnTarget) : selectedAircraft ? labelForAircraft(selectedAircraft) : selectedIdentity}</div>
+                  <div className="detail-registration">{selectedOgnTarget ? `${t.ogn.badge} · ${t.ogn.trackingSources[selectedOgnTarget.trackingSource]}` : selectedAircraft ? `${selectedAircraft.icaoHex} · ${selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || t.common.emptyValue}` : t.aircraft.notCurrentlyInRange}</div>
                 </div>
-                <button className="close-button" onClick={() => setSelectedHex(null)} aria-label={t.history.closeAircraftDetails}>×</button>
+                <button className="close-button" onClick={() => selectedOgnTarget ? setSelectedOgnId(null) : setSelectedHex(null)} aria-label={t.history.closeAircraftDetails}>×</button>
               </div>
-              {selectedAircraft ? <div className="detail-content">
+              {selectedOgnTarget ? <OgnDetailContent target={selectedOgnTarget} /> : selectedAircraft ? <div className="detail-content">
               <div className="detail-hero">
                 {selectedAircraft.enrichment?.route && <div className="detail-hero-route"><RouteContextRow aircraft={selectedAircraft} route={selectedAircraft.enrichment.route} /></div>}
                 <div className="detail-hero-type">{selectedAircraft.enrichment?.metadata?.aircraftDescription || selectedAircraft.aircraftDescription || selectedAircraft.enrichment?.metadata?.icaoTypeCode || selectedAircraft.aircraftType || t.aircraft.unknownType}</div>
@@ -1465,6 +1597,43 @@ export function AirRadarApp() {
       </section>
     </main>
   );
+}
+
+function OgnDetailContent({ target }: { target: OgnTargetView }) {
+  const typeLabel = target.aircraftType.replaceAll("_", " ");
+  const ageSeconds = Math.max(0, (Date.now() - Date.parse(target.receivedAt)) / 1000);
+  const position = `${formatCoordinate(target.latitude)}, ${formatCoordinate(target.longitude)}`;
+  return <div className="detail-content ogn-detail-content">
+    <div className="detail-hero">
+      <div className="detail-hero-type">{typeLabel}</div>
+      <div className="detail-hero-metrics">
+        <div><strong>{formatAltitude(target.altitudeFt)}</strong><span>{t.ogn.altitude}</span></div>
+        <div><strong>{formatSpeed(target.groundSpeedKt)}</strong><span>{t.ogn.groundSpeed}</span></div>
+        <div><strong>{formatTrack(target.trackDeg)}</strong><span>{t.ogn.track}</span></div>
+        <div><strong>{target.verticalRateFpm === null ? t.common.emptyValue : `${target.verticalRateFpm > 0 ? "+" : ""}${formatNumber(target.verticalRateFpm)} ft/min`}</strong><span>{t.ogn.verticalRate}</span></div>
+      </div>
+    </div>
+    <DetailSection title={t.ogn.identity}>
+      {target.identityVisible ? <>
+        <DetailItem label={t.ogn.address} value={target.address || t.common.emptyValue} />
+        <DetailItem label={t.ogn.addressType} value={target.addressType} />
+        <DetailItem label={t.ogn.callsign} value={target.senderCallsign || t.common.emptyValue} />
+        <DetailItem label={t.ogn.registration} value={target.registration || t.common.emptyValue} />
+        <DetailItem label={t.ogn.competitionNumber} value={target.competitionNumber || t.common.emptyValue} />
+        <DetailItem label={t.ogn.model} value={target.model || t.common.emptyValue} />
+      </> : <div className="detail-disclaimer">{t.ogn.anonymous} · {t.ogn.hiddenIdentity}</div>}
+    </DetailSection>
+    <DetailSection title={t.ogn.position}>
+      <DetailItem label={t.ogn.aircraftType} value={typeLabel} />
+      <DetailItem label={t.ogn.position} value={position} />
+      <DetailItem label={t.ogn.distance} value={formatDistance(target.distanceKm)} />
+      <DetailItem label={t.ogn.bearing} value={formatTrack(target.bearing)} />
+      <DetailItem label={t.ogn.lastSeen} value={formatAge(ageSeconds)} />
+      <DetailItem label={t.ogn.receiver} value={target.lastReceiver || t.common.emptyValue} />
+      <DetailItem label={t.ogn.title} value={`${t.ogn.trackingSources[target.trackingSource]}${target.stale ? ` · ${t.ogn.stale}` : ""}`} />
+    </DetailSection>
+    <div className="detail-disclaimer">{t.ogn.sourceDisclaimer}</div>
+  </div>;
 }
 
 function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {

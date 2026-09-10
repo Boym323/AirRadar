@@ -85,13 +85,13 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("checked={showAircraft}");
     expect(appSource).toContain("checked={showAirports}");
     expect(appSource).toContain("checked={showAtc}");
-    expect(appSource.match(/\bfetch\(/g)).toHaveLength(6);
+    expect(appSource.match(/\bfetch\(/g)).toHaveLength(7);
     expect(appSource).toContain("/api/aircraft/${encodeURIComponent(selectedHex)}");
     expect(appSource).toContain("/api/history/${encodeURIComponent(selectedHex)}");
   });
 
-  it("keeps one existing SSE stream and does not add trail polling", () => {
-    expect(appSource.match(/new EventSource\(/g)).toHaveLength(1);
+  it("keeps independent bounded SSE streams and does not add trail polling", () => {
+    expect(appSource.match(/new EventSource\(/g)).toHaveLength(2);
     expect(appSource).not.toContain("setInterval(");
     expect(appSource).toContain("selected-trail-line");
     expect(appSource).toContain('geometry: { type: "LineString"');

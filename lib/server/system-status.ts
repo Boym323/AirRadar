@@ -1,8 +1,10 @@
 import nextPackage from "next/package.json" with { type: "json" };
 import type { AtcDataResponse } from "@/lib/atc/types";
 import type { NetworkProviderDiagnostics, ReceiverStatisticsResponse, StateSnapshot } from "@/lib/aircraft/types";
+import type { OgnProviderDiagnostics, OgnProviderStatus } from "@/lib/ogn/types";
 import { getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
+import { getOgnStateService } from "@/lib/server/ogn-state";
 import { getHistoryPersistenceStatus, type HistoryPersistenceStatus } from "@/lib/server/history";
 import { getAtcData } from "@/lib/server/providers";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
@@ -61,6 +63,48 @@ export interface SystemStatusResponse {
     consecutiveFailures: number;
     rateLimited: boolean;
     retryAfterMs: number | null;
+  };
+  ogn: {
+    status: SystemStatus;
+    enabled: boolean;
+    providerStatus: OgnProviderStatus;
+    host: string;
+    port: number;
+    radiusKm: number;
+    connectedAt: string | null;
+    lastActivityAt: string | null;
+    lastPacketAt: string | null;
+    lastAircraftPacketAt: string | null;
+    loginAcknowledged: boolean;
+    packets: number;
+    positionPackets: number;
+    canonicalPositionUpdates: number;
+    duplicatePackets: number;
+    malformed: number;
+    droppedAdsb: number;
+    droppedGroundStatus: number;
+    droppedStatus: number;
+    droppedDelayed: number;
+    droppedPrivacy: number;
+    droppedStale: number;
+    droppedCapacity: number;
+    unknownTocall: number;
+    sourceCounts: Record<string, number>;
+    unknownTocalls: Array<{ tocall: string; count: number }>;
+    activeTargets: number;
+    freshTargets: number;
+    staleTargets: number;
+    reconnects: number;
+    configurationError: string | null;
+    ddb: {
+      status: OgnProviderDiagnostics["ddb"]["status"];
+      entries: number;
+      lastRefreshAt: string | null;
+      lastSuccessAt: string | null;
+      ageMs: number | null;
+      failures: number;
+      stale: boolean;
+    };
   };
   database: {
     status: "ok" | "offline" | "disabled";
@@ -176,6 +220,7 @@ export interface SystemStatusBuildInput {
   };
   weather?: Partial<AviationWeatherDiagnostics> & { entries?: number; airports?: number };
   adsbLol?: NetworkProviderDiagnostics;
+  ogn?: OgnProviderDiagnostics;
   now?: Date;
   runtime?: Partial<Pick<SystemStatusResponse["application"], "version" | "commit" | "buildTime" | "channel" | "nodeVersion" | "nextVersion" | "environment" | "timezone">> & {
     uptimeSeconds?: number;
@@ -347,6 +392,106 @@ function adsbLolResponse(diagnostics: NetworkProviderDiagnostics | undefined): S
   };
 }
 
+function ognStatus(diagnostics: OgnProviderDiagnostics): SystemStatus {
+  if (!diagnostics.enabled) return "disabled";
+  if (diagnostics.configurationError) return "degraded";
+  if (diagnostics.status === "online") return "ok";
+  if (diagnostics.status === "offline") return "offline";
+  return "degraded";
+}
+
+function safeOgnTocall(value: string): string | null {
+  return /^[A-Z0-9?]{1,16}$/i.test(value) ? value.toUpperCase() : null;
+}
+
+function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemStatusResponse["ogn"] {
+  const value = diagnostics ?? {
+    enabled: false,
+    status: "disabled" as const,
+    host: "aprs.glidernet.org",
+    port: 14580,
+    radiusKm: 250,
+    connectedAt: null,
+    lastActivityAt: null,
+    lastPacketAt: null,
+    lastAircraftPacketAt: null,
+    loginAcknowledged: false,
+    packets: 0,
+    positionPackets: 0,
+    canonicalPositionUpdates: 0,
+    duplicatePackets: 0,
+    malformed: 0,
+    droppedAdsb: 0,
+    droppedGroundStatus: 0,
+    droppedStatus: 0,
+    droppedDelayed: 0,
+    droppedPrivacy: 0,
+    droppedStale: 0,
+    droppedCapacity: 0,
+    unknownTocall: 0,
+    sourceCounts: {},
+    unknownTocalls: [],
+    activeTargets: 0,
+    freshTargets: 0,
+    staleTargets: 0,
+    reconnects: 0,
+    configurationError: null,
+    ddb: { status: "disabled" as const, entries: 0, lastRefreshAt: null, lastSuccessAt: null, ageMs: null, failures: 0, stale: true },
+  };
+  const sourceCounts: Record<string, number> = {};
+  for (const [tocall, count] of Object.entries(value.sourceCounts).slice(0, 64)) {
+    const safe = safeOgnTocall(tocall);
+    if (safe) sourceCounts[safe] = nonNegativeInteger(count, 10_000_000);
+  }
+  return {
+    status: ognStatus(value),
+    enabled: value.enabled,
+    providerStatus: value.status,
+    host: safeLabel(value.host, "aprs.glidernet.org"),
+    port: nonNegativeInteger(value.port, 65_535),
+    radiusKm: nonNegativeNumber(value.radiusKm),
+    connectedAt: safeTimestamp(value.connectedAt),
+    lastActivityAt: safeTimestamp(value.lastActivityAt),
+    lastPacketAt: safeTimestamp(value.lastPacketAt),
+    lastAircraftPacketAt: safeTimestamp(value.lastAircraftPacketAt),
+    loginAcknowledged: Boolean(value.loginAcknowledged),
+    packets: nonNegativeInteger(value.packets, 10_000_000_000),
+    positionPackets: nonNegativeInteger(value.positionPackets, 10_000_000_000),
+    canonicalPositionUpdates: nonNegativeInteger(value.canonicalPositionUpdates, 10_000_000_000),
+    duplicatePackets: nonNegativeInteger(value.duplicatePackets, 10_000_000_000),
+    malformed: nonNegativeInteger(value.malformed, 10_000_000_000),
+    droppedAdsb: nonNegativeInteger(value.droppedAdsb, 10_000_000_000),
+    droppedGroundStatus: nonNegativeInteger(value.droppedGroundStatus, 10_000_000_000),
+    droppedStatus: nonNegativeInteger(value.droppedStatus, 10_000_000_000),
+    droppedDelayed: nonNegativeInteger(value.droppedDelayed, 10_000_000_000),
+    droppedPrivacy: nonNegativeInteger(value.droppedPrivacy, 10_000_000_000),
+    droppedStale: nonNegativeInteger(value.droppedStale, 10_000_000_000),
+    droppedCapacity: nonNegativeInteger(value.droppedCapacity, 10_000_000_000),
+    unknownTocall: nonNegativeInteger(value.unknownTocall, 10_000_000_000),
+    sourceCounts,
+    unknownTocalls: value.unknownTocalls.slice(0, 20).flatMap((entry) => {
+      const tocall = safeOgnTocall(entry.tocall);
+      return tocall ? [{ tocall, count: nonNegativeInteger(entry.count, 10_000_000_000) }] : [];
+    }),
+    activeTargets: nonNegativeInteger(value.activeTargets, 20_000),
+    freshTargets: nonNegativeInteger(value.freshTargets, 20_000),
+    staleTargets: nonNegativeInteger(value.staleTargets, 20_000),
+    reconnects: nonNegativeInteger(value.reconnects, 10_000_000),
+    configurationError: value.configurationError && value.configurationError.length <= 200 && /^Invalid OGN configuration: [A-Z0-9_, ]+$/.test(value.configurationError)
+      ? value.configurationError
+      : null,
+    ddb: {
+      status: value.ddb.status,
+      entries: nonNegativeInteger(value.ddb.entries, 100_000),
+      lastRefreshAt: safeTimestamp(value.ddb.lastRefreshAt),
+      lastSuccessAt: safeTimestamp(value.ddb.lastSuccessAt),
+      ageMs: value.ddb.ageMs === null ? null : nonNegativeInteger(value.ddb.ageMs, 30 * 24 * 60 * 60_000),
+      failures: nonNegativeInteger(value.ddb.failures, 10_000_000),
+      stale: Boolean(value.ddb.stale),
+    },
+  };
+}
+
 function weatherStatus(value: SystemStatusBuildInput["weather"]): SystemStatus {
   if (!value) return "disabled";
   if (value?.status === "disabled" || value?.enabled === false) return "disabled";
@@ -423,6 +568,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       },
     },
     adsbLol: adsbLolResponse(input.adsbLol),
+    ogn: ognResponse(input.ogn),
     database: {
       status: input.database.status,
       connected: input.database.connected,
@@ -536,6 +682,8 @@ const unavailableAtcData: AtcDataResponse = {
 
 export async function readSystemStatus(service: SystemStatusServiceLike = getAircraftStateService()): Promise<SystemStatusResponse> {
   await service.waitForReady();
+  const ognService = getOgnStateService();
+  await ognService.waitForReady();
   const snapshot = service.getSnapshot();
   const database = await inspectDatabase();
   const atc = database.status === "ok" || snapshot.provider === "mock"
@@ -561,6 +709,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     },
     weather,
     adsbLol: service.getNetworkDiagnostics?.(),
+    ogn: ognService.getDiagnostics(),
     runtime: {
       diagnostics: serviceDiagnostics ? {
         aircraftCount: serviceDiagnostics.aircraftCount,

@@ -121,6 +121,32 @@ These are behavior and safety contracts for changes to the current system.
   output includes safe source/provenance and ADSB.lol ODbL attribution, but no
   raw provider errors or exact receiver coordinates by default.
 
+## OGN / FLARM integration
+
+- `OgnProvider` and `OgnStateService` are optional server-side singletons,
+  separate from `AircraftStateService`. `OGN_ENABLED=false` is the default;
+  disabled mode creates no TCP, DDB refresh, cleanup, or OGN SSE work.
+- OGN identity is `addressType + address`; callsign is observation metadata.
+  Newer observations replace the canonical target, equal timestamps may add
+  receiver provenance, and older packets never roll back position or identity.
+- APRS-IS is receive-only with CRLF login, a server-side radius filter, and a
+  periodic comment-only `#keepalive`; no aircraft telemetry is sent. The
+  bounded line reader accepts no line over 512 bytes including its line ending.
+  `OGADSB` is dropped by the local classifier even if the server filter
+  delivers it; unknown and unsupported TOCALLs are fail-closed.
+- OGN targets are RAM-only and must not reach Prisma, `AircraftStateService`,
+  ADS-B history/statistics/reception records, alerts, enrichment, ATC, or
+  receiver health. The map uses dedicated GeoJSON source/layers and the UI
+  has a separate OGN list/detail selection.
+- DDB refreshes are bounded and atomic. While the DDB has no usable snapshot,
+  OGN targets are not public. Packet no-tracking and DDB `tracked=N` are
+  dropped; DDB misses, `identified=N`, and packet stealth are anonymous. The
+  public serializer never sends anonymous address, sender, registration,
+  competition number, model, receiver signal, or receiver history.
+- OGN targets are stale after 15 seconds, removed after 60 seconds, and
+  capped at 5,000. `/api/ogn/stream` has its own initial snapshot, heartbeat,
+  abort cleanup, SSE capacity slot, and newest-only pending update.
+
 ## ATC
 
 - ATC assignment is a probable candidate based on aircraft position,
@@ -156,6 +182,9 @@ frames, event listeners, and dynamic source data. Its generic IDs are:
   `atc-sectors-label`, `atc-transmitters-circle`,
   `route-airports-circle`, `route-airports-label`, `aviation-sigmet-fill`,
   `aviation-sigmet-line`;
+- OGN uses source `ogn-targets` and layers `ogn-targets-circle` and
+  `ogn-targets-label`; these are GeoJSON layers, not DOM markers, and are
+  hidden until the operator enables the separate OGN map toggle.
 - Route V2 constants in `lib/route-visualization.ts`: sources
   `selected-route-v2` and `selected-route-airports-v2`; layers
   `selected-route-completed`, `selected-route-remaining`,

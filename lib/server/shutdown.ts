@@ -1,4 +1,5 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
+import { getOgnStateService } from "@/lib/server/ogn-state";
 import { closePrisma } from "@/lib/server/db";
 
 export const SHUTDOWN_BUDGET_MS = 10_000;
@@ -6,6 +7,7 @@ export type ShutdownState = "RUNNING" | "SHUTTING_DOWN" | "COMPLETE";
 
 type Cleanup = {
   stopAircraft: (deadline: number) => Promise<void>;
+  stopOgn?: () => Promise<void>;
   closeStatistics: () => Promise<void>;
   closeProvider: () => Promise<void>;
   closeDatabase: () => Promise<void>;
@@ -47,6 +49,10 @@ export function createShutdownCoordinator(cleanup: Cleanup, budgetMs = SHUTDOWN_
       console.info("[shutdown] stopping aircraft state");
       console.info("[shutdown] draining history");
       await phase("aircraft state stop", () => cleanup.stopAircraft(deadline), deadline);
+      if (cleanup.stopOgn) {
+        console.info("[shutdown] stopping OGN state");
+        await phase("OGN state stop", cleanup.stopOgn, deadline);
+      }
       console.info("[shutdown] closing statistics");
       await phase("statistics close", cleanup.closeStatistics, deadline);
       console.info("[shutdown] closing provider");
@@ -76,6 +82,7 @@ type SignalProcess = Pick<NodeJS.Process, "pid" | "ppid" | "listeners" | "remove
 export function getShutdownCoordinator() {
   globalForShutdown.airRadarShutdown ??= createShutdownCoordinator({
     stopAircraft: (deadline) => getAircraftStateService().stop({ deadline, closeStatistics: false, closeProvider: false }),
+    stopOgn: () => getOgnStateService().stop(),
     closeStatistics: () => getAircraftStateService().closeStatistics(),
     closeProvider: () => getAircraftStateService().closeProvider(),
     closeDatabase: closePrisma,

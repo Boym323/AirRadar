@@ -130,7 +130,7 @@ describe("route visualization V2", () => {
   });
 
   it("does not add a route network loop or FlightPosition query", () => {
-    expect(radarSource.match(/new EventSource\(/g)).toHaveLength(1);
+    expect(radarSource.match(/new EventSource\(/g)).toHaveLength(2);
     expect(radarSource.match(/\/api\/stream/g)).toHaveLength(1);
     expect(radarSource).not.toContain("FlightPosition");
     expect(radarSource).toContain("createRouteGeoJSON(");

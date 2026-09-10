@@ -55,6 +55,31 @@ live trail, animates MapLibre DOM markers, and reconnects through the browser's
 `EventSource` behavior after a network interruption. The statistics page has
 its own page-scoped stream for live counters.
 
+## OGN / FLARM live flow
+
+When `OGN_ENABLED=true`, `OgnProvider` connects to the official OGN APRS-IS
+endpoint using the canonical receiver latitude/longitude and configured
+radius. APRS-IS server-side filtering requests `r/.../.../... -u/OGADSB`, but
+the local classifier still drops every `OGADSB` packet. A bounded 512-byte
+line reader handles CRLF framing, comments, TNC2 envelopes, and reconnects;
+the provider sends only a periodic `#keepalive` comment and no aircraft
+telemetry. No browser or Prisma connection is involved.
+
+Accepted aircraft positions go through nearest-day timestamp validation,
+future tolerance, a 120-second age limit, source-specific TOCALL
+classification, and an identity key of `addressType + address`. Newer
+observations replace the canonical position; equal timestamps may add receiver
+provenance; older observations never roll back the target. The OGN DDB is
+refreshed atomically in bounded RAM and is never fetched per packet. Privacy is
+fail-closed while DDB is unusable, with packet no-tracking and DDB tracked/identified
+choices applied before public serialization.
+
+`/api/ogn/state` returns the current bounded snapshot and `/api/ogn/stream`
+delivers an initial snapshot plus coalesced updates and heartbeats. OGN has no
+effect on `/api/stream`, local aircraft filters, local history, statistics,
+alerts, or the main receiver status. Stale targets are marked after 15 seconds
+and removed after 60 seconds; the target map is capped at 5,000 entries.
+
 ## History persistence
 
 Every successful provider refresh replaces the pending history snapshot. A

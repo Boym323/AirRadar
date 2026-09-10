@@ -107,6 +107,38 @@ curl -sS 'https://api.adsb.lol/v2/lat/LAT/lon/LON/dist/100' | jq '.total'
 ADSB.lol publishes its API and public data under ODbL 1.0. Keep the in-app
 ADSB.lol attribution and comply with the current [ODbL terms](https://opendatacommons.org/licenses/odbl/1-0/).
 
+## OGN / FLARM Integration v1
+
+OGN is an optional, server-side APRS-IS live feed. It is disabled by default;
+when enabled, one process connects to `aprs.glidernet.org:14580`, sends a
+receive-only `pass -1` login, and applies a radius filter around the existing
+canonical receiver coordinates. It sends only the documented `#keepalive`
+comment at the configured interval; it never sends aircraft telemetry. The
+browser uses a separate `/api/ogn/state` snapshot and `/api/ogn/stream` SSE
+channel; it never opens a TCP connection.
+
+OGN targets stay in a bounded RAM-only state map. They do not enter the local
+ADS-B state service, `FlightPosition`, `Flight` history, daily statistics,
+reception records, alerts, enrichment, or receiver health. The OGN map layer
+is separate, off by default, and uses MapLibre GeoJSON source/layers; the OGN
+list and detail panel are separate from ADS-B selection and filters.
+
+Before publishing a target, AirRadar fail-closes on a stale/unavailable OGN
+DDB privacy index. Packet `no-tracking` and DDB `tracked=N` are dropped. A DDB
+miss, DDB `identified=N`, or packet stealth flag is anonymous: identity fields
+are removed at the server serialization boundary. Identified metadata is shown
+only when both the packet and DDB permit it. OGN timestamps are nearest-day
+UTC timestamps, packets older than 120 seconds are dropped, and identity is
+deduplicated by `addressType + address`, never by callsign.
+
+The implementation accepts the current v1 FLARM, OGN tracker, FANET, SafeSky,
+PilotAware, and ADS-L TOCALL variants that have a safe airborne interpretation;
+`OGADSB`, ground/weather/status, delayed, and unknown variants are counted and
+dropped. Official OGN source data and privacy choices are documented in
+[`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md). Configure the complete bounded
+set of `OGN_*` variables from `.env.example`; keep `OGN_ENABLED=false` in demo
+and release-gate environments.
+
 ## PostgreSQL
 
 The schema source is `prisma/contract.prisma`; checked-in forward migrations

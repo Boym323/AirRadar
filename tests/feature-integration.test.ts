@@ -98,7 +98,7 @@ describe("feature integration", () => {
   it("keeps global search in the header without changing map transport", () => {
     expect(radarSource).toContain('import { GlobalSearch } from "@/components/global-search";');
     expect(radarSource).toContain("<GlobalSearch />");
-    expect(radarSource.match(/new EventSource\(/g)).toHaveLength(1);
+    expect(radarSource.match(/new EventSource\(/g)).toHaveLength(2);
     expect(radarSource.match(/\/api\/stream/g)).toHaveLength(1);
     expect(radarSource).not.toContain("setInterval(");
     expect(searchSource).not.toContain("EventSource");
@@ -110,7 +110,7 @@ describe("feature integration", () => {
     expect(rangeRingsSource).toContain("50, 100, 200, 300, 400");
     expect(radarSource).toContain("showRangeRings");
     expect(radarSource).toContain("snapshot.receiver.lat === null || snapshot.receiver.lon === null");
-    expect(radarSource.match(/new EventSource\(/g)).toHaveLength(1);
+    expect(radarSource.match(/new EventSource\(/g)).toHaveLength(2);
   });
 
   it("keeps aircraft and airport result navigation canonical", () => {

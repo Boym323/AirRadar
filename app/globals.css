@@ -273,6 +273,24 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .stat-label { color: var(--muted); font-size: 9px; line-height: 1.25; margin-top: 4px; text-transform: uppercase; letter-spacing: .07em; }
 
 .aircraft-list { padding: 6px 8px 12px; }
+.ogn-list-section { margin: 0 8px 8px; padding: 9px 10px 6px; border: 1px solid rgba(102, 216, 207, .2); border-radius: 9px; background: rgba(102, 216, 207, .035); }
+.ogn-list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; color: var(--mint); font-size: 11px; }
+.ogn-list-heading span { color: var(--muted); font-size: 10px; }
+.ogn-empty { padding: 7px 0 5px; color: var(--muted); font-size: 10px; }
+.ogn-list { display: grid; gap: 3px; }
+.ogn-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 5px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); text-align: left; }
+.ogn-row:hover, .ogn-row.selected { border-color: rgba(102, 216, 207, .32); background: rgba(102, 216, 207, .08); }
+.ogn-row-icon { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 auto; color: var(--mint); font-size: 17px; }
+.ogn-row-main { min-width: 0; flex: 1; }
+.ogn-row-topline { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ogn-row-name { min-width: 0; overflow: hidden; color: var(--text); font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.ogn-source-badge, .ogn-stale-badge { flex: 0 0 auto; color: var(--mint); font-size: 8px; font-weight: 700; letter-spacing: .03em; white-space: nowrap; }
+.ogn-stale-badge { color: var(--warning); }
+.ogn-row-type { display: block; overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.ogn-row-meta { display: flex; gap: 7px; margin-top: 3px; color: var(--muted); font-family: var(--font-geist-mono), monospace; font-size: 10px; }
+.ogn-row-meta b { color: var(--text); font-weight: 550; }
+.ogn-row-distance { color: var(--warning); font-family: var(--font-geist-mono), monospace; font-size: 10px; white-space: nowrap; }
+.ogn-detail-content .detail-disclaimer { border-color: rgba(102, 216, 207, .22); }
 .aircraft-row { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: transparent; border: 1px solid transparent; color: var(--text); border-radius: 9px; padding: 9px 10px; transition: background .18s, border-color .18s; }
 .aircraft-row:hover { background: rgba(55, 214, 192, .06); border-color: rgba(55, 214, 192, .18); }
 .aircraft-row.selected { background: linear-gradient(90deg, rgba(55, 214, 192, .13), rgba(55, 214, 192, .04)); border-color: rgba(55, 214, 192, .42); }

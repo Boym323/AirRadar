@@ -5,6 +5,8 @@ import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/wiedehopf/tar1090-db/refs/heads/csv/aircraft.csv.gz";
 export const DEFAULT_AVIATION_WEATHER_BASE_URL = "https://aviationweather.gov";
+export const DEFAULT_OGN_HOST = "aprs.glidernet.org";
+export const DEFAULT_OGN_PORT = 14580;
 
 export type PublicReceiverPositionMode = "exact" | "approximate" | "hidden";
 
@@ -173,6 +175,132 @@ export function getAircraftMetadataUrl(): string {
 export function getFlightAwareApiKey(): string | null {
   const key = process.env.FLIGHTAWARE_API_KEY?.trim();
   return key || null;
+}
+
+export interface OgnConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+  radiusKm: number;
+  connectTimeoutMs: number;
+  keepaliveMs: number;
+  staleAfterMs: number;
+  removeAfterMs: number;
+  maxPacketAgeMs: number;
+  reconnectMinMs: number;
+  reconnectMaxMs: number;
+  ddbRefreshMs: number;
+  ddbMaxStaleMs: number;
+  maxTargets: number;
+  configurationError: string | null;
+}
+
+function rawNumber(name: string): number | null {
+  const value = process.env[name]?.trim();
+  if (!value) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : Number.NaN;
+}
+
+function boundedOgnMilliseconds(name: string, fallback: number, minimum: number, maximum: number): number {
+  return boundedMilliseconds(name, fallback, minimum, maximum);
+}
+
+export function isOgnEnabled(): boolean {
+  return process.env.OGN_ENABLED?.trim().toLowerCase() === "true";
+}
+
+export function getOgnHost(): string {
+  const value = process.env.OGN_HOST?.trim();
+  return value && value.length <= 253 && !/[\r\n\s]/.test(value) ? value : DEFAULT_OGN_HOST;
+}
+
+export function getOgnPort(): number {
+  return boundedInteger("OGN_PORT", DEFAULT_OGN_PORT, 1, 65_535);
+}
+
+export function getOgnRadiusKm(): number {
+  return boundedInteger("OGN_RADIUS_KM", 250, 1, 1_000);
+}
+
+export function getOgnConnectTimeoutMs(): number {
+  return boundedOgnMilliseconds("OGN_CONNECT_TIMEOUT_MS", 10_000, 500, 120_000);
+}
+
+export function getOgnKeepaliveMs(): number {
+  return boundedOgnMilliseconds("OGN_KEEPALIVE_MS", 240_000, 30_000, 15 * 60_000);
+}
+
+export function getOgnStaleAfterMs(): number {
+  return boundedOgnMilliseconds("OGN_STALE_AFTER_MS", 15_000, 5_000, 24 * 60 * 60_000);
+}
+
+export function getOgnRemoveAfterMs(): number {
+  return boundedOgnMilliseconds("OGN_REMOVE_AFTER_MS", 60_000, 5_000, 7 * 24 * 60 * 60_000);
+}
+
+export function getOgnMaxPacketAgeMs(): number {
+  return boundedOgnMilliseconds("OGN_MAX_PACKET_AGE_MS", 120_000, 1_000, 24 * 60 * 60_000);
+}
+
+export function getOgnReconnectMinMs(): number {
+  return boundedOgnMilliseconds("OGN_RECONNECT_MIN_MS", 1_000, 100, 60_000);
+}
+
+export function getOgnReconnectMaxMs(): number {
+  return boundedOgnMilliseconds("OGN_RECONNECT_MAX_MS", 30_000, 1_000, 10 * 60_000);
+}
+
+export function getOgnDdbRefreshMs(): number {
+  return boundedOgnMilliseconds("OGN_DDB_REFRESH_MS", 6 * 60 * 60_000, 60_000, 7 * 24 * 60 * 60_000);
+}
+
+export function getOgnDdbMaxStaleMs(): number {
+  return boundedOgnMilliseconds("OGN_DDB_MAX_STALE_MS", 24 * 60 * 60_000, 60_000, 24 * 60 * 60_000);
+}
+
+export function getOgnMaxTargets(): number {
+  return boundedInteger("OGN_MAX_TARGETS", 5_000, 1, 20_000);
+}
+
+export function getOgnConfig(): OgnConfig {
+  const staleAfterMs = getOgnStaleAfterMs();
+  const removeAfterMs = getOgnRemoveAfterMs();
+  const reconnectMinMs = getOgnReconnectMinMs();
+  const reconnectMaxMs = getOgnReconnectMaxMs();
+  const ddbRefreshMs = getOgnDdbRefreshMs();
+  const ddbMaxStaleMs = getOgnDdbMaxStaleMs();
+  const errors: string[] = [];
+  const host = process.env.OGN_HOST?.trim();
+  const port = rawNumber("OGN_PORT");
+  const radius = rawNumber("OGN_RADIUS_KM");
+  const receiverLat = rawNumber("RECEIVER_LAT");
+  const receiverLon = rawNumber("RECEIVER_LON");
+  if (host && (host.length > 253 || /[\r\n\s]/.test(host))) errors.push("OGN_HOST");
+  if (port !== null && (!Number.isInteger(port) || port < 1 || port > 65_535)) errors.push("OGN_PORT");
+  if (radius !== null && (!Number.isInteger(radius) || radius < 1 || radius > 1_000)) errors.push("OGN_RADIUS_KM");
+  if (receiverLat !== null && (!Number.isFinite(receiverLat) || receiverLat < -90 || receiverLat > 90)) errors.push("RECEIVER_LAT");
+  if (receiverLon !== null && (!Number.isFinite(receiverLon) || receiverLon < -180 || receiverLon > 180)) errors.push("RECEIVER_LON");
+  if (removeAfterMs < staleAfterMs) errors.push("OGN_REMOVE_AFTER_MS");
+  if (reconnectMaxMs < reconnectMinMs) errors.push("OGN_RECONNECT_MAX_MS");
+  if (ddbMaxStaleMs < ddbRefreshMs) errors.push("OGN_DDB_MAX_STALE_MS");
+  return {
+    enabled: isOgnEnabled(),
+    host: getOgnHost(),
+    port: getOgnPort(),
+    radiusKm: getOgnRadiusKm(),
+    connectTimeoutMs: getOgnConnectTimeoutMs(),
+    keepaliveMs: getOgnKeepaliveMs(),
+    staleAfterMs,
+    removeAfterMs,
+    maxPacketAgeMs: getOgnMaxPacketAgeMs(),
+    reconnectMinMs,
+    reconnectMaxMs,
+    ddbRefreshMs,
+    ddbMaxStaleMs,
+    maxTargets: getOgnMaxTargets(),
+    configurationError: errors.length ? `Invalid OGN configuration: ${errors.join(", ")}` : null,
+  };
 }
 
 export function isAviationWeatherEnabled(): boolean {

@@ -43,6 +43,14 @@ coverage. `AdsbLolProvider` calls the public ADSB.lol geographic v2 endpoint,
 keeps its validated snapshot in RAM, and never enters the local history,
 statistics, alert, enrichment, or ATC input lanes.
 
+`OgnProvider` and `OgnStateService` form a second optional live-only boundary.
+They are server-side singletons in the same Node process but are not children
+of `AircraftStateService`. `OgnProvider` owns one bounded APRS-IS TCP stream,
+receive-only login, and comment-only `#keepalive`; `OgnStateService` owns the OGN RAM map, DDB privacy
+re-application, stale/capacity cleanup, and an independent listener set for
+`/api/ogn/stream`. OGN never calls Prisma or any ADS-B history/statistics,
+enrichment, alert, or receiver-health path.
+
 ## Server ownership
 
 `AircraftStateService` owns the live lifecycle and coordinates the following
