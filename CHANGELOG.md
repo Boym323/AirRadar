@@ -352,3 +352,9 @@ Changes since v1.0.19:
 Changes since v1.0.20:
 
 - fix: update paths for Next.js release types to version 21023 (1035203c)
+
+## [1.0.22] - 2026-09-10
+
+Changes since v1.0.21:
+
+- fix: keep release builds from modifying tracked config (f8f73f17)
