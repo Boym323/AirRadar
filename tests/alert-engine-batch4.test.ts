@@ -18,7 +18,25 @@ function historyRecorder() {
   return {
     detected,
     recordDetected: vi.fn(async (event: AlertHistoryDetection) => {
-      detected.push({ id: event.id, detectedAt: event.detectedAt, type: event.type, reason: event.reason, aircraft: { icaoHex: event.aircraft.icaoHex, registration: event.aircraft.registration, callsign: event.aircraft.callsign, aircraftType: event.aircraft.aircraftType }, record: null, notificationStatus: "pending", notificationAttemptedAt: null });
+      detected.push({
+        id: event.id,
+        detectedAt: event.detectedAt,
+        type: event.type,
+        reason: event.reason,
+        aircraft: {
+          icaoHex: event.aircraft.icaoHex,
+          registration: event.aircraft.registration,
+          callsign: event.aircraft.callsign,
+          aircraftType: event.aircraft.aircraftType,
+        },
+        ruleIds: event.ruleIds ?? [],
+        ruleNames: event.ruleNames ?? [],
+        radiusKm: event.radiusKm ?? null,
+        squawk: event.squawk ?? null,
+        record: event.record ?? null,
+        notificationStatus: "pending",
+        notificationAttemptedAt: null,
+      });
     }),
     recordNotification: vi.fn(async () => undefined),
   };
