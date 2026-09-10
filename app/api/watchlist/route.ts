@@ -1,4 +1,5 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
+import { getRuleLastTriggeredAt } from "@/lib/server/alert-state";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { watchlistValidationResponse } from "@/lib/server/watchlist-api";
 import { requireWatchlistMutation } from "@/lib/server/watchlist-auth";
@@ -26,12 +27,16 @@ async function readBody(request: Request): Promise<WatchlistRuleInput | Response
   }
 }
 
+function publicResponse(service: ReturnType<typeof getAircraftStateService>) {
+  return listWatchlistRules().then((rules) => toPublicWatchlistResponse(rules, service.getSnapshot(), getRuleLastTriggeredAt()));
+}
+
 export async function GET(request: Request): Promise<Response> {
   const rateLimit = checkPublicRateLimit("watchlist", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const service = getAircraftStateService();
   await service.waitForReady();
-  return Response.json(toPublicWatchlistResponse(await listWatchlistRules(), service.getSnapshot()), { headers: noStoreHeaders() });
+  return Response.json(await publicResponse(service), { headers: noStoreHeaders() });
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -46,7 +51,7 @@ export async function POST(request: Request): Promise<Response> {
     const service = getAircraftStateService();
     service.reloadAlertConfig();
     await service.waitForReady();
-    const response = toPublicWatchlistResponse(await listWatchlistRules(), service.getSnapshot());
+    const response = await publicResponse(service);
     return Response.json({ rule: response.rules.find((item) => item.id === rule.id), ...response }, { status: 201, headers: noStoreHeaders() });
   } catch (error) {
     if (error instanceof WatchlistValidationError) return watchlistValidationResponse(error);

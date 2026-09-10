@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -31,9 +31,77 @@ describe("alert history", () => {
 
     const result = await store.list({ pageSize: 10 });
     expect(result.items).toHaveLength(1);
-    expect(result.items[0]).toMatchObject({ id: "new:ABC123", notificationStatus: "failed", aircraft: { icaoHex: "ABC123", registration: "OK-ABC" } });
+    expect(result.items[0]).toMatchObject({
+      id: "new:ABC123",
+      notificationStatus: "failed",
+      aircraft: { icaoHex: "ABC123", registration: "OK-ABC" },
+      ruleIds: [],
+      ruleNames: [],
+      radiusKm: null,
+      squawk: null,
+    });
     expect(await readFile(path, "utf8")).not.toContain("secret");
     expect((await stat(path)).mode & 0o777).toBe(0o600);
+  });
+
+  it("persists explicit watchlist radius and emergency metadata", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
+    directories.push(directory);
+    const store = new JsonlAlertHistoryStore(join(directory, "events.jsonl"));
+    await store.recordDetected({
+      id: "entered:ABC123",
+      detectedAt: "2026-09-10T18:00:00Z",
+      type: "entered_radius",
+      reason: "entered_radius",
+      aircraft,
+      ruleIds: ["near"],
+      ruleNames: ["Nearby test"],
+      radiusKm: 50,
+    });
+    await store.recordDetected({
+      id: "7700:ABC123",
+      detectedAt: "2026-09-10T18:01:00Z",
+      type: "emergency_7700",
+      reason: "squawk_7700",
+      aircraft,
+      squawk: "7700",
+    });
+
+    const result = await store.list({ pageSize: 10 });
+    expect(result.items[0]).toMatchObject({ type: "emergency_7700", squawk: "7700" });
+    expect(result.items[1]).toMatchObject({
+      type: "entered_radius",
+      ruleIds: ["near"],
+      ruleNames: ["Nearby test"],
+      radiusKm: 50,
+    });
+  });
+
+  it("keeps legacy JSONL entries readable after the v1.3 metadata extension", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
+    directories.push(directory);
+    const path = join(directory, "events.jsonl");
+    await writeFile(path, `${JSON.stringify({
+      kind: "detected",
+      entry: {
+        id: "legacy",
+        detectedAt: "2026-09-08T12:00:00.000Z",
+        type: "watchlist",
+        reason: "watchlisted",
+        aircraft: { icaoHex: "ABC123", registration: "OK-ABC", callsign: "TEST123", aircraftType: "A320" },
+        record: null,
+        notificationStatus: "pending",
+        notificationAttemptedAt: null,
+      },
+    })}\n`, "utf8");
+
+    expect((await new JsonlAlertHistoryStore(path).list()).items[0]).toMatchObject({
+      id: "legacy",
+      ruleIds: [],
+      ruleNames: [],
+      radiusKm: null,
+      squawk: null,
+    });
   });
 
   it("returns bounded pages", async () => {
@@ -45,6 +113,23 @@ describe("alert history", () => {
     }
     expect(await store.list({ page: 0, pageSize: 2 })).toMatchObject({ page: 0, pageSize: 2, nextPage: 1, items: expect.any(Array) });
     expect(await store.list({ page: 1, pageSize: 2 })).toMatchObject({ page: 1, nextPage: null });
+  });
+
+  it("applies event filters before pagination", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
+    directories.push(directory);
+    const store = new JsonlAlertHistoryStore(join(directory, "events.jsonl"));
+    await store.recordDetected({ id: "watch-1", detectedAt: "2026-09-08T12:00:00Z", type: "aircraft_appeared", reason: "appeared", aircraft });
+    await store.recordDetected({ id: "emergency-1", detectedAt: "2026-09-08T12:01:00Z", type: "emergency_7700", reason: "squawk_7700", aircraft, squawk: "7700" });
+    await store.recordDetected({ id: "watch-2", detectedAt: "2026-09-08T12:02:00Z", type: "entered_radius", reason: "entered_radius", aircraft, radiusKm: 50 });
+    await store.recordDetected({ id: "record-1", detectedAt: "2026-09-08T12:03:00Z", type: "new_aircraft", reason: "new", aircraft });
+
+    const watchlist = await store.list({ filter: "watchlist", pageSize: 1 });
+    expect(watchlist.items.map((entry) => entry.id)).toEqual(["watch-2"]);
+    expect(watchlist.nextPage).toBe(1);
+    expect((await store.list({ filter: "watchlist", page: 1, pageSize: 1 })).items.map((entry) => entry.id)).toEqual(["watch-1"]);
+    expect((await store.list({ filter: "emergency" })).items.map((entry) => entry.id)).toEqual(["emergency-1"]);
+    expect((await store.list({ filter: "records" })).items.map((entry) => entry.id)).toEqual(["record-1"]);
   });
 
   it("reloads from the same persistent file and isolates separate ledgers", async () => {

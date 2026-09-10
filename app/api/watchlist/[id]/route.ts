@@ -1,4 +1,5 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
+import { getRuleLastTriggeredAt } from "@/lib/server/alert-state";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { watchlistValidationResponse } from "@/lib/server/watchlist-api";
 import { requireWatchlistMutation } from "@/lib/server/watchlist-auth";
@@ -41,6 +42,10 @@ async function resolveId(context: { params: Promise<{ id: string }> }): Promise<
   }
 }
 
+async function publicResponse(service: ReturnType<typeof getAircraftStateService>) {
+  return toPublicWatchlistResponse(await listWatchlistRules(), service.getSnapshot(), getRuleLastTriggeredAt());
+}
+
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
   const rateLimit = checkPublicRateLimit("watchlist", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
@@ -55,7 +60,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const service = getAircraftStateService();
     service.reloadAlertConfig();
     await service.waitForReady();
-    const response = toPublicWatchlistResponse(await listWatchlistRules(), service.getSnapshot());
+    const response = await publicResponse(service);
     return Response.json({ rule: response.rules.find((item) => item.id === rule.id), ...response }, { headers: noStoreHeaders() });
   } catch (error) {
     if (error instanceof WatchlistNotFoundError) return notFoundResponse();
@@ -76,7 +81,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     const service = getAircraftStateService();
     service.reloadAlertConfig();
     await service.waitForReady();
-    return Response.json(toPublicWatchlistResponse(await listWatchlistRules(), service.getSnapshot()), { headers: noStoreHeaders() });
+    return Response.json(await publicResponse(service), { headers: noStoreHeaders() });
   } catch (error) {
     if (error instanceof WatchlistNotFoundError) return notFoundResponse();
     return Response.json({ error: "Watchlist could not be updated" }, { status: 500, headers: noStoreHeaders() });

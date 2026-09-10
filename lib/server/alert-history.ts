@@ -3,9 +3,28 @@ import { dirname } from "node:path";
 import type { Aircraft } from "@/lib/aircraft/types";
 import { getRuntimeStatePath } from "@/lib/server/runtime-state";
 
-export type AlertHistoryEventType = "watchlist" | "new_aircraft" | "reception_record" | "emergency";
+export type AlertHistoryEventType =
+  | "watchlist"
+  | "aircraft_appeared"
+  | "entered_radius"
+  | "new_aircraft"
+  | "reception_record"
+  | "emergency"
+  | "emergency_7500"
+  | "emergency_7600"
+  | "emergency_7700";
 export type AlertNotificationStatus = "pending" | "attempted" | "delivered" | "failed" | "disabled";
-export type AlertHistoryReason = "watchlisted" | "new" | "record" | "emergency";
+export type AlertHistoryReason =
+  | "watchlisted"
+  | "appeared"
+  | "entered_radius"
+  | "new"
+  | "record"
+  | "emergency"
+  | "squawk_7500"
+  | "squawk_7600"
+  | "squawk_7700";
+export type AlertHistoryFilter = "all" | "watchlist" | "emergency" | "records";
 export type ReceptionRecordScope = "daily" | "lifetime";
 
 export interface AlertHistoryRecordValue {
@@ -27,6 +46,10 @@ export interface AlertHistoryEntry {
     callsign: string | null;
     aircraftType: string | null;
   };
+  ruleIds: string[];
+  ruleNames: string[];
+  radiusKm: number | null;
+  squawk: string | null;
   record: AlertHistoryRecordValue | null;
   notificationStatus: AlertNotificationStatus;
   notificationAttemptedAt: string | null;
@@ -38,6 +61,10 @@ export interface AlertHistoryDetection {
   type: AlertHistoryEventType;
   reason: AlertHistoryReason;
   aircraft: Aircraft;
+  ruleIds?: string[];
+  ruleNames?: string[];
+  radiusKm?: number | null;
+  squawk?: string | null;
   record?: AlertHistoryRecordValue;
 }
 
@@ -60,6 +87,12 @@ interface NotificationLine {
   at: string;
 }
 
+interface AlertHistoryListOptions {
+  page?: number;
+  pageSize?: number;
+  filter?: AlertHistoryFilter;
+}
+
 const MAX_PAGE_SIZE = 100;
 const MAX_READ_BYTES = 2_000_000;
 const MAX_LINE_LENGTH = 8_000;
@@ -73,6 +106,14 @@ export function getAlertHistoryPath(): string {
 function cleanText(value: string | null | undefined, maximum = 120): string | null {
   const cleaned = value?.trim().replace(/[\r\n]+/g, " ");
   return cleaned ? cleaned.slice(0, maximum) : null;
+}
+
+function cleanStrings(values: string[] | undefined, maximumItems = 20): string[] {
+  if (!values) return [];
+  return values.slice(0, maximumItems).flatMap((value) => {
+    const cleaned = cleanText(value, 120);
+    return cleaned ? [cleaned] : [];
+  });
 }
 
 function validTimestamp(value: string): string {
@@ -93,6 +134,12 @@ function entryFromDetection(detection: AlertHistoryDetection): AlertHistoryEntry
       callsign: cleanText(detection.aircraft.callsign),
       aircraftType: cleanText(detection.aircraft.aircraftType ?? metadata?.icaoTypeCode ?? metadata?.aircraftDescription),
     },
+    ruleIds: cleanStrings(detection.ruleIds),
+    ruleNames: cleanStrings(detection.ruleNames),
+    radiusKm: detection.radiusKm !== null && detection.radiusKm !== undefined && Number.isFinite(detection.radiusKm)
+      ? Math.max(0, detection.radiusKm)
+      : null,
+    squawk: cleanText(detection.squawk, 4),
     record: detection.record ? {
       scope: detection.record.scope,
       distanceKm: Number.isFinite(detection.record.distanceKm) ? Math.max(0, detection.record.distanceKm) : 0,
@@ -107,11 +154,21 @@ function entryFromDetection(detection: AlertHistoryDetection): AlertHistoryEntry
   };
 }
 
+function normalizeLegacyEntry(entry: AlertHistoryEntry): AlertHistoryEntry {
+  return {
+    ...entry,
+    ruleIds: Array.isArray(entry.ruleIds) ? entry.ruleIds : [],
+    ruleNames: Array.isArray(entry.ruleNames) ? entry.ruleNames : [],
+    radiusKm: typeof entry.radiusKm === "number" && Number.isFinite(entry.radiusKm) ? entry.radiusKm : null,
+    squawk: typeof entry.squawk === "string" ? entry.squawk : null,
+  };
+}
+
 function lineFromUnknown(value: unknown): DetectionLine | NotificationLine | null {
   if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
   if (record.kind === "detected" && record.entry && typeof record.entry === "object") {
-    return { kind: "detected", entry: record.entry as AlertHistoryEntry };
+    return { kind: "detected", entry: normalizeLegacyEntry(record.entry as AlertHistoryEntry) };
   }
   if (record.kind === "notification" && typeof record.id === "string"
     && typeof record.status === "string" && typeof record.at === "string") {
@@ -123,7 +180,14 @@ function lineFromUnknown(value: unknown): DetectionLine | NotificationLine | nul
   return null;
 }
 
-function pageFromLines(lines: Iterable<unknown>, options: { page?: number; pageSize?: number }): AlertHistoryPage {
+function matchesFilter(entry: AlertHistoryEntry, filter: AlertHistoryFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "watchlist") return entry.type === "watchlist" || entry.type === "aircraft_appeared" || entry.type === "entered_radius";
+  if (filter === "emergency") return entry.type === "emergency" || entry.type === "emergency_7500" || entry.type === "emergency_7600" || entry.type === "emergency_7700";
+  return entry.type === "new_aircraft" || entry.type === "reception_record";
+}
+
+function pageFromLines(lines: Iterable<unknown>, options: AlertHistoryListOptions): AlertHistoryPage {
   const entries = new Map<string, AlertHistoryEntry>();
   for (const line of lines) {
     const parsed = lineFromUnknown(line);
@@ -138,7 +202,10 @@ function pageFromLines(lines: Iterable<unknown>, options: { page?: number; pageS
     entry.notificationStatus = parsed.status;
     entry.notificationAttemptedAt = parsed.at;
   }
-  const all = [...entries.values()].sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
+  const filter = options.filter ?? "all";
+  const all = [...entries.values()]
+    .filter((entry) => matchesFilter(entry, filter))
+    .sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
   const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), MAX_PAGE_SIZE);
   const page = Math.max(Math.trunc(options.page ?? 0), 0);
   const items = all.slice(page * pageSize, (page + 1) * pageSize);
@@ -167,7 +234,7 @@ export class JsonlAlertHistoryStore {
     return this.enqueue(line);
   }
 
-  async list(options: { page?: number; pageSize?: number } = {}): Promise<AlertHistoryPage> {
+  async list(options: AlertHistoryListOptions = {}): Promise<AlertHistoryPage> {
     await this.writeQueue;
     const lines = await this.readTail();
     return pageFromLines(lines, options);
@@ -227,7 +294,8 @@ export class JsonlAlertHistoryStore {
       const buffer = Buffer.alloc(size - start);
       await handle.read(buffer, 0, buffer.length, start);
       const text = buffer.toString("utf8");
-      const complete = start > 0 ? text.slice(text.indexOf("\n") + 1) : text;
+      const firstLineEnd = text.indexOf("\n");
+      const complete = start > 0 ? (firstLineEnd >= 0 ? text.slice(firstLineEnd + 1) : "") : text;
       return complete.split("\n").flatMap((line) => {
         if (!line || line.length > MAX_LINE_LENGTH) return [];
         try { return [JSON.parse(line) as unknown]; } catch { return []; }
@@ -254,7 +322,7 @@ export class MemoryAlertHistoryStore {
     this.lines.push({ kind: "notification", id: id.slice(0, 180), status, at: validTimestamp(at) });
   }
 
-  async list(options: { page?: number; pageSize?: number } = {}): Promise<AlertHistoryPage> {
+  async list(options: AlertHistoryListOptions = {}): Promise<AlertHistoryPage> {
     return pageFromLines(this.lines, options);
   }
 }
@@ -264,6 +332,6 @@ export function createAlertHistoryStore(): JsonlAlertHistoryStore | MemoryAlertH
   return isTestRuntime ? new MemoryAlertHistoryStore() : new JsonlAlertHistoryStore();
 }
 
-export async function listAlertHistory(options: { page?: number; pageSize?: number } = {}): Promise<AlertHistoryPage> {
+export async function listAlertHistory(options: AlertHistoryListOptions = {}): Promise<AlertHistoryPage> {
   return createAlertHistoryStore().list(options);
 }

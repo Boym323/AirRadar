@@ -1,8 +1,12 @@
-import { listAlertHistory } from "@/lib/server/alert-history";
+import { listAlertHistory, type AlertHistoryFilter } from "@/lib/server/alert-history";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+function alertFilter(value: string | null): AlertHistoryFilter {
+  return value === "watchlist" || value === "emergency" || value === "records" ? value : "all";
+}
 
 export async function GET(request: Request): Promise<Response> {
   const rateLimit = checkPublicRateLimit("alertHistory", request);
@@ -10,6 +14,10 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const page = Number(url.searchParams.get("page") ?? "0");
   const pageSize = Number(url.searchParams.get("pageSize") ?? "25");
-  const result = await listAlertHistory({ page: Number.isFinite(page) ? page : 0, pageSize: Number.isFinite(pageSize) ? pageSize : 25 });
+  const result = await listAlertHistory({
+    page: Number.isFinite(page) ? page : 0,
+    pageSize: Number.isFinite(pageSize) ? pageSize : 25,
+    filter: alertFilter(url.searchParams.get("filter")),
+  });
   return Response.json(result, { headers: { "Cache-Control": "no-store" } });
 }

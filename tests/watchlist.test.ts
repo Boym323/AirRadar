@@ -93,14 +93,20 @@ describe("server watchlist management", () => {
     expect((await readdir(directory)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
 
-  it("exposes only safe current matching state", async () => {
+  it("exposes only safe current matching state and last-trigger metadata", async () => {
     const rule = await createWatchlistRule({ id: "plane", name: "Plane", type: "icaoHex", value: "abc123" }, configPath);
-    const response = toPublicWatchlistResponse([rule], snapshot());
+    const response = toPublicWatchlistResponse([rule], snapshot(), new Map([["plane", "2026-09-10T18:00:00.000Z"]]));
     expect(response.rules[0]?.currentState).toMatchObject({ status: "matching", aircraft: [{ icaoHex: "ABC123", registration: "OK-TEST", callsign: "TEST123" }] });
+    expect(response.rules[0]?.lastTriggeredAt).toBe("2026-09-10T18:00:00.000Z");
     const serialized = JSON.stringify(response);
     expect(serialized).not.toContain("secret provider error");
     expect(serialized).not.toContain("postgresql://secret");
     expect(serialized).not.toContain(directory);
+  });
+
+  it("defaults last-trigger metadata to null", async () => {
+    const rule = await createWatchlistRule({ id: "plane", name: "Plane", type: "icaoHex", value: "abc123" }, configPath);
+    expect(toPublicWatchlistResponse([rule], snapshot()).rules[0]?.lastTriggeredAt).toBeNull();
   });
 
   it("provides Czech and English UI dictionaries", () => {

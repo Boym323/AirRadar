@@ -15,6 +15,8 @@ interface RuleForm {
   enabled: boolean;
 }
 
+const DISTANCE_PRESETS_KM = [10, 25, 50, 100] as const;
+
 class ApiError extends Error {
   constructor(readonly code: string | undefined) {
     super(code ?? "request_failed");
@@ -41,7 +43,7 @@ function formatCooldown(milliseconds: number, dictionary: LocaleDictionary): str
     const hours = minutes / 60;
     return dictionary.locale.startsWith("cs") ? `${hours} h` : `${hours} hr`;
   }
-  return dictionary.locale.startsWith("cs") ? `${minutes} min` : `${minutes} min`;
+  return `${minutes} min`;
 }
 
 function formatObservedAt(value: string | null, dictionary: LocaleDictionary): string {
@@ -50,6 +52,14 @@ function formatObservedAt(value: string | null, dictionary: LocaleDictionary): s
   return Number.isFinite(date.getTime())
     ? new Intl.DateTimeFormat(dictionary.locale, { dateStyle: "short", timeStyle: "short" }).format(date)
     : dictionary.common.emptyValue;
+}
+
+function lastAlertLabel(dictionary: LocaleDictionary): string {
+  return dictionary.locale.startsWith("cs") ? "Poslední upozornění" : "Last alert";
+}
+
+function neverAlertedLabel(dictionary: LocaleDictionary): string {
+  return dictionary.locale.startsWith("cs") ? "Zatím bez upozornění" : "No alert yet";
 }
 
 function typeLabel(dictionary: LocaleDictionary, type: RuleType): string {
@@ -126,6 +136,12 @@ function RuleEditor({
           <span>{dictionary.watchlist.maxDistance}</span>
           <input type="number" min="0.000001" step="any" value={form.maxDistanceKm} placeholder={dictionary.watchlist.maxDistancePlaceholder} onChange={(event) => setForm({ ...form, maxDistanceKm: event.target.value })} />
         </label>
+      </div>
+      <div className="watchlist-editor-actions" aria-label={dictionary.watchlist.maxDistance}>
+        {DISTANCE_PRESETS_KM.map((distance) => (
+          <button key={distance} className="secondary-button" type="button" disabled={busy} aria-pressed={form.maxDistanceKm === String(distance)} onClick={() => setForm({ ...form, maxDistanceKm: String(distance) })}>{distance} km</button>
+        ))}
+        <button className="secondary-button" type="button" disabled={busy} aria-pressed={form.maxDistanceKm === ""} onClick={() => setForm({ ...form, maxDistanceKm: "" })}>{dictionary.filters.distanceAll}</button>
       </div>
       <label className="watchlist-enabled-input"><input type="checkbox" checked={form.enabled} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} /> {form.enabled ? dictionary.watchlist.enabled : dictionary.watchlist.disabled}</label>
       <div className="watchlist-editor-actions">
@@ -325,6 +341,7 @@ export function WatchlistPage() {
           <p className="statistics-subtitle">{dictionary.watchlist.pageSubtitle}</p>
         </div>
         <nav className="watchlist-nav" aria-label={dictionary.watchlist.navigation}>
+          <Link className="secondary-button" href="/alerts">{dictionary.alerts.title}</Link>
           <Link className="secondary-button" href="/fleet">{dictionary.watchlist.fleet}</Link>
           <button type="button" className="language-button" onClick={() => setLocale((current) => current === "cs" ? "en" : "cs")} aria-label={locale === "cs" ? "English" : "Čeština"}>{locale === "cs" ? "EN" : "CZ"}</button>
         </nav>
@@ -368,6 +385,7 @@ export function WatchlistPage() {
                 <dl className="watchlist-rule-meta">
                   {rule.maxDistanceKm !== undefined && <div><dt>{dictionary.watchlist.maxDistance}</dt><dd>{rule.maxDistanceKm} km</dd></div>}
                   <div><dt>{dictionary.watchlist.cooldown}</dt><dd title={dictionary.watchlist.cooldownDescription}>{formatCooldown(rule.cooldownMs, dictionary)}</dd></div>
+                  <div><dt>{lastAlertLabel(dictionary)}</dt><dd>{rule.lastTriggeredAt ? formatObservedAt(rule.lastTriggeredAt, dictionary) : neverAlertedLabel(dictionary)}</dd></div>
                 </dl>
                 <CurrentState rule={rule} dictionary={dictionary} />
                 <div className="watchlist-rule-actions">
