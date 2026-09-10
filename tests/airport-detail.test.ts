@@ -60,7 +60,7 @@ describe("airport detail V1", () => {
 
   it("keeps flight-detail airport navigation, map navigation, and raw weather mobile-safe", () => {
     expect(radarSource).toContain("/airports/${encodeURIComponent(airport.icaoCode)}");
-    expect(radarSource).toContain("window.location.assign(`/airports/${encodeURIComponent(icao)}`)");
+    expect(radarSource).toContain("router.push(`/airports/${encodeURIComponent(icao)}`)");
     expect(stylesSource).toContain(".airport-map { height: 360px");
     expect(stylesSource).toContain(".airport-map { height: 260px");
     expect(stylesSource).toContain("white-space: pre-wrap");
