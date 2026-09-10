@@ -35,7 +35,9 @@
     "**/*.tsx",
     ".next/dev/types/**/*.ts",
     ".next-release-16654/types/**/*.ts",
-    ".next-release-16654/dev/types/**/*.ts"
+    ".next-release-16654/dev/types/**/*.ts",
+    ".next-release-21023/types/**/*.ts",
+    ".next-release-21023/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
