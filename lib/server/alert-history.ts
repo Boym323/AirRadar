@@ -24,6 +24,7 @@ export type AlertHistoryReason =
   | "squawk_7500"
   | "squawk_7600"
   | "squawk_7700";
+export type AlertHistoryFilter = "all" | "watchlist" | "emergency" | "records";
 export type ReceptionRecordScope = "daily" | "lifetime";
 
 export interface AlertHistoryRecordValue {
@@ -84,6 +85,12 @@ interface NotificationLine {
   id: string;
   status: AlertNotificationStatus;
   at: string;
+}
+
+interface AlertHistoryListOptions {
+  page?: number;
+  pageSize?: number;
+  filter?: AlertHistoryFilter;
 }
 
 const MAX_PAGE_SIZE = 100;
@@ -173,7 +180,14 @@ function lineFromUnknown(value: unknown): DetectionLine | NotificationLine | nul
   return null;
 }
 
-function pageFromLines(lines: Iterable<unknown>, options: { page?: number; pageSize?: number }): AlertHistoryPage {
+function matchesFilter(entry: AlertHistoryEntry, filter: AlertHistoryFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "watchlist") return entry.type === "watchlist" || entry.type === "aircraft_appeared" || entry.type === "entered_radius";
+  if (filter === "emergency") return entry.type === "emergency" || entry.type === "emergency_7500" || entry.type === "emergency_7600" || entry.type === "emergency_7700";
+  return entry.type === "new_aircraft" || entry.type === "reception_record";
+}
+
+function pageFromLines(lines: Iterable<unknown>, options: AlertHistoryListOptions): AlertHistoryPage {
   const entries = new Map<string, AlertHistoryEntry>();
   for (const line of lines) {
     const parsed = lineFromUnknown(line);
@@ -188,7 +202,10 @@ function pageFromLines(lines: Iterable<unknown>, options: { page?: number; pageS
     entry.notificationStatus = parsed.status;
     entry.notificationAttemptedAt = parsed.at;
   }
-  const all = [...entries.values()].sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
+  const filter = options.filter ?? "all";
+  const all = [...entries.values()]
+    .filter((entry) => matchesFilter(entry, filter))
+    .sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
   const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), MAX_PAGE_SIZE);
   const page = Math.max(Math.trunc(options.page ?? 0), 0);
   const items = all.slice(page * pageSize, (page + 1) * pageSize);
@@ -217,7 +234,7 @@ export class JsonlAlertHistoryStore {
     return this.enqueue(line);
   }
 
-  async list(options: { page?: number; pageSize?: number } = {}): Promise<AlertHistoryPage> {
+  async list(options: AlertHistoryListOptions = {}): Promise<AlertHistoryPage> {
     await this.writeQueue;
     const lines = await this.readTail();
     return pageFromLines(lines, options);
@@ -305,7 +322,7 @@ export class MemoryAlertHistoryStore {
     this.lines.push({ kind: "notification", id: id.slice(0, 180), status, at: validTimestamp(at) });
   }
 
-  async list(options: { page?: number; pageSize?: number } = {}): Promise<AlertHistoryPage> {
+  async list(options: AlertHistoryListOptions = {}): Promise<AlertHistoryPage> {
     return pageFromLines(this.lines, options);
   }
 }
@@ -315,6 +332,6 @@ export function createAlertHistoryStore(): JsonlAlertHistoryStore | MemoryAlertH
   return isTestRuntime ? new MemoryAlertHistoryStore() : new JsonlAlertHistoryStore();
 }
 
-export async function listAlertHistory(options: { page?: number; pageSize?: number } = {}): Promise<AlertHistoryPage> {
+export async function listAlertHistory(options: AlertHistoryListOptions = {}): Promise<AlertHistoryPage> {
   return createAlertHistoryStore().list(options);
 }
