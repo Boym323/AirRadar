@@ -257,3 +257,11 @@ Changes since v1.0.5:
 Changes since v1.0.6:
 
 - Add new aircraft icons and sync script for tar1090 (47918dc5)
+
+## [1.0.8] - 2026-09-10
+
+Changes since v1.0.7:
+
+- feat(weather): integrate aviation weather functionality and diagnostics (033ab5d4)
+- feat: enhance production gate logic to support dynamic build metadata versioning (f556b10a)
+- feat(env): expand configuration options for receiver and weather integration (aea8d844)
