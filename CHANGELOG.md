@@ -325,3 +325,11 @@ Changes since v1.0.15:
 Changes since v1.0.16:
 
 - style: improve layout and responsiveness of history and secondary pages (e189a6c3)
+
+## [1.0.18] - 2026-09-10
+
+Changes since v1.0.17:
+
+- feat: implement isolated build directory for production releases (6c6eb5b3)
+- chore: update dependencies and devDependencies in package.json (8c520b43)
+- chore: update dependencies and configuration for Next.js 16 and Tailwind CSS 4 (e0f7ecc0)
