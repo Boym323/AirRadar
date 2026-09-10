@@ -215,6 +215,6 @@ component that created it.
 - Production starts the direct Node entrypoint under systemd as `MainPID`.
   `NEXT_MANUAL_SIG_HANDLE=1` leaves one signal owner and `KillMode=control-group`
   lets systemd clean the process group.
-- Production builds hold `/run/lock/airradar-build.lock`. The start wrapper
+- Production builds hold `/run/airradar-build.lock`. The start wrapper
   waits for that lock and requires `.next/BUILD_ID` before importing Next. A
   build/start lock change must preserve this race-prevention contract.

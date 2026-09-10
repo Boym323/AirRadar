@@ -62,7 +62,7 @@ sudo ./deploy/release.sh --channel rc --dry-run
    automatically before continuing.
 5. It runs `npm ci`, `npm run prisma:generate`, `npm run lint`,
    `npm run typecheck`, and `npm test`.
-6. It acquires `/run/lock/airradar-build.lock`, writes ignored
+6. It acquires `/run/airradar-build.lock`, writes ignored
    `generated/build-version.json`, and runs `npm run build`. The build lock is
    released after the build.
 7. It runs `npm run prisma:deploy` against the configured database. Migrations
@@ -87,7 +87,7 @@ the tag is created last.
 
 ## Build/start lock and systemd
 
-The production release build and start path share `/run/lock/airradar-build.lock`.
+The production release build and start path share `/run/airradar-build.lock`.
 `deploy/release.sh` holds this lock while it runs `npm run build`;
 `scripts/start-production.mjs`
 probes the lock and waits up to its configured 120-second timeout, then

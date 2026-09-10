@@ -5,7 +5,7 @@ readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly APP_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd -P)"
 readonly EXPECTED_APP_DIR="/var/www/airradar"
 readonly LOCK_FILE="/var/lock/airradar-release.lock"
-readonly BUILD_LOCK_FILE="/run/lock/airradar-build.lock"
+readonly BUILD_LOCK_FILE="/run/airradar-build.lock"
 readonly SERVICE_NAME="airradar"
 readonly PUBLIC_HEALTH_URL="https://airradar.pomykal.cz/api/health"
 # The service binds to the production LAN address so the separate Nginx Proxy

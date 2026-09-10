@@ -79,7 +79,7 @@ describe("production build/start lock", () => {
   it("release.sh uses the same shared build lock around the production build", async () => {
     const release = await readFile(new URL("../deploy/release.sh", import.meta.url), "utf8");
 
-    expect(release).toContain('BUILD_LOCK_FILE="/run/lock/airradar-build.lock"');
+    expect(release).toContain('BUILD_LOCK_FILE="/run/airradar-build.lock"');
     expect(release).toMatch(/acquire_build_lock[\s\S]*?npm run build[\s\S]*?release_build_lock/);
   });
 });

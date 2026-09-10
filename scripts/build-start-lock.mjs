@@ -1,7 +1,7 @@
 import { access } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
-export const DEFAULT_BUILD_LOCK_FILE = "/run/lock/airradar-build.lock";
+export const DEFAULT_BUILD_LOCK_FILE = "/run/airradar-build.lock";
 // A production build can legitimately exceed two minutes on a cold boot,
 // especially while dependencies/filesystems are warming up. Keep the service
 // waiting for the shared release lock instead of making systemd restart it
