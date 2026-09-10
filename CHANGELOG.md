@@ -371,3 +371,9 @@ Changes since v1.0.22:
 Changes since v1.0.23:
 
 - feat: Enhance air traffic and weather features (c820306b)
+
+## [1.0.25] - 2026-09-10
+
+Changes since v1.0.24:
+
+- feat: enhance airport traffic classification logic and add related tests (626ff809)
