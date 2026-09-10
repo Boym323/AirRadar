@@ -94,12 +94,18 @@ compatible with the restored database. The release tag is created only after
 all release gates pass; an untagged commit can still be restored by its full
 SHA.
 
-The current hardening batch adds only an additive recap-index migration. It is
-pending in this checkout until an explicitly authorized deployment applies it.
-Code rollback across a schema change is not automatically safe: first verify
-that the older code understands the already-applied contract. Indexes are
-normally compatible with older code, but that must still be checked against
-the selected migration state.
+The current checkout contains two forward, additive migrations: the
+`20260909T0830_recap_query_indexes` migration adds the two `Flight` indexes
+used by recap and airport-traffic queries, and
+`20260910T0535_airport_data_v2` adds airport infrastructure tables together
+with the related airport catalog fields and indexes. They form a migration
+chain and must be reviewed and applied in order during an explicitly
+authorized deployment; this runbook does not imply that either migration is
+already applied to production or to a restored database. Code rollback across
+a schema change is not automatically safe: first verify that the older code
+understands the already-applied contract. Indexes are normally compatible with
+older code, but that must still be checked against the selected migration
+state.
 
 ## Validation checklist
 
