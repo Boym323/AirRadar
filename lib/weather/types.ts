@@ -23,12 +23,14 @@ export interface MetarObservation {
   dewpointC: number | null;
   windDirectionDeg: number | null;
   windVariable: boolean;
+  windCalm?: boolean;
   windSpeedKt: number | null;
   windGustKt: number | null;
   visibilityMeters: number | null;
   visibilityGreaterThan: boolean;
   visibilityLessThan?: boolean;
   altimeterHpa: number | null;
+  cavok?: boolean;
   flightCategory: FlightCategory | null;
   clouds?: MetarCloudLayer[];
   weather?: string[];

@@ -1,4 +1,4 @@
-import type { AtcDataResponse, AtcDatasetMetadata, AtcSector, AtcTransmitter } from "@/lib/atc/types";
+import { normalizeAtcActivationStatus, type AtcDataResponse, type AtcDatasetMetadata, type AtcSector, type AtcTransmitter } from "@/lib/atc/types";
 import { isSupportedAtcFrequencyMhz } from "@/lib/atc/frequency-policy";
 import type { AtcSectorProvider } from "@/lib/server/provider";
 import { getPrisma } from "@/lib/server/db";
@@ -26,6 +26,7 @@ export const SAMPLE_ATC_SECTORS: AtcSector[] = [
     source: "AirRadar sample data",
     sourceReference: "demo://airradar-sample-atc",
     lastVerifiedAt: "2026-01-01T00:00:00.000Z",
+    activationStatus: normalizeAtcActivationStatus("UNKNOWN"),
   },
   {
     id: "CZ-PRAGUE-APPROACH",
@@ -47,6 +48,7 @@ export const SAMPLE_ATC_SECTORS: AtcSector[] = [
     source: "AirRadar sample data",
     sourceReference: "demo://airradar-sample-atc",
     lastVerifiedAt: "2026-01-01T00:00:00.000Z",
+    activationStatus: normalizeAtcActivationStatus("UNKNOWN"),
   },
 ];
 
@@ -147,6 +149,7 @@ function storedSector(record: {
     source: record.source,
     sourceReference: record.sourceReference,
     lastVerifiedAt: record.lastVerifiedAt.toString(),
+    activationStatus: normalizeAtcActivationStatus("UNKNOWN"),
   };
 }
 

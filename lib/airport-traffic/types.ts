@@ -58,6 +58,9 @@ export interface AirportTrafficSummary {
   topAircraft: AirportTrafficAircraftCount[];
   topCallsigns: AirportTrafficCallsignCount[];
   recentTraffic: AirportTrafficRecentFlight[];
+  /** Route match plus bounded receiver-proximity evidence; never an official movement log. */
+  observedArrivals: AirportTrafficRecentFlight[];
+  observedDepartures: AirportTrafficRecentFlight[];
   heatmap: {
     cells: AirportTrafficHeatmapCell[];
     maxCount: number;

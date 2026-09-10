@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
+import type { AirportRunway } from "@/lib/airports/infrastructure";
+import { calculateRunwayWind, selectWindFavoredRunway } from "@/lib/airport-runway-wind";
 import type { FlightCategory, MetarCloudLayer, MetarObservation, TafCloudLayer, TafForecast, TafPeriod } from "@/lib/weather/types";
 import { formatDateTime, formatNumber, formatSpeed, formatTrack, formatWeatherVisibility, t } from "@/lib/i18n";
 
@@ -27,10 +29,48 @@ function airportLabel(airport: Airport): string {
 }
 
 function windLabel(metar: MetarObservation | TafPeriod): string {
-  const direction = metar.windVariable ? "VRB" : metar.windDirectionDeg === null ? t.common.emptyValue : formatTrack(metar.windDirectionDeg);
+  const direction = metar.windVariable ? t.weather.variable : metar.windDirectionDeg === null ? t.common.emptyValue : formatTrack(metar.windDirectionDeg);
+  if ("windCalm" in metar && metar.windCalm) return `${t.weather.calm} / ${formatSpeed(0)}`;
   const speed = formatSpeed(metar.windSpeedKt);
-  const gust = metar.windGustKt === null ? "" : ` G${formatNumber(metar.windGustKt)} kt`;
-  return `${direction} / ${speed}${gust}`;
+  return `${direction} / ${speed}`;
+}
+
+function windRunwayDirections(runway: AirportRunway): Array<{ ident: string; headingDeg: number | null }> {
+  return [
+    { ident: runway.leIdent ?? "?", headingDeg: runway.leHeadingDegT },
+    { ident: runway.heIdent ?? "?", headingDeg: runway.heHeadingDegT },
+  ].filter((direction) => direction.headingDeg !== null);
+}
+
+function RunwayWindPanel({ runways, metar }: { runways: AirportRunway[]; metar: MetarObservation | null }) {
+  if (runways.length === 0) return null;
+  const usableRunways = runways.filter((runway) => runway.closed !== true);
+  const favored = metar && !metar.windVariable && !metar.windCalm
+    ? selectWindFavoredRunway(usableRunways, windRunwayDirections, metar.windDirectionDeg, metar.windSpeedKt)
+    : null;
+  const canCalculate = Boolean(metar && !metar.windVariable && !metar.windCalm && metar.windDirectionDeg !== null && metar.windSpeedKt !== null && metar.windSpeedKt > 0);
+  return <section className="weather-runway-wind" aria-labelledby="weather-runway-wind-title">
+    <div className="weather-report-heading" id="weather-runway-wind-title">{t.weather.windFavoredRunway}</div>
+    {!canCalculate ? <p className="weather-runway-wind-message">{t.weather.noClearWindFavoredRunway}</p> : <>
+      {favored && <p className="weather-runway-favored"><strong>RWY {String(Math.round(favored.headingDeg / 10)).padStart(2, "0")}</strong> · {t.weather.headwind} {formatSpeed(favored.headwindKt)} · {t.weather.crosswind} {formatSpeed(favored.crosswindKt)}</p>}
+      <div className="weather-runway-wind-list">
+        {usableRunways.flatMap((runway) => windRunwayDirections(runway).map((direction) => {
+          const component = calculateRunwayWind(direction.headingDeg, metar?.windDirectionDeg, metar?.windSpeedKt);
+          if (!component) return null;
+          const gust = metar?.windGustKt === null || metar?.windGustKt === undefined
+            ? null
+            : calculateRunwayWind(direction.headingDeg, metar.windDirectionDeg, metar.windGustKt);
+          return <div className="weather-runway-wind-row" key={`${runway.id}-${direction.ident}`}>
+            <strong>RWY {direction.ident}</strong>
+            <span>{component.headwindKt >= 0 ? t.weather.headwind : t.weather.tailwind} {formatSpeed(component.headwindKt >= 0 ? component.headwindKt : component.tailwindKt)}</span>
+            <span>{t.weather.crosswind} {formatSpeed(component.crosswindKt)}</span>
+            {gust && <span>{t.weather.crosswindGust} {formatSpeed(gust.crosswindKt)}</span>}
+          </div>;
+        }))}
+      </div>
+    </>}
+    <p className="weather-disclaimer">{t.weather.calculatedFromWind}</p>
+  </section>;
 }
 
 function categoryClass(category: FlightCategory | null | undefined): string {
@@ -57,8 +97,10 @@ function WeatherValue({ label, value, className = "" }: { label: string; value: 
 
 function TafPeriodRow({ period }: { period: TafPeriod }) {
   const validity = `${formatDateTime(period.from)}–${formatDateTime(period.to)}`;
+  const indicator = period.changeIndicator?.trim().toUpperCase();
+  const label = !indicator ? t.weather.tafBase : indicator.startsWith("PROB") ? indicator : indicator;
   return <article className={`weather-taf-period${categoryClass(period.flightCategory)}`}>
-    <div className="weather-taf-period-header"><strong>{period.changeIndicator || t.weather.forecast}</strong><span>{validity}</span></div>
+    <div className="weather-taf-period-header"><strong>{label}</strong><span>{validity}</span></div>
     <div className="weather-grid">
       <WeatherValue label={t.weather.wind} value={windLabel(period)} />
       <WeatherValue label={t.weather.visibility} value={visibilityLabel(period.visibilityMeters, period.visibilityGreaterThan, period.visibilityLessThan)} />
@@ -76,15 +118,16 @@ function WeatherReports({ weather }: { weather: AirportWeatherResponse }) {
   return <>
     {weather.stale && <div className="weather-stale" role="status">{t.weather.staleData}</div>}
     {metar && <>
-      <div className="weather-meta">{t.weather.observed}: {formatDateTime(observedAt)} · {weather.fetchedAt ? formatDateTime(weather.fetchedAt) : t.common.emptyValue}</div>
+      <div className="weather-meta">{t.weather.observed}: {formatDateTime(observedAt)} · {t.weather.updated}: {weather.fetchedAt ? formatDateTime(weather.fetchedAt) : t.common.emptyValue}</div>
       <div className="weather-report-heading">{t.weather.metar}</div><span className={`weather-category${categoryClass(metar.flightCategory)}`}>{metar.flightCategory ?? t.common.emptyValue}</span>
       <div className="weather-grid">
-        <WeatherValue label={t.weather.wind} value={windLabel(metar)} />
+      <WeatherValue label={t.weather.wind} value={windLabel(metar)} />
+        {metar.windGustKt !== null && <WeatherValue label={t.weather.gusts} value={formatSpeed(metar.windGustKt)} />}
         <WeatherValue label={t.weather.visibility} value={visibilityLabel(metar.visibilityMeters, metar.visibilityGreaterThan, metar.visibilityLessThan)} />
         <WeatherValue label={t.weather.temperature} value={metar.temperatureC === null ? t.common.emptyValue : `${formatNumber(metar.temperatureC, 0)} °C`} />
         <WeatherValue label={t.weather.dewpoint} value={metar.dewpointC === null ? t.common.emptyValue : `${formatNumber(metar.dewpointC, 0)} °C`} />
         <WeatherValue label={t.weather.qnh} value={metar.altimeterHpa === null ? t.common.emptyValue : `${formatNumber(metar.altimeterHpa, 0)} hPa`} />
-        <WeatherValue label={t.weather.clouds} value={cloudLabel(metar.clouds)} />
+      <WeatherValue label={t.weather.clouds} value={metar.cavok ? t.weather.cavok : cloudLabel(metar.clouds)} />
         <WeatherValue label={t.weather.weather} value={weatherLabel(metar.weather)} />
       </div>
     </>}
@@ -105,7 +148,7 @@ function WeatherLoadState({ loading, failed, onRetry }: { loading: boolean; fail
   return null;
 }
 
-export function AirportWeatherPanel({ airport }: { airport: Airport }) {
+export function AirportWeatherPanel({ airport, runways = [] }: { airport: Airport; runways?: AirportRunway[] }) {
   const [weather, setWeather] = useState<AirportWeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -129,7 +172,7 @@ export function AirportWeatherPanel({ airport }: { airport: Airport }) {
 
   return <div className="airport-weather-panel">
     <WeatherLoadState loading={loading} failed={failed} onRetry={() => void loadWeather()} />
-    {!loading && !failed && weather && <WeatherReports weather={weather} />}
+    {!loading && !failed && weather && <><WeatherReports weather={weather} /><RunwayWindPanel runways={runways} metar={weather.metar} /></>}
     {!loading && !failed && !weather && <div className="weather-unavailable">{t.weather.unavailableData}</div>}
   </div>;
 }

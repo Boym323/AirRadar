@@ -6,7 +6,7 @@ import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit
 export const dynamic = "force-dynamic";
 
 function noStoreHeaders(): HeadersInit {
-  return { "Cache-Control": "no-store" };
+  return { "Cache-Control": "public, max-age=30, stale-while-revalidate=120" };
 }
 
 export async function GET(request: Request, context: { params: Promise<{ icao: string }> }): Promise<Response> {

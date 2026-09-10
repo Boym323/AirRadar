@@ -1,5 +1,10 @@
 export type Coordinate = [lon: number, lat: number];
 export type SectorPolygon = Coordinate[];
+export type AtcActivationStatus = "ACTIVE" | "INACTIVE" | "UNKNOWN";
+
+export function normalizeAtcActivationStatus(value: unknown): AtcActivationStatus {
+  return value === "ACTIVE" || value === "INACTIVE" ? value : "UNKNOWN";
+}
 
 export interface AtcFrequency {
   frequencyMhz: number;
@@ -25,6 +30,8 @@ export interface AtcSector {
   source: string;
   sourceReference: string;
   lastVerifiedAt: string;
+  /** Published geometry is not operational activation evidence. */
+  activationStatus?: AtcActivationStatus;
 }
 
 export interface AtcAssignment {
@@ -73,6 +80,7 @@ export interface AtcDatasetMetadata {
   lastVerifiedAt: string | null;
   sectorCount: number;
   transmitterCount: number;
+  activationSource?: string | null;
 }
 
 export interface AtcDataResponse {

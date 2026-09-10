@@ -118,6 +118,13 @@ and removed after 60 seconds; the target map is capped at 5,000 entries.
 
 ## History persistence
 
+Airport Intelligence reads nearby aircraft from the existing local aircraft
+SSE on the client and filters positioned, recent ADS-B observations within a
+30 km radius. No weather, airport, or history query is triggered by an SSE
+update. Airport observed-movement rows reuse bounded `Flight` route queries;
+they require receiver-proximity evidence and remain explicitly observed, not
+official airport movements. OGN is not included in either airport feature.
+
 Every successful provider refresh replaces the pending history snapshot. A
 single history writer drains that coalesced queue. For each aircraft with a
 valid position, `persistHistory()` writes only when its last sample is older

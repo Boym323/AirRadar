@@ -327,19 +327,24 @@ function mapMetar(payload: unknown, icaoCode: string): MetarObservation | null {
   const clouds = cloudLayers(record.clouds);
   const visibilityData = visibility(record.visib);
   const observedAt = isoDate(record.reportTime) ?? isoDate(record.obsTime);
+  const rawText = stringValue(record.rawOb);
+  const rawUpper = rawText?.toUpperCase() ?? "";
+  const windSpeedKt = numberValue(record.wspd);
   return {
     stationId: icaoCode,
-    rawText: stringValue(record.rawOb),
+    rawText,
     observationTime: observedAt,
     observedAt,
     temperatureC: numberValue(record.temp),
     dewpointC: numberValue(record.dewp),
     windDirectionDeg: numericDirection !== null && numericDirection >= 0 ? numericDirection : null,
     windVariable: typeof direction === "string" && direction.trim().toUpperCase() === "VRB",
-    windSpeedKt: numberValue(record.wspd),
+    windCalm: rawUpper.includes("00000KT") || (numericDirection === 0 && windSpeedKt === 0),
+    windSpeedKt,
     windGustKt: numberValue(record.wgst),
     ...visibilityData,
     altimeterHpa: numberValue(record.altim),
+    cavok: rawUpper.includes("CAVOK") || stringValue(record.wxString)?.toUpperCase() === "CAVOK",
     flightCategory: normalizedCategory(record.fltCat),
     clouds,
     weather: weatherTokens(record.wxString),

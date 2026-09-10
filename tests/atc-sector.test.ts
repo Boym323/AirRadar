@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AtcSectorService, matchSector, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
+import { normalizeAtcActivationStatus } from "@/lib/atc/types";
 import type { AtcAssignment, AtcSector, SectorPolygon } from "@/lib/atc/types";
 import type { AtcAssignedAircraft } from "@/lib/server/atc-sector-service";
 
@@ -47,6 +48,11 @@ function baseAssignment(sectorId: string, name: string): AtcAssignment {
 }
 
 describe("ATC sector matching", () => {
+  it("keeps published airspace activation fail-closed", () => {
+    expect(normalizeAtcActivationStatus("ACTIVE")).toBe("ACTIVE");
+    expect(normalizeAtcActivationStatus("published")).toBe("UNKNOWN");
+    expect(normalizeAtcActivationStatus(null)).toBe("UNKNOWN");
+  });
   it("matches position and altitude and keeps the sector provider-agnostic", () => {
     expect(matchSector(sector, { latitude: 50.5, longitude: 14.5, altitudeFt: 8000 })?.sector.id).toBe("LKAA-TMA");
     expect(matchSector(sector, { latitude: 50.5, longitude: 14.5, altitudeFt: 2000 })).toBeNull();

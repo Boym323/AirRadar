@@ -449,6 +449,14 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .airport-info-grid dd { margin: 4px 0 0; color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
 .airport-weather-panel { padding: 0 19px 19px; }
 .airport-weather-panel .weather-meta { margin-top: 12px; }
+.weather-runway-wind { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); }
+.weather-runway-wind-message, .weather-disclaimer { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.weather-runway-favored { margin: 7px 0 0; color: var(--text); font-size: 11px; }
+.weather-runway-favored strong { color: var(--mint); font-family: var(--font-geist-mono), monospace; }
+.weather-runway-wind-list { display: grid; gap: 0; margin-top: 9px; }
+.weather-runway-wind-row { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 0; border-top: 1px solid rgba(153,181,207,.1); color: var(--muted); font-size: 10px; }
+.weather-runway-wind-row strong { color: var(--accent); font-family: var(--font-geist-mono), monospace; }
+.weather-runway-wind-row span { font-variant-numeric: tabular-nums; }
 .airport-traffic-card { padding-bottom: 18px; }
 .airport-traffic-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 17px 19px 0; }
 .airport-traffic-header h2 { margin: 0; color: var(--text); font-size: 15px; letter-spacing: -.02em; }
@@ -457,6 +465,26 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .airport-traffic-range button { min-height: 34px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--muted); font-size: 10px; }
 .airport-traffic-range button.active { border-color: rgba(55,214,192,.55); color: var(--mint); background: rgba(55,214,192,.1); }
 .airport-traffic-body { padding: 16px 19px 0; }
+.airport-section-heading, .airport-observed-movement-header { padding: 17px 19px 0; }
+.airport-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.airport-section-heading h2, .airport-observed-movement-header h3 { margin: 0; color: var(--text); font-size: 15px; letter-spacing: -.02em; }
+.airport-section-heading p, .airport-observed-movement-header p { margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.live-badge { flex: 0 0 auto; color: var(--mint); font-size: 9px; font-weight: 700; letter-spacing: .1em; }
+.airport-nearby-aircraft-card { padding-bottom: 18px; }
+.airport-nearby-aircraft-list { display: grid; gap: 0; margin: 12px 19px 0; padding: 0; list-style: none; }
+.airport-nearby-aircraft-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 9px 0; border-top: 1px solid rgba(153,181,207,.1); }
+.airport-nearby-aircraft-link { display: grid; gap: 2px; min-width: 0; color: var(--text); text-decoration: none; }
+.airport-nearby-aircraft-link:hover { color: var(--mint); }
+.airport-nearby-aircraft-link strong, .airport-nearby-aircraft-link small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.airport-nearby-aircraft-link strong { font-size: 12px; }
+.airport-nearby-aircraft-link small { color: var(--muted); font-size: 9px; }
+.airport-nearby-aircraft-meta { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: 5px 10px; color: var(--amber); font-size: 10px; font-variant-numeric: tabular-nums; }
+.airport-nearby-aircraft-meta span:last-child { color: var(--mint); }
+.airport-observed-movement-header { margin-top: 19px; padding-top: 15px; border-top: 1px solid var(--line); }
+.airport-observed-movement-header h3 { color: var(--mint); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+.airport-observed-movement-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px 20px; margin-top: 12px; }
+.airport-observed-movements h3 { margin: 0; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.airport-observed-movements .airport-traffic-recent-list { margin-top: 4px; }
 .airport-traffic-message { color: var(--muted); font-size: 11px; line-height: 1.5; }
 .airport-traffic-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; margin: 0; }
 .airport-traffic-data-row { min-width: 0; padding: 10px; border: 1px solid rgba(153,181,207,.09); border-radius: 9px; background: rgba(17,35,55,.8); }
@@ -950,6 +978,9 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .airport-traffic-range { width: 100%; }
   .airport-traffic-range button { flex: 1; min-height: 44px; }
   .airport-traffic-body { padding-left: 15px; padding-right: 15px; }
+  .airport-section-heading, .airport-observed-movement-header { padding-left: 15px; padding-right: 15px; }
+  .airport-nearby-aircraft-list { margin-left: 15px; margin-right: 15px; }
+  .airport-observed-movement-grid { grid-template-columns: 1fr; gap: 15px; }
   .airport-traffic-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .airport-traffic-rankings { grid-template-columns: 1fr; gap: 15px; }
   .airport-traffic-recent-list li { grid-template-columns: minmax(0, 1fr) auto auto; }

@@ -11,12 +11,16 @@ import type {
   AirportTrafficSummary,
 } from "@/lib/airport-traffic/types";
 import { airportFromCode } from "@/lib/server/airport-catalog";
-import { dayKey, getAppTimezone } from "@/lib/server/config";
+import { dayKey, getAppTimezone, getReceiverPosition } from "@/lib/server/config";
 import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport-resolver";
 import { getPrisma } from "@/lib/server/db";
+import { haversineDistanceKm } from "@/lib/geo";
 
 export const AIRPORT_TRAFFIC_RECENT_LIMIT = 10;
 export const AIRPORT_TRAFFIC_TOP_LIMIT = 5;
+export const AIRPORT_TRAFFIC_QUERY_LIMIT = 500;
+export const AIRPORT_TRAFFIC_MOVEMENT_LIMIT = 10;
+export const AIRPORT_MOVEMENT_RADIUS_KM = 30;
 
 export class AirportTrafficDatabaseUnavailableError extends Error {
   constructor() {
@@ -74,6 +78,7 @@ interface AirportTrafficFlightRow {
   destination: string | null;
   startTime: Temporal.Instant | Date;
   lastSeenAt: Temporal.Instant | Date;
+  minDistanceKm?: number | null;
 }
 
 function timestampAsDate(value: Temporal.Instant | Date): Date {
@@ -168,6 +173,8 @@ function emptyTrafficSummary(range: AirportTrafficRange): AirportTrafficSummary 
     topAircraft: [],
     topCallsigns: [],
     recentTraffic: [],
+    observedArrivals: [],
+    observedDepartures: [],
     heatmap: { cells, maxCount: 0 },
   };
 }
@@ -289,6 +296,26 @@ function recentTraffic(
     });
 }
 
+function boundedQuery(query: { limit?: (value: number) => { all(): unknown }; all(): unknown }, limit: number): Promise<unknown[]> {
+  const result = typeof query.limit === "function" ? query.limit(limit).all() : query.all();
+  return Promise.resolve(result as PromiseLike<unknown[]>).then((value) => Array.isArray(value) ? value : []);
+}
+
+/**
+ * Flight has the receiver-relative minimum distance but no airport-relative
+ * position aggregate. Only use it as evidence when the configured receiver
+ * itself is close enough to the selected airport; otherwise route metadata is
+ * deliberately not promoted to an observed movement.
+ */
+function hasReceiverProximityEvidence(airport: Airport, flight: AirportTrafficFlightRow): boolean {
+  const receiver = getReceiverPosition();
+  const receiverToAirport = haversineDistanceKm(receiver.lat, receiver.lon, airport.latitude, airport.longitude);
+  const minDistance = flight.minDistanceKm;
+  return typeof minDistance === "number" && Number.isFinite(minDistance)
+    && receiverToAirport <= AIRPORT_MOVEMENT_RADIUS_KM
+    && minDistance <= receiverToAirport + AIRPORT_MOVEMENT_RADIUS_KM;
+}
+
 /**
  * Summarizes only persisted Flight instances. The two route predicates are
  * independently bounded by the local date range, then deduplicated by Flight
@@ -325,11 +352,14 @@ export async function getAirportTrafficSummary(
       .where((flight) => flight.destination.in(targetCodes))
       .include("aircraft", (aircraft) => aircraft.select("id", "icaoHex", "registration", "aircraftType"));
     const [originRows, destinationRows] = await Promise.all([
-      originQuery.all(),
-      destinationQuery.all(),
+      boundedQuery(originQuery, AIRPORT_TRAFFIC_QUERY_LIMIT),
+      boundedQuery(destinationQuery, AIRPORT_TRAFFIC_QUERY_LIMIT),
     ]);
     const flights = new Map<number, AirportTrafficFlightRow>();
-    for (const row of [...originRows, ...destinationRows]) flights.set(row.id, row as AirportTrafficFlightRow);
+    for (const row of [...originRows, ...destinationRows]) {
+      const flight = row as AirportTrafficFlightRow;
+      flights.set(flight.id, flight);
+    }
     const relevantFlights = [...flights.values()];
     summary.flights = relevantFlights.length;
     if (relevantFlights.length === 0) return summary;
@@ -382,6 +412,9 @@ export async function getAirportTrafficSummary(
     summary.topAircraft = topAircraft(aircraft);
     summary.topCallsigns = topCallsigns(callsigns);
     summary.recentTraffic = recentTraffic(relevantFlights, targetCodeSet, airports);
+    const observedTraffic = recentTraffic(relevantFlights.filter((flight) => hasReceiverProximityEvidence(airport, flight)), targetCodeSet, airports);
+    summary.observedArrivals = observedTraffic.filter((flight) => flight.direction === "arrival").slice(0, AIRPORT_TRAFFIC_MOVEMENT_LIMIT);
+    summary.observedDepartures = observedTraffic.filter((flight) => flight.direction === "departure").slice(0, AIRPORT_TRAFFIC_MOVEMENT_LIMIT);
     const cells = emptyTrafficSummary(range).heatmap.cells.map((emptyCell) => heatmapCells.get(`${emptyCell.dayOfWeek}:${emptyCell.hour}`) ?? emptyCell);
     summary.heatmap = {
       cells,

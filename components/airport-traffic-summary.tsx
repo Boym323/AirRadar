@@ -52,6 +52,24 @@ function dataRow(label: string, value: ReactNode): ReactNode {
   return <div className="airport-traffic-data-row"><dt>{label}</dt><dd>{value}</dd></div>;
 }
 
+function ObservedMovementList({ items, title }: { items: AirportTrafficSummary["observedArrivals"]; title: string }): ReactNode {
+  return <section className="airport-observed-movements" aria-labelledby={`airport-${title.replace(/\s+/g, "-").toLowerCase()}`}>
+    <h3 id={`airport-${title.replace(/\s+/g, "-").toLowerCase()}`}>{title}</h3>
+    {items.length === 0 ? <div className="airport-traffic-empty-list">{t.airport.observedMovementEmpty}</div> : <ol className="airport-traffic-recent-list">
+      {items.map((flight) => <li key={flight.id}>
+        <time dateTime={flight.time}>{formatDateTime(flight.time)}</time>
+        <span className="airport-traffic-recent-callsign">{flight.callsign ?? t.history.unknownCallsign}</span>
+        <Link className="airport-traffic-aircraft-link" href={`/aircraft/${encodeURIComponent(flight.aircraft.icaoHex)}`}>
+          {flight.aircraft.registration ?? flight.aircraft.icaoHex}
+          <small>{flight.aircraft.icaoHex}</small>
+        </Link>
+        <span className="airport-traffic-counterpart">{airportLink(flight.otherAirport)}</span>
+        <Link className="airport-traffic-history-link" href={aircraftFlightHref(flight.id)} aria-label={`${t.airportTraffic.viewFlight}: ${flight.id}`}>↗</Link>
+      </li>)}
+    </ol>}
+  </section>;
+}
+
 function heatmapCellLabel(cell: AirportTrafficHeatmapCell): string {
   return `${t.airportTraffic.heatmapDays[cell.dayOfWeek - 1]} ${String(cell.hour).padStart(2, "0")}:00 · ${t.airportTraffic.departure} ${cell.departures} · ${t.airportTraffic.arrival} ${cell.arrivals}`;
 }
@@ -102,10 +120,7 @@ export function AirportTrafficSummary({ airport }: { airport: Airport }) {
     const controller = new AbortController();
     setLoading(true);
     setError(false);
-    void fetch(`/api/airports/${encodeURIComponent(airport.icaoCode)}/traffic?range=${range}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
+    void fetch(`/api/airports/${encodeURIComponent(airport.icaoCode)}/traffic?range=${range}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("airport traffic request failed");
         return await response.json() as AirportTrafficSummary;
@@ -159,6 +174,15 @@ export function AirportTrafficSummary({ airport }: { airport: Airport }) {
           {dataRow(t.airportTraffic.firstCapture, formatDateTime(summary.firstCapturedAt))}
           {dataRow(t.airportTraffic.lastCapture, formatDateTime(summary.lastCapturedAt))}
         </dl>
+
+        <div className="airport-observed-movement-header">
+          <h3>{t.airport.observedArrivals} / {t.airport.observedDepartures}</h3>
+          <p>{t.airport.observedMovementDisclaimer}</p>
+        </div>
+        <div className="airport-observed-movement-grid">
+          <ObservedMovementList items={summary.observedArrivals ?? []} title={t.airport.observedArrivals} />
+          <ObservedMovementList items={summary.observedDepartures ?? []} title={t.airport.observedDepartures} />
+        </div>
 
         <div className="airport-traffic-rankings">
           <section aria-labelledby="airport-top-destinations-title">

@@ -120,6 +120,19 @@ describe("AviationWeatherProvider", () => {
     });
   });
 
+  it("normalizes gust, calm wind and CAVOK without losing raw METAR", async () => {
+    const provider = providerWith(
+      response([{ ...metarPayload[0], wdir: 280, wspd: 12, wgst: 22, visib: "10+", rawOb: "LKPR 080800Z 28012G22KT CAVOK 23/14 Q1016" }]),
+      new Response(null, { status: 204 }),
+    );
+    await expect(provider.getAirportWeather("LKPR")).resolves.toMatchObject({
+      metar: { windDirectionDeg: 280, windSpeedKt: 12, windGustKt: 22, windCalm: false, cavok: true, rawText: expect.stringContaining("G22KT") },
+    });
+
+    const calm = providerWith(response([{ ...metarPayload[0], wdir: 0, wspd: 0, rawOb: "LKPR 080800Z 00000KT 9999" }]), new Response(null, { status: 204 }));
+    await expect(calm.getAirportWeather("LKPR")).resolves.toMatchObject({ metar: { windCalm: true, windSpeedKt: 0 } });
+  });
+
   it("normalizes structured METAR clouds, weather tokens, coordinates and fractional visibility", async () => {
     const provider = providerWith(response([{ ...metarPayload[0], visib: "M1/4", clouds: [{ cover: "BKN", base: 800 }], wxString: "-RA BR", lat: 50.1, lon: 14.2 }]), new Response(null, { status: 204 }));
     await expect(provider.getAirportWeather("LKPR")).resolves.toMatchObject({
@@ -142,6 +155,14 @@ describe("AviationWeatherProvider", () => {
     await expect(provider.getAirportWeather("LKPR")).resolves.toMatchObject({
       taf: { periods: [{ visibilityMeters: statuteMilesToMeters(1.5), flightCategory: "IFR" }] },
     });
+  });
+
+  it("retains BASE, FM, TEMPO, BECMG and PROB forecast blocks", async () => {
+    const periods = [null, "FM", "TEMPO", "BECMG", "PROB30"].map((fcstChange, index) => ({
+      fcstChange, timeFrom: 1788858000 + index * 1800, timeTo: 1788861600 + index * 1800, wdir: 200, wspd: 8, visib: "6+", clouds: [],
+    }));
+    const provider = providerWith(new Response(null, { status: 204 }), response([{ ...tafPayload[0], fcsts: periods }]));
+    await expect(provider.getAirportWeather("LKPR")).resolves.toMatchObject({ taf: { periods: periods.map((period) => expect.objectContaining({ changeIndicator: period.fcstChange })) } });
   });
 
   it("rejects invalid ICAO before making an upstream request", async () => {
