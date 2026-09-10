@@ -365,3 +365,9 @@ Changes since v1.0.22:
 
 - feat: add squawk detail to AircraftDetailV2 component (1af6fad5)
 - feat: enhance aircraft detail view with flight plan and altitude chart features (0f17e0f7)
+
+## [1.0.24] - 2026-09-10
+
+Changes since v1.0.23:
+
+- feat: Enhance air traffic and weather features (c820306b)
