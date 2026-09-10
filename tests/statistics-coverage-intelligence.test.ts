@@ -90,6 +90,24 @@ describe("coverage intelligence", () => {
     expect(result.hourly.busiestHour).toBeNull();
   });
 
+  it("does not manufacture a zero-value peak record from an empty daily aggregate", () => {
+    const result = aggregateCoverageIntelligence({
+      ...baseOptions,
+      coverageRows: [],
+      statsRows: [{
+        date: "2026-09-10",
+        maxConcurrentAircraft: 0,
+        maxDistanceKm: 0,
+        maxDistanceIcaoHex: null,
+        maxDistanceRegistration: null,
+        maxDistanceBearing: null,
+        maxDistanceAt: null,
+      }],
+    });
+    expect(result.records.peakConcurrent).toBeNull();
+    expect(result.records.farthestReception).toBeNull();
+  });
+
   it("selects range records without position samples", () => {
     const highestFlight = {
       flightId: 77,
