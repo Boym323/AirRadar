@@ -27,7 +27,7 @@ import {
 } from "@/lib/i18n";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
-import { TAR1090_ICON_CODES } from "@/lib/aircraft/tar1090-icon-map";
+import { TAR1090_CATEGORY_ICON_ASSETS, TAR1090_GROUND_SQUARE_ICON_ASSET, TAR1090_ICON_CODES, TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import { appendTrailPoint, boundTrailPoints, selectedTrail, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
@@ -262,22 +262,34 @@ const AIRCRAFT_GLYPH_PATHS: Record<AircraftMarkerKind, string> = {
   ground: "M10 11h12l3 8v5H7v-5l3-8Zm1 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z",
 };
 
-// These are the filenames shipped by AircraftShapesSVG. Keeping the allowlist
-// here prevents a missing or malformed provider value from creating a 404 (or
-// an arbitrary URL) in every aircraft marker.
-const AIRCRAFT_ICON_CODES = new Set([
-  "A10", "A124", "A19N", "A20N", "A21N", "A225", "A306", "A310", "A318", "A320", "A321", "A332", "A333", "A337", "A338", "A339", "A342", "A343", "A345", "A346", "A359", "A35K", "A388", "A3ST", "A4", "A400", "AJET", "AN12", "AN26", "AS21", "AS32", "AS65", "AT45", "AT75", "ATP", "B190", "B29", "B350", "B38M", "B39M", "B52", "B703", "B712", "B722", "B733", "B734", "B735", "B737", "B738", "B739", "B742", "B744", "B748", "B74S", "B752", "B753", "B762", "B763", "B764", "B772", "B773", "B779", "B77L", "B77W", "B788", "B789", "B78X", "BALL", "BCS1", "BCS3", "BLCF", "BN2P", "C130", "C160", "C17", "C172", "C2", "C208", "C25B", "C295", "C5M", "C750", "CL2T", "CN35", "CRJ2", "CRJ7", "CRJ9", "CRJX", "D228", "D328", "DA42", "DC10", "DC3", "DC87", "DH8C", "DH8D", "DO27", "DO28", "E170", "E195", "E300", "E35L", "E390", "E3CF", "E3TF", "E737", "E8", "EC20", "EC35", "EC45", "EUFI", "F15", "F16", "F18H", "F18S", "F22", "F35", "F406", "F5", "F50", "FA7X", "GAZL", "GL5T", "GLF6", "GYRO", "H47", "H60", "H64", "HAWK", "HUNT", "IL62", "IL76", "J328", "K35E", "KC2", "KC46", "L159", "LJ35", "LYNX", "M326", "MD11", "MI24", "MIRA", "MRF1", "NH90", "P1", "P180", "P28A", "P3", "P8", "PA46", "PC12", "PC6T", "PC9", "Q4", "R135", "R44", "RFAL", "RJ85", "S61", "SB39", "SC7", "SF25", "SF34", "SGUP", "SR22", "ST75", "SU95", "T204", "T38", "TIGR", "U2", "VF35",
-]);
+type AircraftIconInput = Pick<AircraftView, "aircraftType" | "aircraftDescription" | "enrichment" | "category" | "onGround">;
 
-function aircraftTypeCode(aircraft: Pick<AircraftView, "aircraftType" | "enrichment">): string {
-  return (aircraft.enrichment?.metadata?.icaoTypeCode ?? aircraft.aircraftType ?? "").toUpperCase().replaceAll("-", "");
+function aircraftTypeCandidates(aircraft: AircraftIconInput): string[] {
+  const values = [
+    aircraft.enrichment?.metadata?.icaoTypeCode,
+    aircraft.aircraftType,
+    aircraft.enrichment?.metadata?.aircraftType,
+    aircraft.aircraftDescription,
+  ];
+  const candidates: string[] = [];
+  for (const value of values) {
+    if (!value) continue;
+    const normalized = value.trim().toUpperCase().replaceAll("-", "");
+    if (normalized) candidates.push(normalized);
+    for (const token of value.toUpperCase().match(/[A-Z][A-Z0-9]{2,3}/g) ?? []) candidates.push(token);
+  }
+  return [...new Set(candidates)];
 }
 
-function aircraftIconAsset(aircraft: Pick<AircraftView, "aircraftType" | "enrichment">): string | null {
+function aircraftTypeCode(aircraft: AircraftIconInput): string {
+  const candidates = aircraftTypeCandidates(aircraft);
+  return candidates.find((candidate) => TAR1090_ICON_CODES.has(candidate)) ?? candidates[0] ?? "";
+}
+
+function aircraftIconAsset(aircraft: AircraftIconInput): string {
   const type = aircraftTypeCode(aircraft);
-  // A few common provider codes have no standalone drawing in the upstream
-  // catalogue; use the closest airframe silhouette instead of falling back to
-  // the generic marker.
+  // Normalize a few common provider codes when their closest tar1090 drawing
+  // exists; otherwise the tar1090 category or fallback asset below is used.
   const aliases: Record<string, string> = {
     A319: "A320",
     C25A: "C25B",
@@ -292,13 +304,21 @@ function aircraftIconAsset(aircraft: Pick<AircraftView, "aircraftType" | "enrich
     BE40: "C25B",
     M20P: "PA46",
   };
-  const code = aliases[type] ?? type;
+  const code = TAR1090_ICON_CODES.has(type) ? type : aliases[type] ?? type;
+  const category = aircraft.category?.trim().toUpperCase() ?? "";
+  const categoryAsset = TAR1090_CATEGORY_ICON_ASSETS[category as keyof typeof TAR1090_CATEGORY_ICON_ASSETS];
+  // C0-C3 are surface-vehicle categories. They must win over a stale or
+  // misleading type-designator so ground vehicles never get an aircraft glyph.
+  if (/^C[0-3]$/.test(category) && categoryAsset) return categoryAsset;
   if (TAR1090_ICON_CODES.has(code)) return `/aircraft-icons-tar1090/${code}.svg`;
-  return AIRCRAFT_ICON_CODES.has(code) ? `/aircraft-icons/${code}.svg` : null;
+  if (categoryAsset) return categoryAsset;
+  return aircraft.onGround ? TAR1090_GROUND_SQUARE_ICON_ASSET : TAR1090_UNKNOWN_ICON_ASSET;
 }
 
-function aircraftMarkerKind(aircraft: Pick<AircraftView, "category" | "aircraftType" | "enrichment">): AircraftMarkerKind {
+function aircraftMarkerKind(aircraft: AircraftIconInput): AircraftMarkerKind {
   const type = aircraftTypeCode(aircraft);
+  const category = aircraft.category?.trim().toUpperCase() ?? "";
+  if (/^C[0-3]$/.test(category) || ["GND", "GRND", "SERV", "EMER", "TWR"].includes(type)) return "ground";
   if (["A318", "A319", "A320", "A321", "A19N", "A20N", "A21N"].includes(type)) return "a320";
   if (/^(BCS1|BCS3|A221|A223)/.test(type)) return "a220";
   if (/^(A306|A310|A342|A343|A345|A346)/.test(type)) return "a330";
@@ -317,12 +337,15 @@ function aircraftMarkerKind(aircraft: Pick<AircraftView, "category" | "aircraftT
   if (/^(E1[3-9]|E2[0-9]|CRJ|RJ[0-9]|ARJ)/.test(type)) return "regional";
   if (/^(GLF|CL[0-9]|LJ[0-9]|E55|FA[0-9]|C5[0-9]|C68|C7[0-9]|PRM|H25|DA[0-9])/.test(type)) return "business-jet";
   if (/^(C[0-4]|P28|P32|P46|PA[0-9]|PC1|TBM|BE[0-9]|SR2|M20|DA4)/.test(type)) return "general-aviation";
-  switch (aircraft.category?.toUpperCase()) {
+  if (aircraft.onGround) return "ground";
+  switch (category) {
     case "A7": return "helicopter";
     case "B1": return "glider";
     case "B6": return "drone";
+    case "C0":
     case "C1":
-    case "C2": return "ground";
+    case "C2":
+    case "C3": return "ground";
     default: return "airplane";
   }
 }
