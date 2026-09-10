@@ -1,0 +1,146 @@
+.wrapper {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 36px;
+}
+
+.panel {
+  padding-bottom: 18px;
+}
+
+.header {
+  align-items: flex-start;
+}
+
+.headerCopy {
+  min-width: 0;
+}
+
+.headerCopy p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.controls > div {
+  margin: 0;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.metric {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(153, 181, 207, .12);
+  border-radius: 10px;
+}
+
+.metric strong {
+  display: block;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.note {
+  align-self: center;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.rankings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.ranking {
+  min-width: 0;
+  padding: 14px 15px;
+  border: 1px solid rgba(153, 181, 207, .12);
+  border-radius: 10px;
+}
+
+.ranking h3 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.ranking ol {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ranking li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(153, 181, 207, .1);
+  font-size: 11px;
+}
+
+.ranking li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking li strong {
+  flex: 0 0 auto;
+  color: var(--amber);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.status {
+  margin: 16px 20px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .rankings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .wrapper { padding: 0 12px 28px; }
+  .controls { width: 100%; justify-content: flex-start; }
+  .controls > div { width: 100%; }
+  .controls button { flex: 1; min-height: 44px; }
+  .summary { grid-template-columns: 1fr; padding-left: 15px; padding-right: 15px; }
+  .rankings { grid-template-columns: 1fr; padding-left: 15px; padding-right: 15px; }
+  .status { margin-left: 15px; margin-right: 15px; }
+}
