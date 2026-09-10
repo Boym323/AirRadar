@@ -3,6 +3,7 @@ import { getAppTimezone } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 import { getReceiverStatistics } from "@/lib/server/statistics";
 import { statisticsRangeBounds } from "@/lib/server/statistics-range";
+import { mergeCurrentDayStats } from "@/lib/statistics-coverage-current-day";
 import {
   aggregateCoverageIntelligence,
   COVERAGE_INTELLIGENCE_FLIGHT_LIMIT,
@@ -131,23 +132,30 @@ export async function getCoverageIntelligence(
     if (currentHasData && current.date >= bounds.from && current.date < bounds.toExclusive) {
       for (const row of current.coverage) {
         if (row.maxDistanceKm <= 0) continue;
-        coverageByKey.set(`${current.date}:${row.azimuthBucket}`, {
+        const key = `${current.date}:${row.azimuthBucket}`;
+        const persisted = coverageByKey.get(key);
+        coverageByKey.set(key, {
           date: current.date,
           azimuthBucket: row.azimuthBucket,
-          maxDistanceKm: row.maxDistanceKm,
+          maxDistanceKm: Math.max(row.maxDistanceKm, persisted?.maxDistanceKm ?? 0),
         });
       }
       const reception = statistics.getDailyReceptionRecord();
       const persistedToday = statsByDate.get(current.date);
-      statsByDate.set(current.date, {
+      statsByDate.set(current.date, mergeCurrentDayStats({
         date: current.date,
-        maxConcurrentAircraft: Math.max(current.maxConcurrentAircraft, persistedToday?.maxConcurrentAircraft ?? 0),
-        maxDistanceKm: Math.max(current.maxDistanceKm, persistedToday?.maxDistanceKm ?? 0),
-        maxDistanceIcaoHex: reception?.icaoHex ?? persistedToday?.maxDistanceIcaoHex ?? null,
-        maxDistanceRegistration: reception?.registration ?? persistedToday?.maxDistanceRegistration ?? null,
-        maxDistanceBearing: reception?.bearing ?? persistedToday?.maxDistanceBearing ?? null,
-        maxDistanceAt: reception?.recordedAt ?? persistedToday?.maxDistanceAt ?? null,
-      });
+        currentMaxConcurrentAircraft: current.maxConcurrentAircraft,
+        currentMaxDistanceKm: current.maxDistanceKm,
+        currentReception: reception ? {
+          date: reception.date,
+          distanceKm: reception.distanceKm,
+          icaoHex: reception.icaoHex,
+          registration: reception.registration,
+          recordedAt: reception.recordedAt,
+          bearing: reception.bearing,
+        } : null,
+        persisted: persistedToday,
+      }));
     }
 
     const highestRow = highestRaw[0] ?? null;
