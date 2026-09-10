@@ -64,8 +64,10 @@ checks when a browser is installed:
 npm run test:production:browser
 ```
 
-The production gate accepts only `1.0.0/production` or a canonical
-`1.0.0-rc.N/release-candidate` build. It detects either pair by default; set
+The production gate accepts the version and channel emitted by the current
+`generated/build-version.json` build metadata, requiring either a stable
+`X.Y.Z/production` or canonical `X.Y.Z-rc.N/release-candidate` pair. It detects
+the current pair by default; set
 `PRODUCTION_GATE_CHANNEL=stable` or `PRODUCTION_GATE_CHANNEL=rc` to require a
 specific pair.
 

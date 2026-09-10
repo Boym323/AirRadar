@@ -7,6 +7,19 @@ import { fileURLToPath } from "node:url";
 export const STABLE_PRODUCTION_VERSION = "1.0.0";
 export const RELEASE_CANDIDATE_VERSION_PATTERN = /^1\.0\.0-rc\.[1-9]\d*$/;
 
+function validReleaseVersion(value) {
+  return typeof value === "string" && /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-rc\.[1-9]\d*)?$/.test(value);
+}
+
+function expectedBuildVersion() {
+  try {
+    const metadata = JSON.parse(readFileSync("generated/build-version.json", "utf8"));
+    return validReleaseVersion(metadata.version) ? metadata.version : STABLE_PRODUCTION_VERSION;
+  } catch {
+    return STABLE_PRODUCTION_VERSION;
+  }
+}
+
 export function resolveProductionGateChannel(value = process.env.PRODUCTION_GATE_CHANNEL) {
   const channel = (value || "auto").trim().toLowerCase();
   if (channel !== "auto" && channel !== "stable" && channel !== "rc") {
@@ -15,17 +28,21 @@ export function resolveProductionGateChannel(value = process.env.PRODUCTION_GATE
   return channel;
 }
 
-export function assertProductionReleaseMetadata(payload, requestedChannel = "auto") {
+export function assertProductionReleaseMetadata(payload, requestedChannel = "auto", expectedVersion = STABLE_PRODUCTION_VERSION) {
   const channel = resolveProductionGateChannel(requestedChannel);
   const version = payload && typeof payload.version === "string" ? payload.version : "";
   const reportedChannel = payload && typeof payload.channel === "string" ? payload.channel : "";
-  const stable = version === STABLE_PRODUCTION_VERSION && reportedChannel === "production";
-  const releaseCandidate = RELEASE_CANDIDATE_VERSION_PATTERN.test(version) && reportedChannel === "release-candidate";
+  const stable = version === expectedVersion && !version.includes("-rc.") && reportedChannel === "production";
+  const releaseCandidate = (expectedVersion === STABLE_PRODUCTION_VERSION
+    ? RELEASE_CANDIDATE_VERSION_PATTERN.test(version)
+    : version === expectedVersion && version.includes("-rc."))
+    && reportedChannel === "release-candidate";
   const valid = channel === "auto" ? stable || releaseCandidate : channel === "stable" ? stable : releaseCandidate;
   if (!valid) {
+    const releaseDescription = expectedVersion.includes("-rc.") ? `${expectedVersion}/release-candidate` : `${expectedVersion}/production`;
     const expected = channel === "auto"
-      ? `${STABLE_PRODUCTION_VERSION}/production or 1.0.0-rc.N/release-candidate`
-      : channel === "stable" ? `${STABLE_PRODUCTION_VERSION}/production` : "1.0.0-rc.N/release-candidate";
+      ? releaseDescription
+      : channel === "stable" ? `${expectedVersion}/production` : `${expectedVersion}/release-candidate`;
     throw new Error(`Release metadata smoke failed: expected ${expected}, got ${version || "(missing)"}/${reportedChannel || "(missing)"}`);
   }
 }
@@ -118,6 +135,7 @@ async function assertBrowserSmoke() {
 
 async function main() {
   const gateChannel = resolveProductionGateChannel();
+  const expectedVersion = expectedBuildVersion();
   assertMigrationSource();
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", host, "--port", String(port)], {
     cwd: process.cwd(),
@@ -147,7 +165,7 @@ async function main() {
     if (!health.ok || (await health.json()).status !== "ok") throw new Error("Health smoke failed");
     const version = await get("/api/version");
     const versionPayload = await version.json();
-    assertProductionReleaseMetadata(versionPayload, gateChannel);
+    assertProductionReleaseMetadata(versionPayload, gateChannel, expectedVersion);
     const homepage = await get("/");
     const html = await homepage.text();
     if (!html.includes("<h1") || !html.includes("AirRadar")) throw new Error("Homepage semantic heading smoke failed");

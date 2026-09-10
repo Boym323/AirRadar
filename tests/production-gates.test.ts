@@ -19,6 +19,11 @@ describe("production release metadata gate", () => {
     expect(() => assertProductionReleaseMetadata({ version: "1.0.0-rc.1", channel: "production" }, "rc")).toThrow();
   });
 
+  it("supports the version emitted by the current build metadata", () => {
+    expect(() => assertProductionReleaseMetadata({ version: "1.0.7", channel: "production" }, "auto", "1.0.7")).not.toThrow();
+    expect(() => assertProductionReleaseMetadata({ version: "1.0.6", channel: "production" }, "auto", "1.0.7")).toThrow();
+  });
+
   it("rejects an unconfigured or arbitrary gate mode", () => {
     expect(resolveProductionGateChannel(undefined)).toBe("auto");
     expect(resolveProductionGateChannel("RC")).toBe("rc");
