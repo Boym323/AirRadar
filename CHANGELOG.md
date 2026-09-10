@@ -272,3 +272,10 @@ Changes since v1.0.8:
 
 - feat: Enhance SIGMET handling and diagnostics (45930d92)
 - Add new aircraft icons and ground symbols in SVG format (d63c8f98)
+
+## [1.0.10] - 2026-09-10
+
+Changes since v1.0.9:
+
+- feat: extend build wait timeout to accommodate longer production builds (98315c29)
+- feat: add airports sync script and corresponding tests (043516b6)
