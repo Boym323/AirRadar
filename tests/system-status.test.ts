@@ -153,6 +153,26 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(value.weather).toMatchObject({ status: "degraded", requests: 6, failures: 2, activeSigmets: 7, sigmetStale: true, retryAfterMs: 30_000 });
   });
 
+  it("exposes per-dataset SIGMET freshness and keeps partial degradation visible", () => {
+    const value = build({ weather: {
+      enabled: true,
+      status: "degraded",
+      sigmet: {
+        overallStatus: "degraded",
+        international: { status: "fresh", lastSuccessAt: checkedAt.toISOString(), featureCount: 4, stale: false, failures: 0, consecutiveFailures: 0, lastFailureAt: null },
+        airsigmet: { status: "stale", lastSuccessAt: checkedAt.toISOString(), featureCount: 2, stale: true, failures: 1, consecutiveFailures: 1, lastFailureAt: checkedAt.toISOString() },
+      },
+    } });
+    expect(value.weather.status).toBe("degraded");
+    expect(value.weather.sigmet).toMatchObject({
+      overallStatus: "degraded",
+      international: { status: "fresh", featureCount: 4, stale: false },
+      airsigmet: { status: "stale", featureCount: 2, stale: true, consecutiveFailures: 1 },
+    });
+    expect(pageSource).toContain("dictionary.system.sigmetInternational");
+    expect(pageSource).toContain("dictionary.system.sigmetAirsigmet");
+  });
+
   it("reports database unavailable while keeping the live status shape", () => {
     const value = build({ database: { status: "offline", connected: false }, airportData: { rowCount: null, fallbackRowCount: 6 } });
     expect(value.database).toMatchObject({ status: "offline", connected: false });

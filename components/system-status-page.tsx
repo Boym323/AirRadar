@@ -31,6 +31,11 @@ function formatStatus(status: SystemStatus | "demo", dictionary: LocaleDictionar
   return dictionary.system.statusLabels[status];
 }
 
+function formatSigmetDataset(dataset: SystemStatusResponse["weather"]["sigmet"]["international"], dictionary: LocaleDictionary): string {
+  const freshness = dataset.status === "fresh" ? dictionary.system.current : dataset.status === "stale" ? dictionary.system.stale : dictionary.system.unavailable;
+  return `${freshness} · ${formatNumber(dataset.featureCount, 0, dictionary.locale)} ${dictionary.system.sigmetFeatures} · ${formatDateTime(dataset.lastSuccessAt, dictionary)}`;
+}
+
 function StatusBadge({ status, dictionary }: { status: SystemStatus | "demo"; dictionary: LocaleDictionary }) {
   return <span className={`system-status-badge ${status}`} data-status={status}>{formatStatus(status, dictionary)}</span>;
 }
@@ -206,6 +211,8 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.cacheMisses} value={formatNumber(data.weather.cacheMisses, 0, dictionary.locale)} />
         <Field label={dictionary.system.activeSigmets} value={formatNumber(data.weather.activeSigmets, 0, dictionary.locale)} />
         <Field label={dictionary.system.sigmetFreshness} value={data.weather.sigmetStale ? dictionary.system.stale : dictionary.system.current} />
+        <Field label={dictionary.system.sigmetInternational} value={formatSigmetDataset(data.weather.sigmet.international, dictionary)} />
+        <Field label={dictionary.system.sigmetAirsigmet} value={formatSigmetDataset(data.weather.sigmet.airsigmet, dictionary)} />
         {data.weather.retryAfterMs !== null && <Field label={dictionary.system.retryAfter} value={`${formatNumber(data.weather.retryAfterMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />}
       </Card>
 

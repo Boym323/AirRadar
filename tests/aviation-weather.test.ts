@@ -7,6 +7,7 @@ import {
   AVIATION_WEATHER_BASE_URL,
   AVIATION_WEATHER_USER_AGENT,
   normalizeWeatherIcao,
+  parseStatuteMiles,
   statuteMilesToMeters,
 } from "@/lib/server/aviation-weather-provider";
 import { getWeatherAirportResponse } from "@/lib/server/weather-api";
@@ -43,6 +44,20 @@ afterEach(() => {
 });
 
 describe("AviationWeatherProvider", () => {
+  it.each([
+    ["1 1/2", 1.5],
+    ["1 1/2 SM", 1.5],
+    ["1 3/4", 1.75],
+    ["2 1/2", 2.5],
+    ["3/4", 0.75],
+    ["1/4", 0.25],
+    ["M1/4", 0.25],
+    ["6+", 6],
+    ["10+", 10],
+  ])("parses %s statute-mile visibility as %s", (raw, expected) => {
+    expect(parseStatuteMiles(raw)).toBe(expected);
+  });
+
   it("formats statute-mile visibility for the compact weather UI", () => {
     expect(formatWeatherVisibility(statuteMilesToMeters(6), true)).toBe("10+ km");
     expect(formatWeatherVisibility(statuteMilesToMeters(3))).toBe("4,8 km");
@@ -116,6 +131,16 @@ describe("AviationWeatherProvider", () => {
         latitude: 50.1,
         longitude: 14.2,
       },
+    });
+  });
+
+  it("derives TAF flight category from mixed-fraction visibility", async () => {
+    const provider = providerWith(
+      new Response(null, { status: 204 }),
+      response([{ ...tafPayload[0], fcsts: [{ visib: "1 1/2", clouds: [] }] }]),
+    );
+    await expect(provider.getAirportWeather("LKPR")).resolves.toMatchObject({
+      taf: { periods: [{ visibilityMeters: statuteMilesToMeters(1.5), flightCategory: "IFR" }] },
     });
   });
 

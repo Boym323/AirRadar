@@ -45,6 +45,10 @@ These are behavior and safety contracts for changes to the current system.
   readsb poller, alter `/api/stream`, enqueue history/statistics writes, or
   persist its RAM cache. Only canonical four-letter ICAO codes may reach its
   airport endpoints; IATA is never guessed into a weather request.
+- International SIGMET and AirSIGMET caches are independent. A failed refresh
+  may use that dataset's stale-if-error snapshot, but the response rechecks
+  advisory validity so expired or future records are never revived. The two
+  distinct AWC product namespaces are not deduplicated by text or geometry.
 
 ## SSE
 

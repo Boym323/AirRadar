@@ -12,6 +12,9 @@ import type {
 } from "@/lib/weather/types";
 import { getAviationWeatherBaseUrl, getAviationWeatherMetarTtlMs, getAviationWeatherRequestTimeoutMs, getAviationWeatherSigmetTtlMs, getAviationWeatherStaleIfErrorMs, getAviationWeatherTafTtlMs, getAviationWeatherUserAgent } from "@/lib/server/config";
 import { deriveFlightCategory } from "@/lib/weather/flight-category";
+import { parseStatuteMiles } from "@/lib/weather/visibility";
+
+export { parseStatuteMiles } from "@/lib/weather/visibility";
 
 export const AVIATION_WEATHER_BASE_URL = "https://aviationweather.gov";
 export const AVIATION_WEATHER_USER_AGENT = getAviationWeatherUserAgent();
@@ -26,6 +29,7 @@ export const AVIATION_WEATHER_TTLS = {
 } as const;
 
 type Product = "metar" | "taf" | "sigmet";
+type SigmetDataset = "isigmet" | "airsigmet";
 
 interface CacheEntry<T> {
   value: T | null;
@@ -193,7 +197,22 @@ export interface AviationWeatherDiagnostics {
   tafEntries: number;
   activeSigmets: number;
   sigmetStale: boolean;
+  sigmet: {
+    overallStatus: "online" | "degraded" | "offline";
+    international: SigmetDatasetDiagnostics;
+    airsigmet: SigmetDatasetDiagnostics;
+  };
   retryAfterMs: number | null;
+}
+
+export interface SigmetDatasetDiagnostics {
+  status: "fresh" | "stale" | "unavailable";
+  lastSuccessAt: string | null;
+  featureCount: number;
+  stale: boolean;
+  failures: number;
+  consecutiveFailures: number;
+  lastFailureAt: string | null;
 }
 
 export interface AviationWeatherProviderOptions {
@@ -267,13 +286,7 @@ function visibility(value: unknown): Pick<MetarObservation, "visibilityMeters" |
   const raw = typeof value === "string" ? value.trim().toUpperCase() : value;
   const greaterThan = typeof raw === "string" && (raw.endsWith("+") || raw.startsWith("P"));
   const lessThan = typeof raw === "string" && raw.startsWith("M");
-  const rawNumber = typeof raw === "string" ? raw.replace(/^[MP]/, "").replace(/\+$/, "").replace(/SM$/, "") : raw;
-  const numeric = typeof rawNumber === "string" && rawNumber.includes("/")
-    ? (() => {
-      const [numerator, denominator] = rawNumber.split("/").map(Number);
-      return Number.isFinite(numerator) && Number.isFinite(denominator) && denominator !== 0 ? numerator / denominator : null;
-    })()
-    : typeof rawNumber === "string" ? numberValue(rawNumber) : numberValue(rawNumber);
+  const numeric = parseStatuteMiles(value);
   return {
     visibilityMeters: numeric !== null && numeric >= 0 ? statuteMilesToMeters(numeric) : null,
     visibilityGreaterThan: greaterThan,
@@ -444,7 +457,30 @@ function normalizedSigmetTime(value: unknown): string | null {
   return isoDate(value);
 }
 
-export function normalizeSigmetGeoJson(payload: unknown, now = Date.now(), fetchedAt = new Date(now).toISOString()): AviationSigmet[] {
+function identifierValue(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return typeof value === "number" && Number.isFinite(value) ? String(value) : null;
+}
+
+function sigmetAltitude(properties: Record<string, unknown>, source: SigmetDataset): Pick<AviationSigmet, "lowerFt" | "upperFt"> {
+  if (source === "airsigmet") {
+    return {
+      lowerFt: altitudeFeet(properties.altitudeLo1) ?? altitudeFeet(properties.altitudeLow1) ?? altitudeFeet(properties.altitudeLo2) ?? altitudeFeet(properties.base),
+      upperFt: altitudeFeet(properties.altitudeHi1) ?? altitudeFeet(properties.altitudeHigh1) ?? altitudeFeet(properties.altitudeHi2) ?? altitudeFeet(properties.top),
+    };
+  }
+  return {
+    lowerFt: altitudeFeet(properties.base) ?? altitudeFeet(properties.altitudeLo1) ?? altitudeFeet(properties.altitudeLow1) ?? altitudeFeet(properties.altitudeLo2),
+    upperFt: altitudeFeet(properties.top) ?? altitudeFeet(properties.altitudeHi1) ?? altitudeFeet(properties.altitudeHigh1) ?? altitudeFeet(properties.altitudeHi2),
+  };
+}
+
+export function normalizeSigmetGeoJson(
+  payload: unknown,
+  now = Date.now(),
+  fetchedAt = new Date(now).toISOString(),
+  source: SigmetDataset = "isigmet",
+): AviationSigmet[] {
   if (!isRecord(payload) || payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) throw new Error("SIGMET response is not a FeatureCollection");
   return payload.features.flatMap((candidate, index) => {
     if (!isRecord(candidate) || candidate.type !== "Feature" || !geometryValid(candidate.geometry) || !isRecord(candidate.properties)) return [];
@@ -455,7 +491,8 @@ export function normalizeSigmetGeoJson(payload: unknown, now = Date.now(), fetch
     const office = stringValue(properties.icaoId);
     const firId = stringValue(properties.firId);
     const seriesId = stringValue(properties.seriesId);
-    const id = stringValue(candidate.id) ?? `${office ?? "sigmet"}:${firId ?? ""}:${seriesId ?? index}:${validFrom}`;
+    const id = identifierValue(candidate.id) ?? `${office ?? "sigmet"}:${firId ?? ""}:${seriesId ?? index}:${validFrom}`;
+    const altitude = sigmetAltitude(properties, source);
     const sigmet: AviationSigmet = {
       id,
       issuingOffice: office,
@@ -466,12 +503,11 @@ export function normalizeSigmetGeoJson(payload: unknown, now = Date.now(), fetch
       qualifier: stringValue(properties.qualifier),
       validFrom,
       validTo,
-      lowerFt: altitudeFeet(properties.base),
-      upperFt: altitudeFeet(properties.top),
+      ...altitude,
       seriesId,
       rawText: stringValue(properties.rawSigmet) ?? stringValue(properties.rawAirSigmet),
       geometry: candidate.geometry,
-      source: "aviationweather",
+      source,
       fetchedAt,
     };
     return [sigmet];
@@ -479,12 +515,44 @@ export function normalizeSigmetGeoJson(payload: unknown, now = Date.now(), fetch
 }
 
 function asFeatureCollection(sigmet: AviationSigmet[], fetchedAt: string): SigmetSnapshot {
+  const idCounts = new Map<string, number>();
+  for (const item of sigmet) idCounts.set(item.id, (idCounts.get(item.id) ?? 0) + 1);
   return {
     type: "FeatureCollection",
-    features: sigmet.map(({ geometry, ...properties }) => ({ type: "Feature", id: properties.id, properties, geometry })),
+    features: sigmet.map(({ geometry, ...properties }) => {
+      // International and domestic SIGMETs are distinct AWC products. Keep
+      // same-looking upstream IDs from collapsing across those namespaces.
+      const id = (idCounts.get(properties.id) ?? 0) > 1 ? `${properties.source}:${properties.id}` : properties.id;
+      return { type: "Feature", id, properties: { ...properties, id }, geometry };
+    }),
     fetchedAt,
     stale: false,
   };
+}
+
+function emptySigmetDatasetDiagnostics(): SigmetDatasetDiagnostics {
+  return { status: "unavailable", lastSuccessAt: null, featureCount: 0, stale: false, failures: 0, consecutiveFailures: 0, lastFailureAt: null };
+}
+
+function currentSigmets(value: AviationSigmet[], now: number): AviationSigmet[] {
+  return value.filter((item) => {
+    const validFrom = item.validFrom ? Date.parse(item.validFrom) : Number.NaN;
+    const validTo = item.validTo ? Date.parse(item.validTo) : Number.NaN;
+    return Number.isFinite(validFrom) && Number.isFinite(validTo) && validFrom <= now && validTo > now;
+  });
+}
+
+function mergeSigmetDatasets(values: AviationSigmet[][]): AviationSigmet[] {
+  const merged = new Map<string, AviationSigmet>();
+  for (const dataset of values) {
+    for (const item of dataset) {
+      // The two feeds are explicitly different AWC products. Deduplicate
+      // repeated IDs within a product, but do not use text or geometry to
+      // collapse advisories across product namespaces.
+      merged.set(`${item.source}:${item.id}`, item);
+    }
+  }
+  return [...merged.values()];
 }
 
 export class AviationWeatherProvider {
@@ -500,6 +568,7 @@ export class AviationWeatherProvider {
   private readonly sigmetTtlMs: number;
   private readonly staleIfErrorMs: number;
   private readonly diagnostics: AviationWeatherDiagnostics;
+  private sigmetAttempted = false;
   private backoffUntil = 0;
 
   constructor(options: AviationWeatherProviderOptions = {}) {
@@ -528,7 +597,12 @@ export class AviationWeatherProvider {
       metarEntries: 0,
       tafEntries: 0,
       activeSigmets: 0,
-      sigmetStale: false,
+      sigmetStale: true,
+      sigmet: {
+        overallStatus: "offline",
+        international: emptySigmetDatasetDiagnostics(),
+        airsigmet: emptySigmetDatasetDiagnostics(),
+      },
       retryAfterMs: null,
     };
   }
@@ -557,28 +631,31 @@ export class AviationWeatherProvider {
 
   async getSigmets(parentSignal?: AbortSignal): Promise<SigmetSnapshot> {
     if (!this.enabled) throw new AviationWeatherUnavailableError();
-    const result = await this.cache.get<SigmetSnapshot>("sigmet", "current", async () => {
-      const fetchedAt = new Date(this.now()).toISOString();
-      const datasets = await Promise.allSettled([
-        this.fetchSigmetDataset("isigmet", parentSignal),
-        this.fetchSigmetDataset("airsigmet", parentSignal),
-      ]);
-      const failedDatasets = datasets.filter((dataset) => dataset.status === "rejected");
-      const successful = datasets.filter((dataset) => dataset.status === "fulfilled");
-      if (!successful.length) {
-        const rateLimit = failedDatasets.find((dataset) => dataset.status === "rejected" && dataset.reason instanceof AviationWeatherRateLimitError);
-        throw rateLimit && rateLimit.status === "rejected" ? rateLimit.reason : new Error("SIGMET datasets unavailable");
-      }
-      failedDatasets.forEach((dataset) => this.recordFailure(dataset.status === "rejected" ? dataset.reason : undefined));
-      const current = successful.flatMap((dataset) => dataset.value ? normalizeSigmetGeoJson(dataset.value, this.now(), fetchedAt) : []);
-      const deduped = [...new Map(current.map((item) => [item.id, item])).values()];
-      this.diagnostics.activeSigmets = deduped.length;
-      this.diagnostics.sigmetStale = false;
-      return asFeatureCollection(deduped, fetchedAt);
-    }, { ttlMs: this.sigmetTtlMs, staleIfErrorMs: this.staleIfErrorMs }, this.now(), (error) => this.recordFailure(error));
-    if (!result.value) throw new AviationWeatherUnavailableError();
-    this.diagnostics.sigmetStale = result.stale;
-    return { ...result.value, stale: result.stale };
+    this.sigmetAttempted = true;
+    const [internationalResult, airsigmetResult] = await Promise.all([
+      this.getSigmetDataset("isigmet", parentSignal),
+      this.getSigmetDataset("airsigmet", parentSignal),
+    ]);
+    const results: Array<[SigmetDataset, ProductResult<AviationSigmet[]>]> = [
+      ["isigmet", internationalResult],
+      ["airsigmet", airsigmetResult],
+    ];
+    const currentDatasets = results.map(([dataset, result]) => {
+      const current = result.value === null ? [] : currentSigmets(result.value, this.now());
+      this.updateSigmetDatasetDiagnostics(dataset, result, current.length);
+      return { dataset, result, current };
+    });
+    const usable = currentDatasets.filter(({ result }) => result.value !== null);
+    this.refreshSigmetDiagnostics(usable.length > 0);
+    if (!usable.length) throw new AviationWeatherUnavailableError();
+
+    const merged = mergeSigmetDatasets(usable.flatMap(({ current }) => [current]));
+    const fetchedAtMs = Math.max(...results.map(([dataset]) => this.cache.fetchedAt("sigmet", dataset) ?? 0));
+    const fetchedAt = new Date(fetchedAtMs || this.now()).toISOString();
+    const stale = currentDatasets.some(({ result }) => result.stale || result.failed);
+    this.diagnostics.activeSigmets = merged.length;
+    this.diagnostics.sigmetStale = stale;
+    return { ...asFeatureCollection(merged, fetchedAt), stale };
   }
 
   getDiagnostics(): AviationWeatherDiagnostics {
@@ -589,6 +666,11 @@ export class AviationWeatherProvider {
       cacheMisses: cacheStats.misses,
       metarEntries: this.cache.productEntries("metar"),
       tafEntries: this.cache.productEntries("taf"),
+      sigmet: {
+        overallStatus: this.diagnostics.sigmet.overallStatus,
+        international: { ...this.diagnostics.sigmet.international },
+        airsigmet: { ...this.diagnostics.sigmet.airsigmet },
+      },
       retryAfterMs: this.backoffUntil > this.now() ? this.backoffUntil - this.now() : null,
     };
   }
@@ -598,6 +680,63 @@ export class AviationWeatherProvider {
 
   private async getProduct<T extends MetarObservation | TafForecast>(product: "metar" | "taf", icaoCode: string, ttlMs: number, parentSignal?: AbortSignal): Promise<ProductResult<T>> {
     return this.cache.get(product, icaoCode, () => this.fetchProduct(product, icaoCode, parentSignal), { ttlMs, staleIfErrorMs: this.staleIfErrorMs }, this.now(), (error) => this.recordFailure(error)) as unknown as Promise<ProductResult<T>>;
+  }
+
+  private async getSigmetDataset(dataset: SigmetDataset, parentSignal?: AbortSignal): Promise<ProductResult<AviationSigmet[]>> {
+    return this.cache.get<AviationSigmet[]>("sigmet", dataset, async () => {
+      const payload = await this.fetchSigmetDataset(dataset, parentSignal);
+      if (payload === null) return [];
+      const fetchedAt = new Date(this.now()).toISOString();
+      return normalizeSigmetGeoJson(payload, this.now(), fetchedAt, dataset);
+    }, { ttlMs: this.sigmetTtlMs, staleIfErrorMs: this.staleIfErrorMs }, this.now(), (error) => this.recordFailure(error))
+      .then((result) => {
+        if (result.stale || result.failed) this.recordSigmetDatasetFailure(dataset, result.stale);
+        return result;
+      });
+  }
+
+  private updateSigmetDatasetDiagnostics(dataset: SigmetDataset, result: ProductResult<AviationSigmet[]>, featureCount: number): void {
+    const diagnostics = this.diagnostics.sigmet[dataset === "isigmet" ? "international" : "airsigmet"];
+    diagnostics.featureCount = featureCount;
+    if (result.value === null || result.failed) {
+      diagnostics.status = "unavailable";
+      diagnostics.stale = false;
+      return;
+    }
+    diagnostics.status = result.stale ? "stale" : "fresh";
+    diagnostics.stale = result.stale;
+    const fetchedAt = this.cache.fetchedAt("sigmet", dataset);
+    if (fetchedAt !== null) diagnostics.lastSuccessAt = new Date(fetchedAt).toISOString();
+    if (!result.stale) {
+      const recoveredAfterFailures = diagnostics.consecutiveFailures > 0;
+      diagnostics.consecutiveFailures = 0;
+      if (recoveredAfterFailures) console.info(`[Aviation Weather] ${dataset} recovered`);
+    }
+  }
+
+  private recordSigmetDatasetFailure(dataset: SigmetDataset, usingStale: boolean): void {
+    const diagnostics = this.diagnostics.sigmet[dataset === "isigmet" ? "international" : "airsigmet"];
+    const firstFailure = diagnostics.consecutiveFailures === 0;
+    diagnostics.failures += 1;
+    diagnostics.consecutiveFailures += 1;
+    diagnostics.lastFailureAt = new Date(this.now()).toISOString();
+    if (firstFailure) {
+      const label = dataset === "isigmet" ? "International SIGMET" : "AirSIGMET";
+      console.warn(`[Aviation Weather] ${label} fetch failed; ${usingStale ? "using stale cache." : "no usable cache."}`);
+    }
+  }
+
+  private refreshSigmetDiagnostics(hasUsableDataset: boolean): void {
+    const international = this.diagnostics.sigmet.international.status;
+    const airsigmet = this.diagnostics.sigmet.airsigmet.status;
+    const bothFresh = international === "fresh" && airsigmet === "fresh";
+    const overallStatus = !hasUsableDataset ? "offline" : bothFresh ? "online" : "degraded";
+    this.diagnostics.sigmet.overallStatus = overallStatus;
+    this.diagnostics.sigmetStale = !bothFresh;
+    if (!hasUsableDataset && this.backoffUntil > this.now()) this.diagnostics.status = "rate_limited";
+    else if (overallStatus === "online") this.diagnostics.status = "online";
+    else if (overallStatus === "degraded") this.diagnostics.status = "degraded";
+    else this.diagnostics.status = "offline";
   }
 
   private async fetchProduct(product: "metar" | "taf", icaoCode: string, parentSignal?: AbortSignal): Promise<MetarObservation | TafForecast | null> {
@@ -659,7 +798,7 @@ export class AviationWeatherProvider {
     this.diagnostics.lastSuccessAt = new Date(now).toISOString();
     this.diagnostics.consecutiveFailures = 0;
     this.diagnostics.retryAfterMs = null;
-    this.diagnostics.status = "online";
+    if (!this.sigmetAttempted) this.diagnostics.status = "online";
     if (this.backoffUntil <= now) this.backoffUntil = 0;
   }
 

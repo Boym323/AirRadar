@@ -184,9 +184,13 @@ path reports the aircraft's actual tuned frequency.
   `GET /api/weather/sigmet` combines the worldwide international SIGMET feed
   with the CONUS domestic feed, validates Polygon/MultiPolygon GeoJSON, filters
   to currently valid records, and returns a safe normalized FeatureCollection.
-  Separate product TTLs, negative entries, in-flight coalescing, bounded RAM
-  caches, stale-if-error, timeout, and `Retry-After` backoff protect the
-  upstream. Weather is never persisted or included in aircraft SSE.
+  International and AirSIGMET have separate bounded cache entries and are
+  merged at response time, so one feed can refresh or fail without discarding
+  the other feed's fresh/stale data. Dataset diagnostics expose fresh/stale/
+  unavailable state. Separate product TTLs, negative entries, in-flight
+  coalescing, bounded RAM caches, stale-if-error, timeout, and `Retry-After`
+  backoff protect the upstream. Weather is never persisted or included in
+  aircraft SSE.
 - `GET /api/aircraft/:hex/photo` validates the aircraft identity, looks up
   Planespotters metadata by hex and, only when that is empty, by registration.
   The browser loads the allowed HTTPS thumbnail directly; image bytes do not

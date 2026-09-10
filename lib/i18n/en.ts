@@ -742,6 +742,9 @@ export const en = {
     cacheMisses: "Cache misses",
     activeSigmets: "Active SIGMETs",
     sigmetFreshness: "SIGMET freshness",
+    sigmetInternational: "International SIGMET",
+    sigmetAirsigmet: "AirSIGMET",
+    sigmetFeatures: "features",
   },
   counts: {
     aircraft: { one: "aircraft", few: "aircraft", many: "aircraft" },

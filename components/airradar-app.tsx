@@ -366,6 +366,7 @@ export function AirRadarApp() {
   const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
   const [showSigmet, setShowSigmet] = useState(false);
+  const [sigmetEnabled, setSigmetEnabled] = useState<boolean | null>(null);
   const [sigmetData, setSigmetData] = useState<SigmetSnapshot>(EMPTY_SIGMET_DATA);
   const [showAirports, setShowAirports] = useState(true);
   const [showSignificantAirports, setShowSignificantAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSignificant);
@@ -393,6 +394,7 @@ export function AirRadarApp() {
   const [mapZoom, setMapZoom] = useState(7.4);
   const [mapReady, setMapReady] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const sigmetGenerationRef = useRef(0);
 
   useEffect(() => {
     try {
@@ -431,6 +433,7 @@ export function AirRadarApp() {
   }, [showSigmet]);
 
   useEffect(() => {
+    const generation = ++sigmetGenerationRef.current;
     if (!showSigmet) {
       setSigmetData(EMPTY_SIGMET_DATA);
       return;
@@ -443,11 +446,19 @@ export function AirRadarApp() {
         const response = await fetch("/api/weather/sigmet", { cache: "no-store", signal: controller.signal });
         if (!response.ok) throw new Error("SIGMET request failed");
         const data = await response.json() as Partial<SigmetSnapshot> & { enabled?: boolean; available?: boolean };
-        if (active) setSigmetData(data.enabled === false || data.available === false || data.type !== "FeatureCollection" ? EMPTY_SIGMET_DATA : data as SigmetSnapshot);
+        if (!active || generation !== sigmetGenerationRef.current || controller.signal.aborted) return;
+        if (data.enabled === false || data.available === false) {
+          setSigmetEnabled(false);
+          setShowSigmet(false);
+          setSigmetData(EMPTY_SIGMET_DATA);
+        } else if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
+          setSigmetEnabled(true);
+          setSigmetData(data as SigmetSnapshot);
+        }
       } catch {
-        if (active) setSigmetData(EMPTY_SIGMET_DATA);
+        // A transient client/API failure must not erase the last good layer.
       } finally {
-        if (active) timer = setTimeout(() => { void load(); }, 5 * 60_000);
+        if (active && generation === sigmetGenerationRef.current && !controller.signal.aborted) timer = setTimeout(() => { void load(); }, 5 * 60_000);
       }
     };
     void load();
@@ -787,9 +798,9 @@ export function AirRadarApp() {
     const source = map.getSource("aviation-sigmet") as GeoJSONSource | undefined;
     source?.setData(sigmetData as unknown as GeoJSON.FeatureCollection);
     for (const layer of ["aviation-sigmet-fill", "aviation-sigmet-line"] as const) {
-      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showSigmet ? "visible" : "none");
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showSigmet && sigmetEnabled === true ? "visible" : "none");
     }
-  }, [mapReady, showSigmet, sigmetData]);
+  }, [mapReady, showSigmet, sigmetData, sigmetEnabled]);
 
   const mapFilteredAircraft = useMemo(
     () => filterAircraftForMap(snapshot.aircraft, mapFilters),
@@ -1189,7 +1200,7 @@ export function AirRadarApp() {
                 <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>
                 <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
                 <label><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {t.layers.atc}</label>
-                <label><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>
+                {sigmetEnabled !== false && <label><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>}
               </div>
             </details>
           </div>

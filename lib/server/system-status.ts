@@ -6,7 +6,7 @@ import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getHistoryPersistenceStatus, type HistoryPersistenceStatus } from "@/lib/server/history";
 import { getAtcData } from "@/lib/server/providers";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
-import { defaultAviationWeatherProvider, type AviationWeatherDiagnostics } from "@/lib/server/aviation-weather-provider";
+import { defaultAviationWeatherProvider, type AviationWeatherDiagnostics, type SigmetDatasetDiagnostics } from "@/lib/server/aviation-weather-provider";
 import type { AlertStatus } from "@/lib/server/alert-engine";
 import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
@@ -120,6 +120,11 @@ export interface SystemStatusResponse {
     cacheMisses: number;
     activeSigmets: number;
     sigmetStale: boolean;
+    sigmet: {
+      overallStatus: "online" | "degraded" | "offline";
+      international: SigmetDatasetDiagnostics;
+      airsigmet: SigmetDatasetDiagnostics;
+    };
     retryAfterMs: number | null;
     lastProviderError: null;
   };
@@ -345,9 +350,24 @@ function adsbLolResponse(diagnostics: NetworkProviderDiagnostics | undefined): S
 function weatherStatus(value: SystemStatusBuildInput["weather"]): SystemStatus {
   if (!value) return "disabled";
   if (value?.status === "disabled" || value?.enabled === false) return "disabled";
+  if (value?.sigmet?.overallStatus === "offline") return "offline";
+  if (value?.sigmet?.overallStatus === "degraded") return "degraded";
   if (value?.status === "offline") return "offline";
   if (value?.status === "degraded" || value?.status === "rate_limited") return "degraded";
   return "ok";
+}
+
+function sigmetDatasetStatus(value: Partial<SigmetDatasetDiagnostics> | undefined): SigmetDatasetDiagnostics {
+  const status = value?.status === "fresh" || value?.status === "stale" ? value.status : "unavailable";
+  return {
+    status,
+    lastSuccessAt: safeTimestamp(value?.lastSuccessAt),
+    featureCount: nonNegativeInteger(value?.featureCount ?? 0, 10_000),
+    stale: Boolean(value?.stale) || status === "stale",
+    failures: nonNegativeInteger(value?.failures ?? 0, 10_000_000),
+    consecutiveFailures: nonNegativeInteger(value?.consecutiveFailures ?? 0, 1_000_000),
+    lastFailureAt: safeTimestamp(value?.lastFailureAt),
+  };
 }
 
 export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusResponse {
@@ -446,6 +466,13 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       cacheMisses: nonNegativeInteger(input.weather?.cacheMisses ?? 0, 10_000_000),
       activeSigmets: nonNegativeInteger(input.weather?.activeSigmets ?? 0, 10_000),
       sigmetStale: Boolean(input.weather?.sigmetStale),
+      sigmet: {
+        overallStatus: input.weather?.sigmet?.overallStatus === "online" || input.weather?.sigmet?.overallStatus === "degraded"
+          ? input.weather.sigmet.overallStatus
+          : "offline",
+        international: sigmetDatasetStatus(input.weather?.sigmet?.international),
+        airsigmet: sigmetDatasetStatus(input.weather?.sigmet?.airsigmet),
+      },
       retryAfterMs: input.weather?.retryAfterMs === undefined || input.weather.retryAfterMs === null ? null : nonNegativeInteger(input.weather.retryAfterMs, 86_400_000),
       lastProviderError: null,
     },

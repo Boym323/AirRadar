@@ -96,7 +96,7 @@ export interface AviationSigmet {
   seriesId: string | null;
   rawText: string | null;
   geometry: SigmetGeometry;
-  source: "aviationweather";
+  source: "isigmet" | "airsigmet";
   fetchedAt: string;
 }
 

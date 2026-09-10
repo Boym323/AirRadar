@@ -740,6 +740,9 @@ export const cs = {
     cacheMisses: "Cache minutí",
     activeSigmets: "Aktivní SIGMETy",
     sigmetFreshness: "Čerstvost SIGMETů",
+    sigmetInternational: "International SIGMET",
+    sigmetAirsigmet: "AirSIGMET",
+    sigmetFeatures: "prvků",
   },
   counts: {
     aircraft: { one: "letadlo", few: "letadla", many: "letadel" },
