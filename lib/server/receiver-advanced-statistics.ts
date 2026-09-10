@@ -129,7 +129,7 @@ export class ReceiverAdvancedStatistics {
   private async observeInternal(aircraft: Aircraft[], receiverMessagesTotal: number | null | undefined, observedAt: Date): Promise<void> {
     const nextDate = dayKey(observedAt, this.timezone);
     if (nextDate !== this.currentDate) await this.rollover(nextDate);
-    await this.ensureLoaded();
+    if (!await this.ensureLoaded()) return;
     this.observeMessages(receiverMessagesTotal);
 
     for (const item of aircraft) {
@@ -185,7 +185,7 @@ export class ReceiverAdvancedStatistics {
     await this.flush(true);
     const crossDayRaw = this.receiverMessagesRawLast;
     this.currentDate = nextDate;
-    this.initializedDate = nextDate;
+    this.initializedDate = null;
     this.receiverMessagesCount = crossDayRaw === null ? null : 0;
     this.receiverMessagesRawLast = crossDayRaw;
     this.altitudeCoverage = new Map();
@@ -195,11 +195,13 @@ export class ReceiverAdvancedStatistics {
     this.lastFlushAt = 0;
   }
 
-  private async ensureLoaded(): Promise<void> {
-    if (this.initializedDate === this.currentDate) return;
-    this.initializedDate = this.currentDate;
+  private async ensureLoaded(): Promise<boolean> {
+    if (this.initializedDate === this.currentDate) return true;
     const database = getPrisma();
-    if (!database) return;
+    if (!database) {
+      this.initializedDate = this.currentDate;
+      return true;
+    }
     try {
       const schema = database.orm.public;
       const [aggregate, altitudeRows] = await Promise.all([
@@ -231,14 +233,17 @@ export class ReceiverAdvancedStatistics {
         const key = coverageKey(row.azimuthBucket, row.altitudeBand);
         this.altitudeCoverage.set(key, { azimuthBucket: row.azimuthBucket, altitudeBand: row.altitudeBand, maxDistanceKm: distance });
       }
+      this.initializedDate = this.currentDate;
+      return true;
     } catch (error) {
       console.error("AirRadar advanced receiver statistics load failed", error);
+      return false;
     }
   }
 
   private async flush(force: boolean, now = Date.now()): Promise<void> {
     const database = getPrisma();
-    if (!database) return;
+    if (!database || this.initializedDate !== this.currentDate) return;
     if (!this.aggregateDirty && this.dirtyAltitude.size === 0) return;
     if (!force && now - this.lastFlushAt < STATISTICS_FLUSH_INTERVAL_MS) return;
     this.lastFlushAt = now;
