@@ -279,3 +279,9 @@ Changes since v1.0.9:
 
 - feat: extend build wait timeout to accommodate longer production builds (98315c29)
 - feat: add airports sync script and corresponding tests (043516b6)
+
+## [1.0.11] - 2026-09-10
+
+Changes since v1.0.10:
+
+- feat: enhance OGN DDB handling and improve privacy features (1203fb49)
