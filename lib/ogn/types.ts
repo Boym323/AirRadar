@@ -120,6 +120,8 @@ export interface OgnProviderDiagnostics {
   droppedStatus: number;
   droppedDelayed: number;
   droppedPrivacy: number;
+  droppedDdbUnresolved: number;
+  ddbUnresolvable: number;
   droppedStale: number;
   droppedCapacity: number;
   unknownTocall: number;
@@ -134,10 +136,28 @@ export interface OgnProviderDiagnostics {
 }
 
 export interface OgnDdbDiagnostics {
-  status: "disabled" | "loading" | "online" | "stale" | "offline";
-  mode: "rich-json" | "base-json" | null;
+  status: "disabled" | "idle" | "loading" | "online" | "stale" | "offline" | "rate-limited" | "degraded";
+  strategy: "targeted" | "bulk-compatibility";
+  representation: "rich" | "base" | null;
+  mode: "rich-json" | "base-json" | "targeted-rich-json" | "targeted-base-json" | null;
   endpoint: string;
   entries: number;
+  cacheEntries: number;
+  positiveEntries: number;
+  negativeEntries: number;
+  pendingKeys: number;
+  queuedIds: number;
+  inFlight: boolean;
+  requests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  batchCount: number;
+  lastBatchSize: number | null;
+  cacheHits: number;
+  cacheMisses: number;
+  evictions: number;
+  unexpectedRecords: number;
+  conflictingRecords: number;
   lastAttemptAt: string | null;
   lastRefreshAt: string | null;
   lastSuccessAt: string | null;
@@ -162,9 +182,13 @@ export interface OgnStateSnapshot {
 
 export interface OgnPrivacyInput {
   position: OgnPosition;
-  ddbAvailable: boolean;
-  ddbEntry: OgnDdbEntry | null;
+  ddbResolution: OgnDdbResolution;
 }
+
+export type OgnDdbResolution =
+  | { status: "unresolved" }
+  | { status: "found"; entry: OgnDdbEntry; resolvedAt: number; expiresAt?: number }
+  | { status: "missing"; resolvedAt: number; expiresAt?: number };
 
 export interface OgnDdbEntry {
   deviceType: "F" | "I" | "O";

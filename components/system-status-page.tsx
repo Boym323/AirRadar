@@ -181,6 +181,13 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.lastPacket} value={formatDateTime(data.ogn.lastPacketAt, dictionary)} />
         <Field label={dictionary.system.reconnects} value={formatNumber(data.ogn.reconnects, 0, dictionary.locale)} />
         <Field label={dictionary.system.ddb} value={`${data.ogn.ddb.status} · ${formatNumber(data.ogn.ddb.entries, 0, dictionary.locale)} ${dictionary.system.entries}`} />
+        <Field label={dictionary.system.ddbStrategy} value={data.ogn.ddb.strategy} />
+        <Field label={dictionary.system.ddbRepresentation} value={data.ogn.ddb.representation ?? dictionary.system.notAvailable} />
+        <Field label={dictionary.system.ddbCacheEntries} value={`${formatNumber(data.ogn.ddb.positiveEntries, 0, dictionary.locale)} · ${dictionary.system.ddbNegativeEntries} ${formatNumber(data.ogn.ddb.negativeEntries, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.ddbPending} value={`${formatNumber(data.ogn.ddb.pendingKeys, 0, dictionary.locale)} · ${dictionary.system.ddbRequests} ${formatNumber(data.ogn.ddb.requests, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.ddbLastBatch} value={data.ogn.ddb.lastBatchSize === null ? dictionary.system.notAvailable : `${formatNumber(data.ogn.ddb.lastBatchSize, 0, dictionary.locale)} ${dictionary.system.entries}`} />
+        <Field label={dictionary.system.ddbSuccessfulRequests} value={formatNumber(data.ogn.ddb.successfulRequests, 0, dictionary.locale)} />
+        <Field label={dictionary.system.ddbEvictions} value={formatNumber(data.ogn.ddb.evictions, 0, dictionary.locale)} />
         <Field label={dictionary.system.ddbEndpoint} value={data.ogn.ddb.endpoint} />
         <Field label={dictionary.system.ddbMode} value={data.ogn.ddb.mode ?? dictionary.system.notAvailable} />
         <Field label={dictionary.system.ddbLastAttempt} value={formatDateTime(data.ogn.ddb.lastAttemptAt, dictionary)} />
@@ -193,6 +200,8 @@ export function SystemStatusPage() {
         {data.ogn.ddb.retryAfterMs !== null && <Field label={dictionary.system.retryAfter} value={`${formatNumber(data.ogn.ddb.retryAfterMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />}
         <Field label={dictionary.system.nextRetry} value={formatDateTime(data.ogn.ddb.nextRetryAt, dictionary)} />
         <Field label={dictionary.system.ddbAircraftType} value={data.ogn.ddb.aircraftTypeAvailable ? dictionary.system.yes : dictionary.system.no} />
+        <Field label={dictionary.system.ddbUnresolvedDrops} value={formatNumber(data.ogn.droppedDdbUnresolved, 0, dictionary.locale)} />
+        <Field label={dictionary.system.ddbUnresolvable} value={formatNumber(data.ogn.ddbUnresolvable, 0, dictionary.locale)} />
         {data.ogn.configurationError && <Field label={dictionary.system.configurationError} value={data.ogn.configurationError} />}
       </Card>
 

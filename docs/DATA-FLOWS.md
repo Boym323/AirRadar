@@ -69,14 +69,26 @@ Accepted aircraft positions go through nearest-day timestamp validation,
 future tolerance, a 120-second age limit, source-specific TOCALL
 classification, and an identity key of `addressType + address`. Newer
 observations replace the canonical position; equal timestamps may add receiver
-provenance; older observations never roll back the target. The OGN DDB is
-refreshed atomically in bounded RAM and is never fetched per packet. Its
-primary official JSON request is `?j=1&t=1`; a failed primary request may use
-the official `?j=1` base JSON fallback, but only after the same bounded JSON,
-privacy-schema, and sanity validation. APRS `CSE/SPD` speed is already in
-knots and is stored directly in `groundSpeedKt`, regardless of source TOCALL.
-Privacy is fail-closed while DDB is unusable, with packet no-tracking and DDB
-tracked/identified choices applied before public serialization.
+provenance; older observations never roll back the target. The OGN DDB resolver
+uses a bounded RAM cache of exact `device_type:device_id` resolutions.
+`OgnDdb.start()` does not download the full table: an accepted packet enqueues
+its device identity, and the resolver debounces unique IDs into bounded
+targeted requests using `?j=1&t=1&device_id=...`. It allows only one in-flight
+batch, enforces a minimum request interval, and applies a global
+`Retry-After` gate after `429`. The official `?j=1` base representation is a
+same-batch fallback for allowed rich-representation/server failures; a
+network/schema failure requeues the requested identities as unresolved. A
+valid targeted empty response creates a short-lived negative/missing
+resolution. DDB responses are indexed only by exact device type and ID, so a
+same-ID record under another type is not used. The old full-table loader
+remains only as an explicit compatibility/debug `refresh()` path.
+
+APRS `CSE/SPD` speed is already in knots and is stored directly in
+`groundSpeedKt`, regardless of source TOCALL. Privacy is fail-closed per
+device while its resolution is unresolved, with packet no-tracking and DDB
+tracked/identified choices applied before public serialization. Existing
+privacy-valid cache entries remain visible through their maximum stale window
+even if another device or the upstream DDB is unavailable.
 
 `/api/ogn/state` returns the current bounded snapshot and `/api/ogn/stream`
 delivers an initial snapshot plus coalesced updates and heartbeats. OGN has no

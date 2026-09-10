@@ -1,7 +1,14 @@
 import type { ReceiverPosition } from "@/lib/aircraft/types";
 import { t } from "@/lib/i18n";
 import { getAirRadarUserAgent } from "@/lib/server/user-agent";
-import { DEFAULT_OGN_DDB_URL } from "@/lib/ogn/ddb";
+import {
+  DEFAULT_OGN_DDB_BATCH_DELAY_MS,
+  DEFAULT_OGN_DDB_BATCH_SIZE,
+  DEFAULT_OGN_DDB_CACHE_MAX_ENTRIES,
+  DEFAULT_OGN_DDB_MIN_REQUEST_INTERVAL_MS,
+  DEFAULT_OGN_DDB_NEGATIVE_TTL_MS,
+  DEFAULT_OGN_DDB_URL,
+} from "@/lib/ogn/ddb";
 
 export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/wiedehopf/tar1090-db/refs/heads/csv/aircraft.csv.gz";
@@ -194,6 +201,11 @@ export interface OgnConfig {
   ddbRefreshMs: number;
   ddbMaxStaleMs: number;
   ddbUrl: string;
+  ddbBatchSize?: number;
+  ddbBatchDelayMs?: number;
+  ddbMinRequestIntervalMs?: number;
+  ddbNegativeTtlMs?: number;
+  ddbCacheMaxEntries?: number;
   maxTargets: number;
   configurationError: string | null;
 }
@@ -266,13 +278,33 @@ export function getOgnDdbMaxStaleMs(): number {
   return boundedOgnMilliseconds("OGN_DDB_MAX_STALE_MS", 24 * 60 * 60_000, 60_000, 24 * 60 * 60_000);
 }
 
+export function getOgnDdbBatchSize(): number {
+  return boundedInteger("OGN_DDB_BATCH_SIZE", DEFAULT_OGN_DDB_BATCH_SIZE, 1, 100);
+}
+
+export function getOgnDdbBatchDelayMs(): number {
+  return boundedOgnMilliseconds("OGN_DDB_BATCH_DELAY_MS", DEFAULT_OGN_DDB_BATCH_DELAY_MS, 100, 60_000);
+}
+
+export function getOgnDdbMinRequestIntervalMs(): number {
+  return boundedOgnMilliseconds("OGN_DDB_MIN_REQUEST_INTERVAL_MS", DEFAULT_OGN_DDB_MIN_REQUEST_INTERVAL_MS, 1_000, 60 * 60_000);
+}
+
+export function getOgnDdbNegativeTtlMs(): number {
+  return boundedOgnMilliseconds("OGN_DDB_NEGATIVE_TTL_MS", DEFAULT_OGN_DDB_NEGATIVE_TTL_MS, 60_000, 7 * 24 * 60 * 60_000);
+}
+
+export function getOgnDdbCacheMaxEntries(): number {
+  return boundedInteger("OGN_DDB_CACHE_MAX_ENTRIES", DEFAULT_OGN_DDB_CACHE_MAX_ENTRIES, 1, 100_000);
+}
+
 export function getOgnDdbUrl(): string {
   const configured = process.env.OGN_DDB_URL?.trim();
   if (!configured) return DEFAULT_OGN_DDB_URL;
   try {
     const url = new URL(configured);
     const host = url.hostname.toLowerCase().replace(/\.$/, "");
-    if ((url.protocol !== "https:" && url.protocol !== "http:") || host !== "ddb.glidernet.org" || url.pathname !== "/download/") return DEFAULT_OGN_DDB_URL;
+    if ((url.protocol !== "https:" && url.protocol !== "http:") || host !== "ddb.glidernet.org" || url.port || url.username || url.password || url.pathname !== "/download/") return DEFAULT_OGN_DDB_URL;
     return url.toString();
   } catch {
     return DEFAULT_OGN_DDB_URL;
@@ -290,6 +322,11 @@ export function getOgnConfig(): OgnConfig {
   const reconnectMaxMs = getOgnReconnectMaxMs();
   const ddbRefreshMs = getOgnDdbRefreshMs();
   const ddbMaxStaleMs = getOgnDdbMaxStaleMs();
+  const ddbBatchSize = getOgnDdbBatchSize();
+  const ddbBatchDelayMs = getOgnDdbBatchDelayMs();
+  const ddbMinRequestIntervalMs = getOgnDdbMinRequestIntervalMs();
+  const ddbNegativeTtlMs = getOgnDdbNegativeTtlMs();
+  const ddbCacheMaxEntries = getOgnDdbCacheMaxEntries();
   const ddbUrl = getOgnDdbUrl();
   const errors: string[] = [];
   const host = process.env.OGN_HOST?.trim();
@@ -323,6 +360,11 @@ export function getOgnConfig(): OgnConfig {
     ddbRefreshMs,
     ddbMaxStaleMs,
     ddbUrl,
+    ddbBatchSize,
+    ddbBatchDelayMs,
+    ddbMinRequestIntervalMs,
+    ddbNegativeTtlMs,
+    ddbCacheMaxEntries,
     maxTargets: getOgnMaxTargets(),
     configurationError: errors.length ? `Invalid OGN configuration: ${errors.join(", ")}` : null,
   };

@@ -138,18 +138,23 @@ These are behavior and safety contracts for changes to the current system.
   ADS-B history/statistics/reception records, alerts, enrichment, ATC, or
   receiver health. The map uses dedicated GeoJSON source/layers and the UI
   has a separate OGN list/detail selection.
-- DDB refreshes are bounded and atomic. While the DDB has no usable snapshot,
-  OGN targets are not public. Packet no-tracking and DDB `tracked=N` are
-  dropped; DDB misses, `identified=N`, and packet stealth are anonymous. The
+- OGN DDB runtime resolution is targeted and bounded: startup performs no full
+  table request, IDs are deduplicated and batched, and only one request may be
+  in flight. A valid targeted empty response is `MISSING`; network, HTTP,
+  `429`, and schema failures remain `UNRESOLVED` and are never converted into a
+  miss. Privacy-valid per-device cache entries remain usable until their
+  maximum stale age, independently of other unresolved devices. Packet
+  no-tracking and DDB `tracked=N` are dropped; DDB misses, `identified=N`, and packet stealth are anonymous. The
   public serializer never sends anonymous address, sender, registration,
   competition number, model, receiver signal, or receiver history.
 - APRS `CCC/SSS` course/speed semantics are degrees/knots. `SSS` is copied to
-  `groundSpeedKt` without a km/h or TOCALL-specific conversion. The DDB first
-  requests official `?j=1&t=1` JSON and may fall back to official `?j=1`;
-  fallback cannot bypass validation of `device_type`, `device_id`, `tracked`,
-  or `identified`. DDB failures retain a last good snapshot only within the
-  configured stale limit, and diagnostics expose request mode, attempt/status,
-  fallback, and enrichment state.
+  `groundSpeedKt` without a km/h or TOCALL-specific conversion. The targeted
+  DDB request uses official `?j=1&t=1&device_id=...` and may fall back for the
+  same ID batch to official `?j=1`; fallback cannot bypass validation of
+  `device_type`, `device_id`, `tracked`, or `identified`. DDB failures retain a
+  per-device positive resolution only within the configured stale limit, and
+  diagnostics expose strategy, queue/cache counters, attempt/status, fallback,
+  backoff, and enrichment state.
 - OGN targets are stale after 15 seconds, removed after 60 seconds, and
   capped at 5,000. `/api/ogn/stream` has its own initial snapshot, heartbeat,
   abort cleanup, SSE capacity slot, and newest-only pending update.

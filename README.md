@@ -123,25 +123,33 @@ reception records, alerts, enrichment, or receiver health. The OGN map layer
 is separate, off by default, and uses MapLibre GeoJSON source/layers; the OGN
 list and detail panel are separate from ADS-B selection and filters.
 
-Before publishing a target, AirRadar fail-closes on a stale/unavailable OGN
-DDB privacy index. Packet `no-tracking` and DDB `tracked=N` are dropped. A DDB
-miss, DDB `identified=N`, or packet stealth flag is anonymous: identity fields
-are removed at the server serialization boundary. Identified metadata is shown
-only when both the packet and DDB permit it. OGN timestamps are nearest-day
-UTC timestamps, packets older than 120 seconds are dropped, and identity is
-deduplicated by `addressType + address`, never by callsign.
+Before publishing a target, AirRadar fail-closes on an unresolved or stale
+per-device OGN DDB resolution. Packet `no-tracking` and DDB `tracked=N` are
+dropped. A DDB miss, DDB `identified=N`, or packet stealth flag is anonymous:
+identity fields are removed at the server serialization boundary. Identified
+metadata is shown only when both the packet and DDB permit it. OGN timestamps
+are nearest-day UTC timestamps, packets older than 120 seconds are dropped,
+and identity is deduplicated by `addressType + address`, never by callsign.
 
 APRS `CSE/SPD` uses `CCC/SSS` where course is degrees and speed is knots.
 AirRadar stores that value directly as `groundSpeedKt`; it does not apply a
 FANET source-specific conversion after OGN infrastructure has emitted APRS.
-The official DDB rich JSON request is `?j=1&t=1`, with a fallback to
-`?j=1` when the rich request fails. The fallback is accepted only when every
-device record still contains the privacy-critical `device_type`, `device_id`,
-`tracked`, and `identified` fields; missing or invalid fields keep privacy
-fail-closed. `aircraft_type` is optional enrichment. Valid snapshots are
-swapped atomically, failed refreshes retain the last good snapshot only until
-`OGN_DDB_MAX_STALE_MS`, and `/system` reports mode, HTTP status, age, fallback
-use, and aircraft-type availability.
+The runtime does not require a full DDB download at startup. Each active OGN
+device is resolved through the official targeted JSON request
+`?j=1&t=1&device_id=<comma-separated-ids>`, with bounded batching, debounce,
+minimum request spacing, one in-flight request, and global `429` backoff. A
+rich targeted failure may use the same batch with the official `?j=1` base
+representation; it never falls back to a full table download. The resolver
+keeps positive and short-lived negative resolutions in bounded RAM. An empty
+targeted `devices` array is a valid DDB miss, while HTTP/network/schema
+failures remain unresolved and fail closed. Exact `device_type:device_id`
+matching prevents a same-ID record under another device type from being used.
+The fallback is accepted only when every device record still contains the
+privacy-critical `device_type`, `device_id`, `tracked`, and `identified`
+fields; missing or invalid fields keep privacy fail-closed. `aircraft_type` is
+optional enrichment. `/system` reports the targeted strategy, queue/cache
+counts, batch/request counters, HTTP status, backoff, and aircraft-type
+availability.
 
 The implementation accepts the current v1 FLARM, OGN tracker, FANET, SafeSky,
 PilotAware, and ADS-L TOCALL variants that have a safe airborne interpretation;

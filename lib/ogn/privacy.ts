@@ -1,7 +1,7 @@
-import type { OgnDdbEntry, OgnPosition, OgnTarget } from "@/lib/ogn/types";
+import type { OgnDdbEntry, OgnDdbResolution, OgnPosition, OgnTarget } from "@/lib/ogn/types";
 
 export type OgnPrivacyDecision =
-  | { action: "drop"; reason: "no-tracking" | "ddb-unavailable" | "ddb-tracked-disabled" }
+  | { action: "drop"; reason: "no-tracking" | "ddb-unavailable" | "ddb-unresolved" | "ddb-tracked-disabled" }
   | { action: "anonymous"; entry: OgnDdbEntry | null; reason: "ddb-miss" | "not-identified" | "stealth" }
   | { action: "identified"; entry: OgnDdbEntry };
 
@@ -13,12 +13,27 @@ export type OgnPrivacyDecision =
  */
 export function applyOgnPrivacy(input: {
   position: OgnPosition;
+  ddbResolution: OgnDdbResolution;
+} | {
+  position: OgnPosition;
+  /** @deprecated Use ddbResolution. Kept for source compatibility with older callers. */
   ddbAvailable: boolean;
+  /** @deprecated Use ddbResolution. */
   ddbEntry: OgnDdbEntry | null;
 }): OgnPrivacyDecision {
-  const { position, ddbAvailable, ddbEntry } = input;
+  const { position } = input;
   if (position.id.noTracking) return { action: "drop", reason: "no-tracking" };
-  if (!ddbAvailable) return { action: "drop", reason: "ddb-unavailable" };
+  const resolution: OgnDdbResolution = "ddbResolution" in input
+    ? input.ddbResolution
+    : input.ddbAvailable
+      ? input.ddbEntry
+        ? { status: "found", entry: input.ddbEntry, resolvedAt: Date.now() }
+        : { status: "missing", resolvedAt: Date.now() }
+      : { status: "unresolved" };
+  if (resolution.status === "unresolved") {
+    return { action: "drop", reason: "ddbResolution" in input ? "ddb-unresolved" : "ddb-unavailable" };
+  }
+  const ddbEntry = resolution.status === "found" ? resolution.entry : null;
   if (ddbEntry?.tracked === "N") return { action: "drop", reason: "ddb-tracked-disabled" };
   if (!ddbEntry) return { action: "anonymous", entry: null, reason: "ddb-miss" };
   if (position.id.stealth) return { action: "anonymous", entry: ddbEntry, reason: "stealth" };
@@ -74,4 +89,3 @@ export function targetWithPrivacy(
     stale,
   };
 }
-

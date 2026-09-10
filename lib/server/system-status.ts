@@ -86,6 +86,8 @@ export interface SystemStatusResponse {
     droppedStatus: number;
     droppedDelayed: number;
     droppedPrivacy: number;
+    droppedDdbUnresolved: number;
+    ddbUnresolvable: number;
     droppedStale: number;
     droppedCapacity: number;
     unknownTocall: number;
@@ -98,9 +100,27 @@ export interface SystemStatusResponse {
     configurationError: string | null;
     ddb: {
       status: OgnProviderDiagnostics["ddb"]["status"];
+      strategy: OgnProviderDiagnostics["ddb"]["strategy"];
+      representation: OgnProviderDiagnostics["ddb"]["representation"];
       mode: OgnProviderDiagnostics["ddb"]["mode"];
       endpoint: string;
       entries: number;
+      cacheEntries: number;
+      positiveEntries: number;
+      negativeEntries: number;
+      pendingKeys: number;
+      queuedIds: number;
+      inFlight: boolean;
+      requests: number;
+      successfulRequests: number;
+      failedRequests: number;
+      batchCount: number;
+      lastBatchSize: number | null;
+      cacheHits: number;
+      cacheMisses: number;
+      evictions: number;
+      unexpectedRecords: number;
+      conflictingRecords: number;
       lastAttemptAt: string | null;
       lastRefreshAt: string | null;
       lastSuccessAt: string | null;
@@ -446,6 +466,8 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
     droppedStatus: 0,
     droppedDelayed: 0,
     droppedPrivacy: 0,
+    droppedDdbUnresolved: 0,
+    ddbUnresolvable: 0,
     droppedStale: 0,
     droppedCapacity: 0,
     unknownTocall: 0,
@@ -457,7 +479,10 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
     reconnects: 0,
     configurationError: null,
     ddb: {
-      status: "disabled" as const, mode: null, endpoint: "https://ddb.glidernet.org/download/", entries: 0,
+      status: "disabled" as const, strategy: "targeted" as const, representation: null, mode: null, endpoint: "https://ddb.glidernet.org/download/", entries: 0,
+      cacheEntries: 0, positiveEntries: 0, negativeEntries: 0, pendingKeys: 0, queuedIds: 0, inFlight: false,
+      requests: 0, successfulRequests: 0, failedRequests: 0, batchCount: 0, lastBatchSize: null,
+      cacheHits: 0, cacheMisses: 0, evictions: 0, unexpectedRecords: 0, conflictingRecords: 0,
       lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
       failures: 0, fallbackCount: 0, fallbackUsed: false, rateLimited: false, retryAfterMs: null, nextRetryAt: null,
       aircraftTypeAvailable: false, stale: true,
@@ -490,6 +515,8 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
     droppedStatus: nonNegativeInteger(value.droppedStatus, 10_000_000_000),
     droppedDelayed: nonNegativeInteger(value.droppedDelayed, 10_000_000_000),
     droppedPrivacy: nonNegativeInteger(value.droppedPrivacy, 10_000_000_000),
+    droppedDdbUnresolved: nonNegativeInteger(value.droppedDdbUnresolved, 10_000_000_000),
+    ddbUnresolvable: nonNegativeInteger(value.ddbUnresolvable, 10_000_000_000),
     droppedStale: nonNegativeInteger(value.droppedStale, 10_000_000_000),
     droppedCapacity: nonNegativeInteger(value.droppedCapacity, 10_000_000_000),
     unknownTocall: nonNegativeInteger(value.unknownTocall, 10_000_000_000),
@@ -507,9 +534,27 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
       : null,
     ddb: {
       status: value.ddb.status,
+      strategy: value.ddb.strategy,
+      representation: value.ddb.representation,
       mode: value.ddb.mode,
       endpoint: safeDdbEndpoint(value.ddb.endpoint),
       entries: nonNegativeInteger(value.ddb.entries, 100_000),
+      cacheEntries: nonNegativeInteger(value.ddb.cacheEntries, 100_000),
+      positiveEntries: nonNegativeInteger(value.ddb.positiveEntries, 100_000),
+      negativeEntries: nonNegativeInteger(value.ddb.negativeEntries, 100_000),
+      pendingKeys: nonNegativeInteger(value.ddb.pendingKeys, 100_000),
+      queuedIds: nonNegativeInteger(value.ddb.queuedIds, 100_000),
+      inFlight: Boolean(value.ddb.inFlight),
+      requests: nonNegativeInteger(value.ddb.requests, 10_000_000),
+      successfulRequests: nonNegativeInteger(value.ddb.successfulRequests, 10_000_000),
+      failedRequests: nonNegativeInteger(value.ddb.failedRequests, 10_000_000),
+      batchCount: nonNegativeInteger(value.ddb.batchCount, 10_000_000),
+      lastBatchSize: value.ddb.lastBatchSize === null ? null : nonNegativeInteger(value.ddb.lastBatchSize, 100),
+      cacheHits: nonNegativeInteger(value.ddb.cacheHits, 10_000_000_000),
+      cacheMisses: nonNegativeInteger(value.ddb.cacheMisses, 10_000_000_000),
+      evictions: nonNegativeInteger(value.ddb.evictions, 10_000_000_000),
+      unexpectedRecords: nonNegativeInteger(value.ddb.unexpectedRecords, 10_000_000),
+      conflictingRecords: nonNegativeInteger(value.ddb.conflictingRecords, 10_000_000),
       lastAttemptAt: safeTimestamp(value.ddb.lastAttemptAt),
       lastRefreshAt: safeTimestamp(value.ddb.lastRefreshAt),
       lastSuccessAt: safeTimestamp(value.ddb.lastSuccessAt),

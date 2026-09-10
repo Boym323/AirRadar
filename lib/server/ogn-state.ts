@@ -3,7 +3,7 @@ import { applyOgnPrivacy, targetWithPrivacy } from "@/lib/ogn/privacy";
 import { toPublicOgnTarget } from "@/lib/ogn/public-serialization";
 import type { OgnConfig } from "@/lib/server/config";
 import { getOgnConfig, getReceiverPosition } from "@/lib/server/config";
-import { OgnDdb } from "@/lib/ogn/ddb";
+import { ddbDeviceTypeForAddressType, OgnDdb } from "@/lib/ogn/ddb";
 import { OgnProvider } from "@/lib/server/ogn-provider";
 import type { OgnPosition, OgnProviderDiagnostics, OgnStateSnapshot, OgnTarget } from "@/lib/ogn/types";
 
@@ -38,6 +38,8 @@ export class OgnStateService {
   private canonicalPositionUpdates = 0;
   private duplicatePackets = 0;
   private droppedPrivacy = 0;
+  private droppedDdbUnresolved = 0;
+  private ddbUnresolvable = 0;
   private droppedStale = 0;
   private droppedCapacity = 0;
 
@@ -47,7 +49,17 @@ export class OgnStateService {
     this.now = options.now ?? Date.now;
     this.cleanupIntervalMs = Math.max(1_000, options.cleanupIntervalMs ?? 5_000);
     this.broadcastIntervalMs = Math.max(250, options.broadcastIntervalMs ?? 500);
-    this.ddb = options.ddb ?? new OgnDdb({ url: this.config.ddbUrl, refreshMs: this.config.ddbRefreshMs, maxStaleMs: this.config.ddbMaxStaleMs });
+    this.ddb = options.ddb ?? new OgnDdb({
+      url: this.config.ddbUrl,
+      refreshMs: this.config.ddbRefreshMs,
+      maxStaleMs: this.config.ddbMaxStaleMs,
+      batchSize: this.config.ddbBatchSize,
+      batchDelayMs: this.config.ddbBatchDelayMs,
+      minRequestIntervalMs: this.config.ddbMinRequestIntervalMs,
+      negativeTtlMs: this.config.ddbNegativeTtlMs,
+      cacheMaxEntries: this.config.ddbCacheMaxEntries,
+      maxPendingKeys: this.config.maxTargets,
+    });
     this.provider = options.provider ?? new OgnProvider({
       config: this.config,
       receiver: this.receiver,
@@ -109,9 +121,15 @@ export class OgnStateService {
       return;
     }
     this.positions.set(key, position);
-    const decision = applyOgnPrivacy({ position, ddbAvailable: this.ddb.isUsable(), ddbEntry: this.lookupDdb(position) });
+    // Packet-level no-tracking is authoritative and must not enqueue a DDB
+    // lookup just to decide an already-known drop.
+    const ddbResolution = position.id.noTracking
+      ? { status: "unresolved" } as const
+      : this.resolveDdb(position, true);
+    const decision = applyOgnPrivacy({ position, ddbResolution });
     if (decision.action === "drop") {
-      this.droppedPrivacy += 1;
+      if (decision.reason === "ddb-unresolved") this.droppedDdbUnresolved += 1;
+      else this.droppedPrivacy += 1;
       this.targets.delete(key);
       this.scheduleBroadcast();
       return;
@@ -134,9 +152,10 @@ export class OgnStateService {
     const fetchedAt = new Date(this.now()).toISOString();
     const status = this.provider.getDiagnostics().status;
     if (!this.config.enabled) return { enabled: false, status: "disabled", fetchedAt, targets: [] };
-    if (this.config.configurationError || !this.ddb.isUsable()) return { enabled: true, status, fetchedAt, targets: [] };
+    if (this.config.configurationError) return { enabled: true, status, fetchedAt, targets: [] };
     const targets = [...this.targets.values()]
       .map((target) => this.withLiveMetrics(target, this.now()))
+      .filter((target) => this.isPrivacyUsable(target.id))
       .filter((target) => this.now() - Date.parse(target.receivedAt) <= this.config.removeAfterMs)
       .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
       .map(toPublicOgnTarget);
@@ -149,6 +168,7 @@ export class OgnStateService {
     let freshTargets = 0;
     let staleTargets = 0;
     for (const target of this.targets.values()) {
+      if (!this.isPrivacyUsable(target.id)) continue;
       if (now - Date.parse(target.receivedAt) > this.config.removeAfterMs) continue;
       if (now - Date.parse(target.receivedAt) >= this.config.staleAfterMs) staleTargets += 1;
       else freshTargets += 1;
@@ -158,18 +178,34 @@ export class OgnStateService {
       canonicalPositionUpdates: this.canonicalPositionUpdates,
       duplicatePackets: this.duplicatePackets,
       droppedPrivacy: this.droppedPrivacy,
+      droppedDdbUnresolved: this.droppedDdbUnresolved,
+      ddbUnresolvable: this.ddbUnresolvable,
       droppedStale: this.droppedStale,
       droppedCapacity: this.droppedCapacity,
-      activeTargets: this.ddb.isUsable() ? freshTargets + staleTargets : 0,
-      freshTargets: this.ddb.isUsable() ? freshTargets : 0,
-      staleTargets: this.ddb.isUsable() ? staleTargets : 0,
+      activeTargets: freshTargets + staleTargets,
+      freshTargets,
+      staleTargets,
       ddb: this.ddb.getDiagnostics(),
     };
   }
 
-  private lookupDdb(position: OgnPosition) {
-    const type = position.id.addressTypeCode === 1 ? "I" : position.id.addressTypeCode === 2 ? "F" : position.id.addressTypeCode === 3 ? "O" : null;
-    return type ? this.ddb.lookup(type, position.id.address) : null;
+  private resolveDdb(position: OgnPosition, enqueue: boolean) {
+    const type = ddbDeviceTypeForAddressType(position.id.addressTypeCode);
+    if (!type) {
+      if (enqueue) this.ddbUnresolvable += 1;
+      return { status: "unresolved" } as const;
+    }
+    if (enqueue) this.ddb.ensure(type, position.id.address);
+    return this.ddb.getResolution(type, position.id.address);
+  }
+
+  private isPrivacyUsable(key: string): boolean {
+    const position = this.positions.get(key);
+    if (!position) return false;
+    return applyOgnPrivacy({
+      position,
+      ddbResolution: position.id.noTracking ? { status: "unresolved" } : this.resolveDdb(position, false),
+    }).action !== "drop";
   }
 
   private buildTarget(key: string, position: OgnPosition, decision: Parameters<typeof targetWithPrivacy>[1], existing: OgnTarget | undefined): OgnTarget | null {
@@ -237,13 +273,11 @@ export class OgnStateService {
   private reapplyPrivacy(): void {
     if (this.shuttingDown || !this.config.enabled) return;
     let changed = false;
-    if (!this.ddb.isUsable()) {
-      if (this.targets.size) { this.targets.clear(); changed = true; }
-      if (changed) this.scheduleBroadcast();
-      return;
-    }
     for (const [key, position] of this.positions) {
-      const decision = applyOgnPrivacy({ position, ddbAvailable: true, ddbEntry: this.lookupDdb(position) });
+      const decision = applyOgnPrivacy({
+        position,
+        ddbResolution: position.id.noTracking ? { status: "unresolved" } : this.resolveDdb(position, true),
+      });
       const existing = this.targets.get(key);
       if (decision.action === "drop") {
         if (existing) { this.targets.delete(key); changed = true; }
