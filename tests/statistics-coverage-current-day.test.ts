@@ -9,6 +9,12 @@ const persistedComplete = {
   maxDistanceRegistration: "OK-AAA",
   maxDistanceBearing: 45,
   maxDistanceAt: "2026-09-10T10:00:00.000Z",
+  receiverMessagesCount: 123_000,
+  maxGroundSpeedKt: 510,
+  maxGroundSpeedIcaoHex: "CCCCCC",
+  maxGroundSpeedRegistration: "OK-CCC",
+  maxGroundSpeedCallsign: "TEST510",
+  maxGroundSpeedAt: "2026-09-10T09:00:00.000Z",
 };
 
 describe("coverage intelligence current-day merge", () => {
@@ -32,6 +38,8 @@ describe("coverage intelligence current-day merge", () => {
     expect(result.maxDistanceKm).toBe(300);
     expect(result.maxDistanceIcaoHex).toBe("AAAAAA");
     expect(result.maxDistanceBearing).toBe(45);
+    expect(result.receiverMessagesCount).toBe(123_000);
+    expect(result.maxGroundSpeedKt).toBe(510);
   });
 
   it("uses a complete RAM reception instead of pairing an incomplete persisted maximum with stale metadata", () => {
@@ -75,5 +83,7 @@ describe("coverage intelligence current-day merge", () => {
     expect(result.maxDistanceIcaoHex).toBeNull();
     expect(result.maxDistanceBearing).toBeNull();
     expect(result.maxDistanceAt).toBeNull();
+    expect(result.receiverMessagesCount).toBeNull();
+    expect(result.maxGroundSpeedKt).toBeNull();
   });
 });
