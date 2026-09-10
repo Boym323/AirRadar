@@ -32,6 +32,8 @@ RELEASE_MODE="stable"
 RELEASE_BUILD_CHANNEL="production"
 DRY_RUN=0
 ALLOW_DIRTY=0
+AUTOMATED=0
+EXPECTED_COMMIT=""
 OLD_SHA=""
 NEW_SHA=""
 RESTART_ATTEMPTED=0
@@ -56,6 +58,8 @@ Usage: sudo ./deploy/release.sh [options]
 Options:
   --branch BRANCH  Release the current checkout of BRANCH instead of main.
   --channel MODE    Release channel: stable (default) or rc.
+  --automated       Continuous-deployment mode; keep origin/main fast-forwardable.
+  --commit SHA       Require the release branch to resolve to this exact commit.
   --allow-dirty    Release uncommitted changes without updating from origin.
   --dry-run        Run preflight checks and print the release plan only.
   --help           Show this help.
@@ -200,6 +204,16 @@ parse_args() {
             die "Unsupported release channel: $2 (expected stable or rc)."
             ;;
         esac
+        shift 2
+        ;;
+      --automated)
+        AUTOMATED=1
+        shift
+        ;;
+      --commit)
+        (( $# >= 2 )) || die "--commit requires a full commit SHA."
+        [[ "$2" =~ ^[0-9a-fA-F]{40}$ ]] || die "--commit requires a full 40-character commit SHA."
+        EXPECTED_COMMIT="${2,,}"
         shift 2
         ;;
       --dry-run)
@@ -400,11 +414,25 @@ update_repository() {
   fi
 
   NEW_SHA="$(git_cmd rev-parse HEAD)"
+  if [[ -n "${EXPECTED_COMMIT}" && "${NEW_SHA}" != "${EXPECTED_COMMIT}" ]]; then
+    die "Resolved ${DEPLOY_BRANCH} at ${NEW_SHA}, but deployment expected ${EXPECTED_COMMIT}."
+  fi
   log "New commit: ${NEW_SHA}"
 }
 
 prepare_release_version() {
   local resolved_version
+
+  if (( AUTOMATED == 1 )); then
+    RELEASE_VERSION="$(node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); process.stdout.write(pkg.version);')"
+    RELEASE_TAG="v${RELEASE_VERSION}"
+    export AIRRADAR_VERSION="${RELEASE_VERSION}"
+    export AIRRADAR_TAG="${RELEASE_TAG}"
+    export AIRRADAR_COMMIT="${NEW_SHA}"
+    export AIRRADAR_CHANNEL="production"
+    log "Continuous-deployment metadata: ${RELEASE_VERSION} (${RELEASE_TAG}), commit=${NEW_SHA}"
+    return 0
+  fi
 
   resolved_version="$(node "${VERSION_SCRIPT}" resolve-release-version --channel "${RELEASE_MODE}")" || die "Could not resolve the release version."
   if [[ "${RELEASE_MODE}" == "rc" ]]; then
@@ -424,6 +452,11 @@ prepare_release_version() {
 
 generate_release_changelog() {
   local release_date
+
+  if (( AUTOMATED == 1 )); then
+    log "Continuous deployment; skipping changelog commit to keep ${DEPLOY_BRANCH} fast-forwardable."
+    return 0
+  fi
 
   release_date="$(date --utc +%F)"
   log "Generating changelog for ${RELEASE_TAG}"
@@ -781,6 +814,11 @@ activate_staged_build_and_check() {
 
 create_release_tag() {
   local tag_ref="refs/tags/${RELEASE_TAG}"
+
+  if (( AUTOMATED == 1 )); then
+    log "Continuous deployment; no release tag mutation."
+    return 0
+  fi
 
   [[ "${RELEASE_TAG}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$ ]] || die "Refusing to create non-canonical release tag: ${RELEASE_TAG}"
 

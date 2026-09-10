@@ -40,6 +40,29 @@ health-check. To inspect an RC candidate without mutations, use:
 sudo ./deploy/release.sh --channel rc --dry-run
 ```
 
+## Continuous deployment
+
+`.github/workflows/ci.yml` runs the full validation gate on every pull request
+and push. A push to `main` automatically runs the production smoke checks,
+including the desktop/mobile browser gate, and then starts the `deploy` job.
+The deploy job connects to the production host with a dedicated SSH key and
+runs:
+
+```bash
+sudo -n /var/www/airradar/deploy/release.sh --branch main --automated --commit COMMIT_SHA
+```
+
+The repository/environment must provide `PRODUCTION_HOST`, `PRODUCTION_USER`,
+`PRODUCTION_SSH_KEY`, and `PRODUCTION_KNOWN_HOSTS`; `PRODUCTION_SSH_PORT` is
+optional. The production user must have passwordless sudo for the release
+script. Configure required reviewers on the GitHub `production` environment if
+an approval step is desired.
+
+Automated mode deploys the exact tested commit, does not create a local
+changelog commit or release tag, and keeps the production checkout
+fast-forwardable from `origin/main`. Versioned stable/RC releases continue to
+use the normal command above.
+
 ## Exact release order
 
 `deploy/release.sh` performs these gates and mutations in order:
