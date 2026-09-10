@@ -1,18 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import type { AlertHistoryEntry, AlertHistoryPage, AlertNotificationStatus } from "@/lib/server/alert-history";
+import { useEffect, useState } from "react";
+import type { AlertHistoryEntry, AlertHistoryFilter, AlertHistoryPage, AlertNotificationStatus } from "@/lib/server/alert-history";
 import { formatDateTime, formatDistance, formatTrack, getTranslations, type LocaleKey } from "@/lib/i18n";
-
-type AlertFilter = "all" | "watchlist" | "emergency" | "records";
 
 function isEmergencyEntry(entry: AlertHistoryEntry): boolean {
   return entry.type === "emergency" || entry.type === "emergency_7500" || entry.type === "emergency_7600" || entry.type === "emergency_7700";
-}
-
-function isWatchlistEntry(entry: AlertHistoryEntry): boolean {
-  return entry.type === "watchlist" || entry.type === "aircraft_appeared" || entry.type === "entered_radius";
 }
 
 function isRecordEntry(entry: AlertHistoryEntry): boolean {
@@ -54,7 +48,7 @@ function reasonLabel(entry: AlertHistoryEntry, dictionary: ReturnType<typeof get
   return dictionary.alerts.reasons.watchlist;
 }
 
-function filterLabel(filter: AlertFilter, locale: LocaleKey): string {
+function filterLabel(filter: AlertHistoryFilter, locale: LocaleKey): string {
   const cs = locale === "cs";
   if (filter === "watchlist") return cs ? "Sledované" : "Watchlist";
   if (filter === "emergency") return cs ? "Nouzové" : "Emergency";
@@ -85,11 +79,12 @@ export function AlertHistoryPage() {
   const dictionary = getTranslations(locale);
   const [data, setData] = useState<AlertHistoryPage | null>(null);
   const [error, setError] = useState(false);
-  const [filter, setFilter] = useState<AlertFilter>("all");
+  const [filter, setFilter] = useState<AlertHistoryFilter>("all");
 
   useEffect(() => {
     let active = true;
-    void fetch("/api/alerts?pageSize=50", { cache: "no-store" })
+    setData(null);
+    void fetch(`/api/alerts?pageSize=50&filter=${encodeURIComponent(filter)}`, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("alert history request failed");
         return await response.json() as AlertHistoryPage;
@@ -97,15 +92,7 @@ export function AlertHistoryPage() {
       .then((next) => { if (active) { setData(next); setError(false); } })
       .catch(() => { if (active) setError(true); });
     return () => { active = false; };
-  }, []);
-
-  const visibleItems = useMemo(() => {
-    const items = data?.items ?? [];
-    if (filter === "watchlist") return items.filter(isWatchlistEntry);
-    if (filter === "emergency") return items.filter(isEmergencyEntry);
-    if (filter === "records") return items.filter(isRecordEntry);
-    return items;
-  }, [data, filter]);
+  }, [filter]);
 
   return <main className="history-page alert-history-page">
     <header className="history-page-header">
@@ -118,6 +105,6 @@ export function AlertHistoryPage() {
     </div>
     {error && <p className="statistics-error" role="alert">{dictionary.alerts.loadFailed}</p>}
     {!data && !error && <p className="statistics-empty">{dictionary.common.loading}</p>}
-    {data && <>{visibleItems.length ? <ol className="alert-history-list">{visibleItems.map((entry) => <AlertRow key={entry.id} entry={entry} dictionary={dictionary} />)}</ol> : <p className="statistics-empty">{dictionary.alerts.empty}</p>}{data.nextPage !== null && <p className="alert-history-bounded">{dictionary.alerts.bounded}</p>}</>}
+    {data && <>{data.items.length ? <ol className="alert-history-list">{data.items.map((entry) => <AlertRow key={entry.id} entry={entry} dictionary={dictionary} />)}</ol> : <p className="statistics-empty">{dictionary.alerts.empty}</p>}{data.nextPage !== null && <p className="alert-history-bounded">{dictionary.alerts.bounded}</p>}</>}
   </main>;
 }
