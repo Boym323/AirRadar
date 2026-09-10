@@ -158,7 +158,7 @@ These are behavior and safety contracts for changes to the current system.
 - The optional SoftRF SQLite snapshot is a read-only emergency whitelist below
   live OGN DDB and the official persistent cache. It is activated only after
   those sources are unresolved, validates the `devices` schema, row count,
-  mtime age, identity, and privacy flag types, and indexes only `track=1` plus
+  sidecar `generatedAt` age, database SHA-256 binding, identity, and privacy flag types, and indexes only `track=1` plus
   `ident=1` rows. It supplies no metadata and is never queried per APRS
   packet. Invalid or expired snapshots, and absent IDs, remain unresolved and
   therefore hidden; an invalid replacement cannot clear an active valid one.

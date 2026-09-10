@@ -92,8 +92,11 @@ same-ID record under another type is not used. The old full-table loader
 remains only as an explicit compatibility/debug `refresh()` path.
 
 When an official resolution is unavailable, the resolver may consult an
-explicitly enabled local SoftRF `ogn.db` SQLite snapshot. It validates the
-read-only `devices` schema, mtime age, row count, and privacy flag types once,
+explicitly enabled local SoftRF `ogn.db` SQLite snapshot. Its required
+`ogn.db.meta.json` sidecar supplies the trusted UTC `generatedAt` timestamp and a
+lowercase SHA-256 hash of the exact database; mtime is used only to detect replacement.
+AirRadar validates the read-only
+`devices` schema, metadata age, row count, and privacy flag types once,
 then keeps only `type + id` rows with `track=1` and `ident=1` in memory. The
 SoftRF dataset is a whitelist below live OGN DDB and the official persistent
 cache; it supplies no metadata, is never queried per APRS packet, and expires

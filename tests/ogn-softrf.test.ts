@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -27,6 +28,8 @@ function makeSnapshot(rows: Array<{ type?: number; id?: number; track?: number; 
   database.close();
   const timestamp = (now - ageMs) / 1_000;
   utimesSync(databasePath, timestamp, timestamp);
+  const sha256 = createHash("sha256").update(readFileSync(databasePath)).digest("hex");
+  writeFileSync(`${databasePath}.meta.json`, JSON.stringify({ generatedAt: new Date(now - ageMs).toISOString(), source: "SoftRF", sourceRunId: "test-run", sha256 }));
   return databasePath;
 }
 
@@ -43,7 +46,7 @@ afterEach(() => {
 });
 
 describe("SoftRF OGN DDB emergency whitelist", () => {
-  it("reads the real devices schema and normalizes numeric IDs without importing metadata", () => {
+  it("accepts a database when metadata contains its correct SHA-256", () => {
     const databasePath = makeSnapshot(rowsWith({ type: 2, id: 0x8e20f0 }));
     const ddb = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: databasePath });
     expect(ddb.getResolution("F", "8e20f0")).toMatchObject({ status: "found", source: "softrf", entry: { deviceType: "F", deviceId: "8E20F0", tracked: "Y", identified: "Y", registration: null, aircraftModel: null } });
@@ -86,7 +89,7 @@ describe("SoftRF OGN DDB emergency whitelist", () => {
     expect(applyOgnPrivacy({ position, ddbResolution: ddb.getResolution("F", "ABCDEF") })).toMatchObject({ action: "drop", reason: "ddb-unresolved" });
   });
 
-  it("fails closed for expired or corrupt SQLite and preserves a valid active snapshot on bad reload", () => {
+  it("fails closed for expired snapshots and preserves a valid active snapshot on checksum failure", () => {
     const databasePath = makeSnapshot(rowsWith({ type: 2, id: 0x8e20f0 }), 169 * 60 * 60_000);
     const expired = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: databasePath });
     expect(expired.getResolution("F", "8E20F0")).toEqual({ status: "unresolved" });
@@ -97,6 +100,69 @@ describe("SoftRF OGN DDB emergency whitelist", () => {
     writeFileSync(validPath, "not sqlite");
     expect(ddb.refreshSoftRf()).toBe(false);
     expect(ddb.getResolution("F", "8E20F0")).toMatchObject({ status: "found", source: "softrf" });
+    expect(ddb.getDiagnostics().softRf).toMatchObject({ lastLoadError: "CHECKSUM_MISMATCH" });
+  });
+
+  it("rejects an old database paired with metadata from another snapshot", () => {
+    const oldPath = makeSnapshot(rowsWith({ type: 2, id: 0x8e20f0 }), 169 * 60 * 60_000);
+    const newerPath = makeSnapshot(rowsWith({ type: 2, id: 0x8e20f1 }));
+    writeFileSync(`${oldPath}.meta.json`, readFileSync(`${newerPath}.meta.json`));
+    const ddb = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: oldPath });
+    expect(ddb.getResolution("F", "8E20F0")).toEqual({ status: "unresolved" });
+    expect(ddb.getDiagnostics().softRf).toMatchObject({ valid: false, lastLoadError: "CHECKSUM_MISMATCH" });
+  });
+
+  it("rejects a database modified after metadata creation", () => {
+    const databasePath = makeSnapshot(rowsWith({ type: 2, id: 0x8e20f0 }));
+    const database = readFileSync(databasePath);
+    database[database.length - 1] ^= 1;
+    writeFileSync(databasePath, database);
+    const ddb = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: databasePath });
+    expect(ddb.getResolution("F", "8E20F0")).toEqual({ status: "unresolved" });
+    expect(ddb.getDiagnostics().softRf).toMatchObject({ valid: false, lastLoadError: "CHECKSUM_MISMATCH" });
+  });
+
+  it("logs a checksum mismatch once and preserves the previous valid snapshot", () => {
+    const databasePath = makeSnapshot(rowsWith({ type: 2, id: 0x8e20f0 }));
+    const ddb = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: databasePath });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const database = readFileSync(databasePath);
+      database[database.length - 1] ^= 1;
+      writeFileSync(databasePath, database);
+      expect(ddb.refreshSoftRf()).toBe(false);
+      expect(ddb.refreshSoftRf()).toBe(false);
+      expect(ddb.getResolution("F", "8E20F0")).toMatchObject({ status: "found", source: "softrf" });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith("[ogn-ddb] SoftRF snapshot rejected: checksum mismatch");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("cannot be rejuvenated by copying an old database and changing only its mtime", () => {
+    const ageMs = 169 * 60 * 60_000;
+    const databasePath = makeSnapshot(rowsWith({ type: 2, id: 0x8e20f0 }), ageMs);
+    const today = now / 1_000;
+    utimesSync(databasePath, today, today);
+    const ddb = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: databasePath });
+    expect(ddb.getResolution("F", "8E20F0")).toEqual({ status: "unresolved" });
+    expect(ddb.getDiagnostics().softRf).toMatchObject({ valid: false, lastLoadError: "SNAPSHOT_EXPIRED" });
+  });
+
+  it("fails closed when snapshot metadata is missing or invalid", () => {
+    const databasePath = makeSnapshot(rowsWith({ type: 2, id: 0x8e20f0 }));
+    const metadataPath = `${databasePath}.meta.json`;
+    rmSync(metadataPath);
+    const missing = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: databasePath });
+    expect(missing.getResolution("F", "8E20F0")).toEqual({ status: "unresolved" });
+    writeFileSync(metadataPath, JSON.stringify({ generatedAt: new Date(now).toISOString(), source: "SoftRF", sourceRunId: "test-run" }));
+    const missingHash = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: databasePath });
+    expect(missingHash.getResolution("F", "8E20F0")).toEqual({ status: "unresolved" });
+    writeFileSync(metadataPath, JSON.stringify({ generatedAt: new Date(now).toISOString(), source: "SoftRF", sourceRunId: "test-run", sha256: "A".repeat(64) }));
+    const invalidHash = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: databasePath });
+    expect(invalidHash.getResolution("F", "8E20F0")).toEqual({ status: "unresolved" });
+    expect(invalidHash.getDiagnostics().softRf).toMatchObject({ lastLoadError: "METADATA_INVALID" });
   });
 
   it("rejects empty snapshots", () => {

@@ -1,16 +1,20 @@
+import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import type { OgnDdbEntry, OgnDdbResolution } from "@/lib/ogn/types";
 
 export const DEFAULT_OGN_SOFTRF_DDB_PATH = "/var/lib/airradar/ogn/softrf/ogn.db";
 export const DEFAULT_OGN_SOFTRF_DDB_MAX_AGE_HOURS = 168;
 
 const MAX_SOFTRF_BYTES = 256 * 1024 * 1024;
+const MAX_SOFTRF_METADATA_BYTES = 64 * 1024;
 const MAX_SOFTRF_ROWS = 1_000_000;
 const MIN_REASONABLE_SOFTRF_ROWS = 101;
 const FUTURE_SKEW_MS = 5 * 60_000;
 const DEVICE_TYPES = new Set([1, 2, 3]);
 const REQUIRED_COLUMNS = new Set(["type", "id", "acmodel", "acreg", "accn", "track", "ident", "actype"]);
+const ISO_UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
+const SHA256_HEX = /^[a-f0-9]{64}$/;
 
 export interface SoftRfDdbOptions {
   enabled?: boolean;
@@ -63,6 +67,7 @@ function integer(value: unknown): number | null {
 export class SoftRfDdb {
   private readonly enabled: boolean;
   private readonly path: string;
+  private readonly metadataPath: string;
   private readonly maxAgeMs: number;
   private readonly now: () => number;
   private active: SoftRfSnapshot | null = null;
@@ -70,10 +75,12 @@ export class SoftRfDdb {
   private hasObservedFile = false;
   private lastLoadAt: number | null = null;
   private lastLoadError: string | null = null;
+  private lastLoggedLoadError: string | null = null;
 
   constructor(options: SoftRfDdbOptions = {}) {
     this.enabled = options.enabled ?? false;
     this.path = options.path ?? DEFAULT_OGN_SOFTRF_DDB_PATH;
+    this.metadataPath = `${this.path}.meta.json`;
     const maxAgeHours = options.maxAgeHours ?? DEFAULT_OGN_SOFTRF_DDB_MAX_AGE_HOURS;
     this.maxAgeMs = Number.isFinite(maxAgeHours) ? Math.max(1, maxAgeHours * 60 * 60_000) : DEFAULT_OGN_SOFTRF_DDB_MAX_AGE_HOURS * 60 * 60_000;
     this.now = options.now ?? Date.now;
@@ -90,10 +97,18 @@ export class SoftRfDdb {
       const candidate = this.readSnapshot();
       this.active = candidate;
       this.lastLoadError = null;
+      this.lastLoggedLoadError = null;
       return true;
     } catch (error) {
       this.lastLoadError = error instanceof Error && /^[A-Z0-9_]+$/.test(error.message) ? error.message : "INVALID_SNAPSHOT";
-      console.warn(`[ogn-ddb] SoftRF snapshot unavailable (${this.lastLoadError})`);
+      if (this.lastLoadError !== this.lastLoggedLoadError) {
+        if (this.lastLoadError === "CHECKSUM_MISMATCH") {
+          console.warn("[ogn-ddb] SoftRF snapshot rejected: checksum mismatch");
+        } else {
+          console.warn(`[ogn-ddb] SoftRF snapshot unavailable (${this.lastLoadError})`);
+        }
+        this.lastLoggedLoadError = this.lastLoadError;
+      }
       return false;
     }
   }
@@ -145,9 +160,12 @@ export class SoftRfDdb {
     if (!stat.isFile() || !Number.isSafeInteger(stat.size) || stat.size <= 0 || stat.size > MAX_SOFTRF_BYTES) {
       throw new Error("FILE_INVALID");
     }
-    const snapshotAt = Math.trunc(stat.mtimeMs);
+    const metadata = this.readMetadata();
+    const snapshotAt = Date.parse(metadata.generatedAt);
     const age = this.now() - snapshotAt;
     if (!Number.isFinite(snapshotAt) || age < -FUTURE_SKEW_MS || age > this.maxAgeMs) throw new Error("SNAPSHOT_EXPIRED");
+    const sha256 = createHash("sha256").update(readFileSync(this.path)).digest("hex");
+    if (sha256 !== metadata.sha256) throw new Error("CHECKSUM_MISMATCH");
 
     const database = new DatabaseSync(this.path, { readOnly: true });
     try {
@@ -201,9 +219,34 @@ export class SoftRfDdb {
   private fileSignature(): string {
     try {
       const stat = statSync(this.path);
-      return stat.isFile() ? `${Math.trunc(stat.mtimeMs)}:${stat.size}` : "not-file";
+      const metadata = statSync(this.metadataPath);
+      return stat.isFile() && metadata.isFile() ? `${Math.trunc(stat.mtimeMs)}:${stat.size}:${Math.trunc(metadata.mtimeMs)}:${metadata.size}` : "not-file";
     } catch {
       return "missing";
     }
+  }
+
+  private readMetadata(): { generatedAt: string; sha256: string } {
+    let serialized: string;
+    try {
+      const metadataStat = statSync(this.metadataPath);
+      if (!metadataStat.isFile() || !Number.isSafeInteger(metadataStat.size) || metadataStat.size <= 0 || metadataStat.size > MAX_SOFTRF_METADATA_BYTES) throw new Error("METADATA_INVALID");
+      serialized = readFileSync(this.metadataPath, "utf8");
+    } catch (error) {
+      if (error instanceof Error && error.message === "METADATA_INVALID") throw error;
+      throw new Error("METADATA_UNAVAILABLE");
+    }
+    let payload: unknown;
+    try {
+      payload = JSON.parse(serialized) as unknown;
+    } catch {
+      throw new Error("METADATA_INVALID");
+    }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("METADATA_INVALID");
+    const row = payload as Record<string, unknown>;
+    if (row.source !== "SoftRF" || typeof row.sourceRunId !== "string" || !/^[A-Za-z0-9._:-]{1,128}$/.test(row.sourceRunId) || typeof row.generatedAt !== "string" || !ISO_UTC_TIMESTAMP.test(row.generatedAt) || !Number.isFinite(Date.parse(row.generatedAt)) || typeof row.sha256 !== "string" || !SHA256_HEX.test(row.sha256)) {
+      throw new Error("METADATA_INVALID");
+    }
+    return { generatedAt: row.generatedAt, sha256: row.sha256 };
   }
 }
