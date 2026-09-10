@@ -319,3 +319,9 @@ Changes since v1.0.15:
 - Add radar-selected image for visual polish at 1440x900 resolution (1aeee23f)
 - docs: update release and development guidelines for build consistency and visual changes (96863989)
 - feat: finalize visual polish v2 (211298d3)
+
+## [1.0.17] - 2026-09-10
+
+Changes since v1.0.16:
+
+- style: improve layout and responsiveness of history and secondary pages (e189a6c3)
