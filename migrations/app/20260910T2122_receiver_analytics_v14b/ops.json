@@ -1,0 +1,416 @@
+[
+  {
+    "id": "table.receiverDailyCoverageAltitude",
+    "label": "Create table \"receiverDailyCoverageAltitude\"",
+    "summary": "Creates table \"receiverDailyCoverageAltitude\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "receiverDailyCoverageAltitude"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"receiverDailyCoverageAltitude\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyCoverageAltitude\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"receiverDailyCoverageAltitude\"",
+        "sql": "CREATE TABLE \"public\".\"receiverDailyCoverageAltitude\" (\n  \"altitudeBand\" int4 NOT NULL,\n  \"azimuthBucket\" int4 NOT NULL,\n  \"date\" text NOT NULL,\n  \"maxDistanceKm\" float8 NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"date\", \"azimuthBucket\", \"altitudeBand\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"receiverDailyCoverageAltitude\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyCoverageAltitude\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.receiverDailyStats.maxGroundSpeedAt",
+    "label": "Add column \"maxGroundSpeedAt\" to \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "maxGroundSpeedAt",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"maxGroundSpeedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"maxGroundSpeedAt\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyStats\" ADD COLUMN \"maxGroundSpeedAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"maxGroundSpeedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.receiverDailyStats.maxGroundSpeedCallsign",
+    "label": "Add column \"maxGroundSpeedCallsign\" to \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "maxGroundSpeedCallsign",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"maxGroundSpeedCallsign\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedCallsign"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"maxGroundSpeedCallsign\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyStats\" ADD COLUMN \"maxGroundSpeedCallsign\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"maxGroundSpeedCallsign\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedCallsign"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.receiverDailyStats.maxGroundSpeedIcaoHex",
+    "label": "Add column \"maxGroundSpeedIcaoHex\" to \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "maxGroundSpeedIcaoHex",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"maxGroundSpeedIcaoHex\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedIcaoHex"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"maxGroundSpeedIcaoHex\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyStats\" ADD COLUMN \"maxGroundSpeedIcaoHex\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"maxGroundSpeedIcaoHex\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedIcaoHex"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.receiverDailyStats.maxGroundSpeedKt",
+    "label": "Add column \"maxGroundSpeedKt\" to \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "maxGroundSpeedKt",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"maxGroundSpeedKt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedKt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"maxGroundSpeedKt\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyStats\" ADD COLUMN \"maxGroundSpeedKt\" float8"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"maxGroundSpeedKt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedKt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.receiverDailyStats.maxGroundSpeedRegistration",
+    "label": "Add column \"maxGroundSpeedRegistration\" to \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "maxGroundSpeedRegistration",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"maxGroundSpeedRegistration\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedRegistration"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"maxGroundSpeedRegistration\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyStats\" ADD COLUMN \"maxGroundSpeedRegistration\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"maxGroundSpeedRegistration\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "maxGroundSpeedRegistration"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.receiverDailyStats.receiverMessagesCount",
+    "label": "Add column \"receiverMessagesCount\" to \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "receiverMessagesCount",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"receiverMessagesCount\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "receiverMessagesCount"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"receiverMessagesCount\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyStats\" ADD COLUMN \"receiverMessagesCount\" float8"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"receiverMessagesCount\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "receiverMessagesCount"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.receiverDailyStats.receiverMessagesRawLast",
+    "label": "Add column \"receiverMessagesRawLast\" to \"receiverDailyStats\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "receiverMessagesRawLast",
+        "table": "receiverDailyStats"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"receiverMessagesRawLast\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "receiverMessagesRawLast"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"receiverMessagesRawLast\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyStats\" ADD COLUMN \"receiverMessagesRawLast\" float8"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"receiverMessagesRawLast\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "receiverDailyStats",
+          "receiverMessagesRawLast"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.receiverDailyCoverageAltitude.receiverDailyCoverageAltitude_date_idx_b4ca319c",
+    "label": "Create index \"receiverDailyCoverageAltitude_date_idx_b4ca319c\" on \"receiverDailyCoverageAltitude\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "receiverDailyCoverageAltitude_date_idx_b4ca319c",
+        "table": "receiverDailyCoverageAltitude"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"receiverDailyCoverageAltitude_date_idx_b4ca319c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyCoverageAltitude_date_idx_b4ca319c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"receiverDailyCoverageAltitude_date_idx_b4ca319c\"",
+        "sql": "CREATE INDEX \"receiverDailyCoverageAltitude_date_idx_b4ca319c\" ON \"public\".\"receiverDailyCoverageAltitude\" (\"date\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"receiverDailyCoverageAltitude_date_idx_b4ca319c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverDailyCoverageAltitude_date_idx_b4ca319c\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.receiverDailyCoverageAltitude.receiverDailyCoverageAltitude_date_fkey",
+    "label": "Add foreign key \"receiverDailyCoverageAltitude_date_fkey\" on \"receiverDailyCoverageAltitude\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "receiverDailyCoverageAltitude_date_fkey",
+        "table": "receiverDailyCoverageAltitude"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"receiverDailyCoverageAltitude_date_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "receiverDailyCoverageAltitude_date_fkey",
+          "public",
+          "\"public\".\"receiverDailyCoverageAltitude\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"receiverDailyCoverageAltitude_date_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"receiverDailyCoverageAltitude\"\nADD CONSTRAINT \"receiverDailyCoverageAltitude_date_fkey\"\nFOREIGN KEY (\"date\")\nREFERENCES \"public\".\"receiverDailyStats\" (\"date\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"receiverDailyCoverageAltitude_date_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "receiverDailyCoverageAltitude_date_fkey",
+          "public",
+          "\"public\".\"receiverDailyCoverageAltitude\""
+        ]
+      }
+    ]
+  }
+]
