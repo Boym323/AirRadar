@@ -6,6 +6,7 @@ import { OgnStateService } from "@/lib/server/ogn-state";
 import { OGN_FIXTURES } from "@/tests/fixtures/ogn-packets";
 
 const receiver = { lat: 50.0755, lon: 14.4378, name: "Test receiver" };
+const fixtureNow = Date.parse("2026-09-10T11:49:00.000Z");
 const config: OgnConfig = {
   enabled: true,
   host: "aprs.glidernet.org",
@@ -63,7 +64,7 @@ const ddbEntry = { device_type: "F", device_id: "8E20F0", aircraft_model: "ASW 2
 describe("OGN state service", () => {
   it("holds targets outside ADS-B state, deduplicates by address type/address, and does not roll back", async () => {
     const ddb = await ddbWith(ddbEntry);
-    const service = new OgnStateService({ config, ddb, receiver, provider: diagnosticProvider() as never });
+    const service = new OgnStateService({ config, ddb, receiver, now: () => fixtureNow, provider: diagnosticProvider() as never });
     const first = position();
     service.ingest(first);
     service.ingest({ ...first, latitude: 49, lastReceiver: "OTHER" });
@@ -80,7 +81,7 @@ describe("OGN state service", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ devices: [ddbEntry] })))
       .mockResolvedValueOnce(new Response(JSON.stringify({ devices: [{ ...ddbEntry, identified: "N" }] })));
     const ddb = new OgnDdb({ fetcher: fetcher as unknown as typeof fetch, refreshMs: 60_000 });
-    const service = new OgnStateService({ config, ddb, receiver, provider: diagnosticProvider() as never });
+    const service = new OgnStateService({ config, ddb, receiver, now: () => fixtureNow, provider: diagnosticProvider() as never });
     service.ingest(position());
     expect(service.getSnapshot().targets).toEqual([]);
 
