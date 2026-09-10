@@ -136,11 +136,17 @@ export async function getCoverageIntelligence(
     }
 
     // Keep the current day at RAM freshness instead of waiting for the normal
-    // statistics persistence flush. This mirrors the existing range endpoint.
+    // statistics persistence flush. Never let a newly constructed/empty RAM
+    // instance erase a valid persisted current-day aggregate.
     const statistics = getReceiverStatistics();
     const current = statistics.getCurrentDaySnapshot();
-    if (current.date >= bounds.from && current.date < bounds.toExclusive) {
+    const currentHasData = current.uniqueAircraftCount > 0
+      || current.maxConcurrentAircraft > 0
+      || current.maxDistanceKm > 0
+      || current.coverage.some((row) => row.maxDistanceKm > 0);
+    if (currentHasData && current.date >= bounds.from && current.date < bounds.toExclusive) {
       for (const row of current.coverage) {
+        if (row.maxDistanceKm <= 0) continue;
         coverageByKey.set(`${current.date}:${row.azimuthBucket}`, {
           date: current.date,
           azimuthBucket: row.azimuthBucket,
@@ -148,14 +154,15 @@ export async function getCoverageIntelligence(
         });
       }
       const reception = statistics.getDailyReceptionRecord();
+      const persistedToday = statsByDate.get(current.date);
       statsByDate.set(current.date, {
         date: current.date,
-        maxConcurrentAircraft: current.maxConcurrentAircraft,
-        maxDistanceKm: current.maxDistanceKm,
-        maxDistanceIcaoHex: reception?.icaoHex ?? null,
-        maxDistanceRegistration: reception?.registration ?? null,
-        maxDistanceBearing: reception?.bearing ?? null,
-        maxDistanceAt: reception?.recordedAt ?? null,
+        maxConcurrentAircraft: Math.max(current.maxConcurrentAircraft, persistedToday?.maxConcurrentAircraft ?? 0),
+        maxDistanceKm: Math.max(current.maxDistanceKm, persistedToday?.maxDistanceKm ?? 0),
+        maxDistanceIcaoHex: reception?.icaoHex ?? persistedToday?.maxDistanceIcaoHex ?? null,
+        maxDistanceRegistration: reception?.registration ?? persistedToday?.maxDistanceRegistration ?? null,
+        maxDistanceBearing: reception?.bearing ?? persistedToday?.maxDistanceBearing ?? null,
+        maxDistanceAt: reception?.recordedAt ?? persistedToday?.maxDistanceAt ?? null,
       });
     }
 
