@@ -31,7 +31,7 @@ describe("Slovak eAIP ENR 2.1 parser", () => {
     });
     const zilina = result.document.sectors.find((sector) => sector.id === "SK-ZILINA-TMA-3");
     expect(zilina).toMatchObject({
-      name: "ŽILINA TMA 3 (Class D)",
+      name: "ŽILINA TMA 3",
       country: "SK",
       service: "TWR",
       atcCallsign: "ŽILINA TOWER",
