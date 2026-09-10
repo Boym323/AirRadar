@@ -3,6 +3,7 @@ import {
   aggregateCoverageIntelligence,
   parseCoverageIntelligenceRange,
   type CoverageIntelligenceDailyCoverageRow,
+  type CoverageIntelligenceDailyStatsRow,
 } from "@/lib/statistics-coverage-intelligence";
 
 const baseOptions = {
@@ -16,6 +17,25 @@ const baseOptions = {
   flightRowsComplete: true,
   highestFlight: null,
 };
+
+function statsRow(overrides: Partial<CoverageIntelligenceDailyStatsRow> = {}): CoverageIntelligenceDailyStatsRow {
+  return {
+    date: "2026-09-10",
+    maxConcurrentAircraft: 0,
+    maxDistanceKm: 0,
+    maxDistanceIcaoHex: null,
+    maxDistanceRegistration: null,
+    maxDistanceBearing: null,
+    maxDistanceAt: null,
+    receiverMessagesCount: null,
+    maxGroundSpeedKt: null,
+    maxGroundSpeedIcaoHex: null,
+    maxGroundSpeedRegistration: null,
+    maxGroundSpeedCallsign: null,
+    maxGroundSpeedAt: null,
+    ...overrides,
+  };
+}
 
 describe("coverage intelligence", () => {
   it("accepts only bounded historical ranges", () => {
@@ -59,6 +79,22 @@ describe("coverage intelligence", () => {
     expect(result.coverage.bestReliableP95).toBeNull();
   });
 
+  it("aggregates altitude coverage as P95 of daily sector maxima", () => {
+    const result = aggregateCoverageIntelligence({
+      ...baseOptions,
+      coverageRows: [],
+      altitudeCoverageRows: [
+        { date: "2026-09-08", altitudeBand: 1, azimuthBucket: 9, maxDistanceKm: 120 },
+        { date: "2026-09-09", altitudeBand: 1, azimuthBucket: 9, maxDistanceKm: 150 },
+        { date: "2026-09-10", altitudeBand: 1, azimuthBucket: 10, maxDistanceKm: 210 },
+      ],
+    });
+    const band = result.altitudeCoverage.bands[1]!;
+    expect(band).toMatchObject({ minFt: 5_000, maxFt: 15_000, observedDays: 3, maxDistanceKm: 210 });
+    expect(band.sectors[9]).toMatchObject({ observedDays: 2, p95DailyMaxDistanceKm: 150, maxDistanceKm: 150 });
+    expect(band.sectors[10]).toMatchObject({ observedDays: 1, p95DailyMaxDistanceKm: 210 });
+  });
+
   it("builds local-hour traffic bins and the busiest exact hour", () => {
     const result = aggregateCoverageIntelligence({
       ...baseOptions,
@@ -90,22 +126,36 @@ describe("coverage intelligence", () => {
     expect(result.hourly.busiestHour).toBeNull();
   });
 
-  it("does not manufacture a zero-value peak record from an empty daily aggregate", () => {
+  it("does not manufacture zero-value records from an empty daily aggregate", () => {
     const result = aggregateCoverageIntelligence({
       ...baseOptions,
       coverageRows: [],
-      statsRows: [{
-        date: "2026-09-10",
-        maxConcurrentAircraft: 0,
-        maxDistanceKm: 0,
-        maxDistanceIcaoHex: null,
-        maxDistanceRegistration: null,
-        maxDistanceBearing: null,
-        maxDistanceAt: null,
-      }],
+      statsRows: [statsRow()],
     });
     expect(result.records.peakConcurrent).toBeNull();
     expect(result.records.farthestReception).toBeNull();
+    expect(result.records.fastestAircraft).toBeNull();
+    expect(result.messages).toEqual({ observedDays: 0, total: null });
+  });
+
+  it("sums only observed receiver-message days and selects the fastest record", () => {
+    const result = aggregateCoverageIntelligence({
+      ...baseOptions,
+      coverageRows: [],
+      statsRows: [
+        statsRow({ date: "2026-09-09", receiverMessagesCount: 120_000, maxGroundSpeedKt: 480, maxGroundSpeedIcaoHex: "AAAAAA", maxGroundSpeedAt: "2026-09-09T10:00:00.000Z" }),
+        statsRow({ date: "2026-09-10", receiverMessagesCount: 140_000, maxGroundSpeedKt: 535, maxGroundSpeedIcaoHex: "BBBBBB", maxGroundSpeedRegistration: "OK-BBB", maxGroundSpeedCallsign: "TEST535", maxGroundSpeedAt: "2026-09-10T11:00:00.000Z" }),
+      ],
+    });
+    expect(result.messages).toEqual({ observedDays: 2, total: 260_000 });
+    expect(result.records.fastestAircraft).toEqual({
+      date: "2026-09-10",
+      speedKt: 535,
+      icaoHex: "BBBBBB",
+      registration: "OK-BBB",
+      callsign: "TEST535",
+      recordedAt: "2026-09-10T11:00:00.000Z",
+    });
   });
 
   it("selects range records without position samples", () => {
@@ -122,7 +172,7 @@ describe("coverage intelligence", () => {
       coverageRows: [],
       highestFlight,
       statsRows: [
-        {
+        statsRow({
           date: "2026-09-09",
           maxConcurrentAircraft: 72,
           maxDistanceKm: 310,
@@ -130,8 +180,8 @@ describe("coverage intelligence", () => {
           maxDistanceRegistration: "OK-AAA",
           maxDistanceBearing: 45,
           maxDistanceAt: "2026-09-09T12:00:00.000Z",
-        },
-        {
+        }),
+        statsRow({
           date: "2026-09-10",
           maxConcurrentAircraft: 88,
           maxDistanceKm: 280,
@@ -139,7 +189,7 @@ describe("coverage intelligence", () => {
           maxDistanceRegistration: null,
           maxDistanceBearing: 90,
           maxDistanceAt: "2026-09-10T12:00:00.000Z",
-        },
+        }),
       ],
     });
 
