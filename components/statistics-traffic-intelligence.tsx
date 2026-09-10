@@ -62,6 +62,7 @@ export default function StatisticsTrafficIntelligence() {
 
   useEffect(() => {
     const controller = new AbortController();
+    setData(null);
     setFailed(false);
     void fetch(`/api/statistics/traffic?range=${range}`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
@@ -71,10 +72,8 @@ export default function StatisticsTrafficIntelligence() {
       .then((next) => {
         if (!controller.signal.aborted) setData(next);
       })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        setFailed(true);
-        if (error instanceof Error && error.name === "AbortError") return;
+      .catch(() => {
+        if (!controller.signal.aborted) setFailed(true);
       });
     return () => controller.abort();
   }, [range]);
@@ -133,6 +132,7 @@ export default function StatisticsTrafficIntelligence() {
           <div className={styles.rankings}>
             <Ranking title={text.aircraftTypes} items={data.topAircraftTypes} />
             <Ranking title={text.airlines} items={data.topAirlines} />
+            <Ranking title={text.operators} items={data.topOperators} />
             <Routes items={data.topRoutes} />
             <Ranking title={text.origins} items={data.topOrigins} />
             <Ranking title={text.destinations} items={data.topDestinations} />
