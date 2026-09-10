@@ -285,3 +285,9 @@ Changes since v1.0.9:
 Changes since v1.0.10:
 
 - feat: enhance OGN DDB handling and improve privacy features (1203fb49)
+
+## [1.0.12] - 2026-09-10
+
+Changes since v1.0.11:
+
+- fix: update OgnStateService to use a fixed timestamp for testing (8e367fae)
