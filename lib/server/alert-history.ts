@@ -3,9 +3,27 @@ import { dirname } from "node:path";
 import type { Aircraft } from "@/lib/aircraft/types";
 import { getRuntimeStatePath } from "@/lib/server/runtime-state";
 
-export type AlertHistoryEventType = "watchlist" | "new_aircraft" | "reception_record" | "emergency";
+export type AlertHistoryEventType =
+  | "watchlist"
+  | "aircraft_appeared"
+  | "entered_radius"
+  | "new_aircraft"
+  | "reception_record"
+  | "emergency"
+  | "emergency_7500"
+  | "emergency_7600"
+  | "emergency_7700";
 export type AlertNotificationStatus = "pending" | "attempted" | "delivered" | "failed" | "disabled";
-export type AlertHistoryReason = "watchlisted" | "new" | "record" | "emergency";
+export type AlertHistoryReason =
+  | "watchlisted"
+  | "appeared"
+  | "entered_radius"
+  | "new"
+  | "record"
+  | "emergency"
+  | "squawk_7500"
+  | "squawk_7600"
+  | "squawk_7700";
 export type ReceptionRecordScope = "daily" | "lifetime";
 
 export interface AlertHistoryRecordValue {
@@ -27,6 +45,10 @@ export interface AlertHistoryEntry {
     callsign: string | null;
     aircraftType: string | null;
   };
+  ruleIds: string[];
+  ruleNames: string[];
+  radiusKm: number | null;
+  squawk: string | null;
   record: AlertHistoryRecordValue | null;
   notificationStatus: AlertNotificationStatus;
   notificationAttemptedAt: string | null;
@@ -38,6 +60,10 @@ export interface AlertHistoryDetection {
   type: AlertHistoryEventType;
   reason: AlertHistoryReason;
   aircraft: Aircraft;
+  ruleIds?: string[];
+  ruleNames?: string[];
+  radiusKm?: number | null;
+  squawk?: string | null;
   record?: AlertHistoryRecordValue;
 }
 
@@ -75,6 +101,14 @@ function cleanText(value: string | null | undefined, maximum = 120): string | nu
   return cleaned ? cleaned.slice(0, maximum) : null;
 }
 
+function cleanStrings(values: string[] | undefined, maximumItems = 20): string[] {
+  if (!values) return [];
+  return values.slice(0, maximumItems).flatMap((value) => {
+    const cleaned = cleanText(value, 120);
+    return cleaned ? [cleaned] : [];
+  });
+}
+
 function validTimestamp(value: string): string {
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : new Date().toISOString();
@@ -93,6 +127,12 @@ function entryFromDetection(detection: AlertHistoryDetection): AlertHistoryEntry
       callsign: cleanText(detection.aircraft.callsign),
       aircraftType: cleanText(detection.aircraft.aircraftType ?? metadata?.icaoTypeCode ?? metadata?.aircraftDescription),
     },
+    ruleIds: cleanStrings(detection.ruleIds),
+    ruleNames: cleanStrings(detection.ruleNames),
+    radiusKm: detection.radiusKm !== null && detection.radiusKm !== undefined && Number.isFinite(detection.radiusKm)
+      ? Math.max(0, detection.radiusKm)
+      : null,
+    squawk: cleanText(detection.squawk, 4),
     record: detection.record ? {
       scope: detection.record.scope,
       distanceKm: Number.isFinite(detection.record.distanceKm) ? Math.max(0, detection.record.distanceKm) : 0,
@@ -107,11 +147,21 @@ function entryFromDetection(detection: AlertHistoryDetection): AlertHistoryEntry
   };
 }
 
+function normalizeLegacyEntry(entry: AlertHistoryEntry): AlertHistoryEntry {
+  return {
+    ...entry,
+    ruleIds: Array.isArray(entry.ruleIds) ? entry.ruleIds : [],
+    ruleNames: Array.isArray(entry.ruleNames) ? entry.ruleNames : [],
+    radiusKm: typeof entry.radiusKm === "number" && Number.isFinite(entry.radiusKm) ? entry.radiusKm : null,
+    squawk: typeof entry.squawk === "string" ? entry.squawk : null,
+  };
+}
+
 function lineFromUnknown(value: unknown): DetectionLine | NotificationLine | null {
   if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
   if (record.kind === "detected" && record.entry && typeof record.entry === "object") {
-    return { kind: "detected", entry: record.entry as AlertHistoryEntry };
+    return { kind: "detected", entry: normalizeLegacyEntry(record.entry as AlertHistoryEntry) };
   }
   if (record.kind === "notification" && typeof record.id === "string"
     && typeof record.status === "string" && typeof record.at === "string") {
@@ -227,7 +277,8 @@ export class JsonlAlertHistoryStore {
       const buffer = Buffer.alloc(size - start);
       await handle.read(buffer, 0, buffer.length, start);
       const text = buffer.toString("utf8");
-      const complete = start > 0 ? text.slice(text.indexOf("\n") + 1) : text;
+      const firstLineEnd = text.indexOf("\n");
+      const complete = start > 0 ? (firstLineEnd >= 0 ? text.slice(firstLineEnd + 1) : "") : text;
       return complete.split("\n").flatMap((line) => {
         if (!line || line.length > MAX_LINE_LENGTH) return [];
         try { return [JSON.parse(line) as unknown]; } catch { return []; }
