@@ -36,6 +36,8 @@
     "atc:import": "jiti scripts/atc-import.ts",
     "atc:sync:cz": "jiti scripts/atc-sync-cz.ts",
     "atc:status:cz": "jiti scripts/atc-status-cz.ts",
+    "atc:sync:sk": "jiti scripts/atc-sync-sk.ts",
+    "atc:status:sk": "jiti scripts/atc-status-sk.ts",
     "changelog": "node scripts/changelog.mjs generate",
     "changelog:backfill": "node scripts/changelog.mjs backfill"
   },
