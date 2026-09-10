@@ -21,6 +21,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run prisma:generate
+      - name: Plan receiver analytics migration
+        run: npx prisma migration plan --name receiver_analytics_v14b --from 20260910T0535_airport_data_v2
+      - name: Export generated migration artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: receiver-analytics-migration
+          path: |
+            migrations
+            generated/prisma8
+          if-no-files-found: error
+          retention-days: 1
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
