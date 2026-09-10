@@ -5,10 +5,10 @@ import { matchesAircraftRule } from "@/lib/aircraft/watchlist";
 import { parseAlertRules, type AlertRule } from "@/lib/server/alert-config";
 import { AlertEngine, type AlertEngineOptions } from "@/lib/server/alert-engine";
 import type { AlertNotifier, AircraftAlert } from "@/lib/server/alert-notifier";
-import { NoopAlertNotifier } from "@/lib/server/alert-notifier";
+import { aircraftAlertUrl, formatAircraftAlert, NoopAlertNotifier } from "@/lib/server/alert-notifier";
+import { MemoryAlertStateStore } from "@/lib/server/alert-state";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
 import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
-import { formatAircraftAlert } from "@/lib/server/alert-notifier";
 import { toPublicHealthResponse } from "@/lib/server/public-health";
 
 const receiver = { lat: 50, lon: 14, name: "Test" };
@@ -55,6 +55,8 @@ describe("server alerts", () => {
     engine.observe([], [aircraft()]);
     await flushAlerts();
     expect(notifier.calls).toHaveLength(1);
+    expect(notifier.calls[0]?.type).toBe("aircraft_appeared");
+    expect(notifier.calls[0]?.reason).toBe("appeared");
   });
 
   it("does not alert again on the next poll", async () => {
@@ -91,15 +93,33 @@ describe("server alerts", () => {
     expect(notifier.calls).toHaveLength(2);
   });
 
-  it("alerts on a false to true max-distance transition", async () => {
+  it("classifies a false-to-true max-distance transition as entered radius", async () => {
     const notifier = recordingNotifier();
-    const engine = createTestAlertEngine({ rules: [rule("a380-near", "aircraftType", "A388", 150)], notifier });
-    const far = aircraft("ABC123", { aircraftType: "A388", distanceKm: 220 });
-    const near = aircraft("ABC123", { aircraftType: "A388", distanceKm: 149 });
+    const engine = createTestAlertEngine({ rules: [rule("a380-near", "aircraftType", "A388", 50)], notifier });
+    const far = aircraft("ABC123", { aircraftType: "A388", distanceKm: 70 });
+    const near = aircraft("ABC123", { aircraftType: "A388", distanceKm: 49 });
     engine.observe([], [far]);
     engine.observe([far], [near]);
     await flushAlerts();
     expect(notifier.calls).toHaveLength(1);
+    expect(notifier.calls[0]).toMatchObject({ type: "entered_radius", reason: "entered_radius", radiusKm: 50 });
+  });
+
+  it("keeps deduplication per rule so one rule cannot suppress another", async () => {
+    const notifier = recordingNotifier();
+    const engine = createTestAlertEngine({ rules: [
+      rule("uae", "callsignPattern", "UAE*"),
+      rule("near", "callsignPattern", "UAE*", 50),
+    ], notifier });
+    const far = aircraft("ABC123", { distanceKm: 70 });
+    const near = aircraft("ABC123", { distanceKm: 49 });
+    engine.observe([], [far]);
+    engine.observe([far], [near]);
+    await flushAlerts();
+    expect(notifier.calls).toHaveLength(2);
+    expect(notifier.calls[0]?.matchedRules.map((item) => item.id)).toEqual(["uae"]);
+    expect(notifier.calls[1]?.matchedRules.map((item) => item.id)).toEqual(["near"]);
+    expect(notifier.calls[1]?.type).toBe("entered_radius");
   });
 
   it("aggregates multiple matching rules into one aircraft alert", async () => {
@@ -114,6 +134,56 @@ describe("server alerts", () => {
     await flushAlerts();
     expect(notifier.calls).toHaveLength(1);
     expect(notifier.calls[0]?.matchedRules).toHaveLength(3);
+  });
+
+  it("restores rule deduplication across an engine restart", async () => {
+    let now = 1_000;
+    const state = new MemoryAlertStateStore();
+    const firstNotifier = recordingNotifier();
+    const first = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier: firstNotifier, cooldownMs: 60_000, now: () => now, state });
+    first.observe([], [aircraft()]);
+    await flushAlerts();
+    expect(firstNotifier.calls).toHaveLength(1);
+
+    now = 2_000;
+    const secondNotifier = recordingNotifier();
+    const second = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier: secondNotifier, cooldownMs: 60_000, now: () => now, state });
+    second.observe([], [aircraft()]);
+    await flushAlerts();
+    expect(secondNotifier.calls).toHaveLength(0);
+
+    now = 61_001;
+    const thirdNotifier = recordingNotifier();
+    const third = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier: thirdNotifier, cooldownMs: 60_000, now: () => now, state });
+    third.observe([], [aircraft()]);
+    await flushAlerts();
+    expect(thirdNotifier.calls).toHaveLength(1);
+  });
+
+  it("persists durable new-aircraft deduplication across restarts", async () => {
+    const state = new MemoryAlertStateStore();
+    const firstNotifier = recordingNotifier();
+    const first = createTestAlertEngine({ notifier: firstNotifier, state });
+    first.observeNewAircraft(aircraft());
+    await flushAlerts();
+    expect(firstNotifier.calls).toHaveLength(1);
+
+    const secondNotifier = recordingNotifier();
+    const second = createTestAlertEngine({ notifier: secondNotifier, state });
+    second.observeNewAircraft(aircraft());
+    await flushAlerts();
+    expect(secondNotifier.calls).toHaveLength(0);
+  });
+
+  it("persists the last trigger time for a watchlist rule", () => {
+    let now = Date.parse("2026-09-10T18:00:00Z");
+    const state = new MemoryAlertStateStore();
+    const first = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier: new NoopAlertNotifier(), now: () => now, state });
+    first.observe([], [aircraft()]);
+    expect(first.getRuleLastTriggeredAt("uae")).toBe("2026-09-10T18:00:00.000Z");
+    now += 1_000;
+    const second = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier: new NoopAlertNotifier(), now: () => now, state });
+    expect(second.getRuleLastTriggeredAt("uae")).toBe("2026-09-10T18:00:00.000Z");
   });
 
   it("uses the shared callsign wildcard semantics", () => {
@@ -175,7 +245,7 @@ describe("server alerts", () => {
     expect(error).toHaveBeenCalledWith("AirRadar alert delivery failed: provider=test status=network");
   });
 
-  it("alerts once on an explicit emergency transition", async () => {
+  it("alerts once on an explicit generic emergency transition", async () => {
     vi.stubEnv("ALERT_EMERGENCY_ENABLED", "true");
     const notifier = recordingNotifier();
     const engine = createTestAlertEngine({ notifier });
@@ -187,6 +257,47 @@ describe("server alerts", () => {
     await flushAlerts();
     expect(notifier.calls).toHaveLength(1);
     expect(notifier.calls[0]?.priority).toBe("high");
+    expect(notifier.calls[0]?.type).toBe("emergency");
+  });
+
+  it("emits distinct transition events for squawks 7500, 7600 and 7700", async () => {
+    vi.stubEnv("ALERT_EMERGENCY_ENABLED", "true");
+    const notifier = recordingNotifier();
+    const engine = createTestAlertEngine({ notifier });
+    const normal = aircraft("ABC123", { squawk: "7000", emergency: null });
+    const sq7500 = aircraft("ABC123", { squawk: "7500", emergency: "general" });
+    const sq7600 = aircraft("ABC123", { squawk: "7600", emergency: "general" });
+    const sq7700 = aircraft("ABC123", { squawk: "7700", emergency: "general" });
+    engine.observe([], [normal]);
+    engine.observe([normal], [sq7500]);
+    engine.observe([sq7500], [sq7600]);
+    engine.observe([sq7600], [sq7700]);
+    engine.observe([sq7700], [sq7700]);
+    await flushAlerts();
+    expect(notifier.calls.map((item) => item.type)).toEqual(["emergency_7500", "emergency_7600", "emergency_7700"]);
+    expect(notifier.calls.map((item) => item.squawk)).toEqual(["7500", "7600", "7700"]);
+  });
+
+  it("alerts again when an emergency squawk clears and later returns", async () => {
+    vi.stubEnv("ALERT_EMERGENCY_ENABLED", "true");
+    const notifier = recordingNotifier();
+    const engine = createTestAlertEngine({ notifier });
+    const normal = aircraft("ABC123", { squawk: "7000", emergency: null });
+    const emergency = aircraft("ABC123", { squawk: "7700", emergency: "general" });
+    engine.observe([], [normal]);
+    engine.observe([normal], [emergency]);
+    engine.observe([emergency], [normal]);
+    engine.observe([normal], [emergency]);
+    await flushAlerts();
+    expect(notifier.calls).toHaveLength(2);
+    expect(notifier.calls.every((item) => item.type === "emergency_7700")).toBe(true);
+  });
+
+  it("uses event-specific notification text and a deep aircraft link", () => {
+    const value = aircraft("ABC123", { distanceKm: 42 });
+    const message = formatAircraftAlert({ aircraft: value, matchedRules: [rule("near", "callsign", "UAE139", 50)], emergency: false, priority: "normal", type: "entered_radius", reason: "entered_radius", radiusKm: 50 });
+    expect(message).toContain("vstoupil do 50 km");
+    expect(aircraftAlertUrl({ aircraft: value, matchedRules: [], emergency: false, priority: "normal" })).toBe("https://airradar.pomykal.cz/aircraft/ABC123");
   });
 
   it("uses probable ATC wording without claiming a tuned frequency", () => {
