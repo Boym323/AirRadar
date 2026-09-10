@@ -1665,7 +1665,7 @@ function OgnDetailContent({ target }: { target: OgnTargetView }) {
       {target.identityVisible && <DetailItem label={t.ogn.receiver} value={target.lastReceiver || t.common.emptyValue} />}
       <DetailItem label={t.ogn.title} value={`${t.ogn.trackingSources[target.trackingSource]}${target.stale ? ` · ${t.ogn.stale}` : ""}`} />
     </DetailSection>
-    <div className="detail-disclaimer">{t.ogn.sourceDisclaimer}</div>
+    <div className="detail-disclaimer ogn-privacy-note">{t.ogn.sourceDisclaimer}</div>
   </div>;
 }
 
