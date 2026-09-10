@@ -22,6 +22,7 @@ export interface StatisticsTrafficResponse {
   observedFlights: number | null;
   topAircraftTypes: StatisticsTrafficRankingItem[];
   topAirlines: StatisticsTrafficRankingItem[];
+  topOperators: StatisticsTrafficRankingItem[];
   topRoutes: StatisticsTrafficRouteItem[];
   topOrigins: StatisticsTrafficRankingItem[];
   topDestinations: StatisticsTrafficRankingItem[];
@@ -53,6 +54,7 @@ export function statisticsTrafficCsv(data: StatisticsTrafficResponse): string {
   ];
   for (const item of data.topAircraftTypes) rows.push(csvRow(["aircraft_type", data.range, item.name, item.count]));
   for (const item of data.topAirlines) rows.push(csvRow(["airline", data.range, item.name, item.count]));
+  for (const item of data.topOperators) rows.push(csvRow(["operator", data.range, item.name, item.count]));
   for (const item of data.topRoutes) rows.push(csvRow(["route", data.range, `${item.origin} → ${item.destination}`, item.count]));
   for (const item of data.topOrigins) rows.push(csvRow(["origin", data.range, item.name, item.count]));
   for (const item of data.topDestinations) rows.push(csvRow(["destination", data.range, item.name, item.count]));
