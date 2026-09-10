@@ -23,6 +23,8 @@ readonly EXPECTED_PRODUCTION_ENTRYPOINT="${APP_DIR}/scripts/start-production.mjs
 readonly EXPECTED_ENVIRONMENT_FILE="${APP_DIR}/.env"
 readonly RUNTIME_STATE_DIRECTORY="/var/lib/airradar"
 readonly LEGACY_ALERT_CONFIG_PATH="${APP_DIR}/data/alerts.json"
+readonly RELEASE_BUILD_DIR=".next-release-${BASHPID}"
+readonly RELEASE_BUILD_BACKUP_DIR=".next-release-backup-${BASHPID}"
 
 DEPLOY_BRANCH="main"
 RELEASE_MODE="stable"
@@ -32,6 +34,7 @@ ALLOW_DIRTY=0
 OLD_SHA=""
 NEW_SHA=""
 RESTART_ATTEMPTED=0
+SERVICE_STOPPED=0
 ERROR_REPORTED=0
 DIAGNOSTICS_PRINTED=0
 HEALTH_SUMMARY=""
@@ -130,6 +133,11 @@ on_exit() {
   local exit_code="$?"
 
   trap - EXIT
+  if (( SERVICE_STOPPED == 1 )); then
+    error "Service was left stopped by an interrupted release; attempting to start it."
+    run_privileged systemctl start "${SERVICE_NAME}" || true
+    SERVICE_STOPPED=0
+  fi
   if (( exit_code != 0 )); then
     if (( ERROR_REPORTED == 0 )); then
       error "Release failed."
@@ -423,7 +431,15 @@ run_release_steps() {
   acquire_build_lock
   RELEASE_BUILD_TIME="$(date --utc --iso-8601=seconds)"
   export AIRRADAR_BUILD_TIME="${RELEASE_BUILD_TIME}"
-  npm run build
+  rm -rf -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
+  if ! NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" npm run build; then
+    release_build_lock
+    die "Production build failed; the active .next directory was not changed."
+  fi
+  [[ -f "${APP_DIR}/${RELEASE_BUILD_DIR}/BUILD_ID" ]] || {
+    release_build_lock
+    die "Production build completed without ${RELEASE_BUILD_DIR}/BUILD_ID."
+  }
   release_build_lock
 
   log "Applying database migrations"
@@ -699,6 +715,41 @@ restart_and_check() {
   check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
 }
 
+activate_staged_build_and_check() {
+  local active_build="${APP_DIR}/.next"
+  local staged_build="${APP_DIR}/${RELEASE_BUILD_DIR}"
+  local backup_build="${APP_DIR}/${RELEASE_BUILD_BACKUP_DIR}"
+
+  [[ -d "${staged_build}" && -f "${staged_build}/BUILD_ID" ]] || die "Staged production build is missing or incomplete."
+
+  log "Activating staged production build"
+  RESTART_ATTEMPTED=1
+  run_privileged systemctl stop "${SERVICE_NAME}"
+  SERVICE_STOPPED=1
+
+  rm -rf -- "${backup_build}"
+  if [[ -d "${active_build}" ]]; then
+    mv -- "${active_build}" "${backup_build}"
+  fi
+  if ! mv -- "${staged_build}" "${active_build}"; then
+    if [[ -d "${backup_build}" ]]; then
+      mv -- "${backup_build}" "${active_build}" || true
+    fi
+    die "Could not activate the staged production build."
+  fi
+
+  run_privileged systemctl start "${SERVICE_NAME}"
+  SERVICE_STOPPED=0
+  if ! run_privileged systemctl is-active --quiet "${SERVICE_NAME}"; then
+    die "${SERVICE_NAME}.service is not active after restart."
+  fi
+
+  check_health_with_retries "Local" "${LOCAL_HEALTH_URL}" "${HEALTH_ATTEMPTS}" "${HEALTH_DELAY_SECONDS}" 1
+  check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
+
+  rm -rf -- "${backup_build}"
+}
+
 create_release_tag() {
   local tag_ref="refs/tags/${RELEASE_TAG}"
 
@@ -759,7 +810,7 @@ main() {
   run_release_steps
   deploy_systemd_unit
   migrate_legacy_alert_config
-  restart_and_check
+  activate_staged_build_and_check
   create_release_tag
 
   log "Release successful: ${RELEASE_TAG}"

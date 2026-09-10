@@ -64,7 +64,8 @@ sudo journalctl -u airradar -f
 
 Normal production releases should use `deploy/release.sh`. It calculates the
 next version in the current `package.json` major/minor series, writes ignored
-build metadata before `next build`, and creates the matching Git tag only after
+build metadata before an isolated `next build`, activates the completed build
+with a short service restart, and creates the matching Git tag only after
 the build, migrations, restart and both health checks pass. Release retries on
 the same commit reuse the same tag. When the runtime alert config does not yet
 exist, the release script creates `/var/lib/airradar` with service ownership

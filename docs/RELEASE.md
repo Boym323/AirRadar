@@ -65,8 +65,10 @@ sudo ./deploy/release.sh --channel rc --dry-run
    Vitest suite in parallel. The release test invocation uses Vitest
    `--pool=threads`; all tests still run.
 6. It acquires `/run/airradar-build.lock`, writes ignored
-   `generated/build-version.json`, and runs `npm run build`. The build lock is
-   released after the build.
+   `generated/build-version.json`, and runs `npm run build` with Next.js output
+   directed to an isolated `.next-release-*` directory. The active `.next`
+   directory is not changed while the service is serving traffic. The build
+   lock is released after the build.
 7. It runs `npm run prisma:deploy` against the configured database. Migrations
    are forward migrations; never reset or recreate a production database.
 8. It validates the repository systemd unit, compares/installs it atomically
@@ -77,9 +79,10 @@ sudo ./deploy/release.sh --channel rc --dry-run
    non-destructive legacy alert-config migration if needed. The migration never
    overwrites `/var/lib/airradar/alerts.json`; the old alert-event ledger is
    never copied.
-9. It restarts `airradar.service`, requires the service to be active, checks
-   the local health URL with retries, and checks the public health URL with
-   retries.
+9. It briefly stops `airradar.service`, atomically activates the completed
+   build, starts the service, requires it to be active, checks the local health
+   URL with retries, and checks the public health URL with retries. The old
+   build is retained until both health checks pass.
 10. Only after every required check passes does it create the resolved Git tag.
 
 A failed post-restart release prints systemd/journal diagnostics and does not
@@ -98,10 +101,12 @@ return `200` while appearing unstyled and non-interactive. The build/start
 lock prevents a service from starting during an active release build, but it
 does not make an independently run build safe for an already running process.
 
-Use `deploy/release.sh` for production builds. If a release fails after
-building but before restart, treat the checkout as inconsistent: do not leave
-the old service running against the new `.next`; either complete the release
-or restore a matching build before serving traffic.
+Use `deploy/release.sh` for production builds. It builds into an isolated
+`.next-release-*` directory and changes the active `.next` only during the
+short service stop/start handoff. If a build fails, the active service and
+build remain untouched. During a failed activation, keep the service recovery
+and database migration compatibility in mind before manually restoring an old
+build.
 
 Any change to `app/`, `components/`, styles, images, fonts, or other visual UI
 code requires the browser gate before release:
@@ -119,7 +124,7 @@ visual UI.
 ## Build/start lock and systemd
 
 The production release build and start path share `/run/airradar-build.lock`.
-`deploy/release.sh` holds this lock while it runs `npm run build`;
+`deploy/release.sh` holds this lock while it runs the isolated `npm run build`;
 `scripts/start-production.mjs`
 probes the lock and waits up to its configured 120-second timeout, then
 requires `.next/BUILD_ID` before loading Next. This prevents systemd from
