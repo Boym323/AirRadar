@@ -1,7 +1,7 @@
 import nextPackage from "next/package.json" with { type: "json" };
 import type { AtcDataResponse } from "@/lib/atc/types";
 import type { NetworkProviderDiagnostics, ReceiverStatisticsResponse, StateSnapshot } from "@/lib/aircraft/types";
-import type { OgnProviderDiagnostics, OgnProviderStatus } from "@/lib/ogn/types";
+import type { OgnDdbPersistenceDiagnostics, OgnProviderDiagnostics, OgnProviderStatus } from "@/lib/ogn/types";
 import { getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getOgnStateService } from "@/lib/server/ogn-state";
@@ -134,6 +134,7 @@ export interface SystemStatusResponse {
       nextRetryAt: string | null;
       aircraftTypeAvailable: boolean;
       stale: boolean;
+      persistence: OgnDdbPersistenceDiagnostics;
     };
   };
   database: {
@@ -444,6 +445,12 @@ function safeDdbEndpoint(value: string): string {
   }
 }
 
+function safeDdbCacheFile(value: string): string {
+  return typeof value === "string" && value.length > 0 && value.length <= 4_096 && !/[\0\r\n]/.test(value)
+    ? value
+    : "/var/lib/airradar/ogn-ddb-cache-v1.json";
+}
+
 function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemStatusResponse["ogn"] {
   const value = diagnostics ?? {
     enabled: false,
@@ -486,6 +493,11 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
       lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
       failures: 0, fallbackCount: 0, fallbackUsed: false, rateLimited: false, retryAfterMs: null, nextRetryAt: null,
       aircraftTypeAvailable: false, stale: true,
+      persistence: {
+        enabled: false, cacheFile: "/var/lib/airradar/ogn-ddb-cache-v1.json", loadedFromDisk: false,
+        diskEntriesLoaded: 0, diskEntriesRejected: 0, lastLoadAt: null, lastLoadError: null, dirty: false,
+        lastSaveAt: null, lastSaveEntries: 0, lastSaveError: null, writes: 0,
+      },
     },
   };
   const sourceCounts: Record<string, number> = {};
@@ -568,6 +580,20 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
       nextRetryAt: safeTimestamp(value.ddb.nextRetryAt),
       aircraftTypeAvailable: Boolean(value.ddb.aircraftTypeAvailable),
       stale: Boolean(value.ddb.stale),
+      persistence: {
+        enabled: Boolean(value.ddb.persistence.enabled),
+        cacheFile: safeDdbCacheFile(value.ddb.persistence.cacheFile),
+        loadedFromDisk: Boolean(value.ddb.persistence.loadedFromDisk),
+        diskEntriesLoaded: nonNegativeInteger(value.ddb.persistence.diskEntriesLoaded, 100_000),
+        diskEntriesRejected: nonNegativeInteger(value.ddb.persistence.diskEntriesRejected, 100_000),
+        lastLoadAt: safeTimestamp(value.ddb.persistence.lastLoadAt),
+        lastLoadError: value.ddb.persistence.lastLoadError && /^[A-Z0-9_]+$/.test(value.ddb.persistence.lastLoadError) ? value.ddb.persistence.lastLoadError : null,
+        dirty: Boolean(value.ddb.persistence.dirty),
+        lastSaveAt: safeTimestamp(value.ddb.persistence.lastSaveAt),
+        lastSaveEntries: nonNegativeInteger(value.ddb.persistence.lastSaveEntries, 100_000),
+        lastSaveError: value.ddb.persistence.lastSaveError && /^[A-Z0-9_]+$/.test(value.ddb.persistence.lastSaveError) ? value.ddb.persistence.lastSaveError : null,
+        writes: nonNegativeInteger(value.ddb.persistence.writes, 10_000_000),
+      },
     },
   };
 }

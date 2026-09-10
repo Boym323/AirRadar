@@ -1,4 +1,7 @@
-import type { OgnDdbDiagnostics, OgnDdbEntry, OgnDdbResolution } from "@/lib/ogn/types";
+import { closeSync, openSync, readSync, statSync } from "node:fs";
+import { chmod, mkdir, open, rename, unlink } from "node:fs/promises";
+import path from "node:path";
+import type { OgnDdbDiagnostics, OgnDdbEntry, OgnDdbPersistenceDiagnostics, OgnDdbResolution } from "@/lib/ogn/types";
 import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 
 export const DEFAULT_OGN_DDB_URL = "https://ddb.glidernet.org/download/?j=1&t=1";
@@ -17,6 +20,12 @@ const MAX_DDB_ENTRIES = 100_000;
 const MAX_DDB_BATCH_SIZE = 100;
 const MAX_DDB_CACHE_ENTRIES = 100_000;
 const MAX_RETRY_AFTER_MS = 24 * 60 * 60_000;
+const PERSISTENCE_VERSION = 1;
+const MAX_PERSISTENT_CACHE_BYTES = 16 * 1024 * 1024;
+const PERSISTENCE_FUTURE_SKEW_MS = 5 * 60_000;
+const DEFAULT_PERSISTENCE_DEBOUNCE_MS = 3_000;
+const DEFAULT_PERSISTENCE_FLUSH_TIMEOUT_MS = 2_000;
+const DEFAULT_PERSISTENCE_FILE = "/var/lib/airradar/ogn-ddb-cache-v1.json";
 const DEVICE_ID_PATTERN = /^[A-F0-9]{6}$/;
 const DEVICE_TYPES = new Set(["F", "I", "O"]);
 
@@ -34,6 +43,10 @@ export interface OgnDdbOptions {
   maxBytes?: number;
   maxEntries?: number;
   failureRetryMs?: number;
+  persistCache?: boolean;
+  cacheFile?: string;
+  persistenceDebounceMs?: number;
+  persistenceFlushTimeoutMs?: number;
   fetcher?: typeof fetch;
   now?: () => number;
 }
@@ -49,6 +62,26 @@ interface CachedDdbResolution {
   status: "found" | "missing";
   entry?: OgnDdbEntry;
   resolvedAt: number;
+}
+
+interface PersistentDdbFile {
+  version: 1;
+  savedAt: string;
+  entries: Array<{
+    key: string;
+    status: "found" | "missing";
+    resolvedAt: string;
+    entry?: {
+      deviceType: "F" | "I" | "O";
+      deviceId: string;
+      tracked: "Y" | "N";
+      identified: "Y" | "N";
+      aircraftModel: string | null;
+      registration: string | null;
+      competitionNumber: string | null;
+      aircraftType: number | null;
+    };
+  }>;
 }
 
 class DdbLoadError extends Error {
@@ -192,6 +225,55 @@ function sanitizeDdbUrl(value: string): string {
   }
 }
 
+function persistenceTimestamp(value: unknown, now: number): number | null {
+  if (typeof value !== "string") return null;
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp) || timestamp > now + PERSISTENCE_FUTURE_SKEW_MS) return null;
+  return timestamp;
+}
+
+function persistentText(value: unknown, maximum: number): { valid: true; value: string | null } | { valid: false } {
+  if (value === undefined || value === null) return { valid: true, value: null };
+  if (typeof value !== "string" || value.trim().length === 0 || value.length > maximum || /[\r\n]/.test(value)) return { valid: false };
+  return { valid: true, value: value.trim() };
+}
+
+function parsePersistentEntry(value: unknown, now: number): CachedDdbResolution | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const key = typeof row.key === "string" ? row.key : "";
+  const status = row.status;
+  const resolvedAt = persistenceTimestamp(row.resolvedAt, now);
+  if (!/^[FIO]:[A-F0-9]{6}$/.test(key) || (status !== "found" && status !== "missing") || resolvedAt === null) return null;
+  const [deviceType, deviceId] = key.split(":") as ["F" | "I" | "O", string];
+  if (status === "missing") return row.entry === undefined ? { status, resolvedAt } : null;
+  if (!row.entry || typeof row.entry !== "object" || Array.isArray(row.entry)) return null;
+  const entry = row.entry as Record<string, unknown>;
+  const tracked = parseFlag(entry.tracked);
+  const identified = parseFlag(entry.identified);
+  if (entry.deviceType !== deviceType || entry.deviceId !== deviceId || !tracked || !identified) return null;
+  const aircraftModel = persistentText(entry.aircraftModel, 160);
+  const registration = persistentText(entry.registration, 40);
+  const competitionNumber = persistentText(entry.competitionNumber, 24);
+  if (!aircraftModel.valid || !registration.valid || !competitionNumber.valid) return null;
+  const aircraftType = entry.aircraftType === null || entry.aircraftType === undefined ? null : parseAircraftType(entry.aircraftType);
+  if (entry.aircraftType !== null && entry.aircraftType !== undefined && aircraftType === null) return null;
+  return {
+    status,
+    resolvedAt,
+    entry: {
+      deviceType,
+      deviceId,
+      tracked,
+      identified,
+      aircraftModel: aircraftModel.value,
+      registration: registration.value,
+      competitionNumber: competitionNumber.value,
+      aircraftType,
+    },
+  };
+}
+
 export class OgnDdb {
   private readonly url: string;
   private readonly refreshMs: number;
@@ -206,6 +288,10 @@ export class OgnDdb {
   private readonly maxBytes: number;
   private readonly maxEntries: number;
   private readonly failureRetryMs: number;
+  private readonly persistCache: boolean;
+  private readonly cacheFile: string;
+  private readonly persistenceDebounceMs: number;
+  private readonly persistenceFlushTimeoutMs: number;
   private readonly fetcher: typeof fetch;
   private readonly now: () => number;
   private readonly endpoint: string;
@@ -241,6 +327,19 @@ export class OgnDdb {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private inFlight: Promise<void> | null = null;
   private activeController: AbortController | null = null;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private saveInFlight: Promise<void> | null = null;
+  private flushPromise: Promise<void> | null = null;
+  private dirty = false;
+  private loadedFromDisk = false;
+  private diskEntriesLoaded = 0;
+  private diskEntriesRejected = 0;
+  private lastLoadAt: number | null = null;
+  private lastLoadError: string | null = null;
+  private lastSaveAt: number | null = null;
+  private lastSaveEntries = 0;
+  private lastSaveError: string | null = null;
+  private persistenceWrites = 0;
   private status: OgnDdbDiagnostics["status"] = "offline";
   private strategy: OgnDdbDiagnostics["strategy"] = "targeted";
   private representation: "rich" | "base" | null = null;
@@ -261,9 +360,14 @@ export class OgnDdb {
     this.maxBytes = Math.min(MAX_DDB_BYTES, Math.max(1_024, options.maxBytes ?? MAX_DDB_BYTES));
     this.maxEntries = Math.min(MAX_DDB_ENTRIES, Math.max(1, options.maxEntries ?? MAX_DDB_ENTRIES));
     this.failureRetryMs = boundedInteger(options.failureRetryMs ?? DEFAULT_OGN_DDB_FAILURE_RETRY_MS, 0, 60 * 60_000);
+    this.persistCache = options.persistCache ?? false;
+    this.cacheFile = options.cacheFile ?? DEFAULT_PERSISTENCE_FILE;
+    this.persistenceDebounceMs = boundedInteger(options.persistenceDebounceMs ?? DEFAULT_PERSISTENCE_DEBOUNCE_MS, 0, 60_000);
+    this.persistenceFlushTimeoutMs = boundedInteger(options.persistenceFlushTimeoutMs ?? DEFAULT_PERSISTENCE_FLUSH_TIMEOUT_MS, 100, 30_000);
     this.fetcher = options.fetcher ?? fetch;
     this.now = options.now ?? Date.now;
     this.endpoint = this.endpointFromUrl(this.url);
+    if (this.persistCache) this.loadPersistentCache();
   }
 
   /** Start the resolver lifecycle. Targeted mode deliberately performs no request here. */
@@ -278,9 +382,12 @@ export class OgnDdb {
     this.running = false;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
     this.nextRetryAt = null;
     this.activeController?.abort();
     await this.inFlight;
+    if (this.persistCache) await this.flushPersistenceWithTimeout();
   }
 
   subscribe(listener: () => void): () => void {
@@ -380,7 +487,218 @@ export class OgnDdb {
       nextRetryAt: this.nextRetryAt === null ? null : new Date(this.nextRetryAt).toISOString(),
       aircraftTypeAvailable: this.aircraftTypeAvailable,
       stale: !usable,
+      persistence: this.getPersistenceDiagnostics(),
     };
+  }
+
+  private getPersistenceDiagnostics(): OgnDdbPersistenceDiagnostics {
+    return {
+      enabled: this.persistCache,
+      cacheFile: this.cacheFile,
+      loadedFromDisk: this.loadedFromDisk,
+      diskEntriesLoaded: this.diskEntriesLoaded,
+      diskEntriesRejected: this.diskEntriesRejected,
+      lastLoadAt: this.lastLoadAt === null ? null : new Date(this.lastLoadAt).toISOString(),
+      lastLoadError: this.lastLoadError,
+      dirty: this.dirty,
+      lastSaveAt: this.lastSaveAt === null ? null : new Date(this.lastSaveAt).toISOString(),
+      lastSaveEntries: this.lastSaveEntries,
+      lastSaveError: this.lastSaveError,
+      writes: this.persistenceWrites,
+    };
+  }
+
+  private loadPersistentCache(): void {
+    this.lastLoadAt = this.now();
+    let fileSize: number;
+    try {
+      fileSize = statSync(this.cacheFile).size;
+    } catch (error) {
+      if (this.errorCode(error) !== "ENOENT") this.lastLoadError = "stat_failed";
+      return;
+    }
+    if (!Number.isSafeInteger(fileSize) || fileSize < 0 || fileSize > MAX_PERSISTENT_CACHE_BYTES) {
+      this.lastLoadError = "file_too_large";
+      return;
+    }
+    let payload: unknown;
+    let serialized = "";
+    let descriptor = -1;
+    try {
+      descriptor = openSync(this.cacheFile, "r");
+      const buffer = Buffer.alloc(MAX_PERSISTENT_CACHE_BYTES + 1);
+      let total = 0;
+      while (total < buffer.length) {
+        const bytes = readSync(descriptor, buffer, total, buffer.length - total, null);
+        if (bytes === 0) break;
+        total += bytes;
+      }
+      if (total > MAX_PERSISTENT_CACHE_BYTES) {
+        this.lastLoadError = "file_too_large";
+        return;
+      }
+      serialized = buffer.subarray(0, total).toString("utf8");
+    } catch {
+      this.lastLoadError = "read_failed";
+      return;
+    } finally {
+      if (descriptor !== -1) {
+        try { closeSync(descriptor); } catch { this.lastLoadError = "read_failed"; }
+      }
+    }
+    try {
+      payload = JSON.parse(serialized) as unknown;
+    } catch {
+      this.lastLoadError = "invalid_json";
+      return;
+    }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      this.lastLoadError = "invalid_structure";
+      return;
+    }
+    const row = payload as Record<string, unknown>;
+    const savedAt = persistenceTimestamp(row.savedAt, this.now());
+    const entries = row.entries;
+    if (row.version !== PERSISTENCE_VERSION || savedAt === null || !Array.isArray(entries)) {
+      this.lastLoadError = row.version !== PERSISTENCE_VERSION ? "wrong_version" : "invalid_structure";
+      return;
+    }
+    if (entries.length > this.cacheMaxEntries) {
+      this.diskEntriesRejected = entries.length;
+      this.lastLoadError = "entry_cap_exceeded";
+      return;
+    }
+    const seen = new Set<string>();
+    const duplicateKeys = new Set<string>();
+    const parsedEntries = new Map<string, CachedDdbResolution>();
+    for (const value of entries) {
+      const key = value && typeof value === "object" && !Array.isArray(value) && typeof (value as Record<string, unknown>).key === "string"
+        ? (value as Record<string, unknown>).key as string
+        : null;
+      if (key && seen.has(key)) {
+        duplicateKeys.add(key);
+        parsedEntries.delete(key);
+        this.diskEntriesRejected += 1;
+        continue;
+      }
+      if (key) seen.add(key);
+      const resolution = parsePersistentEntry(value, this.now());
+      if (!key || !resolution) {
+        this.diskEntriesRejected += 1;
+        continue;
+      }
+      parsedEntries.set(key, resolution);
+    }
+    for (const [key, resolution] of parsedEntries) {
+      if (duplicateKeys.has(key)) continue;
+      this.putResolution(key, resolution);
+      this.diskEntriesLoaded += 1;
+    }
+    this.loadedFromDisk = true;
+    if (this.diskEntriesRejected > 0) this.lastLoadError = "entries_rejected";
+  }
+
+  private markPersistenceDirty(): void {
+    if (!this.persistCache) return;
+    this.dirty = true;
+    if (this.saveTimer || this.saveInFlight) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      void this.flushPersistence();
+    }, this.persistenceDebounceMs);
+  }
+
+  private async flushPersistence(): Promise<void> {
+    if (!this.persistCache) return;
+    if (this.flushPromise) return this.flushPromise;
+    const promise = (async () => {
+      if (this.saveInFlight) await this.saveInFlight;
+      let attempts = 0;
+      while (this.dirty && attempts < 2) {
+        attempts += 1;
+        const payload = this.persistentSnapshot();
+        this.dirty = false;
+        const save = this.writePersistentSnapshot(payload);
+        this.saveInFlight = save;
+        await save;
+        if (this.saveInFlight === save) this.saveInFlight = null;
+      }
+      if (this.dirty && this.running && !this.saveTimer) {
+        this.saveTimer = setTimeout(() => {
+          this.saveTimer = null;
+          void this.flushPersistence();
+        }, this.persistenceDebounceMs);
+      }
+    })();
+    this.flushPromise = promise.finally(() => {
+      this.flushPromise = null;
+    });
+    return this.flushPromise;
+  }
+
+  private async flushPersistenceWithTimeout(): Promise<void> {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    try {
+      await Promise.race([
+        this.flushPersistence(),
+        new Promise<void>((resolve) => { timeout = setTimeout(resolve, this.persistenceFlushTimeoutMs); }),
+      ]);
+    } catch {
+      // Persistence is best effort and must never block OGN or process shutdown.
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  }
+
+  private persistentSnapshot(): PersistentDdbFile {
+    const now = this.now();
+    const entries: PersistentDdbFile["entries"] = [];
+    for (const [key, resolution] of this.cache) {
+      const age = now - resolution.resolvedAt;
+      if (resolution.status === "found" && resolution.entry && age <= this.maxStaleMs) {
+        entries.push({
+          key,
+          status: "found",
+          resolvedAt: new Date(resolution.resolvedAt).toISOString(),
+          entry: { ...resolution.entry },
+        });
+      } else if (resolution.status === "missing" && age < this.negativeTtlMs) {
+        entries.push({ key, status: "missing", resolvedAt: new Date(resolution.resolvedAt).toISOString() });
+      }
+      if (entries.length >= this.cacheMaxEntries) break;
+    }
+    return { version: PERSISTENCE_VERSION, savedAt: new Date(now).toISOString(), entries };
+  }
+
+  private async writePersistentSnapshot(payload: PersistentDdbFile): Promise<void> {
+    const temporaryFile = `${this.cacheFile}.tmp`;
+    try {
+      await mkdir(path.dirname(this.cacheFile), { recursive: true, mode: 0o750 });
+      const handle = await open(temporaryFile, "w", 0o600);
+      try {
+        await handle.writeFile(`${JSON.stringify(payload)}\n`, "utf8");
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+      await chmod(temporaryFile, 0o600);
+      await rename(temporaryFile, this.cacheFile);
+      this.persistenceWrites += 1;
+      this.lastSaveAt = this.now();
+      this.lastSaveEntries = payload.entries.length;
+      this.lastSaveError = null;
+    } catch (error) {
+      this.dirty = true;
+      this.lastSaveError = this.errorCode(error) ?? "save_failed";
+      try { await unlink(temporaryFile); } catch { /* best effort cleanup of our temp file */ }
+      console.warn(`[ogn-ddb] persistent cache save failed (${this.lastSaveError})`);
+    }
+  }
+
+  private errorCode(error: unknown): string | null {
+    if (!error || typeof error !== "object") return null;
+    const code = (error as { code?: unknown }).code;
+    return typeof code === "string" && /^[A-Z0-9_]+$/.test(code) ? code : null;
   }
 
   private validKey(deviceType: "F" | "I" | "O", deviceId: string): string | null {
@@ -558,11 +876,14 @@ export class OgnDdb {
       if (!conflictingKeys.has(key)) responseIndex.set(key, entry);
     }
     const resolvedAt = this.now();
+    let changed = false;
     for (const key of keys) {
       if (conflictingKeys.has(key)) continue;
       const entry = responseIndex.get(key);
       this.putResolution(key, entry ? { status: "found", entry, resolvedAt } : { status: "missing", resolvedAt });
+      changed = true;
     }
+    if (changed) this.markPersistenceDirty();
   }
 
   private async loadBulkSnapshot(): Promise<void> {
@@ -600,6 +921,7 @@ export class OgnDdb {
       this.successfulRequests += 1;
       this.status = "online";
       this.fallbackUsed = loaded.mode === "base-json";
+      this.markPersistenceDirty();
       this.notifyListeners();
     } catch (error) {
       this.failures += 1;

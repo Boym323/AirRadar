@@ -51,6 +51,15 @@ re-application, stale/capacity cleanup, and an independent listener set for
 `/api/ogn/stream`. OGN never calls Prisma or any ADS-B history/statistics,
 enrichment, alert, or receiver-health path.
 
+`OgnDdb` may persist only validated DDB resolutions in the versioned local
+state file `/var/lib/airradar/ogn-ddb-cache-v1.json` (configurable server-side).
+The file is a last-known-good cache, not an authority: it is strictly bounded
+and validated on load, preserves each resolution's original timestamp, and is
+written through a single debounced atomic writer. It contains no OGN packets,
+coordinates, positions, or history. Production systemd already provisions the
+default directory with `StateDirectory=airradar`; persistence failures are
+best-effort and cannot stop live OGN or ADS-B processing.
+
 ## Server ownership
 
 `AircraftStateService` owns the live lifecycle and coordinates the following

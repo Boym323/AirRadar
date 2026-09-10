@@ -156,6 +156,11 @@ export class OgnProvider {
         lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
         failures: 0, fallbackCount: 0, fallbackUsed: false, rateLimited: false, retryAfterMs: null, nextRetryAt: null,
         aircraftTypeAvailable: false, stale: true,
+        persistence: {
+          enabled: false, cacheFile: "/var/lib/airradar/ogn-ddb-cache-v1.json", loadedFromDisk: false,
+          diskEntriesLoaded: 0, diskEntriesRejected: 0, lastLoadAt: null, lastLoadError: null, dirty: false,
+          lastSaveAt: null, lastSaveEntries: 0, lastSaveError: null, writes: 0,
+        },
       },
       reconnects: this.reconnects,
       configurationError: this.configurationError,

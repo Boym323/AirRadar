@@ -155,6 +155,14 @@ These are behavior and safety contracts for changes to the current system.
   per-device positive resolution only within the configured stale limit, and
   diagnostics expose strategy, queue/cache counters, attempt/status, fallback,
   backoff, and enrichment state.
+- The optional persistent DDB cache stores only validated `FOUND`/`MISSING`
+  resolutions in version 1 JSON. Loading is fail-safe and bounded; malformed
+  entries and duplicate keys are rejected, while structural/file errors load
+  nothing without stopping AirRadar. `resolvedAt` is never reset at startup,
+  so persistence cannot extend the positive max-stale or negative TTL privacy
+  windows. Writes are debounced, single-writer, atomic, mode `0600`, and best
+  effort; shutdown performs one bounded final flush. The file never contains
+  packets, positions, coordinates, or receiver history.
 - OGN targets are stale after 15 seconds, removed after 60 seconds, and
   capped at 5,000. `/api/ogn/stream` has its own initial snapshot, heartbeat,
   abort cleanup, SSE capacity slot, and newest-only pending update.

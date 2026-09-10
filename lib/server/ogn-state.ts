@@ -59,6 +59,8 @@ export class OgnStateService {
       negativeTtlMs: this.config.ddbNegativeTtlMs,
       cacheMaxEntries: this.config.ddbCacheMaxEntries,
       maxPendingKeys: this.config.maxTargets,
+      persistCache: this.config.enabled && this.config.ddbPersistCache,
+      cacheFile: this.config.ddbCacheFile,
     });
     this.provider = options.provider ?? new OgnProvider({
       config: this.config,

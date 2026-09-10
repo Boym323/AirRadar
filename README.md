@@ -147,9 +147,19 @@ matching prevents a same-ID record under another device type from being used.
 The fallback is accepted only when every device record still contains the
 privacy-critical `device_type`, `device_id`, `tracked`, and `identified`
 fields; missing or invalid fields keep privacy fail-closed. `aircraft_type` is
-optional enrichment. `/system` reports the targeted strategy, queue/cache
-counts, batch/request counters, HTTP status, backoff, and aircraft-type
-availability.
+optional enrichment. A validated `FOUND` or `MISSING` resolution is also
+stored in the versioned local cache
+`/var/lib/airradar/ogn-ddb-cache-v1.json` (configurable with
+`OGN_DDB_CACHE_FILE`), using bounded debounced atomic writes and a final
+shutdown flush. The cache preserves the original `resolvedAt`; it never
+extends the positive 24-hour privacy stale limit or the negative 30-minute
+TTL, and corrupted/expired entries remain fail-closed. `/system` reports the
+targeted strategy, queue/cache counts, batch/request counters, HTTP status,
+backoff, aircraft-type availability, and cache persistence diagnostics.
+
+The persistent cache cannot bootstrap DDB while all official upstreams are
+unavailable. A new device therefore remains unresolved and hidden until a
+valid targeted DDB response has been received.
 
 The implementation accepts the current v1 FLARM, OGN tracker, FANET, SafeSky,
 PilotAware, and ADS-L TOCALL variants that have a safe airborne interpretation;

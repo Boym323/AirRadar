@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { ReceiverPosition } from "@/lib/aircraft/types";
 import { t } from "@/lib/i18n";
 import { getAirRadarUserAgent } from "@/lib/server/user-agent";
@@ -15,6 +16,7 @@ export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/
 export const DEFAULT_AVIATION_WEATHER_BASE_URL = "https://aviationweather.gov";
 export const DEFAULT_OGN_HOST = "aprs.glidernet.org";
 export const DEFAULT_OGN_PORT = 14580;
+export const DEFAULT_OGN_DDB_CACHE_FILE = "/var/lib/airradar/ogn-ddb-cache-v1.json";
 
 export type PublicReceiverPositionMode = "exact" | "approximate" | "hidden";
 
@@ -206,6 +208,8 @@ export interface OgnConfig {
   ddbMinRequestIntervalMs?: number;
   ddbNegativeTtlMs?: number;
   ddbCacheMaxEntries?: number;
+  ddbPersistCache?: boolean;
+  ddbCacheFile?: string;
   maxTargets: number;
   configurationError: string | null;
 }
@@ -298,6 +302,21 @@ export function getOgnDdbCacheMaxEntries(): number {
   return boundedInteger("OGN_DDB_CACHE_MAX_ENTRIES", DEFAULT_OGN_DDB_CACHE_MAX_ENTRIES, 1, 100_000);
 }
 
+export function isOgnDdbPersistenceEnabled(): boolean {
+  const configured = process.env.OGN_DDB_PERSIST_CACHE?.trim().toLowerCase();
+  if (configured === "true") return true;
+  if (configured === "false") return false;
+  // The production unit grants the service a private StateDirectory. Keep
+  // local/test processes side-effect free unless persistence is explicit.
+  return process.env.NODE_ENV === "production";
+}
+
+export function getOgnDdbCacheFile(): string {
+  const configured = process.env.OGN_DDB_CACHE_FILE?.trim();
+  if (configured && configured.length <= 4_096 && path.isAbsolute(configured) && !/[\0\r\n]/.test(configured)) return configured;
+  return DEFAULT_OGN_DDB_CACHE_FILE;
+}
+
 export function getOgnDdbUrl(): string {
   const configured = process.env.OGN_DDB_URL?.trim();
   if (!configured) return DEFAULT_OGN_DDB_URL;
@@ -327,6 +346,8 @@ export function getOgnConfig(): OgnConfig {
   const ddbMinRequestIntervalMs = getOgnDdbMinRequestIntervalMs();
   const ddbNegativeTtlMs = getOgnDdbNegativeTtlMs();
   const ddbCacheMaxEntries = getOgnDdbCacheMaxEntries();
+  const ddbPersistCache = isOgnDdbPersistenceEnabled();
+  const ddbCacheFile = getOgnDdbCacheFile();
   const ddbUrl = getOgnDdbUrl();
   const errors: string[] = [];
   const host = process.env.OGN_HOST?.trim();
@@ -365,6 +386,8 @@ export function getOgnConfig(): OgnConfig {
     ddbMinRequestIntervalMs,
     ddbNegativeTtlMs,
     ddbCacheMaxEntries,
+    ddbPersistCache,
+    ddbCacheFile,
     maxTargets: getOgnMaxTargets(),
     configurationError: errors.length ? `Invalid OGN configuration: ${errors.join(", ")}` : null,
   };

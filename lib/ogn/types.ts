@@ -171,6 +171,22 @@ export interface OgnDdbDiagnostics {
   nextRetryAt: string | null;
   aircraftTypeAvailable: boolean;
   stale: boolean;
+  persistence: OgnDdbPersistenceDiagnostics;
+}
+
+export interface OgnDdbPersistenceDiagnostics {
+  enabled: boolean;
+  cacheFile: string;
+  loadedFromDisk: boolean;
+  diskEntriesLoaded: number;
+  diskEntriesRejected: number;
+  lastLoadAt: string | null;
+  lastLoadError: string | null;
+  dirty: boolean;
+  lastSaveAt: string | null;
+  lastSaveEntries: number;
+  lastSaveError: string | null;
+  writes: number;
 }
 
 export interface OgnStateSnapshot {

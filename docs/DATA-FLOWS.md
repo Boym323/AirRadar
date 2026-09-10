@@ -71,6 +71,14 @@ classification, and an identity key of `addressType + address`. Newer
 observations replace the canonical position; equal timestamps may add receiver
 provenance; older observations never roll back the target. The OGN DDB resolver
 uses a bounded RAM cache of exact `device_type:device_id` resolutions.
+At process startup, `OgnDdb` first loads the validated version-1 local
+last-known-good cache from `OGN_DDB_CACHE_FILE` when persistence is enabled;
+this is local-only and performs no network request. Successful targeted
+`FOUND`/`MISSING` batches mark the bounded RAM snapshot dirty and persist it
+later through one debounced atomic writer. The original `resolvedAt` is kept,
+so the existing positive refresh/max-stale and negative TTL rules continue to
+apply across restarts. The persistent file contains no APRS packets or
+positions and cannot make an unresolved device public.
 `OgnDdb.start()` does not download the full table: an accepted packet enqueues
 its device identity, and the resolver debounces unique IDs into bounded
 targeted requests using `?j=1&t=1&device_id=...`. It allows only one in-flight
