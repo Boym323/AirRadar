@@ -12,6 +12,8 @@ export interface AircraftAlert {
   type?: AlertHistoryEventType;
   reason?: AlertHistoryReason;
   eventId?: string;
+  radiusKm?: number | null;
+  squawk?: string | null;
   record?: AlertHistoryRecordValue;
 }
 
@@ -46,18 +48,43 @@ function formatTrack(track: number | null): string {
   return track === null || !Number.isFinite(track) ? "směr neuveden" : `směr ${Math.round((track + 360) % 360)}°`;
 }
 
+function formatDistance(distanceKm: number | null): string {
+  return distanceKm === null || !Number.isFinite(distanceKm) ? "vzdálenost neuvedena" : `${Math.round(distanceKm)} km`;
+}
+
+function alertHeadline(alert: AircraftAlert, label: string): string {
+  if (alert.type === "emergency_7500" || alert.type === "emergency_7600" || alert.type === "emergency_7700") {
+    return `🚨 ${label} · Squawk ${alert.squawk ?? alert.type.slice(-4)}`;
+  }
+  if (alert.emergency) return `🚨 ${label} — nouzový stav hlášen`;
+  if (alert.type === "entered_radius" && alert.radiusKm !== null && alert.radiusKm !== undefined) {
+    return `✈ ${label} vstoupil do ${Math.round(alert.radiusKm)} km`;
+  }
+  if (alert.type === "aircraft_appeared") return `✈ ${label} zachycen na watchlistu`;
+  if (alert.type === "new_aircraft") return `✈ ${label} poprvé zachycen`;
+  if (alert.type === "reception_record") return `✈ ${label} překonal rekord příjmu`;
+  return `✈ ${label} odpovídá sledovanému pravidlu`;
+}
+
+export function aircraftAlertUrl(alert: AircraftAlert): string {
+  return `https://airradar.pomykal.cz/aircraft/${encodeURIComponent(alert.aircraft.icaoHex)}`;
+}
+
 export function formatAircraftAlert(alert: AircraftAlert): string {
   const aircraft = alert.aircraft;
   const label = aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
+  const lines = [alertHeadline(alert, label), "", aircraft.icaoHex];
+
   if (alert.emergency) {
-    return [`🚨 ${label} — nouzový stav hlášen`, "", aircraft.icaoHex, `${formatAltitude(aircraft.altitude)} · ${formatTrack(aircraft.track)}`, "", "airradar.pomykal.cz"].join("\n");
+    lines.push(`${formatAltitude(aircraft.altitude)} · ${formatTrack(aircraft.track)}`);
+  } else {
+    const type = aircraft.enrichment?.metadata?.aircraftDescription || aircraft.aircraftDescription || aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || "typ neuveden";
+    const registration = aircraft.registration || aircraft.enrichment?.metadata?.registration;
+    const identity = registration ? `${type} · ${registration}` : type;
+    lines.push(identity, `${formatDistance(aircraft.distanceKm)} · ${formatAltitude(aircraft.altitude)}`, formatTrack(aircraft.track));
+    if (alert.matchedRules.length === 1) lines.push(`Pravidlo: ${alert.matchedRules[0]?.name ?? alert.matchedRules[0]?.id}`);
   }
 
-  const type = aircraft.enrichment?.metadata?.aircraftDescription || aircraft.aircraftDescription || aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || "typ neuveden";
-  const registration = aircraft.registration || aircraft.enrichment?.metadata?.registration;
-  const identity = registration ? `${type} · ${registration}` : type;
-  const distance = aircraft.distanceKm === null ? "vzdálenost neuvedena" : `${Math.round(aircraft.distanceKm)} km`;
-  const lines = [`✈ ${label} zachycen`, "", identity, `${distance} · ${formatAltitude(aircraft.altitude)}`, formatTrack(aircraft.track)];
   const assignment = aircraft.atc;
   if (assignment && assignment.primaryFrequencyMhz !== null) {
     lines.push("", "Pravděpodobně relevantní ATC:", `${assignment.name} · ${assignment.primaryFrequencyMhz.toFixed(3)} MHz`);
@@ -87,6 +114,8 @@ class PushoverNotifier implements AlertNotifier {
           message: formatAircraftAlert(alert),
           title: alert.emergency ? "AirRadar nouzové upozornění" : "AirRadar upozornění",
           priority: alert.priority === "high" ? "1" : "0",
+          url: aircraftAlertUrl(alert),
+          url_title: "Otevřít detail v AirRadaru",
         }),
       });
       if (!response.ok) throw new AlertDeliveryError(response.status);
