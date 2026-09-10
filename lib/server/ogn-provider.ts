@@ -143,7 +143,11 @@ export class OgnProvider {
       activeTargets: 0,
       freshTargets: 0,
       staleTargets: 0,
-      ddb: { status: "disabled", entries: 0, lastRefreshAt: null, lastSuccessAt: null, ageMs: null, failures: 0, stale: true },
+      ddb: {
+        status: "disabled", mode: null, endpoint: "https://ddb.glidernet.org/download/", entries: 0,
+        lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
+        failures: 0, fallbackCount: 0, fallbackUsed: false, aircraftTypeAvailable: false, stale: true,
+      },
       reconnects: this.reconnects,
       configurationError: this.configurationError,
     };

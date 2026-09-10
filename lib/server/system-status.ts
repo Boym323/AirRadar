@@ -98,11 +98,18 @@ export interface SystemStatusResponse {
     configurationError: string | null;
     ddb: {
       status: OgnProviderDiagnostics["ddb"]["status"];
+      mode: OgnProviderDiagnostics["ddb"]["mode"];
+      endpoint: string;
       entries: number;
+      lastAttemptAt: string | null;
       lastRefreshAt: string | null;
       lastSuccessAt: string | null;
+      lastHttpStatus: number | null;
       ageMs: number | null;
       failures: number;
+      fallbackCount: number;
+      fallbackUsed: boolean;
+      aircraftTypeAvailable: boolean;
       stale: boolean;
     };
   };
@@ -404,6 +411,16 @@ function safeOgnTocall(value: string): string | null {
   return /^[A-Z0-9?]{1,16}$/i.test(value) ? value.toUpperCase() : null;
 }
 
+function safeDdbEndpoint(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("unsupported protocol");
+    return `${url.protocol}//${url.host}${url.pathname}`;
+  } catch {
+    return "https://ddb.glidernet.org/download/";
+  }
+}
+
 function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemStatusResponse["ogn"] {
   const value = diagnostics ?? {
     enabled: false,
@@ -436,7 +453,11 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
     staleTargets: 0,
     reconnects: 0,
     configurationError: null,
-    ddb: { status: "disabled" as const, entries: 0, lastRefreshAt: null, lastSuccessAt: null, ageMs: null, failures: 0, stale: true },
+    ddb: {
+      status: "disabled" as const, mode: null, endpoint: "https://ddb.glidernet.org/download/", entries: 0,
+      lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
+      failures: 0, fallbackCount: 0, fallbackUsed: false, aircraftTypeAvailable: false, stale: true,
+    },
   };
   const sourceCounts: Record<string, number> = {};
   for (const [tocall, count] of Object.entries(value.sourceCounts).slice(0, 64)) {
@@ -482,11 +503,18 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
       : null,
     ddb: {
       status: value.ddb.status,
+      mode: value.ddb.mode,
+      endpoint: safeDdbEndpoint(value.ddb.endpoint),
       entries: nonNegativeInteger(value.ddb.entries, 100_000),
+      lastAttemptAt: safeTimestamp(value.ddb.lastAttemptAt),
       lastRefreshAt: safeTimestamp(value.ddb.lastRefreshAt),
       lastSuccessAt: safeTimestamp(value.ddb.lastSuccessAt),
+      lastHttpStatus: value.ddb.lastHttpStatus === null ? null : nonNegativeInteger(value.ddb.lastHttpStatus, 599),
       ageMs: value.ddb.ageMs === null ? null : nonNegativeInteger(value.ddb.ageMs, 30 * 24 * 60 * 60_000),
       failures: nonNegativeInteger(value.ddb.failures, 10_000_000),
+      fallbackCount: nonNegativeInteger(value.ddb.fallbackCount, 10_000_000),
+      fallbackUsed: Boolean(value.ddb.fallbackUsed),
+      aircraftTypeAvailable: Boolean(value.ddb.aircraftTypeAvailable),
       stale: Boolean(value.ddb.stale),
     },
   };

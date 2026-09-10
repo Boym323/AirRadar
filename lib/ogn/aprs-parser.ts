@@ -157,10 +157,13 @@ function parseComment(comment: string): Pick<OgnPosition, "trackDeg" | "groundSp
     const course = /^(\d{3})\/(\d{3})(?:\/A=(\d{6}))?$/.exec(token);
     if (course && index === 0) {
       trackDeg = Number(course[1]);
-      const speedKph = Number(course[2]);
+      // APRS CSE/SPD is course in degrees and speed in knots. The OGN
+      // server has already converted any underlying tracking protocol into
+      // this APRS representation, so TOCALL must not affect the unit.
+      const speedKt = Number(course[2]);
       if (trackDeg > 360) throw new OgnParseError("course", "Course outside range");
-      if (!Number.isFinite(speedKph) || speedKph < 0) throw new OgnParseError("speed", "Speed outside range");
-      groundSpeedKt = speedKph * 0.539956803;
+      if (!Number.isFinite(speedKt) || speedKt < 0) throw new OgnParseError("speed", "Speed outside range");
+      groundSpeedKt = speedKt;
       if (course[3]) altitudeFt = Number(course[3]);
       continue;
     }

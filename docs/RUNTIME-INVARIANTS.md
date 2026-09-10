@@ -143,6 +143,13 @@ These are behavior and safety contracts for changes to the current system.
   dropped; DDB misses, `identified=N`, and packet stealth are anonymous. The
   public serializer never sends anonymous address, sender, registration,
   competition number, model, receiver signal, or receiver history.
+- APRS `CCC/SSS` course/speed semantics are degrees/knots. `SSS` is copied to
+  `groundSpeedKt` without a km/h or TOCALL-specific conversion. The DDB first
+  requests official `?j=1&t=1` JSON and may fall back to official `?j=1`;
+  fallback cannot bypass validation of `device_type`, `device_id`, `tracked`,
+  or `identified`. DDB failures retain a last good snapshot only within the
+  configured stale limit, and diagnostics expose request mode, attempt/status,
+  fallback, and enrichment state.
 - OGN targets are stale after 15 seconds, removed after 60 seconds, and
   capped at 5,000. `/api/ogn/stream` has its own initial snapshot, heartbeat,
   abort cleanup, SSE capacity slot, and newest-only pending update.

@@ -181,7 +181,15 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.lastPacket} value={formatDateTime(data.ogn.lastPacketAt, dictionary)} />
         <Field label={dictionary.system.reconnects} value={formatNumber(data.ogn.reconnects, 0, dictionary.locale)} />
         <Field label={dictionary.system.ddb} value={`${data.ogn.ddb.status} · ${formatNumber(data.ogn.ddb.entries, 0, dictionary.locale)} ${dictionary.system.entries}`} />
+        <Field label={dictionary.system.ddbEndpoint} value={data.ogn.ddb.endpoint} />
+        <Field label={dictionary.system.ddbMode} value={data.ogn.ddb.mode ?? dictionary.system.notAvailable} />
+        <Field label={dictionary.system.ddbLastAttempt} value={formatDateTime(data.ogn.ddb.lastAttemptAt, dictionary)} />
         <Field label={dictionary.system.ddbRefresh} value={formatDateTime(data.ogn.ddb.lastSuccessAt, dictionary)} />
+        <Field label={dictionary.system.ddbHttpStatus} value={data.ogn.ddb.lastHttpStatus === null ? dictionary.system.notAvailable : String(data.ogn.ddb.lastHttpStatus)} />
+        <Field label={dictionary.system.ddbAge} value={data.ogn.ddb.ageMs === null ? dictionary.system.notAvailable : `${formatNumber(data.ogn.ddb.ageMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />
+        <Field label={dictionary.system.ddbFailures} value={formatNumber(data.ogn.ddb.failures, 0, dictionary.locale)} />
+        <Field label={dictionary.system.ddbFallback} value={`${data.ogn.ddb.fallbackUsed ? dictionary.system.yes : dictionary.system.no} · ${formatNumber(data.ogn.ddb.fallbackCount, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.ddbAircraftType} value={data.ogn.ddb.aircraftTypeAvailable ? dictionary.system.yes : dictionary.system.no} />
         {data.ogn.configurationError && <Field label={dictionary.system.configurationError} value={data.ogn.configurationError} />}
       </Card>
 

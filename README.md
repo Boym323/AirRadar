@@ -131,6 +131,18 @@ only when both the packet and DDB permit it. OGN timestamps are nearest-day
 UTC timestamps, packets older than 120 seconds are dropped, and identity is
 deduplicated by `addressType + address`, never by callsign.
 
+APRS `CSE/SPD` uses `CCC/SSS` where course is degrees and speed is knots.
+AirRadar stores that value directly as `groundSpeedKt`; it does not apply a
+FANET source-specific conversion after OGN infrastructure has emitted APRS.
+The official DDB rich JSON request is `?j=1&t=1`, with a fallback to
+`?j=1` when the rich request fails. The fallback is accepted only when every
+device record still contains the privacy-critical `device_type`, `device_id`,
+`tracked`, and `identified` fields; missing or invalid fields keep privacy
+fail-closed. `aircraft_type` is optional enrichment. Valid snapshots are
+swapped atomically, failed refreshes retain the last good snapshot only until
+`OGN_DDB_MAX_STALE_MS`, and `/system` reports mode, HTTP status, age, fallback
+use, and aircraft-type availability.
+
 The implementation accepts the current v1 FLARM, OGN tracker, FANET, SafeSky,
 PilotAware, and ADS-L TOCALL variants that have a safe airborne interpretation;
 `OGADSB`, ground/weather/status, delayed, and unknown variants are counted and

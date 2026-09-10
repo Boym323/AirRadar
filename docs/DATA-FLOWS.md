@@ -70,9 +70,13 @@ future tolerance, a 120-second age limit, source-specific TOCALL
 classification, and an identity key of `addressType + address`. Newer
 observations replace the canonical position; equal timestamps may add receiver
 provenance; older observations never roll back the target. The OGN DDB is
-refreshed atomically in bounded RAM and is never fetched per packet. Privacy is
-fail-closed while DDB is unusable, with packet no-tracking and DDB tracked/identified
-choices applied before public serialization.
+refreshed atomically in bounded RAM and is never fetched per packet. Its
+primary official JSON request is `?j=1&t=1`; a failed primary request may use
+the official `?j=1` base JSON fallback, but only after the same bounded JSON,
+privacy-schema, and sanity validation. APRS `CSE/SPD` speed is already in
+knots and is stored directly in `groundSpeedKt`, regardless of source TOCALL.
+Privacy is fail-closed while DDB is unusable, with packet no-tracking and DDB
+tracked/identified choices applied before public serialization.
 
 `/api/ogn/state` returns the current bounded snapshot and `/api/ogn/stream`
 delivers an initial snapshot plus coalesced updates and heartbeats. OGN has no

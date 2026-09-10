@@ -44,7 +44,7 @@ export interface OgnPosition {
   latitude: number;
   longitude: number;
   trackDeg: number | null;
-  /** OGN/APRS position speed is encoded in km/h; this is normalized to knots. */
+  /** APRS CSE/SPD speed is encoded directly in knots. */
   groundSpeedKt: number | null;
   altitudeFt: number | null;
   verticalRateFpm: number | null;
@@ -135,11 +135,18 @@ export interface OgnProviderDiagnostics {
 
 export interface OgnDdbDiagnostics {
   status: "disabled" | "loading" | "online" | "stale" | "offline";
+  mode: "rich-json" | "base-json" | null;
+  endpoint: string;
   entries: number;
+  lastAttemptAt: string | null;
   lastRefreshAt: string | null;
   lastSuccessAt: string | null;
+  lastHttpStatus: number | null;
   ageMs: number | null;
   failures: number;
+  fallbackCount: number;
+  fallbackUsed: boolean;
+  aircraftTypeAvailable: boolean;
   stale: boolean;
 }
 

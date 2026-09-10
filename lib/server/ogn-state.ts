@@ -47,7 +47,7 @@ export class OgnStateService {
     this.now = options.now ?? Date.now;
     this.cleanupIntervalMs = Math.max(1_000, options.cleanupIntervalMs ?? 5_000);
     this.broadcastIntervalMs = Math.max(250, options.broadcastIntervalMs ?? 500);
-    this.ddb = options.ddb ?? new OgnDdb({ refreshMs: this.config.ddbRefreshMs, maxStaleMs: this.config.ddbMaxStaleMs });
+    this.ddb = options.ddb ?? new OgnDdb({ url: this.config.ddbUrl, refreshMs: this.config.ddbRefreshMs, maxStaleMs: this.config.ddbMaxStaleMs });
     this.provider = options.provider ?? new OgnProvider({
       config: this.config,
       receiver: this.receiver,

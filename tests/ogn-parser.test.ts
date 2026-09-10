@@ -10,7 +10,7 @@ function parse(line: string, at = now) {
 }
 
 describe("OGN/APRS parser", () => {
-  it("parses the current supported source variants and normalizes OGN units", () => {
+  it("keeps APRS CSE/SPD speed in knots for every accepted source", () => {
     const flarm = parse(OGN_FIXTURES.flarm, new Date("2026-09-10T10:10:00.000Z"));
     expect(flarm.classification).toMatchObject({ action: "accept", source: "flarm" });
     expect(flarm.position).toMatchObject({
@@ -22,8 +22,19 @@ describe("OGN/APRS parser", () => {
       receiverSignalDb: 32.5,
       lastReceiver: "LFLE",
     });
-    expect(flarm.position.groundSpeedKt).toBeCloseTo(54 * 0.539956803, 6);
+    expect(flarm.position.groundSpeedKt).toBe(54);
     expect(flarm.position.turnRateDegPerSec).toBe(0);
+
+    const realAt = new Date("2026-09-10T07:39:50.000Z");
+    const realCases = [
+      [OGN_FIXTURES.realFlarm, 96],
+      [OGN_FIXTURES.realOgnTracker, 63],
+      [OGN_FIXTURES.realSafeSky, 99],
+      [OGN_FIXTURES.realAdsL, 0],
+    ] as const;
+    for (const [packet, expectedSpeed] of realCases) {
+      expect(parse(packet, realAt).position.groundSpeedKt).toBe(expectedSpeed);
+    }
 
     expect(parse(OGN_FIXTURES.flarm6, new Date("2026-09-10T14:11:00.000Z")).classification.action).toBe("accept");
     expect(parse(OGN_FIXTURES.ognTracker, new Date("2026-09-10T11:49:00.000Z")).classification.action).toBe("accept");
@@ -33,7 +44,16 @@ describe("OGN/APRS parser", () => {
     expect(parse(OGN_FIXTURES.pilotAware, new Date("2026-09-10T10:44:00.000Z")).classification.action).toBe("accept");
     expect(parse(OGN_FIXTURES.pilotAwareCurrent, new Date("2026-09-10T10:44:00.000Z")).classification.action).toBe("accept");
     expect(parse(OGN_FIXTURES.adsL, new Date("2026-09-10T10:47:00.000Z")).classification.action).toBe("accept");
+    expect(parse(OGN_FIXTURES.fanet, new Date("2026-09-10T10:44:00.000Z")).position.groundSpeedKt).toBe(81);
+    expect(parse(OGN_FIXTURES.pilotAware, new Date("2026-09-10T10:44:00.000Z")).position.groundSpeedKt).toBe(81);
     expect(parse(OGN_FIXTURES.pilotAwareCurrent, new Date("2026-09-10T10:44:00.000Z")).position.trackingSource).toBe("pilotaware");
+  });
+
+  it("does not double-convert a three-digit APRS speed and preserves zero", () => {
+    const realAt = new Date("2026-09-10T07:39:50.000Z");
+    expect(parse(OGN_FIXTURES.realFlarm, realAt).position.groundSpeedKt).toBe(96);
+    expect(parse(OGN_FIXTURES.realAdsL, realAt).position.groundSpeedKt).toBe(0);
+    expect(parse(OGN_FIXTURES.realFlarm.replace("182/096", "182/100"), realAt).position.groundSpeedKt).toBe(100);
   });
 
   it("decodes identity detail bits and nearest-day timestamps", () => {
@@ -68,6 +88,7 @@ describe("OGN/APRS parser", () => {
     expect(() => parseOgnPosition(OGN_FIXTURES.flarm, { now: new Date("2026-09-10T10:09:00.000Z"), futureToleranceMs: 1_000 })).toThrowError(/future/);
     expect(() => parse("ICA3836BC>OGFLR,qAS,LFLE:/100956h9999.99N/00558.45E'000/054/A=000964 id053836BC")).toThrowError(/coordinate/i);
     expect(() => parse("ICA3836BC>OGFLR,qAS,LFLE:/100956h4533.58N/00558.45E'000/054/A=000964 idINVALID")).toThrowError(/id/i);
+    expect(() => parse(OGN_FIXTURES.realFlarm.replace("182/096", "182/ABC"), new Date("2026-09-10T07:39:50.000Z"))).toThrowError(OgnParseError);
   });
 
   it("keeps TCP line framing bounded across chunks", () => {

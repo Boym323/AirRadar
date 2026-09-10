@@ -20,6 +20,7 @@ const config: OgnConfig = {
   reconnectMaxMs: 2_000,
   ddbRefreshMs: 60_000,
   ddbMaxStaleMs: 86_400_000,
+  ddbUrl: "https://ddb.glidernet.org/download/?j=1&t=1",
   maxTargets: 5_000,
   configurationError: null,
 };
@@ -34,7 +35,11 @@ function diagnosticProvider() {
       packets: 0, positionPackets: 0, canonicalPositionUpdates: 0, duplicatePackets: 0, malformed: 0, droppedAdsb: 0,
       droppedGroundStatus: 0, droppedStatus: 0, droppedDelayed: 0, droppedPrivacy: 0, droppedStale: 0, droppedCapacity: 0,
       unknownTocall: 0, sourceCounts: {}, unknownTocalls: [], activeTargets: 0, freshTargets: 0, staleTargets: 0,
-      ddb: { status: "disabled" as const, entries: 0, lastRefreshAt: null, lastSuccessAt: null, ageMs: null, failures: 0, stale: true },
+      ddb: {
+        status: "disabled" as const, mode: null, endpoint: "https://ddb.glidernet.org/download/", entries: 0,
+        lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
+        failures: 0, fallbackCount: 0, fallbackUsed: false, aircraftTypeAvailable: false, stale: true,
+      },
       reconnects: 0, configurationError: null,
     })),
   };

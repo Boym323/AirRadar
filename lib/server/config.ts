@@ -1,6 +1,7 @@
 import type { ReceiverPosition } from "@/lib/aircraft/types";
 import { t } from "@/lib/i18n";
 import { getAirRadarUserAgent } from "@/lib/server/user-agent";
+import { DEFAULT_OGN_DDB_URL } from "@/lib/ogn/ddb";
 
 export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/wiedehopf/tar1090-db/refs/heads/csv/aircraft.csv.gz";
@@ -191,6 +192,7 @@ export interface OgnConfig {
   reconnectMaxMs: number;
   ddbRefreshMs: number;
   ddbMaxStaleMs: number;
+  ddbUrl: string;
   maxTargets: number;
   configurationError: string | null;
 }
@@ -259,6 +261,19 @@ export function getOgnDdbMaxStaleMs(): number {
   return boundedOgnMilliseconds("OGN_DDB_MAX_STALE_MS", 24 * 60 * 60_000, 60_000, 24 * 60 * 60_000);
 }
 
+export function getOgnDdbUrl(): string {
+  const configured = process.env.OGN_DDB_URL?.trim();
+  if (!configured) return DEFAULT_OGN_DDB_URL;
+  try {
+    const url = new URL(configured);
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
+    if ((url.protocol !== "https:" && url.protocol !== "http:") || host !== "ddb.glidernet.org" || url.pathname !== "/download/") return DEFAULT_OGN_DDB_URL;
+    return url.toString();
+  } catch {
+    return DEFAULT_OGN_DDB_URL;
+  }
+}
+
 export function getOgnMaxTargets(): number {
   return boundedInteger("OGN_MAX_TARGETS", 5_000, 1, 20_000);
 }
@@ -270,6 +285,7 @@ export function getOgnConfig(): OgnConfig {
   const reconnectMaxMs = getOgnReconnectMaxMs();
   const ddbRefreshMs = getOgnDdbRefreshMs();
   const ddbMaxStaleMs = getOgnDdbMaxStaleMs();
+  const ddbUrl = getOgnDdbUrl();
   const errors: string[] = [];
   const host = process.env.OGN_HOST?.trim();
   const port = rawNumber("OGN_PORT");
@@ -284,6 +300,8 @@ export function getOgnConfig(): OgnConfig {
   if (removeAfterMs < staleAfterMs) errors.push("OGN_REMOVE_AFTER_MS");
   if (reconnectMaxMs < reconnectMinMs) errors.push("OGN_RECONNECT_MAX_MS");
   if (ddbMaxStaleMs < ddbRefreshMs) errors.push("OGN_DDB_MAX_STALE_MS");
+  const configuredDdbUrl = process.env.OGN_DDB_URL?.trim();
+  if (configuredDdbUrl && ddbUrl === DEFAULT_OGN_DDB_URL && configuredDdbUrl !== DEFAULT_OGN_DDB_URL) errors.push("OGN_DDB_URL");
   return {
     enabled: isOgnEnabled(),
     host: getOgnHost(),
@@ -298,6 +316,7 @@ export function getOgnConfig(): OgnConfig {
     reconnectMaxMs,
     ddbRefreshMs,
     ddbMaxStaleMs,
+    ddbUrl,
     maxTargets: getOgnMaxTargets(),
     configurationError: errors.length ? `Invalid OGN configuration: ${errors.join(", ")}` : null,
   };

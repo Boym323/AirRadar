@@ -8,7 +8,7 @@ const config: OgnConfig = {
   enabled: true, host: "aprs.glidernet.org", port: 14580, radiusKm: 250, connectTimeoutMs: 1_000,
   keepaliveMs: 240_000,
   staleAfterMs: 15_000, removeAfterMs: 60_000, maxPacketAgeMs: 120_000, reconnectMinMs: 1_000,
-  reconnectMaxMs: 2_000, ddbRefreshMs: 60_000, ddbMaxStaleMs: 86_400_000, maxTargets: 5_000, configurationError: null,
+  reconnectMaxMs: 2_000, ddbRefreshMs: 60_000, ddbMaxStaleMs: 86_400_000, ddbUrl: "https://ddb.glidernet.org/download/?j=1&t=1", maxTargets: 5_000, configurationError: null,
 };
 
 class FakeSocket implements OgnSocketLike {

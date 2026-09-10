@@ -1,12 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_OGN_HOST, DEFAULT_OGN_PORT, getOgnConfig } from "@/lib/server/config";
+import { DEFAULT_OGN_DDB_URL } from "@/lib/ogn/ddb";
 
 afterEach(() => vi.unstubAllEnvs());
 
 describe("OGN configuration", () => {
   it("is disabled by default and uses the official APRS endpoint", () => {
     vi.stubEnv("OGN_ENABLED", "false");
-    expect(getOgnConfig()).toMatchObject({ enabled: false, host: DEFAULT_OGN_HOST, port: DEFAULT_OGN_PORT, radiusKm: 250, staleAfterMs: 15_000, removeAfterMs: 60_000, maxPacketAgeMs: 120_000, maxTargets: 5_000, configurationError: null });
+    expect(getOgnConfig()).toMatchObject({ enabled: false, host: DEFAULT_OGN_HOST, port: DEFAULT_OGN_PORT, radiusKm: 250, staleAfterMs: 15_000, removeAfterMs: 60_000, maxPacketAgeMs: 120_000, ddbUrl: DEFAULT_OGN_DDB_URL, maxTargets: 5_000, configurationError: null });
+  });
+
+  it("keeps the server-side DDB URL on the official host", () => {
+    vi.stubEnv("OGN_DDB_URL", "https://example.invalid/ddb?j=1&t=1");
+    const value = getOgnConfig();
+    expect(value.ddbUrl).toBe(DEFAULT_OGN_DDB_URL);
+    expect(value.configurationError).toContain("OGN_DDB_URL");
   });
 
   it("reports invalid operator configuration without accepting unsafe values", () => {
