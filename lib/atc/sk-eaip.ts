@@ -128,14 +128,11 @@ function parseAltitude(value: string): ImportAltitude | null {
 function verticalLimits(value: string): { upper: ImportAltitude; lower: ImportAltitude } | null {
   const classIndex = value.search(/Class of airspace\s*:/i);
   const candidate = classIndex >= 0 ? value.slice(0, classIndex) : value;
-  const matches = [...candidate.matchAll(ALTITUDE_PATTERN)].map((match) => parseAltitude(match[0])).filter((item): item is ImportAltitude => item !== null);
+  const matches = [...candidate.matchAll(ALTITUDE_PATTERN)]
+    .map((match) => parseAltitude(match[0]))
+    .filter((item): item is ImportAltitude => item !== null);
   if (matches.length < 2) return null;
   return { upper: matches.at(-2)!, lower: matches.at(-1)! };
-}
-
-function airspaceClass(value: string): string | null {
-  const match = /Class of airspace\s*:\s*([A-G])/i.exec(value);
-  return match?.[1]?.toUpperCase() ?? null;
 }
 
 function concreteAirspaceName(firstCell: string): { name: string; firstCoordinateIndex: number } | null {
@@ -155,7 +152,9 @@ function geometryText(firstCell: string, firstCoordinateIndex: number): string {
 }
 
 function parseGeometry(text: string, name: string, boundaryProvider?: StateBoundaryProvider): ParsedGeometry {
-  if (/circular arc|\bCWA\b|\bCCA\b/i.test(text)) throw new Error("circular arc without unambiguous direction is not imported");
+  if (/circular arc|\bCWA\b|\bCCA\b/i.test(text)) {
+    throw new Error("circular arc without unambiguous direction is not imported");
+  }
   COORDINATE_PAIR_PATTERN.lastIndex = 0;
   const matches = [...text.matchAll(COORDINATE_PAIR_PATTERN)];
   if (matches.length < 3) throw new Error("fewer than three published coordinate points");
@@ -218,13 +217,12 @@ function rowToSector(cells: string[], options: ParseSkEaipOptions): { sector: At
     };
   }
 
-  const classLabel = airspaceClass(firstCell);
   const unit = normalizedText(cells[1] ?? "");
   const callsign = callsignFromCell(cells[2] ?? "");
   const service = serviceFromUnit(unit);
   const sector: AtcImportSector = {
     id: skSectorId(name),
-    name: classLabel ? `${name} (Class ${classLabel})` : name,
+    name,
     atcCallsign: callsign,
     service,
     country: "SK",
@@ -245,7 +243,9 @@ function rowToSector(cells: string[], options: ParseSkEaipOptions): { sector: At
 }
 
 export function parseSkEaipEnr21(html: string, options: ParseSkEaipOptions): SkEaipParseResult {
-  if (!/^https:\/\/aim\.lps\.sk\/web\/eAIP_SR\//i.test(options.sourceReference)) throw new Error("Refusing non-authoritative Slovak eAIP source reference");
+  if (!/^https:\/\/aim\.lps\.sk\/web\/eAIP_SR\//i.test(options.sourceReference)) {
+    throw new Error("Refusing non-authoritative Slovak eAIP source reference");
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(options.effectiveDate) || !Number.isFinite(Date.parse(`${options.effectiveDate}T00:00:00Z`))) {
     throw new Error("Invalid Slovak eAIP effective date");
   }
@@ -309,7 +309,11 @@ export function skEaipUrlCandidates(now = new Date()): string[] {
 
 export function skEaipEffectiveDateFromUrl(value: string): string | null {
   let url: URL;
-  try { url = new URL(value); } catch { return null; }
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
   if (url.protocol !== "https:" || url.hostname.toLowerCase().replace(/\.$/, "") !== SK_EAIP_HOST) return null;
   const match = /\/AIP_SR_EFF_(\d{2})([A-Z]{3})(\d{4})(?:_amdt)?\//i.exec(url.pathname);
   if (!match) return null;
@@ -330,7 +334,10 @@ export async function fetchCurrentSkEaip(options: { now?: Date; fetchImpl?: type
     try {
       response = await fetchImpl(candidate, {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": getAirRadarUserAgent("Slovak-eAIP-sync") },
+        headers: {
+          Accept: "text/html,application/xhtml+xml",
+          "User-Agent": getAirRadarUserAgent("Slovak-eAIP-sync"),
+        },
       });
     } catch (error) {
       attempts.push(`${candidate}: ${error instanceof Error ? error.message : String(error)}`);
@@ -342,7 +349,9 @@ export async function fetchCurrentSkEaip(options: { now?: Date; fetchImpl?: type
     }
     if (response.url) {
       const final = new URL(response.url);
-      if (final.protocol !== "https:" || final.hostname.toLowerCase().replace(/\.$/, "") !== SK_EAIP_HOST) throw new Error("Slovak eAIP redirected to a non-authoritative host");
+      if (final.protocol !== "https:" || final.hostname.toLowerCase().replace(/\.$/, "") !== SK_EAIP_HOST) {
+        throw new Error("Slovak eAIP redirected to a non-authoritative host");
+      }
     }
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (bytes.byteLength > MAX_EAIP_BYTES) throw new Error("Slovak eAIP ENR 2.1 exceeds the safety size limit");
