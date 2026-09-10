@@ -12,7 +12,7 @@ export const cs = {
     more: "Další",
   },
   brand: {
-    subtitle: "OSOBNÍ PŘEHLED O PROVOZU ADS-B",
+    subtitle: "OSOBNÍ PŘEHLED LETECKÉHO PROVOZU",
     demoMode: "DEMO REŽIM",
   },
   status: {
@@ -35,6 +35,10 @@ export const cs = {
     receiverPosition: "Pozice přijímače",
     liveAirPicture: "Živý přehled provozu",
     aircraftInRange: "v dosahu",
+    trafficNearby: "Provoz v okolí",
+    trafficSourceLabel: "Zdroj provozu",
+    trafficSourceAdsb: "ADS-B",
+    trafficSourceOgn: "OGN",
     aircraftNearby: "Letadla v okolí",
     visibleAircraft: (visible: string, total: string) => `${visible} / ${total} letadel`,
     expandAircraftPanel: "Rozbalit panel s letadly",
@@ -56,6 +60,7 @@ export const cs = {
   },
   layers: {
     title: "Vrstvy mapy",
+    groups: { traffic: "Provoz", aviation: "Letectví", display: "Zobrazení" },
     aircraft: "Letadla",
     ogn: "OGN / FLARM",
     rangeRings: "Kruhy dosahu přijímače",
@@ -75,7 +80,8 @@ export const cs = {
     title: "OGN / FLARM",
     toggle: "Cíle OGN / FLARM",
     count: (count: string) => `${count} cílů OGN`,
-    empty: "Žádné cíle OGN",
+    empty: "Žádné OGN cíle k zobrazení",
+    noMatching: "Žádné odpovídající OGN cíle",
     badge: "OGN",
     anonymous: "Anonymní cíl",
     trackingSources: { flarm: "FLARM", ogn: "OGN tracker", fanet: "FANET", safesky: "SafeSky", pilotaware: "PilotAware", ads_l: "ADS-L" },
@@ -102,7 +108,9 @@ export const cs = {
   },
   search: {
     placeholder: "Hledat volací znak, registraci, ICAO…",
+    ognPlaceholder: "Hledat veřejný OGN cíl…",
     aircraftLabel: "Hledat letadla",
+    ognLabel: "Hledat cíle OGN",
     globalPlaceholder: "Hledat letadla a letiště…",
     globalLabel: "Globální vyhledávání",
     aircraftResults: "Letadla",

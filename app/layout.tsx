@@ -6,8 +6,8 @@ import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 
 export const metadata: Metadata = {
-  title: "AirRadar — osobní ADS-B radar",
-  description: "Soukromý ADS-B radar pro sledování letadel v okolí.",
+  title: "AirRadar — osobní radar leteckého provozu",
+  description: "Soukromý radar pro přehled leteckého provozu v okolí.",
   applicationName: "AirRadar",
   manifest: "/manifest.webmanifest",
 };

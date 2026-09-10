@@ -14,7 +14,7 @@ export const en = {
     more: "More",
   },
   brand: {
-    subtitle: "PERSONAL ADS-B SITUATIONAL AWARENESS",
+    subtitle: "PERSONAL AVIATION SITUATIONAL AWARENESS",
     demoMode: "DEMO MODE",
   },
   status: {
@@ -37,6 +37,10 @@ export const en = {
     receiverPosition: "Receiver position",
     liveAirPicture: "Live air picture",
     aircraftInRange: "aircraft in range",
+    trafficNearby: "Traffic nearby",
+    trafficSourceLabel: "Traffic source",
+    trafficSourceAdsb: "ADS-B",
+    trafficSourceOgn: "OGN",
     aircraftNearby: "Aircraft nearby",
     visibleAircraft: (visible: string, total: string) => `${visible} / ${total} aircraft`,
     expandAircraftPanel: "Expand aircraft panel",
@@ -58,6 +62,7 @@ export const en = {
   },
   layers: {
     title: "Map layers",
+    groups: { traffic: "Traffic", aviation: "Aviation", display: "Display" },
     aircraft: "Aircraft",
     ogn: "OGN / FLARM",
     rangeRings: "Receiver range rings",
@@ -77,7 +82,8 @@ export const en = {
     title: "OGN / FLARM",
     toggle: "OGN / FLARM targets",
     count: (count: string) => `${count} OGN targets`,
-    empty: "No OGN targets",
+    empty: "No OGN targets to display",
+    noMatching: "No matching OGN targets",
     badge: "OGN",
     anonymous: "Anonymous target",
     trackingSources: { flarm: "FLARM", ogn: "OGN tracker", fanet: "FANET", safesky: "SafeSky", pilotaware: "PilotAware", ads_l: "ADS-L" },
@@ -104,7 +110,9 @@ export const en = {
   },
   search: {
     placeholder: "Search callsign, registration, ICAO…",
+    ognPlaceholder: "Search public OGN target…",
     aircraftLabel: "Search aircraft",
+    ognLabel: "Search OGN targets",
     globalPlaceholder: "Search aircraft and airports…",
     globalLabel: "Global search",
     aircraftResults: "Aircraft",
