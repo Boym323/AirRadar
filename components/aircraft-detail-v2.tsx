@@ -347,6 +347,7 @@ export function AircraftDetailV2({
                   <DetailValue label={t.aircraft.altitude}>{formatAltitude(liveAircraft.altitude)}</DetailValue>
                   <DetailValue label={t.aircraft.groundSpeed}>{formatSpeed(liveAircraft.groundSpeed)}</DetailValue>
                   <DetailValue label={t.aircraft.track}>{formatTrack(liveAircraft.track)}</DetailValue>
+                  <DetailValue label={t.aircraft.squawk}>{valueOrEmpty(liveAircraft.squawk)}</DetailValue>
                 </div>
               ) : <div className="detail-disclaimer">{t.aircraft.notCurrentlyInRange}</div>}
             </section>
