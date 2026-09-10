@@ -26,7 +26,7 @@ function fakeBoundaryProvider(): StateBoundaryProvider {
 }
 
 describe("Slovak eAIP ENR 2.1 parser", () => {
-  it("imports direct Slovak TMA geometry, vertical limits, callsign and VHF frequencies", () => {
+  it("imports direct Slovak TMA geometry, vertical limits, callsign and working VHF frequencies", () => {
     const result = parseSkEaipEnr21(fixture, {
       sourceReference,
       effectiveDate: "2026-09-03",
@@ -47,8 +47,11 @@ describe("Slovak eAIP ENR 2.1 parser", () => {
     });
     expect(zilina?.alternateFrequencies).toEqual([
       { frequencyMhz: 118.405 },
-      { frequencyMhz: 121.5 },
     ]);
+    expect([
+      zilina?.primaryFrequencyMhz,
+      ...(zilina?.alternateFrequencies ?? []).map((item) => item.frequencyMhz),
+    ]).not.toContain(121.5);
     expect(zilina?.polygons[0][0]).toEqual(zilina?.polygons[0].at(-1));
     expect(result.document.source).toMatchObject({ name: "Slovak eAIP", reference: sourceReference, effectiveDate: "2026-09-03" });
     expect(result.document.transmitters).toEqual([]);
