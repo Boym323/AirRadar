@@ -84,6 +84,12 @@ partial because AirRadar cannot reconstruct the already elapsed part of that
 day without scanning another historical source. A local-midnight boundary is
 accurate to the normal snapshot cadence.
 
+If the initial current-day aggregate load fails, advanced statistics skip that
+snapshot and retry the load on a later snapshot. They do not persist a new
+partial counter until the existing current-day baseline has been loaded
+successfully, preventing a transient startup database failure from overwriting
+a larger persisted count.
+
 ## Fastest-aircraft record
 
 The speed record is receiver-observed and comes only from the current local
@@ -145,8 +151,14 @@ The approved V1.4B schema change is additive:
 - nullable message-counter fields on `ReceiverDailyStats`; and
 - nullable fastest-aircraft fields on `ReceiverDailyStats`.
 
-There is no historical backfill and no new index required for the bounded
-altitude query because the composite primary key is date-leading.
+The Prisma 8 emitted contract also materializes a date-only relation index on
+`ReceiverDailyCoverageAltitude`. The generated migration keeps that index so
+the migration stays identical to the emitted contract, even though `date` is
+already the leading column of the composite primary key.
+
+There is no historical backfill. All migration operations are additive and the
+new analytics begin collecting data only after the new application version is
+running.
 
 Application rollback does not require an immediate database rollback. An older
 AirRadar build ignores the new nullable columns and table. If schema cleanup is
