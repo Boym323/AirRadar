@@ -29,6 +29,12 @@ writing or changing documentation.
 - ATC results are probable position/altitude/time matches, never proof of the
   aircraft's tuned frequency. Sample ATC is demo-only unless explicitly
   enabled; production data is imported and provenance is retained.
+- Never run `npm run build` directly in the live `/var/www/airradar` checkout
+  while `airradar.service` is serving traffic. Replacing shared `.next`
+  files behind an already running Next.js process can mix build manifests and
+  static assets, leaving the UI unstyled and non-interactive. Production
+  builds go through `deploy/release.sh`; visual changes additionally require
+  the desktop/mobile browser gate and a post-restart public UI smoke check.
 - Do not reset or destructively migrate a production database. Do not run a
   release unless the user explicitly requests it; follow `docs/RELEASE.md`.
 - Keep user-facing strings in `lib/i18n/`; established aviation terms remain

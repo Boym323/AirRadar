@@ -87,6 +87,35 @@ automatically roll back Git code or database migrations. Recovery must account
 for migration/code compatibility. A failed candidate remains reusable because
 the tag is created last.
 
+## Build consistency and visual changes
+
+Do not run `npm run build` directly in the live `/var/www/airradar` checkout
+while `airradar.service` is running. Next.js keeps the build manifest in the
+running process, while the build rewrites the shared `.next` directory. If a
+new build replaces `.next` before the old process is restarted, HTML from the
+old build can reference missing static CSS/JavaScript files; the homepage may
+return `200` while appearing unstyled and non-interactive. The build/start
+lock prevents a service from starting during an active release build, but it
+does not make an independently run build safe for an already running process.
+
+Use `deploy/release.sh` for production builds. If a release fails after
+building but before restart, treat the checkout as inconsistent: do not leave
+the old service running against the new `.next`; either complete the release
+or restore a matching build before serving traffic.
+
+Any change to `app/`, `components/`, styles, images, fonts, or other visual UI
+code requires the browser gate before release:
+
+```bash
+npm run test:production:browser
+```
+
+After restart, verify the public URL in a real browser or equivalent smoke
+check. The check must confirm that all `/_next/static/*` resources return
+successful responses with their expected MIME types and that the page has no
+browser console errors. `/api/health` alone is not sufficient to validate the
+visual UI.
+
 ## Build/start lock and systemd
 
 The production release build and start path share `/run/airradar-build.lock`.

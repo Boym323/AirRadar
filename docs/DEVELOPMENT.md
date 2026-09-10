@@ -71,6 +71,13 @@ the current pair by default; set
 `PRODUCTION_GATE_CHANNEL=stable` or `PRODUCTION_GATE_CHANNEL=rc` to require a
 specific pair.
 
+For visual work, also run the desktop/mobile browser gate. Do not validate a
+visual change by running `npm run build` in the live production checkout: a
+running Next.js process can retain the old build manifest while `.next` is
+rewritten, which mixes old HTML references with new static assets. Use a
+separate worktree or local/staging process during implementation, then use
+`deploy/release.sh` for production.
+
 Documentation-only changes that do not touch code, package files, schema,
 migrations, or build configuration do not require the build/full suite unless
 the user asks for it. Still run relevant lightweight checks such as link
