@@ -5,9 +5,6 @@ on:
     branches: [main, master]
   pull_request:
 
-permissions:
-  contents: write
-
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -18,30 +15,12 @@ jobs:
           fetch-depth: 0
           # Keep tags explicit: the changelog test resolves historical release tags.
           fetch-tags: true
-          # Temporary migration-generation run: operate on the actual PR head,
-          # not GitHub's synthetic pull-request merge commit.
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run prisma:generate
-      - name: Plan receiver analytics migration
-        run: npx prisma migration plan --name receiver_analytics_v14b --from 20260910T0535_airport_data_v2
-      - name: Commit generated migration artifacts
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-          set -Eeuo pipefail
-          git add migrations/app/*_receiver_analytics_v14b migrations/snapshots/b332f6de2e8028b03d145c733735d73aea24b7ab1fa8f41968f3f97c29dd53dc
-          if git diff --cached --quiet; then
-            echo "Migration artifacts already committed"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "db: add receiver analytics migration"
-            git push origin HEAD:"${GITHUB_HEAD_REF}"
-          fi
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
