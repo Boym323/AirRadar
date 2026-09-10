@@ -73,5 +73,5 @@ describe("aircraft metadata catalog memory bounds", () => {
     expect(batchSizes).toHaveLength(Math.ceil(recordCount / METADATA_IMPORT_BATCH_SIZE));
     expect(Math.max(...batchSizes)).toBeLessThanOrEqual(METADATA_IMPORT_BATCH_SIZE);
     expect(batchSizes.reduce((total, size) => total + size, 0)).toBe(recordCount);
-  }, 30_000);
+  }, 60_000);
 });

@@ -50,6 +50,11 @@ function field(value: string | undefined): string | null {
 }
 
 function splitCsvRow(line: string): string[] {
+  // The tar1090 catalog is normally unescaped. Keep the character-by-character
+  // path for escaped values, but avoid building each field one character at a
+  // time for the hundreds of thousands of rows in a full catalog import.
+  if (!line.includes("\\")) return line.split(";");
+
   const fields: string[] = [];
   let current = "";
   let escaped = false;
