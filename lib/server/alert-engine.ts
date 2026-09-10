@@ -4,11 +4,13 @@ import { loadAlertConfig, type AlertRule } from "@/lib/server/alert-config";
 import { getAlertCooldownMs, isEmergencyAlertEnabled } from "@/lib/server/config";
 import { createAlertNotifier, type AlertNotifier, type AircraftAlert } from "@/lib/server/alert-notifier";
 import { createAlertHistoryStore, type AlertHistoryReason, type AlertHistoryRecordValue, type AlertHistoryEventType, type JsonlAlertHistoryStore } from "@/lib/server/alert-history";
+import { createAlertStateStore, type AlertStateStore } from "@/lib/server/alert-state";
 import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
 
 const MAX_DEDUP_ENTRIES = 10_000;
 const MAX_PENDING_ALERTS = 32;
 const MAX_CONCURRENT_DELIVERIES = 2;
+const EMERGENCY_SQUAWKS = new Set(["7500", "7600", "7700"]);
 
 export interface AlertStatus {
   status: "ok" | "disabled" | "error";
@@ -24,6 +26,7 @@ export interface AlertEngineOptions {
   cooldownMs?: number;
   now?: () => number;
   history?: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
+  state?: AlertStateStore;
 }
 
 function aircraftMap(value: ReadonlyMap<string, Aircraft> | ReadonlyArray<Aircraft>): ReadonlyMap<string, Aircraft> {
@@ -35,6 +38,39 @@ function isEmergency(aircraft: Aircraft | undefined): boolean {
   return Boolean(aircraft?.emergency);
 }
 
+function emergencySquawk(aircraft: Aircraft | undefined): "7500" | "7600" | "7700" | null {
+  const value = aircraft?.squawk?.trim();
+  return value && EMERGENCY_SQUAWKS.has(value) ? value as "7500" | "7600" | "7700" : null;
+}
+
+function emergencyEvent(squawk: "7500" | "7600" | "7700"): { type: AlertHistoryEventType; reason: AlertHistoryReason } {
+  if (squawk === "7500") return { type: "emergency_7500", reason: "squawk_7500" };
+  if (squawk === "7600") return { type: "emergency_7600", reason: "squawk_7600" };
+  return { type: "emergency_7700", reason: "squawk_7700" };
+}
+
+function matchesRuleIgnoringDistance(aircraft: Aircraft, rule: AlertRule): boolean {
+  return matchesAircraftRule(aircraft, { type: rule.type, value: rule.value });
+}
+
+function watchlistEvent(
+  prior: Aircraft | undefined,
+  aircraft: Aircraft,
+  rules: AlertRule[],
+): { type: AlertHistoryEventType; reason: AlertHistoryReason; radiusKm?: number } {
+  if (!prior) return { type: "aircraft_appeared", reason: "appeared" };
+  const crossed = rules
+    .filter((rule) => rule.maxDistanceKm !== undefined
+      && matchesRuleIgnoringDistance(prior, rule)
+      && prior.distanceKm !== null
+      && aircraft.distanceKm !== null
+      && prior.distanceKm > rule.maxDistanceKm!
+      && aircraft.distanceKm <= rule.maxDistanceKm!)
+    .map((rule) => rule.maxDistanceKm as number);
+  if (crossed.length) return { type: "entered_radius", reason: "entered_radius", radiusKm: Math.min(...crossed) };
+  return { type: "watchlist", reason: "watchlisted" };
+}
+
 export class AlertEngine {
   private rules: AlertRule[];
   private configErrors: string[];
@@ -42,12 +78,15 @@ export class AlertEngine {
   private readonly cooldownMs: number;
   private readonly now: () => number;
   private readonly history: Pick<JsonlAlertHistoryStore, "recordDetected" | "recordNotification">;
+  private readonly stateStore: AlertStateStore;
   private readonly dedupCache = new Map<string, number>();
   private readonly pending: AircraftAlert[] = [];
   private activeDeliveries = 0;
   private deliveryError = false;
+  private statePersistenceError = false;
   private sequence = 0;
   private readonly permanentEvents = new Map<string, number>();
+  private readonly ruleLastTriggered = new Map<string, number>();
 
   constructor(options: AlertEngineOptions = {}) {
     const config = options.rules ? { rules: options.rules, errors: options.configErrors ?? [] } : loadAlertConfig();
@@ -57,6 +96,12 @@ export class AlertEngine {
     this.cooldownMs = options.cooldownMs ?? getAlertCooldownMs();
     this.now = options.now ?? Date.now;
     this.history = options.history ?? createAlertHistoryStore();
+    this.stateStore = options.state ?? createAlertStateStore();
+    const persisted = this.stateStore.load();
+    for (const [key, timestamp] of persisted.dedup) this.dedupCache.set(key, timestamp);
+    for (const [key, timestamp] of persisted.permanent) this.permanentEvents.set(key, timestamp);
+    for (const [key, timestamp] of persisted.ruleLastTriggered) this.ruleLastTriggered.set(key, timestamp);
+    this.cleanupDedupCache(this.now());
   }
 
   /**
@@ -71,10 +116,15 @@ export class AlertEngine {
 
   getStatus(): AlertStatus {
     const hasConditions = this.rules.length > 0 || isEmergencyAlertEnabled();
-    const status: AlertStatus["status"] = this.configErrors.length || this.deliveryError
+    const status: AlertStatus["status"] = this.configErrors.length || this.deliveryError || this.statePersistenceError
       ? "error"
       : this.notifier.enabled && hasConditions ? "ok" : "disabled";
     return { status, enabled: status === "ok", notifier: this.notifier.name, ruleCount: this.rules.length };
+  }
+
+  getRuleLastTriggeredAt(ruleId: string): string | null {
+    const timestamp = this.ruleLastTriggered.get(ruleId);
+    return timestamp === undefined ? null : new Date(timestamp).toISOString();
   }
 
   observe(
@@ -85,25 +135,69 @@ export class AlertEngine {
     this.cleanupDedupCache(now);
     const previous = aircraftMap(previousValue);
     const current = aircraftMap(currentValue);
+    let stateDirty = false;
 
     for (const aircraft of current.values()) {
       const prior = previous.get(aircraft.icaoHex);
       const matchedRules = this.rules.filter((rule) => matchesAircraftRule(aircraft, rule));
       const transitionedRules = matchedRules.filter((rule) => !prior || !matchesAircraftRule(prior, rule));
-      if (transitionedRules.length && this.isAvailable(`aircraft:${aircraft.icaoHex}`, now)) {
-        this.reserve(`aircraft:${aircraft.icaoHex}`, now);
-        for (const rule of transitionedRules) this.reserve(`rule:${rule.id}:${aircraft.icaoHex}`, now);
-        this.enqueue({ aircraft, matchedRules: transitionedRules, emergency: false, priority: "normal", type: "watchlist", reason: "watchlisted" });
+      const availableRules = transitionedRules.filter((rule) => this.isAvailable(`rule:${rule.id}:${aircraft.icaoHex}`, now));
+      if (availableRules.length) {
+        for (const rule of availableRules) {
+          this.reserve(`rule:${rule.id}:${aircraft.icaoHex}`, now);
+          this.ruleLastTriggered.set(rule.id, now);
+        }
+        const event = watchlistEvent(prior, aircraft, availableRules);
+        this.enqueue({
+          aircraft,
+          matchedRules: availableRules,
+          emergency: false,
+          priority: "normal",
+          type: event.type,
+          reason: event.reason,
+          radiusKm: event.radiusKm ?? null,
+        });
+        stateDirty = true;
       }
 
-      if (isEmergencyAlertEnabled() && isEmergency(aircraft) && !isEmergency(prior)) {
+      if (!isEmergencyAlertEnabled()) continue;
+
+      const currentSquawk = emergencySquawk(aircraft);
+      const priorSquawk = emergencySquawk(prior);
+      if (priorSquawk && currentSquawk !== priorSquawk) {
+        this.dedupCache.delete(`squawk:${priorSquawk}:${aircraft.icaoHex}`);
+        stateDirty = true;
+      }
+      if (currentSquawk && currentSquawk !== priorSquawk) {
+        const key = `squawk:${currentSquawk}:${aircraft.icaoHex}`;
+        if (this.isAvailable(key, now)) {
+          this.reserve(key, now);
+          const event = emergencyEvent(currentSquawk);
+          this.enqueue({
+            aircraft,
+            matchedRules: [],
+            emergency: true,
+            priority: "high",
+            type: event.type,
+            reason: event.reason,
+            squawk: currentSquawk,
+          });
+          stateDirty = true;
+        }
+      } else if (!currentSquawk && isEmergency(aircraft) && !isEmergency(prior)) {
         const key = `emergency:${aircraft.icaoHex}`;
         if (this.isAvailable(key, now)) {
           this.reserve(key, now);
           this.enqueue({ aircraft, matchedRules: [], emergency: true, priority: "high", type: "emergency", reason: "emergency" });
+          stateDirty = true;
         }
       }
+      if (isEmergency(prior) && !isEmergency(aircraft)) {
+        if (this.dedupCache.delete(`emergency:${aircraft.icaoHex}`)) stateDirty = true;
+      }
     }
+
+    if (stateDirty) this.persistState();
   }
 
   /** Called only after durable history confirms that a first Flight exists. */
@@ -112,6 +206,7 @@ export class AlertEngine {
     if (this.permanentEvents.has(id)) return;
     this.rememberPermanentEvent(id);
     this.enqueue({ aircraft, matchedRules: [], emergency: false, priority: "normal", type: "new_aircraft", reason: "new", eventId: id });
+    this.persistState();
   }
 
   /** Called only on a genuine in-memory record transition. */
@@ -127,6 +222,7 @@ export class AlertEngine {
       previousDistanceKm: previous?.distanceKm ?? null,
     };
     this.enqueue({ aircraft: aircraftFromRecord(current), matchedRules: [], emergency: false, priority: "normal", type: "reception_record", reason: "record", eventId: id, record });
+    this.persistState();
   }
 
   cleanupDedupCache(now = this.now()): void {
@@ -172,11 +268,38 @@ export class AlertEngine {
     }
   }
 
+  private persistState(): void {
+    try {
+      this.stateStore.save({
+        dedup: [...this.dedupCache.entries()],
+        permanent: [...this.permanentEvents.entries()],
+        ruleLastTriggered: [...this.ruleLastTriggered.entries()],
+      });
+      this.statePersistenceError = false;
+    } catch (error) {
+      if (!this.statePersistenceError) {
+        console.error("AirRadar alert state persistence failed", error instanceof Error ? error.message : "unknown error");
+      }
+      this.statePersistenceError = true;
+    }
+  }
+
   private enqueue(alert: AircraftAlert): void {
     const type: AlertHistoryEventType = alert.type ?? (alert.emergency ? "emergency" : "watchlist");
     const reason: AlertHistoryReason = alert.reason ?? (alert.emergency ? "emergency" : "watchlisted");
     const eventId = alert.eventId ?? `${type}:${alert.aircraft.icaoHex}:${this.now()}:${this.sequence++}`;
-    void this.history.recordDetected({ id: eventId, detectedAt: new Date(this.now()).toISOString(), type, reason, aircraft: alert.aircraft, record: alert.record }).catch(() => undefined);
+    void this.history.recordDetected({
+      id: eventId,
+      detectedAt: new Date(this.now()).toISOString(),
+      type,
+      reason,
+      aircraft: alert.aircraft,
+      ruleIds: alert.matchedRules.map((rule) => rule.id),
+      ruleNames: alert.matchedRules.map((rule) => rule.name ?? rule.id),
+      radiusKm: alert.radiusKm ?? null,
+      squawk: alert.squawk ?? null,
+      record: alert.record,
+    }).catch(() => undefined);
     if (this.pending.length >= MAX_PENDING_ALERTS) {
       console.error(`AirRadar alert dropped: provider=${this.notifier.name} reason=queue_full`);
       void this.history.recordNotification(eventId, "failed").catch(() => undefined);
@@ -211,7 +334,7 @@ export class AlertEngine {
         await this.notifier.send(alert);
         if (eventId) void this.history.recordNotification(eventId, "delivered").catch(() => undefined);
         this.deliveryError = false;
-        console.info(`AirRadar alert sent: ruleCount=${alert.matchedRules.length} aircraft=${alert.aircraft.icaoHex}`);
+        console.info(`AirRadar alert sent: type=${alert.type ?? "watchlist"} ruleCount=${alert.matchedRules.length} aircraft=${alert.aircraft.icaoHex}`);
         return;
       } catch (error) {
         lastError = error;
