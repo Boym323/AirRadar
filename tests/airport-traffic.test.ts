@@ -262,6 +262,7 @@ describe("airport traffic summary v1", () => {
     const invalidResponse = await getAirportTraffic(new Request("http://localhost/api/airports/lkpr/traffic?range=today"), { params: Promise.resolve({ icao: "lkpr" }) });
 
     expect(defaultResponse.status).toBe(200);
+    expect(defaultResponse.headers.get("Cache-Control")).toBe("public, max-age=30, stale-while-revalidate=120");
     expect((await defaultResponse.json()).range).toBe("30d");
     expect(invalidResponse.status).toBe(400);
     expect(aircraftAirportHref("EDDF")).toBe("/airports/EDDF");

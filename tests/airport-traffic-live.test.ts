@@ -24,8 +24,18 @@ describe("airport nearby ADS-B traffic", () => {
     expect(items[0].distanceKm).toBeLessThan(AIRPORT_NEARBY_RADIUS_KM);
   });
 
-  it("classifies only when trajectory evidence is sufficient", () => {
+  it("accepts a descent as compatible with an approach", () => {
+    expect(classifyAirportTraffic({ track: 180, verticalRate: -2_000 }, 10, 180, 12)).toBe("approaching");
+  });
+
+  it("uses distance and track as the primary approach evidence", () => {
     expect(classifyAirportTraffic({ track: 180, verticalRate: 0 }, 10, 180, 12)).toBe("approaching");
+    expect(classifyAirportTraffic({ track: 180, verticalRate: null }, 10, 180, 12)).toBe("approaching");
+    expect(classifyAirportTraffic({ track: 180, verticalRate: 1_500 }, 10, 180, 12)).toBe("unknown");
+    expect(classifyAirportTraffic({ track: 90, verticalRate: -500 }, 10, 180, 12)).toBe("unknown");
+  });
+
+  it("classifies an aircraft moving away while climbing as departing", () => {
     expect(classifyAirportTraffic({ track: 0, verticalRate: 500 }, 12, 180, 10)).toBe("departing");
     expect(classifyAirportTraffic({ track: 90, verticalRate: 0 }, 10, 180, 10.05)).toBe("overflying");
     expect(classifyAirportTraffic({ track: null, verticalRate: null }, 10, 180, 12)).toBe("unknown");

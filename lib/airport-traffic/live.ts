@@ -15,6 +15,8 @@ function angleDifference(a: number, b: number): number {
   return Math.abs(((a - b + 540) % 360) - 180);
 }
 
+const CLEAR_CLIMB_FPM = 1_000;
+
 /** Classifies a positioned, recent ADS-B observation using movement heuristics. */
 export function classifyAirportTraffic(
   aircraft: Pick<AircraftView, "track" | "verticalRate">,
@@ -26,8 +28,14 @@ export function classifyAirportTraffic(
   const trendKm = previousDistanceKm - distanceKm;
   const toward = angleDifference(aircraft.track, bearingToAirport) <= 65;
   const away = angleDifference(aircraft.track, (bearingToAirport + 180) % 360) <= 65;
-  if (trendKm >= 0.2 && toward && (aircraft.verticalRate ?? 0) > -700) return "approaching";
-  if (trendKm <= -0.2 && away && (aircraft.verticalRate ?? 0) >= 150) return "departing";
+  const verticalRate = typeof aircraft.verticalRate === "number" && Number.isFinite(aircraft.verticalRate)
+    ? aircraft.verticalRate
+    : null;
+  // Distance trend and track are the primary evidence. Descent is compatible
+  // with an approach; only a clearly positive climb is a reason to stay
+  // conservative when the aircraft is otherwise pointed toward the airport.
+  if (trendKm >= 0.2 && toward && !(verticalRate !== null && verticalRate >= CLEAR_CLIMB_FPM)) return "approaching";
+  if (trendKm <= -0.2 && away && (verticalRate ?? 0) >= 150) return "departing";
   if (Math.abs(trendKm) < 0.2 && !toward && !away) return "overflying";
   return "unknown";
 }
