@@ -333,3 +333,9 @@ Changes since v1.0.17:
 - feat: implement isolated build directory for production releases (6c6eb5b3)
 - chore: update dependencies and devDependencies in package.json (8c520b43)
 - chore: update dependencies and configuration for Next.js 16 and Tailwind CSS 4 (e0f7ecc0)
+
+## [1.0.19] - 2026-09-10
+
+Changes since v1.0.18:
+
+- feat: implement SoftRF metadata validation and checksum verification for emergency whitelist (85b29ad6)
