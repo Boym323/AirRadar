@@ -298,3 +298,10 @@ Changes since v1.0.12:
 
 - docs: update recovery runbook to reflect new migration details and safety checks (1c77b204)
 - feat: enhance OGN privacy handling and DDB integration (f0aec448)
+
+## [1.0.14] - 2026-09-10
+
+Changes since v1.0.13:
+
+- feat: optimize release process by running npm ci with local cache and parallelizing lint, typecheck, and tests (d82388e6)
+- feat: implement persistent caching for OGN DDB resolutions with file-based storage (85875919)
