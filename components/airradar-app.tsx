@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
@@ -408,6 +408,7 @@ function aircraftGlyphMarkup(aircraft: AircraftView): string {
 
 export function AirRadarApp() {
   const pathname = usePathname();
+  const router = useRouter();
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
@@ -891,7 +892,7 @@ export function AirRadarApp() {
       map.on("mouseleave", "atc-transmitters-circle", () => { map.getCanvas().style.cursor = ""; });
       const openAirport = (event: maplibregl.MapLayerMouseEvent) => {
         const icao = event.features?.[0]?.properties?.icao;
-        if (typeof icao === "string" && /^[A-Z0-9]{4}$/.test(icao)) window.location.assign(`/airports/${encodeURIComponent(icao)}`);
+        if (typeof icao === "string" && /^[A-Z0-9]{4}$/.test(icao)) router.push(`/airports/${encodeURIComponent(icao)}`);
       };
       for (const layer of ["route-airports-circle", "route-airports-label", ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, ROUTE_V2_AIRPORT_LABEL_LAYER_ID] as const) {
         map.on("click", layer, openAirport);
@@ -916,7 +917,7 @@ export function AirRadarApp() {
       mapRef.current = null;
       setMapReady(false);
     };
-  }, [selectAircraft, selectOgn]);
+  }, [router, selectAircraft, selectOgn]);
 
   useEffect(() => {
     const map = mapRef.current;
