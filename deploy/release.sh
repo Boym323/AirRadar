@@ -412,19 +412,12 @@ generate_release_changelog() {
 
 run_release_steps() {
   log "Installing dependencies"
-  npm ci
+  npm ci --prefer-offline --no-audit --no-fund
 
   log "Generating Prisma contract"
   npm run prisma:generate
 
-  log "Running lint"
-  npm run lint
-
-  log "Running typecheck"
-  npm run typecheck
-
-  log "Running tests"
-  npm test
+  run_quality_gates
 
   log "Building production app"
   acquire_build_lock
@@ -435,6 +428,29 @@ run_release_steps() {
 
   log "Applying database migrations"
   npm run prisma:deploy
+}
+
+run_quality_gates() {
+  local lint_pid typecheck_pid tests_pid
+  local lint_status=0 typecheck_status=0 tests_status=0
+
+  log "Running lint, typecheck, and tests in parallel"
+  npm run lint &
+  lint_pid=$!
+  npm run typecheck &
+  typecheck_pid=$!
+  npm test -- --pool=threads &
+  tests_pid=$!
+
+  wait "${lint_pid}" || lint_status=$?
+  wait "${typecheck_pid}" || typecheck_status=$?
+  wait "${tests_pid}" || tests_status=$?
+
+  if (( lint_status != 0 || typecheck_status != 0 || tests_status != 0 )); then
+    die "Quality gates failed (lint=${lint_status}, typecheck=${typecheck_status}, tests=${tests_status})."
+  fi
+
+  log "Quality gates passed"
 }
 
 validate_repository_systemd_unit() {
@@ -718,9 +734,9 @@ print_dry_run_plan() {
   log "Current commit: ${OLD_SHA}"
   log "Candidate: version=${resolved_version} tag=v${resolved_version} channel=${RELEASE_BUILD_CHANNEL}"
   if (( WORKTREE_DIRTY == 1 )); then
-    log "Planned release: preserve the current working tree, resolve version, generate/commit changelog, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
+    log "Planned release: preserve the current working tree, resolve version, generate/commit changelog, npm ci (prefer offline, no audit/fund), Prisma generate, parallel lint/typecheck/tests (Vitest threads), build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
   else
-    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, resolve version, generate/commit changelog, npm ci, Prisma generate, lint, typecheck, tests, build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
+    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, resolve version, generate/commit changelog, npm ci (prefer offline, no audit/fund), Prisma generate, parallel lint/typecheck/tests (Vitest threads), build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
   fi
 }
 

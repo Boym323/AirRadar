@@ -60,8 +60,10 @@ sudo ./deploy/release.sh --channel rc --dry-run
 4. `scripts/changelog.mjs` generates the new `CHANGELOG.md` section from Git
    commits since the previous release tag. If changed, the release commits it
    automatically before continuing.
-5. It runs `npm ci`, `npm run prisma:generate`, `npm run lint`,
-   `npm run typecheck`, and `npm test`.
+5. It runs `npm ci` with the local cache and without npm audit/fund network
+   checks, emits the Prisma contract, then runs lint, typecheck, and the full
+   Vitest suite in parallel. The release test invocation uses Vitest
+   `--pool=threads`; all tests still run.
 6. It acquires `/run/airradar-build.lock`, writes ignored
    `generated/build-version.json`, and runs `npm run build`. The build lock is
    released after the build.
