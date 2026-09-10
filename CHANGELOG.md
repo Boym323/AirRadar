@@ -339,3 +339,10 @@ Changes since v1.0.17:
 Changes since v1.0.18:
 
 - feat: implement SoftRF metadata validation and checksum verification for emergency whitelist (85b29ad6)
+
+## [1.0.20] - 2026-09-10
+
+Changes since v1.0.19:
+
+- fix: update paths for Next.js release types in tsconfig and import statements (17fd5815)
+- feat: add systemd service and timer for SoftRF OGN snapshot updates (fd189b4b)
