@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import type { StyleSpecification } from "maplibre-gl";
 import type { Airport } from "@/lib/airports/types";
 import type { AirportInfrastructure } from "@/lib/airports/infrastructure";

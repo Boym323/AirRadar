@@ -4,8 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
-import type { FilterSpecification, GeoJSONSource, StyleSpecification } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { FilterSpecification, GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
 import {
   formatAge,
   formatAltitude,
@@ -817,7 +817,7 @@ export function AirRadarApp() {
       map.addSource("aviation-sigmet", { type: "geojson", data: EMPTY_SIGMET_DATA as unknown as GeoJSON.FeatureCollection });
       map.addLayer({ id: "aviation-sigmet-fill", type: "fill", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "fill-color": "#f3b95f", "fill-opacity": 0.08 } });
       map.addLayer({ id: "aviation-sigmet-line", type: "line", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "line-color": "#f3b95f", "line-opacity": 0.68, "line-width": 1.2 } });
-      map.on("click", "aviation-sigmet-fill", (event) => {
+      map.on("click", "aviation-sigmet-fill", (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
         if (!feature) return;
         const properties = feature.properties ?? {};
@@ -834,11 +834,11 @@ export function AirRadarApp() {
       });
       map.on("mouseenter", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = ""; });
-      map.on("click", "ogn-targets-circle", (event) => {
+      map.on("click", "ogn-targets-circle", (event: MapLayerMouseEvent) => {
         const id = event.features?.[0]?.properties?.id;
         if (typeof id === "string" && id.length <= 80) selectOgn(id);
       });
-      map.on("click", "ogn-targets-label", (event) => {
+      map.on("click", "ogn-targets-label", (event: MapLayerMouseEvent) => {
         const id = event.features?.[0]?.properties?.id;
         if (typeof id === "string" && id.length <= 80) selectOgn(id);
       });
@@ -849,7 +849,7 @@ export function AirRadarApp() {
       map.addSource(ROUTE_V2_AIRPORT_SOURCE_ID, { type: "geojson", data: createRouteAirportGeoJSON(null) });
       map.addLayer({ id: ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, type: "circle", source: ROUTE_V2_AIRPORT_SOURCE_ID, paint: { "circle-color": "#37d6c0", "circle-opacity": 0.92, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4.5, 12, 6], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.8 } });
       map.addLayer({ id: ROUTE_V2_AIRPORT_LABEL_LAYER_ID, type: "symbol", source: ROUTE_V2_AIRPORT_SOURCE_ID, layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 10, 10, 13, 11], "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#72e5d3", "text-opacity": 0.9, "text-halo-color": "#08111d", "text-halo-width": 1 } });
-      map.on("click", "atc-sectors-fill", (event) => {
+      map.on("click", "atc-sectors-fill", (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
         if (!feature) return;
         const properties = feature.properties ?? {};
@@ -865,7 +865,7 @@ export function AirRadarApp() {
       });
       map.on("mouseenter", "atc-sectors-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "atc-sectors-fill", () => { map.getCanvas().style.cursor = ""; });
-      map.on("click", "atc-transmitters-circle", (event) => {
+      map.on("click", "atc-transmitters-circle", (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
         if (!feature) return;
         const properties = feature.properties ?? {};

@@ -40,21 +40,21 @@
     "changelog:backfill": "node scripts/changelog.mjs backfill"
   },
   "dependencies": {
-    "@prisma/orm-postgres": "8.0.0-rc.8",
+    "@prisma/orm-postgres": "8.0.0-rc.9",
     "cheerio": "^1.2.0",
     "geist": "^1.7.2",
-    "maplibre-gl": "4.7.1",
+    "maplibre-gl": "^6.9.0",
     "next": "^15.5.4",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "temporal-polyfill": "1.0.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.0",
-    "@types/node": "^20.17.30",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
-    "autoprefixer": "^10.4.20",
+    "@types/node": "^22.20.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.5.6",
     "dotenv": "^17.4.2",
     "eslint": "^9.20.1",
     "eslint-config-next": "^15.5.4",
@@ -63,6 +63,7 @@
     "prisma": "8.0.0-rc.13",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.9.0",
-    "vitest": "^3.0.9"
+    "vite": "^7.3.6",
+    "vitest": "^5.0.0"
   }
 }
