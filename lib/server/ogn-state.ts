@@ -104,6 +104,10 @@ export class OgnStateService {
         return;
       }
     }
+    if (!previous && this.positions.size >= this.config.maxTargets && !this.removePositionCapacityVictim()) {
+      this.droppedCapacity += 1;
+      return;
+    }
     this.positions.set(key, position);
     const decision = applyOgnPrivacy({ position, ddbAvailable: this.ddb.isUsable(), ddbEntry: this.lookupDdb(position) });
     if (decision.action === "drop") {
@@ -146,7 +150,7 @@ export class OgnStateService {
     let staleTargets = 0;
     for (const target of this.targets.values()) {
       if (now - Date.parse(target.receivedAt) > this.config.removeAfterMs) continue;
-      if (now - Date.parse(target.receivedAt) > this.config.staleAfterMs) staleTargets += 1;
+      if (now - Date.parse(target.receivedAt) >= this.config.staleAfterMs) staleTargets += 1;
       else freshTargets += 1;
     }
     return {
@@ -213,6 +217,23 @@ export class OgnStateService {
     }
   }
 
+  private removePositionCapacityVictim(): boolean {
+    let victim: [string, OgnPosition] | null = null;
+    for (const entry of this.positions) {
+      if (!victim) {
+        victim = entry;
+        continue;
+      }
+      const entryAt = Date.parse(entry[1].receivedAt);
+      const victimAt = Date.parse(victim[1].receivedAt);
+      if (entryAt < victimAt || (entryAt === victimAt && entry[0] < victim[0])) victim = entry;
+    }
+    if (!victim) return false;
+    this.positions.delete(victim[0]);
+    this.targets.delete(victim[0]);
+    return true;
+  }
+
   private reapplyPrivacy(): void {
     if (this.shuttingDown || !this.config.enabled) return;
     let changed = false;
@@ -238,6 +259,13 @@ export class OgnStateService {
         receiverCount: existing.receiverCount,
       } : rebuilt;
       if (next && JSON.stringify(next) !== JSON.stringify(existing)) {
+        if (!existing && this.targets.size >= this.config.maxTargets) {
+          this.removeCapacityVictim();
+          if (this.targets.size >= this.config.maxTargets) {
+            this.droppedCapacity += 1;
+            continue;
+          }
+        }
         this.targets.set(key, next);
         changed = true;
       }
@@ -249,7 +277,7 @@ export class OgnStateService {
     const age = now - Date.parse(target.receivedAt);
     return {
       ...target,
-      stale: age > this.config.staleAfterMs,
+      stale: age >= this.config.staleAfterMs,
       distanceKm: haversineDistanceKm(this.receiver.lat, this.receiver.lon, target.latitude, target.longitude),
       bearing: initialBearing(this.receiver.lat, this.receiver.lon, target.latitude, target.longitude),
     };

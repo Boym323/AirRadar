@@ -30,7 +30,13 @@ describe("OGN privacy boundary", () => {
     expect(identified).not.toBeNull();
     expect(anonymous).not.toBeNull();
     expect(toPublicOgnTarget(identified!)).toMatchObject({ id: "flarm:8E20F0", address: "3836BC", registration: "OK-TEST", identityVisible: true });
-    expect(toPublicOgnTarget(anonymous!)).toMatchObject({ id: "anonymous-2", publicId: "anonymous-2", address: null, senderCallsign: null, registration: null, model: null, identityVisible: false, noTracking: false });
-    expect(JSON.stringify(toPublicOgnTarget(anonymous!))).not.toContain("ICA3836BC");
+    const publicAnonymous = toPublicOgnTarget({ ...anonymous!, lastReceiver: "LKXX", receiverSignalDb: 32.5, recentReceivers: ["LKXX", "LKYY"], receiverCount: 2 });
+    expect(publicAnonymous).toMatchObject({ id: "anonymous-2", publicId: "anonymous-2", address: null, senderCallsign: null, registration: null, model: null, identityVisible: false, noTracking: false, lastReceiver: null });
+    expect(publicAnonymous).not.toHaveProperty("receiverSignalDb");
+    expect(publicAnonymous).not.toHaveProperty("recentReceivers");
+    expect(publicAnonymous).not.toHaveProperty("receiverCount");
+    expect(JSON.stringify(publicAnonymous)).not.toContain("ICA3836BC");
+    expect(JSON.stringify(publicAnonymous)).not.toContain("LKXX");
+    expect(toPublicOgnTarget({ ...identified!, lastReceiver: "LKXX" }).lastReceiver).toBe("LKXX");
   });
 });

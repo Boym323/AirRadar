@@ -50,6 +50,7 @@ export class OgnProvider {
   private readonly unknownTocalls = new Map<string, number>();
   private socket: OgnSocketLike | null = null;
   private connectTimer: ReturnType<typeof setTimeout> | null = null;
+  private handshakeTimer: ReturnType<typeof setTimeout> | null = null;
   private keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
@@ -94,9 +95,11 @@ export class OgnProvider {
   async stop(): Promise<void> {
     this.running = false;
     if (this.connectTimer) clearTimeout(this.connectTimer);
+    if (this.handshakeTimer) clearTimeout(this.handshakeTimer);
     if (this.keepaliveTimer) clearTimeout(this.keepaliveTimer);
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.connectTimer = null;
+    this.handshakeTimer = null;
     this.keepaliveTimer = null;
     this.reconnectTimer = null;
     this.lineReader.reset();
@@ -146,7 +149,8 @@ export class OgnProvider {
       ddb: {
         status: "disabled", mode: null, endpoint: "https://ddb.glidernet.org/download/", entries: 0,
         lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
-        failures: 0, fallbackCount: 0, fallbackUsed: false, aircraftTypeAvailable: false, stale: true,
+        failures: 0, fallbackCount: 0, fallbackUsed: false, rateLimited: false, retryAfterMs: null, nextRetryAt: null,
+        aircraftTypeAvailable: false, stale: true,
       },
       reconnects: this.reconnects,
       configurationError: this.configurationError,
@@ -182,7 +186,11 @@ export class OgnProvider {
       this.lastActivityAt = this.connectedAt;
       try {
         socket.write(buildOgnLogin(this.config, this.receiver));
-        this.scheduleKeepalive(socket);
+        this.handshakeTimer = setTimeout(() => {
+          if (this.socket !== socket || !this.running || this.loginAcknowledged) return;
+          console.error("OGN login handshake timed out");
+          socket.destroy();
+        }, this.config.handshakeTimeoutMs);
       } catch (error) {
         this.reportError(error);
         socket.destroy();
@@ -254,14 +262,20 @@ export class OgnProvider {
     if (!lower.includes("logresp")) return;
     if (/invalid|unrecognized|reject|failed|error/.test(lower)) {
       this.status = "degraded";
+      this.clearHandshakeTimer();
+      this.loginAcknowledged = false;
+      this.socket?.destroy();
       return;
     }
+    const firstAcknowledgement = !this.loginAcknowledged;
+    this.clearHandshakeTimer();
     this.loginAcknowledged = true;
     this.status = "online";
     if (!this.reportedLogin) {
       this.reportedLogin = true;
       console.info("OGN login accepted");
     }
+    if (firstAcknowledgement && this.socket) this.scheduleKeepalive(this.socket);
     this.reconnectAttempt = 0;
     this.reportedError = false;
   }
@@ -270,8 +284,10 @@ export class OgnProvider {
     if (socket && this.socket !== socket) return;
     if (socket && this.socket === socket) this.socket = null;
     if (this.connectTimer) clearTimeout(this.connectTimer);
+    if (this.handshakeTimer) clearTimeout(this.handshakeTimer);
     if (this.keepaliveTimer) clearTimeout(this.keepaliveTimer);
     this.connectTimer = null;
+    this.handshakeTimer = null;
     this.keepaliveTimer = null;
     this.lineReader.reset();
     if (!this.running) return;
@@ -305,6 +321,11 @@ export class OgnProvider {
         socket.destroy();
       }
     }, this.config.keepaliveMs);
+  }
+
+  private clearHandshakeTimer(): void {
+    if (this.handshakeTimer) clearTimeout(this.handshakeTimer);
+    this.handshakeTimer = null;
   }
 
   private recordSource(tocall: string): void {

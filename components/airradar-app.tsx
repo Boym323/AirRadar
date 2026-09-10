@@ -1629,7 +1629,7 @@ function OgnDetailContent({ target }: { target: OgnTargetView }) {
       <DetailItem label={t.ogn.distance} value={formatDistance(target.distanceKm)} />
       <DetailItem label={t.ogn.bearing} value={formatTrack(target.bearing)} />
       <DetailItem label={t.ogn.lastSeen} value={formatAge(ageSeconds)} />
-      <DetailItem label={t.ogn.receiver} value={target.lastReceiver || t.common.emptyValue} />
+      {target.identityVisible && <DetailItem label={t.ogn.receiver} value={target.lastReceiver || t.common.emptyValue} />}
       <DetailItem label={t.ogn.title} value={`${t.ogn.trackingSources[target.trackingSource]}${target.stale ? ` · ${t.ogn.stale}` : ""}`} />
     </DetailSection>
     <div className="detail-disclaimer">{t.ogn.sourceDisclaimer}</div>

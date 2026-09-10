@@ -12,6 +12,7 @@ const config: OgnConfig = {
   port: 14580,
   radiusKm: 250,
   connectTimeoutMs: 1_000,
+  handshakeTimeoutMs: 1_000,
   keepaliveMs: 240_000,
   staleAfterMs: 15_000,
   removeAfterMs: 60_000,
@@ -38,7 +39,8 @@ function diagnosticProvider() {
       ddb: {
         status: "disabled" as const, mode: null, endpoint: "https://ddb.glidernet.org/download/", entries: 0,
         lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
-        failures: 0, fallbackCount: 0, fallbackUsed: false, aircraftTypeAvailable: false, stale: true,
+        failures: 0, fallbackCount: 0, fallbackUsed: false, rateLimited: false, retryAfterMs: null, nextRetryAt: null,
+        aircraftTypeAvailable: false, stale: true,
       },
       reconnects: 0, configurationError: null,
     })),
@@ -85,7 +87,7 @@ describe("OGN state service", () => {
     await ddb.refresh();
     expect(service.getSnapshot().targets).toHaveLength(1);
     await ddb.refresh();
-    expect(service.getSnapshot().targets[0]).toMatchObject({ identityVisible: false, address: null, registration: null, senderCallsign: null });
+    expect(service.getSnapshot().targets[0]).toMatchObject({ identityVisible: false, address: null, registration: null, senderCallsign: null, lastReceiver: null });
   });
 
   it("expires RAM targets without persisting them", async () => {
@@ -98,5 +100,64 @@ describe("OGN state service", () => {
     (service as unknown as { removeExpired: () => void }).removeExpired();
     expect(service.getSnapshot().targets).toEqual([]);
     expect(service.getDiagnostics().droppedStale).toBe(1);
+  });
+
+  it("hard-bounds positions and targets while keeping updates for an existing key", async () => {
+    const ddb = await ddbWith(ddbEntry);
+    const boundedConfig = { ...config, maxTargets: 3 };
+    const service = new OgnStateService({ config: boundedConfig, ddb, receiver, provider: diagnosticProvider() as never });
+    const base = position();
+    for (let index = 0; index < 10; index += 1) {
+      const address = index.toString(16).padStart(6, "0").toUpperCase();
+      service.ingest({
+        ...base,
+        id: { ...base.id, address },
+        observedAt: new Date(Date.parse(base.observedAt) + index * 1_000).toISOString(),
+        receivedAt: new Date(Date.parse(base.receivedAt) + index * 1_000).toISOString(),
+      });
+    }
+    const internals = service as unknown as { positions: Map<string, unknown>; targets: Map<string, unknown> };
+    expect(internals.positions.size).toBeLessThanOrEqual(3);
+    expect(internals.targets.size).toBeLessThanOrEqual(3);
+
+    const before = internals.targets.size;
+    const existingKey = [...internals.targets.keys()][0];
+    const existingAddress = existingKey.split(":")[1];
+    const existing = { ...base, id: { ...base.id, address: existingAddress }, latitude: 48.5, observedAt: "2026-09-10T11:50:00.000Z", receivedAt: "2026-09-10T11:50:00.000Z" };
+    service.ingest(existing);
+    expect(internals.targets.size).toBe(before);
+    expect((internals.positions.get(existingKey) as { latitude: number }).latitude).toBe(48.5);
+  });
+
+  it("keeps reapplyPrivacy within the target cap after DDB recovery", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ devices: [ddbEntry] })));
+    const ddb = new OgnDdb({ fetcher: fetcher as unknown as typeof fetch, refreshMs: 60_000 });
+    const boundedConfig = { ...config, maxTargets: 3 };
+    const service = new OgnStateService({ config: boundedConfig, ddb, receiver, provider: diagnosticProvider() as never });
+    const base = position();
+    for (let index = 0; index < 10; index += 1) {
+      service.ingest({ ...base, id: { ...base.id, address: index.toString(16).padStart(6, "0").toUpperCase() }, observedAt: new Date(Date.parse(base.observedAt) + index * 1_000).toISOString(), receivedAt: new Date(Date.parse(base.receivedAt) + index * 1_000).toISOString() });
+    }
+    await ddb.refresh();
+    const internals = service as unknown as { positions: Map<string, unknown>; targets: Map<string, unknown> };
+    expect(internals.positions.size).toBeLessThanOrEqual(3);
+    expect(internals.targets.size).toBeLessThanOrEqual(3);
+  });
+
+  it("uses the exact stale and removal boundaries", async () => {
+    let clock = Date.parse("2026-09-10T11:49:00.000Z");
+    const ddb = await ddbWith(ddbEntry);
+    const service = new OgnStateService({ config, ddb, receiver, now: () => clock, provider: diagnosticProvider() as never });
+    service.ingest(position(new Date(clock).toISOString()));
+
+    clock += 14_999;
+    expect(service.getSnapshot().targets[0].stale).toBe(false);
+    clock += 1;
+    expect(service.getSnapshot().targets[0].stale).toBe(true);
+    clock = Date.parse("2026-09-10T11:49:00.000Z") + 60_000;
+    expect(service.getSnapshot().targets[0].stale).toBe(true);
+    clock += 1;
+    (service as unknown as { removeExpired: () => void }).removeExpired();
+    expect(service.getSnapshot().targets).toEqual([]);
   });
 });

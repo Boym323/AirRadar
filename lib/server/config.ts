@@ -184,6 +184,7 @@ export interface OgnConfig {
   port: number;
   radiusKm: number;
   connectTimeoutMs: number;
+  handshakeTimeoutMs: number;
   keepaliveMs: number;
   staleAfterMs: number;
   removeAfterMs: number;
@@ -227,6 +228,10 @@ export function getOgnRadiusKm(): number {
 
 export function getOgnConnectTimeoutMs(): number {
   return boundedOgnMilliseconds("OGN_CONNECT_TIMEOUT_MS", 10_000, 500, 120_000);
+}
+
+export function getOgnHandshakeTimeoutMs(): number {
+  return boundedOgnMilliseconds("OGN_HANDSHAKE_TIMEOUT_MS", 10_000, 500, 120_000);
 }
 
 export function getOgnKeepaliveMs(): number {
@@ -308,6 +313,7 @@ export function getOgnConfig(): OgnConfig {
     port: getOgnPort(),
     radiusKm: getOgnRadiusKm(),
     connectTimeoutMs: getOgnConnectTimeoutMs(),
+    handshakeTimeoutMs: getOgnHandshakeTimeoutMs(),
     keepaliveMs: getOgnKeepaliveMs(),
     staleAfterMs,
     removeAfterMs,

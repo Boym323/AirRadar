@@ -732,6 +732,7 @@ export const cs = {
     failures: "Selhání",
     rateLimited: "Rate limit",
     retryAfter: "Další pokus",
+    nextRetry: "Další retry",
     license: "Licence",
     connected: "Připojeno",
     unavailable: "Nedostupné",

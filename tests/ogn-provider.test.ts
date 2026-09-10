@@ -5,7 +5,7 @@ import { OGN_FIXTURES } from "@/tests/fixtures/ogn-packets";
 
 const receiver = { lat: 50.0755, lon: 14.4378, name: "Private receiver" };
 const config: OgnConfig = {
-  enabled: true, host: "aprs.glidernet.org", port: 14580, radiusKm: 250, connectTimeoutMs: 1_000,
+  enabled: true, host: "aprs.glidernet.org", port: 14580, radiusKm: 250, connectTimeoutMs: 1_000, handshakeTimeoutMs: 1_000,
   keepaliveMs: 240_000,
   staleAfterMs: 15_000, removeAfterMs: 60_000, maxPacketAgeMs: 120_000, reconnectMinMs: 1_000,
   reconnectMaxMs: 2_000, ddbRefreshMs: 60_000, ddbMaxStaleMs: 86_400_000, ddbUrl: "https://ddb.glidernet.org/download/?j=1&t=1", maxTargets: 5_000, configurationError: null,
@@ -62,7 +62,7 @@ describe("OGN APRS provider", () => {
     provider.start();
     socket.emit("connect");
     expect(socket.writes).toHaveLength(1);
-    socket.emit("data", Buffer.from(`# logresp AIRRADAR verified, server T2\r\n${OGN_FIXTURES.flarm}\r\n${OGN_FIXTURES.adsb}\r\n${OGN_FIXTURES.ground}\r\n${OGN_FIXTURES.weather}\r\n${OGN_FIXTURES.meshtastic}\r\n`));
+    socket.emit("data", Buffer.from(`# logresp AIRRADAR unverified, server T2\r\n${OGN_FIXTURES.flarm}\r\n${OGN_FIXTURES.adsb}\r\n${OGN_FIXTURES.ground}\r\n${OGN_FIXTURES.weather}\r\n${OGN_FIXTURES.meshtastic}\r\n`));
     expect(positions).toHaveLength(1);
     expect(provider.getDiagnostics()).toMatchObject({ status: "online", loginAcknowledged: true, packets: 5, positionPackets: 1, droppedAdsb: 1, droppedGroundStatus: 2, droppedStatus: 1 });
     expect(provider.getDiagnostics().lastAircraftPacketAt).toBe(new Date(clock).toISOString());
@@ -75,6 +75,9 @@ describe("OGN APRS provider", () => {
     const provider = new OgnProvider({ config: { ...config, keepaliveMs: 1_000 }, receiver, socketFactory: () => socket });
     provider.start();
     socket.emit("connect");
+    await vi.advanceTimersByTimeAsync(999);
+    expect(socket.writes).toHaveLength(1);
+    socket.emit("data", Buffer.from("# logresp AIRRADAR unverified\r\n"));
     await vi.advanceTimersByTimeAsync(999);
     expect(socket.writes).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1);
@@ -98,5 +101,76 @@ describe("OGN APRS provider", () => {
     await provider.stop();
     await vi.advanceTimersByTimeAsync(config.reconnectMaxMs + 1_000);
     expect(sockets).toHaveLength(2);
+  });
+
+  it("accepts an unverified receive-only login and starts keepalive only after acknowledgement", async () => {
+    vi.useFakeTimers();
+    const socket = new FakeSocket();
+    const provider = new OgnProvider({ config: { ...config, keepaliveMs: 1_000 }, receiver, socketFactory: () => socket });
+    provider.start();
+    socket.emit("connect");
+    await vi.advanceTimersByTimeAsync(config.handshakeTimeoutMs - 1);
+    expect(provider.getDiagnostics()).toMatchObject({ status: "connecting", loginAcknowledged: false });
+    socket.emit("data", Buffer.from("# logresp AIRRADAR unverified, server GLIDERN3/2\r\n"));
+    expect(provider.getDiagnostics()).toMatchObject({ status: "online", loginAcknowledged: true });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(socket.writes.at(-1)).toBe("#keepalive\r\n");
+    await provider.stop();
+  });
+
+  it("destroys a silently connected socket and uses the normal reconnect path", async () => {
+    vi.useFakeTimers();
+    const sockets: FakeSocket[] = [];
+    const provider = new OgnProvider({ config, receiver, random: () => 0.5, socketFactory: () => { const socket = new FakeSocket(); sockets.push(socket); return socket; } });
+    provider.start();
+    sockets[0].emit("connect");
+    await vi.advanceTimersByTimeAsync(config.handshakeTimeoutMs);
+    expect(sockets[0].destroyed).toBe(true);
+    expect(provider.getDiagnostics()).toMatchObject({ status: "reconnecting", loginAcknowledged: false, reconnects: 1 });
+    await vi.advanceTimersByTimeAsync(config.reconnectMinMs);
+    expect(sockets).toHaveLength(2);
+    await provider.stop();
+  });
+
+  it("ignores a late acknowledgement from an invalidated socket", async () => {
+    vi.useFakeTimers();
+    const sockets: FakeSocket[] = [];
+    const provider = new OgnProvider({ config, receiver, random: () => 0.5, socketFactory: () => { const socket = new FakeSocket(); sockets.push(socket); return socket; } });
+    provider.start();
+    const first = sockets[0];
+    first.emit("connect");
+    await vi.advanceTimersByTimeAsync(config.handshakeTimeoutMs);
+    await vi.advanceTimersByTimeAsync(config.reconnectMinMs);
+    const second = sockets[1];
+    first.emit("data", Buffer.from("# logresp AIRRADAR unverified\r\n"));
+    expect(provider.getDiagnostics()).toMatchObject({ status: "connecting", loginAcknowledged: false });
+    second.emit("connect");
+    expect(second.writes).toHaveLength(1);
+    await provider.stop();
+  });
+
+  it("cancels the handshake timer and does not reconnect during shutdown", async () => {
+    vi.useFakeTimers();
+    const sockets: FakeSocket[] = [];
+    const provider = new OgnProvider({ config, receiver, random: () => 0.5, socketFactory: () => { const socket = new FakeSocket(); sockets.push(socket); return socket; } });
+    provider.start();
+    sockets[0].emit("connect");
+    await provider.stop();
+    await vi.advanceTimersByTimeAsync(config.handshakeTimeoutMs + config.reconnectMaxMs + 1_000);
+    expect(sockets).toHaveLength(1);
+    expect(sockets[0].destroyed).toBe(true);
+    expect(provider.getDiagnostics()).toMatchObject({ status: "offline", loginAcknowledged: false });
+  });
+
+  it("reconnects after an explicit login rejection", async () => {
+    vi.useFakeTimers();
+    const socket = new FakeSocket();
+    const provider = new OgnProvider({ config, receiver, random: () => 0.5, socketFactory: () => socket });
+    provider.start();
+    socket.emit("connect");
+    socket.emit("data", Buffer.from("# logresp AIRRADAR invalid\r\n"));
+    expect(socket.destroyed).toBe(true);
+    expect(provider.getDiagnostics()).toMatchObject({ status: "reconnecting", loginAcknowledged: false, reconnects: 1 });
+    await provider.stop();
   });
 });

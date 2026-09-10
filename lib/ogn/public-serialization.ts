@@ -27,7 +27,7 @@ export function toPublicOgnTarget(target: OgnTarget): OgnTargetView {
     identityVisible: identified,
     stealth: target.stealth,
     noTracking: false,
-    lastReceiver: target.lastReceiver,
+    lastReceiver: identified ? target.lastReceiver : null,
     distanceKm: target.distanceKm,
     bearing: target.bearing,
     stale: target.stale,

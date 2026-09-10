@@ -734,6 +734,7 @@ export const en = {
     failures: "Failures",
     rateLimited: "Rate limited",
     retryAfter: "Retry after",
+    nextRetry: "Next retry",
     license: "License",
     connected: "Connected",
     unavailable: "Unavailable",

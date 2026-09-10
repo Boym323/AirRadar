@@ -146,6 +146,9 @@ export interface OgnDdbDiagnostics {
   failures: number;
   fallbackCount: number;
   fallbackUsed: boolean;
+  rateLimited: boolean;
+  retryAfterMs: number | null;
+  nextRetryAt: string | null;
   aircraftTypeAvailable: boolean;
   stale: boolean;
 }

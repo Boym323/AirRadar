@@ -109,6 +109,9 @@ export interface SystemStatusResponse {
       failures: number;
       fallbackCount: number;
       fallbackUsed: boolean;
+      rateLimited: boolean;
+      retryAfterMs: number | null;
+      nextRetryAt: string | null;
       aircraftTypeAvailable: boolean;
       stale: boolean;
     };
@@ -456,7 +459,8 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
     ddb: {
       status: "disabled" as const, mode: null, endpoint: "https://ddb.glidernet.org/download/", entries: 0,
       lastAttemptAt: null, lastRefreshAt: null, lastSuccessAt: null, lastHttpStatus: null, ageMs: null,
-      failures: 0, fallbackCount: 0, fallbackUsed: false, aircraftTypeAvailable: false, stale: true,
+      failures: 0, fallbackCount: 0, fallbackUsed: false, rateLimited: false, retryAfterMs: null, nextRetryAt: null,
+      aircraftTypeAvailable: false, stale: true,
     },
   };
   const sourceCounts: Record<string, number> = {};
@@ -514,6 +518,9 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
       failures: nonNegativeInteger(value.ddb.failures, 10_000_000),
       fallbackCount: nonNegativeInteger(value.ddb.fallbackCount, 10_000_000),
       fallbackUsed: Boolean(value.ddb.fallbackUsed),
+      rateLimited: Boolean(value.ddb.rateLimited),
+      retryAfterMs: value.ddb.retryAfterMs === null ? null : nonNegativeInteger(value.ddb.retryAfterMs, 24 * 60 * 60_000),
+      nextRetryAt: safeTimestamp(value.ddb.nextRetryAt),
       aircraftTypeAvailable: Boolean(value.ddb.aircraftTypeAvailable),
       stale: Boolean(value.ddb.stale),
     },

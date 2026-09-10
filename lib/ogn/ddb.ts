@@ -8,6 +8,7 @@ export const DEFAULT_OGN_DDB_MAX_STALE_MS = 24 * 60 * 60_000;
 export const DEFAULT_OGN_DDB_FAILURE_RETRY_MS = 10 * 60_000;
 const MAX_DDB_BYTES = 16 * 1024 * 1024;
 const MAX_DDB_ENTRIES = 100_000;
+const MAX_RETRY_AFTER_MS = 24 * 60 * 60_000;
 
 export interface OgnDdbOptions {
   url?: string;
@@ -30,12 +31,37 @@ interface DdbSnapshot {
 
 class DdbLoadError extends Error {
   readonly httpStatus: number | null;
+  readonly retryAfterMs: number | null;
 
-  constructor(message: string, httpStatus: number | null = null) {
+  constructor(message: string, httpStatus: number | null = null, retryAfterMs: number | null = null) {
     super(message);
     this.name = "DdbLoadError";
     this.httpStatus = httpStatus;
+    this.retryAfterMs = retryAfterMs;
   }
+}
+
+export function parseDdbRetryAfter(value: string | null, now = Date.now(), maximumMs = MAX_RETRY_AFTER_MS): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) {
+    const seconds = Number(trimmed);
+    if (!Number.isSafeInteger(seconds) || seconds < 0) return null;
+    const delayMs = seconds * 1_000;
+    return Number.isSafeInteger(delayMs) && delayMs <= maximumMs ? delayMs : null;
+  }
+  const timestamp = Date.parse(trimmed);
+  if (!Number.isFinite(timestamp)) return null;
+  const delayMs = timestamp - now;
+  return delayMs >= 0 && delayMs <= maximumMs ? delayMs : null;
+}
+
+export function shouldTryDdbFallback(error: unknown): boolean {
+  if (!(error instanceof DdbLoadError) || error.httpStatus === null || error.httpStatus === 429) return false;
+  if (error.httpStatus >= 500 && error.httpStatus <= 599) return true;
+  // These statuses can indicate that the richer t=1 representation is not
+  // supported while the documented base endpoint remains available.
+  return error.httpStatus === 200 || error.httpStatus === 400 || error.httpStatus === 404 || error.httpStatus === 406 || error.httpStatus === 415;
 }
 
 function optionalText(value: unknown, maximum: number): string | null {
@@ -140,6 +166,9 @@ export class OgnDdb {
   private failures = 0;
   private fallbackCount = 0;
   private fallbackUsed = false;
+  private rateLimited = false;
+  private retryAfterMs: number | null = null;
+  private nextRetryAt: number | null = null;
   private aircraftTypeAvailable = false;
   private running = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -171,6 +200,7 @@ export class OgnDdb {
     this.running = false;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
+    this.nextRetryAt = null;
     this.activeController?.abort();
     await this.inFlight;
   }
@@ -209,6 +239,9 @@ export class OgnDdb {
       failures: this.failures,
       fallbackCount: this.fallbackCount,
       fallbackUsed: this.fallbackUsed,
+      rateLimited: this.rateLimited,
+      retryAfterMs: this.retryAfterMs,
+      nextRetryAt: this.nextRetryAt === null ? null : new Date(this.nextRetryAt).toISOString(),
       aircraftTypeAvailable: this.aircraftTypeAvailable,
       stale: !this.isUsable(),
     };
@@ -217,15 +250,19 @@ export class OgnDdb {
   private async loadSnapshot(): Promise<void> {
     this.status = "loading";
     this.lastRefreshAt = this.now();
+    this.nextRetryAt = null;
+    this.rateLimited = false;
+    this.retryAfterMs = null;
     const controller = new AbortController();
     this.activeController = controller;
     const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+    let failureDelayMs: number | null = null;
     try {
       let loaded: { snapshot: DdbSnapshot; mode: DdbMode } | null = null;
       try {
         loaded = { snapshot: await this.fetchSnapshot(this.primaryUrl(), controller), mode: "rich-json" };
       } catch (error) {
-        if (controller.signal.aborted) throw error;
+        if (controller.signal.aborted || !shouldTryDdbFallback(error)) throw error;
         loaded = { snapshot: await this.fetchSnapshot(this.fallbackUrl(), controller), mode: "base-json" };
         this.fallbackCount += 1;
       }
@@ -236,18 +273,25 @@ export class OgnDdb {
       this.lastSuccessAt = this.now();
       this.failures = 0;
       this.status = "online";
+      this.rateLimited = false;
+      this.retryAfterMs = null;
       for (const listener of this.listeners) {
         try { listener(); } catch { /* diagnostics listeners are optional */ }
       }
-    } catch {
+    } catch (error) {
       this.failures += 1;
+      const rateLimitError = error instanceof DdbLoadError && error.httpStatus === 429 ? error : null;
+      this.rateLimited = rateLimitError !== null;
+      this.retryAfterMs = rateLimitError?.retryAfterMs ?? null;
+      failureDelayMs = this.getFailureRetryDelay(error);
       this.status = this.isUsable() ? "stale" : "offline";
       if (this.running) console.error(`AirRadar OGN DDB refresh failed (${this.failures})`);
     } finally {
       clearTimeout(timeout);
       if (this.activeController === controller) this.activeController = null;
       if (this.running) {
-        const delay = this.status === "stale" || this.status === "offline" ? Math.min(this.refreshMs, this.failureRetryMs) : this.refreshMs;
+        const delay = failureDelayMs ?? this.refreshMs;
+        if (failureDelayMs !== null) this.nextRetryAt = this.now() + delay;
         this.timer = setTimeout(() => { this.timer = null; void this.refresh(); }, delay);
       }
     }
@@ -289,7 +333,10 @@ export class OgnDdb {
       },
     });
     this.lastHttpStatus = response.status;
-    if (!response.ok) throw new DdbLoadError(`DDB HTTP ${response.status}`, response.status);
+    if (!response.ok) {
+      const retryAfterMs = response.status === 429 ? parseDdbRetryAfter(response.headers.get("retry-after"), this.now()) : null;
+      throw new DdbLoadError(`DDB HTTP ${response.status}`, response.status, retryAfterMs);
+    }
     let payload: unknown;
     try {
       payload = JSON.parse(await readBounded(response, this.maxBytes)) as unknown;
@@ -313,5 +360,10 @@ export class OgnDdb {
     if (next.size === 0) throw new DdbLoadError("DDB response contained no valid devices", response.status);
     if (this.index.size >= 100 && next.size < Math.max(10, Math.floor(this.index.size * 0.1))) throw new DdbLoadError("DDB response failed sanity-count validation", response.status);
     return { index: next, aircraftTypeAvailable };
+  }
+
+  private getFailureRetryDelay(error: unknown): number {
+    const retryAfterMs = error instanceof DdbLoadError && error.httpStatus === 429 ? error.retryAfterMs : null;
+    return retryAfterMs === null ? this.failureRetryMs : Math.max(this.failureRetryMs, retryAfterMs);
   }
 }

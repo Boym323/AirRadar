@@ -189,6 +189,9 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.ddbAge} value={data.ogn.ddb.ageMs === null ? dictionary.system.notAvailable : `${formatNumber(data.ogn.ddb.ageMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />
         <Field label={dictionary.system.ddbFailures} value={formatNumber(data.ogn.ddb.failures, 0, dictionary.locale)} />
         <Field label={dictionary.system.ddbFallback} value={`${data.ogn.ddb.fallbackUsed ? dictionary.system.yes : dictionary.system.no} · ${formatNumber(data.ogn.ddb.fallbackCount, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.rateLimited} value={data.ogn.ddb.rateLimited ? dictionary.system.configured : dictionary.system.disabled} />
+        {data.ogn.ddb.retryAfterMs !== null && <Field label={dictionary.system.retryAfter} value={`${formatNumber(data.ogn.ddb.retryAfterMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />}
+        <Field label={dictionary.system.nextRetry} value={formatDateTime(data.ogn.ddb.nextRetryAt, dictionary)} />
         <Field label={dictionary.system.ddbAircraftType} value={data.ogn.ddb.aircraftTypeAvailable ? dictionary.system.yes : dictionary.system.no} />
         {data.ogn.configurationError && <Field label={dictionary.system.configurationError} value={data.ogn.configurationError} />}
       </Card>

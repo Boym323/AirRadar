@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { DEFAULT_OGN_DDB_FALLBACK_URL, DEFAULT_OGN_DDB_URL, OgnDdb, ddbKey, ddbDeviceTypeForAddressType } from "@/lib/ogn/ddb";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_OGN_DDB_FALLBACK_URL, DEFAULT_OGN_DDB_URL, OgnDdb, ddbKey, ddbDeviceTypeForAddressType, parseDdbRetryAfter } from "@/lib/ogn/ddb";
 
 const device = {
   device_type: "F",
@@ -15,6 +15,8 @@ const device = {
 function response(devices: unknown[]) {
   return new Response(JSON.stringify({ devices }), { status: 200, headers: { "content-type": "application/json" } });
 }
+
+afterEach(() => vi.useRealTimers());
 
 describe("OGN DDB refresh", () => {
   it("loads the documented device schema and swaps the index atomically", async () => {
@@ -103,6 +105,67 @@ describe("OGN DDB refresh", () => {
     expect(fetcher).toHaveBeenCalledTimes(3);
     expect(fetcher.mock.calls[2][0]).toBe(DEFAULT_OGN_DDB_URL);
     expect(ddb.getDiagnostics()).toMatchObject({ mode: "rich-json", fallbackCount: 1, fallbackUsed: false, aircraftTypeAvailable: true });
+  });
+
+  it("does not fall back after a rate limit and retains a usable old snapshot", async () => {
+    let now = Date.parse("2026-09-10T12:00:00.000Z");
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(response([device]))
+      .mockResolvedValueOnce(new Response("rate limited", { status: 429, headers: { "Retry-After": "600" } }));
+    const ddb = new OgnDdb({ fetcher: fetcher as unknown as typeof fetch, now: () => now, failureRetryMs: 300_000 });
+
+    await ddb.refresh();
+    await ddb.refresh();
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher.mock.calls[1][0]).toBe(DEFAULT_OGN_DDB_URL);
+    expect(ddb.lookup("F", "8E20F0")).not.toBeNull();
+    expect(ddb.getDiagnostics()).toMatchObject({ status: "stale", rateLimited: true, retryAfterMs: 600_000, nextRetryAt: null, fallbackCount: 0 });
+    now += 600_000;
+    expect(ddb.isUsable()).toBe(true);
+  });
+
+  it("fails closed without a snapshot when primary is rate limited", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response("rate limited", { status: 429, headers: { "Retry-After": "600" } }));
+    const ddb = new OgnDdb({ fetcher: fetcher as unknown as typeof fetch });
+
+    await ddb.refresh();
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(ddb.isUsable()).toBe(false);
+    expect(ddb.getDiagnostics()).toMatchObject({ status: "offline", rateLimited: true, fallbackCount: 0 });
+  });
+
+  it("parses bounded Retry-After seconds and HTTP dates", () => {
+    const now = Date.parse("2026-09-10T12:00:00.000Z");
+    expect(parseDdbRetryAfter("600", now)).toBe(600_000);
+    expect(parseDdbRetryAfter("Thu, 10 Sep 2026 12:10:00 GMT", now)).toBe(600_000);
+    expect(parseDdbRetryAfter("-1", now)).toBeNull();
+    expect(parseDdbRetryAfter("not-a-date", now)).toBeNull();
+    expect(parseDdbRetryAfter("999999999999", now)).toBeNull();
+  });
+
+  it("schedules the allowed retry and cancels it during shutdown", async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn().mockResolvedValue(new Response("rate limited", { status: 429, headers: { "Retry-After": "600" } }));
+    const ddb = new OgnDdb({ fetcher: fetcher as unknown as typeof fetch, failureRetryMs: 300_000 });
+    ddb.start();
+    await ddb.refresh();
+    expect(ddb.getDiagnostics().nextRetryAt).not.toBeNull();
+    const calls = fetcher.mock.calls.length;
+    await ddb.stop();
+    await vi.advanceTimersByTimeAsync(900_000);
+    expect(fetcher).toHaveBeenCalledTimes(calls);
+  });
+
+  it("does not immediately fall back after a network failure", async () => {
+    const fetcher = vi.fn().mockRejectedValue(new Error("ECONNRESET"));
+    const ddb = new OgnDdb({ fetcher: fetcher as unknown as typeof fetch });
+
+    await ddb.refresh();
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(ddb.getDiagnostics()).toMatchObject({ status: "offline", fallbackCount: 0, rateLimited: false });
   });
 
   it("maps OGN address detail codes to DDB device types", () => {
