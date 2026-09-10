@@ -305,3 +305,9 @@ Changes since v1.0.13:
 
 - feat: optimize release process by running npm ci with local cache and parallelizing lint, typecheck, and tests (d82388e6)
 - feat: implement persistent caching for OGN DDB resolutions with file-based storage (85875919)
+
+## [1.0.15] - 2026-09-10
+
+Changes since v1.0.14:
+
+- feat: update weather status logic to prevent premature offline marking for METAR/TAF (6f88feb3)
