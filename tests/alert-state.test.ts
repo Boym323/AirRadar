@@ -47,15 +47,15 @@ describe("persistent alert engine state", () => {
     expect(store.load()).toEqual({ dedup: [], permanent: [], ruleLastTriggered: [] });
   });
 
-  it("drops malformed persisted entries instead of trusting them", async () => {
+  it("drops malformed and out-of-range persisted entries instead of trusting them", async () => {
     const directory = await mkdtemp(join(tmpdir(), "airradar-alert-state-"));
     directories.push(directory);
     const path = join(directory, "alert-engine-state.json");
     await writeFile(path, JSON.stringify({
       version: 1,
-      dedup: [["ok", 1], ["bad-time", "x"], ["", 2]],
+      dedup: [["ok", 1], ["bad-time", "x"], ["out-of-range", Number.MAX_VALUE], ["", 2]],
       permanent: "bad",
-      ruleLastTriggered: [["near", 3]],
+      ruleLastTriggered: [["near", 3], ["invalid-date", Number.MAX_VALUE]],
     }), "utf8");
 
     expect(new JsonAlertStateStore(path).load()).toEqual({
