@@ -14,6 +14,7 @@ export const SK_EAIP_AIRAC_ANCHOR = "2026-09-03";
 const MAX_EAIP_BYTES = 8 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 20_000;
 const AIRAC_CYCLE_MS = 28 * 24 * 60 * 60_000;
+const EMERGENCY_FREQUENCY_MHZ = 121.5;
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] as const;
 const COORDINATE_PAIR_PATTERN = /(\d{6}(?:[.,]\d+)?[NS])\s*(\d{7}(?:[.,]\d+)?[EW])/gi;
 const ALTITUDE_PATTERN = /(UNL|GND|SFC|FL\s*\d{1,3}|\d[\d ]*\s*ft\s*(?:AMSL|AGL))/gi;
@@ -105,6 +106,10 @@ function frequencyList(value: string): number[] {
   for (const match of value.matchAll(/\b(1(?:1[8-9]|2\d|3[0-6]))[,.](\d{3})\b/g)) {
     const frequency = Number(`${match[1]}.${match[2]}`);
     const key = frequency.toFixed(3);
+    // 121.500 MHz is explicitly published as the emergency frequency in the
+    // Slovak ENR 2.1 tables. It must not be presented as a sector working or
+    // alternate channel by AirRadar.
+    if (Math.abs(frequency - EMERGENCY_FREQUENCY_MHZ) < 0.0005) continue;
     if (!isSupportedAtcFrequencyMhz(frequency) || seen.has(key)) continue;
     seen.add(key);
     frequencies.push(frequency);
