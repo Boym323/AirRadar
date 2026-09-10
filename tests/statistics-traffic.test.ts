@@ -48,9 +48,9 @@ describe("statistics traffic aggregation", () => {
           { origin: "LKTB", destination: null, count: 1 },
         ],
         countries: [
-          { id: 1, registrationCountryCode: "CZ", registrationCountry: "Czechia" },
-          { id: 2, registrationCountryCode: "DE", registrationCountry: "Germany" },
-          { id: 3, registrationCountryCode: null, registrationCountry: null },
+          { id: 1, registrationCountryCode: "CZ", registrationCountry: "Czechia", operator: "CSA" },
+          { id: 2, registrationCountryCode: "DE", registrationCountry: "Germany", operator: "Lufthansa" },
+          { id: 3, registrationCountryCode: null, registrationCountry: null, operator: "CSA" },
         ],
       },
     });
@@ -63,6 +63,10 @@ describe("statistics traffic aggregation", () => {
     expect(response.topAirlines).toEqual([
       { name: "Ryanair", count: 3 },
       { name: "Smartwings", count: 2 },
+    ]);
+    expect(response.topOperators).toEqual([
+      { name: "CSA", count: 4 },
+      { name: "Lufthansa", count: 2 },
     ]);
     expect(response.topRoutes).toEqual([
       { origin: "LKPR", destination: "EGLL", count: 2 },
@@ -120,12 +124,13 @@ describe("statistics traffic public helpers", () => {
         aircraftTypes: [{ name: "A320", count: 2 }],
         airlines: [],
         routes: [{ origin: "LKPR", destination: "EGLL", count: 2 }],
-        countries: [],
+        countries: [{ id: 1, registrationCountryCode: "CZ", registrationCountry: "Czechia", operator: "CSA" }],
       },
     });
     const csv = statisticsTrafficCsv(data);
     expect(csv).toContain("summary,today,observed_flights,2");
     expect(csv).toContain("aircraft_type,today,A320,2");
+    expect(csv).toContain("operator,today,CSA,2");
     expect(csv).toContain("route,today,LKPR → EGLL,2");
   });
 });
