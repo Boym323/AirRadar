@@ -44,18 +44,19 @@ sudo ./deploy/release.sh --channel rc --dry-run
 
 `.github/workflows/ci.yml` runs the full validation gate on every pull request
 and push. A push to `main` automatically runs the production smoke checks,
-including the desktop/mobile browser gate, and then starts the `deploy` job.
-The deploy job connects to the production host with a dedicated SSH key and
-runs:
+including the desktop/mobile browser gate, and then starts the `deploy` job on
+the self-hosted Linux x64 runner. The runner executes:
 
 ```bash
 sudo -n /var/www/airradar/deploy/release.sh --branch main --automated --commit COMMIT_SHA
 ```
 
-The repository/environment must provide `PRODUCTION_HOST`, `PRODUCTION_USER`,
-`PRODUCTION_SSH_KEY`, and `PRODUCTION_KNOWN_HOSTS`; `PRODUCTION_SSH_PORT` is
-optional. The production user must have passwordless sudo for the release
-script. Configure required reviewers on the GitHub `production` environment if
+The runner needs only outbound HTTPS access to GitHub. Install it through
+GitHub's **Settings → Actions → Runners → New self-hosted runner**, configure
+the default labels `self-hosted`, `linux`, and `x64`, and run it as a
+dedicated non-root user. That user needs passwordless sudo for the release
+script. Do not allow workflows from untrusted pull requests to run on this
+runner. Configure required reviewers on the GitHub `production` environment if
 an approval step is desired.
 
 Automated mode deploys the exact tested commit, does not create a local

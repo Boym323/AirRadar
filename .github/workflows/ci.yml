@@ -33,45 +33,16 @@ jobs:
     name: Deploy production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
     environment: production
     permissions:
       contents: read
     steps:
-      - name: Deploy the tested commit
-        env:
-          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
-          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
-          PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
-          PRODUCTION_KNOWN_HOSTS: ${{ secrets.PRODUCTION_KNOWN_HOSTS }}
-          PRODUCTION_SSH_PORT: ${{ secrets.PRODUCTION_SSH_PORT }}
-          EXPECTED_COMMIT: ${{ github.sha }}
+      - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
-
-          : "${PRODUCTION_HOST:?Missing PRODUCTION_HOST repository/environment secret}"
-          : "${PRODUCTION_USER:?Missing PRODUCTION_USER repository/environment secret}"
-          : "${PRODUCTION_SSH_KEY:?Missing PRODUCTION_SSH_KEY repository/environment secret}"
-          : "${PRODUCTION_KNOWN_HOSTS:?Missing PRODUCTION_KNOWN_HOSTS repository/environment secret}"
-          : "${EXPECTED_COMMIT:?Missing GitHub commit SHA}"
-
-          install -d -m 700 "${HOME}/.ssh"
-          key_file="${HOME}/.ssh/airradar-production"
-          known_hosts_file="${HOME}/.ssh/known_hosts"
-          umask 077
-          printf '%s\n' "${PRODUCTION_SSH_KEY}" > "${key_file}"
-          printf '%s\n' "${PRODUCTION_KNOWN_HOSTS}" > "${known_hosts_file}"
-
-          ssh_args=(
-            -o BatchMode=yes
-            -o IdentitiesOnly=yes
-            -o StrictHostKeyChecking=yes
-            -i "${key_file}"
-          )
-          if [[ -n "${PRODUCTION_SSH_PORT:-}" ]]; then
-            ssh_args+=( -p "${PRODUCTION_SSH_PORT}" )
-          fi
-
-          ssh "${ssh_args[@]}" "${PRODUCTION_USER}@${PRODUCTION_HOST}" \
-            "sudo -n /var/www/airradar/deploy/release.sh --branch main --automated --commit ${EXPECTED_COMMIT}"
+          sudo -n /var/www/airradar/deploy/release.sh \
+            --branch main \
+            --automated \
+            --commit "${GITHUB_SHA}"
