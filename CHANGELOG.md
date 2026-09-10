@@ -346,3 +346,9 @@ Changes since v1.0.19:
 
 - fix: update paths for Next.js release types in tsconfig and import statements (17fd5815)
 - feat: add systemd service and timer for SoftRF OGN snapshot updates (fd189b4b)
+
+## [1.0.21] - 2026-09-10
+
+Changes since v1.0.20:
+
+- fix: update paths for Next.js release types to version 21023 (1035203c)
