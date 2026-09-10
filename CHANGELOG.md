@@ -358,3 +358,10 @@ Changes since v1.0.20:
 Changes since v1.0.21:
 
 - fix: keep release builds from modifying tracked config (f8f73f17)
+
+## [1.0.23] - 2026-09-10
+
+Changes since v1.0.22:
+
+- feat: add squawk detail to AircraftDetailV2 component (1af6fad5)
+- feat: enhance aircraft detail view with flight plan and altitude chart features (0f17e0f7)
