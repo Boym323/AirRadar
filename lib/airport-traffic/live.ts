@@ -11,6 +11,8 @@ export interface AirportTrafficObservation {
   classification: AirportTrafficClassification;
 }
 
+const STRONG_CLIMB_FPM = 1_000;
+
 function angleDifference(a: number, b: number): number {
   return Math.abs(((a - b + 540) % 360) - 180);
 }
@@ -26,8 +28,9 @@ export function classifyAirportTraffic(
   const trendKm = previousDistanceKm - distanceKm;
   const toward = angleDifference(aircraft.track, bearingToAirport) <= 65;
   const away = angleDifference(aircraft.track, (bearingToAirport + 180) % 360) <= 65;
-  if (trendKm >= 0.2 && toward && (aircraft.verticalRate ?? 0) > -700) return "approaching";
-  if (trendKm <= -0.2 && away && (aircraft.verticalRate ?? 0) >= 150) return "departing";
+  const verticalRate = aircraft.verticalRate ?? 0;
+  if (trendKm >= 0.2 && toward && verticalRate < STRONG_CLIMB_FPM) return "approaching";
+  if (trendKm <= -0.2 && away && verticalRate >= 150) return "departing";
   if (Math.abs(trendKm) < 0.2 && !toward && !away) return "overflying";
   return "unknown";
 }
