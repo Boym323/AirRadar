@@ -1,8 +1,21 @@
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { FlatCompat } from "@eslint/eslintrc";
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 
-const directory = dirname(fileURLToPath(import.meta.url));
-const compat = new FlatCompat({ baseDirectory: directory });
-const config = [...compat.extends("next/core-web-vitals", "next/typescript"), { ignores: [".next/**", "node_modules/**", "coverage/**", "generated/**", "migrations/**", "next-env.d.ts"] }];
+const config = [
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+  {
+    ignores: [".next/**", "node_modules/**", "coverage/**", "generated/**", "migrations/**", "next-env.d.ts"],
+  },
+  {
+    // These React Compiler rules are newly enabled by eslint-config-next 16.
+    // Keep the existing lint contract until the affected components are migrated deliberately.
+    rules: {
+      "react-hooks/error-boundaries": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+];
 export default config;
