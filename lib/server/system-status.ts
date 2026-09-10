@@ -601,8 +601,6 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
 function weatherStatus(value: SystemStatusBuildInput["weather"]): SystemStatus {
   if (!value) return "disabled";
   if (value?.status === "disabled" || value?.enabled === false) return "disabled";
-  if (value?.sigmet?.overallStatus === "offline") return "offline";
-  if (value?.sigmet?.overallStatus === "degraded") return "degraded";
   if (value?.status === "offline") return "offline";
   if (value?.status === "degraded" || value?.status === "rate_limited") return "degraded";
   return "ok";

@@ -175,6 +175,21 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(pageSource).toContain("dictionary.system.sigmetAirsigmet");
   });
 
+  it("does not mark METAR/TAF weather offline before the optional SIGMET layer is fetched", () => {
+    const value = build({ weather: {
+      enabled: true,
+      status: "online",
+      entries: 2,
+      airports: 1,
+      sigmet: {
+        overallStatus: "offline",
+        international: { status: "unavailable", lastSuccessAt: null, featureCount: 0, stale: false, failures: 0, consecutiveFailures: 0, lastFailureAt: null },
+        airsigmet: { status: "unavailable", lastSuccessAt: null, featureCount: 0, stale: false, failures: 0, consecutiveFailures: 0, lastFailureAt: null },
+      },
+    } });
+    expect(value.weather.status).toBe("ok");
+  });
+
   it("reports database unavailable while keeping the live status shape", () => {
     const value = build({ database: { status: "offline", connected: false }, airportData: { rowCount: null, fallbackRowCount: 6 } });
     expect(value.database).toMatchObject({ status: "offline", connected: false });
