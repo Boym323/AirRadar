@@ -73,8 +73,8 @@ describe("statistics traffic aggregation", () => {
       { name: "LKTB", count: 1 },
     ]);
     expect(response.topDestinations).toEqual([
-      { name: "LKPR", count: 2 },
       { name: "EGLL", count: 2 },
+      { name: "LKPR", count: 2 },
       { name: "EDDF", count: 1 },
     ]);
     expect(response.registrationCountries).toEqual([
