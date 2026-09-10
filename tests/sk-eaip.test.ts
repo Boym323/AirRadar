@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { parseSkEaipEnr21, skEaipEffectiveDateFromUrl, skEaipUrlCandidates, skSectorId } from "@/lib/atc/sk-eaip";
-import type { StateBoundaryProvider } from "@/lib/atc/cz-boundary";
+import type { StateBoundaryInput, StateBoundaryProvider } from "@/lib/atc/cz-boundary";
 
 const fixture = readFileSync(new URL("./fixtures/sk-eaip-enr21.html", import.meta.url), "utf8");
 const sourceReference = "https://aim.lps.sk/web/eAIP_SR/AIP_SR_EFF_03SEP2026/html/LZ-ENR-2.1-en-SK.html";
 
 function fakeBoundaryProvider(): StateBoundaryProvider {
   return {
-    getBoundarySegment: vi.fn(({ start, end }) => ({
+    getBoundarySegment: vi.fn(({ start, end }: StateBoundaryInput) => ({
       coordinates: [start, [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2], end],
       startSnapDistanceKm: 0.05,
       endSnapDistanceKm: 0.06,
