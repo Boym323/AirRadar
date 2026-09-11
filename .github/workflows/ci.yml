@@ -74,7 +74,7 @@ jobs:
           set -Eeuo pipefail
           app_dir=/var/www/airradar
           git_prod() {
-            sudo -n git -c "safe.directory=${app_dir}" -C "${app_dir}" "$@"
+            git -c "safe.directory=${app_dir}" -C "${app_dir}" "$@"
           }
           status="$(git_prod status --porcelain)"
           if [[ -n "${status}" ]]; then
