@@ -88,7 +88,9 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toContain(".ogn-marker");
     expect(appSource).toContain("checked={showAirports}");
     expect(appSource).toContain("checked={showAtc}");
-    expect(appSource.match(/\bfetch\(/g)).toHaveLength(8);
+    expect(appSource.match(/\bfetch\(/g)).toHaveLength(9);
+    expect(appSource).toContain('fetch("/api/airspace/activity", { cache: "no-store" })');
+    expect(appSource).toContain("airspaceActivityRequestedRef.current = true");
     expect(appSource).toContain("/api/aircraft/${encodeURIComponent(selectedHex)}");
     expect(appSource).toContain("/api/history/${encodeURIComponent(selectedHex)}");
   });
