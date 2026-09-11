@@ -106,6 +106,7 @@ interface StaticAnalysis {
 }
 
 const staticCache = new Map<string, StaticAnalysis>();
+let networkKeyCache = new WeakMap<RouteIntelligenceNetwork, string>();
 
 function normalized(value: string): string {
   return value.trim().toUpperCase();
@@ -167,9 +168,26 @@ function routeFields(input: AircraftRouteInput | AircraftEnrichment | null | und
   return { text, source: routeSource(input) };
 }
 
+function networkCacheKey(network: RouteIntelligenceNetwork): string {
+  const cached = networkKeyCache.get(network);
+  if (cached) return cached;
+  const routeShape = network.routes
+    .map((route) => `${route.designator}:${route.segments.map((segment) => `${segment.id}:${segment.fromName}:${segment.toName}`).join(",")}`)
+    .join("|");
+  const key = `${network.source.effectiveDate}:${routeShape}`;
+  networkKeyCache.set(network, key);
+  return key;
+}
+
 function routeKey(network: RouteIntelligenceNetwork, tokens: RouteToken[]): string {
-  const routeShape = network.routes.map((route) => `${route.designator}:${route.segments.map((segment) => `${segment.id}:${segment.fromName}:${segment.toName}`).join(",")}`).join("|");
-  return `${network.source.effectiveDate}:${routeShape}:${tokens.map((token) => `${token.type}:${token.value}`).join(" ")}`;
+  return `${networkCacheKey(network)}:${tokens.map((token) => `${token.type}:${token.value}`).join(" ")}`;
+}
+
+function sameSegmentPath(
+  left: Array<{ segment: CzAtsSegment }>,
+  right: Array<{ segment: CzAtsSegment }>,
+): boolean {
+  return left.length === right.length && left.every((item, index) => item.segment.id === right[index]?.segment.id);
 }
 
 function pointCandidates(network: RouteIntelligenceNetwork, name: string, designator?: string): PointRef[] {
@@ -305,17 +323,22 @@ function staticResult(input: AircraftRouteInput | AircraftEnrichment | null | un
     if (!isDct && airway.length <= 1 && startCandidates.length && endCandidates.length) {
       if (airway.length === 1) {
         explicitAirway = true;
+        let ambiguousPath = false;
         for (const start of startCandidates) {
           for (const end of endCandidates) {
             if (start.route.designator !== end.route.designator) continue;
             const candidate = findPath(start.route, start, end);
             if (!candidate) continue;
             const mapped = candidate.map((item) => ({ ...item, route: start.route }));
-            if (path && JSON.stringify(path.map((item) => item.segment.id)) !== JSON.stringify(mapped.map((item) => item.segment.id))) { path = null; break; }
+            if (path && !sameSegmentPath(path, mapped)) {
+              ambiguousPath = true;
+              break;
+            }
             path = mapped;
           }
-          if (path === null && explicitAirway) break;
+          if (ambiguousPath) break;
         }
+        if (ambiguousPath) path = null;
       } else {
         path = directPath(network, startName, endName);
       }
@@ -473,4 +496,5 @@ export function analyzePublishedRoute(options: { aircraftRoute: AircraftRouteInp
 
 export function clearRouteIntelligenceCache(): void {
   staticCache.clear();
+  networkKeyCache = new WeakMap<RouteIntelligenceNetwork, string>();
 }
