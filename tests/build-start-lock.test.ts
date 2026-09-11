@@ -82,4 +82,13 @@ describe("production build/start lock", () => {
     expect(release).toContain('BUILD_LOCK_FILE="/run/airradar-build.lock"');
     expect(release).toMatch(/acquire_build_lock[\s\S]*?npm run build[\s\S]*?release_build_lock/);
   });
+
+  it("snapshots tracked Next source files before quality gates can rewrite them", async () => {
+    const release = await readFile(new URL("../deploy/release.sh", import.meta.url), "utf8");
+    const steps = release.slice(release.indexOf("run_release_steps()"), release.indexOf("run_quality_gates()"));
+
+    expect(steps.indexOf("snapshot_build_source_files")).toBeGreaterThanOrEqual(0);
+    expect(steps.indexOf("snapshot_build_source_files")).toBeLessThan(steps.indexOf("run_quality_gates"));
+    expect(steps.indexOf("run_quality_gates")).toBeLessThan(steps.indexOf("npm run build"));
+  });
 });
