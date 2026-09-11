@@ -34,6 +34,7 @@ import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { AircraftAltitudeChart, AircraftRecentFlights } from "@/components/aircraft-detail-v2";
+import { RouteIntelligencePanel } from "@/components/route-intelligence-panel";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { SigmetSnapshot } from "@/lib/weather/types";
@@ -52,7 +53,11 @@ import {
   ROUTE_V2_COMPLETED_LAYER_ID,
   ROUTE_V2_REMAINING_LAYER_ID,
   ROUTE_V2_SOURCE_ID,
+  ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID,
+  ROUTE_INTELLIGENCE_CURRENT_LAYER_ID,
+  ROUTE_INTELLIGENCE_REMAINING_LAYER_ID,
 } from "@/lib/route-visualization";
+import { analyzePublishedRoute } from "@/lib/route-intelligence";
 import { GlobalSearch } from "@/components/global-search";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
@@ -787,6 +792,9 @@ export function AirRadarApp() {
       map.addLayer({ id: "ats-routes-line", type: "line", source: "ats-routes", layout: { visibility: "none" }, paint: { "line-color": "#37d6c0", "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 8, 2.2, 13, 3.4] } });
       map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": "#f3b95f", "line-opacity": 0.95, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.5, 8, 2.4, 13, 3.6], "line-dasharray": [2, 2] } });
       map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": "#ffe08a", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
+      map.addLayer({ id: ROUTE_INTELLIGENCE_REMAINING_LAYER_ID, type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__route-intelligence-none__"], layout: { visibility: "none" }, paint: { "line-color": "#8bb9c8", "line-opacity": 0.8, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5], "line-dasharray": [1, 2] } });
+      map.addLayer({ id: ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID, type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__route-intelligence-none__"], layout: { visibility: "none" }, paint: { "line-color": "#4e9d91", "line-opacity": 0.78, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
+      map.addLayer({ id: ROUTE_INTELLIGENCE_CURRENT_LAYER_ID, type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__route-intelligence-none__"], layout: { visibility: "none" }, paint: { "line-color": "#fff0a6", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 4, 13, 6] } });
       map.addSource("ats-route-labels", { type: "geojson", data: EMPTY_ATS_GEOJSON });
       map.addLayer({ id: "ats-route-labels", type: "symbol", source: "ats-route-labels", minzoom: 6.5, layout: { visibility: "none", "symbol-placement": "line", "text-field": ["get", "routeDesignator"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-padding": 18, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#c1d4de", "text-halo-color": "#07111d", "text-halo-width": 1.1 } });
       map.addSource("ats-route-points", { type: "geojson", data: EMPTY_ATS_GEOJSON });
@@ -1302,12 +1310,42 @@ export function AirRadarApp() {
   }, [airportFilter, mapReady, showAirports]);
 
   const selectedAircraftSnapshot = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) ?? null;
-  const selectedAircraft = selectedAircraftSnapshot && aircraftDetail?.liveEnrichment
+  const selectedAircraft = useMemo(() => selectedAircraftSnapshot && aircraftDetail?.liveEnrichment
     ? { ...selectedAircraftSnapshot, enrichment: aircraftDetail.liveEnrichment }
-    : selectedAircraftSnapshot;
+    : selectedAircraftSnapshot, [aircraftDetail, selectedAircraftSnapshot]);
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
   const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
+
+  const routeIntelligence = useMemo(() => {
+    if (!selectedAircraft) return null;
+    const atsNetwork = atsRoutes?.available && atsRoutes.source && atsRoutes.routes
+      ? { source: atsRoutes.source, routes: atsRoutes.routes }
+      : null;
+    return analyzePublishedRoute({
+      aircraftRoute: selectedAircraft.enrichment ?? null,
+      aircraftPosition: { lat: selectedAircraft.lat, lon: selectedAircraft.lon, track: selectedAircraft.track },
+      atsNetwork,
+    });
+  }, [atsRoutes, selectedAircraft]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const result = routeIntelligence;
+    const completed = result?.progress.completedSegmentIds ?? [];
+    const current = result?.progress.currentSegmentId ? [result.progress.currentSegmentId] : [];
+    const remaining = result?.progress.remainingSegmentIds ?? [];
+    const filterFor = (ids: string[]): FilterSpecification => ids.length
+      ? ["in", ["get", "segmentId"], ...ids] as unknown as FilterSpecification
+      : ["==", ["get", "segmentId"], "__route-intelligence-none__"];
+    map.setFilter(ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID, filterFor(completed));
+    map.setFilter(ROUTE_INTELLIGENCE_CURRENT_LAYER_ID, filterFor(current));
+    map.setFilter(ROUTE_INTELLIGENCE_REMAINING_LAYER_ID, filterFor(remaining));
+    for (const layer of [ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID, ROUTE_INTELLIGENCE_CURRENT_LAYER_ID, ROUTE_INTELLIGENCE_REMAINING_LAYER_ID] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtsRoutes && Boolean(result?.matchedSegments.length) ? "visible" : "none");
+    }
+  }, [mapReady, routeIntelligence, showAtsRoutes]);
 
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
   const hasActiveMapFilters = isMapAircraftFilterActive(mapFilters)
@@ -1636,6 +1674,7 @@ export function AirRadarApp() {
                 <DetailItem label={t.aircraft.positionSource} value={aircraftPositionSourceLabel(selectedAircraft)} />
                 <DetailItem label={t.aircraft.lastObservation} value={formatAge(selectedAircraft.seenSeconds)} />
               </DetailSection>
+              {routeIntelligence && <RouteIntelligencePanel result={routeIntelligence} />}
               <DetailSection title={t.atc.estimate}>
                 {selectedAircraft.atc ? <>
                   <div className="detail-atc-probable">{t.atc.probableRelevant}</div>

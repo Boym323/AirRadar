@@ -39,6 +39,52 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Verify production ATS routes before release
+        run: |
+          set -Eeuo pipefail
+          ats_tmp="$(mktemp)"
+          trap 'rm -f "${ats_tmp}"' EXIT
+          curl -fsS https://airradar.pomykal.cz/api/ats/routes -o "${ats_tmp}"
+          node - "${ats_tmp}" <<'NODE'
+          const fs = require("node:fs");
+          const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const counts = payload.counts;
+          if (payload.available !== true) throw new Error("Production ATS routes are unavailable");
+          if (!counts || !Number.isInteger(counts.routes) || counts.routes <= 0 || !Number.isInteger(counts.points) || counts.points <= 0 || !Number.isInteger(counts.segments) || counts.segments <= 0) {
+            throw new Error(`Invalid production ATS counts: ${JSON.stringify(counts)}`);
+          }
+          if (!Array.isArray(payload.routes) || payload.routes.length !== counts.routes) {
+            throw new Error("Production ATS route count does not match the route payload");
+          }
+          if (typeof payload.source?.effectiveDate !== "string" || payload.source.effectiveDate.length === 0) {
+            throw new Error("Production ATS source is missing an effective date");
+          }
+          for (const route of payload.routes) {
+            for (const segment of route.segments ?? []) {
+              if (segment.availabilityStatus !== "UNKNOWN") {
+                throw new Error(`Unexpected ATS availability status on ${route.designator}/${segment.id}: ${segment.availabilityStatus}`);
+              }
+            }
+          }
+          console.log(`[deploy] ATS routes OK effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
+          NODE
+
+      - name: Align production checkout to main
+        run: |
+          set -Eeuo pipefail
+          app_dir=/var/www/airradar
+          git_prod() {
+            sudo -n git -c "safe.directory=${app_dir}" -C "${app_dir}" "$@"
+          }
+          status="$(git_prod status --porcelain)"
+          if [[ -n "${status}" ]]; then
+            printf '%s\n' "${status}" >&2
+            echo "Production checkout is dirty; refusing to switch branches." >&2
+            exit 1
+          fi
+          git_prod fetch origin main
+          git_prod switch main
+
       - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
@@ -46,3 +92,33 @@ jobs:
             --branch main \
             --automated \
             --commit "${GITHUB_SHA}"
+
+      - name: Verify production ATS routes after release
+        run: |
+          set -Eeuo pipefail
+          ats_tmp="$(mktemp)"
+          trap 'rm -f "${ats_tmp}"' EXIT
+          curl -fsS https://airradar.pomykal.cz/api/ats/routes -o "${ats_tmp}"
+          node - "${ats_tmp}" <<'NODE'
+          const fs = require("node:fs");
+          const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const counts = payload.counts;
+          if (payload.available !== true) throw new Error("Production ATS routes are unavailable after release");
+          if (!counts || !Number.isInteger(counts.routes) || counts.routes <= 0 || !Number.isInteger(counts.points) || counts.points <= 0 || !Number.isInteger(counts.segments) || counts.segments <= 0) {
+            throw new Error(`Invalid production ATS counts after release: ${JSON.stringify(counts)}`);
+          }
+          if (!Array.isArray(payload.routes) || payload.routes.length !== counts.routes) {
+            throw new Error("Production ATS route count does not match the route payload after release");
+          }
+          if (typeof payload.source?.effectiveDate !== "string" || payload.source.effectiveDate.length === 0) {
+            throw new Error("Production ATS source is missing an effective date after release");
+          }
+          for (const route of payload.routes) {
+            for (const segment of route.segments ?? []) {
+              if (segment.availabilityStatus !== "UNKNOWN") {
+                throw new Error(`Unexpected ATS availability status after release on ${route.designator}/${segment.id}: ${segment.availabilityStatus}`);
+              }
+            }
+          }
+          console.log(`[deploy] ATS routes remain healthy effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
+          NODE
