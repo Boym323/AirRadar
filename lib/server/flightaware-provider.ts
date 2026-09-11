@@ -51,8 +51,8 @@ class SlidingWindowRequestBudget {
 }
 
 class FlightAwareRateLimitError extends Error {
-  constructor() {
-    super("FlightAware local request budget exhausted");
+  constructor(message = "FlightAware local request budget exhausted") {
+    super(message);
     this.name = "FlightAwareRateLimitError";
   }
 }
@@ -178,11 +178,14 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
         signal: controller.signal,
         headers: { "x-apikey": this.apiKey, Accept: "application/json" },
       });
-      if (response.status === 429) this.rateLimited += 1;
+      if (response.status === 429) {
+        this.rateLimited += 1;
+        throw new FlightAwareRateLimitError("FlightAware upstream rate limit reached");
+      }
       if (!response.ok && response.status !== 404) this.failures += 1;
       return response;
     } catch (error) {
-      this.failures += 1;
+      if (!(error instanceof FlightAwareRateLimitError)) this.failures += 1;
       throw error;
     } finally {
       clearTimeout(timeout);
@@ -199,6 +202,9 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
         ? payload.fixes.map((fix) => stringValue(fix.name)).filter((name): name is string => name !== null)
         : [];
     } catch (error) {
+      // Never positively cache a plan whose waypoint lookup was skipped by a
+      // local/upstream rate limit. The caller can retry after the rolling window.
+      if (error instanceof FlightAwareRateLimitError) throw error;
       const message = error instanceof Error ? error.message : "Unknown route lookup error";
       console.warn(`FlightAware route enrichment unavailable for ${faFlightId}: ${message}`);
       return [];
