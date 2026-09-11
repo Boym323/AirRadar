@@ -29,10 +29,34 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:production:browser
 
+  prepare-deploy:
+    name: Prepare production checkout ref
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Fast-forward production checkout branch to tested main commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          api_url="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/git/refs/heads/feature/v1.5c-route-intelligence"
+          payload="$(printf '{\"sha\":\"%s\",\"force\":false}' "${GITHUB_SHA}")"
+          curl -fsS \
+            -X PATCH \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${api_url}" \
+            -d "${payload}" >/dev/null
+          echo "[deploy] production checkout ref fast-forwarded to ${GITHUB_SHA}"
+
   deploy:
     name: Deploy production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: validate
+    needs: [validate, prepare-deploy]
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
     environment: production
@@ -69,27 +93,11 @@ jobs:
           console.log(`[deploy] ATS routes OK effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
           NODE
 
-      - name: Align production checkout to main
-        run: |
-          set -Eeuo pipefail
-          app_dir=/var/www/airradar
-          git_prod() {
-            git -c "safe.directory=${app_dir}" -C "${app_dir}" "$@"
-          }
-          status="$(git_prod status --porcelain)"
-          if [[ -n "${status}" ]]; then
-            printf '%s\n' "${status}" >&2
-            echo "Production checkout is dirty; refusing to switch branches." >&2
-            exit 1
-          fi
-          git_prod fetch origin main
-          git_prod switch main
-
       - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
           sudo -n /var/www/airradar/deploy/release.sh \
-            --branch main \
+            --branch feature/v1.5c-route-intelligence \
             --automated \
             --commit "${GITHUB_SHA}"
 
