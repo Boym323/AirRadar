@@ -327,7 +327,7 @@ npm run typecheck
 npm run test:targeted -- tests/aircraft-state.test.ts
 npm run test:changed
 npm test                         # complete Vitest suite
-npm run build
+npm run build                    # local/isolated checkout only
 npm run prisma:generate
 npm run prisma:migrate
 npm run prisma:deploy

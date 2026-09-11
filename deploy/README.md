@@ -7,15 +7,24 @@ sudo useradd --system --home /var/www/airradar --shell /usr/sbin/nologin airrada
 sudo chown -R airradar:airradar /var/www/airradar
 ```
 
-AirRadar requires Node.js 22.18+ because it uses the Prisma 8 contract-based PostgreSQL runtime. From the release checkout, install dependencies, emit the contract, apply the checked-in migration, and build:
+AirRadar requires Node.js 22.18+ because it uses the Prisma 8 contract-based PostgreSQL runtime. For a production deployment, use the authoritative release procedure; do not run a build directly in the live checkout while `airradar.service` is serving traffic. The release script builds in isolation, applies the checked-in migration, restarts the service, and performs health checks:
 
 ```bash
 cd /var/www/airradar
+sudo ./deploy/release.sh
+```
+
+For a non-production or initial installation before the service is running,
+the equivalent dependency and schema preparation is:
+
+```bash
 sudo -u airradar npm ci
 sudo -u airradar npm run prisma:generate
-sudo -u airradar npm run build
 sudo -u airradar npm run prisma:deploy
 ```
+
+See [`docs/RELEASE.md`](../docs/RELEASE.md) for release options and the full
+validation contract.
 
 `DATABASE_URL` must be present in `/var/www/airradar/.env` before `prisma:deploy`. If PostgreSQL is intentionally disabled, omit it; demo mode and the in-memory history fallback still work.
 

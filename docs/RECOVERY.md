@@ -118,6 +118,8 @@ npm run prisma:generate
 npm run lint
 npm run typecheck
 npm test
+# Build only in an isolated/non-serving checkout. Never rewrite `.next` in
+# the live checkout; use deploy/release.sh for a production deployment.
 npm run build
 curl -fsS http://127.0.0.1:3000/api/health
 curl -fsS http://127.0.0.1:3000/api/system/status
