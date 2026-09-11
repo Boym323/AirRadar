@@ -784,9 +784,9 @@ export function AirRadarApp() {
         paint: { "line-color": "#37d6c0", "line-opacity": 0.24, "line-width": 1, "line-dasharray": [2, 3] },
       });
       map.addSource("ats-routes", { type: "geojson", data: EMPTY_ATS_GEOJSON });
-      map.addLayer({ id: "ats-routes-line", type: "line", source: "ats-routes", layout: { visibility: "none" }, paint: { "line-color": "#82a9bd", "line-opacity": 0.58, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 8, 1.25, 13, 2] } });
-      map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": "#a7a28b", "line-opacity": 0.56, "line-width": 1.25, "line-dasharray": [2, 2] } });
-      map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": "#d2b56f", "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 8, 2.2, 13, 3.2] } });
+      map.addLayer({ id: "ats-routes-line", type: "line", source: "ats-routes", layout: { visibility: "none" }, paint: { "line-color": "#37d6c0", "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 8, 2.2, 13, 3.4] } });
+      map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": "#f3b95f", "line-opacity": 0.95, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.5, 8, 2.4, 13, 3.6], "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": "#ffe08a", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
       map.addSource("ats-route-labels", { type: "geojson", data: EMPTY_ATS_GEOJSON });
       map.addLayer({ id: "ats-route-labels", type: "symbol", source: "ats-route-labels", minzoom: 6.5, layout: { visibility: "none", "symbol-placement": "line", "text-field": ["get", "routeDesignator"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-padding": 18, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#c1d4de", "text-halo-color": "#07111d", "text-halo-width": 1.1 } });
       map.addSource("ats-route-points", { type: "geojson", data: EMPTY_ATS_GEOJSON });
@@ -823,8 +823,8 @@ export function AirRadarApp() {
         paint: { "line-color": "#a7b6c7", "line-opacity": 0.68, "line-width": 2, "line-dasharray": [2, 3] },
       });
       map.addSource("atc-sectors", { type: "geojson", data: createAtcGeoJSON([], false) });
-      map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": "#8068ff", "fill-opacity": 0.09 } });
-      map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": "#a990ff", "line-opacity": 0.6, "line-width": 1.2, "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": "#8068ff", "fill-opacity": 0.16 } });
+      map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": "#c4b5fd", "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.3, 8, 2, 13, 3], "line-dasharray": [2, 2] } });
       map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "name"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#d7caff", "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
       map.addSource("atc-transmitters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": "#f3b95f", "circle-radius": 5, "circle-stroke-color": "#08111d", "circle-stroke-width": 1.5 } });
