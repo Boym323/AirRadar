@@ -38,6 +38,8 @@
     "atc:status:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-status-cz.ts",
     "atc:sync:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-sync-sk.ts",
     "atc:status:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-status-sk.ts",
+    "ats:sync:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-sync-cz.ts",
+    "ats:status:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-cz.ts",
     "changelog": "node scripts/changelog.mjs generate",
     "changelog:backfill": "node scripts/changelog.mjs backfill"
   },
