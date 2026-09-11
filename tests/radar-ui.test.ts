@@ -12,6 +12,7 @@ import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");
+const aircraftDetailSource = readFileSync(new URL("../components/aircraft-detail-v2.tsx", import.meta.url), "utf8");
 const globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 const maplibreCss = readFileSync(new URL("../node_modules/maplibre-gl/dist/maplibre-gl.css", import.meta.url), "utf8");
 
@@ -90,9 +91,18 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("checked={showAtc}");
     expect(appSource.match(/\bfetch\(/g)).toHaveLength(9);
     expect(appSource).toContain('fetch("/api/airspace/activity", { cache: "no-store" })');
-    expect(appSource).toContain("airspaceActivityRequestedRef.current = true");
+    expect(appSource).toContain("setAirspaceActivityRetry((value) => value + 1)");
+    expect(appSource).toContain("setAtsRoutesRetry((value) => value + 1)");
+    expect(appSource).toContain("INTELLIGENCE_RETRY_MS = 30_000");
+    expect(appSource).not.toContain("airspaceActivityRequestedRef");
     expect(appSource).toContain("/api/aircraft/${encodeURIComponent(selectedHex)}");
     expect(appSource).toContain("/api/history/${encodeURIComponent(selectedHex)}");
+  });
+
+  it("plots aircraft altitude using recorded time instead of sample index", () => {
+    expect(aircraftDetailSource).toContain("Date.parse(point.recordedAt) - firstTimestamp");
+    expect(aircraftDetailSource).toContain("lastTimestamp - firstTimestamp");
+    expect(aircraftDetailSource).not.toContain("index / (chartPoints.length - 1)");
   });
 
   it("keeps independent bounded SSE streams and does not add trail polling", () => {
