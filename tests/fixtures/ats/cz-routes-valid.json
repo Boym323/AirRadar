@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "name": "AIM ŘLP ČR eAIP ENR 3.2 (test fixture)",
+    "reference": "https://aim.rlp.cz/eaip/html/eAIP/LK-ENR-3.2-en-GB.html",
+    "effectiveDate": "2026-09-03",
+    "lastVerifiedAt": "2026-09-11T00:00:00.000Z",
+    "aipAmendment": "10/26",
+    "airacAmendment": "7/26"
+  },
+  "routes": [
+    {
+      "designator": "L100",
+      "sourceId": "fixture-route-100",
+      "points": [
+        { "id": "DP:1001", "sourceId": "1001", "name": "TESTA", "kind": "DESIGNATED_POINT", "latitude": 50.1, "longitude": 14.4, "foreignMaintainer": null, "remarks": null },
+        { "id": "NAV:1002", "sourceId": "1002", "name": "TESTN", "kind": "NAVAID", "latitude": 50.3, "longitude": 14.8, "foreignMaintainer": null, "remarks": null },
+        { "id": "DP:1003", "sourceId": "1003", "name": "TESTB", "kind": "DESIGNATED_POINT", "latitude": 50.5, "longitude": 15.2, "foreignMaintainer": null, "remarks": null }
+      ],
+      "segments": [
+        { "id": "CZ-L100-10001", "sourceId": "10001", "fromPointId": "DP:1001", "toPointId": "NAV:1002", "fromName": "TESTA", "toName": "TESTN", "from": [14.4, 50.1], "to": [14.8, 50.3], "navigationSpecification": "RNAV 5", "magTrackForwardDeg": 42, "magTrackReverseDeg": 222, "distanceNm": 18.2, "geometricDistanceNm": 18.1, "upperLimit": "FL195", "lowerLimit": "5000 FT AMSL", "lowerOverride": null, "cruisingLevelForward": "ODD", "cruisingLevelReverse": "EVEN", "availabilityClass": null, "availabilityStatus": "UNKNOWN", "remarks": null },
+        { "id": "CZ-L100-10002", "sourceId": "10002", "fromPointId": "NAV:1002", "toPointId": "DP:1003", "fromName": "TESTN", "toName": "TESTB", "from": [14.8, 50.3], "to": [15.2, 50.5], "navigationSpecification": "RNAV 5", "magTrackForwardDeg": 42, "magTrackReverseDeg": 222, "distanceNm": 18.2, "geometricDistanceNm": 18.1, "upperLimit": "FL195", "lowerLimit": "5000 FT AMSL", "lowerOverride": null, "cruisingLevelForward": "ODD", "cruisingLevelReverse": "EVEN", "availabilityClass": "CDR1", "availabilityStatus": "UNKNOWN", "remarks": "CDR1 test segment" }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "P200",
+      "sourceId": "fixture-route-200",
+      "points": [
+        { "id": "DP:2001", "sourceId": "2001", "name": "TESTC", "kind": "DESIGNATED_POINT", "latitude": 49.8, "longitude": 14.1, "foreignMaintainer": "PL", "remarks": "For continuation see AIP POLAND" },
+        { "id": "DP:2002", "sourceId": "2002", "name": "TESTD", "kind": "DESIGNATED_POINT", "latitude": 49.9, "longitude": 14.7, "foreignMaintainer": null, "remarks": null },
+        { "id": "DP:2003", "sourceId": "2003", "name": "TESTE", "kind": "DESIGNATED_POINT", "latitude": 50.0, "longitude": 15.3, "foreignMaintainer": null, "remarks": null }
+      ],
+      "segments": [
+        { "id": "CZ-P200-20001", "sourceId": "20001", "fromPointId": "DP:2001", "toPointId": "DP:2002", "fromName": "TESTC", "toName": "TESTD", "from": [14.1, 49.8], "to": [14.7, 49.9], "navigationSpecification": "RNAV 5", "magTrackForwardDeg": 80, "magTrackReverseDeg": 260, "distanceNm": 22.5, "geometricDistanceNm": 22.4, "upperLimit": "FL245", "lowerLimit": "7000 FT AMSL", "lowerOverride": "7000 FT AMSL", "cruisingLevelForward": null, "cruisingLevelReverse": null, "availabilityClass": null, "availabilityStatus": "UNKNOWN", "remarks": null }
+      ],
+      "discontinuities": [{ "afterPointId": "DP:2002", "beforePointId": "DP:2003" }]
+    }
+  ],
+  "counts": { "routes": 2, "points": 6, "segments": 3, "cdrSegments": 1, "discontinuities": 1 }
+}

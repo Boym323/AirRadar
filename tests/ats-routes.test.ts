@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { GET } from "@/app/api/ats/routes/route";
 import { clearCzAtsRouteCache, loadCzAtsRoutes } from "@/lib/ats/cz-routes";
@@ -8,20 +9,25 @@ import { createCzAtsGeoJSON } from "@/lib/ats/geojson";
 
 const originalPath = process.env.ATS_CZ_ROUTES_PATH;
 afterEach(() => { if (originalPath === undefined) delete process.env.ATS_CZ_ROUTES_PATH; else process.env.ATS_CZ_ROUTES_PATH = originalPath; clearCzAtsRouteCache(); });
+const validFixturePath = fileURLToPath(new URL("./fixtures/ats/cz-routes-valid.json", import.meta.url));
+function useDataset(file: string): void {
+  process.env.ATS_CZ_ROUTES_PATH = file;
+  clearCzAtsRouteCache();
+}
 
 describe("CZ ATS routes", () => {
   it("loads the published dataset and keeps discontinuities out of geometry", async () => {
-    delete process.env.ATS_CZ_ROUTES_PATH;
+    useDataset(validFixturePath);
     const document = loadCzAtsRoutes();
-    expect(document?.counts).toMatchObject({ routes: 33, segments: 73, discontinuities: 4 });
+    expect(document?.counts).toMatchObject({ routes: 2, segments: 3, discontinuities: 1 });
     expect(document?.routes.every((route) => route.segments.every((segment) => segment.availabilityStatus === "UNKNOWN"))).toBe(true);
     const geojson = createCzAtsGeoJSON(document!);
-    expect(geojson.segments.features).toHaveLength(73);
+    expect(geojson.segments.features).toHaveLength(3);
     expect(geojson.segments.features.every((feature) => feature.geometry.coordinates.length === 2)).toBe(true);
   });
 
   it("serves route metadata for the map and detail", async () => {
-    delete process.env.ATS_CZ_ROUTES_PATH;
+    useDataset(validFixturePath);
     const response = await GET();
     const body = await response.json();
     expect(response.status).toBe(200);
@@ -30,17 +36,25 @@ describe("CZ ATS routes", () => {
     expect(body.routes[0].segments[0]).toHaveProperty("availabilityStatus", "UNKNOWN");
   });
 
-  it("fails closed for missing and invalid datasets", () => {
+  it("fails closed for a missing dataset", () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "airradar-ats-"));
-    process.env.ATS_CZ_ROUTES_PATH = path.join(directory, "missing.json");
-    expect(loadCzAtsRoutes()).toBeNull();
-    fs.writeFileSync(process.env.ATS_CZ_ROUTES_PATH, JSON.stringify({ schemaVersion: 99 }));
-    clearCzAtsRouteCache();
+    useDataset(path.join(directory, "missing.json"));
     expect(loadCzAtsRoutes()).toBeNull();
   });
 
+  it("fails closed for invalid JSON/schema", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "airradar-ats-"));
+    const invalidPath = path.join(directory, "invalid.json");
+    fs.writeFileSync(invalidPath, "{\"schemaVersion\":99}");
+    useDataset(invalidPath);
+    expect(loadCzAtsRoutes()).toBeNull();
+    const response = await GET();
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ available: false, status: "unavailable" });
+  });
+
   it("returns cache headers and a controlled unavailable response", async () => {
-    process.env.ATS_CZ_ROUTES_PATH = path.join(os.tmpdir(), "airradar-no-such-routes.json");
+    useDataset(path.join(os.tmpdir(), `airradar-no-such-routes-${process.pid}.json`));
     const response = await GET();
     expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toContain("stale-while-revalidate");

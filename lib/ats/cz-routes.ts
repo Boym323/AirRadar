@@ -34,5 +34,9 @@ export function loadCzAtsRoutes(): CzAtsRouteDocument | null {
     const document = validateCzAtsRouteDocument(JSON.parse(fs.readFileSync(file, "utf8")));
     cached = { file, mtimeMs: stat.mtimeMs, document };
     return document;
-  } catch { return null; }
+  } catch {
+    // A failed read must not leave a previous valid document available.
+    cached = null;
+    return null;
+  }
 }
