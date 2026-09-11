@@ -31,6 +31,9 @@ import { TAR1090_CATEGORY_ICON_ASSETS, TAR1090_GROUND_SQUARE_ICON_ASSET, TAR1090
 import { appendTrailPoint, boundTrailPoints, selectedTrail, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
+import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
+import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/airspace-activity/map";
+import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { AircraftAltitudeChart, AircraftRecentFlights } from "@/components/aircraft-detail-v2";
@@ -154,6 +157,12 @@ function formatAtcLimit(feet: number | null, reference: string | null | undefine
   return `${formatAltitude(feet)}${reference === "AGL" ? " AGL" : ""}`;
 }
 
+function formatAirspaceUtc(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return t.common.emptyValue;
+  return `${date.toISOString().slice(0, 10)} ${date.toISOString().slice(11, 16)} UTC`;
+}
+
 function airportCodes(airport: Airport): string {
   const icao = airport.icaoCode.trim().toUpperCase();
   const iata = airport.iataCode?.trim().toUpperCase();
@@ -188,30 +197,48 @@ function RouteContextRow({ aircraft, route }: { aircraft: AircraftView; route: N
   </div>;
 }
 
-function createAtcGeoJSON(sectors: AtcSector[], visible: boolean) {
+function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivity: AirspaceActivityResponse | null = null) {
+  const planIndex = buildAirspacePlanMapIndex(airspaceActivity);
   return {
     type: "FeatureCollection" as const,
-    features: visible ? sectors.flatMap((sector) => sector.polygons.map((polygon) => ({
-      type: "Feature" as const,
-      properties: {
-        id: sector.id,
-        name: sector.name,
-        service: formatAtcService(sector.service ?? sector.atcCallsign),
-        lowerAltitudeFt: sector.lowerAltitudeFt,
-        upperAltitudeFt: sector.upperAltitudeFt,
-        lowerAltitude: formatAtcLimit(sector.lowerAltitudeFt, sector.lowerAltitudeReference, t.common.unlimited),
-        upperAltitude: formatAtcLimit(sector.upperAltitudeFt, sector.upperAltitudeReference, t.common.unlimited),
-        primaryFrequency: formatAtcFrequency((sector.frequencies.find((frequency) => frequency.isPrimary) ?? sector.frequencies[0])?.frequencyMhz),
-        alternateFrequencies: sector.frequencies.filter((frequency) => !frequency.isPrimary).map((frequency) => formatAtcFrequency(frequency.frequencyMhz)).join(", "),
-        source: sector.source,
-        sourceReference: sector.sourceReference,
-        validFrom: sector.validFrom,
-        validTo: sector.validTo,
-        lastVerifiedAt: sector.lastVerifiedAt,
-        activationStatus: sector.activationStatus ?? "UNKNOWN",
-      },
-      geometry: { type: "Polygon" as const, coordinates: [polygon] },
-    }))) : [],
+    features: visible ? sectors.flatMap((sector) => {
+      const plan = matchAirspacePlanForSector(sector, planIndex);
+      const planLabel = plan?.state === "planned-now" ? activityT.plannedNow : plan?.state === "upcoming" ? activityT.upcoming : null;
+      return sector.polygons.map((polygon) => ({
+        type: "Feature" as const,
+        properties: {
+          id: sector.id,
+          name: sector.name,
+          label: planLabel ? `${sector.name} · ${planLabel}` : sector.name,
+          service: formatAtcService(sector.service ?? sector.atcCallsign),
+          lowerAltitudeFt: sector.lowerAltitudeFt,
+          upperAltitudeFt: sector.upperAltitudeFt,
+          lowerAltitude: formatAtcLimit(sector.lowerAltitudeFt, sector.lowerAltitudeReference, t.common.unlimited),
+          upperAltitude: formatAtcLimit(sector.upperAltitudeFt, sector.upperAltitudeReference, t.common.unlimited),
+          primaryFrequency: formatAtcFrequency((sector.frequencies.find((frequency) => frequency.isPrimary) ?? sector.frequencies[0])?.frequencyMhz),
+          alternateFrequencies: sector.frequencies.filter((frequency) => !frequency.isPrimary).map((frequency) => formatAtcFrequency(frequency.frequencyMhz)).join(", "),
+          source: sector.source,
+          sourceReference: sector.sourceReference,
+          validFrom: sector.validFrom,
+          validTo: sector.validTo,
+          lastVerifiedAt: sector.lastVerifiedAt,
+          activationStatus: sector.activationStatus ?? "UNKNOWN",
+          airspacePlanState: plan?.state ?? "none",
+          airspacePlanStale: plan?.stale ?? false,
+          airspacePlanSource: plan?.source ?? "",
+          airspacePlanSequence: plan?.sequence ?? 0,
+          airspacePlanSourceReference: plan?.sourceReference ?? "",
+          airspacePlanStartsAt: plan?.startsAt ?? "",
+          airspacePlanEndsAt: plan?.endsAt ?? "",
+          airspacePlanLowerLimit: plan?.lowerLimit ?? "",
+          airspacePlanUpperLimit: plan?.upperLimit ?? "",
+          airspacePlanResponsibleUnit: plan?.responsibleUnit ?? "",
+          airspacePlanActivity: plan?.activity ?? "",
+          airspacePlanDesignator: plan?.canonicalDesignator ?? "",
+        },
+        geometry: { type: "Polygon" as const, coordinates: [polygon] },
+      }));
+    }) : [],
   };
 }
 
@@ -442,6 +469,7 @@ export function AirRadarApp() {
   const [showHeliports, setShowHeliports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showHeliports);
   const [airports, setAirports] = useState<Airport[]>([]);
   const [atcData, setAtcData] = useState<AtcDataResponse>(EMPTY_ATC_DATA);
+  const [airspaceActivity, setAirspaceActivity] = useState<AirspaceActivityResponse | null>(null);
   const [atcExpanded, setAtcExpanded] = useState(false);
   const [streamConnected, setStreamConnected] = useState(false);
   const [coverage, setCoverage] = useState<CoverageMode>("local");
@@ -465,6 +493,7 @@ export function AirRadarApp() {
   const [mapReady, setMapReady] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sigmetGenerationRef = useRef(0);
+  const airspaceActivityRequestedRef = useRef(false);
 
   useEffect(() => {
     if (!showAtsRoutes || atsRoutes) return;
@@ -475,6 +504,17 @@ export function AirRadarApp() {
       .catch(() => { if (active) setAtsRoutes({ available: false }); });
     return () => { active = false; };
   }, [atsRoutes, showAtsRoutes]);
+
+  useEffect(() => {
+    if (!showAtc || airspaceActivityRequestedRef.current) return;
+    airspaceActivityRequestedRef.current = true;
+    let active = true;
+    void fetch("/api/airspace/activity", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() as Promise<AirspaceActivityResponse> : null)
+      .then((data) => { if (active && data) setAirspaceActivity(data); })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [showAtc]);
 
   useEffect(() => {
     try {
@@ -831,9 +871,9 @@ export function AirRadarApp() {
         paint: { "line-color": "#a7b6c7", "line-opacity": 0.68, "line-width": 2, "line-dasharray": [2, 3] },
       });
       map.addSource("atc-sectors", { type: "geojson", data: createAtcGeoJSON([], false) });
-      map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": "#8068ff", "fill-opacity": 0.16 } });
-      map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": "#c4b5fd", "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.3, 8, 2, 13, 3], "line-dasharray": [2, 2] } });
-      map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "name"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#d7caff", "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
+      map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "airspacePlanState"], "planned-now", "#f3b95f", "upcoming", "#4fb3d8", "#8068ff"], "fill-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.28, "upcoming", 0.1, 0.16] } });
+      map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffd27a", "upcoming", "#79cbe8", "#c4b5fd"], "line-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 1, "upcoming", 0.78, 0.92], "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.3, 8, 2, 13, 3], "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffe2a6", "upcoming", "#a8dcf0", "#d7caff"], "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
       map.addSource("atc-transmitters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": "#f3b95f", "circle-radius": 5, "circle-stroke-color": "#08111d", "circle-stroke-width": 1.5 } });
       map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([]) });
@@ -875,7 +915,17 @@ export function AirRadarApp() {
         const activation = properties.activationStatus === "ACTIVE" ? t.atc.activationValues.active : properties.activationStatus === "INACTIVE" ? t.atc.activationValues.inactive : t.atc.activationValues.unknown;
         body.textContent = `${t.atc.activation}: ${activation} · ${String(properties.service ?? "")} · ${altitude} · ${t.atc.primaryFrequency}: ${String(properties.primaryFrequency ?? t.common.emptyValue)} · ${t.atc.alternates}: ${String(properties.alternateFrequencies || t.common.emptyValue)} · ${t.atc.source}: ${String(properties.source ?? t.common.emptyValue)} · ${t.atc.sourceReference}: ${String(properties.sourceReference ?? t.common.emptyValue)} · ${t.atc.effectiveDate}: ${String(properties.validFrom ?? t.common.emptyValue)} · ${t.atc.lastVerified}: ${String(properties.lastVerifiedAt ?? t.common.emptyValue)}`;
         content.append(title, body);
-        new maplibregl.Popup({ closeButton: true, maxWidth: "260px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
+        const planState = String(properties.airspacePlanState ?? "none");
+        if (planState === "planned-now" || planState === "upcoming") {
+          const plan = document.createElement("span");
+          const planStatus = planState === "planned-now" ? activityT.plannedNow : activityT.upcoming;
+          const staleNote = properties.airspacePlanStale === true ? ` · ${activityT.stale}: ${activityT.staleNote}` : "";
+          const responsibleUnit = properties.airspacePlanResponsibleUnit ? ` · ${activityT.responsibleUnit}: ${String(properties.airspacePlanResponsibleUnit)}` : "";
+          const activity = properties.airspacePlanActivity ? ` · ${activityT.activity}: ${String(properties.airspacePlanActivity)}` : "";
+          plan.textContent = `${activityT.plannedAllocation}: ${planStatus} · ${activityT.timeWindow}: ${formatAirspaceUtc(String(properties.airspacePlanStartsAt))}–${formatAirspaceUtc(String(properties.airspacePlanEndsAt))} · ${activityT.levels}: ${String(properties.airspacePlanLowerLimit)}–${String(properties.airspacePlanUpperLimit)} · ${activityT.source}: ${String(properties.airspacePlanSource)} #${String(properties.airspacePlanSequence)}${responsibleUnit}${activity}${staleNote}. ${activityT.disclaimer}`;
+          content.append(plan);
+        }
+        new maplibregl.Popup({ closeButton: true, maxWidth: "360px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
       });
       map.on("mouseenter", "atc-sectors-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "atc-sectors-fill", () => { map.getCanvas().style.cursor = ""; });
@@ -1262,7 +1312,7 @@ export function AirRadarApp() {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const atcSource = map.getSource("atc-sectors") as GeoJSONSource | undefined;
-    atcSource?.setData(createAtcGeoJSON(atcData.sectors, showAtc));
+    atcSource?.setData(createAtcGeoJSON(atcData.sectors, showAtc, airspaceActivity));
     const transmitterSource = map.getSource("atc-transmitters") as GeoJSONSource | undefined;
     transmitterSource?.setData({
       type: "FeatureCollection",
@@ -1285,7 +1335,7 @@ export function AirRadarApp() {
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
-  }, [airports, atcData, mapReady, selectedHex, showAtc, snapshot.aircraft]);
+  }, [airports, airspaceActivity, atcData, mapReady, selectedHex, showAtc, snapshot.aircraft]);
 
   const airportLayerVisibility = useMemo<AirportLayerVisibility>(() => ({
     showAirports,
@@ -1468,6 +1518,7 @@ export function AirRadarApp() {
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
                     <label><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {t.layers.atc}</label>
+                    {showAtc && airspaceActivity?.planned.status !== "unavailable" && <div className="map-layer-sublevel">{activityT.legendCurrent} · {activityT.legendUpcoming}{airspaceActivity?.planned.status === "stale" ? ` · ${activityT.stale}` : ""}<br /><small>{activityT.disclaimer}</small></div>}
                     <label><input type="checkbox" checked={showAtsRoutes} onChange={(event) => { setShowAtsRoutes(event.target.checked); if (!event.target.checked) setSelectedAtsRoute(null); }} /> {t.layers.atsRoutes}</label>
                     {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
                     {showAtsRoutes && atsRoutes && !atsRoutes.available && <div className="map-layer-sublevel">{t.layers.atsRoutesUnavailable}</div>}
