@@ -9,18 +9,23 @@ describe("FlightAwareFlightPlanProvider cost guard", () => {
   });
 
   it("bounds the ident lookup to one page and uses its filed route without a second paid request", async () => {
-    const fetchMock = vi.fn(async (_input: string | URL | Request) => new Response(JSON.stringify({
-      flights: [{
-        ident: "TEST123",
-        fa_flight_id: "TEST123-20260911-test",
-        scheduled_out: "2026-09-11T12:00:00Z",
-        scheduled_in: "2026-09-11T14:00:00Z",
-        route: "DCT VLM HDO DCT",
-      }],
-    }), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    }));
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const requestUrl = new URL(String(input));
+      expect(requestUrl.pathname).toBe("/aeroapi/flights/TEST123");
+      expect(requestUrl.searchParams.get("max_pages")).toBe("1");
+      return new Response(JSON.stringify({
+        flights: [{
+          ident: "TEST123",
+          fa_flight_id: "TEST123-20260911-test",
+          scheduled_out: "2026-09-11T12:00:00Z",
+          scheduled_in: "2026-09-11T14:00:00Z",
+          route: "DCT VLM HDO DCT",
+        }],
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const provider = new FlightAwareFlightPlanProvider("secret-test-key");
@@ -33,9 +38,6 @@ describe("FlightAwareFlightPlanProvider cost guard", () => {
       source: "flightaware-aeroapi",
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const identUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
-    expect(identUrl.pathname).toBe("/aeroapi/flights/TEST123");
-    expect(identUrl.searchParams.get("max_pages")).toBe("1");
     expect(provider.getDiagnostics()).toMatchObject({
       requests: 1,
       failures: 0,
