@@ -182,7 +182,18 @@ describe("provider enrichment cache", () => {
     expect(getRoute).toHaveBeenCalledTimes(14);
   });
 
-  it("keeps the paid FlightAware plan provider at two concurrent requests", async () => {
+  it("never invokes the paid flight-plan provider from realtime enrichment", async () => {
+    const getFlightPlan = vi.fn(async (): Promise<FlightPlan | null> => null);
+    const service = new EnrichmentService({ flightPlan: { name: "flightaware", getFlightPlan } });
+
+    expect(service.hasProviders).toBe(false);
+    expect(service.hasFlightPlanProvider).toBe(true);
+    expect(service.needsEnrichment(aircraft("DEF001", "PLAN1"), undefined)).toBe(false);
+    expect(await service.enrich(aircraft("DEF001", "PLAN1"), new Date("2026-01-01T12:00:00Z"))).toBeNull();
+    expect(getFlightPlan).not.toHaveBeenCalled();
+  });
+
+  it("keeps on-demand paid flight-plan lookups at two concurrent provider calls", async () => {
     let active = 0;
     let maximum = 0;
     const getFlightPlan = vi.fn(async (callsign: string): Promise<FlightPlan> => {
@@ -196,8 +207,30 @@ describe("provider enrichment cache", () => {
       };
     });
     const service = new EnrichmentService({ flightPlan: { name: "flightaware", getFlightPlan } });
-    await Promise.all(Array.from({ length: 7 }, (_, index) => service.enrich(aircraft(`DEF${index.toString(16).padStart(3, "0")}`, `PLAN${index}`), new Date("2026-01-01T12:00:00Z"))));
+    await Promise.all(Array.from({ length: 7 }, (_, index) => service.getFlightPlanOnDemand(
+      aircraft(`DEF${index.toString(16).padStart(3, "0")}`, `PLAN${index}`),
+      new Date("2026-01-01T12:00:00Z"),
+    )));
     expect(maximum).toBeLessThanOrEqual(2);
     expect(getFlightPlan).toHaveBeenCalledTimes(7);
+  });
+
+  it("caches on-demand FlightAware results for six hours and negative results for thirty minutes", async () => {
+    const getFlightPlan = vi.fn(async (callsign: string): Promise<FlightPlan> => ({
+      callsign, scheduledDeparture: null, actualDeparture: null, scheduledArrival: null,
+      estimatedArrival: null, filedRoute: "DCT VLM DCT", waypoints: ["VLM"], source: "flightaware", retrievedAt: new Date().toISOString(),
+    }));
+    const service = new EnrichmentService({ flightPlan: { name: "flightaware", getFlightPlan } });
+    const target = aircraft("DEF123", "PLAN123");
+    const observedAt = new Date("2026-01-01T12:00:00Z");
+
+    const first = await service.getFlightPlanOnDemand(target, observedAt);
+    const second = await service.getFlightPlanOnDemand(target, observedAt);
+
+    expect(first).toEqual(second);
+    expect(getFlightPlan).toHaveBeenCalledTimes(1);
+    expect(service.getDiagnostics().flightPlan.cacheHits).toBe(1);
+    expect(ENRICHMENT_TTLS.flightPlanMs).toBe(6 * 60 * 60_000);
+    expect(ENRICHMENT_TTLS.flightPlanNegativeMs).toBe(30 * 60_000);
   });
 });
