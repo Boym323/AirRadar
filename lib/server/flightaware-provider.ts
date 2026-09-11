@@ -2,14 +2,22 @@ import type { FlightPlan } from "@/lib/aircraft/types";
 import type { FlightPlanProvider } from "@/lib/server/provider";
 
 export const FLIGHTAWARE_MAX_REQUESTS_PER_MINUTE = 5;
-const FLIGHTAWARE_RATE_WINDOW_MS = 60_000;
+export const FLIGHTAWARE_MAX_REQUESTS_PER_HOUR = 30;
+export const FLIGHTAWARE_MAX_REQUESTS_PER_DAY = 100;
+const FLIGHTAWARE_MINUTE_WINDOW_MS = 60_000;
+const FLIGHTAWARE_HOUR_WINDOW_MS = 60 * 60_000;
+const FLIGHTAWARE_DAY_WINDOW_MS = 24 * 60 * 60_000;
 
 export interface FlightAwareDiagnostics {
   requests: number;
   failures: number;
   rateLimited: number;
   limitPerMinute: number;
+  limitPerHour: number;
+  limitPerDay: number;
   windowMs: number;
+  hourWindowMs: number;
+  dayWindowMs: number;
 }
 
 export interface FlightAwareFlight extends Record<string, unknown> {
@@ -33,28 +41,52 @@ export interface FlightAwareFlight extends Record<string, unknown> {
 interface FlightAwareResponse { flights?: FlightAwareFlight[] }
 interface FlightAwareRouteFix { name?: unknown }
 interface FlightAwareRouteResponse { fixes?: FlightAwareRouteFix[] }
+type FlightAwareBudgetWindow = "minute" | "hour" | "day";
+
+interface FlightAwareBudgetOptions {
+  maxRequestsPerMinute?: number;
+  maxRequestsPerHour?: number;
+  maxRequestsPerDay?: number;
+}
 
 class SlidingWindowRequestBudget {
   private readonly timestamps: number[] = [];
 
   constructor(
-    private readonly limit: number,
-    private readonly windowMs: number,
+    private readonly limits: { minute: number; hour: number; day: number },
   ) {}
 
-  tryTake(now = Date.now()): boolean {
-    while (this.timestamps.length && this.timestamps[0] <= now - this.windowMs) this.timestamps.shift();
-    if (this.timestamps.length >= this.limit) return false;
+  tryTake(now = Date.now()): FlightAwareBudgetWindow | null {
+    while (this.timestamps.length && this.timestamps[0] <= now - FLIGHTAWARE_DAY_WINDOW_MS) this.timestamps.shift();
+
+    let minuteCount = 0;
+    let hourCount = 0;
+    for (const timestamp of this.timestamps) {
+      if (timestamp > now - FLIGHTAWARE_HOUR_WINDOW_MS) hourCount += 1;
+      if (timestamp > now - FLIGHTAWARE_MINUTE_WINDOW_MS) minuteCount += 1;
+    }
+
+    if (minuteCount >= this.limits.minute) return "minute";
+    if (hourCount >= this.limits.hour) return "hour";
+    if (this.timestamps.length >= this.limits.day) return "day";
+
     this.timestamps.push(now);
-    return true;
+    return null;
   }
 }
 
 class FlightAwareRateLimitError extends Error {
-  constructor(message = "FlightAware local request budget exhausted") {
-    super(message);
+  constructor(window: FlightAwareBudgetWindow | "upstream" = "minute") {
+    super(window === "upstream"
+      ? "FlightAware upstream rate limit reached"
+      : `FlightAware local ${window} request budget exhausted`);
     this.name = "FlightAwareRateLimitError";
   }
+}
+
+function boundedLimit(value: number | undefined, fallback: number, absoluteMaximum: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(absoluteMaximum, Math.max(1, Math.trunc(value!)));
 }
 
 function stringValue(value: unknown): string | null {
@@ -138,19 +170,24 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
   readonly name = "flightaware-aeroapi";
   private readonly budget: SlidingWindowRequestBudget;
   private readonly limitPerMinute: number;
+  private readonly limitPerHour: number;
+  private readonly limitPerDay: number;
   private requests = 0;
   private failures = 0;
   private rateLimited = 0;
 
   constructor(
     private readonly apiKey: string,
-    options: { maxRequestsPerMinute?: number } = {},
+    options: FlightAwareBudgetOptions = {},
   ) {
-    const configuredLimit = options.maxRequestsPerMinute ?? FLIGHTAWARE_MAX_REQUESTS_PER_MINUTE;
-    this.limitPerMinute = Number.isFinite(configuredLimit)
-      ? Math.min(30, Math.max(1, Math.trunc(configuredLimit)))
-      : FLIGHTAWARE_MAX_REQUESTS_PER_MINUTE;
-    this.budget = new SlidingWindowRequestBudget(this.limitPerMinute, FLIGHTAWARE_RATE_WINDOW_MS);
+    this.limitPerMinute = boundedLimit(options.maxRequestsPerMinute, FLIGHTAWARE_MAX_REQUESTS_PER_MINUTE, 30);
+    this.limitPerHour = boundedLimit(options.maxRequestsPerHour, FLIGHTAWARE_MAX_REQUESTS_PER_HOUR, 300);
+    this.limitPerDay = boundedLimit(options.maxRequestsPerDay, FLIGHTAWARE_MAX_REQUESTS_PER_DAY, 1_000);
+    this.budget = new SlidingWindowRequestBudget({
+      minute: this.limitPerMinute,
+      hour: this.limitPerHour,
+      day: this.limitPerDay,
+    });
   }
 
   getDiagnostics(): FlightAwareDiagnostics {
@@ -159,14 +196,19 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
       failures: this.failures,
       rateLimited: this.rateLimited,
       limitPerMinute: this.limitPerMinute,
-      windowMs: FLIGHTAWARE_RATE_WINDOW_MS,
+      limitPerHour: this.limitPerHour,
+      limitPerDay: this.limitPerDay,
+      windowMs: FLIGHTAWARE_MINUTE_WINDOW_MS,
+      hourWindowMs: FLIGHTAWARE_HOUR_WINDOW_MS,
+      dayWindowMs: FLIGHTAWARE_DAY_WINDOW_MS,
     };
   }
 
   private async request(url: string): Promise<Response> {
-    if (!this.budget.tryTake()) {
+    const exhaustedWindow = this.budget.tryTake();
+    if (exhaustedWindow) {
       this.rateLimited += 1;
-      throw new FlightAwareRateLimitError();
+      throw new FlightAwareRateLimitError(exhaustedWindow);
     }
 
     this.requests += 1;
@@ -180,7 +222,7 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
       });
       if (response.status === 429) {
         this.rateLimited += 1;
-        throw new FlightAwareRateLimitError("FlightAware upstream rate limit reached");
+        throw new FlightAwareRateLimitError("upstream");
       }
       if (!response.ok && response.status !== 404) this.failures += 1;
       return response;
@@ -202,12 +244,13 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
         ? payload.fixes.map((fix) => stringValue(fix.name)).filter((name): name is string => name !== null)
         : [];
     } catch (error) {
-      // Never positively cache a plan whose waypoint lookup was skipped by a
-      // local/upstream rate limit. The caller can retry after the rolling window.
+      // An unavailable fallback route must not turn an incomplete result into a
+      // six-hour positive cache entry. Bubble the error so the on-demand cache
+      // can fail soft without caching the provider failure.
       if (error instanceof FlightAwareRateLimitError) throw error;
       const message = error instanceof Error ? error.message : "Unknown route lookup error";
       console.warn(`FlightAware route enrichment unavailable for ${faFlightId}: ${message}`);
-      return [];
+      throw error;
     }
   }
 
@@ -219,17 +262,23 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
     const payload = await response.json() as FlightAwareResponse;
     const flight = selectFlightInstance(payload.flights ?? [], observedAt);
     if (!flight) return null;
+
+    const filedRoute = stringValue(flight.route);
     const faFlightId = stringValue(flight.fa_flight_id);
+    // The ident response already carries the filed route in normal cases. A
+    // second paid /route call is therefore reserved strictly for the fallback
+    // case where the filed route is absent.
+    const waypoints = !filedRoute && faFlightId ? await this.readRoute(faFlightId) : [];
+    if (!filedRoute && waypoints.length === 0) return null;
+
     return {
       callsign: stringValue(flight.ident) ?? callsign.trim().toUpperCase(),
       scheduledDeparture: stringValue(flight.scheduled_out),
       actualDeparture: stringValue(flight.actual_out),
       scheduledArrival: stringValue(flight.scheduled_in),
       estimatedArrival: stringValue(flight.estimated_in),
-      filedRoute: stringValue(flight.route),
-      // Waypoints are fetched only when this provider is explicitly invoked.
-      // Background aircraft polling no longer invokes FlightAware at all.
-      waypoints: faFlightId ? await this.readRoute(faFlightId) : [],
+      filedRoute,
+      waypoints,
       source: this.name,
       retrievedAt: observedAt.toISOString(),
     };
