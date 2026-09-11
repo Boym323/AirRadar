@@ -481,6 +481,9 @@ run_release_steps() {
   log "Generating Prisma contract"
   npm run prisma:generate
 
+  # next typegen/build may rewrite tracked TypeScript declaration files. Keep
+  # the source checkout exactly as it was before the release starts.
+  snapshot_build_source_files
   run_quality_gates
 
   log "Building production app"
@@ -488,7 +491,6 @@ run_release_steps() {
   RELEASE_BUILD_TIME="$(date --utc --iso-8601=seconds)"
   export AIRRADAR_BUILD_TIME="${RELEASE_BUILD_TIME}"
   rm -rf -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
-  snapshot_build_source_files
   if ! NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" npm run build; then
     restore_build_source_files || true
     release_build_lock
