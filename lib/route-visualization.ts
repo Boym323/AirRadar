@@ -8,6 +8,10 @@ export const ROUTE_V2_REMAINING_LAYER_ID = "selected-route-remaining";
 export const ROUTE_V2_AIRPORT_SOURCE_ID = "selected-route-airports-v2";
 export const ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID = "selected-route-airports-v2-circle";
 export const ROUTE_V2_AIRPORT_LABEL_LAYER_ID = "selected-route-airports-v2-label";
+/** These layers reuse the existing `ats-routes` GeoJSON source. */
+export const ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID = "ats-route-intelligence-completed";
+export const ROUTE_INTELLIGENCE_CURRENT_LAYER_ID = "ats-route-intelligence-current";
+export const ROUTE_INTELLIGENCE_REMAINING_LAYER_ID = "ats-route-intelligence-remaining";
 
 export const MAX_ROUTE_POINTS_PER_SEGMENT = 64;
 
