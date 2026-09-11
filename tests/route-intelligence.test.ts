@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RouteIntelligenceNetwork } from "@/lib/route-intelligence";
-import { analyzePublishedRoute, tokenizeRoute } from "@/lib/route-intelligence";
+import {
+  analyzePublishedRoute,
+  clearRouteIntelligenceCache,
+  ensureRouteIntelligenceAtsNetwork,
+  tokenizeRoute,
+} from "@/lib/route-intelligence";
 
 const network: RouteIntelligenceNetwork = {
   source: { name: "fixture", reference: "fixture", effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null },
@@ -21,9 +26,14 @@ const network: RouteIntelligenceNetwork = {
   }],
 };
 
-function plan(filedRoute: string) {
-  return { flightPlan: { filedRoute, waypoints: [], source: "test" } };
+function plan(filedRoute: string, source = "test") {
+  return { flightPlan: { filedRoute, waypoints: [], source } };
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  clearRouteIntelligenceCache();
+});
 
 describe("route intelligence tokenizer", () => {
   it("distinguishes fixes, airways, DCT, and unknown syntax", () => {
@@ -43,10 +53,16 @@ describe("route intelligence matching", () => {
     expect(result.crossTrackDeviationNm).not.toBeNull();
   });
 
-  it("traverses multiple segments only inside the named airway", () => {
+  it("tracks progress inside a multi-segment named airway leg", () => {
     const result = analyzePublishedRoute({ aircraftRoute: plan("USUPA T709 TIBLA"), aircraftPosition: { lat: 50.3, lon: 14.6, track: 50 }, atsNetwork: network });
     expect(result.status).toBe("MATCHED");
     expect(result.matchedSegments.map((segment) => segment.segmentId)).toEqual(["T709-A-B", "T709-B-C"]);
+    expect(result.currentSegment?.segmentId).toBe("T709-B-C");
+    expect(result.progress.completedSegmentIds).toEqual(["T709-A-B"]);
+    expect(result.progress.currentSegmentId).toBe("T709-B-C");
+    expect(result.progress.remainingSegmentIds).toEqual([]);
+    expect(result.previousWaypoint?.name).toBe("BODAL");
+    expect(result.nextWaypoint?.name).toBe("TIBLA");
   });
 
   it("supports reverse filed direction", () => {
@@ -73,6 +89,38 @@ describe("route intelligence matching", () => {
     const result = analyzePublishedRoute({ aircraftRoute: plan("USUPA T709 BODAL DCT ???"), aircraftPosition: { lat: 50.1, lon: 14.2 }, atsNetwork: network });
     expect(result.status).toBe("PARTIAL");
     expect(result.unresolvedRouteTokens).toContain("???");
+  });
+
+  it("keeps route provenance request-local across a shared static match", () => {
+    const first = analyzePublishedRoute({ aircraftRoute: plan("USUPA T709 BODAL", "FlightAware"), aircraftPosition: null, atsNetwork: network });
+    const second = analyzePublishedRoute({ aircraftRoute: plan("USUPA T709 BODAL", "ADSBDB"), aircraftPosition: null, atsNetwork: network });
+    expect(first.source.aircraftRouteSource).toBe("FlightAware");
+    expect(second.source.aircraftRouteSource).toBe("ADSBDB");
+  });
+});
+
+describe("route intelligence ATS loading", () => {
+  it("loads ATS data for a selected-aircraft analysis even when the visual ATS layer has not loaded it", async () => {
+    vi.stubGlobal("window", {});
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ available: true, source: network.source, routes: network.routes }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = analyzePublishedRoute({
+      aircraftRoute: plan("USUPA T709 BODAL"),
+      aircraftPosition: { lat: 50.1, lon: 14.2, track: 50 },
+      atsNetwork: null,
+    });
+
+    expect(result.status).toBe("NO_ATS_DATA");
+    await ensureRouteIntelligenceAtsNetwork();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/ats/routes", { cache: "force-cache" });
+    expect(result.status).toBe("MATCHED");
+    expect(result.currentSegment?.segmentId).toBe("T709-A-B");
   });
 });
 

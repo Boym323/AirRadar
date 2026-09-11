@@ -1,5 +1,9 @@
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { formatNumber, t } from "@/lib/i18n";
+import {
+  getRouteIntelligenceUpdateSnapshot,
+  subscribeRouteIntelligenceUpdates,
+} from "@/lib/route-intelligence";
 import type { RouteIntelligenceResult } from "@/lib/route-intelligence";
 
 function statusLabel(result: RouteIntelligenceResult): string {
@@ -30,6 +34,15 @@ function segmentLabel(result: RouteIntelligenceResult): string {
 }
 
 export function RouteIntelligencePanel({ result }: { result: RouteIntelligenceResult }) {
+  // Route Intelligence loads the published ATS dataset independently of the
+  // visual ATS map toggle. The store only invalidates this panel when that
+  // one-time internal dataset load upgrades a fail-closed NO_ATS_DATA result.
+  useSyncExternalStore(
+    subscribeRouteIntelligenceUpdates,
+    getRouteIntelligenceUpdateSnapshot,
+    getRouteIntelligenceUpdateSnapshot,
+  );
+
   return <DetailSection title={t.routeIntelligence.title}>
     <DetailItem label={t.routeIntelligence.publishedMatch} value={result.routeCoveragePercent === null ? statusLabel(result) : `${formatNumber(result.routeCoveragePercent, 0)} % · ${statusLabel(result)}`} />
     <DetailItem label={t.routeIntelligence.currentRoute} value={result.currentSegment?.routeDesignator || t.routeIntelligence.unknown} />
