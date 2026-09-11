@@ -30,8 +30,14 @@ export function canonicalAirspaceDesignator(value: string | null | undefined): s
   const direct = compact.match(/^(?:LK)?(TRA|TSA)(\d+[A-Z]?)$/);
   if (direct) return `LK${direct[1]}${direct[2]}`;
 
-  const embedded = normalized.match(/(?:^|[^A-Z0-9])LK(TRA|TSA)[\s_-]*(\d+[A-Z]?)(?=$|[^A-Z0-9])/);
-  return embedded ? `LK${embedded[1]}${embedded[2]}` : null;
+  const explicitLk = normalized.match(/(?:^|[^A-Z0-9])LK(TRA|TSA)[\s_-]*(\d+[A-Z]?)(?=$|[^A-Z0-9])/);
+  if (explicitLk) return `LK${explicitLk[1]}${explicitLk[2]}`;
+
+  // Published Czech names may use bare "TRA 36 HOLICE" / "TSA 4A" tokens.
+  // Requiring a non-alphanumeric boundary prevents foreign designators such as
+  // LZTRA01 from being rewritten as Czech LKTRA01.
+  const publishedToken = normalized.match(/(?:^|[^A-Z0-9])(TRA|TSA)[\s_-]*(\d+[A-Z]?)(?=$|[^A-Z0-9])/);
+  return publishedToken ? `LK${publishedToken[1]}${publishedToken[2]}` : null;
 }
 
 function matchFromWindow(
