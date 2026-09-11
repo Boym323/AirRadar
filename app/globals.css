@@ -585,6 +585,15 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .aircraft-marker.selected .aircraft-plane { color: var(--amber); filter: drop-shadow(0 0 7px rgba(243, 185, 95, .84)); transform: scale(1.12); }
 .aircraft-marker.watchlisted .aircraft-plane { filter: drop-shadow(0 0 6px rgba(243, 185, 95, .82)); }
 .aircraft-marker.selected .aircraft-glyph-asset { filter: brightness(0) saturate(100%) invert(81%) sepia(52%) saturate(652%) hue-rotate(344deg) brightness(101%) contrast(91%); }
+.ogn-marker { width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; z-index: 3; }
+.ogn-marker.selected { z-index: 30; }
+.ogn-marker.stale { opacity: .72; }
+.ogn-marker-icon { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid rgba(102,216,207,.82); border-radius: 50%; background: rgba(8,17,29,.78); color: var(--accent); box-shadow: 0 0 0 3px rgba(102,216,207,.13), 0 0 12px rgba(102,216,207,.5); line-height: 1; transition: color .18s, filter .18s, transform .18s; }
+.ogn-marker:hover .ogn-marker-icon, .ogn-marker:focus-visible .ogn-marker-icon { transform: scale(1.1); }
+.ogn-marker-icon .ogn-glyph { width: 19px; height: 19px; }
+.ogn-marker-label { position: absolute; top: 27px; left: 50%; max-width: 130px; transform: translateX(-50%); padding: 2px 4px; border: 1px solid rgba(102,216,207,.28); border-radius: 4px; background: rgba(8,17,29,.84); color: #b5f1eb; font-size: 8px; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; text-overflow: ellipsis; overflow: hidden; }
+.ogn-marker.selected .ogn-marker-icon { border-color: var(--amber); color: var(--amber); filter: drop-shadow(0 0 7px rgba(243,185,95,.78)); transform: scale(1.12); }
+.ogn-marker.selected .ogn-marker-label { border-color: rgba(243,185,95,.42); color: var(--amber); }
 .receiver-marker { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--amber); background: rgba(243, 185, 95, .2); box-shadow: 0 0 0 7px rgba(243, 185, 95, .08); }
 .maplibregl-ctrl-group { background: rgba(8,17,29,.87) !important; border: 1px solid var(--line) !important; }
 .maplibregl-ctrl-group button { filter: invert(1) hue-rotate(160deg); }

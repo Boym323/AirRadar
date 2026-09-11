@@ -232,33 +232,22 @@ function ognTargetLabel(target: OgnTargetView): string {
   return target.aircraftType.toUpperCase();
 }
 
-function OgnGlyph({ aircraftType }: { aircraftType: OgnTargetView["aircraftType"] }) {
-  const path = aircraftType === "glider" || aircraftType === "paraglider" || aircraftType === "hang_glider"
+function ognGlyphPath(aircraftType: OgnTargetView["aircraftType"]): string {
+  return aircraftType === "glider" || aircraftType === "paraglider" || aircraftType === "hang_glider"
     ? "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z"
     : aircraftType === "helicopter"
       ? "M5 9h22M16 9v5m-7 0h14l3 5H6l3-5Zm7 5v8m-5 0h10"
       : aircraftType === "balloon" || aircraftType === "airship"
         ? "M16 3c5 0 8 4 8 9 0 5-3 8-8 8s-8-3-8-8c0-5 3-9 8-9Zm0 17v6m-4 0h8"
         : "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z";
-  return <svg className="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d={path} /></svg>;
 }
 
-function createOgnGeoJSON(targets: OgnTargetView[], selectedId: string | null = null) {
-  return {
-    type: "FeatureCollection" as const,
-    features: targets
-      .filter((target) => Number.isFinite(target.latitude) && Number.isFinite(target.longitude))
-      .map((target) => ({
-        type: "Feature" as const,
-        properties: {
-          id: target.id,
-          label: ognTargetLabel(target),
-          stale: target.stale,
-          selected: target.id === selectedId,
-        },
-        geometry: { type: "Point" as const, coordinates: [target.longitude, target.latitude] },
-      })),
-  };
+function OgnGlyph({ aircraftType }: { aircraftType: OgnTargetView["aircraftType"] }) {
+  return <svg className="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d={ognGlyphPath(aircraftType)} /></svg>;
+}
+
+function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {
+  return `<svg class="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d="${ognGlyphPath(aircraftType)}"></path></svg>`;
 }
 
 function LogoMark() {
@@ -453,6 +442,7 @@ export function AirRadarApp() {
   const focusedAircraftRef = useRef<string | null>(null);
   const receiverMarkerRef = useRef<maplibregl.Marker | null>(null);
   const aircraftMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+  const ognMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const animationFramesRef = useRef<Map<string, number>>(new Map());
   const aircraftMotionTimingRef = useRef<Map<string, AircraftMotionTiming>>(new Map());
   const aircraftAnimationTargetsRef = useRef<Map<string, [number, number]>>(new Map());
@@ -764,6 +754,7 @@ export function AirRadarApp() {
     mapRef.current = map;
     const animationFrames = animationFramesRef.current;
     const aircraftMarkers = aircraftMarkersRef.current;
+    const ognMarkers = ognMarkersRef.current;
     const aircraftMotionTiming = aircraftMotionTimingRef.current;
     const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
     const liveTrails = liveTrailsRef.current;
@@ -775,27 +766,6 @@ export function AirRadarApp() {
         type: "line",
         source: "range-rings",
         paint: { "line-color": "#37d6c0", "line-opacity": 0.24, "line-width": 1, "line-dasharray": [2, 3] },
-      });
-      map.addSource("ogn-targets", { type: "geojson", data: createOgnGeoJSON([]) });
-      map.addLayer({
-        id: "ogn-targets-circle",
-        type: "circle",
-        source: "ogn-targets",
-        layout: { visibility: "none" },
-        paint: {
-          "circle-color": "#66d8cf",
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 4, 9, 6, 14, 8],
-          "circle-opacity": ["case", ["get", "stale"], 0.42, 0.92],
-          "circle-stroke-color": "#07111d",
-          "circle-stroke-width": ["case", ["get", "selected"], 2.8, 1.4],
-        },
-      });
-      map.addLayer({
-        id: "ogn-targets-label",
-        type: "symbol",
-        source: "ogn-targets",
-        layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 1.15], "text-padding": 5, "text-optional": true },
-        paint: { "text-color": "#9de8df", "text-opacity": ["case", ["get", "stale"], 0.45, 0.9], "text-halo-color": "#07111d", "text-halo-width": 1 },
       });
       map.addSource("selected-trail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "selected-trail-line", type: "line", source: "selected-trail", paint: { "line-color": "#f3b95f", "line-opacity": 0.85, "line-width": 2.5 } });
@@ -843,18 +813,6 @@ export function AirRadarApp() {
       });
       map.on("mouseenter", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = ""; });
-      map.on("click", "ogn-targets-circle", (event: MapLayerMouseEvent) => {
-        const id = event.features?.[0]?.properties?.id;
-        if (typeof id === "string" && id.length <= 80) selectOgn(id);
-      });
-      map.on("click", "ogn-targets-label", (event: MapLayerMouseEvent) => {
-        const id = event.features?.[0]?.properties?.id;
-        if (typeof id === "string" && id.length <= 80) selectOgn(id);
-      });
-      map.on("mouseenter", "ogn-targets-circle", () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseenter", "ogn-targets-label", () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", "ogn-targets-circle", () => { map.getCanvas().style.cursor = ""; });
-      map.on("mouseleave", "ogn-targets-label", () => { map.getCanvas().style.cursor = ""; });
       map.addSource(ROUTE_V2_AIRPORT_SOURCE_ID, { type: "geojson", data: createRouteAirportGeoJSON(null) });
       map.addLayer({ id: ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, type: "circle", source: ROUTE_V2_AIRPORT_SOURCE_ID, paint: { "circle-color": "#37d6c0", "circle-opacity": 0.92, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4.5, 12, 6], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.8 } });
       map.addLayer({ id: ROUTE_V2_AIRPORT_LABEL_LAYER_ID, type: "symbol", source: ROUTE_V2_AIRPORT_SOURCE_ID, layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 10, 10, 13, 11], "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#72e5d3", "text-opacity": 0.9, "text-halo-color": "#08111d", "text-halo-width": 1 } });
@@ -912,6 +870,8 @@ export function AirRadarApp() {
       receiverMarkerRef.current = null;
       for (const marker of aircraftMarkers.values()) marker.remove();
       aircraftMarkers.clear();
+      for (const marker of ognMarkers.values()) marker.remove();
+      ognMarkers.clear();
       liveTrails.clear();
       map.remove();
       mapRef.current = null;
@@ -964,12 +924,60 @@ export function AirRadarApp() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const source = map.getSource("ogn-targets") as GeoJSONSource | undefined;
-    source?.setData(createOgnGeoJSON(ognSnapshot.targets, selectedOgnId));
-    for (const layer of ["ogn-targets-circle", "ogn-targets-label"] as const) {
-      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showOgn && ognEnabled === true ? "visible" : "none");
+    const visible = showOgn && ognEnabled === true;
+    const ognMarkers = ognMarkersRef.current;
+    const currentIds = new Set<string>();
+
+    for (const target of ognSnapshot.targets) {
+      if (!Number.isFinite(target.latitude) || !Number.isFinite(target.longitude)) continue;
+      currentIds.add(target.id);
+      let marker = ognMarkers.get(target.id);
+      if (!marker) {
+        const root = document.createElement("div");
+        root.className = "ogn-marker";
+        root.setAttribute("role", "button");
+        root.setAttribute("tabindex", "0");
+        const icon = document.createElement("div");
+        icon.className = "ogn-marker-icon";
+        root.appendChild(icon);
+        const label = document.createElement("div");
+        label.className = "ogn-marker-label";
+        root.appendChild(label);
+        root.addEventListener("click", () => selectOgn(target.id));
+        root.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectOgn(target.id);
+          }
+        });
+        marker = new maplibregl.Marker({ element: root, anchor: "center" })
+          .setLngLat([target.longitude, target.latitude])
+          .addTo(map);
+        ognMarkers.set(target.id, marker);
+      } else {
+        marker.setLngLat([target.longitude, target.latitude]);
+      }
+      const root = marker.getElement();
+      root.setAttribute("aria-label", ognTargetLabel(target));
+      root.setAttribute("aria-pressed", String(target.id === selectedOgnId));
+      root.classList.toggle("selected", target.id === selectedOgnId);
+      root.classList.toggle("stale", target.stale);
+      root.style.visibility = visible ? "visible" : "hidden";
+      const icon = root.querySelector<HTMLElement>(".ogn-marker-icon");
+      if (icon && icon.dataset.aircraftType !== target.aircraftType) {
+        icon.dataset.aircraftType = target.aircraftType;
+        icon.innerHTML = ognGlyphMarkup(target.aircraftType);
+      }
+      const label = root.querySelector<HTMLElement>(".ogn-marker-label");
+      if (label) label.textContent = ognTargetLabel(target);
     }
-  }, [mapReady, ognEnabled, ognSnapshot.targets, selectedOgnId, showOgn]);
+
+    for (const [id, marker] of ognMarkers) {
+      if (currentIds.has(id)) continue;
+      marker.remove();
+      ognMarkers.delete(id);
+    }
+  }, [mapReady, ognEnabled, ognSnapshot.targets, selectOgn, selectedOgnId, showOgn]);
 
   const mapFilteredAircraft = useMemo(
     () => filterAircraftForMap(snapshot.aircraft, mapFilters),

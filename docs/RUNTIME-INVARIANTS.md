@@ -136,8 +136,8 @@ These are behavior and safety contracts for changes to the current system.
   delivers it; unknown and unsupported TOCALLs are fail-closed.
 - OGN targets are RAM-only and must not reach Prisma, `AircraftStateService`,
   ADS-B history/statistics/reception records, alerts, enrichment, ATC, or
-  receiver health. The map uses dedicated GeoJSON source/layers and the UI
-  has a separate OGN list/detail selection.
+  receiver health. The map uses dedicated DOM markers and the UI has a
+  separate OGN list/detail selection.
 - OGN DDB runtime resolution is targeted and bounded: startup performs no full
   table request, IDs are deduplicated and batched, and only one request may be
   in flight. A valid targeted empty response is `MISSING`; network, HTTP,
@@ -209,9 +209,9 @@ frames, event listeners, and dynamic source data. Its generic IDs are:
   `atc-sectors-label`, `atc-transmitters-circle`,
   `route-airports-circle`, `route-airports-label`, `aviation-sigmet-fill`,
   `aviation-sigmet-line`;
-- OGN uses source `ogn-targets` and layers `ogn-targets-circle` and
-  `ogn-targets-label`; these are GeoJSON layers, not DOM markers, and are
-  hidden until the operator enables the separate OGN map toggle.
+- OGN targets use dedicated MapLibre DOM markers, independent of the ADS-B
+  GeoJSON layers, and are hidden until the operator enables the separate OGN
+  map toggle.
 - Route V2 constants in `lib/route-visualization.ts`: sources
   `selected-route-v2` and `selected-route-airports-v2`; layers
   `selected-route-completed`, `selected-route-remaining`,

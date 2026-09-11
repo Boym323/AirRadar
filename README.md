@@ -120,7 +120,7 @@ channel; it never opens a TCP connection.
 OGN targets stay in a bounded RAM-only state map. They do not enter the local
 ADS-B state service, `FlightPosition`, `Flight` history, daily statistics,
 reception records, alerts, enrichment, or receiver health. The OGN map layer
-is separate, off by default, and uses MapLibre GeoJSON source/layers; the OGN
+is separate, off by default, and uses dedicated MapLibre DOM markers; the OGN
 list and detail panel are separate from ADS-B selection and filters.
 
 Before publishing a target, AirRadar fail-closes on an unresolved or stale

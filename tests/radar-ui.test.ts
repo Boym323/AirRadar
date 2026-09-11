@@ -83,6 +83,9 @@ describe("radar UI polish helpers", () => {
 
   it("exposes the layer state and keeps aircraft detail loading bounded", () => {
     expect(appSource).toContain("checked={showAircraft}");
+    expect(appSource).toContain('root.className = "ogn-marker"');
+    expect(appSource).toContain('root.style.visibility = visible ? "visible" : "hidden"');
+    expect(globalCss).toContain(".ogn-marker");
     expect(appSource).toContain("checked={showAirports}");
     expect(appSource).toContain("checked={showAtc}");
     expect(appSource.match(/\bfetch\(/g)).toHaveLength(7);
