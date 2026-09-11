@@ -2,6 +2,7 @@ import { normalizeAircraftResponse, type RawReadsbAircraftResponse } from "@/lib
 import type { AircraftProvider } from "@/lib/server/provider";
 import type { ProviderSnapshot, ReceiverPosition } from "@/lib/aircraft/types";
 import { getReceiverRefreshIntervalMs } from "@/lib/server/config";
+import { getReceiverAdvancedStatistics } from "@/lib/server/receiver-advanced-statistics";
 
 function endpoint(baseUrl: string, path: string): string {
   const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -41,16 +42,25 @@ export class LocalReadsbProvider implements AircraftProvider {
     }
 
     const fetchedAt = new Date(now).toISOString();
-    const messageCount = typeof aircraftResponse.messages === "number"
+    const parsedMessageCount = typeof aircraftResponse.messages === "number"
       ? aircraftResponse.messages
       : typeof aircraftResponse.messages === "string" ? Number(aircraftResponse.messages) : null;
-    const messagesPerSecond = messageCount !== null && Number.isFinite(messageCount) && this.lastMessageCount !== null && this.lastMessageAt !== null
+    const messageCount = parsedMessageCount !== null && Number.isFinite(parsedMessageCount) && parsedMessageCount >= 0
+      ? parsedMessageCount
+      : null;
+    const messagesPerSecond = messageCount !== null && this.lastMessageCount !== null && this.lastMessageAt !== null
       ? Math.max(0, (messageCount - this.lastMessageCount) / Math.max((now - this.lastMessageAt) / 1000, 0.001))
       : null;
-    this.lastMessageCount = messageCount !== null && Number.isFinite(messageCount) ? messageCount : this.lastMessageCount;
+    this.lastMessageCount = messageCount ?? this.lastMessageCount;
     this.lastMessageAt = now;
+
+    const aircraft = normalizeAircraftResponse(aircraftResponse, this.currentReceiver, new Date(fetchedAt));
+    // Receiver analytics are intentionally non-blocking: PostgreSQL can be
+    // slow or offline without delaying the live readsb snapshot or SSE path.
+    getReceiverAdvancedStatistics().observe(aircraft, messageCount, new Date(fetchedAt));
+
     return {
-      aircraft: normalizeAircraftResponse(aircraftResponse, this.currentReceiver, new Date(fetchedAt)),
+      aircraft,
       receiver: this.currentReceiver,
       fetchedAt,
       provider: "readsb",
@@ -65,6 +75,7 @@ export class LocalReadsbProvider implements AircraftProvider {
 
   async close(): Promise<void> {
     this.abort();
+    await getReceiverAdvancedStatistics().close();
   }
 
   private async fetchJson<T>(url: string): Promise<T> {

@@ -1,0 +1,257 @@
+.wrapper {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 36px;
+}
+
+.panel {
+  padding-bottom: 18px;
+}
+
+.header {
+  align-items: flex-start;
+}
+
+.header p,
+.sectionHeader p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.metric {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(153, 181, 207, .12);
+  border-radius: 10px;
+}
+
+.metric > span,
+.records span {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.metric strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric small,
+.records small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.sections {
+  display: grid;
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.section {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid rgba(153, 181, 207, .12);
+  border-radius: 10px;
+}
+
+.sectionHeader h3 {
+  margin: 0;
+  font-size: 12px;
+}
+
+.tableScroll {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 8px 9px;
+  border-top: 1px solid rgba(153, 181, 207, .1);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table th:first-child,
+.table td:first-child {
+  text-align: left;
+}
+
+.table thead th {
+  border-top: 0;
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.reliable td:nth-child(4) strong {
+  color: var(--amber);
+}
+
+.note,
+.status {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.altitudeBands {
+  display: grid;
+  gap: 11px;
+  margin-top: 14px;
+}
+
+.altitudeBand {
+  display: grid;
+  grid-template-columns: minmax(170px, .8fr) minmax(360px, 2fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.altitudeBandHeader {
+  min-width: 0;
+}
+
+.altitudeBandHeader strong {
+  display: block;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.altitudeBandHeader span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.azimuthStrip {
+  display: grid;
+  grid-template-columns: repeat(36, minmax(5px, 1fr));
+  gap: 2px;
+  min-width: 360px;
+}
+
+.azimuthCell {
+  display: block;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--amber);
+}
+
+.hourChart {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(18px, 1fr));
+  gap: 4px;
+  min-width: 650px;
+  height: 190px;
+  margin-top: 14px;
+  align-items: end;
+}
+
+.section:has(.hourChart),
+.section:has(.azimuthStrip) {
+  overflow-x: auto;
+}
+
+.hourColumn {
+  display: grid;
+  grid-template-rows: 130px auto auto;
+  gap: 3px;
+  min-width: 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.hourBarTrack {
+  position: relative;
+  height: 130px;
+  border-bottom: 1px solid rgba(153, 181, 207, .16);
+}
+
+.hourBar {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  left: 2px;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: var(--amber);
+  opacity: .65;
+}
+
+.hourColumn strong {
+  font-size: 8px;
+}
+
+.hourColumn small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.records {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.records > div {
+  min-width: 0;
+}
+
+.records strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.records a {
+  color: inherit;
+}
+
+@media (max-width: 950px) {
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .records { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 800px) {
+  .altitudeBand {
+    grid-template-columns: 150px minmax(360px, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .wrapper { padding: 0 12px 28px; }
+  .metrics,
+  .sections { padding-left: 15px; padding-right: 15px; }
+  .metrics,
+  .records { grid-template-columns: 1fr; }
+  .metric { min-height: 74px; }
+  .altitudeBand { grid-template-columns: 120px minmax(360px, 1fr); }
+}
