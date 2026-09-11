@@ -137,6 +137,7 @@ export function selectFlightInstance(flights: FlightAwareFlight[], observedAt: D
 export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
   readonly name = "flightaware-aeroapi";
   private readonly budget: SlidingWindowRequestBudget;
+  private readonly limitPerMinute: number;
   private requests = 0;
   private failures = 0;
   private rateLimited = 0;
@@ -146,10 +147,10 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
     options: { maxRequestsPerMinute?: number } = {},
   ) {
     const configuredLimit = options.maxRequestsPerMinute ?? FLIGHTAWARE_MAX_REQUESTS_PER_MINUTE;
-    const limit = Number.isFinite(configuredLimit)
+    this.limitPerMinute = Number.isFinite(configuredLimit)
       ? Math.min(30, Math.max(1, Math.trunc(configuredLimit)))
       : FLIGHTAWARE_MAX_REQUESTS_PER_MINUTE;
-    this.budget = new SlidingWindowRequestBudget(limit, FLIGHTAWARE_RATE_WINDOW_MS);
+    this.budget = new SlidingWindowRequestBudget(this.limitPerMinute, FLIGHTAWARE_RATE_WINDOW_MS);
   }
 
   getDiagnostics(): FlightAwareDiagnostics {
@@ -157,15 +158,9 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
       requests: this.requests,
       failures: this.failures,
       rateLimited: this.rateLimited,
-      limitPerMinute: this.budgetLimit(),
+      limitPerMinute: this.limitPerMinute,
       windowMs: FLIGHTAWARE_RATE_WINDOW_MS,
     };
-  }
-
-  private budgetLimit(): number {
-    // The budget intentionally keeps its timestamps private; the configured
-    // limit is stable for this provider instance and exposed without secrets.
-    return (this.budget as unknown as { limit: number }).limit;
   }
 
   private async request(url: string): Promise<Response> {
