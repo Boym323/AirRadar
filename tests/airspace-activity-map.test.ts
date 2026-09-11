@@ -59,7 +59,7 @@ describe("airspace activity map matching", () => {
     expect(canonicalAirspaceDesignator("TRA 36")).toBe("LKTRA36");
     expect(canonicalAirspaceDesignator("cz-eaip-LKTRA36-sector")).toBe("LKTRA36");
     expect(canonicalAirspaceDesignator("LKTSA4A")).toBe("LKTSA4A");
-    expect(canonicalAirspaceDesignator("LZTRA01")).toBe("LKTRA01");
+    expect(canonicalAirspaceDesignator("LZTRA01")).toBeNull();
     expect(canonicalAirspaceDesignator("Praha TMA")).toBeNull();
   });
 
