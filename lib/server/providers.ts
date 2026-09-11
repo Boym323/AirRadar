@@ -89,6 +89,18 @@ class CombinedAdsbDbProvider implements AircraftMetadataProvider, FlightRoutePro
   }
 }
 
+export function isFlightAwareEnabled(): boolean {
+  return process.env.FLIGHTAWARE_ENABLED?.trim().toLowerCase() === "true";
+}
+
+function getUsableFlightAwareApiKey(): string | null {
+  const key = getFlightAwareApiKey();
+  if (!key) return null;
+  const marker = key.trim().toUpperCase();
+  if (["EMPTY", "CHANGEME", "CHANGE_ME", "YOUR_API_KEY"].includes(marker)) return null;
+  return key;
+}
+
 /** External integrations are optional; the local tar1090 lookup needs no API key. */
 export function createEnrichmentService(): EnrichmentService {
   const registry: ProviderRegistry = {};
@@ -106,9 +118,25 @@ export function createEnrichmentService(): EnrichmentService {
   } else if (tar1090Db) {
     registry.aircraftMetadata = tar1090Db;
   }
-  const flightAwareApiKey = getFlightAwareApiKey();
-  if (flightAwareApiKey) registry.flightPlan = new FlightAwareFlightPlanProvider(flightAwareApiKey);
+
+  // A paid FlightAware provider is deliberately double opt-in: a usable key
+  // alone is not enough to activate it. This prevents accidental spend when a
+  // secret is provisioned before the feature is intentionally enabled.
+  const flightAwareApiKey = getUsableFlightAwareApiKey();
+  if (isFlightAwareEnabled() && flightAwareApiKey) {
+    registry.flightPlan = new FlightAwareFlightPlanProvider(flightAwareApiKey);
+  }
   return new EnrichmentService(registry);
+}
+
+const globalForOnDemandEnrichment = globalThis as unknown as {
+  airRadarOnDemandEnrichment?: EnrichmentService;
+};
+
+/** Shared cache/budget for explicit detail requests across the server process. */
+export function getOnDemandEnrichmentService(): EnrichmentService {
+  globalForOnDemandEnrichment.airRadarOnDemandEnrichment ??= createEnrichmentService();
+  return globalForOnDemandEnrichment.airRadarOnDemandEnrichment;
 }
 
 export function createAtcSectorProvider() {
