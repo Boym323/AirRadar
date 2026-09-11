@@ -103,6 +103,7 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 
 const MIN_AIRCRAFT_ANIMATION_MS = 650;
 const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
+const INTELLIGENCE_RETRY_MS = 30_000;
 type TrafficSource = "adsb" | "ogn";
 
 interface AircraftMotionTiming {
@@ -460,6 +461,7 @@ export function AirRadarApp() {
   const [showSigmet, setShowSigmet] = useState(false);
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
   const [atsRoutes, setAtsRoutes] = useState<AtsRoutesResponse | null>(null);
+  const [atsRoutesRetry, setAtsRoutesRetry] = useState(0);
   const [selectedAtsRoute, setSelectedAtsRoute] = useState<string | null>(null);
   const [sigmetEnabled, setSigmetEnabled] = useState<boolean | null>(null);
   const [sigmetData, setSigmetData] = useState<SigmetSnapshot>(EMPTY_SIGMET_DATA);
@@ -470,6 +472,7 @@ export function AirRadarApp() {
   const [airports, setAirports] = useState<Airport[]>([]);
   const [atcData, setAtcData] = useState<AtcDataResponse>(EMPTY_ATC_DATA);
   const [airspaceActivity, setAirspaceActivity] = useState<AirspaceActivityResponse | null>(null);
+  const [airspaceActivityRetry, setAirspaceActivityRetry] = useState(0);
   const [atcExpanded, setAtcExpanded] = useState(false);
   const [streamConnected, setStreamConnected] = useState(false);
   const [coverage, setCoverage] = useState<CoverageMode>("local");
@@ -493,28 +496,44 @@ export function AirRadarApp() {
   const [mapReady, setMapReady] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sigmetGenerationRef = useRef(0);
-  const airspaceActivityRequestedRef = useRef(false);
 
   useEffect(() => {
     if (!showAtsRoutes || atsRoutes) return;
     let active = true;
+    let retryTimer: number | null = null;
     void fetch("/api/ats/routes", { cache: "force-cache" })
-      .then((response) => response.json() as Promise<AtsRoutesResponse>)
+      .then((response) => {
+        if (!response.ok) throw new Error("ATS routes request failed");
+        return response.json() as Promise<AtsRoutesResponse>;
+      })
       .then((data) => { if (active) setAtsRoutes(data); })
-      .catch(() => { if (active) setAtsRoutes({ available: false }); });
-    return () => { active = false; };
-  }, [atsRoutes, showAtsRoutes]);
+      .catch(() => {
+        if (active) retryTimer = window.setTimeout(() => setAtsRoutesRetry((value) => value + 1), INTELLIGENCE_RETRY_MS);
+      });
+    return () => {
+      active = false;
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+    };
+  }, [atsRoutes, atsRoutesRetry, showAtsRoutes]);
 
   useEffect(() => {
-    if (!showAtc || airspaceActivityRequestedRef.current) return;
-    airspaceActivityRequestedRef.current = true;
+    if (!showAtc || airspaceActivity) return;
     let active = true;
+    let retryTimer: number | null = null;
     void fetch("/api/airspace/activity", { cache: "no-store" })
-      .then((response) => response.ok ? response.json() as Promise<AirspaceActivityResponse> : null)
-      .then((data) => { if (active && data) setAirspaceActivity(data); })
-      .catch(() => undefined);
-    return () => { active = false; };
-  }, [showAtc]);
+      .then((response) => {
+        if (!response.ok) throw new Error("airspace activity request failed");
+        return response.json() as Promise<AirspaceActivityResponse>;
+      })
+      .then((data) => { if (active) setAirspaceActivity(data); })
+      .catch(() => {
+        if (active) retryTimer = window.setTimeout(() => setAirspaceActivityRetry((value) => value + 1), INTELLIGENCE_RETRY_MS);
+      });
+    return () => {
+      active = false;
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+    };
+  }, [airspaceActivity, airspaceActivityRetry, showAtc]);
 
   useEffect(() => {
     try {

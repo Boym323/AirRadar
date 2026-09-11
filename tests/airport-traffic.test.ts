@@ -60,6 +60,10 @@ class FakeCollection {
     return this;
   }
 
+  limit(value: number): FakeCollection {
+    return new FakeCollection(this.rows.slice(0, value), this.kind, this.onAll, this.onIn);
+  }
+
   async all(): Promise<Row[]> {
     this.onAll();
     return this.rows;
@@ -228,6 +232,22 @@ describe("airport traffic summary v1", () => {
     expect(result.topAircraft).toHaveLength(AIRPORT_TRAFFIC_TOP_LIMIT);
     expect(result.topCallsigns).toHaveLength(AIRPORT_TRAFFIC_TOP_LIMIT);
     expect(result.recentTraffic).toHaveLength(AIRPORT_TRAFFIC_RECENT_LIMIT);
+  });
+
+  it("marks the response incomplete when a bounded route query is truncated", async () => {
+    const counters = { all: 0, in: 0 };
+    const flights = Array.from({ length: 501 }, (_, index) => flight(index + 1, "2026-09-08T08:00:00Z", {
+      origin: "PRG",
+      destination: "FRA",
+      aircraft: { icaoHex: (index + 1).toString(16).padStart(6, "0").toUpperCase(), registration: null, aircraftType: "A320" },
+    }));
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase(flights, routeAirports, counters) as never);
+
+    const result = await getAirportTrafficSummary(prague, { range: "30d", now: new Date("2026-09-08T12:00:00Z") });
+
+    expect(result.complete).toBe(false);
+    expect(result.flights).toBe(500);
+    expect(result.departures).toBe(500);
   });
 
   it("returns a true empty state without reading positions", async () => {

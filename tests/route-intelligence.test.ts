@@ -72,6 +72,20 @@ describe("route intelligence matching", () => {
     expect(result.currentSegment?.toName).toBe("USUPA");
   });
 
+  it("tries later duplicate airway candidates when the first candidate has no path", () => {
+    const disconnected = {
+      ...network.routes[0],
+      points: network.routes[0].points.map((point) => ({ ...point, id: `X-${point.id}` })),
+      segments: [],
+      discontinuities: [],
+    };
+    const duplicateNetwork: RouteIntelligenceNetwork = { ...network, routes: [disconnected, network.routes[0]] };
+    const result = analyzePublishedRoute({ aircraftRoute: plan("USUPA T709 BODAL"), aircraftPosition: null, atsNetwork: duplicateNetwork });
+
+    expect(result.status).toBe("MATCHED");
+    expect(result.matchedSegments.map((segment) => segment.segmentId)).toEqual(["T709-A-B"]);
+  });
+
   it("does not invent an ATS leg across DCT", () => {
     const result = analyzePublishedRoute({ aircraftRoute: plan("USUPA DCT BODAL"), aircraftPosition: { lat: 50.1, lon: 14.2 }, atsNetwork: network });
     expect(result.status).toBe("UNRESOLVED");
@@ -121,6 +135,18 @@ describe("route intelligence ATS loading", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/ats/routes", { cache: "force-cache" });
     expect(result.status).toBe("MATCHED");
     expect(result.currentSegment?.segmentId).toBe("T709-A-B");
+  });
+
+  it("retries ATS loading after a transient failed request", async () => {
+    vi.stubGlobal("window", {});
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ available: true, source: network.source, routes: network.routes }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(ensureRouteIntelligenceAtsNetwork()).resolves.toBeNull();
+    await expect(ensureRouteIntelligenceAtsNetwork()).resolves.toMatchObject({ source: network.source });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 

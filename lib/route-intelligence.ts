@@ -195,6 +195,12 @@ export function ensureRouteIntelligenceAtsNetwork(): Promise<RouteIntelligenceNe
       return network;
     });
 
+  // A transient fetch failure must not poison the client for the whole page
+  // session. Successful loads are still cached by clientAtsNetwork.
+  void clientAtsLoadPromise.then(
+    () => { clientAtsLoadPromise = null; },
+    () => { clientAtsLoadPromise = null; },
+  );
   return clientAtsLoadPromise;
 }
 

@@ -46,6 +46,8 @@ export interface AirportTrafficRecentFlight {
 
 export interface AirportTrafficSummary {
   range: AirportTrafficRange;
+  /** False when one of the bounded route queries exceeded its safe row cap. */
+  complete: boolean;
   flights: number;
   departures: number;
   arrivals: number;

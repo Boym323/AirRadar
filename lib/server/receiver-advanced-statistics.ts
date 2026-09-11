@@ -279,22 +279,20 @@ export class ReceiverAdvancedStatistics {
           });
         }
         for (const row of altitudeRows) {
-          const existing = await schema.ReceiverDailyCoverageAltitude
-            .where({ date, azimuthBucket: row.azimuthBucket, altitudeBand: row.altitudeBand })
-            .first();
-          if (existing) {
-            await schema.ReceiverDailyCoverageAltitude
-              .where({ date, azimuthBucket: row.azimuthBucket, altitudeBand: row.altitudeBand })
-              .update({ maxDistanceKm: Math.max(existing.maxDistanceKm, row.maxDistanceKm), updatedAt });
-          } else {
-            await schema.ReceiverDailyCoverageAltitude.create({
+          // The in-memory row was loaded from persistence and is marked dirty
+          // only after a larger local maximum is observed. With the documented
+          // single-process runtime invariant, one upsert is therefore enough
+          // and avoids a read-before-write query for every changed cell.
+          await schema.ReceiverDailyCoverageAltitude.upsert({
+            update: { maxDistanceKm: row.maxDistanceKm, updatedAt },
+            create: {
               date,
               azimuthBucket: row.azimuthBucket,
               altitudeBand: row.altitudeBand,
               maxDistanceKm: row.maxDistanceKm,
               updatedAt,
-            });
-          }
+            },
+          });
         }
       });
       if (date === this.currentDate) {

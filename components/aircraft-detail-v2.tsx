@@ -78,10 +78,13 @@ export function AircraftAltitudeChart({
   const height = 120;
   const horizontalPadding = 8;
   const verticalPadding = 10;
-  const polyline = chartPoints.map((point, index) => {
+  const firstTimestamp = chartPoints.length ? Date.parse(chartPoints[0].recordedAt) : anchor;
+  const lastTimestamp = chartPoints.length ? Date.parse(chartPoints.at(-1)!.recordedAt) : anchor;
+  const timeSpan = Math.max(1, lastTimestamp - firstTimestamp);
+  const polyline = chartPoints.map((point) => {
     const x = chartPoints.length <= 1
       ? width / 2
-      : horizontalPadding + (index / (chartPoints.length - 1)) * (width - horizontalPadding * 2);
+      : horizontalPadding + ((Date.parse(point.recordedAt) - firstTimestamp) / timeSpan) * (width - horizontalPadding * 2);
     const y = height - verticalPadding - (((point.altitude as number) - min) / span) * (height - verticalPadding * 2);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");

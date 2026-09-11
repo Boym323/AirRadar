@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { readFileSync, statSync } from "node:fs";
+import { closeSync, openSync, readFileSync, readSync, statSync } from "node:fs";
 import type { OgnDdbEntry, OgnDdbResolution } from "@/lib/ogn/types";
 
 export const DEFAULT_OGN_SOFTRF_DDB_PATH = "/var/lib/airradar/ogn/softrf/ogn.db";
@@ -57,6 +57,22 @@ function validText(value: unknown, maximum: number): boolean {
 
 function integer(value: unknown): number | null {
   return typeof value === "number" && Number.isSafeInteger(value) ? value : null;
+}
+
+function sha256File(path: string): string {
+  const hash = createHash("sha256");
+  const descriptor = openSync(path, "r");
+  const buffer = Buffer.allocUnsafe(1024 * 1024);
+  try {
+    for (;;) {
+      const bytesRead = readSync(descriptor, buffer, 0, buffer.length, null);
+      if (bytesRead === 0) break;
+      hash.update(buffer.subarray(0, bytesRead));
+    }
+    return hash.digest("hex");
+  } finally {
+    closeSync(descriptor);
+  }
 }
 
 /**
@@ -164,7 +180,7 @@ export class SoftRfDdb {
     const snapshotAt = Date.parse(metadata.generatedAt);
     const age = this.now() - snapshotAt;
     if (!Number.isFinite(snapshotAt) || age < -FUTURE_SKEW_MS || age > this.maxAgeMs) throw new Error("SNAPSHOT_EXPIRED");
-    const sha256 = createHash("sha256").update(readFileSync(this.path)).digest("hex");
+    const sha256 = sha256File(this.path);
     if (sha256 !== metadata.sha256) throw new Error("CHECKSUM_MISMATCH");
 
     const database = new DatabaseSync(this.path, { readOnly: true });
@@ -179,10 +195,12 @@ export class SoftRfDdb {
       const recordCount = integer(countRow?.count);
       if (recordCount === null || recordCount < MIN_REASONABLE_SOFTRF_ROWS || recordCount > MAX_SOFTRF_ROWS) throw new Error("COUNT_INVALID");
 
-      const rows = database.prepare("SELECT type, id, acmodel, acreg, accn, track, ident, actype FROM devices").all() as Array<Record<string, unknown>>;
-      if (rows.length !== recordCount) throw new Error("COUNT_CHANGED");
+      const statement = database.prepare("SELECT type, id, acmodel, acreg, accn, track, ident, actype FROM devices");
       const entries = new Map<string, OgnDdbEntry>();
-      for (const row of rows) {
+      let seenRows = 0;
+      for (const row of statement.iterate() as Iterable<Record<string, unknown>>) {
+        seenRows += 1;
+        if (seenRows > recordCount) throw new Error("COUNT_CHANGED");
         const deviceType = typeFromSoftRf(row.type);
         const id = integer(row.id);
         if (!deviceType || id === null || id < 0 || id > 0xffffff || !DEVICE_TYPES.has(row.type as number) || (row.track !== 0 && row.track !== 1) || (row.ident !== 0 && row.ident !== 1)) {
@@ -210,6 +228,7 @@ export class SoftRfDdb {
         if (row.acreg !== null && row.acreg !== undefined && !validText(row.acreg, 40)) throw new Error("ROW_INVALID");
         if (row.accn !== null && row.accn !== undefined && !validText(row.accn, 24)) throw new Error("ROW_INVALID");
       }
+      if (seenRows !== recordCount) throw new Error("COUNT_CHANGED");
       return { entries, recordCount, snapshotAt };
     } finally {
       database.close();

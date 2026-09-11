@@ -13,6 +13,7 @@ import type {
 } from "@/lib/airport-traffic/types";
 import { aircraftAirportHref, aircraftFlightHref } from "@/lib/aircraft/detail-links";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
+import { airportTrafficPartialData } from "@/lib/i18n/airport-traffic-extra";
 
 function airportLabel(airport: AirportTrafficAirport | null): string {
   return airport?.iataCode ?? airport?.icaoCode ?? t.common.emptyValue;
@@ -162,6 +163,7 @@ export function AirportTrafficSummary({ airport }: { airport: Airport }) {
       ) : !summary ? null : !hasTraffic ? (
         <div className="airport-traffic-message">{t.airportTraffic.empty}</div>
       ) : <>
+        {summary.complete === false && <div className="airport-traffic-message" role="status">{airportTrafficPartialData(t.locale)}</div>}
         <dl className="airport-traffic-stats">
           {dataRow(t.airportTraffic.flights, formatNumber(summary.flights))}
           {dataRow(t.airportTraffic.departures, formatNumber(summary.departures))}
