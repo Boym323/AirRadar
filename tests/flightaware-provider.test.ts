@@ -9,7 +9,7 @@ describe("FlightAwareFlightPlanProvider cost guard", () => {
   });
 
   it("bounds the ident lookup to one page and uses its filed route without a second paid request", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+    const fetchMock = vi.fn(async (_input: string | URL | Request) => new Response(JSON.stringify({
       flights: [{
         ident: "TEST123",
         fa_flight_id: "TEST123-20260911-test",
