@@ -161,6 +161,7 @@ function emptyTrafficSummary(range: AirportTrafficRange): AirportTrafficSummary 
   }
   return {
     range,
+    complete: true,
     flights: 0,
     departures: 0,
     arrivals: 0,
@@ -296,9 +297,19 @@ function recentTraffic(
     });
 }
 
-function boundedQuery(query: { limit?: (value: number) => { all(): unknown }; all(): unknown }, limit: number): Promise<unknown[]> {
-  const result = typeof query.limit === "function" ? query.limit(limit).all() : query.all();
-  return Promise.resolve(result as PromiseLike<unknown[]>).then((value) => Array.isArray(value) ? value : []);
+interface BoundedQueryResult {
+  rows: unknown[];
+  truncated: boolean;
+}
+
+function boundedQuery(query: { limit?: (value: number) => { all(): unknown }; all(): unknown }, limit: number): Promise<BoundedQueryResult> {
+  // Fetch one sentinel row beyond the public processing cap so callers can
+  // distinguish a complete result from a bounded lower-bound sample.
+  const result = typeof query.limit === "function" ? query.limit(limit + 1).all() : query.all();
+  return Promise.resolve(result as PromiseLike<unknown[]>).then((value) => {
+    const rows = Array.isArray(value) ? value : [];
+    return { rows: rows.slice(0, limit), truncated: rows.length > limit };
+  });
 }
 
 /**
@@ -351,12 +362,13 @@ export async function getAirportTrafficSummary(
       .where((flight) => flight.startTime.lt(toInstant))
       .where((flight) => flight.destination.in(targetCodes))
       .include("aircraft", (aircraft) => aircraft.select("id", "icaoHex", "registration", "aircraftType"));
-    const [originRows, destinationRows] = await Promise.all([
+    const [originResult, destinationResult] = await Promise.all([
       boundedQuery(originQuery, AIRPORT_TRAFFIC_QUERY_LIMIT),
       boundedQuery(destinationQuery, AIRPORT_TRAFFIC_QUERY_LIMIT),
     ]);
+    summary.complete = !originResult.truncated && !destinationResult.truncated;
     const flights = new Map<number, AirportTrafficFlightRow>();
-    for (const row of [...originRows, ...destinationRows]) {
+    for (const row of [...originResult.rows, ...destinationResult.rows]) {
       const flight = row as AirportTrafficFlightRow;
       flights.set(flight.id, flight);
     }
