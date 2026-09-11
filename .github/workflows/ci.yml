@@ -42,7 +42,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -Eeuo pipefail
-          api_url="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/git/refs/heads/feature/v1.5c-route-intelligence"
+          api_url="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/git/refs/heads/main"
           payload="$(printf '{\"sha\":\"%s\",\"force\":false}' "${GITHUB_SHA}")"
           curl -fsS \
             -X PATCH \
@@ -97,7 +97,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           sudo -n /var/www/airradar/deploy/release.sh \
-            --branch feature/v1.5c-route-intelligence \
+            --branch main \
             --automated \
             --commit "${GITHUB_SHA}"
 
