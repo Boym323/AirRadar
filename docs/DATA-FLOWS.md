@@ -22,9 +22,11 @@
    never mark the local receiver offline.
 5. The service notifies listeners with a snapshot. `GET /api/aircraft` waits
    for the first refresh and returns the safe public DTO. `GET /api/stream`
-   subscribes once and sends named `snapshot` SSE events. `coverage=extended`
-   explicitly merges the local and network RAM maps; `coverage=local` remains
-   the default.
+   remains a V1 full-snapshot SSE feed by default; `?v=2` opts into one full
+   public snapshot followed by sequence-aware changed/removed deltas. The V2
+   baseline is per connection, bounded by SSE capacity, and discarded on
+   disconnect. `coverage=extended` explicitly merges the local and network RAM
+   maps; `coverage=local` remains the default. See [SSE Delta V2](SSE-DELTA-V2.md).
 6. Metadata/routes/flight plans, ATC assignments, statistics, and alerts run
    from the same snapshot flow but are asynchronous and isolated from the
    local provider refresh. An enrichment result is applied only if it still
@@ -161,7 +163,12 @@ catalog as a fallback. Missing route metadata is omitted from route rankings,
 not inferred from `FlightPosition`; the summary never reads `FlightPosition`
 and never calls an external provider. Recent links use canonical airport ICAO,
 aircraft ICAO hex, and the existing flight-history detail route. This is
-receiver-observed traffic, not a complete airport traffic count.
+receiver-observed traffic, not a complete airport traffic count. Both route
+predicates use a 500-row sentinel-bounded query; when either is truncated,
+`complete: false` is preserved, but totals, active days, heatmap, and all
+rankings are still calculated from the deduplicated truncated row set. That is
+a known performance/data-quality limitation for busy airports and should be
+addressed with database-side aggregates in a future batch.
 
 Aircraft detail lifetime statistics read only the aircraft's `Flight` rows via
 the existing `(aircraftId, startTime)` index. They count retained Flight

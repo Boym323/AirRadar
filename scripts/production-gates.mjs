@@ -92,6 +92,35 @@ async function assertSseLifecycle() {
   return Buffer.byteLength(firstEvent);
 }
 
+async function assertSseV2Lifecycle() {
+  const controller = new AbortController();
+  const response = await get("/api/stream?v=2", { signal: controller.signal });
+  if (!response.ok || !response.body) throw new Error(`SSE V2 returned HTTP ${response.status}`);
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let received = "";
+  const deadline = Date.now() + 10_000;
+  let pendingRead = reader.read();
+  try {
+    while (Date.now() < deadline && !received.includes("event: delta")) {
+      const result = await Promise.race([
+        pendingRead,
+        wait(1_000).then(() => null),
+      ]);
+      if (!result) continue;
+      if (result.value) received += decoder.decode(result.value, { stream: true });
+      if (result.done) break;
+      pendingRead = reader.read();
+    }
+  } finally {
+    await reader.cancel();
+    controller.abort();
+  }
+  if (!received.includes("event: snapshot") || !received.includes('"protocol":"airradar-sse-v2"')) throw new Error("SSE V2 did not deliver its initial snapshot");
+  if (!received.includes("event: delta")) throw new Error("SSE V2 did not deliver a delta within 10 seconds");
+  return Buffer.byteLength(received.split("\n\n", 1)[0] + "\n\n");
+}
+
 function assertMigrationSource() {
   const directory = "migrations/app/20260909T0830_recap_query_indexes";
   const manifest = JSON.parse(readFileSync(`${directory}/migration.json`, "utf8"));
@@ -194,11 +223,12 @@ async function main() {
     const watchlistMutation = await get("/api/watchlist", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
     if (watchlistMutation.status !== 401) throw new Error("Watchlist mutation was not protected");
     const sseSnapshotBytes = await assertSseLifecycle();
+    const sseV2SnapshotBytes = await assertSseV2Lifecycle();
     const afterSse = await get("/api/system/status");
     const afterSsePayload = await afterSse.json();
     if (!afterSse.ok || afterSsePayload.runtime?.activeSseClients !== 0) throw new Error("SSE client cleanup failed");
     await assertBrowserSmoke();
-    console.log(`[production-gates] measured first SSE event bytes=${sseSnapshotBytes}, airports bytes=${staticPayloadBytes["/api/airports"]}, ATC bytes=${staticPayloadBytes["/api/atc/sectors"]}`);
+    console.log(`[production-gates] measured first SSE event bytes=${sseSnapshotBytes}, V2 snapshot bytes=${sseV2SnapshotBytes}, airports bytes=${staticPayloadBytes["/api/airports"]}, ATC bytes=${staticPayloadBytes["/api/atc/sectors"]}`);
     console.log("[production-gates] built server, SSE, caching, auth, PWA, migration, and diagnostics checks passed");
   } catch (error) {
     const detail = logs.join("").slice(-4_000);
