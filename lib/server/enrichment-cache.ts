@@ -6,8 +6,8 @@ export const ENRICHMENT_TTLS = {
   metadataNegativeMs: 15 * 60_000,
   routeMs: 6 * 60 * 60_000,
   routeNegativeMs: 10 * 60_000,
-  flightPlanMs: 15 * 60_000,
-  flightPlanNegativeMs: 2 * 60_000,
+  flightPlanMs: 6 * 60 * 60_000,
+  flightPlanNegativeMs: 30 * 60_000,
 } as const;
 
 interface CacheEntry<T> {
@@ -18,6 +18,8 @@ interface CacheEntry<T> {
 interface CacheOptions {
   ttlMs: number;
   negativeTtlMs: number;
+  /** Preserve legacy fail-soft behavior by default; on-demand paid providers may opt out. */
+  cacheLoaderErrors?: boolean;
 }
 
 /** Runs different provider keys in parallel only up to the provider budget. */
@@ -69,21 +71,34 @@ export class ProviderCache {
     const existing = this.inFlight.get(key);
     if (existing) return existing as Promise<T | null>;
 
+    const store = (value: T | null): T | null => {
+      this.entries.set(key, {
+        value,
+        expiresAt: Date.now() + (value === null ? options.negativeTtlMs : options.ttlMs),
+      });
+      this.evictIfNeeded();
+      return value;
+    };
+
     const request = loader()
-      .catch(() => null)
-      .then((value) => {
-        this.entries.set(key, {
-          value,
-          expiresAt: Date.now() + (value === null ? options.negativeTtlMs : options.ttlMs),
-        });
-        this.evictIfNeeded();
-        return value;
+      .then(store)
+      .catch((error) => {
+        if (options.cacheLoaderErrors === false) throw error;
+        return store(null);
       })
       .finally(() => {
         this.inFlight.delete(key);
       });
     this.inFlight.set(key, request);
     return request;
+  }
+
+  hasFreshOrPending(key: string): boolean {
+    const now = Date.now();
+    const cached = this.entries.get(key);
+    if (cached && cached.expiresAt > now) return true;
+    if (cached) this.entries.delete(key);
+    return this.inFlight.has(key);
   }
 
   clear(): void {
@@ -130,10 +145,36 @@ export function flightPlanCacheKey(callsign: string, observedAt: Date): string {
   return `flight-plan:${normalizeCallsign(callsign)}:${dayKey(observedAt)}`;
 }
 
+interface FlightPlanProviderDiagnostics {
+  requests: number;
+  failures: number;
+  rateLimited: number;
+  limitPerMinute: number;
+  windowMs: number;
+}
+
+function getFlightPlanProviderDiagnostics(provider: ProviderRegistry["flightPlan"]): FlightPlanProviderDiagnostics | null {
+  if (!provider || !("getDiagnostics" in provider)) return null;
+  const getDiagnostics = (provider as typeof provider & { getDiagnostics?: () => unknown }).getDiagnostics;
+  if (typeof getDiagnostics !== "function") return null;
+  const candidate = getDiagnostics.call(provider);
+  if (!candidate || typeof candidate !== "object") return null;
+  const value = candidate as Partial<FlightPlanProviderDiagnostics>;
+  if (
+    typeof value.requests !== "number"
+    || typeof value.failures !== "number"
+    || typeof value.rateLimited !== "number"
+    || typeof value.limitPerMinute !== "number"
+    || typeof value.windowMs !== "number"
+  ) return null;
+  return value as FlightPlanProviderDiagnostics;
+}
+
 export class EnrichmentService {
   private readonly metadataLimiter: ConcurrencyLimiter;
   private readonly routeLimiter: ConcurrencyLimiter;
   private readonly flightPlanLimiter = new ConcurrencyLimiter(2);
+  private flightPlanCacheHits = 0;
 
   constructor(
     private readonly providers: ProviderRegistry,
@@ -150,11 +191,25 @@ export class EnrichmentService {
     this.routeLimiter = sharedAdsbDbLimiter ?? new ConcurrencyLimiter(6);
   }
 
+  /** Providers safe for continuous live-snapshot enrichment. */
   get hasProviders(): boolean {
-    return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute || this.providers.flightPlan);
+    return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute);
   }
 
-  getDiagnostics(): { providerCacheEntries: number; providerCacheLimit: number; metadata: AircraftMetadataDiagnostics | null } {
+  get hasFlightPlanProvider(): boolean {
+    return Boolean(this.providers.flightPlan);
+  }
+
+  getDiagnostics(): {
+    providerCacheEntries: number;
+    providerCacheLimit: number;
+    metadata: AircraftMetadataDiagnostics | null;
+    flightPlan: {
+      enabled: boolean;
+      cacheHits: number;
+      provider: FlightPlanProviderDiagnostics | null;
+    };
+  } {
     const metadataProvider = this.providers.aircraftMetadata;
     const candidate = metadataProvider && "getDiagnostics" in metadataProvider && typeof metadataProvider.getDiagnostics === "function"
       ? metadataProvider.getDiagnostics()
@@ -169,20 +224,28 @@ export class EnrichmentService {
       providerCacheEntries: this.cache.size(),
       providerCacheLimit: this.cache.limit(),
       metadata: diagnostics,
+      flightPlan: {
+        enabled: this.hasFlightPlanProvider,
+        cacheHits: this.flightPlanCacheHits,
+        provider: getFlightPlanProviderDiagnostics(this.providers.flightPlan),
+      },
     };
   }
 
   needsEnrichment(aircraft: Aircraft, existing: AircraftEnrichment | undefined): boolean {
     return Boolean(
       (this.providers.aircraftMetadata && !existing?.metadata)
-      || (aircraft.callsign && this.providers.flightRoute && !existing?.route)
-      || (aircraft.callsign && this.providers.flightPlan && !existing?.flightPlan),
+      || (aircraft.callsign && this.providers.flightRoute && !existing?.route),
     );
   }
 
+  /**
+   * Continuous enrichment intentionally excludes paid flight-plan providers.
+   * FlightAware is invoked only through getFlightPlanOnDemand().
+   */
   async enrich(aircraft: Aircraft, observedAt: Date): Promise<AircraftEnrichment | null> {
     if (!this.hasProviders) return null;
-    const [metadata, route, flightPlan] = await Promise.all([
+    const [metadata, route] = await Promise.all([
       this.providers.aircraftMetadata
         ? this.cache.get(metadataCacheKey(aircraft.icaoHex), () => this.metadataLimiter.run(() => this.providers.aircraftMetadata!.getMetadata(aircraft.icaoHex)), {
             ttlMs: ENRICHMENT_TTLS.metadataMs,
@@ -195,18 +258,40 @@ export class EnrichmentService {
             negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
           })
         : Promise.resolve(null),
-      aircraft.callsign && this.providers.flightPlan
-        ? this.cache.get(flightPlanCacheKey(aircraft.callsign, observedAt), () => this.flightPlanLimiter.run(() => this.providers.flightPlan!.getFlightPlan(aircraft.callsign!, observedAt)), {
-            ttlMs: ENRICHMENT_TTLS.flightPlanMs,
-            negativeTtlMs: ENRICHMENT_TTLS.flightPlanNegativeMs,
-          })
-        : Promise.resolve(null),
     ]);
 
     const enrichment: AircraftEnrichment = {};
     if (metadata) enrichment.metadata = metadata;
     if (route) enrichment.route = route;
-    if (flightPlan) enrichment.flightPlan = flightPlan;
     return Object.keys(enrichment).length ? enrichment : null;
+  }
+
+  /** Paid provider lookup used only by explicit aircraft-detail requests. */
+  async getFlightPlanOnDemand(
+    aircraft: Aircraft,
+    observedAt: Date,
+  ): Promise<NonNullable<AircraftEnrichment["flightPlan"]> | null> {
+    const provider = this.providers.flightPlan;
+    const callsign = aircraft.callsign?.trim();
+    if (!provider || !callsign) return null;
+
+    const key = flightPlanCacheKey(callsign, observedAt);
+    if (this.cache.hasFreshOrPending(key)) this.flightPlanCacheHits += 1;
+
+    try {
+      return await this.cache.get(
+        key,
+        () => this.flightPlanLimiter.run(() => provider.getFlightPlan(callsign, observedAt)),
+        {
+          ttlMs: ENRICHMENT_TTLS.flightPlanMs,
+          negativeTtlMs: ENRICHMENT_TTLS.flightPlanNegativeMs,
+          // A local/upstream rate-limit or network failure must not poison the
+          // 30-minute negative cache. True null provider results are cached.
+          cacheLoaderErrors: false,
+        },
+      );
+    } catch {
+      return null;
+    }
   }
 }
