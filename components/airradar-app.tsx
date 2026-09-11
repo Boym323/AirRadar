@@ -54,6 +54,7 @@ import {
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
 import { GlobalSearch } from "@/components/global-search";
+import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
 import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
@@ -71,6 +72,8 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
 };
 const EMPTY_SIGMET_DATA: SigmetSnapshot = { type: "FeatureCollection", features: [], fetchedAt: new Date(0).toISOString(), stale: false };
 const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled", fetchedAt: new Date(0).toISOString(), targets: [] };
+const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
+interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; routes?: CzAtsRoute[]; segments?: GeoJSON.FeatureCollection; labels?: GeoJSON.FeatureCollection; points?: GeoJSON.FeatureCollection; }
 
 interface PublicAlertStatus {
   enabled: boolean;
@@ -423,6 +426,9 @@ export function AirRadarApp() {
   const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
   const [showSigmet, setShowSigmet] = useState(false);
+  const [showAtsRoutes, setShowAtsRoutes] = useState(false);
+  const [atsRoutes, setAtsRoutes] = useState<AtsRoutesResponse | null>(null);
+  const [selectedAtsRoute, setSelectedAtsRoute] = useState<string | null>(null);
   const [sigmetEnabled, setSigmetEnabled] = useState<boolean | null>(null);
   const [sigmetData, setSigmetData] = useState<SigmetSnapshot>(EMPTY_SIGMET_DATA);
   const [showAirports, setShowAirports] = useState(true);
@@ -454,6 +460,16 @@ export function AirRadarApp() {
   const [mapReady, setMapReady] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sigmetGenerationRef = useRef(0);
+
+  useEffect(() => {
+    if (!showAtsRoutes || atsRoutes) return;
+    let active = true;
+    void fetch("/api/ats/routes", { cache: "force-cache" })
+      .then((response) => response.json() as Promise<AtsRoutesResponse>)
+      .then((data) => { if (active) setAtsRoutes(data); })
+      .catch(() => { if (active) setAtsRoutes({ available: false }); });
+    return () => { active = false; };
+  }, [atsRoutes, showAtsRoutes]);
 
   useEffect(() => {
     try {
@@ -767,6 +783,28 @@ export function AirRadarApp() {
         source: "range-rings",
         paint: { "line-color": "#37d6c0", "line-opacity": 0.24, "line-width": 1, "line-dasharray": [2, 3] },
       });
+      map.addSource("ats-routes", { type: "geojson", data: EMPTY_ATS_GEOJSON });
+      map.addLayer({ id: "ats-routes-line", type: "line", source: "ats-routes", layout: { visibility: "none" }, paint: { "line-color": "#82a9bd", "line-opacity": 0.58, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 8, 1.25, 13, 2] } });
+      map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": "#a7a28b", "line-opacity": 0.56, "line-width": 1.25, "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": "#d2b56f", "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 8, 2.2, 13, 3.2] } });
+      map.addSource("ats-route-labels", { type: "geojson", data: EMPTY_ATS_GEOJSON });
+      map.addLayer({ id: "ats-route-labels", type: "symbol", source: "ats-route-labels", minzoom: 6.5, layout: { visibility: "none", "symbol-placement": "line", "text-field": ["get", "routeDesignator"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-padding": 18, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#c1d4de", "text-halo-color": "#07111d", "text-halo-width": 1.1 } });
+      map.addSource("ats-route-points", { type: "geojson", data: EMPTY_ATS_GEOJSON });
+      map.addLayer({ id: "ats-route-points", type: "circle", source: "ats-route-points", minzoom: 8, layout: { visibility: "none" }, paint: { "circle-color": ["case", ["==", ["get", "kind"], "NAVAID"], "#d2b56f", "#82a9bd"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 13, 4], "circle-stroke-color": "#07111d", "circle-stroke-width": 1 } });
+      map.addLayer({ id: "ats-route-points-label", type: "symbol", source: "ats-route-points", minzoom: 9, layout: { visibility: "none", "text-field": ["get", "name"], "text-font": ["Open Sans Semibold"], "text-size": 9, "text-offset": [0, 1.1], "text-padding": 5, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#a8c2ce", "text-halo-color": "#07111d", "text-halo-width": 1 } });
+      const openAtsSegment = (event: MapLayerMouseEvent) => {
+        const properties = event.features?.[0]?.properties;
+        if (!properties) return;
+        setSelectedAtsRoute(String(properties.routeDesignator));
+        const content = document.createElement("div"); content.className = "map-popup";
+        const title = document.createElement("strong"); title.textContent = `${String(properties.routeDesignator)} · ${String(properties.fromName)} → ${String(properties.toName)}`;
+        const body = document.createElement("span");
+        const track = properties.magTrackForwardDeg == null ? t.common.emptyValue : `${String(properties.magTrackForwardDeg).padStart(3, "0")}° / ${properties.magTrackReverseDeg == null ? t.common.emptyValue : `${String(properties.magTrackReverseDeg).padStart(3, "0")}°`}`;
+        body.textContent = `${String(properties.navigationSpecification)} · ${properties.distanceNm} NM · ${t.layers.atsVertical}: ${properties.lowerLimit}–${properties.upperLimit}${properties.lowerOverride ? ` (${properties.lowerOverride})` : ""} · ${t.layers.atsMagneticTrack}: ${track} · ${t.layers.atsLevels}: ${properties.cruisingLevelForward ?? t.common.emptyValue} / ${properties.cruisingLevelReverse ?? t.common.emptyValue} · ${t.layers.atsAvailability}: UNKNOWN · ${t.layers.atsPublished}: ${properties.availabilityClass ?? "Published"} · ${t.layers.atsEffective}: ${properties.effectiveDate} · ${t.layers.atsSource}: ${properties.aipAmendment ?? t.common.emptyValue} / ${properties.airacAmendment ?? t.common.emptyValue}. ${t.layers.atsPublishedDisclaimer}${properties.remarks ? ` ${properties.remarks}` : ""}`;
+        content.append(title, body); new maplibregl.Popup({ closeButton: true, maxWidth: "340px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
+      };
+      map.on("click", "ats-routes-line", openAtsSegment); map.on("click", "ats-routes-cdr", openAtsSegment); map.on("click", "ats-routes-selected", openAtsSegment);
+      for (const layer of ["ats-routes-line", "ats-routes-cdr", "ats-routes-selected"] as const) { map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; }); }
       map.addSource("selected-trail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "selected-trail-line", type: "line", source: "selected-trail", paint: { "line-color": "#f3b95f", "line-opacity": 0.85, "line-width": 2.5 } });
       map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -1199,6 +1237,22 @@ export function AirRadarApp() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
+    const visible = showAtsRoutes && atsRoutes?.available === true;
+    const geojson = visible && atsRoutes?.segments && atsRoutes.labels && atsRoutes.points
+      ? { segments: atsRoutes.segments, labels: atsRoutes.labels, points: atsRoutes.points }
+      : { segments: EMPTY_ATS_GEOJSON, labels: EMPTY_ATS_GEOJSON, points: EMPTY_ATS_GEOJSON };
+    (map.getSource("ats-routes") as GeoJSONSource | undefined)?.setData(geojson.segments as GeoJSON.FeatureCollection);
+    (map.getSource("ats-route-labels") as GeoJSONSource | undefined)?.setData(geojson.labels as GeoJSON.FeatureCollection);
+    (map.getSource("ats-route-points") as GeoJSONSource | undefined)?.setData(geojson.points as GeoJSON.FeatureCollection);
+    if (map.getLayer("ats-routes-selected")) map.setFilter("ats-routes-selected", ["==", ["get", "routeDesignator"], selectedAtsRoute ?? ""]);
+    for (const layer of ["ats-routes-line", "ats-routes-cdr", "ats-routes-selected", "ats-route-labels", "ats-route-points", "ats-route-points-label"] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visible ? "visible" : "none");
+    }
+  }, [atsRoutes, mapReady, selectedAtsRoute, showAtsRoutes]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
     const atcSource = map.getSource("atc-sectors") as GeoJSONSource | undefined;
     atcSource?.setData(createAtcGeoJSON(atcData.sectors, showAtc));
     const transmitterSource = map.getSource("atc-transmitters") as GeoJSONSource | undefined;
@@ -1376,6 +1430,9 @@ export function AirRadarApp() {
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
                     <label><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {t.layers.atc}</label>
+                    <label><input type="checkbox" checked={showAtsRoutes} onChange={(event) => { setShowAtsRoutes(event.target.checked); if (!event.target.checked) setSelectedAtsRoute(null); }} /> {t.layers.atsRoutes}</label>
+                    {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
+                    {showAtsRoutes && atsRoutes && !atsRoutes.available && <div className="map-layer-sublevel">{t.layers.atsRoutesUnavailable}</div>}
                     {sigmetEnabled !== false && <label><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>}
                   </div>
                   <div className="map-layer-group">
