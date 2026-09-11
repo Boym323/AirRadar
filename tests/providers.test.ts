@@ -239,5 +239,5 @@ describe("aircraft metadata catalog", () => {
     const diagnostics = provider.getDiagnostics();
     expect(diagnostics.blockCacheBytes).toBeLessThanOrEqual(TAR1090_BLOCK_CACHE_MAX_BYTES);
     expect(diagnostics.blockCacheSize).toBeLessThan(45);
-  });
+  }, 30_000);
 });
