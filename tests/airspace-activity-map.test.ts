@@ -57,6 +57,7 @@ function activity(
 describe("airspace activity map matching", () => {
   it("canonicalizes Czech TRA/TSA identifiers embedded in ATC names and ids", () => {
     expect(canonicalAirspaceDesignator("TRA 36")).toBe("LKTRA36");
+    expect(canonicalAirspaceDesignator("TRA 36 HOLICE")).toBe("LKTRA36");
     expect(canonicalAirspaceDesignator("cz-eaip-LKTRA36-sector")).toBe("LKTRA36");
     expect(canonicalAirspaceDesignator("LKTSA4A")).toBe("LKTSA4A");
     expect(canonicalAirspaceDesignator("LZTRA01")).toBeNull();
