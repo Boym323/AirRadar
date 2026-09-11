@@ -75,12 +75,12 @@ describe("receiver advanced statistics", () => {
     const stats = new ReceiverAdvancedStatistics("Europe/Prague");
     const at = new Date("2026-09-10T12:00:00.000Z");
     stats.observe([
-      aircraft({ hex: "LOW001", altitude: 4_000, bearing: 42, distanceKm: 80 }),
-      aircraft({ hex: "MID001", altitude: 10_000, bearing: 42, distanceKm: 140 }),
+      aircraft({ hex: "A00001", altitude: 4_000, bearing: 42, distanceKm: 80 }),
+      aircraft({ hex: "B00001", altitude: 10_000, bearing: 42, distanceKm: 140 }),
     ], null, at);
     stats.observe([
-      aircraft({ hex: "LOW002", altitude: 4_000, bearing: 42, distanceKm: 50 }),
-      aircraft({ hex: "LOW003", altitude: 4_000, bearing: 55, distanceKm: 90 }),
+      aircraft({ hex: "A00002", altitude: 4_000, bearing: 42, distanceKm: 50 }),
+      aircraft({ hex: "A00003", altitude: 4_000, bearing: 55, distanceKm: 90 }),
     ], null, new Date(at.getTime() + 1_000));
     await stats.close();
 
@@ -96,11 +96,11 @@ describe("receiver advanced statistics", () => {
     const stats = new ReceiverAdvancedStatistics("Europe/Prague");
     const at = new Date("2026-09-10T12:00:00.000Z");
     stats.observe([
-      aircraft({ hex: "FAST01", groundSpeed: 420 }),
-      aircraft({ hex: "SPIKE1", groundSpeed: 1_500 }),
-      aircraft({ hex: "FAST02", groundSpeed: 510 }),
+      aircraft({ hex: "FA5701", groundSpeed: 420 }),
+      aircraft({ hex: "5A1CE1", groundSpeed: 1_500 }),
+      aircraft({ hex: "FA5702", groundSpeed: 510 }),
     ], null, at);
     await stats.close();
-    expect(stats.getSnapshot(at).fastest).toMatchObject({ speedKt: 510, icaoHex: "FAST02" });
+    expect(stats.getSnapshot(at).fastest).toMatchObject({ speedKt: 510, icaoHex: "FA5702" });
   });
 });
