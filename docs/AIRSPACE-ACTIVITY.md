@@ -23,15 +23,30 @@ AUP list-C rows are keyed by their published sequence number. UUP list-C rows ar
 - another UUP row replaces the same sequence number with its updated vertical/time window;
 - unchanged AUP rows remain in the plan.
 
-The output keeps both the published designator (`TRA36`) and the canonical Czech designator (`LKTRA36`) so a later map layer can join plan/activity data to imported ATC geometry without changing the static ATC import contract.
+The output keeps both the published designator (`TRA36`) and the canonical Czech designator (`LKTRA36`) so the map can join plan/activity data to imported ATC geometry without changing the static ATC import contract.
+
+## Live map semantics
+
+The MapLibre ATC layer joins planned AUP/UUP windows to Czech `TRA`/`TSA` geometry by canonical designator. The plan is visual context layered on top of the existing ATC geometry; it does not mutate the static ATC activation contract.
+
+- a window containing the current UTC time is rendered as **planned now** with an amber emphasis;
+- the nearest future window is rendered as **planned later** with a subtler blue emphasis;
+- areas without a matching plan keep the normal ATC styling;
+- stale API data keeps its stale provenance and is explicitly labelled as such;
+- the ATC popup keeps `activationStatus` independent from AUP/UUP and adds a separate plan section with UTC times, vertical limits, source and sequence;
+- `planned now` is never rendered as confirmed `ACTIVE`;
+- delayed `historicalActual` records are intentionally excluded from the live map and are reserved for History/Replay.
+
+The browser requests `/api/airspace/activity` only when the ATC layer is first enabled. There is no browser polling loop. Map state is recalculated from the cached plan during ordinary radar snapshot renders, so a plan window can naturally cross from upcoming to planned-now or expire without another network request.
 
 ## Runtime boundaries
 
 This integration is independent from the live ADS-B/OGN paths:
 
 - no additional background poller;
-- no SSE connection;
-- no PostgreSQL table or migration;
+- no additional SSE connection;
+- no PostgreSQL table, schema change, index or migration;
+- no PostgreSQL read/write path for airspace activity;
 - no `FlightPosition` access;
 - HTTPS fetches are restricted to `aup.rlp.cz` and `aim.rlp.cz`;
 - source bodies are bounded to 512 KiB and requests time out after 8 seconds;
@@ -46,5 +61,3 @@ This integration is independent from the live ADS-B/OGN paths:
 `planned.windows[].plannedNow` means only that the current UTC time lies within the latest resolved AUP/UUP plan window. It must never be labelled as confirmed `ACTIVE`.
 
 `historicalActual.delayed` is always `true` to make the publication delay explicit to API consumers.
-
-The first version is intentionally an API/data-contract slice. A subsequent map/UI slice can join `canonicalDesignator` to Czech airspace geometry and render planned and historical states with distinct visual language.
