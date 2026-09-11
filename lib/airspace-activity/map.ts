@@ -25,9 +25,13 @@ function normalizedTimestamp(value: string): number | null {
 
 export function canonicalAirspaceDesignator(value: string | null | undefined): string | null {
   if (!value) return null;
-  const compact = value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const match = compact.match(/(?:LK)?(TRA|TSA)(\d+[A-Z]?)/);
-  return match ? `LK${match[1]}${match[2]}` : null;
+  const normalized = value.trim().toUpperCase();
+  const compact = normalized.replace(/[^A-Z0-9]/g, "");
+  const direct = compact.match(/^(?:LK)?(TRA|TSA)(\d+[A-Z]?)$/);
+  if (direct) return `LK${direct[1]}${direct[2]}`;
+
+  const embedded = normalized.match(/(?:^|[^A-Z0-9])LK(TRA|TSA)[\s_-]*(\d+[A-Z]?)(?=$|[^A-Z0-9])/);
+  return embedded ? `LK${embedded[1]}${embedded[2]}` : null;
 }
 
 function matchFromWindow(
