@@ -1,6 +1,6 @@
 import { getAircraftDetail, HistoryDatabaseUnavailableError, normalizeAircraftHistoryRange } from "@/lib/server/history";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
-import { getOnDemandEnrichmentService } from "@/lib/server/providers";
+import { enrichAircraftDetailView } from "@/lib/server/aircraft-detail-enrichment";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { normalizeIcaoHex } from "@/lib/server/validation";
 import { parseCoverage } from "@/lib/server/coverage";
@@ -34,22 +34,11 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
     const stateService = getAircraftStateService();
     const liveAircraft = stateService.getAircraft(icaoHex, coverage);
 
-    // FlightAware is deliberately detail/on-demand only. The shared service
-    // provides process-wide cache and cost budget, while failures remain
-    // fail-soft so aircraft history/detail never depends on the paid provider.
-    const [detail, flightPlan] = await Promise.all([
+    const [detail, enrichedAircraft] = await Promise.all([
       getAircraftDetail(icaoHex, { historyRange: range }),
-      liveAircraft
-        ? getOnDemandEnrichmentService().getFlightPlanOnDemand(liveAircraft, new Date())
-        : Promise.resolve(null),
+      enrichAircraftDetailView(liveAircraft, new Date()),
     ]);
-
-    const liveEnrichment = liveAircraft?.enrichment || flightPlan
-      ? {
-          ...(liveAircraft?.enrichment ?? {}),
-          ...(flightPlan ? { flightPlan } : {}),
-        }
-      : undefined;
+    const liveEnrichment = enrichedAircraft?.enrichment;
 
     return Response.json({ ...detail, ...(liveEnrichment ? { liveEnrichment } : {}) }, { headers: noStoreHeaders() });
   } catch (error) {
