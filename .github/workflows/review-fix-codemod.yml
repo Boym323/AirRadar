@@ -1,0 +1,89 @@
+name: Review follow-up codemod
+
+on:
+  push:
+    branches:
+      - fix/review-followups-20260911
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/review-followups-20260911
+          fetch-depth: 0
+      - name: Apply final review fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          detail = Path("components/aircraft-detail-v2.tsx")
+          text = detail.read_text()
+          old = '''  const horizontalPadding = 8;\n  const verticalPadding = 10;\n  const polyline = chartPoints.map((point, index) => {\n    const x = chartPoints.length <= 1\n      ? width / 2\n      : horizontalPadding + (index / (chartPoints.length - 1)) * (width - horizontalPadding * 2);\n'''
+          new = '''  const horizontalPadding = 8;\n  const verticalPadding = 10;\n  const firstTimestamp = chartPoints.length ? Date.parse(chartPoints[0].recordedAt) : anchor;\n  const lastTimestamp = chartPoints.length ? Date.parse(chartPoints.at(-1)!.recordedAt) : anchor;\n  const timeSpan = Math.max(1, lastTimestamp - firstTimestamp);\n  const polyline = chartPoints.map((point) => {\n    const x = chartPoints.length <= 1\n      ? width / 2\n      : horizontalPadding + ((Date.parse(point.recordedAt) - firstTimestamp) / timeSpan) * (width - horizontalPadding * 2);\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"aircraft detail replacement count: {text.count(old)}")
+          detail.write_text(text.replace(old, new))
+
+          app = Path("components/airradar-app.tsx")
+          text = app.read_text()
+          old = '''const MIN_AIRCRAFT_ANIMATION_MS = 650;\nconst MAX_AIRCRAFT_ANIMATION_MS = 8_000;\n'''
+          new = '''const MIN_AIRCRAFT_ANIMATION_MS = 650;\nconst MAX_AIRCRAFT_ANIMATION_MS = 8_000;\nconst INTELLIGENCE_RETRY_MS = 30_000;\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"retry constant replacement count: {text.count(old)}")
+          text = text.replace(old, new)
+
+          old = '''  const [showAtsRoutes, setShowAtsRoutes] = useState(false);\n  const [atsRoutes, setAtsRoutes] = useState<AtsRoutesResponse | null>(null);\n'''
+          new = '''  const [showAtsRoutes, setShowAtsRoutes] = useState(false);\n  const [atsRoutes, setAtsRoutes] = useState<AtsRoutesResponse | null>(null);\n  const [atsRoutesRetry, setAtsRoutesRetry] = useState(0);\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"ATS state replacement count: {text.count(old)}")
+          text = text.replace(old, new)
+
+          old = '''  const [airspaceActivity, setAirspaceActivity] = useState<AirspaceActivityResponse | null>(null);\n'''
+          new = '''  const [airspaceActivity, setAirspaceActivity] = useState<AirspaceActivityResponse | null>(null);\n  const [airspaceActivityRetry, setAirspaceActivityRetry] = useState(0);\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"airspace state replacement count: {text.count(old)}")
+          text = text.replace(old, new)
+
+          old = '''  const sigmetGenerationRef = useRef(0);\n  const airspaceActivityRequestedRef = useRef(false);\n\n  useEffect(() => {\n    if (!showAtsRoutes || atsRoutes) return;\n    let active = true;\n    void fetch("/api/ats/routes", { cache: "force-cache" })\n      .then((response) => response.json() as Promise<AtsRoutesResponse>)\n      .then((data) => { if (active) setAtsRoutes(data); })\n      .catch(() => { if (active) setAtsRoutes({ available: false }); });\n    return () => { active = false; };\n  }, [atsRoutes, showAtsRoutes]);\n\n  useEffect(() => {\n    if (!showAtc || airspaceActivityRequestedRef.current) return;\n    airspaceActivityRequestedRef.current = true;\n    let active = true;\n    void fetch("/api/airspace/activity", { cache: "no-store" })\n      .then((response) => response.ok ? response.json() as Promise<AirspaceActivityResponse> : null)\n      .then((data) => { if (active && data) setAirspaceActivity(data); })\n      .catch(() => undefined);\n    return () => { active = false; };\n  }, [showAtc]);\n'''
+          new = '''  const sigmetGenerationRef = useRef(0);\n\n  useEffect(() => {\n    if (!showAtsRoutes || atsRoutes) return;\n    let active = true;\n    let retryTimer: number | null = null;\n    void fetch("/api/ats/routes", { cache: "force-cache" })\n      .then((response) => {\n        if (!response.ok) throw new Error("ATS routes request failed");\n        return response.json() as Promise<AtsRoutesResponse>;\n      })\n      .then((data) => { if (active) setAtsRoutes(data); })\n      .catch(() => {\n        if (active) retryTimer = window.setTimeout(() => setAtsRoutesRetry((value) => value + 1), INTELLIGENCE_RETRY_MS);\n      });\n    return () => {\n      active = false;\n      if (retryTimer !== null) window.clearTimeout(retryTimer);\n    };\n  }, [atsRoutes, atsRoutesRetry, showAtsRoutes]);\n\n  useEffect(() => {\n    if (!showAtc || airspaceActivity) return;\n    let active = true;\n    let retryTimer: number | null = null;\n    void fetch("/api/airspace/activity", { cache: "no-store" })\n      .then((response) => {\n        if (!response.ok) throw new Error("airspace activity request failed");\n        return response.json() as Promise<AirspaceActivityResponse>;\n      })\n      .then((data) => { if (active) setAirspaceActivity(data); })\n      .catch(() => {\n        if (active) retryTimer = window.setTimeout(() => setAirspaceActivityRetry((value) => value + 1), INTELLIGENCE_RETRY_MS);\n      });\n    return () => {\n      active = false;\n      if (retryTimer !== null) window.clearTimeout(retryTimer);\n    };\n  }, [airspaceActivity, airspaceActivityRetry, showAtc]);\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"intelligence effects replacement count: {text.count(old)}")
+          app.write_text(text.replace(old, new))
+
+          tests = Path("tests/radar-ui.test.ts")
+          text = tests.read_text()
+          old = '''const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");\nconst globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");\n'''
+          new = '''const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");\nconst aircraftDetailSource = readFileSync(new URL("../components/aircraft-detail-v2.tsx", import.meta.url), "utf8");\nconst globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"test import replacement count: {text.count(old)}")
+          text = text.replace(old, new)
+
+          old = '''    expect(appSource).toContain('fetch("/api/airspace/activity", { cache: "no-store" })');\n    expect(appSource).toContain("airspaceActivityRequestedRef.current = true");\n    expect(appSource).toContain("/api/aircraft/${encodeURIComponent(selectedHex)}");\n'''
+          new = '''    expect(appSource).toContain('fetch("/api/airspace/activity", { cache: "no-store" })');\n    expect(appSource).toContain("setAirspaceActivityRetry((value) => value + 1)");\n    expect(appSource).toContain("setAtsRoutesRetry((value) => value + 1)");\n    expect(appSource).toContain("INTELLIGENCE_RETRY_MS = 30_000");\n    expect(appSource).not.toContain("airspaceActivityRequestedRef");\n    expect(appSource).toContain("/api/aircraft/${encodeURIComponent(selectedHex)}");\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"retry assertion replacement count: {text.count(old)}")
+          text = text.replace(old, new)
+
+          marker = '''  it("keeps independent bounded SSE streams and does not add trail polling", () => {\n'''
+          insertion = '''  it("plots aircraft altitude using recorded time instead of sample index", () => {\n    expect(aircraftDetailSource).toContain("Date.parse(point.recordedAt) - firstTimestamp");\n    expect(aircraftDetailSource).toContain("lastTimestamp - firstTimestamp");\n    expect(aircraftDetailSource).not.toContain("index / (chartPoints.length - 1)");\n  });\n\n'''
+          if text.count(marker) != 1:
+              raise SystemExit(f"altitude test marker count: {text.count(marker)}")
+          tests.write_text(text.replace(marker, insertion + marker))
+      - name: Commit generated fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No codemod changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/aircraft-detail-v2.tsx components/airradar-app.tsx tests/radar-ui.test.ts
+          git commit -m "fix: complete reviewed radar resilience fixes"
+          git push origin HEAD:fix/review-followups-20260911
