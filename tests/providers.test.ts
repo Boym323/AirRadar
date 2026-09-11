@@ -27,54 +27,53 @@ describe("optional enrichment providers", () => {
     });
   });
 
-  it("selects the observed FlightAware instance and loads its filed route by fa_flight_id", async () => {
+  it("selects the observed FlightAware instance and uses its filed route without a second paid lookup", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ flights: [
         { ident: "UAE139", fa_flight_id: "UAE139-past", scheduled_out: "2026-01-01T02:00:00Z", actual_out: "2026-01-01T02:10:00Z", actual_in: "2026-01-01T06:00:00Z", route: "OLD ROUTE" },
         { ident: "UAE139", fa_flight_id: "UAE139-current", scheduled_out: "2026-01-01T08:00:00Z", actual_out: "2026-01-01T08:10:00Z", scheduled_in: "2026-01-01T16:00:00Z", estimated_in: "2026-01-01T16:20:00Z", route: "DCT L604" },
         { ident: "UAE139", fa_flight_id: "UAE139-future", scheduled_out: "2026-01-02T08:00:00Z", scheduled_in: "2026-01-02T16:00:00Z", route: "FUTURE ROUTE" },
-      ] })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ fixes: [{ name: "TOP" }, { name: "L604" }] })));
+      ] })));
     vi.stubGlobal("fetch", fetchMock);
     const provider = new FlightAwareFlightPlanProvider("secret-key");
     await expect(provider.getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z"))).resolves.toMatchObject({
       scheduledDeparture: "2026-01-01T08:00:00Z", estimatedArrival: "2026-01-01T16:20:00Z",
-      filedRoute: "DCT L604", waypoints: ["TOP", "L604"],
+      filedRoute: "DCT L604", waypoints: [],
     });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const identUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(identUrl.pathname).toBe("/aeroapi/flights/UAE139");
+    expect(identUrl.searchParams.get("max_pages")).toBe("1");
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ headers: { "x-apikey": "secret-key" } });
-    expect(fetchMock.mock.calls[1][0]).toBe("https://aeroapi.flightaware.com/aeroapi/flights/UAE139-current/route");
-    expect(fetchMock.mock.calls[1][1]).toMatchObject({ headers: { "x-apikey": "secret-key" } });
   });
 
-  it("keeps the basic FlightPlan when the optional route endpoint returns HTTP 500", async () => {
+  it("rejects an incomplete FlightPlan when the fallback route endpoint returns HTTP 500", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ flights: [{
         ident: "UAE139", fa_flight_id: "UAE139-current", scheduled_out: "2026-01-01T08:00:00Z",
         actual_out: "2026-01-01T08:10:00Z", scheduled_in: "2026-01-01T16:00:00Z",
-        estimated_in: "2026-01-01T16:20:00Z", route: "DCT L604",
+        estimated_in: "2026-01-01T16:20:00Z",
       }] })))
       .mockResolvedValueOnce(new Response("upstream failure", { status: 500 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(new FlightAwareFlightPlanProvider("secret-key").getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z"))).resolves.toMatchObject({
-      callsign: "UAE139", scheduledDeparture: "2026-01-01T08:00:00Z", actualDeparture: "2026-01-01T08:10:00Z",
-      scheduledArrival: "2026-01-01T16:00:00Z", estimatedArrival: "2026-01-01T16:20:00Z",
-      filedRoute: "DCT L604", waypoints: [],
-    });
+    await expect(new FlightAwareFlightPlanProvider("secret-key").getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z")))
+      .rejects.toThrow("FlightAware route returned HTTP 500");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps the basic FlightPlan when the optional route endpoint times out", async () => {
+  it("rejects an incomplete FlightPlan when the fallback route endpoint times out", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ flights: [{
         ident: "UAE139", fa_flight_id: "UAE139-current", scheduled_out: "2026-01-01T08:00:00Z",
-        scheduled_in: "2026-01-01T16:00:00Z", route: "DCT L604",
+        scheduled_in: "2026-01-01T16:00:00Z",
       }] })))
       .mockRejectedValueOnce(new Error("The operation was aborted"));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(new FlightAwareFlightPlanProvider("secret-key").getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z"))).resolves.toMatchObject({
-      filedRoute: "DCT L604", scheduledDeparture: "2026-01-01T08:00:00Z", waypoints: [],
-    });
+    await expect(new FlightAwareFlightPlanProvider("secret-key").getFlightPlan("UAE139", new Date("2026-01-01T12:00:00Z")))
+      .rejects.toThrow("The operation was aborted");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("does not call FlightAware when the optional key is empty", async () => {
