@@ -171,4 +171,11 @@ describe("SoftRF OGN DDB emergency whitelist", () => {
     expect(ddb.getDiagnostics().softRf).toMatchObject({ valid: false, recordCount: 0, lastLoadError: "COUNT_INVALID" });
     expect(ddb.getResolution("F", "8E20F0")).toEqual({ status: "unresolved" });
   });
+  it("streams checksum and device rows instead of materializing the full database", () => {
+    const source = readFileSync(new URL("../lib/ogn/softrf.ts", import.meta.url), "utf8");
+    expect(source).toContain("statement.iterate()");
+    expect(source).toContain("readSync(descriptor");
+    expect(source).not.toContain("FROM devices\").all()");
+  });
+
 });
