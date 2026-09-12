@@ -483,3 +483,9 @@ Changes since v1.0.31:
 
 - feat(geo): add distanceToGreatCircleSegmentKm function and coordinate validation (de67b36b)
 - feat(adsbdb): persist enrichment cache across restarts (8925da5c)
+
+## [1.0.33] - 2026-09-12
+
+Changes since v1.0.32:
+
+- feat(animation): implement aircraft animation job management and optimize rendering (9cb1e8d8)
