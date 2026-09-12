@@ -95,9 +95,9 @@ describe("provider enrichment cache", () => {
     expect(first?.metadata?.registration).toBe("REG-ABC123");
     expect(second?.metadata?.registration).toBe("REG-DEF456");
     expect(first?.metadata?.operator).not.toBe(second?.metadata?.operator);
-    expect(first?.route).toEqual(second?.route);
+    expect(first?.route).toMatchObject({ callsign: "UAE139", origin: "OMDB", destination: "LKPR" });
     expect(getMetadata).toHaveBeenCalledTimes(2);
-    expect(getRoute).toHaveBeenCalledTimes(1);
+    expect(getRoute).toHaveBeenCalledTimes(2);
   });
 
   it("keeps metadata on one hex when its callsign changes while refreshing route", async () => {
@@ -139,6 +139,21 @@ describe("provider enrichment cache", () => {
     expect(result?.metadata).toMatchObject({ registration: "A6-RJX", manufacturer: "Boeing", operator: "Royal Jet" });
     expect(result?.route).toMatchObject({ airline: "Emirates", origin: "OMDB", destination: "LKPR" });
     expect(result?.metadata?.operator).not.toBe(result?.route?.airline);
+  });
+
+  it("rejects a callsign route whose airports are far from the live aircraft", async () => {
+    const routeWithAirports: FlightRoute = {
+      ...route("RYR3YV", "EIDW", "EGSS"),
+      originAirport: { icaoCode: "EIDW", iataCode: "DUB", name: "Dublin", city: "Dublin", country: "IE", latitude: 53.4287, longitude: -6.2621 },
+      destinationAirport: { icaoCode: "EGSS", iataCode: "STN", name: "Stansted", city: "London", country: "GB", latitude: 51.885, longitude: 0.235 },
+    };
+    const service = new EnrichmentService({
+      flightRoute: { name: "adsbdb", getRoute: async () => routeWithAirports },
+    });
+    const aircraft = normalizeAircraft({ hex: "48c135", flight: "RYR3YV", lat: 49.49, lon: 17.63 }, { lat: 50, lon: 14, name: "Test" });
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+
+    await expect(service.enrich(aircraft, new Date("2026-09-12T11:20:00Z"))).resolves.toBeNull();
   });
 
   it("bounds concurrent lookups for different cache keys", async () => {

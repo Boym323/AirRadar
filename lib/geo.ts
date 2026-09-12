@@ -1,5 +1,14 @@
 const EARTH_RADIUS_KM = 6371;
 
+function validCoordinate(latitude: number, longitude: number): boolean {
+  return Number.isFinite(latitude)
+    && Number.isFinite(longitude)
+    && latitude >= -90
+    && latitude <= 90
+    && longitude >= -180
+    && longitude <= 180;
+}
+
 export function haversineDistanceKm(
   fromLat: number,
   fromLon: number,
@@ -28,6 +37,46 @@ export function initialBearing(
   return (Math.atan2(y, x) * 180) / Math.PI < 0
     ? ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360
     : (Math.atan2(y, x) * 180) / Math.PI;
+}
+
+/**
+ * Returns the shortest distance from a point to the great-circle segment
+ * between two coordinates. This is intentionally a geometric plausibility
+ * check, not an attempt to reconstruct the aircraft's filed route.
+ */
+export function distanceToGreatCircleSegmentKm(
+  fromLat: number,
+  fromLon: number,
+  toLat: number,
+  toLon: number,
+  pointLat: number,
+  pointLon: number,
+): number {
+  if (![fromLat, fromLon, toLat, toLon, pointLat, pointLon].every(Number.isFinite)
+    || !validCoordinate(fromLat, fromLon)
+    || !validCoordinate(toLat, toLon)
+    || !validCoordinate(pointLat, pointLon)) return Number.POSITIVE_INFINITY;
+
+  const segmentDistance = haversineDistanceKm(fromLat, fromLon, toLat, toLon);
+  if (segmentDistance === 0) return haversineDistanceKm(fromLat, fromLon, pointLat, pointLon);
+
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const angularPointDistance = haversineDistanceKm(fromLat, fromLon, pointLat, pointLon) / EARTH_RADIUS_KM;
+  const startBearing = toRadians(initialBearing(fromLat, fromLon, toLat, toLon));
+  const pointBearing = toRadians(initialBearing(fromLat, fromLon, pointLat, pointLon));
+  const bearingDelta = pointBearing - startBearing;
+  const alongTrackDistance = Math.atan2(
+    Math.sin(angularPointDistance) * Math.cos(bearingDelta),
+    Math.cos(angularPointDistance),
+  ) * EARTH_RADIUS_KM;
+
+  if (alongTrackDistance <= 0) return haversineDistanceKm(fromLat, fromLon, pointLat, pointLon);
+  if (alongTrackDistance >= segmentDistance) return haversineDistanceKm(toLat, toLon, pointLat, pointLon);
+
+  const crossTrackAngular = Math.asin(Math.max(-1, Math.min(1,
+    Math.sin(angularPointDistance) * Math.sin(bearingDelta),
+  )));
+  return Math.abs(crossTrackAngular * EARTH_RADIUS_KM);
 }
 
 export function destinationPoint(lat: number, lon: number, distanceKm: number, bearingDegrees: number): [number, number] {

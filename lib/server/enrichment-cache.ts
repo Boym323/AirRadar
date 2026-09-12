@@ -1,4 +1,5 @@
 import type { Aircraft, AircraftEnrichment } from "@/lib/aircraft/types";
+import { distanceToGreatCircleSegmentKm } from "@/lib/geo";
 import type { AircraftMetadataDiagnostics, ProviderRegistry } from "@/lib/server/provider";
 
 export const ENRICHMENT_TTLS = {
@@ -9,6 +10,29 @@ export const ENRICHMENT_TTLS = {
   flightPlanMs: 6 * 60 * 60_000,
   flightPlanNegativeMs: 30 * 60_000,
 } as const;
+
+/**
+ * ADSBDB route lookups are keyed by callsign, while a callsign can be reused
+ * for different flight instances. Keep a stale callsign match from appearing
+ * as a live route when its airports are nowhere near the aircraft position.
+ * The generous tolerance covers normal airway/reroute differences from the
+ * airport-to-airport great-circle approximation.
+ */
+export const MAX_ROUTE_POSITION_DEVIATION_KM = 250 * 1.852;
+
+export function routeMatchesAircraftPosition(aircraft: Aircraft, route: NonNullable<AircraftEnrichment["route"]>): boolean {
+  if (aircraft.lat === null || aircraft.lon === null || !route.originAirport || !route.destinationAirport) return true;
+
+  const distanceKm = distanceToGreatCircleSegmentKm(
+    route.originAirport.latitude,
+    route.originAirport.longitude,
+    route.destinationAirport.latitude,
+    route.destinationAirport.longitude,
+    aircraft.lat,
+    aircraft.lon,
+  );
+  return distanceKm <= MAX_ROUTE_POSITION_DEVIATION_KM;
+}
 
 interface CacheEntry<T> {
   value: T | null;
@@ -137,8 +161,9 @@ export function metadataCacheKey(icaoHex: string): string {
   return `aircraft-metadata:${normalizeHex(icaoHex)}`;
 }
 
-export function routeCacheKey(callsign: string, observedAt: Date): string {
-  return `flight-route:${normalizeCallsign(callsign)}:${dayKey(observedAt)}`;
+export function routeCacheKey(callsign: string, observedAt: Date, icaoHex?: string): string {
+  const aircraftIdentity = icaoHex ? `${normalizeHex(icaoHex)}:` : "";
+  return `flight-route:${aircraftIdentity}${normalizeCallsign(callsign)}:${dayKey(observedAt)}`;
 }
 
 export function flightPlanCacheKey(callsign: string, observedAt: Date): string {
@@ -253,10 +278,10 @@ export class EnrichmentService {
           })
         : Promise.resolve(null),
       aircraft.callsign && this.providers.flightRoute
-        ? this.cache.get(routeCacheKey(aircraft.callsign, observedAt), () => this.routeLimiter.run(() => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt)), {
+        ? this.cache.get(routeCacheKey(aircraft.callsign, observedAt, aircraft.icaoHex), () => this.routeLimiter.run(() => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt)), {
             ttlMs: ENRICHMENT_TTLS.routeMs,
             negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
-          })
+          }).then((route) => route && routeMatchesAircraftPosition(aircraft, route) ? route : null)
         : Promise.resolve(null),
     ]);
 
