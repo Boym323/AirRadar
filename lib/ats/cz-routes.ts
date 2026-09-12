@@ -29,9 +29,9 @@ export function clearCzAtsRouteCache(): void { cached = null; }
 export function loadCzAtsRoutes(): CzAtsRouteDocument | null {
   const file = getCzAtsRoutesPath();
   try {
-    const stat = fs.statSync(file);
+    const stat = fs.statSync(/*turbopackIgnore: true*/ file);
     if (cached?.file === file && cached.mtimeMs === stat.mtimeMs) return cached.document;
-    const document = validateCzAtsRouteDocument(JSON.parse(fs.readFileSync(file, "utf8")));
+    const document = validateCzAtsRouteDocument(JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ file, "utf8")));
     cached = { file, mtimeMs: stat.mtimeMs, document };
     return document;
   } catch {

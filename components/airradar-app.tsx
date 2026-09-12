@@ -28,7 +28,7 @@ import {
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { TAR1090_CATEGORY_ICON_ASSETS, TAR1090_GROUND_SQUARE_ICON_ASSET, TAR1090_ICON_CODES, TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
-import { appendTrailPoint, boundTrailPoints, selectedTrail, trailPointFromAircraft } from "@/lib/aircraft/trail";
+import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
@@ -64,6 +64,7 @@ import { analyzePublishedRoute } from "@/lib/route-intelligence";
 import { GlobalSearch } from "@/components/global-search";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
+import { useAircraftStream } from "@/components/use-aircraft-stream";
 import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   filterAircraftForMap,
@@ -474,7 +475,6 @@ export function AirRadarApp() {
   const [airspaceActivity, setAirspaceActivity] = useState<AirspaceActivityResponse | null>(null);
   const [airspaceActivityRetry, setAirspaceActivityRetry] = useState(0);
   const [atcExpanded, setAtcExpanded] = useState(false);
-  const [streamConnected, setStreamConnected] = useState(false);
   const [coverage, setCoverage] = useState<CoverageMode>("local");
   const [serverAlertsEnabled, setServerAlertsEnabled] = useState<boolean | null>(null);
   const [mobileCompact, setMobileCompact] = useState(true);
@@ -496,6 +496,19 @@ export function AirRadarApp() {
   const [mapReady, setMapReady] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sigmetGenerationRef = useRef(0);
+  const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
+  const activeCoverage: CoverageMode = networkEnabled ? coverage : "local";
+  const onSelectedAircraftRemoved = useCallback(() => {
+    selectedHexRef.current = null;
+    setSelectedHex(null);
+  }, []);
+  const { connected: streamConnected } = useAircraftStream({
+    activeCoverage,
+    liveTrailsRef,
+    selectedHexRef,
+    onSelectedAircraftRemoved,
+    onSnapshot: setSnapshot,
+  });
 
   useEffect(() => {
     if (!showAtsRoutes || atsRoutes) return;
@@ -633,9 +646,6 @@ export function AirRadarApp() {
     return type ? matchesAircraftRule(aircraft, { type, value }) : false;
   }), [watchlist]);
 
-  const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
-  const activeCoverage: CoverageMode = networkEnabled ? coverage : "local";
-
   function updateMapFilter<Key extends keyof MapAircraftFilters>(key: Key, value: MapAircraftFilters[Key]) {
     setMapFilters((current) => ({ ...current, [key]: value }));
   }
@@ -759,42 +769,6 @@ export function AirRadarApp() {
       });
     return () => { active = false; };
   }, [selectedHex]);
-
-  useEffect(() => {
-    let active = true;
-    const source = new EventSource(`/api/stream?coverage=${activeCoverage}`);
-    const onSnapshot = (event: Event) => {
-      try {
-        const next = JSON.parse((event as MessageEvent<string>).data) as PublicStateSnapshot;
-        if (active) {
-          const now = Date.now();
-          for (const aircraft of next.aircraft) {
-            const point = trailPointFromAircraft(aircraft);
-            if (!point) continue;
-            const trail = liveTrailsRef.current.get(aircraft.icaoHex) ?? [];
-            liveTrailsRef.current.set(aircraft.icaoHex, appendTrailPoint(trail, point, now));
-          }
-          for (const [hex, trail] of liveTrailsRef.current) {
-            const bounded = boundTrailPoints(trail, now);
-            if (bounded.length || hex === selectedHexRef.current) liveTrailsRef.current.set(hex, bounded);
-            else liveTrailsRef.current.delete(hex);
-          }
-          setSnapshot(next);
-          setStreamConnected(true);
-        }
-      } catch {
-        // Ignore malformed events and allow EventSource to reconnect.
-      }
-    };
-    source.addEventListener("snapshot", onSnapshot);
-    source.onopen = () => setStreamConnected(true);
-    source.onerror = () => setStreamConnected(false);
-    return () => {
-      active = false;
-      source.removeEventListener("snapshot", onSnapshot);
-      source.close();
-    };
-  }, [activeCoverage]);
 
   useEffect(() => {
     if (ognEnabled !== true) return;

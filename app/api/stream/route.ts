@@ -1,7 +1,8 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { toPublicLiveStateSnapshot } from "@/lib/server/public-serialization";
-import { acquireSseClient } from "@/lib/server/sse-capacity";
+import { acquireSseClient, recordSsePayload, type SseProtocol } from "@/lib/server/sse-capacity";
 import { parseCoverage } from "@/lib/server/coverage";
+import { SseDeltaEncoder } from "@/lib/server/sse-delta";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,7 +12,9 @@ function event(name: string, payload: unknown): string {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const releaseSseClient = acquireSseClient();
+  const url = new URL(request.url);
+  const protocol: SseProtocol = url.searchParams.get("v") === "2" ? "v2" : "v1";
+  const releaseSseClient = acquireSseClient(protocol);
   if (!releaseSseClient) {
     return new Response("SSE capacity reached", {
       status: 503,
@@ -20,12 +23,14 @@ export async function GET(request: Request): Promise<Response> {
   }
   const encoder = new TextEncoder();
   const service = getAircraftStateService();
-  const coverage = parseCoverage(new URL(request.url).searchParams.get("coverage"));
+  const coverage = parseCoverage(url.searchParams.get("coverage"));
+  const deltaEncoder = protocol === "v2" ? new SseDeltaEncoder() : null;
   let closed = false;
   let heartbeat: ReturnType<typeof setInterval> | null = null;
   let unsubscribe: () => void = () => undefined;
   let controllerRef: ReadableStreamDefaultController<Uint8Array> | null = null;
-  let pending: Uint8Array | null = null;
+  let pendingSnapshot: ReturnType<typeof service.getSnapshot> | null = null;
+  let deliverSnapshot: ((snapshot: ReturnType<typeof service.getSnapshot>) => void) | null = null;
 
   const close = () => {
     if (closed) return;
@@ -44,19 +49,34 @@ export async function GET(request: Request): Promise<Response> {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       controllerRef = controller;
-      const send = (snapshot: ReturnType<typeof service.getSnapshot>) => {
+      const deliver = (snapshot: ReturnType<typeof service.getSnapshot>) => {
         if (closed) return;
-        const chunk = encoder.encode(event("snapshot", toPublicLiveStateSnapshot(snapshot)));
+        const publicSnapshot = toPublicLiveStateSnapshot(snapshot);
+        const nextEvent = deltaEncoder?.next(publicSnapshot);
+        const eventName = nextEvent?.event ?? "snapshot";
+        const payload = nextEvent?.payload ?? publicSnapshot;
+        const chunk = encoder.encode(event(eventName, payload));
         if ((controller.desiredSize ?? 0) > 0) {
           try {
             controller.enqueue(chunk);
+            if (nextEvent) {
+              if (nextEvent.event === "delta") recordSsePayload(protocol, nextEvent.event, chunk.byteLength, nextEvent.payload.changed.length, nextEvent.payload.removed.length);
+              else recordSsePayload(protocol, nextEvent.event, chunk.byteLength);
+            }
           } catch {
             close();
           }
         } else {
-          // Keep only the newest snapshot for a slow client; never build an unbounded queue.
-          pending = chunk;
+          // Keep only the newest internal snapshot for a slow client; the
+          // delta encoder advances only after the chunk is actually queued.
+          pendingSnapshot = snapshot;
         }
+      };
+      deliverSnapshot = deliver;
+      const send = (snapshot: ReturnType<typeof service.getSnapshot>) => {
+        if (closed) return;
+        if ((controller.desiredSize ?? 0) > 0) deliver(snapshot);
+        else pendingSnapshot = snapshot;
       };
       unsubscribe = service.subscribe(send, { coverage });
       send(service.getSnapshot({ coverage }));
@@ -72,14 +92,10 @@ export async function GET(request: Request): Promise<Response> {
       if (request.signal.aborted) close();
     },
     pull(controller) {
-      if (!closed && pending && (controller.desiredSize ?? 0) > 0) {
-        const chunk = pending;
-        pending = null;
-        try {
-          controller.enqueue(chunk);
-        } catch {
-          close();
-        }
+      if (!closed && pendingSnapshot && (controller.desiredSize ?? 0) > 0) {
+        const snapshot = pendingSnapshot;
+        pendingSnapshot = null;
+        deliverSnapshot?.(snapshot);
       }
     },
     cancel() {

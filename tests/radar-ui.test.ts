@@ -11,6 +11,7 @@ import {
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
 const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");
 const aircraftDetailSource = readFileSync(new URL("../components/aircraft-detail-v2.tsx", import.meta.url), "utf8");
 const globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -106,7 +107,7 @@ describe("radar UI polish helpers", () => {
   });
 
   it("keeps independent bounded SSE streams and does not add trail polling", () => {
-    expect(appSource.match(/new EventSource\(/g)).toHaveLength(2);
+    expect(`${appSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
     expect(appSource).not.toContain("setInterval(");
     expect(appSource).toContain("selected-trail-line");
     expect(appSource).toContain('geometry: { type: "LineString"');

@@ -27,7 +27,7 @@ whether an operator has configured an optional provider.
 | `GET /api/aircraft?coverage=local\|extended` | Current safe snapshot; default is local for backward compatibility. | Production core. |
 | `GET /api/aircraft/:hex?coverage=local\|extended` | Safe durable metadata, recent flights, and 7d/30d history summary; selected live enrichment follows the requested coverage view. | Production when PostgreSQL is configured. |
 | `GET /api/aircraft/:hex/photo` | Optional Planespotters photo metadata; returns disabled/empty safely. | Optional, disabled by default. |
-| `GET /api/stream?coverage=local\|extended` | Coalesced `snapshot` events over Server-Sent Events; default is local and each client receives a selected coverage view from one shared state service. | Production core; not WebSocket. |
+| `GET /api/stream?coverage=local\|extended[&v=2]` | Coalesced Server-Sent Events; V1 named `snapshot` events remain the default, while explicit `v=2` sends one full public snapshot followed by sequence-aware `delta` events for changed/removed aircraft. Each client receives a selected coverage view from one shared state service. | Production core; not WebSocket. |
 | `GET /api/ogn/state` | Current bounded OGN/FLARM snapshot; disabled mode returns an empty snapshot and does not start a provider. | Optional; disabled by default. |
 | `GET /api/ogn/stream` | Independent coalesced OGN/FLARM `snapshot` events with heartbeat and bounded backpressure. | Optional; not WebSocket and never part of `/api/stream`. |
 | `GET /api/history/:hex` | PostgreSQL latest history or bounded RAM trail fallback. | Production/degraded gracefully without DB. |

@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { getActiveSseClientCount, MAX_SSE_CLIENTS } from "@/lib/server/sse-capacity";
+import { getSseDiagnostics, MAX_SSE_CLIENTS } from "@/lib/server/sse-capacity";
 
 export interface RuntimeDiagnostics {
   processRssBytes: number;
@@ -11,7 +11,15 @@ export interface RuntimeDiagnostics {
   externalBytes: number;
   arrayBuffersBytes: number;
   activeSseClients: number;
+  activeSseV1Clients: number;
+  activeSseV2Clients: number;
   sseClientLimit: number;
+  lastV2SnapshotBytes: number | null;
+  lastV2DeltaBytes: number | null;
+  recentV2DeltaChanged: number;
+  recentV2DeltaRemoved: number;
+  recentV2DeltaSamples: number;
+  recentV2DeltaAverageBytes: number | null;
   cgroupMemoryCurrentBytes: number | null;
   cgroupMemoryMaxBytes: number | null;
   aircraftCount: number | null;
@@ -106,6 +114,7 @@ export function cgroupFileCandidates(file: CgroupMemoryFile, cgroupText = proces
 
 export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}): RuntimeDiagnostics {
   const memory = process.memoryUsage();
+  const sse = getSseDiagnostics();
   return {
     processRssBytes: nonNegative(memory.rss),
     ...readProcMemory(),
@@ -113,8 +122,16 @@ export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}):
     heapTotalBytes: nonNegative(memory.heapTotal),
     externalBytes: nonNegative(memory.external),
     arrayBuffersBytes: nonNegative(memory.arrayBuffers),
-    activeSseClients: getActiveSseClientCount(),
+    activeSseClients: sse.activeClients,
+    activeSseV1Clients: sse.activeV1Clients,
+    activeSseV2Clients: sse.activeV2Clients,
     sseClientLimit: MAX_SSE_CLIENTS,
+    lastV2SnapshotBytes: sse.lastV2SnapshotBytes,
+    lastV2DeltaBytes: sse.lastV2DeltaBytes,
+    recentV2DeltaChanged: sse.recentDeltaChanged,
+    recentV2DeltaRemoved: sse.recentDeltaRemoved,
+    recentV2DeltaSamples: sse.recentDeltaSamples,
+    recentV2DeltaAverageBytes: sse.recentDeltaAverageBytes,
     cgroupMemoryCurrentBytes: cgroupValue(cgroupFileCandidates("memory.current")),
     cgroupMemoryMaxBytes: cgroupValue(cgroupFileCandidates("memory.max")),
     aircraftCount: null,
