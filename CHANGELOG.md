@@ -449,3 +449,12 @@ Changes since v1.0.25:
 Changes since v1.0.26:
 
 - feat: enhance airport visibility filtering and add related tests (814db0e7)
+
+## [1.0.28] - 2026-09-12
+
+Changes since v1.0.27:
+
+- fix: make aviation map layers recover reliably (b2cb2785)
+- feat: add airport movement intelligence v2 (99ca4068)
+- chore: remove obsolete visual polish images (5a8cd334)
+- feat: add map radius configuration and filter airports within radius (dbfd1355)
