@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.35] - 2026-09-12
+
+Changes since v1.0.34:
+
+- feat: add scripts for syncing and fetching Slovak air traffic data (8889e794)
+
 ## [1.0.34] - 2026-09-12
 
 Changes since v1.0.33:
