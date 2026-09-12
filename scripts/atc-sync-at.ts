@@ -3,10 +3,13 @@ import "dotenv/config";
 import { austroControlPdfUrls, discoverAustroControl, extractAustroControlPdfText, fetchAustroControlPdf, parseAustrianEnr21 } from "../lib/atc/austro-control";
 import { validateAtcImportDocument } from "../lib/atc/import-format";
 import { AustrianBevBoundaryProvider, BEV_AUSTRIAN_BOUNDARY_SOURCE } from "../lib/atc/austrian-boundary";
+import { runAtcImport } from "../lib/atc/import-db";
 
 async function main(): Promise<void> {
-  if (process.argv.slice(2).some((arg) => arg !== "--dry-run")) throw new Error("Usage: npm run atc:sync:at -- [--dry-run]");
+  if (process.argv.slice(2).some((arg) => arg !== "--dry-run" && arg !== "--apply")) throw new Error("Usage: npm run atc:sync:at -- [--dry-run|--apply]");
   const dryRun = process.argv.includes("--dry-run");
+  const apply = process.argv.includes("--apply");
+  if (dryRun === apply) throw new Error("Choose exactly one of --dry-run or --apply");
   const discovery = await discoverAustroControl();
   if (!discovery.current) throw new Error("No currently effective Austro Control AIP found");
   const urls = austroControlPdfUrls(discovery.current);
@@ -28,6 +31,6 @@ async function main(): Promise<void> {
   for (const item of rejected) console.log(`  reject ${item.name}: ${item.reason}`);
   if (boundarySnaps.length) { const sorted = [...boundarySnaps].sort((left, right) => left - right); console.log(`Boundary snaps: max ${Math.max(...boundarySnaps).toFixed(3)} km; median ${sorted[Math.floor(sorted.length / 2)].toFixed(3)} km; limit 5.000 km`); }
   if (dryRun) console.log("Dry run: no database or dataset file was modified.");
-  else console.log("Apply intentionally disabled in this implementation; use the reviewed import/release procedure for production enablement.");
+  else { await runAtcImport(document, { dryRun: false }); console.log("ATC AT import committed in one transaction."); }
 }
 main().catch((error: unknown) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });
