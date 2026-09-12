@@ -55,7 +55,9 @@ export function airportVisibilityFilter(
   zoom: number,
   visibility: AirportLayerVisibility = DEFAULT_AIRPORT_LAYER_VISIBILITY,
 ): unknown[] {
-  if (!visibility.showAirports) return ["==", 1, 0];
+  // MapLibre filters compare a feature property to a literal. A
+  // constant-only numeric comparison is rejected by the filter validator.
+  if (!visibility.showAirports) return ["==", "icao", "__airradar_hidden__"];
 
   const visibleTiers: AirportVisibilityTier[] = [];
   if (visibility.showSignificant) visibleTiers.push("significant");
@@ -64,6 +66,6 @@ export function airportVisibilityFilter(
 
   const tierFilter: unknown[] = visibleTiers.length
     ? ["match", ["get", "tier"], visibleTiers, true, false]
-    : ["==", 1, 0];
+    : ["==", "icao", "__airradar_hidden__"];
   return ["all", ["any", tierFilter, ["==", ["get", "important"], true]]];
 }

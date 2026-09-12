@@ -26,6 +26,8 @@ describe("radar UI polish helpers", () => {
     expect(airportVisibleAtZoom("heliport", AIRPORT_VISIBILITY_ZOOM.heliport)).toBe(false);
     expect(airportVisibleAtZoom("heliport", AIRPORT_VISIBILITY_ZOOM.heliport, { ...DEFAULT_AIRPORT_LAYER_VISIBILITY, showHeliports: true })).toBe(true);
     expect(airportVisibilityFilter(7.4)).toEqual(airportVisibilityFilter(7.4));
+    expect(airportVisibilityFilter(7.4, { ...DEFAULT_AIRPORT_LAYER_VISIBILITY, showAirports: false })).toEqual(["==", "icao", "__airradar_hidden__"]);
+    expect(airportVisibilityFilter(7.4, { ...DEFAULT_AIRPORT_LAYER_VISIBILITY, showSignificant: false, showSmall: false, showHeliports: false })).toEqual(["all", ["any", ["==", "icao", "__airradar_hidden__"], ["==", ["get", "important"], true]]]);
   });
 
   it("uses only safe DTO signals for airport prominence", () => {

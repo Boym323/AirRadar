@@ -1301,6 +1301,14 @@ export function AirRadarApp() {
     }
   }, [atsRoutes, mapReady, selectedAtsRoute, showAtsRoutes]);
 
+  const selectedRouteAirportCodesKey = useMemo(() => {
+    const selectedRoute = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex)?.enrichment?.route;
+    return [selectedRoute?.originAirport?.icaoCode, selectedRoute?.destinationAirport?.icaoCode]
+      .filter((icao): icao is string => Boolean(icao))
+      .map((icao) => icao.trim().toUpperCase())
+      .join("|");
+  }, [selectedHex, snapshot.aircraft]);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -1315,20 +1323,13 @@ export function AirRadarApp() {
         geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
       })) : [],
     });
-    const selectedRoute = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex)?.enrichment?.route;
-    const selectedRouteAirportCodes = new Set(
-      [selectedRoute?.originAirport?.icaoCode, selectedRoute?.destinationAirport?.icaoCode]
-        .filter((icao): icao is string => Boolean(icao))
-        .map((icao) => icao.trim().toUpperCase()),
-    );
+    const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
     const airportSource = map.getSource("route-airports") as GeoJSONSource | undefined;
     airportSource?.setData(createAirportGeoJSON(airports, selectedRouteAirportCodes));
-    const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
-    routeAirportSource?.setData(createRouteAirportGeoJSON(selectedRoute));
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
-  }, [airports, airspaceActivity, atcData, mapReady, selectedHex, showAtc, snapshot.aircraft]);
+  }, [airports, airspaceActivity, atcData, mapReady, selectedRouteAirportCodesKey, showAtc]);
 
   const airportLayerVisibility = useMemo<AirportLayerVisibility>(() => ({
     showAirports,
