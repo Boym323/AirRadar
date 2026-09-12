@@ -1,7 +1,7 @@
 import { circleCoordinates } from "@/lib/geo";
 import type { ReceiverPosition } from "@/lib/aircraft/types";
 
-export const RANGE_RING_RADII_KM = [50, 100, 200, 300, 400] as const;
+export const RANGE_RING_RADII_KM = [50, 100, 200, 300, 400, 463] as const;
 
 export function createRangeRingsGeoJSON(
   receiver: ReceiverPosition,

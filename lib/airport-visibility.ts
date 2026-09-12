@@ -1,4 +1,14 @@
 import type { Airport } from "@/lib/airports/types";
+import { haversineDistanceKm } from "@/lib/geo";
+
+/** The radar's intended local overview radius (250 nautical miles). */
+export function mapRadiusNmFromEnv(raw: string | undefined = process.env.NEXT_PUBLIC_MAP_RADIUS_NM): number {
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= 25 && value <= 500 ? value : 250;
+}
+
+export const AIRPORT_MAP_RADIUS_NM = mapRadiusNmFromEnv();
+export const AIRPORT_MAP_RADIUS_KM = AIRPORT_MAP_RADIUS_NM * 1.852;
 
 export type AirportVisibilityTier = "significant" | "small" | "heliport";
 
@@ -68,4 +78,16 @@ export function airportVisibilityFilter(
     ? ["match", ["get", "tier"], visibleTiers, true, false]
     : ["==", "icao", "__airradar_hidden__"];
   return ["all", ["any", tierFilter, ["==", ["get", "important"], true]]];
+}
+
+/** Keep the MapLibre airport source bounded to the receiver's operating area. */
+export function airportsWithinMapRadius(
+  airports: readonly Airport[],
+  receiver: { lat: number | null; lon: number | null },
+  radiusKm = AIRPORT_MAP_RADIUS_KM,
+): Airport[] {
+  if (receiver.lat === null || receiver.lon === null || !Number.isFinite(receiver.lat) || !Number.isFinite(receiver.lon)) {
+    return [...airports];
+  }
+  return airports.filter((airport) => haversineDistanceKm(receiver.lat!, receiver.lon!, airport.latitude, airport.longitude) <= radiusKm);
 }

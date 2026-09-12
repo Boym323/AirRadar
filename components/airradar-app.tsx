@@ -42,7 +42,7 @@ import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/w
 import type { AircraftDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { SigmetSnapshot } from "@/lib/weather/types";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
-import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
+import { airportVisibilityFilter, airportVisibilityTier, airportsWithinMapRadius, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
@@ -1313,8 +1313,11 @@ export function AirRadarApp() {
     trailSource?.setData(selectedTrailForMap.length > 1
       ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
       : { type: "FeatureCollection", features: [] });
-    for (const layer of ["selected-trail-line", ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID, ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, ROUTE_V2_AIRPORT_LABEL_LAYER_ID] as const) {
+    for (const layer of ["selected-trail-line", ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none");
+    }
+    for (const layer of [ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, ROUTE_V2_AIRPORT_LABEL_LAYER_ID] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && showAirports ? "visible" : "none");
     }
     const routeSource = map.getSource(ROUTE_V2_SOURCE_ID) as GeoJSONSource | undefined;
     routeSource?.setData(createRouteGeoJSON(
@@ -1323,7 +1326,7 @@ export function AirRadarApp() {
     ));
     const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
     routeAirportSource?.setData(createRouteAirportGeoJSON(selected?.enrichment?.route));
-  }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const visible = showAtsRoutes && atsRoutes?.available === true;
@@ -1368,7 +1371,8 @@ export function AirRadarApp() {
     transmitterGeoJsonRef.current = transmitterGeoJson;
     mapReplayRef.current.atc.setData(atcGeoJson);
     mapReplayRef.current.transmitters.setData(transmitterGeoJson);
-    const airportGeoJson = createAirportGeoJSON(airports, selectedRouteAirportCodes);
+    const nearbyAirports = airportsWithinMapRadius(airports, { lat: snapshot.receiver.lat, lon: snapshot.receiver.lon });
+    const airportGeoJson = createAirportGeoJSON(nearbyAirports, selectedRouteAirportCodes);
     airportGeoJsonRef.current = airportGeoJson;
     mapReplayRef.current.airports.setData(airportGeoJson);
     const map = mapRef.current;
@@ -1382,7 +1386,7 @@ export function AirRadarApp() {
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
-  }, [airports, airspaceActivity, atcData, mapReady, selectedRouteAirportCodesKey, showAtc]);
+  }, [airports, airspaceActivity, atcData, mapReady, selectedRouteAirportCodesKey, showAtc, snapshot.receiver.lat, snapshot.receiver.lon]);
 
   const airportLayerVisibility = useMemo<AirportLayerVisibility>(() => ({
     showAirports,

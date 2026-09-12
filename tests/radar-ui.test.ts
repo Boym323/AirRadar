@@ -5,6 +5,8 @@ import {
   AIRPORT_VISIBILITY_ZOOM,
   airportVisibilityFilter,
   airportVisibilityTier,
+  airportsWithinMapRadius,
+  mapRadiusNmFromEnv,
   airportVisibleAtZoom,
   DEFAULT_AIRPORT_LAYER_VISIBILITY,
 } from "@/lib/airport-visibility";
@@ -35,6 +37,18 @@ describe("radar UI polish helpers", () => {
     expect(airportVisibilityTier({ iataCode: "PRG", name: "Prague" })).toBe("significant");
     expect(airportVisibilityTier({ iataCode: null, name: "Small strip" })).toBe("small");
     expect(airportVisibilityTier({ iataCode: null, name: "City Helipad" })).toBe("heliport");
+  });
+
+  it("bounds the airport map source to the receiver's 250 NM operating area", () => {
+    const nearby = { icaoCode: "NEAR", iataCode: null, name: "Nearby", city: null, country: null, latitude: 50.1, longitude: 14.3 };
+    const far = { icaoCode: "FAR", iataCode: null, name: "Far", city: null, country: null, latitude: 55, longitude: 14.3 };
+    expect(airportsWithinMapRadius([nearby, far], { lat: 50.1, lon: 14.3 }).map((airport) => airport.icaoCode)).toEqual(["NEAR"]);
+  });
+
+  it("validates the public map radius configuration", () => {
+    expect(mapRadiusNmFromEnv("300")).toBe(300);
+    expect(mapRadiusNmFromEnv("24")).toBe(250);
+    expect(mapRadiusNmFromEnv("not-a-number")).toBe(250);
   });
 
   it("keeps selected, watchlisted and emergency aircraft visually distinct", () => {
@@ -130,6 +144,7 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("selectedAircraftVisible ? selectedTrail");
     expect(appSource).toContain("selectedAircraftVisible ? selectedAircraftInSnapshot");
     expect(appSource).toContain('map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none")');
+    expect(appSource).toContain('map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && showAirports ? "visible" : "none")');
     expect(appSource).toContain("resetMapFilters");
     expect(appSource).toContain("setMapFilters(DEFAULT_MAP_AIRCRAFT_FILTERS)");
   });
