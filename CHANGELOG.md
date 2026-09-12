@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.38] - 2026-09-12
+
+Changes since v1.0.37:
+
+- feat: add ATS point search functionality and update related components (28d12b5b)
+
 ## [1.0.37] - 2026-09-12
 
 Changes since v1.0.36:
