@@ -11,6 +11,8 @@ export type RuntimeStateFile = "alerts.json" | "alert-events.jsonl";
  * into their stores instead of changing this resolver.
  */
 export function getRuntimeStateDirectory(): string {
+  const override = process.env.AIRRADAR_RUNTIME_STATE_DIRECTORY?.trim();
+  if (override) return override;
   return process.env.NODE_ENV === "production"
     ? AIRRADAR_PRODUCTION_STATE_DIRECTORY
     : resolve(process.cwd(), "data");

@@ -269,6 +269,8 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivi
           name: sector.name,
           label: planLabel ? `${sector.name} · ${planLabel}` : sector.name,
           service: formatAtcService(sector.service ?? sector.atcCallsign),
+          airspaceType: sector.airspaceType ?? null,
+          airspaceClass: sector.airspaceClass ?? null,
           lowerAltitudeFt: sector.lowerAltitudeFt,
           upperAltitudeFt: sector.upperAltitudeFt,
           lowerAltitude: formatAtcLimit(sector.lowerAltitudeFt, sector.lowerAltitudeReference, t.common.unlimited),

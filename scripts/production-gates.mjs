@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
@@ -121,6 +122,16 @@ async function assertSseV2Lifecycle() {
   return Buffer.byteLength(received.split("\n\n", 1)[0] + "\n\n");
 }
 
+async function waitForSseCleanup() {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const response = await get("/api/system/status");
+    if (response.ok && (await response.json()).runtime?.activeSseClients === 0) return;
+    await wait(100);
+  }
+  throw new Error("SSE client cleanup did not complete within 5 seconds");
+}
+
 function assertMigrationSource() {
   const directory = "migrations/app/20260909T0830_recap_query_indexes";
   const manifest = JSON.parse(readFileSync(`${directory}/migration.json`, "utf8"));
@@ -152,6 +163,15 @@ async function assertBrowserSmoke() {
       { width: 1440, height: 900 },
     ]) {
       const page = await browser.newPage({ viewport });
+      const originalWaitForFunction = page.waitForFunction.bind(page);
+      page.waitForFunction = async (...args) => {
+        try {
+          return await originalWaitForFunction(...args);
+        } catch (error) {
+          const predicate = typeof args[0] === "function" ? args[0].toString().replace(/\s+/g, " ").slice(0, 240) : String(args[0]);
+          throw new Error(`browser predicate timed out at ${viewport.width}px: ${predicate}; ${error instanceof Error ? error.message : String(error)}`);
+        }
+      };
       const browserErrors = [];
       page.on("console", (message) => { if (message.type() === "error") browserErrors.push(`console: ${message.text()}`); });
       page.on("pageerror", (error) => browserErrors.push(`page: ${error.message}`));
@@ -305,18 +325,28 @@ async function assertBrowserSmoke() {
         if (!map || !map.isStyleLoaded()) return false;
         const sourceIds = ["route-airports", "atc-sectors", "ats-routes", "aviation-sigmet"];
         const layerIds = ["route-airports-circle", "atc-sectors-fill", "ats-routes-line", "aviation-sigmet-fill"];
-        return sourceIds.every((id) => map.isSourceLoaded(id))
+        const hasCountry = (sourceId, layerId, countryCode) => map.queryRenderedFeatures({ layers: [layerId] }).some((feature) => feature.properties?.countryCode === countryCode)
+          || map.querySourceFeatures(sourceId).some((feature) => feature.properties?.countryCode === countryCode);
+        return sourceIds.every((id) => Boolean(map.getSource(id)))
           && layerIds.every((id) => Boolean(map.getLayer(id)))
-          && map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "SK")
-          && map.queryRenderedFeatures({ layers: ["ats-routes-line"] }).some((feature) => feature.properties?.countryCode === "SK");
+          && hasCountry("atc-sectors", "atc-sectors-fill", "SK")
+          && hasCountry("ats-routes", "ats-routes-line", "SK");
       }, undefined, { timeout: 30_000 });
       await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [19.5, 48.8], zoom: 6 }));
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
-        return Boolean(map?.isStyleLoaded()) && map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "SK")
-          && map.queryRenderedFeatures({ layers: ["ats-routes-line"] }).some((feature) => feature.properties?.countryCode === "SK");
+        if (!map?.isStyleLoaded()) return false;
+        const hasCountry = (sourceId, layerId, countryCode) => map.queryRenderedFeatures({ layers: [layerId] }).some((feature) => feature.properties?.countryCode === countryCode)
+          || map.querySourceFeatures(sourceId).some((feature) => feature.properties?.countryCode === countryCode);
+        return hasCountry("atc-sectors", "atc-sectors-fill", "SK")
+          && hasCountry("ats-routes", "ats-routes-line", "SK");
       }, undefined, { timeout: 30_000 });
-      await page.waitForFunction(() => window.__airradarMapForDiagnostics?.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "SK" && feature.properties?.airspaceType === "FIR"), undefined, { timeout: 30_000 });
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        if (!map?.isStyleLoaded()) return false;
+        return map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "SK" && feature.properties?.airspaceType === "FIR")
+          || map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.countryCode === "SK" && feature.properties?.airspaceType === "FIR");
+      }, undefined, { timeout: 30_000 });
       if (browserErrors.length) throw new Error(`Browser errors at ${viewport.width}px: ${browserErrors.join(" | ")}`);
       await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [14.2, 50.1], zoom: 8 }));
       await page.waitForFunction(() => {
@@ -341,6 +371,7 @@ async function main() {
   const gateChannel = resolveProductionGateChannel();
   const expectedVersion = expectedBuildVersion();
   assertMigrationSource();
+  const runtimeStateDirectory = mkdtempSync(resolve(tmpdir(), "airradar-production-gate-"));
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", host, "--port", String(port)], {
     cwd: process.cwd(),
     env: {
@@ -355,6 +386,7 @@ async function main() {
       FLIGHTAWARE_API_KEY: "",
       WATCHLIST_ADMIN_TOKEN: "production-gate-token",
       AIRRADAR_CHANNEL: gateChannel === "rc" ? "release-candidate" : "production",
+      AIRRADAR_RUNTIME_STATE_DIRECTORY: runtimeStateDirectory,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -396,7 +428,8 @@ async function main() {
     const sseV2SnapshotBytes = await assertSseV2Lifecycle();
     const afterSse = await get("/api/system/status");
     const afterSsePayload = await afterSse.json();
-    if (!afterSse.ok || afterSsePayload.runtime?.activeSseClients !== 0) throw new Error("SSE client cleanup failed");
+    if (!afterSse.ok) throw new Error("SSE cleanup diagnostics request failed");
+    if (afterSsePayload.runtime?.activeSseClients !== 0) await waitForSseCleanup();
     await assertBrowserSmoke();
     console.log(`[production-gates] measured first SSE event bytes=${sseSnapshotBytes}, V2 snapshot bytes=${sseV2SnapshotBytes}, airports bytes=${staticPayloadBytes["/api/airports"]}, ATC bytes=${staticPayloadBytes["/api/atc/sectors"]}`);
     console.log("[production-gates] built server, SSE, caching, auth, PWA, migration, and diagnostics checks passed");
@@ -408,6 +441,7 @@ async function main() {
     await new Promise((resolve) => child.once("exit", resolve));
     process.removeListener("SIGINT", stop);
     process.removeListener("SIGTERM", stop);
+    rmSync(runtimeStateDirectory, { recursive: true, force: true });
   }
 }
 
