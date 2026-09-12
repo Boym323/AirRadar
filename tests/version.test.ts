@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 // @ts-expect-error The release helper is runtime-only ESM consumed by Node.
 import { createBuildMetadata, parseReleaseVersion, resolveReleaseVersion } from "../scripts/version.mjs";
 // @ts-expect-error The changelog helper is runtime-only ESM consumed by Node.
-import { backfillChangelog, createChangelogEntry, updateChangelog } from "../scripts/changelog.mjs";
+import { backfillChangelog, createChangelogEntry, normalizeChangelog, updateChangelog } from "../scripts/changelog.mjs";
 import { parseBuildMetadata } from "../lib/server/version";
 
 describe("automatic release versioning", () => {
@@ -167,6 +167,23 @@ describe("automatic changelog generation", () => {
       previousTag: "v0.1.9",
       commits: [],
     })).toBe(existing);
+  });
+
+  it("inserts new releases immediately after the changelog introduction", () => {
+    const existing = "# Changelog\n\nAll notable changes to AirRadar are documented here.\n\n## [0.1.9] - 2026-09-09\n";
+    const updated = updateChangelog({
+      version: "0.1.10",
+      date: "2026-09-09",
+      existing,
+      previousTag: "v0.1.9",
+      commits: [],
+    });
+    expect(updated.indexOf("## [0.1.10]")).toBeLessThan(updated.indexOf("## [0.1.9]"));
+  });
+
+  it("normalizes existing releases in descending version order", () => {
+    const normalized = normalizeChangelog("# Changelog\n\nIntro\n\n## [0.1.9] - 2026-09-09\n\nold\n\n## [1.0.0] - 2026-09-09\n\nnew\n");
+    expect(normalized.indexOf("## [1.0.0]")).toBeLessThan(normalized.indexOf("## [0.1.9]"));
   });
 
   it("backfills missing tagged releases in descending order", () => {

@@ -66,7 +66,35 @@ export function updateChangelog({ version, date, existing = "", previousTag = la
   if (existing.includes(heading)) return existing;
   const entry = createChangelogEntry({ version, date, previousTag, commits });
   const prefix = existing.trim() || "# Changelog\n\nAll notable changes to AirRadar are documented here.\n";
-  return `${prefix.trimEnd()}\n\n${entry}\n`;
+  const firstEntry = prefix.search(/\n\n## \[/);
+  if (firstEntry < 0) return `${prefix.trimEnd()}\n\n${entry}\n`;
+  return `${prefix.slice(0, firstEntry).trimEnd()}\n\n${entry}\n\n${prefix.slice(firstEntry + 2).trimStart()}`;
+}
+
+function compareVersionsDescending(left, right) {
+  const parse = (version) => {
+    const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-rc\.(\d+))?$/);
+    return match ? match.slice(1).map((part) => part === undefined ? -1 : Number(part)) : [0, 0, 0, -1];
+  };
+  const a = parse(left);
+  const b = parse(right);
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) return a[index] > b[index] ? -1 : 1;
+  }
+  return 0;
+}
+
+export function normalizeChangelog(existing = "") {
+  const marker = "\n\n## [";
+  const firstEntry = existing.indexOf(marker);
+  if (firstEntry < 0) return existing;
+  const intro = existing.slice(0, firstEntry);
+  const entries = existing.slice(firstEntry + 2).split(/\n\n(?=## \[)/).filter(Boolean);
+  entries.sort((left, right) => compareVersionsDescending(
+    left.match(/^## \[([^\]]+)\]/)?.[1] ?? "",
+    right.match(/^## \[([^\]]+)\]/)?.[1] ?? "",
+  ));
+  return `${intro.trimEnd()}\n\n${entries.join("\n\n")}\n`;
 }
 
 export function backfillChangelog({ existing = "", tags = releaseTags(), releases = {} }) {
@@ -101,8 +129,15 @@ function main() {
     process.stdout.write(`[AirRadar changelog] ${updated === existing ? "unchanged" : "backfilled"}\n`);
     return;
   }
+  if (command === "normalize") {
+    const existing = readFileSync(CHANGELOG_PATH, "utf8");
+    const updated = normalizeChangelog(existing);
+    if (updated !== existing) writeFileSync(CHANGELOG_PATH, updated, "utf8");
+    process.stdout.write(`[AirRadar changelog] ${updated === existing ? "unchanged" : "normalized"}\n`);
+    return;
+  }
   if (command !== "generate" || !version || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new Error("Usage: node scripts/changelog.mjs generate VERSION YYYY-MM-DD | backfill");
+    throw new Error("Usage: node scripts/changelog.mjs generate VERSION YYYY-MM-DD | backfill | normalize");
   }
   const existing = readFileSync(CHANGELOG_PATH, "utf8");
   const updated = updateChangelog({ version, date, existing });

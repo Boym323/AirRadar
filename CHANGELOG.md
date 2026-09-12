@@ -2,6 +2,363 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.33] - 2026-09-12
+
+Changes since v1.0.32:
+
+- feat(animation): implement aircraft animation job management and optimize rendering (9cb1e8d8)
+
+
+## [1.0.32] - 2026-09-12
+
+Changes since v1.0.31:
+
+- feat(geo): add distanceToGreatCircleSegmentKm function and coordinate validation (de67b36b)
+- feat(adsbdb): persist enrichment cache across restarts (8925da5c)
+
+## [1.0.31] - 2026-09-12
+
+Changes since v1.0.30:
+
+- feat(weather): persist aviation weather cache across restarts (8fa9a07a)
+
+## [1.0.30] - 2026-09-12
+
+Changes since v1.0.29:
+
+- fix(map): configure MapLibre worker for GeoJSON overlays (8729f806)
+
+## [1.0.29] - 2026-09-12
+
+Changes since v1.0.28:
+
+- fix(ui): harden responsive map controls and mobile layout (31d53386)
+
+## [1.0.28] - 2026-09-12
+
+Changes since v1.0.27:
+
+- fix: make aviation map layers recover reliably (b2cb2785)
+- feat: add airport movement intelligence v2 (99ca4068)
+- chore: remove obsolete visual polish images (5a8cd334)
+- feat: add map radius configuration and filter airports within radius (dbfd1355)
+
+## [1.0.27] - 2026-09-12
+
+Changes since v1.0.26:
+
+- feat: enhance airport visibility filtering and add related tests (814db0e7)
+
+## [1.0.26] - 2026-09-12
+
+Changes since v1.0.25:
+
+- fix: keep release checkout free of generated Next files (51ef21f5)
+- fix: keep release checkout free of generated Next files (1f7be7df)
+- fix: release tested main commit (4adf67ab)
+- fix: release tested main commit (ad8b85b1)
+- feat: add Czech airspace activity types (c6a3e567)
+- feat: parse Czech AUP UUP and actual activations (b409fdf6)
+- feat: add Czech airspace activity provider (30900ab9)
+- feat: rate limit airspace activity endpoint (572e94d9)
+- feat: expose Czech airspace activity API (05fd9c88)
+- test: cover Czech airspace activity parsing (4e6d83ba)
+- docs: document Czech airspace activity feed (afe471b5)
+- Merge main into feature/airspace-activity-aup-uup (e6bcb919)
+- Merge pull request #12 from Boym323/feature/airspace-activity-aup-uup (4f65be04)
+- fix: add FlightAware upstream cost guard (2a0a54d5)
+- fix: make FlightAware enrichment on-demand only (71b7f7b0)
+- fix: require explicit FlightAware enablement (358529a1)
+- fix: load FlightAware only from aircraft detail (c06a131d)
+- refactor: expose FlightAware budget limit safely (d122ef8d)
+- test: enforce FlightAware on-demand enrichment (5745be36)
+- test: cover FlightAware request budget and pagination (5a831376)
+- docs: document FlightAware double opt-in cost guard (5ec09512)
+- fix: avoid caching rate-limited partial FlightAware plans (afb9b5d6)
+- test: cover FlightAware double opt-in configuration (c8200931)
+- feat: add airspace activity map matching (8f2d4771)
+- test: cover airspace activity map joins (d991b03d)
+- fix: keep airspace map joins country-safe (705e74ac)
+- test: reject foreign airspace designators (0074dd07)
+- feat: add airspace activity map translations (88dfeb13)
+- fix: match embedded Czech TRA TSA names safely (f6b25a82)
+- chore: add temporary airspace map UI patcher (9aa1d731)
+- chore: add temporary branch UI patch workflow (6b948098)
+- feat: visualize planned airspace activity on radar map (d659489e)
+- chore: remove temporary airspace map patch workflow (5c9da30e)
+- chore: remove temporary airspace map patch helper (b709c1c4)
+- test: cover published Czech airspace names (c9e42581)
+- docs: describe AUP UUP map semantics (732d5067)
+- test: account for lazy airspace activity fetch (f0dfe2f7)
+- Merge pull request #14 from Boym323/feature/airspace-activity-map (8291bd32)
+- fix: harden FlightAware cost guard (967acfd0)
+- merge: update FlightAware cost guard with main (165b6957)
+- test: fix FlightAware fetch mock typing (c82754ab)
+- test: align FlightAware provider expectations with cost guard (fd3006ab)
+- test: clean FlightAware cost guard lint warning (72059430)
+- Merge pull request #13 from fix/v1.5c1-flightaware-cost-guard (208b8654)
+- fix: enrich direct aircraft detail on demand (c3ef9993)
+- fix: expose bounded airport traffic truncation (fdc7dbfc)
+- perf: bound SoftRF snapshot loading memory (13f95b6a)
+- perf: upsert receiver altitude coverage cells (2c675d57)
+- fix: make route intelligence retryable and deterministic (400a5467)
+- docs: document route and airspace intelligence (43ba588c)
+- chore: apply final review follow-up codemod (5c8a8722)
+- fix: complete reviewed radar resilience fixes (c4b82cd4)
+- chore: remove temporary review codemod workflow (35ad552e)
+- test: type aircraft enrichment fixture as Aircraft (4e495df4)
+- Merge pull request #15 from fix/review-followups-20260911 (5a5bfd06)
+- docs: update deployment and recovery instructions for clarity and best practices (32c43744)
+- refactor: isolate radar live stream hook (70c87391)
+- chore: reduce next build tracing warnings (4498f35c)
+- feat: add backwards-compatible SSE delta v2 (8648b71c)
+- docs: define future airport movement intelligence (4e99545f)
+- Merge pull request #16 from Boym323/automation/overnight-sse-delta-v2 (57acf27b)
+
+## [1.0.25] - 2026-09-10
+
+Changes since v1.0.24:
+
+- feat: enhance airport traffic classification logic and add related tests (626ff809)
+
+## [1.0.24] - 2026-09-10
+
+Changes since v1.0.23:
+
+- feat: Enhance air traffic and weather features (c820306b)
+
+## [1.0.23] - 2026-09-10
+
+Changes since v1.0.22:
+
+- feat: add squawk detail to AircraftDetailV2 component (1af6fad5)
+- feat: enhance aircraft detail view with flight plan and altitude chart features (0f17e0f7)
+
+## [1.0.22] - 2026-09-10
+
+Changes since v1.0.21:
+
+- fix: keep release builds from modifying tracked config (f8f73f17)
+
+## [1.0.21] - 2026-09-10
+
+Changes since v1.0.20:
+
+- fix: update paths for Next.js release types to version 21023 (1035203c)
+
+## [1.0.20] - 2026-09-10
+
+Changes since v1.0.19:
+
+- fix: update paths for Next.js release types in tsconfig and import statements (17fd5815)
+- feat: add systemd service and timer for SoftRF OGN snapshot updates (fd189b4b)
+
+## [1.0.19] - 2026-09-10
+
+Changes since v1.0.18:
+
+- feat: implement SoftRF metadata validation and checksum verification for emergency whitelist (85b29ad6)
+
+## [1.0.18] - 2026-09-10
+
+Changes since v1.0.17:
+
+- feat: implement isolated build directory for production releases (6c6eb5b3)
+- chore: update dependencies and devDependencies in package.json (8c520b43)
+- chore: update dependencies and configuration for Next.js 16 and Tailwind CSS 4 (e0f7ecc0)
+
+## [1.0.17] - 2026-09-10
+
+Changes since v1.0.16:
+
+- style: improve layout and responsiveness of history and secondary pages (e189a6c3)
+
+## [1.0.16] - 2026-09-10
+
+Changes since v1.0.15:
+
+- Add radar-selected image for visual polish at 1440x900 resolution (1aeee23f)
+- docs: update release and development guidelines for build consistency and visual changes (96863989)
+- feat: finalize visual polish v2 (211298d3)
+
+## [1.0.15] - 2026-09-10
+
+Changes since v1.0.14:
+
+- feat: update weather status logic to prevent premature offline marking for METAR/TAF (6f88feb3)
+
+## [1.0.14] - 2026-09-10
+
+Changes since v1.0.13:
+
+- feat: optimize release process by running npm ci with local cache and parallelizing lint, typecheck, and tests (d82388e6)
+- feat: implement persistent caching for OGN DDB resolutions with file-based storage (85875919)
+
+## [1.0.13] - 2026-09-10
+
+Changes since v1.0.12:
+
+- docs: update recovery runbook to reflect new migration details and safety checks (1c77b204)
+- feat: enhance OGN privacy handling and DDB integration (f0aec448)
+
+## [1.0.12] - 2026-09-10
+
+Changes since v1.0.11:
+
+- fix: update OgnStateService to use a fixed timestamp for testing (8e367fae)
+
+## [1.0.11] - 2026-09-10
+
+Changes since v1.0.10:
+
+- feat: enhance OGN DDB handling and improve privacy features (1203fb49)
+
+## [1.0.10] - 2026-09-10
+
+Changes since v1.0.9:
+
+- feat: extend build wait timeout to accommodate longer production builds (98315c29)
+- feat: add airports sync script and corresponding tests (043516b6)
+
+## [1.0.9] - 2026-09-10
+
+Changes since v1.0.8:
+
+- feat: Enhance SIGMET handling and diagnostics (45930d92)
+- Add new aircraft icons and ground symbols in SVG format (d63c8f98)
+
+## [1.0.8] - 2026-09-10
+
+Changes since v1.0.7:
+
+- feat(weather): integrate aviation weather functionality and diagnostics (033ab5d4)
+- feat: enhance production gate logic to support dynamic build metadata versioning (f556b10a)
+- feat(env): expand configuration options for receiver and weather integration (aea8d844)
+
+## [1.0.7] - 2026-09-09
+
+Changes since v1.0.6:
+
+- Add new aircraft icons and sync script for tar1090 (47918dc5)
+
+## [1.0.6] - 2026-09-09
+
+Changes since v1.0.5:
+
+- feat: add User-Agent header to ADSB.lol requests (5bac7791)
+
+## [1.0.5] - 2026-09-09
+
+Changes since v1.0.4:
+
+- fix: handle stale network positions and improve aircraft merging logic (e3fcc215)
+
+## [1.0.4] - 2026-09-09
+
+Changes since v1.0.3:
+
+- fix: retain local aircraft in extended coverage even when position is stale or unavailable (4295f1bc)
+
+## [1.0.3] - 2026-09-09
+
+Changes since v1.0.2:
+
+- fix: make ADSB.lol arbitration and polling independent (28fccfec)
+
+## [1.0.2] - 2026-09-09
+
+Changes since v1.0.1:
+
+- feat: Add ADS-B LOL provider and integrate network diagnostics (1e34569e)
+
+## [1.0.1] - 2026-09-09
+
+Changes since v1.0.0:
+
+- feat: integrate Geist font and enhance aircraft detail display (378a8c15)
+
+## [1.0.0-rc.2] - 2026-09-09
+
+Changes since v1.0.0-rc.1:
+
+- fix: cap tar1090 fallback cache by bytes (4a84ee1b)
+- test: support release candidate production gates (f45e98c1)
+
+## [1.0.0-rc.1] - 2026-09-09
+
+Changes since v0.1.13:
+
+- fix: bound aircraft metadata catalog memory (6b32fe38)
+- perf: optimize recap queries (d1a7d48d)
+- perf: compact live stream and bound SSE clients (82088886)
+- fix: scope public rate limits per client (9e4167ad)
+- fix: protect watchlist mutations (49774910)
+- feat: expose bounded runtime diagnostics (91402c90)
+- fix: bound alert ledger growth (f687960f)
+- chore: prepare stable release metadata (14d4e32e)
+- fix: improve PWA and accessibility basics (f55b1af2)
+- test: add production stability gates (c91a8d13)
+- ops: document backup and recovery (dfb480e9)
+- chore: mark production builds with stable channel (8ffb5f8c)
+- test: report production payload measurements (35b73966)
+- fix: report metadata catalog diagnostics (2a237a47)
+- test: stabilize release channel fixture (5e3f0f67)
+- fix: bound tar1090 metadata fallback cache (f201265c)
+- fix: report process cgroup memory diagnostics (def27a1c)
+- test: cover SSE cleanup and client rate isolation (24f24d96)
+- docs: document bounded metadata and memory diagnostics (c246715d)
+- test: stabilize browser accessibility gate (33b6ef0e)
+- feat: support release candidate deployments (b07ecf4c)
+
+## [1.0.0] - 2026-09-09
+
+Changes since v1.0.0-rc.2:
+
+- No user-facing changes.
+
+## [0.1.13] - 2026-09-09
+
+Changes since v0.1.12:
+
+- feat: enhance backfillChangelog to support release dates and commits (eefc3360)
+- feat: persist product alert events (df19de6d)
+- feat: explain interesting live aircraft (24c21923)
+- feat: add daily and weekly receiver recaps (c3cae270)
+- feat: expand system source status (7bab251e)
+- fix: polish application UX (e72b3146)
+- fix: make record alerts restart safe (9e394397)
+- docs: document batch 4 product flows (fdebe871)
+- fix: bound alert event deduplication (6a8e10c3)
+- fix: persist runtime alert state outside source tree (8898a796)
+
+## [0.1.12] - 2026-09-09
+
+Changes since v0.1.11:
+
+- fix: ensure fetch-tags is set to true for changelog tests (69faa806)
+
+## [0.1.11] - 2026-09-09
+
+Changes since v0.1.10:
+
+- feat: add nearby airports (96db59a6)
+- feat: add airport traffic heatmap (d3991c93)
+- feat: add receiver range rings (541e7ba4)
+- feat: add aircraft map color modes (3dc6bc2f)
+- feat: improve radar labels (f364c227)
+- feat: improve history playback (30b7eeee)
+- feat: sync flight profiles with playback (1f83f61b)
+- feat: compare receiver statistics periods (9e3efcba)
+- fix: keep period comparison at response boundary (d3f64cd9)
+
+## [0.1.10] - 2026-09-09
+
+Changes since v0.1.9:
+
+- feat: implement automatic changelog generation and update release procedure (e36116ef)
+- feat: add backfill functionality to changelog generation script and update tests (63d64408)
+- fix: correct indentation for fetch-depth in CI workflow (d5471c36)
+
 ## [0.1.9] - 2026-09-09
 
 Changes since v0.1.8:
@@ -133,359 +490,3 @@ Changes since v0.1.0:
 - feat: implement watchlist management API and UI (088c40c3)
 - feat: add system status API and frontend page (fad9afc3)
 - feat: add versioning API and build metadata management (db0b013f)
-
-## [0.1.10] - 2026-09-09
-
-Changes since v0.1.9:
-
-- feat: implement automatic changelog generation and update release procedure (e36116ef)
-- feat: add backfill functionality to changelog generation script and update tests (63d64408)
-- fix: correct indentation for fetch-depth in CI workflow (d5471c36)
-
-## [0.1.11] - 2026-09-09
-
-Changes since v0.1.10:
-
-- feat: add nearby airports (96db59a6)
-- feat: add airport traffic heatmap (d3991c93)
-- feat: add receiver range rings (541e7ba4)
-- feat: add aircraft map color modes (3dc6bc2f)
-- feat: improve radar labels (f364c227)
-- feat: improve history playback (30b7eeee)
-- feat: sync flight profiles with playback (1f83f61b)
-- feat: compare receiver statistics periods (9e3efcba)
-- fix: keep period comparison at response boundary (d3f64cd9)
-
-## [0.1.12] - 2026-09-09
-
-Changes since v0.1.11:
-
-- fix: ensure fetch-tags is set to true for changelog tests (69faa806)
-
-## [0.1.13] - 2026-09-09
-
-Changes since v0.1.12:
-
-- feat: enhance backfillChangelog to support release dates and commits (eefc3360)
-- feat: persist product alert events (df19de6d)
-- feat: explain interesting live aircraft (24c21923)
-- feat: add daily and weekly receiver recaps (c3cae270)
-- feat: expand system source status (7bab251e)
-- fix: polish application UX (e72b3146)
-- fix: make record alerts restart safe (9e394397)
-- docs: document batch 4 product flows (fdebe871)
-- fix: bound alert event deduplication (6a8e10c3)
-- fix: persist runtime alert state outside source tree (8898a796)
-
-## [1.0.0-rc.1] - 2026-09-09
-
-Changes since v0.1.13:
-
-- fix: bound aircraft metadata catalog memory (6b32fe38)
-- perf: optimize recap queries (d1a7d48d)
-- perf: compact live stream and bound SSE clients (82088886)
-- fix: scope public rate limits per client (9e4167ad)
-- fix: protect watchlist mutations (49774910)
-- feat: expose bounded runtime diagnostics (91402c90)
-- fix: bound alert ledger growth (f687960f)
-- chore: prepare stable release metadata (14d4e32e)
-- fix: improve PWA and accessibility basics (f55b1af2)
-- test: add production stability gates (c91a8d13)
-- ops: document backup and recovery (dfb480e9)
-- chore: mark production builds with stable channel (8ffb5f8c)
-- test: report production payload measurements (35b73966)
-- fix: report metadata catalog diagnostics (2a237a47)
-- test: stabilize release channel fixture (5e3f0f67)
-- fix: bound tar1090 metadata fallback cache (f201265c)
-- fix: report process cgroup memory diagnostics (def27a1c)
-- test: cover SSE cleanup and client rate isolation (24f24d96)
-- docs: document bounded metadata and memory diagnostics (c246715d)
-- test: stabilize browser accessibility gate (33b6ef0e)
-- feat: support release candidate deployments (b07ecf4c)
-
-## [1.0.0-rc.2] - 2026-09-09
-
-Changes since v1.0.0-rc.1:
-
-- fix: cap tar1090 fallback cache by bytes (4a84ee1b)
-- test: support release candidate production gates (f45e98c1)
-
-## [1.0.0] - 2026-09-09
-
-Changes since v1.0.0-rc.2:
-
-- No user-facing changes.
-
-## [1.0.1] - 2026-09-09
-
-Changes since v1.0.0:
-
-- feat: integrate Geist font and enhance aircraft detail display (378a8c15)
-
-## [1.0.2] - 2026-09-09
-
-Changes since v1.0.1:
-
-- feat: Add ADS-B LOL provider and integrate network diagnostics (1e34569e)
-
-## [1.0.3] - 2026-09-09
-
-Changes since v1.0.2:
-
-- fix: make ADSB.lol arbitration and polling independent (28fccfec)
-
-## [1.0.4] - 2026-09-09
-
-Changes since v1.0.3:
-
-- fix: retain local aircraft in extended coverage even when position is stale or unavailable (4295f1bc)
-
-## [1.0.5] - 2026-09-09
-
-Changes since v1.0.4:
-
-- fix: handle stale network positions and improve aircraft merging logic (e3fcc215)
-
-## [1.0.6] - 2026-09-09
-
-Changes since v1.0.5:
-
-- feat: add User-Agent header to ADSB.lol requests (5bac7791)
-
-## [1.0.7] - 2026-09-09
-
-Changes since v1.0.6:
-
-- Add new aircraft icons and sync script for tar1090 (47918dc5)
-
-## [1.0.8] - 2026-09-10
-
-Changes since v1.0.7:
-
-- feat(weather): integrate aviation weather functionality and diagnostics (033ab5d4)
-- feat: enhance production gate logic to support dynamic build metadata versioning (f556b10a)
-- feat(env): expand configuration options for receiver and weather integration (aea8d844)
-
-## [1.0.9] - 2026-09-10
-
-Changes since v1.0.8:
-
-- feat: Enhance SIGMET handling and diagnostics (45930d92)
-- Add new aircraft icons and ground symbols in SVG format (d63c8f98)
-
-## [1.0.10] - 2026-09-10
-
-Changes since v1.0.9:
-
-- feat: extend build wait timeout to accommodate longer production builds (98315c29)
-- feat: add airports sync script and corresponding tests (043516b6)
-
-## [1.0.11] - 2026-09-10
-
-Changes since v1.0.10:
-
-- feat: enhance OGN DDB handling and improve privacy features (1203fb49)
-
-## [1.0.12] - 2026-09-10
-
-Changes since v1.0.11:
-
-- fix: update OgnStateService to use a fixed timestamp for testing (8e367fae)
-
-## [1.0.13] - 2026-09-10
-
-Changes since v1.0.12:
-
-- docs: update recovery runbook to reflect new migration details and safety checks (1c77b204)
-- feat: enhance OGN privacy handling and DDB integration (f0aec448)
-
-## [1.0.14] - 2026-09-10
-
-Changes since v1.0.13:
-
-- feat: optimize release process by running npm ci with local cache and parallelizing lint, typecheck, and tests (d82388e6)
-- feat: implement persistent caching for OGN DDB resolutions with file-based storage (85875919)
-
-## [1.0.15] - 2026-09-10
-
-Changes since v1.0.14:
-
-- feat: update weather status logic to prevent premature offline marking for METAR/TAF (6f88feb3)
-
-## [1.0.16] - 2026-09-10
-
-Changes since v1.0.15:
-
-- Add radar-selected image for visual polish at 1440x900 resolution (1aeee23f)
-- docs: update release and development guidelines for build consistency and visual changes (96863989)
-- feat: finalize visual polish v2 (211298d3)
-
-## [1.0.17] - 2026-09-10
-
-Changes since v1.0.16:
-
-- style: improve layout and responsiveness of history and secondary pages (e189a6c3)
-
-## [1.0.18] - 2026-09-10
-
-Changes since v1.0.17:
-
-- feat: implement isolated build directory for production releases (6c6eb5b3)
-- chore: update dependencies and devDependencies in package.json (8c520b43)
-- chore: update dependencies and configuration for Next.js 16 and Tailwind CSS 4 (e0f7ecc0)
-
-## [1.0.19] - 2026-09-10
-
-Changes since v1.0.18:
-
-- feat: implement SoftRF metadata validation and checksum verification for emergency whitelist (85b29ad6)
-
-## [1.0.20] - 2026-09-10
-
-Changes since v1.0.19:
-
-- fix: update paths for Next.js release types in tsconfig and import statements (17fd5815)
-- feat: add systemd service and timer for SoftRF OGN snapshot updates (fd189b4b)
-
-## [1.0.21] - 2026-09-10
-
-Changes since v1.0.20:
-
-- fix: update paths for Next.js release types to version 21023 (1035203c)
-
-## [1.0.22] - 2026-09-10
-
-Changes since v1.0.21:
-
-- fix: keep release builds from modifying tracked config (f8f73f17)
-
-## [1.0.23] - 2026-09-10
-
-Changes since v1.0.22:
-
-- feat: add squawk detail to AircraftDetailV2 component (1af6fad5)
-- feat: enhance aircraft detail view with flight plan and altitude chart features (0f17e0f7)
-
-## [1.0.24] - 2026-09-10
-
-Changes since v1.0.23:
-
-- feat: Enhance air traffic and weather features (c820306b)
-
-## [1.0.25] - 2026-09-10
-
-Changes since v1.0.24:
-
-- feat: enhance airport traffic classification logic and add related tests (626ff809)
-
-## [1.0.26] - 2026-09-12
-
-Changes since v1.0.25:
-
-- fix: keep release checkout free of generated Next files (51ef21f5)
-- fix: keep release checkout free of generated Next files (1f7be7df)
-- fix: release tested main commit (4adf67ab)
-- fix: release tested main commit (ad8b85b1)
-- feat: add Czech airspace activity types (c6a3e567)
-- feat: parse Czech AUP UUP and actual activations (b409fdf6)
-- feat: add Czech airspace activity provider (30900ab9)
-- feat: rate limit airspace activity endpoint (572e94d9)
-- feat: expose Czech airspace activity API (05fd9c88)
-- test: cover Czech airspace activity parsing (4e6d83ba)
-- docs: document Czech airspace activity feed (afe471b5)
-- Merge main into feature/airspace-activity-aup-uup (e6bcb919)
-- Merge pull request #12 from Boym323/feature/airspace-activity-aup-uup (4f65be04)
-- fix: add FlightAware upstream cost guard (2a0a54d5)
-- fix: make FlightAware enrichment on-demand only (71b7f7b0)
-- fix: require explicit FlightAware enablement (358529a1)
-- fix: load FlightAware only from aircraft detail (c06a131d)
-- refactor: expose FlightAware budget limit safely (d122ef8d)
-- test: enforce FlightAware on-demand enrichment (5745be36)
-- test: cover FlightAware request budget and pagination (5a831376)
-- docs: document FlightAware double opt-in cost guard (5ec09512)
-- fix: avoid caching rate-limited partial FlightAware plans (afb9b5d6)
-- test: cover FlightAware double opt-in configuration (c8200931)
-- feat: add airspace activity map matching (8f2d4771)
-- test: cover airspace activity map joins (d991b03d)
-- fix: keep airspace map joins country-safe (705e74ac)
-- test: reject foreign airspace designators (0074dd07)
-- feat: add airspace activity map translations (88dfeb13)
-- fix: match embedded Czech TRA TSA names safely (f6b25a82)
-- chore: add temporary airspace map UI patcher (9aa1d731)
-- chore: add temporary branch UI patch workflow (6b948098)
-- feat: visualize planned airspace activity on radar map (d659489e)
-- chore: remove temporary airspace map patch workflow (5c9da30e)
-- chore: remove temporary airspace map patch helper (b709c1c4)
-- test: cover published Czech airspace names (c9e42581)
-- docs: describe AUP UUP map semantics (732d5067)
-- test: account for lazy airspace activity fetch (f0dfe2f7)
-- Merge pull request #14 from Boym323/feature/airspace-activity-map (8291bd32)
-- fix: harden FlightAware cost guard (967acfd0)
-- merge: update FlightAware cost guard with main (165b6957)
-- test: fix FlightAware fetch mock typing (c82754ab)
-- test: align FlightAware provider expectations with cost guard (fd3006ab)
-- test: clean FlightAware cost guard lint warning (72059430)
-- Merge pull request #13 from fix/v1.5c1-flightaware-cost-guard (208b8654)
-- fix: enrich direct aircraft detail on demand (c3ef9993)
-- fix: expose bounded airport traffic truncation (fdc7dbfc)
-- perf: bound SoftRF snapshot loading memory (13f95b6a)
-- perf: upsert receiver altitude coverage cells (2c675d57)
-- fix: make route intelligence retryable and deterministic (400a5467)
-- docs: document route and airspace intelligence (43ba588c)
-- chore: apply final review follow-up codemod (5c8a8722)
-- fix: complete reviewed radar resilience fixes (c4b82cd4)
-- chore: remove temporary review codemod workflow (35ad552e)
-- test: type aircraft enrichment fixture as Aircraft (4e495df4)
-- Merge pull request #15 from fix/review-followups-20260911 (5a5bfd06)
-- docs: update deployment and recovery instructions for clarity and best practices (32c43744)
-- refactor: isolate radar live stream hook (70c87391)
-- chore: reduce next build tracing warnings (4498f35c)
-- feat: add backwards-compatible SSE delta v2 (8648b71c)
-- docs: define future airport movement intelligence (4e99545f)
-- Merge pull request #16 from Boym323/automation/overnight-sse-delta-v2 (57acf27b)
-
-## [1.0.27] - 2026-09-12
-
-Changes since v1.0.26:
-
-- feat: enhance airport visibility filtering and add related tests (814db0e7)
-
-## [1.0.28] - 2026-09-12
-
-Changes since v1.0.27:
-
-- fix: make aviation map layers recover reliably (b2cb2785)
-- feat: add airport movement intelligence v2 (99ca4068)
-- chore: remove obsolete visual polish images (5a8cd334)
-- feat: add map radius configuration and filter airports within radius (dbfd1355)
-
-## [1.0.29] - 2026-09-12
-
-Changes since v1.0.28:
-
-- fix(ui): harden responsive map controls and mobile layout (31d53386)
-
-## [1.0.30] - 2026-09-12
-
-Changes since v1.0.29:
-
-- fix(map): configure MapLibre worker for GeoJSON overlays (8729f806)
-
-## [1.0.31] - 2026-09-12
-
-Changes since v1.0.30:
-
-- feat(weather): persist aviation weather cache across restarts (8fa9a07a)
-
-## [1.0.32] - 2026-09-12
-
-Changes since v1.0.31:
-
-- feat(geo): add distanceToGreatCircleSegmentKm function and coordinate validation (de67b36b)
-- feat(adsbdb): persist enrichment cache across restarts (8925da5c)
-
-## [1.0.33] - 2026-09-12
-
-Changes since v1.0.32:
-
-- feat(animation): implement aircraft animation job management and optimize rendering (9cb1e8d8)
