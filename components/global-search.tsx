@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { t } from "@/lib/i18n";
-import { MAX_GLOBAL_SEARCH_QUERY_LENGTH, MIN_GLOBAL_SEARCH_QUERY_LENGTH, type AircraftSearchResult, type AirportSearchResult, type GlobalSearchResponse, type SearchHref } from "@/lib/search/types";
+import { MAX_GLOBAL_SEARCH_QUERY_LENGTH, MIN_GLOBAL_SEARCH_QUERY_LENGTH, type AircraftSearchResult, type AirportSearchResult, type AtsPointSearchResult, type GlobalSearchResponse, type SearchHref } from "@/lib/search/types";
 
 const SEARCH_DEBOUNCE_MS = 220;
 
-type SearchItem = AircraftSearchResult | AirportSearchResult;
+type SearchItem = AircraftSearchResult | AirportSearchResult | AtsPointSearchResult;
 
 function itemKey(item: SearchItem): string {
-  return item.kind === "aircraft" ? `aircraft-${item.icaoHex}` : `airport-${item.icaoCode}`;
+  if (item.kind === "aircraft") return `aircraft-${item.icaoHex}`;
+  if (item.kind === "airport") return `airport-${item.icaoCode}`;
+  return `ats-point-${item.id}`;
 }
 
 function aircraftPrimaryLabel(item: AircraftSearchResult): string {
@@ -34,6 +36,10 @@ function airportSecondaryLabel(item: AirportSearchResult): string {
   return [item.name, item.city].filter(Boolean).join(" · ");
 }
 
+function atsPointSecondaryLabel(item: AtsPointSearchResult): string {
+  return [item.countryCode, item.pointKind === "NAVAID" ? "NAVAID" : "FIX", item.routeDesignators.join(", ")].join(" · ");
+}
+
 export function GlobalSearch() {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -48,6 +54,7 @@ export function GlobalSearch() {
   const items = useMemo<SearchItem[]>(() => [
     ...(results?.aircraft ?? []),
     ...(results?.airports ?? []),
+    ...(results?.atsPoints ?? []),
   ], [results]);
   const activeItem = items[activeIndex] ?? null;
 
@@ -186,6 +193,16 @@ export function GlobalSearch() {
             >
               <span className="global-search-item-primary">{airportPrimaryLabel(item)}</span>
               <span className="global-search-item-secondary">{airportSecondaryLabel(item)}</span>
+            </Link>;
+          })}
+        </section> : null}
+        {!loading && !requestFailed && results?.atsPoints.length ? <section className="global-search-group" aria-label={t.search.atsPointResults}>
+          <div className="global-search-group-title">{t.search.atsPointResults}</div>
+          {results.atsPoints.map((item) => {
+            const index = items.findIndex((candidate) => itemKey(candidate) === itemKey(item));
+            return <Link id={itemKey(item)} key={itemKey(item)} className={`global-search-item ${index === activeIndex ? "active" : ""}`} href={item.href as SearchHref} role="option" aria-selected={index === activeIndex} onMouseEnter={() => setActiveIndex(index)} onClick={() => setOpen(false)}>
+              <span className="global-search-item-primary">{item.name}</span>
+              <span className="global-search-item-secondary">{atsPointSecondaryLabel(item)}</span>
             </Link>;
           })}
         </section> : null}

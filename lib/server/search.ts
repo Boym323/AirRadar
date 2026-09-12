@@ -4,12 +4,16 @@ import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getPrisma } from "@/lib/server/db";
 import type { AirportDatabaseRow } from "@/lib/server/airport-resolver";
+import { loadAtAtsRoutes } from "@/lib/ats/at-routes";
+import { loadCzAtsRoutes, type CzAtsRouteDocument } from "@/lib/ats/cz-routes";
+import { loadSkAtsRoutes } from "@/lib/ats/sk-routes";
 import {
   GLOBAL_SEARCH_RESULT_LIMIT,
   MAX_GLOBAL_SEARCH_QUERY_LENGTH,
   MIN_GLOBAL_SEARCH_QUERY_LENGTH,
   type AircraftSearchResult,
   type AirportSearchResult,
+  type AtsPointSearchResult,
   type GlobalSearchResponse,
 } from "@/lib/search/types";
 
@@ -25,6 +29,7 @@ export interface SearchQueryValidation {
 export interface SearchOptions {
   aircraft?: readonly AircraftView[];
   database?: SearchDatabase | null;
+  atsDocuments?: readonly (CzAtsRouteDocument | null)[];
 }
 
 interface MatchScore {
@@ -83,8 +88,8 @@ function compareScored<T>(left: Scored<T>, right: Scored<T>): number {
 }
 
 function compareAnyScored(
-  left: Scored<AircraftSearchResult> | Scored<AirportSearchResult>,
-  right: Scored<AircraftSearchResult> | Scored<AirportSearchResult>,
+  left: Scored<AircraftSearchResult> | Scored<AirportSearchResult> | Scored<AtsPointSearchResult>,
+  right: Scored<AircraftSearchResult> | Scored<AirportSearchResult> | Scored<AtsPointSearchResult>,
 ): number {
   return left.score.tier - right.score.tier
     || left.score.field - right.score.field
@@ -149,6 +154,20 @@ function toAirportResult(airport: Airport): AirportSearchResult {
   };
 }
 
+function toAtsPointResult(point: { id: string; name: string; kind: "DESIGNATED_POINT" | "NAVAID"; latitude: number; longitude: number }, countryCode: string, routeDesignators: string[]): AtsPointSearchResult {
+  return {
+    kind: "ats-point",
+    id: `${countryCode}:${point.id}`,
+    name: point.name,
+    countryCode,
+    pointKind: point.kind,
+    routeDesignators,
+    latitude: point.latitude,
+    longitude: point.longitude,
+    href: `/?atsPoint=${encodeURIComponent(`${countryCode}:${point.name}`)}`,
+  };
+}
+
 function rankAircraft(aircraft: readonly AircraftView[], query: string): Scored<AircraftSearchResult>[] {
   return aircraft.flatMap((item) => {
     const score = matchScore(query, aircraftSearchFields(item));
@@ -160,6 +179,24 @@ function rankAirports(airports: readonly Airport[], query: string): Scored<Airpo
   return airports.flatMap((item) => {
     const score = matchScore(query, airportSearchFields(item));
     return score ? [{ item: toAirportResult(item), score, identity: item.icaoCode }] : [];
+  }).sort(compareScored);
+}
+
+function rankAtsPoints(documents: readonly (CzAtsRouteDocument | null)[], query: string): Scored<AtsPointSearchResult>[] {
+  const points = new Map<string, { point: { id: string; name: string; kind: "DESIGNATED_POINT" | "NAVAID"; latitude: number; longitude: number }; countryCode: string; routeDesignators: Set<string> }>();
+  for (const document of documents) {
+    if (!document) continue;
+    const countryCode = document.source.countryCode ?? "CZ";
+    for (const route of document.routes) for (const point of route.points) {
+      const key = `${countryCode}:${point.name}:${point.latitude}:${point.longitude}`;
+      const existing = points.get(key);
+      if (existing) existing.routeDesignators.add(route.designator);
+      else points.set(key, { point, countryCode, routeDesignators: new Set([route.designator]) });
+    }
+  }
+  return [...points.values()].flatMap(({ point, countryCode, routeDesignators }) => {
+    const score = matchScore(query, [point.name, ...routeDesignators]);
+    return score ? [{ item: toAtsPointResult(point, countryCode, [...routeDesignators].sort()), score, identity: `${countryCode}:${point.name}` }] : [];
   }).sort(compareScored);
 }
 
@@ -224,7 +261,7 @@ async function loadAirports(query: string, database: SearchDatabase | null): Pro
 }
 
 function emptySearchResponse(query = ""): GlobalSearchResponse {
-  return { query, aircraft: [], airports: [] };
+  return { query, aircraft: [], airports: [], atsPoints: [] };
 }
 
 export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {}): Promise<GlobalSearchResponse> {
@@ -249,10 +286,13 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
     Promise.resolve(rankAircraft(aircraft, validation.query)),
     loadAirports(validation.query, database).then((items) => rankAirports(items, validation.query!)),
   ]);
-  const selected = [...rankedAircraft, ...rankedAirports].sort(compareAnyScored).slice(0, GLOBAL_SEARCH_RESULT_LIMIT);
+  const atsDocuments = options.atsDocuments ?? [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()];
+  const rankedAtsPoints = rankAtsPoints(atsDocuments, validation.query);
+  const selected = [...rankedAircraft, ...rankedAirports, ...rankedAtsPoints].sort(compareAnyScored).slice(0, GLOBAL_SEARCH_RESULT_LIMIT);
   return {
     query: validation.query,
     aircraft: selected.filter((result): result is Scored<AircraftSearchResult> => result.item.kind === "aircraft").map((result) => result.item),
     airports: selected.filter((result): result is Scored<AirportSearchResult> => result.item.kind === "airport").map((result) => result.item),
+    atsPoints: selected.filter((result): result is Scored<AtsPointSearchResult> => result.item.kind === "ats-point").map((result) => result.item),
   };
 }

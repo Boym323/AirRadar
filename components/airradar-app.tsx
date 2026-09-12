@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
@@ -493,6 +493,8 @@ function aircraftGlyphMarkup(aircraft: AircraftView): string {
 export function AirRadarApp() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const atsPointFocus = searchParams.get("atsPoint");
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
@@ -1393,6 +1395,21 @@ export function AirRadarApp() {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visible ? "visible" : "none");
     }
   }, [atsRoutes, mapReady, selectedAtsRoute, showAtsRoutes]);
+
+  useEffect(() => {
+    if (!atsPointFocus) return;
+    setShowAtsRoutes(true);
+    if (!mapReady || !atsRoutes?.points) return;
+    const point = atsRoutes.points.features.find((feature) => {
+      const properties = feature.properties ?? {};
+      return `${String(properties.countryCode ?? "")}:${String(properties.name ?? "")}` === atsPointFocus;
+    });
+    const coordinates = point?.geometry?.type === "Point" ? point.geometry.coordinates : null;
+    if (!coordinates || typeof coordinates[0] !== "number" || typeof coordinates[1] !== "number") return;
+    const map = mapRef.current;
+    if (!map) return;
+    map.flyTo({ center: [coordinates[0], coordinates[1]], zoom: Math.max(map.getZoom(), 9.5), duration: 700 });
+  }, [atsPointFocus, atsRoutes, mapReady]);
 
   const selectedRouteAirportCodesKey = useMemo(() => {
     const selectedRoute = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex)?.enrichment?.route;

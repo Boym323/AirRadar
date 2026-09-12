@@ -128,6 +128,26 @@ describe("global search", () => {
     await expect(searchGlobal("brno", { aircraft: [], database: database(rows) })).resolves.toMatchObject({ airports: [{ icaoCode: "LKTB", city: "Brno" }] });
   });
 
+  it("searches ATS route points and returns their country and routes", async () => {
+    const result = await searchGlobal("BODAL", {
+      aircraft: [],
+      database: null,
+      atsDocuments: [{
+        schemaVersion: 1,
+        source: { name: "Test ATS", reference: "https://example.test/ats", effectiveDate: "2026-09-01", aipAmendment: null, airacAmendment: null, countryCode: "AT" },
+        routes: [{
+          designator: "L12",
+          points: [{ id: "AT-L12-BODAL", name: "BODAL", kind: "DESIGNATED_POINT", latitude: 47.2, longitude: 11.1, foreignMaintainer: null, remarks: null }],
+          segments: [],
+          discontinuities: [],
+        }],
+        counts: { routes: 1, points: 1, segments: 0, cdrSegments: 0, discontinuities: 0 },
+      }],
+    });
+    expect(result.atsPoints[0]).toMatchObject({ name: "BODAL", countryCode: "AT", pointKind: "DESIGNATED_POINT", routeDesignators: ["L12"] });
+    expect(result.atsPoints[0]?.href).toContain("atsPoint=AT%3ABODAL");
+  });
+
   it("keeps total results bounded and every airport database query bounded", async () => {
     const rows = Array.from({ length: 40 }, (_, index) => airport({
       icao: `LK${String(index).padStart(2, "0")}`,
@@ -143,8 +163,8 @@ describe("global search", () => {
 
   it("does not query for a short or empty query and returns an empty result", async () => {
     const table = new AirportTable([airport()]);
-    await expect(searchGlobal("a", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [] });
-    await expect(searchGlobal("  ", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [] });
+    await expect(searchGlobal("a", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [] });
+    await expect(searchGlobal("  ", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [] });
     expect(table.limits).toEqual([]);
   });
 
@@ -178,8 +198,8 @@ describe("global search API/UI contract", () => {
   });
 
   it("keeps Czech and English category and state labels", () => {
-    expect(getTranslations("cs").search).toMatchObject({ globalLabel: "Globální vyhledávání", aircraftResults: "Letadla", airportResults: "Letiště", loading: "Vyhledávání…" });
-    expect(getTranslations("en").search).toMatchObject({ globalLabel: "Global search", aircraftResults: "Aircraft", airportResults: "Airports", loading: "Searching…" });
+    expect(getTranslations("cs").search).toMatchObject({ globalLabel: "Globální vyhledávání", aircraftResults: "Letadla", airportResults: "Letiště", atsPointResults: "Traťové body", loading: "Vyhledávání…" });
+    expect(getTranslations("en").search).toMatchObject({ globalLabel: "Global search", aircraftResults: "Aircraft", airportResults: "Airports", atsPointResults: "ATS points", loading: "Searching…" });
   });
 
   it("contains the debounced keyboard and navigation behavior", () => {

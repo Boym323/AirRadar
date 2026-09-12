@@ -9,8 +9,17 @@ import { createCzAtsGeoJSON } from "@/lib/ats/geojson";
 
 const originalPath = process.env.ATS_CZ_ROUTES_PATH;
 const originalSkPath = process.env.ATS_SK_ROUTES_PATH;
-beforeEach(() => { process.env.ATS_SK_ROUTES_PATH = path.join(os.tmpdir(), `airradar-no-such-sk-routes-${process.pid}.json`); });
-afterEach(() => { if (originalPath === undefined) delete process.env.ATS_CZ_ROUTES_PATH; else process.env.ATS_CZ_ROUTES_PATH = originalPath; if (originalSkPath === undefined) delete process.env.ATS_SK_ROUTES_PATH; else process.env.ATS_SK_ROUTES_PATH = originalSkPath; clearCzAtsRouteCache(); });
+const originalAtPath = process.env.ATS_AT_ROUTES_PATH;
+beforeEach(() => {
+  process.env.ATS_SK_ROUTES_PATH = path.join(os.tmpdir(), `airradar-no-such-sk-routes-${process.pid}.json`);
+  process.env.ATS_AT_ROUTES_PATH = path.join(os.tmpdir(), `airradar-no-such-at-routes-${process.pid}.json`);
+});
+afterEach(() => {
+  if (originalPath === undefined) delete process.env.ATS_CZ_ROUTES_PATH; else process.env.ATS_CZ_ROUTES_PATH = originalPath;
+  if (originalSkPath === undefined) delete process.env.ATS_SK_ROUTES_PATH; else process.env.ATS_SK_ROUTES_PATH = originalSkPath;
+  if (originalAtPath === undefined) delete process.env.ATS_AT_ROUTES_PATH; else process.env.ATS_AT_ROUTES_PATH = originalAtPath;
+  clearCzAtsRouteCache();
+});
 const validFixturePath = fileURLToPath(new URL("./fixtures/ats/cz-routes-valid.json", import.meta.url));
 function useDataset(file: string): void {
   process.env.ATS_CZ_ROUTES_PATH = file;
