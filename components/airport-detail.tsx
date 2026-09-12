@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Airport } from "@/lib/airports/types";
 import { AirportMap } from "@/components/airport-map";
 import { AirportTrafficSummary } from "@/components/airport-traffic-summary";
+import { AirportMovements } from "@/components/airport-movements";
 import { AirportWeatherPanel } from "@/components/airport-weather";
 import { AirportNearbyAircraft } from "@/components/airport-nearby-aircraft";
 import { formatCoordinate, t } from "@/lib/i18n";
@@ -94,6 +95,8 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
         <AirportNearbyAircraft airport={airport} />
 
         <AirportTrafficSummary airport={airport} />
+
+        <AirportMovements airport={airport} />
 
         <section className="airport-card airport-nearby-card" aria-labelledby="airport-nearby-title">
           <h2 id="airport-nearby-title">{t.airport.nearbyTitle}</h2>
