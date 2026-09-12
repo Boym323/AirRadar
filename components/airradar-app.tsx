@@ -67,12 +67,19 @@ import { LogbookSummary } from "@/components/logbook-summary";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import { useRetryingDataset, type DatasetState } from "@/components/use-retrying-dataset";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
+import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   filterAircraftForMap,
   isMapAircraftFilterActive,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
+
+declare global {
+  interface Window {
+    __airradarMapForDiagnostics?: maplibregl.Map;
+  }
+}
 
 const DEMO_RECEIVER: ReceiverPosition = { lat: 50.0755, lon: 14.4378, name: t.radar.receiverName };
 const EMPTY_RECEIVER: PublicReceiverPosition = { lat: null, lon: null, name: t.radar.receiverName };
@@ -820,6 +827,7 @@ export function AirRadarApp() {
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
+    configureMapLibreWorker();
     const startingReceiver = receiverRef.current.lat === null || receiverRef.current.lon === null
       ? DEMO_RECEIVER
       : receiverRef.current as ReceiverPosition;
@@ -834,6 +842,9 @@ export function AirRadarApp() {
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     mapRef.current = map;
+    if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
+      window.__airradarMapForDiagnostics = map;
+    }
     const animationFrames = animationFramesRef.current;
     const aircraftMarkers = aircraftMarkersRef.current;
     const ognMarkers = ognMarkersRef.current;
@@ -1003,6 +1014,7 @@ export function AirRadarApp() {
       ognMarkers.clear();
       liveTrails.clear();
       map.remove();
+      if (window.__airradarMapForDiagnostics === map) delete window.__airradarMapForDiagnostics;
       mapRef.current = null;
       setMapReady(false);
     };
@@ -1573,7 +1585,7 @@ export function AirRadarApp() {
                     <label data-testid="map-layer-ats"><input type="checkbox" checked={showAtsRoutes} onChange={(event) => { setShowAtsRoutes(event.target.checked); if (!event.target.checked) setSelectedAtsRoute(null); }} /> {datasetStateLabel(t.layers.atsRoutes, atsDataset, (count) => t.layers.routesCount(formatNumber(count)))}</label>
                     {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
                     {showAtsRoutes && atsRoutes && !atsRoutes.available && <div className="map-layer-sublevel">{t.layers.atsRoutesUnavailable}</div>}
-                    {sigmetEnabled !== false && <label><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>}
+                    {sigmetEnabled !== false && <label data-testid="map-layer-sigmet"><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>}
                   </div>
                   <div className="map-layer-group">
                     <span className="map-layer-group-title">{t.layers.groups.display}</span>

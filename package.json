@@ -14,6 +14,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/sync-maplibre-worker.mjs",
     "build": "NODE_ENV=production node scripts/version.mjs write-build-metadata && prisma contract emit && next build",
     "start": "next start",
     "lint": "eslint .",

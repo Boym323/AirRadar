@@ -5,7 +5,7 @@ const config = [
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
-    ignores: [".next/**", ".next-release-*/**", "node_modules/**", "coverage/**", "generated/**", "migrations/**", "next-env.d.ts"],
+    ignores: [".next/**", ".next-release-*/**", "node_modules/**", "coverage/**", "generated/**", "migrations/**", "public/maplibre-gl-*.mjs", "next-env.d.ts"],
   },
   {
     // These React Compiler rules are newly enabled by eslint-config-next 16.

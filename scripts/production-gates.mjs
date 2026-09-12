@@ -152,6 +152,54 @@ async function assertBrowserSmoke() {
       { width: 1440, height: 900 },
     ]) {
       const page = await browser.newPage({ viewport });
+      await page.route("**/api/airports", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([{ icaoCode: "LKFIX", iataCode: "FIX", name: "Browser fixture airport", city: "Fixture", country: "CZ", latitude: 50.0755, longitude: 14.4378, type: "large_airport" }]),
+      }));
+      await page.route("**/api/atc/sectors", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          sectors: [{
+            id: "fixture-sector",
+            name: "Browser fixture sector",
+            atcCallsign: "FIXTURE",
+            service: "ACC",
+            polygons: [[[14.25, 49.9], [14.65, 49.9], [14.65, 50.25], [14.25, 50.25], [14.25, 49.9]]],
+            lowerAltitudeFt: 0,
+            upperAltitudeFt: 66000,
+            lowerAltitudeReference: "SFC",
+            upperAltitudeReference: "UNL",
+            frequencies: [],
+            validFrom: "2026-09-03",
+            validTo: null,
+            country: "CZ",
+            source: "browser fixture",
+            sourceReference: "https://example.invalid/atc",
+            lastVerifiedAt: "2026-09-03T00:00:00.000Z",
+          }],
+          transmitters: [],
+          metadata: { status: "configured", source: "browser fixture", sourceReference: "https://example.invalid/atc", effectiveDate: "2026-09-03", lastVerifiedAt: "2026-09-03T00:00:00.000Z", sectorCount: 1, transmitterCount: 0 },
+        }),
+      }));
+      await page.route("**/api/weather/sigmet", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          enabled: true,
+          available: true,
+          type: "FeatureCollection",
+          features: [{
+            type: "Feature",
+            id: "fixture-sigmet",
+            properties: { id: "fixture-sigmet", issuingOffice: "FIXTURE", firId: "LKAA", firName: "Prague FIR", phenomenon: "TS", hazard: "Thunderstorm", qualifier: null, validFrom: "2026-09-12T00:00:00.000Z", validTo: "2026-09-12T23:59:59.000Z", lowerFt: 0, upperFt: 12000, seriesId: "FIXTURE", rawText: null, source: "isigmet", fetchedAt: "2026-09-12T00:00:00.000Z" },
+            geometry: { type: "Polygon", coordinates: [[[14.25, 49.9], [14.65, 49.9], [14.65, 50.25], [14.25, 50.25], [14.25, 49.9]]] },
+          }],
+          fetchedAt: "2026-09-12T00:00:00.000Z",
+          stale: false,
+        }),
+      }));
       await page.route("**/api/ats/routes", (route) => route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -165,7 +213,7 @@ async function assertBrowserSmoke() {
           points: { type: "FeatureCollection", features: [] },
         }),
       }));
-      await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+      await page.goto(`${baseUrl}/?mapDiagnostics=1`, { waitUntil: "domcontentloaded" });
       await page.locator("h1").first().waitFor({ state: "visible" });
       // MapLibre controls and React controls settle asynchronously after the
       // shell heading. Poll for the complete accessible DOM before asserting
@@ -210,6 +258,7 @@ async function assertBrowserSmoke() {
       const airportLayer = page.getByTestId("map-layer-airports");
       const atcLayer = page.getByTestId("map-layer-atc");
       const atsLayer = page.getByTestId("map-layer-ats");
+      const sigmetLayer = page.getByTestId("map-layer-sigmet");
       await airportLayer.waitFor({ state: "visible" });
       await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-airports"]')?.textContent || ""));
       const airportCheckbox = airportLayer.locator("input");
@@ -223,6 +272,17 @@ async function assertBrowserSmoke() {
       await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-ats"]')?.textContent || ""));
       await atsLayer.locator("input").uncheck();
       await atsLayer.locator("input").check();
+      await sigmetLayer.locator("input").check();
+      await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [14.4378, 50.0755], zoom: 8 }));
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        if (!map || !map.isStyleLoaded()) return false;
+        const sourceIds = ["route-airports", "atc-sectors", "ats-routes", "aviation-sigmet"];
+        const layerIds = ["route-airports-circle", "atc-sectors-fill", "ats-routes-line", "aviation-sigmet-fill"];
+        return sourceIds.every((id) => map.isSourceLoaded(id))
+          && layerIds.every((id) => Boolean(map.getLayer(id)))
+          && layerIds.every((id) => map.queryRenderedFeatures({ layers: [id] }).length > 0);
+      }, undefined, { timeout: 30_000 });
       const accessibility = await page.evaluate(() => ({
         missingImageAlt: [...document.images].filter((image) => !image.hasAttribute("alt")).length,
         unnamedButtons: [...document.querySelectorAll("button")].filter((button) => !button.textContent?.trim() && !button.getAttribute("aria-label")).length,

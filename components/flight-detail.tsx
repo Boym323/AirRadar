@@ -17,6 +17,7 @@ import type { HistoryFlightDetail } from "@/lib/server/history";
 import { playbackSampleAt, playbackTimeRange, type PlaybackPosition, type PlaybackSample } from "@/lib/history/playback";
 import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
 import { FlightProfile } from "@/components/flight-profile";
+import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 
 const HISTORY_MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -43,6 +44,7 @@ function HistoryMap({ positions, sample }: { positions: PlaybackPosition[]; samp
 
   useEffect(() => {
     if (!containerRef.current || !positions.length) return;
+    configureMapLibreWorker();
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: HISTORY_MAP_STYLE,

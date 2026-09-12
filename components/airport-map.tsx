@@ -8,6 +8,7 @@ import type { AirportInfrastructure } from "@/lib/airports/infrastructure";
 import { formatNavaidFrequency } from "@/lib/airports/infrastructure";
 import { haversineDistanceKm } from "@/lib/geo";
 import { t } from "@/lib/i18n";
+import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 
 const MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -39,6 +40,7 @@ export function AirportMap({ airport, infrastructure = { runways: [], frequencie
 
   useEffect(() => {
     if (!containerRef.current) return;
+    configureMapLibreWorker();
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: MAP_STYLE,
