@@ -458,3 +458,9 @@ Changes since v1.0.27:
 - feat: add airport movement intelligence v2 (99ca4068)
 - chore: remove obsolete visual polish images (5a8cd334)
 - feat: add map radius configuration and filter airports within radius (dbfd1355)
+
+## [1.0.29] - 2026-09-12
+
+Changes since v1.0.28:
+
+- fix(ui): harden responsive map controls and mobile layout (31d53386)
