@@ -476,3 +476,10 @@ Changes since v1.0.29:
 Changes since v1.0.30:
 
 - feat(weather): persist aviation weather cache across restarts (8fa9a07a)
+
+## [1.0.32] - 2026-09-12
+
+Changes since v1.0.31:
+
+- feat(geo): add distanceToGreatCircleSegmentKm function and coordinate validation (de67b36b)
+- feat(adsbdb): persist enrichment cache across restarts (8925da5c)
