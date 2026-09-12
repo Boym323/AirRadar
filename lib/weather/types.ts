@@ -2,6 +2,8 @@ export type WindDirection = number | "VRB";
 
 export type FlightCategory = "VFR" | "MVFR" | "IFR" | "LIFR";
 
+export type WeatherCacheSource = "live" | "memory-cache" | "persistent-cache";
+
 export interface MetarCloudLayer {
   cover: string;
   baseFtAgl: number | null;
@@ -75,6 +77,8 @@ export interface AirportWeather {
   taf: TafForecast | null;
   fetchedAt: string;
   stale: boolean;
+  cacheSource?: WeatherCacheSource;
+  snapshotAgeMs?: number;
   enabled?: boolean;
   source?: "Aviation Weather Center";
 }
@@ -112,4 +116,6 @@ export interface SigmetSnapshot {
   }>;
   fetchedAt: string;
   stale: boolean;
+  cacheSource?: WeatherCacheSource;
+  snapshotAgeMs?: number;
 }

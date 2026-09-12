@@ -39,6 +39,12 @@ ADSBDB_ENABLED=true
 ATC_SAMPLE_ENABLED=false
 FLIGHTAWARE_API_KEY=
 APP_TIMEZONE=Europe/Prague
+# Optional overrides; production persistence is enabled by default.
+# AVIATION_WEATHER_PERSIST_CACHE=true
+# AVIATION_WEATHER_CACHE_DIR=/var/lib/airradar/weather
+# AVIATION_WEATHER_METAR_MAX_PERSISTED_AGE_MS=7200000
+# AVIATION_WEATHER_TAF_MAX_PERSISTED_AGE_MS=86400000
+# AVIATION_WEATHER_SIGMET_MAX_PERSISTED_AGE_MS=86400000
 ```
 
 `WATCHLIST_ADMIN_TOKEN` is the exact server-side secret used to authorize
@@ -54,6 +60,12 @@ Use the actual readsb/tar1090 web root in `READSB_BASE_URL`; AirRadar appends
 by `airradar` but not world-readable (`chmod 640` with an appropriate group).
 
 Optional enrichment is configured in the same server-only `.env`: set `ADSBDB_ENABLED=true` for free, keyless aircraft metadata and route lookups. Keep `FLIGHTAWARE_API_KEY=` empty for the first production deployment; if configured, the current architecture may perform paid AeroAPI flight-plan lookups for currently tracked aircraft with callsigns. Never use a `NEXT_PUBLIC_*` variable for these values. If either provider or PostgreSQL is offline, live readsb polling continues and the UI degrades gracefully.
+
+Aviation weather persistence uses the systemd-managed `/var/lib/airradar`
+state directory and stores `/var/lib/airradar/weather/weather-cache-v1.json`.
+The production service user already has access through `StateDirectory=airradar`;
+development and test processes keep persistence disabled unless explicitly
+enabled with `AVIATION_WEATHER_PERSIST_CACHE=true` and a suitable cache path.
 
 Optional server alerts use `/var/lib/airradar/alerts.json`, a persistent file
 created in the systemd-managed state directory. The checked-in `data/alerts.json`

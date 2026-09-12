@@ -9,6 +9,7 @@ import { getHistoryPersistenceStatus, type HistoryPersistenceStatus } from "@/li
 import { getAtcData } from "@/lib/server/providers";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
 import { defaultAviationWeatherProvider, type AviationWeatherDiagnostics, type SigmetDatasetDiagnostics } from "@/lib/server/aviation-weather-provider";
+import type { AviationWeatherPersistenceDiagnostics } from "@/lib/server/aviation-weather-persistence";
 import type { AlertStatus } from "@/lib/server/alert-engine";
 import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
@@ -190,12 +191,21 @@ export interface SystemStatusResponse {
   };
   weather: {
     status: SystemStatus;
+    providerStatus: AviationWeatherDiagnostics["status"];
     enabled: boolean;
     provider: "AviationWeather";
     cache: {
       status: "warm" | "empty";
       entries: number;
       airports: number;
+      memoryEntries: number;
+      persistentEnabled: boolean;
+      persistentPath: string;
+      loadedFromDisk: boolean;
+      lastLoadAt: string | null;
+      lastLoadError: string | null;
+      lastSaveAt: string | null;
+      lastSaveError: string | null;
     };
     lastAttemptAt: string | null;
     lastSuccessAt: string | null;
@@ -207,11 +217,15 @@ export interface SystemStatusResponse {
     cacheMisses: number;
     activeSigmets: number;
     sigmetStale: boolean;
+    sigmetSnapshotAgeMs: number | null;
     sigmet: {
       overallStatus: "online" | "degraded" | "offline";
       international: SigmetDatasetDiagnostics;
       airsigmet: SigmetDatasetDiagnostics;
     };
+    metar: { entries: number; staleEntries: number };
+    taf: { entries: number; staleEntries: number };
+    persistence: AviationWeatherPersistenceDiagnostics;
     retryAfterMs: number | null;
     lastProviderError: null;
   };
@@ -476,6 +490,12 @@ function safeDdbCacheFile(value: string): string {
     : "/var/lib/airradar/ogn-ddb-cache-v1.json";
 }
 
+function safeWeatherCacheFile(value: string): string {
+  return typeof value === "string" && value.startsWith("/") && value.length > 0 && value.length <= 4_096 && !/[\0\r\n]/.test(value) && !/password|secret|DATABASE_URL/i.test(value)
+    ? value
+    : "/var/lib/airradar/weather/weather-cache-v1.json";
+}
+
 function safeDdbError(value: string | null | undefined): string | null {
   return value && (/^HTTP [1-5][0-9]{2}$/.test(value) || value === "TIMEOUT" || value === "INVALID_RESPONSE" || value === "UNAVAILABLE")
     ? value
@@ -667,6 +687,23 @@ function sigmetDatasetStatus(value: Partial<SigmetDatasetDiagnostics> | undefine
   };
 }
 
+function weatherPersistenceStatus(value: Partial<AviationWeatherPersistenceDiagnostics> | undefined): AviationWeatherPersistenceDiagnostics {
+  return {
+    enabled: Boolean(value?.enabled),
+    cacheFile: safeWeatherCacheFile(value?.cacheFile ?? "/var/lib/airradar/weather/weather-cache-v1.json"),
+    loadedFromDisk: Boolean(value?.loadedFromDisk),
+    diskEntriesLoaded: nonNegativeInteger(value?.diskEntriesLoaded ?? 0, 1_024),
+    diskEntriesRejected: nonNegativeInteger(value?.diskEntriesRejected ?? 0, 1_024),
+    lastLoadAt: safeTimestamp(value?.lastLoadAt),
+    lastLoadError: value?.lastLoadError && /^[A-Z0-9_]+$/.test(value.lastLoadError) ? value.lastLoadError : null,
+    dirty: Boolean(value?.dirty),
+    lastSaveAt: safeTimestamp(value?.lastSaveAt),
+    lastSaveEntries: nonNegativeInteger(value?.lastSaveEntries ?? 0, 1_024),
+    lastSaveError: value?.lastSaveError && /^[A-Z0-9_]+$/.test(value.lastSaveError) ? value.lastSaveError : null,
+    writes: nonNegativeInteger(value?.writes ?? 0, 10_000_000),
+  };
+}
+
 export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusResponse {
   const now = input.now ?? new Date();
   const application = applicationRuntime(now, input.runtime);
@@ -751,9 +788,22 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
     },
     weather: {
       status: weatherState,
+      providerStatus: input.weather?.status === "disabled" || input.weather?.status === "online" || input.weather?.status === "degraded" || input.weather?.status === "rate_limited" || input.weather?.status === "offline" ? input.weather.status : "offline",
       enabled: weatherEnabled,
       provider: "AviationWeather",
-      cache: { status: weatherEntries ? "warm" : "empty", entries: weatherEntries, airports: weatherAirports },
+      cache: {
+        status: weatherEntries ? "warm" : "empty",
+        entries: weatherEntries,
+        airports: weatherAirports,
+        memoryEntries: weatherEntries,
+        persistentEnabled: Boolean(input.weather?.persistence?.enabled),
+        persistentPath: safeWeatherCacheFile(input.weather?.persistence?.cacheFile ?? "/var/lib/airradar/weather/weather-cache-v1.json"),
+        loadedFromDisk: Boolean(input.weather?.persistence?.loadedFromDisk),
+        lastLoadAt: safeTimestamp(input.weather?.persistence?.lastLoadAt),
+        lastLoadError: input.weather?.persistence?.lastLoadError && /^[A-Z0-9_]+$/.test(input.weather.persistence.lastLoadError) ? input.weather.persistence.lastLoadError : null,
+        lastSaveAt: safeTimestamp(input.weather?.persistence?.lastSaveAt),
+        lastSaveError: input.weather?.persistence?.lastSaveError && /^[A-Z0-9_]+$/.test(input.weather.persistence.lastSaveError) ? input.weather.persistence.lastSaveError : null,
+      },
       lastAttemptAt: safeTimestamp(input.weather?.lastAttemptAt),
       lastSuccessAt: safeTimestamp(input.weather?.lastSuccessAt),
       latencyMs: input.weather?.lastLatencyMs === undefined || input.weather.lastLatencyMs === null ? null : nonNegativeInteger(input.weather.lastLatencyMs, 86_400_000),
@@ -764,12 +814,22 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       cacheMisses: nonNegativeInteger(input.weather?.cacheMisses ?? 0, 10_000_000),
       activeSigmets: nonNegativeInteger(input.weather?.activeSigmets ?? 0, 10_000),
       sigmetStale: Boolean(input.weather?.sigmetStale),
+      sigmetSnapshotAgeMs: input.weather?.sigmetSnapshotAgeMs === undefined || input.weather.sigmetSnapshotAgeMs === null ? null : nonNegativeInteger(input.weather.sigmetSnapshotAgeMs, 7 * 24 * 60 * 60_000),
       sigmet: {
         overallStatus: input.weather?.sigmet?.overallStatus === "online" || input.weather?.sigmet?.overallStatus === "degraded"
           ? input.weather.sigmet.overallStatus
           : "offline",
         international: sigmetDatasetStatus(input.weather?.sigmet?.international),
         airsigmet: sigmetDatasetStatus(input.weather?.sigmet?.airsigmet),
+      },
+      persistence: weatherPersistenceStatus(input.weather?.persistence),
+      metar: {
+        entries: nonNegativeInteger(input.weather?.metarEntries ?? 0, 256),
+        staleEntries: nonNegativeInteger(input.weather?.metarStaleEntries ?? 0, 256),
+      },
+      taf: {
+        entries: nonNegativeInteger(input.weather?.tafEntries ?? 0, 256),
+        staleEntries: nonNegativeInteger(input.weather?.tafStaleEntries ?? 0, 256),
       },
       retryAfterMs: input.weather?.retryAfterMs === undefined || input.weather.retryAfterMs === null ? null : nonNegativeInteger(input.weather.retryAfterMs, 86_400_000),
       lastProviderError: null,

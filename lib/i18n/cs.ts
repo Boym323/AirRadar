@@ -649,6 +649,8 @@ export const cs = {
     destination: "Přílet",
     unavailableData: "Údaje nejsou dostupné",
     staleData: "Data mohou být zastaralá",
+    persistentCache: "z persistentní cache",
+    memoryCache: "z paměťové cache",
     loadFailed: "Načítání počasí selhalo",
     load: "Načíst počasí",
     retry: "Zkusit znovu",

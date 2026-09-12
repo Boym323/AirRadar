@@ -9,10 +9,18 @@ import type {
   TafCloudLayer,
   TafForecast,
   TafPeriod,
+  WeatherCacheSource,
 } from "@/lib/weather/types";
-import { getAviationWeatherBaseUrl, getAviationWeatherMetarTtlMs, getAviationWeatherRequestTimeoutMs, getAviationWeatherSigmetTtlMs, getAviationWeatherStaleIfErrorMs, getAviationWeatherTafTtlMs, getAviationWeatherUserAgent } from "@/lib/server/config";
+import { getAviationWeatherBaseUrl, getAviationWeatherCacheFile, getAviationWeatherMetarMaxPersistedAgeMs, getAviationWeatherMetarTtlMs, getAviationWeatherRequestTimeoutMs, getAviationWeatherSigmetMaxPersistedAgeMs, getAviationWeatherSigmetTtlMs, getAviationWeatherStaleIfErrorMs, getAviationWeatherTafMaxPersistedAgeMs, getAviationWeatherTafTtlMs, getAviationWeatherUserAgent, isAviationWeatherPersistenceEnabled } from "@/lib/server/config";
 import { deriveFlightCategory } from "@/lib/weather/flight-category";
 import { parseStatuteMiles } from "@/lib/weather/visibility";
+import {
+  AviationWeatherPersistence,
+  type AviationWeatherCachePersistence,
+  type AviationWeatherPersistenceDiagnostics,
+  type AviationWeatherProduct,
+  type PersistentWeatherEntry,
+} from "@/lib/server/aviation-weather-persistence";
 
 export { parseStatuteMiles } from "@/lib/weather/visibility";
 
@@ -28,7 +36,7 @@ export const AVIATION_WEATHER_TTLS = {
   timeoutMs: 5_000,
 } as const;
 
-type Product = "metar" | "taf" | "sigmet";
+type Product = AviationWeatherProduct;
 type SigmetDataset = "isigmet" | "airsigmet";
 
 interface CacheEntry<T> {
@@ -36,6 +44,7 @@ interface CacheEntry<T> {
   fetchedAt: number;
   freshUntil: number;
   staleUntil: number;
+  source: WeatherCacheSource;
 }
 
 interface ProductResult<T> {
@@ -49,11 +58,14 @@ interface ProductCacheOptions {
   staleIfErrorMs?: number;
 }
 
+type CachePersistenceOptions = AviationWeatherCachePersistence;
+
 /** Bounded product cache with negative entries and in-flight coalescing. */
 export class AviationWeatherCache {
   private readonly entries = new Map<string, CacheEntry<unknown>>();
   private readonly airportOrder = new Map<string, number>();
   private readonly inFlight = new Map<string, Promise<ProductResult<unknown>>>();
+  private readonly persistedEntries = new Map<string, PersistentWeatherEntry>();
   private hits = 0;
   private misses = 0;
 
@@ -61,23 +73,50 @@ export class AviationWeatherCache {
     private readonly maxAirports: number = AVIATION_WEATHER_TTLS.maxAirports,
     private readonly defaultStaleIfErrorMs: number = AVIATION_WEATHER_TTLS.staleMs,
     private readonly clock: () => number = Date.now,
-  ) {}
+    private readonly persistence?: CachePersistenceOptions,
+  ) {
+    for (const entry of persistence?.load() ?? []) this.persistedEntries.set(`${entry.product}:${entry.key}`, entry);
+  }
 
   async get<T>(
     product: Product,
     keyPart: string,
     loader: () => Promise<T | null>,
     options: ProductCacheOptions,
-    now = Date.now(),
+    now = this.clock(),
     onFailure?: (error: unknown) => void,
   ): Promise<ProductResult<T>> {
     const key = `${product}:${keyPart}`;
-    const cached = this.entries.get(key) as CacheEntry<T> | undefined;
+    let cached = this.entries.get(key) as CacheEntry<T> | undefined;
+    if (!cached) {
+      const persisted = this.persistedEntries.get(key);
+      if (persisted) {
+        const fetchedAt = Date.parse(persisted.fetchedAt);
+        if (Number.isFinite(fetchedAt) && fetchedAt + (this.persistence?.maxAgeMsFor(product) ?? 0) > now) {
+          cached = {
+            value: persisted.value as T | null,
+            fetchedAt,
+            freshUntil: fetchedAt + options.ttlMs,
+            staleUntil: fetchedAt + (this.persistence?.maxAgeMsFor(product) ?? options.ttlMs + (options.staleIfErrorMs ?? this.defaultStaleIfErrorMs)),
+            source: "persistent-cache",
+          };
+          this.entries.set(key, cached);
+          this.persistedEntries.delete(key);
+          this.touchAirport(product, keyPart, now);
+          this.evictIfNeeded();
+        } else {
+          this.persistedEntries.delete(key);
+        }
+      }
+    }
     if (cached && cached.freshUntil > now) {
       this.hits += 1;
       this.touchAirport(product, keyPart, now);
-      return { value: cached.value, stale: false, failed: false };
+      if (cached.source === "live") cached.source = "memory-cache";
+      return { value: cached.value, stale: cached.source === "persistent-cache", failed: false };
     }
+
+    if (cached?.source === "live") cached.source = "memory-cache";
 
     const existing = this.inFlight.get(key);
     if (existing) {
@@ -94,9 +133,12 @@ export class AviationWeatherCache {
           fetchedAt,
           freshUntil: fetchedAt + options.ttlMs,
           staleUntil: fetchedAt + (options.ttlMs + (options.staleIfErrorMs ?? this.defaultStaleIfErrorMs)),
+          source: "live",
         });
         this.touchAirport(product, keyPart, fetchedAt);
         this.evictIfNeeded();
+        this.persistedEntries.delete(key);
+        this.schedulePersistence();
         return { value, stale: false, failed: false } satisfies ProductResult<T>;
       })
       .catch((error: unknown) => {
@@ -134,6 +176,18 @@ export class AviationWeatherCache {
     return (this.entries.get(`${product}:${keyPart}`) as CacheEntry<unknown> | undefined)?.fetchedAt ?? null;
   }
 
+  source(product: Product, keyPart: string): WeatherCacheSource | null {
+    return (this.entries.get(`${product}:${keyPart}`) as CacheEntry<unknown> | undefined)?.source ?? null;
+  }
+
+  staleEntries(product: Product, now = this.clock()): number {
+    let count = 0;
+    for (const entry of this.entries.entries()) {
+      if (entry[0].startsWith(`${product}:`) && entry[1].value !== null && (entry[1].source === "persistent-cache" || entry[1].freshUntil <= now)) count += 1;
+    }
+    return count;
+  }
+
   stats(): { hits: number; misses: number } {
     return { hits: this.hits, misses: this.misses };
   }
@@ -142,6 +196,7 @@ export class AviationWeatherCache {
     this.entries.clear();
     this.airportOrder.clear();
     this.inFlight.clear();
+    this.persistedEntries.clear();
     this.hits = 0;
     this.misses = 0;
   }
@@ -165,6 +220,19 @@ export class AviationWeatherCache {
       this.entries.delete(`metar:${oldest}`);
       this.entries.delete(`taf:${oldest}`);
     }
+  }
+
+  private schedulePersistence(): void {
+    if (!this.persistence) return;
+    const values = new Map<string, PersistentWeatherEntry>();
+    for (const [key, entry] of this.persistedEntries) values.set(key, entry);
+    for (const [key, entry] of this.entries) {
+      const separator = key.indexOf(":");
+      if (separator < 1) continue;
+      const product = key.slice(0, separator) as Product;
+      values.set(key, { product, key: key.slice(separator + 1), fetchedAt: new Date(entry.fetchedAt).toISOString(), value: entry.value });
+    }
+    this.persistence.schedule([...values.values()]);
   }
 }
 
@@ -195,14 +263,18 @@ export interface AviationWeatherDiagnostics {
   cacheMisses: number;
   metarEntries: number;
   tafEntries: number;
+  metarStaleEntries: number;
+  tafStaleEntries: number;
   activeSigmets: number;
   sigmetStale: boolean;
+  sigmetSnapshotAgeMs: number | null;
   sigmet: {
     overallStatus: "online" | "degraded" | "offline";
     international: SigmetDatasetDiagnostics;
     airsigmet: SigmetDatasetDiagnostics;
   };
   retryAfterMs: number | null;
+  persistence: AviationWeatherPersistenceDiagnostics;
 }
 
 export interface SigmetDatasetDiagnostics {
@@ -228,6 +300,9 @@ export interface AviationWeatherProviderOptions {
   sigmetTtlMs?: number;
   staleIfErrorMs?: number;
   maxAirports?: number;
+  persistCache?: boolean;
+  cacheFile?: string;
+  persistenceMaxAgeMs?: number | Partial<Record<AviationWeatherProduct, number>>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -458,6 +533,93 @@ function geometryValid(value: unknown): value is SigmetGeometry {
   }));
 }
 
+function nullableNumber(value: unknown): number | null {
+  return value === null ? null : numberValue(value);
+}
+
+function nullableBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : value === null ? null : null;
+}
+
+function boundedText(value: unknown, maximum: number): string | null {
+  return value === null ? null : typeof value === "string" && value.length <= maximum && !/[\0\r\n]/.test(value) ? value : null;
+}
+
+function persistedTimestamp(value: unknown): string | null {
+  if (value === null) return null;
+  return typeof value === "string" && Number.isFinite(Date.parse(value)) ? new Date(Date.parse(value)).toISOString() : null;
+}
+
+function persistedCloudLayers(value: unknown): MetarCloudLayer[] | null {
+  if (!Array.isArray(value) || value.length > 32) return null;
+  const result: MetarCloudLayer[] = [];
+  for (const candidate of value) {
+    if (!isRecord(candidate) || typeof candidate.cover !== "string" || candidate.cover.length > 16) return null;
+    const base = nullableNumber(candidate.baseFtAgl);
+    const top = nullableNumber(candidate.topFtAgl);
+    if (base === null && candidate.baseFtAgl !== null || top === null && candidate.topFtAgl !== undefined && candidate.topFtAgl !== null) return null;
+    result.push({ cover: candidate.cover, baseFtAgl: base, topFtAgl: top });
+  }
+  return result;
+}
+
+function persistedTextList(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length > 32 || value.some((item) => typeof item !== "string" || item.length > 32 || /[\0\r\n]/.test(item))) return null;
+  return [...value];
+}
+
+function validatePersistedWeatherValue(product: AviationWeatherProduct, key: string, value: unknown): { valid: true; value: unknown } | { valid: false } {
+  if (value === null) return { valid: true, value: null };
+  if (product === "metar") {
+    if (!isRecord(value) || value.stationId !== key) return { valid: false };
+    const clouds = persistedCloudLayers(value.clouds);
+    const weather = persistedTextList(value.weather);
+    const flightCategory = value.flightCategory === null || value.flightCategory === "VFR" || value.flightCategory === "MVFR" || value.flightCategory === "IFR" || value.flightCategory === "LIFR" ? value.flightCategory : undefined;
+    const observationTime = persistedTimestamp(value.observationTime);
+    const observedAt = persistedTimestamp(value.observedAt);
+    if (clouds === null || weather === null || flightCategory === undefined || observationTime === null && value.observationTime !== null || observedAt === null && value.observedAt !== undefined && value.observedAt !== null) return { valid: false };
+    const windVariable = nullableBoolean(value.windVariable);
+    const visibilityGreaterThan = nullableBoolean(value.visibilityGreaterThan);
+    if (windVariable === null || visibilityGreaterThan === null || typeof value.windVariable !== "boolean" || typeof value.visibilityGreaterThan !== "boolean") return { valid: false };
+    return { valid: true, value: {
+      stationId: key, rawText: boundedText(value.rawText, 2_000), observationTime, observedAt,
+      temperatureC: nullableNumber(value.temperatureC), dewpointC: nullableNumber(value.dewpointC),
+      windDirectionDeg: nullableNumber(value.windDirectionDeg), windVariable, windCalm: value.windCalm === undefined ? undefined : value.windCalm === true,
+      windSpeedKt: nullableNumber(value.windSpeedKt), windGustKt: nullableNumber(value.windGustKt), visibilityMeters: nullableNumber(value.visibilityMeters),
+      visibilityGreaterThan, visibilityLessThan: value.visibilityLessThan === undefined ? undefined : value.visibilityLessThan === true,
+      altimeterHpa: nullableNumber(value.altimeterHpa), cavok: value.cavok === undefined ? undefined : value.cavok === true,
+      flightCategory, clouds, weather,
+      latitude: value.latitude === undefined ? undefined : nullableNumber(value.latitude), longitude: value.longitude === undefined ? undefined : nullableNumber(value.longitude),
+    } satisfies MetarObservation };
+  }
+  if (product === "taf") {
+    if (!isRecord(value) || value.stationId !== key) return { valid: false };
+    if (value.issueTime !== null && persistedTimestamp(value.issueTime) === null || value.issuedAt !== undefined && value.issuedAt !== null && persistedTimestamp(value.issuedAt) === null || value.validFrom !== null && persistedTimestamp(value.validFrom) === null || value.validTo !== null && persistedTimestamp(value.validTo) === null) return { valid: false };
+    if (!Array.isArray(value.periods) || value.periods.length > 128) return { valid: false };
+    const periods: TafPeriod[] = [];
+    for (const candidate of value.periods) {
+      if (!isRecord(candidate)) return { valid: false };
+      const clouds = persistedCloudLayers(candidate.clouds) as TafCloudLayer[] | null;
+      const weather = persistedTextList(candidate.weather);
+      const flightCategory = candidate.flightCategory === null || candidate.flightCategory === "VFR" || candidate.flightCategory === "MVFR" || candidate.flightCategory === "IFR" || candidate.flightCategory === "LIFR" ? candidate.flightCategory : undefined;
+      if (!clouds || !weather || flightCategory === undefined || candidate.from !== null && persistedTimestamp(candidate.from) === null || candidate.to !== null && persistedTimestamp(candidate.to) === null || typeof candidate.windVariable !== "boolean" || typeof candidate.visibilityGreaterThan !== "boolean") return { valid: false };
+      periods.push({ from: persistedTimestamp(candidate.from), to: persistedTimestamp(candidate.to), changeIndicator: boundedText(candidate.changeIndicator, 32), probability: nullableNumber(candidate.probability), windDirectionDeg: nullableNumber(candidate.windDirectionDeg), windVariable: candidate.windVariable, windSpeedKt: nullableNumber(candidate.windSpeedKt), windGustKt: nullableNumber(candidate.windGustKt), visibilityMeters: nullableNumber(candidate.visibilityMeters), visibilityGreaterThan: candidate.visibilityGreaterThan, visibilityLessThan: candidate.visibilityLessThan === undefined ? undefined : candidate.visibilityLessThan === true, clouds, weather, flightCategory });
+    }
+    return { valid: true, value: { rawText: boundedText(value.rawText, 2_000), issueTime: persistedTimestamp(value.issueTime), issuedAt: value.issuedAt === undefined ? undefined : persistedTimestamp(value.issuedAt), validFrom: persistedTimestamp(value.validFrom), validTo: persistedTimestamp(value.validTo), stationId: key, periods } satisfies TafForecast };
+  }
+  if (!Array.isArray(value) || value.length > 1_024) return { valid: false };
+  const sigmets: AviationSigmet[] = [];
+  for (const candidate of value) {
+    if (!isRecord(candidate) || typeof candidate.id !== "string" || candidate.id.length > 200 || candidate.source !== key || !geometryValid(candidate.geometry)) return { valid: false };
+    const validFrom = persistedTimestamp(candidate.validFrom);
+    const validTo = persistedTimestamp(candidate.validTo);
+    const fetchedAt = persistedTimestamp(candidate.fetchedAt);
+    if (validFrom === null || validTo === null || fetchedAt === null) return { valid: false };
+    sigmets.push({ id: candidate.id, issuingOffice: boundedText(candidate.issuingOffice, 32), firId: boundedText(candidate.firId, 64), firName: boundedText(candidate.firName, 160), phenomenon: boundedText(candidate.phenomenon, 80), hazard: boundedText(candidate.hazard, 80), qualifier: boundedText(candidate.qualifier, 32), validFrom, validTo, lowerFt: nullableNumber(candidate.lowerFt), upperFt: nullableNumber(candidate.upperFt), seriesId: boundedText(candidate.seriesId, 32), rawText: boundedText(candidate.rawText, 2_000), geometry: candidate.geometry, source: key as SigmetDataset, fetchedAt });
+  }
+  return { valid: true, value: sigmets };
+}
+
 function normalizedSigmetTime(value: unknown): string | null {
   return isoDate(value);
 }
@@ -547,6 +709,12 @@ function currentSigmets(value: AviationSigmet[], now: number): AviationSigmet[] 
   });
 }
 
+function currentTaf(value: TafForecast, now: number): boolean {
+  const from = value.validFrom ? Date.parse(value.validFrom) : Number.NEGATIVE_INFINITY;
+  const to = value.validTo ? Date.parse(value.validTo) : Number.POSITIVE_INFINITY;
+  return Number.isFinite(from) && Number.isFinite(to) ? from <= now && to > now : false;
+}
+
 function mergeSigmetDatasets(values: AviationSigmet[][]): AviationSigmet[] {
   const merged = new Map<string, AviationSigmet>();
   for (const dataset of values) {
@@ -558,6 +726,12 @@ function mergeSigmetDatasets(values: AviationSigmet[][]): AviationSigmet[] {
     }
   }
   return [...merged.values()];
+}
+
+function combinedCacheSource(sources: Array<WeatherCacheSource | null>): WeatherCacheSource {
+  if (sources.includes("persistent-cache")) return "persistent-cache";
+  if (sources.includes("memory-cache")) return "memory-cache";
+  return "live";
 }
 
 export class AviationWeatherProvider {
@@ -572,13 +746,32 @@ export class AviationWeatherProvider {
   private readonly tafTtlMs: number;
   private readonly sigmetTtlMs: number;
   private readonly staleIfErrorMs: number;
+  private readonly persistence?: AviationWeatherCachePersistence;
   private readonly diagnostics: AviationWeatherDiagnostics;
   private sigmetAttempted = false;
   private backoffUntil = 0;
 
   constructor(options: AviationWeatherProviderOptions = {}) {
     this.fetcher = options.fetcher ?? fetch;
-    this.cache = options.cache ?? new AviationWeatherCache(options.maxAirports ?? AVIATION_WEATHER_TTLS.maxAirports, options.staleIfErrorMs ?? getAviationWeatherStaleIfErrorMs(), options.now ?? Date.now);
+    this.persistence = options.cache ? undefined : options.persistCache
+      ? new AviationWeatherPersistence({
+        cacheFile: options.cacheFile ?? getAviationWeatherCacheFile(),
+        maxAgeMs: options.persistenceMaxAgeMs ?? {
+          metar: getAviationWeatherMetarMaxPersistedAgeMs(),
+          taf: getAviationWeatherTafMaxPersistedAgeMs(),
+          sigmet: getAviationWeatherSigmetMaxPersistedAgeMs(),
+        },
+        maxEntries: (options.maxAirports ?? AVIATION_WEATHER_TTLS.maxAirports) * 2 + 2,
+        now: options.now ?? Date.now,
+        validateValue: validatePersistedWeatherValue,
+      })
+      : undefined;
+    this.cache = options.cache ?? new AviationWeatherCache(
+      options.maxAirports ?? AVIATION_WEATHER_TTLS.maxAirports,
+      options.staleIfErrorMs ?? getAviationWeatherStaleIfErrorMs(),
+      options.now ?? Date.now,
+      this.persistence,
+    );
     this.timeoutMs = options.timeoutMs ?? getAviationWeatherRequestTimeoutMs();
     this.now = options.now ?? Date.now;
     this.baseUrl = options.baseUrl ?? getAviationWeatherBaseUrl();
@@ -601,14 +794,31 @@ export class AviationWeatherProvider {
       cacheMisses: 0,
       metarEntries: 0,
       tafEntries: 0,
+      metarStaleEntries: 0,
+      tafStaleEntries: 0,
       activeSigmets: 0,
       sigmetStale: true,
+      sigmetSnapshotAgeMs: null,
       sigmet: {
         overallStatus: "offline",
         international: emptySigmetDatasetDiagnostics(),
         airsigmet: emptySigmetDatasetDiagnostics(),
       },
       retryAfterMs: null,
+      persistence: this.persistence?.getDiagnostics() ?? {
+        enabled: false,
+        cacheFile: getAviationWeatherCacheFile(),
+        loadedFromDisk: false,
+        diskEntriesLoaded: 0,
+        diskEntriesRejected: 0,
+        lastLoadAt: null,
+        lastLoadError: null,
+        dirty: false,
+        lastSaveAt: null,
+        lastSaveEntries: 0,
+        lastSaveError: null,
+        writes: 0,
+      },
     };
   }
 
@@ -621,14 +831,22 @@ export class AviationWeatherProvider {
       this.getProduct<TafForecast>("taf", icaoCode, this.tafTtlMs, parentSignal),
     ]);
     if (metar.value === null && taf.value === null && (metar.failed || taf.failed)) throw new AviationWeatherUnavailableError();
+    if (metar.stale || taf.stale) this.diagnostics.status = this.backoffUntil > this.now() ? "rate_limited" : "degraded";
     const fetchedAt = Math.max(this.cache.fetchedAt("metar", icaoCode) ?? 0, this.cache.fetchedAt("taf", icaoCode) ?? 0) || this.now();
     const fetchedAtIso = new Date(fetchedAt).toISOString();
+    const metarFetchedAt = this.cache.fetchedAt("metar", icaoCode) ?? fetchedAt;
+    const tafFetchedAt = this.cache.fetchedAt("taf", icaoCode) ?? fetchedAt;
+    const tafSource = this.cache.source("taf", icaoCode);
+    const tafValue = taf.value && (tafSource !== "persistent-cache" || currentTaf(taf.value, this.now())) ? taf.value : null;
+    const cacheSource = combinedCacheSource([this.cache.source("metar", icaoCode), this.cache.source("taf", icaoCode)]);
     return {
       icaoCode,
-      metar: metar.value ? { ...metar.value, fetchedAt: fetchedAtIso, stale: metar.stale } : null,
-      taf: taf.value ? { ...taf.value, fetchedAt: fetchedAtIso, stale: taf.stale } : null,
+      metar: metar.value ? { ...metar.value, fetchedAt: new Date(metarFetchedAt).toISOString(), stale: metar.stale } : null,
+      taf: tafValue ? { ...tafValue, fetchedAt: new Date(tafFetchedAt).toISOString(), stale: taf.stale } : null,
       fetchedAt: fetchedAtIso,
       stale: metar.stale || taf.stale,
+      cacheSource,
+      snapshotAgeMs: Math.max(0, this.now() - fetchedAt),
       enabled: true,
       source: "Aviation Weather Center",
     };
@@ -658,9 +876,12 @@ export class AviationWeatherProvider {
     const fetchedAtMs = Math.max(...results.map(([dataset]) => this.cache.fetchedAt("sigmet", dataset) ?? 0));
     const fetchedAt = new Date(fetchedAtMs || this.now()).toISOString();
     const stale = currentDatasets.some(({ result }) => result.stale || result.failed);
+    const snapshotAgeMs = Math.max(0, this.now() - (fetchedAtMs || this.now()));
+    const cacheSource = combinedCacheSource(results.map(([dataset]) => this.cache.source("sigmet", dataset)));
     this.diagnostics.activeSigmets = merged.length;
     this.diagnostics.sigmetStale = stale;
-    return { ...asFeatureCollection(merged, fetchedAt), stale };
+    this.diagnostics.sigmetSnapshotAgeMs = snapshotAgeMs;
+    return { ...asFeatureCollection(merged, fetchedAt), stale, cacheSource, snapshotAgeMs };
   }
 
   getDiagnostics(): AviationWeatherDiagnostics {
@@ -671,17 +892,37 @@ export class AviationWeatherProvider {
       cacheMisses: cacheStats.misses,
       metarEntries: this.cache.productEntries("metar"),
       tafEntries: this.cache.productEntries("taf"),
+      metarStaleEntries: this.cache.staleEntries("metar", this.now()),
+      tafStaleEntries: this.cache.staleEntries("taf", this.now()),
       sigmet: {
         overallStatus: this.diagnostics.sigmet.overallStatus,
         international: { ...this.diagnostics.sigmet.international },
         airsigmet: { ...this.diagnostics.sigmet.airsigmet },
       },
       retryAfterMs: this.backoffUntil > this.now() ? this.backoffUntil - this.now() : null,
+      persistence: this.persistence?.getDiagnostics() ?? {
+        enabled: false,
+        cacheFile: getAviationWeatherCacheFile(),
+        loadedFromDisk: false,
+        diskEntriesLoaded: 0,
+        diskEntriesRejected: 0,
+        lastLoadAt: null,
+        lastLoadError: null,
+        dirty: false,
+        lastSaveAt: null,
+        lastSaveEntries: 0,
+        lastSaveError: null,
+        writes: 0,
+      },
     };
   }
 
   cacheSize(): number { return this.cache.size(); }
   cacheAirportCount(): number { return this.cache.airportCount(); }
+
+  async flushPersistence(): Promise<void> {
+    await this.persistence?.flush();
+  }
 
   private async getProduct<T extends MetarObservation | TafForecast>(product: "metar" | "taf", icaoCode: string, ttlMs: number, parentSignal?: AbortSignal): Promise<ProductResult<T>> {
     return this.cache.get(product, icaoCode, () => this.fetchProduct(product, icaoCode, parentSignal), { ttlMs, staleIfErrorMs: this.staleIfErrorMs }, this.now(), (error) => this.recordFailure(error)) as unknown as Promise<ProductResult<T>>;
@@ -727,7 +968,12 @@ export class AviationWeatherProvider {
     diagnostics.lastFailureAt = new Date(this.now()).toISOString();
     if (firstFailure) {
       const label = dataset === "isigmet" ? "International SIGMET" : "AirSIGMET";
-      console.warn(`[Aviation Weather] ${label} fetch failed; ${usingStale ? "using stale cache." : "no usable cache."}`);
+      const source = this.cache.source("sigmet", dataset);
+      if (usingStale && source === "persistent-cache") {
+        const fetchedAt = this.cache.fetchedAt("sigmet", dataset);
+        const ageMinutes = fetchedAt === null ? null : Math.max(0, Math.round((this.now() - fetchedAt) / 60_000));
+        console.warn(`[Aviation Weather] ${label} provider unavailable; using persisted snapshot${ageMinutes === null ? "" : ` age=${ageMinutes}m`}.`);
+      } else console.warn(`[Aviation Weather] ${label} fetch failed; ${usingStale ? "using stale memory cache." : "no usable cache."}`);
     }
   }
 
@@ -820,4 +1066,6 @@ export class AviationWeatherProvider {
   }
 }
 
-export const defaultAviationWeatherProvider = new AviationWeatherProvider();
+export const defaultAviationWeatherProvider = new AviationWeatherProvider({
+  persistCache: isAviationWeatherPersistenceEnabled(),
+});

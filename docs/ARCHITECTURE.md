@@ -126,7 +126,7 @@ PostgreSQL is optional for live operation. When configured, it stores:
   not complete reception records.
 
 Process memory holds live aircraft, trails, bounded enrichment caches, ATC
-resolver cache, weather cache, photo metadata cache, reception-record
+resolver cache, the hot weather cache, photo metadata cache, reception-record
 baselines, and alert deduplication. Tar1090 metadata is indexed in PostgreSQL
 and only a bounded hot LRU is held in RAM; synchronization streams and
 batch-writes the catalog without materializing the dataset in application
@@ -176,10 +176,18 @@ collections server-side; the browser never downloads upstream CSV files.
 
 `AviationWeatherProvider` is an optional, independent server-side subsystem.
 It reads only official Aviation Weather Center METAR, TAF, and SIGMET
-endpoints. The provider has its own bounded in-process cache, request timeout,
-negative entries, in-flight coalescing, stale-if-error policy, and rate-limit
-backoff. It is not part of `AircraftStateService`, readsb polling, aircraft
-serialization, SSE, history, statistics, or PostgreSQL persistence.
+endpoints. The provider has its own bounded in-process hot cache, plus an
+optional versioned last-known-good file at
+`/var/lib/airradar/weather/weather-cache-v1.json`. The file is validated and
+size/entry bounded on load, written by one debounced atomic writer, and is
+best-effort: corruption or disk failure cannot stop the provider or application.
+The cache also has request timeout, negative entries, in-flight coalescing,
+stale-if-error policy, and rate-limit backoff. Persistent METAR entries are
+retained for at most 2 hours by default; TAF and SIGMET entries for at most 24
+hours. SIGMET features are filtered by their own
+`validFrom`/`validTo` on every response, independently of dataset age. Weather
+is not part of `AircraftStateService`, readsb polling, aircraft serialization,
+SSE, history, statistics, or PostgreSQL persistence.
 
 The weather API accepts only canonical airport ICAO codes. The browser renders
 normalized METAR/TAF data in airport and flight detail, while the optional

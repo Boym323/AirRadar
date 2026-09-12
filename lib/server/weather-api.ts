@@ -63,6 +63,8 @@ export async function getWeatherAirportResponse(request: Request, rawIcao: unkno
       taf: weather.taf,
       fetchedAt: weather.fetchedAt,
       stale: weather.stale,
+      cacheSource: weather.cacheSource,
+      snapshotAgeMs: weather.snapshotAgeMs,
     });
   } catch {
     return json({ error: "Weather data temporarily unavailable" }, 503);
@@ -93,6 +95,8 @@ export async function getWeatherAirportsResponse(request: Request, rawIcaoList: 
         taf: weather.taf,
         fetchedAt: weather.fetchedAt,
         stale: weather.stale,
+        cacheSource: weather.cacheSource,
+        snapshotAgeMs: weather.snapshotAgeMs,
       };
     } catch {
       return null;

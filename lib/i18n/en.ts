@@ -651,6 +651,8 @@ export const en = {
     destination: "Destination",
     unavailableData: "Data unavailable",
     staleData: "Data may be stale",
+    persistentCache: "from persistent cache",
+    memoryCache: "from memory cache",
     loadFailed: "Weather loading failed",
     load: "Load weather",
     retry: "Try again",

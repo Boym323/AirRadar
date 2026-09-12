@@ -15,6 +15,7 @@ import { DEFAULT_OGN_SOFTRF_DDB_MAX_AGE_HOURS, DEFAULT_OGN_SOFTRF_DDB_PATH } fro
 export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/wiedehopf/tar1090-db/refs/heads/csv/aircraft.csv.gz";
 export const DEFAULT_AVIATION_WEATHER_BASE_URL = "https://aviationweather.gov";
+export const DEFAULT_AVIATION_WEATHER_CACHE_FILE = "/var/lib/airradar/weather/weather-cache-v1.json";
 export const DEFAULT_OGN_HOST = "aprs.glidernet.org";
 export const DEFAULT_OGN_PORT = 14580;
 export const DEFAULT_OGN_DDB_CACHE_FILE = "/var/lib/airradar/ogn-ddb-cache-v1.json";
@@ -458,6 +459,32 @@ export function getAviationWeatherSigmetTtlMs(): number {
 
 export function getAviationWeatherStaleIfErrorMs(): number {
   return boundedMilliseconds("AVIATION_WEATHER_STALE_IF_ERROR_MS", 30 * 60_000, 1_000, 7 * 24 * 60 * 60_000);
+}
+
+export function isAviationWeatherPersistenceEnabled(): boolean {
+  const configured = (process.env.AVIATION_WEATHER_PERSIST_CACHE ?? process.env.AVIATION_WEATHER_PERSISTENCE)?.trim().toLowerCase();
+  if (configured !== undefined && configured !== "") return configured === "true";
+  return process.env.NODE_ENV === "production";
+}
+
+export function getAviationWeatherCacheFile(): string {
+  const configured = process.env.AVIATION_WEATHER_CACHE_FILE?.trim();
+  if (configured && configured.length <= 4_096 && configured.startsWith("/") && !/[\0\r\n]/.test(configured)) return configured;
+  const directory = process.env.AVIATION_WEATHER_CACHE_DIR?.trim();
+  if (directory && directory.length <= 4_096 && directory.startsWith("/") && !/[\0\r\n]/.test(directory)) return path.join(directory, "weather-cache-v1.json");
+  return DEFAULT_AVIATION_WEATHER_CACHE_FILE;
+}
+
+export function getAviationWeatherMetarMaxPersistedAgeMs(): number {
+  return boundedMilliseconds("AVIATION_WEATHER_METAR_MAX_PERSISTED_AGE_MS", 2 * 60 * 60_000, 60 * 60_000, 7 * 24 * 60 * 60_000);
+}
+
+export function getAviationWeatherTafMaxPersistedAgeMs(): number {
+  return boundedMilliseconds("AVIATION_WEATHER_TAF_MAX_PERSISTED_AGE_MS", 24 * 60 * 60_000, 60 * 60_000, 7 * 24 * 60 * 60_000);
+}
+
+export function getAviationWeatherSigmetMaxPersistedAgeMs(): number {
+  return boundedMilliseconds("AVIATION_WEATHER_SIGMET_MAX_PERSISTED_AGE_MS", 24 * 60 * 60_000, 60 * 60_000, 7 * 24 * 60 * 60_000);
 }
 
 export function getAviationWeatherUserAgent(): string {

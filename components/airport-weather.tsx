@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { calculateRunwayWind, selectWindFavoredRunway } from "@/lib/airport-runway-wind";
-import type { FlightCategory, MetarCloudLayer, MetarObservation, TafCloudLayer, TafForecast, TafPeriod } from "@/lib/weather/types";
+import type { FlightCategory, MetarCloudLayer, MetarObservation, TafCloudLayer, TafForecast, TafPeriod, WeatherCacheSource } from "@/lib/weather/types";
 import { formatDateTime, formatNumber, formatSpeed, formatTrack, formatWeatherVisibility, t } from "@/lib/i18n";
 
 export interface AirportWeatherResponse {
@@ -13,6 +13,8 @@ export interface AirportWeatherResponse {
   taf: TafForecast | null;
   fetchedAt?: string;
   stale: boolean;
+  cacheSource?: WeatherCacheSource;
+  snapshotAgeMs?: number;
   enabled?: boolean;
   available?: boolean;
   source?: string;
@@ -86,6 +88,12 @@ function weatherLabel(weather: string[] | undefined): string {
   return weather?.length ? weather.join(" ") : t.common.emptyValue;
 }
 
+function cacheSourceLabel(source: WeatherCacheSource | undefined): string | null {
+  if (source === "persistent-cache") return t.weather.persistentCache;
+  if (source === "memory-cache") return t.weather.memoryCache;
+  return null;
+}
+
 function visibilityLabel(value: MetarObservation["visibilityMeters"] | TafPeriod["visibilityMeters"], greaterThan: boolean, lessThan = false): string {
   const formatted = formatWeatherVisibility(value, greaterThan);
   return lessThan && formatted !== t.common.emptyValue ? `< ${formatted}` : formatted;
@@ -116,7 +124,7 @@ function WeatherReports({ weather }: { weather: AirportWeatherResponse }) {
   const taf = weather.taf;
   const observedAt = metar?.observedAt ?? metar?.observationTime ?? null;
   return <>
-    {weather.stale && <div className="weather-stale" role="status">{t.weather.staleData}</div>}
+    {weather.stale && <div className="weather-stale" role="status">{t.weather.staleData}{cacheSourceLabel(weather.cacheSource) ? ` · ${cacheSourceLabel(weather.cacheSource)}` : ""}</div>}
     {metar && <>
       <div className="weather-meta">{t.weather.observed}: {formatDateTime(observedAt)} · {t.weather.updated}: {weather.fetchedAt ? formatDateTime(weather.fetchedAt) : t.common.emptyValue}</div>
       <div className="weather-report-heading">{t.weather.metar}</div><span className={`weather-category${categoryClass(metar.flightCategory)}`}>{metar.flightCategory ?? t.common.emptyValue}</span>

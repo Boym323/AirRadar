@@ -118,6 +118,32 @@ effect on `/api/stream`, local aircraft filters, local history, statistics,
 alerts, or the main receiver status. Stale targets are marked after 15 seconds
 and removed after 60 seconds; the target map is capped at 5,000 entries.
 
+## Aviation weather
+
+`AviationWeatherProvider` loads a bounded, validated in-process cache and then
+serves on-demand METAR, TAF, international SIGMET, and AirSIGMET requests.
+Successful normalized values update memory and schedule one debounced snapshot
+write to `/var/lib/airradar/weather/weather-cache-v1.json`; failures never
+write provider errors. The versioned file is written through a temporary file,
+`fsync`, and atomic rename. A missing, oversized, malformed, wrong-version, or
+partially invalid file is ignored entry-by-entry and cannot prevent startup.
+
+At process startup, valid persistent entries become stale-capable fallbacks
+and a live request is still attempted when the product TTL has elapsed. A
+persisted fallback is bounded by a product-specific maximum age (2 hours for
+METAR, 24 hours for TAF and SIGMET), separate from the normal in-memory
+stale-if-error window. Empty successful METAR/TAF
+responses are retained as negative entries, and an empty SIGMET dataset clears
+the previous dataset. SIGMET responses always re-check each feature's
+`validFrom` and `validTo`; a stale dataset can therefore correctly return zero
+active features after all advisories expire.
+
+Weather responses expose `cacheSource` (`live`, `memory-cache`, or
+`persistent-cache`), `fetchedAt`, `snapshotAgeMs`, and `stale`. A persistent
+entry is explicitly marked stale until a live refresh succeeds. Development and
+test processes do not enable the `/var/lib` writer unless persistence is
+explicitly configured.
+
 ## History persistence
 
 Airport Intelligence reads nearby aircraft from the existing local aircraft
