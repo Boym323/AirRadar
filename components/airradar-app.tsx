@@ -65,6 +65,8 @@ import { GlobalSearch } from "@/components/global-search";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
+import { useRetryingDataset, type DatasetState } from "@/components/use-retrying-dataset";
+import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
 import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   filterAircraftForMap,
@@ -83,6 +85,42 @@ const EMPTY_SIGMET_DATA: SigmetSnapshot = { type: "FeatureCollection", features:
 const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled", fetchedAt: new Date(0).toISOString(), targets: [] };
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; routes?: CzAtsRoute[]; segments?: GeoJSON.FeatureCollection; labels?: GeoJSON.FeatureCollection; points?: GeoJSON.FeatureCollection; }
+
+function parseAirportDataset(value: unknown): value is Airport[] {
+  return Array.isArray(value) && value.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const airport = item as Partial<Airport>;
+    return typeof airport.icaoCode === "string" && typeof airport.name === "string"
+      && Number.isFinite(airport.latitude) && Number.isFinite(airport.longitude);
+  });
+}
+
+function parseAtcDataset(value: unknown): value is AtcDataResponse {
+  return Boolean(value) && typeof value === "object" && Array.isArray((value as AtcDataResponse).sectors)
+    && Array.isArray((value as AtcDataResponse).transmitters) && Boolean((value as AtcDataResponse).metadata);
+}
+
+function parseAtsDataset(value: unknown): value is AtsRoutesResponse {
+  return Boolean(value) && typeof value === "object" && typeof (value as AtsRoutesResponse).available === "boolean";
+}
+
+function parseAirspaceDataset(value: unknown): value is AirspaceActivityResponse {
+  return Boolean(value) && typeof value === "object" && Boolean((value as AirspaceActivityResponse).planned)
+    && Boolean((value as AirspaceActivityResponse).historicalActual);
+}
+
+async function parseJsonDataset<T>(response: Response, validator: (value: unknown) => value is T): Promise<T> {
+  const value: unknown = await response.json();
+  if (!validator(value)) throw new SyntaxError("malformed dataset response");
+  return value;
+}
+
+function datasetStateLabel(label: string, dataset: DatasetState<unknown>, countLabel: (count: number) => string): string {
+  if ((dataset.status === "ready" || dataset.status === "stale") && dataset.itemCount > 0) return `${label} · ${countLabel(dataset.itemCount)}`;
+  if (dataset.status === "retrying" || dataset.status === "loading" || dataset.status === "stale") return `${label} · ${t.layers.reconnecting}`;
+  if (dataset.status === "unavailable") return `${label} · ${t.layers.unavailable}`;
+  return label;
+}
 
 interface PublicAlertStatus {
   enabled: boolean;
@@ -104,7 +142,6 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 
 const MIN_AIRCRAFT_ANIMATION_MS = 650;
 const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
-const INTELLIGENCE_RETRY_MS = 30_000;
 type TrafficSource = "adsb" | "ogn";
 
 interface AircraftMotionTiming {
@@ -461,8 +498,6 @@ export function AirRadarApp() {
   const [showAtc, setShowAtc] = useState(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
-  const [atsRoutes, setAtsRoutes] = useState<AtsRoutesResponse | null>(null);
-  const [atsRoutesRetry, setAtsRoutesRetry] = useState(0);
   const [selectedAtsRoute, setSelectedAtsRoute] = useState<string | null>(null);
   const [sigmetEnabled, setSigmetEnabled] = useState<boolean | null>(null);
   const [sigmetData, setSigmetData] = useState<SigmetSnapshot>(EMPTY_SIGMET_DATA);
@@ -470,10 +505,6 @@ export function AirRadarApp() {
   const [showSignificantAirports, setShowSignificantAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSignificant);
   const [showSmallAirports, setShowSmallAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSmall);
   const [showHeliports, setShowHeliports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showHeliports);
-  const [airports, setAirports] = useState<Airport[]>([]);
-  const [atcData, setAtcData] = useState<AtcDataResponse>(EMPTY_ATC_DATA);
-  const [airspaceActivity, setAirspaceActivity] = useState<AirspaceActivityResponse | null>(null);
-  const [airspaceActivityRetry, setAirspaceActivityRetry] = useState(0);
   const [atcExpanded, setAtcExpanded] = useState(false);
   const [coverage, setCoverage] = useState<CoverageMode>("local");
   const [serverAlertsEnabled, setServerAlertsEnabled] = useState<boolean | null>(null);
@@ -494,6 +525,18 @@ export function AirRadarApp() {
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
   const [mapReady, setMapReady] = useState(false);
+  const airportGeoJsonRef = useRef<ReturnType<typeof createAirportGeoJSON>>(createAirportGeoJSON([]));
+  const atcGeoJsonRef = useRef<ReturnType<typeof createAtcGeoJSON>>(createAtcGeoJSON([], false));
+  const transmitterGeoJsonRef = useRef<GeoJSON.FeatureCollection>({ type: "FeatureCollection", features: [] });
+  const atsGeoJsonRef = useRef<{ segments: GeoJSON.FeatureCollection; labels: GeoJSON.FeatureCollection; points: GeoJSON.FeatureCollection }>({ segments: EMPTY_ATS_GEOJSON, labels: EMPTY_ATS_GEOJSON, points: EMPTY_ATS_GEOJSON });
+  const mapReplayRef = useRef({
+    airports: createMapDatasetReplay<ReturnType<typeof createAirportGeoJSON>>(() => mapRef.current?.getSource("route-airports") as GeoJSONSource | undefined),
+    atc: createMapDatasetReplay<ReturnType<typeof createAtcGeoJSON>>(() => mapRef.current?.getSource("atc-sectors") as GeoJSONSource | undefined),
+    transmitters: createMapDatasetReplay<GeoJSON.FeatureCollection>(() => mapRef.current?.getSource("atc-transmitters") as GeoJSONSource | undefined),
+    atsSegments: createMapDatasetReplay<GeoJSON.FeatureCollection>(() => mapRef.current?.getSource("ats-routes") as GeoJSONSource | undefined),
+    atsLabels: createMapDatasetReplay<GeoJSON.FeatureCollection>(() => mapRef.current?.getSource("ats-route-labels") as GeoJSONSource | undefined),
+    atsPoints: createMapDatasetReplay<GeoJSON.FeatureCollection>(() => mapRef.current?.getSource("ats-route-points") as GeoJSONSource | undefined),
+  });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sigmetGenerationRef = useRef(0);
   const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
@@ -510,43 +553,36 @@ export function AirRadarApp() {
     onSnapshot: setSnapshot,
   });
 
-  useEffect(() => {
-    if (!showAtsRoutes || atsRoutes) return;
-    let active = true;
-    let retryTimer: number | null = null;
-    void fetch("/api/ats/routes", { cache: "force-cache" })
-      .then((response) => {
-        if (!response.ok) throw new Error("ATS routes request failed");
-        return response.json() as Promise<AtsRoutesResponse>;
-      })
-      .then((data) => { if (active) setAtsRoutes(data); })
-      .catch(() => {
-        if (active) retryTimer = window.setTimeout(() => setAtsRoutesRetry((value) => value + 1), INTELLIGENCE_RETRY_MS);
-      });
-    return () => {
-      active = false;
-      if (retryTimer !== null) window.clearTimeout(retryTimer);
-    };
-  }, [atsRoutes, atsRoutesRetry, showAtsRoutes]);
-
-  useEffect(() => {
-    if (!showAtc || airspaceActivity) return;
-    let active = true;
-    let retryTimer: number | null = null;
-    void fetch("/api/airspace/activity", { cache: "no-store" })
-      .then((response) => {
-        if (!response.ok) throw new Error("airspace activity request failed");
-        return response.json() as Promise<AirspaceActivityResponse>;
-      })
-      .then((data) => { if (active) setAirspaceActivity(data); })
-      .catch(() => {
-        if (active) retryTimer = window.setTimeout(() => setAirspaceActivityRetry((value) => value + 1), INTELLIGENCE_RETRY_MS);
-      });
-    return () => {
-      active = false;
-      if (retryTimer !== null) window.clearTimeout(retryTimer);
-    };
-  }, [airspaceActivity, airspaceActivityRetry, showAtc]);
+  const airportsDataset = useRetryingDataset<Airport[]>({
+    url: "/api/airports",
+    cache: "force-cache",
+    parse: (response) => parseJsonDataset(response, parseAirportDataset),
+    itemCount: (value) => value.length,
+  });
+  const atcDataset = useRetryingDataset<AtcDataResponse>({
+    url: "/api/atc/sectors",
+    cache: "force-cache",
+    parse: (response) => parseJsonDataset(response, parseAtcDataset),
+    itemCount: (value) => value.sectors.length,
+  });
+  const atsDataset = useRetryingDataset<AtsRoutesResponse>({
+    url: "/api/ats/routes",
+    enabled: showAtsRoutes,
+    cache: "force-cache",
+    parse: (response) => parseJsonDataset(response, parseAtsDataset),
+    itemCount: (value) => value.counts?.routes ?? value.routes?.length ?? 0,
+  });
+  const airspaceDataset = useRetryingDataset<AirspaceActivityResponse>({
+    url: "/api/airspace/activity",
+    enabled: showAtc,
+    cache: "no-store",
+    parse: (response) => parseJsonDataset(response, parseAirspaceDataset),
+    itemCount: () => 1,
+  });
+  const airports = useMemo(() => airportsDataset.data ?? [], [airportsDataset.data]);
+  const atcData = atcDataset.data ?? EMPTY_ATC_DATA;
+  const atsRoutes = atsDataset.data;
+  const airspaceActivity = airspaceDataset.data;
 
   useEffect(() => {
     try {
@@ -559,14 +595,6 @@ export function AirRadarApp() {
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
     }
-    void fetch("/api/atc/sectors", { cache: "force-cache" })
-      .then((response) => response.ok ? response.json() as Promise<AtcDataResponse> : null)
-      .then((data) => { if (data) setAtcData(data); })
-      .catch(() => undefined);
-    void fetch("/api/airports", { cache: "force-cache" })
-      .then((response) => response.ok ? response.json() as Promise<Airport[]> : null)
-      .then((data) => { if (data) setAirports(data); })
-      .catch(() => undefined);
     void fetch("/api/health", { cache: "no-store" })
       .then((response) => response.ok ? response.json() as Promise<{ alerts?: PublicAlertStatus }> : null)
       .then((data) => { if (data?.alerts) setServerAlertsEnabled(data.alerts.enabled); })
@@ -812,6 +840,7 @@ export function AirRadarApp() {
     const aircraftMotionTiming = aircraftMotionTimingRef.current;
     const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
     const liveTrails = liveTrailsRef.current;
+    const mapReplays = mapReplayRef.current;
 
     map.on("load", () => {
       map.addSource("range-rings", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -947,10 +976,21 @@ export function AirRadarApp() {
         map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
       }
       map.on("zoomend", () => setMapZoom(map.getZoom()));
+      // Dataset fetches and map construction are independent lifecycles. The
+      // refs retain the newest payload so a dataset that arrived before the
+      // map load is applied to this map instance as soon as its sources exist.
+      (map.getSource("ats-routes") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.segments as GeoJSON.FeatureCollection);
+      (map.getSource("ats-route-labels") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.labels as GeoJSON.FeatureCollection);
+      (map.getSource("ats-route-points") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.points as GeoJSON.FeatureCollection);
+      (map.getSource("atc-sectors") as GeoJSONSource | undefined)?.setData(atcGeoJsonRef.current);
+      (map.getSource("atc-transmitters") as GeoJSONSource | undefined)?.setData(transmitterGeoJsonRef.current);
+      (map.getSource("route-airports") as GeoJSONSource | undefined)?.setData(airportGeoJsonRef.current);
+      for (const replay of Object.values(mapReplays)) replay.setReady(true);
       setMapReady(true);
     });
 
     return () => {
+      for (const replay of Object.values(mapReplays)) replay.setReady(false);
       for (const frame of animationFrames.values()) cancelAnimationFrame(frame);
       animationFrames.clear();
       aircraftMotionTiming.clear();
@@ -1286,12 +1326,16 @@ export function AirRadarApp() {
   }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, showAircraft, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
     const visible = showAtsRoutes && atsRoutes?.available === true;
     const geojson = visible && atsRoutes?.segments && atsRoutes.labels && atsRoutes.points
       ? { segments: atsRoutes.segments, labels: atsRoutes.labels, points: atsRoutes.points }
       : { segments: EMPTY_ATS_GEOJSON, labels: EMPTY_ATS_GEOJSON, points: EMPTY_ATS_GEOJSON };
+    atsGeoJsonRef.current = geojson;
+    mapReplayRef.current.atsSegments.setData(geojson.segments as GeoJSON.FeatureCollection);
+    mapReplayRef.current.atsLabels.setData(geojson.labels as GeoJSON.FeatureCollection);
+    mapReplayRef.current.atsPoints.setData(geojson.points as GeoJSON.FeatureCollection);
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
     (map.getSource("ats-routes") as GeoJSONSource | undefined)?.setData(geojson.segments as GeoJSON.FeatureCollection);
     (map.getSource("ats-route-labels") as GeoJSONSource | undefined)?.setData(geojson.labels as GeoJSON.FeatureCollection);
     (map.getSource("ats-route-points") as GeoJSONSource | undefined)?.setData(geojson.points as GeoJSON.FeatureCollection);
@@ -1310,22 +1354,31 @@ export function AirRadarApp() {
   }, [selectedHex, snapshot.aircraft]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    const atcSource = map.getSource("atc-sectors") as GeoJSONSource | undefined;
-    atcSource?.setData(createAtcGeoJSON(atcData.sectors, showAtc, airspaceActivity));
-    const transmitterSource = map.getSource("atc-transmitters") as GeoJSONSource | undefined;
-    transmitterSource?.setData({
+    const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
+    const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc, airspaceActivity);
+    const transmitterGeoJson: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
       features: showAtc ? atcData.transmitters.map((transmitter) => ({
         type: "Feature" as const,
         properties: { name: transmitter.name, service: formatAtcService(transmitter.service), frequency: formatAtcFrequency(transmitter.frequencyMhz), notes: formatAtcNote(transmitter.notes), source: transmitter.source, sourceReference: transmitter.sourceReference, validFrom: transmitter.validFrom, validTo: transmitter.validTo, lastVerifiedAt: transmitter.lastVerifiedAt },
         geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
       })) : [],
-    });
-    const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
+    };
+    atcGeoJsonRef.current = atcGeoJson;
+    transmitterGeoJsonRef.current = transmitterGeoJson;
+    mapReplayRef.current.atc.setData(atcGeoJson);
+    mapReplayRef.current.transmitters.setData(transmitterGeoJson);
+    const airportGeoJson = createAirportGeoJSON(airports, selectedRouteAirportCodes);
+    airportGeoJsonRef.current = airportGeoJson;
+    mapReplayRef.current.airports.setData(airportGeoJson);
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const atcSource = map.getSource("atc-sectors") as GeoJSONSource | undefined;
+    atcSource?.setData(atcGeoJson);
+    const transmitterSource = map.getSource("atc-transmitters") as GeoJSONSource | undefined;
+    transmitterSource?.setData(transmitterGeoJson);
     const airportSource = map.getSource("route-airports") as GeoJSONSource | undefined;
-    airportSource?.setData(createAirportGeoJSON(airports, selectedRouteAirportCodes));
+    airportSource?.setData(airportGeoJson);
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
@@ -1507,13 +1560,13 @@ export function AirRadarApp() {
                   </div>
                   <div className="map-layer-group">
                     <span className="map-layer-group-title">{t.layers.groups.aviation}</span>
-                    <label><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> {t.layers.airports}</label>
+                    <label data-testid="map-layer-airports"><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> {datasetStateLabel(t.layers.airports, airportsDataset, (count) => t.layers.airportsCount(formatNumber(count)))}</label>
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showSignificantAirports} disabled={!showAirports} onChange={(event) => setShowSignificantAirports(event.target.checked)} /> {t.layers.significantAirports}</label>
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
-                    <label><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {t.layers.atc}</label>
+                    <label data-testid="map-layer-atc"><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {datasetStateLabel(t.layers.atc, atcDataset, (count) => t.layers.sectorsCount(formatNumber(count)))}</label>
                     {showAtc && airspaceActivity?.planned.status !== "unavailable" && <div className="map-layer-sublevel">{activityT.legendCurrent} · {activityT.legendUpcoming}{airspaceActivity?.planned.status === "stale" ? ` · ${activityT.stale}` : ""}<br /><small>{activityT.disclaimer}</small></div>}
-                    <label><input type="checkbox" checked={showAtsRoutes} onChange={(event) => { setShowAtsRoutes(event.target.checked); if (!event.target.checked) setSelectedAtsRoute(null); }} /> {t.layers.atsRoutes}</label>
+                    <label data-testid="map-layer-ats"><input type="checkbox" checked={showAtsRoutes} onChange={(event) => { setShowAtsRoutes(event.target.checked); if (!event.target.checked) setSelectedAtsRoute(null); }} /> {datasetStateLabel(t.layers.atsRoutes, atsDataset, (count) => t.layers.routesCount(formatNumber(count)))}</label>
                     {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
                     {showAtsRoutes && atsRoutes && !atsRoutes.available && <div className="map-layer-sublevel">{t.layers.atsRoutesUnavailable}</div>}
                     {sigmetEnabled !== false && <label><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>}

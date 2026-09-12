@@ -144,6 +144,19 @@ async function assertBrowserSmoke() {
   try {
     for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
       const page = await browser.newPage({ viewport });
+      await page.route("**/api/ats/routes", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          available: true,
+          source: { name: "browser fixture", reference: "https://example.invalid/ats", effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null },
+          counts: { routes: 1, points: 2, segments: 1, cdrSegments: 0, discontinuities: 0 },
+          routes: [],
+          segments: { type: "FeatureCollection", features: [{ type: "Feature", properties: { routeDesignator: "FIXTURE1", segmentId: "fixture-segment", fromName: "A", toName: "B", navigationSpecification: "RNAV", distanceNm: 10, lowerLimit: "SFC", upperLimit: "UNL", lowerOverride: null, magTrackForwardDeg: 90, magTrackReverseDeg: 270, cruisingLevelForward: null, cruisingLevelReverse: null, availabilityClass: null, effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null, remarks: null }, geometry: { type: "LineString", coordinates: [[14, 50], [14.2, 50.1]] } }] },
+          labels: { type: "FeatureCollection", features: [] },
+          points: { type: "FeatureCollection", features: [] },
+        }),
+      }));
       await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
       await page.locator("h1").first().waitFor({ state: "visible" });
       // MapLibre controls and React controls settle asynchronously after the
@@ -155,6 +168,23 @@ async function assertBrowserSmoke() {
         const buttonsReady = [...document.querySelectorAll("button")].every((button) => Boolean(button.textContent?.trim() || button.getAttribute("aria-label")));
         return mapReady && imagesReady && buttonsReady;
       });
+      await page.locator("details.map-layers > summary").click();
+      const airportLayer = page.getByTestId("map-layer-airports");
+      const atcLayer = page.getByTestId("map-layer-atc");
+      const atsLayer = page.getByTestId("map-layer-ats");
+      await airportLayer.waitFor({ state: "visible" });
+      await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-airports"]')?.textContent || ""));
+      const airportCheckbox = airportLayer.locator("input");
+      await airportCheckbox.uncheck();
+      await airportCheckbox.check();
+      await atcLayer.locator("input").check();
+      await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-atc"]')?.textContent || ""));
+      await atcLayer.locator("input").uncheck();
+      await atcLayer.locator("input").check();
+      await atsLayer.locator("input").check();
+      await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-ats"]')?.textContent || ""));
+      await atsLayer.locator("input").uncheck();
+      await atsLayer.locator("input").check();
       const accessibility = await page.evaluate(() => ({
         missingImageAlt: [...document.images].filter((image) => !image.hasAttribute("alt")).length,
         unnamedButtons: [...document.querySelectorAll("button")].filter((button) => !button.textContent?.trim() && !button.getAttribute("aria-label")).length,

@@ -12,6 +12,7 @@ import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
+const datasetSource = readFileSync(new URL("../components/use-retrying-dataset.ts", import.meta.url), "utf8");
 const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");
 const aircraftDetailSource = readFileSync(new URL("../components/aircraft-detail-v2.tsx", import.meta.url), "utf8");
 const globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -92,12 +93,13 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toContain(".ogn-marker");
     expect(appSource).toContain("checked={showAirports}");
     expect(appSource).toContain("checked={showAtc}");
-    expect(appSource.match(/\bfetch\(/g)).toHaveLength(9);
-    expect(appSource).toContain('fetch("/api/airspace/activity", { cache: "no-store" })');
-    expect(appSource).toContain("setAirspaceActivityRetry((value) => value + 1)");
-    expect(appSource).toContain("setAtsRoutesRetry((value) => value + 1)");
-    expect(appSource).toContain("INTELLIGENCE_RETRY_MS = 30_000");
-    expect(appSource).not.toContain("airspaceActivityRequestedRef");
+    expect(appSource).toContain("useRetryingDataset");
+    expect(appSource).toContain('url: "/api/airspace/activity"');
+    expect(appSource).toContain('url: "/api/ats/routes"');
+    expect(datasetSource).toContain('"retrying"');
+    expect(datasetSource).toContain("retry-after");
+    expect(datasetSource).toContain("controller.abort()");
+    expect(appSource).toContain("mapReplayRef");
     expect(appSource).toContain("/api/aircraft/${encodeURIComponent(selectedHex)}");
     expect(appSource).toContain("/api/history/${encodeURIComponent(selectedHex)}");
   });

@@ -14,6 +14,7 @@ import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistic
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getBuildMetadata } from "@/lib/server/version";
 import { readRuntimeDiagnostics, type RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
+import { loadCzAtsRoutes } from "@/lib/ats/cz-routes";
 
 export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
 
@@ -228,6 +229,12 @@ export interface SystemStatusResponse {
     bounded: true;
     rowCountIsLowerBound: boolean;
   };
+  mapLayers: {
+    airports: { state: SystemStatus; count: number; lastSuccessAt: string | null };
+    atc: { state: SystemStatus; sectorCount: number; transmitterCount: number; source: string | null; effectiveDate: string | null };
+    ats: { state: SystemStatus; routeCount: number; pointCount: number; segmentCount: number; effectiveDate: string | null };
+    airspaceActivity: { state: "on_demand"; stale: boolean };
+  };
   dataSources: {
     adsbdb: SystemDataSourceStatus;
     aircraftPhotos: SystemDataSourceStatus;
@@ -259,6 +266,13 @@ export interface SystemStatusBuildInput {
     rowCount: number | null;
     fallbackRowCount: number | null;
     rowCountIsLowerBound?: boolean;
+  };
+  atsData?: {
+    available: boolean;
+    routeCount: number;
+    pointCount: number;
+    segmentCount: number;
+    effectiveDate: string | null;
   };
   weather?: Partial<AviationWeatherDiagnostics> & { entries?: number; airports?: number };
   adsbLol?: NetworkProviderDiagnostics;
@@ -774,6 +788,24 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       bounded: true,
       rowCountIsLowerBound: Boolean(input.airportData.rowCountIsLowerBound),
     },
+    mapLayers: {
+      airports: { state: airportStatus, count: airportRowCount ?? fallbackRowCount ?? 0, lastSuccessAt: null },
+      atc: {
+        state: atcFreshness.status,
+        sectorCount: nonNegativeInteger(input.atc.metadata.sectorCount, 2_000),
+        transmitterCount: nonNegativeInteger(input.atc.metadata.transmitterCount, 20_000),
+        source: input.atc.metadata.source && input.atc.metadata.source.length <= 120 && !/[/:\\=]|password|secret|DATABASE_URL/i.test(input.atc.metadata.source) ? input.atc.metadata.source : null,
+        effectiveDate: safeTimestamp(input.atc.metadata.effectiveDate),
+      },
+      ats: {
+        state: input.atsData?.available ? "ok" : "offline",
+        routeCount: nonNegativeInteger(input.atsData?.routeCount ?? 0, 10_000),
+        pointCount: nonNegativeInteger(input.atsData?.pointCount ?? 0, 100_000),
+        segmentCount: nonNegativeInteger(input.atsData?.segmentCount ?? 0, 100_000),
+        effectiveDate: safeTimestamp(input.atsData?.effectiveDate),
+      },
+      airspaceActivity: { state: "on_demand", stale: false },
+    },
     dataSources: {
       // These are configuration-safe states. Opening /system never probes an
       // optional upstream provider and therefore exposes no raw error detail.
@@ -827,6 +859,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
   const atc = database.status === "ok" || snapshot.provider === "mock"
     ? await getAtcData().catch(() => unavailableAtcData)
     : unavailableAtcData;
+  const ats = loadCzAtsRoutes();
   const providerWeather = defaultAviationWeatherProvider.getDiagnostics();
   const weather = isAviationWeatherEnabled()
     ? providerWeather
@@ -845,6 +878,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       fallbackRowCount: SAMPLE_AIRPORTS.length,
       rowCountIsLowerBound: database.airportRowCountIsLowerBound,
     },
+    atsData: ats ? { available: true, routeCount: ats.counts.routes, pointCount: ats.counts.points, segmentCount: ats.counts.segments, effectiveDate: ats.source.effectiveDate } : { available: false, routeCount: 0, pointCount: 0, segmentCount: 0, effectiveDate: null },
     weather,
     adsbLol: service.getNetworkDiagnostics?.(),
     ogn: ognService.getDiagnostics(),
