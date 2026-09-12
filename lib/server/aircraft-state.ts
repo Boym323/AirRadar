@@ -164,7 +164,11 @@ export class AircraftStateService {
     try {
       await this.provider.close?.();
     } finally {
-      await this.stopNetworkProvider();
+      try {
+        await this.stopNetworkProvider();
+      } finally {
+        await this.enrichment.close();
+      }
     }
   }
 

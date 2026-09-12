@@ -92,6 +92,10 @@ async function fetchAdsbDb<T>(baseUrl: string, path: string): Promise<T | null> 
 
 export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProvider {
   readonly name = "adsbdb";
+  private providerStatus: "online" | "degraded" | "offline" = "offline";
+  private lastSuccessAt: string | null = null;
+  private lastFailureAt: string | null = null;
+  private consecutiveFailures = 0;
 
   constructor(
     private readonly baseUrl = "https://api.adsbdb.com/v0",
@@ -99,7 +103,14 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
   ) {}
 
   async getMetadata(icaoHex: string): Promise<AircraftMetadata | null> {
-    const payload = await fetchAdsbDb<AdsbDbResponse>(this.baseUrl, `/aircraft/${encodeURIComponent(icaoHex.toLowerCase())}`);
+    let payload: AdsbDbResponse | null;
+    try {
+      payload = await fetchAdsbDb<AdsbDbResponse>(this.baseUrl, `/aircraft/${encodeURIComponent(icaoHex.toLowerCase())}`);
+      this.recordSuccess();
+    } catch (error) {
+      this.recordFailure();
+      throw error;
+    }
     const response = payload?.response;
     if (!response || typeof response === "string") return null;
     const aircraft = response.aircraft;
@@ -119,7 +130,14 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
   }
 
   async getRoute(callsign: string, observedAt: Date): Promise<FlightRoute | null> {
-    const payload = await fetchAdsbDb<AdsbDbResponse>(this.baseUrl, `/callsign/${encodeURIComponent(callsign.trim().toLowerCase())}`);
+    let payload: AdsbDbResponse | null;
+    try {
+      payload = await fetchAdsbDb<AdsbDbResponse>(this.baseUrl, `/callsign/${encodeURIComponent(callsign.trim().toLowerCase())}`);
+      this.recordSuccess();
+    } catch (error) {
+      this.recordFailure();
+      throw error;
+    }
     const response = payload?.response;
     if (!response || typeof response === "string") return null;
     const route = response.flightroute;
@@ -139,5 +157,30 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
       source: this.name,
       retrievedAt: observedAt.toISOString(),
     };
+  }
+
+  getAdsbDbDiagnostics() {
+    return {
+      providerStatus: this.providerStatus,
+      lastSuccessAt: this.lastSuccessAt,
+      lastFailureAt: this.lastFailureAt,
+      consecutiveFailures: this.consecutiveFailures,
+    } as const;
+  }
+
+  private recordSuccess(): void {
+    const recovered = this.providerStatus === "degraded" || this.providerStatus === "offline";
+    this.providerStatus = "online";
+    this.lastSuccessAt = new Date().toISOString();
+    this.consecutiveFailures = 0;
+    if (recovered && this.lastFailureAt) console.info("[adsbdb] provider recovered");
+  }
+
+  private recordFailure(): void {
+    const wasOnline = this.providerStatus === "online";
+    this.providerStatus = this.lastSuccessAt ? "degraded" : "offline";
+    this.lastFailureAt = new Date().toISOString();
+    this.consecutiveFailures += 1;
+    if (wasOnline || this.consecutiveFailures === 1) console.warn("[adsbdb] provider unavailable");
   }
 }

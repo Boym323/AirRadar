@@ -16,6 +16,7 @@ export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/wiedehopf/tar1090-db/refs/heads/csv/aircraft.csv.gz";
 export const DEFAULT_AVIATION_WEATHER_BASE_URL = "https://aviationweather.gov";
 export const DEFAULT_AVIATION_WEATHER_CACHE_FILE = "/var/lib/airradar/weather/weather-cache-v1.json";
+export const DEFAULT_ADSBDB_CACHE_FILE = "/var/lib/airradar/adsbdb/adsbdb-cache-v1.json";
 export const DEFAULT_OGN_HOST = "aprs.glidernet.org";
 export const DEFAULT_OGN_PORT = 14580;
 export const DEFAULT_OGN_DDB_CACHE_FILE = "/var/lib/airradar/ogn-ddb-cache-v1.json";
@@ -178,6 +179,43 @@ export function isAircraftPhotosEnabled(): boolean {
 
 export function getAdsbDbBaseUrl(): string {
   return process.env.ADSBDB_BASE_URL?.trim() || "https://api.adsbdb.com/v0";
+}
+
+export function isAdsbDbPersistenceEnabled(): boolean {
+  const configured = (process.env.ADSBDB_PERSIST_CACHE ?? process.env.ADSBDB_PERSISTENCE)?.trim().toLowerCase();
+  if (configured !== undefined && configured !== "") return configured === "true";
+  return process.env.NODE_ENV === "production";
+}
+
+function safeAbsoluteCachePath(value: string | undefined, fallback: string): string {
+  if (value && value.length <= 4_096 && value.startsWith("/") && !/[\0\r\n]/.test(value)) return value;
+  return fallback;
+}
+
+export function getAdsbDbCacheFile(): string {
+  const configuredFile = process.env.ADSBDB_CACHE_FILE?.trim();
+  if (configuredFile) return safeAbsoluteCachePath(configuredFile, DEFAULT_ADSBDB_CACHE_FILE);
+  const configuredDirectory = process.env.ADSBDB_CACHE_DIR?.trim();
+  if (configuredDirectory && configuredDirectory.length <= 4_096 && configuredDirectory.startsWith("/") && !/[\0\r\n]/.test(configuredDirectory)) {
+    return path.join(configuredDirectory, "adsbdb-cache-v1.json");
+  }
+  return DEFAULT_ADSBDB_CACHE_FILE;
+}
+
+export function getAdsbDbMetadataMaxPersistedAgeMs(): number {
+  return boundedMilliseconds("ADSBDB_METADATA_MAX_STALE_MS", 7 * 24 * 60 * 60_000, 60 * 60_000, 30 * 24 * 60 * 60_000);
+}
+
+export function getAdsbDbRouteMaxPersistedAgeMs(): number {
+  return boundedMilliseconds("ADSBDB_ROUTE_MAX_STALE_MS", 24 * 60 * 60_000, 60 * 60_000, 7 * 24 * 60 * 60_000);
+}
+
+export function getAdsbDbMetadataMaxPersistedEntries(): number {
+  return boundedInteger("ADSBDB_METADATA_MAX_ENTRIES", 4_096, 1, 10_000);
+}
+
+export function getAdsbDbRouteMaxPersistedEntries(): number {
+  return boundedInteger("ADSBDB_ROUTE_MAX_ENTRIES", 4_096, 1, 10_000);
 }
 
 export function getAircraftMetadataUrl(): string {

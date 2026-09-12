@@ -140,6 +140,10 @@ event/status lines in `/var/lib/airradar/alert-events.jsonl` in production and
 is read from a bounded tail with bounded pagination. Local development keeps
 the equivalent files under `data/`; the tracked `data/alerts.json` is only a
 legacy migration source when the production state file does not yet exist.
+Positive ADSBDB metadata/routes additionally use the optional bounded,
+versioned snapshot `/var/lib/airradar/adsbdb/adsbdb-cache-v1.json`; it is a
+last-known-good provider fallback, not a source of truth. Negative entries and
+in-flight requests are never persisted.
 
 ## Browser and API boundary
 

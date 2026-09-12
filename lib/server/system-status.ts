@@ -2,7 +2,7 @@ import nextPackage from "next/package.json" with { type: "json" };
 import type { AtcDataResponse } from "@/lib/atc/types";
 import type { NetworkProviderDiagnostics, ReceiverStatisticsResponse, StateSnapshot } from "@/lib/aircraft/types";
 import type { OgnDdbPersistenceDiagnostics, OgnProviderDiagnostics, OgnProviderStatus } from "@/lib/ogn/types";
-import { getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled, isAviationWeatherEnabled } from "@/lib/server/config";
+import { getAdsbDbCacheFile, getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getOgnStateService } from "@/lib/server/ogn-state";
 import { getHistoryPersistenceStatus, type HistoryPersistenceStatus } from "@/lib/server/history";
@@ -10,6 +10,7 @@ import { getAtcData } from "@/lib/server/providers";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
 import { defaultAviationWeatherProvider, type AviationWeatherDiagnostics, type SigmetDatasetDiagnostics } from "@/lib/server/aviation-weather-provider";
 import type { AviationWeatherPersistenceDiagnostics } from "@/lib/server/aviation-weather-persistence";
+import type { AdsbDbPersistenceDiagnostics } from "@/lib/server/adsbdb-persistence";
 import type { AlertStatus } from "@/lib/server/alert-engine";
 import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
@@ -65,6 +66,17 @@ export interface SystemStatusResponse {
     consecutiveFailures: number;
     rateLimited: boolean;
     retryAfterMs: number | null;
+  };
+  adsbdb: {
+    status: SystemStatus;
+    enabled: boolean;
+    providerStatus: "online" | "degraded" | "offline" | "unknown";
+    lastSuccessAt: string | null;
+    lastFailureAt: string | null;
+    consecutiveFailures: number;
+    memory: { metadataEntries: number; routeEntries: number };
+    persistence: AdsbDbPersistenceDiagnostics;
+    hits: { memory: number; persistent: number; live: number; staleFallback: number };
   };
   ogn: {
     status: SystemStatus;
@@ -290,6 +302,15 @@ export interface SystemStatusBuildInput {
   };
   weather?: Partial<AviationWeatherDiagnostics> & { entries?: number; airports?: number };
   adsbLol?: NetworkProviderDiagnostics;
+  adsbdb?: {
+    providerStatus: "online" | "degraded" | "offline" | "unknown";
+    lastSuccessAt: string | null;
+    lastFailureAt: string | null;
+    consecutiveFailures: number;
+    memory: { metadataEntries: number; routeEntries: number };
+    persistence: AdsbDbPersistenceDiagnostics;
+    hits: { memory: number; persistent: number; live: number; staleFallback: number };
+  };
   ogn?: OgnProviderDiagnostics;
   now?: Date;
   runtime?: Partial<Pick<SystemStatusResponse["application"], "version" | "commit" | "buildTime" | "channel" | "nodeVersion" | "nextVersion" | "environment" | "timezone">> & {
@@ -494,6 +515,56 @@ function safeWeatherCacheFile(value: string): string {
   return typeof value === "string" && value.startsWith("/") && value.length > 0 && value.length <= 4_096 && !/[\0\r\n]/.test(value) && !/password|secret|DATABASE_URL/i.test(value)
     ? value
     : "/var/lib/airradar/weather/weather-cache-v1.json";
+}
+
+function safeAdsbDbCacheFile(value: string): string {
+  return typeof value === "string" && value.startsWith("/") && value.length > 0 && value.length <= 4_096 && !/[\0\r\n]/.test(value) && !/password|secret|DATABASE_URL/i.test(value)
+    ? value
+    : getAdsbDbCacheFile();
+}
+
+function adsbDbPersistenceStatus(value: AdsbDbPersistenceDiagnostics | undefined): AdsbDbPersistenceDiagnostics {
+  return {
+    enabled: Boolean(value?.enabled),
+    cacheFile: safeAdsbDbCacheFile(value?.cacheFile ?? getAdsbDbCacheFile()),
+    loadedFromDisk: Boolean(value?.loadedFromDisk),
+    loadedMetadataEntries: nonNegativeInteger(value?.loadedMetadataEntries ?? 0, 10_000),
+    loadedRouteEntries: nonNegativeInteger(value?.loadedRouteEntries ?? 0, 10_000),
+    rejectedEntries: nonNegativeInteger(value?.rejectedEntries ?? 0, 20_000),
+    lastLoadAt: safeTimestamp(value?.lastLoadAt),
+    lastLoadError: value?.lastLoadError && /^[A-Z0-9_]+$/.test(value.lastLoadError) ? value.lastLoadError : null,
+    dirty: Boolean(value?.dirty),
+    lastSaveAt: safeTimestamp(value?.lastSaveAt),
+    lastSaveError: value?.lastSaveError && /^[A-Z0-9_]+$/.test(value.lastSaveError) ? value.lastSaveError : null,
+    lastSaveEntries: nonNegativeInteger(value?.lastSaveEntries ?? 0, 20_000),
+    fileSizeBytes: value?.fileSizeBytes === null || value?.fileSizeBytes === undefined ? null : nonNegativeInteger(value.fileSizeBytes, 16 * 1024 * 1024),
+    writes: nonNegativeInteger(value?.writes ?? 0, 10_000_000),
+  };
+}
+
+function adsbDbResponse(value: SystemStatusBuildInput["adsbdb"]): SystemStatusResponse["adsbdb"] {
+  const enabled = Boolean(value);
+  const providerStatus = value?.providerStatus ?? "unknown";
+  const status: SystemStatus = !enabled ? "disabled" : providerStatus === "offline" ? "offline" : providerStatus === "degraded" ? "degraded" : "ok";
+  return {
+    status,
+    enabled,
+    providerStatus,
+    lastSuccessAt: safeTimestamp(value?.lastSuccessAt),
+    lastFailureAt: safeTimestamp(value?.lastFailureAt),
+    consecutiveFailures: nonNegativeInteger(value?.consecutiveFailures ?? 0, 1_000_000),
+    memory: {
+      metadataEntries: nonNegativeInteger(value?.memory.metadataEntries ?? 0, 10_000),
+      routeEntries: nonNegativeInteger(value?.memory.routeEntries ?? 0, 10_000),
+    },
+    persistence: adsbDbPersistenceStatus(value?.persistence),
+    hits: {
+      memory: nonNegativeInteger(value?.hits.memory ?? 0, 10_000_000_000),
+      persistent: nonNegativeInteger(value?.hits.persistent ?? 0, 10_000_000_000),
+      live: nonNegativeInteger(value?.hits.live ?? 0, 10_000_000_000),
+      staleFallback: nonNegativeInteger(value?.hits.staleFallback ?? 0, 10_000_000_000),
+    },
+  };
 }
 
 function safeDdbError(value: string | null | undefined): string | null {
@@ -757,6 +828,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       },
     },
     adsbLol: adsbLolResponse(input.adsbLol),
+    adsbdb: adsbDbResponse(input.adsbdb),
     ogn: ognResponse(input.ogn),
     database: {
       status: input.database.status,
@@ -941,6 +1013,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     atsData: ats ? { available: true, routeCount: ats.counts.routes, pointCount: ats.counts.points, segmentCount: ats.counts.segments, effectiveDate: ats.source.effectiveDate } : { available: false, routeCount: 0, pointCount: 0, segmentCount: 0, effectiveDate: null },
     weather,
     adsbLol: service.getNetworkDiagnostics?.(),
+    adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
     ogn: ognService.getDiagnostics(),
     runtime: {
       diagnostics: serviceDiagnostics ? {

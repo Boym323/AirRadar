@@ -1,8 +1,10 @@
-import { getAdsbDbBaseUrl, getFlightAwareApiKey, getReceiverPosition, isAdsbDbEnabled, isAdsbLolEnabled, isReadsbConfigured, shouldUseSampleAtcData } from "@/lib/server/config";
+import { getAdsbDbBaseUrl, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbConfigured, shouldUseSampleAtcData } from "@/lib/server/config";
 import { AdsbLolProvider } from "@/lib/server/adsblol-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
 import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
 import { EnrichmentService } from "@/lib/server/enrichment-cache";
+import { ENRICHMENT_TTLS } from "@/lib/server/enrichment-cache";
+import { AdsbDbPersistence } from "@/lib/server/adsbdb-persistence";
 import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { AircraftMetadataCatalog } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
@@ -37,7 +39,11 @@ class CombinedMetadataProvider implements AircraftMetadataProvider {
       .map((result) => result.value)
       .filter((value): value is AircraftMetadata => value !== null);
     const first = values[0];
-    if (!first) return null;
+    if (!first) {
+      const failure = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+      if (failure) throw failure.reason;
+      return null;
+    }
 
     const merged: AircraftMetadata = { ...first };
     for (const value of values.slice(1)) {
@@ -65,6 +71,12 @@ class CombinedMetadataProvider implements AircraftMetadataProvider {
     }
     return null;
   }
+
+  getAdsbDbDiagnostics() {
+    return this.providers
+      .map((provider) => "getAdsbDbDiagnostics" in provider && typeof provider.getAdsbDbDiagnostics === "function" ? provider.getAdsbDbDiagnostics() : null)
+      .find((value): value is NonNullable<typeof value> => value !== null) ?? null;
+  }
 }
 
 /** Keeps the shared ADSBDB metadata/route concurrency budget when both sources are enabled. */
@@ -82,6 +94,10 @@ class CombinedAdsbDbProvider implements AircraftMetadataProvider, FlightRoutePro
 
   getDiagnostics(): AircraftMetadataDiagnostics | null {
     return this.metadata.getDiagnostics();
+  }
+
+  getAdsbDbDiagnostics() {
+    return this.adsbDb.getAdsbDbDiagnostics();
   }
 
   getRoute(callsign: string, observedAt: Date): Promise<FlightRoute | null> {
@@ -102,7 +118,7 @@ function getUsableFlightAwareApiKey(): string | null {
 }
 
 /** External integrations are optional; the local tar1090 lookup needs no API key. */
-export function createEnrichmentService(): EnrichmentService {
+export function createEnrichmentService(options: { persistAdsbDb?: boolean } = {}): EnrichmentService {
   const registry: ProviderRegistry = {};
   const readsbBaseUrl = process.env.READSB_BASE_URL?.trim();
   const adsbDb = isAdsbDbEnabled() ? new AdsbDbProvider(getAdsbDbBaseUrl()) : null;
@@ -126,7 +142,18 @@ export function createEnrichmentService(): EnrichmentService {
   if (isFlightAwareEnabled() && flightAwareApiKey) {
     registry.flightPlan = new FlightAwareFlightPlanProvider(flightAwareApiKey);
   }
-  return new EnrichmentService(registry);
+  const persistence = adsbDb && options.persistAdsbDb !== false && isAdsbDbPersistenceEnabled()
+    ? new AdsbDbPersistence({
+      cacheFile: getAdsbDbCacheFile(),
+      metadataTtlMs: ENRICHMENT_TTLS.metadataMs,
+      routeTtlMs: ENRICHMENT_TTLS.routeMs,
+      metadataMaxStaleMs: getAdsbDbMetadataMaxPersistedAgeMs(),
+      routeMaxStaleMs: getAdsbDbRouteMaxPersistedAgeMs(),
+      metadataMaxEntries: getAdsbDbMetadataMaxPersistedEntries(),
+      routeMaxEntries: getAdsbDbRouteMaxPersistedEntries(),
+    })
+    : undefined;
+  return new EnrichmentService(registry, undefined, persistence);
 }
 
 const globalForOnDemandEnrichment = globalThis as unknown as {
@@ -135,7 +162,7 @@ const globalForOnDemandEnrichment = globalThis as unknown as {
 
 /** Shared cache/budget for explicit detail requests across the server process. */
 export function getOnDemandEnrichmentService(): EnrichmentService {
-  globalForOnDemandEnrichment.airRadarOnDemandEnrichment ??= createEnrichmentService();
+  globalForOnDemandEnrichment.airRadarOnDemandEnrichment ??= createEnrichmentService({ persistAdsbDb: false });
   return globalForOnDemandEnrichment.airRadarOnDemandEnrichment;
 }
 

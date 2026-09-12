@@ -1,5 +1,7 @@
-import type { Aircraft, AircraftEnrichment } from "@/lib/aircraft/types";
+import type { Aircraft, AircraftEnrichment, AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
 import { distanceToGreatCircleSegmentKm } from "@/lib/geo";
+import { getAdsbDbCacheFile } from "@/lib/server/config";
+import { AdsbDbPersistence, disabledAdsbDbPersistence, type AdsbDbPersistenceDiagnostics } from "@/lib/server/adsbdb-persistence";
 import type { AircraftMetadataDiagnostics, ProviderRegistry } from "@/lib/server/provider";
 
 export const ENRICHMENT_TTLS = {
@@ -130,6 +132,18 @@ export class ProviderCache {
     this.inFlight.clear();
   }
 
+  /** Hydrates a positive value without creating an in-flight/request state. */
+  hydrate<T>(key: string, value: T, expiresAt: number): void {
+    if (expiresAt <= Date.now()) return;
+    this.entries.delete(key);
+    this.entries.set(key, { value, expiresAt });
+    this.evictIfNeeded();
+  }
+
+  count(prefix: string): number {
+    return [...this.entries.keys()].filter((key) => key.startsWith(prefix)).length;
+  }
+
   size(): number {
     return this.entries.size;
   }
@@ -200,10 +214,14 @@ export class EnrichmentService {
   private readonly routeLimiter: ConcurrencyLimiter;
   private readonly flightPlanLimiter = new ConcurrencyLimiter(2);
   private flightPlanCacheHits = 0;
+  private readonly adsbDbPersistence: AdsbDbPersistence | null;
+  private readonly adsbDbHits = { memory: 0, persistent: 0, live: 0, staleFallback: 0 };
+  private readonly staleFallbackLogged = new Set<string>();
 
   constructor(
     private readonly providers: ProviderRegistry,
     private readonly cache = new ProviderCache(),
+    adsbDbPersistence?: AdsbDbPersistence,
   ) {
     // The factory supplies one AdsbDbProvider instance for both capabilities.
     // Sharing only that instance's limiter keeps future provider combinations independent.
@@ -214,6 +232,12 @@ export class EnrichmentService {
       : null;
     this.metadataLimiter = sharedAdsbDbLimiter ?? new ConcurrencyLimiter(6);
     this.routeLimiter = sharedAdsbDbLimiter ?? new ConcurrencyLimiter(6);
+    this.adsbDbPersistence = adsbDbPersistence ?? null;
+    for (const kind of ["metadata", "route"] as const) {
+      for (const entry of this.adsbDbPersistence?.hydrateEntries(kind) ?? []) {
+        this.cache.hydrate(entry.key, entry.value, entry.freshUntilMs);
+      }
+    }
   }
 
   /** Providers safe for continuous live-snapshot enrichment. */
@@ -229,6 +253,15 @@ export class EnrichmentService {
     providerCacheEntries: number;
     providerCacheLimit: number;
     metadata: AircraftMetadataDiagnostics | null;
+    adsbdb: {
+      providerStatus: "online" | "degraded" | "offline" | "unknown";
+      lastSuccessAt: string | null;
+      lastFailureAt: string | null;
+      consecutiveFailures: number;
+      memory: { metadataEntries: number; routeEntries: number };
+      persistence: AdsbDbPersistenceDiagnostics;
+      hits: { memory: number; persistent: number; live: number; staleFallback: number };
+    };
     flightPlan: {
       enabled: boolean;
       cacheHits: number;
@@ -245,10 +278,23 @@ export class EnrichmentService {
       && (candidate.catalogRecordCount === null || typeof candidate.catalogRecordCount === "number")
       ? candidate as AircraftMetadataDiagnostics
       : null;
+    const providerDiagnostics = this.getAdsbDbProviderDiagnostics();
     return {
       providerCacheEntries: this.cache.size(),
       providerCacheLimit: this.cache.limit(),
       metadata: diagnostics,
+      adsbdb: {
+        providerStatus: providerDiagnostics?.providerStatus ?? "unknown",
+        lastSuccessAt: providerDiagnostics?.lastSuccessAt ?? null,
+        lastFailureAt: providerDiagnostics?.lastFailureAt ?? null,
+        consecutiveFailures: providerDiagnostics?.consecutiveFailures ?? 0,
+        memory: {
+          metadataEntries: this.cache.count("aircraft-metadata:"),
+          routeEntries: this.cache.count("flight-route:"),
+        },
+        persistence: this.adsbDbPersistence?.getDiagnostics() ?? disabledAdsbDbPersistence(getAdsbDbCacheFile()),
+        hits: { ...this.adsbDbHits },
+      },
       flightPlan: {
         enabled: this.hasFlightPlanProvider,
         cacheHits: this.flightPlanCacheHits,
@@ -272,13 +318,13 @@ export class EnrichmentService {
     if (!this.hasProviders) return null;
     const [metadata, route] = await Promise.all([
       this.providers.aircraftMetadata
-        ? this.cache.get(metadataCacheKey(aircraft.icaoHex), () => this.metadataLimiter.run(() => this.providers.aircraftMetadata!.getMetadata(aircraft.icaoHex)), {
+        ? this.getAdsbDbCached("metadata", metadataCacheKey(aircraft.icaoHex), () => this.metadataLimiter.run(() => this.providers.aircraftMetadata!.getMetadata(aircraft.icaoHex)), {
             ttlMs: ENRICHMENT_TTLS.metadataMs,
             negativeTtlMs: ENRICHMENT_TTLS.metadataNegativeMs,
           })
         : Promise.resolve(null),
       aircraft.callsign && this.providers.flightRoute
-        ? this.cache.get(routeCacheKey(aircraft.callsign, observedAt, aircraft.icaoHex), () => this.routeLimiter.run(() => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt)), {
+        ? this.getAdsbDbCached("route", routeCacheKey(aircraft.callsign, observedAt, aircraft.icaoHex), () => this.routeLimiter.run(() => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt)), {
             ttlMs: ENRICHMENT_TTLS.routeMs,
             negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
           }).then((route) => route && routeMatchesAircraftPosition(aircraft, route) ? route : null)
@@ -318,5 +364,89 @@ export class EnrichmentService {
     } catch {
       return null;
     }
+  }
+
+  async close(): Promise<void> {
+    await this.adsbDbPersistence?.flush();
+  }
+
+  private async getAdsbDbCached<T extends AircraftEnrichment["metadata"] | AircraftEnrichment["route"]>(
+    kind: "metadata" | "route",
+    key: string,
+    loader: () => Promise<T | null>,
+    options: CacheOptions,
+  ): Promise<T | null> {
+    const isAdsbDb = this.adsbDbPersistence !== null;
+    const pendingOrFresh = this.cache.hasFreshOrPending(key);
+    if (isAdsbDb && !pendingOrFresh) {
+      const persisted = this.adsbDbPersistence!.get(kind, key);
+      if (persisted?.fresh) {
+        this.cache.hydrate(key, persisted.value as T, persisted.fetchedAtMs + options.ttlMs);
+        this.adsbDbHits.persistent += 1;
+        return persisted.value as T;
+      }
+    }
+    if (isAdsbDb && pendingOrFresh) this.adsbDbHits.memory += 1;
+
+    try {
+      const value = await this.cache.get(key, async () => {
+        if (isAdsbDb) this.adsbDbHits.live += 1;
+        return loader();
+      }, { ...options, ...(isAdsbDb ? { cacheLoaderErrors: false } : {}) });
+      if (isAdsbDb && value !== null) {
+        const source = (value as { source?: unknown }).source;
+        if (source === "adsbdb") {
+          this.adsbDbPersistence!.set(kind, key, value as AircraftMetadata | FlightRoute);
+          this.staleFallbackLogged.delete(`${kind}:${key}`);
+        }
+        // A local tar1090/PostgreSQL fallback is not evidence that ADSBDB
+        // returned a miss. Keep the last-known-good ADSBDB value available if
+        // the local source becomes unavailable later.
+      } else if (isAdsbDb && value === null) {
+        // A valid provider miss must not revive an older route/metadata value.
+        this.adsbDbPersistence!.delete(kind, key);
+        this.staleFallbackLogged.delete(`${kind}:${key}`);
+      }
+      return value as T | null;
+    } catch {
+      const stale = isAdsbDb ? this.adsbDbPersistence!.get(kind, key) : null;
+      if (stale && !stale.fresh) {
+        this.adsbDbHits.staleFallback += 1;
+        const logKey = `${kind}:${key}`;
+        if (!this.staleFallbackLogged.has(logKey)) {
+          this.staleFallbackLogged.add(logKey);
+          console.warn(`[adsbdb] provider unavailable; using stale ${kind} age=${Math.max(0, Date.now() - stale.fetchedAtMs)}ms`);
+        }
+        return stale.value as T;
+      }
+      return null;
+    }
+  }
+
+  private getAdsbDbProviderDiagnostics(): {
+    providerStatus: "online" | "degraded" | "offline";
+    lastSuccessAt: string | null;
+    lastFailureAt: string | null;
+    consecutiveFailures: number;
+  } | null {
+    const providers = [this.providers.aircraftMetadata, this.providers.flightRoute];
+    for (const provider of providers) {
+      if (!provider || !("getAdsbDbDiagnostics" in provider)) continue;
+      const candidate = (provider as typeof provider & { getAdsbDbDiagnostics?: () => unknown }).getAdsbDbDiagnostics?.();
+      if (!candidate || typeof candidate !== "object") continue;
+      const value = candidate as Record<string, unknown>;
+      if ((value.providerStatus === "online" || value.providerStatus === "degraded" || value.providerStatus === "offline")
+        && (value.lastSuccessAt === null || typeof value.lastSuccessAt === "string")
+        && (value.lastFailureAt === null || typeof value.lastFailureAt === "string")
+        && typeof value.consecutiveFailures === "number") {
+        return value as {
+          providerStatus: "online" | "degraded" | "offline";
+          lastSuccessAt: string | null;
+          lastFailureAt: string | null;
+          consecutiveFailures: number;
+        };
+      }
+    }
+    return null;
   }
 }

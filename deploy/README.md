@@ -45,6 +45,12 @@ APP_TIMEZONE=Europe/Prague
 # AVIATION_WEATHER_METAR_MAX_PERSISTED_AGE_MS=7200000
 # AVIATION_WEATHER_TAF_MAX_PERSISTED_AGE_MS=86400000
 # AVIATION_WEATHER_SIGMET_MAX_PERSISTED_AGE_MS=86400000
+# ADSBDB persistence is enabled by default in production and writes a bounded,
+# last-known-good snapshot under the systemd StateDirectory.
+# ADSBDB_PERSIST_CACHE=true
+# ADSBDB_CACHE_DIR=/var/lib/airradar/adsbdb
+# ADSBDB_METADATA_MAX_STALE_MS=604800000
+# ADSBDB_ROUTE_MAX_STALE_MS=86400000
 ```
 
 `WATCHLIST_ADMIN_TOKEN` is the exact server-side secret used to authorize
@@ -66,6 +72,15 @@ state directory and stores `/var/lib/airradar/weather/weather-cache-v1.json`.
 The production service user already has access through `StateDirectory=airradar`;
 development and test processes keep persistence disabled unless explicitly
 enabled with `AVIATION_WEATHER_PERSIST_CACHE=true` and a suitable cache path.
+
+ADSBDB persistence uses the same systemd-managed state directory and stores
+`/var/lib/airradar/adsbdb/adsbdb-cache-v1.json`. The snapshot is versioned,
+bounded, validated, written atomically with mode `0600`, and contains only
+positive metadata/routes. Metadata remains fresh for 24 hours and may be used
+as a provider-error fallback for up to 7 days; routes remain fresh for 6 hours
+and may be used stale for up to 24 hours. Negative results stay in RAM only.
+Development and test processes do not write `/var/lib/airradar` unless
+`ADSBDB_PERSIST_CACHE=true` is explicitly configured.
 
 Optional server alerts use `/var/lib/airradar/alerts.json`, a persistent file
 created in the systemd-managed state directory. The checked-in `data/alerts.json`

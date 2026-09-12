@@ -271,9 +271,16 @@ path reports the aircraft's actual tuned frequency.
 
 ## Auxiliary flows
 
-- `ADSBDB` and tar1090 metadata are keyed by aircraft hex; ADSBDB route data
-  is keyed by normalized callsign and UTC date. FlightAware flight-plan data
-  is keyed by callsign and observed time. All are server-side enrichment with
+- `ADSBDB` metadata is keyed by aircraft hex. ADSBDB route data is keyed by
+  aircraft hex, normalized callsign, and UTC date, so a callsign reuse cannot
+  silently share a route across aircraft or days. The RAM cache keeps the
+  existing 24-hour metadata and 6-hour route TTLs; positive ADSBDB values are
+  also hydrated from the optional bounded version-1 snapshot at
+  `/var/lib/airradar/adsbdb/adsbdb-cache-v1.json`. Metadata has a 7-day
+  persistent stale limit and routes 24 hours. Persistent values are used only
+  after a provider error; a valid provider miss never revives stale data.
+  Negative results remain RAM-only. FlightAware flight-plan data is keyed by
+  callsign and observed time. All are server-side enrichment with
   cache/concurrency limits.
 - ADSBDB route airport objects pass through `AirportResolver`: PostgreSQL
   exact ICAO, then IATA, then valid provider coordinates, then the small
