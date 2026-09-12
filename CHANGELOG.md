@@ -443,3 +443,9 @@ Changes since v1.0.25:
 - feat: add backwards-compatible SSE delta v2 (8648b71c)
 - docs: define future airport movement intelligence (4e99545f)
 - Merge pull request #16 from Boym323/automation/overnight-sse-delta-v2 (57acf27b)
+
+## [1.0.27] - 2026-09-12
+
+Changes since v1.0.26:
+
+- feat: enhance airport visibility filtering and add related tests (814db0e7)
