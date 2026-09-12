@@ -464,3 +464,9 @@ Changes since v1.0.27:
 Changes since v1.0.28:
 
 - fix(ui): harden responsive map controls and mobile layout (31d53386)
+
+## [1.0.30] - 2026-09-12
+
+Changes since v1.0.29:
+
+- fix(map): configure MapLibre worker for GeoJSON overlays (8729f806)
