@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { aviationCoordinateToDecimal, densifyArc } from "@/lib/atc/cz-geometry";
 import { CzEaipParseError, mergeCzAd2AtcResults, parseCzEaipAd2AtcAirspace, parseCzEaipEnr21 } from "@/lib/atc/cz-eaip";
+import type { BoundaryResolver } from "@/lib/atc/boundary-resolver";
 import { evaluateCzEaipDiagnosticPolicy } from "@/lib/atc/cz-eaip-policy";
 import type { AtcSector } from "@/lib/atc/types";
 import { matchSector } from "@/lib/server/atc-sector-service";
@@ -29,6 +30,8 @@ function sourceLimitedRow(name: string, annotationParam: string, unit: string, c
 }
 
 const referenceAccRow = `<tr><td><p><strong><span class="SD">SECTOR TEST</span><span class="sdParams">TAIRSPACE;TXT_NAME;100</span> <span class="SD">LKAAFIX</span><span class="sdParams">TAIRSPACE;CODE_ID;100</span></strong></p><p><span class="SD">500000N</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LAT;1001</span> <span class="SD">0140000E</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LONG;1001</span></p><p><span class="SD">501000N</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LAT;1002</span> <span class="SD">0140000E</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LONG;1002</span></p><p><span class="SD">501000N</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LAT;1003</span> <span class="SD">0150000E</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LONG;1003</span></p><p><span class="SD">SFC</span><span class="sdParams">TAIRSPACE_VOLUME;VAL_DIST_VER_LOWER;100</span> <span class="SD">FL</span><span class="sdParams">TAIRSPACE_VOLUME;UOM_DIST_VER_UPPER;100</span> <span class="SD">125</span><span class="sdParams">TAIRSPACE_VOLUME;VAL_DIST_VER_UPPER;100</span></p></td><td><span class="SD">PRAHA ACC</span><span class="sdParams">TUNIT;TXT_NAME;100</span></td><td><span class="SD">PRAHA RADAR</span><span class="sdParams">TCALLSIGN_DETAIL;TXT_CALL_SIGN;100</span></td><td><span class="SD">128.230</span><span class="sdParams">TFREQUENCY;VAL_FREQ_TRANS;100</span></td></tr>`;
+
+const firRow = `<tr><td><p><strong><span class="SD">FIR PRAHA</span><span class="sdParams">TAIRSPACE;TXT_NAME;2987</span></strong></p><p><span class="SD">484617.8329N</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LAT;1</span> <span class="SD">0135022.4354E</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LONG;1</span></p><p><span class="SD">state boundary with Germany</span><span class="sdParams">TGEO_BORDER;ANNOTATION:1;1</span></p><p><span class="SD">505214.0557N</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LAT;2</span> <span class="SD">0144924.1001E</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LONG;2</span></p><p><span class="SD">state boundary with Poland</span><span class="sdParams">TGEO_BORDER;ANNOTATION:1;2</span></p><p><span class="SD">493101.7340N</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LAT;3</span> <span class="SD">0185103.2694E</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LONG;3</span></p><p><span class="SD">state boundary with Slovakia</span><span class="sdParams">TGEO_BORDER;ANNOTATION:1;3</span></p><p><span class="SD">483659.5406N</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LAT;4</span> <span class="SD">0165624.6784E</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LONG;4</span></p><p><span class="SD">state boundary with Austria</span><span class="sdParams">TGEO_BORDER;ANNOTATION:1;4</span></p><p><span class="SD">484617.8329N</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LAT;5</span> <span class="SD">0135022.4354E</span><span class="sdParams">TAIRSPACE_VERTEX;GEO_LONG;5</span></p><p><span class="SD">FL</span><span class="sdParams">TAIRSPACE_VOLUME;UOM_DIST_VER_UPPER;3032</span> <span class="SD">660</span><span class="sdParams">TAIRSPACE_VOLUME;VAL_DIST_VER_UPPER;3032</span> / <span class="SD">GND</span><span class="sdParams">TAIRSPACE_VOLUME;VAL_DIST_VER_LOWER;3032</span></p></td><td>Units providing services are set at particular areas</td><td></td><td></td></tr>`;
 
 function parsedFixtureSector(): AtcSector {
   const source = parseCzEaipEnr21(fixture, { publicationHtml: publicationFixture }).document.sectors[0];
@@ -85,6 +88,42 @@ describe("Czech eAIP geometry utilities", () => {
 });
 
 describe("Czech eAIP ENR 2.1 parser", () => {
+  it("imports FIR PRAHA from its authoritative state-boundary walk and keeps UIR NIL empty", () => {
+    const resolutions: Array<{ neighbour: string; start: number[]; end: number[] }> = [];
+    const boundaryResolver: BoundaryResolver = {
+      getBoundarySegment(reference, input) {
+        if (reference.kind !== "czech-border") throw new Error("unexpected boundary kind");
+        resolutions.push({ neighbour: reference.neighbour, start: input.start, end: input.end });
+        return {
+          coordinates: [input.start, input.end],
+          startSnapDistanceKm: 0,
+          endSnapDistanceKm: 0,
+          pathLengthKm: 1,
+          vertexCount: 2,
+          maxSegmentLengthKm: 1,
+          featureIds: [`cz-${reference.neighbour}`],
+          provider: "ČÚZK Data50",
+        };
+      },
+    };
+    const result = parseCzEaipEnr21(referenceFixture(`${firRow}<tr><td colspan="5">UIR: NIL</td></tr>`), { boundaryResolver });
+    expect(result.document.sectors).toHaveLength(1);
+    expect(result.document.sectors[0]).toMatchObject({
+      id: "LKAA-AIP-2987",
+      name: "FIR PRAHA",
+      country: "CZ",
+      airspaceType: "FIR",
+      airspaceClass: null,
+      lowerAltitude: "SFC",
+      upperAltitude: "FL660",
+      primaryFrequencyMhz: null,
+    });
+    expect(result.document.sectors[0].polygons[0].length).toBe(5);
+    expect(resolutions.map(({ neighbour }) => neighbour)).toEqual(["DE", "PL", "SK", "AT"]);
+    expect(result.document.sectors.some((sector) => /UIR/i.test(sector.name))).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => /UIR/i.test(diagnostic.name))).toBe(false);
+  });
+
   it("classifies rows, resolves lateral references, retains reserve frequencies and metadata", () => {
     const result = parseCzEaipEnr21(fixture, { publicationHtml: publicationFixture, lastVerifiedAt: "2026-09-06T00:00:00.000Z" });
     expect(result.effectiveDate).toBe("2026-09-03");

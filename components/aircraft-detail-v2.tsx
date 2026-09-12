@@ -8,6 +8,7 @@ import { aircraftAirportHref, aircraftFlightHref, aircraftWatchlistHref } from "
 import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryAirportCount, AircraftHistoryRange, AircraftHistorySummary, AircraftLifetimeStats, HistoryFlightSummary, HistoryResponse } from "@/lib/server/history";
 import { formatAge, formatAltitude, formatDateTime, formatDistance, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
 import { FlightRouteWeather } from "@/components/airport-weather";
+import type { AtcContextResult } from "@/lib/atc-context/types";
 
 function valueOrEmpty(value: string | null | undefined): string {
   return value || t.common.emptyValue;
@@ -45,6 +46,32 @@ function AirportCodeLink({ code }: { code: string | null }): ReactNode {
 
 function DetailValue({ label, children }: { label: string; children: ReactNode }) {
   return <div><div className="detail-item-label">{label}</div><div className="detail-item-value">{children}</div></div>;
+}
+
+function AtcContextCard({ icaoHex, enabled }: { icaoHex: string; enabled: boolean }) {
+  const [context, setContext] = useState<AtcContextResult | null>(null);
+  useEffect(() => {
+    if (!enabled) { setContext(null); return; }
+    let active = true;
+    void fetch(`/api/aircraft/${encodeURIComponent(icaoHex)}/context`, { cache: "no-store" })
+      .then((response) => response.json() as Promise<AtcContextResult>)
+      .then((value) => { if (active) setContext(value); })
+      .catch(() => { if (active) setContext(null); });
+    return () => { active = false; };
+  }, [enabled, icaoHex]);
+  if (!enabled) return null;
+  if (!context || context.status !== "available") return <section className="aircraft-card" aria-label={t.atc.contextTitle}><h2>{t.atc.contextTitle}</h2><div className="detail-disclaimer">{context?.status === "stale" ? t.atc.contextStale : t.atc.contextUnavailable}</div></section>;
+  const route = context.atsRoute;
+  return <section className="aircraft-card" aria-label={t.atc.contextTitle}>
+    <h2>{t.atc.contextTitle}</h2>
+    <div className="detail-grid aircraft-detail-grid">
+      <DetailValue label={t.atc.contextFir}>{context.fir?.name ?? t.common.emptyValue}</DetailValue>
+      <DetailValue label={t.atc.contextAirspace}>{context.primaryAirspace?.name ?? t.common.emptyValue}</DetailValue>
+      <DetailValue label={route?.confidence === "high" ? t.atc.contextAts : t.atc.contextNearestAts}>{route ? `${route.routeId} · ${formatNumber(route.distanceNm, 1)} NM` : t.atc.contextDirect}</DetailValue>
+      <DetailValue label={t.atc.contextNext}>{context.nextPoint ? `${context.nextPoint.identifier} · ${formatNumber(context.nextPoint.distanceNm, 0)} NM` : context.ahead ? `${context.ahead.airspace.name} · ${formatNumber(context.ahead.distanceNm, 0)} NM` : t.common.emptyValue}</DetailValue>
+    </div>
+    <div className="detail-disclaimer">{t.atc.contextDisclaimer}</div>
+  </section>;
 }
 
 type AltitudeChartPoint = Pick<HistoryResponse["positions"][number], "recordedAt" | "altitude">;
@@ -438,6 +465,8 @@ export function AircraftDetailV2({
         <div><strong>{formatTrack(liveAircraft.track)}</strong><span>{t.aircraft.track}</span></div>
         <div><strong>{liveAircraft.verticalRate === null ? t.common.emptyValue : `${liveAircraft.verticalRate > 0 ? "+" : ""}${formatNumber(liveAircraft.verticalRate)} ft/min`}</strong><span>{t.aircraft.verticalRate}</span></div>
       </section>}
+
+      <AtcContextCard icaoHex={icaoHex} enabled={Boolean(liveAircraft)} />
 
       {route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
 

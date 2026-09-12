@@ -31,6 +31,7 @@ import { TAR1090_CATEGORY_ICON_ASSETS, TAR1090_GROUND_SQUARE_ICON_ASSET, TAR1090
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
+import type { AtcContextResult } from "@/lib/atc-context/types";
 import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
 import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/airspace-activity/map";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
@@ -505,6 +506,7 @@ export function AirRadarApp() {
   const [aircraftDetail, setAircraftDetail] = useState<AircraftDetailResponse | null>(null);
   const [aircraftDetailLoading, setAircraftDetailLoading] = useState(false);
   const [aircraftDetailError, setAircraftDetailError] = useState<string | null>(null);
+  const [selectedAtcContext, setSelectedAtcContext] = useState<AtcContextResult | null>(null);
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
@@ -908,6 +910,7 @@ export function AirRadarApp() {
       map.addLayer({ id: "ats-routes-line", type: "line", source: "ats-routes", layout: { visibility: "none" }, paint: { "line-color": "#37d6c0", "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 8, 2.2, 13, 3.4] } });
       map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": "#f3b95f", "line-opacity": 0.95, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.5, 8, 2.4, 13, 3.6], "line-dasharray": [2, 2] } });
       map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": "#ffe08a", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
+      map.addLayer({ id: "ats-route-context-highlight", type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": "#fff0a6", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 4.5, 13, 7] } });
       map.addLayer({ id: ROUTE_INTELLIGENCE_REMAINING_LAYER_ID, type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__route-intelligence-none__"], layout: { visibility: "none" }, paint: { "line-color": "#8bb9c8", "line-opacity": 0.8, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5], "line-dasharray": [1, 2] } });
       map.addLayer({ id: ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID, type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__route-intelligence-none__"], layout: { visibility: "none" }, paint: { "line-color": "#4e9d91", "line-opacity": 0.78, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
       map.addLayer({ id: ROUTE_INTELLIGENCE_CURRENT_LAYER_ID, type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__route-intelligence-none__"], layout: { visibility: "none" }, paint: { "line-color": "#fff0a6", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 4, 13, 6] } });
@@ -950,6 +953,7 @@ export function AirRadarApp() {
       map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "airspacePlanState"], "planned-now", "#f3b95f", "upcoming", "#4fb3d8", "#8068ff"], "fill-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.28, "upcoming", 0.1, 0.16] } });
       map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffd27a", "upcoming", "#79cbe8", "#c4b5fd"], "line-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 1, "upcoming", 0.78, 0.92], "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.3, 8, 2, 13, 3], "line-dasharray": [2, 2] } });
       map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffe2a6", "upcoming", "#a8dcf0", "#d7caff"], "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
+      map.addLayer({ id: "atc-sectors-context-highlight", type: "line", source: "atc-sectors", filter: ["==", ["get", "id"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": "#fff0a6", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2.5, 8, 3.5, 13, 5] } });
       map.addSource("atc-transmitters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": "#f3b95f", "circle-radius": 5, "circle-stroke-color": "#08111d", "circle-stroke-width": 1.5 } });
       map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([]) });
@@ -1480,6 +1484,29 @@ export function AirRadarApp() {
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
   const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
+  const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
+  const contextHasPosition = selectedAircraftSnapshot?.lat !== null && selectedAircraftSnapshot?.lon !== null;
+
+  useEffect(() => {
+    if (!contextAircraftHex || !contextHasPosition) {
+      setSelectedAtcContext(null);
+      return;
+    }
+    let active = true;
+    const refresh = () => {
+      void fetch(`/api/aircraft/${encodeURIComponent(contextAircraftHex)}/context`, { cache: "no-store" })
+        .then((response) => response.json() as Promise<AtcContextResult>)
+        .then((value) => { if (active) setSelectedAtcContext(value); })
+        .catch(() => { if (active) setSelectedAtcContext(null); });
+    };
+    refresh();
+    let timer: number | null = null;
+    const schedule = () => {
+      timer = window.setTimeout(() => { refresh(); schedule(); }, 5_000);
+    };
+    schedule();
+    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
+  }, [contextAircraftHex, contextHasPosition]);
 
   const routeIntelligence = useMemo(() => {
     if (!selectedAircraft) return null;
@@ -1512,6 +1539,21 @@ export function AirRadarApp() {
   }, [mapReady, routeIntelligence, showAtsRoutes]);
 
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const airspaceId = selectedAircraftVisible && selectedAtcContext?.status === "available" ? selectedAtcContext.primaryAirspace?.id ?? "__context-none__" : "__context-none__";
+    const route = selectedAircraftVisible && selectedAtcContext?.status === "available" ? selectedAtcContext.atsRoute : null;
+    const segmentId = route && (route.confidence === "high" || route.confidence === "medium") ? route.segmentId : "__context-none__";
+    if (map.getLayer("atc-sectors-context-highlight")) {
+      map.setFilter("atc-sectors-context-highlight", ["==", ["get", "id"], airspaceId]);
+      map.setLayoutProperty("atc-sectors-context-highlight", "visibility", showAtc && airspaceId !== "__context-none__" ? "visible" : "none");
+    }
+    if (map.getLayer("ats-route-context-highlight")) {
+      map.setFilter("ats-route-context-highlight", ["==", ["get", "segmentId"], segmentId]);
+      map.setLayoutProperty("ats-route-context-highlight", "visibility", showAtsRoutes && segmentId !== "__context-none__" ? "visible" : "none");
+    }
+  }, [mapReady, selectedAircraftVisible, selectedAtcContext, showAtc, showAtsRoutes]);
   const hasActiveMapFilters = isMapAircraftFilterActive(mapFilters)
     || search.trim() !== ""
     || distanceFilter !== "all"

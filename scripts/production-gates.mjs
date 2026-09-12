@@ -185,6 +185,7 @@ async function assertBrowserSmoke() {
       page.on("console", (message) => { if (message.type() === "error") browserErrors.push(`console: ${message.text()}`); });
       page.on("pageerror", (error) => browserErrors.push(`page: ${error.message}`));
       page.on("worker", (worker) => worker.on("error", (error) => browserErrors.push(`worker: ${error.message}`)));
+      page.on("response", (response) => { if (response.status() >= 500) browserErrors.push(`http ${response.status()}: ${response.url()}`); });
       await page.route("**/api/airports", (route) => route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -247,6 +248,26 @@ async function assertBrowserSmoke() {
           }],
           transmitters: [],
           metadata: { status: "configured", source: "browser fixture", sourceReference: "https://example.invalid/atc", effectiveDate: "2026-09-03", lastVerifiedAt: "2026-09-03T00:00:00.000Z", sectorCount: 1, transmitterCount: 0 },
+        }),
+      }));
+      await page.route("**/api/aircraft/*?coverage=local", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ aircraft: null, recentFlights: [], historySummary: { range: "30d", flightCount: 0, activeDays: 0, firstSeenAt: null, lastSeenAt: null, topCallsigns: [], topRoutes: [], topOrigin: null, topDestination: null }, lifetimeStats: { firstObservedAt: null, lastObservedAt: null, flightCount: 0, activeDays: 0, topCallsigns: [], topOrigins: [], topDestinations: [], topRoutes: [], returningGapDays: null }, logbook: { isNew: false, isRare: false, isReturning: false, returningGapDays: null } }),
+      }));
+      await page.route("**/api/aircraft/*/context", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          status: "available",
+          position: { lat: 50.1, lon: 14.4, altitude: 34000, altitudeSource: "baro" },
+          supportedCountry: true,
+          fir: { id: "fixture-sector", name: "Browser fixture sector", countryCode: "CZ", airspaceType: "CTA", airspaceClass: "C", verticalMatch: "true", horizontalMatch: "inside", confidence: "high", lowerLimitFt: 0, upperLimitFt: 66000, lowerLimitReference: "SFC", upperLimitReference: "UNL", publishedUnit: "FIXTURE", publishedFrequenciesMhz: [], remarks: null, provenance: { source: "browser fixture", sourceReference: "https://example.invalid/atc", effectiveDate: null, lastVerifiedAt: "2026-09-03T00:00:00.000Z" } },
+          currentAirspaces: [],
+          primaryAirspace: { id: "fixture-sector", name: "Browser fixture sector", countryCode: "CZ", airspaceType: "CTA", airspaceClass: "C", verticalMatch: "true", horizontalMatch: "inside", confidence: "high", lowerLimitFt: 0, upperLimitFt: 66000, lowerLimitReference: "SFC", upperLimitReference: "UNL", publishedUnit: "FIXTURE", publishedFrequenciesMhz: [], remarks: null, provenance: { source: "browser fixture", sourceReference: "https://example.invalid/atc", effectiveDate: null, lastVerifiedAt: "2026-09-03T00:00:00.000Z" } },
+          atsRoute: { routeId: "FIXTURE1", segmentId: "fixture-segment", from: "A", to: "B", distanceNm: 1.2, alignmentDifferenceDeg: 4, confidence: "high", countryCode: "CZ", sourceReference: "https://example.invalid/ats" },
+          nearestAtsCandidate: null, nearestPoint: null, nextPoint: null, ahead: null, limitation: null,
+          computedAt: "2026-09-12T00:00:00.000Z", dataset: { atcVersion: "fixture", atsVersion: "fixture", atcCount: 1, atsSegmentCount: 1 },
         }),
       }));
       await page.route("**/api/weather/sigmet", (route) => route.fulfill({
@@ -336,9 +357,23 @@ async function assertBrowserSmoke() {
       await atcLayer.locator("input").check();
       await atsLayer.locator("input").check();
       await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-ats"]')?.textContent || ""));
-      await atsLayer.locator("input").uncheck();
-      await atsLayer.locator("input").check();
-      await sigmetLayer.locator("input").check();
+      await page.locator(".aircraft-row").first().evaluate((element) => element.click());
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        if (!map?.isStyleLoaded()) return false;
+        return JSON.stringify(map.getFilter("atc-sectors-context-highlight"))?.includes("fixture-sector")
+          && JSON.stringify(map.getFilter("ats-route-context-highlight"))?.includes("fixture-segment");
+      }, undefined, { timeout: 10_000 });
+      await page.locator(".close-button").click();
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        if (!map?.isStyleLoaded()) return false;
+        return !JSON.stringify(map.getFilter("atc-sectors-context-highlight"))?.includes("fixture-sector")
+          && !JSON.stringify(map.getFilter("ats-route-context-highlight"))?.includes("fixture-segment");
+      }, undefined, { timeout: 10_000 });
+      await atsLayer.locator("input").evaluate((element) => element.click());
+      await atsLayer.locator("input").evaluate((element) => element.click());
+      await sigmetLayer.locator("input").evaluate((element) => element.click());
       await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [17.9, 49.0], zoom: 8 }));
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;

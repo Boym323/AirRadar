@@ -18,7 +18,7 @@ export const CZ_ATC_SOURCE_REFERENCE = `${CZ_EAIP_ENR21_URL} | Czech boundary ge
 const AUTHORITATIVE_HOST = "aim.rlp.cz";
 const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
 
-export type CzAtcObjectType = "ACC_OPERATIONAL_SECTOR" | "FIC_SECTOR" | "TMA" | "CTA" | "CTR" | "OTHER";
+export type CzAtcObjectType = "FIR" | "ACC_OPERATIONAL_SECTOR" | "FIC_SECTOR" | "TMA" | "CTA" | "CTR" | "OTHER";
 
 export interface CzPublicationMetadata {
   aipAmendment: string | null;
@@ -469,6 +469,7 @@ function classifyRow(name: string, unit: string | null, callsign: string | null)
   const normalizedName = name.toUpperCase();
   const normalizedUnit = unit?.toUpperCase() ?? "";
   const normalizedCallsign = callsign?.toUpperCase() ?? "";
+  if (/^FIR\s+PRAHA\b/.test(normalizedName)) return "FIR";
   if (normalizedName.startsWith("SECTOR") && normalizedUnit.includes("PRAHA ACC") && normalizedCallsign.includes("PRAHA RADAR")) return "ACC_OPERATIONAL_SECTOR";
   if (normalizedName.startsWith("SECTOR") && (normalizedUnit.includes("FIC") || normalizedCallsign.includes("INFORMATION"))) return "FIC_SECTOR";
   if (normalizedName.startsWith("TMA")) return "TMA";
@@ -477,6 +478,7 @@ function classifyRow(name: string, unit: string | null, callsign: string | null)
 }
 
 function serviceForObjectType(objectType: CzAtcObjectType, unit: string | null): string | null {
+  if (objectType === "FIR") return null;
   if (objectType === "ACC_OPERATIONAL_SECTOR" || objectType === "CTA") return "ACC";
   if (objectType === "FIC_SECTOR") return "FIS";
   if (objectType === "TMA") return "APP";
@@ -499,7 +501,6 @@ function stableId($: CheerioAPI, cell: Parameters<CheerioAPI>[0], prefix = "LKAA
 
 function parseRow($: CheerioAPI, rowNode: Parameters<CheerioAPI>[0], geometryOnly = false): ParsedRow | null {
   const cells = $(rowNode).children("td").toArray();
-  if (cells.length < 4 && !geometryOnly) return null;
   const first = $(cells[0]);
   const name = normalizedText(first.find("strong .SD").first().text());
   if (!name) return null;
@@ -508,6 +509,7 @@ function parseRow($: CheerioAPI, rowNode: Parameters<CheerioAPI>[0], geometryOnl
   const unit = unitCell ? sourceValue($, unitCell, "TUNIT", "TXT_NAME") ?? (normalizedText(unitCell.text()).split(";")[0] || null) : null;
   const callsign = callsignCell ? sourceValue($, callsignCell, "TCALLSIGN_DETAIL", "TXT_CALL_SIGN") ?? null : null;
   const objectType = classifyRow(name, unit, callsign);
+  if (cells.length < 4 && !geometryOnly && objectType !== "FIR") return null;
   const airspaceClass = /class of airspace\s*:\s*([A-G])\b/i.exec(normalizedText(first.text()))?.[1]?.toUpperCase() ?? null;
   const remarks = cells[4] ? normalizedText($(cells[4]).text()) || null : null;
   const boundary = parseBoundary($, first);
@@ -640,12 +642,38 @@ function validatePolygon(name: string, polygon: Coordinate[]): string | null {
   let area = 0;
   for (let index = 0; index < polygon.length - 1; index += 1) area += polygon[index][0] * polygon[index + 1][1] - polygon[index + 1][0] * polygon[index][1];
   if (Math.abs(area) < 1e-12) return `${name} has zero-area geometry`;
+  // Official state-boundary geometry can contain many thousands of vertices.
+  // Index segment bounding boxes before testing intersections so validation
+  // remains bounded by local geometry rather than O(n²) for the whole ring.
+  const cellSize = 0.25;
+  const cells = new Map<string, number[]>();
+  const cellKey = (x: number, y: number): string => `${x}:${y}`;
+  for (let index = 0; index < polygon.length - 1; index += 1) {
+    const left = polygon[index];
+    const right = polygon[index + 1];
+    const west = Math.floor(Math.min(left[0], right[0]) / cellSize);
+    const east = Math.floor(Math.max(left[0], right[0]) / cellSize);
+    const south = Math.floor(Math.min(left[1], right[1]) / cellSize);
+    const north = Math.floor(Math.max(left[1], right[1]) / cellSize);
+    for (let x = west; x <= east; x += 1) for (let y = south; y <= north; y += 1) {
+      const key = cellKey(x, y);
+      cells.set(key, [...(cells.get(key) ?? []), index]);
+    }
+  }
+  const checked = new Set<string>();
   for (let first = 0; first < polygon.length - 1; first += 1) {
-    for (let second = first + 1; second < polygon.length - 1; second += 1) {
-      if (second === first + 1 || (first === 0 && second === polygon.length - 2)) continue;
-      if (segmentIntersects(polygon[first], polygon[first + 1], polygon[second], polygon[second + 1])) {
-        return `${name} has self-intersecting geometry`;
-      }
+    const left = polygon[first];
+    const right = polygon[first + 1];
+    const west = Math.floor(Math.min(left[0], right[0]) / cellSize);
+    const east = Math.floor(Math.max(left[0], right[0]) / cellSize);
+    const south = Math.floor(Math.min(left[1], right[1]) / cellSize);
+    const north = Math.floor(Math.max(left[1], right[1]) / cellSize);
+    for (let x = west; x <= east; x += 1) for (let y = south; y <= north; y += 1) for (const second of cells.get(cellKey(x, y)) ?? []) {
+      if (second <= first || second === first + 1 || (first === 0 && second === polygon.length - 2)) continue;
+      const pair = `${first}:${second}`;
+      if (checked.has(pair)) continue;
+      checked.add(pair);
+      if (segmentIntersects(polygon[first], polygon[first + 1], polygon[second], polygon[second + 1])) return `${name} has self-intersecting geometry`;
     }
   }
   return null;
@@ -786,10 +814,10 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
   const rows = parseRows($);
   const referencedRows = parseReferencedRows($, rows);
   const allRows = [...rows, ...referencedRows];
-  const classification = { ACC_OPERATIONAL_SECTOR: 0, FIC_SECTOR: 0, TMA: 0, CTA: 0, CTR: 0, OTHER: 0 } satisfies Record<CzAtcObjectType, number>;
+  const classification = { FIR: 0, ACC_OPERATIONAL_SECTOR: 0, FIC_SECTOR: 0, TMA: 0, CTA: 0, CTR: 0, OTHER: 0 } satisfies Record<CzAtcObjectType, number>;
   for (const row of rows) classification[row.objectType] += 1;
   const accRows = rows.filter((row) => row.objectType === "ACC_OPERATIONAL_SECTOR");
-  if (!accRows.length) throw new CzEaipParseError(["No PRAHA ACC operational sector rows were found"]);
+  if (!accRows.length && !rows.some((row) => row.objectType === "FIR")) throw new CzEaipParseError(["No PRAHA ACC operational sector rows were found"]);
   const candidateRows = rows.filter((row) => importableObjectType(row.objectType));
   inheritLogicalVerticalLimits(candidateRows);
   for (const row of allRows) {
@@ -823,7 +851,7 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
     }
     if (!row.skipReason && row.lowerAltitude === null) row.skipReason = "missing lower vertical limit";
     if (!row.skipReason && row.upperAltitude === null) row.skipReason = "missing upper vertical limit";
-    if (!row.skipReason && row.primaryFrequencyMhz === null) row.skipReason = "missing primary frequency";
+    if (!row.skipReason && row.objectType !== "FIR" && row.primaryFrequencyMhz === null) row.skipReason = "missing primary frequency";
     if (!row.skipReason) {
       const geometryIssue = row.boundary.polygons.map((polygon) => validatePolygon(row.name, polygon)).find((issue): issue is string => issue !== null);
       if (geometryIssue) row.skipReason = geometryIssue;
