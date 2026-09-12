@@ -158,6 +158,14 @@ interface AircraftMotionTiming {
   durationMs: number;
 }
 
+interface AircraftAnimationJob {
+  marker: maplibregl.Marker;
+  start: maplibregl.LngLat;
+  target: [number, number];
+  startedAt: number;
+  durationMs: number;
+}
+
 const MAP_STYLE: StyleSpecification = {
   version: 8,
   glyphs: "/fonts/{fontstack}/{range}.pbf",
@@ -523,7 +531,9 @@ export function AirRadarApp() {
   const receiverMarkerRef = useRef<maplibregl.Marker | null>(null);
   const aircraftMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const ognMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
-  const animationFramesRef = useRef<Map<string, number>>(new Map());
+  const animationJobsRef = useRef<Map<string, AircraftAnimationJob>>(new Map());
+  const animationFrameRef = useRef<number | null>(null);
+  const animationSchedulerRef = useRef<(() => void) | null>(null);
   const aircraftMotionTimingRef = useRef<Map<string, AircraftMotionTiming>>(new Map());
   const aircraftAnimationTargetsRef = useRef<Map<string, [number, number]>>(new Map());
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
@@ -845,13 +855,38 @@ export function AirRadarApp() {
     if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
       window.__airradarMapForDiagnostics = map;
     }
-    const animationFrames = animationFramesRef.current;
+    const animationJobs = animationJobsRef.current;
     const aircraftMarkers = aircraftMarkersRef.current;
     const ognMarkers = ognMarkersRef.current;
     const aircraftMotionTiming = aircraftMotionTimingRef.current;
     const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
     const liveTrails = liveTrailsRef.current;
     const mapReplays = mapReplayRef.current;
+
+    const runAnimations = (timestamp: number) => {
+      animationFrameRef.current = null;
+      if (document.hidden) return;
+      for (const [hex, job] of animationJobs) {
+        const progress = Math.min(1, (timestamp - job.startedAt) / job.durationMs);
+        const eased = progress * (2 - progress);
+        job.marker.setLngLat([
+          job.start.lng + (job.target[0] - job.start.lng) * eased,
+          job.start.lat + (job.target[1] - job.start.lat) * eased,
+        ]);
+        if (progress >= 1) animationJobs.delete(hex);
+      }
+      if (animationJobs.size) animationFrameRef.current = requestAnimationFrame(runAnimations);
+    };
+    const ensureAnimationFrame = () => {
+      if (!document.hidden && animationJobs.size && animationFrameRef.current === null) {
+        animationFrameRef.current = requestAnimationFrame(runAnimations);
+      }
+    };
+    const onVisibilityChange = () => {
+      if (!document.hidden) ensureAnimationFrame();
+    };
+    animationSchedulerRef.current = ensureAnimationFrame;
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     map.on("load", () => {
       map.addSource("range-rings", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -1002,8 +1037,11 @@ export function AirRadarApp() {
 
     return () => {
       for (const replay of Object.values(mapReplays)) replay.setReady(false);
-      for (const frame of animationFrames.values()) cancelAnimationFrame(frame);
-      animationFrames.clear();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+      animationSchedulerRef.current = null;
+      animationJobs.clear();
       aircraftMotionTiming.clear();
       aircraftAnimationTargets.clear();
       receiverMarkerRef.current?.remove();
@@ -1181,29 +1219,16 @@ export function AirRadarApp() {
     const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
     const currentHexes = new Set<string>();
     const animate = (hex: string, marker: maplibregl.Marker, target: [number, number], duration: number) => {
-      const previousFrame = animationFramesRef.current.get(hex);
-      if (previousFrame) cancelAnimationFrame(previousFrame);
       const start = marker.getLngLat();
       if (Math.abs(start.lng - target[0]) < 0.000001 && Math.abs(start.lat - target[1]) < 0.000001) {
         marker.setLngLat(target);
-        animationFramesRef.current.delete(hex);
+        animationJobsRef.current.delete(hex);
         return;
       }
-      const startedAt = performance.now();
-      const frame = (timestamp: number) => {
-        const progress = Math.min(1, (timestamp - startedAt) / duration);
-        const eased = progress * (2 - progress);
-        marker.setLngLat([
-          start.lng + (target[0] - start.lng) * eased,
-          start.lat + (target[1] - start.lat) * eased,
-        ]);
-        if (progress < 1) {
-          animationFramesRef.current.set(hex, requestAnimationFrame(frame));
-        } else {
-          animationFramesRef.current.delete(hex);
-        }
-      };
-      animationFramesRef.current.set(hex, requestAnimationFrame(frame));
+      animationJobsRef.current.set(hex, { marker, start, target, startedAt: performance.now(), durationMs: duration });
+      // All aircraft share one browser animation callback, which substantially
+      // reduces callback and map-render overhead when traffic is dense.
+      animationSchedulerRef.current?.();
     };
 
     const selectedAircraftInSnapshot = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex);
@@ -1310,9 +1335,7 @@ export function AirRadarApp() {
           marker.getElement().style.visibility = showAircraft ? "visible" : "hidden";
           continue;
         }
-        const frame = animationFramesRef.current.get(hex);
-        if (frame) cancelAnimationFrame(frame);
-        animationFramesRef.current.delete(hex);
+        animationJobsRef.current.delete(hex);
         aircraftMotionTiming.delete(hex);
         aircraftAnimationTargets.delete(hex);
         marker.remove();
