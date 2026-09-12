@@ -142,7 +142,15 @@ async function assertBrowserSmoke() {
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
   try {
-    for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    for (const viewport of [
+      { width: 375, height: 844 },
+      { width: 390, height: 844 },
+      { width: 821, height: 900 },
+      { width: 850, height: 900 },
+      { width: 900, height: 900 },
+      { width: 1024, height: 900 },
+      { width: 1440, height: 900 },
+    ]) {
       const page = await browser.newPage({ viewport });
       await page.route("**/api/ats/routes", (route) => route.fulfill({
         status: 200,
@@ -169,6 +177,36 @@ async function assertBrowserSmoke() {
         return mapReady && imagesReady && buttonsReady;
       });
       await page.locator("details.map-layers > summary").click();
+      const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+      if (hasHorizontalOverflow) throw new Error(`Horizontal overflow at ${viewport.width}px`);
+
+      const layerMenu = page.locator(".map-layers-menu");
+      const layerMenuBounds = await layerMenu.boundingBox();
+      if (!layerMenuBounds) throw new Error(`Map layers menu is not measurable at ${viewport.width}px`);
+      if (layerMenuBounds.x < 0 || layerMenuBounds.x + layerMenuBounds.width > viewport.width) {
+        throw new Error(`Map layers menu overflows at ${viewport.width}px: ${JSON.stringify(layerMenuBounds)}`);
+      }
+
+      if (viewport.width <= 820) {
+        const sidebar = page.locator('[data-testid="radar-sidebar"].compact');
+        const atcPanel = page.getByTestId("atc-relevance-panel");
+        const sidebarBounds = await sidebar.boundingBox();
+        const atcPanelBounds = await atcPanel.boundingBox();
+        if (!sidebarBounds || !atcPanelBounds) throw new Error(`Compact sidebar is not measurable at ${viewport.width}px`);
+        if (atcPanelBounds.y + atcPanelBounds.height > sidebarBounds.y + sidebarBounds.height + 2) {
+          throw new Error(`Compact ATC panel is clipped at ${viewport.width}px: sidebar=${JSON.stringify(sidebarBounds)}, atc=${JSON.stringify(atcPanelBounds)}`);
+        }
+        if (await page.locator('[data-testid="radar-sidebar"].compact .sidebar-secondary-tools').isVisible()) {
+          throw new Error(`Secondary tools remain visible in compact sidebar at ${viewport.width}px`);
+        }
+        await page.locator(".mobile-collapse").click();
+        await page.locator('[data-testid="radar-sidebar"]:not(.compact)').waitFor({ state: "visible" });
+        if (!await page.locator('[data-testid="radar-sidebar"]:not(.compact) .sidebar-secondary-tools').isVisible()) {
+          throw new Error(`Secondary tools are not available after expanding sidebar at ${viewport.width}px`);
+        }
+        await page.locator(".mobile-collapse").click();
+      }
+
       const airportLayer = page.getByTestId("map-layer-airports");
       const atcLayer = page.getByTestId("map-layer-atc");
       const atsLayer = page.getByTestId("map-layer-ats");

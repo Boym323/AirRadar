@@ -1600,7 +1600,7 @@ export function AirRadarApp() {
           </div>
         </div>
 
-        <aside className={`sidebar ${mobileCompact ? "compact" : ""} ${selectedAircraft || selectedOgnTarget ? "has-selection" : ""}`}>
+        <aside data-testid="radar-sidebar" className={`sidebar ${mobileCompact ? "compact" : ""} ${selectedAircraft || selectedOgnTarget ? "has-selection" : ""}`}>
           <div className="sidebar-heading">
               <div className="sidebar-heading-main">
                 <div className="sidebar-title">{t.radar.trafficNearby}</div>

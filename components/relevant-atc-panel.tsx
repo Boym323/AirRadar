@@ -27,7 +27,7 @@ export function RelevantAtcPanel({ summaries, onOpen, expanded = true }: Relevan
   }
 
   return (
-    <section className={`atc-relevance-panel ${expanded ? "is-expanded" : "is-compact"}`} aria-label={t.atc.relevantTitle}>
+    <section data-testid="atc-relevance-panel" className={`atc-relevance-panel ${expanded ? "is-expanded" : "is-compact"}`} aria-label={t.atc.relevantTitle}>
       <div className="atc-panel-mobile-summary">
         <div className="atc-panel-kicker">{t.atc.relevantTitle}</div>
         {first ? <button type="button" className="atc-mobile-entry" aria-expanded={expanded} aria-controls="atc-panel-content" onClick={() => select(first)}>

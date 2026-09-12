@@ -937,7 +937,7 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .map-summary-card { gap: 9px; max-width: calc(100vw - 92px); }
   .map-summary-item strong { font-size: 12px; }
   .map-summary-item span { font-size: 7px; }
-  .map-layers-menu { right: auto; left: 0; }
+  .map-layers-menu { left: auto; right: 0; max-width: calc(100vw - 20px); }
   .range-legend { display: none; }
   .layer-legend { display: none; }
   .sidebar { position: absolute; z-index: 3; left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); height: min(46svh, 440px); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 -12px 35px rgba(0,0,0,.35); }
@@ -1533,7 +1533,8 @@ button, input, select, textarea { color-scheme: dark; }
   .contextual-legend { display: none; }
   .map-layers > summary { min-height: 38px; }
   .sidebar { left: 6px; right: 6px; bottom: max(6px, env(safe-area-inset-bottom)); border-radius: 8px; }
-  .sidebar.compact { height: 134px; }
+  .sidebar.compact { height: 144px; }
+  .sidebar.compact .sidebar-secondary-tools { display: none; }
   .sidebar:not(.compact) { height: min(54svh, 520px); }
   .sidebar-heading { padding: 11px 13px 9px; }
   .sidebar-heading::before { content: ""; position: absolute; top: 6px; left: 50%; width: 32px; height: 3px; transform: translateX(-50%); border-radius: 99px; background: rgba(190, 214, 232, .42); }
@@ -1561,7 +1562,7 @@ button, input, select, textarea { color-scheme: dark; }
   .aircraft-marker { width: 42px; height: 42px; }
   .aircraft-label { font-size: 10px; }
   .map-panel .maplibregl-ctrl-bottom-right { bottom: calc(min(54svh, 520px) + max(6px, env(safe-area-inset-bottom))); }
-  .radar-content:has(.sidebar.compact) .maplibregl-ctrl-bottom-right { bottom: calc(82px + max(6px, env(safe-area-inset-bottom))); }
+  .radar-content:has(.sidebar.compact) .maplibregl-ctrl-bottom-right { bottom: calc(92px + max(6px, env(safe-area-inset-bottom))); }
   .history-page, .flight-page, .aircraft-page, .airport-page, .statistics-page, .watchlist-page, .fleet-page, .system-page { padding-top: 20px; }
   .aircraft-page-header h1, .airport-page-header h1, .flight-page-header h1 { font-size: clamp(25px, 8vw, 34px); }
   .aircraft-page-route { font-size: 16px; }
@@ -1572,6 +1573,16 @@ button, input, select, textarea { color-scheme: dark; }
 }
 
 @media (min-width: 821px) { .mobile-collapse { display: none !important; } }
+
+@media (min-width: 821px) and (max-width: 900px) {
+  .topbar-receiver,
+  .topbar-secondary-status { display: none; }
+  .global-search { flex-basis: 170px; min-width: 150px; margin-left: 8px; }
+  .topbar-nav { gap: 8px; margin-right: 8px; }
+  .topbar-nav a,
+  .topbar-nav-more > summary { white-space: nowrap; font-size: 11px; }
+  .topbar-meta .status-pill { min-height: 28px; padding: 4px 7px; font-size: 10px; }
+}
 
 .history-v2-card { overflow: hidden; }
 .history-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-top: 15px; }
