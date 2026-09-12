@@ -149,6 +149,9 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 
 const MIN_AIRCRAFT_ANIMATION_MS = 650;
 const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
+// Position samples arrive every few seconds. Ten visual updates per second
+// are enough for smooth movement while avoiding a permanent 60 Hz map loop.
+const AIRCRAFT_ANIMATION_TICK_MS = 100;
 type TrafficSource = "adsb" | "ogn";
 
 interface AircraftMotionTiming {
@@ -532,7 +535,7 @@ export function AirRadarApp() {
   const aircraftMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const ognMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const animationJobsRef = useRef<Map<string, AircraftAnimationJob>>(new Map());
-  const animationFrameRef = useRef<number | null>(null);
+  const animationTimerRef = useRef<number | null>(null);
   const animationSchedulerRef = useRef<(() => void) | null>(null);
   const aircraftMotionTimingRef = useRef<Map<string, AircraftMotionTiming>>(new Map());
   const aircraftAnimationTargetsRef = useRef<Map<string, [number, number]>>(new Map());
@@ -864,7 +867,7 @@ export function AirRadarApp() {
     const mapReplays = mapReplayRef.current;
 
     const runAnimations = (timestamp: number) => {
-      animationFrameRef.current = null;
+      animationTimerRef.current = null;
       if (document.hidden) return;
       for (const [hex, job] of animationJobs) {
         const progress = Math.min(1, (timestamp - job.startedAt) / job.durationMs);
@@ -875,17 +878,17 @@ export function AirRadarApp() {
         ]);
         if (progress >= 1) animationJobs.delete(hex);
       }
-      if (animationJobs.size) animationFrameRef.current = requestAnimationFrame(runAnimations);
+      if (animationJobs.size) animationTimerRef.current = window.setTimeout(() => runAnimations(performance.now()), AIRCRAFT_ANIMATION_TICK_MS);
     };
-    const ensureAnimationFrame = () => {
-      if (!document.hidden && animationJobs.size && animationFrameRef.current === null) {
-        animationFrameRef.current = requestAnimationFrame(runAnimations);
+    const ensureAnimationTimer = () => {
+      if (!document.hidden && animationJobs.size && animationTimerRef.current === null) {
+        animationTimerRef.current = window.setTimeout(() => runAnimations(performance.now()), 0);
       }
     };
     const onVisibilityChange = () => {
-      if (!document.hidden) ensureAnimationFrame();
+      if (!document.hidden) ensureAnimationTimer();
     };
-    animationSchedulerRef.current = ensureAnimationFrame;
+    animationSchedulerRef.current = ensureAnimationTimer;
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     map.on("load", () => {
@@ -1038,8 +1041,8 @@ export function AirRadarApp() {
     return () => {
       for (const replay of Object.values(mapReplays)) replay.setReady(false);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
+      if (animationTimerRef.current !== null) window.clearTimeout(animationTimerRef.current);
+      animationTimerRef.current = null;
       animationSchedulerRef.current = null;
       animationJobs.clear();
       aircraftMotionTiming.clear();
@@ -1226,8 +1229,9 @@ export function AirRadarApp() {
         return;
       }
       animationJobsRef.current.set(hex, { marker, start, target, startedAt: performance.now(), durationMs: duration });
-      // All aircraft share one browser animation callback, which substantially
-      // reduces callback and map-render overhead when traffic is dense.
+      // All aircraft share one low-frequency animation timer, which avoids a
+      // permanent 60 Hz callback and reduces map-render overhead when traffic
+      // is dense.
       animationSchedulerRef.current?.();
     };
 
