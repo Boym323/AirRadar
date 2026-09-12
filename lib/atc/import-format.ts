@@ -20,6 +20,9 @@ export interface AtcImportSector {
   name: string;
   atcCallsign?: string | null;
   service?: string | null;
+  airspaceType?: string | null;
+  airspaceClass?: string | null;
+  remarks?: string | null;
   country?: string | null;
   polygons: number[][][];
   lowerAltitude?: ImportAltitude | null;
@@ -65,6 +68,9 @@ export interface NormalizedAtcSector {
   name: string;
   atcCallsign: string | null;
   service: string | null;
+  airspaceType: string | null;
+  airspaceClass: string | null;
+  remarks: string | null;
   country: string | null;
   polygons: number[][][];
   lowerAltitudeFt: number | null;
@@ -117,6 +123,9 @@ export interface ExistingAtcSectorRecord {
   upperAltitudeReference?: string | null;
   atcCallsign: string | null;
   service: string | null;
+  airspaceType?: string | null;
+  airspaceClass?: string | null;
+  remarks?: string | null;
   primaryFrequencyMhz: number | null;
   alternateFrequenciesJson: string | null;
   country: string | null;
@@ -183,6 +192,9 @@ function sameSector(row: ExistingAtcSectorRecord, sector: NormalizedAtcSector): 
     && (row.upperAltitudeReference ?? null) === sector.upperAltitudeReference
     && row.atcCallsign === sector.atcCallsign
     && row.service === sector.service
+    && (row.airspaceType ?? null) === sector.airspaceType
+    && (row.airspaceClass ?? null) === sector.airspaceClass
+    && (row.remarks ?? null) === sector.remarks
     && row.primaryFrequencyMhz === sector.primaryFrequencyMhz
     && sameJson(parsedJson(row.alternateFrequenciesJson), sector.alternateFrequencies)
     && row.country === sector.country
@@ -338,6 +350,12 @@ function textOrNull(value: unknown, path: string, issues: string[]): string | nu
   return value === undefined || value === null ? null : optionalString(value, path, issues);
 }
 
+function airspaceClass(value: unknown, path: string, issues: string[]): string | null {
+  const result = textOrNull(value, path, issues)?.toUpperCase() ?? null;
+  if (result !== null && !/^[A-G]$/.test(result)) issues.push(`${path} must be an ICAO class A-G or null`);
+  return result !== null && /^[A-G]$/.test(result) ? result : null;
+}
+
 function polygons(value: unknown, path: string, issues: string[]): number[][][] {
   if (!Array.isArray(value) || value.length === 0) {
     issues.push(`${path} must contain at least one polygon ring`);
@@ -458,6 +476,9 @@ export function validateAtcImportDocument(value: unknown): NormalizedAtcImport {
         name,
         atcCallsign: textOrNull(rawSector.atcCallsign, `${path}.atcCallsign`, issues),
         service: textOrNull(rawSector.service, `${path}.service`, issues),
+        airspaceType: textOrNull(rawSector.airspaceType, `${path}.airspaceType`, issues),
+        airspaceClass: airspaceClass(rawSector.airspaceClass, `${path}.airspaceClass`, issues),
+        remarks: textOrNull(rawSector.remarks, `${path}.remarks`, issues),
         country: textOrNull(rawSector.country, `${path}.country`, issues),
         polygons: ringData,
         lowerAltitudeFt,

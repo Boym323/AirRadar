@@ -41,6 +41,8 @@
     "atc:status:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-status-sk.ts",
     "ats:sync:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-sync-cz.ts",
     "ats:status:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-cz.ts",
+    "ats:status:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-sk.ts",
+    "ats:sync:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-sync-sk.ts",
     "changelog": "node scripts/changelog.mjs generate",
     "changelog:backfill": "node scripts/changelog.mjs backfill"
   },
@@ -50,6 +52,7 @@
     "geist": "^1.7.2",
     "maplibre-gl": "^6.9.0",
     "next": "^16.3.4",
+    "proj4": "^2.22.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "temporal-polyfill": "1.0.4"

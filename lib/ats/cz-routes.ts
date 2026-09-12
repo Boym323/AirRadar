@@ -4,7 +4,7 @@ import path from "node:path";
 export type CzAtsPoint = { id: string; name: string; kind: "DESIGNATED_POINT" | "NAVAID"; latitude: number; longitude: number; foreignMaintainer: string | null; remarks: string | null };
 export type CzAtsSegment = { id: string; fromName: string; toName: string; from: [number, number]; to: [number, number]; navigationSpecification: string; magTrackForwardDeg: number | null; magTrackReverseDeg: number | null; distanceNm: number; upperLimit: string; lowerLimit: string; lowerOverride: string | null; cruisingLevelForward: string | null; cruisingLevelReverse: string | null; availabilityClass: "CDR1" | "CDR2" | "CDR3" | null; availabilityStatus: "UNKNOWN"; remarks: string | null };
 export type CzAtsRoute = { designator: string; points: CzAtsPoint[]; segments: CzAtsSegment[]; discontinuities: Array<{ afterPointId: string; beforePointId: string }> };
-export type CzAtsRouteDocument = { schemaVersion: 1; source: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; routes: CzAtsRoute[]; counts: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number } };
+export type CzAtsRouteDocument = { schemaVersion: 1; source: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null; countryCode?: string; provider?: string; sections?: string[] }; routes: CzAtsRoute[]; counts: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number } };
 
 const DEFAULT_PATH = path.join(process.cwd(), "data/ats/generated/cz-routes.json");
 let cached: { file: string; mtimeMs: number; document: CzAtsRouteDocument } | null = null;

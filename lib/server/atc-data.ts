@@ -121,6 +121,9 @@ function storedSector(record: {
   upperAltitudeReference: string | null;
   atcCallsign: string | null;
   service: string | null;
+  airspaceType: string | null;
+  airspaceClass: string | null;
+  remarks: string | null;
   primaryFrequencyMhz: number | null;
   alternateFrequenciesJson: string | null;
   country: string | null;
@@ -137,6 +140,9 @@ function storedSector(record: {
     name: record.name,
     atcCallsign: record.atcCallsign,
     service: record.service,
+    airspaceType: record.airspaceType,
+    airspaceClass: record.airspaceClass,
+    remarks: record.remarks,
     polygons,
     lowerAltitudeFt: record.lowerAltitudeFt,
     upperAltitudeFt: record.upperAltitudeFt,

@@ -152,6 +152,10 @@ async function assertBrowserSmoke() {
       { width: 1440, height: 900 },
     ]) {
       const page = await browser.newPage({ viewport });
+      const browserErrors = [];
+      page.on("console", (message) => { if (message.type() === "error") browserErrors.push(`console: ${message.text()}`); });
+      page.on("pageerror", (error) => browserErrors.push(`page: ${error.message}`));
+      page.on("worker", (worker) => worker.on("error", (error) => browserErrors.push(`worker: ${error.message}`)));
       await page.route("**/api/airports", (route) => route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -178,6 +182,28 @@ async function assertBrowserSmoke() {
             source: "browser fixture",
             sourceReference: "https://example.invalid/atc",
             lastVerifiedAt: "2026-09-03T00:00:00.000Z",
+          }, {
+            id: "fixture-sk-sector",
+            name: "Slovakia fixture CTA",
+            atcCallsign: "BRATISLAVA RADAR",
+            service: "ACC",
+            airspaceType: "CTA",
+            polygons: [[[17.3, 48.5], [18.5, 48.5], [18.5, 49.4], [17.3, 49.4], [17.3, 48.5]]],
+            lowerAltitudeFt: 8000, upperAltitudeFt: 66000,
+            lowerAltitudeReference: "AMSL", upperAltitudeReference: "FL",
+            frequencies: [], validFrom: "2026-09-03", validTo: null, country: "SK",
+            source: "browser fixture", sourceReference: "https://example.invalid/sk-atc", lastVerifiedAt: "2026-09-03T00:00:00.000Z",
+          }, {
+            id: "fixture-sk-fir",
+            name: "BRATISLAVA FIR",
+            atcCallsign: null,
+            service: "ACC",
+            airspaceType: "FIR",
+            polygons: [[[16.84, 47.73], [22.57, 47.73], [22.57, 49.62], [16.84, 49.62], [16.84, 47.73]]],
+            lowerAltitudeFt: 0, upperAltitudeFt: null,
+            lowerAltitudeReference: "SFC", upperAltitudeReference: "UNL",
+            frequencies: [], validFrom: "2026-09-03", validTo: null, country: "SK",
+            source: "browser fixture", sourceReference: "https://example.invalid/sk-atc-fir", lastVerifiedAt: "2026-09-03T00:00:00.000Z",
           }],
           transmitters: [],
           metadata: { status: "configured", source: "browser fixture", sourceReference: "https://example.invalid/atc", effectiveDate: "2026-09-03", lastVerifiedAt: "2026-09-03T00:00:00.000Z", sectorCount: 1, transmitterCount: 0 },
@@ -208,7 +234,7 @@ async function assertBrowserSmoke() {
           source: { name: "browser fixture", reference: "https://example.invalid/ats", effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null },
           counts: { routes: 1, points: 2, segments: 1, cdrSegments: 0, discontinuities: 0 },
           routes: [],
-          segments: { type: "FeatureCollection", features: [{ type: "Feature", properties: { routeDesignator: "FIXTURE1", segmentId: "fixture-segment", fromName: "A", toName: "B", navigationSpecification: "RNAV", distanceNm: 10, lowerLimit: "SFC", upperLimit: "UNL", lowerOverride: null, magTrackForwardDeg: 90, magTrackReverseDeg: 270, cruisingLevelForward: null, cruisingLevelReverse: null, availabilityClass: null, effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null, remarks: null }, geometry: { type: "LineString", coordinates: [[14, 50], [14.2, 50.1]] } }] },
+          segments: { type: "FeatureCollection", features: [{ type: "Feature", properties: { countryCode: "CZ", routeDesignator: "FIXTURE1", segmentId: "fixture-segment", fromName: "A", toName: "B", navigationSpecification: "RNAV", distanceNm: 10, lowerLimit: "SFC", upperLimit: "UNL", lowerOverride: null, magTrackForwardDeg: 90, magTrackReverseDeg: 270, cruisingLevelForward: null, cruisingLevelReverse: null, availabilityClass: null, effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null, remarks: null }, geometry: { type: "LineString", coordinates: [[14, 50], [14.2, 50.1]] } }, { type: "Feature", properties: { countryCode: "SK", routeDesignator: "A4", segmentId: "sk-segment", fromName: "SKA", toName: "SKB", navigationSpecification: "CONVENTIONAL", distanceNm: 10, lowerLimit: "SFC", upperLimit: "UNL", lowerOverride: null, magTrackForwardDeg: 90, magTrackReverseDeg: 270, cruisingLevelForward: null, cruisingLevelReverse: null, availabilityClass: null, effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null, remarks: null }, geometry: { type: "LineString", coordinates: [[17.4, 48.7], [18.1, 49.1]] } }] },
           labels: { type: "FeatureCollection", features: [] },
           points: { type: "FeatureCollection", features: [] },
         }),
@@ -273,7 +299,7 @@ async function assertBrowserSmoke() {
       await atsLayer.locator("input").uncheck();
       await atsLayer.locator("input").check();
       await sigmetLayer.locator("input").check();
-      await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [14.4378, 50.0755], zoom: 8 }));
+      await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [17.9, 49.0], zoom: 8 }));
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
         if (!map || !map.isStyleLoaded()) return false;
@@ -281,7 +307,23 @@ async function assertBrowserSmoke() {
         const layerIds = ["route-airports-circle", "atc-sectors-fill", "ats-routes-line", "aviation-sigmet-fill"];
         return sourceIds.every((id) => map.isSourceLoaded(id))
           && layerIds.every((id) => Boolean(map.getLayer(id)))
-          && layerIds.every((id) => map.queryRenderedFeatures({ layers: [id] }).length > 0);
+          && map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "SK")
+          && map.queryRenderedFeatures({ layers: ["ats-routes-line"] }).some((feature) => feature.properties?.countryCode === "SK");
+      }, undefined, { timeout: 30_000 });
+      await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [19.5, 48.8], zoom: 6 }));
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        return Boolean(map?.isStyleLoaded()) && map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "SK")
+          && map.queryRenderedFeatures({ layers: ["ats-routes-line"] }).some((feature) => feature.properties?.countryCode === "SK");
+      }, undefined, { timeout: 30_000 });
+      await page.waitForFunction(() => window.__airradarMapForDiagnostics?.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "SK" && feature.properties?.airspaceType === "FIR"), undefined, { timeout: 30_000 });
+      if (browserErrors.length) throw new Error(`Browser errors at ${viewport.width}px: ${browserErrors.join(" | ")}`);
+      await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [14.2, 50.1], zoom: 8 }));
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        if (!map || !map.isStyleLoaded()) return false;
+        return map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "CZ")
+          && map.queryRenderedFeatures({ layers: ["ats-routes-line"] }).some((feature) => feature.properties?.countryCode === "CZ");
       }, undefined, { timeout: 30_000 });
       const accessibility = await page.evaluate(() => ({
         missingImageAlt: [...document.images].filter((image) => !image.hasAttribute("alt")).length,

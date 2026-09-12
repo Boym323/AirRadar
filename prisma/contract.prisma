@@ -231,6 +231,9 @@ model AtcSector {
   upperAltitudeReference String?
   atcCallsign       String?
   service           String?
+  airspaceType      String?
+  airspaceClass     String?
+  remarks           String?
   primaryFrequencyMhz Float?
   alternateFrequenciesJson String?
   country           String?

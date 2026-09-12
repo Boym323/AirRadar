@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { parseSkEaipEnr21, skEaipEffectiveDateFromUrl, skEaipUrlCandidates, skSectorId } from "@/lib/atc/sk-eaip";
+import { parseSkEaipEnr21, skEaipEffectiveDateFromUrl, skEaipEffectiveUrlsFromMenu, skEaipUrlCandidates, skSectorId } from "@/lib/atc/sk-eaip";
 import type { StateBoundaryInput, StateBoundaryProvider, StateBoundaryResolution } from "@/lib/atc/cz-boundary";
 import type { Coordinate } from "@/lib/atc/types";
 
@@ -72,6 +72,16 @@ describe("Slovak eAIP ENR 2.1 parser", () => {
     expect(result.document.sectors.some((sector) => sector.id === "SK-ZILINA-TMA-2")).toBe(true);
   });
 
+  it("constructs textual Bratislava FIR from the official national-boundary provider", () => {
+    const result = parseSkEaipEnr21("<table><tbody><tr><td>BRATISLAVA FIR State boundary with Poland, Ukraine, Hungary, Austria and Czech Republic. UNL / GND</td></tr></tbody></table>", {
+      sourceReference,
+      effectiveDate: "2026-09-03",
+      nationalBoundaryProvider: { getNationalPolygon: () => [[17, 48], [18, 49], [17, 48]] },
+    });
+    expect(result.document.sectors[0]).toMatchObject({ id: "SK-BRATISLAVA-FIR", airspaceType: "FIR", lowerAltitude: "SFC", upperAltitude: "UNL", country: "SK" });
+    expect(result.diagnostics[0]).toMatchObject({ name: "BRATISLAVA FIR", status: "accepted", geometry: "state-boundary" });
+  });
+
   it("fails closed on ambiguous circular-arc geometry instead of drawing a guessed line", () => {
     const result = parseSkEaipEnr21(fixture, {
       sourceReference,
@@ -99,10 +109,14 @@ describe("Slovak eAIP ENR 2.1 parser", () => {
     expect(skEaipEffectiveDateFromUrl(sourceReference.replace("aim.lps.sk", "example.com"))).toBeNull();
   });
 
-  it("discovers the current AIRAC publication first and keeps bounded previous-cycle fallbacks", () => {
+  it("uses menu-discovered AIRAC publications and keeps a bounded dated fallback", () => {
     const candidates = skEaipUrlCandidates(new Date("2026-09-10T12:00:00Z"));
-    expect(candidates[0]).toBe(sourceReference);
-    expect(candidates).toHaveLength(8);
+    expect(candidates).toHaveLength(56);
     expect(candidates.every((candidate) => candidate.startsWith("https://aim.lps.sk/web/eAIP_SR/"))).toBe(true);
+    const menu = `<a href="AIP_SR_EFF_06AUG2026/html/LZ-menu-en-SK.html">A</a><a href="AIP_SR_EFF_03SEP2026/html/LZ-menu-en-SK.html">B</a>`;
+    expect(skEaipEffectiveUrlsFromMenu(menu)).toEqual([
+      "https://aim.lps.sk/web/eAIP_SR/AIP_SR_EFF_03SEP2026/html/LZ-menu-en-SK.html",
+      "https://aim.lps.sk/web/eAIP_SR/AIP_SR_EFF_06AUG2026/html/LZ-menu-en-SK.html",
+    ]);
   });
 });

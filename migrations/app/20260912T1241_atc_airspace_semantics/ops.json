@@ -1,0 +1,128 @@
+[
+  {
+    "id": "column.public.atcSector.airspaceType",
+    "label": "Add column \"airspaceType\" to \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "airspaceType",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"airspaceType\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "airspaceType"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"airspaceType\"",
+        "sql": "ALTER TABLE \"public\".\"atcSector\" ADD COLUMN \"airspaceType\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"airspaceType\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "airspaceType"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.atcSector.airspaceClass",
+    "label": "Add column \"airspaceClass\" to \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "airspaceClass",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"airspaceClass\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "airspaceClass"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"airspaceClass\"",
+        "sql": "ALTER TABLE \"public\".\"atcSector\" ADD COLUMN \"airspaceClass\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"airspaceClass\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "airspaceClass"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.atcSector.remarks",
+    "label": "Add column \"remarks\" to \"atcSector\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "remarks",
+        "table": "atcSector"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"remarks\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "remarks"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"remarks\"",
+        "sql": "ALTER TABLE \"public\".\"atcSector\" ADD COLUMN \"remarks\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"remarks\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "atcSector",
+          "remarks"
+        ]
+      }
+    ]
+  }
+]

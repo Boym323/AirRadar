@@ -265,6 +265,7 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivi
         type: "Feature" as const,
         properties: {
           id: sector.id,
+          countryCode: sector.country,
           name: sector.name,
           label: planLabel ? `${sector.name} · ${planLabel}` : sector.name,
           service: formatAtcService(sector.service ?? sector.atcCallsign),
@@ -1349,9 +1350,11 @@ export function AirRadarApp() {
 
     const selected = selectedAircraftVisible ? selectedAircraftInSnapshot : undefined;
     const trailSource = map.getSource("selected-trail") as GeoJSONSource | undefined;
-    trailSource?.setData(selectedTrailForMap.length > 1
-      ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
-      : { type: "FeatureCollection", features: [] });
+    if (selectedAircraftVisible) {
+      trailSource?.setData(selectedTrailForMap.length > 1
+        ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
+        : { type: "FeatureCollection", features: [] });
+    }
     for (const layer of ["selected-trail-line", ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none");
     }
@@ -1359,12 +1362,14 @@ export function AirRadarApp() {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && showAirports ? "visible" : "none");
     }
     const routeSource = map.getSource(ROUTE_V2_SOURCE_ID) as GeoJSONSource | undefined;
-    routeSource?.setData(createRouteGeoJSON(
-      selected?.enrichment?.route,
-      selected && selected.lat !== null && selected.lon !== null ? { lat: selected.lat, lon: selected.lon } : null,
-    ));
+    if (selectedAircraftVisible) {
+      routeSource?.setData(createRouteGeoJSON(
+        selected?.enrichment?.route,
+        selected && selected.lat !== null && selected.lon !== null ? { lat: selected.lat, lon: selected.lon } : null,
+      ));
+    }
     const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
-    routeAirportSource?.setData(createRouteAirportGeoJSON(selected?.enrichment?.route));
+    if (selectedAircraftVisible) routeAirportSource?.setData(createRouteAirportGeoJSON(selected?.enrichment?.route));
   }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {

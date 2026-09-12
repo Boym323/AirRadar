@@ -71,6 +71,9 @@ export interface CzAtsRouteDocument {
     lastVerifiedAt: string;
     aipAmendment: string | null;
     airacAmendment: string | null;
+    countryCode?: string;
+    provider?: string;
+    sections?: string[];
   };
   routes: CzAtsRoute[];
   counts: {

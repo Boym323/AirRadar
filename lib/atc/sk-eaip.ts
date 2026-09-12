@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import { aviationCoordinateToDecimal } from "./cz-geometry";
+import { aviationCoordinateToDecimal, densifyArc } from "./cz-geometry";
 import type { StateBoundaryProvider, StateBoundaryResolution } from "./cz-boundary";
 import type { AtcImportDocument, AtcImportFrequency, AtcImportSector, ImportAltitude } from "./import-format";
 import { isSupportedAtcFrequencyMhz } from "./frequency-policy";
@@ -9,21 +9,21 @@ import { getAirRadarUserAgent } from "@/lib/server/user-agent";
 export const SK_EAIP_SOURCE_NAME = "Slovak eAIP";
 export const SK_EAIP_BASE_URL = "https://aim.lps.sk/web/eAIP_SR";
 export const SK_EAIP_HOST = "aim.lps.sk";
-export const SK_EAIP_AIRAC_ANCHOR = "2026-09-03";
+export const SK_EAIP_ENTRY_URL = "https://aim.lps.sk/web/eAIP_SR/";
 
 const MAX_EAIP_BYTES = 8 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 20_000;
-const AIRAC_CYCLE_MS = 28 * 24 * 60 * 60_000;
 const EMERGENCY_FREQUENCY_MHZ = 121.5;
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] as const;
 const COORDINATE_PAIR_PATTERN = /(\d{6}(?:[.,]\d+)?[NS])\s*(\d{7}(?:[.,]\d+)?[EW])/gi;
-const ALTITUDE_PATTERN = /(UNL|GND|SFC|FL\s*\d{1,3}|\d[\d ]*\s*ft\s*(?:AMSL|AGL))/gi;
 
 export interface SkEaipSource {
   enr21Html: string;
   enr21Url: string;
   effectiveDate: string;
 }
+
+export interface SkEaipSectionSource extends SkEaipSource { section: "ENR 2.1" | "ENR 3.1" | "ENR 3.2"; }
 
 export interface SkEaipDiagnostic {
   name: string;
@@ -44,6 +44,8 @@ export interface ParseSkEaipOptions {
   effectiveDate: string;
   boundaryProvider?: StateBoundaryProvider;
   verifiedAt?: Date;
+  arcCenterProvider?: (reference: string) => Coordinate | null;
+  nationalBoundaryProvider?: { getNationalPolygon(): Coordinate[] };
 }
 
 interface ParsedGeometry {
@@ -64,6 +66,17 @@ function appendUnique(target: Coordinate[], coordinates: Coordinate[]): void {
   for (const coordinate of coordinates) {
     if (!sameCoordinate(target.at(-1), coordinate)) target.push(coordinate);
   }
+}
+
+function arcLength(coordinates: Coordinate[]): number {
+  const radians = (value: number) => value * Math.PI / 180;
+  return coordinates.slice(1).reduce((sum, coordinate, index) => {
+    const previous = coordinates[index];
+    const dLat = radians(coordinate[1] - previous[1]);
+    const dLon = radians(coordinate[0] - previous[0]);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(radians(previous[1])) * Math.cos(radians(coordinate[1])) * Math.sin(dLon / 2) ** 2;
+    return sum + 2 * 6371.0088 * Math.asin(Math.sqrt(Math.min(1, a)));
+  }, 0);
 }
 
 function coordinate(latitude: string, longitude: string): Coordinate {
@@ -118,7 +131,7 @@ function frequencyList(value: string): number[] {
 }
 
 function parseAltitude(value: string): ImportAltitude | null {
-  const normalized = normalizedText(value).toUpperCase();
+  const normalized = normalizedText(value).toUpperCase().replace(/\s+/g, " ").replace(/(\d)FT\b/, "$1 FT");
   if (normalized === "UNL") return "UNL";
   if (normalized === "GND" || normalized === "SFC") return "SFC";
   const flightLevel = /^FL\s*(\d{1,3})$/.exec(normalized);
@@ -131,12 +144,23 @@ function parseAltitude(value: string): ImportAltitude | null {
 }
 
 function verticalLimits(value: string): { upper: ImportAltitude; lower: ImportAltitude } | null {
-  const classIndex = value.search(/Class of airspace\s*:/i);
-  const candidate = classIndex >= 0 ? value.slice(0, classIndex) : value;
-  const matches = [...candidate.matchAll(ALTITUDE_PATTERN)]
-    .map((match) => parseAltitude(match[0]))
+  const candidate = value;
+  const matches = [...candidate.matchAll(/(?:UNL|GND|SFC|FL\s*\d{1,3}|\d[\d ]*\s*ft\s*(?:AMSL|AGL))/gi)]
+    .map((match) => parseAltitude(match[0].trim()))
     .filter((item): item is ImportAltitude => item !== null);
-  if (matches.length < 2) return null;
+  if (matches.length < 2) {
+    const fallback = [...candidate.matchAll(/(UNL|GND|SFC|FL\s*\d{1,3}|\d[\d ]*\s*ft\s*(?:AMSL|AGL))/gi)].map((match) => {
+      const raw = match[1].replace(/\s+/g, " ").trim().toUpperCase();
+      const flight = /^FL\s*(\d{1,3})$/.exec(raw);
+      if (flight) return `FL${Number(flight[1])}` as ImportAltitude;
+      if (/^(?:GND|SFC)$/.test(raw)) return "SFC" as ImportAltitude;
+      if (raw === "UNL") return "UNL" as ImportAltitude;
+      const feet = /^(\d[\d ]*)\s*FT\s*(AMSL|AGL)$/.exec(raw);
+      return feet ? (feet[2] === "AGL" ? `${Number(feet[1].replace(/\s/g, ""))} AGL` : Number(feet[1].replace(/\s/g, ""))) as ImportAltitude : null;
+    }).filter((item): item is ImportAltitude => item !== null);
+    if (fallback.length < 2) return null;
+    return { upper: fallback.at(-2)!, lower: fallback.at(-1)! };
+  }
   return { upper: matches.at(-2)!, lower: matches.at(-1)! };
 }
 
@@ -149,6 +173,10 @@ function concreteAirspaceName(firstCell: string): { name: string; firstCoordinat
   return { name, firstCoordinateIndex: first.index };
 }
 
+function textualFirRow(firstCell: string): { name: string; firstCoordinateIndex: number } | null {
+  return /^BRATISLAVA FIR\b/i.test(firstCell) ? { name: "BRATISLAVA FIR", firstCoordinateIndex: -1 } : null;
+}
+
 function geometryText(firstCell: string, firstCoordinateIndex: number): string {
   const verticalIndex = firstCell.slice(firstCoordinateIndex).search(/(?:Vertical limits and class of airspace\s*:|(?:UNL|GND|SFC|FL\s*\d{1,3}|\d[\d ]*\s*ft\s*(?:AMSL|AGL))\s*\/)/i);
   return verticalIndex >= 0
@@ -156,10 +184,7 @@ function geometryText(firstCell: string, firstCoordinateIndex: number): string {
     : firstCell.slice(firstCoordinateIndex);
 }
 
-function parseGeometry(text: string, name: string, boundaryProvider?: StateBoundaryProvider): ParsedGeometry {
-  if (/circular arc|\bCWA\b|\bCCA\b/i.test(text)) {
-    throw new Error("circular arc without unambiguous direction is not imported");
-  }
+function parseGeometry(text: string, name: string, boundaryProvider?: StateBoundaryProvider, arcCenterProvider?: ParseSkEaipOptions["arcCenterProvider"]): ParsedGeometry {
   COORDINATE_PAIR_PATTERN.lastIndex = 0;
   const matches = [...text.matchAll(COORDINATE_PAIR_PATTERN)];
   if (matches.length < 3) throw new Error("fewer than three published coordinate points");
@@ -172,7 +197,20 @@ function parseGeometry(text: string, name: string, boundaryProvider?: StateBound
     const previousMatch = matches[index - 1];
     const currentMatch = matches[index];
     const between = text.slice((previousMatch.index ?? 0) + previousMatch[0].length, currentMatch.index ?? 0);
-    if (/along state boundary/i.test(between)) {
+    const arc = /circular arc\s+([\d.,]+)\s*NM\s+around\s+(?:ARP\s+)?([A-Z0-9-]+)\s+to/i.exec(between);
+    if (arc) {
+      const center = arcCenterProvider?.(arc[2]) ?? null;
+      if (!center) throw new Error(`circular arc center ${arc[2]} is not available from an authoritative source`);
+      const radiusNm = Number(arc[1].replace(",", "."));
+      const clockwise = densifyArc({ start: points[index - 1], end: points[index], center, radiusNm, direction: "CWA" });
+      const counterClockwise = densifyArc({ start: points[index - 1], end: points[index], center, radiusNm, direction: "CCA" });
+      const clockwiseLength = arcLength(clockwise);
+      const counterClockwiseLength = arcLength(counterClockwise);
+      if (Math.abs(clockwiseLength - counterClockwiseLength) < 0.001) throw new Error("circular arc direction is ambiguous");
+      appendUnique(polygon, (clockwiseLength < counterClockwiseLength ? clockwise : counterClockwise).slice(1));
+    } else if (/\bCWA\b|\bCCA\b/i.test(between)) {
+      throw new Error("arc direction or center is not unambiguous");
+    } else if (/along state boundary/i.test(between)) {
       if (!boundaryProvider) throw new Error("state-boundary geometry requires an authoritative boundary provider");
       const resolution = boundaryProvider.getBoundarySegment({ start: points[index - 1], end: points[index], hint: name });
       boundaryResolutions.push(resolution);
@@ -195,20 +233,27 @@ function alternateFrequencies(values: number[]): AtcImportFrequency[] {
 function rowToSector(cells: string[], options: ParseSkEaipOptions): { sector: AtcImportSector | null; diagnostic: SkEaipDiagnostic | null } {
   const firstCell = normalizedText(cells[0] ?? "");
   const concrete = concreteAirspaceName(firstCell);
-  if (!concrete) return { sector: null, diagnostic: null };
-  const limits = verticalLimits(firstCell);
+  const fir = !concrete ? textualFirRow(firstCell) : null;
+  if (!concrete && !fir) return { sector: null, diagnostic: null };
+  const name = (concrete ?? fir)!.name;
+  // Some LPS versions place the vertical-limit paragraph in a rowspan
+  // continuation cell. Parse the whole structural row as a fallback, while
+  // keeping geometry anchored to the name/lateral-limits cell.
+  const limits = verticalLimits(firstCell) ?? verticalLimits(cells.join(" "));
   const frequencies = frequencyList(cells[3] ?? "");
-  const name = concrete.name;
   if (!limits) {
     return { sector: null, diagnostic: { name, status: "skipped", reason: "vertical limits could not be parsed", geometry: "unsupported", boundaryResolutions: [] } };
-  }
-  if (!frequencies.length) {
-    return { sector: null, diagnostic: { name, status: "skipped", reason: "no supported civil ATC VHF frequency in the published row", geometry: "unsupported", boundaryResolutions: [] } };
   }
 
   let geometry: ParsedGeometry;
   try {
-    geometry = parseGeometry(geometryText(firstCell, concrete.firstCoordinateIndex), name, options.boundaryProvider);
+    if (fir) {
+      const polygon = options.nationalBoundaryProvider?.getNationalPolygon();
+      if (!polygon) throw new Error("BRATISLAVA FIR requires the official national-boundary geometry provider");
+      geometry = { polygon, boundaryResolutions: [], mode: "state-boundary" };
+    } else {
+      geometry = parseGeometry(geometryText(firstCell, concrete!.firstCoordinateIndex), name, options.boundaryProvider, options.arcCenterProvider);
+    }
   } catch (error) {
     return {
       sector: null,
@@ -234,8 +279,11 @@ function rowToSector(cells: string[], options: ParseSkEaipOptions): { sector: At
     polygons: [geometry.polygon],
     lowerAltitude: limits.lower,
     upperAltitude: limits.upper,
-    primaryFrequencyMhz: frequencies[0],
+    primaryFrequencyMhz: frequencies[0] ?? null,
     alternateFrequencies: alternateFrequencies(frequencies),
+    airspaceType: /\bCTA\s+SECTOR\b/i.test(name) ? "CTA_SECTOR" : /\bFIR\b/i.test(name) ? "FIR" : /\bCTA\b/i.test(name) ? "CTA" : /\bTMA\b/i.test(name) ? "TMA" : /\bCTR\b/i.test(name) ? "CTR" : "OTHER",
+    airspaceClass: /Class of airspace\s*:\s*([A-G])\b/i.exec(firstCell)?.[1]?.toUpperCase() ?? null,
+    remarks: fir ? normalizedText(firstCell.replace(/^BRATISLAVA FIR\s*/i, "")) : normalizedText(cells[4] ?? "") || null,
     sourceReference: options.sourceReference,
     lastVerifiedAt: (options.verifiedAt ?? new Date()).toISOString(),
     validFrom: options.effectiveDate,
@@ -258,18 +306,32 @@ export function parseSkEaipEnr21(html: string, options: ParseSkEaipOptions): SkE
   const sectors: AtcImportSector[] = [];
   const diagnostics: SkEaipDiagnostic[] = [];
   const ids = new Set<string>();
-  $("tr").each((_index, row) => {
-    const cells = $(row).find("td").map((_cellIndex, cell) => normalizedText($(cell).text())).get();
-    if (!cells.length) return;
-    const parsed = rowToSector(cells, options);
+  $("table tbody").each((_tableIndex, tbody) => {
+    const rows = $(tbody).find("tr").toArray();
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+      const row = rows[rowIndex];
+      const cells = $(row).find("td").map((_cellIndex, cell) => normalizedText($(cell).text())).get();
+      if (!cells.length) continue;
+      // LPS uses rowspan for the name/geometry and remarks columns. Frequency
+      // rows follow the first row and must be folded into the same observation.
+      if (!concreteAirspaceName(cells[0] ?? "") && !textualFirRow(cells[0] ?? "")) continue;
+      const merged = [...cells];
+      const rowspan = Number($(row).find("td").first().attr("rowspan") ?? "1");
+      const end = Number.isFinite(rowspan) && rowspan > 1 ? Math.min(rows.length, rowIndex + rowspan) : rowIndex + 1;
+      for (let continuation = rowIndex + 1; continuation < end; continuation += 1) {
+        const continuationCells = $(rows[continuation]).find("td").map((_cellIndex, cell) => normalizedText($(cell).text())).get();
+        if (continuationCells.length >= 2) merged[3] = `${merged[3] ?? ""} ${continuationCells.at(-1) ?? ""}`;
+      }
+      const parsed = rowToSector(merged, options);
     if (parsed.diagnostic) diagnostics.push(parsed.diagnostic);
-    if (!parsed.sector) return;
+    if (!parsed.sector) continue;
     if (ids.has(parsed.sector.id)) {
       diagnostics.push({ name: parsed.sector.name, status: "skipped", reason: "duplicate stable sector id", geometry: "unsupported", boundaryResolutions: [] });
-      return;
+      continue;
     }
     ids.add(parsed.sector.id);
     sectors.push(parsed.sector);
+    }
   });
   if (!diagnostics.length) throw new Error("Slovak eAIP ENR 2.1 contained no recognizable concrete ATC rows");
   return {
@@ -289,27 +351,32 @@ export function parseSkEaipEnr21(html: string, options: ParseSkEaipOptions): SkE
   };
 }
 
-function airacDateAtOrBefore(now: Date): Date {
-  const anchor = Date.parse(`${SK_EAIP_AIRAC_ANCHOR}T00:00:00Z`);
-  const cycles = Math.floor((now.getTime() - anchor) / AIRAC_CYCLE_MS);
-  return new Date(anchor + cycles * AIRAC_CYCLE_MS);
-}
-
 function directoryDate(date: Date): string {
   return `${String(date.getUTCDate()).padStart(2, "0")}${MONTHS[date.getUTCMonth()]}${date.getUTCFullYear()}`;
 }
 
 export function skEaipUrlCandidates(now = new Date()): string[] {
-  const current = airacDateAtOrBefore(now);
   const candidates: string[] = [];
-  for (let offset = 0; offset < 4; offset += 1) {
-    const date = new Date(current.getTime() - offset * AIRAC_CYCLE_MS);
+  // The entry page is the authority. If the host does not expose a directory
+  // listing, probe one bounded AIRAC-sized date window; this avoids a dated
+  // production anchor while still finding an effective Thursday such as the
+  // current 03SEP2026 publication.
+  for (let offset = 0; offset < 28; offset += 1) {
+    const date = new Date(now.getTime() - offset * 24 * 60 * 60_000);
     const token = directoryDate(date);
     for (const suffix of ["", "_amdt"]) {
       candidates.push(`${SK_EAIP_BASE_URL}/AIP_SR_EFF_${token}${suffix}/html/LZ-ENR-2.1-en-SK.html`);
     }
   }
   return candidates;
+}
+
+export function skEaipEffectiveUrlsFromMenu(html: string): string[] {
+  const $ = load(html);
+  const urls = $("a[href]").toArray().map((anchor) => {
+    try { return new URL($(anchor).attr("href") ?? "", SK_EAIP_ENTRY_URL).toString(); } catch { return ""; }
+  }).filter((url) => skEaipEffectiveDateFromUrl(url) !== null && /LZ-menu-en-SK\.html$/i.test(url));
+  return [...new Set(urls)].sort((left, right) => (skEaipEffectiveDateFromUrl(right) ?? "").localeCompare(skEaipEffectiveDateFromUrl(left) ?? ""));
 }
 
 export function skEaipEffectiveDateFromUrl(value: string): string | null {
@@ -332,7 +399,13 @@ export function skEaipEffectiveDateFromUrl(value: string): string | null {
 export async function fetchCurrentSkEaip(options: { now?: Date; fetchImpl?: typeof fetch } = {}): Promise<SkEaipSource> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const attempts: string[] = [];
-  for (const candidate of skEaipUrlCandidates(options.now ?? new Date())) {
+  const candidates = new Set<string>();
+  try {
+    const menuResponse = await fetchImpl(SK_EAIP_ENTRY_URL, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), headers: { Accept: "text/html", "User-Agent": getAirRadarUserAgent("Slovak-eAIP-discovery") } });
+    if (menuResponse.ok) for (const url of skEaipEffectiveUrlsFromMenu(await menuResponse.text())) candidates.add(url.replace(/LZ-menu-en-SK\.html$/i, "LZ-ENR-2.1-en-SK.html"));
+  } catch { /* bounded dated fallback below */ }
+  for (const candidate of skEaipUrlCandidates(options.now ?? new Date())) candidates.add(candidate);
+  for (const candidate of candidates) {
     const effectiveDate = skEaipEffectiveDateFromUrl(candidate);
     if (!effectiveDate) continue;
     let response: Response;
@@ -368,4 +441,20 @@ export async function fetchCurrentSkEaip(options: { now?: Date; fetchImpl?: type
     return { enr21Html: html, enr21Url: candidate, effectiveDate };
   }
   throw new Error(`Unable to fetch current Slovak eAIP ENR 2.1 from official LPS AIM candidates: ${attempts.slice(0, 4).join("; ")}`);
+}
+
+/** Resolve ARP references from the same effective official eAIP publication. */
+export async function fetchSkArpCenters(effectiveEnr21Url: string, fetchImpl: typeof fetch = fetch): Promise<Map<string, Coordinate>> {
+  const base = effectiveEnr21Url.replace(/LZ-ENR-2\.1-en-SK\.html$/i, "");
+  const centers = new Map<string, Coordinate>();
+  for (const airport of ["LZIB", "LZPP"]) {
+    const url = `${base}LZ-AD-2.${airport}-en-SK.html`;
+    const response = await fetchImpl(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), headers: { Accept: "text/html", "User-Agent": getAirRadarUserAgent("Slovak-eAIP-arp") } });
+    if (!response.ok) throw new Error(`Official ${airport} AD 2 page returned HTTP ${response.status}`);
+    const body = normalizedText(load(await response.text())("body").text());
+    const match = /ARP coordinates and site at AD\s+(\d{6}[NS])\s+(\d{7}[EW])/i.exec(body);
+    if (!match) throw new Error(`Official ${airport} AD 2 page has no parseable ARP coordinates`);
+    centers.set(airport, coordinate(match[1], match[2]));
+  }
+  return centers;
 }

@@ -115,6 +115,8 @@ interface ParsedRow {
   objectType: CzAtcObjectType;
   unit: string | null;
   callsign: string | null;
+  airspaceClass: string | null;
+  remarks: string | null;
   frequencies: AtcImportFrequency[];
   primaryFrequencyMhz: number | null;
   lowerAltitude: ImportAltitude | null;
@@ -506,6 +508,8 @@ function parseRow($: CheerioAPI, rowNode: Parameters<CheerioAPI>[0], geometryOnl
   const unit = unitCell ? sourceValue($, unitCell, "TUNIT", "TXT_NAME") ?? (normalizedText(unitCell.text()).split(";")[0] || null) : null;
   const callsign = callsignCell ? sourceValue($, callsignCell, "TCALLSIGN_DETAIL", "TXT_CALL_SIGN") ?? null : null;
   const objectType = classifyRow(name, unit, callsign);
+  const airspaceClass = /class of airspace\s*:\s*([A-G])\b/i.exec(normalizedText(first.text()))?.[1]?.toUpperCase() ?? null;
+  const remarks = cells[4] ? normalizedText($(cells[4]).text()) || null : null;
   const boundary = parseBoundary($, first);
   const vertical = parseVerticalLimits($, first);
   const parsedFrequencies = cells.length >= 4 ? parseFrequencies($, $(rowNode)) : { primary: null, frequencies: [] };
@@ -519,6 +523,8 @@ function parseRow($: CheerioAPI, rowNode: Parameters<CheerioAPI>[0], geometryOnl
     objectType,
     unit,
     callsign,
+    airspaceClass,
+    remarks,
     frequencies: parsedFrequencies.frequencies,
     primaryFrequencyMhz: parsedFrequencies.primary,
     lowerAltitude: vertical.lower,
@@ -832,6 +838,9 @@ export function parseCzEaipEnr21(html: string, options: { publicationHtml?: stri
       name: row.name,
       atcCallsign: row.callsign,
       service: serviceForObjectType(row.objectType, row.unit),
+      airspaceType: row.objectType === "ACC_OPERATIONAL_SECTOR" ? "CTA_SECTOR" : row.objectType,
+      airspaceClass: row.airspaceClass,
+      remarks: row.remarks,
       country: "CZ",
       polygons: row.boundary.polygons,
       lowerAltitude: row.lowerAltitude,

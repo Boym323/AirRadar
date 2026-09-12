@@ -18,6 +18,8 @@ export interface AtcSector {
   atcCallsign: string | null;
   service?: string | null;
   airspaceType?: string | null;
+  airspaceClass?: string | null;
+  remarks?: string | null;
   polygons: SectorPolygon[];
   lowerAltitudeFt: number | null;
   upperAltitudeFt: number | null;

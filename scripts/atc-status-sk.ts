@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import "dotenv/config";
-import { CuzkStateBoundaryProvider } from "../lib/atc/cz-boundary";
-import { fetchCurrentSkEaip, parseSkEaipEnr21, SK_EAIP_SOURCE_NAME } from "../lib/atc/sk-eaip";
+import { GKU_ZBGIS_BOUNDARY_URL, SlovakiaGkuBoundaryProvider } from "../lib/atc/gku-boundary";
+import { fetchCurrentSkEaip, fetchSkArpCenters, parseSkEaipEnr21, SK_EAIP_SOURCE_NAME } from "../lib/atc/sk-eaip";
 import { createAtcDatabase, existingAtcRows } from "../lib/atc/import-db";
 import { planAtcImport, validateAtcImportDocument } from "../lib/atc/import-format";
 import { compareAtcSectorIds, determineAtcDatasetStatus } from "../lib/atc/status";
@@ -14,16 +14,22 @@ function dateOnly(value: unknown): string | null {
 
 async function main(): Promise<void> {
   const source = await fetchCurrentSkEaip();
-  const czechBoundary = new CuzkStateBoundaryProvider();
-  await czechBoundary.load();
+  const arpCenters = await fetchSkArpCenters(source.enr21Url);
+  const czechBoundary = new SlovakiaGkuBoundaryProvider();
+  czechBoundary.load();
   const parsed = parseSkEaipEnr21(source.enr21Html, {
-    sourceReference: source.enr21Url,
+    sourceReference: `${source.enr21Url} | geometry: ${czechBoundary.source} | dataset: data/atc/sk-state-boundary.json (${GKU_ZBGIS_BOUNDARY_URL})`,
     effectiveDate: source.effectiveDate,
     boundaryProvider: czechBoundary,
+    nationalBoundaryProvider: czechBoundary,
+    arcCenterProvider: (reference) => arpCenters.get(reference) ?? null,
   });
   const dataset = validateAtcImportDocument(parsed.document);
   const database = createAtcDatabase();
-  const rows = database ? await existingAtcRows(database) : null;
+  let rows: Awaited<ReturnType<typeof existingAtcRows>> | null = null;
+  try { rows = database ? await existingAtcRows(database) : null; } catch (error) {
+    console.log(`Stored dataset unavailable (schema migration pending): ${error instanceof Error ? error.message : String(error)}`);
+  }
   const stored = rows?.sectors.filter((sector) => sector.source === SK_EAIP_SOURCE_NAME) ?? [];
   const comparison = compareAtcSectorIds(dataset.sectors.map((sector) => sector.id), stored.map((sector) => sector.id));
   const importedDates = stored.map((sector) => dateOnly(sector.validFrom)).filter((date): date is string => date !== null).sort();
@@ -44,7 +50,7 @@ async function main(): Promise<void> {
   console.log(`Current AIP effective date: ${parsed.effectiveDate}`);
   console.log(`Current persistable sectors: ${dataset.sectors.length}`);
   console.log(`Current direct geometry: ${accepted.filter((item) => item.geometry === "direct").length}`);
-  console.log(`Current Czech-border-resolved geometry: ${accepted.filter((item) => item.geometry === "state-boundary").length}`);
+  console.log(`Current state-boundary-resolved geometry: ${accepted.filter((item) => item.geometry === "state-boundary").length}`);
   console.log(`Current source-limited/skipped rows: ${skipped.length}`);
   console.log(`Stored Slovak eAIP sectors: ${stored.length}`);
   console.log(`Matching sector IDs: ${comparison.matchingIds.length}`);
