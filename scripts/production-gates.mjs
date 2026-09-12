@@ -51,6 +51,15 @@ export function assertProductionReleaseMetadata(payload, requestedChannel = "aut
 const host = "127.0.0.1";
 const port = Number(process.env.PRODUCTION_GATE_PORT || 3199);
 const baseUrl = `http://${host}:${port}`;
+const atBoundaryArtifact = JSON.parse(readFileSync("data/atc/at-state-boundary.json", "utf8"));
+const atBoundaryBbox = atBoundaryArtifact.bbox;
+const atBoundaryPolygon = [[
+  [atBoundaryBbox[0], atBoundaryBbox[1]],
+  [atBoundaryBbox[2], atBoundaryBbox[1]],
+  [atBoundaryBbox[2], atBoundaryBbox[3]],
+  [atBoundaryBbox[0], atBoundaryBbox[3]],
+  [atBoundaryBbox[0], atBoundaryBbox[1]],
+]];
 
 async function get(path, options = {}) {
   return fetch(`${baseUrl}${path}`, options);
@@ -224,6 +233,17 @@ async function assertBrowserSmoke() {
             lowerAltitudeReference: "SFC", upperAltitudeReference: "UNL",
             frequencies: [], validFrom: "2026-09-03", validTo: null, country: "SK",
             source: "browser fixture", sourceReference: "https://example.invalid/sk-atc-fir", lastVerifiedAt: "2026-09-03T00:00:00.000Z",
+          }, {
+            id: "fixture-at-fir-wien",
+            name: "FIR WIEN",
+            atcCallsign: "WIEN RADAR",
+            service: "ACC",
+            airspaceType: "FIR",
+            polygons: atBoundaryPolygon,
+            lowerAltitudeFt: 0, upperAltitudeFt: null,
+            lowerAltitudeReference: "SFC", upperAltitudeReference: "UNL",
+            frequencies: [], validFrom: "2026-09-04", validTo: null, country: "AT",
+            source: "BEV Verwaltungsgrenzen (VGD) derived artifact", sourceReference: "https://data.bev.gv.at/geonetwork/srv/metadata/793160c9-426a-43a6-ba6b-9702c5dff89b", lastVerifiedAt: "2026-09-04T00:00:00.000Z",
           }],
           transmitters: [],
           metadata: { status: "configured", source: "browser fixture", sourceReference: "https://example.invalid/atc", effectiveDate: "2026-09-03", lastVerifiedAt: "2026-09-03T00:00:00.000Z", sectorCount: 1, transmitterCount: 0 },
@@ -254,7 +274,7 @@ async function assertBrowserSmoke() {
           source: { name: "browser fixture", reference: "https://example.invalid/ats", effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null },
           counts: { routes: 1, points: 2, segments: 1, cdrSegments: 0, discontinuities: 0 },
           routes: [],
-          segments: { type: "FeatureCollection", features: [{ type: "Feature", properties: { countryCode: "CZ", routeDesignator: "FIXTURE1", segmentId: "fixture-segment", fromName: "A", toName: "B", navigationSpecification: "RNAV", distanceNm: 10, lowerLimit: "SFC", upperLimit: "UNL", lowerOverride: null, magTrackForwardDeg: 90, magTrackReverseDeg: 270, cruisingLevelForward: null, cruisingLevelReverse: null, availabilityClass: null, effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null, remarks: null }, geometry: { type: "LineString", coordinates: [[14, 50], [14.2, 50.1]] } }, { type: "Feature", properties: { countryCode: "SK", routeDesignator: "A4", segmentId: "sk-segment", fromName: "SKA", toName: "SKB", navigationSpecification: "CONVENTIONAL", distanceNm: 10, lowerLimit: "SFC", upperLimit: "UNL", lowerOverride: null, magTrackForwardDeg: 90, magTrackReverseDeg: 270, cruisingLevelForward: null, cruisingLevelReverse: null, availabilityClass: null, effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null, remarks: null }, geometry: { type: "LineString", coordinates: [[17.4, 48.7], [18.1, 49.1]] } }] },
+          segments: { type: "FeatureCollection", features: [{ type: "Feature", properties: { countryCode: "CZ", routeDesignator: "FIXTURE1", segmentId: "fixture-segment", fromName: "A", toName: "B", navigationSpecification: "RNAV", distanceNm: 10, lowerLimit: "SFC", upperLimit: "UNL", lowerOverride: null, magTrackForwardDeg: 90, magTrackReverseDeg: 270, cruisingLevelForward: null, cruisingLevelReverse: null, availabilityClass: null, effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null, remarks: null }, geometry: { type: "LineString", coordinates: [[14, 50], [14.2, 50.1]] } }, { type: "Feature", properties: { countryCode: "SK", routeDesignator: "A4", segmentId: "sk-segment", fromName: "SKA", toName: "SKB", navigationSpecification: "CONVENTIONAL", distanceNm: 10, lowerLimit: "SFC", upperLimit: "UNL", lowerOverride: null, magTrackForwardDeg: 90, magTrackReverseDeg: 270, cruisingLevelForward: null, cruisingLevelReverse: null, availabilityClass: null, effectiveDate: "2026-09-03", aipAmendment: null, airacAmendment: null, remarks: null }, geometry: { type: "LineString", coordinates: [[17.4, 48.7], [18.1, 49.1]] } }, { type: "Feature", properties: { countryCode: "AT", routeDesignator: "L12", segmentId: "at-segment", fromName: "MOGTI", toName: "SUDUX", navigationSpecification: "RNAV", distanceNm: 29.2, lowerLimit: "15800 FT AMSL", upperLimit: "FL660", lowerOverride: null, magTrackForwardDeg: null, magTrackReverseDeg: null, cruisingLevelForward: null, cruisingLevelReverse: null, availabilityClass: null, effectiveDate: "2026-09-04", aipAmendment: null, airacAmendment: null, remarks: null }, geometry: { type: "LineString", coordinates: [[17.4, 48.7], [18.1, 49.1]] } }] },
           labels: { type: "FeatureCollection", features: [] },
           points: { type: "FeatureCollection", features: [] },
         }),
@@ -330,7 +350,9 @@ async function assertBrowserSmoke() {
         return sourceIds.every((id) => Boolean(map.getSource(id)))
           && layerIds.every((id) => Boolean(map.getLayer(id)))
           && hasCountry("atc-sectors", "atc-sectors-fill", "SK")
-          && hasCountry("ats-routes", "ats-routes-line", "SK");
+          && hasCountry("atc-sectors", "atc-sectors-fill", "AT")
+          && hasCountry("ats-routes", "ats-routes-line", "SK")
+          && hasCountry("ats-routes", "ats-routes-line", "AT");
       }, undefined, { timeout: 30_000 });
       await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [19.5, 48.8], zoom: 6 }));
       await page.waitForFunction(() => {
@@ -339,13 +361,17 @@ async function assertBrowserSmoke() {
         const hasCountry = (sourceId, layerId, countryCode) => map.queryRenderedFeatures({ layers: [layerId] }).some((feature) => feature.properties?.countryCode === countryCode)
           || map.querySourceFeatures(sourceId).some((feature) => feature.properties?.countryCode === countryCode);
         return hasCountry("atc-sectors", "atc-sectors-fill", "SK")
-          && hasCountry("ats-routes", "ats-routes-line", "SK");
+          && hasCountry("atc-sectors", "atc-sectors-fill", "AT")
+          && hasCountry("ats-routes", "ats-routes-line", "SK")
+          && hasCountry("ats-routes", "ats-routes-line", "AT");
       }, undefined, { timeout: 30_000 });
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
         if (!map?.isStyleLoaded()) return false;
         return map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "SK" && feature.properties?.airspaceType === "FIR")
-          || map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.countryCode === "SK" && feature.properties?.airspaceType === "FIR");
+          || map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.countryCode === "SK" && feature.properties?.airspaceType === "FIR")
+          || map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "AT" && feature.properties?.airspaceType === "FIR")
+          || map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.countryCode === "AT" && feature.properties?.airspaceType === "FIR");
       }, undefined, { timeout: 30_000 });
       if (browserErrors.length) throw new Error(`Browser errors at ${viewport.width}px: ${browserErrors.join(" | ")}`);
       await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [14.2, 50.1], zoom: 8 }));

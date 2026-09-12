@@ -3,6 +3,21 @@
 This directory is reserved for locally maintained ATC reference data. No
 verified Czech AIP dataset is bundled with AirRadar.
 
+## Austrian boundary artifact
+
+`at-state-boundary.json` is a reproducible derived artifact from the official
+[BEV Verwaltungsgrenzen (VGD) INSPIRE metadata](https://data.bev.gv.at/geonetwork/srv/metadata/793160c9-426a-43a6-ba6b-9702c5dff89b)
+and its [01.10.2025 SHP delivery](https://data.bev.gv.at/download/Verwaltungsgrenzen/shp/20251001/AT_INSPIRE_AB_AdministrativeBoundaries_SHP_CSV_20251001.zip).
+It contains the `1stOrder` national boundary records transformed from EPSG:3416
+to EPSG:4326. Regenerate it with:
+
+```bash
+npm run generate:boundary:at -- /path/to/AdministrativeBoundary.shp /path/to/AB_nationalLevel.csv /path/to/AdministrativeBoundary.prj
+```
+
+The source metadata declares CC BY 4.0. Keep the recorded BEV attribution and
+do not replace unresolved AIP boundary walks with a straight line.
+
 ## JSON schema
 
 An import document has `schemaVersion: 1`, one `source` block, and `sectors`

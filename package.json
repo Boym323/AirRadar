@@ -39,10 +39,15 @@
     "atc:status:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-status-cz.ts",
     "atc:sync:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-sync-sk.ts",
     "atc:status:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-status-sk.ts",
+    "atc:sync:at": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-sync-at.ts",
+    "atc:status:at": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-status-at.ts",
     "ats:sync:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-sync-cz.ts",
     "ats:status:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-cz.ts",
     "ats:status:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-sk.ts",
     "ats:sync:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-sync-sk.ts",
+    "ats:sync:at": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-sync-at.ts",
+    "ats:status:at": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-at.ts",
+    "generate:boundary:at": "node scripts/generate-at-boundary.mjs",
     "changelog": "node scripts/changelog.mjs generate",
     "changelog:backfill": "node scripts/changelog.mjs backfill"
   },
@@ -52,9 +57,11 @@
     "geist": "^1.7.2",
     "maplibre-gl": "^6.9.0",
     "next": "^16.3.4",
+    "pdfjs-dist": "^5.4.149",
     "proj4": "^2.22.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "shapefile": "^0.6.6",
     "temporal-polyfill": "1.0.4"
   },
   "devDependencies": {
