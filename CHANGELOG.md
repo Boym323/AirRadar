@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.36] - 2026-09-12
+
+Changes since v1.0.35:
+
+- feat: enhance ATC data structure with airspace type and class; improve runtime state directory handling (17307733)
+- feat: add Austria ATC and ATS coverage (021b7dc9)
+
 ## [1.0.35] - 2026-09-12
 
 Changes since v1.0.34:
