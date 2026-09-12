@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.34] - 2026-09-12
+
+Changes since v1.0.33:
+
+- feat(changelog): add normalization and version sorting functionality (a3dc4513)
+- feat(animation): replace animation frame with low-frequency timer for smoother aircraft movement (13c178d0)
+
 ## [1.0.33] - 2026-09-12
 
 Changes since v1.0.32:
