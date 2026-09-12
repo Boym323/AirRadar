@@ -470,3 +470,9 @@ Changes since v1.0.28:
 Changes since v1.0.29:
 
 - fix(map): configure MapLibre worker for GeoJSON overlays (8729f806)
+
+## [1.0.31] - 2026-09-12
+
+Changes since v1.0.30:
+
+- feat(weather): persist aviation weather cache across restarts (8fa9a07a)
