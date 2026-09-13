@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { getTranslations } from "@/lib/i18n";
+import { movementRunwayLabel } from "@/components/airport-movements";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { analyzeAirportMovement, summarizeAirportMovements, type AirportMovement, type MovementFlight, type MovementPosition } from "@/lib/server/airport-movements";
 
@@ -18,6 +20,17 @@ function flight(id: number, values: MovementPosition[]): MovementFlight {
 }
 
 describe("airport movement intelligence", () => {
+  it("uses a neutral runway label for overflights while retaining unknown runway for runway movements", () => {
+    const overflight = { movement: "OVERFLIGHT" as const, runway: null };
+    expect(movementRunwayLabel(overflight, getTranslations("en"))).toBe("—");
+    expect(movementRunwayLabel(overflight, getTranslations("cs"))).toBe("—");
+    expect(movementRunwayLabel(overflight, getTranslations("en"))).not.toBe(getTranslations("en").airport.unknownRunway);
+    expect(movementRunwayLabel(overflight, getTranslations("cs"))).not.toBe(getTranslations("cs").airport.unknownRunway);
+
+    expect(movementRunwayLabel({ movement: "LANDING", runway: null }, getTranslations("en"))).toBe(getTranslations("en").airport.unknownRunway);
+    expect(movementRunwayLabel({ movement: "LANDING", runway: null }, getTranslations("cs"))).toBe(getTranslations("cs").airport.unknownRunway);
+  });
+
   it("recognises a descending final approach and a likely landing", () => {
     const result = analyzeAirportMovement(flight(1, positions([
       ["2026-09-12T08:00:00Z", 50.08, 14.3, 7_000, 190, 240, -500],
