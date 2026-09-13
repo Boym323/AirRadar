@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error The production gate helper is runtime-only ESM consumed by Node.
-import { assertProductionReleaseMetadata, resolveProductionGateChannel } from "../scripts/production-gates.mjs";
+import { assertMigrationSource, assertProductionReleaseMetadata, resolveProductionGateChannel } from "../scripts/production-gates.mjs";
 
 describe("production release metadata gate", () => {
   it("accepts only the stable production pair", () => {
@@ -28,5 +28,12 @@ describe("production release metadata gate", () => {
     expect(resolveProductionGateChannel(undefined)).toBe("auto");
     expect(resolveProductionGateChannel("RC")).toBe("rc");
     expect(() => resolveProductionGateChannel("anything")).toThrow();
+  });
+
+  it("validates the complete checked-in migration chain", () => {
+    const result = assertMigrationSource(process.cwd());
+    expect(result.directories).toHaveLength(10);
+    expect(result.directories.at(-1)).toBe("20260912T1241_atc_airspace_semantics");
+    expect(result.finalContractHash).toMatch(/^[a-f0-9]{64}$/);
   });
 });
