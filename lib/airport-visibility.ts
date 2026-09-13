@@ -33,13 +33,14 @@ export const AIRPORT_VISIBILITY_ZOOM = {
 
 const HELIPORT_NAME = /\b(heliport|helipad|helisurface|vrtulník|vrtulnik)\b/i;
 
-/**
- * The public Airport DTO intentionally has no upstream airport type. IATA
- * presence is the only conservative prominence signal available to the UI;
- * everything else is treated as a small landing site unless its name clearly
- * identifies a heliport.
- */
-export function airportVisibilityTier(airport: Pick<Airport, "iataCode" | "name">): AirportVisibilityTier {
+/** Prefer authoritative catalog metadata, retaining name/IATA fallback for old DTOs. */
+export function airportVisibilityTier(airport: Pick<Airport, "iataCode" | "name"> & Partial<Pick<Airport, "type" | "scheduledService">>): AirportVisibilityTier {
+  const type = airport.type?.trim().toLowerCase() ?? null;
+  if (type === "heliport" || type === "helipad" || type === "heli_surface") return "heliport";
+  if (type === "large_airport" || type === "medium_airport" || type === "international_airport") return "significant";
+  if (type === "small_airport") return airport.scheduledService === true ? "significant" : "small";
+  if (type === "seaplane_base" || type === "balloonport" || type === "closed") return "small";
+  if (airport.scheduledService === true) return "significant";
   if (HELIPORT_NAME.test(airport.name)) return "heliport";
   return airport.iataCode ? "significant" : "small";
 }

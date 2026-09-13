@@ -1,6 +1,7 @@
 import type { AtcAssignment, AtcFrequencySummary, AtcLookup, AtcSector, AtcSectorMatch, Coordinate } from "@/lib/atc/types";
 import { isSupportedAtcFrequencyMhz } from "@/lib/atc/frequency-policy";
 import type { AtcSectorProvider } from "@/lib/server/provider";
+import { isAtcValidityValid } from "@/lib/server/atc-validity";
 
 export class EmptyAtcSectorProvider implements AtcSectorProvider {
   readonly name = "empty";
@@ -59,15 +60,6 @@ function pointInPolygon(point: Coordinate, polygon: Coordinate[]): "inside" | "b
   return inside ? "inside" : null;
 }
 
-function isValidAt(sector: AtcSector, observedAt: Date): boolean {
-  const time = observedAt.getTime();
-  const validFrom = sector.validFrom ? Date.parse(sector.validFrom) : Number.NEGATIVE_INFINITY;
-  const validTo = sector.validTo ? Date.parse(sector.validTo) : Number.POSITIVE_INFINITY;
-  if (!Number.isFinite(validFrom) && validFrom !== Number.NEGATIVE_INFINITY) return false;
-  if (!Number.isFinite(validTo) && validTo !== Number.POSITIVE_INFINITY) return false;
-  return time >= validFrom && time <= validTo;
-}
-
 function containsAltitude(sector: AtcSector, altitudeFt: number | null): { matches: boolean; confidence: "matched" | "unknown" } {
   if (altitudeFt === null) return { matches: true, confidence: "unknown" };
   const lowerComparable = sector.lowerAltitudeReference !== "AGL";
@@ -81,7 +73,7 @@ function containsAltitude(sector: AtcSector, altitudeFt: number | null): { match
 
 export function matchSector(sector: AtcSector, lookup: AtcLookup): AtcSectorMatch | null {
   const observedAt = lookup.observedAt ?? new Date();
-  if (!isValidAt(sector, observedAt)) return null;
+  if (!isAtcValidityValid(sector.validFrom, sector.validTo, observedAt)) return null;
   const altitude = containsAltitude(sector, lookup.altitudeFt);
   if (!altitude.matches) return null;
   const point: Coordinate = [lookup.longitude, lookup.latitude];

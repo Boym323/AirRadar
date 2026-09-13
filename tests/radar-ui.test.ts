@@ -33,10 +33,14 @@ describe("radar UI polish helpers", () => {
     expect(airportVisibilityFilter(7.4, { ...DEFAULT_AIRPORT_LAYER_VISIBILITY, showSignificant: false, showSmall: false, showHeliports: false })).toEqual(["all", ["any", ["==", "icao", "__airradar_hidden__"], ["==", ["get", "important"], true]]]);
   });
 
-  it("uses only safe DTO signals for airport prominence", () => {
+  it("uses airport metadata before legacy prominence fallbacks", () => {
     expect(airportVisibilityTier({ iataCode: "PRG", name: "Prague" })).toBe("significant");
     expect(airportVisibilityTier({ iataCode: null, name: "Small strip" })).toBe("small");
     expect(airportVisibilityTier({ iataCode: null, name: "City Helipad" })).toBe("heliport");
+    expect(airportVisibilityTier({ iataCode: null, name: "City Medical Base", type: "heliport" })).toBe("heliport");
+    expect(airportVisibilityTier({ iataCode: null, name: "Regional Field", type: "medium_airport" })).toBe("significant");
+    expect(airportVisibilityTier({ iataCode: null, name: "Small Strip", type: "small_airport" })).toBe("small");
+    expect(airportVisibilityTier({ iataCode: null, name: "Scheduled Strip", type: "small_airport", scheduledService: true })).toBe("significant");
   });
 
   it("bounds the airport map source to the receiver's 250 NM operating area", () => {
