@@ -59,6 +59,9 @@ export interface AirportMovementsResponse {
     takeoffs: number;
     departures: number;
     overflights: number;
+    runwayRelevantMovements: number;
+    probableRunwayMovements: number;
+    unknownRunwayMovements: number;
     probableRunways: Array<{ designator: string; count: number }>;
   };
   diagnostics: {
@@ -91,7 +94,7 @@ interface QueryCollection<T> {
   where(filter: unknown): QueryCollection<T>;
   include(relation: string, callback: (query: QueryCollection<unknown>) => QueryCollection<unknown>): QueryCollection<T>;
   select?(...fields: string[]): QueryCollection<T>;
-  orderBy?(callback: (fields: Record<string, { asc(): unknown; desc(): unknown }>) => unknown): QueryCollection<T>;
+  orderBy(order: unknown): QueryCollection<T>;
   limit(value: number): QueryCollection<T>;
   all(): Promise<T[]>;
 }
@@ -179,6 +182,7 @@ function inferRunway(
   runways: readonly AirportRunway[],
   confidence: MovementConfidence,
 ): ProbableRunway | null {
+  if (movement === "OVERFLIGHT") return null;
   const candidates = runways
     .filter((runway) => runway.closed !== true)
     .flatMap(runwayEnds)
@@ -284,7 +288,39 @@ function envelope(airport: MovementAirport): { minLat: number; maxLat: number; m
 }
 
 function emptySummary() {
-  return { approaches: 0, landings: 0, takeoffs: 0, departures: 0, overflights: 0, probableRunways: [] as Array<{ designator: string; count: number }> };
+  return {
+    approaches: 0,
+    landings: 0,
+    takeoffs: 0,
+    departures: 0,
+    overflights: 0,
+    runwayRelevantMovements: 0,
+    probableRunwayMovements: 0,
+    unknownRunwayMovements: 0,
+    probableRunways: [] as Array<{ designator: string; count: number }>,
+  };
+}
+
+export function summarizeAirportMovements(movements: readonly AirportMovement[]): AirportMovementsResponse["summary"] {
+  const summary = emptySummary();
+  const runways = new Map<string, number>();
+  for (const movement of movements) {
+    if (movement.movement === "APPROACH") summary.approaches += 1;
+    if (movement.movement === "LANDING") summary.landings += 1;
+    if (movement.movement === "TAKEOFF") summary.takeoffs += 1;
+    if (movement.movement === "DEPARTURE") summary.departures += 1;
+    if (movement.movement === "OVERFLIGHT") summary.overflights += 1;
+    if (movement.movement !== "OVERFLIGHT") summary.runwayRelevantMovements += 1;
+    if (movement.movement !== "OVERFLIGHT" && movement.runway) {
+      summary.probableRunwayMovements += 1;
+      runways.set(movement.runway.designator, (runways.get(movement.runway.designator) ?? 0) + 1);
+    }
+  }
+  summary.unknownRunwayMovements = summary.runwayRelevantMovements - summary.probableRunwayMovements;
+  summary.probableRunways = [...runways.entries()]
+    .map(([designator, count]) => ({ designator, count }))
+    .sort((a, b) => b.count - a.count || a.designator.localeCompare(b.designator, undefined, { numeric: true }));
+  return summary;
 }
 
 export function getAirportMovementDiagnostics() {
@@ -308,24 +344,38 @@ export async function getAirportMovements(
   let truncated = false;
   try {
     const schema = database.orm.public;
-    const flights = await schema.Flight
-      .where((flight: { startTime: { gte(value: unknown): unknown } }) => flight.startTime.gte(fromInstant))
+    const positions = await schema.FlightPosition
+      .where((position: { recordedAt: { gte(value: unknown): unknown; lt(value: unknown): unknown } }) => position.recordedAt.gte(fromInstant))
+      .where((position: { recordedAt: { lt(value: unknown): unknown } }) => position.recordedAt.lt(toInstant))
+      .where((position: { lat: { gte(value: number): unknown } }) => position.lat.gte(bounds.minLat))
+      .where((position: { lat: { lte(value: number): unknown } }) => position.lat.lte(bounds.maxLat))
+      .where((position: { lon: { gte(value: number): unknown } }) => position.lon.gte(bounds.minLon))
+      .where((position: { lon: { lte(value: number): unknown } }) => position.lon.lte(bounds.maxLon))
+      .orderBy([
+        (position: { recordedAt: { desc(): unknown } }) => position.recordedAt.desc(),
+        (position: { flightId: { desc(): unknown } }) => position.flightId.desc(),
+      ])
+      .limit(POSITION_QUERY_LIMIT + 1)
+      .all();
+    truncated ||= positions.length > POSITION_QUERY_LIMIT;
+    const relevantFlightIds = [...new Set(positions.slice(0, POSITION_QUERY_LIMIT).map((position) => position.flightId))];
+    truncated ||= relevantFlightIds.length > FLIGHT_LIMIT;
+    const flightIds = relevantFlightIds.slice(0, FLIGHT_LIMIT);
+    const flights = flightIds.length === 0 ? [] : await schema.Flight
+      .where((flight: { id: { in(values: number[]): unknown } }) => flight.id.in(flightIds))
+      .orderBy([
+        (flight: { startTime: { desc(): unknown } }) => flight.startTime.desc(),
+        (flight: { id: { desc(): unknown } }) => flight.id.desc(),
+      ])
       .include("aircraft", (aircraft) => aircraft.select?.("icaoHex", "registration") ?? aircraft)
       .limit(FLIGHT_LIMIT + 1)
       .all() ?? [];
     truncated ||= flights.length > FLIGHT_LIMIT;
     const candidateFlights = flights.slice(0, FLIGHT_LIMIT);
-    const flightIds = candidateFlights.map((flight) => flight.id);
-    const positions = flightIds.length === 0 ? [] : await schema.FlightPosition
-      .where((position: { flightId: { in(values: number[]): unknown } }) => position.flightId.in(flightIds))
-      .where((position: { recordedAt: { gte(value: unknown): unknown; lt(value: unknown): unknown } }) => position.recordedAt.gte(fromInstant))
-      .where((position: { recordedAt: { lt(value: unknown): unknown } }) => position.recordedAt.lt(toInstant))
-      .where((position: { lat: { gte(value: number): unknown; lte(value: number): unknown }; lon: { gte(value: number): unknown; lte(value: number): unknown } }) => position.lat.gte(bounds.minLat) && position.lat.lte(bounds.maxLat) && position.lon.gte(bounds.minLon) && position.lon.lte(bounds.maxLon))
-      .limit(POSITION_QUERY_LIMIT + 1)
-      .all();
-    truncated ||= positions.length > POSITION_QUERY_LIMIT;
+    const candidateFlightIdSet = new Set(candidateFlights.map((flight) => flight.id));
     const positionsByFlight = new Map<number, MovementPosition[]>();
     for (const position of positions.slice(0, POSITION_QUERY_LIMIT)) {
+      if (!candidateFlightIdSet.has(position.flightId)) continue;
       const current = positionsByFlight.get(position.flightId) ?? [];
       current.push(position);
       positionsByFlight.set(position.flightId, current);
@@ -348,17 +398,7 @@ export async function getAirportMovements(
       if (movement) movements.push(movement);
     }
     movements.sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt) || b.flightId - a.flightId);
-    const summary = emptySummary();
-    const runways = new Map<string, number>();
-    for (const movement of movements) {
-      if (movement.movement === "APPROACH") summary.approaches += 1;
-      if (movement.movement === "LANDING") summary.landings += 1;
-      if (movement.movement === "TAKEOFF") summary.takeoffs += 1;
-      if (movement.movement === "DEPARTURE") summary.departures += 1;
-      if (movement.movement === "OVERFLIGHT") summary.overflights += 1;
-      if (movement.runway) runways.set(movement.runway.designator, (runways.get(movement.runway.designator) ?? 0) + 1);
-    }
-    summary.probableRunways = [...runways.entries()].map(([designator, count]) => ({ designator, count })).sort((a, b) => b.count - a.count || a.designator.localeCompare(b.designator, undefined, { numeric: true }));
+    const summary = summarizeAirportMovements(movements);
     const queryDurationMs = Math.max(0, Date.now() - started);
     lastDiagnostics = { enabled: true, lastQueryDurationMs: queryDurationMs, flightsExamined: candidateFlights.length, positionsExamined: Math.min(positions.length, POSITION_QUERY_LIMIT), truncated };
     return {

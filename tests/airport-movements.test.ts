@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
-import { analyzeAirportMovement, type MovementFlight, type MovementPosition } from "@/lib/server/airport-movements";
+import { analyzeAirportMovement, summarizeAirportMovements, type AirportMovement, type MovementFlight, type MovementPosition } from "@/lib/server/airport-movements";
 
 const airport = { icaoCode: "LKPR", latitude: 50, longitude: 14, elevationFt: 1_200 };
 const runways: AirportRunway[] = [{
@@ -65,6 +65,29 @@ describe("airport movement intelligence", () => {
     ])), airport, runways);
     expect(result?.movement).toBe("OVERFLIGHT");
     expect(result?.runway).toBeNull();
+  });
+
+  it("never infers a runway for a runway-aligned high-altitude overflight", () => {
+    const result = analyzeAirportMovement(flight(50, positions([
+      ["2026-09-12T10:00:00Z", 50, 13.8, 22_000, 420, 60, 0],
+      ["2026-09-12T10:02:00Z", 50, 14, 22_100, 420, 60, 0],
+      ["2026-09-12T10:04:00Z", 50, 14.2, 22_000, 420, 60, 0],
+    ])), airport, runways);
+    expect(result).toMatchObject({ movement: "OVERFLIGHT", runway: null });
+  });
+
+  it("excludes overflights from unknown runway usage", () => {
+    let nextFlightId = 1;
+    const movement = (kind: AirportMovement["movement"], runway: AirportMovement["runway"] = null): AirportMovement => ({
+      flightId: nextFlightId++, icaoHex: "ABC123", callsign: null, registration: null, movement: kind,
+      confidence: "medium", airport: "LKPR", runway, observedAt: "2026-09-12T12:00:00.000Z", evidence: [],
+    });
+    const result = summarizeAirportMovements([
+      ...Array.from({ length: 4 }, () => movement("LANDING")),
+      ...Array.from({ length: 3 }, () => movement("TAKEOFF", { designator: "24", status: "probable", confidence: "medium" })),
+      ...Array.from({ length: 20 }, () => movement("OVERFLIGHT", { designator: "24", status: "probable", confidence: "medium" })),
+    ]);
+    expect(result).toMatchObject({ runwayRelevantMovements: 7, probableRunwayMovements: 3, unknownRunwayMovements: 4, overflights: 20 });
   });
 
   it("handles insufficient, stale/gappy, and ambiguous observations conservatively", () => {

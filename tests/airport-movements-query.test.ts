@@ -35,6 +35,14 @@ class FakeQuery<T extends Row> {
   }
   include(): FakeQuery<T> { return this; }
   select(): FakeQuery<T> { return this; }
+  orderBy(): FakeQuery<T> {
+    const sorted = [...this.rows].sort((left, right) => {
+      const leftTime = comparable(left.recordedAt ?? left.startTime);
+      const rightTime = comparable(right.recordedAt ?? right.startTime);
+      return rightTime - leftTime || Number(right.id ?? right.flightId ?? 0) - Number(left.id ?? left.flightId ?? 0);
+    });
+    return new FakeQuery(sorted);
+  }
   limit(value: number): FakeQuery<T> { return new FakeQuery(this.rows.slice(0, value)); }
   async all(): Promise<T[]> { return this.rows; }
 }
@@ -45,7 +53,7 @@ const infrastructure: AirportInfrastructure = { runways: [], frequencies: [], na
 afterEach(() => vi.mocked(getPrisma).mockReset());
 
 describe("airport movement query bounds", () => {
-  it("reports an incomplete lower-bound result when the flight sentinel is reached", async () => {
+  it("reports an incomplete lower-bound result when the spatial flight-id sentinel is reached", async () => {
     const flights = Array.from({ length: 251 }, (_, id) => ({
       id: id + 1,
       callsign: `TEST${id}`,
@@ -53,13 +61,38 @@ describe("airport movement query bounds", () => {
       startTime: new Date("2026-09-12T08:00:00Z"),
       aircraft: { icaoHex: `${(id + 1).toString(16).padStart(6, "0")}`, registration: null },
     }));
+    const positions = flights.map((flight, index) => ({
+      id: index + 1,
+      flightId: flight.id,
+      recordedAt: new Date("2026-09-12T10:00:00Z"),
+      lat: 50,
+      lon: 14,
+      altitude: 10_000,
+      groundSpeed: 300,
+      track: 90,
+      verticalRate: 0,
+    }));
     vi.mocked(getPrisma).mockReturnValue({ orm: { public: {
       Flight: new FakeQuery(flights),
-      FlightPosition: new FakeQuery([]),
+      FlightPosition: new FakeQuery(positions),
     } } } as never);
 
     const result = await getAirportMovements(airport, infrastructure, { now: new Date("2026-09-12T12:00:00Z") });
-    expect(result).toMatchObject({ complete: false, truncated: true, diagnostics: { flightsExamined: 250, positionsExamined: 0 } });
+    expect(result).toMatchObject({ complete: false, truncated: true, diagnostics: { flightsExamined: 250, positionsExamined: 251 } });
     expect(result.movements).toEqual([]);
+  });
+
+  it("applies all four geographic envelope limits before selecting flight IDs", async () => {
+    const flights = [{ id: 1, callsign: "INSIDE", registration: null, startTime: new Date("2026-09-12T08:00:00Z"), aircraft: { icaoHex: "ABC001", registration: null } }];
+    const positions = [
+      { id: 1, flightId: 1, recordedAt: new Date("2026-09-12T10:00:00Z"), lat: 50, lon: 14, altitude: 10_000, groundSpeed: 300, track: 90, verticalRate: 0 },
+      { id: 2, flightId: 2, recordedAt: new Date("2026-09-12T10:00:00Z"), lat: 50.5, lon: 14, altitude: 10_000, groundSpeed: 300, track: 90, verticalRate: 0 },
+      { id: 3, flightId: 3, recordedAt: new Date("2026-09-12T10:00:00Z"), lat: 49.5, lon: 14, altitude: 10_000, groundSpeed: 300, track: 90, verticalRate: 0 },
+      { id: 4, flightId: 4, recordedAt: new Date("2026-09-12T10:00:00Z"), lat: 50, lon: 14.7, altitude: 10_000, groundSpeed: 300, track: 90, verticalRate: 0 },
+      { id: 5, flightId: 5, recordedAt: new Date("2026-09-12T10:00:00Z"), lat: 50, lon: 13.3, altitude: 10_000, groundSpeed: 300, track: 90, verticalRate: 0 },
+    ];
+    vi.mocked(getPrisma).mockReturnValue({ orm: { public: { Flight: new FakeQuery(flights), FlightPosition: new FakeQuery(positions) } } } as never);
+    const result = await getAirportMovements(airport, infrastructure, { now: new Date("2026-09-12T12:00:00Z") });
+    expect(result.diagnostics.flightsExamined).toBe(1);
   });
 });

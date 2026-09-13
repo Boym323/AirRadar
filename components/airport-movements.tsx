@@ -59,7 +59,7 @@ export function AirportMovements({ airport }: { airport: { icaoCode: string } })
           <h3>{t.airport.probableRunwayUsage}</h3>
           <ul className="airport-runway-usage-list">
             {data.summary.probableRunways.map((runway) => <li key={runway.designator}><strong>RWY {runway.designator}</strong><span>{runway.count}</span></li>)}
-            <li><strong>{t.airport.unknownRunway}</strong><span>{Math.max(0, data.movements.length - data.summary.probableRunways.reduce((sum, runway) => sum + runway.count, 0))}</span></li>
+            <li><strong>{t.airport.unknownRunway}</strong><span>{data.summary.unknownRunwayMovements}</span></li>
           </ul>
         </div>
       </div>
