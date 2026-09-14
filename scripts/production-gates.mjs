@@ -398,10 +398,17 @@ async function assertBrowserSmoke() {
         if (!await sidebar.evaluate((element) => element.classList.contains("drawer-aircraft"))) {
           throw new Error(`Aircraft detail did not open at ${viewport.width}px`);
         }
+        await trafficTrigger.click();
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
+        await sidebar.locator(".aircraft-row").first().click();
+        await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
         await sidebar.locator(".detail-back-button").click();
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
         await sidebar.locator(".drawer-close-button").click();
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
+        if (await page.evaluate(() => document.activeElement?.getAttribute("data-testid")) !== "traffic-trigger") {
+          throw new Error(`Desktop Close did not restore focus to Traffic trigger at ${viewport.width}px`);
+        }
         await trafficTrigger.click();
         await sidebar.locator(".aircraft-row").first().click();
         await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
@@ -412,6 +419,9 @@ async function assertBrowserSmoke() {
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
         await page.keyboard.press("Escape");
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
+        if (await page.evaluate(() => document.activeElement?.getAttribute("data-testid")) !== "traffic-trigger") {
+          throw new Error(`Desktop Escape did not restore focus to Traffic trigger at ${viewport.width}px`);
+        }
       }
       await page.locator("details.map-layers > summary").click();
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
@@ -425,6 +435,8 @@ async function assertBrowserSmoke() {
       }
 
       if (viewport.width <= 820) {
+        const trafficTrigger = page.getByTestId("traffic-trigger");
+        if (await trafficTrigger.isVisible()) throw new Error(`Traffic trigger is visible on mobile at ${viewport.width}px`);
         const sidebar = page.getByTestId("radar-sidebar");
         const atcPanel = page.getByTestId("atc-relevance-panel");
         const sidebarBounds = await sidebar.boundingBox();

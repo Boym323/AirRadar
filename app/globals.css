@@ -1848,7 +1848,7 @@ button, input, select, textarea { color-scheme: dark; }
   .secondary-page-content { min-height: calc(100svh - 58px); }
   .sidebar { top: auto; right: 6px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 6px; width: auto; border-radius: 9px; }
   .sidebar.drawer-closed { visibility: visible; transform: none; pointer-events: auto; }
-  .traffic-trigger { min-height: 36px; }
+  .traffic-trigger { display: none; }
   .drawer-close-button { display: none; }
   .sidebar.compact { height: 122px; }
   .sidebar:not(.compact) { height: min(54svh, 500px); }

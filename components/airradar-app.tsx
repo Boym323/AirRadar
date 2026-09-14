@@ -524,6 +524,8 @@ export function AirRadarApp() {
   const [serverAlertsEnabled, setServerAlertsEnabled] = useState<boolean | null>(null);
   const [mobileCompact, setMobileCompact] = useState(true);
   const [trafficOpen, setTrafficOpen] = useState(false);
+  const trafficTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const previousDrawerStateRef = useRef<RadarDrawerState>("closed");
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const centeredTrafficRef = useRef(false);
@@ -765,6 +767,13 @@ export function AirRadarApp() {
     setSelectedHex(null);
     setSelectedOgnId(null);
     setMobileCompact(true);
+  }, []);
+
+  const openTrafficDrawer = useCallback(() => {
+    setSelectedHex(null);
+    setSelectedOgnId(null);
+    setTrafficOpen(true);
+    setMobileCompact(false);
   }, []);
 
   const backToTraffic = useCallback(() => {
@@ -1595,6 +1604,13 @@ export function AirRadarApp() {
       : trafficOpen
         ? "traffic"
         : "closed";
+  useEffect(() => {
+    if (drawerState === "closed" && previousDrawerStateRef.current !== "closed") {
+      const trigger = trafficTriggerRef.current;
+      if (trigger?.getClientRects().length && !trigger.disabled) trigger.focus();
+    }
+    previousDrawerStateRef.current = drawerState;
+  }, [drawerState]);
   const networkStatus = snapshot.sources?.adsbLol.status;
   const networkNotice = activeCoverage === "extended" && networkStatus === "rate_limited"
     ? t.radar.networkRateLimited
@@ -1636,7 +1652,7 @@ export function AirRadarApp() {
                 <div className="map-summary-item"><strong>{snapshot.stats.messagesPerSecond === null ? t.common.emptyValue : `${formatNumber(snapshot.stats.messagesPerSecond, 1)}/s`}</strong><span>{t.statistics.messagesPerSecond}</span></div>
                 <div className="map-summary-item"><strong>{formatDistance(snapshot.stats.maxDistanceKm)}</strong><span>{t.stats.maxDistance}</span></div>
               </div>
-              <button type="button" className={`traffic-trigger ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => { setTrafficOpen(true); setMobileCompact(false); }}>
+              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={openTrafficDrawer}>
                 <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>
