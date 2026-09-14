@@ -17,13 +17,15 @@ tuned frequency, or complete airport movement log.
 
 ## Bounds and completeness
 
-`GET /api/airports/[icao]/movements?period=today|24h|7d` examines at most 250
-candidate flights, searches a 45 km airport envelope, caps the position query
-at 50,000 rows, and keeps at most 240 positions per flight. The response
-reports `complete: false` and `truncated: true` whenever a cap is reached;
-partial counts are lower bounds. The normal UI default is 24 hours.
+`GET /api/airports/[icao]/movements?period=today|24h|7d` first searches a
+time-bounded 45 km airport envelope for recent sampled positions, then selects
+at most 250 unique flight IDs in recent-position order and performs one batched
+flight metadata lookup. The position query is capped at 50,000 rows and keeps
+at most 240 positions per flight. The response reports `complete: false` and
+`truncated: true` whenever a cap is reached; partial counts are lower bounds.
+The normal UI default is 24 hours.
 
-The analyzer performs one bounded flight query and one batched position query,
+The analyzer performs one bounded position query and one batched flight query,
 then classifies in memory. It ignores invalid timestamps/coordinates and needs
 at least three valid ordered observations. Sparse or ambiguous trajectories may
 produce no classification.
@@ -51,7 +53,10 @@ difference, so reciprocal headings such as 359° and 001° are two degrees
 apart. A runway is returned only when the geometry and track score clear a
 threshold and the best candidate is not effectively tied with another runway
 end. Parallel or otherwise ambiguous runways therefore return no probable
-runway rather than a forced answer.
+runway rather than a forced answer. `OVERFLIGHT` always has `runway: null`,
+even when its track aligns with a runway. Runway usage summaries count only
+approach, landing, takeoff, and departure; overflights do not inflate unknown
+runway counts.
 
 ## Limitations
 

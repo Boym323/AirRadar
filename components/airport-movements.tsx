@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatTime, t } from "@/lib/i18n";
+import { formatTime, t, type LocaleDictionary } from "@/lib/i18n";
 import type { AirportMovement, AirportMovementsResponse } from "@/lib/server/airport-movements";
 
 function movementLabel(movement: AirportMovement["movement"]): string {
@@ -12,6 +12,14 @@ function movementLabel(movement: AirportMovement["movement"]): string {
     DEPARTURE: t.airport.movementDeparture,
     OVERFLIGHT: t.airport.movementOverflight,
   }[movement];
+}
+
+export function movementRunwayLabel(
+  movement: Pick<AirportMovement, "movement" | "runway">,
+  dictionary: LocaleDictionary = t,
+): string {
+  if (movement.movement === "OVERFLIGHT") return "—";
+  return movement.runway?.designator ? `RWY ${movement.runway.designator}` : dictionary.airport.unknownRunway;
 }
 
 export function AirportMovements({ airport }: { airport: { icaoCode: string } }) {
@@ -51,7 +59,7 @@ export function AirportMovements({ airport }: { airport: { icaoCode: string } })
               <time dateTime={movement.observedAt}>{formatTime(movement.observedAt)}</time>
               <span>{movement.callsign || movement.icaoHex}</span>
               <strong>{movementLabel(movement.movement)}</strong>
-              <small>{movement.runway?.designator ? `RWY ${movement.runway.designator}` : t.airport.unknownRunway} · {movement.confidence}</small>
+              <small>{movementRunwayLabel(movement)} · {movement.confidence}</small>
             </li>)}
           </ol>
         </div>
@@ -59,7 +67,7 @@ export function AirportMovements({ airport }: { airport: { icaoCode: string } })
           <h3>{t.airport.probableRunwayUsage}</h3>
           <ul className="airport-runway-usage-list">
             {data.summary.probableRunways.map((runway) => <li key={runway.designator}><strong>RWY {runway.designator}</strong><span>{runway.count}</span></li>)}
-            <li><strong>{t.airport.unknownRunway}</strong><span>{Math.max(0, data.movements.length - data.summary.probableRunways.reduce((sum, runway) => sum + runway.count, 0))}</span></li>
+            <li><strong>{t.airport.unknownRunway}</strong><span>{data.summary.unknownRunwayMovements}</span></li>
           </ul>
         </div>
       </div>

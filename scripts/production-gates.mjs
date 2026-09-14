@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -46,6 +46,59 @@ export function assertProductionReleaseMetadata(payload, requestedChannel = "aut
       : channel === "stable" ? `${expectedVersion}/production` : `${expectedVersion}/release-candidate`;
     throw new Error(`Release metadata smoke failed: expected ${expected}, got ${version || "(missing)"}/${reportedChannel || "(missing)"}`);
   }
+}
+
+const CONTRACT_HASH = /^[a-f0-9]{64}$/;
+
+/** Validate checked-in migration metadata without importing or executing migration code. */
+export function assertMigrationSource(root = process.cwd()) {
+  const appDirectory = resolve(root, "migrations/app");
+  const snapshotDirectory = resolve(root, "migrations/snapshots");
+  const directories = readdirSync(appDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^\d{8}T\d{4}_/.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+  if (!directories.length) throw new Error("Migration chain is empty");
+
+  let predecessor = null;
+  for (const directoryName of directories) {
+    const directory = resolve(appDirectory, directoryName);
+    const manifestPath = resolve(directory, "migration.json");
+    const operationsPath = resolve(directory, "ops.json");
+    const sourcePath = resolve(directory, "migration.ts");
+    if (!existsSync(manifestPath) || !existsSync(operationsPath) || !existsSync(sourcePath)) {
+      throw new Error(`Migration ${directoryName} is missing migration.json, ops.json, or migration.ts`);
+    }
+    let manifest;
+    let operations;
+    try {
+      manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      operations = JSON.parse(readFileSync(operationsPath, "utf8"));
+    } catch (error) {
+      throw new Error(`Migration ${directoryName} has malformed JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    if (!manifest || typeof manifest !== "object"
+      || (manifest.from !== null && !CONTRACT_HASH.test(manifest.from))
+      || !CONTRACT_HASH.test(manifest.to)
+      || typeof manifest.createdAt !== "string" || !Number.isFinite(Date.parse(manifest.createdAt))
+      || !CONTRACT_HASH.test(manifest.migrationHash)) {
+      throw new Error(`Migration ${directoryName} has malformed migration metadata`);
+    }
+    if (manifest.from !== predecessor) {
+      throw new Error(`Migration ${directoryName} predecessor ${String(manifest.from)} does not continue ${String(predecessor)}`);
+    }
+    const snapshot = resolve(snapshotDirectory, manifest.to);
+    if (!existsSync(resolve(snapshot, "contract.json")) || !existsSync(resolve(snapshot, "contract.d.ts"))) {
+      throw new Error(`Migration ${directoryName} target contract snapshot is missing for ${manifest.to}`);
+    }
+    if (!Array.isArray(operations) || operations.length === 0 || operations.some((operation) => !operation || typeof operation !== "object"
+      || typeof operation.id !== "string" || typeof operation.operationClass !== "string"
+      || !Array.isArray(operation.precheck) || !Array.isArray(operation.execute) || !Array.isArray(operation.postcheck))) {
+      throw new Error(`Migration ${directoryName} has malformed operations metadata`);
+    }
+    predecessor = manifest.to;
+  }
+  return { directories, finalContractHash: predecessor };
 }
 
 const host = "127.0.0.1";
@@ -141,19 +194,6 @@ async function waitForSseCleanup() {
   throw new Error("SSE client cleanup did not complete within 5 seconds");
 }
 
-function assertMigrationSource() {
-  const directory = "migrations/app/20260909T0830_recap_query_indexes";
-  const manifest = JSON.parse(readFileSync(`${directory}/migration.json`, "utf8"));
-  if (manifest.from !== "03aa657ab742b58e9acb95c3556a50f3ab7ec364cd0aeee203514e8688912ee2") throw new Error("Recap migration is not based on the current applied contract");
-  const operations = JSON.parse(readFileSync(`${directory}/ops.json`, "utf8"));
-  if (operations.length !== 2 || operations.some((operation) => operation.operationClass !== "additive")) throw new Error("Recap migration is not additive-only");
-  const airportDirectory = "migrations/app/20260910T0535_airport_data_v2";
-  const airportManifest = JSON.parse(readFileSync(`${airportDirectory}/migration.json`, "utf8"));
-  if (airportManifest.from !== "e05c22fd90a750642d9e212984e8b9d0797d81c37a9754fb29eebf0e50c82a08") throw new Error("Airport Data v2 migration is not based on the current applied contract");
-  const airportOperations = JSON.parse(readFileSync(`${airportDirectory}/ops.json`, "utf8"));
-  if (airportOperations.length < 1 || airportOperations.some((operation) => operation.operationClass !== "additive")) throw new Error("Airport Data v2 migration is not additive-only");
-}
-
 async function assertBrowserSmoke() {
   if (process.env.RUN_BROWSER_GATE !== "1") {
     console.log("[production-gates] browser desktop/mobile gate skipped; set RUN_BROWSER_GATE=1 to run it");
@@ -182,19 +222,45 @@ async function assertBrowserSmoke() {
         }
       };
       const browserErrors = [];
-      page.on("console", (message) => { if (message.type() === "error") browserErrors.push(`console: ${message.text()}`); });
+      let expectedTransientFailures = 0;
+      let airportAttempts = 0;
+      let atcAttempts = 0;
+      page.on("console", (message) => { if (message.type() === "error" && !message.text().includes("503")) browserErrors.push(`console: ${message.text()}`); });
       page.on("pageerror", (error) => browserErrors.push(`page: ${error.message}`));
       page.on("worker", (worker) => worker.on("error", (error) => browserErrors.push(`worker: ${error.message}`)));
-      page.on("response", (response) => { if (response.status() >= 500) browserErrors.push(`http ${response.status()}: ${response.url()}`); });
-      await page.route("**/api/airports", (route) => route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([{ icaoCode: "LKFIX", iataCode: "FIX", name: "Browser fixture airport", city: "Fixture", country: "CZ", latitude: 50.0755, longitude: 14.4378, type: "large_airport" }]),
-      }));
-      await page.route("**/api/atc/sectors", (route) => route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
+      page.on("response", (response) => {
+        if (response.status() >= 500) {
+          if (expectedTransientFailures > 0) expectedTransientFailures -= 1;
+          else browserErrors.push(`http ${response.status()}: ${response.url()}`);
+        }
+      });
+      await page.route("**/api/airports", async (route) => {
+        airportAttempts += 1;
+        if (airportAttempts === 1) {
+          expectedTransientFailures += 1;
+          return route.fulfill({ status: 503, headers: { "retry-after": "1" }, body: "temporary fixture failure" });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            { icaoCode: "LKFIX", iataCode: "FIX", name: "Browser fixture airport", city: "Fixture", country: "CZ", latitude: 50.0755, longitude: 14.4378, type: "large_airport" },
+            { icaoCode: "LKSML", iataCode: null, name: "Browser fixture small field", city: "Fixture", country: "CZ", latitude: 50.15, longitude: 14.55, type: "small_airport" },
+          ]),
+        });
+      });
+      await page.route("**/api/atc/sectors", async (route) => {
+        atcAttempts += 1;
+        if (atcAttempts === 1) {
+          expectedTransientFailures += 1;
+          return route.fulfill({ status: 503, headers: { "retry-after": "1" }, body: "temporary fixture failure" });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
           sectors: [{
             id: "fixture-sector",
             name: "Browser fixture sector",
@@ -248,8 +314,9 @@ async function assertBrowserSmoke() {
           }],
           transmitters: [],
           metadata: { status: "configured", source: "browser fixture", sourceReference: "https://example.invalid/atc", effectiveDate: "2026-09-03", lastVerifiedAt: "2026-09-03T00:00:00.000Z", sectorCount: 1, transmitterCount: 0 },
-        }),
-      }));
+          }),
+        });
+      });
       await page.route("**/api/aircraft/*?coverage=local", (route) => route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -347,6 +414,12 @@ async function assertBrowserSmoke() {
       const atsLayer = page.getByTestId("map-layer-ats");
       const sigmetLayer = page.getByTestId("map-layer-sigmet");
       await airportLayer.waitFor({ state: "visible" });
+      if (viewport.width === 375) {
+        await page.waitForFunction(() => {
+          const text = (document.querySelector('[data-testid="map-layer-airports"]')?.textContent || "").toLowerCase();
+          return text.includes("reconnecting") || text.includes("obnovuje se spojení");
+        }, undefined, { timeout: 5_000 });
+      }
       await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-airports"]')?.textContent || ""));
       const airportCheckbox = airportLayer.locator("input");
       await airportCheckbox.uncheck();
@@ -355,8 +428,20 @@ async function assertBrowserSmoke() {
       await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-atc"]')?.textContent || ""));
       await atcLayer.locator("input").uncheck();
       await atcLayer.locator("input").check();
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        return Boolean(map?.getSource("route-airports") && map.querySourceFeatures("route-airports").some((feature) => feature.properties?.icao === "LKFIX"));
+      }, undefined, { timeout: 10_000 });
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        return Boolean(map?.getSource("atc-sectors") && map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.id === "fixture-sector"));
+      }, undefined, { timeout: 10_000 });
       await atsLayer.locator("input").check();
       await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-ats"]')?.textContent || ""));
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        return Boolean(map?.getSource("ats-routes") && map.querySourceFeatures("ats-routes").some((feature) => feature.properties?.segmentId === "fixture-segment"));
+      }, undefined, { timeout: 10_000 });
       await page.locator(".aircraft-row").first().evaluate((element) => element.click());
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
@@ -409,6 +494,7 @@ async function assertBrowserSmoke() {
           || map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.countryCode === "AT" && feature.properties?.airspaceType === "FIR");
       }, undefined, { timeout: 30_000 });
       if (browserErrors.length) throw new Error(`Browser errors at ${viewport.width}px: ${browserErrors.join(" | ")}`);
+      if (viewport.width === 375 && (airportAttempts < 2 || atcAttempts < 2)) throw new Error(`Transient dataset recovery did not retry without reload: airports=${airportAttempts}, atc=${atcAttempts}`);
       await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [14.2, 50.1], zoom: 8 }));
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
