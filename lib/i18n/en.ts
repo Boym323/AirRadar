@@ -592,6 +592,12 @@ export const en = {
     movementNoData: "No classifiable movements were found in the last 24 hours.",
     movementIncomplete: "This bounded result is incomplete; counts are a lower bound.",
     movementDisclaimer: "Movement and runway classifications are inferred from observed receiver data and are not authoritative ATC information.",
+    movementPeriodSelector: "Movement period",
+    movementPeriodToday: "Today",
+    movementPeriod24h: "24 h",
+    movementPeriodSevenDays: "7 days",
+    showMore: "Show more",
+    showLess: "Show less",
   },
   airportTraffic: {
     title: "Observed receiver traffic",

@@ -590,6 +590,12 @@ export const cs = {
     movementNoData: "Za posledních 24 hodin nebyly nalezeny klasifikovatelné pohyby.",
     movementIncomplete: "Tento omezený výsledek není úplný; počty jsou dolní mez.",
     movementDisclaimer: "Klasifikace pohybů a drah je odvozena z pozorování přijímače a není autoritativní informací ATC.",
+    movementPeriodSelector: "Období pohybů",
+    movementPeriodToday: "Dnes",
+    movementPeriod24h: "24 h",
+    movementPeriodSevenDays: "7 dní",
+    showMore: "Zobrazit více",
+    showLess: "Zobrazit méně",
   },
   airportTraffic: {
     title: "Provoz zachycený přijímačem",
