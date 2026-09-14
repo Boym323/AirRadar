@@ -1774,7 +1774,6 @@ button, input, select, textarea { color-scheme: dark; }
 .traffic-trigger:hover, .traffic-trigger.active { border-color: rgba(67,216,194,.62); background: rgba(13,32,49,.96); }
 .traffic-trigger-label { color: var(--text-secondary); }
 .traffic-trigger strong { color: var(--accent-primary); font-family: var(--font-geist-mono), monospace; font-size: 13px; }
-.traffic-trigger-state { color: var(--text-muted); font-size: 16px; line-height: 1; }
 .sidebar { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: var(--radar-drawer-width); border-left: 1px solid var(--border-default); box-shadow: -18px 0 40px rgba(0,0,0,.24); transform: translateX(0); transition: transform 190ms ease, visibility 190ms ease; }
 .sidebar.drawer-closed { visibility: hidden; transform: translateX(100%); pointer-events: none; }
 .sidebar.drawer-aircraft .sidebar-browse, .sidebar.drawer-ogn .sidebar-browse { display: none; }

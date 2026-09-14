@@ -387,10 +387,25 @@ async function assertBrowserSmoke() {
         }
         await trafficTrigger.click();
         await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
-        if (await trafficTrigger.getAttribute("aria-expanded") !== "true" || !await sidebar.evaluate((element) => element.classList.contains("drawer-traffic"))) {
+        if (await trafficTrigger.getAttribute("aria-expanded") !== "true"
+          || !await sidebar.evaluate((element) => element.classList.contains("drawer-traffic"))
+          || (await trafficTrigger.textContent())?.includes("×")) {
           throw new Error(`Traffic drawer did not open at ${viewport.width}px`);
         }
+        await sidebar.locator(".aircraft-row").first().click();
+        await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
+        await sidebar.locator(".close-button").waitFor({ state: "visible" });
+        if (!await sidebar.evaluate((element) => element.classList.contains("drawer-aircraft"))) {
+          throw new Error(`Aircraft detail did not open at ${viewport.width}px`);
+        }
+        await sidebar.locator(".detail-back-button").click();
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
         await sidebar.locator(".drawer-close-button").click();
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
+        await trafficTrigger.click();
+        await sidebar.locator(".aircraft-row").first().click();
+        await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
+        await sidebar.locator(".close-button").click();
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         await trafficTrigger.focus();
         await page.keyboard.press("Enter");
@@ -410,7 +425,7 @@ async function assertBrowserSmoke() {
       }
 
       if (viewport.width <= 820) {
-        const sidebar = page.locator('[data-testid="radar-sidebar"].compact');
+        const sidebar = page.getByTestId("radar-sidebar");
         const atcPanel = page.getByTestId("atc-relevance-panel");
         const sidebarBounds = await sidebar.boundingBox();
         const atcPanelBounds = await atcPanel.boundingBox();
@@ -515,6 +530,22 @@ async function assertBrowserSmoke() {
       }, undefined, { timeout: 30_000 });
       if (browserErrors.length) throw new Error(`Browser errors at ${viewport.width}px: ${browserErrors.join(" | ")}`);
       if (viewport.width === 375 && (airportAttempts < 2 || atcAttempts < 2)) throw new Error(`Transient dataset recovery did not retry without reload: airports=${airportAttempts}, atc=${atcAttempts}`);
+      if (viewport.width === 375) {
+        const mobileSidebar = page.getByTestId("radar-sidebar");
+        await page.locator(".map-container").waitFor({ state: "visible" });
+        if (!await mobileSidebar.evaluate((element) => element.classList.contains("compact"))) {
+          throw new Error("Mobile traffic sheet is not compact initially");
+        }
+        await page.locator(".mobile-collapse").click();
+        await page.locator('[data-testid="radar-sidebar"]:not(.compact)').waitFor({ state: "visible" });
+        await mobileSidebar.locator(".aircraft-row").first().click();
+        await mobileSidebar.locator(".detail-back-button").waitFor({ state: "visible" });
+        if (!await mobileSidebar.evaluate((element) => element.classList.contains("drawer-aircraft") && element.classList.contains("has-selection"))) {
+          throw new Error("Mobile aircraft selection did not open");
+        }
+        await mobileSidebar.locator(".close-button").click();
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("compact"));
+      }
       await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [14.2, 50.1], zoom: 8 }));
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;

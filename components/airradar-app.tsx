@@ -1639,7 +1639,6 @@ export function AirRadarApp() {
               <button type="button" className={`traffic-trigger ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => { setTrafficOpen(true); setMobileCompact(false); }}>
                 <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
                 <strong>{formatNumber(activeTrafficCount)}</strong>
-                <span className="traffic-trigger-state" aria-hidden="true">{drawerState === "closed" ? "＋" : "×"}</span>
               </button>
               <details className="map-layers">
                 <summary>{t.layers.title}</summary>
