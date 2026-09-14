@@ -72,10 +72,10 @@ export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDat
     const entry = prepared.airspaces[index]; if (!entry) continue;
     const sector = entry.sector;
     const horizontal = entry.boxes.some((box, polygonIndex) => {
-      diagnostics && (diagnostics.atcBboxCandidates += 1);
+      if (diagnostics) diagnostics.atcBboxCandidates += 1;
       const polygon = sector.polygons[polygonIndex];
       if (!polygon || !bboxContains(box, point)) return false;
-      diagnostics && (diagnostics.atcExactPolygonTests += 1);
+      if (diagnostics) diagnostics.atcExactPolygonTests += 1;
       const rings = polygon as unknown as [number, number][];
       return pointInPolygon(point, [rings]) !== null;
     });
@@ -93,18 +93,38 @@ export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDat
   // confidence threshold, and deliberately keeps crossing/parallel cases.
   const routeCandidates = queryGrid(prepared.atsGrid, point).map((index) => segments[index]).filter((item): item is typeof segments[number] => Boolean(item) && point[0] >= item.box[0] - 0.3 && point[0] <= item.box[2] + 0.3 && point[1] >= item.box[1] - 0.3 && point[1] <= item.box[3] + 0.3);
   let nearestAtsCandidate: AtsRouteMatch | null = null;
-  for (const item of routeCandidates) { diagnostics && (diagnostics.atsBboxCandidates += 1); diagnostics && (diagnostics.atsGeodesicCalculations += 1); const candidate = routeMatch(item.routeId, item.countryCode, item.sourceReference, item.segment, point, input.track); if (!nearestAtsCandidate || candidate.distanceNm < nearestAtsCandidate.distanceNm) nearestAtsCandidate = candidate; }
+  for (const item of routeCandidates) {
+    if (diagnostics) {
+      diagnostics.atsBboxCandidates += 1;
+      diagnostics.atsGeodesicCalculations += 1;
+    }
+    const candidate = routeMatch(item.routeId, item.countryCode, item.sourceReference, item.segment, point, input.track);
+    if (!nearestAtsCandidate || candidate.distanceNm < nearestAtsCandidate.distanceNm) nearestAtsCandidate = candidate;
+  }
   const atsRoute = input.onGround ? null : nearestAtsCandidate?.confidence === "low" ? null : nearestAtsCandidate;
-  const pointCandidates = queryGrid(prepared.pointGrid, point); for (const _ of pointCandidates) diagnostics && (diagnostics.pointBboxCandidates += 1);
+  const pointCandidates = queryGrid(prepared.pointGrid, point);
+  if (diagnostics) diagnostics.pointBboxCandidates += pointCandidates.length;
   let nearestRaw: typeof prepared.points[number] | undefined; let nearestDistance = Number.POSITIVE_INFINITY;
-  for (const index of pointCandidates) { const candidate = prepared.points[index]; if (!candidate) continue; diagnostics && (diagnostics.pointDistanceCalculations += 1); const distance = distanceNm(point, [candidate.point.longitude, candidate.point.latitude]); if (distance < nearestDistance) { nearestDistance = distance; nearestRaw = candidate; } }
+  for (const index of pointCandidates) {
+    const candidate = prepared.points[index];
+    if (!candidate) continue;
+    if (diagnostics) diagnostics.pointDistanceCalculations += 1;
+    const distance = distanceNm(point, [candidate.point.longitude, candidate.point.latitude]);
+    if (distance < nearestDistance) { nearestDistance = distance; nearestRaw = candidate; }
+  }
   const nearestPoint: ContextPoint | null = nearestRaw ? { identifier: nearestRaw.point.name, distanceNm: Number(distanceNm(point, [nearestRaw.point.longitude, nearestRaw.point.latitude]).toFixed(1)), bearing: Number(bearing(point, [nearestRaw.point.longitude, nearestRaw.point.latitude]).toFixed(1)), kind: nearestRaw.point.kind } : null;
   let nextPoint: ContextPoint | null = null;
   if (atsRoute) { const item = segments.find((s) => s.segment.id === atsRoute.segmentId && s.routeId === atsRoute.routeId); if (item) { const forward = input.track !== null && angleDifference(input.track, item.forwardBearing) <= angleDifference(input.track, item.reverseBearing); const destinationPoint = forward ? item.segment.to : item.segment.from; nextPoint = { identifier: forward ? item.segment.toName : item.segment.fromName, distanceNm: Number(distanceNm(point, destinationPoint).toFixed(1)), bearing: Number(bearing(point, destinationPoint).toFixed(1)), kind: "DESIGNATED_POINT" }; } }
   let ahead: AtcContextResult["ahead"] = null;
   const currentIds = new Set(matches.map((m) => m.id));
   if (!input.onGround && input.track !== null && input.groundSpeed !== null && input.groundSpeed > 20) {
-    for (let nm = 2; nm <= 45; nm += 2) { diagnostics && (diagnostics.aheadProjectedSteps += 1); const projected = destination(point, nm, input.track); const candidate = queryGrid(prepared.atcGrid, projected).map((index) => prepared.airspaces[index]?.sector).find((sector) => sector && !currentIds.has(sector.id) && sector.polygons.some((p) => pointInPolygon(projected, [p as unknown as [number, number][]]) !== null) && verticalMatch(sector, input).match !== "false"); diagnostics && (diagnostics.aheadAirspaceQueries += 1); if (candidate) { const match = airspace(candidate, "inside", verticalMatch(candidate, input).match); ahead = { airspace: match, distanceNm: nm, estimatedMinutes: Number((nm / input.groundSpeed * 60).toFixed(1)), confidence: nm <= 15 ? "medium" : "low" }; break; } }
+    for (let nm = 2; nm <= 45; nm += 2) {
+      if (diagnostics) diagnostics.aheadProjectedSteps += 1;
+      const projected = destination(point, nm, input.track);
+      const candidate = queryGrid(prepared.atcGrid, projected).map((index) => prepared.airspaces[index]?.sector).find((sector) => sector && !currentIds.has(sector.id) && sector.polygons.some((p) => pointInPolygon(projected, [p as unknown as [number, number][]]) !== null) && verticalMatch(sector, input).match !== "false");
+      if (diagnostics) diagnostics.aheadAirspaceQueries += 1;
+      if (candidate) { const match = airspace(candidate, "inside", verticalMatch(candidate, input).match); ahead = { airspace: match, distanceNm: nm, estimatedMinutes: Number((nm / input.groundSpeed * 60).toFixed(1)), confidence: nm <= 15 ? "medium" : "low" }; break; }
+    }
   }
   return { status: "available", position: { lat: input.lat, lon: input.lon, altitude: input.altitude, altitudeSource: input.altitudeSource ?? "none" }, supportedCountry: fir?.countryCode ? SUPPORTED.has(fir.countryCode) : matches.some((m) => m.countryCode !== null && SUPPORTED.has(m.countryCode!)), fir, currentAirspaces: matches, primaryAirspace: matches[0] ?? null, atsRoute, nearestAtsCandidate, nearestPoint, nextPoint, ahead, limitation: input.onGround ? "Ground aircraft: en-route ATS route prediction skipped" : ahead ? "Ahead on current track only; no turn or flight-plan prediction" : null, computedAt, dataset: { atcVersion: prepared.sectors.map((s) => s.lastVerifiedAt).sort().at(-1) ?? "none", atsVersion: docs.map((d) => d.source.effectiveDate).sort().at(-1) ?? "none", atcCount: prepared.sectors.length, atsSegmentCount: segments.length } };
 }
