@@ -134,6 +134,7 @@ export const en = {
     aircraftLabel: "Search aircraft",
     ognLabel: "Search OGN targets",
     globalPlaceholder: "Search aircraft, airports and ATS points…",
+    globalMobilePlaceholder: "Search aircraft, airports…",
     globalLabel: "Global search",
     aircraftResults: "Aircraft",
     airportResults: "Airports",

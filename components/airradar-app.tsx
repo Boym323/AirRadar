@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
@@ -62,7 +62,7 @@ import {
   ROUTE_INTELLIGENCE_REMAINING_LAYER_ID,
 } from "@/lib/route-visualization";
 import { analyzePublishedRoute } from "@/lib/route-intelligence";
-import { GlobalSearch } from "@/components/global-search";
+import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
@@ -346,17 +346,6 @@ function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {
   return `<svg class="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d="${ognGlyphPath(aircraftType)}"></path></svg>`;
 }
 
-function LogoMark() {
-  return (
-    <svg className="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-      <circle cx="20" cy="20" r="14" stroke="currentColor" strokeWidth="1.5" opacity=".32" />
-      <circle cx="20" cy="20" r="8" stroke="currentColor" strokeWidth="1.2" opacity=".5" />
-      <path d="M20 20 33 7" stroke="#f3b95f" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="20" cy="20" r="2.6" fill="currentColor" />
-    </svg>
-  );
-}
-
 type AircraftMarkerKind = "airplane" | "a220" | "a320" | "a330" | "a350" | "a380" | "b717" | "b727" | "b737" | "b747" | "b757" | "b767" | "b777" | "b787" | "regional" | "turboprop" | "business-jet" | "general-aviation" | "helicopter" | "glider" | "drone" | "ground";
 
 const AIRCRAFT_GLYPH_PATHS: Record<AircraftMarkerKind, string> = {
@@ -492,7 +481,6 @@ function aircraftGlyphMarkup(aircraft: AircraftView): string {
 }
 
 export function AirRadarApp() {
-  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const atsPointFocus = searchParams.get("atsPoint");
@@ -1594,46 +1582,8 @@ export function AirRadarApp() {
 
   return (
     <main className="radar-shell">
-      <header className="topbar">
-        <div className="brand">
-          <LogoMark />
-          <div>
-            <h1 className="brand-title">AirRadar</h1>
-            <div className="brand-subtitle">{t.brand.subtitle}</div>
-          </div>
-        </div>
-        <GlobalSearch />
-        <details className="mobile-main-nav">
-          <summary aria-label={t.system.navigation}>☰</summary>
-          <nav aria-label={t.statistics.navigation}>
-            <Link href="/alerts">{t.alerts.title}</Link>
-            <Link href="/recap/daily">{t.recap.daily}</Link>
-            <Link href="/recap/weekly">{t.recap.weekly}</Link>
-            <Link href="/watchlist">{t.watchlist.title}</Link>
-            <Link href="/fleet">{t.fleet.title}</Link>
-            <Link href="/statistics">{t.statistics.title}</Link>
-            <Link href="/history">{t.history.title}</Link>
-            <Link href="/system">{t.system.title}</Link>
-          </nav>
-        </details>
-        <Link className="mobile-system-link" href="/system" aria-label={t.system.title}>⚙</Link>
-        <nav className="topbar-nav" aria-label={t.statistics.navigation}>
-          <Link className={`topbar-nav-primary ${pathname === "/" ? "active" : ""}`} href="/" aria-current={pathname === "/" ? "page" : undefined}>{t.radar.liveAirPicture}</Link>
-          <Link className={`topbar-nav-primary ${pathname === "/history" ? "active" : ""}`} href="/history" aria-current={pathname === "/history" ? "page" : undefined}>{t.history.title}</Link>
-          <Link className={`topbar-nav-primary ${pathname === "/statistics" ? "active" : ""}`} href="/statistics" aria-current={pathname === "/statistics" ? "page" : undefined}>{t.statistics.title}</Link>
-          <Link className={`topbar-nav-primary ${pathname === "/fleet" ? "active" : ""}`} href="/fleet" aria-current={pathname === "/fleet" ? "page" : undefined}>{t.fleet.title}</Link>
-          <details className="topbar-nav-more">
-            <summary>{t.common.more}</summary>
-            <div>
-              <Link href="/alerts">{t.alerts.title}</Link>
-              <Link href="/recap/daily">{t.recap.daily}</Link>
-              <Link href="/recap/weekly">{t.recap.weekly}</Link>
-              <Link href="/watchlist">{t.watchlist.title}</Link>
-              <Link href="/system">{t.system.title}</Link>
-            </div>
-          </details>
-        </nav>
-        <div className="topbar-meta">
+      <AirRadarTopbar heading meta={
+        <>
           <span className="topbar-receiver"><span className="topbar-receiver-label">{t.status.receiverLabel}</span><span className="topbar-receiver-name">{snapshot.receiver.name}</span></span>
           <span className={`status-pill ${statusOffline ? "offline" : isDemo ? "demo" : ""}`} title={receiverStatusLabel} aria-label={receiverStatusLabel}>
             <span className="status-dot" />
@@ -1646,8 +1596,8 @@ export function AirRadarApp() {
               {serverAlertsEnabled !== null && <span>{serverAlertsEnabled ? t.status.serverAlertsActive : t.status.serverAlertsDisabled}</span>}
             </div>
           </details>
-        </div>
-      </header>
+        </>
+      } />
 
       <section className="radar-content">
         <div className="map-panel">
@@ -1960,6 +1910,8 @@ export function AirRadarApp() {
           )}
         </aside>
       </section>
+
+      <MobileBottomNav />
     </main>
   );
 }

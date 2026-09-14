@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlightDetailPage } from "@/components/flight-detail";
+import { AirRadarPageShell } from "@/components/airradar-shell";
 import { getHistoryFlight, HistoryDatabaseUnavailableError } from "@/lib/server/history";
 import { t } from "@/lib/i18n";
 
@@ -31,19 +32,17 @@ export default async function FlightPage({ params }: { params: Promise<{ id: str
   try {
     const detail = await getHistoryFlight(id);
     if (!detail) notFound();
-    return <FlightDetailPage detail={detail} />;
+    return <AirRadarPageShell><FlightDetailPage detail={detail} /></AirRadarPageShell>;
   } catch (error) {
     if (!(error instanceof HistoryDatabaseUnavailableError)) throw error;
-    return (
-      <main className="flight-page">
-        <header className="flight-page-header">
-          <div>
-            <Link className="back-link" href="/history">{t.history.backToRadar}</Link>
-            <div className="aircraft-page-kicker">{t.history.flightDetails}</div>
-            <h1>{t.history.databaseUnavailable}</h1>
-          </div>
-        </header>
-      </main>
-    );
+    return <AirRadarPageShell><main className="flight-page">
+      <header className="flight-page-header">
+        <div>
+          <Link className="back-link" href="/history">{t.history.backToRadar}</Link>
+          <div className="aircraft-page-kicker">{t.history.flightDetails}</div>
+          <h1>{t.history.databaseUnavailable}</h1>
+        </div>
+      </header>
+    </main></AirRadarPageShell>;
   }
 }

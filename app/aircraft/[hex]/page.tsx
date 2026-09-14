@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AircraftDetailV2 } from "@/components/aircraft-detail-v2";
+import { AirRadarPageShell } from "@/components/airradar-shell";
 import { normalizeIcaoHex } from "@/lib/server/validation";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getAircraftDetail, HistoryDatabaseUnavailableError, type AircraftDetailResponse } from "@/lib/server/history";
@@ -43,5 +44,5 @@ export default async function AircraftPage({ params }: { params: Promise<{ hex: 
   if (!icaoHex) notFound();
   const { detail, liveAircraft } = await resolveAircraft(icaoHex);
   if (!detail?.aircraft && !liveAircraft) notFound();
-  return <AircraftDetailV2 detail={detail} liveAircraft={liveAircraft} />;
+  return <AirRadarPageShell><AircraftDetailV2 detail={detail} liveAircraft={liveAircraft} /></AirRadarPageShell>;
 }

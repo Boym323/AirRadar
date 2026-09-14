@@ -132,6 +132,7 @@ export const cs = {
     aircraftLabel: "Hledat letadla",
     ognLabel: "Hledat cíle OGN",
     globalPlaceholder: "Hledat letadla, letiště a traťové body…",
+    globalMobilePlaceholder: "Hledat letadla, letiště…",
     globalLabel: "Globální vyhledávání",
     aircraftResults: "Letadla",
     airportResults: "Letiště",
