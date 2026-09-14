@@ -1960,6 +1960,33 @@ export function AirRadarApp() {
           )}
         </aside>
       </section>
+
+      <nav className="mobile-bottom-nav" aria-label={t.statistics.navigation}>
+        <Link className={pathname === "/" ? "active" : ""} href="/" aria-current={pathname === "/" ? "page" : undefined}>
+          <span className="mobile-bottom-nav-icon" aria-hidden="true">⌁</span>
+          <span>{t.radar.liveAirPicture}</span>
+        </Link>
+        <Link className={pathname === "/history" ? "active" : ""} href="/history" aria-current={pathname === "/history" ? "page" : undefined}>
+          <span className="mobile-bottom-nav-icon" aria-hidden="true">◷</span>
+          <span>{t.history.title}</span>
+        </Link>
+        <Link className={pathname === "/statistics" ? "active" : ""} href="/statistics" aria-current={pathname === "/statistics" ? "page" : undefined}>
+          <span className="mobile-bottom-nav-icon" aria-hidden="true">▥</span>
+          <span>{t.statistics.title}</span>
+        </Link>
+        <details className="mobile-bottom-more">
+          <summary>
+            <span className="mobile-bottom-nav-icon" aria-hidden="true">⋯</span>
+            <span>{t.common.more}</span>
+          </summary>
+          <div>
+            <Link href="/fleet">{t.fleet.title}</Link>
+            <Link href="/alerts">{t.alerts.title}</Link>
+            <Link href="/watchlist">{t.watchlist.title}</Link>
+            <Link href="/system">{t.system.title}</Link>
+          </div>
+        </details>
+      </nav>
     </main>
   );
 }
