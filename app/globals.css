@@ -468,6 +468,13 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .airport-section-heading, .airport-observed-movement-header { padding: 17px 19px 0; }
 .airport-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .airport-section-heading h2, .airport-observed-movement-header h3 { margin: 0; color: var(--text); font-size: 15px; letter-spacing: -.02em; }
+.airport-movement-title-row { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.airport-movements-card .airport-section-heading { display: block; }
+.airport-movement-title-row > strong { color: var(--mint); font-size: 11px; }
+.airport-movement-periods { display: flex; gap: 5px; margin-top: 10px; }
+.airport-movement-periods button, .airport-movement-show-more { border: 1px solid var(--line); background: transparent; color: var(--muted); padding: 5px 8px; font: inherit; font-size: 10px; cursor: pointer; }
+.airport-movement-periods button[aria-pressed="true"] { border-color: var(--mint); color: var(--mint); }
+.airport-movement-show-more { margin-top: 8px; color: var(--mint); }
 .airport-section-heading p, .airport-observed-movement-header p { margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
 .live-badge { flex: 0 0 auto; color: var(--mint); font-size: 9px; font-weight: 700; letter-spacing: .1em; }
 .airport-nearby-aircraft-card { padding-bottom: 18px; }

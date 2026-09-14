@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getTranslations } from "@/lib/i18n";
-import { movementRunwayLabel } from "@/components/airport-movements";
+import { AIRPORT_MOVEMENT_PERIODS, movementRunwayLabel } from "@/components/airport-movements";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { analyzeAirportMovement, summarizeAirportMovements, type AirportMovement, type MovementFlight, type MovementPosition } from "@/lib/server/airport-movements";
 
@@ -20,6 +20,21 @@ function flight(id: number, values: MovementPosition[]): MovementFlight {
 }
 
 describe("airport movement intelligence", () => {
+  it("exposes the three localized period options", () => {
+    expect(AIRPORT_MOVEMENT_PERIODS).toEqual(["today", "24h", "7d"]);
+    expect(getTranslations("en").airport.movementPeriodToday).toBe("Today");
+    expect(getTranslations("en").airport.movementPeriod24h).toBe("24 h");
+    expect(getTranslations("en").airport.movementPeriodSevenDays).toBe("7 days");
+    expect(getTranslations("cs").airport.movementPeriodToday).toBe("Dnes");
+    expect(getTranslations("cs").airport.movementPeriodSevenDays).toBe("7 dní");
+  });
+
+  it("provides localized incomplete-result and show-more labels", () => {
+    expect(getTranslations("en").airport.movementIncomplete).toContain("incomplete");
+    expect(getTranslations("cs").airport.movementIncomplete).toContain("není úplný");
+    expect(getTranslations("en").airport.showMore).toBe("Show more");
+    expect(getTranslations("cs").airport.showMore).toBe("Zobrazit více");
+  });
   it("uses a neutral runway label for overflights while retaining unknown runway for runway movements", () => {
     const overflight = { movement: "OVERFLIGHT" as const, runway: null };
     expect(movementRunwayLabel(overflight, getTranslations("en"))).toBe("—");
