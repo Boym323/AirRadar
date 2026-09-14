@@ -158,4 +158,12 @@ describe("radar UI polish helpers", () => {
     expect(getTranslations("cs").layers).toMatchObject({ aircraft: "Letadla", airports: "Letiště", atc: "ATC", heliports: "Heliporty" });
     expect(getTranslations("en").layers).toMatchObject({ aircraft: "Aircraft", airports: "Airports", atc: "ATC", heliports: "Heliports" });
   });
+
+  it("keeps the layer overlay drawer-aware without changing mobile placement", () => {
+    expect(globalCss).toContain("--radar-drawer-width");
+    expect(globalCss).toContain(".radar-content:has(.drawer-traffic) .map-overlay");
+    expect(globalCss).toContain("right: calc(var(--radar-drawer-width) + 64px)");
+    expect(globalCss).toContain("@media (min-width: 821px)");
+    expect(globalCss).toContain(".detail-panel .close-button { display: none; }");
+  });
 });

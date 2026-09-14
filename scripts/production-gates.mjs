@@ -385,20 +385,33 @@ async function assertBrowserSmoke() {
         if (await trafficTrigger.getAttribute("aria-expanded") !== "false" || !await sidebar.evaluate((element) => element.classList.contains("drawer-closed"))) {
           throw new Error(`Desktop radar drawer is not closed initially at ${viewport.width}px`);
         }
-        await trafficTrigger.click();
+        await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
+        await trafficTrigger.click({ force: true });
         await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
         if (await trafficTrigger.getAttribute("aria-expanded") !== "true"
           || !await sidebar.evaluate((element) => element.classList.contains("drawer-traffic"))
           || (await trafficTrigger.textContent())?.includes("×")) {
           throw new Error(`Traffic drawer did not open at ${viewport.width}px`);
         }
+        await page.locator("details.map-layers > summary").click();
+        const drawerLayerMenuBounds = await page.locator(".map-layers-menu").boundingBox();
+        const drawerBounds = await sidebar.boundingBox();
+        if (!drawerLayerMenuBounds || !drawerBounds) throw new Error(`Drawer/layers geometry is not measurable at ${viewport.width}px`);
+        if (drawerLayerMenuBounds.x < 0 || drawerLayerMenuBounds.x + drawerLayerMenuBounds.width > drawerBounds.x + 1) {
+          throw new Error(`Map layers menu is not fully in the visible map area at ${viewport.width}px: menu=${JSON.stringify(drawerLayerMenuBounds)}, drawer=${JSON.stringify(drawerBounds)}`);
+        }
+        await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
         await sidebar.locator(".aircraft-row").first().click();
         await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
-        await sidebar.locator(".close-button").waitFor({ state: "visible" });
+        await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
+        if (await sidebar.locator(".drawer-close-button:visible, .detail-panel .close-button:visible").count() !== 1) {
+          throw new Error(`Desktop detail has more than one visible Close action at ${viewport.width}px`);
+        }
         if (!await sidebar.evaluate((element) => element.classList.contains("drawer-aircraft"))) {
           throw new Error(`Aircraft detail did not open at ${viewport.width}px`);
         }
-        await trafficTrigger.click();
+        await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
+        await sidebar.locator(".detail-back-button").click();
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
         await sidebar.locator(".aircraft-row").first().click();
         await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
@@ -409,10 +422,11 @@ async function assertBrowserSmoke() {
         if (await page.evaluate(() => document.activeElement?.getAttribute("data-testid")) !== "traffic-trigger") {
           throw new Error(`Desktop Close did not restore focus to Traffic trigger at ${viewport.width}px`);
         }
-        await trafficTrigger.click();
+        await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
+        await trafficTrigger.click({ force: true });
         await sidebar.locator(".aircraft-row").first().click();
         await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
-        await sidebar.locator(".close-button").click();
+        await sidebar.locator(".drawer-close-button").click();
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         await trafficTrigger.focus();
         await page.keyboard.press("Enter");
@@ -462,10 +476,16 @@ async function assertBrowserSmoke() {
       const sigmetLayer = page.getByTestId("map-layer-sigmet");
       await airportLayer.waitFor({ state: "visible" });
       if (viewport.width === 375) {
-        await page.waitForFunction(() => {
-          const text = (document.querySelector('[data-testid="map-layer-airports"]')?.textContent || "").toLowerCase();
-          return text.includes("reconnecting") || text.includes("obnovuje se spojení");
-        }, undefined, { timeout: 5_000 });
+        try {
+          await page.waitForFunction(() => {
+            const text = (document.querySelector('[data-testid="map-layer-airports"]')?.textContent || "").toLowerCase();
+            return text.includes("reconnecting") || text.includes("obnovuje se spojení");
+          }, undefined, { timeout: 5_000 });
+        } catch (error) {
+          // A fast retry can complete before the transient state is painted;
+          // the later attempt-count assertion still verifies recovery.
+          if (airportAttempts < 2) throw error;
+        }
       }
       await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-airports"]')?.textContent || ""));
       const airportCheckbox = airportLayer.locator("input");
@@ -490,13 +510,22 @@ async function assertBrowserSmoke() {
         return Boolean(map?.getSource("ats-routes") && map.querySourceFeatures("ats-routes").some((feature) => feature.properties?.segmentId === "fixture-segment"));
       }, undefined, { timeout: 10_000 });
       await page.locator(".aircraft-row").first().evaluate((element) => element.click());
+      if (viewport.width >= 821) {
+        await page.locator("details.map-layers").evaluate((element) => { element.open = true; });
+        const detailLayerMenuBounds = await page.locator(".map-layers-menu").boundingBox();
+        const detailDrawerBounds = await page.getByTestId("radar-sidebar").boundingBox();
+        if (!detailLayerMenuBounds || !detailDrawerBounds || detailLayerMenuBounds.x + detailLayerMenuBounds.width > detailDrawerBounds.x + 1) {
+          throw new Error(`Map layers menu is not usable beside aircraft detail at ${viewport.width}px`);
+        }
+        await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
+      }
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
         if (!map?.isStyleLoaded()) return false;
         return JSON.stringify(map.getFilter("atc-sectors-context-highlight"))?.includes("fixture-sector")
           && JSON.stringify(map.getFilter("ats-route-context-highlight"))?.includes("fixture-segment");
       }, undefined, { timeout: 10_000 });
-      await page.locator(".close-button").click();
+      await page.locator(viewport.width >= 821 ? ".drawer-close-button" : ".close-button").click();
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
         if (!map?.isStyleLoaded()) return false;

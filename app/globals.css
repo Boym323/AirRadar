@@ -1782,6 +1782,18 @@ button, input, select, textarea { color-scheme: dark; }
 .detail-heading { position: relative; padding-top: 48px; }
 .detail-back-button { position: absolute; top: 10px; left: 16px; border: 0; padding: 0; background: transparent; color: var(--accent-primary); font-size: 10px; }
 .detail-back-button:hover { text-decoration: underline; }
+@media (min-width: 821px) {
+  .radar-content:has(.drawer-traffic) .map-overlay,
+  .radar-content:has(.drawer-aircraft) .map-overlay,
+  .radar-content:has(.drawer-ogn) .map-overlay { right: calc(var(--radar-drawer-width) + 64px); }
+  .radar-content:has(.drawer-traffic) .map-overlay-primary,
+  .radar-content:has(.drawer-aircraft) .map-overlay-primary,
+  .radar-content:has(.drawer-ogn) .map-overlay-primary { position: relative; }
+  .radar-content:has(.drawer-traffic) .map-layers,
+  .radar-content:has(.drawer-aircraft) .map-layers,
+  .radar-content:has(.drawer-ogn) .map-layers { position: absolute; top: 0; right: 0; }
+  .detail-panel .close-button { display: none; }
+}
 .radar-content:has(.drawer-traffic) .maplibregl-ctrl-top-right,
 .radar-content:has(.drawer-aircraft) .maplibregl-ctrl-top-right,
 .radar-content:has(.drawer-ogn) .maplibregl-ctrl-top-right,
