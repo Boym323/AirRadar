@@ -50,6 +50,15 @@ export function GlobalSearch() {
   const [loading, setLoading] = useState(false);
   const [requestFailed, setRequestFailed] = useState(false);
   const [open, setOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 820px)");
+    const update = () => setIsMobileViewport(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const items = useMemo<SearchItem[]>(() => [
     ...(results?.aircraft ?? []),
@@ -146,7 +155,7 @@ export function GlobalSearch() {
         onChange={(event) => setQuery(event.target.value)}
         onFocus={() => { if (results || loading) setOpen(true); }}
         onKeyDown={handleKeyDown}
-        placeholder={t.search.globalPlaceholder}
+        placeholder={isMobileViewport ? t.search.globalMobilePlaceholder : t.search.globalPlaceholder}
         aria-label={t.search.globalLabel}
         aria-autocomplete="list"
         aria-controls="global-search-results"

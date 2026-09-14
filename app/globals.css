@@ -1886,11 +1886,18 @@ button, input, select, textarea { color-scheme: dark; }
     text-decoration: none;
   }
   .mobile-bottom-more > div a:hover { color: var(--accent-primary); background: rgba(67, 216, 194, .08); }
-  .aircraft-page,
-  .airport-page,
-  .history-page,
-  .system-page { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
-  .statistics-page { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+  .secondary-page-content > :is(
+    .history-page,
+    .flight-page,
+    .aircraft-page,
+    .airport-page,
+    .statistics-page,
+    .watchlist-page,
+    .fleet-page,
+    .system-page,
+    .alert-history-page,
+    .recap-page
+  ) { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
   .airport-overview { grid-template-columns: 1fr; }
   .airport-map-card { order: -1; }
   .airport-content { margin-top: 12px; }
