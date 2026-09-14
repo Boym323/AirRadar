@@ -1,7 +1,8 @@
 import { AlertHistoryPage } from "@/components/alert-history-page";
+import { AirRadarPageShell } from "@/components/airradar-shell";
 
 export const dynamic = "force-dynamic";
 
 export default function AlertsPage() {
-  return <AlertHistoryPage />;
+  return <AirRadarPageShell><AlertHistoryPage /></AirRadarPageShell>;
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AirportDetail } from "@/components/airport-detail";
+import { AirRadarPageShell } from "@/components/airradar-shell";
 import { resolveAirportDetail, resolveAirportDetailWithInfrastructure } from "@/lib/server/airport-detail";
 import { getNearbyAirports } from "@/lib/server/nearby-airports";
 
@@ -21,5 +22,5 @@ export default async function AirportPage({ params }: { params: Promise<{ icao: 
   if (!airport) notFound();
   const infrastructure = detail?.infrastructure ?? { runways: [], frequencies: [], navaids: [] };
   const nearbyAirports = await getNearbyAirports(airport);
-  return <AirportDetail airport={airport} infrastructure={infrastructure} nearbyAirports={nearbyAirports} />;
+  return <AirRadarPageShell><AirportDetail airport={airport} infrastructure={infrastructure} nearbyAirports={nearbyAirports} /></AirRadarPageShell>;
 }

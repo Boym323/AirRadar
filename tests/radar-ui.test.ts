@@ -13,6 +13,7 @@ import {
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
 const datasetSource = readFileSync(new URL("../components/use-retrying-dataset.ts", import.meta.url), "utf8");
 const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");
@@ -65,10 +66,10 @@ describe("radar UI polish helpers", () => {
   });
 
   it("keeps all primary routes reachable from the mobile radar header", () => {
-    expect(appSource).toContain("mobile-main-nav");
-    expect(appSource).toContain('href="/alerts"');
-    expect(appSource).toContain('href="/recap/daily"');
-    expect(globalCss).toContain(".mobile-main-nav > nav");
+    expect(shellSource).toContain("mobile-bottom-nav");
+    expect(shellSource).toContain('href="/alerts"');
+    expect(shellSource).toContain('href="/recap/daily"');
+    expect(globalCss).toContain(".mobile-bottom-more > div");
   });
 
   it("keeps MapLibre in control of DOM marker positioning", () => {

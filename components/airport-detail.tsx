@@ -68,7 +68,7 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
     </header>
 
     <div className="airport-layout">
-      <div className="airport-content">
+      <div className="airport-overview">
         <section className="airport-card" aria-labelledby="airport-information-title">
           <h2 id="airport-information-title">{t.airport.information}</h2>
           <dl className="airport-info-grid">
@@ -83,6 +83,14 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
             <div><dt>{t.airport.coordinates}</dt><dd>{formatCoordinate(airport.latitude)}, {formatCoordinate(airport.longitude)}</dd></div>
           </dl>
         </section>
+
+        <section className="airport-card airport-map-card" aria-labelledby="airport-map-title">
+          <h2 id="airport-map-title">{t.airport.map}</h2>
+          <AirportMap airport={airport} infrastructure={infrastructure} />
+        </section>
+      </div>
+
+      <div className="airport-content">
 
         <section className="airport-card" aria-labelledby="airport-weather-title">
           <h2 id="airport-weather-title">{t.weather.title}</h2>
@@ -113,11 +121,6 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
         </section>
 
       </div>
-
-      <section className="airport-card airport-map-card" aria-labelledby="airport-map-title">
-        <h2 id="airport-map-title">{t.airport.map}</h2>
-        <AirportMap airport={airport} infrastructure={infrastructure} />
-      </section>
     </div>
     <p className="airport-data-source">{t.airport.dataSource}</p>
   </main>;

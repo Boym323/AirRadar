@@ -12,6 +12,7 @@ import {
 } from "@/lib/route-visualization";
 
 const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
 const searchSource = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
 const serverSearchSource = readFileSync(new URL("../lib/server/search.ts", import.meta.url), "utf8");
@@ -97,8 +98,8 @@ describe("feature integration", () => {
   });
 
   it("keeps global search in the header without changing map transport", () => {
-    expect(radarSource).toContain('import { GlobalSearch } from "@/components/global-search";');
-    expect(radarSource).toContain("<GlobalSearch />");
+    expect(shellSource).toContain('import { GlobalSearch } from "@/components/global-search";');
+    expect(shellSource).toContain("<GlobalSearch />");
     expect(`${radarSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
     expect(streamSource.match(/\/api\/stream/g)).toHaveLength(1);
     expect(radarSource).not.toContain("setInterval(");

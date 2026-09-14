@@ -7,6 +7,7 @@ import type { FormEvent } from "react";
 import { formatTime, t } from "@/lib/i18n";
 import type { HistoryFlightDetail, HistoryFlightRange, HistoryFlightSummary } from "@/lib/server/history";
 import { FlightDetailPanel } from "@/components/flight-detail";
+import { AirRadarPageShell } from "@/components/airradar-shell";
 
 function FlightCard({ flight, selected, onSelect }: { flight: HistoryFlightSummary; selected: boolean; onSelect: () => void }) {
   const route = flight.origin && flight.destination ? `${flight.origin} → ${flight.destination}` : t.common.emptyValue;
@@ -112,8 +113,11 @@ export default function HistoryPage() {
     void loadFlights(range, nextQuery);
   }
 
+  const historyEmpty = !listLoading && (Boolean(listError) || flights.length === 0);
+
   return (
-    <main className="history-page">
+    <AirRadarPageShell>
+      <main className="history-page">
       <div className="history-page-header">
         <div><h1>{t.history.title}</h1><p className="brand-subtitle">{t.history.subtitle}</p></div>
         <Link className="back-link" href="/">{t.history.backToRadar}</Link>
@@ -136,17 +140,18 @@ export default function HistoryPage() {
             </form>
           </div>
         </div>
-        <div className="history-layout">
+        <div className={`history-layout${historyEmpty ? " is-empty" : ""}`}>
           <aside className="history-flight-list" aria-label={t.history.flightList}>
             {listLoading ? <div className="history-note">{t.common.loading}</div> : listError ? <div className="history-note">{listError}</div> : flights.length ? flights.map((flight) => (
               <FlightCard key={flight.id} flight={flight} selected={selectedId === flight.id} onSelect={() => void loadDetail(flight.id)} />
             )) : <div className="history-note">{query ? t.history.noMatchingFlights : t.history.noFlights}</div>}
           </aside>
           <section className="history-detail" aria-label={t.history.flightDetails}>
-            {detailLoading ? <div className="history-note">{t.common.loading}</div> : detailError ? <div className="history-note">{detailError}</div> : !detail ? <div className="history-note">{t.history.selectFlight}</div> : <FlightDetailPanel detail={detail} />}
+            {detailLoading ? <div className="history-note">{t.common.loading}</div> : detailError ? <div className="history-note">{detailError}</div> : listError ? <div className="history-empty-state"><strong>{listError}</strong></div> : !detail ? historyEmpty ? <div className="history-empty-state"><strong>{query ? t.history.noMatchingFlights : t.history.noFlights}</strong><span>{t.history.description}</span></div> : <div className="history-note">{t.history.selectFlight}</div> : <FlightDetailPanel detail={detail} />}
           </section>
         </div>
       </section>
-    </main>
+      </main>
+    </AirRadarPageShell>
   );
 }
