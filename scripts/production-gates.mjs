@@ -378,6 +378,26 @@ async function assertBrowserSmoke() {
         const buttonsReady = [...document.querySelectorAll("button")].every((button) => Boolean(button.textContent?.trim() || button.getAttribute("aria-label")));
         return mapReady && imagesReady && buttonsReady;
       });
+      if (viewport.width >= 821) {
+        const trafficTrigger = page.getByTestId("traffic-trigger");
+        const sidebar = page.getByTestId("radar-sidebar");
+        await trafficTrigger.waitFor({ state: "visible" });
+        if (await trafficTrigger.getAttribute("aria-expanded") !== "false" || !await sidebar.evaluate((element) => element.classList.contains("drawer-closed"))) {
+          throw new Error(`Desktop radar drawer is not closed initially at ${viewport.width}px`);
+        }
+        await trafficTrigger.click();
+        await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
+        if (await trafficTrigger.getAttribute("aria-expanded") !== "true" || !await sidebar.evaluate((element) => element.classList.contains("drawer-traffic"))) {
+          throw new Error(`Traffic drawer did not open at ${viewport.width}px`);
+        }
+        await sidebar.locator(".drawer-close-button").click();
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
+        await trafficTrigger.focus();
+        await page.keyboard.press("Enter");
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
+        await page.keyboard.press("Escape");
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
+      }
       await page.locator("details.map-layers > summary").click();
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
       if (hasHorizontalOverflow) throw new Error(`Horizontal overflow at ${viewport.width}px`);

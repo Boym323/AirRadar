@@ -1766,6 +1766,33 @@ button, input, select, textarea { color-scheme: dark; }
 .system-status-badge { border-radius: 5px; }
 .mobile-bottom-nav { display: none; }
 
+/* UX V3: the live map owns the radar workspace; browsing is contextual. */
+:root { --radar-drawer-width: clamp(360px, 28vw, 420px); }
+.radar-content { position: relative; display: block; overflow: hidden; }
+.map-panel { height: 100%; }
+.traffic-trigger { pointer-events: auto; display: inline-flex; align-items: center; gap: 9px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border-default); border-radius: 7px; background: rgba(8,17,29,.9); color: var(--text-primary); box-shadow: 0 8px 20px rgba(0,0,0,.22); font-size: 10px; }
+.traffic-trigger:hover, .traffic-trigger.active { border-color: rgba(67,216,194,.62); background: rgba(13,32,49,.96); }
+.traffic-trigger-label { color: var(--text-secondary); }
+.traffic-trigger strong { color: var(--accent-primary); font-family: var(--font-geist-mono), monospace; font-size: 13px; }
+.traffic-trigger-state { color: var(--text-muted); font-size: 16px; line-height: 1; }
+.sidebar { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: var(--radar-drawer-width); border-left: 1px solid var(--border-default); box-shadow: -18px 0 40px rgba(0,0,0,.24); transform: translateX(0); transition: transform 190ms ease, visibility 190ms ease; }
+.sidebar.drawer-closed { visibility: hidden; transform: translateX(100%); pointer-events: none; }
+.sidebar.drawer-aircraft .sidebar-browse, .sidebar.drawer-ogn .sidebar-browse { display: none; }
+.drawer-close-button { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; border: 1px solid var(--border-default); border-radius: 5px; background: transparent; color: var(--text-muted); font-size: 20px; line-height: 1; }
+.drawer-close-button:hover { color: var(--text-primary); border-color: rgba(67,216,194,.5); }
+.detail-heading { position: relative; padding-top: 48px; }
+.detail-back-button { position: absolute; top: 10px; left: 16px; border: 0; padding: 0; background: transparent; color: var(--accent-primary); font-size: 10px; }
+.detail-back-button:hover { text-decoration: underline; }
+.radar-content:has(.drawer-traffic) .maplibregl-ctrl-top-right,
+.radar-content:has(.drawer-aircraft) .maplibregl-ctrl-top-right,
+.radar-content:has(.drawer-ogn) .maplibregl-ctrl-top-right,
+.radar-content:has(.drawer-traffic) .maplibregl-ctrl-bottom-right,
+.radar-content:has(.drawer-aircraft) .maplibregl-ctrl-bottom-right,
+.radar-content:has(.drawer-ogn) .maplibregl-ctrl-bottom-right { right: calc(var(--radar-drawer-width) + 12px); }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar { transition: none; }
+}
+
 .airradar-page-shell { min-height: 100svh; }
 .secondary-page-content { min-height: calc(100svh - 60px); }
 
@@ -1820,7 +1847,10 @@ button, input, select, textarea { color-scheme: dark; }
   .global-search-input { min-height: 38px; font-size: 14px; }
   .radar-content { height: calc(100svh - 58px); }
   .secondary-page-content { min-height: calc(100svh - 58px); }
-  .sidebar { bottom: calc(66px + env(safe-area-inset-bottom)); border-radius: 9px; }
+  .sidebar { top: auto; right: 6px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 6px; width: auto; border-radius: 9px; }
+  .sidebar.drawer-closed { visibility: visible; transform: none; pointer-events: auto; }
+  .traffic-trigger { min-height: 36px; }
+  .drawer-close-button { display: none; }
   .sidebar.compact { height: 122px; }
   .sidebar:not(.compact) { height: min(54svh, 500px); }
   .sidebar.has-selection { height: min(66svh, 580px); }
