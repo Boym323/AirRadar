@@ -2,6 +2,22 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.39] - 2026-09-14
+
+Changes since v1.0.38:
+
+- fix: harden airport movement inference and queries (73da4203)
+- fix: correct ATC validity and airport visibility (37269c07)
+- test: strengthen map layer and migration production gates (5d6a47ac)
+- fix: avoid runway label for airport overflights (88a39122)
+- Merge pull request #17 from Boym323/automation/harden-movement-atc-gates (af783315)
+- Improve airport movement intelligence UX (86430821)
+- Merge pull request #18 from Boym323/feature/airport-movement-ux (5236afe9)
+- style: establish visual system v2 (ccaa4c2c)
+- polish shared visual shell and secondary layouts (b500a1ef)
+- style: finish visual system v2 mobile polish (46c26d08)
+- Merge pull request #19 from Boym323/feature/visual-system-v2 (ab018303)
+
 ## [1.0.38] - 2026-09-12
 
 Changes since v1.0.37:
