@@ -65,6 +65,18 @@ export interface FlightPlan {
   waypoints: string[];
   source?: string;
   retrievedAt?: string;
+  flightAware?: FlightAwareFlightStatus;
+}
+
+export interface FlightAwareFlightStatus {
+  ident?: string; identIcao?: string; identIata?: string; faFlightId?: string; flightNumber?: string; atcIdent?: string; type?: string;
+  operator?: string; operatorIcao?: string; operatorIata?: string; registration?: string; aircraftType?: string;
+  inboundFaFlightId?: string; codeshares?: string[]; codesharesIata?: string[]; status?: string;
+  cancelled?: boolean; diverted?: boolean; blocked?: boolean; positionOnly?: boolean; progressPercent?: number;
+  origin?: Record<string, unknown>; destination?: Record<string, unknown>; schedule?: Record<string, string>;
+  filedEteSeconds?: number; filedAirspeed?: number; filedAltitude?: number; routeDistance?: number;
+  departureDelaySeconds?: number; arrivalDelaySeconds?: number;
+  operational?: { originTerminal?: string; originGate?: string; departureRunway?: string; destinationTerminal?: string; destinationGate?: string; baggageClaim?: string; arrivalRunway?: string };
 }
 
 export interface AircraftEnrichment {

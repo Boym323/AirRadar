@@ -2,7 +2,7 @@ import { join, resolve } from "node:path";
 
 export const AIRRADAR_PRODUCTION_STATE_DIRECTORY = "/var/lib/airradar";
 
-export type RuntimeStateFile = "alerts.json" | "alert-events.jsonl";
+export type RuntimeStateFile = "alerts.json" | "alert-events.jsonl" | "flightaware-usage.json";
 
 /**
  * Runtime state is deliberately separate from the source checkout in

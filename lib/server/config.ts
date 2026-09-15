@@ -227,6 +227,20 @@ export function getFlightAwareApiKey(): string | null {
   return key || null;
 }
 
+export function isFlightAwareForesightEnabled(): boolean {
+  return process.env.FLIGHTAWARE_FORESIGHT_ENABLED?.trim().toLowerCase() === "true";
+}
+
+export function isFlightAwareTrackEnabled(): boolean {
+  return process.env.FLIGHTAWARE_TRACK_ENABLED?.trim().toLowerCase() === "true";
+}
+
+export function isFlightAwareHistoryEnabled(): boolean {
+  return process.env.FLIGHTAWARE_HISTORY_ENABLED?.trim().toLowerCase() === "true";
+}
+export function getFlightAwareMaxCostUsdPerDay(): number | undefined { const value = envNumber("FLIGHTAWARE_MAX_COST_USD_PER_DAY", 0); return value > 0 ? value : undefined; }
+export function getFlightAwareMaxCostUsdPerMonth(): number { return Math.max(0, envNumber("FLIGHTAWARE_MAX_COST_USD_PER_MONTH", 5)); }
+
 export interface OgnConfig {
   enabled: boolean;
   host: string;

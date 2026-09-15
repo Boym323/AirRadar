@@ -1,5 +1,6 @@
-import type { FlightPlan } from "@/lib/aircraft/types";
+import type { FlightAwareFlightStatus, FlightPlan } from "@/lib/aircraft/types";
 import type { FlightPlanProvider } from "@/lib/server/provider";
+import { FlightAwareUsageLedger, FLIGHTAWARE_COST_POLICY, type FlightAwareEndpointClass } from "@/lib/server/flightaware-usage";
 
 export const FLIGHTAWARE_MAX_REQUESTS_PER_MINUTE = 5;
 export const FLIGHTAWARE_MAX_REQUESTS_PER_HOUR = 30;
@@ -18,6 +19,7 @@ export interface FlightAwareDiagnostics {
   windowMs: number;
   hourWindowMs: number;
   dayWindowMs: number;
+  ledgerHealthy: boolean; ledgerState: string; estimatedResultSetsToday: number; estimatedResultSetsMonth: number; estimatedCostTodayUsd: number; estimatedCostMonthUsd: number; budgetBlocked: number; providerState: string; lastRequestAt: string | null; lastSuccessfulRequestAt: string | null; lastFailureAt: string | null;
 }
 
 export interface FlightAwareFlight extends Record<string, unknown> {
@@ -47,6 +49,9 @@ interface FlightAwareBudgetOptions {
   maxRequestsPerMinute?: number;
   maxRequestsPerHour?: number;
   maxRequestsPerDay?: number;
+  maxCostUsdPerDay?: number;
+  maxCostUsdPerMonth?: number;
+  ledgerPath?: string;
 }
 
 class SlidingWindowRequestBudget {
@@ -98,6 +103,29 @@ function timeValue(value: unknown): number | null {
   if (!text) return null;
   const timestamp = Date.parse(text);
   return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function numberValue(value: unknown): number | null { return typeof value === "number" && Number.isFinite(value) ? value : null; }
+function booleanValue(value: unknown): boolean | null { return typeof value === "boolean" ? value : null; }
+const SCHEDULE_FIELDS = ["scheduled_out", "estimated_out", "actual_out", "scheduled_off", "estimated_off", "actual_off", "scheduled_on", "estimated_on", "actual_on", "scheduled_in", "estimated_in", "actual_in"] as const;
+
+function statusFromFlight(flight: FlightAwareFlight): FlightAwareFlightStatus {
+  const status: FlightAwareFlightStatus = {};
+  const strings: Array<[keyof FlightAwareFlightStatus, unknown]> = [["ident", flight.ident], ["identIcao", flight.ident_icao], ["identIata", flight.ident_iata], ["faFlightId", flight.fa_flight_id], ["flightNumber", flight.flight_number], ["atcIdent", flight.atc_ident], ["type", flight.type], ["operator", flight.operator], ["operatorIcao", flight.operator_icao], ["operatorIata", flight.operator_iata], ["registration", flight.registration], ["aircraftType", flight.aircraft_type], ["inboundFaFlightId", flight.inbound_fa_flight_id], ["status", flight.status]];
+  for (const [key, value] of strings) { const parsed = stringValue(value); if (parsed) (status[key] as string) = parsed; }
+  for (const [key, value] of [["cancelled", flight.cancelled], ["diverted", flight.diverted], ["blocked", flight.blocked], ["positionOnly", flight.position_only]] as const) { const parsed = booleanValue(value); if (parsed !== null) (status[key] as boolean) = parsed; }
+  const progress = numberValue(flight.progress_percent); if (progress !== null) status.progressPercent = progress;
+  const schedule: Record<string, string> = {}; for (const key of SCHEDULE_FIELDS) { const parsed = stringValue(flight[key]); if (parsed) schedule[key] = parsed; } if (Object.keys(schedule).length) status.schedule = schedule;
+  for (const [key, value] of [["filedEteSeconds", flight.filed_ete], ["filedAirspeed", flight.filed_airspeed], ["filedAltitude", flight.filed_altitude], ["routeDistance", flight.route_distance]] as const) { const parsed = numberValue(value); if (parsed !== null) (status[key] as number) = parsed; }
+  for (const [key, value] of [["departureDelaySeconds", flight.departure_delay], ["arrivalDelaySeconds", flight.arrival_delay]] as const) { const parsed = numberValue(value); if (parsed !== null) status[key] = parsed; }
+  const operational: Record<string, string> = {};
+  for (const [key, value] of [["originTerminal", flight.origin_terminal], ["originGate", flight.origin_gate], ["departureRunway", flight.actual_departure_runway], ["destinationTerminal", flight.destination_terminal], ["destinationGate", flight.destination_gate], ["baggageClaim", flight.baggage_claim], ["arrivalRunway", flight.actual_arrival_runway]] as const) { const parsed = stringValue(value); if (parsed) operational[key] = parsed; }
+  if (Object.keys(operational).length) status.operational = operational;
+  if (Array.isArray(flight.codeshares)) status.codeshares = flight.codeshares.map(stringValue).filter((v): v is string => v !== null);
+  if (Array.isArray(flight.codeshares_iata)) status.codesharesIata = flight.codeshares_iata.map(stringValue).filter((v): v is string => v !== null);
+  if (flight.origin && typeof flight.origin === "object") status.origin = flight.origin as Record<string, unknown>;
+  if (flight.destination && typeof flight.destination === "object") status.destination = flight.destination as Record<string, unknown>;
+  return status;
 }
 
 function endpoint(callsign: string): string {
@@ -175,11 +203,21 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
   private requests = 0;
   private failures = 0;
   private rateLimited = 0;
+  private readonly ledger: FlightAwareUsageLedger;
+  private readonly maxCostDay: number | null;
+  private readonly maxCostMonth: number | null;
+  private reservedCost = 0;
+  private budgetBlocked = 0;
+  private providerState = "ready";
+  private lastRequestAt: string | null = null;
+  private lastSuccessfulRequestAt: string | null = null;
+  private lastFailureAt: string | null = null;
 
   constructor(
     private readonly apiKey: string,
     options: FlightAwareBudgetOptions = {},
   ) {
+    this.ledger = new FlightAwareUsageLedger(options.ledgerPath);
     this.limitPerMinute = boundedLimit(options.maxRequestsPerMinute, FLIGHTAWARE_MAX_REQUESTS_PER_MINUTE, 30);
     this.limitPerHour = boundedLimit(options.maxRequestsPerHour, FLIGHTAWARE_MAX_REQUESTS_PER_HOUR, 300);
     this.limitPerDay = boundedLimit(options.maxRequestsPerDay, FLIGHTAWARE_MAX_REQUESTS_PER_DAY, 1_000);
@@ -188,9 +226,12 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
       hour: this.limitPerHour,
       day: this.limitPerDay,
     });
+    this.maxCostDay = options.maxCostUsdPerDay && options.maxCostUsdPerDay > 0 ? options.maxCostUsdPerDay : null;
+    this.maxCostMonth = options.maxCostUsdPerMonth && options.maxCostUsdPerMonth > 0 ? options.maxCostUsdPerMonth : null;
   }
 
   getDiagnostics(): FlightAwareDiagnostics {
+    const now = Date.now(); const today = this.ledger.entriesSince(now - 86_400_000); const month = this.ledger.entriesSince(now - 31 * 86_400_000);
     return {
       requests: this.requests,
       failures: this.failures,
@@ -201,15 +242,26 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
       windowMs: FLIGHTAWARE_MINUTE_WINDOW_MS,
       hourWindowMs: FLIGHTAWARE_HOUR_WINDOW_MS,
       dayWindowMs: FLIGHTAWARE_DAY_WINDOW_MS,
+      ledgerHealthy: this.ledger.isHealthy(), ledgerState: this.ledger.state(), estimatedResultSetsToday: today.reduce((s, e) => s + e.resultSetsEstimated, 0), estimatedResultSetsMonth: month.reduce((s, e) => s + e.resultSetsEstimated, 0), estimatedCostTodayUsd: today.reduce((s, e) => s + e.estimatedCostUsd, 0), estimatedCostMonthUsd: month.reduce((s, e) => s + e.estimatedCostUsd, 0), budgetBlocked: this.budgetBlocked, providerState: this.providerState, lastRequestAt: this.lastRequestAt, lastSuccessfulRequestAt: this.lastSuccessfulRequestAt, lastFailureAt: this.lastFailureAt,
     };
   }
 
+  getReservationCostForTest(): number { return this.reservedCost; }
+
   private async request(url: string): Promise<Response> {
+    const endpointClass: FlightAwareEndpointClass = url.endsWith("/route") ? "route" : "flight";
+    const cost = FLIGHTAWARE_COST_POLICY[endpointClass];
+    const now = Date.now();
+    if (!this.ledger.isHealthy()) { this.providerState = "ledger-error"; this.budgetBlocked += 1; throw new FlightAwareRateLimitError("day"); }
+    if (this.maxCostDay !== null && this.ledger.sum(now - 86_400_000) + this.reservedCost + cost.usdPerResultSet > this.maxCostDay) { this.providerState = "daily-cost-limit"; this.budgetBlocked += 1; throw new FlightAwareRateLimitError("day"); }
+    if (this.maxCostMonth !== null && this.ledger.sum(now - 31 * 86_400_000) + this.reservedCost + cost.usdPerResultSet > this.maxCostMonth) { this.providerState = "monthly-cost-limit"; this.budgetBlocked += 1; throw new FlightAwareRateLimitError("day"); }
     const exhaustedWindow = this.budget.tryTake();
     if (exhaustedWindow) {
       this.rateLimited += 1;
+      this.providerState = `${exhaustedWindow}-limit`;
       throw new FlightAwareRateLimitError(exhaustedWindow);
     }
+    this.reservedCost += cost.usdPerResultSet;
 
     this.requests += 1;
     const controller = new AbortController();
@@ -220,6 +272,7 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
         signal: controller.signal,
         headers: { "x-apikey": this.apiKey, Accept: "application/json" },
       });
+      this.ledger.append({ timestamp: new Date().toISOString(), endpointClass, requestCount: 1, resultSetsEstimated: 1, estimatedCostUsd: cost.usdPerResultSet, success: response.ok, httpStatusCategory: `${Math.floor(response.status / 100)}xx` });
       if (response.status === 429) {
         this.rateLimited += 1;
         throw new FlightAwareRateLimitError("upstream");
@@ -230,6 +283,7 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
       if (!(error instanceof FlightAwareRateLimitError)) this.failures += 1;
       throw error;
     } finally {
+      this.reservedCost = Math.max(0, this.reservedCost - cost.usdPerResultSet);
       clearTimeout(timeout);
     }
   }
@@ -270,6 +324,7 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
     // case where the filed route is absent.
     const waypoints = !filedRoute && faFlightId ? await this.readRoute(faFlightId) : [];
     if (!filedRoute && waypoints.length === 0) return null;
+    const flightAware = statusFromFlight(flight);
 
     return {
       callsign: stringValue(flight.ident) ?? callsign.trim().toUpperCase(),
@@ -281,6 +336,7 @@ export class FlightAwareFlightPlanProvider implements FlightPlanProvider {
       waypoints,
       source: this.name,
       retrievedAt: observedAt.toISOString(),
+      ...(Object.keys(flightAware).length ? { flightAware } : {}),
     };
   }
 }

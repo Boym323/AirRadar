@@ -1,4 +1,4 @@
-import { getAdsbDbBaseUrl, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbConfigured, shouldUseSampleAtcData } from "@/lib/server/config";
+import { getAdsbDbBaseUrl, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getFlightAwareMaxCostUsdPerDay, getFlightAwareMaxCostUsdPerMonth, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbConfigured, shouldUseSampleAtcData } from "@/lib/server/config";
 import { AdsbLolProvider } from "@/lib/server/adsblol-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
 import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
@@ -140,7 +140,7 @@ export function createEnrichmentService(options: { persistAdsbDb?: boolean } = {
   // secret is provisioned before the feature is intentionally enabled.
   const flightAwareApiKey = getUsableFlightAwareApiKey();
   if (isFlightAwareEnabled() && flightAwareApiKey) {
-    registry.flightPlan = new FlightAwareFlightPlanProvider(flightAwareApiKey);
+    registry.flightPlan = new FlightAwareFlightPlanProvider(flightAwareApiKey, { maxCostUsdPerDay: getFlightAwareMaxCostUsdPerDay(), maxCostUsdPerMonth: getFlightAwareMaxCostUsdPerMonth() });
   }
   const persistence = adsbDb && options.persistAdsbDb !== false && isAdsbDbPersistenceEnabled()
     ? new AdsbDbPersistence({

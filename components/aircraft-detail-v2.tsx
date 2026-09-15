@@ -14,6 +14,24 @@ function valueOrEmpty(value: string | null | undefined): string {
   return value || t.common.emptyValue;
 }
 
+function formatFlightAwareTime(value: string | undefined, timezone?: unknown): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const options: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+  if (typeof timezone === "string") { try { new Intl.DateTimeFormat("en", { timeZone: timezone }).format(); options.timeZone = timezone; } catch { /* fallback to AirRadar locale convention */ } }
+  return new Intl.DateTimeFormat(t.locale, options).format(date);
+}
+
+function delayLabel(seconds: number | undefined): string | null {
+  if (seconds === undefined || !Number.isFinite(seconds)) return null;
+  const minutes = Math.round(seconds / 60);
+  if (minutes === 0) return "On time";
+  const absolute = Math.abs(minutes);
+  const text = absolute >= 60 ? `${Math.floor(absolute / 60)} h ${absolute % 60 ? `${absolute % 60} min` : ""}`.trim() : `${absolute} min`;
+  return minutes > 0 ? `+${text}` : `${text} early`;
+}
+
 export { aircraftAirportHref, aircraftFlightHref } from "@/lib/aircraft/detail-links";
 
 function flightDuration(flight: HistoryFlightSummary): string {
@@ -395,6 +413,7 @@ export function AircraftDetailV2({
   const callsign = liveAircraft?.callsign || t.history.unknownCallsign;
   const route = liveAircraft?.enrichment?.route ?? null;
   const flightPlan = liveAircraft?.enrichment?.flightPlan ?? null;
+  const flightAware = flightPlan?.flightAware ?? null;
   const backLink = backHref === "/history" ? "/history" : "/";
   const watchlistHref = icaoHex === t.common.emptyValue ? "/watchlist" : aircraftWatchlistHref(icaoHex, registration);
   const [flightHistory, setFlightHistory] = useState<HistoryResponse | null>(null);
@@ -520,12 +539,34 @@ export function AircraftDetailV2({
               <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
             </div>}
             {flightPlan && <div className="detail-grid aircraft-flight-plan-grid">
+              {flightAware?.identIata && <DetailValue label="Flight">{flightAware.identIata}</DetailValue>}
+              {flightAware?.identIcao && <DetailValue label="ICAO ident">{flightAware.identIcao}</DetailValue>}
+              {flightAware?.operator && <DetailValue label={t.aircraft.operator}>{flightAware.operator}</DetailValue>}
+              {flightAware?.status && <DetailValue label="Status">{flightAware.cancelled ? "Cancelled" : flightAware.diverted ? "Diverted" : flightAware.status}</DetailValue>}
+              {flightAware?.progressPercent !== undefined && <DetailValue label="Progress">{formatNumber(flightAware.progressPercent, 0)}%</DetailValue>}
               <DetailValue label={t.flightPlan.scheduledDeparture}>{valueOrEmpty(flightPlan.scheduledDeparture)}</DetailValue>
               <DetailValue label={t.flightPlan.actualDeparture}>{valueOrEmpty(flightPlan.actualDeparture)}</DetailValue>
               <DetailValue label={t.flightPlan.scheduledArrival}>{valueOrEmpty(flightPlan.scheduledArrival)}</DetailValue>
               <DetailValue label={t.flightPlan.estimatedArrival}>{valueOrEmpty(flightPlan.estimatedArrival)}</DetailValue>
               <DetailValue label={t.flightPlan.filedRoute}>{valueOrEmpty(flightPlan.filedRoute)}</DetailValue>
               <DetailValue label={t.flightPlan.waypoints}>{flightPlan.waypoints.length ? flightPlan.waypoints.join(" · ") : t.common.emptyValue}</DetailValue>
+              {flightAware?.codesharesIata?.length ? <DetailValue label="Codeshare">{flightAware.codesharesIata.slice(0, 8).join(" · ")}</DetailValue> : null}
+              {flightAware?.operational?.originTerminal && <DetailValue label="Origin terminal">{flightAware.operational.originTerminal}</DetailValue>}
+              {flightAware?.operational?.originGate && <DetailValue label="Origin gate">{flightAware.operational.originGate}</DetailValue>}
+              {flightAware?.operational?.destinationTerminal && <DetailValue label="Destination terminal">{flightAware.operational.destinationTerminal}</DetailValue>}
+              {flightAware?.operational?.destinationGate && <DetailValue label="Destination gate">{flightAware.operational.destinationGate}</DetailValue>}
+              {flightAware?.operational?.departureRunway && <DetailValue label="Departure runway">{flightAware.operational.departureRunway}</DetailValue>}
+              {flightAware?.operational?.arrivalRunway && <DetailValue label="Arrival runway">{flightAware.operational.arrivalRunway}</DetailValue>}
+              {flightAware?.operational?.baggageClaim && <DetailValue label="Baggage claim">{flightAware.operational.baggageClaim}</DetailValue>}
+            </div>}
+            {flightAware?.schedule && <div className="detail-section">
+              {(["out", "off", "on", "in"] as const).map((phase) => {
+                const prefix = phase === "out" ? "Gate departure" : phase === "off" ? "Takeoff" : phase === "on" ? "Landing" : "Gate arrival";
+                const values = (["scheduled", "estimated", "actual"] as const).map((kind) => [kind, formatFlightAwareTime(flightAware.schedule?.[`${kind}_${phase}`], phase === "out" || phase === "off" ? flightAware.origin?.timezone : flightAware.destination?.timezone)] as const).filter(([, value]) => value);
+                return values.length ? <div key={phase}><strong>{prefix}</strong>{values.map(([kind, value]) => <DetailValue key={kind} label={kind}>{value}</DetailValue>)}</div> : null;
+              })}
+              {delayLabel(flightAware.departureDelaySeconds) && <DetailValue label="Departure delay">{delayLabel(flightAware.departureDelaySeconds)}</DetailValue>}
+              {delayLabel(flightAware.arrivalDelaySeconds) && <DetailValue label="Arrival delay">{delayLabel(flightAware.arrivalDelaySeconds)}</DetailValue>}
             </div>}
             <div className="detail-disclaimer">{t.aircraft.routeDisclaimer}</div>
           </section>}

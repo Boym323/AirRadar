@@ -193,6 +193,7 @@ interface FlightPlanProviderDiagnostics {
   rateLimited: number;
   limitPerMinute: number;
   windowMs: number;
+  providerState?: string;
 }
 
 function getFlightPlanProviderDiagnostics(provider: ProviderRegistry["flightPlan"]): FlightPlanProviderDiagnostics | null {
