@@ -143,6 +143,17 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("isEditableTarget(event.target)");
   });
 
+  it("keeps search shortcuts source-independent while filters stay ADS-B-only", () => {
+    const searchBranch = appSource.indexOf('if (shortcut === "search")');
+    const filterBranch = appSource.indexOf('else if (shortcut === "filters" && trafficSource === "adsb")');
+    const ognBranch = appSource.indexOf('else if (trafficSource === "ogn")');
+    expect(searchBranch).toBeGreaterThan(-1);
+    expect(appSource.slice(searchBranch, filterBranch)).toContain("searchInputRef.current?.focus()");
+    expect(filterBranch).toBeGreaterThan(searchBranch);
+    expect(ognBranch).toBeGreaterThan(filterBranch);
+    expect(appSource.slice(ognBranch, ognBranch + 120)).toContain("setFiltersOpen(false)");
+  });
+
   it("keeps selection details while hiding filtered map overlays and supports a client reset", () => {
     expect(appSource).toContain("filterAircraftForMap(snapshot.aircraft, mapFilters)");
     expect(appSource).toContain("const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some");
@@ -157,5 +168,13 @@ describe("radar UI polish helpers", () => {
   it("keeps CZ and EN layer labels in the existing i18n dictionaries", () => {
     expect(getTranslations("cs").layers).toMatchObject({ aircraft: "Letadla", airports: "Letiště", atc: "ATC", heliports: "Heliporty" });
     expect(getTranslations("en").layers).toMatchObject({ aircraft: "Aircraft", airports: "Airports", atc: "ATC", heliports: "Heliports" });
+  });
+
+  it("keeps the layer overlay drawer-aware without changing mobile placement", () => {
+    expect(globalCss).toContain("--radar-drawer-width");
+    expect(globalCss).toContain(".radar-content:has(.drawer-traffic) .map-overlay");
+    expect(globalCss).toContain("right: calc(var(--radar-drawer-width) + 64px)");
+    expect(globalCss).toContain("@media (min-width: 821px)");
+    expect(globalCss).toContain(".detail-panel .close-button { display: none; }");
   });
 });

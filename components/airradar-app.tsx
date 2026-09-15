@@ -154,6 +154,7 @@ const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
 // are enough for smooth movement while avoiding a permanent 60 Hz map loop.
 const AIRCRAFT_ANIMATION_TICK_MS = 100;
 type TrafficSource = "adsb" | "ogn";
+type RadarDrawerState = "closed" | "traffic" | "aircraft" | "ogn";
 
 interface AircraftMotionTiming {
   lat: number;
@@ -522,6 +523,9 @@ export function AirRadarApp() {
   const [coverage, setCoverage] = useState<CoverageMode>("local");
   const [serverAlertsEnabled, setServerAlertsEnabled] = useState<boolean | null>(null);
   const [mobileCompact, setMobileCompact] = useState(true);
+  const [trafficOpen, setTrafficOpen] = useState(false);
+  const trafficTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const previousDrawerStateRef = useRef<RadarDrawerState>("closed");
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const centeredTrafficRef = useRef(false);
@@ -701,35 +705,6 @@ export function AirRadarApp() {
     setSortBy("distance");
   }, []);
 
-  useEffect(() => {
-    function isEditableTarget(target: EventTarget | null): boolean {
-      const element = target instanceof HTMLElement ? target : null;
-      if (!element) return false;
-      return element instanceof HTMLInputElement
-        || element instanceof HTMLTextAreaElement
-        || element instanceof HTMLSelectElement
-        || element.isContentEditable;
-    }
-
-    function handleKeyboardShortcut(event: KeyboardEvent): void {
-      if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
-      if (event.key === "/") {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-      } else if (event.key.toLowerCase() === "f") {
-        event.preventDefault();
-        setFiltersOpen((current) => !current);
-      } else if (event.key === "Escape") {
-        setFiltersOpen(false);
-        setSelectedHex(null);
-        setSelectedOgnId(null);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyboardShortcut);
-    return () => window.removeEventListener("keydown", handleKeyboardShortcut);
-  }, []);
-
   function addWatchlistRule(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = watchlistValue.trim().toUpperCase();
@@ -744,6 +719,7 @@ export function AirRadarApp() {
     setSelectedOgnId(null);
     setSelectedHex(hex);
     setMobileCompact(false);
+    setTrafficOpen(true);
   }, []);
 
   const selectOgn = useCallback((id: string) => {
@@ -751,6 +727,35 @@ export function AirRadarApp() {
     setTrafficSource("ogn");
     setSelectedHex(null);
     setSelectedOgnId(id);
+    setMobileCompact(false);
+    setTrafficOpen(true);
+  }, []);
+
+  const closeRadarDrawer = useCallback(() => {
+    setTrafficOpen(false);
+    setSelectedHex(null);
+    setSelectedOgnId(null);
+    setMobileCompact(true);
+  }, []);
+
+  const openTrafficDrawer = useCallback((shortcut?: "search" | "filters") => {
+    setSelectedHex(null);
+    setSelectedOgnId(null);
+    setTrafficOpen(true);
+    setMobileCompact(false);
+    if (shortcut === "search") {
+      window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    } else if (shortcut === "filters" && trafficSource === "adsb") {
+      window.requestAnimationFrame(() => setFiltersOpen(true));
+    } else if (trafficSource === "ogn") {
+      setFiltersOpen(false);
+    }
+  }, [trafficSource]);
+
+  const backToTraffic = useCallback(() => {
+    setSelectedHex(null);
+    setSelectedOgnId(null);
+    setTrafficOpen(true);
     setMobileCompact(false);
   }, []);
 
@@ -1568,6 +1573,58 @@ export function AirRadarApp() {
   const receiverStatusShort = statusOffline ? t.status.offlineShort : isDemo ? t.status.demoShort : streamConnected ? t.status.liveShort : t.status.connectingShort;
   const displayedAircraftCount = snapshot.coverageStats?.displayedAircraft ?? snapshot.stats.currentAircraft;
   const activeTrafficCount = trafficSource === "ogn" ? filteredOgnTargets.length : filteredAircraft.length;
+  const drawerState: RadarDrawerState = selectedOgnTarget
+    ? "ogn"
+    : selectedAircraft || selectedDatabaseAircraft
+      ? "aircraft"
+      : trafficOpen
+        ? "traffic"
+        : "closed";
+  useEffect(() => {
+    if (drawerState === "closed" && previousDrawerStateRef.current !== "closed") {
+      const trigger = trafficTriggerRef.current;
+      if (trigger?.getClientRects().length && !trigger.disabled) trigger.focus();
+    }
+    previousDrawerStateRef.current = drawerState;
+  }, [drawerState]);
+  useEffect(() => {
+    function isEditableTarget(target: EventTarget | null): boolean {
+      const element = target instanceof HTMLElement ? target : null;
+      if (!element) return false;
+      return element instanceof HTMLInputElement
+        || element instanceof HTMLTextAreaElement
+        || element instanceof HTMLSelectElement
+        || element.isContentEditable;
+    }
+
+    function handleKeyboardShortcut(event: KeyboardEvent): void {
+      if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
+      if (event.key === "/") {
+        event.preventDefault();
+        if (window.matchMedia("(min-width: 821px)").matches && drawerState !== "traffic") {
+          openTrafficDrawer("search");
+        } else {
+          searchInputRef.current?.focus();
+        }
+      } else if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        if (window.matchMedia("(min-width: 821px)").matches && drawerState !== "traffic") {
+          openTrafficDrawer("filters");
+        } else if (trafficSource === "adsb") {
+          setFiltersOpen((current) => !current);
+        }
+      } else if (event.key === "Escape") {
+        setFiltersOpen(false);
+        setTrafficOpen(false);
+        setSelectedHex(null);
+        setSelectedOgnId(null);
+        setMobileCompact(true);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyboardShortcut);
+    return () => window.removeEventListener("keydown", handleKeyboardShortcut);
+  }, [drawerState, openTrafficDrawer, trafficSource]);
   const networkStatus = snapshot.sources?.adsbLol.status;
   const networkNotice = activeCoverage === "extended" && networkStatus === "rate_limited"
     ? t.radar.networkRateLimited
@@ -1609,6 +1666,10 @@ export function AirRadarApp() {
                 <div className="map-summary-item"><strong>{snapshot.stats.messagesPerSecond === null ? t.common.emptyValue : `${formatNumber(snapshot.stats.messagesPerSecond, 1)}/s`}</strong><span>{t.statistics.messagesPerSecond}</span></div>
                 <div className="map-summary-item"><strong>{formatDistance(snapshot.stats.maxDistanceKm)}</strong><span>{t.stats.maxDistance}</span></div>
               </div>
+              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
+                <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
+                <strong>{formatNumber(activeTrafficCount)}</strong>
+              </button>
               <details className="map-layers">
                 <summary>{t.layers.title}</summary>
                 <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
@@ -1655,7 +1716,7 @@ export function AirRadarApp() {
           </div>
         </div>
 
-        <aside data-testid="radar-sidebar" className={`sidebar ${mobileCompact ? "compact" : ""} ${selectedAircraft || selectedOgnTarget ? "has-selection" : ""}`}>
+        <aside id="radar-sidebar" data-testid="radar-sidebar" className={`sidebar drawer-${drawerState} ${mobileCompact ? "compact" : ""} ${selectedAircraft || selectedOgnTarget ? "has-selection" : ""}`}>
           <div className="sidebar-heading">
               <div className="sidebar-heading-main">
                 <div className="sidebar-title">{t.radar.trafficNearby}</div>
@@ -1673,6 +1734,7 @@ export function AirRadarApp() {
               <button className="icon-button mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-expanded={!mobileCompact} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
                 {mobileCompact ? "↑" : "↓"}
               </button>
+              <button type="button" className="drawer-close-button" onClick={closeRadarDrawer} aria-label={drawerState === "traffic" ? t.history.closeTrafficPanel : drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}>×</button>
             </div>
           <div className="sidebar-browse">
           <div className="sidebar-header">
@@ -1781,13 +1843,14 @@ export function AirRadarApp() {
 
           </div>
 
-          {(selectedAircraft || selectedDatabaseAircraft || selectedOgnTarget) && (
+          {(drawerState === "aircraft" || drawerState === "ogn") && (
             <div className="detail-panel" key={selectedOgnTarget ? `ogn-${selectedOgnTarget.id}` : selectedIdentity}>
               <div className="detail-heading">
+                <button type="button" className="detail-back-button" onClick={backToTraffic}>← {t.radar.trafficNearby}</button>
                 <div><div className="detail-eyebrow">{selectedOgnTarget ? t.ogn.title : t.history.aircraftDetail}</div><div className="detail-callsign">{selectedOgnTarget ? ognTargetLabel(selectedOgnTarget) : selectedAircraft ? labelForAircraft(selectedAircraft) : selectedIdentity}</div>
                   <div className="detail-registration">{selectedOgnTarget ? `${t.ogn.badge} · ${t.ogn.trackingSources[selectedOgnTarget.trackingSource]}` : selectedAircraft ? `${selectedAircraft.icaoHex} · ${selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || t.common.emptyValue}` : t.aircraft.notCurrentlyInRange}</div>
                 </div>
-                <button className="close-button" onClick={() => selectedOgnTarget ? setSelectedOgnId(null) : setSelectedHex(null)} aria-label={t.history.closeAircraftDetails}>×</button>
+                <button className="close-button" onClick={closeRadarDrawer} aria-label={drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}>×</button>
               </div>
               {selectedOgnTarget ? <OgnDetailContent target={selectedOgnTarget} /> : selectedAircraft ? <div className="detail-content">
               <div className="detail-hero">

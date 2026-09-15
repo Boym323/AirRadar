@@ -795,6 +795,8 @@ export const cs = {
     profileNoData: "Pro tento profil nejsou k dispozici zaznamenané hodnoty.",
     viewHistory: "Zobrazit historii",
     closeAircraftDetails: "Zavřít detail letadla",
+    closeTrafficPanel: "Zavřít panel provozu",
+    closePanel: "Zavřít panel",
     noPositions: "Pro toto letadlo zatím nebyly nalezeny žádné zaznamenané pozice.",
     trailMap: "Mapa letové trasy",
     recentFlights: "Poslední lety",

@@ -797,6 +797,8 @@ export const en = {
     profileNoData: "No sampled values are available for this profile.",
     viewHistory: "View history",
     closeAircraftDetails: "Close aircraft details",
+    closeTrafficPanel: "Close traffic panel",
+    closePanel: "Close panel",
     noPositions: "No sampled positions found for this aircraft yet.",
     trailMap: "Flight trail map",
     recentFlights: "Recent flights",
