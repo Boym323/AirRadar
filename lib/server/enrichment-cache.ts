@@ -13,6 +13,9 @@ export const ENRICHMENT_TTLS = {
   flightPlanNegativeMs: 30 * 60_000,
 } as const;
 
+const ADSBDB_RETRY_INITIAL_MS = 5_000;
+const ADSBDB_RETRY_MAX_MS = 5 * 60_000;
+
 /**
  * ADSBDB route lookups are keyed by callsign, while a callsign can be reused
  * for different flight instances. Keep a stale callsign match from appearing
@@ -217,6 +220,8 @@ export class EnrichmentService {
   private readonly adsbDbPersistence: AdsbDbPersistence | null;
   private readonly adsbDbHits = { memory: 0, persistent: 0, live: 0, staleFallback: 0 };
   private readonly staleFallbackLogged = new Set<string>();
+  private adsbDbRetryAt = 0;
+  private adsbDbFailureStreak = 0;
 
   constructor(
     private readonly providers: ProviderRegistry,
@@ -388,6 +393,17 @@ export class EnrichmentService {
     }
     if (isAdsbDb && pendingOrFresh) this.adsbDbHits.memory += 1;
 
+    // Do not hammer an unavailable upstream once per aircraft and poll cycle.
+    // A stale persisted value is still eligible below as a fail-soft fallback.
+    if (isAdsbDb && this.adsbDbRetryAt > Date.now()) {
+      const stale = this.adsbDbPersistence!.get(kind, key);
+      if (stale && !stale.fresh) {
+        this.adsbDbHits.staleFallback += 1;
+        return stale.value as T;
+      }
+      return null;
+    }
+
     try {
       const value = await this.cache.get(key, async () => {
         if (isAdsbDb) this.adsbDbHits.live += 1;
@@ -407,8 +423,20 @@ export class EnrichmentService {
         this.adsbDbPersistence!.delete(kind, key);
         this.staleFallbackLogged.delete(`${kind}:${key}`);
       }
+      if (isAdsbDb) {
+        this.adsbDbFailureStreak = 0;
+        this.adsbDbRetryAt = 0;
+      }
       return value as T | null;
     } catch {
+      if (isAdsbDb) {
+        this.adsbDbFailureStreak += 1;
+        const retryMs = Math.min(
+          ADSBDB_RETRY_MAX_MS,
+          ADSBDB_RETRY_INITIAL_MS * 2 ** Math.min(this.adsbDbFailureStreak - 1, 10),
+        );
+        this.adsbDbRetryAt = Date.now() + retryMs;
+      }
       const stale = isAdsbDb ? this.adsbDbPersistence!.get(kind, key) : null;
       if (stale && !stale.fresh) {
         this.adsbDbHits.staleFallback += 1;
