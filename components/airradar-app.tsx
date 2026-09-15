@@ -705,37 +705,6 @@ export function AirRadarApp() {
     setSortBy("distance");
   }, []);
 
-  useEffect(() => {
-    function isEditableTarget(target: EventTarget | null): boolean {
-      const element = target instanceof HTMLElement ? target : null;
-      if (!element) return false;
-      return element instanceof HTMLInputElement
-        || element instanceof HTMLTextAreaElement
-        || element instanceof HTMLSelectElement
-        || element.isContentEditable;
-    }
-
-    function handleKeyboardShortcut(event: KeyboardEvent): void {
-      if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
-      if (event.key === "/") {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-      } else if (event.key.toLowerCase() === "f") {
-        event.preventDefault();
-        setFiltersOpen((current) => !current);
-      } else if (event.key === "Escape") {
-        setFiltersOpen(false);
-        setTrafficOpen(false);
-        setSelectedHex(null);
-        setSelectedOgnId(null);
-        setMobileCompact(true);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyboardShortcut);
-    return () => window.removeEventListener("keydown", handleKeyboardShortcut);
-  }, []);
-
   function addWatchlistRule(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = watchlistValue.trim().toUpperCase();
@@ -769,11 +738,13 @@ export function AirRadarApp() {
     setMobileCompact(true);
   }, []);
 
-  const openTrafficDrawer = useCallback(() => {
+  const openTrafficDrawer = useCallback((shortcut?: "search" | "filters") => {
     setSelectedHex(null);
     setSelectedOgnId(null);
     setTrafficOpen(true);
     setMobileCompact(false);
+    if (shortcut === "search") window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    if (shortcut === "filters") window.requestAnimationFrame(() => setFiltersOpen(true));
   }, []);
 
   const backToTraffic = useCallback(() => {
@@ -1611,6 +1582,44 @@ export function AirRadarApp() {
     }
     previousDrawerStateRef.current = drawerState;
   }, [drawerState]);
+  useEffect(() => {
+    function isEditableTarget(target: EventTarget | null): boolean {
+      const element = target instanceof HTMLElement ? target : null;
+      if (!element) return false;
+      return element instanceof HTMLInputElement
+        || element instanceof HTMLTextAreaElement
+        || element instanceof HTMLSelectElement
+        || element.isContentEditable;
+    }
+
+    function handleKeyboardShortcut(event: KeyboardEvent): void {
+      if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
+      if (event.key === "/") {
+        event.preventDefault();
+        if (window.matchMedia("(min-width: 821px)").matches && drawerState === "closed") {
+          openTrafficDrawer("search");
+        } else {
+          searchInputRef.current?.focus();
+        }
+      } else if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        if (window.matchMedia("(min-width: 821px)").matches && drawerState === "closed") {
+          openTrafficDrawer("filters");
+        } else {
+          setFiltersOpen((current) => !current);
+        }
+      } else if (event.key === "Escape") {
+        setFiltersOpen(false);
+        setTrafficOpen(false);
+        setSelectedHex(null);
+        setSelectedOgnId(null);
+        setMobileCompact(true);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyboardShortcut);
+    return () => window.removeEventListener("keydown", handleKeyboardShortcut);
+  }, [drawerState, openTrafficDrawer]);
   const networkStatus = snapshot.sources?.adsbLol.status;
   const networkNotice = activeCoverage === "extended" && networkStatus === "rate_limited"
     ? t.radar.networkRateLimited
@@ -1652,7 +1661,7 @@ export function AirRadarApp() {
                 <div className="map-summary-item"><strong>{snapshot.stats.messagesPerSecond === null ? t.common.emptyValue : `${formatNumber(snapshot.stats.messagesPerSecond, 1)}/s`}</strong><span>{t.statistics.messagesPerSecond}</span></div>
                 <div className="map-summary-item"><strong>{formatDistance(snapshot.stats.maxDistanceKm)}</strong><span>{t.stats.maxDistance}</span></div>
               </div>
-              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={openTrafficDrawer}>
+              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
                 <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>

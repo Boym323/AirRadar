@@ -203,12 +203,15 @@ async function assertBrowserSmoke() {
   const browser = await chromium.launch({ headless: true });
   try {
     for (const viewport of [
-      { width: 375, height: 844 },
+      { width: 375, height: 812 },
       { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+      { width: 820, height: 900 },
       { width: 821, height: 900 },
       { width: 850, height: 900 },
       { width: 900, height: 900 },
-      { width: 1024, height: 900 },
+      { width: 1024, height: 768 },
+      { width: 1280, height: 800 },
       { width: 1440, height: 900 },
     ]) {
       const page = await browser.newPage({ viewport });
@@ -385,6 +388,27 @@ async function assertBrowserSmoke() {
         if (await trafficTrigger.getAttribute("aria-expanded") !== "false" || !await sidebar.evaluate((element) => element.classList.contains("drawer-closed"))) {
           throw new Error(`Desktop radar drawer is not closed initially at ${viewport.width}px`);
         }
+        await page.evaluate(() => document.body.focus());
+        await page.keyboard.press("/");
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
+        await page.waitForFunction(() => document.activeElement?.classList.contains("search-input"));
+        if (!await page.locator(".search-input").isVisible()) {
+          throw new Error(`Slash shortcut did not open and focus Traffic search at ${viewport.width}px`);
+        }
+        await sidebar.locator(".drawer-close-button").click();
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
+        await page.keyboard.press("f");
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
+        await page.waitForFunction(() => document.querySelector(".filter-button")?.getAttribute("aria-expanded") === "true");
+        if (!await page.locator(".filter-button").getAttribute("aria-expanded").then((value) => value === "true")) {
+          throw new Error(`F shortcut did not open Traffic and filters at ${viewport.width}px`);
+        }
+        await page.keyboard.press("f");
+        if (await page.locator(".filter-button").getAttribute("aria-expanded").then((value) => value !== "false")) {
+          throw new Error(`Second F shortcut did not toggle filters closed at ${viewport.width}px`);
+        }
+        await sidebar.locator(".drawer-close-button").click();
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
         await trafficTrigger.click({ force: true });
         await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
@@ -399,6 +423,11 @@ async function assertBrowserSmoke() {
         if (!drawerLayerMenuBounds || !drawerBounds) throw new Error(`Drawer/layers geometry is not measurable at ${viewport.width}px`);
         if (drawerLayerMenuBounds.x < 0 || drawerLayerMenuBounds.x + drawerLayerMenuBounds.width > drawerBounds.x + 1) {
           throw new Error(`Map layers menu is not fully in the visible map area at ${viewport.width}px: menu=${JSON.stringify(drawerLayerMenuBounds)}, drawer=${JSON.stringify(drawerBounds)}`);
+        }
+        const trafficBounds = await trafficTrigger.boundingBox();
+        const layersBounds = await page.locator("details.map-layers > summary").boundingBox();
+        if (!trafficBounds || !layersBounds || trafficBounds.x + trafficBounds.width > layersBounds.x + 1 || layersBounds.x + layersBounds.width > drawerBounds.x + 1) {
+          throw new Error(`Traffic/Layers controls overlap or are hidden by the drawer at ${viewport.width}px: traffic=${JSON.stringify(trafficBounds)}, layers=${JSON.stringify(layersBounds)}, drawer=${JSON.stringify(drawerBounds)}`);
         }
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
         await sidebar.locator(".aircraft-row").first().click();
@@ -571,7 +600,7 @@ async function assertBrowserSmoke() {
       }, undefined, { timeout: 30_000 });
       if (browserErrors.length) throw new Error(`Browser errors at ${viewport.width}px: ${browserErrors.join(" | ")}`);
       if (viewport.width === 375 && (airportAttempts < 2 || atcAttempts < 2)) throw new Error(`Transient dataset recovery did not retry without reload: airports=${airportAttempts}, atc=${atcAttempts}`);
-      if (viewport.width === 375) {
+      if (viewport.width <= 820) {
         const mobileSidebar = page.getByTestId("radar-sidebar");
         await page.locator(".map-container").waitFor({ state: "visible" });
         if (!await mobileSidebar.evaluate((element) => element.classList.contains("compact"))) {
@@ -583,6 +612,20 @@ async function assertBrowserSmoke() {
         await mobileSidebar.locator(".detail-back-button").waitFor({ state: "visible" });
         if (!await mobileSidebar.evaluate((element) => element.classList.contains("drawer-aircraft") && element.classList.contains("has-selection"))) {
           throw new Error("Mobile aircraft selection did not open");
+        }
+        const mobileControlBounds = await page.evaluate(() => {
+          const insideViewport = (selector) => [...document.querySelectorAll(selector)].map((element) => {
+            const rect = element.getBoundingClientRect();
+            return { x: rect.x, width: rect.width, right: rect.right };
+          }).filter((rect) => rect.width > 0).every((rect) => rect.x >= -1 && rect.right <= window.innerWidth + 1);
+          return {
+            topRight: insideViewport(".maplibregl-ctrl-top-right"),
+            bottomRight: insideViewport(".maplibregl-ctrl-bottom-right"),
+            overflow: document.documentElement.scrollWidth > window.innerWidth,
+          };
+        });
+        if (!mobileControlBounds.topRight || !mobileControlBounds.bottomRight || mobileControlBounds.overflow) {
+          throw new Error(`Mobile map controls are outside the viewport at ${viewport.width}px: ${JSON.stringify(mobileControlBounds)}`);
         }
         await mobileSidebar.locator(".close-button").click();
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("compact"));
