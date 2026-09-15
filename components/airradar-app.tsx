@@ -485,6 +485,7 @@ export function AirRadarApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const atsPointFocus = searchParams.get("atsPoint");
+  const aircraftFocus = searchParams.get("aircraft")?.trim().toUpperCase() ?? null;
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
@@ -721,6 +722,15 @@ export function AirRadarApp() {
     setMobileCompact(false);
     setTrafficOpen(true);
   }, []);
+
+  // Global search opens the live radar and selects the matching aircraft. The
+  // effect intentionally waits for the stream snapshot, since search can be
+  // selected before the first live update has arrived.
+  useEffect(() => {
+    if (!aircraftFocus) return;
+    const aircraft = snapshot.aircraft.find((item) => item.icaoHex.toUpperCase() === aircraftFocus);
+    if (aircraft && selectedHex !== aircraft.icaoHex) selectAircraft(aircraft.icaoHex);
+  }, [aircraftFocus, selectAircraft, selectedHex, snapshot.aircraft]);
 
   const selectOgn = useCallback((id: string) => {
     selectedHexRef.current = null;

@@ -2,7 +2,7 @@ export const MIN_GLOBAL_SEARCH_QUERY_LENGTH = 2;
 export const MAX_GLOBAL_SEARCH_QUERY_LENGTH = 64;
 export const GLOBAL_SEARCH_RESULT_LIMIT = 12;
 
-export type SearchHref = `/aircraft/${string}` | `/airports/${string}` | `/?atsPoint=${string}`;
+export type SearchHref = `/aircraft/${string}` | `/airports/${string}` | `/?aircraft=${string}` | `/?atsPoint=${string}`;
 
 export interface AircraftSearchResult {
   kind: "aircraft";

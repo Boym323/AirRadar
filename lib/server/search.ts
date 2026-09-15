@@ -135,7 +135,7 @@ function toAircraftResult(aircraft: AircraftView): AircraftSearchResult {
     callsign: aircraft.callsign,
     aircraftType: aircraftType(aircraft),
     manufacturer: metadata?.manufacturer ?? null,
-    href: `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`,
+    href: `/?aircraft=${encodeURIComponent(aircraft.icaoHex)}`,
   };
 }
 
