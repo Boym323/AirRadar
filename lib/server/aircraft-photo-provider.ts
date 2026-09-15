@@ -170,10 +170,14 @@ export class PlanespottersPhotoProvider {
     const icaoHex = normalizeIcaoHex(rawIcaoHex);
     if (!icaoHex) return { photo: null, cached: false };
     const registration = stringValue(rawRegistration, 100);
-    return this.cache.get(icaoHex, async () => {
+    // Include the registration in the cache key. A first lookup can happen
+    // before enrichment resolves it; that must not cache a permanent-looking
+    // miss for the later, more precise lookup.
+    const cacheKey = `${icaoHex}:${registration?.toUpperCase() ?? ""}`;
+    return this.cache.get(cacheKey, async () => {
       const byHex = await this.fetchPhoto(endpoint("hex", icaoHex));
       if (byHex.status === "found") return byHex.photo;
-      if (byHex.status !== "empty" || !registration) return null;
+      if (!registration) return null;
       const byRegistration = await this.fetchPhoto(endpoint("reg", registration));
       return byRegistration.status === "found" ? byRegistration.photo : null;
     });
