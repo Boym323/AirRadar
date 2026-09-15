@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.43] - 2026-09-15
+
+Changes since v1.0.42:
+
+- feat: update FlightAware usage data with new timestamps and request details (84ec5758)
+- feat: finish aircraft detail v3 visual hierarchy (48a88981)
+
 ## [1.0.42] - 2026-09-15
 
 Changes since v1.0.0-rc.4:
