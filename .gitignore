@@ -17,3 +17,4 @@ prisma/*.db-journal
 npm-debug.log*
 *.tsbuildinfo
 .next*/
+data/flightaware-usage.json
