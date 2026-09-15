@@ -7,10 +7,7 @@ readonly EXPECTED_APP_DIR="/var/www/airradar"
 readonly LOCK_FILE="/var/lock/airradar-release.lock"
 readonly BUILD_LOCK_FILE="/run/airradar-build.lock"
 readonly SERVICE_NAME="airradar"
-readonly PUBLIC_HEALTH_URLS=(
-  "https://airradar.cz/api/health"
-  "https://airradar.pomykal.cz/api/health"
-)
+readonly PUBLIC_HEALTH_URL="https://airradar.pomykal.cz/api/health"
 # The service binds to the production LAN address so the separate Nginx Proxy
 # Manager host can reach it; loopback is intentionally not a listener.
 readonly LOCAL_HEALTH_URL="http://192.168.1.142:3000/api/health"
@@ -779,9 +776,7 @@ restart_and_check() {
   fi
 
   check_health_with_retries "Local" "${LOCAL_HEALTH_URL}" "${HEALTH_ATTEMPTS}" "${HEALTH_DELAY_SECONDS}" 1
-  for public_health_url in "${PUBLIC_HEALTH_URLS[@]}"; do
-    check_health_with_retries "Public (${public_health_url})" "${public_health_url}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
-  done
+  check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
 }
 
 activate_staged_build_and_check() {
@@ -814,9 +809,7 @@ activate_staged_build_and_check() {
   fi
 
   check_health_with_retries "Local" "${LOCAL_HEALTH_URL}" "${HEALTH_ATTEMPTS}" "${HEALTH_DELAY_SECONDS}" 1
-  for public_health_url in "${PUBLIC_HEALTH_URLS[@]}"; do
-    check_health_with_retries "Public (${public_health_url})" "${public_health_url}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
-  done
+  check_health_with_retries "Public" "${PUBLIC_HEALTH_URL}" "${PUBLIC_HEALTH_ATTEMPTS}" "${PUBLIC_HEALTH_DELAY_SECONDS}" 1
 
   rm -rf -- "${backup_build}"
 }
