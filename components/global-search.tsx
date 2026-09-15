@@ -117,7 +117,9 @@ export function GlobalSearch() {
 
   function selectItem(item: SearchItem) {
     setOpen(false);
-    router.push(item.href as SearchHref);
+    router.push(item.kind === "aircraft"
+      ? `/?aircraft=${encodeURIComponent(item.icaoHex)}`
+      : item.href as SearchHref);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -179,7 +181,7 @@ export function GlobalSearch() {
               role="option"
               aria-selected={index === activeIndex}
               onMouseEnter={() => setActiveIndex(index)}
-              onClick={() => setOpen(false)}
+              onClick={(event) => { event.preventDefault(); selectItem(item); }}
             >
               <span className="global-search-item-primary">{aircraftPrimaryLabel(item)}</span>
               <span className="global-search-item-secondary">{aircraftSecondaryLabel(item)}</span>
@@ -209,7 +211,7 @@ export function GlobalSearch() {
           <div className="global-search-group-title">{t.search.atsPointResults}</div>
           {results.atsPoints.map((item) => {
             const index = items.findIndex((candidate) => itemKey(candidate) === itemKey(item));
-            return <Link id={itemKey(item)} key={itemKey(item)} className={`global-search-item ${index === activeIndex ? "active" : ""}`} href={item.href as SearchHref} role="option" aria-selected={index === activeIndex} onMouseEnter={() => setActiveIndex(index)} onClick={() => setOpen(false)}>
+            return <Link id={itemKey(item)} key={itemKey(item)} className={`global-search-item ${index === activeIndex ? "active" : ""}`} href={item.href as SearchHref} role="option" aria-selected={index === activeIndex} onMouseEnter={() => setActiveIndex(index)} onClick={(event) => { event.preventDefault(); selectItem(item); }}>
               <span className="global-search-item-primary">{item.name}</span>
               <span className="global-search-item-secondary">{atsPointSecondaryLabel(item)}</span>
             </Link>;
