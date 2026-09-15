@@ -117,13 +117,26 @@ describe("public snapshot serialization", () => {
     expect(JSON.stringify(value.relevantAtcFrequencies)).not.toContain("polygon");
   });
 
-  it("keeps full metadata and flight plans out of the live feed", () => {
+  it("publishes only explicitly public metadata and keeps flight plans out of the live feed", () => {
     const value = toPublicLiveStateSnapshot(snapshot(), "hidden");
     expect(value.aircraft[0].enrichment).toEqual({
+      metadata: {
+        registration: null,
+        registrationCountry: null,
+        registrationCountryCode: null,
+        aircraftType: null,
+        icaoTypeCode: "A320",
+        aircraftDescription: "Airbus A320",
+      },
       route: snapshot().aircraft[0].enrichment?.route,
     });
+    expect(value.aircraft[0].enrichment?.metadata).not.toHaveProperty("source");
+    expect(value.aircraft[0].enrichment?.metadata).not.toHaveProperty("retrievedAt");
+    expect(value.aircraft[0].enrichment?.metadata).not.toHaveProperty("flags");
+    expect(value.aircraft[0].enrichment?.metadata).not.toHaveProperty("operator");
+    expect(value.aircraft[0].enrichment?.metadata).not.toHaveProperty("manufacturer");
     expect(JSON.stringify(value)).not.toContain("LONG ROUTE");
-    expect(JSON.stringify(value)).not.toContain("Airbus A320");
+    expect(JSON.stringify(value)).not.toContain("2020");
   });
 });
 

@@ -1,5 +1,6 @@
 import type {
   AircraftView,
+  AircraftMetadata,
   PublicReceiverPosition,
   PublicStateSnapshot,
   ReceiverPosition,
@@ -28,6 +29,22 @@ export function toPublicReceiverPosition(
 
 function publicSourceError(online: boolean): string | null {
   return online ? null : "Receiver unavailable";
+}
+
+/** Metadata used by the live list/map labels. Provider provenance and detail-only
+ * catalog fields stay behind the selected-aircraft API. */
+function publicLiveMetadata(metadata: AircraftMetadata): Pick<AircraftMetadata,
+  "registration" | "registrationCountry" | "registrationCountryCode" |
+  "aircraftType" | "icaoTypeCode" | "aircraftDescription"
+> {
+  return {
+    registration: metadata.registration,
+    registrationCountry: metadata.registrationCountry,
+    registrationCountryCode: metadata.registrationCountryCode,
+    aircraftType: metadata.aircraftType,
+    icaoTypeCode: metadata.icaoTypeCode,
+    aircraftDescription: metadata.aircraftDescription,
+  };
 }
 
 function publicSources(snapshot: StateSnapshot): PublicStateSnapshot["sources"] {
@@ -92,10 +109,12 @@ export function toPublicLiveStateSnapshot(
     const route = item.enrichment?.route;
     const metadata = item.enrichment?.metadata;
     const liveEnrichment = route || metadata ? {
-      ...(metadata ? { metadata } : {}),
+      ...(metadata ? { metadata: publicLiveMetadata(metadata) } : {}),
       ...(route ? { route } : {}),
     } : undefined;
-    return { ...item, enrichment: liveEnrichment };
+    // The public wire DTO intentionally has a narrower metadata shape than the
+    // internal AircraftEnrichment type used by state/detail code.
+    return { ...item, enrichment: liveEnrichment } as AircraftView;
   });
   return toPublicStateSnapshot({ ...snapshot, aircraft }, mode);
 }
