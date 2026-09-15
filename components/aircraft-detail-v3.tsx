@@ -177,13 +177,11 @@ function AirspaceCard({ icaoHex, enabled }: { icaoHex: string; enabled: boolean 
 
   if (!enabled) return null;
   if (!context || context.status !== "available") {
-    return <section className="aircraft-card" aria-label={t.atc.contextTitle}>
-      <h2>{t.atc.contextTitle}</h2>
-      <div className="detail-disclaimer">{context?.status === "stale" ? t.atc.contextStale : t.atc.contextUnavailable}</div>
-    </section>;
+    return null;
   }
 
   const route = context.atsRoute ?? context.nearestAtsCandidate;
+  if (!context.primaryAirspace && !route && !context.ahead) return null;
   const frequencies = context.primaryAirspace?.publishedFrequenciesMhz ?? [];
   return <section className="aircraft-card" aria-label={t.atc.contextTitle}>
     <h2>{t.atc.contextTitle}</h2>
@@ -345,6 +343,22 @@ export function AircraftDetailV3({
       </div>
     </header>
 
+    <section className={styles.trackingSection} aria-labelledby="aircraft-live-tracking-v3-title">
+      <h2 id="aircraft-live-tracking-v3-title">{t.aircraft.liveTrackingTitle}</h2>
+      <div className={styles.trackingGrid}>
+        <AircraftAltitudeChart points={[...historyPoints, ...sessionPoints]} livePoint={livePoint} loading={flightHistoryLoading} />
+        <section className="aircraft-card" aria-label={t.aircraft.liveTrackingTitle}>
+          <div className="aircraft-history-stats">
+            <DetailValue label={t.aircraft.firstSeen}>{formatTime(firstSeen)}</DetailValue>
+            <DetailValue label={t.aircraft.trackedFor}>{durationBetween(firstSeen, lastSeen)}</DetailValue>
+            <DetailValue label={t.aircraft.lastUpdate}>{liveAircraft ? formatAge(liveAircraft.seenSeconds) : formatTime(lastSeen)}</DetailValue>
+            <DetailValue label={t.aircraft.positions}>{formatNumber(positionCount)}</DetailValue>
+          </div>
+          <div className="aircraft-trail-actions"><Link className="primary-button" href={`/history?hex=${encodeURIComponent(icaoHex)}`}>{t.aircraft.showFullTrail}</Link></div>
+        </section>
+      </div>
+    </section>
+
     <div className={styles.operationalGrid}>
       <div className={styles.primaryColumn}>
         {(route || flightPlan) && <section className={`aircraft-card aircraft-route-card ${styles.currentFlightCard}`} aria-labelledby="aircraft-current-flight-title">
@@ -443,22 +457,6 @@ export function AircraftDetailV3({
         {route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
       </aside>
     </div>
-
-    <section className={styles.trackingSection} aria-labelledby="aircraft-live-tracking-v3-title">
-      <h2 id="aircraft-live-tracking-v3-title">{t.aircraft.liveTrackingTitle}</h2>
-      <div className={styles.trackingGrid}>
-        <AircraftAltitudeChart points={[...historyPoints, ...sessionPoints]} livePoint={livePoint} loading={flightHistoryLoading} />
-        <section className="aircraft-card" aria-label={t.aircraft.liveTrackingTitle}>
-          <div className="aircraft-history-stats">
-            <DetailValue label={t.aircraft.firstSeen}>{formatTime(firstSeen)}</DetailValue>
-            <DetailValue label={t.aircraft.trackedFor}>{durationBetween(firstSeen, lastSeen)}</DetailValue>
-            <DetailValue label={t.aircraft.lastUpdate}>{liveAircraft ? formatAge(liveAircraft.seenSeconds) : formatTime(lastSeen)}</DetailValue>
-            <DetailValue label={t.aircraft.positions}>{formatNumber(positionCount)}</DetailValue>
-          </div>
-          <div className="aircraft-trail-actions"><Link className="primary-button" href={`/history?hex=${encodeURIComponent(icaoHex)}`}>{t.aircraft.showFullTrail}</Link></div>
-        </section>
-      </div>
-    </section>
 
     <section className={styles.historySection} aria-label={t.history.aircraftHistory}>
       <div className={styles.sectionHeading}><h2>{t.history.aircraftHistory}</h2></div>

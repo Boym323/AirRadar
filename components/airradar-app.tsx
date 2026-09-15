@@ -1895,8 +1895,8 @@ export function AirRadarApp() {
                 <DetailItem label={t.aircraft.lastObservation} value={formatAge(selectedAircraft.seenSeconds)} />
               </DetailSection>
               {routeIntelligence && routeIntelligence.status !== "NO_ROUTE" && routeIntelligence.status !== "NO_ATS_DATA" && <RouteIntelligencePanel result={routeIntelligence} />}
-              <DetailSection title={t.atc.estimate}>
-                {selectedAircraft.atc ? <>
+              {(selectedAtcContext?.status === "available" && selectedAtcContext.primaryAirspace || selectedAircraft.atc) && <DetailSection title={t.atc.estimate}>
+                {selectedAircraft.atc && !(selectedAtcContext?.status === "available" && selectedAtcContext.primaryAirspace) ? <>
                   <div className="detail-atc-probable">{t.atc.probableRelevant}</div>
                   <DetailItem label={t.atc.sectorService} value={`${selectedAircraft.atc.name} · ${formatAtcService(selectedAircraft.atc.service || selectedAircraft.atc.callsign)}`} />
                   <DetailItem label={t.atc.primaryFrequency} value={formatAtcFrequency(selectedAircraft.atc.primaryFrequencyMhz)} />
@@ -1917,9 +1917,12 @@ export function AirRadarApp() {
                   <DetailItem label={t.atc.lowerLimit} value={formatAtcLimit(selectedAtcContext.primaryAirspace.lowerLimitFt, selectedAtcContext.primaryAirspace.lowerLimitReference, t.common.unlimited)} />
                   <DetailItem label={t.atc.upperLimit} value={formatAtcLimit(selectedAtcContext.primaryAirspace.upperLimitFt, selectedAtcContext.primaryAirspace.upperLimitReference, t.common.unlimited)} />
                   <DetailItem label={t.atc.confidence} value={formatAtcConfidence(selectedAtcContext.primaryAirspace.horizontalMatch)} />
+                  <DetailItem label={t.atc.source} value={selectedAtcContext.primaryAirspace.provenance.source} />
+                  <DetailItem label={t.atc.effectiveDate} value={formatDateTime(selectedAtcContext.primaryAirspace.provenance.effectiveDate)} />
+                  {selectedAtcContext.primaryAirspace.verticalMatch === "uncertain" && <DetailItem label={t.atc.altitudeConfidence} value={t.atc.altitudeConfidenceValues.unknown} />}
                   <div className="detail-disclaimer">{t.atc.probableFrequency}</div>
-                </> : <div className="detail-disclaimer">{t.atc.noMatchingSector}</div>}
-              </DetailSection>
+                </> : null}
+              </DetailSection>}
               <details className="detail-more"><summary>{t.aircraft.liveAdsb}</summary><div className="detail-grid">
                 <DetailItem label={t.aircraft.icaoHex} value={selectedAircraft.icaoHex} />
                 <DetailItem label={t.aircraft.baroGeomAltitude} value={`${formatAltitude(selectedAircraft.baroAltitude)} / ${formatAltitude(selectedAircraft.geomAltitude)}`} />
