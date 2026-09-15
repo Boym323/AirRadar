@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.42] - 2026-09-15
+
+Changes since v1.0.0-rc.4:
+
+- feat: add FlightAware usage data JSON file (8e88ac6d)
+- feat: enhance aircraft detail page with new layout and data sources (5bb0e22b)
+
 ## [1.0.0-rc.4] - 2026-09-15
 
 Changes since v1.0.0-rc.3:
