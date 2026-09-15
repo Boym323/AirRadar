@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.41] - 2026-09-15
+
+Changes since v1.0.40:
+
+- fix: add turbopackIgnore comment to runtime state path function (37da2f42)
+- fix: update CI workflow for concurrency and simplify deployment steps feat: enhance public serialization for aircraft data and improve test coverage (2462d707)
+
 ## [1.0.40] - 2026-09-15
 
 Changes since v1.0.39:
