@@ -143,6 +143,17 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("isEditableTarget(event.target)");
   });
 
+  it("keeps search shortcuts source-independent while filters stay ADS-B-only", () => {
+    const searchBranch = appSource.indexOf('if (shortcut === "search")');
+    const filterBranch = appSource.indexOf('else if (shortcut === "filters" && trafficSource === "adsb")');
+    const ognBranch = appSource.indexOf('else if (trafficSource === "ogn")');
+    expect(searchBranch).toBeGreaterThan(-1);
+    expect(appSource.slice(searchBranch, filterBranch)).toContain("searchInputRef.current?.focus()");
+    expect(filterBranch).toBeGreaterThan(searchBranch);
+    expect(ognBranch).toBeGreaterThan(filterBranch);
+    expect(appSource.slice(ognBranch, ognBranch + 120)).toContain("setFiltersOpen(false)");
+  });
+
   it("keeps selection details while hiding filtered map overlays and supports a client reset", () => {
     expect(appSource).toContain("filterAircraftForMap(snapshot.aircraft, mapFilters)");
     expect(appSource).toContain("const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some");

@@ -743,12 +743,12 @@ export function AirRadarApp() {
     setSelectedOgnId(null);
     setTrafficOpen(true);
     setMobileCompact(false);
-    if (trafficSource === "ogn") {
-      setFiltersOpen(false);
-    } else if (shortcut === "search") {
+    if (shortcut === "search") {
       window.requestAnimationFrame(() => searchInputRef.current?.focus());
-    } else if (shortcut === "filters") {
+    } else if (shortcut === "filters" && trafficSource === "adsb") {
       window.requestAnimationFrame(() => setFiltersOpen(true));
+    } else if (trafficSource === "ogn") {
+      setFiltersOpen(false);
     }
   }, [trafficSource]);
 
