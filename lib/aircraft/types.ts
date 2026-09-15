@@ -33,13 +33,13 @@ export interface AircraftMetadata {
   aircraftType: string | null;
   icaoTypeCode: string | null;
   aircraftDescription: string | null;
-  operator: string | null;
-  manufacturer: string | null;
+  operator?: string | null;
+  manufacturer?: string | null;
   /** Optional fields present in the tar1090/readsb catalog. */
   flags?: string | null;
   year?: string | null;
-  source: string;
-  retrievedAt: string;
+  source?: string;
+  retrievedAt?: string;
 }
 
 export interface FlightRoute {
@@ -51,8 +51,8 @@ export interface FlightRoute {
   destination: string | null;
   originAirport: Airport | null;
   destinationAirport: Airport | null;
-  source: string;
-  retrievedAt: string;
+  source?: string;
+  retrievedAt?: string;
 }
 
 export interface FlightPlan {
@@ -63,8 +63,8 @@ export interface FlightPlan {
   estimatedArrival: string | null;
   filedRoute: string | null;
   waypoints: string[];
-  source: string;
-  retrievedAt: string;
+  source?: string;
+  retrievedAt?: string;
 }
 
 export interface AircraftEnrichment {
@@ -112,6 +112,10 @@ export interface Aircraft {
 
 /** The wire representation intentionally omits the in-memory trail by default. */
 export type AircraftView = Omit<Aircraft, "trail"> & { trail?: TrailPoint[] };
+
+/** Public aircraft are assembled explicitly by the serializer; this alias
+ * keeps existing UI consumers compatible with the shared wire shape. */
+export type PublicAircraft = AircraftView;
 
 export interface TrailPoint {
   lat: number;

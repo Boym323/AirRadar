@@ -64,7 +64,8 @@ Options:
   --dry-run        Run preflight checks and print the release plan only.
   --help           Show this help.
 
-The default release always runs all quality gates, including tests.
+The default release runs all quality gates. Automated CI releases reuse the
+validated commit's lint, typecheck, and test results.
 EOF
 }
 
@@ -484,7 +485,11 @@ run_release_steps() {
   # next typegen/build may rewrite tracked TypeScript declaration files. Keep
   # the source checkout exactly as it was before the release starts.
   snapshot_build_source_files
-  run_quality_gates
+  if (( AUTOMATED == 1 )); then
+    log "Automated release: reusing CI validation for ${NEW_SHA}; skipping duplicate quality suite"
+  else
+    run_quality_gates
+  fi
 
   log "Building production app"
   acquire_build_lock

@@ -5,6 +5,7 @@ import type {
   PublicStateSnapshot,
   ReceiverPosition,
   StateSnapshot,
+  PublicAircraft,
 } from "@/lib/aircraft/types";
 import { getPublicReceiverPositionMode, type PublicReceiverPositionMode } from "@/lib/server/config";
 
@@ -69,6 +70,30 @@ function publicSources(snapshot: StateSnapshot): PublicStateSnapshot["sources"] 
   };
 }
 
+function publicAircraft(item: AircraftView): PublicAircraft {
+  const { icaoHex, callsign, registration, aircraftType, aircraftDescription, lat, lon,
+    altitude, baroAltitude, geomAltitude, groundSpeed, track, verticalRate, baroRate,
+    geomRate, squawk, category, emergency, rssi, messages, seenSeconds, seenPosSeconds,
+    lastSeen, source, origin, provenance, sourceType, onGround, distanceKm, bearing, trail,
+    enrichment } = item;
+  const route = enrichment?.route;
+  const metadata = enrichment?.metadata;
+  return {
+    icaoHex, callsign, registration, aircraftType, aircraftDescription, lat, lon,
+    altitude, baroAltitude, geomAltitude, groundSpeed, track, verticalRate, baroRate,
+    geomRate, squawk, category, emergency, rssi, messages, seenSeconds, seenPosSeconds,
+    lastSeen, source, ...(origin === undefined ? {} : { origin }),
+    ...(provenance === undefined ? {} : { provenance }), sourceType, onGround,
+    distanceKm, bearing, ...(trail === undefined ? {} : { trail }),
+    ...((metadata || route) ? { enrichment: {
+      ...(metadata ? { metadata: publicLiveMetadata(metadata) } : {}),
+      ...(route ? { route: { callsign: route.callsign, airline: route.airline, airlineIcao: route.airlineIcao,
+        airlineIata: route.airlineIata, origin: route.origin, destination: route.destination,
+        originAirport: route.originAirport, destinationAirport: route.destinationAirport } } : {}),
+    } } : {}),
+  };
+}
+
 /**
  * Converts the internal state into the only snapshot shape allowed on the
  * public API and SSE wire. Internal coordinates and raw provider errors never
@@ -79,7 +104,7 @@ export function toPublicStateSnapshot(
   mode: PublicReceiverPositionMode = getPublicReceiverPositionMode(),
 ): PublicStateSnapshot {
   return {
-    aircraft: snapshot.aircraft,
+    aircraft: snapshot.aircraft.map(publicAircraft),
     relevantAtcFrequencies: snapshot.relevantAtcFrequencies,
     receiver: toPublicReceiverPosition(snapshot.receiver, mode),
     fetchedAt: snapshot.fetchedAt,
@@ -105,16 +130,5 @@ export function toPublicLiveStateSnapshot(
   snapshot: StateSnapshot,
   mode: PublicReceiverPositionMode = getPublicReceiverPositionMode(),
 ): PublicStateSnapshot {
-  const aircraft: AircraftView[] = snapshot.aircraft.map((item) => {
-    const route = item.enrichment?.route;
-    const metadata = item.enrichment?.metadata;
-    const liveEnrichment = route || metadata ? {
-      ...(metadata ? { metadata: publicLiveMetadata(metadata) } : {}),
-      ...(route ? { route } : {}),
-    } : undefined;
-    // The public wire DTO intentionally has a narrower metadata shape than the
-    // internal AircraftEnrichment type used by state/detail code.
-    return { ...item, enrichment: liveEnrichment } as AircraftView;
-  });
-  return toPublicStateSnapshot({ ...snapshot, aircraft }, mode);
+  return toPublicStateSnapshot(snapshot, mode);
 }

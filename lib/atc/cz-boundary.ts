@@ -282,16 +282,16 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
   }
 
   private findSnap(point: Coordinate, allowed: Set<BoundaryClassification>, maxSnapDistanceKm: number): SnapCandidate {
-    const candidates: SnapCandidate[] = [];
+    let result: SnapCandidate | undefined;
     for (const edge of this.edges) {
       if (!allowed.has(edge.classification)) continue;
       const from = this.nodes.get(edge.from)!.coordinate;
       const to = this.nodes.get(edge.to)!.coordinate;
       const projection = projectOnSegment(point, from, to);
-      candidates.push({ point: projection.point, distanceKm: projection.distanceKm, edge, fraction: projection.fraction });
+      const candidate = { point: projection.point, distanceKm: projection.distanceKm, edge, fraction: projection.fraction };
+      if (!result || candidate.distanceKm < result.distanceKm ||
+        (candidate.distanceKm === result.distanceKm && candidate.edge.id.localeCompare(result.edge.id) < 0)) result = candidate;
     }
-    candidates.sort((left, right) => left.distanceKm - right.distanceKm || left.edge.id.localeCompare(right.edge.id));
-    const result = candidates[0];
     if (!result || result.distanceKm > maxSnapDistanceKm) {
       throw new CuzkBoundaryError(`AIP endpoint is ${result?.distanceKm.toFixed(3) ?? "unknown"} km from the authoritative ${[...allowed].join("/")} boundary (maximum ${maxSnapDistanceKm} km)`);
     }

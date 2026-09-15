@@ -128,7 +128,10 @@ describe("public snapshot serialization", () => {
         icaoTypeCode: "A320",
         aircraftDescription: "Airbus A320",
       },
-      route: snapshot().aircraft[0].enrichment?.route,
+      route: {
+        callsign: "TEST123", airline: "Test Air", airlineIcao: "TST", airlineIata: "TS",
+        origin: null, destination: null, originAirport: null, destinationAirport: null,
+      },
     });
     expect(value.aircraft[0].enrichment?.metadata).not.toHaveProperty("source");
     expect(value.aircraft[0].enrichment?.metadata).not.toHaveProperty("retrievedAt");
