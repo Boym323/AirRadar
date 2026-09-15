@@ -124,7 +124,10 @@ function photoFromPayload(payload: unknown): ProviderPhotoResponse {
   for (const candidate of payload.photos) {
     if (!isRecord(candidate)) continue;
     const thumbnail = isRecord(candidate.thumbnail) ? candidate.thumbnail : null;
-    const thumbnailUrl = allowedHttpsUrl(thumbnail?.src);
+    const thumbnailLarge = isRecord(candidate.thumbnail_large) ? candidate.thumbnail_large : null;
+    // Prefer the larger Planespotters rendition; some older responses only
+    // contain the small thumbnail, so retain that as a safe fallback.
+    const thumbnailUrl = allowedHttpsUrl(thumbnailLarge?.src) ?? allowedHttpsUrl(thumbnail?.src);
     const sourceUrl = allowedHttpsUrl(candidate.link);
     if (!thumbnailUrl || !sourceUrl) continue;
     const photographer = stringValue(candidate.photographer, 200);
