@@ -226,6 +226,7 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
   private readonly edges: GraphEdge[] = [];
   private readonly edgeKeys = new Set<string>();
   private readonly adjacency = new Map<string, GraphEdge[]>();
+  private readonly pathAdjacency = new Map<string, LocalBoundaryEdge[]>();
 
   constructor(features: StateBoundaryFeature[], private readonly maxBoundaryEdgeLengthKm = MAX_BOUNDARY_EDGE_LENGTH_KM) {
     for (const feature of features) {
@@ -246,6 +247,9 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
       }
     }
     if (!this.edges.length) throw new CuzkBoundaryError("State-boundary graph contains no usable edges");
+    for (const edge of this.edges) {
+      this.addPathEdge(this.pathAdjacency, edge.from, edge.to, edge.lengthKm, edge.featureId);
+    }
   }
 
   getBoundarySegment(input: StateBoundaryInput): StateBoundaryResolution {
@@ -254,7 +258,7 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
     if (!Number.isFinite(maxSnapDistanceKm) || maxSnapDistanceKm <= 0) throw new CuzkBoundaryError("State-boundary snap tolerance must be positive");
     const start = this.findSnap(input.start, allowed, maxSnapDistanceKm);
     const end = this.findSnap(input.end, allowed, maxSnapDistanceKm);
-    const path = this.findPath(start, end, allowed);
+    const path = this.findPath(start, end);
     const coordinates: Coordinate[] = [];
     appendUnique(coordinates, path.coordinates);
     if (coordinates.length < 1) throw new CuzkBoundaryError("State-boundary resolver produced an empty path");
@@ -294,13 +298,17 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
     return result;
   }
 
-  private findPath(start: SnapCandidate, end: SnapCandidate, allowed: Set<BoundaryClassification>): { coordinates: Coordinate[]; distanceKm: number; featureIds: Set<string> } {
+  private findPath(start: SnapCandidate, end: SnapCandidate): { coordinates: Coordinate[]; distanceKm: number; featureIds: Set<string> } {
     const startId = "@start";
     const endId = "@end";
     const coordinates = new Map<string, Coordinate>([...this.nodes.values()].map((node) => [node.id, node.coordinate]));
     coordinates.set(startId, start.point);
     coordinates.set(endId, end.point);
-    const adjacency = new Map<string, LocalBoundaryEdge[]>();
+    // The authoritative graph is immutable after construction. Reuse its
+    // adjacency lists and copy only the lists touched by the two snap nodes.
+    // Rebuilding all lists here made a production-sized boundary lookup
+    // needlessly expensive and caused test/runtime contention.
+    const adjacency = new Map(this.pathAdjacency);
     const geometryKey = (from: string, to: string, distanceKm: number): string => {
       const first = coordinates.get(from);
       const second = coordinates.get(to);
@@ -312,13 +320,8 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
         : `${secondKey}|${firstKey}|${distanceKm.toFixed(12)}`;
     };
     const addEdge = (from: string, to: string, distanceKm: number, featureId: string): void => {
-      const edgeGeometryKey = geometryKey(from, to, distanceKm);
-      adjacency.set(from, [...(adjacency.get(from) ?? []), { to, distanceKm, featureId, geometryKey: edgeGeometryKey }]);
-      adjacency.set(to, [...(adjacency.get(to) ?? []), { to: from, distanceKm, featureId, geometryKey: edgeGeometryKey }]);
+      this.addPathEdge(adjacency, from, to, distanceKm, featureId, coordinates, geometryKey);
     };
-    for (const edge of this.edges) {
-      if (allowed.has(edge.classification)) addEdge(edge.from, edge.to, edge.lengthKm, edge.featureId);
-    }
     const connectSnap = (id: string, snap: SnapCandidate): void => {
       addEdge(id, snap.edge.from, snap.edge.lengthKm * snap.fraction, snap.edge.featureId);
       addEdge(id, snap.edge.to, snap.edge.lengthKm * (1 - snap.fraction), snap.edge.featureId);
@@ -377,6 +380,29 @@ export class InMemoryStateBoundaryProvider implements StateBoundaryProvider {
     }
     reversed.reverse();
     return { coordinates: reversed, distanceKm: distance, featureIds };
+  }
+
+  private addPathEdge(
+    adjacency: Map<string, LocalBoundaryEdge[]>,
+    from: string,
+    to: string,
+    distanceKm: number,
+    featureId: string,
+    coordinates?: Map<string, Coordinate>,
+    geometryKey: (from: string, to: string, distanceKm: number) => string = (left, right, distance) => {
+      const first = coordinates?.get(left) ?? this.nodes.get(left)?.coordinate;
+      const second = coordinates?.get(right) ?? this.nodes.get(right)?.coordinate;
+      if (!first || !second) return `${left}|${right}|${distance}`;
+      const firstKey = nodeKey(first);
+      const secondKey = nodeKey(second);
+      return firstKey < secondKey
+        ? `${firstKey}|${secondKey}|${distance.toFixed(12)}`
+        : `${secondKey}|${firstKey}|${distance.toFixed(12)}`;
+    },
+  ): void {
+    const edgeGeometryKey = geometryKey(from, to, distanceKm);
+    adjacency.set(from, [...(adjacency.get(from) ?? []), { to, distanceKm, featureId, geometryKey: edgeGeometryKey }]);
+    adjacency.set(to, [...(adjacency.get(to) ?? []), { to: from, distanceKm, featureId, geometryKey: edgeGeometryKey }]);
   }
 
   /**

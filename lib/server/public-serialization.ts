@@ -80,8 +80,9 @@ export function toPublicStateSnapshot(
 }
 
 /**
- * The live feed contains only fields needed for the map and list. Full
- * metadata and flight plans remain available from the selected-aircraft API.
+ * The live feed contains fields needed for the map and list, including the
+ * public aircraft metadata used to display the type and registration. Flight
+ * plans remain available only from the selected-aircraft API.
  */
 export function toPublicLiveStateSnapshot(
   snapshot: StateSnapshot,
@@ -89,7 +90,11 @@ export function toPublicLiveStateSnapshot(
 ): PublicStateSnapshot {
   const aircraft: AircraftView[] = snapshot.aircraft.map((item) => {
     const route = item.enrichment?.route;
-    const liveEnrichment = route ? { route } : undefined;
+    const metadata = item.enrichment?.metadata;
+    const liveEnrichment = route || metadata ? {
+      ...(metadata ? { metadata } : {}),
+      ...(route ? { route } : {}),
+    } : undefined;
     return { ...item, enrichment: liveEnrichment };
   });
   return toPublicStateSnapshot({ ...snapshot, aircraft }, mode);
