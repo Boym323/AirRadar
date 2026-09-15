@@ -395,6 +395,10 @@ async function assertBrowserSmoke() {
         if (!await page.locator(".search-input").isVisible()) {
           throw new Error(`Slash shortcut did not open and focus Traffic search at ${viewport.width}px`);
         }
+        const trafficCloseLabel = await sidebar.locator(".drawer-close-button").getAttribute("aria-label");
+        if (trafficCloseLabel !== "Zavřít panel provozu" || trafficCloseLabel === "Zavřít detail letadla") {
+          throw new Error(`Traffic drawer Close has the wrong accessible name at ${viewport.width}px: ${trafficCloseLabel}`);
+        }
         await sidebar.locator(".drawer-close-button").click();
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         await page.keyboard.press("f");
@@ -430,7 +434,8 @@ async function assertBrowserSmoke() {
           throw new Error(`Traffic/Layers controls overlap or are hidden by the drawer at ${viewport.width}px: traffic=${JSON.stringify(trafficBounds)}, layers=${JSON.stringify(layersBounds)}, drawer=${JSON.stringify(drawerBounds)}`);
         }
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
-        await sidebar.locator(".aircraft-row").first().click();
+        await sidebar.locator(".aircraft-row").first().waitFor({ state: "visible" });
+        await sidebar.locator(".aircraft-row").first().evaluate((element) => element.click());
         await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
         await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
         if (await sidebar.locator(".drawer-close-button:visible, .detail-panel .close-button:visible").count() !== 1) {
@@ -439,8 +444,29 @@ async function assertBrowserSmoke() {
         if (!await sidebar.evaluate((element) => element.classList.contains("drawer-aircraft"))) {
           throw new Error(`Aircraft detail did not open at ${viewport.width}px`);
         }
+        if (await sidebar.locator(".close-button").getAttribute("aria-label") !== "Zavřít detail letadla") {
+          throw new Error(`Aircraft detail Close has the wrong accessible name at ${viewport.width}px`);
+        }
+        await page.keyboard.press("f");
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
+        await page.waitForFunction(() => document.querySelector(".filter-button")?.getAttribute("aria-expanded") === "true");
+        if (await sidebar.locator(".filter-button").getAttribute("aria-expanded") !== "true") {
+          throw new Error(`F shortcut did not return from aircraft detail with filters open at ${viewport.width}px`);
+        }
+        await page.keyboard.press("f");
+        await page.evaluate(() => document.body.focus());
+        await sidebar.locator(".aircraft-row").first().evaluate((element) => element.click());
+        await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
+        await page.keyboard.press("/");
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
+        await page.waitForFunction(() => document.activeElement?.classList.contains("search-input"));
+        if (!await page.locator(".search-input").isVisible()) {
+          throw new Error(`Slash shortcut did not return from aircraft detail at ${viewport.width}px`);
+        }
+        await sidebar.locator(".drawer-close-button").click();
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
-        await sidebar.locator(".detail-back-button").click();
+        await trafficTrigger.click({ force: true });
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
         await sidebar.locator(".aircraft-row").first().click();
         await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });

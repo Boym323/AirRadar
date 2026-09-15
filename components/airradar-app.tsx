@@ -743,9 +743,14 @@ export function AirRadarApp() {
     setSelectedOgnId(null);
     setTrafficOpen(true);
     setMobileCompact(false);
-    if (shortcut === "search") window.requestAnimationFrame(() => searchInputRef.current?.focus());
-    if (shortcut === "filters") window.requestAnimationFrame(() => setFiltersOpen(true));
-  }, []);
+    if (trafficSource === "ogn") {
+      setFiltersOpen(false);
+    } else if (shortcut === "search") {
+      window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    } else if (shortcut === "filters") {
+      window.requestAnimationFrame(() => setFiltersOpen(true));
+    }
+  }, [trafficSource]);
 
   const backToTraffic = useCallback(() => {
     setSelectedHex(null);
@@ -1596,16 +1601,16 @@ export function AirRadarApp() {
       if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
       if (event.key === "/") {
         event.preventDefault();
-        if (window.matchMedia("(min-width: 821px)").matches && drawerState === "closed") {
+        if (window.matchMedia("(min-width: 821px)").matches && drawerState !== "traffic") {
           openTrafficDrawer("search");
         } else {
           searchInputRef.current?.focus();
         }
       } else if (event.key.toLowerCase() === "f") {
         event.preventDefault();
-        if (window.matchMedia("(min-width: 821px)").matches && drawerState === "closed") {
+        if (window.matchMedia("(min-width: 821px)").matches && drawerState !== "traffic") {
           openTrafficDrawer("filters");
-        } else {
+        } else if (trafficSource === "adsb") {
           setFiltersOpen((current) => !current);
         }
       } else if (event.key === "Escape") {
@@ -1619,7 +1624,7 @@ export function AirRadarApp() {
 
     window.addEventListener("keydown", handleKeyboardShortcut);
     return () => window.removeEventListener("keydown", handleKeyboardShortcut);
-  }, [drawerState, openTrafficDrawer]);
+  }, [drawerState, openTrafficDrawer, trafficSource]);
   const networkStatus = snapshot.sources?.adsbLol.status;
   const networkNotice = activeCoverage === "extended" && networkStatus === "rate_limited"
     ? t.radar.networkRateLimited
@@ -1729,7 +1734,7 @@ export function AirRadarApp() {
               <button className="icon-button mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-expanded={!mobileCompact} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
                 {mobileCompact ? "↑" : "↓"}
               </button>
-              <button type="button" className="drawer-close-button" onClick={closeRadarDrawer} aria-label={t.history.closeAircraftDetails}>×</button>
+              <button type="button" className="drawer-close-button" onClick={closeRadarDrawer} aria-label={drawerState === "traffic" ? t.history.closeTrafficPanel : drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}>×</button>
             </div>
           <div className="sidebar-browse">
           <div className="sidebar-header">
@@ -1845,7 +1850,7 @@ export function AirRadarApp() {
                 <div><div className="detail-eyebrow">{selectedOgnTarget ? t.ogn.title : t.history.aircraftDetail}</div><div className="detail-callsign">{selectedOgnTarget ? ognTargetLabel(selectedOgnTarget) : selectedAircraft ? labelForAircraft(selectedAircraft) : selectedIdentity}</div>
                   <div className="detail-registration">{selectedOgnTarget ? `${t.ogn.badge} · ${t.ogn.trackingSources[selectedOgnTarget.trackingSource]}` : selectedAircraft ? `${selectedAircraft.icaoHex} · ${selectedAircraft.registration || selectedAircraft.enrichment?.metadata?.registration || t.common.emptyValue}` : t.aircraft.notCurrentlyInRange}</div>
                 </div>
-                <button className="close-button" onClick={closeRadarDrawer} aria-label={t.history.closeAircraftDetails}>×</button>
+                <button className="close-button" onClick={closeRadarDrawer} aria-label={drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}>×</button>
               </div>
               {selectedOgnTarget ? <OgnDetailContent target={selectedOgnTarget} /> : selectedAircraft ? <div className="detail-content">
               <div className="detail-hero">
