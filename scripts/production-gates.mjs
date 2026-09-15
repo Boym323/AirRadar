@@ -502,6 +502,22 @@ async function assertBrowserSmoke() {
       if (layerMenuBounds.x < 0 || layerMenuBounds.x + layerMenuBounds.width > viewport.width) {
         throw new Error(`Map layers menu overflows at ${viewport.width}px: ${JSON.stringify(layerMenuBounds)}`);
       }
+      const mapStacking = await page.evaluate(() => {
+        const panel = document.querySelector('.map-panel');
+        const container = document.querySelector('.map-container');
+        const overlay = document.querySelector('.map-overlay');
+        const menu = document.querySelector('.map-layers-menu');
+        if (!panel || !container || !overlay || !menu) return null;
+        return {
+          panelIsolation: getComputedStyle(panel).isolation,
+          containerZIndex: getComputedStyle(container).zIndex,
+          overlayZIndex: getComputedStyle(overlay).zIndex,
+          menuZIndex: getComputedStyle(menu).zIndex,
+        };
+      });
+      if (!mapStacking || mapStacking.panelIsolation !== 'isolate' || mapStacking.containerZIndex !== '0' || Number(mapStacking.overlayZIndex) <= Number(mapStacking.containerZIndex)) {
+        throw new Error(`Map layers stacking context is not above map content at ${viewport.width}px: ${JSON.stringify(mapStacking)}`);
+      }
 
       if (viewport.width <= 820) {
         const trafficTrigger = page.getByTestId("traffic-trigger");
