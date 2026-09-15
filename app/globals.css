@@ -1769,7 +1769,7 @@ button, input, select, textarea { color-scheme: dark; }
 /* UX V3: the live map owns the radar workspace; browsing is contextual. */
 :root { --radar-drawer-width: clamp(360px, 28vw, 420px); }
 .radar-content { position: relative; display: block; overflow: hidden; }
-.map-panel { height: 100%; }
+.map-panel { height: 100%; z-index: 0; }
 .traffic-trigger { pointer-events: auto; display: inline-flex; align-items: center; gap: 9px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border-default); border-radius: 7px; background: rgba(8,17,29,.9); color: var(--text-primary); box-shadow: 0 8px 20px rgba(0,0,0,.22); font-size: 10px; }
 .traffic-trigger:hover, .traffic-trigger.active { border-color: rgba(67,216,194,.62); background: rgba(13,32,49,.96); }
 .traffic-trigger-label { color: var(--text-secondary); }
