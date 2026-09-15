@@ -1,8 +1,5 @@
 import type { AircraftView, TrailPoint } from "@/lib/aircraft/types";
 
-export const LIVE_TRACK_WINDOW_MS = 20 * 60 * 1000;
-export const LIVE_TRACK_MAX_POINTS = 120;
-
 export type TrailPosition = Pick<TrailPoint, "lat" | "lon" | "recordedAt"> & Partial<Pick<TrailPoint, "altitude" | "groundSpeed" | "track">>;
 
 function recordedAtMs(point: TrailPosition): number {
@@ -14,20 +11,18 @@ function trailPointKey(point: TrailPosition): string {
 }
 
 /**
- * Returns a chronological, duplicate-free and bounded trail. Invalid timestamps
- * are ignored so a malformed provider/history point cannot disturb the line.
+ * Returns a chronological, duplicate-free trail. Invalid timestamps are ignored
+ * so a malformed provider/history point cannot disturb the line. The trail is
+ * retained for as long as its aircraft remains present in the live state.
  */
 export function boundTrailPoints(points: readonly TrailPosition[], now = Date.now()): TrailPoint[] {
   const valid = points
     .map((point, index) => ({ point, index, timestamp: recordedAtMs(point) }))
     .filter((item) => Number.isFinite(item.timestamp))
     .sort((a, b) => a.timestamp - b.timestamp || a.index - b.index);
-  const newestTimestamp = valid.at(-1)?.timestamp ?? now;
-  const cutoff = Math.max(now - LIVE_TRACK_WINDOW_MS, newestTimestamp - LIVE_TRACK_WINDOW_MS);
   const unique = new Map<string, TrailPoint>();
 
   for (const item of valid) {
-    if (item.timestamp < cutoff) continue;
     unique.set(trailPointKey(item.point), {
       lat: item.point.lat,
       lon: item.point.lon,
@@ -47,7 +42,7 @@ export function boundTrailPoints(points: readonly TrailPosition[], now = Date.no
       deduplicated.push(point);
     }
   }
-  return deduplicated.slice(-LIVE_TRACK_MAX_POINTS);
+  return deduplicated;
 }
 
 export function appendTrailPoint(

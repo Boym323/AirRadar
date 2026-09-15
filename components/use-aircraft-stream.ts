@@ -1,7 +1,7 @@
 import { useEffect, useState, type MutableRefObject } from "react";
 import type { CoverageMode, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import { applySseV2Event } from "@/lib/aircraft/sse-v2";
-import { appendTrailPoint, boundTrailPoints, trailPointFromAircraft } from "@/lib/aircraft/trail";
+import { appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
 
 interface UseAircraftStreamOptions {
   activeCoverage: CoverageMode;
@@ -27,12 +27,11 @@ export function useAircraftStream({
     let current: { snapshot: PublicStateSnapshot; sequence: string } | null = null;
 
     const updateTrails = (next: PublicStateSnapshot) => {
-      const now = Date.now();
       for (const aircraft of next.aircraft) {
         const point = trailPointFromAircraft(aircraft);
         if (!point) continue;
         const trail = liveTrailsRef.current.get(aircraft.icaoHex) ?? [];
-        liveTrailsRef.current.set(aircraft.icaoHex, appendTrailPoint(trail, point, now));
+        liveTrailsRef.current.set(aircraft.icaoHex, appendTrailPoint(trail, point));
       }
       const visibleHexes = new Set(next.aircraft.map((aircraft) => aircraft.icaoHex));
       for (const [hex, trail] of liveTrailsRef.current) {
@@ -40,8 +39,7 @@ export function useAircraftStream({
           liveTrailsRef.current.delete(hex);
           continue;
         }
-        const bounded = boundTrailPoints(trail, now);
-        if (bounded.length || hex === selectedHexRef.current) liveTrailsRef.current.set(hex, bounded);
+        if (trail.length || hex === selectedHexRef.current) liveTrailsRef.current.set(hex, trail);
         else liveTrailsRef.current.delete(hex);
       }
     };

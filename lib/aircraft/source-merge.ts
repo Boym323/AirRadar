@@ -181,7 +181,7 @@ function selectedSquawk(
 }
 
 function selectedTrail(position: Aircraft | undefined): TrailPoint[] {
-  return position?.trail?.slice(-120) ?? [];
+  return position?.trail ?? [];
 }
 
 /**

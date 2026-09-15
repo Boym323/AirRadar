@@ -39,14 +39,14 @@ describe("selected aircraft live trail", () => {
     ]);
   });
 
-  it("keeps only the recent bounded window and maximum point count", () => {
+  it("keeps the complete trail while the aircraft remains live", () => {
     const result = boundTrailPoints(
       [point(-21, 13.99), ...Array.from({ length: 130 }, (_, index) => point(-19 + index / 10, 14 + index / 1000))],
       now,
     );
 
-    expect(result).toHaveLength(120);
-    expect(result[0]?.lon).toBe(14.01);
+    expect(result).toHaveLength(131);
+    expect(result[0]?.lon).toBe(13.99);
     expect(result.every((item, index) => index === 0 || item.recordedAt >= result[index - 1]!.recordedAt)).toBe(true);
   });
 

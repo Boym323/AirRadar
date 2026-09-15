@@ -74,7 +74,9 @@ These are behavior and safety contracts for changes to the current system.
 
 - Live state belongs in RAM; PostgreSQL stores sampled positions and durable
   reference data, not every ADS-B update.
-- The history queue is coalesced and its writer is single-lane. Per-aircraft
+- Live trails are retained in RAM for the full time an aircraft remains in the
+  live state and are removed with stale-aircraft cleanup; they are not bounded
+  by a time window or point count. The history queue is coalesced and its writer is single-lane. Per-aircraft
   writes have bounded concurrency; one failed aircraft does not reject other
   samples or mark the receiver offline.
 - `FlightPosition` is sampled only for valid positions and is capped by the

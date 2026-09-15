@@ -411,7 +411,7 @@ export class AircraftStateService {
       currentHexes.add(incoming.icaoHex);
       const networkIncoming = { ...incoming, origin: "adsblol" as const };
       const previous = this.networkAircraft.get(incoming.icaoHex);
-      const trail = this.updateTrail(previous, networkIncoming, 120);
+      const trail = this.updateTrail(previous, networkIncoming);
       this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
     }
     for (const hex of this.networkAircraft.keys()) {
@@ -431,7 +431,7 @@ export class AircraftStateService {
     this.atcResolutionKeys.delete(hex);
   }
 
-  private updateTrail(previous: Aircraft | undefined, incoming: Aircraft, limit = 80): TrailPoint[] {
+  private updateTrail(previous: Aircraft | undefined, incoming: Aircraft): TrailPoint[] {
     const previousTrail = previous?.trail ?? [];
     const last = previousTrail[previousTrail.length - 1];
     const canAppend = incoming.lat !== null && incoming.lon !== null &&
@@ -446,7 +446,7 @@ export class AircraftStateService {
           track: incoming.track,
         }]
       : previousTrail;
-    return next.slice(-limit);
+    return next;
   }
 
   private async persistHistory(snapshot: ProviderSnapshot): Promise<void> {
