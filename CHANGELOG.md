@@ -2,6 +2,19 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.44] - 2026-09-15
+
+Changes since v1.0.43:
+
+- style: simplify radar aircraft detail panel (fa8dda8d)
+- style: load radar aircraft panel polish (fa198ec9)
+- fix: preserve mobile aircraft drawer controls (26a24a5a)
+- fix: align aircraft drawer close controls with responsive gate (0c88a978)
+- Merge pull request #23 from Boym323/ui/radar-aircraft-panel-polish (69f33d1f)
+- chore: ignore FlightAware usage runtime state (ab01b00b)
+- chore: add data/flightaware-usage.json to .gitignore (1e2224d5)
+- Merge branch 'main' of https://github.com/Boym323/AirRadar (5728cf13)
+
 ## [1.0.43] - 2026-09-15
 
 Changes since v1.0.42:
