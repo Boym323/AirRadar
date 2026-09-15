@@ -2,6 +2,25 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.40] - 2026-09-15
+
+Changes since v1.0.39:
+
+- refactor: clean up tsconfig.json by removing unnecessary type includes (27240678)
+- feat: make desktop radar map-first (e4e6e366)
+- fix: clarify traffic drawer trigger (59708aac)
+- chore: add 1280 drawer layer review (f8126086)
+- fix: refine traffic drawer accessibility (d996edce)
+- fix: keep radar layers clear of desktop drawer (918b77e5)
+- test: refresh frontend ux review captures (74d07f13)
+- fix: keep mobile traffic sheet above map (9d4ae489)
+- chore: remove temporary ux review artifacts (bd980f68)
+- fix: address frontend ux v3 review feedback (871915e7)
+- fix: address final frontend ux review feedback (7b3f4896)
+- fix: preserve OGN search shortcut focus (c7149c32)
+- Merge pull request #20 from Boym323/feature/frontend-ux-v3 (5fe864fe)
+- fix: enhance live state snapshot to include public aircraft metadata (98909827)
+
 ## [1.0.39] - 2026-09-14
 
 Changes since v1.0.38:
