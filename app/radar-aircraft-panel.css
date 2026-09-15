@@ -4,9 +4,9 @@
  * aircraft detail page or in the collapsed advanced disclosures.
  */
 
-/* The desktop aircraft drawer does not need the generic traffic heading.
- * On mobile the heading remains as a compact control rail so the canonical
- * drawer-close button stays visible and keyboard/browser-gate accessible. */
+/* The generic traffic title is redundant while an aircraft is selected.
+ * Desktop keeps its canonical drawer-close control in a compact top rail;
+ * mobile uses the close button next to the aircraft identity instead. */
 .sidebar.drawer-aircraft > .sidebar-heading {
   justify-content: flex-end;
   min-height: 48px;
@@ -301,13 +301,25 @@
 
 @media (min-width: 821px) {
   .sidebar.drawer-aircraft > .sidebar-heading {
+    display: flex;
+  }
+
+  .sidebar.drawer-aircraft .drawer-close-button {
+    display: grid;
+  }
+
+  .sidebar.drawer-aircraft .detail-heading > .close-button {
     display: none;
   }
 }
 
 @media (max-width: 820px) {
   .sidebar.drawer-aircraft > .sidebar-heading {
-    display: flex;
+    display: none;
+  }
+
+  .sidebar.drawer-aircraft .detail-heading > .close-button {
+    display: grid;
   }
 
   .sidebar.drawer-aircraft .detail-content {
