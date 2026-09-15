@@ -415,6 +415,15 @@ function AircraftPhotoCard({ icaoHex, registration }: { icaoHex: string; registr
   );
 }
 
+function FlightSection({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
+  return <section className={`aircraft-flight-section ${className}`}><h3>{title}</h3>{children}</section>;
+}
+
+function DataSources({ metadataSource, routeSource, positionSource, photoAvailable }: { metadataSource?: string | null; routeSource?: string | null; positionSource: string; photoAvailable: boolean }) {
+  const entries = [[t.aircraft.positionSourceLabel, positionSource], [t.aircraft.aircraftSource, metadataSource], [t.aircraft.routeSource, routeSource], [t.aircraft.photoTitle, photoAvailable ? t.aircraft.photoSource : null]].filter((entry): entry is [string, string] => Boolean(entry[1]));
+  return <details className="aircraft-sources"><summary>{t.aircraft.dataSourcesTitle}</summary><div className="aircraft-sources-grid">{entries.map(([label, value]) => <DetailValue key={label} label={label}>{value}</DetailValue>)}</div></details>;
+}
+
 export function AircraftDetailV2({
   detail,
   liveAircraft,
@@ -512,14 +521,12 @@ export function AircraftDetailV2({
         <div><strong>{liveAircraft.verticalRate === null ? t.common.emptyValue : `${liveAircraft.verticalRate > 0 ? "+" : ""}${formatNumber(liveAircraft.verticalRate)} ft/min`}</strong><span>{t.aircraft.verticalRate}</span></div>
       </section>}
 
-      <AtcContextCard icaoHex={icaoHex} enabled={Boolean(liveAircraft)} />
-
-      {route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
+      <div className="aircraft-hero-photo"><AircraftPhotoCard icaoHex={icaoHex} registration={registration} /></div>
 
       <div className="aircraft-page-layout">
         <div className="aircraft-primary-column">
           <section className="aircraft-card" aria-labelledby="aircraft-information-title">
-            <h2 id="aircraft-information-title">{t.aircraft.flightData}</h2>
+            <h2 id="aircraft-information-title">{t.aircraft.aircraftTitle}</h2>
             <div className="detail-grid aircraft-detail-grid">
               <DetailValue label={t.aircraft.icaoHex}>{icaoHex}</DetailValue>
               <DetailValue label={t.aircraft.registration}>{valueOrEmpty(registration)}</DetailValue>
@@ -535,28 +542,6 @@ export function AircraftDetailV2({
             </div>
             <div className="watchlist-actions"><Link className="primary-button" href={watchlistHref}>{t.watchlist.followAircraft}</Link></div>
 
-            <section className="detail-section" aria-labelledby="aircraft-live-title">
-              <h3 id="aircraft-live-title">{t.aircraft.movement}</h3>
-              {liveAircraft ? (
-                <div className="detail-grid">
-                  <DetailValue label={t.aircraft.altitude}>{formatAltitude(liveAircraft.altitude)}</DetailValue>
-                  <DetailValue label={t.aircraft.groundSpeed}>{formatSpeed(liveAircraft.groundSpeed)}</DetailValue>
-                  <DetailValue label={t.aircraft.track}>{formatTrack(liveAircraft.track)}</DetailValue>
-                  <DetailValue label={t.aircraft.distance}>{formatDistance(liveAircraft.distanceKm)}</DetailValue>
-                  <DetailValue label={t.aircraft.squawk}>{valueOrEmpty(liveAircraft.squawk)}</DetailValue>
-                  <DetailValue label={t.aircraft.emergency}>{valueOrEmpty(liveAircraft.emergency)}</DetailValue>
-                </div>
-              ) : <div className="detail-disclaimer">{t.aircraft.notCurrentlyInRange}</div>}
-            </section>
-
-            <section className="detail-section" aria-labelledby="aircraft-provenance-title">
-              <h3 id="aircraft-provenance-title">{t.aircraft.provenance}</h3>
-              <div className="detail-grid">
-                <DetailValue label={t.aircraft.aircraftSource}>{valueOrEmpty(metadata?.source)}</DetailValue>
-                <DetailValue label={t.aircraft.routeSource}>{valueOrEmpty(route?.source ?? flightPlan?.source)}</DetailValue>
-                <DetailValue label={t.aircraft.positionSourceLabel}>{sourceLabel}</DetailValue>
-              </div>
-            </section>
           </section>
           {(route || flightPlan) && <section className="aircraft-card aircraft-route-card" aria-labelledby="aircraft-route-title">
             <h2 id="aircraft-route-title">{t.route.originDestination}</h2>
@@ -601,10 +586,11 @@ export function AircraftDetailV2({
             </div>}
             <div className="detail-disclaimer">{t.aircraft.routeDisclaimer}</div>
           </section>}
-          <AircraftPhotoCard icaoHex={icaoHex} registration={registration} />
+          <AtcContextCard icaoHex={icaoHex} enabled={Boolean(liveAircraft)} />
+          {route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
           <AircraftAltitudeChart points={[...historyPoints, ...sessionPoints]} livePoint={livePoint} loading={flightHistoryLoading} />
           <section className="aircraft-card aircraft-timeline-card" aria-labelledby="aircraft-timeline-title">
-            <h2 id="aircraft-timeline-title">{t.aircraft.flightData}</h2>
+            <h2 id="aircraft-timeline-title">{t.aircraft.liveTrackingTitle}</h2>
             <div className="aircraft-history-stats">
               <DetailValue label={t.aircraft.firstSeen}>{formatTime(firstSeen)}</DetailValue>
               <DetailValue label={t.aircraft.trackedFor}>{durationBetween(firstSeen, lastSeen)}</DetailValue>
@@ -622,6 +608,8 @@ export function AircraftDetailV2({
         <section className="aircraft-card aircraft-recent-card" aria-label={t.history.recentFlights}>
           <AircraftRecentFlights recentFlights={detail?.recentFlights ?? []} loading={loading} error={error} />
         </section>
+
+        <DataSources metadataSource={metadata?.source} routeSource={route?.source ?? flightPlan?.source} positionSource={sourceLabel} photoAvailable={false} />
       </div>
     </main>
   );

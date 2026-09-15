@@ -1406,6 +1406,44 @@ button, input, select, textarea { color-scheme: dark; }
 .watchlist-current-state, .flight-profile-chart, .airport-traffic-data-row { border-color: var(--border); border-radius: 4px; background: rgba(17, 35, 55, .42); }
 .system-status-badge { border-radius: 4px; }
 
+/* Aircraft detail v2: identity first, operational flight data next, history last. */
+.aircraft-page-header { position: relative; padding: 22px 24px 24px; border: 1px solid var(--border); border-radius: 8px; background: linear-gradient(120deg, rgba(17,35,55,.9), rgba(8,17,29,.7)); }
+.aircraft-page-header h1 { margin-top: 12px; font-size: clamp(30px, 5vw, 52px); }
+.aircraft-hero-actions { position: absolute; top: 24px; right: 24px; }
+.aircraft-hero-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 330px); gap: 16px; align-items: start; margin-top: 16px; }
+.aircraft-hero-body .aircraft-live-hero { margin: 0; min-height: 100%; align-content: center; }
+.aircraft-hero-photo:empty { display: none; }
+.aircraft-hero-photo .aircraft-photo-card { height: 100%; }
+.aircraft-page-layout { grid-template-columns: minmax(0, 1.45fr) minmax(320px, .75fr); margin-top: 16px; }
+.aircraft-primary-column { gap: 16px; }
+.aircraft-flight-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.aircraft-flight-section h3 { margin: 0; color: var(--accent); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.aircraft-schedule-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.aircraft-schedule-grid > div { min-width: 0; padding: 11px; border: 1px solid var(--border); border-radius: 4px; background: rgba(17,35,55,.35); }
+.aircraft-schedule-grid strong { display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 11px; }
+.aircraft-delay-row { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 14px; }
+.aircraft-long-value { display: block; overflow-wrap: anywhere; white-space: normal; }
+.aircraft-sources { grid-column: 1 / -1; color: var(--text-muted); }
+.aircraft-sources summary { cursor: pointer; color: var(--text-muted); font-size: 11px; }
+.aircraft-sources-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 4px; }
+
+@media (max-width: 820px) {
+  .aircraft-hero-actions { position: static; margin-top: 16px; }
+  .aircraft-hero-body, .aircraft-page-layout { display: block; }
+  .aircraft-hero-body > *, .aircraft-primary-column > *, .aircraft-page-layout > * { margin-bottom: 14px; }
+  .aircraft-schedule-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aircraft-sources-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+@media (max-width: 480px) {
+  .aircraft-page { padding-inline: 12px; }
+  .aircraft-page-header { padding: 18px 16px; }
+  .aircraft-page-header h1 { font-size: 30px; }
+  .aircraft-live-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .aircraft-schedule-grid, .aircraft-sources-grid { grid-template-columns: 1fr; }
+  .aircraft-route-endpoints { gap: 8px; padding: 12px; }
+}
+
 /* Keep compact labels legible on high-density panels. The only deliberately
    smaller text left below is map attribution / chart axis metadata. */
 .logbook-summary-heading p,
