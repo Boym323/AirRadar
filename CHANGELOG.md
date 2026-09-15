@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.0-rc.3] - 2026-09-15
+
+Changes since v1.0.41:
+
+- test: finalize FlightAware release coverage (64d42c50)
+
 ## [1.0.41] - 2026-09-15
 
 Changes since v1.0.40:
