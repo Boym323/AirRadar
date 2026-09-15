@@ -256,6 +256,11 @@ export class AircraftStateService {
 
   getDiagnostics(): {
     aircraftCount: number;
+    localTrailAircraftCount: number;
+    networkTrailAircraftCount: number;
+    localTrailPointCount: number;
+    networkTrailPointCount: number;
+    trailEstimatedBytes: number;
     listenerCount: number;
     running: boolean;
     enrichment: ReturnType<EnrichmentService["getDiagnostics"]>;
@@ -263,6 +268,13 @@ export class AircraftStateService {
   } {
     return {
       aircraftCount: this.aircraft.size,
+      localTrailAircraftCount: this.localAircraft.size,
+      networkTrailAircraftCount: this.networkAircraft.size,
+      localTrailPointCount: [...this.localAircraft.values()].reduce((total, aircraft) => total + aircraft.trail.length, 0),
+      networkTrailPointCount: [...this.networkAircraft.values()].reduce((total, aircraft) => total + aircraft.trail.length, 0),
+      // Practical estimate for one retained TrailPoint including V8 object/array overhead.
+      trailEstimatedBytes: ([...this.localAircraft.values(), ...this.networkAircraft.values()]
+        .reduce((total, aircraft) => total + aircraft.trail.length, 0)) * 96,
       listenerCount: this.listeners.size,
       running: this.running,
       enrichment: this.enrichment.getDiagnostics(),

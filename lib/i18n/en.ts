@@ -964,6 +964,8 @@ export const en = {
     sseClients: "SSE clients",
     aircraftState: "Aircraft in RAM",
     metadataCache: "Metadata hot cache",
+    trailPoints: "Trail points",
+    trailMemory: "Estimated trail RAM",
     providerCache: "Provider cache",
     lastAttempt: "Last attempt",
     lastSuccess: "Last success",

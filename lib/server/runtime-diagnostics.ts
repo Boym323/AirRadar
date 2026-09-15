@@ -23,6 +23,11 @@ export interface RuntimeDiagnostics {
   cgroupMemoryCurrentBytes: number | null;
   cgroupMemoryMaxBytes: number | null;
   aircraftCount: number | null;
+  localTrailAircraftCount: number | null;
+  networkTrailAircraftCount: number | null;
+  localTrailPointCount: number | null;
+  networkTrailPointCount: number | null;
+  trailEstimatedBytes: number | null;
   listenerCount: number | null;
   metadataHotCacheSize: number | null;
   metadataHotCacheLimit: number | null;
@@ -135,6 +140,11 @@ export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}):
     cgroupMemoryCurrentBytes: cgroupValue(cgroupFileCandidates("memory.current")),
     cgroupMemoryMaxBytes: cgroupValue(cgroupFileCandidates("memory.max")),
     aircraftCount: null,
+    localTrailAircraftCount: null,
+    networkTrailAircraftCount: null,
+    localTrailPointCount: null,
+    networkTrailPointCount: null,
+    trailEstimatedBytes: null,
     listenerCount: null,
     metadataHotCacheSize: null,
     metadataHotCacheLimit: null,

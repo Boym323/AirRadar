@@ -962,6 +962,8 @@ export const cs = {
     sseClients: "SSE klienti",
     aircraftState: "Letadla v RAM",
     metadataCache: "Hot cache metadat",
+    trailPoints: "Body trailu",
+    trailMemory: "Odhad RAM trailu",
     providerCache: "Cache providerů",
     lastAttempt: "Poslední pokus",
     lastSuccess: "Poslední úspěch",

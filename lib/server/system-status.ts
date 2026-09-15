@@ -1018,6 +1018,11 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     runtime: {
       diagnostics: serviceDiagnostics ? {
         aircraftCount: serviceDiagnostics.aircraftCount,
+        localTrailAircraftCount: serviceDiagnostics.localTrailAircraftCount,
+        networkTrailAircraftCount: serviceDiagnostics.networkTrailAircraftCount,
+        localTrailPointCount: serviceDiagnostics.localTrailPointCount,
+        networkTrailPointCount: serviceDiagnostics.networkTrailPointCount,
+        trailEstimatedBytes: serviceDiagnostics.trailEstimatedBytes,
         listenerCount: serviceDiagnostics.listenerCount,
         metadataHotCacheSize: serviceDiagnostics.enrichment.metadata?.hotCacheSize ?? null,
         metadataHotCacheLimit: serviceDiagnostics.enrichment.metadata?.hotCacheLimit ?? null,

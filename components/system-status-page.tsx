@@ -137,6 +137,8 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.cgroupMemory} value={data.runtime.cgroupMemoryMaxBytes === null ? formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary) : `${formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary)} / ${formatBytes(data.runtime.cgroupMemoryMaxBytes, dictionary)}`} />
         <Field label={dictionary.system.sseClients} value={`${formatNumber(data.runtime.activeSseClients, 0, dictionary.locale)} / ${formatNumber(data.runtime.sseClientLimit, 0, dictionary.locale)}`} />
         <Field label={dictionary.system.aircraftState} value={formatCount(data.runtime.aircraftCount, dictionary)} />
+        <Field label={dictionary.system.trailPoints} value={formatCount(data.runtime.localTrailPointCount, dictionary)} />
+        <Field label={dictionary.system.trailMemory} value={formatBytes(data.runtime.trailEstimatedBytes, dictionary)} />
         <Field label={dictionary.system.metadataCache} value={data.runtime.metadataHotCacheLimit === null ? formatCount(data.runtime.metadataHotCacheSize, dictionary) : `${formatCount(data.runtime.metadataHotCacheSize, dictionary)} / ${formatCount(data.runtime.metadataHotCacheLimit, dictionary)}`} />
         <Field label={dictionary.system.providerCache} value={data.runtime.providerCacheLimit === null ? formatCount(data.runtime.providerCacheEntries, dictionary) : `${formatCount(data.runtime.providerCacheEntries, dictionary)} / ${formatCount(data.runtime.providerCacheLimit, dictionary)}`} />
       </Card>
