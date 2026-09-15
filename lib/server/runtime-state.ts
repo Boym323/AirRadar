@@ -19,7 +19,7 @@ export function getRuntimeStateDirectory(): string {
 }
 
 export function getRuntimeStatePath(file: RuntimeStateFile): string {
-  return join(getRuntimeStateDirectory(), file);
+  return join(/*turbopackIgnore: true*/ getRuntimeStateDirectory(), file);
 }
 
 /** The only legacy file eligible for the safe production migration. */
