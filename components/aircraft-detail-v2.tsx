@@ -32,6 +32,33 @@ function delayLabel(seconds: number | undefined): string | null {
   return minutes > 0 ? `+${text}` : `${text} early`;
 }
 
+export function formatFiledAltitude(value: number): string {
+  const feet = value * 100;
+  const formattedFeet = `${formatNumber(feet)} ft`;
+  return value >= 180 ? `FL${formatNumber(value)} · ${formattedFeet}` : formattedFeet;
+}
+
+export function hasFiniteFlightPlanValue(value: number | undefined): value is number {
+  return value !== undefined && Number.isFinite(value);
+}
+
+export function formatFiledAirspeed(value: number): string {
+  return formatSpeed(value);
+}
+
+export function formatFiledEte(seconds: number): string {
+  const minutes = Math.round(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (!hours) return `${minutes} min`;
+  return remainingMinutes ? `${hours} h ${remainingMinutes} min` : `${hours} h`;
+}
+
+export function formatRouteDistance(statuteMiles: number): string {
+  const nauticalMiles = Math.round(statuteMiles * 0.868976);
+  return `${formatNumber(statuteMiles)} mi · ${formatNumber(nauticalMiles)} NM`;
+}
+
 export { aircraftAirportHref, aircraftFlightHref } from "@/lib/aircraft/detail-links";
 
 function flightDuration(flight: HistoryFlightSummary): string {
@@ -548,6 +575,10 @@ export function AircraftDetailV2({
               <DetailValue label={t.flightPlan.actualDeparture}>{valueOrEmpty(flightPlan.actualDeparture)}</DetailValue>
               <DetailValue label={t.flightPlan.scheduledArrival}>{valueOrEmpty(flightPlan.scheduledArrival)}</DetailValue>
               <DetailValue label={t.flightPlan.estimatedArrival}>{valueOrEmpty(flightPlan.estimatedArrival)}</DetailValue>
+              {hasFiniteFlightPlanValue(flightAware?.filedAltitude) && <DetailValue label={t.flightPlan.filedAltitude}>{formatFiledAltitude(flightAware.filedAltitude)}</DetailValue>}
+              {hasFiniteFlightPlanValue(flightAware?.filedAirspeed) && <DetailValue label={t.flightPlan.filedAirspeed}>{formatFiledAirspeed(flightAware.filedAirspeed)}</DetailValue>}
+              {hasFiniteFlightPlanValue(flightAware?.filedEteSeconds) && <DetailValue label={t.flightPlan.filedEte}>{formatFiledEte(flightAware.filedEteSeconds)}</DetailValue>}
+              {hasFiniteFlightPlanValue(flightAware?.routeDistance) && <DetailValue label={t.flightPlan.routeDistance}>{formatRouteDistance(flightAware.routeDistance)}</DetailValue>}
               <DetailValue label={t.flightPlan.filedRoute}>{valueOrEmpty(flightPlan.filedRoute)}</DetailValue>
               <DetailValue label={t.flightPlan.waypoints}>{flightPlan.waypoints.length ? flightPlan.waypoints.join(" · ") : t.common.emptyValue}</DetailValue>
               {flightAware?.codesharesIata?.length ? <DetailValue label="Codeshare">{flightAware.codesharesIata.slice(0, 8).join(" · ")}</DetailValue> : null}
