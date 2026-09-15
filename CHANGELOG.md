@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.0-rc.4] - 2026-09-15
+
+Changes since v1.0.0-rc.3:
+
+- feat: show additional FlightAware flight plan details (691bab9a)
+
 ## [1.0.0-rc.3] - 2026-09-15
 
 Changes since v1.0.41:
