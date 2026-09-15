@@ -1481,8 +1481,8 @@ export function AirRadarApp() {
   const contextHasPosition = selectedAircraftSnapshot?.lat !== null && selectedAircraftSnapshot?.lon !== null;
 
   useEffect(() => {
+    setSelectedAtcContext(null);
     if (!contextAircraftHex || !contextHasPosition) {
-      setSelectedAtcContext(null);
       return;
     }
     let active = true;
@@ -1908,6 +1908,15 @@ export function AirRadarApp() {
                   <DetailItem label={t.atc.lastVerified} value={formatDateTime(selectedAircraft.atc.lastVerifiedAt)} />
                   <DetailItem label={t.atc.confidence} value={formatAtcConfidence(selectedAircraft.atc.confidence)} />
                   {selectedAircraft.atc.altitudeConfidence === "unknown" && <DetailItem label={t.atc.altitudeConfidence} value={t.atc.altitudeConfidenceValues.unknown} />}
+                  <div className="detail-disclaimer">{t.atc.probableFrequency}</div>
+                </> : selectedAtcContext?.status === "available" && selectedAtcContext.primaryAirspace ? <>
+                  <div className="detail-atc-probable">{t.atc.probableRelevant}</div>
+                  <DetailItem label={t.atc.sectorService} value={`${selectedAtcContext.primaryAirspace.name} · ${formatAtcService(selectedAtcContext.primaryAirspace.publishedUnit)}`} />
+                  <DetailItem label={t.atc.primaryFrequency} value={formatAtcFrequency(selectedAtcContext.primaryAirspace.publishedFrequenciesMhz[0])} />
+                  <DetailItem label={t.atc.alternates} value={selectedAtcContext.primaryAirspace.publishedFrequenciesMhz.slice(1).map((frequency) => formatAtcFrequency(frequency)).join(", ") || t.common.emptyValue} />
+                  <DetailItem label={t.atc.lowerLimit} value={formatAtcLimit(selectedAtcContext.primaryAirspace.lowerLimitFt, selectedAtcContext.primaryAirspace.lowerLimitReference, t.common.unlimited)} />
+                  <DetailItem label={t.atc.upperLimit} value={formatAtcLimit(selectedAtcContext.primaryAirspace.upperLimitFt, selectedAtcContext.primaryAirspace.upperLimitReference, t.common.unlimited)} />
+                  <DetailItem label={t.atc.confidence} value={formatAtcConfidence(selectedAtcContext.primaryAirspace.horizontalMatch)} />
                   <div className="detail-disclaimer">{t.atc.probableFrequency}</div>
                 </> : <div className="detail-disclaimer">{t.atc.noMatchingSector}</div>}
               </DetailSection>
