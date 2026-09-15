@@ -4,8 +4,18 @@
  * aircraft detail page or in the collapsed advanced disclosures.
  */
 
+/* The desktop aircraft drawer does not need the generic traffic heading.
+ * On mobile the heading remains as a compact control rail so the canonical
+ * drawer-close button stays visible and keyboard/browser-gate accessible. */
 .sidebar.drawer-aircraft > .sidebar-heading {
-  display: none;
+  justify-content: flex-end;
+  min-height: 48px;
+  padding: 8px 10px;
+}
+
+.sidebar.drawer-aircraft > .sidebar-heading .sidebar-heading-main,
+.sidebar.drawer-aircraft > .sidebar-heading .mobile-collapse {
+  display: none !important;
 }
 
 .sidebar.drawer-aircraft .detail-panel {
@@ -14,7 +24,7 @@
 
 .sidebar.drawer-aircraft .detail-heading {
   flex: 0 0 auto;
-  padding: 12px 14px 11px;
+  padding: 42px 14px 11px;
 }
 
 .sidebar.drawer-aircraft .detail-back-button {
@@ -192,7 +202,7 @@
   font-size: 11px;
 }
 
-/* 4. Keep the altitude profile visible, but below the live summary. */
+/* 4. Keep the altitude profile visible, but below live summary. */
 .sidebar.drawer-aircraft .aircraft-altitude-card {
   order: 6;
   margin-top: 12px;
@@ -289,9 +299,15 @@
   padding-bottom: 4px;
 }
 
-@media (max-width: 820px) {
+@media (min-width: 821px) {
   .sidebar.drawer-aircraft > .sidebar-heading {
     display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .sidebar.drawer-aircraft > .sidebar-heading {
+    display: flex;
   }
 
   .sidebar.drawer-aircraft .detail-content {
