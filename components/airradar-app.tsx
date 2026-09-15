@@ -1894,7 +1894,7 @@ export function AirRadarApp() {
                 <DetailItem label={t.aircraft.positionSource} value={aircraftPositionSourceLabel(selectedAircraft)} />
                 <DetailItem label={t.aircraft.lastObservation} value={formatAge(selectedAircraft.seenSeconds)} />
               </DetailSection>
-              {routeIntelligence && <RouteIntelligencePanel result={routeIntelligence} />}
+              {routeIntelligence && routeIntelligence.status !== "NO_ROUTE" && routeIntelligence.status !== "NO_ATS_DATA" && <RouteIntelligencePanel result={routeIntelligence} />}
               <DetailSection title={t.atc.estimate}>
                 {selectedAircraft.atc ? <>
                   <div className="detail-atc-probable">{t.atc.probableRelevant}</div>
