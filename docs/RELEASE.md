@@ -88,7 +88,7 @@ use the normal command above.
    checks, emits the Prisma contract, then runs lint, typecheck, and the full
    Vitest suite in parallel. The release test invocation uses Vitest
    `--pool=threads`; all tests still run.
-6. It acquires `/run/airradar-build.lock`, writes ignored
+6. It acquires `/var/lib/airradar/build.lock`, writes ignored
    `generated/build-version.json`, and runs `npm run build` with Next.js output
    directed to an isolated `.next-release-*` directory. The active `.next`
    directory is not changed while the service is serving traffic. The build
@@ -147,7 +147,7 @@ visual UI.
 
 ## Build/start lock and systemd
 
-The production release build and start path share `/run/airradar-build.lock`.
+The production release build and start path share `/var/lib/airradar/build.lock`.
 `deploy/release.sh` holds this lock while it runs the isolated `npm run build`;
 `scripts/start-production.mjs`
 probes the lock and waits up to its configured 120-second timeout, then

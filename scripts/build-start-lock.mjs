@@ -1,7 +1,10 @@
 import { access } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
-export const DEFAULT_BUILD_LOCK_FILE = "/run/airradar-build.lock";
+// Keep the lock in the service-owned StateDirectory.  The service must be
+// able to probe the lock during boot, before a release has had a chance to
+// create a file under /run.
+export const DEFAULT_BUILD_LOCK_FILE = "/var/lib/airradar/build.lock";
 // A production build can legitimately exceed two minutes on a cold boot,
 // especially while dependencies/filesystems are warming up. Keep the service
 // waiting for the shared release lock instead of making systemd restart it
