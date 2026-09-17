@@ -19,6 +19,9 @@ view DTO locally.
 - Procedure ingestion owns `Procedure`, `ProcedureLeg`, `ProcedurePoint`,
   `ProcedureSource`, runway applicability, and publication metadata. Geometry
   may be null per leg. A discontinuity is explicit data, not an inferred line.
+  The initial implementation is in `lib/procedures`; its generated dataset is
+  read by `ProcedureRepository` and is never populated by the runtime aircraft
+  display path.
 - The static engine owns `InterpretedRoute`, its ordered
   `InterpretedRouteElement[]`, procedure matches, and element provenance.
   Published SID/STAR/ATS, filed DCT, filed route text, schematic legs, and
@@ -65,3 +68,9 @@ map the domain model to `RouteIntelligenceViewDTO`; it should not import
 The existing ATS document types in `lib/ats/cz-routes.ts` remain the current
 published ATS dataset boundary. They are input data for the static engine, not
 the V2 procedure contract and should not be extended into SID/STAR semantics.
+
+The procedure contract has one backwards-compatible extension from the
+original Agent A shape: optional `Procedure.remarks` preserves published
+procedure-level notes that cannot be attached to a leg. Existing producers
+remain valid because the field is optional; the procedure parser populates it
+when the official source exposes such text.
