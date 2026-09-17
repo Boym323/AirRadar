@@ -156,6 +156,18 @@ export function formatAtcFrequency(value: number | null | undefined, dictionary:
   return `${new Intl.NumberFormat(dictionary.locale, { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(value)} MHz`;
 }
 
+export function formatAtcLimit(
+  feet: number | null,
+  reference: string | null | undefined,
+  unlimited: string,
+  dictionary: LocaleDictionary = t,
+): string {
+  if (reference === "SFC") return "SFC";
+  if (reference === "UNL" || feet === null) return unlimited;
+  if (reference === "FL") return `FL${Math.round(feet / 100)}`;
+  return `${formatAltitude(feet, dictionary)}${reference === "AGL" ? " AGL" : ""}`;
+}
+
 export function formatAtcConfidence(value: "inside" | "boundary", dictionary: LocaleDictionary = t): string {
   return dictionary.atc.confidenceValues[value];
 }

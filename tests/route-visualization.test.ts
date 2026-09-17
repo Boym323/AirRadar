@@ -16,6 +16,7 @@ import {
 } from "@/lib/route-visualization";
 
 const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
 
 const origin: Airport = {
@@ -129,7 +130,7 @@ describe("route visualization V2", () => {
     expect(radarSource).toContain("ROUTE_V2_AIRPORT_SOURCE_ID");
     expect(radarSource).toContain('"line-color": "#7ea9bd"');
     expect(radarSource).toContain("t.route.actualTrail");
-    expect(radarSource).toContain("AirportRouteLink");
+    expect(quickDetailSource).toContain("aircraftAirportHref");
   });
 
   it("does not add a route network loop or FlightPosition query", () => {

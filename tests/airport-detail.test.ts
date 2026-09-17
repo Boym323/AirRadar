@@ -11,6 +11,7 @@ const pageSource = readFileSync(new URL("../app/airports/[icao]/page.tsx", impor
 const detailSource = readFileSync(new URL("../components/airport-detail.tsx", import.meta.url), "utf8");
 const weatherSource = readFileSync(new URL("../components/airport-weather.tsx", import.meta.url), "utf8");
 const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const stylesSource = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
 
 const prague: Airport = {
@@ -59,7 +60,7 @@ describe("airport detail V1", () => {
   });
 
   it("keeps flight-detail airport navigation, map navigation, and raw weather mobile-safe", () => {
-    expect(radarSource).toContain("/airports/${encodeURIComponent(airport.icaoCode)}");
+    expect(quickDetailSource).toContain("aircraftAirportHref(airport.icaoCode)");
     expect(radarSource).toContain("router.push(`/airports/${encodeURIComponent(icao)}`)");
     expect(stylesSource).toContain(".airport-map { height: 360px");
     expect(stylesSource).toContain(".airport-map { height: 260px");
