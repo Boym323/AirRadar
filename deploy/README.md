@@ -98,6 +98,31 @@ sudo systemctl enable --now airradar
 sudo journalctl -u airradar -f
 ```
 
+### ADSB.lol polling watchdog
+
+The optional ADSB.lol lane has a separate watchdog because a provider request
+can become permanently pending without taking down local readsb. The watchdog
+checks the local system-status endpoint every minute and restarts
+`airradar.service` only when both the last successful poll and the last poll
+attempt are older than three minutes. A fifteen-minute cooldown prevents a
+restart loop during a prolonged upstream outage.
+
+Install and enable it with:
+
+```bash
+sudo install -o root -g root -m 0644 deploy/systemd/airradar-adsb-watchdog.service /etc/systemd/system/
+sudo install -o root -g root -m 0644 deploy/systemd/airradar-adsb-watchdog.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now airradar-adsb-watchdog.timer
+```
+
+Check watchdog activity with:
+
+```bash
+sudo systemctl status airradar-adsb-watchdog.timer --no-pager
+sudo journalctl -u airradar-adsb-watchdog.service -n 50 --no-pager
+```
+
 ## SoftRF OGN snapshot updater
 
 The SoftRF updater is a separate `Type=oneshot` service. It finds the latest

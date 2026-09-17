@@ -1,0 +1,22 @@
+[Unit]
+Description=Restart AirRadar when the ADSB.lol polling lane is stuck
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/var/www/airradar
+Environment=AIRRADAR_ADSB_WATCHDOG_STATUS_URL=http://192.168.1.142:3000/api/system/status
+Environment=AIRRADAR_ADSB_WATCHDOG_STATE_FILE=/run/airradar-adsb-watchdog/last-restart
+ExecStart=/usr/bin/node /var/www/airradar/scripts/adsb-watchdog.mjs
+RuntimeDirectory=airradar-adsb-watchdog
+RuntimeDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=journal
+StandardError=journal
