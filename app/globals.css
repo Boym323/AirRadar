@@ -1994,3 +1994,76 @@ button, input, select, textarea { color-scheme: dark; }
   .system-card-header { padding-left: 15px; padding-right: 15px; }
   .system-fields { gap: 12px; padding-left: 15px; padding-right: 15px; }
 }
+
+/* AirRadar visual refinement: readable hierarchy over dense operational data. */
+.map-overlay-card,
+.map-layers > summary,
+.traffic-trigger {
+  border-color: rgba(190, 214, 232, .22);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .2);
+}
+
+.map-overlay-primary { align-items: center; }
+.map-summary-card { gap: 22px; padding: 11px 14px; }
+.map-summary-item { gap: 3px; }
+.map-summary-item strong { color: var(--text-primary); font-size: 16px; letter-spacing: -.03em; }
+.map-summary-item span { color: var(--text-secondary); font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; font-size: 10px; letter-spacing: .045em; }
+.traffic-trigger { min-height: 40px; padding-inline: 12px; font-size: 11px; }
+.traffic-trigger strong { font-size: 14px; }
+.map-layers > summary { min-height: 40px; font-size: 11px; }
+.contextual-legend { padding: 9px 11px; border-color: rgba(190, 214, 232, .2); background: rgba(7, 19, 31, .9); }
+
+.aircraft-row {
+  min-height: 62px;
+  padding: 10px 11px;
+  gap: 11px;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.aircraft-row-icon { width: 28px; height: 28px; }
+.aircraft-row-name { font-size: 12.5px; }
+.aircraft-row-type { font-size: 11px; }
+.aircraft-row-meta { font-size: 10.5px; }
+.aircraft-row.selected {
+  background: linear-gradient(90deg, rgba(245, 189, 98, .16), rgba(67, 216, 194, .06));
+  border-color: rgba(245, 189, 98, .68);
+  box-shadow: inset 3px 0 0 var(--warning), 0 5px 18px rgba(0, 0, 0, .13);
+}
+
+.aircraft-marker.selected::before {
+  inset: -3px;
+  border-width: 2px;
+  box-shadow: 0 0 0 5px rgba(243, 185, 95, .16), 0 0 22px rgba(243, 185, 95, .62);
+}
+.aircraft-marker.selected::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border: 1px solid rgba(243, 185, 95, .32);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.aircraft-marker.selected .aircraft-plane { transform: scale(1.18); filter: drop-shadow(0 0 9px rgba(243, 185, 95, .92)); }
+.aircraft-marker.selected .aircraft-label {
+  border-color: rgba(243, 185, 95, .72);
+  background: rgba(8, 17, 29, .96);
+  font-weight: 700;
+}
+
+.detail-heading { border-left: 3px solid var(--accent-primary); }
+.detail-hero { background: linear-gradient(135deg, rgba(23, 57, 75, .72), rgba(8, 17, 29, .42)); }
+.detail-callsign { letter-spacing: -.02em; }
+
+.traffic-trigger,
+.map-layers > summary,
+.filter-button,
+.primary-button,
+.drawer-close-button {
+  transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+@media (max-width: 820px) {
+  .map-summary-card { gap: 13px; padding: 9px 10px; }
+  .map-summary-item strong { font-size: 14px; }
+  .map-summary-item span { font-size: 9px; }
+  .aircraft-row { min-height: 66px; }
+}

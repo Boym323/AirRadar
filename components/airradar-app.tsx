@@ -153,6 +153,10 @@ const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
 // Position samples arrive every few seconds. Ten visual updates per second
 // are enough for smooth movement while avoiding a permanent 60 Hz map loop.
 const AIRCRAFT_ANIMATION_TICK_MS = 100;
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 type TrafficSource = "adsb" | "ogn";
 type RadarDrawerState = "closed" | "traffic" | "aircraft" | "ogn";
 
@@ -784,7 +788,7 @@ export function AirRadarApp() {
     const map = mapRef.current;
     const aircraft = snapshot.aircraft.find((item) => item.icaoHex === selectedHex);
     if (!map || !aircraft || aircraft.lat === null || aircraft.lon === null) return;
-    map.easeTo({ center: [aircraft.lon, aircraft.lat], padding: { top: 70, bottom: 40, left: 40, right: 40 }, duration: 350 });
+    map.easeTo({ center: [aircraft.lon, aircraft.lat], padding: { top: 70, bottom: 40, left: 40, right: 40 }, duration: prefersReducedMotion() ? 0 : 350 });
   }
 
   useEffect(() => {
@@ -890,6 +894,11 @@ export function AirRadarApp() {
     const runAnimations = (timestamp: number) => {
       animationTimerRef.current = null;
       if (document.hidden) return;
+      if (prefersReducedMotion()) {
+        for (const job of animationJobs.values()) job.marker.setLngLat(job.target);
+        animationJobs.clear();
+        return;
+      }
       for (const [hex, job] of animationJobs) {
         const progress = Math.min(1, (timestamp - job.startedAt) / job.durationMs);
         const eased = progress * (2 - progress);
@@ -1237,7 +1246,7 @@ export function AirRadarApp() {
       else if (aircraft?.lat != null && aircraft.lon != null) {
         // Keep the selected aircraft in the visible map above the mobile panel.
         const expandedHeight = mobile ? Math.min(window.innerHeight * 0.46, 440) : 0;
-        map.easeTo({ center: [aircraft.lon, aircraft.lat], padding: { top: 70, bottom: expandedHeight + 20, left: 40, right: 40 }, duration: 350 });
+        map.easeTo({ center: [aircraft.lon, aircraft.lat], padding: { top: 70, bottom: expandedHeight + 20, left: 40, right: 40 }, duration: prefersReducedMotion() ? 0 : 350 });
         focusedAircraftRef.current = selectedHex;
       }
     }
@@ -1245,6 +1254,11 @@ export function AirRadarApp() {
     const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
     const currentHexes = new Set<string>();
     const animate = (hex: string, marker: maplibregl.Marker, target: [number, number], duration: number) => {
+      if (prefersReducedMotion()) {
+        marker.setLngLat(target);
+        animationJobsRef.current.delete(hex);
+        return;
+      }
       const start = marker.getLngLat();
       if (Math.abs(start.lng - target[0]) < 0.000001 && Math.abs(start.lat - target[1]) < 0.000001) {
         marker.setLngLat(target);
@@ -1426,7 +1440,7 @@ export function AirRadarApp() {
     if (!coordinates || typeof coordinates[0] !== "number" || typeof coordinates[1] !== "number") return;
     const map = mapRef.current;
     if (!map) return;
-    map.flyTo({ center: [coordinates[0], coordinates[1]], zoom: Math.max(map.getZoom(), 9.5), duration: 700 });
+    map.flyTo({ center: [coordinates[0], coordinates[1]], zoom: Math.max(map.getZoom(), 9.5), duration: prefersReducedMotion() ? 0 : 700 });
   }, [atsPointFocus, atsRoutes, mapReady]);
 
   const selectedRouteAirportCodesKey = useMemo(() => {
