@@ -3,10 +3,8 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
-    exclude: ["tests/scale/**"],
-    // Keep SQLite-heavy suites from being starved when CI exposes dozens of CPUs.
-    maxWorkers: 4,
+    include: ["tests/scale/**/*.scale.ts"],
+    maxWorkers: 1,
   },
   resolve: { alias: { "@": new URL("./", import.meta.url).pathname } },
 });

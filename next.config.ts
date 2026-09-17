@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  // CI sets this only after the same SHA has passed the explicit typecheck
+  // job. Local/manual builds retain Next's independent safety check.
+  typescript: {
+    ignoreBuildErrors: process.env.AIRRADAR_SKIP_BUILD_TYPECHECK === "1",
+  },
   async headers() {
     return [{
       source: "/(.*)",

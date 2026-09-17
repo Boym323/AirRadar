@@ -194,8 +194,8 @@ async function waitForSseCleanup() {
   throw new Error("SSE client cleanup did not complete within 5 seconds");
 }
 
-async function assertBrowserSmoke() {
-  if (process.env.RUN_BROWSER_GATE !== "1") {
+async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "1" } = {}) {
+  if (!enabled) {
     console.log("[production-gates] browser desktop/mobile gate skipped; set RUN_BROWSER_GATE=1 to run it");
     return;
   }
@@ -214,6 +214,7 @@ async function assertBrowserSmoke() {
       { width: 1280, height: 800 },
       { width: 1440, height: 900 },
     ]) {
+      const fullSmoke = viewport.width === 375 || viewport.width === 821;
       const page = await browser.newPage({ viewport });
       const originalWaitForFunction = page.waitForFunction.bind(page);
       page.waitForFunction = async (...args) => {
@@ -239,7 +240,7 @@ async function assertBrowserSmoke() {
       });
       await page.route("**/api/airports", async (route) => {
         airportAttempts += 1;
-        if (airportAttempts === 1) {
+        if (viewport.width === 375 && airportAttempts === 1) {
           expectedTransientFailures += 1;
           return route.fulfill({ status: 503, headers: { "retry-after": "1" }, body: "temporary fixture failure" });
         }
@@ -255,7 +256,7 @@ async function assertBrowserSmoke() {
       });
       await page.route("**/api/atc/sectors", async (route) => {
         atcAttempts += 1;
-        if (atcAttempts === 1) {
+        if (viewport.width === 375 && atcAttempts === 1) {
           expectedTransientFailures += 1;
           return route.fulfill({ status: 503, headers: { "retry-after": "1" }, body: "temporary fixture failure" });
         }
@@ -544,6 +545,45 @@ async function assertBrowserSmoke() {
           throw new Error(`Desktop Escape did not restore focus to Traffic trigger at ${viewport.width}px`);
         }
       }
+
+      // Run the expensive interaction matrix once per responsive family.
+      // Every configured viewport still exercises the layout/accessibility
+      // contract and the 820/821 breakpoint remains explicit.
+      if (!fullSmoke) {
+        await page.locator("details.map-layers > summary").click();
+        const contract = await page.evaluate(() => {
+          const rect = (selector) => {
+            const element = document.querySelector(selector);
+            if (!element) return null;
+            const box = element.getBoundingClientRect();
+            return { x: box.x, right: box.right, y: box.y, bottom: box.bottom, width: box.width, height: box.height };
+          };
+          const visible = (selector) => [...document.querySelectorAll(selector)].filter((element) => {
+            const box = element.getBoundingClientRect();
+            return box.width > 0 && box.height > 0 && getComputedStyle(element).visibility !== "hidden";
+          }).length;
+          return {
+            overflow: document.documentElement.scrollWidth > window.innerWidth,
+            layerMenu: rect(".map-layers-menu"),
+            sidebar: rect('[data-testid="radar-sidebar"]'),
+            sidebarVisible: Boolean(document.querySelector('[data-testid="radar-sidebar"]') && !document.querySelector('[data-testid="radar-sidebar"]').classList.contains("drawer-closed")),
+            controls: [rect(".maplibregl-ctrl-top-right"), rect(".maplibregl-ctrl-bottom-right")],
+            traffic: visible('[data-testid="traffic-trigger"]'),
+            close: visible(".drawer-close-button, .close-button"),
+            imagesNamed: [...document.images].every((image) => image.hasAttribute("alt")),
+            buttonsNamed: [...document.querySelectorAll("button")].every((button) => Boolean(button.textContent?.trim() || button.getAttribute("aria-label"))),
+          };
+        });
+        const outOfViewport = (box) => box && (box.x < -1 || box.right > viewport.width + 1);
+        if (contract.overflow || outOfViewport(contract.layerMenu) || (contract.sidebarVisible && outOfViewport(contract.sidebar))
+          || contract.controls.some(outOfViewport) || (viewport.width <= 820 ? contract.traffic !== 0 : contract.traffic !== 1)
+          || contract.close !== 0 || !contract.imagesNamed || !contract.buttonsNamed) {
+          throw new Error(`Responsive contract failed at ${viewport.width}px: ${JSON.stringify(contract)}`);
+        }
+        await page.close();
+        continue;
+      }
+
       await page.locator("details.map-layers > summary").click();
       const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
       if (hasHorizontalOverflow) throw new Error(`Horizontal overflow at ${viewport.width}px`);
@@ -744,6 +784,9 @@ async function assertBrowserSmoke() {
 }
 
 async function main() {
+  const args = new Set(process.argv.slice(2));
+  const mode = args.has("--all") ? "all" : args.has("--browser") ? "browser" : "core";
+  if (!["core", "browser", "all"].includes(mode)) throw new Error("Expected --core, --browser, or --all");
   const gateChannel = resolveProductionGateChannel();
   const expectedVersion = expectedBuildVersion();
   assertMigrationSource();
@@ -774,6 +817,10 @@ async function main() {
   process.once("SIGTERM", stop);
   try {
     await waitForHealthyServer();
+    let sseSnapshotBytes = null;
+    let sseV2SnapshotBytes = null;
+    const staticPayloadBytes = {};
+    if (mode !== "browser") {
     const health = await get("/api/health");
     if (!health.ok || (await health.json()).status !== "ok") throw new Error("Health smoke failed");
     const version = await get("/api/version");
@@ -785,7 +832,6 @@ async function main() {
     const manifest = await get("/manifest.webmanifest");
     const manifestPayload = await manifest.json();
     if (manifestPayload.orientation) throw new Error("Manifest still forces an orientation");
-    const staticPayloadBytes = {};
     for (const path of ["/api/airports", "/api/atc/sectors"]) {
       const response = await get(path);
       const body = await response.arrayBuffer();
@@ -800,15 +846,16 @@ async function main() {
     if (!ognState.ok || ognStatePayload.enabled !== false || !Array.isArray(ognStatePayload.targets) || ognStatePayload.targets.length !== 0) throw new Error("Disabled OGN state smoke failed");
     const watchlistMutation = await get("/api/watchlist", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
     if (watchlistMutation.status !== 401) throw new Error("Watchlist mutation was not protected");
-    const sseSnapshotBytes = await assertSseLifecycle();
-    const sseV2SnapshotBytes = await assertSseV2Lifecycle();
+    sseSnapshotBytes = await assertSseLifecycle();
+    sseV2SnapshotBytes = await assertSseV2Lifecycle();
     const afterSse = await get("/api/system/status");
     const afterSsePayload = await afterSse.json();
     if (!afterSse.ok) throw new Error("SSE cleanup diagnostics request failed");
     if (afterSsePayload.runtime?.activeSseClients !== 0) await waitForSseCleanup();
-    await assertBrowserSmoke();
+    }
+    await assertBrowserSmoke({ enabled: mode !== "core" });
     console.log(`[production-gates] measured first SSE event bytes=${sseSnapshotBytes}, V2 snapshot bytes=${sseV2SnapshotBytes}, airports bytes=${staticPayloadBytes["/api/airports"]}, ATC bytes=${staticPayloadBytes["/api/atc/sectors"]}`);
-    console.log("[production-gates] built server, SSE, caching, auth, PWA, migration, and diagnostics checks passed");
+    console.log(`[production-gates] ${mode} production gates passed`);
   } catch (error) {
     const detail = logs.join("").slice(-4_000);
     throw new Error(`${error instanceof Error ? error.message : String(error)}\n${detail}`);
