@@ -410,7 +410,7 @@ async function assertBrowserSmoke() {
         if (await trafficTrigger.getAttribute("aria-expanded") !== "false" || !await sidebar.evaluate((element) => element.classList.contains("drawer-closed"))) {
           throw new Error(`Desktop radar drawer is not closed initially at ${viewport.width}px`);
         }
-        await page.evaluate(() => document.body.focus());
+        await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); });
         await page.keyboard.press("/");
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
         await page.waitForFunction(() => document.activeElement?.classList.contains("search-input"));
