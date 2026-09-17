@@ -975,7 +975,7 @@ export function AirRadarApp() {
         type: "line",
         source: ROUTE_V2_SOURCE_ID,
         filter: ["==", ["get", "segment"], "completed"],
-        paint: { "line-color": "#d2b56f", "line-opacity": 0.62, "line-width": 2, "line-dasharray": [1.5, 2.5] },
+        paint: { "line-color": "#7ea9bd", "line-opacity": 0.58, "line-width": 1.8, "line-dasharray": [1.5, 2.5] },
       });
       map.addLayer({
         id: ROUTE_V2_REMAINING_LAYER_ID,
@@ -1764,7 +1764,7 @@ export function AirRadarApp() {
             {(showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null) || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) ? <div className="map-overlay-card contextual-legend">
               {showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong>{RANGE_RING_RADII_KM.map((radiusKm) => <span key={radiusKm}><i className="legend-dot" /> {radiusKm} km</span>)}</span>}
               {colorMode !== "default" && <span className="color-mode-legend"><strong>{t.layers.colorModes[colorMode]}</strong><span><i className="color-legend-swatch low" /> {t.layers.colorLegendLow}</span><span><i className="color-legend-swatch high" /> {t.layers.colorLegendHigh}</span><span><i className="color-legend-swatch fallback" /> {t.layers.colorLegendFallback}</span></span>}
-              {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <span className="layer-legend"><span><i className="legend-line completed" /> {t.route.originToCurrent}</span><span><i className="legend-line remaining" /> {t.route.currentToDestination}</span><small>{t.route.contextDisclaimer}</small></span>}
+              {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <span className="layer-legend"><span><i className="legend-line actual" /> {t.route.actualTrail}</span><span><i className="legend-line completed" /> {t.route.originToCurrent}</span><span><i className="legend-line remaining" /> {t.route.currentToDestination}</span><small>{t.route.contextDisclaimer}</small></span>}
             </div> : null}
           </div>
         </div>

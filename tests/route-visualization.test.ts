@@ -127,6 +127,8 @@ describe("route visualization V2", () => {
     expect(radarSource).toContain("ROUTE_V2_COMPLETED_LAYER_ID");
     expect(radarSource).toContain("ROUTE_V2_REMAINING_LAYER_ID");
     expect(radarSource).toContain("ROUTE_V2_AIRPORT_SOURCE_ID");
+    expect(radarSource).toContain('"line-color": "#7ea9bd"');
+    expect(radarSource).toContain("t.route.actualTrail");
     expect(radarSource).toContain("AirportRouteLink");
   });
 
