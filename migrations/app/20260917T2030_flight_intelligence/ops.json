@@ -165,196 +165,274 @@
     ]
   },
   {
-    "id": "index.flightEvent.flightEvent_occurredAt_idx",
-    "label": "Create index \"flightEvent_occurredAt_idx\" on \"flightEvent\"",
+    "id": "index.flightEvent.flightEvent_airportIcao_occurredAt_idx_8182f1e6",
+    "label": "Create index \"flightEvent_airportIcao_occurredAt_idx_8182f1e6\" on \"flightEvent\"",
     "operationClass": "additive",
     "target": {
       "id": "postgres",
       "details": {
         "schema": "public",
         "objectType": "index",
-        "name": "flightEvent_occurredAt_idx",
+        "name": "flightEvent_airportIcao_occurredAt_idx_8182f1e6",
         "table": "flightEvent"
       }
     },
     "precheck": [
       {
-        "description": "ensure index \"flightEvent_occurredAt_idx\" does not exist",
+        "description": "ensure index \"flightEvent_airportIcao_occurredAt_idx_8182f1e6\" does not exist",
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_occurredAt_idx\""
+          "\"public\".\"flightEvent_airportIcao_occurredAt_idx_8182f1e6\""
         ]
       }
     ],
     "execute": [
       {
-        "description": "create index \"flightEvent_occurredAt_idx\"",
-        "sql": "CREATE INDEX \"flightEvent_occurredAt_idx\" ON \"public\".\"flightEvent\" (\"occurredAt\")",
+        "description": "create index \"flightEvent_airportIcao_occurredAt_idx_8182f1e6\"",
+        "sql": "CREATE INDEX \"flightEvent_airportIcao_occurredAt_idx_8182f1e6\" ON \"public\".\"flightEvent\" (\"airportIcao\", \"occurredAt\")",
         "params": []
       }
     ],
     "postcheck": [
       {
-        "description": "verify index \"flightEvent_occurredAt_idx\" exists",
+        "description": "verify index \"flightEvent_airportIcao_occurredAt_idx_8182f1e6\" exists",
         "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_occurredAt_idx\""
+          "\"public\".\"flightEvent_airportIcao_occurredAt_idx_8182f1e6\""
         ]
       }
     ]
   },
   {
-    "id": "index.flightEvent.flightEvent_type_occurredAt_idx",
-    "label": "Create index \"flightEvent_type_occurredAt_idx\" on \"flightEvent\"",
+    "id": "index.flightEvent.flightEvent_flightId_idx_7ef5148f",
+    "label": "Create index \"flightEvent_flightId_idx_7ef5148f\" on \"flightEvent\"",
     "operationClass": "additive",
     "target": {
       "id": "postgres",
       "details": {
         "schema": "public",
         "objectType": "index",
-        "name": "flightEvent_type_occurredAt_idx",
+        "name": "flightEvent_flightId_idx_7ef5148f",
         "table": "flightEvent"
       }
     },
     "precheck": [
       {
-        "description": "ensure index \"flightEvent_type_occurredAt_idx\" does not exist",
+        "description": "ensure index \"flightEvent_flightId_idx_7ef5148f\" does not exist",
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_type_occurredAt_idx\""
+          "\"public\".\"flightEvent_flightId_idx_7ef5148f\""
         ]
       }
     ],
     "execute": [
       {
-        "description": "create index \"flightEvent_type_occurredAt_idx\"",
-        "sql": "CREATE INDEX \"flightEvent_type_occurredAt_idx\" ON \"public\".\"flightEvent\" (\"type\", \"occurredAt\")",
+        "description": "create index \"flightEvent_flightId_idx_7ef5148f\"",
+        "sql": "CREATE INDEX \"flightEvent_flightId_idx_7ef5148f\" ON \"public\".\"flightEvent\" (\"flightId\")",
         "params": []
       }
     ],
     "postcheck": [
       {
-        "description": "verify index \"flightEvent_type_occurredAt_idx\" exists",
+        "description": "verify index \"flightEvent_flightId_idx_7ef5148f\" exists",
         "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_type_occurredAt_idx\""
+          "\"public\".\"flightEvent_flightId_idx_7ef5148f\""
         ]
       }
     ]
   },
   {
-    "id": "index.flightEvent.flightEvent_icaoHex_occurredAt_idx",
-    "label": "Create index \"flightEvent_icaoHex_occurredAt_idx\" on \"flightEvent\"",
+    "id": "index.flightEvent.flightEvent_flightId_occurredAt_idx_fcd57517",
+    "label": "Create index \"flightEvent_flightId_occurredAt_idx_fcd57517\" on \"flightEvent\"",
     "operationClass": "additive",
     "target": {
       "id": "postgres",
       "details": {
         "schema": "public",
         "objectType": "index",
-        "name": "flightEvent_icaoHex_occurredAt_idx",
+        "name": "flightEvent_flightId_occurredAt_idx_fcd57517",
         "table": "flightEvent"
       }
     },
     "precheck": [
       {
-        "description": "ensure index \"flightEvent_icaoHex_occurredAt_idx\" does not exist",
+        "description": "ensure index \"flightEvent_flightId_occurredAt_idx_fcd57517\" does not exist",
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_icaoHex_occurredAt_idx\""
+          "\"public\".\"flightEvent_flightId_occurredAt_idx_fcd57517\""
         ]
       }
     ],
     "execute": [
       {
-        "description": "create index \"flightEvent_icaoHex_occurredAt_idx\"",
-        "sql": "CREATE INDEX \"flightEvent_icaoHex_occurredAt_idx\" ON \"public\".\"flightEvent\" (\"icaoHex\", \"occurredAt\")",
+        "description": "create index \"flightEvent_flightId_occurredAt_idx_fcd57517\"",
+        "sql": "CREATE INDEX \"flightEvent_flightId_occurredAt_idx_fcd57517\" ON \"public\".\"flightEvent\" (\"flightId\", \"occurredAt\")",
         "params": []
       }
     ],
     "postcheck": [
       {
-        "description": "verify index \"flightEvent_icaoHex_occurredAt_idx\" exists",
+        "description": "verify index \"flightEvent_flightId_occurredAt_idx_fcd57517\" exists",
         "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_icaoHex_occurredAt_idx\""
+          "\"public\".\"flightEvent_flightId_occurredAt_idx_fcd57517\""
         ]
       }
     ]
   },
   {
-    "id": "index.flightEvent.flightEvent_flightId_occurredAt_idx",
-    "label": "Create index \"flightEvent_flightId_occurredAt_idx\" on \"flightEvent\"",
+    "id": "index.flightEvent.flightEvent_icaoHex_idx_f7ba3f5f",
+    "label": "Create index \"flightEvent_icaoHex_idx_f7ba3f5f\" on \"flightEvent\"",
     "operationClass": "additive",
     "target": {
       "id": "postgres",
       "details": {
         "schema": "public",
         "objectType": "index",
-        "name": "flightEvent_flightId_occurredAt_idx",
+        "name": "flightEvent_icaoHex_idx_f7ba3f5f",
         "table": "flightEvent"
       }
     },
     "precheck": [
       {
-        "description": "ensure index \"flightEvent_flightId_occurredAt_idx\" does not exist",
+        "description": "ensure index \"flightEvent_icaoHex_idx_f7ba3f5f\" does not exist",
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_flightId_occurredAt_idx\""
+          "\"public\".\"flightEvent_icaoHex_idx_f7ba3f5f\""
         ]
       }
     ],
     "execute": [
       {
-        "description": "create index \"flightEvent_flightId_occurredAt_idx\"",
-        "sql": "CREATE INDEX \"flightEvent_flightId_occurredAt_idx\" ON \"public\".\"flightEvent\" (\"flightId\", \"occurredAt\")",
+        "description": "create index \"flightEvent_icaoHex_idx_f7ba3f5f\"",
+        "sql": "CREATE INDEX \"flightEvent_icaoHex_idx_f7ba3f5f\" ON \"public\".\"flightEvent\" (\"icaoHex\")",
         "params": []
       }
     ],
     "postcheck": [
       {
-        "description": "verify index \"flightEvent_flightId_occurredAt_idx\" exists",
+        "description": "verify index \"flightEvent_icaoHex_idx_f7ba3f5f\" exists",
         "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_flightId_occurredAt_idx\""
+          "\"public\".\"flightEvent_icaoHex_idx_f7ba3f5f\""
         ]
       }
     ]
   },
   {
-    "id": "index.flightEvent.flightEvent_airportIcao_occurredAt_idx",
-    "label": "Create index \"flightEvent_airportIcao_occurredAt_idx\" on \"flightEvent\"",
+    "id": "index.flightEvent.flightEvent_icaoHex_occurredAt_idx_ba255191",
+    "label": "Create index \"flightEvent_icaoHex_occurredAt_idx_ba255191\" on \"flightEvent\"",
     "operationClass": "additive",
     "target": {
       "id": "postgres",
       "details": {
         "schema": "public",
         "objectType": "index",
-        "name": "flightEvent_airportIcao_occurredAt_idx",
+        "name": "flightEvent_icaoHex_occurredAt_idx_ba255191",
         "table": "flightEvent"
       }
     },
     "precheck": [
       {
-        "description": "ensure index \"flightEvent_airportIcao_occurredAt_idx\" does not exist",
+        "description": "ensure index \"flightEvent_icaoHex_occurredAt_idx_ba255191\" does not exist",
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_airportIcao_occurredAt_idx\""
+          "\"public\".\"flightEvent_icaoHex_occurredAt_idx_ba255191\""
         ]
       }
     ],
     "execute": [
       {
-        "description": "create index \"flightEvent_airportIcao_occurredAt_idx\"",
-        "sql": "CREATE INDEX \"flightEvent_airportIcao_occurredAt_idx\" ON \"public\".\"flightEvent\" (\"airportIcao\", \"occurredAt\")",
+        "description": "create index \"flightEvent_icaoHex_occurredAt_idx_ba255191\"",
+        "sql": "CREATE INDEX \"flightEvent_icaoHex_occurredAt_idx_ba255191\" ON \"public\".\"flightEvent\" (\"icaoHex\", \"occurredAt\")",
         "params": []
       }
     ],
     "postcheck": [
       {
-        "description": "verify index \"flightEvent_airportIcao_occurredAt_idx\" exists",
+        "description": "verify index \"flightEvent_icaoHex_occurredAt_idx_ba255191\" exists",
         "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
         "params": [
-          "\"public\".\"flightEvent_airportIcao_occurredAt_idx\""
+          "\"public\".\"flightEvent_icaoHex_occurredAt_idx_ba255191\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.flightEvent.flightEvent_occurredAt_idx_c6b89167",
+    "label": "Create index \"flightEvent_occurredAt_idx_c6b89167\" on \"flightEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flightEvent_occurredAt_idx_c6b89167",
+        "table": "flightEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flightEvent_occurredAt_idx_c6b89167\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightEvent_occurredAt_idx_c6b89167\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flightEvent_occurredAt_idx_c6b89167\"",
+        "sql": "CREATE INDEX \"flightEvent_occurredAt_idx_c6b89167\" ON \"public\".\"flightEvent\" (\"occurredAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flightEvent_occurredAt_idx_c6b89167\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightEvent_occurredAt_idx_c6b89167\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.flightEvent.flightEvent_type_occurredAt_idx_4a74ac21",
+    "label": "Create index \"flightEvent_type_occurredAt_idx_4a74ac21\" on \"flightEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "flightEvent_type_occurredAt_idx_4a74ac21",
+        "table": "flightEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"flightEvent_type_occurredAt_idx_4a74ac21\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightEvent_type_occurredAt_idx_4a74ac21\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"flightEvent_type_occurredAt_idx_4a74ac21\"",
+        "sql": "CREATE INDEX \"flightEvent_type_occurredAt_idx_4a74ac21\" ON \"public\".\"flightEvent\" (\"type\", \"occurredAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"flightEvent_type_occurredAt_idx_4a74ac21\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"flightEvent_type_occurredAt_idx_4a74ac21\""
         ]
       }
     ]
