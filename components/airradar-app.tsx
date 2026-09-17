@@ -1956,7 +1956,6 @@ export function AirRadarApp() {
                   <DetailItem label={t.atc.alternates} value={selectedAircraft.atc.alternateFrequenciesMhz.map((frequency) => formatAtcFrequency(frequency)).join(", ") || t.common.emptyValue} />
                   <DetailItem label={t.atc.lowerLimit} value={formatAtcLimit(selectedAircraft.atc.lowerAltitudeFt, selectedAircraft.atc.lowerAltitudeReference, t.common.unlimited)} />
                   <DetailItem label={t.atc.upperLimit} value={formatAtcLimit(selectedAircraft.atc.upperAltitudeFt, selectedAircraft.atc.upperAltitudeReference, t.common.unlimited)} />
-                  <DetailItem label={t.atc.effectiveDate} value={formatDateTime(selectedAircraft.atc.validFrom)} />
                   <DetailItem label={t.atc.validTo} value={formatDateTime(selectedAircraft.atc.validTo)} />
                   <DetailItem label={t.atc.lastVerified} value={formatDateTime(selectedAircraft.atc.lastVerifiedAt)} />
                   <DetailItem label={t.atc.confidence} value={formatAtcConfidence(selectedAircraft.atc.confidence)} />
@@ -1970,8 +1969,6 @@ export function AirRadarApp() {
                   <DetailItem label={t.atc.lowerLimit} value={formatAtcLimit(selectedAtcContext.primaryAirspace.lowerLimitFt, selectedAtcContext.primaryAirspace.lowerLimitReference, t.common.unlimited)} />
                   <DetailItem label={t.atc.upperLimit} value={formatAtcLimit(selectedAtcContext.primaryAirspace.upperLimitFt, selectedAtcContext.primaryAirspace.upperLimitReference, t.common.unlimited)} />
                   <DetailItem label={t.atc.confidence} value={formatAtcConfidence(selectedAtcContext.primaryAirspace.horizontalMatch)} />
-                  <DetailItem label={t.atc.source} value={selectedAtcContext.primaryAirspace.provenance.source} />
-                  <DetailItem label={t.atc.effectiveDate} value={formatDateTime(selectedAtcContext.primaryAirspace.provenance.effectiveDate)} />
                   {selectedAtcContext.primaryAirspace.verticalMatch === "uncertain" && <DetailItem label={t.atc.altitudeConfidence} value={t.atc.altitudeConfidenceValues.unknown} />}
                   <div className="detail-disclaimer">{t.atc.probableFrequency}</div>
                 </> : null}
