@@ -26,6 +26,7 @@ const primaryNavigation = [
 ] as const;
 
 const moreNavigation = [
+  { href: "/intelligence", label: t.intelligence.title },
   { href: "/alerts", label: t.alerts.title },
   { href: "/recap/daily", label: t.recap.daily },
   { href: "/recap/weekly", label: t.recap.weekly },
@@ -119,6 +120,7 @@ export function MobileBottomNav() {
         </summary>
         <div>
           <Link href="/fleet">{t.fleet.title}</Link>
+          <Link href="/intelligence">{t.intelligence.title}</Link>
           <Link href="/alerts">{t.alerts.title}</Link>
           <Link href="/recap/daily">{t.recap.daily}</Link>
           <Link href="/recap/weekly">{t.recap.weekly}</Link>

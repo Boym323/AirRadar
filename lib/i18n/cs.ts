@@ -337,6 +337,13 @@ export const cs = {
     reasons: { watchlist: "Odpovídalo serverové pravidlo sledování.", newAircraft: "První historické zachycení bylo potvrzeno uložením.", record: "Byl překonán skutečný rekord příjmu.", emergency: "Byl nahlášen přechod do nouzového stavu." },
     notificationStatuses: { pending: "Čeká", attempted: "Pokus", delivered: "Doručeno", failed: "Selhalo", disabled: "Notifier vypnutý" },
   },
+  intelligence: {
+    title: "Živá intelligence",
+    description: "Pravděpodobné události odvozené z lokálních ADS-B pozorování.",
+    empty: "Zatím nebyly zjištěny žádné intelligence události.",
+    evidence: "Důkazy",
+    types: { APPROACH: "Pravděpodobné přiblížení", LANDING: "Pravděpodobné přistání", TAKEOFF: "Pravděpodobný vzlet", GO_AROUND: "Go-around", HOLDING: "Pravděpodobný holding", AIRSPACE_ENTRY: "Vstup do vzdušného prostoru", AIRSPACE_EXIT: "Opusťění vzdušného prostoru" },
+  },
   recap: {
     dailyTitle: "Denní recap",
     weeklyTitle: "Týdenní recap",

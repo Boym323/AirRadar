@@ -19,6 +19,7 @@ import { loadAlertConfig } from "@/lib/server/alert-config";
 import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { getReceptionRecords } from "@/lib/server/reception-records";
 import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
+import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -90,6 +91,7 @@ export class AircraftStateService {
   private readonly enrichment: EnrichmentService;
   private readonly atc: AtcSectorService;
   private readonly alerts: AlertEngine;
+  private readonly intelligence = getFlightIntelligenceService();
   private readonly statistics: ReceiverStatistics;
   private readonly atcResolutionKeys = new Map<string, string>();
   private lifetimeReceptionRecord: ReceiverDailyReceptionRecord | null = null;
@@ -415,6 +417,7 @@ export class AircraftStateService {
     if (!this.shuttingDown) this.statistics.observe([...this.localAircraft.values()], this.currentReceiver, new Date());
     this.scheduleReceptionRecordEvaluation();
     this.alerts.observe(previousAircraft, this.localAircraft);
+    for (const current of this.localAircraft.values()) this.intelligence.observe(previousAircraft.get(current.icaoHex), current, Date.parse(snapshot.fetchedAt));
   }
 
   private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {

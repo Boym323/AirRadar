@@ -63,6 +63,7 @@ import { analyzePublishedRoute } from "@/lib/route-intelligence";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
+import { IntelligenceFeed } from "@/components/intelligence-feed";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import { useRetryingDataset, type DatasetState } from "@/components/use-retrying-dataset";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
@@ -1824,6 +1825,7 @@ export function AirRadarApp() {
           </div>
 
           <RelevantAtcPanel summaries={snapshot.relevantAtcFrequencies} expanded={atcExpanded} onOpen={() => setAtcExpanded(true)} />
+          <IntelligenceFeed />
 
           <div id="traffic-list" className={`aircraft-list ${trafficSource === "ogn" ? "ogn-traffic-list" : ""}`}>
             {trafficSource === "ogn" ? (
