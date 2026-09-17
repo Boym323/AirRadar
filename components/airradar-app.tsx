@@ -499,6 +499,7 @@ export function AirRadarApp() {
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
   const [mapReady, setMapReady] = useState(false);
+  const receiverPositionAvailable = snapshot.receiver.lat !== null && snapshot.receiver.lon !== null;
   const airportGeoJsonRef = useRef<ReturnType<typeof createAirportGeoJSON>>(createAirportGeoJSON([]));
   const atcGeoJsonRef = useRef<ReturnType<typeof createAtcGeoJSON>>(createAtcGeoJSON([], false));
   const transmitterGeoJsonRef = useRef<FeatureCollection>({ type: "FeatureCollection", features: [] });
@@ -1712,7 +1713,7 @@ export function AirRadarApp() {
                   </div>
                   <div className="map-layer-group">
                     <span className="map-layer-group-title">{t.layers.groups.display}</span>
-                    <label><input type="checkbox" checked={showRangeRings} onChange={(event) => setShowRangeRings(event.target.checked)} /> {t.layers.rangeRings}</label>
+                    {receiverPositionAvailable && <label><input type="checkbox" checked={showRangeRings} onChange={(event) => setShowRangeRings(event.target.checked)} /> {t.layers.rangeRings}</label>}
                     <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => setColorMode(event.target.value as AircraftColorMode)}>
                       <option value="default">{t.layers.colorModes.default}</option>
                       <option value="altitude">{t.layers.colorModes.altitude}</option>
