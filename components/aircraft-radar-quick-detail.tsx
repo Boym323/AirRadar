@@ -6,7 +6,8 @@ import type { Airport } from "@/lib/airports/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
-import type { RouteIntelligenceResult } from "@/lib/route-intelligence";
+import type { RouteIntelligenceViewDTO } from "@/lib/route-intelligence";
+import { RouteIntelligencePanel } from "@/components/route-intelligence-panel";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import {
@@ -33,7 +34,7 @@ export interface AircraftRadarQuickDetailProps {
   databaseAircraft: AircraftDetailMetadata | null;
   historyTrail: QuickHistoryTrail | null;
   atcContext: AtcContextResult | null;
-  routeIntelligence: RouteIntelligenceResult | null;
+  routeIntelligence: RouteIntelligenceViewDTO | null;
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -137,22 +138,8 @@ function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: At
   </QuickSection>;
 }
 
-function RouteIntelligenceSection({ context, result }: { context: AtcContextResult | null; result: RouteIntelligenceResult | null }) {
-  const atsRoute = context?.status === "available" ? context.atsRoute ?? context.nearestAtsCandidate : null;
-  const currentRoute = result?.currentSegment?.routeDesignator ?? atsRoute?.routeId ?? null;
-  const nextPoint = result?.nextWaypoint
-    ? `${result.nextWaypoint.name}${result.distanceToNextWaypointNm === null ? "" : ` · ${formatNumber(result.distanceToNextWaypointNm, 1)} NM`}`
-    : context?.status === "available" && context.nextPoint
-      ? `${context.nextPoint.identifier} · ${formatNumber(context.nextPoint.distanceNm, 0)} NM`
-      : null;
-  if (!currentRoute && !nextPoint) return null;
-  return <QuickSection id="aircraft-quick-route-intelligence-title" title={t.routeIntelligence.title} className="aircraft-quick-route-intelligence">
-    <div className="aircraft-quick-detail-grid">
-      <DetailValue label={t.atc.contextAts} value={currentRoute} />
-      <DetailValue label={t.routeIntelligence.nextWaypoint} value={nextPoint} />
-    </div>
-    <p className="aircraft-quick-disclaimer">{t.routeIntelligence.publishedData} {t.routeIntelligence.availabilityUnknown}</p>
-  </QuickSection>;
+function RouteIntelligenceSection({ result }: { result: RouteIntelligenceViewDTO | null }) {
+  return result ? <section className="aircraft-quick-section aircraft-quick-route-intelligence"><RouteIntelligencePanel route={result} compact /></section> : null;
 }
 
 function AircraftIdentitySection({ aircraft, databaseAircraft }: { aircraft: AircraftView; databaseAircraft: AircraftDetailMetadata | null }) {
@@ -266,7 +253,7 @@ export function AircraftRadarQuickDetail({
 
     <AtcSection aircraft={aircraft} context={atcContext} />
     <AircraftIdentitySection aircraft={aircraft} databaseAircraft={databaseAircraft} />
-    <RouteIntelligenceSection context={atcContext} result={routeIntelligence} />
+    <RouteIntelligenceSection result={routeIntelligence} />
     {aircraft.enrichment?.route && <FlightRouteWeather compact originAirport={aircraft.enrichment.route.originAirport} destinationAirport={aircraft.enrichment.route.destinationAirport} />}
     <TechnicalDetails aircraft={aircraft} />
   </div>;

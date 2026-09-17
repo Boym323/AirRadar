@@ -1,6 +1,7 @@
 import type { FlightRoute } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
 import type { RouteCoordinate } from "@/lib/route-intelligence/contracts";
+import type { RouteIntelligenceViewDTO, RouteElementViewDTO } from "@/lib/route-intelligence/contracts";
 
 export type { RouteCoordinate } from "@/lib/route-intelligence/contracts";
 
@@ -15,6 +16,7 @@ export const ROUTE_V2_AIRPORT_LABEL_LAYER_ID = "selected-route-airports-v2-label
 export const ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID = "ats-route-intelligence-completed";
 export const ROUTE_INTELLIGENCE_CURRENT_LAYER_ID = "ats-route-intelligence-current";
 export const ROUTE_INTELLIGENCE_REMAINING_LAYER_ID = "ats-route-intelligence-remaining";
+export const ROUTE_INTELLIGENCE_SOURCE_ID = "route-intelligence-v2";
 
 export const MAX_ROUTE_POINTS_PER_SEGMENT = 64;
 
@@ -53,6 +55,36 @@ export interface RouteAirportGeoJSON {
   features: RouteAirportFeature[];
 }
 
+export type RouteIntelligenceFeatureProgress = "completed" | "current" | "remaining" | "unresolved";
+
+export interface RouteIntelligenceFeatureProperties {
+  elementId: string;
+  sequence: number;
+  elementKind: RouteElementViewDTO["kind"];
+  phase: RouteElementViewDTO["phase"];
+  sourceKind: RouteElementViewDTO["source"]["kind"];
+  status: RouteElementViewDTO["status"];
+  progress: RouteIntelligenceFeatureProgress;
+  label: string | null;
+  fromName: string | null;
+  toName: string | null;
+  sourceReference: string | null;
+}
+
+export interface RouteIntelligenceFeature {
+  type: "Feature";
+  properties: RouteIntelligenceFeatureProperties;
+  geometry: {
+    type: "LineString";
+    coordinates: [number, number][];
+  };
+}
+
+export interface RouteIntelligenceGeoJSON {
+  type: "FeatureCollection";
+  features: RouteIntelligenceFeature[];
+}
+
 function isFiniteCoordinate(point: RouteCoordinate): boolean {
   return Number.isFinite(point.lat)
     && Number.isFinite(point.lon)
@@ -60,6 +92,77 @@ function isFiniteCoordinate(point: RouteCoordinate): boolean {
     && point.lat <= 90
     && point.lon >= -180
     && point.lon <= 180;
+}
+
+function coordinateFromView(point: RouteElementViewDTO["from"]): RouteCoordinate | null {
+  if (!point || point.latitude === null || point.longitude === null) return null;
+  const candidate = { lat: point.latitude, lon: point.longitude };
+  return isFiniteCoordinate(candidate) ? candidate : null;
+}
+
+function validLineCoordinates(element: RouteElementViewDTO): [number, number][] {
+  const geometry = element.geometry?.coordinates ?? [];
+  const coordinates = geometry
+    .filter(isFiniteCoordinate)
+    .map((point) => [point.lon, point.lat] as [number, number]);
+  if (coordinates.length >= 2) return coordinates;
+
+  const from = coordinateFromView(element.from);
+  const to = coordinateFromView(element.to);
+  const mayUseEndpointConnector = element.source.kind === "FILED_DCT"
+    || element.source.kind === "FILED_ROUTE"
+    || element.source.kind === "SCHEMATIC";
+  if (mayUseEndpointConnector && from && to && (from.lat !== to.lat || from.lon !== to.lon)) {
+    return [[from.lon, from.lat], [to.lon, to.lat]];
+  }
+  return [];
+}
+
+function featureProgress(route: RouteIntelligenceViewDTO, element: RouteElementViewDTO): RouteIntelligenceFeatureProgress {
+  if (element.status !== "RESOLVED") return "unresolved";
+  if (element.id === route.currentElement?.id) return "current";
+  if (route.completedElementIds.includes(element.id)) return "completed";
+  return "remaining";
+}
+
+/**
+ * Converts the browser contract into safe, semantic GeoJSON for MapLibre.
+ * Missing or malformed geometry is omitted unless the source explicitly
+ * describes a direct/filed or schematic connector. No inferred procedure
+ * line is emitted from endpoints of a published procedure.
+ */
+export function createRouteIntelligenceGeoJSON(
+  route: RouteIntelligenceViewDTO | null | undefined,
+): RouteIntelligenceGeoJSON {
+  const features: RouteIntelligenceFeature[] = [];
+  if (!route) return { type: "FeatureCollection", features };
+
+  for (const element of route.elements) {
+    const coordinates = validLineCoordinates(element);
+    if (coordinates.length < 2) continue;
+    features.push({
+      type: "Feature",
+      properties: {
+        elementId: element.id,
+        sequence: element.sequence,
+        elementKind: element.kind,
+        phase: element.phase,
+        sourceKind: element.source.kind,
+        status: element.status,
+        progress: featureProgress(route, element),
+        label: element.label,
+        fromName: element.from?.name ?? null,
+        toName: element.to?.name ?? null,
+        sourceReference: element.source.reference,
+      },
+      geometry: { type: "LineString", coordinates },
+    });
+  }
+  return { type: "FeatureCollection", features };
+}
+
+export function emptyRouteIntelligenceGeoJSON(): RouteIntelligenceGeoJSON {
+  return { type: "FeatureCollection", features: [] };
 }
 
 function toUnitVector(point: RouteCoordinate): [number, number, number] {
