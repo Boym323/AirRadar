@@ -20,10 +20,13 @@ const ADSBDB_RETRY_MAX_MS = 5 * 60_000;
  * ADSBDB route lookups are keyed by callsign, while a callsign can be reused
  * for different flight instances. Keep a stale callsign match from appearing
  * as a live route when its airports are nowhere near the aircraft position.
- * The generous tolerance covers normal airway/reroute differences from the
- * airport-to-airport great-circle approximation.
+ * Keep this deliberately tight: a callsign can be reused and ADSBDB can
+ * return a scheduled/previous sector. A large tolerance would present that
+ * stale airport pair as the live destination. When the aircraft is outside
+ * this corridor, fail closed and let the UI show that no verified route is
+ * available.
  */
-export const MAX_ROUTE_POSITION_DEVIATION_KM = 250 * 1.852;
+export const MAX_ROUTE_POSITION_DEVIATION_KM = 100;
 
 export function routeMatchesAircraftPosition(aircraft: Aircraft, route: NonNullable<AircraftEnrichment["route"]>): boolean {
   if (aircraft.lat === null || aircraft.lon === null || !route.originAirport || !route.destinationAirport) return true;
