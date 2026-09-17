@@ -53,10 +53,21 @@ export type {
   RoutePhase,
   RouteIntelligenceV2Snapshot,
   RunwayContext,
+  RunwayContextConfidence,
   RunwayContextInput,
+  RunwayContextSource,
   RunwayContextStatus,
 } from "./contracts";
-export { createRunwayContext, hasRunwayConflict } from "./contracts";
+export { createRunwayContext, hasRunwayConflict, normalizeRunwayDesignator } from "./contracts";
+export {
+  compareProcedureRunwayApplicability,
+  inferRunwayFromGeometry,
+  resolveArrivalRunwayContext,
+  resolveDepartureRunwayContext,
+  type RunwayContextResolverInput,
+  type RunwayInferenceAirport,
+  type RunwayInferencePosition,
+} from "./runway-context";
 
 export const DEFAULT_MAX_XTRACK_NM = 25;
 const EARTH_RADIUS_KM = 6371;

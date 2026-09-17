@@ -177,7 +177,16 @@ export function toRouteIntelligenceViewDTO(result: RouteIntelligenceResult | nul
   };
 }
 export type * from "./route-intelligence/contracts";
-export { createRunwayContext, hasRunwayConflict } from "./route-intelligence/contracts";
+export {
+  compareProcedureRunwayApplicability,
+  inferRunwayFromGeometry,
+  resolveArrivalRunwayContext,
+  resolveDepartureRunwayContext,
+  type RunwayContextResolverInput,
+  type RunwayInferenceAirport,
+  type RunwayInferencePosition,
+} from "./route-intelligence/runway-context";
+export { createRunwayContext, hasRunwayConflict, normalizeRunwayDesignator } from "./route-intelligence/contracts";
 
 type AnalyzeOptions = Parameters<typeof analyzePublishedRouteBase>[0] & Omit<RouteIntelligenceV2Options, "aircraftRoute" | "atsNetwork">;
 type StaticAnalyzeOptions = Parameters<typeof analyzePublishedRouteStaticBase>[0] & Omit<RouteIntelligenceV2Options, "aircraftRoute" | "atsNetwork">;
