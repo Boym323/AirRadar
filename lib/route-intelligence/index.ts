@@ -2,6 +2,13 @@ import type { AircraftEnrichment } from "@/lib/aircraft/types";
 import type { CzAtsPoint, CzAtsRoute, CzAtsRouteDocument, CzAtsSegment } from "@/lib/ats/cz-routes";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import type { RouteIntelligenceV2Snapshot } from "./contracts";
+import type { Procedure } from "./contracts";
+export {
+  analyzeRouteIntelligenceV2,
+  analyzeRouteV2,
+  interpretFiledRoute,
+} from "./v2";
+export type { RouteIntelligenceV2Options } from "./v2";
 
 export type {
   AtsRouteCoverage,
@@ -57,7 +64,7 @@ const KM_PER_NM = 1.852;
 const MAX_STATIC_CACHE_ENTRIES = 128;
 const MAX_PATH_SEARCH_STEPS = 128;
 
-export type RouteTokenType = "WAYPOINT" | "AIRWAY" | "DCT" | "UNKNOWN";
+export type RouteTokenType = "WAYPOINT" | "AIRWAY" | "DCT" | "SID" | "STAR" | "UNKNOWN";
 
 export interface RouteToken {
   type: RouteTokenType;
@@ -181,15 +188,26 @@ function fallbackWaypointSyntax(value: string): boolean {
   return /^[A-Z]{2,5}$/.test(value);
 }
 
-export function tokenizeRoute(routeText: string | null | undefined, options: { airwayDesignators?: ReadonlySet<string>; waypointNames?: ReadonlySet<string> } = {}): RouteToken[] {
+export function tokenizeRoute(routeText: string | null | undefined, options: {
+  airwayDesignators?: ReadonlySet<string>;
+  waypointNames?: ReadonlySet<string>;
+  procedures?: readonly Procedure[];
+  originAirportIcao?: string | null;
+  destinationAirportIcao?: string | null;
+} = {}): RouteToken[] {
   if (!routeText?.trim()) return [];
   const airways = new Set([...options.airwayDesignators ?? []].map(normalized));
   const waypoints = new Set([...options.waypointNames ?? []].map(normalized));
-  return routeText
-    .split(/\s+/)
-    .map(cleanToken)
-    .filter(Boolean)
+  const origin = normalized(options.originAirportIcao ?? "");
+  const destination = normalized(options.destinationAirportIcao ?? "");
+  const raw = routeText.split(/\s+/).map(cleanToken).filter(Boolean);
+  return raw
     .map((value, index): RouteToken => {
+      const procedureCandidates = options.procedures?.filter((procedure) => normalized(procedure.designator) === value) ?? [];
+      const sidContext = index === 0 || (index === 1 && origin && normalized(raw[0] ?? "") === origin);
+      const starContext = index === raw.length - 1 || (index === raw.length - 2 && destination && normalized(raw.at(-1) ?? "") === destination);
+      if (sidContext && procedureCandidates.some((procedure) => procedure.type === "SID" && origin && normalized(procedure.airportIcao) === origin)) return { type: "SID", value, index };
+      if (starContext && procedureCandidates.some((procedure) => procedure.type === "STAR" && destination && normalized(procedure.airportIcao) === destination)) return { type: "STAR", value, index };
       if (value === "DCT") return { type: "DCT", value, index };
       if (airways.has(value) || /^[A-Z][0-9]{1,3}[A-Z]?$/.test(value)) return { type: "AIRWAY", value, index };
       if (waypoints.has(value) || fallbackWaypointSyntax(value)) return { type: "WAYPOINT", value, index };
