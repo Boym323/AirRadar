@@ -50,6 +50,23 @@ export type {
   RunwayContextStatus,
 } from "./contracts";
 export { createRunwayContext, hasRunwayConflict } from "./contracts";
+export {
+  analyzeDynamicRoute,
+  analyzeDynamicRouteState,
+  deriveDynamicRouteState,
+  computeDynamicRouteState,
+  analyzeRouteDynamics,
+  matchObservedProcedure,
+  DYNAMIC_ROUTE_HEADING_TOLERANCE_DEG,
+  DYNAMIC_ROUTE_THRESHOLDS_NM,
+} from "./dynamic";
+export type {
+  DynamicAircraftObservation,
+  DynamicRouteInput,
+  ObservedProcedureInput,
+  ObservedProcedureMatch,
+  RouteAirportContext,
+} from "./dynamic";
 
 export const DEFAULT_MAX_XTRACK_NM = 25;
 const EARTH_RADIUS_KM = 6371;

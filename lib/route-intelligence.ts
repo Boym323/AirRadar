@@ -30,6 +30,23 @@ export type {
 };
 export type * from "./route-intelligence/contracts";
 export { createRunwayContext, hasRunwayConflict } from "./route-intelligence/contracts";
+export {
+  analyzeDynamicRoute,
+  analyzeDynamicRouteState,
+  deriveDynamicRouteState,
+  computeDynamicRouteState,
+  analyzeRouteDynamics,
+  matchObservedProcedure,
+  DYNAMIC_ROUTE_HEADING_TOLERANCE_DEG,
+  DYNAMIC_ROUTE_THRESHOLDS_NM,
+} from "./route-intelligence/dynamic";
+export type {
+  DynamicAircraftObservation,
+  DynamicRouteInput,
+  ObservedProcedureInput,
+  ObservedProcedureMatch,
+  RouteAirportContext,
+} from "./route-intelligence/dynamic";
 
 type AnalyzeOptions = Parameters<typeof analyzePublishedRouteBase>[0];
 type StaticAnalyzeOptions = Parameters<typeof analyzePublishedRouteStaticBase>[0];

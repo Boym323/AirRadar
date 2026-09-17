@@ -89,7 +89,7 @@ export interface Procedure {
   source: ProcedureSource;
 }
 
-export type RoutePhase = "SID" | "EN_ROUTE" | "STAR" | "CONNECTOR" | "UNKNOWN";
+export type RoutePhase = "DEPARTURE" | "SID" | "ENROUTE" | "EN_ROUTE" | "STAR" | "ARRIVAL" | "CONNECTOR" | "UNKNOWN";
 
 export type RouteElementSourceKind =
   | "PUBLISHED_SID"
@@ -246,6 +246,12 @@ export function hasRunwayConflict(context: RunwayContext): boolean {
 
 export type RouteAdherence = "ON_ROUTE" | "NEAR_ROUTE" | "OFF_ROUTE" | "UNKNOWN";
 
+/**
+ * Quality of a dynamic value.  A route can be usable while its progress is
+ * only estimated because one or more published elements have no geometry.
+ */
+export type DynamicRoutePrecision = "PRECISE" | "PARTIAL" | "ESTIMATED" | "UNAVAILABLE";
+
 export interface DynamicRouteState {
   currentPhase: RoutePhase;
   currentElement: InterpretedRouteElement | null;
@@ -255,11 +261,17 @@ export interface DynamicRouteState {
   distanceToNext: number | null;
   /** Cross-track deviation is nautical miles. */
   crossTrackDeviation: number | null;
+  /** Signed distance from the beginning of the current element, in nautical miles. */
+  alongTrackDistance: number | null;
   routeAdherence: RouteAdherence;
   completedElements: string[];
   remainingElements: string[];
   /** Fraction from 0 to 1, or null when progress cannot be calculated. */
   routeProgress: number | null;
+  /** Convenience percentage representation of routeProgress, or null. */
+  routeProgressPercent: number | null;
+  precision: DynamicRoutePrecision;
+  progressPrecision: DynamicRoutePrecision;
 }
 
 export interface RouteIntelligenceV2Snapshot {
@@ -322,10 +334,14 @@ export interface RouteIntelligenceViewDTO {
   nextPoint: RoutePointViewDTO | null;
   distanceToNext: number | null;
   crossTrackDeviation: number | null;
+  alongTrackDistance: number | null;
   routeAdherence: RouteAdherence;
   completedElementIds: string[];
   remainingElementIds: string[];
   routeProgress: number | null;
+  routeProgressPercent: number | null;
+  precision: DynamicRoutePrecision;
+  progressPrecision: DynamicRoutePrecision;
   coverage: RouteCoverageViewDTO;
   procedureMatches: ProcedureMatchViewDTO[];
   runway: RunwayContext;
