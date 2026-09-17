@@ -463,7 +463,7 @@ async function assertBrowserSmoke() {
         const quickDetail = sidebar.getByTestId("aircraft-quick-detail");
         await quickDetail.waitFor({ state: "visible" });
         await quickDetail.locator(".aircraft-quick-atc").waitFor({ state: "visible" });
-        await quickDetail.locator(".route-weather-summary").waitFor({ state: "visible" });
+        await quickDetail.locator(".route-weather-summary").first().waitFor({ state: "visible" });
         const quickContract = await quickDetail.evaluate((element) => ({
           order: [...element.children].map((child) => child.className),
           liveMetricGrids: element.querySelectorAll(".aircraft-quick-metrics").length,
