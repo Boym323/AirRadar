@@ -13,7 +13,13 @@ export default class M extends Migration<Start, End> {
     this.addForeignKey({ schema: 'public', table: 'flightEvent', foreignKey: { name: 'flightEvent_icaoHex_fkey', columns: ['icaoHex'], references: { schema: 'public', table: 'aircraft', columns: ['icaoHex'] }, onDelete: 'cascade' } }),
     this.addForeignKey({ schema: 'public', table: 'flightEvent', foreignKey: { name: 'flightEvent_flightId_fkey', columns: ['flightId'], references: { schema: 'public', table: 'flight', columns: ['id'] }, onDelete: 'setNull' } }),
     this.addUnique({ schema: 'public', table: 'flightEvent', constraint: 'flightEvent_eventKey_key', columns: ['eventKey'] }),
-    this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_occurredAt_idx', columns: ['occurredAt'] }), this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_type_occurredAt_idx', columns: ['type', 'occurredAt'] }), this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_icaoHex_occurredAt_idx', columns: ['icaoHex', 'occurredAt'] }), this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_flightId_occurredAt_idx', columns: ['flightId', 'occurredAt'] }), this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_airportIcao_occurredAt_idx', columns: ['airportIcao', 'occurredAt'] }),
+    this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_airportIcao_occurredAt_idx_8182f1e6', columns: ['airportIcao', 'occurredAt'] }),
+    this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_flightId_idx_7ef5148f', columns: ['flightId'] }),
+    this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_flightId_occurredAt_idx_fcd57517', columns: ['flightId', 'occurredAt'] }),
+    this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_icaoHex_idx_f7ba3f5f', columns: ['icaoHex'] }),
+    this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_icaoHex_occurredAt_idx_ba255191', columns: ['icaoHex', 'occurredAt'] }),
+    this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_occurredAt_idx_c6b89167', columns: ['occurredAt'] }),
+    this.createIndex({ schema: 'public', table: 'flightEvent', index: 'flightEvent_type_occurredAt_idx_4a74ac21', columns: ['type', 'occurredAt'] }),
   ]; }
 }
 MigrationCLI.run(import.meta.url, M);
