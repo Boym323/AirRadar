@@ -2,6 +2,50 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.45] - 2026-09-17
+
+Changes since v1.0.44:
+
+- fix: update RouteIntelligencePanel rendering conditions to exclude NO_ROUTE and NO_ATS_DATA statuses (a1aae780)
+- fix: update AirRadarApp to set selected ATC context and display additional details when available (fa764664)
+- fix: update AirRadarApp and AirspaceCard to improve ATC context handling and live tracking display (364a9fd3)
+- fix: update aircraft trail handling to retain complete trails while aircraft are live (3753d34d)
+- fix: add trail points and memory metrics to system status page and diagnostics (262e675f)
+- fix: update global search to include aircraft focus and adjust href generation (589e3df6)
+- fix: update href generation for aircraft search results to use a new path format (1b161c43)
+- fix: include registration in cache key for aircraft photo retrieval (677e7b36)
+- fix: enhance photo retrieval by prioritizing larger thumbnails from Planespotters API (1d4d2822)
+- fix: update build lock file path to /var/lib/airradar/build.lock in scripts and documentation (e63b93a5)
+- fix: improve OGN loading logic to ensure proper snapshot handling and prevent race conditions (7040631c)
+- fix: add escape key functionality to close UI elements in various components (c11dc626)
+- fix: implement reduced motion preferences for smoother animations in AirRadarApp (a6232f25)
+- fix: enhance drawer action handling and keyboard shortcut event listener for improved UI responsiveness (417bc339)
+- fix: update legend line styles and translations for improved clarity in route visualization (81ef86e9)
+- fix: update aircraft drawer layout for improved visual clarity and interaction (11eb37f2)
+- fix: remove effective date display from ATC details for improved clarity (5d0c7872)
+- fix: enhance SIGMET popup content with detailed information and improve translations for clarity (009bb69f)
+- fix: update GeoJSON type references for improved type safety and consistency (45273537)
+- fix: add @types/geojson for improved type definitions and compatibility (0da0564a)
+- fix: add timeout to SoftRF test suites for improved stability (1961edba)
+- Refactor radar aircraft quick detail (0b2e1447)
+- Fix compact weather browser gate (0dd4a772)
+- Stabilize desktop shortcut browser gate (9747c18b)
+- Stabilize traffic search focus (5cdaa318)
+- Retry traffic search focus after drawer render (2ac991d7)
+- Avoid flaky repeated search focus assertion (7c5faa73)
+- Merge pull request #24 from Boym323/refactor/radar-aircraft-quick-detail (bb582bb9)
+- Přidání watchdog služby a časovače pro sledování ADSB.lol polling (e6cdf63a)
+- test: prove quick aircraft flow skips FlightAware (95297895)
+- Merge remote-tracking branch 'origin/main' (51d9e622)
+- perf: optimize CI test and production gates (7fb9d154)
+- perf: parallelize independent CI validation (737034e6)
+- perf: speed up CI and production validation (d375262c)
+- feat: add flight intelligence events (f9d5ce94)
+- fix: satisfy intelligence lint checks (7e4f715a)
+- fix: chain flight intelligence migration (94a723c9)
+- test: include flight intelligence migration (7b8fe829)
+- Merge pull request #28 from Boym323/feat/flight-intelligence (e74447db)
+
 ## [1.0.44] - 2026-09-15
 
 Changes since v1.0.43:
