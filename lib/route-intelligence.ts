@@ -90,10 +90,14 @@ function viewFromSnapshot(snapshot: RouteIntelligenceV2Snapshot): RouteIntellige
     nextPoint: viewPoint(snapshot.dynamic.nextPoint ? { ...snapshot.dynamic.nextPoint, coordinates: snapshot.dynamic.nextPoint.coordinates } : null),
     distanceToNext: snapshot.dynamic.distanceToNext,
     crossTrackDeviation: snapshot.dynamic.crossTrackDeviation,
+    alongTrackDistance: snapshot.dynamic.alongTrackDistance,
     routeAdherence: snapshot.dynamic.routeAdherence,
     completedElementIds: [...snapshot.dynamic.completedElements],
     remainingElementIds: [...snapshot.dynamic.remainingElements],
     routeProgress: snapshot.dynamic.routeProgress,
+    routeProgressPercent: snapshot.dynamic.routeProgressPercent,
+    precision: snapshot.dynamic.precision,
+    progressPrecision: snapshot.dynamic.progressPrecision,
     coverage: snapshot.route.coverage,
     procedureMatches: snapshot.route.procedureMatches.map((match) => ({
       status: match.status,
@@ -163,10 +167,14 @@ export function toRouteIntelligenceViewDTO(result: RouteIntelligenceResult | nul
     nextPoint: result.nextWaypoint ? { id: result.nextWaypoint.pointId, name: result.nextWaypoint.name, latitude: result.nextWaypoint.latitude, longitude: result.nextWaypoint.longitude } : null,
     distanceToNext: result.distanceToNextWaypointNm,
     crossTrackDeviation: result.crossTrackDeviationNm,
+    alongTrackDistance: null,
     routeAdherence: result.crossTrackDeviationNm === null ? "UNKNOWN" : result.crossTrackDeviationNm <= 2 ? "ON_ROUTE" : result.crossTrackDeviationNm <= 10 ? "NEAR_ROUTE" : "OFF_ROUTE",
     completedElementIds,
     remainingElementIds,
     routeProgress: progress,
+    routeProgressPercent: progress === null ? null : Math.round(progress * 100),
+    precision: "UNAVAILABLE",
+    progressPrecision: "UNAVAILABLE",
     coverage: {
       ats: { eligibleLegs, matchedLegs: result.matchedSegments.length, percent },
       reconstruction: { totalElements: elements.length, resolvedElements: elements.length, percent: elements.length ? 100 : null },
@@ -177,6 +185,24 @@ export function toRouteIntelligenceViewDTO(result: RouteIntelligenceResult | nul
   };
 }
 export type * from "./route-intelligence/contracts";
+export { createRunwayContext, hasRunwayConflict, normalizeRunwayDesignator } from "./route-intelligence/contracts";
+export {
+  analyzeDynamicRoute,
+  analyzeDynamicRouteState,
+  deriveDynamicRouteState,
+  computeDynamicRouteState,
+  analyzeRouteDynamics,
+  matchObservedProcedure,
+  DYNAMIC_ROUTE_HEADING_TOLERANCE_DEG,
+  DYNAMIC_ROUTE_THRESHOLDS_NM,
+} from "./route-intelligence/dynamic";
+export type {
+  DynamicAircraftObservation,
+  DynamicRouteInput,
+  ObservedProcedureInput,
+  ObservedProcedureMatch,
+  RouteAirportContext,
+} from "./route-intelligence/dynamic";
 export {
   compareProcedureRunwayApplicability,
   inferRunwayFromGeometry,
@@ -186,7 +212,6 @@ export {
   type RunwayInferenceAirport,
   type RunwayInferencePosition,
 } from "./route-intelligence/runway-context";
-export { createRunwayContext, hasRunwayConflict, normalizeRunwayDesignator } from "./route-intelligence/contracts";
 
 type AnalyzeOptions = Parameters<typeof analyzePublishedRouteBase>[0] & Omit<RouteIntelligenceV2Options, "aircraftRoute" | "atsNetwork">;
 type StaticAnalyzeOptions = Parameters<typeof analyzePublishedRouteStaticBase>[0] & Omit<RouteIntelligenceV2Options, "aircraftRoute" | "atsNetwork">;

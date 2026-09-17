@@ -60,6 +60,23 @@ export type {
 } from "./contracts";
 export { createRunwayContext, hasRunwayConflict, normalizeRunwayDesignator } from "./contracts";
 export {
+  analyzeDynamicRoute,
+  analyzeDynamicRouteState,
+  deriveDynamicRouteState,
+  computeDynamicRouteState,
+  analyzeRouteDynamics,
+  matchObservedProcedure,
+  DYNAMIC_ROUTE_HEADING_TOLERANCE_DEG,
+  DYNAMIC_ROUTE_THRESHOLDS_NM,
+} from "./dynamic";
+export type {
+  DynamicAircraftObservation,
+  DynamicRouteInput,
+  ObservedProcedureInput,
+  ObservedProcedureMatch,
+  RouteAirportContext,
+} from "./dynamic";
+export {
   compareProcedureRunwayApplicability,
   inferRunwayFromGeometry,
   resolveArrivalRunwayContext,
