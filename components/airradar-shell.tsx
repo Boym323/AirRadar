@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { GlobalSearch } from "@/components/global-search";
 import { t } from "@/lib/i18n";
 
@@ -43,6 +44,29 @@ function isMorePath(pathname: string): boolean {
 
 export function AirRadarTopbar({ heading = false, meta }: { heading?: boolean; meta?: ReactNode }) {
   const pathname = usePathname();
+
+  useEffect(() => {
+    function closeOpenUi(event: KeyboardEvent): void {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const openDetails = target?.closest("details[open]") ?? Array.from(document.querySelectorAll("details[open]")).at(-1);
+      if (openDetails instanceof HTMLDetailsElement) {
+        openDetails.open = false;
+        event.preventDefault();
+        return;
+      }
+
+      const popupCloseButton = document.querySelector<HTMLButtonElement>(".maplibregl-popup-close-button");
+      if (popupCloseButton) {
+        popupCloseButton.click();
+        event.preventDefault();
+      }
+    }
+
+    document.addEventListener("keydown", closeOpenUi);
+    return () => document.removeEventListener("keydown", closeOpenUi);
+  }, []);
 
   return (
     <header className="topbar">

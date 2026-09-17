@@ -191,6 +191,18 @@ export function AirportWeatherDisclosure({ airport }: { airport: Airport }) {
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [requested, setRequested] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnEscape(event: KeyboardEvent): void {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      setOpen(false);
+      event.preventDefault();
+    }
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
+
   if (!/^[A-Z]{4}$/.test(airport.icaoCode.trim().toUpperCase())) return null;
   const panelId = `airport-weather-${airport.icaoCode.toLowerCase()}`;
 

@@ -751,6 +751,7 @@ export function AirRadarApp() {
 
   const closeRadarDrawer = useCallback(() => {
     setTrafficOpen(false);
+    setFiltersOpen(false);
     setSelectedHex(null);
     setSelectedOgnId(null);
     setMobileCompact(true);
@@ -761,6 +762,7 @@ export function AirRadarApp() {
     setSelectedOgnId(null);
     setTrafficOpen(true);
     setMobileCompact(false);
+    setFiltersOpen(false);
     if (shortcut === "search") {
       window.requestAnimationFrame(() => searchInputRef.current?.focus());
     } else if (shortcut === "filters" && trafficSource === "adsb") {
@@ -775,6 +777,7 @@ export function AirRadarApp() {
     setSelectedOgnId(null);
     setTrafficOpen(true);
     setMobileCompact(false);
+    setFiltersOpen(false);
   }, []);
 
   function centerSelectedAircraft(): void {
@@ -1616,7 +1619,18 @@ export function AirRadarApp() {
     }
 
     function handleKeyboardShortcut(event: KeyboardEvent): void {
-      if (event.metaKey || event.ctrlKey || event.altKey || isEditableTarget(event.target)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
+      if (event.key === "Escape") {
+        if (filtersOpen) {
+          setFiltersOpen(false);
+          event.preventDefault();
+        } else if (drawerState !== "closed") {
+          closeRadarDrawer();
+          event.preventDefault();
+        }
+        return;
+      }
+      if (isEditableTarget(event.target)) return;
       if (event.key === "/") {
         event.preventDefault();
         if (window.matchMedia("(min-width: 821px)").matches && drawerState !== "traffic") {
@@ -1631,18 +1645,12 @@ export function AirRadarApp() {
         } else if (trafficSource === "adsb") {
           setFiltersOpen((current) => !current);
         }
-      } else if (event.key === "Escape") {
-        setFiltersOpen(false);
-        setTrafficOpen(false);
-        setSelectedHex(null);
-        setSelectedOgnId(null);
-        setMobileCompact(true);
       }
     }
 
     window.addEventListener("keydown", handleKeyboardShortcut);
     return () => window.removeEventListener("keydown", handleKeyboardShortcut);
-  }, [drawerState, openTrafficDrawer, trafficSource]);
+  }, [closeRadarDrawer, drawerState, filtersOpen, openTrafficDrawer, trafficSource]);
   const networkStatus = snapshot.sources?.adsbLol.status;
   const networkNotice = activeCoverage === "extended" && networkStatus === "rate_limited"
     ? t.radar.networkRateLimited

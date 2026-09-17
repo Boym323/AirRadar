@@ -115,6 +115,17 @@ export function GlobalSearch() {
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    function closeOnEscape(event: KeyboardEvent): void {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      setOpen(false);
+      event.preventDefault();
+    }
+    window.addEventListener("keydown", closeOnEscape, true);
+    return () => window.removeEventListener("keydown", closeOnEscape, true);
+  }, [open]);
+
   function selectItem(item: SearchItem) {
     setOpen(false);
     router.push(item.kind === "aircraft"
