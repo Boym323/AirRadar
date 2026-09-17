@@ -509,6 +509,7 @@ export function AirRadarApp() {
     atsPoints: createMapDatasetReplay<FeatureCollection>(() => mapRef.current?.getSource("ats-route-points") as GeoJSONSource | undefined),
   });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const focusSearchOnTrafficOpenRef = useRef(false);
   const sigmetGenerationRef = useRef(0);
   const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
   const activeCoverage: CoverageMode = networkEnabled ? coverage : "local";
@@ -720,9 +721,13 @@ export function AirRadarApp() {
     setMobileCompact(false);
     setFiltersOpen(false);
     if (shortcut === "search") {
+      focusSearchOnTrafficOpenRef.current = true;
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
-          if (actionGeneration === drawerActionGenerationRef.current) searchInputRef.current?.focus();
+          if (actionGeneration === drawerActionGenerationRef.current) {
+            searchInputRef.current?.focus();
+            if (searchInputRef.current) focusSearchOnTrafficOpenRef.current = false;
+          }
         });
       });
     } else if (shortcut === "filters" && trafficSource === "adsb") {
@@ -1585,6 +1590,16 @@ export function AirRadarApp() {
       if (trigger?.getClientRects().length && !trigger.disabled) trigger.focus();
     }
     previousDrawerStateRef.current = drawerState;
+  }, [drawerState]);
+  useEffect(() => {
+    if (drawerState !== "traffic" || !focusSearchOnTrafficOpenRef.current) return;
+    const focusSearch = window.setTimeout(() => {
+      if (drawerState === "traffic" && searchInputRef.current) {
+        searchInputRef.current.focus();
+        focusSearchOnTrafficOpenRef.current = false;
+      }
+    }, 0);
+    return () => window.clearTimeout(focusSearch);
   }, [drawerState]);
   useEffect(() => {
     function isEditableTarget(target: EventTarget | null): boolean {
