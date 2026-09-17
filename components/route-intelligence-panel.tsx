@@ -24,6 +24,7 @@ function statusLabel(status: RouteIntelligenceViewDTO["status"]): string {
     case "PARTIAL": return t.routeIntelligence.partial;
     case "UNRESOLVED": return t.routeIntelligence.unresolved;
     case "NO_ROUTE": return t.routeIntelligence.noRoute;
+    default: return t.routeIntelligence.unknown;
   }
 }
 
@@ -34,6 +35,7 @@ function phaseLabel(phase: RoutePhase): string {
     case "STAR": return t.routeIntelligence.star;
     case "CONNECTOR": return t.routeIntelligence.connector;
     case "UNKNOWN": return t.routeIntelligence.unknown;
+    default: return t.routeIntelligence.unknown;
   }
 }
 
@@ -43,6 +45,7 @@ function adherenceLabel(adherence: RouteAdherence): string {
     case "NEAR_ROUTE": return t.routeIntelligence.nearRoute;
     case "OFF_ROUTE": return t.routeIntelligence.offRoute;
     case "UNKNOWN": return t.routeIntelligence.unknown;
+    default: return t.routeIntelligence.unknown;
   }
 }
 
