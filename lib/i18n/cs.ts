@@ -83,6 +83,8 @@ export const cs = {
     sigmetNotSpecified: "neuvedena",
     sigmetValidity: "Platnost",
     atsRoutes: "ATS tratě",
+    sids: "SID",
+    stars: "STAR",
     atsRoutesUnavailable: "ATS tratě nejsou dostupné",
     reconnecting: "obnovuje se spojení",
     unavailable: "nedostupné",
