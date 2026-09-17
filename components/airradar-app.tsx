@@ -490,6 +490,7 @@ export function AirRadarApp() {
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
   const [showOgn, setShowOgn] = useState(false);
+  const ognLoadStartedRef = useRef(false);
   const [trafficSource, setTrafficSource] = useState<TrafficSource>("adsb");
   const [selectedOgnId, setSelectedOgnId] = useState<string | null>(null);
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
@@ -619,6 +620,13 @@ export function AirRadarApp() {
       .then((response) => response.ok ? response.json() as Promise<{ alerts?: PublicAlertStatus }> : null)
       .then((data) => { if (data?.alerts) setServerAlertsEnabled(data.alerts.enabled); })
       .catch(() => undefined);
+  }, []);
+
+  // OGN is a secondary layer. Wait for the first real readsb snapshot so
+  // the primary ADS-B picture wins the initial render race.
+  useEffect(() => {
+    if (snapshot.lastSourceUpdate === null || ognLoadStartedRef.current) return;
+    ognLoadStartedRef.current = true;
     void fetch("/api/ogn/state", { cache: "no-store" })
       .then((response) => response.ok ? response.json() as Promise<OgnStateSnapshot> : null)
       .then((data) => {
@@ -628,7 +636,7 @@ export function AirRadarApp() {
         if (!data.enabled) setShowOgn(false);
       })
       .catch(() => setOgnEnabled(false));
-  }, []);
+  }, [snapshot.lastSourceUpdate]);
 
   useEffect(() => {
     if (ognEnabled !== true && trafficSource === "ogn") setTrafficSource("adsb");
@@ -829,7 +837,7 @@ export function AirRadarApp() {
   }, [selectedHex]);
 
   useEffect(() => {
-    if (ognEnabled !== true) return;
+    if (ognEnabled !== true || snapshot.lastSourceUpdate === null) return;
     let active = true;
     const source = new EventSource("/api/ogn/stream");
     const onSnapshot = (event: Event) => {
@@ -846,7 +854,7 @@ export function AirRadarApp() {
       source.removeEventListener("snapshot", onSnapshot);
       source.close();
     };
-  }, [ognEnabled]);
+  }, [ognEnabled, snapshot.lastSourceUpdate]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
