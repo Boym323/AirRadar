@@ -62,3 +62,23 @@ A material mismatch fails the sync instead of emitting guessed geometry.
 
 This phase intentionally adds no map layer or public API. Those belong to
 v1.5B, which can consume this file without changing the PostgreSQL schema.
+
+## Terminal procedures
+
+SID/STAR data is intentionally not mixed into the ATS route document. The
+procedure pipeline is owned by `lib/procedures` and uses the shared V2
+contracts from `lib/route-intelligence/contracts.ts`:
+
+```text
+official CZ/SK/AT AD 2 eAIP → procedures:sync → parse → validate
+→ data/procedures/generated/procedures.json → ProcedureRepository
+```
+
+Run `npm run procedures:sync -- --dry-run` to validate a current official
+publication without writing. Use `--country=CZ,SK,AT` and/or
+`--airport=LKPR,LZIB,LOWW` to bound a sync. The generated file is the only
+runtime source; failures are fail-safe and preserve the previous file.
+
+The parser accepts machine-readable eAIP/native text rows and explicit
+discontinuities. Missing coordinates remain partial geometry. It never OCRs a
+diagram or treats an unverified dataset as production navigation data.

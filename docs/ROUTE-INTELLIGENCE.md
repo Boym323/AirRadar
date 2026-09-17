@@ -85,3 +85,8 @@ ATC clearance, trajectory, or operational activation. International portions
 outside the loaded Czech ATS document remain unresolved gaps. The displayed
 aircraft route source and ATS source/effective date remain separate provenance
 fields.
+
+Terminal procedures are a separate static ingestion boundary. `lib/procedures`
+consumes the shared `Procedure` contracts, and `npm run procedures:sync` produces
+the validated local artifact used by the runtime repository and bounded
+`/api/procedures` lookups. Aircraft display code never fetches an eAIP source.
