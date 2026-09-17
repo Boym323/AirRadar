@@ -721,7 +721,9 @@ export function AirRadarApp() {
     setFiltersOpen(false);
     if (shortcut === "search") {
       window.requestAnimationFrame(() => {
-        if (actionGeneration === drawerActionGenerationRef.current) searchInputRef.current?.focus();
+        window.requestAnimationFrame(() => {
+          if (actionGeneration === drawerActionGenerationRef.current) searchInputRef.current?.focus();
+        });
       });
     } else if (shortcut === "filters" && trafficSource === "adsb") {
       window.requestAnimationFrame(() => {
