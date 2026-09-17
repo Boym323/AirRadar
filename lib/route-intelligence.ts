@@ -3,7 +3,10 @@ import {
   DEFAULT_MAX_XTRACK_NM,
   analyzePublishedRoute as analyzePublishedRouteBase,
   analyzePublishedRouteStatic as analyzePublishedRouteStaticBase,
+  analyzeRouteIntelligenceV2,
+  analyzeRouteV2,
   clearRouteIntelligenceCache as clearRouteIntelligenceCacheBase,
+  interpretFiledRoute,
   tokenizeRoute,
 } from "./route-intelligence/index";
 import type {
@@ -15,9 +18,11 @@ import type {
   RouteIntelligenceResult,
   RouteToken,
   RouteTokenType,
+  RouteIntelligenceV2Options,
 } from "./route-intelligence/index";
 
 export { DEFAULT_MAX_XTRACK_NM, tokenizeRoute };
+export { analyzeRouteIntelligenceV2, analyzeRouteV2, interpretFiledRoute };
 export type {
   AircraftPositionInput,
   AircraftRouteInput,
@@ -27,12 +32,13 @@ export type {
   RouteIntelligenceResult,
   RouteToken,
   RouteTokenType,
+  RouteIntelligenceV2Options,
 };
 export type * from "./route-intelligence/contracts";
 export { createRunwayContext, hasRunwayConflict } from "./route-intelligence/contracts";
 
-type AnalyzeOptions = Parameters<typeof analyzePublishedRouteBase>[0];
-type StaticAnalyzeOptions = Parameters<typeof analyzePublishedRouteStaticBase>[0];
+type AnalyzeOptions = Parameters<typeof analyzePublishedRouteBase>[0] & Omit<RouteIntelligenceV2Options, "aircraftRoute" | "atsNetwork">;
+type StaticAnalyzeOptions = Parameters<typeof analyzePublishedRouteStaticBase>[0] & Omit<RouteIntelligenceV2Options, "aircraftRoute" | "atsNetwork">;
 
 type AtsRoutesApiResponse = {
   available?: boolean;
@@ -142,10 +148,12 @@ function correctSegmentProgress(
 function analyzeWithNetwork(options: AnalyzeOptions, network: RouteIntelligenceNetwork | null): RouteIntelligenceResult {
   const result = analyzePublishedRouteBase({ ...options, atsNetwork: network });
   const corrected = correctSegmentProgress(withRequestSource(result, options.aircraftRoute), options.aircraftPosition, network);
+  const v2 = analyzeRouteIntelligenceV2({ ...options, atsNetwork: network });
   // Never expose the base engine's cached result object directly: the client-side
   // ATS loader upgrades pending results in place once the dataset arrives.
   return {
     ...corrected,
+    v2,
     source: { ...corrected.source },
     progress: { ...corrected.progress },
   };
@@ -209,10 +217,11 @@ export function ensureRouteIntelligenceAtsNetwork(): Promise<RouteIntelligenceNe
 export function analyzePublishedRouteStatic(options: StaticAnalyzeOptions): RouteIntelligenceResult {
   const network = options.atsNetwork ?? clientAtsNetwork;
   if (!network && canLoadClientAtsNetwork()) void ensureRouteIntelligenceAtsNetwork();
-  return withRequestSource(
+  const result = withRequestSource(
     analyzePublishedRouteStaticBase({ ...options, atsNetwork: network }),
     options.aircraftRoute,
   );
+  return { ...result, v2: analyzeRouteIntelligenceV2({ ...options, atsNetwork: network }) };
 }
 
 export function analyzePublishedRoute(options: AnalyzeOptions): RouteIntelligenceResult {
