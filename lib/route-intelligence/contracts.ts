@@ -87,6 +87,8 @@ export interface Procedure {
   legs: ProcedureLeg[];
   discontinuities: ProcedureDiscontinuity[];
   source: ProcedureSource;
+  /** Published notes that do not belong to an individual leg. */
+  remarks?: string | null;
 }
 
 export type RoutePhase = "SID" | "EN_ROUTE" | "STAR" | "CONNECTOR" | "UNKNOWN";
