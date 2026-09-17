@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
+import type { FeatureCollection } from "geojson";
 import {
   formatAge,
   formatAltitude,
@@ -92,7 +93,7 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
 const EMPTY_SIGMET_DATA: SigmetSnapshot = { type: "FeatureCollection", features: [], fetchedAt: new Date(0).toISOString(), stale: false };
 const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled", fetchedAt: new Date(0).toISOString(), targets: [] };
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
-interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; routes?: CzAtsRoute[]; segments?: GeoJSON.FeatureCollection; labels?: GeoJSON.FeatureCollection; points?: GeoJSON.FeatureCollection; }
+interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; routes?: CzAtsRoute[]; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
 
 function parseAirportDataset(value: unknown): value is Airport[] {
   return Array.isArray(value) && value.every((item) => {
@@ -553,15 +554,15 @@ export function AirRadarApp() {
   const [mapReady, setMapReady] = useState(false);
   const airportGeoJsonRef = useRef<ReturnType<typeof createAirportGeoJSON>>(createAirportGeoJSON([]));
   const atcGeoJsonRef = useRef<ReturnType<typeof createAtcGeoJSON>>(createAtcGeoJSON([], false));
-  const transmitterGeoJsonRef = useRef<GeoJSON.FeatureCollection>({ type: "FeatureCollection", features: [] });
-  const atsGeoJsonRef = useRef<{ segments: GeoJSON.FeatureCollection; labels: GeoJSON.FeatureCollection; points: GeoJSON.FeatureCollection }>({ segments: EMPTY_ATS_GEOJSON, labels: EMPTY_ATS_GEOJSON, points: EMPTY_ATS_GEOJSON });
+  const transmitterGeoJsonRef = useRef<FeatureCollection>({ type: "FeatureCollection", features: [] });
+  const atsGeoJsonRef = useRef<{ segments: FeatureCollection; labels: FeatureCollection; points: FeatureCollection }>({ segments: EMPTY_ATS_GEOJSON, labels: EMPTY_ATS_GEOJSON, points: EMPTY_ATS_GEOJSON });
   const mapReplayRef = useRef({
     airports: createMapDatasetReplay<ReturnType<typeof createAirportGeoJSON>>(() => mapRef.current?.getSource("route-airports") as GeoJSONSource | undefined),
     atc: createMapDatasetReplay<ReturnType<typeof createAtcGeoJSON>>(() => mapRef.current?.getSource("atc-sectors") as GeoJSONSource | undefined),
-    transmitters: createMapDatasetReplay<GeoJSON.FeatureCollection>(() => mapRef.current?.getSource("atc-transmitters") as GeoJSONSource | undefined),
-    atsSegments: createMapDatasetReplay<GeoJSON.FeatureCollection>(() => mapRef.current?.getSource("ats-routes") as GeoJSONSource | undefined),
-    atsLabels: createMapDatasetReplay<GeoJSON.FeatureCollection>(() => mapRef.current?.getSource("ats-route-labels") as GeoJSONSource | undefined),
-    atsPoints: createMapDatasetReplay<GeoJSON.FeatureCollection>(() => mapRef.current?.getSource("ats-route-points") as GeoJSONSource | undefined),
+    transmitters: createMapDatasetReplay<FeatureCollection>(() => mapRef.current?.getSource("atc-transmitters") as GeoJSONSource | undefined),
+    atsSegments: createMapDatasetReplay<FeatureCollection>(() => mapRef.current?.getSource("ats-routes") as GeoJSONSource | undefined),
+    atsLabels: createMapDatasetReplay<FeatureCollection>(() => mapRef.current?.getSource("ats-route-labels") as GeoJSONSource | undefined),
+    atsPoints: createMapDatasetReplay<FeatureCollection>(() => mapRef.current?.getSource("ats-route-points") as GeoJSONSource | undefined),
   });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sigmetGenerationRef = useRef(0);
@@ -994,7 +995,7 @@ export function AirRadarApp() {
       map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([]) });
       map.addLayer({ id: "route-airports-circle", type: "circle", source: "route-airports", paint: { "circle-color": "#d2b56f", "circle-opacity": 0.72, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 3, 12, 4.5], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.2 } });
       map.addLayer({ id: "route-airports-label", type: "symbol", source: "route-airports", layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 8, 10, 9, 13, 10], "text-offset": [0, 1.1], "text-padding": 7, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#cfbd8b", "text-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.52, 10, 0.72, 13, 0.82], "text-halo-color": "#08111d", "text-halo-width": 0.7 } });
-      map.addSource("aviation-sigmet", { type: "geojson", data: EMPTY_SIGMET_DATA as unknown as GeoJSON.FeatureCollection });
+      map.addSource("aviation-sigmet", { type: "geojson", data: EMPTY_SIGMET_DATA as unknown as FeatureCollection });
       map.addLayer({ id: "aviation-sigmet-fill", type: "fill", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "fill-color": "#f3b95f", "fill-opacity": 0.08 } });
       map.addLayer({ id: "aviation-sigmet-line", type: "line", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "line-color": "#f3b95f", "line-opacity": 0.68, "line-width": 1.2 } });
       map.on("click", "aviation-sigmet-fill", (event: MapLayerMouseEvent) => {
@@ -1084,9 +1085,9 @@ export function AirRadarApp() {
       // Dataset fetches and map construction are independent lifecycles. The
       // refs retain the newest payload so a dataset that arrived before the
       // map load is applied to this map instance as soon as its sources exist.
-      (map.getSource("ats-routes") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.segments as GeoJSON.FeatureCollection);
-      (map.getSource("ats-route-labels") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.labels as GeoJSON.FeatureCollection);
-      (map.getSource("ats-route-points") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.points as GeoJSON.FeatureCollection);
+      (map.getSource("ats-routes") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.segments as FeatureCollection);
+      (map.getSource("ats-route-labels") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.labels as FeatureCollection);
+      (map.getSource("ats-route-points") as GeoJSONSource | undefined)?.setData(atsGeoJsonRef.current.points as FeatureCollection);
       (map.getSource("atc-sectors") as GeoJSONSource | undefined)?.setData(atcGeoJsonRef.current);
       (map.getSource("atc-transmitters") as GeoJSONSource | undefined)?.setData(transmitterGeoJsonRef.current);
       (map.getSource("route-airports") as GeoJSONSource | undefined)?.setData(airportGeoJsonRef.current);
@@ -1153,7 +1154,7 @@ export function AirRadarApp() {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     const source = map.getSource("aviation-sigmet") as GeoJSONSource | undefined;
-    source?.setData(sigmetData as unknown as GeoJSON.FeatureCollection);
+    source?.setData(sigmetData as unknown as FeatureCollection);
     for (const layer of ["aviation-sigmet-fill", "aviation-sigmet-line"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showSigmet && sigmetEnabled === true ? "visible" : "none");
     }
@@ -1438,14 +1439,14 @@ export function AirRadarApp() {
       ? { segments: atsRoutes.segments, labels: atsRoutes.labels, points: atsRoutes.points }
       : { segments: EMPTY_ATS_GEOJSON, labels: EMPTY_ATS_GEOJSON, points: EMPTY_ATS_GEOJSON };
     atsGeoJsonRef.current = geojson;
-    mapReplayRef.current.atsSegments.setData(geojson.segments as GeoJSON.FeatureCollection);
-    mapReplayRef.current.atsLabels.setData(geojson.labels as GeoJSON.FeatureCollection);
-    mapReplayRef.current.atsPoints.setData(geojson.points as GeoJSON.FeatureCollection);
+    mapReplayRef.current.atsSegments.setData(geojson.segments as FeatureCollection);
+    mapReplayRef.current.atsLabels.setData(geojson.labels as FeatureCollection);
+    mapReplayRef.current.atsPoints.setData(geojson.points as FeatureCollection);
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    (map.getSource("ats-routes") as GeoJSONSource | undefined)?.setData(geojson.segments as GeoJSON.FeatureCollection);
-    (map.getSource("ats-route-labels") as GeoJSONSource | undefined)?.setData(geojson.labels as GeoJSON.FeatureCollection);
-    (map.getSource("ats-route-points") as GeoJSONSource | undefined)?.setData(geojson.points as GeoJSON.FeatureCollection);
+    (map.getSource("ats-routes") as GeoJSONSource | undefined)?.setData(geojson.segments as FeatureCollection);
+    (map.getSource("ats-route-labels") as GeoJSONSource | undefined)?.setData(geojson.labels as FeatureCollection);
+    (map.getSource("ats-route-points") as GeoJSONSource | undefined)?.setData(geojson.points as FeatureCollection);
     if (map.getLayer("ats-routes-selected")) map.setFilter("ats-routes-selected", ["==", ["get", "routeDesignator"], selectedAtsRoute ?? ""]);
     for (const layer of ["ats-routes-line", "ats-routes-cdr", "ats-routes-selected", "ats-route-labels", "ats-route-points", "ats-route-points-label"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visible ? "visible" : "none");
@@ -1478,7 +1479,7 @@ export function AirRadarApp() {
   useEffect(() => {
     const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
     const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc, airspaceActivity);
-    const transmitterGeoJson: GeoJSON.FeatureCollection = {
+    const transmitterGeoJson: FeatureCollection = {
       type: "FeatureCollection",
       features: showAtc ? atcData.transmitters.map((transmitter) => ({
         type: "Feature" as const,
