@@ -64,7 +64,6 @@ import {
 import { analyzePublishedRoute, toRouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
-import type { Procedure } from "@/lib/route-intelligence";
 import { LogbookSummary } from "@/components/logbook-summary";
 import { IntelligenceFeed } from "@/components/intelligence-feed";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
