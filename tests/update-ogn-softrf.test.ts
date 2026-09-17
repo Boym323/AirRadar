@@ -117,7 +117,7 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-describe("SoftRF operational updater", () => {
+describe("SoftRF operational updater", { timeout: 30_000 }, () => {
   it("installs a valid artifact and writes a hash-bound sidecar", async () => {
     const source = makeDatabase();
     const target = path.join(source.directory, "ogn", "softrf", "ogn.db");

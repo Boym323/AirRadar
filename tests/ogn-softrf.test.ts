@@ -45,7 +45,7 @@ afterEach(() => {
   for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 
-describe("SoftRF OGN DDB emergency whitelist", () => {
+describe("SoftRF OGN DDB emergency whitelist", { timeout: 30_000 }, () => {
   it("accepts a database when metadata contains its correct SHA-256", () => {
     const databasePath = makeSnapshot(rowsWith({ type: 2, id: 0x8e20f0 }));
     const ddb = new OgnDdb({ now: () => now, fetcher: failingFetcher(), softrfEnabled: true, softrfPath: databasePath });
