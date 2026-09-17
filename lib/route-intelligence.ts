@@ -35,7 +35,7 @@ export type {
   RouteIntelligenceV2Options,
 };
 export type * from "./route-intelligence/contracts";
-export { createRunwayContext, hasRunwayConflict } from "./route-intelligence/contracts";
+export { createRunwayContext, hasRunwayConflict, normalizeRunwayDesignator } from "./route-intelligence/contracts";
 export {
   analyzeDynamicRoute,
   analyzeDynamicRouteState,
@@ -53,6 +53,15 @@ export type {
   ObservedProcedureMatch,
   RouteAirportContext,
 } from "./route-intelligence/dynamic";
+export {
+  compareProcedureRunwayApplicability,
+  inferRunwayFromGeometry,
+  resolveArrivalRunwayContext,
+  resolveDepartureRunwayContext,
+  type RunwayContextResolverInput,
+  type RunwayInferenceAirport,
+  type RunwayInferencePosition,
+} from "./route-intelligence/runway-context";
 
 type AnalyzeOptions = Parameters<typeof analyzePublishedRouteBase>[0] & Omit<RouteIntelligenceV2Options, "aircraftRoute" | "atsNetwork">;
 type StaticAnalyzeOptions = Parameters<typeof analyzePublishedRouteStaticBase>[0] & Omit<RouteIntelligenceV2Options, "aircraftRoute" | "atsNetwork">;

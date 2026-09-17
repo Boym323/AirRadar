@@ -1,7 +1,10 @@
 import "temporal-polyfill/full/global";
+import type { FlightPlan } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
 import type { AirportInfrastructure, AirportRunway } from "@/lib/airports/infrastructure";
 import { haversineDistanceKm } from "@/lib/geo";
+import { resolveArrivalRunwayContext, resolveDepartureRunwayContext } from "@/lib/route-intelligence/runway-context";
+import type { RunwayContext } from "@/lib/route-intelligence/contracts";
 import { getPrisma } from "@/lib/server/db";
 import { getAppTimezone } from "@/lib/server/config";
 
@@ -25,11 +28,13 @@ export interface MovementFlight {
   callsign: string | null;
   registration: string | null;
   positions: MovementPosition[];
+  /** Optional on-demand provider enrichment; absent for sampled history. */
+  flightPlan?: FlightPlan | null;
 }
 
 export interface ProbableRunway {
   designator: string;
-  status: "probable";
+  status: "probable" | "reported";
   confidence: MovementConfidence;
 }
 
@@ -42,6 +47,8 @@ export interface AirportMovement {
   confidence: MovementConfidence;
   airport: string;
   runway: ProbableRunway | null;
+  /** Runway evidence is retained separately from the legacy display runway. */
+  runwayContext?: RunwayContext;
   observedAt: string;
   evidence: string[];
 }
@@ -147,10 +154,6 @@ function periodStart(period: AirportMovementPeriod, now: Date): Date {
   return new Date(now.getTime() - duration * 24 * 60 * 60_000);
 }
 
-function angularDifference(a: number, b: number): number {
-  return Math.abs(((a - b + 540) % 360) - 180);
-}
-
 function finite(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -166,40 +169,6 @@ function distanceToAirport(position: MovementPosition, airport: MovementAirport)
 
 function relativeAltitude(position: MovementPosition, airport: MovementAirport): number | null {
   return finite(position.altitude) ? position.altitude - (airport.elevationFt ?? 0) : null;
-}
-
-function runwayEnds(runway: AirportRunway): Array<{ designator: string; lat: number; lon: number; heading: number | null }> {
-  return [
-    runway.leIdent && finite(runway.leLatitude) && finite(runway.leLongitude) ? { designator: runway.leIdent, lat: runway.leLatitude, lon: runway.leLongitude, heading: runway.leHeadingDegT } : null,
-    runway.heIdent && finite(runway.heLatitude) && finite(runway.heLongitude) ? { designator: runway.heIdent, lat: runway.heLatitude, lon: runway.heLongitude, heading: runway.heHeadingDegT } : null,
-  ].filter((value): value is { designator: string; lat: number; lon: number; heading: number | null } => value !== null);
-}
-
-function inferRunway(
-  movement: AirportMovementKind,
-  positions: MovementPosition[],
-  airport: MovementAirport,
-  runways: readonly AirportRunway[],
-  confidence: MovementConfidence,
-): ProbableRunway | null {
-  if (movement === "OVERFLIGHT") return null;
-  const candidates = runways
-    .filter((runway) => runway.closed !== true)
-    .flatMap(runwayEnds)
-    .map((end) => {
-      const thresholdDistance = Math.min(...positions.map((position) => haversineDistanceKm(position.lat, position.lon, end.lat, end.lon)));
-      const trackPosition = movement === "TAKEOFF" || movement === "DEPARTURE" ? positions[0] : positions.at(-1);
-      const track = trackPosition?.track;
-      const headingScore = finite(track) && finite(end.heading) ? Math.max(0, 30 - angularDifference(track, end.heading)) / 3 : 0;
-      const thresholdScore = Math.max(0, THRESHOLD_RADIUS_KM - thresholdDistance);
-      return { end, score: headingScore + thresholdScore, thresholdDistance };
-    })
-    .sort((a, b) => b.score - a.score || a.end.designator.localeCompare(b.end.designator, undefined, { numeric: true }));
-  const best = candidates[0];
-  if (!best || best.score < 4 || best.thresholdDistance > THRESHOLD_RADIUS_KM) return null;
-  const second = candidates[1];
-  if (second && best.score - second.score < 1.2) return null;
-  return { designator: best.end.designator, status: "probable", confidence };
 }
 
 /** Deterministic, explainable classifier. It describes receiver observations, not official airport movements. */
@@ -259,8 +228,16 @@ export function analyzeAirportMovement(
   } else {
     return null;
   }
-  const runway = inferRunway(movement, positions, airport, runways, confidence === "high" ? "medium" : "low");
-  if (runway) evidence = [...evidence, `track and threshold geometry favor runway ${runway.designator}`];
+  const runwayContext = movement === "OVERFLIGHT"
+    ? resolveArrivalRunwayContext({ positions, airport, runways: [] })
+    : movement === "TAKEOFF" || movement === "DEPARTURE"
+      ? resolveDepartureRunwayContext({ positions, airport, runways, flightPlan: flight.flightPlan, inferredConfidence: confidence === "high" ? "MEDIUM" : "LOW" })
+      : resolveArrivalRunwayContext({ positions, airport, runways, flightPlan: flight.flightPlan, inferredConfidence: confidence === "high" ? "MEDIUM" : "LOW" });
+  const runway = runwayContext.effectiveRunway
+    ? { designator: runwayContext.effectiveRunway, status: runwayContext.status === "REPORTED" ? "reported" as const : "probable" as const, confidence }
+    : null;
+  if (runwayContext.inferredRunway) evidence = [...evidence, `track and threshold geometry favor runway ${runwayContext.inferredRunway}`];
+  if (runwayContext.reportedRunway) evidence = [...evidence, `provider reported runway ${runwayContext.reportedRunway}`];
   if (movement === "APPROACH" && minIndex < positions.length - 1 && lastDistance > minDistance + 2) evidence = [...evidence, "trajectory moved away before touchdown was observed"];
   return {
     flightId: flight.id,
@@ -271,6 +248,7 @@ export function analyzeAirportMovement(
     confidence,
     airport: airport.icaoCode.trim().toUpperCase(),
     runway,
+    runwayContext,
     observedAt: isoTimestamp(last.recordedAt),
     evidence,
   };

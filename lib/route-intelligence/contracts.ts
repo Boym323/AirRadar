@@ -87,6 +87,8 @@ export interface Procedure {
   legs: ProcedureLeg[];
   discontinuities: ProcedureDiscontinuity[];
   source: ProcedureSource;
+  /** Published notes that do not belong to an individual leg. */
+  remarks?: string | null;
 }
 
 export type RoutePhase = "DEPARTURE" | "SID" | "ENROUTE" | "EN_ROUTE" | "STAR" | "ARRIVAL" | "CONNECTOR" | "UNKNOWN";
@@ -216,27 +218,56 @@ export interface ProcedureMatch {
 
 export type RunwayContextStatus = "REPORTED" | "INFERRED" | "UNKNOWN";
 
+export type RunwayContextSource = "FLIGHTAWARE" | "AIRPORT_GEOMETRY" | "MULTIPLE" | "UNKNOWN";
+export type RunwayContextConfidence = "HIGH" | "MEDIUM" | "LOW";
+
 /** Reported and inferred values are independent; neither may overwrite the other. */
 export interface RunwayContext {
   reportedRunway: string | null;
   inferredRunway: string | null;
   status: RunwayContextStatus;
   conflict: boolean;
+  /** Optional V2 metadata; omitted by older producers for compatibility. */
+  effectiveRunway?: string | null;
+  /** The safe display interpretation; conflicts retain both values. */
+  displayRunway?: string | null;
+  source?: RunwayContextSource;
+  confidence?: RunwayContextConfidence | null;
 }
 
 export interface RunwayContextInput {
   reportedRunway?: string | null;
   inferredRunway?: string | null;
+  source?: RunwayContextSource;
+  confidence?: RunwayContextConfidence | null;
+}
+
+/** Normalize the standard runway designator while rejecting malformed values. */
+export function normalizeRunwayDesignator(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const cleaned = value.trim().toUpperCase().replace(/^(?:RWY|RUNWAY)\s*/, "").replace(/\s+/g, "");
+  const match = /^(\d{1,3})([LCR])?$/.exec(cleaned);
+  if (!match) return null;
+  const number = Number(match[1]);
+  if (!Number.isInteger(number) || number < 1 || number > 36) return null;
+  return `${String(number).padStart(2, "0")}${match[2] ?? ""}`;
 }
 
 export function createRunwayContext(input: RunwayContextInput = {}): RunwayContext {
-  const reportedRunway = input.reportedRunway?.trim().toUpperCase() || null;
-  const inferredRunway = input.inferredRunway?.trim().toUpperCase() || null;
+  const reportedRunway = normalizeRunwayDesignator(input.reportedRunway);
+  const inferredRunway = normalizeRunwayDesignator(input.inferredRunway);
+  const conflict = Boolean(reportedRunway && inferredRunway && reportedRunway !== inferredRunway);
+  const effectiveRunway = conflict ? null : reportedRunway ?? inferredRunway;
+  const source = input.source ?? (reportedRunway && inferredRunway ? "MULTIPLE" : reportedRunway ? "FLIGHTAWARE" : inferredRunway ? "AIRPORT_GEOMETRY" : "UNKNOWN");
   return {
     reportedRunway,
     inferredRunway,
     status: reportedRunway ? "REPORTED" : inferredRunway ? "INFERRED" : "UNKNOWN",
-    conflict: Boolean(reportedRunway && inferredRunway && reportedRunway !== inferredRunway),
+    conflict,
+    effectiveRunway,
+    displayRunway: conflict ? `${reportedRunway} / ${inferredRunway}` : effectiveRunway,
+    source,
+    confidence: input.confidence ?? null,
   };
 }
 
