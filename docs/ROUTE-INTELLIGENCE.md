@@ -6,6 +6,9 @@ available aircraft route metadata against the published ATS network. It is not
 an ATC clearance and must not be interpreted as current operational airway
 availability.
 
+The forward-compatible V2 domain contracts are documented in
+[ROUTE-INTELLIGENCE-V2-CONTRACTS.md](ROUTE-INTELLIGENCE-V2-CONTRACTS.md).
+
 ## Sources and boundaries
 
 The aircraft side uses the existing enrichment only:
@@ -82,4 +85,3 @@ ATC clearance, trajectory, or operational activation. International portions
 outside the loaded Czech ATS document remain unresolved gaps. The displayed
 aircraft route source and ATS source/effective date remain separate provenance
 fields.
-

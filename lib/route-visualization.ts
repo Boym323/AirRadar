@@ -1,5 +1,8 @@
 import type { FlightRoute } from "@/lib/aircraft/types";
 import type { Airport } from "@/lib/airports/types";
+import type { RouteCoordinate } from "@/lib/route-intelligence/contracts";
+
+export type { RouteCoordinate } from "@/lib/route-intelligence/contracts";
 
 /** MapLibre namespace owned by Route Visualization V2. */
 export const ROUTE_V2_SOURCE_ID = "selected-route-v2";
@@ -14,11 +17,6 @@ export const ROUTE_INTELLIGENCE_CURRENT_LAYER_ID = "ats-route-intelligence-curre
 export const ROUTE_INTELLIGENCE_REMAINING_LAYER_ID = "ats-route-intelligence-remaining";
 
 export const MAX_ROUTE_POINTS_PER_SEGMENT = 64;
-
-export interface RouteCoordinate {
-  lat: number;
-  lon: number;
-}
 
 interface RouteAirportFeature {
   type: "Feature";
