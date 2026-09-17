@@ -58,8 +58,10 @@ import {
   ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID,
   ROUTE_INTELLIGENCE_CURRENT_LAYER_ID,
   ROUTE_INTELLIGENCE_REMAINING_LAYER_ID,
+  ROUTE_INTELLIGENCE_SOURCE_ID,
+  createRouteIntelligenceGeoJSON,
 } from "@/lib/route-visualization";
-import { analyzePublishedRoute } from "@/lib/route-intelligence";
+import { analyzePublishedRoute, toRouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
@@ -892,9 +894,11 @@ export function AirRadarApp() {
       map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": "#f3b95f", "line-opacity": 0.95, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.5, 8, 2.4, 13, 3.6], "line-dasharray": [2, 2] } });
       map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": "#ffe08a", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
       map.addLayer({ id: "ats-route-context-highlight", type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": "#fff0a6", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 4.5, 13, 7] } });
-      map.addLayer({ id: ROUTE_INTELLIGENCE_REMAINING_LAYER_ID, type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__route-intelligence-none__"], layout: { visibility: "none" }, paint: { "line-color": "#8bb9c8", "line-opacity": 0.8, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5], "line-dasharray": [1, 2] } });
-      map.addLayer({ id: ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID, type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__route-intelligence-none__"], layout: { visibility: "none" }, paint: { "line-color": "#4e9d91", "line-opacity": 0.78, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
-      map.addLayer({ id: ROUTE_INTELLIGENCE_CURRENT_LAYER_ID, type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__route-intelligence-none__"], layout: { visibility: "none" }, paint: { "line-color": "#fff0a6", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 4, 13, 6] } });
+      map.addSource(ROUTE_INTELLIGENCE_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      const routeIntelligenceLine = (id: string, progress: string, opacity: number, dasharray?: number[]) => map.addLayer({ id, type: "line", source: ROUTE_INTELLIGENCE_SOURCE_ID, filter: ["==", ["get", "progress"], progress], layout: { visibility: "none" }, paint: { "line-color": progress === "current" ? "#fff0a6" : ["match", ["get", "sourceKind"], "PUBLISHED_SID", "#e6b65f", "PUBLISHED_STAR", "#e6b65f", "PUBLISHED_ATS", "#37d6c0", "FILED_DCT", "#70b7ed", "FILED_ROUTE", "#70b7ed", "SCHEMATIC", "#a98be8", "#8bb9c8"], "line-opacity": opacity, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 5], ...(dasharray ? { "line-dasharray": dasharray } : {}) } });
+      routeIntelligenceLine(ROUTE_INTELLIGENCE_REMAINING_LAYER_ID, "remaining", 0.86, [1, 2]);
+      routeIntelligenceLine(ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID, "completed", 0.86);
+      routeIntelligenceLine(ROUTE_INTELLIGENCE_CURRENT_LAYER_ID, "current", 1);
       map.addSource("ats-route-labels", { type: "geojson", data: EMPTY_ATS_GEOJSON });
       map.addLayer({ id: "ats-route-labels", type: "symbol", source: "ats-route-labels", minzoom: 6.5, layout: { visibility: "none", "symbol-placement": "line", "text-field": ["get", "routeDesignator"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-padding": 18, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#c1d4de", "text-halo-color": "#07111d", "text-halo-width": 1.1 } });
       map.addSource("ats-route-points", { type: "geojson", data: EMPTY_ATS_GEOJSON });
@@ -1356,11 +1360,9 @@ export function AirRadarApp() {
 
     const selected = selectedAircraftVisible ? selectedAircraftInSnapshot : undefined;
     const trailSource = map.getSource("selected-trail") as GeoJSONSource | undefined;
-    if (selectedAircraftVisible) {
-      trailSource?.setData(selectedTrailForMap.length > 1
-        ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
-        : { type: "FeatureCollection", features: [] });
-    }
+    trailSource?.setData(selectedAircraftVisible && selectedTrailForMap.length > 1
+      ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
+      : { type: "FeatureCollection", features: [] });
     for (const layer of ["selected-trail-line", ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none");
     }
@@ -1368,14 +1370,12 @@ export function AirRadarApp() {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && showAirports ? "visible" : "none");
     }
     const routeSource = map.getSource(ROUTE_V2_SOURCE_ID) as GeoJSONSource | undefined;
-    if (selectedAircraftVisible) {
-      routeSource?.setData(createRouteGeoJSON(
+    routeSource?.setData(selectedAircraftVisible ? createRouteGeoJSON(
         selected?.enrichment?.route,
         selected && selected.lat !== null && selected.lon !== null ? { lat: selected.lat, lon: selected.lon } : null,
-      ));
-    }
+      ) : { type: "FeatureCollection", features: [] });
     const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
-    if (selectedAircraftVisible) routeAirportSource?.setData(createRouteAirportGeoJSON(selected?.enrichment?.route));
+    routeAirportSource?.setData(selectedAircraftVisible ? createRouteAirportGeoJSON(selected?.enrichment?.route) : createRouteAirportGeoJSON(null));
   }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
@@ -1518,25 +1518,23 @@ export function AirRadarApp() {
     });
   }, [atsRoutes, selectedAircraft]);
 
+  const routeIntelligenceView = useMemo(() => toRouteIntelligenceViewDTO(
+    routeIntelligence,
+    selectedAircraft?.enrichment?.route ?? null,
+  ), [routeIntelligence, selectedAircraft]);
+  const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const result = routeIntelligence;
-    const completed = result?.progress.completedSegmentIds ?? [];
-    const current = result?.progress.currentSegmentId ? [result.progress.currentSegmentId] : [];
-    const remaining = result?.progress.remainingSegmentIds ?? [];
-    const filterFor = (ids: string[]): FilterSpecification => ids.length
-      ? ["in", ["get", "segmentId"], ...ids] as unknown as FilterSpecification
-      : ["==", ["get", "segmentId"], "__route-intelligence-none__"];
-    map.setFilter(ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID, filterFor(completed));
-    map.setFilter(ROUTE_INTELLIGENCE_CURRENT_LAYER_ID, filterFor(current));
-    map.setFilter(ROUTE_INTELLIGENCE_REMAINING_LAYER_ID, filterFor(remaining));
+    const source = map.getSource(ROUTE_INTELLIGENCE_SOURCE_ID) as GeoJSONSource | undefined;
+    source?.setData(createRouteIntelligenceGeoJSON(routeIntelligenceView) as unknown as FeatureCollection);
+    const visible = selectedAircraftVisible && Boolean(routeIntelligenceView?.elements.length);
     for (const layer of [ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID, ROUTE_INTELLIGENCE_CURRENT_LAYER_ID, ROUTE_INTELLIGENCE_REMAINING_LAYER_ID] as const) {
-      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtsRoutes && Boolean(result?.matchedSegments.length) ? "visible" : "none");
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visible ? "visible" : "none");
     }
-  }, [mapReady, routeIntelligence, showAtsRoutes]);
+  }, [mapReady, routeIntelligenceView, selectedAircraftVisible]);
 
-  const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -1879,7 +1877,7 @@ export function AirRadarApp() {
                 databaseAircraft={selectedDatabaseAircraft}
                 historyTrail={selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
                 atcContext={selectedAtcContext}
-                routeIntelligence={routeIntelligence}
+                routeIntelligence={routeIntelligenceView}
                 watchlisted={isWatchlisted(selectedAircraft)}
                 onBack={backToTraffic}
                 onClose={closeRadarDrawer}

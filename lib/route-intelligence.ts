@@ -1,4 +1,5 @@
 import { haversineDistanceKm } from "@/lib/geo";
+import type { FlightRoute } from "@/lib/aircraft/types";
 import {
   DEFAULT_MAX_XTRACK_NM,
   analyzePublishedRoute as analyzePublishedRouteBase,
@@ -16,6 +17,15 @@ import type {
   RouteToken,
   RouteTokenType,
 } from "./route-intelligence/index";
+import type {
+  InterpretedRouteElement,
+  InterpretedRouteGeometry,
+  RouteElementViewDTO,
+  RouteIntelligenceViewDTO,
+  RoutePointViewDTO,
+  RouteElementSourceViewDTO,
+  RouteIntelligenceV2Snapshot,
+} from "./route-intelligence/contracts";
 
 export { DEFAULT_MAX_XTRACK_NM, tokenizeRoute };
 export type {
@@ -28,6 +38,138 @@ export type {
   RouteToken,
   RouteTokenType,
 };
+
+function viewPoint(point: { id: string; name: string; coordinates?: { lat: number; lon: number } | null } | null): RoutePointViewDTO | null {
+  if (!point) return null;
+  return {
+    id: point.id,
+    name: point.name,
+    latitude: point.coordinates?.lat ?? null,
+    longitude: point.coordinates?.lon ?? null,
+  };
+}
+
+function viewSource(source: { kind: RouteElementSourceViewDTO["kind"]; provider: string | null; countryCode: string | null; reference: string | null; procedureId: string | null; effectiveDate: string | null; airacCycle: string | null; amendment: string | null }): RouteElementSourceViewDTO {
+  return { ...source };
+}
+
+function viewElement(element: InterpretedRouteElement): RouteElementViewDTO {
+  const geometry: InterpretedRouteGeometry | null = element.geometry
+    ? { type: element.geometry.type, coordinates: element.geometry.coordinates.map((point) => ({ lat: point.lat, lon: point.lon })) }
+    : null;
+  return {
+    id: element.id,
+    sequence: element.sequence,
+    kind: element.kind,
+    phase: element.phase,
+    label: element.label,
+    from: viewPoint(element.from ? { ...element.from, coordinates: element.from.coordinates } : null),
+    to: viewPoint(element.to ? { ...element.to, coordinates: element.to.coordinates } : null),
+    geometry,
+    source: viewSource(element.source),
+    status: element.status,
+    unresolvedReason: element.unresolvedReason,
+  };
+}
+
+function viewFromSnapshot(snapshot: RouteIntelligenceV2Snapshot): RouteIntelligenceViewDTO {
+  const currentElement = snapshot.dynamic.currentElement ? viewElement(snapshot.dynamic.currentElement) : null;
+  return {
+    routeId: snapshot.route.id,
+    status: snapshot.route.status,
+    currentPhase: snapshot.dynamic.currentPhase,
+    elements: snapshot.route.elements.map(viewElement),
+    currentElement,
+    previousPoint: viewPoint(snapshot.dynamic.previousPoint ? { ...snapshot.dynamic.previousPoint, coordinates: snapshot.dynamic.previousPoint.coordinates } : null),
+    nextPoint: viewPoint(snapshot.dynamic.nextPoint ? { ...snapshot.dynamic.nextPoint, coordinates: snapshot.dynamic.nextPoint.coordinates } : null),
+    distanceToNext: snapshot.dynamic.distanceToNext,
+    crossTrackDeviation: snapshot.dynamic.crossTrackDeviation,
+    routeAdherence: snapshot.dynamic.routeAdherence,
+    completedElementIds: [...snapshot.dynamic.completedElements],
+    remainingElementIds: [...snapshot.dynamic.remainingElements],
+    routeProgress: snapshot.dynamic.routeProgress,
+    coverage: snapshot.route.coverage,
+    procedureMatches: snapshot.route.procedureMatches.map((match) => ({
+      status: match.status,
+      selectedProcedureId: match.selectedProcedureId,
+      candidateCount: match.candidateCount,
+      ambiguous: match.ambiguous,
+      confidence: match.confidence,
+      runwayCompatibility: match.runwayCompatibility,
+    })),
+    runway: snapshot.runway,
+  };
+}
+
+/**
+ * Provides the UI with the shared V2 contract while the legacy matcher is
+ * still the live producer. When Agent A's V2 snapshot is present it is used
+ * without reshaping or duplicating that browser DTO.
+ */
+export function toRouteIntelligenceViewDTO(result: RouteIntelligenceResult | null | undefined, route?: FlightRoute | null): RouteIntelligenceViewDTO | null {
+  if (!result) return null;
+  if (result.v2) return viewFromSnapshot(result.v2);
+
+  const sourceBase: RouteElementSourceViewDTO = {
+    kind: "PUBLISHED_ATS",
+    provider: result.source.atsName,
+    countryCode: null,
+    reference: result.source.atsReference,
+    procedureId: null,
+    effectiveDate: result.source.atsEffectiveDate,
+    airacCycle: null,
+    amendment: null,
+  };
+  const elements: RouteElementViewDTO[] = result.matchedSegments.map((segment, index) => ({
+    id: segment.segmentId,
+    sequence: index + 1,
+    kind: "PUBLISHED_ATS",
+    phase: "EN_ROUTE",
+    label: segment.routeDesignator,
+    from: { id: `${segment.segmentId}:from`, name: segment.fromName, latitude: segment.from[1], longitude: segment.from[0] },
+    to: { id: `${segment.segmentId}:to`, name: segment.toName, latitude: segment.to[1], longitude: segment.to[0] },
+    geometry: { type: "LINE", coordinates: segment.direction === "REVERSE"
+      ? [{ lat: segment.from[1], lon: segment.from[0] }, { lat: segment.to[1], lon: segment.to[0] }]
+      : [{ lat: segment.from[1], lon: segment.from[0] }, { lat: segment.to[1], lon: segment.to[0] }] },
+    source: viewSource(sourceBase),
+    status: "RESOLVED",
+    unresolvedReason: null,
+  }));
+  const currentElement = result.currentSegment ? elements.find((element) => element.id === result.currentSegment?.segmentId) ?? null : null;
+  const matched = elements.length;
+  const percent = result.routeCoveragePercent;
+  const eligibleLegs = percent === null ? 0 : Math.max(matched, Math.round(matched * 100 / Math.max(1, percent)));
+  const completedElementIds = [...result.progress.completedSegmentIds];
+  const remainingElementIds = [...result.progress.remainingSegmentIds];
+  const progress = currentElement || completedElementIds.length || remainingElementIds.length
+    ? (matched > 0 ? completedElementIds.length / matched : null)
+    : null;
+  // The legacy payload has no runway evidence. Do not turn airport metadata
+  // into an inferred runway; V2 runway producers may populate the contract.
+  const inferredRunway = null;
+  return {
+    routeId: `legacy:${route?.callsign ?? "unknown"}`,
+    status: result.status === "MATCHED" ? "RESOLVED" : result.status === "NO_ROUTE" ? "NO_ROUTE" : result.status === "NO_ATS_DATA" ? "UNRESOLVED" : result.status,
+    currentPhase: currentElement?.phase ?? "UNKNOWN",
+    elements,
+    currentElement,
+    previousPoint: result.previousWaypoint ? { id: result.previousWaypoint.pointId, name: result.previousWaypoint.name, latitude: result.previousWaypoint.latitude, longitude: result.previousWaypoint.longitude } : null,
+    nextPoint: result.nextWaypoint ? { id: result.nextWaypoint.pointId, name: result.nextWaypoint.name, latitude: result.nextWaypoint.latitude, longitude: result.nextWaypoint.longitude } : null,
+    distanceToNext: result.distanceToNextWaypointNm,
+    crossTrackDeviation: result.crossTrackDeviationNm,
+    routeAdherence: result.crossTrackDeviationNm === null ? "UNKNOWN" : result.crossTrackDeviationNm <= 2 ? "ON_ROUTE" : result.crossTrackDeviationNm <= 10 ? "NEAR_ROUTE" : "OFF_ROUTE",
+    completedElementIds,
+    remainingElementIds,
+    routeProgress: progress,
+    coverage: {
+      ats: { eligibleLegs, matchedLegs: result.matchedSegments.length, percent },
+      reconstruction: { totalElements: elements.length, resolvedElements: elements.length, percent: elements.length ? 100 : null },
+      progress: matched ? { totalElements: matched, completedElements: completedElementIds.length, percent: progress === null ? null : Math.round(progress * 100) } : null,
+    },
+    procedureMatches: [],
+    runway: { reportedRunway: null, inferredRunway, status: inferredRunway ? "INFERRED" : "UNKNOWN", conflict: false },
+  };
+}
 export type * from "./route-intelligence/contracts";
 export { createRunwayContext, hasRunwayConflict } from "./route-intelligence/contracts";
 
