@@ -320,10 +320,32 @@ async function assertBrowserSmoke() {
           }),
         });
       });
-      await page.route("**/api/aircraft/*?coverage=local", (route) => route.fulfill({
+      await page.route(/\/api\/aircraft\/[^/]+(?:\?.*)?$/, (route) => route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ aircraft: null, recentFlights: [], historySummary: { range: "30d", flightCount: 0, activeDays: 0, firstSeenAt: null, lastSeenAt: null, topCallsigns: [], topRoutes: [], topOrigin: null, topDestination: null }, lifetimeStats: { firstObservedAt: null, lastObservedAt: null, flightCount: 0, activeDays: 0, topCallsigns: [], topOrigins: [], topDestinations: [], topRoutes: [], returningGapDays: null }, logbook: { isNew: false, isRare: false, isReturning: false, returningGapDays: null } }),
+        body: JSON.stringify({
+          aircraft: { icaoHex: "ABC123", registration: "OK-ABC", registrationCountry: "Czech Republic", registrationCountryCode: "CZ", aircraftType: "A320", manufacturer: "Airbus", model: "A320-214", operator: "Fixture Air" },
+          liveEnrichment: {
+            metadata: { registration: "OK-ABC", registrationCountry: "Czech Republic", registrationCountryCode: "CZ", aircraftType: "A320", icaoTypeCode: "A320", aircraftDescription: "Airbus A320-214", operator: "Fixture Air", manufacturer: "Airbus", source: "browser fixture", retrievedAt: "2026-09-12T00:00:00.000Z" },
+            route: {
+              callsign: "FIX123", airline: "Fixture Air", airlineIcao: "FIX", airlineIata: "FX", origin: "LKPR", destination: "LZIB", source: "browser fixture", retrievedAt: "2026-09-12T00:00:00.000Z",
+              originAirport: { icaoCode: "LKPR", iataCode: "PRG", name: "Prague fixture airport", city: "Prague", country: "CZ", latitude: 50.1, longitude: 14.3 },
+              destinationAirport: { icaoCode: "LZIB", iataCode: "BTS", name: "Bratislava fixture airport", city: "Bratislava", country: "SK", latitude: 48.17, longitude: 17.21 },
+            },
+          },
+        }),
+      }));
+      await page.route(/\/api\/weather\/airport\?icao=.*/, (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          enabled: true,
+          available: true,
+          airports: [
+            { airport: { icaoCode: "LKPR", iataCode: "PRG", name: "Prague fixture airport", city: "Prague", country: "CZ", latitude: 50.1, longitude: 14.3 }, metar: { flightCategory: "VFR", windDirectionDeg: 240, windSpeedKt: 8, windVariable: false, windCalm: false, windGustKt: null, visibilityMeters: 10_000, visibilityGreaterThan: false, visibilityLessThan: false, temperatureC: 18, dewpointC: 10, altimeterHpa: 1013, clouds: [], cavok: true, weather: [], rawText: null, observedAt: "2026-09-12T00:00:00.000Z", observationTime: "2026-09-12T00:00:00.000Z" }, taf: null, stale: false },
+            { airport: { icaoCode: "LZIB", iataCode: "BTS", name: "Bratislava fixture airport", city: "Bratislava", country: "SK", latitude: 48.17, longitude: 17.21 }, metar: { flightCategory: "VFR", windDirectionDeg: 270, windSpeedKt: 5, windVariable: false, windCalm: false, windGustKt: null, visibilityMeters: 10_000, visibilityGreaterThan: false, visibilityLessThan: false, temperatureC: 20, dewpointC: 11, altimeterHpa: 1012, clouds: [], cavok: true, weather: [], rawText: null, observedAt: "2026-09-12T00:00:00.000Z", observationTime: "2026-09-12T00:00:00.000Z" }, taf: null, stale: false },
+          ],
+        }),
       }));
       await page.route("**/api/aircraft/*/context", (route) => route.fulfill({
         status: 200,
@@ -388,7 +410,7 @@ async function assertBrowserSmoke() {
         if (await trafficTrigger.getAttribute("aria-expanded") !== "false" || !await sidebar.evaluate((element) => element.classList.contains("drawer-closed"))) {
           throw new Error(`Desktop radar drawer is not closed initially at ${viewport.width}px`);
         }
-        await page.evaluate(() => document.body.focus());
+        await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); });
         await page.keyboard.press("/");
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
         await page.waitForFunction(() => document.activeElement?.classList.contains("search-input"));
@@ -438,6 +460,36 @@ async function assertBrowserSmoke() {
         await sidebar.locator(".aircraft-row").first().evaluate((element) => element.click());
         await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
         await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
+        const quickDetail = sidebar.getByTestId("aircraft-quick-detail");
+        await quickDetail.waitFor({ state: "visible" });
+        await quickDetail.locator(".aircraft-quick-atc").waitFor({ state: "visible" });
+        await quickDetail.locator(".route-weather-summary").first().waitFor({ state: "visible" });
+        const quickContract = await quickDetail.evaluate((element) => ({
+          order: [...element.children].map((child) => child.className),
+          liveMetricGrids: element.querySelectorAll(".aircraft-quick-metrics").length,
+          technicalOpen: element.querySelector(".aircraft-quick-advanced")?.hasAttribute("open") ?? false,
+          fullDetailHref: element.querySelector("a[href^='/aircraft/']")?.getAttribute("href") ?? null,
+          atcPrimary: Boolean(element.querySelector(".aircraft-quick-atc-primary")),
+        }));
+        const expectedQuickOrder = [
+          "aircraft-quick-header",
+          "aircraft-quick-section aircraft-quick-route",
+          "aircraft-quick-section aircraft-quick-metrics-section",
+          "aircraft-quick-actions",
+          "aircraft-quick-section aircraft-quick-tracking",
+          "aircraft-quick-section aircraft-quick-atc",
+          "aircraft-quick-section aircraft-quick-aircraft",
+          "aircraft-quick-section aircraft-quick-route-intelligence",
+          "route-weather-card route-weather-card-compact",
+          "aircraft-quick-advanced",
+        ];
+        if (JSON.stringify(quickContract.order) !== JSON.stringify(expectedQuickOrder)
+          || quickContract.liveMetricGrids !== 1
+          || quickContract.technicalOpen
+          || !/^\/aircraft\/[0-9A-Fa-f~]+$/.test(quickContract.fullDetailHref ?? "")
+          || !quickContract.atcPrimary) {
+          throw new Error(`Aircraft quick-detail contract failed at ${viewport.width}px: ${JSON.stringify(quickContract)}`);
+        }
         if (await sidebar.locator(".drawer-close-button:visible, .detail-panel .close-button:visible").count() !== 1) {
           throw new Error(`Desktop detail has more than one visible Close action at ${viewport.width}px`);
         }
@@ -459,7 +511,7 @@ async function assertBrowserSmoke() {
         await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
         await page.keyboard.press("/");
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
-        await page.waitForFunction(() => document.activeElement?.classList.contains("search-input"));
+        await page.locator(".search-input").waitFor({ state: "visible" });
         if (!await page.locator(".search-input").isVisible()) {
           throw new Error(`Slash shortcut did not return from aircraft detail at ${viewport.width}px`);
         }

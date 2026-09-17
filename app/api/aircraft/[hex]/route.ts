@@ -1,4 +1,4 @@
-import { getAircraftDetail, HistoryDatabaseUnavailableError, normalizeAircraftHistoryRange } from "@/lib/server/history";
+import { getAircraftDetail, getAircraftQuickDetail, HistoryDatabaseUnavailableError, normalizeAircraftHistoryRange } from "@/lib/server/history";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { enrichAircraftDetailView } from "@/lib/server/aircraft-detail-enrichment";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
@@ -29,10 +29,19 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
 
   try {
     const searchParams = new URL(request.url).searchParams;
+    const mode = searchParams.get("mode");
+    if (mode !== null && mode !== "quick" && mode !== "full") {
+      return Response.json({ error: "Invalid aircraft detail mode" }, { status: 400, headers: noStoreHeaders() });
+    }
     const range = normalizeAircraftHistoryRange(searchParams.get("range"));
     const coverage = parseCoverage(searchParams.get("coverage"));
     const stateService = getAircraftStateService();
     const liveAircraft = stateService.getAircraft(icaoHex, coverage);
+
+    if (mode === "quick") {
+      const quickDetail = await getAircraftQuickDetail(icaoHex, liveAircraft);
+      return Response.json(quickDetail, { headers: noStoreHeaders() });
+    }
 
     const [detail, enrichedAircraft] = await Promise.all([
       getAircraftDetail(icaoHex, { historyRange: range }),

@@ -13,6 +13,7 @@ import {
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
 const datasetSource = readFileSync(new URL("../components/use-retrying-dataset.ts", import.meta.url), "utf8");
@@ -93,9 +94,9 @@ describe("radar UI polish helpers", () => {
   });
 
   it("shows seen-by and position provenance as separate signals", () => {
-    expect(appSource).toContain("label={t.aircraft.seenBy}");
+    expect(`${appSource}\n${quickDetailSource}`).toContain("label={t.aircraft.seenBy}");
     expect(appSource).toContain("aircraft.provenance?.positionOrigin");
-    expect(appSource).toContain("aircraft.provenance?.positionSource");
+    expect(`${appSource}\n${quickDetailSource}`).toContain("aircraft.provenance?.positionSource");
     expect(appSource).not.toContain("`${aircraftDataSourceLabel(aircraft)} · ${aircraft.source}`");
   });
 

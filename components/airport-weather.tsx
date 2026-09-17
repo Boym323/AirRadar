@@ -156,6 +156,16 @@ function WeatherLoadState({ loading, failed, onRetry }: { loading: boolean; fail
   return null;
 }
 
+function WeatherSummary({ weather }: { weather: AirportWeatherResponse }) {
+  const metar = weather.metar;
+  if (!metar) return <div className="weather-unavailable">{t.weather.unavailableData}</div>;
+  return <div className="route-weather-summary">
+    <span className={`weather-category${categoryClass(metar.flightCategory)}`}>{metar.flightCategory ?? t.common.emptyValue}</span>
+    {metar.temperatureC !== null && <span>{formatNumber(metar.temperatureC, 0)} °C</span>}
+    <span>{windLabel(metar)}</span>
+  </div>;
+}
+
 export function AirportWeatherPanel({ airport, runways = [] }: { airport: Airport; runways?: AirportRunway[] }) {
   const [weather, setWeather] = useState<AirportWeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -240,7 +250,7 @@ export function AirportWeatherDisclosure({ airport }: { airport: Airport }) {
   </section>;
 }
 
-export function FlightRouteWeather({ originAirport, destinationAirport }: { originAirport?: Airport | null; destinationAirport?: Airport | null }) {
+export function FlightRouteWeather({ originAirport, destinationAirport, compact = false }: { originAirport?: Airport | null; destinationAirport?: Airport | null; compact?: boolean }) {
   const airports = [...new Map([destinationAirport, originAirport]
     .filter((airport): airport is Airport => Boolean(airport && /^[A-Z]{4}$/.test(airport.icaoCode.trim().toUpperCase())))
     .map((airport) => [airport.icaoCode.trim().toUpperCase(), airport] as const)).values()];
@@ -283,7 +293,7 @@ export function FlightRouteWeather({ originAirport, destinationAirport }: { orig
 
   if (!airportCodes.length) return null;
   const byIcao = new Map(weather.map((item) => [item.airport?.icaoCode, item]));
-  return <section className="route-weather-card" aria-label={t.weather.title}>
+  return <section className={`route-weather-card${compact ? " route-weather-card-compact" : ""}`} aria-label={t.weather.title}>
     <div className="route-weather-heading"><strong>{t.weather.title}</strong><span>{t.weather.sourceName}</span></div>
     <WeatherLoadState loading={loading} failed={failed} onRetry={() => setRetryNonce((value) => value + 1)} />
     {!loading && !failed && weather.length === 0 && <div className="weather-unavailable">{t.weather.unavailableData}</div>}
@@ -291,7 +301,7 @@ export function FlightRouteWeather({ originAirport, destinationAirport }: { orig
       const report = byIcao.get(airport.icaoCode);
       return <section className="route-weather-airport" key={airport.icaoCode}>
         <div className="route-weather-airport-heading"><strong>{airport.icaoCode}</strong><span>{airport === destinationAirport ? t.weather.destination : t.weather.origin} · {airportLabel(airport)}</span></div>
-        {report ? <WeatherReports weather={report} /> : <div className="weather-unavailable">{t.weather.unavailableData}</div>}
+        {report ? compact ? <WeatherSummary weather={report} /> : <WeatherReports weather={report} /> : <div className="weather-unavailable">{t.weather.unavailableData}</div>}
       </section>;
     })}
   </section>;

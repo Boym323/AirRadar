@@ -154,9 +154,13 @@ coordinates are rounded, hidden, or published exactly only according to
 `PUBLIC_RECEIVER_POSITION_MODE`; raw provider errors are replaced with safe
 messages. Request/response routes have bounded per-client fixed-window
 limiting. SSE has a separate bounded active-client capacity guard and keeps
-only the newest pending snapshot for a slow connection. Full metadata and
-flight plans are loaded lazily for selected aircraft; route context needed by
-the map remains in the compact live snapshot.
+only the newest pending snapshot for a slow connection. Selected aircraft use
+an explicit quick/full boundary: the live radar drawer calls
+`/api/aircraft/[hex]?mode=quick`, which returns only durable identity and locally
+available metadata/route context and never invokes the paid FlightAware plan
+provider. The dedicated `/aircraft/[hex]` page retains the full detail path and
+its on-demand FlightAware enrichment. Route context needed by the map remains
+in the compact live snapshot.
 `coverage=local|extended` is accepted by the live aircraft, selected-aircraft,
 and SSE endpoints. The default is `local`; `extended` includes validated,
 fresh ADSB.lol observations and publishes provider status, source provenance,

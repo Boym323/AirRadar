@@ -1,12 +1,7 @@
-/* Aircraft quick-detail drawer on the live radar.
- * Keep this panel focused on the current aircraft. Deep history, FlightAware
- * schedule detail, raw ADS-B fields and metadata stay available on the full
- * aircraft detail page or in the collapsed advanced disclosures.
- */
+/* Explicit quick-detail layout for the live radar drawer. Full aircraft detail
+ * keeps its own page/component styles; this file does not infer meaning from
+ * DOM position or sibling order. */
 
-/* The generic traffic title is redundant while an aircraft is selected.
- * Desktop keeps its canonical drawer-close control in a compact top rail;
- * mobile uses the close button next to the aircraft identity instead. */
 .sidebar.drawer-aircraft > .sidebar-heading {
   justify-content: flex-end;
   min-height: 48px;
@@ -22,281 +17,391 @@
   border-top: 0;
 }
 
-.sidebar.drawer-aircraft .detail-heading {
-  flex: 0 0 auto;
-  padding: 42px 14px 11px;
-}
-
-.sidebar.drawer-aircraft .detail-back-button {
-  margin-bottom: 8px;
-}
-
-.sidebar.drawer-aircraft .detail-content {
+.aircraft-quick-detail {
   display: flex;
   flex-direction: column;
+  gap: 0;
   min-height: 0;
   padding: 0 14px 18px;
 }
 
-.sidebar.drawer-aircraft .detail-content > * {
-  order: 50;
-}
-
-/* 1. Identity / route / live state */
-.sidebar.drawer-aircraft .detail-hero {
-  order: 1;
+.aircraft-quick-header {
   margin: 0 -14px;
-  padding: 12px 14px 14px;
+  padding: 0 14px 15px;
   border-bottom: 1px solid var(--border-default);
-  background: linear-gradient(180deg, rgba(16, 38, 56, .62), rgba(10, 25, 40, .32));
+  background: linear-gradient(180deg, rgba(16, 42, 61, .98), rgba(8, 20, 32, .98));
 }
 
-.sidebar.drawer-aircraft .detail-hero-route {
-  margin-bottom: 9px;
-}
-
-.sidebar.drawer-aircraft .detail-hero-route .route-context-row {
-  gap: 4px 5px;
-  font-size: 12px;
-}
-
-.sidebar.drawer-aircraft .detail-hero-route .route-disclaimer {
-  margin-top: 5px;
-  color: var(--text-muted);
-  font-size: 9px;
-  line-height: 1.35;
-}
-
-.sidebar.drawer-aircraft .detail-hero-type {
-  color: var(--text-secondary);
-  font-size: 11px;
-  line-height: 1.35;
-}
-
-.sidebar.drawer-aircraft .detail-hero-metrics {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 14px;
-  margin-top: 12px;
-}
-
-.sidebar.drawer-aircraft .detail-hero-metrics strong {
-  font-size: 17px;
-}
-
-.sidebar.drawer-aircraft .detail-hero-metrics span {
-  margin-top: 2px;
-  font-size: 9px;
-}
-
-/* 2. Put the useful navigation where it is visible without scrolling. */
-.sidebar.drawer-aircraft .detail-footer {
-  order: 2;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 7px;
-  margin: 0 -14px;
-  padding: 10px 14px;
-  border-top: 0;
-  border-bottom: 1px solid var(--border-subtle);
-  background: rgba(13, 32, 49, .42);
-}
-
-.sidebar.drawer-aircraft .detail-footer > span:last-child {
+.aircraft-quick-header-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.sidebar.drawer-aircraft .detail-footer .history-link {
-  display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 5px 8px;
-  border: 1px solid rgba(67, 216, 194, .26);
+  justify-content: space-between;
+  min-height: 47px;
+}
+
+.aircraft-quick-header .detail-back-button {
+  position: static;
+  min-height: 40px;
+  padding: 6px 8px;
+  border: 0;
   border-radius: 5px;
-  background: rgba(67, 216, 194, .055);
-  color: var(--accent);
-  font-size: 10px;
+  color: var(--accent-primary);
+  font-size: 11px;
   font-weight: 650;
+}
+
+.aircraft-quick-header .detail-back-button:hover {
+  background: rgba(67, 216, 194, .08);
   text-decoration: none;
 }
 
-.sidebar.drawer-aircraft .detail-footer .history-link:hover {
-  border-color: rgba(67, 216, 194, .5);
+.aircraft-quick-header .close-button {
+  width: 40px;
+  height: 40px;
+}
+
+.aircraft-quick-identity-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aircraft-quick-identity {
+  min-width: 0;
+}
+
+.aircraft-quick-eyebrow,
+.aircraft-quick-section h2 {
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.aircraft-quick-identity h1 {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(24px, 3vw, 30px);
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+
+.aircraft-quick-identity p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.aircraft-quick-watchlist {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: rgba(7, 19, 31, .34);
+  color: var(--text-secondary);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.aircraft-quick-watchlist:hover,
+.aircraft-quick-watchlist.active {
+  border-color: rgba(67, 216, 194, .62);
   background: rgba(67, 216, 194, .1);
-  text-decoration: none;
+  color: var(--accent-primary);
 }
 
-.sidebar.drawer-aircraft .aircraft-trail-actions {
-  order: 3;
+.aircraft-quick-section {
+  margin-top: 15px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-default);
+}
+
+.aircraft-quick-section h2 {
+  margin: 0;
+}
+
+.aircraft-quick-route {
+  margin-top: 0;
+  padding-top: 15px;
+  border-top: 0;
+}
+
+.aircraft-quick-route-value {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+  margin-top: 9px;
+  color: var(--text-primary);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 14px;
+}
+
+.aircraft-quick-route-value strong {
+  color: var(--accent-primary);
+}
+
+.aircraft-quick-disclaimer {
+  margin: 9px 0 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.aircraft-quick-metrics-section {
+  margin-top: 15px;
+  padding: 14px 0 0;
+}
+
+.aircraft-quick-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+  gap: 8px;
   margin-top: 10px;
 }
 
-.sidebar.drawer-aircraft .aircraft-trail-actions .history-link,
-.sidebar.drawer-aircraft .aircraft-center-button {
+.aircraft-quick-metrics > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(190, 214, 232, .14);
+  border-radius: 6px;
+  background: rgba(7, 19, 31, .34);
+}
+
+.aircraft-quick-metrics strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.aircraft-quick-metrics span {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.aircraft-quick-emergency {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  padding: 8px 10px;
+  border: 1px solid rgba(251, 113, 133, .38);
+  border-radius: 5px;
+  background: rgba(251, 113, 133, .1);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.aircraft-quick-emergency span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #07131f;
+}
+
+.aircraft-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.aircraft-quick-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
-  min-height: 34px;
+  min-height: 42px;
   padding: 7px 8px;
   border: 1px solid var(--border-default);
   border-radius: 5px;
   background: rgba(16, 38, 56, .42);
   color: var(--text-secondary);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 650;
+  line-height: 1.25;
   text-align: center;
   text-decoration: none;
 }
 
-.sidebar.drawer-aircraft .aircraft-trail-actions .history-link:hover,
-.sidebar.drawer-aircraft .aircraft-center-button:hover {
-  border-color: rgba(67, 216, 194, .42);
-  color: var(--accent);
+.aircraft-quick-action:hover:not(:disabled),
+.aircraft-quick-action.primary {
+  border-color: rgba(67, 216, 194, .58);
+  background: rgba(67, 216, 194, .1);
+  color: var(--accent-primary);
   text-decoration: none;
 }
 
-.sidebar.drawer-aircraft .watchlist-actions {
-  order: 4;
-  margin-top: 7px;
+.aircraft-quick-action:disabled {
+  cursor: not-allowed;
+  opacity: .5;
 }
 
-.sidebar.drawer-aircraft .watchlist-actions .watchlist-add {
-  width: 100%;
-  min-height: 34px;
+.aircraft-quick-tracking-summary {
+  margin: 9px 0 0;
+  color: var(--text-secondary);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
 }
 
-/* 3. Short tracking summary first. */
-.sidebar.drawer-aircraft .aircraft-altitude-card + .detail-section {
-  order: 5;
-  margin-top: 13px;
-  padding-top: 0;
-  border-top: 0;
-}
-
-.sidebar.drawer-aircraft .aircraft-altitude-card + .detail-section .detail-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-  margin-top: 8px;
-}
-
-.sidebar.drawer-aircraft .aircraft-altitude-card + .detail-section .detail-item {
-  min-width: 0;
-  padding: 8px 7px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 5px;
-  background: rgba(16, 38, 56, .28);
-}
-
-.sidebar.drawer-aircraft .aircraft-altitude-card + .detail-section .detail-item-label {
-  font-size: 8px;
-  line-height: 1.25;
-}
-
-.sidebar.drawer-aircraft .aircraft-altitude-card + .detail-section .detail-item-value {
-  margin-top: 3px;
-  font-size: 11px;
-}
-
-/* 4. Keep the altitude profile visible, but below live summary. */
-.sidebar.drawer-aircraft .aircraft-altitude-card {
-  order: 6;
-  margin-top: 12px;
+.aircraft-quick-tracking .aircraft-altitude-card {
+  margin-top: 10px;
   padding: 11px;
   border-radius: 7px;
 }
 
-.sidebar.drawer-aircraft .aircraft-altitude-card h2 {
+.aircraft-quick-tracking .aircraft-altitude-card h2 {
   font-size: 12px;
 }
 
-.sidebar.drawer-aircraft .aircraft-altitude-chart {
+.aircraft-quick-tracking .aircraft-altitude-chart {
   max-height: 92px;
 }
 
-/* 5. Aircraft identity comes before ATS/ATC context. */
-.sidebar.drawer-aircraft .aircraft-altitude-card + .detail-section + .detail-section,
-.sidebar.drawer-aircraft .route-weather-card + .detail-section {
-  order: 7;
-}
-
-/* Hero already contains altitude/speed/track and the compact summary contains
- * current timing. Remove the second expanded live ADS-B block. Advanced raw
- * ADS-B remains in the collapsed disclosure below. */
-.sidebar.drawer-aircraft .aircraft-altitude-card + .detail-section + .detail-section + .detail-section,
-.sidebar.drawer-aircraft .route-weather-card + .detail-section + .detail-section {
-  display: none;
-}
-
-/* Remaining primary sections are published-route intelligence, ATC and other
- * current-flight context. Keep them before weather and technical disclosures. */
-.sidebar.drawer-aircraft .detail-content > .detail-section {
-  order: 8;
-  margin-top: 13px;
-  padding-top: 11px;
-}
-
-.sidebar.drawer-aircraft .detail-content > .detail-section h3 {
-  margin-bottom: 0;
-  font-size: 9px;
-}
-
-.sidebar.drawer-aircraft .detail-content > .detail-section .detail-grid {
+.aircraft-quick-detail-grid {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px 11px;
+  gap: 11px 13px;
   margin-top: 10px;
 }
 
-/* In the quick drawer, ATC validity/provenance rows are lower priority than
- * sector, frequency and vertical limits. The disclaimer remains visible. */
-.sidebar.drawer-aircraft .detail-section:has(+ .detail-more) .detail-item:nth-child(n + 7) {
-  display: none;
+.aircraft-quick-detail-value {
+  min-width: 0;
 }
 
-/* Full recent-flight history and the long FlightAware flight-plan table live
- * on the dedicated detail page. Keeping them out of the map drawer prevents
- * the live context from turning into a second full page. */
-.sidebar.drawer-aircraft .aircraft-recent-flights,
-.sidebar.drawer-aircraft .aircraft-recent-flights + .detail-section {
-  display: none;
+.aircraft-quick-detail-value .detail-item-value {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 12px;
 }
 
-/* 6. Weather is useful, but current METAR is enough in the quick drawer. */
-.sidebar.drawer-aircraft .route-weather-card {
-  order: 9;
-  margin-top: 13px;
-  border-radius: 7px;
+.aircraft-quick-atc {
+  border-top-color: rgba(67, 216, 194, .42);
 }
 
-.sidebar.drawer-aircraft .route-weather-card .weather-forecast,
-.sidebar.drawer-aircraft .route-weather-card .weather-raw {
-  display: none;
+.aircraft-quick-atc-primary {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 11px;
+  border: 1px solid rgba(67, 216, 194, .24);
+  border-radius: 6px;
+  background: rgba(67, 216, 194, .07);
 }
 
-.sidebar.drawer-aircraft .route-weather-card .weather-meta {
-  font-size: 9px;
-}
-
-/* 7. Raw receiver and metadata fields remain available on demand. */
-.sidebar.drawer-aircraft .detail-more {
-  order: 10;
-  margin-top: 12px;
-}
-
-.sidebar.drawer-aircraft .detail-more > summary {
-  min-height: 36px;
-  display: flex;
-  align-items: center;
+.aircraft-quick-atc-primary .aircraft-quick-atc-fir,
+.aircraft-quick-atc-primary > span {
   color: var(--text-secondary);
   font-size: 10px;
 }
 
-.sidebar.drawer-aircraft .detail-more[open] {
-  padding-bottom: 4px;
+.aircraft-quick-atc-primary > strong {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.aircraft-quick-atc-primary > b {
+  color: var(--accent-primary);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 16px;
+}
+
+.aircraft-quick-atc-limits {
+  color: var(--text-muted) !important;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px !important;
+}
+
+.aircraft-quick-atc-context {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 11px;
+}
+
+.aircraft-quick-atc-more,
+.aircraft-quick-advanced {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.aircraft-quick-atc-more {
+  margin-top: 9px;
+}
+
+.aircraft-quick-atc-more summary,
+.aircraft-quick-advanced summary {
+  min-height: 40px;
+  padding: 9px 0;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 650;
+}
+
+.aircraft-quick-frequency-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 0 5px;
+  color: var(--accent-primary);
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.route-weather-card-compact {
+  margin-top: 15px;
+  border-radius: 7px;
+}
+
+.route-weather-card-compact .route-weather-airport {
+  padding-bottom: 10px;
+}
+
+.route-weather-card-compact .route-weather-airport-heading {
+  padding-top: 9px;
+}
+
+.route-weather-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+}
+
+.aircraft-quick-advanced {
+  margin-top: 15px;
+  border-top: 1px solid var(--border-default);
+}
+
+.aircraft-quick-advanced[open] {
+  padding-bottom: 3px;
+}
+
+.aircraft-quick-advanced summary {
+  font-size: 11px;
 }
 
 @media (min-width: 821px) {
@@ -308,7 +413,7 @@
     display: grid;
   }
 
-  .sidebar.drawer-aircraft .detail-heading > .close-button {
+  .sidebar.drawer-aircraft .aircraft-quick-detail > .aircraft-quick-header .close-button {
     display: none;
   }
 }
@@ -318,42 +423,29 @@
     display: none;
   }
 
-  .sidebar.drawer-aircraft .detail-heading > .close-button {
-    display: grid;
-  }
-
-  .sidebar.drawer-aircraft .detail-content {
-    padding-left: 12px;
+  .sidebar.drawer-aircraft .aircraft-quick-detail {
     padding-right: 12px;
+    padding-left: 12px;
   }
 
-  .sidebar.drawer-aircraft .detail-hero,
-  .sidebar.drawer-aircraft .detail-footer {
-    margin-left: -12px;
+  .sidebar.drawer-aircraft .aircraft-quick-header {
     margin-right: -12px;
-    padding-left: 12px;
+    margin-left: -12px;
     padding-right: 12px;
+    padding-left: 12px;
   }
 
-  .sidebar.drawer-aircraft .aircraft-altitude-card + .detail-section .detail-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .sidebar.drawer-aircraft .detail-content > .detail-section .detail-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .sidebar.drawer-aircraft .aircraft-quick-header .close-button {
+    display: grid;
   }
 }
 
 @media (max-width: 430px) {
-  .sidebar.drawer-aircraft .detail-hero-metrics {
-    gap: 9px 11px;
+  .aircraft-quick-actions {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .sidebar.drawer-aircraft .aircraft-altitude-card + .detail-section .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar.drawer-aircraft .aircraft-trail-actions {
-    grid-template-columns: 1fr;
+  .aircraft-quick-action.primary {
+    grid-column: 1 / -1;
   }
 }

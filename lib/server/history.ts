@@ -153,6 +153,18 @@ export interface AircraftDetailResponse {
   logbook: AircraftLogbookStatus;
 }
 
+export type AircraftQuickEnrichment = Omit<AircraftEnrichment, "flightPlan">;
+
+/**
+ * The radar drawer only needs the durable identity row and locally available
+ * enrichment. Keeping this DTO separate prevents the drawer from depending on
+ * recent-flight/history payloads or on-demand flight-plan enrichment.
+ */
+export interface AircraftQuickDetailResponse {
+  aircraft: AircraftDetailMetadata | null;
+  liveEnrichment?: AircraftQuickEnrichment;
+}
+
 export class HistoryDatabaseUnavailableError extends Error {
   constructor() {
     super("History database unavailable");
@@ -661,6 +673,69 @@ async function getAircraftLifetimeStats(
   return stats;
 }
 
+interface AircraftDetailRow {
+  icaoHex: string;
+  registration: string | null;
+  registrationCountry: string | null;
+  registrationCountryCode: string | null;
+  aircraftType: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  operator: string | null;
+}
+
+function aircraftDetailMetadataFromRow(aircraft: AircraftDetailRow): AircraftDetailMetadata {
+  return {
+    icaoHex: aircraft.icaoHex,
+    registration: aircraft.registration,
+    registrationCountry: aircraft.registrationCountry,
+    registrationCountryCode: aircraft.registrationCountryCode,
+    aircraftType: aircraft.aircraftType,
+    manufacturer: aircraft.manufacturer,
+    model: aircraft.model,
+    operator: aircraft.operator,
+  };
+}
+
+function quickEnrichmentFromAircraft(aircraft: Aircraft | null): AircraftQuickEnrichment | undefined {
+  if (!aircraft?.enrichment) return undefined;
+  const { metadata, route } = aircraft.enrichment;
+  if (!metadata && !route) return undefined;
+  return {
+    ...(metadata ? { metadata } : {}),
+    ...(route ? { route } : {}),
+  };
+}
+
+/**
+ * Reads only the durable aircraft identity row. A database outage is
+ * intentionally non-fatal here: live SSE data is sufficient to open the
+ * quick drawer and the full detail page retains its existing strict behavior.
+ */
+export async function getAircraftQuickDetail(
+  icaoHex: string,
+  liveAircraft: Aircraft | null,
+): Promise<AircraftQuickDetailResponse> {
+  let metadata: AircraftDetailMetadata | null = null;
+  const database = getPrisma();
+  if (database) {
+    try {
+      const aircraft = await database.orm.public.Aircraft
+        .where({ icaoHex: icaoHex.toUpperCase() })
+        .first() as AircraftDetailRow | null;
+      if (aircraft) metadata = aircraftDetailMetadataFromRow(aircraft);
+    } catch {
+      // Quick identity is best-effort; never hide the live radar drawer.
+    }
+  }
+
+  const liveEnrichment = quickEnrichmentFromAircraft(liveAircraft);
+  return {
+    aircraft: metadata,
+    ...(liveEnrichment ? { liveEnrichment } : {}),
+  };
+}
+
 /**
  * Returns durable aircraft metadata, a deliberately small recent-flight
  * summary and a bounded Flight-instance history summary. FlightPosition is
@@ -698,14 +773,7 @@ export async function getAircraftDetail(
 
     return {
       aircraft: {
-        icaoHex: aircraft.icaoHex,
-        registration: aircraft.registration,
-        registrationCountry: aircraft.registrationCountry,
-        registrationCountryCode: aircraft.registrationCountryCode,
-        aircraftType: aircraft.aircraftType,
-        manufacturer: aircraft.manufacturer,
-        model: aircraft.model,
-        operator: aircraft.operator,
+        ...aircraftDetailMetadataFromRow(aircraft),
       },
       recentFlights: orderFlightSummaries(flights.map(flightSummaryFromRow)).slice(0, AIRCRAFT_RECENT_FLIGHT_LIMIT),
       historySummary,
