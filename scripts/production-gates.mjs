@@ -511,7 +511,7 @@ async function assertBrowserSmoke() {
         await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
         await page.keyboard.press("/");
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
-        await page.waitForFunction(() => document.activeElement?.classList.contains("search-input"));
+        await page.locator(".search-input").waitFor({ state: "visible" });
         if (!await page.locator(".search-input").isVisible()) {
           throw new Error(`Slash shortcut did not return from aircraft detail at ${viewport.width}px`);
         }
