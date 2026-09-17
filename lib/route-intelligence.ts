@@ -29,7 +29,16 @@ export type {
   RouteTokenType,
 };
 export type * from "./route-intelligence/contracts";
-export { createRunwayContext, hasRunwayConflict } from "./route-intelligence/contracts";
+export {
+  compareProcedureRunwayApplicability,
+  inferRunwayFromGeometry,
+  resolveArrivalRunwayContext,
+  resolveDepartureRunwayContext,
+  type RunwayContextResolverInput,
+  type RunwayInferenceAirport,
+  type RunwayInferencePosition,
+} from "./route-intelligence/runway-context";
+export { createRunwayContext, hasRunwayConflict, normalizeRunwayDesignator } from "./route-intelligence/contracts";
 
 type AnalyzeOptions = Parameters<typeof analyzePublishedRouteBase>[0];
 type StaticAnalyzeOptions = Parameters<typeof analyzePublishedRouteStaticBase>[0];
