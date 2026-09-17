@@ -112,6 +112,7 @@ describe("feature integration", () => {
     expect(rangeRingsSource).toContain("50, 100, 200, 300, 400");
     expect(radarSource).toContain("showRangeRings");
     expect(radarSource).toContain("snapshot.receiver.lat === null || snapshot.receiver.lon === null");
+    expect(radarSource).toContain("receiverPositionAvailable && <label>");
     expect(`${radarSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
   });
 
