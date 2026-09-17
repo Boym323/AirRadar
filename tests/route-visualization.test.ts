@@ -5,8 +5,10 @@ import type { Airport } from "@/lib/airports/types";
 import {
   createRouteAirportGeoJSON,
   createRouteGeoJSON,
+  createRouteIntelligenceGeoJSON,
   emptyRouteAirportGeoJSON,
   emptyRouteGeoJSON,
+  emptyRouteIntelligenceGeoJSON,
   interpolateGreatCircle,
   MAX_ROUTE_POINTS_PER_SEGMENT,
   ROUTE_V2_AIRPORT_SOURCE_ID,
@@ -14,6 +16,18 @@ import {
   ROUTE_V2_REMAINING_LAYER_ID,
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
+import {
+  atsOnly,
+  dctRoute,
+  fullSidAtsStarRoute,
+  inferredRunwayRoute,
+  invalidGeometryRoute,
+  reportedRunwayRoute,
+  sidOnly,
+  starOnly,
+  unknownProgressRoute,
+  unresolvedRoute,
+} from "./fixtures/route-intelligence-v2";
 
 const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
@@ -138,5 +152,39 @@ describe("route visualization V2", () => {
     expect(streamSource.match(/\/api\/stream/g)).toHaveLength(1);
     expect(radarSource).not.toContain("FlightPosition");
     expect(radarSource).toContain("createRouteGeoJSON(");
+  });
+
+  it("generates semantic completed/current/remaining features for a full SID–ATS–STAR route", () => {
+    const result = createRouteIntelligenceGeoJSON(fullSidAtsStarRoute);
+
+    expect(result.features.map((feature) => feature.properties.elementKind)).toEqual([
+      "PUBLISHED_SID", "PUBLISHED_ATS", "PUBLISHED_ATS", "PUBLISHED_STAR",
+    ]);
+    expect(result.features.map((feature) => feature.properties.progress)).toEqual([
+      "completed", "current", "remaining", "remaining",
+    ]);
+    expect(result.features.every((feature) => feature.properties.sourceKind)).toBe(true);
+  });
+
+  it("keeps ATS-only, SID-only, STAR-only, and filed DCT source semantics", () => {
+    expect(createRouteIntelligenceGeoJSON(atsOnly).features.every((feature) => feature.properties.sourceKind === "PUBLISHED_ATS")).toBe(true);
+    expect(createRouteIntelligenceGeoJSON(sidOnly).features[0]?.properties.sourceKind).toBe("PUBLISHED_SID");
+    expect(createRouteIntelligenceGeoJSON(starOnly).features[0]?.properties.sourceKind).toBe("PUBLISHED_STAR");
+    expect(createRouteIntelligenceGeoJSON(dctRoute).features[0]?.properties.sourceKind).toBe("FILED_DCT");
+  });
+
+  it("preserves reported versus inferred runway context and unresolved progress", () => {
+    expect(reportedRunwayRoute.runway).toMatchObject({ reportedRunway: "24", inferredRunway: null, status: "REPORTED" });
+    expect(inferredRunwayRoute.runway).toMatchObject({ reportedRunway: null, inferredRunway: "25C", status: "INFERRED" });
+    expect(createRouteIntelligenceGeoJSON(unresolvedRoute).features).toHaveLength(0);
+    expect(createRouteIntelligenceGeoJSON(unknownProgressRoute)).toBeDefined();
+  });
+
+  it("drops invalid published geometry but allows an explicit schematic connector", () => {
+    const result = createRouteIntelligenceGeoJSON(invalidGeometryRoute);
+    expect(result.features).toHaveLength(1);
+    expect(result.features[0]?.properties.sourceKind).toBe("SCHEMATIC");
+    expect(result.features[0]?.geometry.coordinates.flat().every(Number.isFinite)).toBe(true);
+    expect(createRouteIntelligenceGeoJSON(null)).toEqual(emptyRouteIntelligenceGeoJSON());
   });
 });
