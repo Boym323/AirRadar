@@ -116,11 +116,40 @@ model Flight {
   endTime    DateTime?
   aircraft   Aircraft         @relation(fields: [aircraftId], references: [id], onDelete: Cascade)
   positions  FlightPosition[]
+  intelligenceEvents FlightEvent[]
 
   @@index([aircraftId, startTime])
   @@index([aircraftId, endTime, lastSeenAt])
   @@index([startTime, origin])
   @@index([startTime, destination])
+}
+
+model FlightEvent {
+  id              Int      @id @default(autoincrement())
+  eventKey        String   @unique
+  type            String
+  icaoHex         String
+  flightId        Int?
+  occurredAt      DateTime
+  detectedAt      DateTime @default(now())
+  latitude        Float?
+  longitude       Float?
+  altitude        Int?
+  confidence      Float
+  airportIcao     String?
+  runway          String?
+  sectorId        String?
+  evidenceJson    String
+  metadataJson    String?
+  aircraft        Aircraft @relation(fields: [icaoHex], references: [icaoHex], onDelete: Cascade)
+  flight          Flight?  @relation(fields: [flightId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+
+  @@index([occurredAt])
+  @@index([type, occurredAt])
+  @@index([icaoHex, occurredAt])
+  @@index([flightId, occurredAt])
+  @@index([airportIcao, occurredAt])
 }
 
 model Airport {

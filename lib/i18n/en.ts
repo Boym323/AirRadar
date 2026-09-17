@@ -339,6 +339,13 @@ export const en = {
     reasons: { watchlist: "A server watchlist rule matched.", newAircraft: "First ever durable observation confirmed.", record: "A genuine reception record was exceeded.", emergency: "An emergency state transition was reported." },
     notificationStatuses: { pending: "Pending", attempted: "Attempted", delivered: "Delivered", failed: "Failed", disabled: "Notifier disabled" },
   },
+  intelligence: {
+    title: "Live intelligence",
+    description: "Probable events inferred from local ADS-B observations.",
+    empty: "No intelligence events have been detected yet.",
+    evidence: "Evidence",
+    types: { APPROACH: "Probable approach", LANDING: "Likely landing", TAKEOFF: "Likely takeoff", GO_AROUND: "Go-around", HOLDING: "Probable holding", AIRSPACE_ENTRY: "Airspace entry", AIRSPACE_EXIT: "Airspace exit" },
+  },
   recap: {
     dailyTitle: "Daily recap",
     weeklyTitle: "Weekly recap",

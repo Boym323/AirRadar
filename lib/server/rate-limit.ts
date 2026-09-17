@@ -95,6 +95,7 @@ export const PUBLIC_RATE_LIMITS = {
   version: { limit: 60, windowMs: 60_000 },
   search: { limit: 60, windowMs: 60_000 },
   watchlist: { limit: 60, windowMs: 60_000 },
+  intelligence: { limit: 30, windowMs: 60_000 },
 } as const;
 
 /**
