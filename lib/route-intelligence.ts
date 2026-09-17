@@ -28,6 +28,8 @@ export type {
   RouteToken,
   RouteTokenType,
 };
+export type * from "./route-intelligence/contracts";
+export { createRunwayContext, hasRunwayConflict } from "./route-intelligence/contracts";
 
 type AnalyzeOptions = Parameters<typeof analyzePublishedRouteBase>[0];
 type StaticAnalyzeOptions = Parameters<typeof analyzePublishedRouteStaticBase>[0];

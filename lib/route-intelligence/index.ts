@@ -1,6 +1,55 @@
 import type { AircraftEnrichment } from "@/lib/aircraft/types";
 import type { CzAtsPoint, CzAtsRoute, CzAtsRouteDocument, CzAtsSegment } from "@/lib/ats/cz-routes";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
+import type { RouteIntelligenceV2Snapshot } from "./contracts";
+
+export type {
+  AtsRouteCoverage,
+  DynamicRouteState,
+  InterpretedRoute,
+  InterpretedRouteElement,
+  InterpretedRouteElementKind,
+  InterpretedRouteElementStatus,
+  InterpretedRouteGeometry,
+  InterpretedRoutePoint,
+  InterpretedRouteStatus,
+  Procedure,
+  ProcedureCandidate,
+  ProcedureDiscontinuity,
+  ProcedureGeometry,
+  ProcedureLeg,
+  ProcedureLegType,
+  ProcedureMatch,
+  ProcedureMatchEvidence,
+  ProcedureMatchStatus,
+  ProcedurePoint,
+  ProcedurePointKind,
+  ProcedureRunwayApplicability,
+  ProcedureRunwayApplicabilityKind,
+  ProcedureRunwayCompatibility,
+  ProcedureSource,
+  ProcedureType,
+  PublicRouteIntelligenceDTO,
+  RouteAdherence,
+  RouteCoordinate,
+  RouteCoverage,
+  RouteElementSource,
+  RouteElementSourceKind,
+  RouteElementSourceViewDTO,
+  RouteIntelligenceViewDTO,
+  RoutePointViewDTO,
+  RouteProgressCoverage,
+  RouteReconstructionCoverage,
+  RouteElementViewDTO,
+  ProcedureMatchViewDTO,
+  RouteCoverageViewDTO,
+  RoutePhase,
+  RouteIntelligenceV2Snapshot,
+  RunwayContext,
+  RunwayContextInput,
+  RunwayContextStatus,
+} from "./contracts";
+export { createRunwayContext, hasRunwayConflict } from "./contracts";
 
 export const DEFAULT_MAX_XTRACK_NM = 25;
 const EARTH_RADIUS_KM = 6371;
@@ -82,6 +131,8 @@ export interface RouteIntelligenceResult {
     atsName: string | null;
     atsReference: string | null;
   };
+  /** Optional migration seam for V2 consumers; all legacy fields remain stable. */
+  v2?: RouteIntelligenceV2Snapshot;
 }
 
 interface PointRef {
