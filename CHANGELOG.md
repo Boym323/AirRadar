@@ -2,6 +2,16 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.46] - 2026-09-17
+
+Changes since v1.0.45:
+
+- Přidání podmínky pro zobrazení rozsahu kroužků na základě dostupnosti pozice přijímače (09c442bd)
+- Merge branch 'main' into fix/receiver-range-availability (b7c89f42)
+- Merge pull request #38 from Boym323/fix/receiver-range-availability (737b171d)
+- fix(enrichment): reject stale route destinations by position (4a44b733)
+- Merge pull request #39 from Boym323/fix/route-enrichment-position-gate (808c453f)
+
 ## [1.0.45] - 2026-09-17
 
 Changes since v1.0.44:
