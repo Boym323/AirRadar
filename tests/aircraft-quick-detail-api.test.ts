@@ -1,11 +1,16 @@
+import { mkdtempSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EnrichmentService } from "@/lib/server/enrichment-cache";
+import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import { GET } from "@/app/api/aircraft/[hex]/route";
 
 const mocks = vi.hoisted(() => ({
   getAircraftDetail: vi.fn(),
   getAircraftQuickDetail: vi.fn(),
-  enrichAircraftDetailView: vi.fn(),
   getAircraft: vi.fn(),
+  getOnDemandEnrichmentService: vi.fn(),
 }));
 
 vi.mock("@/lib/server/history", () => ({
@@ -19,9 +24,12 @@ vi.mock("@/lib/server/aircraft-state", () => ({
   getAircraftStateService: vi.fn(() => ({ getAircraft: mocks.getAircraft })),
 }));
 
-vi.mock("@/lib/server/aircraft-detail-enrichment", () => ({ enrichAircraftDetailView: mocks.enrichAircraftDetailView }));
+vi.mock("@/lib/server/providers", () => ({ getOnDemandEnrichmentService: mocks.getOnDemandEnrichmentService }));
 
-const { getAircraftDetail, getAircraftQuickDetail, enrichAircraftDetailView, getAircraft } = mocks;
+const { getAircraftDetail, getAircraftQuickDetail, getAircraft, getOnDemandEnrichmentService } = mocks;
+
+let flightAwareProvider: FlightAwareFlightPlanProvider;
+let flightAwareFetch: ReturnType<typeof vi.fn>;
 
 const liveAircraft = {
   icaoHex: "ABC123",
@@ -30,6 +38,18 @@ const liveAircraft = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  const ledgerPath = join(mkdtempSync(join(tmpdir(), "airradar-quick-detail-")), "flightaware-usage.json");
+  flightAwareFetch = vi.fn(async () => new Response(JSON.stringify({
+    flights: [{
+      ident: "TEST1",
+      scheduled_out: "2026-01-01T00:00:00Z",
+      scheduled_in: "2026-01-01T01:00:00Z",
+      route: "DCT TEST",
+    }],
+  }), { status: 200, headers: { "content-type": "application/json" } }));
+  vi.stubGlobal("fetch", flightAwareFetch);
+  flightAwareProvider = new FlightAwareFlightPlanProvider("test-key", { ledgerPath });
+  getOnDemandEnrichmentService.mockReturnValue(new EnrichmentService({ flightPlan: flightAwareProvider }));
   getAircraft.mockReturnValue(liveAircraft);
   getAircraftDetail.mockResolvedValue({
     aircraft: { icaoHex: "ABC123" },
@@ -37,10 +57,6 @@ beforeEach(() => {
     historySummary: { range: "30d" },
     lifetimeStats: { flightCount: 1 },
     logbook: { isNew: false },
-  });
-  enrichAircraftDetailView.mockResolvedValue({
-    ...liveAircraft,
-    enrichment: { flightPlan: { callsign: "TEST1", filedRoute: "PAID ROUTE" } },
   });
   getAircraftQuickDetail.mockResolvedValue({
     aircraft: { icaoHex: "ABC123", registration: "OK-ABC" },
@@ -64,8 +80,10 @@ describe("aircraft detail API modes", () => {
     });
     expect(getAircraftQuickDetail).toHaveBeenCalledWith("ABC123", liveAircraft);
     expect(getAircraftDetail).not.toHaveBeenCalled();
-    expect(enrichAircraftDetailView).not.toHaveBeenCalled();
-    expect(JSON.stringify(body)).not.toContain("PAID ROUTE");
+    expect(getOnDemandEnrichmentService).not.toHaveBeenCalled();
+    expect(flightAwareFetch).not.toHaveBeenCalled();
+    expect(flightAwareProvider.getDiagnostics()).toMatchObject({ requests: 0, estimatedCostTodayUsd: 0, estimatedCostMonthUsd: 0 });
+    expect(JSON.stringify(body)).not.toContain("flightPlan");
     expect(JSON.stringify(body)).not.toContain("recentFlights");
   });
 
@@ -75,8 +93,10 @@ describe("aircraft detail API modes", () => {
 
     expect(response.status).toBe(200);
     expect(getAircraftDetail).toHaveBeenCalledWith("ABC123", { historyRange: "30d" });
-    expect(enrichAircraftDetailView).toHaveBeenCalledWith(liveAircraft, expect.any(Date));
-    expect(JSON.stringify(body)).toContain("PAID ROUTE");
+    expect(getOnDemandEnrichmentService).toHaveBeenCalledTimes(1);
+    expect(flightAwareFetch).toHaveBeenCalledTimes(1);
+    expect(flightAwareProvider.getDiagnostics()).toMatchObject({ requests: 1, estimatedCostTodayUsd: 0.005 });
+    expect(JSON.stringify(body)).toContain("DCT TEST");
   });
 
   it("rejects an unknown mode before touching either data path", async () => {
@@ -86,6 +106,6 @@ describe("aircraft detail API modes", () => {
     expect(getAircraft).not.toHaveBeenCalled();
     expect(getAircraftDetail).not.toHaveBeenCalled();
     expect(getAircraftQuickDetail).not.toHaveBeenCalled();
-    expect(enrichAircraftDetailView).not.toHaveBeenCalled();
+    expect(getOnDemandEnrichmentService).not.toHaveBeenCalled();
   });
 });
