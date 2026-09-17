@@ -85,6 +85,8 @@ export const en = {
     sigmetNotSpecified: "not specified",
     sigmetValidity: "Validity",
     atsRoutes: "ATS routes",
+    sids: "SIDs",
+    stars: "STARs",
     atsRoutesUnavailable: "ATS routes unavailable",
     reconnecting: "reconnecting",
     unavailable: "unavailable",
