@@ -64,6 +64,7 @@ import {
 import { analyzePublishedRoute, toRouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
+import type { Procedure } from "@/lib/route-intelligence";
 import { LogbookSummary } from "@/components/logbook-summary";
 import { IntelligenceFeed } from "@/components/intelligence-feed";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
@@ -453,6 +454,7 @@ export function AirRadarApp() {
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
   const [aircraftDetail, setAircraftDetail] = useState<AircraftQuickDetailResponse | null>(null);
   const [selectedAtcContext, setSelectedAtcContext] = useState<AtcContextResult | null>(null);
+  const [selectedProcedures, setSelectedProcedures] = useState<Procedure[]>([]);
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
@@ -1516,6 +1518,22 @@ export function AirRadarApp() {
   const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
   const contextHasPosition = selectedAircraftSnapshot?.lat !== null && selectedAircraftSnapshot?.lon !== null;
 
+  const routeAirports = [selectedAircraft?.enrichment?.route?.origin, selectedAircraft?.enrichment?.route?.destination]
+    .map((value) => value?.trim().toUpperCase()).filter((value): value is string => Boolean(value && /^[A-Z]{4}$/.test(value)));
+  const routeAirportsKey = routeAirports.join(",");
+  useEffect(() => {
+    setSelectedProcedures([]);
+    if (!routeAirportsKey) return;
+    let active = true;
+    void Promise.all(routeAirportsKey.split(",").map(async (airport) => {
+      const response = await fetch(`/api/procedures?airport=${airport}`, { cache: "force-cache" });
+      if (!response.ok) return [];
+      const payload = await response.json() as { procedures?: Procedure[] };
+      return Array.isArray(payload.procedures) ? payload.procedures : [];
+    })).then((sets) => { if (active) setSelectedProcedures(sets.flat()); }).catch(() => { if (active) setSelectedProcedures([]); });
+    return () => { active = false; };
+  }, [routeAirportsKey]);
+
   useEffect(() => {
     setSelectedAtcContext(null);
     if (!contextAircraftHex || !contextHasPosition) {
@@ -1544,10 +1562,13 @@ export function AirRadarApp() {
       : null;
     return analyzePublishedRoute({
       aircraftRoute: selectedAircraft.enrichment ?? null,
-      aircraftPosition: { lat: selectedAircraft.lat, lon: selectedAircraft.lon, track: selectedAircraft.track },
+      aircraftPosition: { lat: selectedAircraft.lat, lon: selectedAircraft.lon, track: selectedAircraft.track, altitude: selectedAircraft.altitude },
+      procedures: selectedProcedures,
+      originAirportIcao: selectedAircraft.enrichment?.route?.origin,
+      destinationAirportIcao: selectedAircraft.enrichment?.route?.destination,
       atsNetwork,
     });
-  }, [atsRoutes, selectedAircraft]);
+  }, [atsRoutes, selectedAircraft, selectedProcedures]);
 
   const routeIntelligenceView = useMemo(() => toRouteIntelligenceViewDTO(
     routeIntelligence,

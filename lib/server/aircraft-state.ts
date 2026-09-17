@@ -417,6 +417,7 @@ export class AircraftStateService {
     if (!this.shuttingDown) this.statistics.observe([...this.localAircraft.values()], this.currentReceiver, new Date());
     this.scheduleReceptionRecordEvaluation();
     this.alerts.observe(previousAircraft, this.localAircraft);
+    this.intelligence.cleanup(currentHexes);
     for (const current of this.localAircraft.values()) this.intelligence.observe(previousAircraft.get(current.icaoHex), current, Date.parse(snapshot.fetchedAt));
   }
 
