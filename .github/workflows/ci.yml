@@ -6,8 +6,8 @@ on:
   pull_request:
 
 concurrency:
-  group: production-deploy-${{ github.ref }}
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production-main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate:
@@ -23,15 +23,38 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Restore ESLint cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/eslint
+          key: eslint-${{ runner.os }}-${{ hashFiles('package-lock.json', 'eslint.config.mjs') }}
+      - name: Restore Next compiler cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
       - run: npm run prisma:generate
       - run: npm run lint
-      - run: npm run typecheck
+      - run: npm run typecheck:prepared
       - run: npm run test
-      - run: npm run build
-      - run: npm run test:production
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:production:browser
+      - run: npm run build:prepared
+        env:
+          AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
+      - name: Restore Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          # package-lock contains the exact installed Playwright version.
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Prepare Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Production core and browser gates
+        run: npm run test:production:all
 
   deploy:
     name: Deploy production

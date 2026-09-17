@@ -3,6 +3,7 @@ node_modules.stale*/
 .next/
 out/
 coverage/
+.cache/
 generated/
 generated/build-version.json
 data/atc/generated/

@@ -35,6 +35,13 @@ suite. The full test command is either `npm test` or its explicit alias
 npm test
 ```
 
+The production-scale metadata importer test is intentionally separate from
+the normal suite because its 617,000-record fixture tests resource behavior,
+not ordinary correctness. Run it with `npm run test:scale`; CI runs it in the
+nightly/manual heavy workflow. The normal metadata test still proves multiple
+full batches, a remainder batch, bounded batch size, streaming, and record
+counts.
+
 Relevant production gates are:
 
 ```bash
@@ -63,6 +70,12 @@ checks when a browser is installed:
 ```bash
 npm run test:production:browser
 ```
+
+Production gates also accept `--core`, `--browser`, and `--all` modes. Browser
+mode starts one built server and checks the full interaction contract on
+representative mobile/desktop widths, while all ten configured widths keep the
+responsive layout contract. `--all` runs core and browser checks in one server
+lifecycle for CI.
 
 The production gate accepts the version and channel emitted by the current
 `generated/build-version.json` build metadata, requiring either a stable

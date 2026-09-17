@@ -36,8 +36,8 @@ describe("aircraft metadata catalog memory bounds", () => {
     expect(METADATA_IMPORT_BATCH_SIZE).toBeGreaterThanOrEqual(1_000);
   });
 
-  it("streams a production-sized catalog through bounded database batches", async () => {
-    const recordCount = 617_000;
+  it("streams multiple full batches and a partial batch without exceeding the bound", async () => {
+    const recordCount = METADATA_IMPORT_BATCH_SIZE * 2 + 17;
     async function* rows() {
       for (let index = 0; index < recordCount; index += 1) {
         const hex = index.toString(16).padStart(6, "0");
@@ -73,5 +73,5 @@ describe("aircraft metadata catalog memory bounds", () => {
     expect(batchSizes).toHaveLength(Math.ceil(recordCount / METADATA_IMPORT_BATCH_SIZE));
     expect(Math.max(...batchSizes)).toBeLessThanOrEqual(METADATA_IMPORT_BATCH_SIZE);
     expect(batchSizes.reduce((total, size) => total + size, 0)).toBe(recordCount);
-  }, 60_000);
+  });
 });

@@ -1,0 +1,24 @@
+name: CI heavy
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
+
+concurrency:
+  group: heavy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  scale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Production-scale metadata catalog
+        run: npm run test:scale
