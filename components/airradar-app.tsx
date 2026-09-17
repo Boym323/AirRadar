@@ -531,6 +531,7 @@ export function AirRadarApp() {
   const [mobileCompact, setMobileCompact] = useState(true);
   const [trafficOpen, setTrafficOpen] = useState(false);
   const trafficTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const drawerActionGenerationRef = useRef(0);
   const previousDrawerStateRef = useRef<RadarDrawerState>("closed");
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -727,10 +728,12 @@ export function AirRadarApp() {
   }
 
   const selectAircraft = useCallback((hex: string) => {
+    drawerActionGenerationRef.current += 1;
     selectedHexRef.current = hex;
     setTrafficSource("adsb");
     setSelectedOgnId(null);
     setSelectedHex(hex);
+    setFiltersOpen(false);
     setMobileCompact(false);
     setTrafficOpen(true);
   }, []);
@@ -745,15 +748,18 @@ export function AirRadarApp() {
   }, [aircraftFocus, selectAircraft, selectedHex, snapshot.aircraft]);
 
   const selectOgn = useCallback((id: string) => {
+    drawerActionGenerationRef.current += 1;
     selectedHexRef.current = null;
     setTrafficSource("ogn");
     setSelectedHex(null);
     setSelectedOgnId(id);
+    setFiltersOpen(false);
     setMobileCompact(false);
     setTrafficOpen(true);
   }, []);
 
   const closeRadarDrawer = useCallback(() => {
+    drawerActionGenerationRef.current += 1;
     setTrafficOpen(false);
     setFiltersOpen(false);
     setSelectedHex(null);
@@ -762,26 +768,32 @@ export function AirRadarApp() {
   }, []);
 
   const openTrafficDrawer = useCallback((shortcut?: "search" | "filters") => {
+    const actionGeneration = ++drawerActionGenerationRef.current;
     setSelectedHex(null);
     setSelectedOgnId(null);
     setTrafficOpen(true);
     setMobileCompact(false);
     setFiltersOpen(false);
     if (shortcut === "search") {
-      window.requestAnimationFrame(() => searchInputRef.current?.focus());
+      window.requestAnimationFrame(() => {
+        if (actionGeneration === drawerActionGenerationRef.current) searchInputRef.current?.focus();
+      });
     } else if (shortcut === "filters" && trafficSource === "adsb") {
-      window.requestAnimationFrame(() => setFiltersOpen(true));
+      window.requestAnimationFrame(() => {
+        if (actionGeneration === drawerActionGenerationRef.current) setFiltersOpen(true);
+      });
     } else if (trafficSource === "ogn") {
       setFiltersOpen(false);
     }
   }, [trafficSource]);
 
   const backToTraffic = useCallback(() => {
+    drawerActionGenerationRef.current += 1;
     setSelectedHex(null);
     setSelectedOgnId(null);
+    setFiltersOpen(false);
     setTrafficOpen(true);
     setMobileCompact(false);
-    setFiltersOpen(false);
   }, []);
 
   function centerSelectedAircraft(): void {
@@ -1662,8 +1674,9 @@ export function AirRadarApp() {
       }
     }
 
-    window.addEventListener("keydown", handleKeyboardShortcut);
-    return () => window.removeEventListener("keydown", handleKeyboardShortcut);
+    // Handle Escape before document-level details/popup handlers can consume it.
+    window.addEventListener("keydown", handleKeyboardShortcut, true);
+    return () => window.removeEventListener("keydown", handleKeyboardShortcut, true);
   }, [closeRadarDrawer, drawerState, filtersOpen, openTrafficDrawer, trafficSource]);
   const networkStatus = snapshot.sources?.adsbLol.status;
   const networkNotice = activeCoverage === "extended" && networkStatus === "rate_limited"
