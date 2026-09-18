@@ -26,7 +26,7 @@ describe("SID/STAR procedure pipeline", () => {
   });
 
   it("accepts a STAR and partial geometry while preserving the contract source", () => {
-    const star = html.replace(/data-procedure-type="SID"/g, "data-procedure-type=\\"STAR\\"").replace(/data-procedure-designator="TACLO"/g, "data-procedure-designator=\\"BODAL1A\\"").replace(/data-transition="BODAL"/g, "data-transition=\\"\\"").replace(/data-runways="24"/g, "data-runways=\\"\\"").replace('data-lat="50.1"', 'data-lat=""');
+    const star = html.replace(/data-procedure-type="SID"/g, "data-procedure-type=\"STAR\"").replace(/data-procedure-designator="TACLO"/g, "data-procedure-designator=\"BODAL1A\"").replace(/data-transition="BODAL"/g, "data-transition=\"\"").replace(/data-runways="24"/g, "data-runways=\"\"").replace('data-lat="50.1"', 'data-lat=""');
     const result = parseOfficialProcedureSource(star, { airportIcao: "LZIB", source: { ...source, countryCode: "SK" } });
     expect(result.procedures[0].type).toBe("STAR");
     expect(result.procedures[0].legs.some((leg) => leg.from?.coordinates === null)).toBe(true);
