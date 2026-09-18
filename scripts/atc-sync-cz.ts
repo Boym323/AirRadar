@@ -61,7 +61,8 @@ async function main(): Promise<void> {
   }
   console.log(`Import preview: sectors ${dataset.sectors.length}; transmitters ${dataset.transmitters.length}`);
   if (dataset.transmitters.length === 0) console.log("no authoritative transmitter-location source found");
-  await runAtcImport(dataset, { dryRun, database });
+  try { await runAtcImport(dataset, { dryRun, database }); }
+  finally { await database?.close(); }
 }
 
 main().catch((error: unknown) => {
