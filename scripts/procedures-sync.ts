@@ -2,7 +2,7 @@
 import "dotenv/config";
 import { mkdir, open, rename, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { mergeProcedureDatasets, parseOfficialProcedureSource, type ProcedureDatasetDocument } from "../lib/procedures/pipeline";
+import { mergeProcedureDatasets, parseOfficialProcedureSource, ProcedureParseError, type ProcedureDatasetDocument } from "../lib/procedures/pipeline";
 import { fetchOfficialProcedureSource, PROCEDURE_DEFAULT_AIRPORTS, type ProcedureCountry } from "../lib/procedures/sources";
 
 function args(): { countries: ProcedureCountry[]; airports: string[]; dryRun: boolean } {
@@ -31,14 +31,26 @@ async function main(): Promise<void> {
   const selected = options.airports.filter((airport) => options.countries.some((country) => airport.startsWith(country === "CZ" ? "LK" : country === "SK" ? "LZ" : "LO")));
   if (!selected.length) throw new Error("No airports selected for the requested countries");
   const documents: ProcedureDatasetDocument[] = [];
+  const skippedAirports: string[] = [];
   for (const airport of selected) {
     const country = airport.startsWith("LK") ? "CZ" : airport.startsWith("LZ") ? "SK" : "AT";
     const fetched = await fetchOfficialProcedureSource(country, airport);
     if (!fetched.effectiveDate) throw new Error(`${airport}: official source did not expose an effective date`);
     const source = { countryCode: country, provider: fetched.provider, reference: fetched.reference, effectiveDate: fetched.effectiveDate, airacCycle: fetched.airacCycle, amendment: fetched.amendment, retrievedAt: new Date().toISOString() };
-    const document = parseOfficialProcedureSource(fetched.html, { airportIcao: airport, source });
-    documents.push(document);
-    console.log(`${airport}: ${document.procedures.length} procedures, ${document.counts.legs} legs, effective ${source.effectiveDate}`);
+    try {
+      const document = parseOfficialProcedureSource(fetched.html, { airportIcao: airport, source });
+      documents.push(document);
+      console.log(`${airport}: ${document.procedures.length} procedures, ${document.counts.legs} legs, effective ${source.effectiveDate}`);
+    } catch (error) {
+      if (!(error instanceof ProcedureParseError)) throw error;
+      skippedAirports.push(airport);
+      console.warn(`${airport}: structured SID/STAR data unavailable; keeping the existing validated dataset (${error.issues.join("; ")})`);
+    }
+  }
+  if (!documents.length) { console.log("No new structured SID/STAR data was available; existing procedure dataset remains unchanged."); return; }
+  if (skippedAirports.length) {
+    console.log(`Structured SID/STAR data is incomplete for ${skippedAirports.join(", ")}; existing procedure dataset remains unchanged.`);
+    return;
   }
   const merged = mergeProcedureDatasets(documents);
   const output = resolve(process.env.PROCEDURES_DATASET_PATH?.trim() || "data/procedures/generated/procedures.json");

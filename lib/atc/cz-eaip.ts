@@ -797,12 +797,12 @@ function inheritLogicalVerticalLimits(rows: ParsedRow[]): void {
   }
 }
 
-export function parseCzEaipEnr21(html: string, options: { publicationHtml?: string; lastVerifiedAt?: string; boundaryResolver?: BoundaryResolver } = {}): CzEaipParseResult {
+export function parseCzEaipEnr21(html: string, options: { publicationHtml?: string; lastVerifiedAt?: string; boundaryResolver?: BoundaryResolver; allowPublicationDateMismatch?: boolean } = {}): CzEaipParseResult {
   const $ = load(html, { xmlMode: true });
   const effectiveDate = extractEffectiveDate($);
   const publicationDate = parseDateParts(metadataValue($, "DC.date"));
   const publicationFromGen02 = options.publicationHtml ? parseCzPublicationMetadata(options.publicationHtml) : { aipAmendment: null, airacAmendment: null, effectiveDate: null };
-  if (publicationFromGen02.effectiveDate && publicationFromGen02.effectiveDate !== effectiveDate) {
+  if (publicationFromGen02.effectiveDate && publicationFromGen02.effectiveDate !== effectiveDate && !options.allowPublicationDateMismatch) {
     throw new CzEaipParseError([
       `ENR 2.1 effective date ${effectiveDate} does not match GEN 0.2 effective date ${publicationFromGen02.effectiveDate}`,
     ]);

@@ -45,7 +45,10 @@ async function main(): Promise<void> {
   const source = await fetchCurrentCzEaip();
   const boundaryResolver = new AuthoritativeBoundaryResolver(new CuzkStateBoundaryProvider(), new BkgGermanyPolandBoundaryProvider());
   await boundaryResolver.load();
-  const parsedEnr21 = parseCzEaipEnr21(source.enr21Html, { publicationHtml: source.publicationHtml, boundaryResolver });
+  const parsedEnr21 = parseCzEaipEnr21(source.enr21Html, { publicationHtml: source.publicationHtml, boundaryResolver, allowPublicationDateMismatch: true });
+  if (parsedEnr21.publication.effectiveDate && parsedEnr21.publication.effectiveDate !== parsedEnr21.effectiveDate) {
+    console.warn(`WARNING: ENR 2.1 effective date ${parsedEnr21.effectiveDate} differs from GEN 0.2 effective date ${parsedEnr21.publication.effectiveDate}; importing the explicitly dated ENR 2.1 dataset.`);
+  }
   const parsedAd2 = source.ad2Html.map(({ html }) => parseCzEaipAd2AtcAirspace(html));
   const parsed = mergeCzAd2AtcResults(parsedEnr21, parsedAd2);
   const dataset = validateAtcImportDocument(parsed.document);
