@@ -550,7 +550,7 @@ export function AirRadarApp() {
   });
   const atsDataset = useRetryingDataset<AtsRoutesResponse>({
     url: "/api/ats/routes",
-    enabled: showAtsRoutes,
+    enabled: showAtsRoutes || Boolean(atsPointFocus) || Boolean(selectedHex),
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtsDataset),
     itemCount: (value) => value.counts?.routes ?? value.routes?.length ?? 0,
@@ -1427,7 +1427,10 @@ export function AirRadarApp() {
 
   const selectedRouteAirportCodesKey = useMemo(() => {
     const selectedRoute = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex)?.enrichment?.route;
-    return [selectedRoute?.originAirport?.icaoCode, selectedRoute?.destinationAirport?.icaoCode]
+    return [
+      selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin,
+      selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination,
+    ]
       .filter((icao): icao is string => Boolean(icao))
       .map((icao) => icao.trim().toUpperCase())
       .join("|");

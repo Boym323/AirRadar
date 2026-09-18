@@ -30,9 +30,12 @@ function statusLabel(status: RouteIntelligenceViewDTO["status"]): string {
 
 function phaseLabel(phase: RoutePhase): string {
   switch (phase) {
+    case "DEPARTURE": return t.routeIntelligence.departure;
     case "SID": return t.routeIntelligence.sid;
+    case "ENROUTE":
     case "EN_ROUTE": return t.routeIntelligence.enRoute;
     case "STAR": return t.routeIntelligence.star;
+    case "ARRIVAL": return t.routeIntelligence.arrival;
     case "CONNECTOR": return t.routeIntelligence.connector;
     case "UNKNOWN": return t.routeIntelligence.unknown;
     default: return t.routeIntelligence.unknown;
@@ -118,7 +121,12 @@ export function RouteIntelligencePanel({ route, compact = false }: { route: Rout
     : Math.max(0, Math.min(100, route.routeProgress * 100));
   const unresolved = route.elements.filter((element) => element.status !== "RESOLVED");
   const sources = [...new Map(route.elements.map((element) => [
-    `${element.source.provider ?? ""}:${element.source.reference ?? ""}`,
+    [
+      element.source.kind,
+      element.source.procedureId ?? "",
+      element.source.provider ?? "",
+      element.source.reference ?? "",
+    ].join(":"),
     [element.source.provider, element.source.reference].filter(Boolean).join(" · ") || sourceKindLabel(element.source.kind),
   ])).values()];
 
