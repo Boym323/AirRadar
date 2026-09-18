@@ -17,7 +17,7 @@ export interface TimeMachineRange { min: string | null; max: string | null; posi
 type PositionRow = { flightId: number; recordedAt: Date | Temporal.Instant; lat: number; lon: number; altitude: number | null; groundSpeed: number | null; track: number | null };
 type FlightRow = { id: number; callsign: string | null; registration: string | null; aircraftType: string | null; origin: string | null; destination: string | null; aircraft: { icaoHex: string; registration: string | null; aircraftType: string | null } };
 type EventRow = { id?: number; eventKey: string; type: string; icaoHex: string; flightId?: number | null; occurredAt: Date | Temporal.Instant; airportIcao?: string | null; sectorId?: string | null; latitude?: number | null; longitude?: number | null; aircraft?: { callsign?: string | null; registration?: string | null } | null };
-type QueryField = { gte(value: unknown): unknown; lt(value: unknown): unknown; in?(values: number[]): unknown; asc(): unknown; };
+type QueryField = { gte(value: unknown): unknown; lt(value: unknown): unknown; in?(values: number[]): unknown; asc(): unknown; desc(): unknown; };
 type QueryRow = Record<string, QueryField>;
 type QueryCollection<T> = { where(predicate: ((row: QueryRow) => unknown) | Record<string, unknown>): QueryCollection<T>; orderBy(order: unknown): QueryCollection<T>; limit(value: number): QueryCollection<T>; include(relation: string, callback: (query: QueryCollection<unknown>) => QueryCollection<unknown>): QueryCollection<T>; select(...fields: string[]): QueryCollection<T>; all(): Promise<T[]> };
 type TimeMachineDb = { orm: { public: { FlightPosition: QueryCollection<PositionRow>; Flight: QueryCollection<FlightRow>; FlightEvent: QueryCollection<EventRow> } } };
@@ -40,8 +40,8 @@ export async function getTimeMachineRange(): Promise<TimeMachineRange> {
   if (!database) throw new TimeMachineDatabaseUnavailableError();
   try {
     const table = database.orm.public.FlightPosition;
-    const first = await table.orderBy({ recordedAt: "asc" }).limit(1).all();
-    const last = await table.orderBy({ recordedAt: "desc" }).limit(1).all();
+    const first = await table.orderBy((row: QueryRow) => row.recordedAt.asc()).limit(1).all();
+    const last = await table.orderBy((row: QueryRow) => row.recordedAt.desc()).limit(1).all();
     return { min: first[0] ? iso(first[0].recordedAt) : null, max: last[0] ? iso(last[0].recordedAt) : null, positions: null };
   } catch { throw new TimeMachineDatabaseUnavailableError(); }
 }
