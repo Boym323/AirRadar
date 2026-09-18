@@ -25,8 +25,10 @@ import {
   watchlistKindLabel,
   watchlistSummary,
 } from "@/lib/i18n";
+import { destinationPoint, haversineDistanceKm } from "@/lib/geo";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
+import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { TAR1090_CATEGORY_ICON_ASSETS, TAR1090_GROUND_SQUARE_ICON_ASSET, TAR1090_ICON_CODES, TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
@@ -154,6 +156,9 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 
 const MIN_AIRCRAFT_ANIMATION_MS = 650;
 const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
+const KNOT_TO_KM_PER_HOUR = 1.852;
+const MAX_PREDICTION_AGE_MS = 15_000;
+const MAX_PREDICTION_CORRECTION_KM = 12;
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -161,19 +166,66 @@ function prefersReducedMotion(): boolean {
 type TrafficSource = "adsb" | "ogn";
 type RadarDrawerState = "closed" | "traffic" | "aircraft" | "ogn";
 
-interface AircraftMotionTiming {
-  lat: number;
-  lon: number;
-  receivedAt: number;
-  durationMs: number;
-}
-
 interface AircraftAnimationJob {
   marker: maplibregl.Marker;
-  start: maplibregl.LngLat;
-  target: [number, number];
-  startedAt: number;
-  durationMs: number;
+  source: {
+    lat: number;
+    lon: number;
+    observedAt: number;
+    groundSpeed: number | null;
+    track: number | null;
+  };
+  correctionLon: number;
+  correctionLat: number;
+  correctionStartedAt: number;
+  correctionDurationMs: number;
+  sourceReceivedAt: number;
+}
+
+function normalizeLongitude(longitude: number): number {
+  return ((longitude + 540) % 360) - 180;
+}
+
+function shortestLongitudeDelta(from: number, to: number): number {
+  let delta = from - to;
+  if (delta > 180) delta -= 360;
+  if (delta < -180) delta += 360;
+  return delta;
+}
+
+function sourceObservedPerformanceTime(aircraft: AircraftView, receivedAt: number): number {
+  const observedAt = positionObservedAt(aircraft);
+  if (observedAt === null) return receivedAt;
+  const age = Math.min(MAX_PREDICTION_AGE_MS, Math.max(0, Date.now() - observedAt));
+  return receivedAt - age;
+}
+
+function predictedPosition(source: AircraftAnimationJob["source"], timestamp: number): [number, number] {
+  const speed = source.groundSpeed;
+  const track = source.track;
+  if (speed === null || !Number.isFinite(speed) || speed < 0.5 || track === null || !Number.isFinite(track)) {
+    return [source.lon, source.lat];
+  }
+  const elapsedHours = Math.max(0, timestamp - source.observedAt) / 3_600_000;
+  return destinationPoint(source.lat, source.lon, speed * KNOT_TO_KM_PER_HOUR * elapsedHours, track);
+}
+
+function predictedMarkerPosition(job: AircraftAnimationJob, timestamp: number): [number, number] {
+  const [predictedLon, predictedLat] = predictedPosition(job.source, timestamp);
+  const correctionProgress = Math.min(1, Math.max(0, (timestamp - job.correctionStartedAt) / job.correctionDurationMs));
+  const correctionWeight = 1 - correctionProgress;
+  return [
+    normalizeLongitude(predictedLon + job.correctionLon * correctionWeight),
+    predictedLat + job.correctionLat * correctionWeight,
+  ];
+}
+
+function hasContinuousPrediction(job: AircraftAnimationJob, timestamp: number): boolean {
+  const speed = job.source.groundSpeed;
+  const moving = speed !== null && Number.isFinite(speed) && speed >= 0.5
+    && job.source.track !== null && Number.isFinite(job.source.track);
+  const correcting = timestamp - job.correctionStartedAt < job.correctionDurationMs;
+  return moving || correcting;
 }
 
 const MAP_STYLE: StyleSpecification = {
@@ -497,8 +549,6 @@ export function AirRadarApp() {
   const animationFrameRef = useRef<number | null>(null);
   const animationHiddenAtRef = useRef<number | null>(null);
   const animationSchedulerRef = useRef<(() => void) | null>(null);
-  const aircraftMotionTimingRef = useRef<Map<string, AircraftMotionTiming>>(new Map());
-  const aircraftAnimationTargetsRef = useRef<Map<string, [number, number]>>(new Map());
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const selectedHexRef = useRef<string | null>(null);
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
@@ -853,8 +903,6 @@ export function AirRadarApp() {
     const animationJobs = animationJobsRef.current;
     const aircraftMarkers = aircraftMarkersRef.current;
     const ognMarkers = ognMarkersRef.current;
-    const aircraftMotionTiming = aircraftMotionTimingRef.current;
-    const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
     const liveTrails = liveTrailsRef.current;
     const mapReplays = mapReplayRef.current;
 
@@ -865,33 +913,26 @@ export function AirRadarApp() {
         return;
       }
       if (prefersReducedMotion()) {
-        for (const job of animationJobs.values()) job.marker.setLngLat(job.target);
+        for (const job of animationJobs.values()) job.marker.setLngLat([job.source.lon, job.source.lat]);
         animationJobs.clear();
         return;
       }
-      for (const [hex, job] of animationJobs) {
-        const progress = Math.min(1, (timestamp - job.startedAt) / job.durationMs);
-        // Position samples are already discrete, so easing every segment makes
-        // each aircraft slow down and speed up again at every server update.
-        // Linear interpolation keeps the visual velocity stable between samples.
-        const interpolated = progress;
-        job.marker.setLngLat([
-          job.start.lng + (job.target[0] - job.start.lng) * interpolated,
-          job.start.lat + (job.target[1] - job.start.lat) * interpolated,
-        ]);
-        if (progress >= 1) animationJobs.delete(hex);
+      let continueAnimation = false;
+      for (const job of animationJobs.values()) {
+        job.marker.setLngLat(predictedMarkerPosition(job, timestamp));
+        if (timestamp - job.correctionStartedAt >= job.correctionDurationMs) {
+          job.correctionLon = 0;
+          job.correctionLat = 0;
+        }
+        if (hasContinuousPrediction(job, timestamp)) continueAnimation = true;
       }
-      if (animationJobs.size) animationFrameRef.current = window.requestAnimationFrame(runAnimations);
+      if (continueAnimation) animationFrameRef.current = window.requestAnimationFrame(runAnimations);
     };
     const ensureAnimationFrame = () => {
       if (document.hidden) return;
       const hiddenAt = animationHiddenAtRef.current;
-      if (hiddenAt !== null) {
-        const pausedFor = performance.now() - hiddenAt;
-        for (const job of animationJobs.values()) job.startedAt += pausedFor;
-        animationHiddenAtRef.current = null;
-      }
-      if (animationJobs.size && animationFrameRef.current === null) {
+      if (hiddenAt !== null) animationHiddenAtRef.current = null;
+      if (animationJobs.size && [...animationJobs.values()].some((job) => hasContinuousPrediction(job, performance.now())) && animationFrameRef.current === null) {
         animationFrameRef.current = window.requestAnimationFrame(runAnimations);
       }
     };
@@ -1082,8 +1123,6 @@ export function AirRadarApp() {
       animationHiddenAtRef.current = null;
       animationSchedulerRef.current = null;
       animationJobs.clear();
-      aircraftMotionTiming.clear();
-      aircraftAnimationTargets.clear();
       receiverMarkerRef.current?.remove();
       receiverMarkerRef.current = null;
       for (const marker of aircraftMarkers.values()) marker.remove();
@@ -1255,25 +1294,75 @@ export function AirRadarApp() {
         focusedAircraftRef.current = selectedHex;
       }
     }
-    const aircraftMotionTiming = aircraftMotionTimingRef.current;
-    const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
+    const animationJobs = animationJobsRef.current;
     const currentHexes = new Set<string>();
-    const animate = (hex: string, marker: maplibregl.Marker, target: [number, number], duration: number) => {
-      if (document.hidden || prefersReducedMotion()) {
+    const upsertPrediction = (aircraft: AircraftView, marker: maplibregl.Marker) => {
+      const now = performance.now();
+      const target: [number, number] = [aircraft.lon!, aircraft.lat!];
+      const source: AircraftAnimationJob["source"] = {
+        lat: aircraft.lat!,
+        lon: aircraft.lon!,
+        observedAt: sourceObservedPerformanceTime(aircraft, now),
+        groundSpeed: aircraft.groundSpeed,
+        track: aircraft.track,
+      };
+      const previous = animationJobs.get(aircraft.icaoHex);
+
+      if (prefersReducedMotion()) {
         marker.setLngLat(target);
-        animationJobsRef.current.delete(hex);
+        animationJobs.delete(aircraft.icaoHex);
         return;
       }
-      const start = marker.getLngLat();
-      if (Math.abs(start.lng - target[0]) < 0.000001 && Math.abs(start.lat - target[1]) < 0.000001) {
+
+      if (document.hidden) {
         marker.setLngLat(target);
-        animationJobsRef.current.delete(hex);
+        animationJobs.set(aircraft.icaoHex, {
+          marker,
+          source,
+          correctionLon: 0,
+          correctionLat: 0,
+          correctionStartedAt: now,
+          correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
+          sourceReceivedAt: now,
+        });
         return;
       }
-      animationJobsRef.current.set(hex, { marker, start, target, startedAt: performance.now(), durationMs: duration });
-      // All aircraft share one low-frequency animation timer, which avoids a
-      // permanent 60 Hz callback and reduces map-render overhead when traffic
-      // is dense.
+
+      if (previous) {
+        const current = marker.getLngLat();
+        const [predictedLon, predictedLat] = predictedPosition(source, now);
+        const correctionDistance = haversineDistanceKm(current.lat, current.lng, predictedLat, predictedLon);
+        const correctionDurationMs = Math.min(
+          MAX_AIRCRAFT_ANIMATION_MS,
+          Math.max(MIN_AIRCRAFT_ANIMATION_MS, now - previous.sourceReceivedAt),
+        );
+        previous.source = source;
+        previous.sourceReceivedAt = now;
+        previous.correctionStartedAt = now;
+        previous.correctionDurationMs = correctionDurationMs;
+        if (correctionDistance <= MAX_PREDICTION_CORRECTION_KM) {
+          previous.correctionLon = shortestLongitudeDelta(current.lng, predictedLon);
+          previous.correctionLat = current.lat - predictedLat;
+        } else {
+          // A large discrepancy usually means a stale/changed source position,
+          // not a correction that should be animated across the map.
+          marker.setLngLat(predictedPosition(source, now));
+          previous.correctionLon = 0;
+          previous.correctionLat = 0;
+        }
+      } else {
+        const initialPosition = predictedPosition(source, now);
+        marker.setLngLat(initialPosition);
+        animationJobs.set(aircraft.icaoHex, {
+          marker,
+          source,
+          correctionLon: 0,
+          correctionLat: 0,
+          correctionStartedAt: now,
+          correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
+          sourceReceivedAt: now,
+        });
+      }
       animationSchedulerRef.current?.();
     };
 
@@ -1317,31 +1406,8 @@ export function AirRadarApp() {
           .setLngLat(target)
           .addTo(map);
         aircraftMarkersRef.current.set(aircraft.icaoHex, marker);
-        aircraftAnimationTargets.set(aircraft.icaoHex, target);
-        aircraftMotionTiming.set(aircraft.icaoHex, {
-          lat: aircraft.lat,
-          lon: aircraft.lon,
-          receivedAt: performance.now(),
-          durationMs: MIN_AIRCRAFT_ANIMATION_MS,
-        });
-      } else {
-        const previousTiming = aircraftMotionTiming.get(aircraft.icaoHex);
-        const positionChanged = !previousTiming ||
-          Math.abs(previousTiming.lat - aircraft.lat) > 0.000001 ||
-          Math.abs(previousTiming.lon - aircraft.lon) > 0.000001;
-        let durationMs = previousTiming?.durationMs ?? MIN_AIRCRAFT_ANIMATION_MS;
-        if (positionChanged) {
-          const now = performance.now();
-          const elapsed = previousTiming ? now - previousTiming.receivedAt : durationMs;
-          durationMs = Math.min(MAX_AIRCRAFT_ANIMATION_MS, Math.max(MIN_AIRCRAFT_ANIMATION_MS, elapsed));
-          aircraftMotionTiming.set(aircraft.icaoHex, { lat: aircraft.lat, lon: aircraft.lon, receivedAt: now, durationMs });
-        }
-        const previousTarget = aircraftAnimationTargets.get(aircraft.icaoHex);
-        if (!previousTarget || Math.abs(previousTarget[0] - target[0]) > 0.000001 || Math.abs(previousTarget[1] - target[1]) > 0.000001) {
-          animate(aircraft.icaoHex, marker, target, durationMs);
-          aircraftAnimationTargets.set(aircraft.icaoHex, target);
-        }
       }
+      upsertPrediction(aircraft, marker);
       const root = marker.getElement();
       root.setAttribute("aria-label", labelForAircraft(aircraft));
       root.setAttribute("aria-pressed", String(aircraft.icaoHex === selectedHex));
@@ -1382,8 +1448,6 @@ export function AirRadarApp() {
           continue;
         }
         animationJobsRef.current.delete(hex);
-        aircraftMotionTiming.delete(hex);
-        aircraftAnimationTargets.delete(hex);
         marker.remove();
         aircraftMarkersRef.current.delete(hex);
       }
