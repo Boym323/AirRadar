@@ -2,6 +2,15 @@
 
 ## Live ingest to browser
 
+## Map Context V1
+
+Map Context is a separate optional read path. Radar catalog/frame requests,
+batch METAR, ICON-EU wind, and AUP/UUP activity are independently cached and
+serialized into bounded map DTOs. Their browser state is isolated from
+`/api/stream`; provider failures leave live aircraft and other map layers
+usable. The radar uses observed frames, wind uses model valid times, METAR uses
+latest observations, and AUP/UUP uses validity intervals.
+
 1. `LocalReadsbProvider` fetches `<READSB_BASE_URL>/data/aircraft.json` on
    the poll interval and refreshes `/data/receiver.json` less often. A missing
    `READSB_BASE_URL` uses `MockReadsbProvider` for demo mode.

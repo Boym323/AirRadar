@@ -147,6 +147,14 @@ in-flight requests are never persisted.
 
 ## Browser and API boundary
 
+### Map Context V1
+
+Map Context is an optional enrichment boundary with independent providers for
+ČHMÚ radar (`lib/server/weather-radar`), batched AWC METAR, DWD ICON-EU wind,
+and the existing Czech AUP/UUP activity provider. These providers feed bounded
+HTTP APIs and MapLibre sources; none is connected to `AircraftStateService` or
+the aircraft SSE serializer. See [MAP-CONTEXT.md](MAP-CONTEXT.md).
+
 The browser uses AirRadar APIs only. `toPublicStateSnapshot()` is the full
 snapshot boundary for `/api/aircraft`; `toPublicLiveStateSnapshot()` is the
 compact SSE boundary. Exact internal receiver

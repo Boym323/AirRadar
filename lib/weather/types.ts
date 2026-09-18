@@ -42,6 +42,25 @@ export interface MetarObservation {
   stale?: boolean;
 }
 
+export interface MetarMapObservation {
+  stationId: string;
+  lat: number;
+  lon: number;
+  observedAt: string | null;
+  flightCategory: FlightCategory | null;
+  windDirection: number | null;
+  windSpeed: number | null;
+  windGust: number | null;
+  visibility: number | null;
+  ceiling: number | null;
+  temperature: number | null;
+  dewpoint: number | null;
+  qnh: number | null;
+  clouds: MetarCloudLayer[];
+  rawMetar: string | null;
+  stale: boolean;
+}
+
 export interface TafForecast {
   rawText: string | null;
   issueTime: string | null;

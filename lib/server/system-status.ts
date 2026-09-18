@@ -17,6 +17,9 @@ import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getBuildMetadata } from "@/lib/server/version";
 import { readRuntimeDiagnostics, type RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import { loadCzAtsRoutes } from "@/lib/ats/cz-routes";
+import { defaultWeatherRadarProvider } from "@/lib/server/weather-radar/provider";
+import type { WeatherRadarDiagnostics } from "@/lib/server/weather-radar/types";
+import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 
 export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
 
@@ -260,6 +263,9 @@ export interface SystemStatusResponse {
     atc: { state: SystemStatus; sectorCount: number; transmitterCount: number; source: string | null; effectiveDate: string | null };
     ats: { state: SystemStatus; routeCount: number; pointCount: number; segmentCount: number; effectiveDate: string | null };
     airspaceActivity: { state: "on_demand"; stale: boolean };
+    radar: { state: SystemStatus; latestFrameId: string | null; latestObservedAt: string | null; ageMs: number | null; cachedFrames: number; failures: number };
+    metar: { state: SystemStatus; stations: number; lastSuccessAt: string | null; cacheAgeMs: number | null };
+    wind: { state: SystemStatus; model: string; modelRun: string | null; availableValidTimes: number; cacheEntries: number; lastSuccessAt: string | null };
   };
   dataSources: {
     adsbdb: SystemDataSourceStatus;
@@ -301,6 +307,7 @@ export interface SystemStatusBuildInput {
     effectiveDate: string | null;
   };
   weather?: Partial<AviationWeatherDiagnostics> & { entries?: number; airports?: number };
+  mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; };
   adsbLol?: NetworkProviderDiagnostics;
   adsbdb?: {
     providerStatus: "online" | "degraded" | "offline" | "unknown";
@@ -937,6 +944,28 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
         effectiveDate: safeTimestamp(input.atsData?.effectiveDate),
       },
       airspaceActivity: { state: "on_demand", stale: false },
+      radar: {
+        state: input.mapContext?.radar?.status === "online" ? "ok" : input.mapContext?.radar?.status === "degraded" ? "degraded" : input.mapContext?.radar?.status === "offline" ? "offline" : "disabled",
+        latestFrameId: input.mapContext?.radar?.latestFrameId ?? null,
+        latestObservedAt: safeTimestamp(input.mapContext?.radar?.latestObservedAt),
+        ageMs: input.mapContext?.radar?.catalogAgeMs === null || input.mapContext?.radar?.catalogAgeMs === undefined ? null : nonNegativeInteger(input.mapContext.radar.catalogAgeMs, 7 * 24 * 60 * 60_000),
+        cachedFrames: nonNegativeInteger(input.mapContext?.radar?.cachedFrames ?? 0, 64),
+        failures: nonNegativeInteger(input.mapContext?.radar?.failures ?? 0, 10_000_000),
+      },
+      metar: {
+        state: weatherState,
+        stations: nonNegativeInteger(weatherAirports, 256),
+        lastSuccessAt: safeTimestamp(input.weather?.lastSuccessAt),
+        cacheAgeMs: input.weather?.lastSuccessAt ? nonNegativeInteger(Math.max(0, now.getTime() - Date.parse(input.weather.lastSuccessAt)), 7 * 24 * 60 * 60_000) : null,
+      },
+      wind: {
+        state: input.mapContext?.wind?.status === "online" ? "ok" : input.mapContext?.wind?.status === "degraded" ? "degraded" : "offline",
+        model: safeLabel(input.mapContext?.wind?.model, "ICON-EU"),
+        modelRun: safeTimestamp(input.mapContext?.wind?.modelRun),
+        availableValidTimes: nonNegativeInteger(input.mapContext?.wind?.validTimes ?? 0, 1_000),
+        cacheEntries: nonNegativeInteger(input.mapContext?.wind?.cacheEntries ?? 0, 8),
+        lastSuccessAt: safeTimestamp(input.mapContext?.wind?.lastSuccessAt),
+      },
     },
     dataSources: {
       // These are configuration-safe states. Opening /system never probes an
@@ -1012,6 +1041,10 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     },
     atsData: ats ? { available: true, routeCount: ats.counts.routes, pointCount: ats.counts.points, segmentCount: ats.counts.segments, effectiveDate: ats.source.effectiveDate } : { available: false, routeCount: 0, pointCount: 0, segmentCount: 0, effectiveDate: null },
     weather,
+    mapContext: {
+      radar: defaultWeatherRadarProvider.getDiagnostics(),
+      wind: defaultWindAloftProvider.diagnostics(),
+    },
     adsbLol: service.getNetworkDiagnostics?.(),
     adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
     ogn: ognService.getDiagnostics(),

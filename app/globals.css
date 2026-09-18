@@ -2354,3 +2354,16 @@ button, input, select, textarea { color-scheme: dark; }
     font-size: 11px;
   }
 }
+/* Map Context V1 controls stay compact so the live map remains dominant. */
+.weather-radar-timeline { margin-top: .45rem; padding: .55rem .65rem; border: 1px solid rgba(155, 212, 255, .24); border-radius: .55rem; background: rgba(7, 17, 29, .88); max-width: 28rem; }
+.weather-radar-timeline-heading, .weather-radar-timeline-controls { display: flex; align-items: center; gap: .45rem; }
+.weather-radar-timeline-heading { justify-content: space-between; font-size: .72rem; color: #c8dbe5; margin-bottom: .35rem; }
+.weather-radar-timeline-controls button { min-height: 1.8rem; padding: .15rem .42rem; border: 1px solid rgba(155, 212, 255, .28); border-radius: .35rem; background: #102337; color: #eaf8ff; cursor: pointer; }
+.weather-radar-timeline-controls button.active { background: #1c617b; }
+.weather-radar-timeline-controls input[type="range"] { min-width: 6rem; flex: 1; }
+.metar-legend { display: flex; flex-wrap: wrap; gap: .35rem .6rem; }
+.metar-dot { display: inline-block; width: .55rem; height: .55rem; margin-right: .2rem; border-radius: 50%; }
+.metar-dot.vfr { background: #42d392; } .metar-dot.mvfr { background: #f4c95d; } .metar-dot.ifr { background: #ef8f6b; } .metar-dot.lifr { background: #dd6b93; }
+.weather-radar-controls, .wind-controls { display: grid; gap: .35rem; }
+.weather-radar-controls input[type="range"] { width: 100%; }
+.map-layer-notice { margin-top: .4rem; padding: .45rem .6rem; border-radius: .4rem; color: #f4c95d; background: rgba(106, 73, 24, .38); font-size: .75rem; }

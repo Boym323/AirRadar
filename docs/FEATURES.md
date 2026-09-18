@@ -1,5 +1,15 @@
 # Features and routes
 
+## Map Context V1
+
+The home radar includes optional, persisted-off layers for ČHMÚ weather radar
+with a two-hour frame timeline, batched AWC METAR markers, cached DWD ICON-EU
+wind aloft at 850/700/500/300/200 hPa, and a dedicated AUP/UUP planned-airspace
+view. Public endpoints are `/api/weather/radar/frames`,
+`/api/weather/radar/frame/:id`, `/api/weather/metar-map`, and
+`/api/weather/wind`. Detailed provider semantics and attribution are in
+[MAP-CONTEXT.md](MAP-CONTEXT.md).
+
 Status describes the current code path, not a transient runtime count or
 whether an operator has configured an optional provider.
 

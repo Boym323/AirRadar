@@ -257,6 +257,22 @@ export function SystemStatusPage() {
         {data.weather.retryAfterMs !== null && <Field label={dictionary.system.retryAfter} value={`${formatNumber(data.weather.retryAfterMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />}
       </Card>
 
+      <Card title={dictionary.system.mapContext} status={data.mapLayers.radar.state} dictionary={dictionary}>
+        <Field label={dictionary.system.radar} value={<StatusBadge status={data.mapLayers.radar.state} dictionary={dictionary} />} />
+        <Field label={dictionary.system.latestFrame} value={data.mapLayers.radar.latestFrameId ?? dictionary.system.notAvailable} />
+        <Field label={dictionary.system.cachedFrames} value={formatNumber(data.mapLayers.radar.cachedFrames, 0, dictionary.locale)} />
+        <Field label={dictionary.system.failures} value={formatNumber(data.mapLayers.radar.failures, 0, dictionary.locale)} />
+        <Field label={dictionary.system.metarMap} value={<StatusBadge status={data.mapLayers.metar.state} dictionary={dictionary} />} />
+        <Field label={dictionary.system.stations} value={formatNumber(data.mapLayers.metar.stations, 0, dictionary.locale)} />
+        <Field label={dictionary.system.lastSuccess} value={formatDateTime(data.mapLayers.metar.lastSuccessAt, dictionary)} />
+        <Field label={dictionary.system.windAloft} value={<StatusBadge status={data.mapLayers.wind.state} dictionary={dictionary} />} />
+        <Field label={dictionary.system.model} value={data.mapLayers.wind.model} />
+        <Field label={dictionary.system.validTimes} value={formatNumber(data.mapLayers.wind.availableValidTimes, 0, dictionary.locale)} />
+        <Field label={dictionary.system.cacheEntries} value={formatNumber(data.mapLayers.wind.cacheEntries, 0, dictionary.locale)} />
+        <Field label={dictionary.system.airspaceActivity} value={data.mapLayers.airspaceActivity.state} />
+        <Field label={dictionary.system.planned} value={data.mapLayers.airspaceActivity.stale ? dictionary.system.stale : dictionary.system.current} />
+      </Card>
+
       <Card title={dictionary.system.alerts} status={data.alerts.status} dictionary={dictionary}>
         <Field label={dictionary.system.configured} value={data.alerts.enabled ? dictionary.system.configured : dictionary.system.disabled} />
         <Field label={dictionary.system.notifier} value={data.alerts.notifier} />
