@@ -166,6 +166,12 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("setMapFilters(DEFAULT_MAP_AIRCRAFT_FILTERS)");
   });
 
+  it("loads ATS data whenever route intelligence or ATS point focus needs it", () => {
+    expect(appSource).toContain("enabled: showAtsRoutes || Boolean(atsPointFocus) || Boolean(selectedHex)");
+    expect(appSource).toContain("selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin");
+    expect(appSource).toContain("selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination");
+  });
+
   it("keeps CZ and EN layer labels in the existing i18n dictionaries", () => {
     expect(getTranslations("cs").layers).toMatchObject({ aircraft: "Letadla", airports: "Letiště", atc: "ATC", heliports: "Heliporty" });
     expect(getTranslations("en").layers).toMatchObject({ aircraft: "Aircraft", airports: "Airports", atc: "ATC", heliports: "Heliports" });
