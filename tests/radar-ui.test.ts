@@ -124,6 +124,13 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("/api/history/${encodeURIComponent(selectedHex)}");
   });
 
+  it("shows available receiver telemetry in technical aircraft details", () => {
+    expect(quickDetailSource).toContain("label={t.aircraft.bearing}");
+    expect(quickDetailSource).toContain("label={t.aircraft.rssi}");
+    expect(quickDetailSource).toContain("label={t.aircraft.seenPosition}");
+    expect(quickDetailSource).toContain("aircraft.seenPosSeconds");
+  });
+
   it("plots aircraft altitude using recorded time instead of sample index", () => {
     expect(aircraftDetailSource).toContain("Date.parse(point.recordedAt) - firstTimestamp");
     expect(aircraftDetailSource).toContain("lastTimestamp - firstTimestamp");
