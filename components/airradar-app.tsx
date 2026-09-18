@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
-import type { FilterSpecification, GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
+import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import {
   formatAge,
@@ -41,7 +41,9 @@ import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import { AircraftRadarQuickDetail } from "@/components/aircraft-radar-quick-detail";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
-import type { SigmetSnapshot } from "@/lib/weather/types";
+import type { MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
+import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
+import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 import { airportVisibilityFilter, airportVisibilityTier, airportsWithinMapRadius, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
@@ -98,6 +100,16 @@ const EMPTY_SIGMET_DATA: SigmetSnapshot = { type: "FeatureCollection", features:
 const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled", fetchedAt: new Date(0).toISOString(), targets: [] };
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: [] };
+const EMPTY_RADAR_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, number], [number, number]] = [
+  [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.north],
+  [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.north],
+  [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.south],
+  [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.south],
+];
+interface WeatherRadarCatalogResponse { available: boolean; frames: Array<{ id: string; observedAt: string; imageUrl: string; latest: boolean; stale: boolean }>; latestFrameId: string | null; bounds: typeof WEATHER_RADAR_BOUNDS; }
+interface WindResponse { model: string; modelRun: string | null; validAt: string; availableValidTimes: string[]; levelHpa: WindLevelHpa; points: Array<{ lat: number; lon: number; speedKt: number | null; directionDeg: number | null }>; stale: boolean; }
+const WIND_PRESSURE_LEVELS: WindLevelHpa[] = [850, 700, 500, 300, 200];
 interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; routes?: CzAtsRoute[]; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
 
 function parseAirportDataset(value: unknown): value is Airport[] {
@@ -330,6 +342,28 @@ function createAirportGeoJSON(airports: Airport[], excludedAirportCodes: Readonl
   };
 }
 
+function createMetarGeoJSON(observations: MetarMapObservation[]) {
+  return {
+    type: "FeatureCollection" as const,
+    features: observations.flatMap((observation) => Number.isFinite(observation.lat) && Number.isFinite(observation.lon) ? [{
+      type: "Feature" as const,
+      properties: observation,
+      geometry: { type: "Point" as const, coordinates: [observation.lon, observation.lat] },
+    }] : []),
+  };
+}
+
+function createWindGeoJSON(data: WindResponse | null) {
+  return {
+    type: "FeatureCollection" as const,
+    features: (data?.points ?? []).flatMap((point) => Number.isFinite(point.lat) && Number.isFinite(point.lon) ? [{
+      type: "Feature" as const,
+      properties: { speedKt: point.speedKt, directionDeg: point.directionDeg },
+      geometry: { type: "Point" as const, coordinates: [point.lon, point.lat] },
+    }] : []),
+  };
+}
+
 function ognTargetLabel(target: OgnTargetView): string {
   if (target.identityVisible) return target.registration || target.competitionNumber || target.model || target.senderCallsign || target.aircraftType.toUpperCase();
   return target.aircraftType.toUpperCase();
@@ -519,6 +553,22 @@ export function AirRadarApp() {
   const [showAtc, setShowAtc] = useState(false);
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
+  const [showWeatherRadar, setShowWeatherRadar] = useState(false);
+  const [radarOpacity, setRadarOpacity] = useState(0.65);
+  const [radarCatalog, setRadarCatalog] = useState<WeatherRadarCatalogResponse | null>(null);
+  const [radarFrameId, setRadarFrameId] = useState<string | null>(null);
+  const [radarLatestMode, setRadarLatestMode] = useState(true);
+  const [radarPlaying, setRadarPlaying] = useState(false);
+  const [radarStatus, setRadarStatus] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
+  const [showMetar, setShowMetar] = useState(false);
+  const [metarObservations, setMetarObservations] = useState<MetarMapObservation[]>([]);
+  const [metarStatus, setMetarStatus] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
+  const [showWind, setShowWind] = useState(false);
+  const [windLevel, setWindLevel] = useState<WindLevelHpa>(300);
+  const [windValidAt, setWindValidAt] = useState<string | null>(null);
+  const [windData, setWindData] = useState<WindResponse | null>(null);
+  const [windStatus, setWindStatus] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
+  const [showAupUup, setShowAupUup] = useState(false);
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
   const [showSids, setShowSids] = useState(false);
   const [showStars, setShowStars] = useState(false);
@@ -571,6 +621,9 @@ export function AirRadarApp() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const focusSearchOnTrafficOpenRef = useRef(false);
   const sigmetGenerationRef = useRef(0);
+  const radarGenerationRef = useRef(0);
+  const radarFrameGenerationRef = useRef(0);
+  const windGenerationRef = useRef(0);
   const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
   const activeCoverage: CoverageMode = networkEnabled ? coverage : "local";
   const onSelectedAircraftRemoved = useCallback(() => {
@@ -606,7 +659,7 @@ export function AirRadarApp() {
   });
   const airspaceDataset = useRetryingDataset<AirspaceActivityResponse>({
     url: "/api/airspace/activity",
-    enabled: showAtc,
+    enabled: showAtc || showAupUup,
     cache: "no-store",
     parse: (response) => parseJsonDataset(response, parseAirspaceDataset),
     itemCount: () => 1,
@@ -624,6 +677,14 @@ export function AirRadarApp() {
       if (storedCoverage === "extended" || storedCoverage === "local") setCoverage(storedCoverage);
       setShowSigmet(window.localStorage.getItem("airradar-sigmet-layer") === "true");
       setShowOgn(window.localStorage.getItem("airradar-ogn-layer") === "true");
+      setShowWeatherRadar(window.localStorage.getItem("airradar-weather-radar-layer") === "true");
+      const storedOpacity = Number(window.localStorage.getItem("airradar-weather-radar-opacity"));
+      if (Number.isFinite(storedOpacity)) setRadarOpacity(Math.min(1, Math.max(0.2, storedOpacity)));
+      setShowMetar(window.localStorage.getItem("airradar-metar-layer") === "true");
+      setShowWind(window.localStorage.getItem("airradar-wind-layer") === "true");
+      const storedWindLevel = Number(window.localStorage.getItem("airradar-wind-level"));
+      if (WIND_PRESSURE_LEVELS.includes(storedWindLevel as WindLevelHpa)) setWindLevel(storedWindLevel as WindLevelHpa);
+      setShowAupUup(window.localStorage.getItem("airradar-aup-uup-layer") === "true");
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
     }
@@ -666,8 +727,113 @@ export function AirRadarApp() {
   }, [showSigmet]);
 
   useEffect(() => {
+    const generation = ++radarGenerationRef.current;
+    if (!showWeatherRadar) { setRadarPlaying(false); return; }
+    let active = true;
+    const load = async (): Promise<void> => {
+      setRadarStatus((current) => current === "ready" || current === "stale" ? current : "loading");
+      try {
+        const response = await fetch("/api/weather/radar/frames", { cache: "no-store" });
+        if (!response.ok) throw new Error("radar catalog unavailable");
+        const catalog = await response.json() as WeatherRadarCatalogResponse;
+        if (!active || generation !== radarGenerationRef.current) return;
+        setRadarCatalog(catalog);
+        setRadarStatus(catalog.available && catalog.frames.length ? (catalog.frames.some((frame) => frame.stale) ? "stale" : "ready") : "unavailable");
+        setRadarFrameId((current) => radarLatestMode ? catalog.latestFrameId : current && catalog.frames.some((frame) => frame.id === current) ? current : catalog.latestFrameId);
+      } catch {
+        if (active && generation === radarGenerationRef.current) setRadarStatus("unavailable");
+      }
+    };
+    let timer: number | null = null;
+    const schedule = () => { if (active) timer = window.setTimeout(() => { void load().finally(schedule); }, 60_000); };
+    void load().finally(schedule);
+    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
+  }, [radarLatestMode, showWeatherRadar]);
+
+  useEffect(() => {
+    if (!showWeatherRadar || !radarPlaying || !radarCatalog?.frames.length) return;
+    let active = true;
+    let timer: number | null = null;
+    const advance = () => {
+      if (!active) return;
+      setRadarFrameId((current) => {
+        const index = radarCatalog.frames.findIndex((frame) => frame.id === current);
+        return radarCatalog.frames[(index < 0 ? 0 : (index + 1) % radarCatalog.frames.length)].id;
+      });
+      timer = window.setTimeout(advance, 650);
+    };
+    timer = window.setTimeout(advance, 650);
+    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
+  }, [radarCatalog, radarPlaying, showWeatherRadar]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const source = map.getSource("weather-radar-image") as ImageSource | undefined;
+    const frame = radarCatalog?.frames.find((candidate) => candidate.id === radarFrameId);
+    if (!source) return;
+    source.updateImage({ url: frame?.imageUrl ?? EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
+    if (map.getLayer("weather-radar-layer")) map.setLayoutProperty("weather-radar-layer", "visibility", showWeatherRadar && Boolean(frame) ? "visible" : "none");
+    if (map.getLayer("weather-radar-layer")) map.setPaintProperty("weather-radar-layer", "raster-opacity", radarOpacity);
+    const generation = ++radarFrameGenerationRef.current;
+    if (frame) {
+      const frameIndex = radarCatalog?.frames.findIndex((candidate) => candidate.id === frame.id) ?? -1;
+      for (const neighbour of [radarCatalog?.frames[frameIndex - 1], radarCatalog?.frames[frameIndex + 1]]) {
+        if (!neighbour) continue;
+        const image = new window.Image();
+        image.onload = () => { if (generation !== radarFrameGenerationRef.current) image.src = ""; };
+        image.src = neighbour.imageUrl;
+      }
+    }
+  }, [mapReady, radarCatalog, radarFrameId, radarOpacity, showWeatherRadar]);
+
+  useEffect(() => {
+    if (!showMetar) return;
+    let active = true;
+    let controller: AbortController | null = null;
+    const load = async (): Promise<void> => {
+      controller?.abort();
+      controller = new AbortController();
+      setMetarStatus("loading");
+      try {
+        const response = await fetch("/api/weather/metar-map", { cache: "no-store", signal: controller.signal });
+        if (!response.ok) throw new Error("METAR map unavailable");
+        const data = await response.json() as { observations?: MetarMapObservation[]; stale?: boolean };
+        if (!active || !Array.isArray(data.observations)) return;
+        setMetarObservations(data.observations);
+        setMetarStatus(data.stale || data.observations.some((item) => item.stale) ? "stale" : "ready");
+      } catch { if (active && !controller.signal.aborted) setMetarStatus("unavailable"); }
+    };
+    let timer: number | null = null;
+    const schedule = () => { if (active) timer = window.setTimeout(() => { void load().finally(schedule); }, 5 * 60_000); };
+    void load().finally(schedule);
+    return () => { active = false; controller?.abort(); if (timer !== null) window.clearTimeout(timer); };
+  }, [showMetar]);
+
+  useEffect(() => {
+    if (!showWind) return;
+    const generation = ++windGenerationRef.current;
+    const controller = new AbortController();
+    setWindStatus("loading");
+    const params = new URLSearchParams({ level: String(windLevel) });
+    if (windValidAt) params.set("valid", windValidAt);
+    fetch(`/api/weather/wind?${params.toString()}`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => { if (!response.ok) throw new Error("wind unavailable"); return await response.json() as WindResponse; })
+      .then((data) => { if (generation !== windGenerationRef.current || controller.signal.aborted) return; setWindData(data); setWindValidAt(data.validAt); setWindStatus(data.stale ? "stale" : "ready"); })
+      .catch(() => { if (!controller.signal.aborted && generation === windGenerationRef.current) setWindStatus("unavailable"); });
+    return () => controller.abort();
+  }, [showWind, windLevel, windValidAt]);
+
+  useEffect(() => {
     try { window.localStorage.setItem("airradar-ogn-layer", String(showOgn)); } catch { /* optional */ }
   }, [showOgn]);
+
+  useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-layer", String(showWeatherRadar)); } catch { /* optional */ } }, [showWeatherRadar]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-weather-radar-opacity", String(radarOpacity)); } catch { /* optional */ } }, [radarOpacity]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-metar-layer", String(showMetar)); } catch { /* optional */ } }, [showMetar]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-wind-layer", String(showWind)); } catch { /* optional */ } }, [showWind]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-wind-level", String(windLevel)); } catch { /* optional */ } }, [windLevel]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-aup-uup-layer", String(showAupUup)); } catch { /* optional */ } }, [showAupUup]);
 
   useEffect(() => {
     const generation = ++sigmetGenerationRef.current;
@@ -949,6 +1115,8 @@ export function AirRadarApp() {
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     map.on("load", () => {
+      map.addSource("weather-radar-image", { type: "image", url: EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
+      map.addLayer({ id: "weather-radar-layer", type: "raster", source: "weather-radar-image", layout: { visibility: "none" }, paint: { "raster-opacity": 0.65, "raster-fade-duration": 0 } });
       map.addSource("range-rings", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
         id: "range-rings-line",
@@ -1006,12 +1174,21 @@ export function AirRadarApp() {
         paint: { "line-color": "#a7b6c7", "line-opacity": 0.68, "line-width": 2, "line-dasharray": [2, 3] },
       });
       map.addSource("atc-sectors", { type: "geojson", data: createAtcGeoJSON([], false) });
+      const plannedFilter: FilterSpecification = ["any", ["==", ["get", "airspacePlanState"], "planned-now"], ["==", ["get", "airspacePlanState"], "upcoming"]];
+      map.addLayer({ id: "airspace-plan-fill", type: "fill", source: "atc-sectors", filter: plannedFilter, layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "airspacePlanState"], "planned-now", "#f3b95f", "#6caed0"], "fill-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.16, 0.07] } });
+      map.addLayer({ id: "airspace-plan-line", type: "line", source: "atc-sectors", filter: plannedFilter, layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffd27a", "#8bd2ed"], "line-opacity": 0.9, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.5, 8, 2.5, 13, 3.5], "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "airspace-plan-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, filter: plannedFilter, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffe2a6", "#b8e7f7"], "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
       map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "airspacePlanState"], "planned-now", "#f3b95f", "upcoming", "#4fb3d8", "#8068ff"], "fill-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.28, "upcoming", 0.1, 0.16] } });
       map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffd27a", "upcoming", "#79cbe8", "#c4b5fd"], "line-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 1, "upcoming", 0.78, 0.92], "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.3, 8, 2, 13, 3], "line-dasharray": [2, 2] } });
       map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffe2a6", "upcoming", "#a8dcf0", "#d7caff"], "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
       map.addLayer({ id: "atc-sectors-context-highlight", type: "line", source: "atc-sectors", filter: ["==", ["get", "id"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": "#fff0a6", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2.5, 8, 3.5, 13, 5] } });
       map.addSource("atc-transmitters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": "#f3b95f", "circle-radius": 5, "circle-stroke-color": "#08111d", "circle-stroke-width": 1.5 } });
+      map.addSource("metar-airports", { type: "geojson", data: createMetarGeoJSON([]) });
+      map.addLayer({ id: "metar-symbols", type: "circle", source: "metar-airports", layout: { visibility: "none" }, paint: { "circle-color": ["match", ["get", "flightCategory"], "VFR", "#42d392", "MVFR", "#f4c95d", "IFR", "#ef8f6b", "LIFR", "#dd6b93", "#9da9b5"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 5, 13, 7], "circle-opacity": ["case", ["get", "stale"], 0.38, 0.9], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.2 } });
+      map.addLayer({ id: "metar-labels", type: "symbol", source: "metar-airports", minzoom: 7.5, layout: { visibility: "none", "text-field": ["concat", ["get", "stationId"], ["case", ["get", "stale"], " · STALE", ""]], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#dce9ee", "text-opacity": ["case", ["get", "stale"], 0.45, 0.9], "text-halo-color": "#08111d", "text-halo-width": 1 } });
+      map.addSource("wind-aloft", { type: "geojson", data: createWindGeoJSON(null) });
+      map.addLayer({ id: "wind-aloft-arrows", type: "symbol", source: "wind-aloft", layout: { visibility: "none", "text-field": ["case", ["has", "speedKt"], ["concat", "↑ ", ["to-string", ["round", ["get", "speedKt"]]], " kt"], "↑"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 3, 11, 7, 13, 10, 15], "text-rotate": ["coalesce", ["get", "directionDeg"], 0], "text-rotation-alignment": "map", "text-allow-overlap": true }, paint: { "text-color": "#9bd4ff", "text-halo-color": "#08111d", "text-halo-width": 1.1 } });
       map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([]) });
       map.addLayer({ id: "route-airports-circle", type: "circle", source: "route-airports", paint: { "circle-color": "#d2b56f", "circle-opacity": 0.72, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 3, 12, 4.5], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.2 } });
       map.addLayer({ id: "route-airports-label", type: "symbol", source: "route-airports", layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 8, 10, 9, 13, 10], "text-offset": [0, 1.1], "text-padding": 7, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#cfbd8b", "text-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.52, 10, 0.72, 13, 0.82], "text-halo-color": "#08111d", "text-halo-width": 0.7 } });
@@ -1077,6 +1254,31 @@ export function AirRadarApp() {
       });
       map.on("mouseenter", "atc-sectors-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "atc-sectors-fill", () => { map.getCanvas().style.cursor = ""; });
+      map.on("click", "airspace-plan-fill", (event: MapLayerMouseEvent) => {
+        const properties = event.features?.[0]?.properties;
+        if (!properties) return;
+        const content = document.createElement("div"); content.className = "map-popup";
+        const title = document.createElement("strong"); title.textContent = String(properties.name ?? t.layers.airspaceActivity);
+        const body = document.createElement("span");
+        const planned = String(properties.airspacePlanState ?? "") === "planned-now";
+        body.textContent = `${planned ? t.layers.airspacePlannedActive : t.layers.airspaceUnknown} · ${t.layers.valid}: ${formatAirspaceUtc(String(properties.airspacePlanStartsAt ?? ""))}–${formatAirspaceUtc(String(properties.airspacePlanEndsAt ?? ""))} · ${t.layers.source}: ${String(properties.airspacePlanSource ?? t.common.emptyValue)} · ${t.layers.airspaceDisclaimer}`;
+        content.append(title, body);
+        new maplibregl.Popup({ closeButton: true, maxWidth: "340px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
+      });
+      map.on("mouseenter", "airspace-plan-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "airspace-plan-fill", () => { map.getCanvas().style.cursor = ""; });
+      map.on("click", "metar-symbols", (event: MapLayerMouseEvent) => {
+        const properties = event.features?.[0]?.properties;
+        if (!properties) return;
+        const content = document.createElement("div"); content.className = "map-popup";
+        const title = document.createElement("strong"); title.textContent = String(properties.stationId ?? t.layers.metar);
+        const body = document.createElement("span");
+        body.textContent = `${t.layers.flightCategory}: ${String(properties.flightCategory ?? "UNKNOWN")} · ${t.layers.windSpeed}: ${properties.windDirection == null ? t.common.emptyValue : `${String(properties.windDirection).padStart(3, "0")}° / `}${properties.windSpeed == null ? t.common.emptyValue : `${String(properties.windSpeed)} kt`} · ${t.layers.metarObserved}: ${formatDateTime(String(properties.observedAt ?? ""), t)}${properties.stale === true ? ` · ${t.layers.metarStale}` : ""}`;
+        content.append(title, body);
+        new maplibregl.Popup({ closeButton: true, maxWidth: "300px" }).setLngLat(event.lngLat).setDOMContent(content).addTo(map);
+      });
+      map.on("mouseenter", "metar-symbols", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "metar-symbols", () => { map.getCanvas().style.cursor = ""; });
       map.on("click", "atc-transmitters-circle", (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
         if (!feature) return;
@@ -1540,7 +1742,7 @@ export function AirRadarApp() {
 
   useEffect(() => {
     const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
-    const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc, airspaceActivity);
+    const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc || showAupUup, airspaceActivity);
     const transmitterGeoJson: FeatureCollection = {
       type: "FeatureCollection",
       features: showAtc ? atcData.transmitters.map((transmitter) => ({
@@ -1568,6 +1770,9 @@ export function AirRadarApp() {
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
+    for (const layer of ["airspace-plan-fill", "airspace-plan-line", "airspace-plan-label"] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAupUup ? "visible" : "none");
+    }
     // The initial radar view is receiver-centred on Czechia.  Without this
     // fit, valid Slovak/Austrian sectors are loaded but remain outside the
     // viewport, which makes the ATC layer appear Czech-only.
@@ -1582,7 +1787,23 @@ export function AirRadarApp() {
       }
     }
     if (!showAtc) atcAutoFitRef.current = false;
-  }, [airports, airspaceActivity, atcData, mapReady, selectedRouteAirportCodesKey, showAtc, snapshot.receiver.lat, snapshot.receiver.lon]);
+  }, [airports, airspaceActivity, atcData, mapReady, selectedRouteAirportCodesKey, showAtc, showAupUup, snapshot.receiver.lat, snapshot.receiver.lon]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    (map.getSource("metar-airports") as GeoJSONSource | undefined)?.setData(createMetarGeoJSON(metarObservations));
+    for (const layer of ["metar-symbols", "metar-labels"] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showMetar ? "visible" : "none");
+    }
+  }, [mapReady, metarObservations, showMetar]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    (map.getSource("wind-aloft") as GeoJSONSource | undefined)?.setData(createWindGeoJSON(windData));
+    if (map.getLayer("wind-aloft-arrows")) map.setLayoutProperty("wind-aloft-arrows", "visibility", showWind && Boolean(windData) ? "visible" : "none");
+  }, [mapReady, showWind, windData]);
 
   const airportLayerVisibility = useMemo<AirportLayerVisibility>(() => ({
     showAirports,
@@ -1800,6 +2021,7 @@ export function AirRadarApp() {
     : activeCoverage === "extended" && networkStatus && ["timeout", "http_error", "invalid_response", "stale"].includes(networkStatus)
       ? t.radar.networkUnavailable
       : null;
+  const selectedRadarFrame = radarCatalog?.frames.find((frame) => frame.id === radarFrameId) ?? null;
 
   function chooseCoverage(nextCoverage: CoverageMode): void {
     if (!networkEnabled && nextCoverage === "extended") return;
@@ -1839,6 +2061,16 @@ export function AirRadarApp() {
                 <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>
+              {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
+                <div className="weather-radar-timeline-heading"><strong>{t.layers.weatherRadar}</strong><span>{selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></div>
+                <div className="weather-radar-timeline-controls">
+                  <button type="button" aria-label={t.layers.previousFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.max(0, index - 1)].id); }}>{"‹"}</button>
+                  <button type="button" aria-pressed={radarPlaying} aria-label={radarPlaying ? t.layers.pause : t.layers.play} onClick={() => { setRadarLatestMode(false); setRadarPlaying((value) => !value); }}>{radarPlaying ? "Ⅱ" : "▶"}</button>
+                  <button type="button" aria-label={t.layers.nextFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.min(radarCatalog.frames.length - 1, index + 1)].id); }}>{"›"}</button>
+                  <input type="range" min="0" max={Math.max(0, radarCatalog.frames.length - 1)} value={Math.max(0, radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId))} aria-label={t.layers.weatherRadar} onChange={(event) => { setRadarLatestMode(false); setRadarPlaying(false); setRadarFrameId(radarCatalog.frames[Number(event.target.value)].id); }} />
+                  <button type="button" className={radarLatestMode ? "active" : ""} aria-pressed={radarLatestMode} onClick={() => { setRadarLatestMode(true); setRadarPlaying(false); setRadarFrameId(radarCatalog.latestFrameId); }}>{t.layers.latest}</button>
+                </div>
+              </div> : showWeatherRadar && radarStatus === "unavailable" ? <div className="map-layer-notice">{t.layers.radarUnavailable}</div> : null}
               <details className="map-layers">
                 <summary>{t.layers.title}</summary>
                 <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
@@ -1861,6 +2093,30 @@ export function AirRadarApp() {
                     {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
                     {showAtsRoutes && atsRoutes && !atsRoutes.available && <div className="map-layer-sublevel">{t.layers.atsRoutesUnavailable}</div>}
                     {sigmetEnabled !== false && <label data-testid="map-layer-sigmet"><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>}
+                  </div>
+                  <div className="map-layer-group">
+                    <span className="map-layer-group-title">{t.layers.groups.weather}</span>
+                    <label data-testid="map-layer-weather-radar"><input type="checkbox" checked={showWeatherRadar} onChange={(event) => { setShowWeatherRadar(event.target.checked); if (!event.target.checked) setRadarPlaying(false); }} /> {t.layers.weatherRadar}</label>
+                    {showWeatherRadar && <div className="map-layer-sublevel weather-radar-controls">
+                      <label className="map-layer-mode"><span>{t.layers.opacity}</span><input type="range" min="0.2" max="1" step="0.05" value={radarOpacity} aria-label={t.layers.opacity} onChange={(event) => setRadarOpacity(Number(event.target.value))} /></label>
+                      <span>{selectedRadarFrame ? `${t.layers.currentTimestamp}: ${formatDateTime(selectedRadarFrame.observedAt, t)}${selectedRadarFrame.stale ? ` · ${t.layers.radarStale}` : ""}` : radarStatus === "unavailable" ? t.layers.radarUnavailable : t.common.loading}</span>
+                    </div>}
+                    <label data-testid="map-layer-metar"><input type="checkbox" checked={showMetar} onChange={(event) => setShowMetar(event.target.checked)} /> {t.layers.metar}</label>
+                    <label data-testid="map-layer-wind"><input type="checkbox" checked={showWind} onChange={(event) => setShowWind(event.target.checked)} /> {t.layers.windAloft}</label>
+                    {showWind && <div className="map-layer-sublevel wind-controls">
+                      <label className="map-layer-mode"><span>{t.layers.pressureLevel}</span><select value={windLevel} aria-label={t.layers.pressureLevel} onChange={(event) => { setWindLevel(Number(event.target.value) as WindLevelHpa); setWindValidAt(null); }}>{WIND_PRESSURE_LEVELS.map((level) => <option key={level} value={level}>{level} hPa</option>)}</select></label>
+                      {windData && <label className="map-layer-mode"><span>{t.layers.valid}</span><select value={windValidAt ?? windData.validAt} aria-label={t.layers.valid} onChange={(event) => setWindValidAt(event.target.value)}>{windData.availableValidTimes.map((valid) => <option key={valid} value={valid}>{formatDateTime(valid, t)}</option>)}</select></label>}
+                      {windData && <span>{windData.model} · {t.layers.windModelForecast}{windData.modelRun ? ` · ${t.layers.modelRun}: ${formatDateTime(windData.modelRun, t)}` : ""} · {t.layers.valid}: {formatDateTime(windData.validAt, t)}</span>}
+                      {windStatus === "unavailable" && <span>{t.layers.windUnavailable}</span>}
+                    </div>}
+                    {showMetar && metarStatus === "unavailable" && <div className="map-layer-sublevel">{t.layers.metarUnavailable}</div>}
+                    {showMetar && <div className="map-layer-sublevel metar-legend"><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span><span><i className="metar-dot lifr" /> {t.layers.lifr}</span></div>}
+                  </div>
+                  <div className="map-layer-group">
+                    <span className="map-layer-group-title">{t.layers.groups.operationalAirspace}</span>
+                    <label data-testid="map-layer-aup-uup"><input type="checkbox" checked={showAupUup} onChange={(event) => setShowAupUup(event.target.checked)} /> {t.layers.airspaceActivity}</label>
+                    {showAupUup && airspaceDataset.status === "unavailable" && <div className="map-layer-sublevel">{t.layers.airspaceUnavailable}</div>}
+                    {showAupUup && <div className="map-layer-sublevel">{t.layers.airspacePlannedActive} · {t.layers.airspaceDisclaimer}</div>}
                   </div>
                   <div className="map-layer-group">
                     <span className="map-layer-group-title">{t.layers.groups.display}</span>

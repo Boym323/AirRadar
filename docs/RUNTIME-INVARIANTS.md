@@ -211,6 +211,13 @@ These are behavior and safety contracts for changes to the current system.
 
 ## MapLibre namespaces and cleanup
 
+Map Context layers are optional enrichment and never own aircraft state. Radar
+frames are observed data, wind is a model forecast, and AUP/UUP planned
+allocation is not proof of actual activation. Radar, METAR, wind, and AUP/UUP
+have independent failure states and bounded caches/prefetch. Their MapLibre
+sources/layers must support repeated ON → OFF → ON cleanup without duplicate
+source or layer errors, and no Map Context payload may enter aircraft SSE.
+
 The `AirRadarApp` map owns its map instance, controls, DOM markers, animation
 frames, event listeners, and dynamic source data. Its generic IDs are:
 

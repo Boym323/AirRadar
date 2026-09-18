@@ -10,6 +10,7 @@ import type {
   TafForecast,
   TafPeriod,
   WeatherCacheSource,
+  MetarMapObservation,
 } from "@/lib/weather/types";
 import { getAviationWeatherBaseUrl, getAviationWeatherCacheFile, getAviationWeatherMetarMaxPersistedAgeMs, getAviationWeatherMetarTtlMs, getAviationWeatherRequestTimeoutMs, getAviationWeatherSigmetMaxPersistedAgeMs, getAviationWeatherSigmetTtlMs, getAviationWeatherStaleIfErrorMs, getAviationWeatherTafMaxPersistedAgeMs, getAviationWeatherTafTtlMs, getAviationWeatherUserAgent, isAviationWeatherPersistenceEnabled } from "@/lib/server/config";
 import { deriveFlightCategory } from "@/lib/weather/flight-category";
@@ -57,6 +58,8 @@ interface ProductCacheOptions {
   ttlMs: number;
   staleIfErrorMs?: number;
 }
+
+interface MetarMapCacheEntry { value: MetarMapObservation[]; fetchedAt: number; }
 
 type CachePersistenceOptions = AviationWeatherCachePersistence;
 
@@ -392,11 +395,7 @@ function weatherTokens(value: unknown): string[] {
   return text ? text.split(/\s+/).filter(Boolean).slice(0, 12) : [];
 }
 
-function mapMetar(payload: unknown, icaoCode: string): MetarObservation | null {
-  if (!Array.isArray(payload)) throw new Error("METAR response is not an array");
-  if (payload.length === 0) return null;
-  const record = payload.find((candidate) => isRecord(candidate) && stringValue(candidate.icaoId)?.toUpperCase() === icaoCode);
-  if (!record || !isRecord(record)) throw new Error("METAR response did not contain the requested airport");
+function mapMetarRecord(record: Record<string, unknown>, icaoCode: string): MetarObservation {
   const direction = record.wdir;
   const numericDirection = numberValue(direction);
   const clouds = cloudLayers(record.clouds);
@@ -420,12 +419,20 @@ function mapMetar(payload: unknown, icaoCode: string): MetarObservation | null {
     ...visibilityData,
     altimeterHpa: numberValue(record.altim),
     cavok: rawUpper.includes("CAVOK") || stringValue(record.wxString)?.toUpperCase() === "CAVOK",
-    flightCategory: normalizedCategory(record.fltCat),
+    flightCategory: normalizedCategory(record.fltCat) ?? deriveFlightCategory(clouds, visibilityData.visibilityMeters, visibilityData.visibilityLessThan),
     clouds,
     weather: weatherTokens(record.wxString),
     latitude: validCoordinate(record.lat, -90, 90),
     longitude: validCoordinate(record.lon, -180, 180),
   };
+}
+
+function mapMetar(payload: unknown, icaoCode: string): MetarObservation | null {
+  if (!Array.isArray(payload)) throw new Error("METAR response is not an array");
+  if (payload.length === 0) return null;
+  const record = payload.find((candidate) => isRecord(candidate) && stringValue(candidate.icaoId)?.toUpperCase() === icaoCode);
+  if (!record || !isRecord(record)) throw new Error("METAR response did not contain the requested airport");
+  return mapMetarRecord(record, icaoCode);
 }
 
 function mapTafPeriod(candidate: unknown): TafPeriod | null {
@@ -478,6 +485,13 @@ function mapTaf(payload: unknown, icaoCode: string): TafForecast | null {
 function productUrl(baseUrl: string, product: "metar" | "taf", icaoCode: string): string {
   const url = new URL(`/api/data/${product}`, baseUrl);
   url.searchParams.set("ids", icaoCode);
+  url.searchParams.set("format", "json");
+  return url.toString();
+}
+
+function metarBatchUrl(baseUrl: string, icaoCodes: string[]): string {
+  const url = new URL("/api/data/metar", baseUrl);
+  url.searchParams.set("ids", icaoCodes.join(","));
   url.searchParams.set("format", "json");
   return url.toString();
 }
@@ -748,6 +762,8 @@ export class AviationWeatherProvider {
   private readonly staleIfErrorMs: number;
   private readonly persistence?: AviationWeatherCachePersistence;
   private readonly diagnostics: AviationWeatherDiagnostics;
+  private metarMapCache: MetarMapCacheEntry | null = null;
+  private metarMapInFlight: Promise<MetarMapObservation[]> | null = null;
   private sigmetAttempted = false;
   private backoffUntil = 0;
 
@@ -850,6 +866,45 @@ export class AviationWeatherProvider {
       enabled: true,
       source: "Aviation Weather Center",
     };
+  }
+
+  async getMetarMap(airports: Array<{ stationId: string; lat: number; lon: number }>, parentSignal?: AbortSignal): Promise<{ observations: MetarMapObservation[]; fetchedAt: string; stale: boolean; source: "Aviation Weather Center" }> {
+    if (!this.enabled) throw new AviationWeatherUnavailableError();
+    const unique = [...new Map(airports
+      .filter((airport) => /^[A-Z]{4}$/.test(airport.stationId) && Number.isFinite(airport.lat) && Number.isFinite(airport.lon))
+      .map((airport) => [airport.stationId, airport])).values()].slice(0, AVIATION_WEATHER_TTLS.maxAirports);
+    const now = this.now();
+    if (this.metarMapCache && now - this.metarMapCache.fetchedAt < this.metarTtlMs) return { observations: this.metarMapCache.value, fetchedAt: new Date(this.metarMapCache.fetchedAt).toISOString(), stale: false, source: "Aviation Weather Center" };
+    if (this.metarMapInFlight) return { observations: await this.metarMapInFlight, fetchedAt: new Date(this.metarMapCache?.fetchedAt ?? now).toISOString(), stale: false, source: "Aviation Weather Center" };
+    const request = this.fetchJson(metarBatchUrl(this.baseUrl, unique.map((airport) => airport.stationId)), "metar", parentSignal)
+      .then((payload) => {
+        if (!Array.isArray(payload)) throw new Error("METAR map response is not an array");
+        const byStation = new Map(payload.flatMap((candidate) => {
+          if (!isRecord(candidate)) return [];
+          const stationId = stringValue(candidate.icaoId)?.toUpperCase();
+          return stationId ? [[stationId, mapMetarRecord(candidate, stationId)] as const] : [];
+        }));
+        const fetchedAt = this.now();
+        const observations = unique.flatMap((airport) => {
+          const metar = byStation.get(airport.stationId);
+          if (!metar) return [];
+          const observedAt = metar.observedAt ?? metar.observationTime;
+          const age = observedAt ? fetchedAt - Date.parse(observedAt) : Number.POSITIVE_INFINITY;
+          const ceiling = metar.clouds?.map((cloud) => cloud.baseFtAgl).filter((value): value is number => value !== null && Number.isFinite(value)).sort((a, b) => a - b)[0] ?? null;
+          return [{ stationId: airport.stationId, lat: airport.lat, lon: airport.lon, observedAt, flightCategory: metar.flightCategory, windDirection: metar.windDirectionDeg, windSpeed: metar.windSpeedKt, windGust: metar.windGustKt, visibility: metar.visibilityMeters, ceiling, temperature: metar.temperatureC, dewpoint: metar.dewpointC, qnh: metar.altimeterHpa, clouds: metar.clouds ?? [], rawMetar: metar.rawText, stale: !Number.isFinite(age) || age > 60 * 60_000 } satisfies MetarMapObservation];
+        });
+        this.metarMapCache = { value: observations, fetchedAt };
+        return observations;
+      })
+      .catch((error) => {
+        if (this.metarMapCache && now - this.metarMapCache.fetchedAt < this.staleIfErrorMs) return this.metarMapCache.value;
+        throw error;
+      })
+      .finally(() => { this.metarMapInFlight = null; });
+    this.metarMapInFlight = request;
+    const observations = await request;
+    const fetchedAt = this.metarMapCache?.fetchedAt ?? now;
+    return { observations, fetchedAt: new Date(fetchedAt).toISOString(), stale: fetchedAt !== now && this.metarMapCache !== null, source: "Aviation Weather Center" };
   }
 
   async getSigmets(parentSignal?: AbortSignal): Promise<SigmetSnapshot> {
