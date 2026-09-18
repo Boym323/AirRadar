@@ -644,6 +644,53 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .map-popup span { color: #405466; line-height: 1.35; overflow-wrap: anywhere; }
 
 .history-page { min-height: 100svh; width: min(100%, 1600px); margin: 0 auto; padding: 28px 24px 42px; }
+.time-machine-page { min-height: 100svh; width: min(100%, 1600px); margin: 0 auto; padding: 28px 24px 42px; }
+.time-machine-header { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:20px; }
+.time-machine-header h1 { margin:6px 0 0; font-size:clamp(27px,4vw,42px); letter-spacing:-.045em; }
+.time-machine-header p { margin:7px 0 0; color:var(--muted); }
+.time-machine-kicker { color:#f3b95f; font-size:10px; font-weight:700; letter-spacing:.14em; }
+.time-machine-card { overflow:hidden; border:1px solid var(--line); border-radius:8px; background:rgba(13,25,39,.82); }
+.time-machine-context { display:flex; justify-content:space-between; gap:12px; padding:13px 16px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px; }
+.time-machine-context strong { color:#f3b95f; letter-spacing:.1em; font-size:11px; }
+.time-machine-map { height:min(62vh,680px); min-height:380px; background:#0b1725; }
+.time-machine-controls { padding:15px 16px 17px; }
+.time-machine-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.time-machine-toolbar button { min-width:36px; min-height:34px; }
+.time-machine-toolbar label { display:flex; align-items:center; gap:8px; margin-left:auto; color:var(--muted); font-size:12px; }
+.time-machine-toolbar select { min-height:34px; color:var(--text-primary); background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:0 8px; }
+.time-machine-toolbar strong { color:var(--text-primary); font-variant-numeric:tabular-nums; }
+.time-machine-slider { width:100%; margin:16px 0 5px; accent-color:#f3b95f; }
+.time-machine-timeline { position:relative; }
+.time-machine-timeline .time-machine-slider { position:relative; z-index:1; }
+.time-machine-event-markers { position:absolute; inset:0 8px; pointer-events:none; }
+.time-machine-event-markers button { position:absolute; top:12px; transform:translateX(-50%); z-index:2; padding:0; color:#f3b95f; background:transparent; border:0; font-size:14px; line-height:1; pointer-events:auto; cursor:pointer; }
+.time-machine-range { display:flex; justify-content:space-between; color:var(--muted); font-size:11px; }
+.time-machine-picker { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:13px; color:var(--muted); font-size:12px; }
+.time-machine-picker label { display:flex; align-items:center; gap:8px; }
+.time-machine-picker input { color:var(--text-primary); background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:7px 8px; }
+.time-machine-lower { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; margin-top:16px; }
+.time-machine-aircraft-panel, .time-machine-events { min-height:180px; padding:17px; border:1px solid var(--line); border-radius:8px; background:rgba(13,25,39,.74); }
+.time-machine-lower h2 { margin:0 0 12px; font-size:15px; }
+.time-machine-lower p { color:var(--muted); font-size:13px; }
+.time-machine-selected { display:grid; gap:7px; color:var(--muted); font-size:12px; }
+.time-machine-selected strong { color:var(--text-primary); font-size:20px; }
+.time-machine-selected a { color:#37d6c0; }
+.time-machine-events ul { display:grid; gap:5px; margin:0; padding:0; list-style:none; max-height:220px; overflow:auto; }
+.time-machine-events button { display:grid; grid-template-columns:58px 100px 1fr; width:100%; gap:8px; padding:8px; text-align:left; color:var(--text-primary); background:transparent; border:0; border-bottom:1px solid var(--line); cursor:pointer; }
+.time-machine-events button:hover, .time-machine-events button:focus-visible { background:rgba(55,214,192,.08); }
+.time-machine-events time, .time-machine-events span { color:var(--muted); font-size:11px; }
+.time-machine-events strong { color:#f3b95f; font-size:11px; }
+.time-machine-alert { margin-bottom:16px; padding:12px 14px; border:1px solid #a96565; border-radius:6px; color:#f2b4b4; background:rgba(110,45,45,.18); }
+@media (max-width: 720px) {
+  .time-machine-page { padding:20px 12px 32px; }
+  .time-machine-header { align-items:flex-start; flex-direction:column; gap:13px; }
+  .time-machine-map { min-height:53svh; height:53svh; }
+  .time-machine-toolbar label { margin-left:0; }
+  .time-machine-picker { align-items:flex-start; flex-direction:column; }
+  .time-machine-lower { grid-template-columns:1fr; }
+  .time-machine-events button { grid-template-columns:52px 1fr; }
+  .time-machine-events button span { grid-column:2; }
+}
 .history-page-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
 .history-page h1 { margin: 0; font-size: 27px; letter-spacing: -.04em; }
 .flight-page { min-height: 100svh; max-width: 1180px; margin: 0 auto; padding: 28px 20px 42px; }

@@ -20,6 +20,7 @@ function LogoMark() {
 
 const primaryNavigation = [
   { href: "/", label: t.radar.liveAirPicture },
+  { href: "/time-machine", label: t.timeMachine.title },
   { href: "/history", label: t.history.title },
   { href: "/statistics", label: t.statistics.title },
   { href: "/fleet", label: t.fleet.title },
@@ -108,6 +109,10 @@ export function MobileBottomNav() {
       <Link className={pathMatches(pathname, "/history") ? "active" : ""} href="/history" aria-current={pathMatches(pathname, "/history") ? "page" : undefined}>
         <span className="mobile-bottom-nav-icon" aria-hidden="true">◷</span>
         <span>{t.history.title}</span>
+      </Link>
+      <Link className={pathMatches(pathname, "/time-machine") ? "active" : ""} href="/time-machine" aria-current={pathMatches(pathname, "/time-machine") ? "page" : undefined}>
+        <span className="mobile-bottom-nav-icon" aria-hidden="true">↻</span>
+        <span>{t.timeMachine.title}</span>
       </Link>
       <Link className={pathMatches(pathname, "/statistics") ? "active" : ""} href="/statistics" aria-current={pathMatches(pathname, "/statistics") ? "page" : undefined}>
         <span className="mobile-bottom-nav-icon" aria-hidden="true">▥</span>

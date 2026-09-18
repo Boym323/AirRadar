@@ -338,3 +338,13 @@ comparison reads the preceding seven aggregate windows without lifetime
 enrichment. Missing aggregate rows remain missing in the response rather than
 becoming zeroes. Recaps do not scan `FlightPosition`, make provider requests,
 create another EventSource, or add another polling loop.
+
+## Time Machine historical flow
+
+`GET /api/time-machine/range` reads the actual first/last
+`FlightPosition.recordedAt` values. `GET /api/time-machine/window` validates a
+maximum five-minute UTC window, reads at most 40,000 positions and 500 flight
+identities, then joins persistent metadata and read-only `FlightEvent` markers.
+The browser keeps one bounded window and reconstructs the selected instant
+locally. Historical reads never invoke intelligence detection, alerts,
+notifications, or live polling.

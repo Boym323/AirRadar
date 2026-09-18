@@ -224,6 +224,16 @@ then starts Next. Shutdown stops the state service and drains history before
 closing statistics, provider, and PostgreSQL within the bounded coordinator
 deadline. The release procedure is defined only in [RELEASE.md](RELEASE.md).
 
+## Time Machine
+
+`/time-machine` is a separate read-only historical context. The historical
+repository in `lib/server/time-machine.ts` reads bounded windows from
+`FlightPosition`, joins `Flight`/`Aircraft` metadata and `FlightEvent` markers,
+and exposes safe DTOs. The browser reconstructs aircraft state through
+`lib/time-machine/playback.ts` and uses the namespaced MapLibre sources
+`time-machine-aircraft` and `time-machine-selected-trail`; it never uses the
+live state service, SSE, or live trail store.
+
 Flight Intelligence loads the imported PostgreSQL airport catalog once into a
 bounded runtime index; it does not scan a sample/world list on each aircraft
 poll. Track memory is limited to 120 samples and a five-minute holding window,
