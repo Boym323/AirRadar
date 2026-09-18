@@ -1438,14 +1438,13 @@ export function AirRadarApp() {
 
   useEffect(() => {
     if (!showSids && !showStars) { setProcedures([]); return; }
-    const selected = selectedRouteAirportCodesKey.split("|").filter(Boolean);
-    const nearby = airportsWithinMapRadius(airports, { lat: snapshot.receiver.lat, lon: snapshot.receiver.lon }).map((airport) => airport.icaoCode.toUpperCase());
-    const codes = [...new Set([...nearby, ...selected])].filter((code) => /^[A-Z]{4}$/.test(code)).slice(0, 24);
     const controller = new AbortController();
-    Promise.all(codes.map((airport) => fetch(`/api/procedures?airport=${airport}`, { cache: "force-cache", signal: controller.signal }).then((response) => response.ok ? response.json() as Promise<{ procedures?: Procedure[] }> : { procedures: [] }).catch(() => ({ procedures: [] }))))
-      .then((results) => setProcedures(results.flatMap((result) => result.procedures ?? []))).catch(() => undefined);
+    fetch("/api/procedures", { cache: "force-cache", signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<{ procedures?: Procedure[] }> : { procedures: [] })
+      .then((result) => setProcedures(result.procedures ?? []))
+      .catch(() => undefined);
     return () => controller.abort();
-  }, [airports, selectedRouteAirportCodesKey, showSids, showStars, snapshot.receiver.lat, snapshot.receiver.lon]);
+  }, [showSids, showStars]);
 
   useEffect(() => {
     const map = mapRef.current;
