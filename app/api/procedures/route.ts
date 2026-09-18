@@ -12,7 +12,12 @@ export async function GET(request: Request): Promise<Response> {
   if (!airport || !/^[A-Z]{4}$/.test(airport)) return Response.json({ error: "airport must be a four-letter ICAO code" }, { status: 400 });
   if (typeValue !== null && typeValue !== "SID" && typeValue !== "STAR") return Response.json({ error: "type must be SID or STAR" }, { status: 400 });
   const repository = loadProcedureRepository();
-  if (!repository) return Response.json({ available: false, status: "unavailable", procedures: [] }, { status: 503, headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } });
+  if (!repository) {
+    return Response.json(
+      { available: false, status: "unavailable", procedures: [] },
+      { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } },
+    );
+  }
   const procedures = (designator
     ? repository.byAirportAndDesignator(airport, designator).filter((procedure) => !typeValue || procedure.type === typeValue)
     : typeValue ? repository.byAirportAndType(airport, typeValue as ProcedureType) : repository.byAirport(airport)).slice(0, MAX_RESULTS);

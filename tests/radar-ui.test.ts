@@ -124,6 +124,13 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("/api/history/${encodeURIComponent(selectedHex)}");
   });
 
+  it("shows available receiver telemetry in technical aircraft details", () => {
+    expect(quickDetailSource).toContain("label={t.aircraft.bearing}");
+    expect(quickDetailSource).toContain("label={t.aircraft.rssi}");
+    expect(quickDetailSource).toContain("label={t.aircraft.seenPosition}");
+    expect(quickDetailSource).toContain("aircraft.seenPosSeconds");
+  });
+
   it("plots aircraft altitude using recorded time instead of sample index", () => {
     expect(aircraftDetailSource).toContain("Date.parse(point.recordedAt) - firstTimestamp");
     expect(aircraftDetailSource).toContain("lastTimestamp - firstTimestamp");
@@ -164,6 +171,12 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain('map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && showAirports ? "visible" : "none")');
     expect(appSource).toContain("resetMapFilters");
     expect(appSource).toContain("setMapFilters(DEFAULT_MAP_AIRCRAFT_FILTERS)");
+  });
+
+  it("loads ATS data whenever route intelligence or ATS point focus needs it", () => {
+    expect(appSource).toContain("enabled: showAtsRoutes || Boolean(atsPointFocus) || Boolean(selectedHex)");
+    expect(appSource).toContain("selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin");
+    expect(appSource).toContain("selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination");
   });
 
   it("keeps CZ and EN layer labels in the existing i18n dictionaries", () => {

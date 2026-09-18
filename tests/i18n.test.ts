@@ -34,6 +34,19 @@ describe("localization", () => {
     expect(getTranslations("en").atc.relevantDisclaimer).toContain("actually tuned");
   });
 
+  it("labels all dynamic route phases in Czech and English", () => {
+    expect(getTranslations().routeIntelligence).toMatchObject({
+      departure: "Odlet",
+      enRoute: "Na trati",
+      arrival: "Přílet",
+    });
+    expect(getTranslations("en").routeIntelligence).toMatchObject({
+      departure: "Departure",
+      enRoute: "En route",
+      arrival: "Arrival",
+    });
+  });
+
   it("provides aircraft detail v2 copy in Czech and English", () => {
     expect(getTranslations().history.recentFlights).toBe("Poslední lety");
     expect(getTranslations().history.aircraftHistory).toBe("Historie letadla");

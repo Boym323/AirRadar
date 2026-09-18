@@ -233,3 +233,10 @@ and exposes safe DTOs. The browser reconstructs aircraft state through
 `lib/time-machine/playback.ts` and uses the namespaced MapLibre sources
 `time-machine-aircraft` and `time-machine-selected-trail`; it never uses the
 live state service, SSE, or live trail store.
+
+Flight Intelligence loads the imported PostgreSQL airport catalog once into a
+bounded runtime index; it does not scan a sample/world list on each aircraft
+poll. Track memory is limited to 120 samples and a five-minute holding window,
+and stale aircraft tracks are removed with live-state cleanup. Event persistence
+stores the newest matching Flight's `flightId` when available; database failures
+remain best-effort.

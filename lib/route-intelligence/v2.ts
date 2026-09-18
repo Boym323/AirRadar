@@ -17,6 +17,7 @@ import type {
 } from "./contracts";
 import { createRunwayContext } from "./contracts";
 import type { AircraftRouteInput, RouteIntelligenceNetwork } from "./index";
+import { analyzeDynamicRoute } from "./dynamic";
 
 export interface RouteIntelligenceV2Options {
   aircraftRoute?: AircraftRouteInput | AircraftEnrichment | null;
@@ -31,6 +32,8 @@ export interface RouteIntelligenceV2Options {
   origin?: string | null;
   destination?: string | null;
   runway?: RunwayContextInput;
+  aircraft?: { lat: number | null; lon: number | null; track?: number | null; altitude?: number | null } | null;
+  previousDynamicState?: RouteIntelligenceV2Snapshot["dynamic"] | null;
 }
 
 type V2TokenType = "WAYPOINT" | "AIRWAY" | "DCT" | "SID" | "STAR" | "UNKNOWN";
@@ -59,6 +62,8 @@ interface ProcedureSelection {
 }
 
 const MAX_PATH_SEARCH_STEPS = 256;
+const MAX_STATIC_CACHE_ENTRIES = 128;
+const staticCache = new Map<string, InterpretedRoute>();
 
 function normalized(value: string): string {
   return value.trim().toUpperCase();
@@ -426,6 +431,16 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
   }
   const context = airportContext(options);
   const runway = createRunwayContext(options.runway);
+  const cacheKey = JSON.stringify({
+    route: fields.text,
+    origin: context.origin,
+    destination: context.destination,
+    ats: network?.source?.effectiveDate ?? null,
+    procedures: procedures.map((procedure) => `${procedure.id}:${procedure.source.effectiveDate ?? ""}`).sort(),
+    runway: runway.reportedRunway ?? runway.inferredRunway ?? null,
+  });
+  const cachedRoute = staticCache.get(cacheKey);
+  if (cachedRoute) return cachedRoute;
   const tokens = tokensFor(options, network, procedures);
   const elements: InterpretedRouteElement[] = [];
   const procedureMatches: ProcedureMatch[] = [];
@@ -516,7 +531,7 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
     return leftIndex - rightIndex || left.sequence - right.sequence;
   }).forEach((element, index) => { element.sequence = index + 1; });
   const resolvedElements = elements.filter((element) => element.status === "RESOLVED").length;
-  return {
+  const result = {
     id: routeId(fields.text),
     status: statusFor(elements, true),
     elements,
@@ -528,6 +543,9 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
       progress: null,
     },
   };
+  staticCache.set(cacheKey, result);
+  if (staticCache.size > MAX_STATIC_CACHE_ENTRIES) staticCache.delete(staticCache.keys().next().value!);
+  return result;
 }
 
 export function interpretFiledRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
@@ -536,24 +554,10 @@ export function interpretFiledRoute(options: RouteIntelligenceV2Options): Interp
 
 export function analyzeRouteIntelligenceV2(options: RouteIntelligenceV2Options): RouteIntelligenceV2Snapshot {
   const route = staticRoute(options);
+  const context = airportContext(options);
   return {
     route,
-    dynamic: {
-      currentPhase: "UNKNOWN",
-      currentElement: null,
-      previousPoint: null,
-      nextPoint: null,
-      distanceToNext: null,
-      crossTrackDeviation: null,
-      alongTrackDistance: null,
-      routeAdherence: "UNKNOWN",
-      completedElements: [],
-      remainingElements: [],
-      routeProgress: null,
-      routeProgressPercent: null,
-      precision: "UNAVAILABLE",
-      progressPrecision: "UNAVAILABLE",
-    },
+    dynamic: analyzeDynamicRoute({ route, aircraft: options.aircraft ?? undefined, previousState: options.previousDynamicState, airportContext: { departureAirportIcao: context.origin, arrivalAirportIcao: context.destination } }),
     runway: createRunwayContext(options.runway),
   };
 }

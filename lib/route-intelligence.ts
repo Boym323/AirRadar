@@ -324,7 +324,14 @@ function correctSegmentProgress(
 function analyzeWithNetwork(options: AnalyzeOptions, network: RouteIntelligenceNetwork | null): RouteIntelligenceResult {
   const result = analyzePublishedRouteBase({ ...options, atsNetwork: network });
   const corrected = correctSegmentProgress(withRequestSource(result, options.aircraftRoute), options.aircraftPosition, network);
-  const v2 = analyzeRouteIntelligenceV2({ ...options, atsNetwork: network });
+  const route = options.aircraftRoute && "route" in options.aircraftRoute ? options.aircraftRoute.route : null;
+  const v2 = analyzeRouteIntelligenceV2({
+    ...options,
+    atsNetwork: network,
+    originAirportIcao: route?.origin ?? null,
+    destinationAirportIcao: route?.destination ?? null,
+    aircraft: options.aircraftPosition ?? null,
+  });
   // Never expose the base engine's cached result object directly: the client-side
   // ATS loader upgrades pending results in place once the dataset arrives.
   return {

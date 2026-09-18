@@ -171,6 +171,14 @@ function TechnicalDetails({ aircraft }: { aircraft: AircraftView }) {
     <summary>{t.aircraft.technicalDetails}</summary>
     <div className="aircraft-quick-detail-grid">
       <DetailValue label={t.aircraft.distance} value={formatDistance(aircraft.distanceKm)} />
+      <DetailValue label={t.aircraft.bearing} value={aircraft.bearing === null ? null : formatTrack(aircraft.bearing)} />
+      <DetailValue label={t.aircraft.rssi} value={aircraft.rssi === null ? null : `${formatNumber(aircraft.rssi, 1)} dBFS`} />
+      <DetailValue
+        label={t.aircraft.seenPosition}
+        value={aircraft.seenSeconds === null && aircraft.seenPosSeconds === null
+          ? null
+          : `${aircraft.seenSeconds === null ? t.common.emptyValue : formatAge(aircraft.seenSeconds)} / ${aircraft.seenPosSeconds === null ? t.common.emptyValue : formatAge(aircraft.seenPosSeconds)}`}
+      />
       <DetailValue label={t.aircraft.squawk} value={aircraft.squawk} />
       <DetailValue label={t.aircraft.source} value={aircraft.sourceType ?? aircraft.source} />
       <DetailValue label={t.aircraft.seenBy} value={aircraft.provenance?.seenLocal && aircraft.provenance.seenNetwork ? t.aircraft.localAndNetwork : aircraft.origin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver} />

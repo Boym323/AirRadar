@@ -65,4 +65,15 @@ describe("SID/STAR procedure pipeline", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).procedures).toHaveLength(1);
   });
+
+  it("fails soft with an empty successful response when the dataset is unavailable", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "airradar-procedures-missing-"));
+    process.env.PROCEDURES_DATASET_PATH = path.join(directory, "procedures.json");
+    clearProcedureRepositoryCache();
+
+    const response = await GET(new Request("http://localhost/api/procedures?airport=LKPR"));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ available: false, status: "unavailable", procedures: [] });
+  });
 });

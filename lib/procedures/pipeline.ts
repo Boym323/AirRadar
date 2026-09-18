@@ -196,6 +196,39 @@ function coordinateFromAttrs(element: Cheerio<AnyNode> | null): RouteCoordinate 
   return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
 }
 
+/** Parse the compact DMS coordinates used by the eAIP semantic tables. */
+function coordinateFromEaip(value: string, axis: "lat" | "lon"): number | null {
+  const normalized = value.replace(/\s+/g, "").toUpperCase();
+  const match = axis === "lat"
+    ? /^(\d{2})(\d{2})(\d{2}(?:\.\d+)?)([NS])$/.exec(normalized)
+    : /^(\d{3})(\d{2})(\d{2}(?:\.\d+)?)([EW])$/.exec(normalized);
+  if (!match) return null;
+  const degrees = Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3]);
+  if (!Number.isFinite(degrees) || !Number.isFinite(minutes) || !Number.isFinite(seconds) || minutes >= 60 || seconds >= 60) return null;
+  const result = degrees + minutes / 60 + seconds / 3600;
+  return (match[4] === "S" || match[4] === "W") ? -result : result;
+}
+
+function eaipPointCoordinates($: ReturnType<typeof load>, sourceId: string): RouteCoordinate | null {
+  const code = $(`.SD`).filter((_index, element) => {
+    const parameter = $(element).next(".sdParams").text().trim();
+    return /^(TDESIGNATED_POINT|TNAVAID);CODE_ID;/.test(parameter) && parameter.split(";")[2] === sourceId;
+  }).first();
+  if (!code.length) return null;
+  const row = code.closest("tr");
+  const values = new Map<string, string>();
+  row.find(".SD").each((_index, element) => {
+    const parameter = $(element).next(".sdParams").text().trim();
+    const parts = parameter.split(";");
+    if (parts.length >= 3 && (parts[1] === "GEO_LAT" || parts[1] === "GEO_LONG")) values.set(parts[1], $(element).text().trim());
+  });
+  const lat = coordinateFromEaip(values.get("GEO_LAT") ?? "", "lat");
+  const lon = coordinateFromEaip(values.get("GEO_LONG") ?? "", "lon");
+  return lat !== null && lon !== null ? { lat, lon } : null;
+}
+
 function parseStructuredHtml(raw: string, options: ProcedureParseOptions): Procedure[] {
   const $ = load(raw);
   const groups = new Map<string, { type: ProcedureType; designator: string; transition: string | null; runway: ProcedureRunwayApplicability; rows: ReturnType<typeof $>[] }>();
@@ -244,6 +277,11 @@ function parseStructuredHtml(raw: string, options: ProcedureParseOptions): Proce
 
 function parseEaipSemanticHtml(raw: string, options: ProcedureParseOptions): Procedure[] {
   const $ = load(raw);
+  const pointCoordinates = new Map<string, RouteCoordinate | null>();
+  const coordinatesFor = (sourceId: string): RouteCoordinate | null => {
+    if (!pointCoordinates.has(sourceId)) pointCoordinates.set(sourceId, eaipPointCoordinates($, sourceId));
+    return pointCoordinates.get(sourceId) ?? null;
+  };
   const parsed: Procedure[] = [];
   $("div[id*='AD-2.22'] tr").each((_index, node) => {
     const row = $(node);
@@ -265,7 +303,7 @@ function parseEaipSemanticHtml(raw: string, options: ProcedureParseOptions): Pro
       const id = `${parts[0] === "TNAVAID" ? "NAV" : "DP"}:${sourceId}`;
       if (pointIds.has(id)) continue;
       pointIds.add(id);
-      points.push({ id, name: token.value.toUpperCase(), kind: parts[0] === "TNAVAID" ? "NAVAID" : "FIX", coordinates: null, sourceReference: row.attr("id") ? `${options.source.reference}#${row.attr("id")}` : options.source.reference });
+      points.push({ id, name: token.value.toUpperCase(), kind: parts[0] === "TNAVAID" ? "NAVAID" : "FIX", coordinates: coordinatesFor(sourceId), sourceReference: row.attr("id") ? `${options.source.reference}#${row.attr("id")}` : options.source.reference });
     }
     if (points.length < 2) return;
     const designator = procedureToken.value.toUpperCase();
