@@ -410,7 +410,12 @@ update_repository() {
   merge_base="$(git_cmd merge-base HEAD "${remote_ref}")"
 
   if [[ "${merge_base}" != "${OLD_SHA}" && "${merge_base}" != "${remote_sha}" ]]; then
-    die "Local ${DEPLOY_BRANCH} and origin/${DEPLOY_BRANCH} have divergent history; refusing to merge on production."
+    if (( AUTOMATED == 1 )); then
+      log "Automated release found divergent local history; resetting ${DEPLOY_BRANCH} to origin/${DEPLOY_BRANCH}."
+      git_cmd reset --hard "${remote_ref}"
+    else
+      die "Local ${DEPLOY_BRANCH} and origin/${DEPLOY_BRANCH} have divergent history; refusing to merge on production."
+    fi
   fi
 
   if [[ "${OLD_SHA}" == "${remote_sha}" ]]; then
@@ -418,6 +423,8 @@ update_repository() {
   elif [[ "${merge_base}" == "${OLD_SHA}" ]]; then
     log "Fast-forwarding ${DEPLOY_BRANCH} to ${remote_sha}"
     git_cmd merge --ff-only "${remote_ref}"
+  elif (( AUTOMATED == 1 )); then
+    log "Automated release aligned ${DEPLOY_BRANCH} to ${remote_sha}."
   else
     log "Local ${DEPLOY_BRANCH} is ahead of origin/${DEPLOY_BRANCH}; keeping the local fast-forward-only state."
   fi

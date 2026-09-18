@@ -20,5 +20,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --prefer-offline --no-audit --no-fund
+      - run: npm run prisma:generate
       - name: Production-scale metadata catalog
         run: npm run test:scale
