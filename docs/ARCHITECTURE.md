@@ -223,3 +223,10 @@ AirRadar shutdown coordinator, disables Next's competing signal handler, and
 then starts Next. Shutdown stops the state service and drains history before
 closing statistics, provider, and PostgreSQL within the bounded coordinator
 deadline. The release procedure is defined only in [RELEASE.md](RELEASE.md).
+
+Flight Intelligence loads the imported PostgreSQL airport catalog once into a
+bounded runtime index; it does not scan a sample/world list on each aircraft
+poll. Track memory is limited to 120 samples and a five-minute holding window,
+and stale aircraft tracks are removed with live-state cleanup. Event persistence
+stores the newest matching Flight's `flightId` when available; database failures
+remain best-effort.
