@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily AirRadar ATC and terminal procedure data update
+
+[Timer]
+OnCalendar=*-*-* 04:17:00
+RandomizedDelaySec=30m
+Persistent=true
+Unit=airradar-aviation-data-sync.service
+
+[Install]
+WantedBy=timers.target

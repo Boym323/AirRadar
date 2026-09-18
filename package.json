@@ -52,6 +52,7 @@
     "ats:sync:at": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-sync-at.ts",
     "ats:status:at": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-at.ts",
     "procedures:sync": "JITI_TSCONFIG_PATHS=true jiti scripts/procedures-sync.ts",
+    "aviation-data:sync": "node scripts/aviation-data-sync.mjs",
     "generate:boundary:at": "node scripts/generate-at-boundary.mjs",
     "changelog": "node scripts/changelog.mjs generate",
     "changelog:backfill": "node scripts/changelog.mjs backfill"

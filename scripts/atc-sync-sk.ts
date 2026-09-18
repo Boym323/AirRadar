@@ -90,7 +90,8 @@ async function main(): Promise<void> {
   }
   console.log("Published airspace is imported with runtime activation UNKNOWN; no operational activation is inferred.");
   console.log("no authoritative transmitter-location source found");
-  await runAtcImport(dataset, { dryRun, database: dryRun ? null : database });
+  try { await runAtcImport(dataset, { dryRun, database: dryRun ? null : database }); }
+  finally { await database?.close(); }
 }
 
 main().catch((error: unknown) => {
