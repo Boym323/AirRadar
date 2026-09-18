@@ -223,3 +223,13 @@ AirRadar shutdown coordinator, disables Next's competing signal handler, and
 then starts Next. Shutdown stops the state service and drains history before
 closing statistics, provider, and PostgreSQL within the bounded coordinator
 deadline. The release procedure is defined only in [RELEASE.md](RELEASE.md).
+
+## Time Machine
+
+`/time-machine` is a separate read-only historical context. The historical
+repository in `lib/server/time-machine.ts` reads bounded windows from
+`FlightPosition`, joins `Flight`/`Aircraft` metadata and `FlightEvent` markers,
+and exposes safe DTOs. The browser reconstructs aircraft state through
+`lib/time-machine/playback.ts` and uses the namespaced MapLibre sources
+`time-machine-aircraft` and `time-machine-selected-trail`; it never uses the
+live state service, SSE, or live trail store.

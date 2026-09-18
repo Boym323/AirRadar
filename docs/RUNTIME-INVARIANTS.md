@@ -2,6 +2,15 @@
 
 These are behavior and safety contracts for changes to the current system.
 
+## Time Machine
+
+- Time Machine is read-only and never controls `AircraftStateService`.
+- Historical playback never runs intelligence detection, alert evaluation, or
+  notification dispatch.
+- Historical API windows and returned rows are bounded; browser playback keeps
+  bounded window state and uses UTC instants.
+- Historical database failure is fail-soft for live radar, SSE, and ingest.
+
 ## Identity and flight semantics
 
 - ICAO hex is the aircraft identity. Normalize it before live-map lookup,
