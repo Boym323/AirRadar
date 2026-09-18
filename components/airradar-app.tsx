@@ -468,6 +468,7 @@ export function AirRadarApp() {
   const [colorMode, setColorMode] = useState<AircraftColorMode>("default");
   const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
+  const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
   const [showSids, setShowSids] = useState(false);
@@ -1485,6 +1486,20 @@ export function AirRadarApp() {
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
+    // The initial radar view is receiver-centred on Czechia.  Without this
+    // fit, valid Slovak/Austrian sectors are loaded but remain outside the
+    // viewport, which makes the ATC layer appear Czech-only.
+    if (showAtc && !atcAutoFitRef.current && atcData.sectors.length) {
+      const bounds = new maplibregl.LngLatBounds();
+      for (const sector of atcData.sectors) for (const polygon of sector.polygons) {
+        for (const [lon, lat] of polygon) bounds.extend([lon, lat]);
+      }
+      if (!bounds.isEmpty()) {
+        atcAutoFitRef.current = true;
+        map.fitBounds(bounds, { padding: 48, maxZoom: 7.5, duration: 500 });
+      }
+    }
+    if (!showAtc) atcAutoFitRef.current = false;
   }, [airports, airspaceActivity, atcData, mapReady, selectedRouteAirportCodesKey, showAtc, snapshot.receiver.lat, snapshot.receiver.lon]);
 
   const airportLayerVisibility = useMemo<AirportLayerVisibility>(() => ({
