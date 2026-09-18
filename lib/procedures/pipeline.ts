@@ -212,18 +212,23 @@ function coordinateFromEaip(value: string, axis: "lat" | "lon"): number | null {
 }
 
 function eaipPointCoordinates($: ReturnType<typeof load>, sourceId: string): RouteCoordinate | null {
-  const code = $(`.SD`).filter((_index, element) => {
+  const code = $(".SD").filter((_index, element) => {
     const parameter = $(element).next(".sdParams").text().trim();
     return /^(TDESIGNATED_POINT|TNAVAID);CODE_ID;/.test(parameter) && parameter.split(";")[2] === sourceId;
   }).first();
   if (!code.length) return null;
-  const row = code.closest("tr");
+  // In semantic eAIP tables the point identity and its GEO_LAT/GEO_LONG
+  // tokens are sometimes split across nested rows. Search the containing
+  // table as a fallback instead of silently losing the point coordinates.
+  const scope = code.closest("tr");
   const values = new Map<string, string>();
-  row.find(".SD").each((_index, element) => {
+  const readCoordinates = (candidates: ReturnType<typeof $>) => candidates.each((_index, element) => {
     const parameter = $(element).next(".sdParams").text().trim();
     const parts = parameter.split(";");
     if (parts.length >= 3 && (parts[1] === "GEO_LAT" || parts[1] === "GEO_LONG")) values.set(parts[1], $(element).text().trim());
   });
+  readCoordinates(scope.find(".SD"));
+  if (!values.has("GEO_LAT") || !values.has("GEO_LONG")) readCoordinates(code.closest("table").find(".SD"));
   const lat = coordinateFromEaip(values.get("GEO_LAT") ?? "", "lat");
   const lon = coordinateFromEaip(values.get("GEO_LONG") ?? "", "lon");
   return lat !== null && lon !== null ? { lat, lon } : null;

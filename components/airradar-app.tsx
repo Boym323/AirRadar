@@ -899,9 +899,9 @@ export function AirRadarApp() {
       });
       map.addSource("ats-routes", { type: "geojson", data: EMPTY_ATS_GEOJSON });
       map.addSource("procedures-sid", { type: "geojson", data: EMPTY_PROCEDURE_GEOJSON });
-      map.addLayer({ id: "procedures-sid-line", type: "line", source: "procedures-sid", layout: { visibility: "none" }, paint: { "line-color": "#f0b35d", "line-opacity": 0.78, "line-width": 2 } });
+      map.addLayer({ id: "procedures-sid-line", type: "line", source: "procedures-sid", layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#f0b35d", "line-opacity": 0.78, "line-width": 2 } });
       map.addSource("procedures-star", { type: "geojson", data: EMPTY_PROCEDURE_GEOJSON });
-      map.addLayer({ id: "procedures-star-line", type: "line", source: "procedures-star", layout: { visibility: "none" }, paint: { "line-color": "#b98be8", "line-opacity": 0.78, "line-width": 2, "line-dasharray": [2, 1] } });
+      map.addLayer({ id: "procedures-star-line", type: "line", source: "procedures-star", layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#b98be8", "line-opacity": 0.78, "line-width": 2, "line-dasharray": [2, 1] } });
       map.addLayer({ id: "ats-routes-line", type: "line", source: "ats-routes", layout: { visibility: "none" }, paint: { "line-color": "#37d6c0", "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 8, 2.2, 13, 3.4] } });
       map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": "#f3b95f", "line-opacity": 0.95, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.5, 8, 2.4, 13, 3.6], "line-dasharray": [2, 2] } });
       map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": "#ffe08a", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
