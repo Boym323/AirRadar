@@ -81,16 +81,25 @@ function finiteNumber(value: unknown): number | null {
 
 function polygonsFromJson(value: string): AtcSector["polygons"] {
   const parsed = jsonValue(value);
-  if (!Array.isArray(parsed)) return [];
-  return parsed.map((polygon) => {
+  const rawPolygons = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    && ((parsed as Record<string, unknown>).type === "Polygon" || (parsed as Record<string, unknown>).type === "MultiPolygon")
+    ? ((parsed as Record<string, unknown>).type === "Polygon"
+      ? [[(parsed as Record<string, unknown>).coordinates]]
+      : [(parsed as Record<string, unknown>).coordinates])
+    : parsed;
+  if (!Array.isArray(rawPolygons)) return [];
+  return rawPolygons.flatMap((polygon) => {
     if (!Array.isArray(polygon)) return [];
-    return polygon.flatMap((coordinate) => {
+    // Accept both AirRadar's flat polygon ring and GeoJSON's polygon-with-
+    // rings shape. Older SK/AT imports used the latter.
+    const ring = Array.isArray(polygon[0]) && Array.isArray(polygon[0][0]) ? polygon[0] : polygon;
+    return [ring.flatMap((coordinate) => {
       if (!Array.isArray(coordinate) || coordinate.length !== 2) return [];
       const lon = finiteNumber(coordinate[0]);
       const lat = finiteNumber(coordinate[1]);
       return lon !== null && lat !== null ? [[lon, lat] as [number, number]] : [];
-    });
-  }).filter((polygon) => polygon.length >= 3);
+    })].filter((item) => item.length >= 3);
+  });
 }
 
 function frequenciesFromRecord(primary: number | null, alternateJson: string | null): AtcSector["frequencies"] {
