@@ -292,9 +292,17 @@ check_repository() {
   [[ "${git_root}" == "${APP_DIR}" ]] || die "Git repository root is ${git_root}, expected ${APP_DIR}."
 
   current_branch="$(git_cmd branch --show-current)"
-  [[ -n "${current_branch}" ]] || die "The checkout is detached; release requires a named branch."
+  if (( AUTOMATED == 1 )); then
+    # GitHub Actions uses this shared production checkout. A previous manual
+    # checkout or PR investigation can leave it on a non-main branch. The
+    # automated caller pins the release to EXPECTED_COMMIT, so the branch name
+    # is not the safety boundary here; the resolved commit is.
+    [[ -n "${current_branch}" ]] || die "The checkout is detached; automated release requires a named branch."
+  else
+    [[ -n "${current_branch}" ]] || die "The checkout is detached; release requires a named branch."
+    [[ "${current_branch}" == "${DEPLOY_BRANCH}" ]] || die "Current branch is ${current_branch}; expected ${DEPLOY_BRANCH}. Use --branch explicitly if this is intentional."
+  fi
   git_cmd check-ref-format --branch "${DEPLOY_BRANCH}" >/dev/null 2>&1 || die "Invalid release branch name: ${DEPLOY_BRANCH}"
-  [[ "${current_branch}" == "${DEPLOY_BRANCH}" ]] || die "Current branch is ${current_branch}; expected ${DEPLOY_BRANCH}. Use --branch explicitly if this is intentional."
   git_cmd remote get-url origin >/dev/null 2>&1 || die "Git remote origin is not configured."
 
   if (( ALLOW_DIRTY == 0 )); then
