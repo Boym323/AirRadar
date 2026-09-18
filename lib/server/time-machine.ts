@@ -16,7 +16,7 @@ export interface TimeMachineRange { min: string | null; max: string | null; posi
 
 type PositionRow = { flightId: number; recordedAt: Date | Temporal.Instant; lat: number; lon: number; altitude: number | null; groundSpeed: number | null; track: number | null };
 type FlightRow = { id: number; callsign: string | null; registration: string | null; aircraftType: string | null; origin: string | null; destination: string | null; aircraft: { icaoHex: string; registration: string | null; aircraftType: string | null } };
-type EventRow = { id?: number; eventKey: string; type: string; icaoHex: string; flightId?: number | null; occurredAt: Date | Temporal.Instant; airportIcao?: string | null; sectorId?: string | null; latitude?: number | null; longitude?: number | null; aircraft?: { callsign?: string | null; registration?: string | null } | null };
+type EventRow = { id?: number; eventKey: string; type: string; icaoHex: string; flightId?: number | null; occurredAt: Date | Temporal.Instant; airportIcao?: string | null; sectorId?: string | null; latitude?: number | null; longitude?: number | null; aircraft?: { registration?: string | null } | null; flight?: { callsign?: string | null } | null };
 type QueryField = { gte(value: unknown): unknown; lt(value: unknown): unknown; in?(values: number[]): unknown; asc(): unknown; desc(): unknown; };
 type QueryRow = Record<string, QueryField>;
 type QueryCollection<T> = { where(predicate: ((row: QueryRow) => unknown) | Record<string, unknown>): QueryCollection<T>; orderBy(order: unknown): QueryCollection<T>; limit(value: number): QueryCollection<T>; include(relation: string, callback: (query: QueryCollection<unknown>) => QueryCollection<unknown>): QueryCollection<T>; select(...fields: string[]): QueryCollection<T>; all(): Promise<T[]> };
@@ -86,9 +86,10 @@ async function getTimeMachineEvents(database: TimeMachineDb, from: Date, to: Dat
   const rows = await database.orm.public.FlightEvent
     .where((row: QueryRow) => row.occurredAt.gte(Temporal.Instant.fromEpochMilliseconds(from.getTime())))
     .where((row: QueryRow) => row.occurredAt.lt(Temporal.Instant.fromEpochMilliseconds(to.getTime())))
-    .include("aircraft", (aircraft: QueryCollection<unknown>) => aircraft.select("callsign", "registration"))
+    .include("aircraft", (aircraft: QueryCollection<unknown>) => aircraft.select("registration"))
+    .include("flight", (flight: QueryCollection<unknown>) => flight.select("callsign"))
     .orderBy((row: QueryRow) => row.occurredAt.asc()).limit(TIME_MACHINE_MAX_EVENTS + 1).all() as EventRow[];
-  return rows.slice(0, TIME_MACHINE_MAX_EVENTS).map((row) => ({ id: row.eventKey || String(row.id), type: row.type, icaoHex: row.icaoHex, flightId: row.flightId ?? null, occurredAt: iso(row.occurredAt), callsign: row.aircraft?.callsign ?? null, registration: row.aircraft?.registration ?? null, airportIcao: row.airportIcao ?? null, sectorId: row.sectorId ?? null, latitude: row.latitude ?? null, longitude: row.longitude ?? null }));
+  return rows.slice(0, TIME_MACHINE_MAX_EVENTS).map((row) => ({ id: row.eventKey || String(row.id), type: row.type, icaoHex: row.icaoHex, flightId: row.flightId ?? null, occurredAt: iso(row.occurredAt), callsign: row.flight?.callsign ?? null, registration: row.aircraft?.registration ?? null, airportIcao: row.airportIcao ?? null, sectorId: row.sectorId ?? null, latitude: row.latitude ?? null, longitude: row.longitude ?? null }));
 }
 
 export function validateTimeMachineWindow(from: string | null, to: string | null): void { bounds(from, to); }
