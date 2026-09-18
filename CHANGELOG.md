@@ -2,6 +2,15 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.48] - 2026-09-18
+
+Changes since v1.0.46:
+
+- Merge pull request #40 from Boym323/chore/changelog-v1.0.46 (fea01ba8)
+- feat(map): add independent SID STAR procedure layers (45ceabd7)
+- Merge branch 'main' into feat/procedure-map-layers (7bb878ec)
+- Merge pull request #41 from Boym323/feat/procedure-map-layers (ec0b4cd3)
+
 ## [1.0.46] - 2026-09-17
 
 Changes since v1.0.45:
