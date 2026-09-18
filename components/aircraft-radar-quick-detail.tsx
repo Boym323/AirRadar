@@ -84,7 +84,8 @@ function trackingSummary(aircraft: AircraftView, historyTrail: QuickHistoryTrail
 
 function RouteSection({ aircraft }: { aircraft: AircraftView }) {
   const route = aircraft.enrichment?.route;
-  if (!route || (!route.origin && !route.originAirport && !route.destination && !route.destinationAirport)) return null;
+  const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
+  if (!hasRouteData || !route) return null;
   return <QuickSection id="aircraft-quick-route-title" title={t.route.context} className="aircraft-quick-route">
     <div className="aircraft-quick-route-value" aria-label={t.route.context}>
       <RouteEndpoint code={route.origin} airport={route.originAirport} />

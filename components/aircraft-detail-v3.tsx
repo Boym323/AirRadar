@@ -258,6 +258,7 @@ export function AircraftDetailV3({
   const route = liveAircraft?.enrichment?.route ?? null;
   const flightPlan = liveAircraft?.enrichment?.flightPlan ?? null;
   const flightAware = flightPlan?.flightAware ?? null;
+  const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
   const backLink = backHref === "/history" ? "/history" : "/";
   const watchlistHref = icaoHex === t.common.emptyValue ? "/watchlist" : aircraftWatchlistHref(icaoHex, registration);
   const sourceLabel = liveAircraft?.origin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver;
@@ -321,7 +322,7 @@ export function AircraftDetailV3({
       </div>
       <div className="aircraft-page-identity"><span>{icaoHex}</span>{registration && <span>{registration}</span>}{aircraftType && <span>{aircraftType}</span>}</div>
       <div className="aircraft-page-subtitle">{[manufacturer, model].filter(Boolean).join(" ") || t.aircraft.unknownAircraftType}{operator ? ` · ${operator}` : ""}</div>
-      {route && <div className="aircraft-page-route" aria-label={t.route.originDestination}>
+      {hasRouteData && route && <div className="aircraft-page-route" aria-label={t.route.originDestination}>
         <span>{route.originAirport?.iataCode || route.originAirport?.icaoCode || route.origin || t.common.emptyValue}</span>
         <span aria-hidden="true">→</span>
         <strong>{callsign}</strong>
@@ -361,9 +362,9 @@ export function AircraftDetailV3({
 
     <div className={styles.operationalGrid}>
       <div className={styles.primaryColumn}>
-        {(route || flightPlan) && <section className={`aircraft-card aircraft-route-card ${styles.currentFlightCard}`} aria-labelledby="aircraft-current-flight-title">
+        {(hasRouteData || flightAware || hasFlightPlanDetails || hasAirportOperations) && <section className={`aircraft-card aircraft-route-card ${styles.currentFlightCard}`} aria-labelledby="aircraft-current-flight-title">
           <h2 id="aircraft-current-flight-title">{t.aircraft.currentFlightTitle}</h2>
-          {route && <div className="aircraft-route-endpoints">
+          {hasRouteData && route && <div className="aircraft-route-endpoints">
             <RouteEndpoint code={route.origin} airport={route.originAirport} />
             <span className="aircraft-route-arrow" aria-hidden="true">↓</span>
             <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
@@ -454,7 +455,7 @@ export function AircraftDetailV3({
         </section>
 
         <AirspaceCard icaoHex={icaoHex} enabled={Boolean(liveAircraft)} />
-        {route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
+        {hasRouteData && route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
       </aside>
     </div>
 

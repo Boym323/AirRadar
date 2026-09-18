@@ -450,6 +450,13 @@ export function AircraftDetailV2({
   const route = liveAircraft?.enrichment?.route ?? null;
   const flightPlan = liveAircraft?.enrichment?.flightPlan ?? null;
   const flightAware = flightPlan?.flightAware ?? null;
+  const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
+  const hasFlightPlanData = Boolean(
+    flightPlan && (flightAware?.identIata || flightAware?.identIcao || flightAware?.operator || flightAware?.status ||
+      flightAware?.progressPercent !== undefined || flightAware?.schedule || flightPlan.scheduledDeparture ||
+      flightPlan.actualDeparture || flightPlan.scheduledArrival || flightPlan.estimatedArrival || flightPlan.filedRoute ||
+      flightPlan.waypoints.length),
+  );
   const backLink = backHref === "/history" ? "/history" : "/";
   const watchlistHref = icaoHex === t.common.emptyValue ? "/watchlist" : aircraftWatchlistHref(icaoHex, registration);
   const [flightHistory, setFlightHistory] = useState<HistoryResponse | null>(null);
@@ -504,7 +511,7 @@ export function AircraftDetailV2({
         </div>
         <div className="aircraft-page-identity"><span>{icaoHex}</span>{registration && <span>{registration}</span>}{aircraftType && <span>{aircraftType}</span>}</div>
         <div className="aircraft-page-subtitle">{[manufacturer, model].filter(Boolean).join(" ") || t.aircraft.unknownAircraftType}{operator ? ` · ${operator}` : ""}</div>
-        {route && <div className="aircraft-page-route" aria-label={t.route.originDestination}>
+        {hasRouteData && route && <div className="aircraft-page-route" aria-label={t.route.originDestination}>
           <span>{route.originAirport?.iataCode || route.originAirport?.icaoCode || route.origin || t.common.emptyValue}</span>
           <span aria-hidden="true">→</span>
           <strong>{callsign}</strong>
@@ -543,9 +550,9 @@ export function AircraftDetailV2({
             <div className="watchlist-actions"><Link className="primary-button" href={watchlistHref}>{t.watchlist.followAircraft}</Link></div>
 
           </section>
-          {(route || flightPlan) && <section className="aircraft-card aircraft-route-card" aria-labelledby="aircraft-route-title">
+          {(hasRouteData || hasFlightPlanData) && <section className="aircraft-card aircraft-route-card" aria-labelledby="aircraft-route-title">
             <h2 id="aircraft-route-title">{t.route.originDestination}</h2>
-            {route && <div className="aircraft-route-endpoints">
+            {hasRouteData && route && <div className="aircraft-route-endpoints">
               <RouteEndpoint code={route.origin} airport={route.originAirport} />
               <span className="aircraft-route-arrow" aria-hidden="true">↓</span>
               <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
@@ -587,7 +594,7 @@ export function AircraftDetailV2({
             <div className="detail-disclaimer">{t.aircraft.routeDisclaimer}</div>
           </section>}
           <AtcContextCard icaoHex={icaoHex} enabled={Boolean(liveAircraft)} />
-          {route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
+          {hasRouteData && route && <FlightRouteWeather originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
           <AircraftAltitudeChart points={[...historyPoints, ...sessionPoints]} livePoint={livePoint} loading={flightHistoryLoading} />
           <section className="aircraft-card aircraft-timeline-card" aria-labelledby="aircraft-timeline-title">
             <h2 id="aircraft-timeline-title">{t.aircraft.liveTrackingTitle}</h2>
