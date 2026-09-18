@@ -154,9 +154,6 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 
 const MIN_AIRCRAFT_ANIMATION_MS = 650;
 const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
-// Position samples arrive every few seconds. Ten visual updates per second
-// are enough for smooth movement while avoiding a permanent 60 Hz map loop.
-const AIRCRAFT_ANIMATION_TICK_MS = 100;
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -497,7 +494,8 @@ export function AirRadarApp() {
   const aircraftMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const ognMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
   const animationJobsRef = useRef<Map<string, AircraftAnimationJob>>(new Map());
-  const animationTimerRef = useRef<number | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const animationHiddenAtRef = useRef<number | null>(null);
   const animationSchedulerRef = useRef<(() => void) | null>(null);
   const aircraftMotionTimingRef = useRef<Map<string, AircraftMotionTiming>>(new Map());
   const aircraftAnimationTargetsRef = useRef<Map<string, [number, number]>>(new Map());
@@ -861,8 +859,11 @@ export function AirRadarApp() {
     const mapReplays = mapReplayRef.current;
 
     const runAnimations = (timestamp: number) => {
-      animationTimerRef.current = null;
-      if (document.hidden) return;
+      animationFrameRef.current = null;
+      if (document.hidden) {
+        animationHiddenAtRef.current ??= timestamp;
+        return;
+      }
       if (prefersReducedMotion()) {
         for (const job of animationJobs.values()) job.marker.setLngLat(job.target);
         animationJobs.clear();
@@ -870,24 +871,40 @@ export function AirRadarApp() {
       }
       for (const [hex, job] of animationJobs) {
         const progress = Math.min(1, (timestamp - job.startedAt) / job.durationMs);
-        const eased = progress * (2 - progress);
+        // Position samples are already discrete, so easing every segment makes
+        // each aircraft slow down and speed up again at every server update.
+        // Linear interpolation keeps the visual velocity stable between samples.
+        const interpolated = progress;
         job.marker.setLngLat([
-          job.start.lng + (job.target[0] - job.start.lng) * eased,
-          job.start.lat + (job.target[1] - job.start.lat) * eased,
+          job.start.lng + (job.target[0] - job.start.lng) * interpolated,
+          job.start.lat + (job.target[1] - job.start.lat) * interpolated,
         ]);
         if (progress >= 1) animationJobs.delete(hex);
       }
-      if (animationJobs.size) animationTimerRef.current = window.setTimeout(() => runAnimations(performance.now()), AIRCRAFT_ANIMATION_TICK_MS);
+      if (animationJobs.size) animationFrameRef.current = window.requestAnimationFrame(runAnimations);
     };
-    const ensureAnimationTimer = () => {
-      if (!document.hidden && animationJobs.size && animationTimerRef.current === null) {
-        animationTimerRef.current = window.setTimeout(() => runAnimations(performance.now()), 0);
+    const ensureAnimationFrame = () => {
+      if (document.hidden) return;
+      const hiddenAt = animationHiddenAtRef.current;
+      if (hiddenAt !== null) {
+        const pausedFor = performance.now() - hiddenAt;
+        for (const job of animationJobs.values()) job.startedAt += pausedFor;
+        animationHiddenAtRef.current = null;
+      }
+      if (animationJobs.size && animationFrameRef.current === null) {
+        animationFrameRef.current = window.requestAnimationFrame(runAnimations);
       }
     };
     const onVisibilityChange = () => {
-      if (!document.hidden) ensureAnimationTimer();
+      if (document.hidden) {
+        animationHiddenAtRef.current = performance.now();
+        if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+        return;
+      }
+      ensureAnimationFrame();
     };
-    animationSchedulerRef.current = ensureAnimationTimer;
+    animationSchedulerRef.current = ensureAnimationFrame;
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     map.on("load", () => {
@@ -1060,8 +1077,9 @@ export function AirRadarApp() {
     return () => {
       for (const replay of Object.values(mapReplays)) replay.setReady(false);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      if (animationTimerRef.current !== null) window.clearTimeout(animationTimerRef.current);
-      animationTimerRef.current = null;
+      if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+      animationHiddenAtRef.current = null;
       animationSchedulerRef.current = null;
       animationJobs.clear();
       aircraftMotionTiming.clear();
@@ -1241,7 +1259,7 @@ export function AirRadarApp() {
     const aircraftAnimationTargets = aircraftAnimationTargetsRef.current;
     const currentHexes = new Set<string>();
     const animate = (hex: string, marker: maplibregl.Marker, target: [number, number], duration: number) => {
-      if (prefersReducedMotion()) {
+      if (document.hidden || prefersReducedMotion()) {
         marker.setLngLat(target);
         animationJobsRef.current.delete(hex);
         return;
