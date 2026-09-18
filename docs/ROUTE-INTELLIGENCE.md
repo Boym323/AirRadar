@@ -90,3 +90,10 @@ Terminal procedures are a separate static ingestion boundary. `lib/procedures`
 consumes the shared `Procedure` contracts, and `npm run procedures:sync` produces
 the validated local artifact used by the runtime repository and bounded
 `/api/procedures` lookups. Aircraft display code never fetches an eAIP source.
+
+The selected-aircraft flow loads only origin SID and destination STAR sets
+through the bounded procedure API. Static V2 analysis uses a 128-entry cache
+keyed by route, airport context, ATS effective date, procedure identity/version,
+and relevant runway context. Dynamic analysis then uses the current position,
+track, and altitude without rebuilding the static route. Missing procedures,
+ATS data, or runway context produce explicit degraded states.

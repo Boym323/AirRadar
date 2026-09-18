@@ -101,7 +101,7 @@ export interface RouteToken {
 }
 
 export interface AircraftRouteInput {
-  route?: Pick<NonNullable<AircraftEnrichment["route"]>, "source"> | null;
+  route?: Pick<NonNullable<AircraftEnrichment["route"]>, "source" | "origin" | "destination"> | null;
   flightPlan?: Pick<NonNullable<AircraftEnrichment["flightPlan"]>, "filedRoute" | "waypoints" | "source"> | null;
   filedRoute?: string | null;
   waypoints?: string[] | null;
@@ -112,6 +112,7 @@ export interface AircraftPositionInput {
   lat: number | null;
   lon: number | null;
   track?: number | null;
+  altitude?: number | null;
 }
 
 export type RouteIntelligenceNetwork = Pick<CzAtsRouteDocument, "source" | "routes">;

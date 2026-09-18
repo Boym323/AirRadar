@@ -7,10 +7,26 @@ const DEFAULT_PATH = path.join(process.cwd(), "data/procedures/generated/procedu
 let cached: { file: string; mtimeMs: number; repository: ProcedureRepository } | null = null;
 
 export class ProcedureRepository {
-  constructor(readonly dataset: ProcedureDatasetDocument) {}
-  byAirport(airportIcao: string): Procedure[] { const code = airportIcao.trim().toUpperCase(); return this.dataset.procedures.filter((procedure) => procedure.airportIcao === code); }
-  byAirportAndType(airportIcao: string, type: ProcedureType): Procedure[] { return this.byAirport(airportIcao).filter((procedure) => procedure.type === type); }
-  byAirportAndDesignator(airportIcao: string, designator: string): Procedure[] { const value = designator.trim().toUpperCase(); return this.byAirport(airportIcao).filter((procedure) => procedure.designator === value); }
+  private readonly byAirportIndex = new Map<string, Procedure[]>();
+  private readonly byAirportTypeIndex = new Map<string, Procedure[]>();
+  private readonly byAirportDesignatorIndex = new Map<string, Procedure[]>();
+  constructor(readonly dataset: ProcedureDatasetDocument) {
+    for (const procedure of dataset.procedures) {
+      const airport = procedure.airportIcao.trim().toUpperCase();
+      const designator = procedure.designator.trim().toUpperCase();
+      const add = (map: Map<string, Procedure[]>, key: string) => {
+        const bucket = map.get(key);
+        if (bucket) bucket.push(procedure);
+        else map.set(key, [procedure]);
+      };
+      add(this.byAirportIndex, airport);
+      add(this.byAirportTypeIndex, `${airport}:${procedure.type}`);
+      add(this.byAirportDesignatorIndex, `${airport}:${designator}`);
+    }
+  }
+  byAirport(airportIcao: string): Procedure[] { return this.byAirportIndex.get(airportIcao.trim().toUpperCase()) ?? []; }
+  byAirportAndType(airportIcao: string, type: ProcedureType): Procedure[] { return this.byAirportTypeIndex.get(`${airportIcao.trim().toUpperCase()}:${type}`) ?? []; }
+  byAirportAndDesignator(airportIcao: string, designator: string): Procedure[] { return this.byAirportDesignatorIndex.get(`${airportIcao.trim().toUpperCase()}:${designator.trim().toUpperCase()}`) ?? []; }
 }
 
 export function getProcedureDatasetPath(): string { return process.env.PROCEDURES_DATASET_PATH?.trim() || DEFAULT_PATH; }
