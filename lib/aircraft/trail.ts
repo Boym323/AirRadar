@@ -16,6 +16,7 @@ function trailPointKey(point: TrailPosition): string {
  * retained for as long as its aircraft remains present in the live state.
  */
 export function boundTrailPoints(points: readonly TrailPosition[], now = Date.now()): TrailPoint[] {
+  void now;
   const valid = points
     .map((point, index) => ({ point, index, timestamp: recordedAtMs(point) }))
     .filter((item) => Number.isFinite(item.timestamp))

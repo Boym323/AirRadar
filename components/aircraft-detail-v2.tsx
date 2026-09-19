@@ -6,7 +6,7 @@ import type { AircraftView } from "@/lib/aircraft/types";
 import type { AircraftPhoto, AircraftPhotoApiResponse } from "@/lib/aircraft/photo";
 import { aircraftAirportHref, aircraftFlightHref, aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
 import type { AircraftDetailResponse, AircraftHistoryAirport, AircraftHistoryAirportCount, AircraftHistoryRange, AircraftHistorySummary, AircraftLifetimeStats, HistoryFlightSummary, HistoryResponse } from "@/lib/server/history";
-import { formatAge, formatAltitude, formatDateTime, formatDistance, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
+import { formatAge, formatAltitude, formatDateTime, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import type { AtcContextResult } from "@/lib/atc-context/types";
 
@@ -413,10 +413,6 @@ function AircraftPhotoCard({ icaoHex, registration }: { icaoHex: string; registr
       )}
     </section>
   );
-}
-
-function FlightSection({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
-  return <section className={`aircraft-flight-section ${className}`}><h3>{title}</h3>{children}</section>;
 }
 
 function DataSources({ metadataSource, routeSource, positionSource, photoAvailable }: { metadataSource?: string | null; routeSource?: string | null; positionSource: string; photoAvailable: boolean }) {
