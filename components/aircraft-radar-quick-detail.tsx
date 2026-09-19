@@ -242,7 +242,6 @@ export function AircraftRadarQuickDetail({
     </header>
 
     <RouteSection aircraft={aircraft} />
-    <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
 
     <QuickSection id="aircraft-quick-metrics-title" title={t.aircraft.liveAdsb} className="aircraft-quick-metrics-section">
       <div className="aircraft-quick-metrics">
@@ -265,7 +264,7 @@ export function AircraftRadarQuickDetail({
       <AircraftAltitudeChart points={chartPoints} livePoint={livePoint} />
     </QuickSection>
 
-    <AtcSection aircraft={aircraft} context={atcContext} />
+    <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
     <AircraftIdentitySection aircraft={aircraft} databaseAircraft={databaseAircraft} />
     <RouteIntelligenceSection result={routeIntelligence} />
     {aircraft.enrichment?.route && <FlightRouteWeather compact originAirport={aircraft.enrichment.route.originAirport} destinationAirport={aircraft.enrichment.route.destinationAirport} />}

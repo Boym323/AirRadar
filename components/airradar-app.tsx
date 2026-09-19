@@ -705,9 +705,12 @@ export function AirRadarApp() {
         if (active) setSectorTrafficState((value) => value === "ready" ? "stale" : "unavailable");
       }
     };
-    void load();
-    const timer = requestedAt ? undefined : window.setInterval(() => void load(), 12000);
-    return () => { active = false; controller?.abort(); if (timer) window.clearInterval(timer); };
+    let timer: number | undefined;
+    const schedule = () => {
+      if (!requestedAt && active) timer = window.setTimeout(async () => { await load(); schedule(); }, 12000);
+    };
+    void load().then(schedule);
+    return () => { active = false; controller?.abort(); if (timer !== undefined) window.clearTimeout(timer); };
   }, [searchParams, showAtcTraffic]);
 
   useEffect(() => {
@@ -717,8 +720,12 @@ export function AirRadarApp() {
       controller?.abort(); controller = new AbortController();
       try { const query = `${requestedAt ? `&at=${encodeURIComponent(new Date(requestedAt).toISOString())}` : ""}`; const response = await fetch(`/api/atc/sectors/transitions?window=${sectorFlowWindow}m${query}`, { cache: "no-store", signal: controller.signal }); if (!response.ok) throw new Error("flows unavailable"); const payload = await response.json() as { transitions?: SectorFlow[] }; if (active) setSectorFlows(Array.isArray(payload.transitions) ? payload.transitions : []); } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError") && active) setSectorFlows([]); }
     };
-    void load(); const timer = requestedAt ? undefined : window.setInterval(() => void load(), 15000);
-    return () => { active = false; controller?.abort(); if (timer) window.clearInterval(timer); };
+    let timer: number | undefined;
+    const schedule = () => {
+      if (!requestedAt && active) timer = window.setTimeout(async () => { await load(); schedule(); }, 15000);
+    };
+    void load().then(schedule);
+    return () => { active = false; controller?.abort(); if (timer !== undefined) window.clearTimeout(timer); };
   }, [searchParams, sectorFlowWindow]);
 
   useEffect(() => {
