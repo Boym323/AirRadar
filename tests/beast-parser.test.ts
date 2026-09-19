@@ -13,6 +13,12 @@ describe("BeastParser", () => {
     const parser = new BeastParser();
     expect(parser.push(Buffer.concat([frame(Buffer.alloc(14, 1)), frame(Buffer.alloc(14, 2))]))).toHaveLength(2);
   });
+  it("parses short Mode-S frames", () => {
+    const parser = new BeastParser();
+    const result = parser.push(frame(Buffer.from([0xa5, 0x40]), 0x31));
+    expect(result).toHaveLength(1);
+    expect(result[0].payload).toEqual(Buffer.from([0xa5, 0x40]));
+  });
   it("handles fragmentation and escaped bytes", () => {
     const parser = new BeastParser(); const input = frame(Buffer.from([0x1a, ...new Array(13).fill(3)]));
     expect(parser.push(input.subarray(0, 5))).toHaveLength(0);
