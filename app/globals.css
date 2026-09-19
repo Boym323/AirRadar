@@ -1,44 +1,77 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #07131f;
-  --bg-secondary: #0a1928;
-  --bg-elevated: #0d2031;
-  --surface-1: #102638;
-  --surface-2: #142d42;
-  --surface-3: #19364d;
-  --surface: var(--surface-1);
+  /* Canonical AirRadar foundation tokens. */
+  --background: #07131f;
+  --surface: #102638;
+  --surface-elevated: #0d2031;
+  --surface-interactive: #142d42;
   --surface-hover: #1b3b52;
   --surface-selected: rgba(55, 214, 192, .13);
   --border-subtle: rgba(190, 214, 232, .09);
-  --border: rgba(190, 214, 232, .16);
-  --border-default: var(--border);
+  --border-default: rgba(190, 214, 232, .16);
   --border-strong: rgba(190, 214, 232, .28);
   --text-primary: #f0f6f8;
   --text-secondary: #b0c2cf;
   --text-muted: #7f98a9;
   --accent: #43d8c2;
-  --accent-hover: #75e6d5;
-  --accent-primary: var(--accent);
-  --accent-primary-hover: var(--accent-hover);
-  --accent-atc: #b39bff;
-  --accent-weather: #66b9ff;
+  --selected: #f5bd62;
   --success: #43d8c2;
   --warning: #f5bd62;
   --danger: #fb7185;
+  --emergency: #fb7185;
+  --atc: #b39bff;
+  --weather: #66b9ff;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+  --control-height: 40px;
+  --control-height-touch: 44px;
+  --shadow-control: 0 8px 20px rgba(0, 0, 0, .22);
+  --shadow-floating: 0 12px 28px rgba(0, 0, 0, .2);
+  --shadow-drawer: -18px 0 40px rgba(0, 0, 0, .24);
+  --z-map-content: 0;
+  --z-map-overlay: 10;
+  --z-map-control: 20;
+  --z-drawer: 30;
+  --z-dropdown: 40;
+  --z-toast: 50;
+  --z-modal: 60;
+
+  /* Transitional aliases. Keep existing feature styles source-compatible. */
+  --bg-primary: var(--background);
+  --bg-secondary: #0a1928;
+  --bg-elevated: var(--surface-elevated);
+  --surface-1: var(--surface);
+  --surface-2: var(--surface-interactive);
+  --surface-3: #19364d;
+  --border: var(--border-default);
+  --accent-hover: #75e6d5;
+  --accent-primary: var(--accent);
+  --accent-primary-hover: var(--accent-hover);
+  --accent-atc: var(--atc);
+  --accent-weather: var(--weather);
   --info: #72bdf4;
-  --atc: var(--accent-atc);
 
   /* Compatibility aliases used by the existing feature pages. */
-  --bg: var(--bg-primary);
-  --panel: var(--bg-elevated);
-  --panel-soft: var(--surface-1);
-  --line: var(--border);
+  --bg: var(--background);
+  --panel: var(--surface-elevated);
+  --panel-soft: var(--surface);
+  --line: var(--border-default);
   --muted: var(--text-secondary);
   --text: var(--text-primary);
   --mint: var(--accent);
-  --amber: var(--warning);
-  --red: var(--danger);
+  --amber: var(--selected);
+  --red: var(--emergency);
 }
 
 .intelligence-feed { margin: 12px 0; padding: 12px; border: 1px solid rgba(151, 184, 211, .16); border-radius: 10px; background: rgba(8, 20, 33, .72); }
@@ -2435,3 +2468,86 @@ button, input, select, textarea { color-scheme: dark; }
 .weather-radar-controls, .wind-controls { display: grid; gap: .35rem; }
 .weather-radar-controls input[type="range"] { width: 100%; }
 .map-layer-notice { margin-top: .4rem; padding: .45rem .6rem; border-radius: .4rem; color: #f4c95d; background: rgba(106, 73, 24, .38); font-size: .75rem; }
+
+/* UI Foundation primitives. Feature-specific layout remains above this layer. */
+.ui-panel {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  background: rgba(8, 17, 29, .91);
+  box-shadow: var(--shadow-floating);
+}
+
+.map-control {
+  min-height: var(--control-height);
+  border-color: var(--border-default);
+  border-radius: var(--radius-md);
+  transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.map-control-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  pointer-events: auto;
+}
+
+.map-control-group-primary { box-shadow: var(--shadow-control); }
+
+.ui-icon-button {
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.ui-icon-button:disabled,
+.map-control:disabled { cursor: not-allowed; opacity: .55; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+
+.status-badge-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-badge-live,
+.status-badge-success { color: var(--success); border-color: color-mix(in srgb, var(--success) 38%, transparent); }
+.status-badge-warning,
+.status-badge-demo { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 38%, transparent); }
+.status-badge-stale { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 52%, transparent); background: color-mix(in srgb, var(--warning) 7%, transparent); }
+.status-badge-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 48%, transparent); background: color-mix(in srgb, var(--danger) 7%, transparent); }
+.status-badge-neutral { color: var(--text-secondary); }
+
+.map-container { z-index: var(--z-map-content); }
+.map-overlay { z-index: var(--z-map-overlay); }
+.map-overlay .map-control-group,
+.map-overlay .map-layers { z-index: var(--z-map-control); }
+.sidebar { z-index: var(--z-drawer); box-shadow: var(--shadow-drawer); }
+.global-search-results,
+.topbar-nav-more > div,
+.map-filters-panel,
+.map-layers-menu { z-index: var(--z-dropdown); }
+.mobile-bottom-nav { z-index: var(--z-map-control); }
+
+@media (max-width: 820px) {
+  .map-control,
+  .ui-icon-button { min-height: var(--control-height-touch); }
+  .status-badge { min-height: 36px; padding-inline: var(--space-2); font-size: 10px; }
+}

@@ -69,6 +69,7 @@ import {
 } from "@/lib/route-visualization";
 import { analyzePublishedRoute, toRouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
+import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge } from "@/components/ui-primitives";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
 import { IntelligenceFeed } from "@/components/intelligence-feed";
@@ -2026,8 +2027,12 @@ export function AirRadarApp() {
   const isDemo = snapshot.provider === "mock";
   const hasSourceSnapshot = snapshot.lastSourceUpdate !== null;
   const statusOffline = !isDemo && hasSourceSnapshot && !snapshot.sourceOnline;
-  const receiverStatusLabel = statusOffline ? t.status.receiverOffline : isDemo ? t.status.mockReceiver : streamConnected ? t.status.liveReceiver : t.status.connecting;
-  const receiverStatusShort = statusOffline ? t.status.offlineShort : isDemo ? t.status.demoShort : streamConnected ? t.status.liveShort : t.status.connectingShort;
+  const sourceAgeMs = snapshot.lastSourceUpdate ? Math.max(0, Date.now() - Date.parse(snapshot.lastSourceUpdate)) : null;
+  const statusStale = !isDemo && !statusOffline && sourceAgeMs !== null && sourceAgeMs > 30_000;
+  const statusReconnecting = !isDemo && !statusOffline && !statusStale && hasSourceSnapshot && !streamConnected;
+  const receiverStatusVariant = statusOffline ? "danger" : statusStale ? "stale" : statusReconnecting || !hasSourceSnapshot ? "warning" : isDemo ? "demo" : "live";
+  const receiverStatusLabel = statusOffline ? t.status.receiverOffline : statusStale ? t.status.stale : statusReconnecting ? t.status.reconnecting : isDemo ? t.status.mockReceiver : streamConnected ? t.status.liveReceiver : t.status.connecting;
+  const receiverStatusShort = statusOffline ? t.status.offlineShort : statusStale ? t.status.staleShort : statusReconnecting ? t.status.reconnectingShort : isDemo ? t.status.demoShort : streamConnected ? t.status.liveShort : t.status.connectingShort;
   const displayedAircraftCount = snapshot.coverageStats?.displayedAircraft ?? snapshot.stats.currentAircraft;
   const activeTrafficCount = trafficSource === "ogn" ? filteredOgnTargets.length : filteredAircraft.length;
   const drawerState: RadarDrawerState = selectedOgnTarget
@@ -2116,10 +2121,7 @@ export function AirRadarApp() {
       <AirRadarTopbar heading meta={
         <>
           <span className="topbar-receiver"><span className="topbar-receiver-label">{t.status.receiverLabel}</span><span className="topbar-receiver-name">{snapshot.receiver.name}</span></span>
-          <span className={`status-pill ${statusOffline ? "offline" : isDemo ? "demo" : ""}`} title={receiverStatusLabel} aria-label={receiverStatusLabel}>
-            <span className="status-dot" />
-            {receiverStatusShort}
-          </span>
+          <StatusBadge variant={receiverStatusVariant} title={receiverStatusLabel} aria-label={receiverStatusLabel}>{receiverStatusShort}</StatusBadge>
           <details className="topbar-secondary-status">
             <summary>{t.status.secondaryStatus}</summary>
             <div>
@@ -2136,15 +2138,17 @@ export function AirRadarApp() {
           <div className="map-overlay">
             {showAtcTraffic && <><AtcVerticalTraffic traffic={sectorTraffic} /><SectorFlowsPanel flows={sectorFlows} windowMinutes={sectorFlowWindow} onWindowChange={setSectorFlowWindow} /></>}
             <div className="map-overlay-primary">
-              <div className="map-overlay-card map-summary-card">
+              <Panel className="map-overlay-card map-summary-card">
                 <div className="map-summary-item"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
                 <div className="map-summary-item"><strong>{snapshot.stats.messagesPerSecond === null ? t.common.emptyValue : `${formatNumber(snapshot.stats.messagesPerSecond, 1)}/s`}</strong><span>{t.statistics.messagesPerSecond}</span></div>
                 <div className="map-summary-item"><strong>{formatDistance(snapshot.stats.maxDistanceKm)}</strong><span>{t.stats.maxDistance}</span></div>
-              </div>
-              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
+              </Panel>
+              <MapControlGroup className="map-control-group-primary">
+              <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
                 <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>
+              </MapControlGroup>
               {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
                 <div className="weather-radar-timeline-heading"><strong>{t.layers.weatherRadar}</strong><span>{selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></div>
                 <div className="weather-radar-timeline-controls">
@@ -2156,7 +2160,7 @@ export function AirRadarApp() {
                 </div>
               </div> : showWeatherRadar && radarStatus === "unavailable" ? <div className="map-layer-notice">{t.layers.radarUnavailable}</div> : null}
               <details className="map-layers">
-                <summary>{t.layers.title}</summary>
+                <MapControl as="summary">{t.layers.title}</MapControl>
                 <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
                   <div className="map-layer-group">
                     <span className="map-layer-group-title">{t.layers.groups.traffic}</span>
@@ -2221,11 +2225,11 @@ export function AirRadarApp() {
               {networkNotice && <span className="network-notice">{networkNotice}</span>}
               {networkEnabled && <span className="network-attribution">{t.radar.networkAttribution}</span>}
             </div>}
-            {(showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null) || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) ? <div className="map-overlay-card contextual-legend">
+            {(showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null) || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) ? <Panel className="map-overlay-card contextual-legend">
               {showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong>{RANGE_RING_RADII_KM.map((radiusKm) => <span key={radiusKm}><i className="legend-dot" /> {radiusKm} km</span>)}</span>}
               {colorMode !== "default" && <span className="color-mode-legend"><strong>{t.layers.colorModes[colorMode]}</strong><span><i className="color-legend-swatch low" /> {t.layers.colorLegendLow}</span><span><i className="color-legend-swatch high" /> {t.layers.colorLegendHigh}</span><span><i className="color-legend-swatch fallback" /> {t.layers.colorLegendFallback}</span></span>}
               {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <span className="layer-legend"><span><i className="legend-line actual" /> {t.route.actualTrail}</span><span><i className="legend-line completed" /> {t.route.originToCurrent}</span><span><i className="legend-line remaining" /> {t.route.currentToDestination}</span><small>{t.route.contextDisclaimer}</small></span>}
-            </div> : null}
+            </Panel> : null}
           </div>
         </div>
 
@@ -2244,9 +2248,9 @@ export function AirRadarApp() {
                 </div>}
                 {trafficSource === "adsb" && activeCoverage === "extended" && snapshot.coverageStats && <div className="coverage-subcount">{t.radar.localOnlyCount(formatNumber(snapshot.coverageStats.localAircraft))} · {t.radar.networkOnlyCount(formatNumber(snapshot.coverageStats.networkOnlyAircraft))}</div>}
               </div>
-              <button className="icon-button mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-expanded={!mobileCompact} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
+              <IconButton className="mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-expanded={!mobileCompact} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
                 {mobileCompact ? "↑" : "↓"}
-              </button>
+              </IconButton>
               <button type="button" className="drawer-close-button" onClick={closeRadarDrawer} aria-label={drawerState === "traffic" ? t.history.closeTrafficPanel : drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}>×</button>
             </div>
           <div className="sidebar-browse">
