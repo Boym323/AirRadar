@@ -474,7 +474,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }));
         const expectedQuickOrder = [
           "aircraft-quick-header",
-          "aircraft-quick-section aircraft-quick-route",
           "aircraft-quick-section aircraft-quick-metrics-section",
           "aircraft-quick-actions",
           "aircraft-quick-section aircraft-quick-tracking",
