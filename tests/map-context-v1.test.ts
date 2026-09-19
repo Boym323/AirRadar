@@ -29,6 +29,24 @@ describe("Map Context V1 providers", () => {
     await expect(provider.getFrame("https://example.com/frame.png")).rejects.toThrow();
   });
 
+  it("keeps a fresh radar provider on-demand until its first request and recovers after a refresh failure", async () => {
+    let now = NOW;
+    const html = '<a href="pacz2gmaps3.z_max3d.20260918.1155.0.png">latest</a>';
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(html))
+      .mockRejectedValueOnce(new Error("timeout"))
+      .mockResolvedValueOnce(new Response(html));
+    const provider = new WeatherRadarProvider(fetcher, () => now);
+    expect(provider.getDiagnostics()).toMatchObject({ status: "disabled", operationalState: "on_demand", reasonCode: "NOT_INITIALIZED", hasAttempted: false, inFlight: false, consecutiveFailures: 0 });
+    await provider.getFrames();
+    now += 61_000;
+    await provider.getFrames();
+    expect(provider.getDiagnostics()).toMatchObject({ status: "degraded", hasAttempted: true, consecutiveFailures: 1 });
+    now += 61_000;
+    await provider.getFrames();
+    expect(provider.getDiagnostics()).toMatchObject({ status: "online", consecutiveFailures: 0 });
+  });
+
   it("uses one AWC batch request for map METAR and preserves stale semantics", async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify([{
       icaoId: "LKPR", reportTime: "2026-09-18T11:50:00Z", fltCat: "VFR", wdir: 260, wspd: 12, wgst: 21, visib: "10+", temp: 18, dewp: 11, altim: 1015, lat: 50.1, lon: 14.26, clouds: [{ cover: "SCT", base: 3500 }], rawOb: "LKPR 181150Z 26012G21KT 9999 SCT035 18/11 Q1015",
@@ -50,9 +68,29 @@ describe("Map Context V1 providers", () => {
       },
     }])));
     const provider = new WindAloftProvider(fetcher, () => NOW);
+    expect(provider.diagnostics()).toMatchObject({ status: "offline", operationalState: "on_demand", reasonCode: "NOT_INITIALIZED", hasAttempted: false, inFlight: false, consecutiveFailures: 0 });
     const result = await provider.getWind(300, "2026-09-18T12:00:00Z");
     expect(result).toMatchObject({ model: "ICON-EU", levelHpa: 300, validAt: "2026-09-18T12:00", modelRun: "2026-09-18T09:00:00Z" });
     expect(result.points[0]).toMatchObject({ speedKt: 82, directionDeg: 270 });
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("distinguishes a failed first wind load from stale-if-error and recovery", async () => {
+    let now = NOW;
+    const payload = JSON.stringify([{ latitude: 50, longitude: 14, model_run: "2026-09-18T09:00:00Z", hourly: { time: ["2026-09-18T12:00"], wind_speed_300hPa: [82], wind_direction_300hPa: [270] } }]);
+    const fetcher = vi.fn<typeof fetch>()
+      .mockRejectedValueOnce(new Error("timeout"))
+      .mockResolvedValueOnce(new Response(payload))
+      .mockRejectedValueOnce(new Error("temporary failure"))
+      .mockResolvedValueOnce(new Response(payload));
+    const provider = new WindAloftProvider(fetcher, () => now);
+    await expect(provider.getWind(300)).rejects.toThrow();
+    expect(provider.diagnostics()).toMatchObject({ status: "offline", hasAttempted: true, consecutiveFailures: 1 });
+    await provider.getWind(300);
+    now += 31 * 60_000;
+    await provider.getWind(300);
+    expect(provider.diagnostics()).toMatchObject({ status: "degraded", consecutiveFailures: 1, validTimes: 1 });
+    await provider.getWind(300);
+    expect(provider.diagnostics()).toMatchObject({ status: "online", consecutiveFailures: 0 });
   });
 });

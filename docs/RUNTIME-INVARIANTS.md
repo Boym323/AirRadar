@@ -2,6 +2,21 @@
 
 These are behavior and safety contracts for changes to the current system.
 
+## System diagnostics semantics
+
+- `DISABLED` means an explicit configuration disable only; an empty cache or a
+  provider that has not been requested is not disabled.
+- Lazy optional providers expose `operationalState` as `on_demand` before the
+  first request and `loading` while the first request is in flight.
+- `OFFLINE` means a real upstream attempt failed and no usable dataset exists.
+  `DEGRADED` means stale, partial, or fallback data remains usable and carries
+  a bounded `reasonCode`/safe reason.
+- Radar and wind diagnostics distinguish lifetime failures from consecutive
+  failures; a successful refresh clears consecutive failures and restores
+  `ok` when the dataset is fresh.
+- Reading `/api/system/status` is read-only and must not warm optional caches
+  or trigger weather, radar, wind, or enrichment requests.
+
 ## Time Machine
 
 - Time Machine is read-only and never controls `AircraftStateService`.

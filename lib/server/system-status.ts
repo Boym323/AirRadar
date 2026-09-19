@@ -23,6 +23,17 @@ import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 
 export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
+export type OperationalState = "ok" | "degraded" | "offline" | "disabled" | "on_demand" | "loading";
+export type DiagnosticReasonCode =
+  | "NOT_INITIALIZED" | "CONFIG_DISABLED" | "FIRST_LOAD_PENDING" | "UPSTREAM_UNAVAILABLE"
+  | "UPSTREAM_TIMEOUT" | "RATE_LIMITED" | "STALE_CACHE" | "STALE_DATASET" | "PARTIAL_DATA"
+  | "NO_VALID_TIMES" | "NO_CATALOG" | "NO_USABLE_CACHE" | "LAST_REFRESH_FAILED";
+
+export interface DiagnosticState {
+  operationalState: OperationalState;
+  reasonCode: DiagnosticReasonCode | null;
+  reason: string | null;
+}
 
 export interface SystemStatusResponse {
   status: SystemStatus;
@@ -99,6 +110,7 @@ export interface SystemStatusResponse {
   };
   adsbdb: {
     status: SystemStatus;
+    diagnostic: DiagnosticState;
     enabled: boolean;
     providerStatus: "online" | "degraded" | "offline" | "unknown";
     lastSuccessAt: string | null;
@@ -233,6 +245,7 @@ export interface SystemStatusResponse {
   };
   weather: {
     status: SystemStatus;
+    diagnostic: DiagnosticState;
     providerStatus: AviationWeatherDiagnostics["status"];
     enabled: boolean;
     provider: "AviationWeather";
@@ -290,9 +303,9 @@ export interface SystemStatusResponse {
     atc: { state: SystemStatus; sectorCount: number; transmitterCount: number; source: string | null; effectiveDate: string | null };
     ats: { state: SystemStatus; routeCount: number; pointCount: number; segmentCount: number; effectiveDate: string | null };
     airspaceActivity: { state: "on_demand"; stale: boolean };
-    radar: { state: SystemStatus; latestFrameId: string | null; latestObservedAt: string | null; ageMs: number | null; cachedFrames: number; failures: number };
+    radar: { state: SystemStatus; diagnostic: DiagnosticState; latestFrameId: string | null; latestObservedAt: string | null; ageMs: number | null; cachedFrames: number; failures: number; consecutiveFailures: number };
     metar: { state: SystemStatus; stations: number; lastSuccessAt: string | null; cacheAgeMs: number | null };
-    wind: { state: SystemStatus; model: string; modelRun: string | null; availableValidTimes: number; cacheEntries: number; lastSuccessAt: string | null };
+    wind: { state: SystemStatus; diagnostic: DiagnosticState; model: string; modelRun: string | null; availableValidTimes: number; cacheEntries: number; lastSuccessAt: string | null };
     historicalContext: {
       radar: { oldest: string | null; latest: string | null; frames: number; diskBytes: number | null; status: string };
       metar: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
@@ -310,6 +323,7 @@ export interface SystemStatusResponse {
 
 export interface SystemDataSourceStatus {
   status: SystemStatus;
+  diagnostic?: DiagnosticState;
   enabled: boolean;
   provider: string;
   lastSuccessAt: string | null;
@@ -348,6 +362,7 @@ export interface SystemStatusBuildInput {
     lastSuccessAt: string | null;
     lastFailureAt: string | null;
     consecutiveFailures: number;
+    hasAttempted?: boolean;
     memory: { metadataEntries: number; routeEntries: number };
     persistence: AdsbDbPersistenceDiagnostics;
     hits: { memory: number; persistent: number; live: number; staleFallback: number };
@@ -610,12 +625,44 @@ function adsbDbPersistenceStatus(value: AdsbDbPersistenceDiagnostics | undefined
   };
 }
 
+function diagnostic(operationalState: OperationalState, reasonCode: DiagnosticReasonCode | null): DiagnosticState {
+  const reasons: Record<DiagnosticReasonCode, string> = {
+    NOT_INITIALIZED: "No request has been made since startup.",
+    CONFIG_DISABLED: "Disabled by configuration.",
+    FIRST_LOAD_PENDING: "The first data request is in progress.",
+    UPSTREAM_UNAVAILABLE: "The upstream provider is unavailable.",
+    UPSTREAM_TIMEOUT: "The upstream provider timed out.",
+    RATE_LIMITED: "The upstream provider is rate limiting requests.",
+    STALE_CACHE: "Using stale cached data.",
+    STALE_DATASET: "The dataset is stale.",
+    PARTIAL_DATA: "Only part of the dataset is available.",
+    NO_VALID_TIMES: "The provider returned no valid forecast times.",
+    NO_CATALOG: "No radar catalog is available.",
+    NO_USABLE_CACHE: "No usable cached data is available.",
+    LAST_REFRESH_FAILED: "The last refresh failed.",
+  };
+  return { operationalState, reasonCode, reason: reasonCode ? reasons[reasonCode] : null };
+}
+
+function legacyStatus(state: OperationalState): SystemStatus {
+  return state === "offline" ? "offline" : state === "degraded" ? "degraded" : state === "disabled" ? "disabled" : "ok";
+}
+
+function adsbDbDiagnostic(value: SystemStatusBuildInput["adsbdb"]): DiagnosticState {
+  if (!value) return diagnostic("disabled", "CONFIG_DISABLED");
+  if (value.hasAttempted === false || (value.providerStatus === "unknown" && !value.lastFailureAt && !value.lastSuccessAt)) return diagnostic("on_demand", "NOT_INITIALIZED");
+  if (value.providerStatus === "offline") return diagnostic("offline", "UPSTREAM_UNAVAILABLE");
+  if (value.providerStatus === "degraded") return diagnostic("degraded", value.hits.staleFallback > 0 ? "STALE_CACHE" : "LAST_REFRESH_FAILED");
+  return diagnostic("ok", null);
+}
+
 function adsbDbResponse(value: SystemStatusBuildInput["adsbdb"]): SystemStatusResponse["adsbdb"] {
   const enabled = Boolean(value);
   const providerStatus = value?.providerStatus ?? "unknown";
-  const status: SystemStatus = !enabled ? "disabled" : providerStatus === "offline" ? "offline" : providerStatus === "degraded" ? "degraded" : "ok";
+  const diagnosticState = adsbDbDiagnostic(value);
   return {
-    status,
+    status: legacyStatus(diagnosticState.operationalState),
+    diagnostic: diagnosticState,
     enabled,
     providerStatus,
     lastSuccessAt: safeTimestamp(value?.lastSuccessAt),
@@ -813,6 +860,35 @@ function weatherStatus(value: SystemStatusBuildInput["weather"]): SystemStatus {
   return "ok";
 }
 
+function weatherDiagnostic(value: SystemStatusBuildInput["weather"]): DiagnosticState {
+  if (!value || value.enabled === false || value.status === "disabled") return diagnostic("disabled", "CONFIG_DISABLED");
+  if (!value.hasAttempted && !value.lastAttemptAt) return diagnostic("on_demand", "NOT_INITIALIZED");
+  if (value.inFlight) return diagnostic("loading", "FIRST_LOAD_PENDING");
+  if (value.status === "rate_limited") return diagnostic("degraded", "RATE_LIMITED");
+  if (value.status === "offline") return diagnostic("offline", "UPSTREAM_UNAVAILABLE");
+  if (value.sigmet?.international?.status === "stale" || value.sigmet?.airsigmet?.status === "stale") return diagnostic("degraded", "STALE_DATASET");
+  if (value.sigmet?.international?.status === "unavailable" || value.sigmet?.airsigmet?.status === "unavailable") return diagnostic("degraded", "PARTIAL_DATA");
+  if (value.status === "degraded") return diagnostic("degraded", "LAST_REFRESH_FAILED");
+  return diagnostic("ok", null);
+}
+
+function radarDiagnostic(value: WeatherRadarDiagnostics | undefined): DiagnosticState {
+  if (!value) return diagnostic("on_demand", "NOT_INITIALIZED");
+  if (value.inFlight) return diagnostic("loading", "FIRST_LOAD_PENDING");
+  if (!value.hasAttempted) return diagnostic("on_demand", "NOT_INITIALIZED");
+  if (value.status === "offline") return diagnostic("offline", value.latestFrameId ? "NO_USABLE_CACHE" : "UPSTREAM_UNAVAILABLE");
+  if (value.status === "degraded") return diagnostic("degraded", value.latestFrameId ? "STALE_CACHE" : "LAST_REFRESH_FAILED");
+  return diagnostic("ok", null);
+}
+
+function windDiagnostic(value: ReturnType<typeof defaultWindAloftProvider.diagnostics> | undefined): DiagnosticState {
+  if (!value || !value.hasAttempted) return diagnostic("on_demand", "NOT_INITIALIZED");
+  if (value.inFlight) return diagnostic("loading", "FIRST_LOAD_PENDING");
+  if (value.status === "offline") return diagnostic("offline", "UPSTREAM_UNAVAILABLE");
+  if (value.status === "degraded") return diagnostic("degraded", value.validTimes ? "STALE_CACHE" : "NO_VALID_TIMES");
+  return diagnostic("ok", null);
+}
+
 function sigmetDatasetStatus(value: Partial<SigmetDatasetDiagnostics> | undefined): SigmetDatasetDiagnostics {
   const status = value?.status === "fresh" || value?.status === "stale" ? value.status : "unavailable";
   return {
@@ -856,6 +932,8 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
   const weatherAirports = nonNegativeInteger(input.weather?.airports ?? 0, 256);
   const weatherEnabled = input.weather?.enabled ?? input.weather?.entries !== undefined;
   const weatherState = weatherStatus(input.weather);
+  const weatherDiagnosticState = weatherDiagnostic(input.weather);
+  const adsbDb = adsbDbResponse(input.adsbdb);
   const airportRowCount = input.airportData.rowCount === null ? null : nonNegativeInteger(input.airportData.rowCount, AIRPORT_STATUS_QUERY_LIMIT);
   const fallbackRowCount = input.airportData.fallbackRowCount === null ? null : nonNegativeInteger(input.airportData.fallbackRowCount, AIRPORT_STATUS_QUERY_LIMIT);
   const usingDatabaseAirports = airportRowCount !== null && airportRowCount > 0 && !input.airportData.rowCountIsLowerBound;
@@ -897,7 +975,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
     },
     ...(input.localAdsb ? { localAdsb: input.localAdsb } : {}),
     adsbLol: adsbLolResponse(input.adsbLol),
-    adsbdb: adsbDbResponse(input.adsbdb),
+    adsbdb: adsbDb,
     ogn: ognResponse(input.ogn),
     database: {
       status: input.database.status,
@@ -929,6 +1007,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
     },
     weather: {
       status: weatherState,
+      diagnostic: weatherDiagnosticState,
       providerStatus: input.weather?.status === "disabled" || input.weather?.status === "online" || input.weather?.status === "degraded" || input.weather?.status === "rate_limited" || input.weather?.status === "offline" ? input.weather.status : "offline",
       enabled: weatherEnabled,
       provider: "AviationWeather",
@@ -1007,12 +1086,14 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       },
       airspaceActivity: { state: "on_demand", stale: false },
       radar: {
-        state: input.mapContext?.radar?.status === "online" ? "ok" : input.mapContext?.radar?.status === "degraded" ? "degraded" : input.mapContext?.radar?.status === "offline" ? "offline" : "disabled",
+        state: legacyStatus(radarDiagnostic(input.mapContext?.radar).operationalState),
+        diagnostic: radarDiagnostic(input.mapContext?.radar),
         latestFrameId: input.mapContext?.radar?.latestFrameId ?? null,
         latestObservedAt: safeTimestamp(input.mapContext?.radar?.latestObservedAt),
         ageMs: input.mapContext?.radar?.catalogAgeMs === null || input.mapContext?.radar?.catalogAgeMs === undefined ? null : nonNegativeInteger(input.mapContext.radar.catalogAgeMs, 7 * 24 * 60 * 60_000),
         cachedFrames: nonNegativeInteger(input.mapContext?.radar?.cachedFrames ?? 0, 64),
         failures: nonNegativeInteger(input.mapContext?.radar?.failures ?? 0, 10_000_000),
+        consecutiveFailures: nonNegativeInteger(input.mapContext?.radar?.consecutiveFailures ?? 0, 1_000_000),
       },
       metar: {
         state: weatherState,
@@ -1021,7 +1102,8 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
         cacheAgeMs: input.weather?.lastSuccessAt ? nonNegativeInteger(Math.max(0, now.getTime() - Date.parse(input.weather.lastSuccessAt)), 7 * 24 * 60 * 60_000) : null,
       },
       wind: {
-        state: input.mapContext?.wind?.status === "online" ? "ok" : input.mapContext?.wind?.status === "degraded" ? "degraded" : "offline",
+        state: legacyStatus(windDiagnostic(input.mapContext?.wind).operationalState),
+        diagnostic: windDiagnostic(input.mapContext?.wind),
         model: safeLabel(input.mapContext?.wind?.model, "ICON-EU"),
         modelRun: safeTimestamp(input.mapContext?.wind?.modelRun),
         availableValidTimes: nonNegativeInteger(input.mapContext?.wind?.validTimes ?? 0, 1_000),
@@ -1059,7 +1141,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
     dataSources: {
       // These are configuration-safe states. Opening /system never probes an
       // optional upstream provider and therefore exposes no raw error detail.
-      adsbdb: configuredSource(isAdsbDbEnabled(), "ADSBDB enrichment"),
+      adsbdb: { ...configuredSource(isAdsbDbEnabled(), "ADSBDB enrichment", adsbDb.status), diagnostic: adsbDb.diagnostic },
       aircraftPhotos: configuredSource(isAircraftPhotosEnabled(), "Planespotters photos"),
       ourAirports: configuredSource(airportSource !== "unavailable", "OurAirports / bundled catalog", airportStatus),
     },

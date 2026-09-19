@@ -996,6 +996,8 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .system-status-badge.degraded { border-color: rgba(243,185,95,.45); color: var(--amber); }
 .system-status-badge.offline { border-color: rgba(251,113,133,.5); color: var(--red); }
 .system-status-badge.disabled, .system-status-badge.demo { border-color: var(--line); color: var(--muted); }
+.system-status-badge.on_demand, .system-status-badge.loading { border-color: rgba(155,212,255,.4); color: var(--blue, #9bd4ff); }
+.system-diagnostic { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .system-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .system-card { min-width: 0; border: 1px solid var(--line); border-radius: 14px; background: rgba(13,25,39,.8); overflow: hidden; }
 .system-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px 13px; border-bottom: 1px solid var(--line); }

@@ -255,6 +255,10 @@ export class AviationWeatherRateLimitError extends Error {
 
 export interface AviationWeatherDiagnostics {
   enabled: boolean;
+  hasAttempted: boolean;
+  inFlight: boolean;
+  operationalState: "disabled" | "on_demand" | "loading" | "ok" | "degraded" | "offline";
+  reasonCode: string | null;
   status: "disabled" | "online" | "degraded" | "rate_limited" | "offline";
   lastAttemptAt: string | null;
   lastSuccessAt: string | null;
@@ -766,6 +770,7 @@ export class AviationWeatherProvider {
   private metarMapInFlight: Promise<MetarMapObservation[]> | null = null;
   private sigmetAttempted = false;
   private backoffUntil = 0;
+  private inFlightRequests = 0;
 
   constructor(options: AviationWeatherProviderOptions = {}) {
     this.fetcher = options.fetcher ?? fetch;
@@ -799,6 +804,10 @@ export class AviationWeatherProvider {
     this.staleIfErrorMs = options.staleIfErrorMs ?? getAviationWeatherStaleIfErrorMs();
     this.diagnostics = {
       enabled: this.enabled,
+      hasAttempted: false,
+      inFlight: false,
+      operationalState: this.enabled ? "on_demand" : "disabled",
+      reasonCode: this.enabled ? "NOT_INITIALIZED" : "CONFIG_DISABLED",
       status: this.enabled ? "online" : "disabled",
       lastAttemptAt: null,
       lastSuccessAt: null,
@@ -941,8 +950,12 @@ export class AviationWeatherProvider {
 
   getDiagnostics(): AviationWeatherDiagnostics {
     const cacheStats = this.cache.stats();
+    const operationalState = !this.enabled ? "disabled" : !this.diagnostics.hasAttempted ? "on_demand" : this.inFlightRequests > 0 || this.metarMapInFlight !== null ? "loading" : this.diagnostics.status === "offline" ? "offline" : this.diagnostics.status === "degraded" || this.diagnostics.status === "rate_limited" ? "degraded" : "ok";
     return {
       ...this.diagnostics,
+      inFlight: this.inFlightRequests > 0 || this.metarMapInFlight !== null,
+      operationalState,
+      reasonCode: operationalState === "disabled" ? "CONFIG_DISABLED" : operationalState === "on_demand" ? "NOT_INITIALIZED" : operationalState === "loading" ? "FIRST_LOAD_PENDING" : operationalState === "degraded" ? (this.diagnostics.status === "rate_limited" ? "RATE_LIMITED" : "LAST_REFRESH_FAILED") : operationalState === "offline" ? "UPSTREAM_UNAVAILABLE" : null,
       cacheHits: cacheStats.hits,
       cacheMisses: cacheStats.misses,
       metarEntries: this.cache.productEntries("metar"),
@@ -1065,6 +1078,8 @@ export class AviationWeatherProvider {
     const abort = combinedAbortSignal(this.timeoutMs, parentSignal);
     const started = this.now();
     this.diagnostics.requests += 1;
+    this.diagnostics.hasAttempted = true;
+    this.inFlightRequests += 1;
     this.diagnostics.lastAttemptAt = new Date(started).toISOString();
     try {
       const response = await this.fetcher(url, {
@@ -1095,6 +1110,7 @@ export class AviationWeatherProvider {
       this.diagnostics.lastLatencyMs = Math.max(0, this.now() - started);
       throw error;
     } finally {
+      this.inFlightRequests -= 1;
       abort.dispose();
     }
   }

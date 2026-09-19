@@ -70,6 +70,11 @@ function nearestValidTime(times: string[], requested: string | null, now: number
 export class WindAloftProvider {
   private snapshot: Snapshot | null = null;
   private inFlight: Promise<Snapshot> | null = null;
+  private hasAttempted = false;
+  private attempts = 0;
+  private lastAttemptAt: string | null = null;
+  private lastFailureAt: string | null = null;
+  private consecutiveFailures = 0;
 
   constructor(private readonly fetcher: typeof fetch = fetch, private readonly clock: () => number = Date.now) {}
 
@@ -90,8 +95,10 @@ export class WindAloftProvider {
     return { provider: "DWD / Open-Meteo", model: MODEL, modelRun: snapshot.modelRun, validAt, availableValidTimes: snapshot.validTimes.slice(0, 96), levelHpa: level, points, fetchedAt: new Date(snapshot.fetchedAt).toISOString(), stale: this.clock() - snapshot.fetchedAt > CACHE_TTL_MS };
   }
 
-  diagnostics(): { status: "online" | "degraded" | "offline"; model: string; modelRun: string | null; validTimes: number; cacheEntries: number; lastSuccessAt: string | null } {
-    return { status: this.snapshot ? (this.clock() - this.snapshot.fetchedAt > CACHE_TTL_MS ? "degraded" : "online") : "offline", model: MODEL, modelRun: this.snapshot?.modelRun ?? null, validTimes: this.snapshot?.validTimes.length ?? 0, cacheEntries: this.snapshot ? 1 : 0, lastSuccessAt: this.snapshot ? new Date(this.snapshot.fetchedAt).toISOString() : null };
+  diagnostics(): { status: "online" | "degraded" | "offline"; operationalState: "on_demand" | "loading" | "ok" | "degraded" | "offline"; reasonCode: string | null; model: string; modelRun: string | null; validTimes: number; cacheEntries: number; lastSuccessAt: string | null; hasAttempted: boolean; inFlight: boolean; attempts: number; lastAttemptAt: string | null; lastFailureAt: string | null; consecutiveFailures: number } {
+    const stale = this.snapshot !== null && this.clock() - this.snapshot.fetchedAt > CACHE_TTL_MS;
+    const operationalState = !this.hasAttempted ? "on_demand" : this.inFlight !== null ? "loading" : this.snapshot ? (stale || this.consecutiveFailures ? "degraded" : "ok") : "offline";
+    return { status: this.snapshot ? (stale || this.consecutiveFailures ? "degraded" : "online") : "offline", operationalState, reasonCode: operationalState === "on_demand" ? "NOT_INITIALIZED" : operationalState === "loading" ? "FIRST_LOAD_PENDING" : operationalState === "degraded" ? (this.snapshot ? "STALE_CACHE" : "LAST_REFRESH_FAILED") : operationalState === "offline" ? "UPSTREAM_UNAVAILABLE" : null, model: MODEL, modelRun: this.snapshot?.modelRun ?? null, validTimes: this.snapshot?.validTimes.length ?? 0, cacheEntries: this.snapshot ? 1 : 0, lastSuccessAt: this.snapshot ? new Date(this.snapshot.fetchedAt).toISOString() : null, hasAttempted: this.hasAttempted, inFlight: this.inFlight !== null, attempts: this.attempts, lastAttemptAt: this.lastAttemptAt, lastFailureAt: this.lastFailureAt, consecutiveFailures: this.consecutiveFailures };
   }
 
   private async getSnapshot(): Promise<Snapshot> {
@@ -106,6 +113,9 @@ export class WindAloftProvider {
   }
 
   private async loadSnapshot(): Promise<Snapshot> {
+    this.hasAttempted = true;
+    this.attempts += 1;
+    this.lastAttemptAt = new Date(this.clock()).toISOString();
     const grid = buildWindGrid();
     const url = new URL(API_URL);
     url.searchParams.set("latitude", grid.map((point) => point.lat).join(","));
@@ -115,6 +125,7 @@ export class WindAloftProvider {
     url.searchParams.set("wind_speed_unit", "kn");
     url.searchParams.set("timezone", "UTC");
     url.searchParams.set("forecast_days", "3");
+    try {
     const response = await this.fetcher(url, { cache: "no-store", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS), headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error(`Wind provider HTTP ${response.status}`);
     const payload = await response.json() as RawPoint | RawPoint[];
@@ -123,7 +134,13 @@ export class WindAloftProvider {
     if (!Array.isArray(firstTimes) || firstTimes.length === 0 || firstTimes.some((value) => typeof value !== "string")) throw new Error("Wind provider returned no hourly times");
     const snapshot: Snapshot = { points, validTimes: firstTimes as string[], fetchedAt: this.clock(), modelRun: points.map((point) => point.model_run).find((value): value is string => typeof value === "string") ?? null };
     this.snapshot = snapshot;
+    this.consecutiveFailures = 0;
     return snapshot;
+    } catch (error) {
+      this.consecutiveFailures += 1;
+      this.lastFailureAt = new Date(this.clock()).toISOString();
+      throw error;
+    }
   }
 }
 

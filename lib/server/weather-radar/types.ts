@@ -35,11 +35,16 @@ export interface WeatherRadarCatalog {
 
 export interface WeatherRadarDiagnostics {
   status: "disabled" | "online" | "degraded" | "offline";
+  operationalState: "disabled" | "on_demand" | "loading" | "ok" | "degraded" | "offline";
+  reasonCode: string | null;
+  hasAttempted: boolean;
+  inFlight: boolean;
   latestFrameId: string | null;
   latestObservedAt: string | null;
   catalogAgeMs: number | null;
   cachedFrames: number;
   failures: number;
+  consecutiveFailures: number;
+  lastFailureAt: string | null;
   lastSuccessAt: string | null;
 }
-

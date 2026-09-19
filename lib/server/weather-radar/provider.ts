@@ -90,6 +90,9 @@ export class WeatherRadarProvider {
   private catalogInFlight: Promise<WeatherRadarCatalog> | null = null;
   private readonly frameInFlight = new Map<string, Promise<Uint8Array>>();
   private failures = 0;
+  private consecutiveFailures = 0;
+  private lastFailureAt: string | null = null;
+  private hasAttempted = false;
   private lastSuccessAt: string | null = null;
 
   constructor(private readonly fetcher: typeof fetch = fetch, private readonly clock: () => number = Date.now) {}
@@ -116,18 +119,26 @@ export class WeatherRadarProvider {
   getDiagnostics(): WeatherRadarDiagnostics {
     const catalog = this.catalog?.value;
     const now = this.clock();
+    const operationalState = !this.hasAttempted ? "on_demand" : this.catalogInFlight !== null || this.frameInFlight.size > 0 ? "loading" : catalog ? (this.consecutiveFailures ? "degraded" : "ok") : "offline";
     return {
-      status: catalog ? (this.failures ? "degraded" : "online") : this.failures ? "offline" : "disabled",
+      status: catalog ? (this.consecutiveFailures ? "degraded" : "online") : this.consecutiveFailures ? "offline" : "disabled",
+      operationalState,
+      reasonCode: operationalState === "on_demand" ? "NOT_INITIALIZED" : operationalState === "loading" ? "FIRST_LOAD_PENDING" : operationalState === "degraded" ? "STALE_CACHE" : operationalState === "offline" ? "UPSTREAM_UNAVAILABLE" : null,
+      hasAttempted: this.hasAttempted,
+      inFlight: this.catalogInFlight !== null || this.frameInFlight.size > 0,
       latestFrameId: catalog?.latestFrameId ?? null,
       latestObservedAt: catalog?.frames.at(-1)?.observedAt ?? null,
       catalogAgeMs: this.catalog ? Math.max(0, now - this.catalog.fetchedAt) : null,
       cachedFrames: this.frames.size,
       failures: this.failures,
+      consecutiveFailures: this.consecutiveFailures,
+      lastFailureAt: this.lastFailureAt,
       lastSuccessAt: this.lastSuccessAt,
     };
   }
 
   private async loadCatalog(now: number): Promise<WeatherRadarCatalog> {
+    this.hasAttempted = true;
     try {
       const response = await this.fetcher(WEATHER_RADAR_SOURCE_URL, { cache: "no-store", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       if (!response.ok) throw new Error(`CHMI catalog HTTP ${response.status}`);
@@ -145,15 +156,19 @@ export class WeatherRadarProvider {
       };
       this.catalog = { value, fetchedAt: now };
       this.lastSuccessAt = new Date(now).toISOString();
+      this.consecutiveFailures = 0;
       return value;
     } catch {
       this.failures += 1;
+      this.consecutiveFailures += 1;
+      this.lastFailureAt = new Date(this.clock()).toISOString();
       if (this.catalog) return this.catalog.value;
       return { available: false, provider: WEATHER_RADAR_PROVIDER, product: WEATHER_RADAR_PRODUCT, frames: [], latestFrameId: null, bounds: WEATHER_RADAR_BOUNDS, generatedAt: new Date(now).toISOString() };
     }
   }
 
   private async loadFrame(id: string): Promise<Uint8Array> {
+    this.hasAttempted = true;
     try {
       const filename = filenameForFrameId(id);
       const response = await this.fetcher(`${WEATHER_RADAR_SOURCE_URL}${filename}`, { cache: "force-cache", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
@@ -165,9 +180,12 @@ export class WeatherRadarProvider {
       if (bytes.length < 8 || bytes.length > MAX_PNG_BYTES || bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4e || bytes[3] !== 0x47 || bytes[4] !== 0x0d || bytes[5] !== 0x0a || bytes[6] !== 0x1a || bytes[7] !== 0x0a) throw new Error("CHMI frame has invalid PNG signature");
       this.frames.set(id, { value: bytes, fetchedAt: this.clock() });
       while (this.frames.size > WEATHER_RADAR_MAX_FRAMES + 4) this.frames.delete(this.frames.keys().next().value!);
+      this.consecutiveFailures = 0;
       return bytes;
     } catch (error) {
       this.failures += 1;
+      this.consecutiveFailures += 1;
+      this.lastFailureAt = new Date(this.clock()).toISOString();
       throw error;
     }
   }
