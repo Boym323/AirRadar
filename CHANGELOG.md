@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.84] - 2026-09-19
+
+Changes since v1.0.83:
+
+- feat: add source-aware live radar coverage (7e2e3d3c)
+
 ## [1.0.82] - 2026-09-19
 
 Changes since v1.0.81:
