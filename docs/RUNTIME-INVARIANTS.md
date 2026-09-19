@@ -221,6 +221,15 @@ These are behavior and safety contracts for changes to the current system.
 - Historical archives are bounded and writers never block `AircraftStateService`.
 - Historical playback is read-only and never creates FlightEvents or alerts.
 
+## Flight Story
+
+- Flight Story is a read-only consumer of persisted Flight, FlightPosition, and
+  FlightEvent data; it never re-runs Flight Intelligence or creates alerts.
+- Map, timeline, profile, event selection, and historical context use one
+  playback timestamp and reuse Global Map Time / Map Context V2.
+- Position payloads are bounded while preserving the full stored flight span;
+  persisted event linkage and route provenance are preserved.
+
 ## MapLibre namespaces and cleanup
 
 Map Context layers are optional enrichment and never own aircraft state. Radar

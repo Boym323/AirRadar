@@ -362,3 +362,9 @@ identities, then joins persistent metadata and read-only `FlightEvent` markers.
 The browser keeps one bounded window and reconstructs the selected instant
 locally. Historical reads never invoke intelligence detection, alerts,
 notifications, or live polling.
+# Flight Story
+
+`/flights/[id]` reads a bounded Flight Story containing Flight identity,
+full-span sampled positions, persisted FlightEvents, and route context. One
+playback timestamp drives map, timeline, profile, event selection, and Map
+Context V2. No detector, alert, or notification write path runs during playback.

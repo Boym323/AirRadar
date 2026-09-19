@@ -6,6 +6,10 @@ not schema sources.
 
 ## Runtime shape
 
+The Flight Story read boundary (`lib/server/flight-story.ts`) is a separate
+read-only composition over history tables and is not connected to live polling
+or intelligence write lanes.
+
 ```text
 RTL-SDR / readsb web root
         │  /data/aircraft.json, /data/receiver.json
