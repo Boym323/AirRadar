@@ -22,6 +22,7 @@ import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { haversineDistanceKm } from "@/lib/geo";
 import { logger } from "@/lib/server/logger";
+import { getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -488,6 +489,7 @@ export class AircraftStateService {
   private removeAircraft(hex: string): void {
     this.aircraft.delete(hex);
     this.atcResolutionKeys.delete(hex);
+    getAtcPredictionValidation().remove(hex);
   }
 
   private updateTrail(previous: Aircraft | undefined, incoming: Aircraft): TrailPoint[] {
@@ -690,6 +692,7 @@ export class AircraftStateService {
       // result. The coarse key is intentional throttling; a changed key is a
       // new resolution generation.
       if (!result.resolved || !current || current.callsign !== result.incoming.callsign || atcResolutionKey(current) !== result.key) continue;
+      getAtcPredictionValidation().observeCurrentSector(current.icaoHex, result.assignment?.sectorId ?? null, Date.parse(current.lastSeen));
       if (JSON.stringify(current.atc) === JSON.stringify(result.assignment)) continue;
       this.aircraft.set(current.icaoHex, { ...current, atc: result.assignment });
       changed = true;
