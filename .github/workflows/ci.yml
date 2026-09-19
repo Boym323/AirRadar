@@ -46,7 +46,11 @@ jobs:
           test_status=0
           npm run lint & lint_pid=$!
           npm run typecheck:prepared & typecheck_pid=$!
-          npm run test & test_pid=$!
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            npm run test:full & test_pid=$!
+          else
+            npm run test:changed & test_pid=$!
+          fi
           wait "$lint_pid" || lint_status=$?
           wait "$typecheck_pid" || typecheck_status=$?
           wait "$test_pid" || test_status=$?

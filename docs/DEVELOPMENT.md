@@ -27,13 +27,20 @@ it is the preferred quick check for a narrow change. For a mixed change,
 npm run test:changed
 ```
 
-It may select no tests in a clean tree and does not replace the complete
-suite. The full test command is either `npm test` or its explicit alias
-`npm run test:full`:
+Vitest follows static imports to include transitive dependants. If it cannot
+prove a relationship, prefer a targeted or full run; do not narrow a test run
+to force it to pass. `npm test` is the affected-test default and may select no
+tests in a clean tree. The complete suite is available explicitly:
 
 ```bash
 npm test
+npm run test:full
 ```
+
+`test:unit` excludes the explicitly classified DB/API/runtime boundary suites;
+`test:integration` runs those suites. The classification is intentionally
+reviewed in `vitest.integration.config.ts` rather than inferred from timing.
+`test:watch` uses Vitest's native affected watch mode.
 
 The production-scale metadata importer test is intentionally separate from
 the normal suite because its 617,000-record fixture tests resource behavior,
