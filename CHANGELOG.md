@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.78] - 2026-09-19
+
+Changes since v1.0.77:
+
+- feat: add ADSBHub support for enhanced network aircraft tracking (e1c05b4f)
+- feat: enhance ATC prediction validation with classification logic and shadow prediction evaluation (19dcf98d)
+
 ## [1.0.74] - 2026-09-19
 
 Changes since v1.0.73:
