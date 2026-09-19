@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.65] - 2026-09-19
+
+Changes since v1.0.64:
+
+- fix: update release script to use FETCH_HEAD for branch resolution (d2212553)
+- feat: add application icon and update metadata for better PWA support (f174a3dd)
+
 ## [1.0.64] - 2026-09-19
 
 Changes since v1.0.63:
