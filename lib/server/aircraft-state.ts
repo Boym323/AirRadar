@@ -20,8 +20,45 @@ import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverSta
 import { getReceptionRecords } from "@/lib/server/reception-records";
 import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
+import { haversineDistanceKm } from "@/lib/geo";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
+
+// Receiver/MLAT glitches can report a valid-looking coordinate hundreds of
+// kilometres away. Keep those points out of the live map and trail. The limit
+// is intentionally generous for fast airliners and long polling gaps.
+const MAX_PLAUSIBLE_GROUND_SPEED_KT = 900;
+const MIN_POSITION_STEP_KM = 25;
+
+function plausiblePosition(previous: Aircraft | undefined, incoming: Aircraft): Aircraft {
+  if (!previous || incoming.lat === null || incoming.lon === null) return incoming;
+  const previousPoint = previous.trail[previous.trail.length - 1];
+  if (!previousPoint) return incoming;
+  const incomingAt = Date.parse(incoming.lastSeen);
+  const previousAt = Date.parse(previousPoint.recordedAt);
+  if (!Number.isFinite(incomingAt) || !Number.isFinite(previousAt) || incomingAt <= previousAt) return incoming;
+  const distanceKm = haversineDistanceKm(previousPoint.lat, previousPoint.lon, incoming.lat, incoming.lon);
+  const elapsedHours = (incomingAt - previousAt) / 3_600_000;
+  const maximumKm = Math.max(MIN_POSITION_STEP_KM, MAX_PLAUSIBLE_GROUND_SPEED_KT * 1.852 * elapsedHours * 1.5);
+  if (distanceKm <= maximumKm) return incoming;
+
+  // Keep the aircraft attached to its last credible position while retaining
+  // the rest of the newest observation (altitude, track, callsign, etc.).
+  return {
+    ...incoming,
+    lat: previousPoint.lat,
+    lon: previousPoint.lon,
+    seenPosSeconds: null,
+    provenance: {
+      seenLocal: incoming.provenance?.seenLocal ?? incoming.origin === "local",
+      seenNetwork: incoming.provenance?.seenNetwork ?? incoming.origin === "adsblol",
+      lastLocalSeen: incoming.provenance?.lastLocalSeen ?? (incoming.origin === "local" ? incoming.lastSeen : null),
+      lastNetworkSeen: incoming.provenance?.lastNetworkSeen ?? (incoming.origin === "adsblol" ? incoming.lastSeen : null),
+      positionOrigin: null,
+      positionSource: incoming.provenance?.positionSource ?? incoming.source,
+    },
+  };
+}
 
 function mergeEnrichment(
   previous: AircraftEnrichment | undefined,
@@ -405,8 +442,8 @@ export class AircraftStateService {
     for (const incoming of snapshot.aircraft) {
       if (Date.parse(incoming.lastSeen) < Date.now() - getAircraftStaleAfterMs()) continue;
       currentHexes.add(incoming.icaoHex);
-      const localIncoming = { ...incoming, origin: "local" as const };
       const previous = this.localAircraft.get(incoming.icaoHex);
+      const localIncoming = plausiblePosition(previous, { ...incoming, origin: "local" as const });
       const trail = this.updateTrail(previous, localIncoming);
       const sameCallsign = previous?.callsign === incoming.callsign;
       const enrichment = mergeEnrichment(previous?.enrichment, incoming.enrichment, sameCallsign);
@@ -430,8 +467,8 @@ export class AircraftStateService {
     const currentHexes = new Set<string>();
     for (const incoming of snapshot.aircraft) {
       currentHexes.add(incoming.icaoHex);
-      const networkIncoming = { ...incoming, origin: "adsblol" as const };
       const previous = this.networkAircraft.get(incoming.icaoHex);
+      const networkIncoming = plausiblePosition(previous, { ...incoming, origin: "adsblol" as const });
       const trail = this.updateTrail(previous, networkIncoming);
       this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
     }

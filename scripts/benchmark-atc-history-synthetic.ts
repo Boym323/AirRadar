@@ -1,5 +1,4 @@
 /** Dev-only synthetic benchmark. It does not access PostgreSQL. */
-type Position = { flight: number; time: number; sector: number; altitude: number; speed: number };
 const sizes = (process.argv.slice(2).map(Number).filter(Number.isFinite).length ? process.argv.slice(2).map(Number).filter(Number.isFinite) : [100_000, 500_000, 1_000_000]).filter((n) => n > 0);
 const sectors = 3;
 for (const count of sizes) {

@@ -50,6 +50,7 @@ const MAX_POSITIONS_PER_CHUNK = 200_000;
 const MAX_TOTAL_POSITIONS_PER_REQUEST = 5_000_000;
 const MIN_CHUNK_MS = 1_000;
 const INITIAL_CHUNK_MS = 60 * 60_000;
+export interface SectorHistoryTestConfig { maxRowsPerChunk?: number; maxTotalPositions?: number; minChunkMs?: number; initialChunkMs?: number; }
 export function validateSectorHistoryRange(from: Date, to: Date, bucket: SectorHistoryBucket): void {
   if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime()) || to <= from) throw new Error("Invalid history range");
   if (to.getTime() - from.getTime() > HISTORY_LIMITS[bucket]) throw new Error("History range exceeds bucket limit");
@@ -63,33 +64,37 @@ export async function getSectorTrafficHistory(input: { sectorId: string; from: D
   return result.sectors[0] ?? null;
 }
 
-export async function getSectorTrafficHistoryBatch(input: { sectorIds?: string[]; from: Date; to: Date; bucket: SectorHistoryBucket }): Promise<SectorTrafficHistoryBatch> {
+export async function getSectorTrafficHistoryBatch(input: { sectorIds?: string[]; from: Date; to: Date; bucket: SectorHistoryBucket; /** Test-only fetch limits; omitted in production. */ testConfig?: SectorHistoryTestConfig }): Promise<SectorTrafficHistoryBatch> {
   validateSectorHistoryRange(input.from, input.to, input.bucket);
   const data = await getAtcData(); const available = supportedSectors(data);
   const ids = input.sectorIds?.length ? input.sectorIds : available.map((s) => s.id);
   if (ids.length > available.length || ids.some((id) => !/^[A-Z0-9]{6}$/.test(id))) throw new Error("Invalid sector selection");
   const sectors = ids.map((id) => available.find((s) => s.id === id)).filter((s): s is AtcSector => Boolean(s));
   if (sectors.length !== ids.length) throw new Error("Invalid sector selection");
-  const db = getPrisma(); const size = HISTORY_MS[input.bucket];
+  const db = getPrisma(); const size = HISTORY_MS[input.bucket]; const testConfig = input.testConfig; const chunkLimit = testConfig?.maxRowsPerChunk ?? MAX_POSITIONS_PER_CHUNK; const totalLimit = testConfig?.maxTotalPositions ?? MAX_TOTAL_POSITIONS_PER_REQUEST; const minimumChunkMs = testConfig?.minChunkMs ?? MIN_CHUNK_MS; const initialChunkMs = testConfig?.initialChunkMs ?? INITIAL_CHUNK_MS;
   if (!db) { const coverage = { complete: true, truncated: false, positionsProcessed: 0 }; return { from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, sectors: sectors.map((s) => ({ sectorId: s.id, name: s.name, from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, points: [], peakAircraftCount: 0, peakAircraftAt: null, averageAircraftCount: 0, totalEntries: 0, totalExits: 0, busiestBucket: null, quietestBucket: null, averageGroundSpeed: null, averageAltitude: null, coverage })), coverage }; }
   type Acc = { snapshots: Map<number, Set<number>>; entering: number; leaving: number; climbing: number; descending: number; level: number; altitudeSum: number; altitudeCount: number; speedSum: number; speedCount: number };
   const accumulators = new Map<string, Acc>(); const previous = new Map<string, boolean>(); let positionsProcessed = 0; let chunksProcessed = 0; let adaptiveSplits = 0;
   const pending: Array<[number, number]> = [];
-  for (let start = input.from.getTime(); start < input.to.getTime(); start += INITIAL_CHUNK_MS) pending.push([start, Math.min(input.to.getTime(), start + INITIAL_CHUNK_MS)]);
+  for (let start = input.from.getTime(); start < input.to.getTime(); start += initialChunkMs) pending.push([start, Math.min(input.to.getTime(), start + initialChunkMs)]);
   while (pending.length) {
     const [start, end] = pending.shift()!;
-    const chunkRows = await (db.orm.public.FlightPosition as unknown as Collection<Position>).where((r) => r.recordedAt.gte(new Date(start))).where((r) => r.recordedAt.lt(new Date(end))).orderBy({ recordedAt: "asc", id: "asc" }).limit(MAX_POSITIONS_PER_CHUNK + 1).all();
-    if (chunkRows.length > MAX_POSITIONS_PER_CHUNK) {
-      if (end - start <= MIN_CHUNK_MS) throw new Error("ATC_HISTORY_CHUNK_TOO_DENSE");
+    const chunkRows = await (db.orm.public.FlightPosition as unknown as Collection<Position>).where((r) => r.recordedAt.gte(new Date(start))).where((r) => r.recordedAt.lt(new Date(end))).orderBy({ recordedAt: "asc", id: "asc" }).limit(chunkLimit + 1).all();
+    if (chunkRows.length > chunkLimit) {
+      if (end - start <= minimumChunkMs) throw new Error("ATC_HISTORY_CHUNK_TOO_DENSE");
       const midpoint = start + Math.floor((end - start) / 2); pending.unshift([midpoint, end], [start, midpoint]); adaptiveSplits++; continue;
     }
-    if (positionsProcessed + chunkRows.length > MAX_TOTAL_POSITIONS_PER_REQUEST) throw new Error("ATC_HISTORY_PROCESSING_LIMIT");
+    if (positionsProcessed + chunkRows.length > totalLimit) throw new Error("ATC_HISTORY_PROCESSING_LIMIT");
     for (const row of chunkRows) {
       const recordedAt = date(row.recordedAt); const bucket = bucketStart(recordedAt.getTime(), size); positionsProcessed++;
       for (const sector of sectors) {
         const key = `${sector.id}|${bucket}`; const acc = accumulators.get(key) ?? { snapshots: new Map(), entering: 0, leaving: 0, climbing: 0, descending: 0, level: 0, altitudeSum: 0, altitudeCount: 0, speedSum: 0, speedCount: 0 };
-        const snapshot = acc.snapshots.get(recordedAt.getTime()) ?? new Set<number>(); snapshot.add(row.flightId); acc.snapshots.set(recordedAt.getTime(), snapshot);
         const inside = Boolean(matchSector(sector, { latitude: row.lat, longitude: row.lon, altitudeFt: row.altitude, observedAt: recordedAt }));
+        // A snapshot represents aircraft observed inside this published volume,
+        // not every aircraft present in the raw history query.
+        const snapshot = acc.snapshots.get(recordedAt.getTime()) ?? new Set<number>();
+        if (inside) snapshot.add(row.flightId);
+        acc.snapshots.set(recordedAt.getTime(), snapshot);
         // Flight continuity is independent of analytics buckets and DB chunks.
         const previousKey = `${sector.id}|${row.flightId}`; const prior = previous.get(previousKey);
         if (prior !== undefined && prior !== inside) { if (inside) acc.entering++; else acc.leaving++; }

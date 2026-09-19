@@ -113,6 +113,17 @@ Synthetic benchmark – does not include PostgreSQL fetch, Prisma overhead or
 network/API serialization. It must not be used as a production response-time
 claim.
 
+The completed local run covered 100,000, 500,000, and 1,000,000 synthetic
+positions. No PostgreSQL or Prisma I/O was involved. A database benchmark was
+skipped: the configured `DATABASE_URL` points at the shared AirRadar database,
+and no separately provisioned, unambiguously non-production database or
+development workflow was available for safe verification.
+
+The streaming path retains only the current DB chunk, bucket accumulators,
+per-snapshot aircraft sets, and per-flight/per-sector continuity state. Raw
+position rows are not appended to a request-wide collection. Its intended
+memory model is therefore `O(chunk + accumulators + per-flight state)`.
+
 Historical processing uses sequential half-open time chunks with a
 `limit + 1` sentinel per chunk. Dense chunks are recursively split down to a
 1-second minimum; a still-too-dense minimum chunk fails explicitly with
