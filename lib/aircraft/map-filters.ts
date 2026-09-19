@@ -1,8 +1,10 @@
 import type { AircraftView } from "@/lib/aircraft/types";
+import { matchesAircraftSourceFilter, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
 
 export type AircraftStatusFilter = "all" | "airborne" | "onGround";
 
 export interface MapAircraftFilters {
+  source: AircraftSourceFilter;
   status: AircraftStatusFilter;
   minAltitude: string;
   maxAltitude: string;
@@ -15,6 +17,7 @@ export interface MapAircraftFilters {
 }
 
 export const DEFAULT_MAP_AIRCRAFT_FILTERS: MapAircraftFilters = {
+  source: "all",
   status: "all",
   minAltitude: "",
   maxAltitude: "",
@@ -58,7 +61,8 @@ function operatorForAircraft(aircraft: AircraftView): string | null {
 }
 
 export function isMapAircraftFilterActive(filters: MapAircraftFilters): boolean {
-  return filters.status !== "all"
+  return filters.source !== "all"
+    || filters.status !== "all"
     || filters.minAltitude.trim() !== ""
     || filters.maxAltitude.trim() !== ""
     || filters.callsign.trim() !== ""
@@ -70,6 +74,7 @@ export function isMapAircraftFilterActive(filters: MapAircraftFilters): boolean 
 }
 
 export function matchesMapAircraftFilters(aircraft: AircraftView, filters: MapAircraftFilters): boolean {
+  if (!matchesAircraftSourceFilter(aircraft, filters.source)) return false;
   if (filters.status === "airborne" && aircraft.onGround) return false;
   if (filters.status === "onGround" && !aircraft.onGround) return false;
 

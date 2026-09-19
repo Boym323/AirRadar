@@ -47,6 +47,9 @@ use independent APIs and fail independently.
    baseline is per connection, bounded by SSE capacity, and discarded on
    disconnect. `coverage=extended` explicitly merges the local and network RAM
    maps; `coverage=local` remains the default. See [SSE Delta V2](SSE-DELTA-V2.md).
+   Extended snapshots also carry compact source counters and a non-persistent
+   LOCAL capture ratio. Its denominator is fresh, positioned NETWORK traffic
+   inside `RECEIVER_COMPARISON_RADIUS_NM`, not the full network radius.
 6. Metadata/routes/flight plans, ATC assignments, statistics, and alerts run
    from the same snapshot flow but are asynchronous and isolated from the
    local provider refresh. An enrichment result is applied only if it still

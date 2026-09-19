@@ -100,6 +100,12 @@ local observation wins when appropriate and a fresh ADSB.lol position can
 temporarily replace a stale local position. Network trails remain bounded and
 in memory.
 
+In `EXTENDED`, merged aircraft are classified from provenance as
+`LOCAL_ONLY`, `NETWORK_ONLY`, or `OVERLAP`. Counters use `LOCAL =
+LOCAL_ONLY + OVERLAP`, `NETWORK = NETWORK_ONLY + OVERLAP`, and `TOTAL =
+LOCAL_ONLY + NETWORK_ONLY + OVERLAP`; the map source filter uses the same
+classification and is persisted in the browser.
+
 Network observations are not local receiver evidence: they are never written
 to `FlightPosition`, never create local `Flight` history, never affect daily
 receiver statistics or reception records, and never use network RSSI/message

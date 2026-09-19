@@ -155,6 +155,11 @@ These are behavior and safety contracts for changes to the current system.
   statistics/coverage, alerts, metadata enrichment, and ATC resolution. Public
   output includes safe source/provenance and ADSB.lol ODbL attribution, but no
   raw provider errors or exact receiver coordinates by default.
+- Source counters are derived from one merged snapshot: `LOCAL = localOnly +
+  overlap`, `NETWORK = networkOnly + overlap`, and `TOTAL = localOnly +
+  networkOnly + overlap`. Source filtering uses provenance and never substitutes
+  `origin` for membership. The LOCAL capture ratio is bounded to
+  `RECEIVER_COMPARISON_RADIUS_NM` and is not persisted.
 
 ## OGN / FLARM integration
 

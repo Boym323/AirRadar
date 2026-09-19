@@ -8,6 +8,7 @@ import {
   getReceiverPosition,
   getNetworkTrailMaxAgeMs,
   getNetworkTrailMaxPoints,
+  getReceiverComparisonRadiusNm,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 import { createAircraftProvider, createEnrichmentService, createNetworkAircraftProvider } from "@/lib/server/providers";
@@ -21,6 +22,7 @@ import { loadAlertConfig } from "@/lib/server/alert-config";
 import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { getReceptionRecords } from "@/lib/server/reception-records";
 import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
+import { computeLocalCoverageRatio, computeSourceStats } from "@/lib/aircraft/source-awareness";
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { haversineDistanceKm } from "@/lib/geo";
 import { logger } from "@/lib/server/logger";
@@ -273,7 +275,8 @@ export class AircraftStateService {
           networkAircraft: 0,
           networkOnlyAircraft: 0,
           seenByBoth: 0,
-        };
+      };
+    const sourceStats = computeSourceStats(aircraft);
     return {
       aircraft,
       relevantAtcFrequencies: summarizeRelevantAtcFrequencies(aircraft.map((item) => ({
@@ -296,6 +299,10 @@ export class AircraftStateService {
         adsbLol: this.networkProvider.getDiagnostics(),
       },
       coverageStats: displayedCoverageStats,
+      sourceStats,
+      localCoverageRatio: coverage === "extended"
+        ? computeLocalCoverageRatio(aircraft, this.currentReceiver, getReceiverComparisonRadiusNm())
+        : undefined,
     };
   }
 

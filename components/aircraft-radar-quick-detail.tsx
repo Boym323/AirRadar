@@ -10,6 +10,7 @@ import type { RouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { RouteIntelligencePanel } from "@/components/route-intelligence-panel";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
+import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { StatusBadge } from "@/components/ui-primitives";
 import {
   formatAge,
@@ -171,6 +172,7 @@ function TechnicalDetails({ aircraft }: { aircraft: AircraftView }) {
   const rateValues = [aircraft.baroRate, aircraft.geomRate]
     .filter((value): value is number => value !== null)
     .map((value) => formatNumber(value));
+  const observationAge = (value: string | null | undefined) => value ? formatAge(Math.max(0, (Date.now() - Date.parse(value)) / 1000)) : null;
   return <details className="aircraft-quick-advanced" data-testid="technical-details">
     <summary>{t.aircraft.technicalDetails}</summary>
     <div className="aircraft-quick-detail-grid">
@@ -186,6 +188,9 @@ function TechnicalDetails({ aircraft }: { aircraft: AircraftView }) {
       <DetailValue label={t.aircraft.squawk} value={aircraft.squawk} />
       <DetailValue label={t.aircraft.source} value={aircraft.sourceType ?? aircraft.source} />
       <DetailValue label={t.aircraft.seenBy} value={aircraft.provenance?.seenLocal && aircraft.provenance.seenNetwork ? t.aircraft.localAndNetwork : aircraft.origin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver} />
+      <DetailValue label={t.aircraft.dataSource} value={classifyAircraftSource(aircraft)} />
+      <DetailValue label="Last LOCAL observation" value={observationAge(aircraft.provenance?.lastLocalSeen)} />
+      <DetailValue label="Last NETWORK observation" value={observationAge(aircraft.provenance?.lastNetworkSeen)} />
       <DetailValue label={t.aircraft.positionSource} value={aircraft.provenance?.positionSource ?? aircraft.source} />
       <DetailValue label={t.aircraft.position} value={position} />
       <DetailValue label={t.aircraft.baroGeomAltitude} value={altitudeValues.length > 0 ? altitudeValues.join(" / ") : null} />

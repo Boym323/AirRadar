@@ -119,6 +119,8 @@ export function toPublicStateSnapshot(
     stats: snapshot.stats,
     sources: publicSources(snapshot),
     coverageStats: snapshot.coverageStats,
+    sourceStats: snapshot.sourceStats,
+    localCoverageRatio: snapshot.localCoverageRatio,
   };
 }
 

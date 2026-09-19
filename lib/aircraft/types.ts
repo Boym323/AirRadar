@@ -157,6 +157,13 @@ export interface CoverageStats {
   seenByBoth: number;
 }
 
+export interface LocalCoverageRatio {
+  radiusNm: number;
+  numerator: number;
+  denominator: number;
+  percentage: number | null;
+}
+
 export type NetworkProviderStatus =
   | "disabled"
   | "connecting"
@@ -239,6 +246,8 @@ export interface StateSnapshot {
   stats: RadarStats;
   sources?: SourceStatusSnapshot;
   coverageStats?: CoverageStats;
+  sourceStats?: import("@/lib/aircraft/source-awareness").SourceStats;
+  localCoverageRatio?: LocalCoverageRatio;
 }
 
 export interface PublicStateSnapshot extends Omit<StateSnapshot, "receiver"> {

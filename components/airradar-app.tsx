@@ -85,6 +85,7 @@ import {
   isMapAircraftFilterActive,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
+import { classifyAircraftSource, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
 
 declare global {
   interface Window {
@@ -734,6 +735,8 @@ export function AirRadarApp() {
       if (stored) setWatchlist(JSON.parse(stored) as Array<{ kind: string; value: string }>);
       const storedCoverage = window.localStorage.getItem("airradar-coverage");
       if (storedCoverage === "extended" || storedCoverage === "local") setCoverage(storedCoverage);
+      const storedSource = window.localStorage.getItem("airradar-source-filter");
+      if (storedSource === "all" || storedSource === "local" || storedSource === "network" || storedSource === "overlap") setMapFilters((current) => ({ ...current, source: storedSource }));
       setShowSigmet(window.localStorage.getItem("airradar-sigmet-layer") === "true");
       setShowOgn(window.localStorage.getItem("airradar-ogn-layer") === "true");
       setShowWeatherRadar(window.localStorage.getItem("airradar-weather-radar-layer") === "true");
@@ -940,6 +943,7 @@ export function AirRadarApp() {
 
   function updateMapFilter<Key extends keyof MapAircraftFilters>(key: Key, value: MapAircraftFilters[Key]) {
     setMapFilters((current) => ({ ...current, [key]: value }));
+    if (key === "source") window.localStorage.setItem("airradar-source-filter", String(value));
   }
 
   const resetMapFilters = useCallback(() => {
@@ -1520,6 +1524,9 @@ export function AirRadarApp() {
     () => filterAircraftForMap(snapshot.aircraft, mapFilters),
     [mapFilters, snapshot.aircraft],
   );
+  useEffect(() => {
+    if (activeCoverage === "local" && mapFilters.source !== "all" && mapFilters.source !== "local") setMapFilters((current) => ({ ...current, source: "local" }));
+  }, [activeCoverage, mapFilters.source]);
   const filteredAircraft = useMemo(() => {
     const query = search.trim().toUpperCase();
     const filtered = mapFilteredAircraft.filter((aircraft) => {
@@ -1659,7 +1666,7 @@ export function AirRadarApp() {
       const target: [number, number] = [aircraft.lon, aircraft.lat];
       if (!marker) {
         const root = document.createElement("div");
-        root.className = aircraftMarkerClassNames({ selected: false, watchlisted: false, emergency: false }).join(" ");
+        root.className = aircraftMarkerClassNames({ selected: false, watchlisted: false, emergency: false, source: classifyAircraftSource(aircraft) }).join(" ");
         root.setAttribute("role", "button");
         root.setAttribute("tabindex", "0");
         root.setAttribute("aria-label", labelForAircraft(aircraft));
@@ -1694,6 +1701,8 @@ export function AirRadarApp() {
       root.classList.toggle("selected", aircraft.icaoHex === selectedHex);
       root.classList.toggle("watchlisted", isWatchlisted(aircraft));
       root.classList.toggle("emergency", Boolean(aircraft.emergency));
+      root.classList.toggle("network-only", classifyAircraftSource(aircraft) === "NETWORK_ONLY");
+      root.classList.toggle("source-overlap", classifyAircraftSource(aircraft) === "OVERLAP");
       root.style.visibility = showAircraft ? "visible" : "hidden";
       const plane = root.querySelector<HTMLElement>(".aircraft-plane");
       if (plane) {
@@ -2157,6 +2166,12 @@ export function AirRadarApp() {
             <div className="map-overlay-primary">
               <Panel className="map-overlay-card map-summary-card">
                 <div className="map-summary-item map-summary-count"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
+                {activeCoverage === "extended" && snapshot.sourceStats && <div className="source-counter-strip" aria-label="Aircraft source counters">
+                  <span><strong>{formatNumber(snapshot.sourceStats.local)}</strong><small>LOCAL</small></span>
+                  <span><strong>{formatNumber(snapshot.sourceStats.network)}</strong><small>NETWORK</small></span>
+                  <span><strong>{formatNumber(snapshot.sourceStats.overlap)}</strong><small>OVERLAP</small></span>
+                  <span><strong>{formatNumber(snapshot.sourceStats.total)}</strong><small>TOTAL</small></span>
+                </div>}
                 {hasActiveMapFilters && <div className="map-summary-filter-state" aria-label={`${t.filters.active}: ${activeFilterCount}`}>
                   <span>{t.filters.title}</span><strong>{activeFilterCount}</strong>
                 </div>}
@@ -2270,6 +2285,9 @@ export function AirRadarApp() {
                   <button type="button" className={activeCoverage === "extended" ? "active" : ""} aria-pressed={activeCoverage === "extended"} onClick={() => chooseCoverage("extended")}>{t.radar.coverageExtended}</button>
                 </div>}
                 {trafficSource === "adsb" && activeCoverage === "extended" && snapshot.coverageStats && <div className="coverage-subcount">{t.radar.localOnlyCount(formatNumber(snapshot.coverageStats.localAircraft))} · {t.radar.networkOnlyCount(formatNumber(snapshot.coverageStats.networkOnlyAircraft))}</div>}
+                {trafficSource === "adsb" && activeCoverage === "extended" && <div className="coverage-switch source-filter-switch" role="group" aria-label="Source filter">
+                  {(["all", "local", "network", "overlap"] as AircraftSourceFilter[]).map((source) => <button key={source} type="button" className={mapFilters.source === source ? "active" : ""} aria-pressed={mapFilters.source === source} onClick={() => updateMapFilter("source", source)}>{source.toUpperCase()}</button>)}
+                </div>}
               </div>
               <IconButton className="mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-expanded={!mobileCompact} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
                 {mobileCompact ? "↑" : "↓"}
@@ -2376,7 +2394,7 @@ export function AirRadarApp() {
               <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""} ${aircraft.emergency ? "emergency" : ""}`} aria-pressed={selectedHex === aircraft.icaoHex} onClick={() => selectAircraft(aircraft.icaoHex)}>
                 <span className="aircraft-row-icon"><AircraftIcon aircraft={aircraft} /></span>
                 <span className="aircraft-row-main">
-                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> <span className="source-badge">{aircraftPositionSourceLabel(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
+                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> <span className="source-badge">{classifyAircraftSource(aircraft)} · {aircraftPositionSourceLabel(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
                   <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}{aircraft.registration || aircraft.enrichment?.metadata?.registration ? ` · ${aircraft.registration || aircraft.enrichment?.metadata?.registration}` : ""}</span>
                   <span className="aircraft-row-meta"><span><b>{formatAltitude(aircraft.altitude)}</b></span><span><b>{formatSpeed(aircraft.groundSpeed)}</b></span><span><b>{formatTrack(aircraft.track)}</b></span><span className="aircraft-row-hex">{aircraft.icaoHex}</span></span>
                 </span>

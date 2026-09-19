@@ -212,6 +212,8 @@ export function getAdsbLolMlatHost(): string { return validHost("ADSBLOL_MLAT_HO
 export function getAdsbLolBeastPort(): number { return boundedInteger("ADSBLOL_BEAST_PORT", 1365, 1, 65535); }
 export function getAdsbLolMlatPort(): number { return boundedInteger("ADSBLOL_MLAT_PORT", 1366, 1, 65535); }
 export function getAdsbLolNetworkRadiusNm(): number { return boundedInteger("ADSBLOL_NETWORK_RADIUS_NM", 500, 1, 2000); }
+
+export function getReceiverComparisonRadiusNm(): number { return boundedInteger("RECEIVER_COMPARISON_RADIUS_NM", 175, 1, 500); }
 export function getAdsbLolRawStaleMs(): number { return boundedMilliseconds("ADSBLOL_RAW_STALE_MS", 15_000, 2_000, 120_000); }
 export function getAdsbLolRawReconnectMaxMs(): number { return boundedMilliseconds("ADSBLOL_RAW_RECONNECT_MAX_MS", 30_000, 1_000, 300_000); }
 export function getAdsbLolRawMaxTracks(): number { return boundedInteger("ADSBLOL_RAW_MAX_TRACKS", 10_000, 100, 50_000); }

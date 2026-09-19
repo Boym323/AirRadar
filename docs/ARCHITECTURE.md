@@ -268,3 +268,9 @@ poll. Track memory is limited to 120 samples and a five-minute holding window,
 and stale aircraft tracks are removed with live-state cleanup. Event persistence
 stores the newest matching Flight's `flightId` when available; database failures
 remain best-effort.
+
+Source awareness is centralized in `lib/aircraft/source-awareness.ts`.
+`LOCAL` and `NETWORK` are provenance memberships, not the dominant `origin`
+field: overlap is `seenLocal=true` and `seenNetwork=true`. The same helper
+drives classification, counters, and client-side filters. Live LOCAL capture
+ratio uses `RECEIVER_COMPARISON_RADIUS_NM` (default 175 NM) and is not stored.
