@@ -20,6 +20,7 @@ export interface SectorTransitions { at: string; windowMinutes: 1 | 5 | 15; tran
 export type SectorHistoryBucket = "1m" | "5m" | "15m" | "1h";
 export interface SectorTrafficHistoryPoint { time: string; aircraftCount: number; entering: number; leaving: number; climbing: number; descending: number; level: number; averageAltitude: number | null; averageGroundSpeed: number | null; }
 export interface SectorTrafficHistory { sectorId: string; from: string; to: string; bucket: SectorHistoryBucket; points: SectorTrafficHistoryPoint[]; peakAircraftCount: number; peakAircraftAt: string | null; averageAircraftCount: number; totalEntries: number; totalExits: number; busiestBucket: string | null; quietestBucket: string | null; averageGroundSpeed: number | null; averageAltitude: number | null; }
+export interface SectorTrafficHistoryBatch { from: string; to: string; bucket: SectorHistoryBucket; sectors: Array<SectorTrafficHistory & { name: string }>; }
 
 type Position = { flightId: number; recordedAt: Date | Temporal.Instant; lat: number; lon: number; altitude: number | null; groundSpeed: number | null; verticalRate: number | null };
 type Field = { lte(v: unknown): unknown; gte(v: unknown): unknown; lt(v: unknown): unknown; asc(): unknown; desc(): unknown; };
@@ -53,12 +54,22 @@ function bucketStart(time: number, size: number): number { return Math.floor(tim
 
 /** Historical aircraftCount uses representative persisted snapshots: the mean distinct aircraft count per observed snapshot in each bucket. */
 export async function getSectorTrafficHistory(input: { sectorId: string; from: Date; to: Date; bucket: SectorHistoryBucket }): Promise<SectorTrafficHistory | null> {
+  const result = await getSectorTrafficHistoryBatch({ ...input, sectorIds: [input.sectorId] });
+  return result.sectors[0] ?? null;
+}
+
+export async function getSectorTrafficHistoryBatch(input: { sectorIds?: string[]; from: Date; to: Date; bucket: SectorHistoryBucket }): Promise<SectorTrafficHistoryBatch> {
   validateSectorHistoryRange(input.from, input.to, input.bucket);
-  const data = await getAtcData(); const sector = supportedSectors(data).find((item) => item.id === input.sectorId); if (!sector) return null;
+  const data = await getAtcData(); const available = supportedSectors(data);
+  const ids = input.sectorIds?.length ? input.sectorIds : available.map((s) => s.id);
+  if (ids.length > available.length || ids.some((id) => !/^[A-Z0-9]{6}$/.test(id))) throw new Error("Invalid sector selection");
+  const sectors = ids.map((id) => available.find((s) => s.id === id)).filter((s): s is AtcSector => Boolean(s));
+  if (sectors.length !== ids.length) throw new Error("Invalid sector selection");
   const db = getPrisma(); const size = HISTORY_MS[input.bucket];
-  if (!db) return { sectorId: sector.id, from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, points: [], peakAircraftCount: 0, peakAircraftAt: null, averageAircraftCount: 0, totalEntries: 0, totalExits: 0, busiestBucket: null, quietestBucket: null, averageGroundSpeed: null, averageAltitude: null };
+  if (!db) return { from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, sectors: sectors.map((s) => ({ sectorId: s.id, name: s.name, from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, points: [], peakAircraftCount: 0, peakAircraftAt: null, averageAircraftCount: 0, totalEntries: 0, totalExits: 0, busiestBucket: null, quietestBucket: null, averageGroundSpeed: null, averageAltitude: null })) };
   const rows = await (db.orm.public.FlightPosition as unknown as Collection<Position>).where((r) => r.recordedAt.gte(input.from)).where((r) => r.recordedAt.lt(input.to)).limit(200000).all();
   const buckets = new Map<number, Position[]>(); for (const row of rows) { const key = bucketStart(date(row.recordedAt).getTime(), size); const list = buckets.get(key) ?? []; list.push(row); buckets.set(key, list); }
+  const histories = sectors.map((sector) => {
   const ordered = [...buckets.entries()].sort((a, b) => a[0] - b[0]); const points = ordered.map(([key, bucketRows]) => {
     const snapshots = new Map<number, Position[]>(); for (const row of bucketRows) { const list = snapshots.get(date(row.recordedAt).getTime()) ?? []; list.push(row); snapshots.set(date(row.recordedAt).getTime(), list); }
     const counts = [...snapshots.values()].map((snapshot) => new Set(snapshot.map((p) => p.flightId)).size); const inside = bucketRows.filter((p) => matchSector(sector, { latitude: p.lat, longitude: p.lon, altitudeFt: p.altitude, observedAt: date(p.recordedAt) }));
@@ -67,7 +78,9 @@ export async function getSectorTrafficHistory(input: { sectorId: string; from: D
     return { time: new Date(key).toISOString(), aircraftCount: Number(count.toFixed(1)), entering, leaving, climbing, descending, level: Math.max(0, inside.length - climbing - descending), averageAltitude: alt.length ? Math.round(alt.reduce((a, b) => a + b, 0) / alt.length) : null, averageGroundSpeed: speed.length ? Math.round(speed.reduce((a, b) => a + b, 0) / speed.length) : null };
   });
   const peak = points.reduce((best, point) => !best || point.aircraftCount > best.aircraftCount ? point : best, null as SectorTrafficHistoryPoint | null); const avg = points.length ? points.reduce((sum, p) => sum + p.aircraftCount, 0) / points.length : 0; const mean = (field: "averageAltitude" | "averageGroundSpeed") => { const values = points.map((p) => p[field]).filter((v): v is number => v !== null); return values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null; };
-  return { sectorId: sector.id, from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, points, peakAircraftCount: peak?.aircraftCount ?? 0, peakAircraftAt: peak?.time ?? null, averageAircraftCount: Number(avg.toFixed(1)), totalEntries: points.reduce((sum, p) => sum + p.entering, 0), totalExits: points.reduce((sum, p) => sum + p.leaving, 0), busiestBucket: peak?.time ?? null, quietestBucket: points.reduce((best, p) => !best || p.aircraftCount < best.aircraftCount ? p : best, null as SectorTrafficHistoryPoint | null)?.time ?? null, averageGroundSpeed: mean("averageGroundSpeed"), averageAltitude: mean("averageAltitude") };
+  return { sectorId: sector.id, name: sector.name, from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, points, peakAircraftCount: peak?.aircraftCount ?? 0, peakAircraftAt: peak?.time ?? null, averageAircraftCount: Number(avg.toFixed(1)), totalEntries: points.reduce((sum, p) => sum + p.entering, 0), totalExits: points.reduce((sum, p) => sum + p.leaving, 0), busiestBucket: peak?.time ?? null, quietestBucket: points.reduce((best, p) => !best || p.aircraftCount < best.aircraftCount ? p : best, null as SectorTrafficHistoryPoint | null)?.time ?? null, averageGroundSpeed: mean("averageGroundSpeed"), averageAltitude: mean("averageAltitude") };
+  });
+  return { from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, sectors: histories };
 }
 function transitionCount(sector: AtcSector, rows: Position[], from: Date, to: Date, key: number, size: number, kind: "enter" | "leave"): number {
   const byFlight = new Map<number, Position[]>(); for (const row of rows) { const list = byFlight.get(row.flightId) ?? []; list.push(row); byFlight.set(row.flightId, list); } let count = 0;
