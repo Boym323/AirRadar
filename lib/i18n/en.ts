@@ -148,6 +148,11 @@ export const en = {
     significantAirports: "Significant airports",
     smallAirports: "Small airports",
     heliports: "Heliports",
+    atcTraffic: "ATC sector traffic",
+    atcTrafficLegend: "NONE · LOW · MEDIUM · HIGH · VERY HIGH",
+    atcTrafficDescription: "Traffic intensity within published sector volumes.",
+    atcTrafficDisclaimer: "Does not indicate official sector activation.",
+    atcTrafficNoData: "No data",
   },
   ogn: {
     title: "OGN / FLARM",

@@ -97,6 +97,8 @@ body {
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 :where(button, input, select, summary, a, [tabindex]):focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+.ui-icon { width: 1.1em; height: 1.1em; flex: 0 0 auto; display: block; }
+.ui-icon-flipped { display: inline-flex; transform: scaleX(-1); }
 .hidden { display: none !important; }
 
 code, pre, kbd, .mono, [data-mono="true"] {
@@ -2571,6 +2573,7 @@ button, input, select, textarea { color-scheme: dark; }
 .map-summary-filter-state strong { display: grid; place-items: center; min-width: 22px; min-height: 22px; padding-inline: 5px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--selected) 14%, transparent); color: var(--selected); font-family: var(--font-geist-mono), monospace; font-size: 11px; }
 .search-clear-button { position: absolute; top: 50%; right: 7px; display: grid; place-items: center; width: 28px; height: 28px; transform: translateY(-50%); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; }
 .search-clear-button:hover { background: var(--surface-hover); color: var(--text-primary); }
+.search-clear-button { min-width: 40px; min-height: 40px; }
 .active-filter-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .filter-chip { display: inline-flex; align-items: center; min-height: 24px; max-width: 150px; overflow: hidden; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--selected) 34%, transparent); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--selected) 8%, transparent); color: var(--selected); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .filter-chip-overflow { border-color: var(--border-default); background: transparent; color: var(--text-secondary); }
@@ -2580,3 +2583,13 @@ button, input, select, textarea { color-scheme: dark; }
 .filter-panel-heading-sort { margin-top: 12px; }
 .map-layer-subgroup-heading { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .map-layers-menu { max-height: min(72vh, 680px); overflow-y: auto; }
+
+@media (min-width: 821px) and (max-height: 520px) {
+  .sidebar { width: min(var(--radar-drawer-width), 390px); }
+  .sidebar-heading { padding-top: 10px; padding-bottom: 8px; }
+  .sidebar-header { padding-bottom: 7px; }
+  .detail-heading { padding-top: 43px; padding-bottom: 12px; }
+  .detail-content { padding-bottom: 12px; }
+  .map-overlay { top: 8px; bottom: 8px; }
+  .contextual-legend { max-height: 54px; overflow: hidden; }
+}

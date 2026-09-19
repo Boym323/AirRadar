@@ -146,6 +146,11 @@ export const cs = {
     significantAirports: "Významná letiště",
     smallAirports: "Malá letiště",
     heliports: "Heliporty",
+    atcTraffic: "Provoz ATC sektorů",
+    atcTrafficLegend: "NONE · LOW · MEDIUM · HIGH · VERY HIGH",
+    atcTrafficDescription: "Intenzita provozu v publikovaných objemech sektorů.",
+    atcTrafficDisclaimer: "Neznamená oficiální aktivaci sektoru.",
+    atcTrafficNoData: "Bez dat",
   },
   ogn: {
     title: "OGN / FLARM",

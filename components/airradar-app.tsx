@@ -69,7 +69,7 @@ import {
 } from "@/lib/route-visualization";
 import { analyzePublishedRoute, toRouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
-import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge } from "@/components/ui-primitives";
+import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
 import { IntelligenceFeed } from "@/components/intelligence-feed";
@@ -2170,15 +2170,15 @@ export function AirRadarApp() {
               {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
                 <div className="weather-radar-timeline-heading"><strong>{t.layers.weatherRadar}</strong><span>{selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></div>
                 <div className="weather-radar-timeline-controls">
-                  <button type="button" aria-label={t.layers.previousFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.max(0, index - 1)].id); }}>{"‹"}</button>
-                  <button type="button" aria-pressed={radarPlaying} aria-label={radarPlaying ? t.layers.pause : t.layers.play} onClick={() => { setRadarLatestMode(false); setRadarPlaying((value) => !value); }}>{radarPlaying ? "Ⅱ" : "▶"}</button>
-                  <button type="button" aria-label={t.layers.nextFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.min(radarCatalog.frames.length - 1, index + 1)].id); }}>{"›"}</button>
+                  <button type="button" aria-label={t.layers.previousFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.max(0, index - 1)].id); }}><UiIcon name="back" /></button>
+                  <button type="button" aria-pressed={radarPlaying} aria-label={radarPlaying ? t.layers.pause : t.layers.play} onClick={() => { setRadarLatestMode(false); setRadarPlaying((value) => !value); }}><UiIcon name={radarPlaying ? "pause" : "play"} /></button>
+                  <button type="button" aria-label={t.layers.nextFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.min(radarCatalog.frames.length - 1, index + 1)].id); }}><span className="ui-icon ui-icon-flipped"><UiIcon name="back" /></span></button>
                   <input type="range" min="0" max={Math.max(0, radarCatalog.frames.length - 1)} value={Math.max(0, radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId))} aria-label={t.layers.weatherRadar} onChange={(event) => { setRadarLatestMode(false); setRadarPlaying(false); setRadarFrameId(radarCatalog.frames[Number(event.target.value)].id); }} />
                   <button type="button" className={radarLatestMode ? "active" : ""} aria-pressed={radarLatestMode} onClick={() => { setRadarLatestMode(true); setRadarPlaying(false); setRadarFrameId(radarCatalog.latestFrameId); }}>{t.layers.latest}</button>
                 </div>
               </div> : showWeatherRadar && radarStatus === "unavailable" ? <div className="map-layer-notice">{t.layers.radarUnavailable}</div> : null}
               <details className="map-layers">
-                <MapControl as="summary">{t.layers.title}</MapControl>
+                <MapControl as="summary"><UiIcon name="layers" />{t.layers.title}</MapControl>
                 <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
                   <div className="map-layer-group">
                     <span className="map-layer-group-title">{t.layers.groups.traffic}</span>
@@ -2193,8 +2193,8 @@ export function AirRadarApp() {
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
                     <div className="map-layer-subgroup-heading">{t.layers.groups.atcAirspace}</div>
                     <label data-testid="map-layer-atc"><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {datasetStateLabel(t.layers.atc, atcDataset, (count) => t.layers.sectorsCount(formatNumber(count)))}</label>
-                    <label data-testid="map-layer-atc-traffic"><input type="checkbox" checked={showAtcTraffic} onChange={(event) => setShowAtcTraffic(event.target.checked)} /> ATC Sector Traffic</label>
-                    {showAtcTraffic && <div className="map-layer-sublevel">NONE · LOW · MEDIUM · HIGH · VERY HIGH<br /><small>Traffic intensity within published ATC sector volumes.<br />Does not indicate official ATC sector activation.{sectorTrafficState === "stale" ? " · STALE" : sectorTrafficState === "unavailable" ? " · NO DATA" : ""}</small></div>}
+                    <label data-testid="map-layer-atc-traffic"><input type="checkbox" checked={showAtcTraffic} onChange={(event) => setShowAtcTraffic(event.target.checked)} /> {t.layers.atcTraffic}</label>
+                    {showAtcTraffic && <div className="map-layer-sublevel">{t.layers.atcTrafficLegend}<br /><small>{t.layers.atcTrafficDescription}<br />{t.layers.atcTrafficDisclaimer}{sectorTrafficState === "stale" ? " · STALE" : sectorTrafficState === "unavailable" ? ` · ${t.layers.atcTrafficNoData}` : ""}</small></div>}
                     {showAtc && airspaceActivity?.planned.status !== "unavailable" && <div className="map-layer-sublevel">{activityT.legendCurrent} · {activityT.legendUpcoming}{airspaceActivity?.planned.status === "stale" ? ` · ${activityT.stale}` : ""}<br /><small>{activityT.disclaimer}</small></div>}
                     <div className="map-layer-subgroup-heading">{t.layers.groups.atsProcedures}</div>
                     <label data-testid="map-layer-ats"><input type="checkbox" checked={showAtsRoutes} onChange={(event) => { setShowAtsRoutes(event.target.checked); if (!event.target.checked) setSelectedAtsRoute(null); }} /> {datasetStateLabel(t.layers.atsRoutes, atsDataset, (count) => t.layers.routesCount(formatNumber(count)))}</label>
@@ -2274,14 +2274,14 @@ export function AirRadarApp() {
               <IconButton className="mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-expanded={!mobileCompact} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
                 {mobileCompact ? "↑" : "↓"}
               </IconButton>
-              <button type="button" className="drawer-close-button" onClick={closeRadarDrawer} aria-label={drawerState === "traffic" ? t.history.closeTrafficPanel : drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}>×</button>
+              <button type="button" className="drawer-close-button" onClick={closeRadarDrawer} aria-label={drawerState === "traffic" ? t.history.closeTrafficPanel : drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}><UiIcon name="close" /></button>
             </div>
           <div className="sidebar-browse">
           <div className="sidebar-header">
             <div className="search-wrap">
               <span className="search-icon" aria-hidden="true">⌕</span>
               <input ref={searchInputRef} className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={trafficSource === "ogn" ? t.search.ognPlaceholder : t.search.placeholder} aria-label={trafficSource === "ogn" ? t.search.ognLabel : t.search.aircraftLabel} />
-              {search && <button type="button" className="search-clear-button" onClick={() => setSearch("")} aria-label={t.filters.clearSearch}>×</button>}
+              {search && <button type="button" className="search-clear-button" onClick={() => setSearch("")} aria-label={t.filters.clearSearch}><UiIcon name="close" /></button>}
             </div>
               {trafficSource === "adsb" && <div className="radar-options">
               <button type="button" className="filter-button" aria-expanded={filtersOpen} aria-controls="map-filters-panel" onClick={() => setFiltersOpen((value) => !value)}>
