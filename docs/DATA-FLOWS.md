@@ -27,13 +27,13 @@ use independent APIs and fail independently.
    stale threshold, updates the RAM map by ICAO identity, appends a changed
    position to a bounded trail, and removes aircraft absent from the current
    snapshot. A failed poll removes only entries that have become stale.
-4. When enabled, the service runs the `AdsbLolProvider` network lane on its own
-   schedule, independent of local readsb retries. The provider polls the public
-   ADSB.lol geographic endpoint using the receiver position and configured
-   radius, validates and normalizes the response into a separate bounded
-   network map, and retains only a bounded stale network snapshot after
-   timeout, HTTP, malformed-response, or rate-limit failures. These failures
-   never mark the local receiver offline.
+4. When enabled, the service runs an outbound ADSB.lol raw lane on its own
+   schedule: `out.adsb.lol:1365` BEAST plus `:1366` SBS/MLAT. It decodes global
+   CPR, merges both streams by ICAO, and publishes only fresh positions inside
+   `ADSBLOL_NETWORK_RADIUS_NM` into a bounded network map. If raw is
+   unavailable, the existing geographic HTTP provider is selected as fallback;
+   the snapshots are never summed. These failures never mark the local
+   receiver offline.
 5. The service notifies listeners with a snapshot. `GET /api/aircraft` waits
    for the first refresh and returns the safe public DTO. `GET /api/stream`
    remains a V1 full-snapshot SSE feed by default; `?v=2` opts into one full
@@ -251,7 +251,7 @@ from the complete-record list and called out in the UI.
 
 ## Extended coverage
 
-The optional `AdsbLolProvider` is a live display source only. It uses
+The optional ADSB.lol raw provider is a live display source only. It uses
 `/v2/lat/{lat}/lon/{lon}/dist/{radius}`, with a bounded radius/poll interval,
 request timeout, maximum aircraft count, stale threshold, and exponential
 retry capped by configuration. A 429 response honors `Retry-After` when

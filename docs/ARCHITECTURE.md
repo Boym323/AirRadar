@@ -18,7 +18,8 @@ LocalReadsbProvider (or MockReadsbProvider when READSB_BASE_URL is empty)
         ▼
 one global AircraftStateService
   ├─ RAM aircraft map, stale cleanup, distance/bearing, bounded live trails
-  ├─ optional AdsbLolProvider → separate network RAM map and explicit merge
+  ├─ optional AdsbLolRawProvider (BEAST + SBS/MLAT) → bounded network RAM map
+  │    └─ AdsbLolProvider HTTP fallback (never summed with raw)
   ├─ async enrichment and ATC resolution
   ├─ async sampled history persistence
   ├─ daily ReceiverStatistics aggregate
@@ -43,8 +44,10 @@ The server-side provider boundary is `AircraftProvider`. The configured local
 provider fetches the readsb/tar1090 web root; the empty base URL selects the
 deterministic demo provider. The frontend never selects a provider.
 `NetworkAircraftProvider` is a separate optional boundary for live-only
-coverage. `AdsbLolProvider` calls the public ADSB.lol geographic v2 endpoint,
-keeps its validated snapshot in RAM, and never enters the local history,
+coverage. `AdsbLolRawProvider` consumes the two authorized outbound ADSB.lol
+streams, decodes global CPR, and merges BEAST and SBS/MLAT by ICAO.
+`AdsbLolProvider` is selected only as a fallback and keeps its validated
+snapshot in RAM. Neither lane enters the local history,
 statistics, alert, enrichment, or ATC input lanes.
 
 `OgnProvider` and `OgnStateService` form a second optional live-only boundary.
@@ -76,9 +79,10 @@ independent lanes:
 - `LocalReadsbProvider` normalizes raw readsb observations into the shared
   `Aircraft` shape. It prefers barometric altitude/rate, retains geometric
   values, and computes distance/bearing from the internal receiver position.
-- `AdsbLolProvider` is opt-in, bounded, and non-overlapping. The state service
-  invokes its network lane on the ADSB.lol schedule independently of the local
-  retry loop; the provider validates the public response, applies
+- The ADSB.lol raw/fallback network lane is opt-in, bounded, and non-overlapping.
+  The state service invokes it independently of the local retry loop; raw
+  validates BEAST/SBS input and the HTTP fallback validates its public response,
+  applies
   timeout/rate-limit/backoff handling, keeps a stale-if-error network snapshot,
   and exposes sanitized diagnostics. Its aircraft are merged with local
   observations only when an extended live snapshot is requested; local

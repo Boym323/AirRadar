@@ -188,6 +188,27 @@ export function getAdsbLolMaxAircraft(): number {
   return boundedInteger("ADSBLOL_MAX_AIRCRAFT", 3_000, 1, 3_000);
 }
 
+export function isAdsbLolRawEnabled(): boolean {
+  const raw = process.env.ADSBLOL_RAW_ENABLED?.trim().toLowerCase();
+  return raw === "true";
+}
+function validHost(name: string, fallback: string): string {
+  const value = process.env[name]?.trim() || fallback;
+  return value.length <= 253 && !/[\0\r\n\s/:]/.test(value) ? value : fallback;
+}
+export function getAdsbLolBeastHost(): string { return validHost("ADSBLOL_BEAST_HOST", "out.adsb.lol"); }
+export function getAdsbLolMlatHost(): string { return validHost("ADSBLOL_MLAT_HOST", "out.adsb.lol"); }
+export function getAdsbLolBeastPort(): number { return boundedInteger("ADSBLOL_BEAST_PORT", 1365, 1, 65535); }
+export function getAdsbLolMlatPort(): number { return boundedInteger("ADSBLOL_MLAT_PORT", 1366, 1, 65535); }
+export function getAdsbLolNetworkRadiusNm(): number { return boundedInteger("ADSBLOL_NETWORK_RADIUS_NM", 500, 1, 2000); }
+export function getAdsbLolRawStaleMs(): number { return boundedMilliseconds("ADSBLOL_RAW_STALE_MS", 15_000, 2_000, 120_000); }
+export function getAdsbLolRawReconnectMaxMs(): number { return boundedMilliseconds("ADSBLOL_RAW_RECONNECT_MAX_MS", 30_000, 1_000, 300_000); }
+export function getAdsbLolRawMaxTracks(): number { return boundedInteger("ADSBLOL_RAW_MAX_TRACKS", 10_000, 100, 50_000); }
+export function getAdsbLolRawPublishIntervalMs(): number { return boundedMilliseconds("ADSBLOL_RAW_PUBLISH_INTERVAL_MS", 1_000, 100, 10_000); }
+export function isAdsbLolHttpFallbackEnabled(): boolean {
+  return process.env.ADSBLOL_HTTP_FALLBACK_ENABLED?.trim().toLowerCase() !== "false";
+}
+
 export function getReceiverRefreshIntervalMs(): number {
   return Math.max(60_000, envNumber("RECEIVER_REFRESH_INTERVAL_MS", 5 * 60_000));
 }

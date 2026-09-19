@@ -159,6 +159,8 @@ export interface CoverageStats {
 
 export type NetworkProviderStatus =
   | "disabled"
+  | "connecting"
+  | "degraded"
   | "online"
   | "stale"
   | "timeout"
@@ -179,6 +181,27 @@ export interface NetworkProviderDiagnostics {
   radiusNm: number;
   pollIntervalMs: number;
   retryAfterMs: number | null;
+  selectedSource?: "raw" | "http-fallback" | "unavailable";
+  beastConnected?: boolean;
+  mlatConnected?: boolean;
+  beastLastFrameAt?: string | null;
+  mlatLastLineAt?: string | null;
+  beastFramesReceived?: number;
+  beastFramesDecoded?: number;
+  beastDecodeErrors?: number;
+  mlatLinesReceived?: number;
+  mlatLinesParsed?: number;
+  mlatParseErrors?: number;
+  beastReconnects?: number;
+  mlatReconnects?: number;
+  activeInternalTracks?: number;
+  publishedAircraftCount?: number;
+  adsbPositionCount?: number;
+  mlatPositionCount?: number;
+  droppedTracks?: number;
+  configuredRadiusNm?: number;
+  lastSourceTransitionAt?: string | null;
+  lastError?: string | null;
 }
 
 export interface SourceStatusSnapshot {

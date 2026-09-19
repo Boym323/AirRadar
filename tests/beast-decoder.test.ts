@@ -19,4 +19,13 @@ describe("BeastDecoder", () => {
     expect(decoder.snapshot()).toHaveLength(1);
     expect(decoder.snapshot()[0].messages).toBe(2);
   });
+  it("performs global airborne CPR independently of the receiver position", () => {
+    const decoder = new BeastDecoder({ lat: 49.22, lon: 17.67, name: "Zlin" }, 10, 30_000, { origin: "adsblol" });
+    decoder.decode(frame("8d40621d58c382d690c8ac2863a7"), 1_000);
+    const aircraft = decoder.decode(frame("8d40621d58c386435cc412692ad6"), 2_000);
+    expect(aircraft).toMatchObject({ origin: "adsblol", provenance: { seenLocal: false, seenNetwork: true } });
+    expect(aircraft?.lat).toBeCloseTo(52.2658, 3);
+    expect(aircraft?.lon).toBeCloseTo(3.9389, 3);
+    expect(aircraft?.distanceKm).toBeGreaterThan(700);
+  });
 });

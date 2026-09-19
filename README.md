@@ -50,16 +50,27 @@ does not take down the UI or API.
 
 ## ADSB.lol Extended Coverage
 
-AirRadar can optionally add live network coverage from the public
-`https://api.adsb.lol` HTTP API. It uses the documented geographic endpoint
-`/v2/lat/{latitude}/lon/{longitude}/dist/{radius_nm}`; the current public
-OpenAPI schema caps the radius at 250 NM. AirRadar never uses `re-api`, BEAST,
-or a direct ADSB.lol TCP stream.
+AirRadar can optionally add live network coverage from the authorized raw
+streams `out.adsb.lol:1365` (BEAST) and `out.adsb.lol:1366` (SBS/MLAT). The
+public `https://api.adsb.lol` geographic API is retained as a fallback; raw
+and HTTP snapshots are never summed.
 
-Enable it only alongside a configured real readsb receiver:
+The raw output is experimental, feeder-only, and available only to authorized
+feeder public IPs. AirRadar makes outbound connections only, never connects
+the stream to local readsb, and never forwards it to any feeder.
+
+Enable it explicitly in the server environment:
 
 ```dotenv
 ADSBLOL_ENABLED=true
+ADSBLOL_RAW_ENABLED=true
+ADSBLOL_BEAST_HOST=out.adsb.lol
+ADSBLOL_BEAST_PORT=1365
+ADSBLOL_MLAT_HOST=out.adsb.lol
+ADSBLOL_MLAT_PORT=1366
+ADSBLOL_NETWORK_RADIUS_NM=500
+ADSBLOL_RAW_MAX_TRACKS=10000
+ADSBLOL_HTTP_FALLBACK_ENABLED=true
 ADSBLOL_BASE_URL=https://api.adsb.lol
 ADSBLOL_RADIUS_NM=250
 ADSBLOL_POLL_INTERVAL_MS=10000

@@ -1,5 +1,6 @@
-import { getAdsbDbBaseUrl, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getFlightAwareMaxCostUsdPerDay, getFlightAwareMaxCostUsdPerMonth, getReadsbBeastHost, getReadsbBeastPort, getReadsbBeastReconnectMaxMs, getReadsbBeastStaleMs, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbBeastEnabled, isReadsbConfigured, isReadsbJsonFailoverEnabled, shouldUseSampleAtcData } from "@/lib/server/config";
+import { getAdsbDbBaseUrl, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getFlightAwareMaxCostUsdPerDay, getFlightAwareMaxCostUsdPerMonth, getReadsbBeastHost, getReadsbBeastPort, getReadsbBeastReconnectMaxMs, getReadsbBeastStaleMs, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbBeastEnabled, isReadsbJsonFailoverEnabled, shouldUseSampleAtcData } from "@/lib/server/config";
 import { AdsbLolProvider } from "@/lib/server/adsblol-provider";
+import { AdsbLolFailoverProvider } from "@/lib/server/adsblol-failover-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
 import { BeastLocalProvider } from "@/lib/server/beast-local-provider";
 import { FailoverLocalProvider } from "@/lib/server/failover-local-provider";
@@ -11,6 +12,7 @@ import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { AircraftMetadataCatalog } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
+import { isAdsbLolHttpFallbackEnabled, isAdsbLolRawEnabled } from "@/lib/server/config";
 import type { AircraftMetadataDiagnostics, AircraftMetadataProvider, AircraftProvider, FlightRouteProvider, NetworkAircraftProvider, ProviderRegistry } from "@/lib/server/provider";
 import { DatabaseAtcSectorProvider, getStoredAtcData, SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS, SampleAtcSectorProvider } from "@/lib/server/atc-data";
 import type { AtcDataResponse } from "@/lib/atc/types";
@@ -25,9 +27,10 @@ export function createAircraftProvider(): AircraftProvider {
 }
 
 export function createNetworkAircraftProvider(): NetworkAircraftProvider {
-  // Demo mode remains deterministic. Extended coverage is opt-in and only
-  // starts when a real local receiver is configured.
-  return new AdsbLolProvider(getReceiverPosition(), { enabled: isAdsbLolEnabled() && isReadsbConfigured() });
+  const enabled = isAdsbLolEnabled();
+  if (!enabled) return new AdsbLolProvider(getReceiverPosition(), { enabled: false });
+  if (isAdsbLolRawEnabled()) return AdsbLolFailoverProvider.create(getReceiverPosition(), { enabled });
+  return new AdsbLolProvider(getReceiverPosition(), { enabled: enabled && isAdsbLolHttpFallbackEnabled() });
 }
 
 /** Combines metadata sources while keeping the first non-empty value per field. */

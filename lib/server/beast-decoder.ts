@@ -77,7 +77,8 @@ function callsignField(bytes: Buffer): string | null {
 export class BeastDecoder {
   private readonly tracks = new Map<string, Track>();
   readonly maxAircraft: number;
-  constructor(private readonly receiver: ReceiverPosition, maxAircraft = 3000, private readonly expiryMs = 30_000) { this.maxAircraft = maxAircraft; }
+  private readonly origin: "local" | "adsblol";
+  constructor(private readonly receiver: ReceiverPosition, maxAircraft = 3000, private readonly expiryMs = 30_000, options: { origin?: "local" | "adsblol" } = {}) { this.maxAircraft = Math.max(1, Math.min(50_000, Math.trunc(maxAircraft))); this.origin = options.origin ?? "local"; }
 
   decode(frame: BeastFrame, receivedAt = Date.now()): Aircraft | null {
     const p = frame.payload;
@@ -93,7 +94,7 @@ export class BeastDecoder {
     const a = track.aircraft;
     a.icaoHex = icaoHex;
     a.lastSeen = new Date(receivedAt).toISOString();
-    a.source = "ADS-B"; a.origin = "local"; a.sourceType = `df${df}`; a.trail ??= [];
+    a.source = a.source ?? "ADS-B"; a.origin = this.origin; a.sourceType = `df${df}`; a.trail ??= [];
     if (typeCode >= 1 && typeCode <= 4) a.callsign = callsignField(me.subarray(1, 7));
     if (typeCode >= 9 && typeCode <= 18 || typeCode >= 20 && typeCode <= 22) {
       a.baroAltitude = altitudeFromGillham(((me[1] & 7) << 8) | me[2]); a.altitude = a.baroAltitude;
@@ -101,17 +102,18 @@ export class BeastDecoder {
       const slot: Cpr = { odd, lat: cprLat / 131072, lon: cprLon / 131072, receivedAt };
       if (odd) track.cprOdd = slot; else track.cprEven = slot;
       const even = track.cprEven; const oddFrame = track.cprOdd;
-      if (even && oddFrame && receivedAt - Math.min(even.receivedAt, oddFrame.receivedAt) <= 10_000) {
+      if (even && oddFrame && Math.abs(even.receivedAt - oddFrame.receivedAt) <= 10_000) {
         const j = Math.floor(59 * even.lat - 60 * oddFrame.lat + 0.5); const latEven = cprDlat(false) * (MOD(j, 60) + even.lat); const latOdd = cprDlat(true) * (MOD(j, 59) + oddFrame.lat);
         const normalizedEven = latEven >= 270 ? latEven - 360 : latEven; const normalizedOdd = latOdd >= 270 ? latOdd - 360 : latOdd; const useOdd = oddFrame.receivedAt > even.receivedAt; const lat = useOdd ? normalizedOdd : normalizedEven; const ni = cprN(lat, useOdd); const m = Math.floor(even.lon * (ni - 1) - oddFrame.lon * ni + 0.5); const longitude = useOdd ? (360 / Math.max(1, ni)) * (MOD(m, Math.max(1, ni)) + oddFrame.lon) : (360 / Math.max(1, ni)) * (MOD(m, Math.max(1, ni)) + even.lon);
-        a.lat = lat; a.lon = longitude >= 180 ? longitude - 360 : longitude; track.lastPositionAt = receivedAt;
+        const normalizedLongitude = MOD(longitude + 180, 360) - 180;
+        if (lat >= -90 && lat <= 90 && Number.isFinite(normalizedLongitude)) { a.lat = lat; a.lon = normalizedLongitude; track.lastPositionAt = receivedAt; }
       }
     } else if (typeCode === 19) {
       const subtype = me[1] & 7; if (subtype >= 1 && subtype <= 4) { const ew = ((me[2] & 3) << 8) | me[3]; const ns = ((me[4] & 3) << 8) | me[5]; const ewSpeed = ew ? ew - 1 : 0; const nsSpeed = ns ? ns - 1 : 0; const east = me[2] & 4 ? -ewSpeed : ewSpeed; const north = me[4] & 4 ? -nsSpeed : nsSpeed; a.groundSpeed = Math.round(Math.sqrt(east * east + north * north)); a.track = Math.round((Math.atan2(east, north) * 180 / Math.PI + 360) % 360); } const vr = ((me[6] & 7) << 6) | (me[7] >> 2); if (vr) a.verticalRate = (me[6] & 8 ? -1 : 1) * (vr - 1) * 64;
     } else if (typeCode === 28) { a.squawk = String(((me[1] & 7) << 9) | ((me[2] & 7) << 6) | ((me[3] & 7) << 3) | (me[4] & 7)).padStart(4, "0"); a.emergency = null; }
-    const lat = a.lat ?? null; const lon = a.lon ?? null; a.distanceKm = lat !== null && lon !== null ? haversineDistanceKm(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.bearing = lat !== null && lon !== null ? initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.seenSeconds = Math.max(0, (Date.now() - receivedAt) / 1000); a.seenPosSeconds = track.lastPositionAt === null ? null : Math.max(0, (Date.now() - track.lastPositionAt) / 1000); a.onGround = false; a.category = null; a.registration = null; a.aircraftType = null; a.aircraftDescription = null; a.rssi = null; a.messages = (a.messages ?? 0) + 1; a.baroRate = a.verticalRate ?? null; a.geomAltitude = null; a.geomRate = null; a.provenance = { seenLocal: true, seenNetwork: false, lastLocalSeen: a.lastSeen, lastNetworkSeen: null, positionOrigin: lat !== null ? "local" : null, positionSource: a.source! };
+    const lat = a.lat ?? null; const lon = a.lon ?? null; a.distanceKm = lat !== null && lon !== null ? haversineDistanceKm(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.bearing = lat !== null && lon !== null ? initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.seenSeconds = Math.max(0, (Date.now() - receivedAt) / 1000); a.seenPosSeconds = track.lastPositionAt === null ? null : Math.max(0, (Date.now() - track.lastPositionAt) / 1000); a.onGround ??= false; a.category ??= null; a.registration ??= null; a.aircraftType ??= null; a.aircraftDescription ??= null; a.rssi ??= null; a.messages = (a.messages ?? 0) + 1; a.baroRate = a.verticalRate ?? a.baroRate ?? null; a.geomRate ??= null; a.provenance = { seenLocal: this.origin === "local", seenNetwork: this.origin === "adsblol", lastLocalSeen: this.origin === "local" ? a.lastSeen! : null, lastNetworkSeen: this.origin === "adsblol" ? a.lastSeen! : null, positionOrigin: lat !== null ? this.origin : null, positionSource: lat !== null ? a.source! : "UNKNOWN" };
     this.expire(receivedAt); return a as Aircraft;
   }
   snapshot(now = Date.now()): Aircraft[] { this.expire(now); return [...this.tracks.values()].map((track) => ({ ...track.aircraft, trail: track.aircraft.trail ?? [] } as Aircraft)); }
-  private expire(now: number): void { for (const [hex, track] of this.tracks) if (now - track.lastMessageAt > this.expiryMs) this.tracks.delete(hex); while (this.tracks.size > this.maxAircraft) { const oldest = [...this.tracks.entries()].sort((a, b) => a[1].lastMessageAt - b[1].lastMessageAt)[0]; if (!oldest) break; this.tracks.delete(oldest[0]); } }
+  private expire(now: number): void { for (const [hex, track] of this.tracks) if (now - track.lastMessageAt > this.expiryMs) this.tracks.delete(hex); while (this.tracks.size > this.maxAircraft) { let oldestHex: string | null = null; let oldestAt = Number.POSITIVE_INFINITY; for (const [hex, track] of this.tracks) if (track.lastMessageAt < oldestAt) { oldestAt = track.lastMessageAt; oldestHex = hex; } if (!oldestHex) break; this.tracks.delete(oldestHex); } }
 }

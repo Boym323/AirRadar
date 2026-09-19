@@ -108,8 +108,9 @@ These are behavior and safety contracts for changes to the current system.
 
 ## Extended network coverage
 
-- `AdsbLolProvider` is optional and uses only the public geographic ADSB.lol
-  API. It must not use `re-api`, BEAST/TCP, or any second live-ingest path.
+- ADSB.lol raw output is optional, outbound-only, and always `origin: "adsblol"`.
+  It is never sent to `192.168.1.50` or any feeder. The public API is a
+  fallback and raw/HTTP snapshots are never summed.
 - The provider has one in-flight request, bounded timeout/retry/backoff,
   response validation, bounded aircraft/trail state, stale-if-error behavior,
   and safe diagnostics. `Retry-After` is honored for HTTP 429 responses.

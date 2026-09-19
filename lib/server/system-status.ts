@@ -58,7 +58,7 @@ export interface SystemStatusResponse {
   adsbLol: {
     status: SystemStatus;
     enabled: boolean;
-    endpoint: "Public API";
+    endpoint: "Public API" | "Raw BEAST + SBS/MLAT";
     license: "ODbL 1.0";
     radiusNm: number;
     pollIntervalMs: number;
@@ -71,6 +71,20 @@ export interface SystemStatusResponse {
     consecutiveFailures: number;
     rateLimited: boolean;
     retryAfterMs: number | null;
+    selectedSource?: "raw" | "http-fallback" | "unavailable";
+    beastConnected?: boolean;
+    mlatConnected?: boolean;
+    beastFramesReceived?: number;
+    beastFramesDecoded?: number;
+    beastDecodeErrors?: number;
+    mlatLinesReceived?: number;
+    mlatLinesParsed?: number;
+    mlatParseErrors?: number;
+    activeInternalTracks?: number;
+    publishedAircraftCount?: number;
+    adsbPositionCount?: number;
+    mlatPositionCount?: number;
+    droppedTracks?: number;
   };
   adsbdb: {
     status: SystemStatus;
@@ -483,7 +497,7 @@ function adsbLolResponse(diagnostics: NetworkProviderDiagnostics | undefined): S
   return {
     status: adsbLolStatus(value),
     enabled: value.enabled,
-    endpoint: "Public API",
+    endpoint: value.selectedSource === "raw" ? "Raw BEAST + SBS/MLAT" : "Public API",
     license: "ODbL 1.0",
     radiusNm: nonNegativeInteger(value.radiusNm, 250),
     pollIntervalMs: nonNegativeInteger(value.pollIntervalMs, 86_400_000),
@@ -496,6 +510,22 @@ function adsbLolResponse(diagnostics: NetworkProviderDiagnostics | undefined): S
     consecutiveFailures: nonNegativeInteger(value.consecutiveFailures, 1_000_000),
     rateLimited: value.status === "rate_limited",
     retryAfterMs: value.retryAfterMs === null ? null : nonNegativeInteger(value.retryAfterMs, 86_400_000),
+    ...(value.selectedSource ? {
+      selectedSource: value.selectedSource,
+      beastConnected: value.beastConnected,
+      mlatConnected: value.mlatConnected,
+      beastFramesReceived: nonNegativeInteger(value.beastFramesReceived ?? 0, 100_000_000),
+      beastFramesDecoded: nonNegativeInteger(value.beastFramesDecoded ?? 0, 100_000_000),
+      beastDecodeErrors: nonNegativeInteger(value.beastDecodeErrors ?? 0, 100_000_000),
+      mlatLinesReceived: nonNegativeInteger(value.mlatLinesReceived ?? 0, 100_000_000),
+      mlatLinesParsed: nonNegativeInteger(value.mlatLinesParsed ?? 0, 100_000_000),
+      mlatParseErrors: nonNegativeInteger(value.mlatParseErrors ?? 0, 100_000_000),
+      activeInternalTracks: nonNegativeInteger(value.activeInternalTracks ?? 0, 100_000_000),
+      publishedAircraftCount: nonNegativeInteger(value.publishedAircraftCount ?? 0, 100_000_000),
+      adsbPositionCount: nonNegativeInteger(value.adsbPositionCount ?? 0, 100_000_000),
+      mlatPositionCount: nonNegativeInteger(value.mlatPositionCount ?? 0, 100_000_000),
+      droppedTracks: nonNegativeInteger(value.droppedTracks ?? 0, 100_000_000),
+    } : {}),
   };
 }
 
