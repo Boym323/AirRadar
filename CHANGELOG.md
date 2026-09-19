@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.79] - 2026-09-19
+
+Changes since v1.0.78:
+
+- fix: bound concurrent ATC shadow evaluations (5f19f473)
+
 ## [1.0.78] - 2026-09-19
 
 Changes since v1.0.77:
