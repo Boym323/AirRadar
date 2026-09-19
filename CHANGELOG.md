@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.81] - 2026-09-19
+
+Changes since v1.0.80:
+
+- fix: make ATC validation attempt outcomes explicit (11d0616d)
+
 ## [1.0.79] - 2026-09-19
 
 Changes since v1.0.78:
