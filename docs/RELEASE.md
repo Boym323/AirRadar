@@ -72,7 +72,10 @@ command above.
 
 1. Preflight checks the application path, required files/commands, Node engine,
    named branch, origin, `.env`, permissions, systemd tools, and clean status
-   unless `--allow-dirty` was explicitly selected.
+   unless `--allow-dirty` was explicitly selected. In automated mode only the
+   exact, unstaged Next.js release-generated changes to `next-env.d.ts` and
+   `tsconfig.json` are restored before this check; all other tracked, staged,
+   or untracked changes still fail closed.
 2. It acquires `/var/lock/airradar-release.lock`. A clean checkout is fetched
    and updated only by fast-forward; divergent history is rejected. A dirty
    allowed checkout is kept as-is.

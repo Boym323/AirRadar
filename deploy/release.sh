@@ -316,6 +316,27 @@ check_repository() {
   fi
 }
 
+clean_automated_generated_changes() {
+  local status_line
+  local -a changed_files=()
+
+  (( AUTOMATED == 1 )) || return 0
+  git_cmd diff --cached --quiet || return 0
+  mapfile -t changed_files < <(git_cmd diff --name-only)
+  (( ${#changed_files[@]} == 2 )) || return 0
+  [[ "${changed_files[0]}" == "next-env.d.ts" && "${changed_files[1]}" == "tsconfig.json" ]] || return 0
+
+  while IFS= read -r status_line; do
+    [[ "${status_line}" == " M next-env.d.ts" || "${status_line}" == " M tsconfig.json" ]] || return 0
+  done < <(git_cmd status --porcelain --untracked-files=all)
+
+  grep -Eq '^import "\./\.next-release-[^/]+/types/routes\.d\.ts";$' "${APP_DIR}/next-env.d.ts" || return 0
+  grep -Eq '"\.next-release-[^/]+/types/\*\*/\*\.ts"' "${APP_DIR}/tsconfig.json" || return 0
+
+  warn "Restoring only stale Next.js release-generated source changes before automated deploy."
+  git_cmd restore -- next-env.d.ts tsconfig.json
+}
+
 check_permissions() {
   if (( EUID != 0 )); then
     require_command sudo
@@ -340,6 +361,7 @@ preflight() {
   require_command mktemp
   require_command cmp
   require_command mv
+  clean_automated_generated_changes
   check_repository
   check_node_version
   check_permissions
