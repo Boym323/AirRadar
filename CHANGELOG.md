@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.72] - 2026-09-19
+
+Changes since v1.0.71:
+
+- feat: refactor caching mechanism to use lru-cache and update related tests (50a42f0b)
+- feat: replace console error logging with logger in aircraft state service tests (fe58f49a)
+
 ## [1.0.68] - 2026-09-19
 
 Changes since v1.0.67:
