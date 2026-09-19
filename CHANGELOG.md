@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.68] - 2026-09-19
+
+Changes since v1.0.67:
+
+- fix: ignore numeric emergency state as map alert (d4b0b9b3)
+
 ## [1.0.67] - 2026-09-19
 
 Changes since v1.0.66:
