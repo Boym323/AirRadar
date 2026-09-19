@@ -2,6 +2,17 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.74] - 2026-09-19
+
+Changes since v1.0.73:
+
+- feat: enhance UI components and improve status handling in AirRadarApp (55aa68a5)
+- feat: add active filter chips and enhance filter functionality in AirRadarApp feat: integrate status badge for emergency squawk in AircraftRadarQuickDetail feat: update Czech and English translations for filter and search functionalities (69169bb2)
+- feat: add RouteSection component to improve route display in AircraftRadarQuickDetail (c94bf8cd)
+- Add new weather radar images for September 19, 2026 (f7818f75)
+- feat: add UI icons for navigation buttons and enhance ATC traffic labels in multiple languages (58e3111d)
+- feat: add weather radar archive directory to production gate configuration (9dab8d87)
+
 ## [1.0.72] - 2026-09-19
 
 Changes since v1.0.71:
