@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   DEFAULT_LOCALE,
   aircraftCount,
@@ -16,9 +18,26 @@ describe("localization", () => {
   });
 
   it("uses Czech aircraft plural forms", () => {
+    expect(aircraftCount(0)).toBe("0 letadel");
     expect(aircraftCount(1)).toBe("1 letadlo");
     expect(aircraftCount(2)).toBe("2 letadla");
+    expect(aircraftCount(4)).toBe("4 letadla");
     expect(aircraftCount(5)).toBe("5 letadel");
+    expect(aircraftCount(21)).toBe("21 letadel");
+    expect(aircraftCount(22)).toBe("22 letadel");
+  });
+
+  it("uses invariant English aircraft wording", () => {
+    const english = getTranslations("en");
+    expect(aircraftCount(0, english)).toBe("0 aircraft");
+    expect(aircraftCount(1, english)).toBe("1 aircraft");
+    expect(aircraftCount(2, english)).toBe("2 aircraft");
+  });
+
+  it("uses the shared aircraft formatter in the ATC panel", () => {
+    const source = readFileSync(fileURLToPath(new URL("../components/atc-sector-traffic-panels.tsx", import.meta.url)), "utf8");
+    expect(source).toContain("aircraftCount(item.traffic.aircraftCount)");
+    expect(source).not.toContain("t.atc.aircraft.toLowerCase()");
   });
 
   it("formats numbers and invalid dates for the UI locale", () => {

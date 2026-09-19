@@ -3,7 +3,7 @@ import { ATC_SECTOR_STACKS } from "@/lib/atc-sector-stacks";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { historyWindow, SECTOR_HISTORY_BUCKET, type SectorHistoryMetric, type SectorHistoryRange, type SectorTrafficHistoryBatch } from "@/lib/atc-sector-history";
-import { t } from "@/lib/i18n";
+import { aircraftCount, t } from "@/lib/i18n";
 
 export interface SectorTrafficPanelItem { sectorId: string; name: string; vertical: { lower: string | null; upper: string | null }; traffic: { aircraftCount: number }; trafficLevel: string; }
 export interface SectorFlow { fromSectorId: string; toSectorId: string; count: number; }
@@ -21,7 +21,7 @@ function TrafficHistory({ sectorIds, compare = false, onClose }: { sectorIds: st
 }
 
 export function AtcVerticalTraffic({ traffic }: { traffic: Map<string, SectorTrafficPanelItem> }) {
-  const [history, setHistory] = useState<string[] | null>(null); return <details className="map-overlay-card atc-traffic-panel"><summary>{t.atc.verticalTraffic}</summary>{ATC_SECTOR_STACKS.map((stack) => <section key={stack.id}><strong>{stack.label}</strong>{stack.members.map((id) => { const item = traffic.get(id); return <div key={id} className="atc-stack-row"><b>{item?.name ?? id}</b><span>{item ? `${item.vertical.lower ?? "—"}–${item.vertical.upper ?? "—"}` : t.layers.atcTrafficNoData}</span><span>{item ? `${item.traffic.aircraftCount} ${t.atc.aircraft.toLowerCase()} · ${item.trafficLevel}` : t.layers.atcTrafficNoData}</span></div>; })}{stack.id === "SOUTH" && <button type="button" onClick={() => setHistory(["LKAATB", "LKAANSL", "LKAAS"])}>{t.atc.showHistory}</button>}</section>)}<small>{t.atc.publishedDisclaimer}</small>{history && <><TrafficHistory sectorIds={history} compare onClose={() => setHistory(null)} /><small>{t.atc.southDisclaimer}</small></>}</details>;
+  const [history, setHistory] = useState<string[] | null>(null); return <details className="map-overlay-card atc-traffic-panel"><summary>{t.atc.verticalTraffic}</summary>{ATC_SECTOR_STACKS.map((stack) => <section key={stack.id}><strong>{stack.label}</strong>{stack.members.map((id) => { const item = traffic.get(id); return <div key={id} className="atc-stack-row"><b>{item?.name ?? id}</b><span>{item ? `${item.vertical.lower ?? "—"}–${item.vertical.upper ?? "—"}` : t.layers.atcTrafficNoData}</span><span>{item ? `${aircraftCount(item.traffic.aircraftCount)} · ${item.trafficLevel}` : t.layers.atcTrafficNoData}</span></div>; })}{stack.id === "SOUTH" && <button type="button" onClick={() => setHistory(["LKAATB", "LKAANSL", "LKAAS"])}>{t.atc.showHistory}</button>}</section>)}<small>{t.atc.publishedDisclaimer}</small>{history && <><TrafficHistory sectorIds={history} compare onClose={() => setHistory(null)} /><small>{t.atc.southDisclaimer}</small></>}</details>;
 }
 
 export function SectorTrafficHistoryPanel({ sectorId }: { sectorId: string }) { return <TrafficHistory sectorIds={[sectorId]} />; }
