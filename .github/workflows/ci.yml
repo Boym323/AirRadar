@@ -49,6 +49,8 @@ jobs:
           if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/main" ]]; then
             npm run test:full & test_pid=$!
           else
+            export AIRRADAR_TEST_BASE_SHA="$(git merge-base HEAD "origin/${GITHUB_BASE_REF:-main}")"
+            echo "Testing changed files since ${AIRRADAR_TEST_BASE_SHA}"
             npm run test:changed & test_pid=$!
           fi
           wait "$lint_pid" || lint_status=$?
