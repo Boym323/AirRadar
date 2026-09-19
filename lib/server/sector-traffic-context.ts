@@ -15,6 +15,8 @@ export interface SectorTrafficContext {
   frequencies: Array<{ channel: string; carrierHz: number | null; spacing: "KHZ_25" | "KHZ_8_33" | "UNKNOWN"; role: "PRIMARY" | "RESERVE" | "OTHER" }>;
   source: { airspace: string; traffic: string };
 }
+export interface SectorTransition { fromSectorId: string; toSectorId: string; count: number; }
+export interface SectorTransitions { at: string; windowMinutes: 1 | 5 | 15; transitions: SectorTransition[]; totalTransitions: number; }
 
 type Position = { flightId: number; recordedAt: Date | Temporal.Instant; lat: number; lon: number; altitude: number | null; groundSpeed: number | null; verticalRate: number | null };
 type Row = { id: number; callsign: string | null; aircraft: { icaoHex: string }; positions: Position[] };
@@ -53,3 +55,39 @@ export async function getAllSectorTrafficContext(atValue?: string | Date): Promi
 }
 
 export async function getSectorTrafficContext(sectorId: string, at?: string | Date): Promise<SectorTrafficContext | null> { return (await getAllSectorTrafficContext(at)).find((s) => s.sectorId === sectorId) ?? null; }
+
+export async function getSectorTransitions(input: { at?: string | Date; windowMinutes: 1 | 5 | 15 }): Promise<SectorTransitions> {
+  const at = input.at ? new Date(input.at) : new Date();
+  if (!Number.isFinite(at.getTime())) throw new Error("Invalid UTC timestamp");
+  const data = await getAtcData();
+  const sectors = data?.sectors.filter((s) => ["LKAATB","LKAAKV","LKAAMT","LKAAWL","LKAAW","LKAANL","LKAAN","LKAANSL","LKAAS"].includes(s.id)) ?? [];
+  const db = getPrisma();
+  if (!db) return { at: at.toISOString(), windowMinutes: input.windowMinutes, transitions: [], totalTransitions: 0 };
+  const start = Temporal.Instant.fromEpochMilliseconds(at.getTime() - input.windowMinutes * 60000 - 120000);
+  const end = Temporal.Instant.fromEpochMilliseconds(at.getTime() + 1);
+  const positions = await (db.orm.public.FlightPosition as unknown as Collection<Position>).where((r) => r.recordedAt.gte(start)).where((r) => r.recordedAt.lt(end)).limit(40000).all();
+  const byFlight = new Map<number, Position[]>();
+  for (const position of positions) { const list = byFlight.get(position.flightId) ?? []; list.push(position); byFlight.set(position.flightId, list); }
+  const counts = new Map<string, number>();
+  for (const flightPositions of byFlight.values()) {
+    const ordered = flightPositions.filter((p) => date(p.recordedAt) <= at).sort((a, b) => date(a.recordedAt).getTime() - date(b.recordedAt).getTime());
+    const states: Array<{ sector: string; at: number }> = [];
+    for (const position of ordered) {
+      const match = sectors.find((sector) => matchSector(sector, { latitude: position.lat, longitude: position.lon, altitudeFt: position.altitude, observedAt: date(position.recordedAt) }));
+      const sector = match?.id;
+      if (!sector) continue;
+      const last = states.at(-1);
+      if (last?.sector === sector) continue;
+      // A short A→B→A boundary jitter is treated as one stable observation.
+      if (states.length >= 2 && states.at(-2)?.sector === sector && date(position.recordedAt).getTime() - (last?.at ?? 0) <= 30000) { states.pop(); continue; }
+      states.push({ sector, at: date(position.recordedAt).getTime() });
+    }
+    for (let i = 1; i < states.length; i++) {
+      const from = states[i - 1]; const to = states[i];
+      if (to.at < at.getTime() - input.windowMinutes * 60000 || from.sector === to.sector) continue;
+      const key = `${from.sector}|${to.sector}`; counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  const transitions = [...counts.entries()].map(([key, count]) => { const [fromSectorId, toSectorId] = key.split("|"); return { fromSectorId, toSectorId, count }; }).sort((a, b) => b.count - a.count || a.fromSectorId.localeCompare(b.fromSectorId) || a.toSectorId.localeCompare(b.toSectorId));
+  return { at: at.toISOString(), windowMinutes: input.windowMinutes, transitions, totalTransitions: transitions.reduce((sum, transition) => sum + transition.count, 0) };
+}
