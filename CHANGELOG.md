@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.67] - 2026-09-19
+
+Changes since v1.0.66:
+
+- fix: skip non-finite aircraft marker coordinates (7c1757ec)
+
 ## [1.0.66] - 2026-09-19
 
 Changes since v1.0.65:
