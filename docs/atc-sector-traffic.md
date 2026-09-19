@@ -106,11 +106,11 @@ Historical processing uses sequential half-open time chunks with a
 `recordedAt < end`, so boundary rows are neither lost nor duplicated. Cursor
 pagination is intentionally not used.
 
-The current aggregation retains fetched rows until the existing batch
-analytics pass completes, preserving exact existing semantics. Database load
-is sequential and bounded per query; a future streaming accumulator can
-reduce total application memory after benchmark evidence justifies that
-refactor.
+The aggregation now processes each chunk immediately. It retains only bucket
+accumulators, per-snapshot `Set<flightId>` values, and the previous sector
+state needed for entry/exit detection; raw `FlightPosition` rows are released
+after each chunk. DB chunks are sequential and analytics bucket boundaries do
+not depend on DB chunk boundaries.
 
 The development-only benchmark helper is
 `scripts/benchmark-atc-history.ts`. Run it only with an explicitly verified
