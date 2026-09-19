@@ -2,7 +2,7 @@ import "temporal-polyfill/full/global";
 import { getPrisma } from "@/lib/server/db";
 import { getAtcData } from "@/lib/server/providers";
 import { matchSector } from "@/lib/server/atc-sector-service";
-import type { AtcLookup, AtcSector } from "@/lib/atc/types";
+import type { AtcSector } from "@/lib/atc/types";
 
 export type TrafficLevel = "NONE" | "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH";
 export const SECTOR_TRAFFIC_THRESHOLDS = { low: 1, medium: 5, high: 10, veryHigh: 20 } as const;
@@ -19,7 +19,6 @@ export interface SectorTransition { fromSectorId: string; toSectorId: string; co
 export interface SectorTransitions { at: string; windowMinutes: 1 | 5 | 15; transitions: SectorTransition[]; totalTransitions: number; }
 
 type Position = { flightId: number; recordedAt: Date | Temporal.Instant; lat: number; lon: number; altitude: number | null; groundSpeed: number | null; verticalRate: number | null };
-type Row = { id: number; callsign: string | null; aircraft: { icaoHex: string }; positions: Position[] };
 type Field = { lte(v: unknown): unknown; gte(v: unknown): unknown; lt(v: unknown): unknown; asc(): unknown; desc(): unknown; };
 type Collection<T> = { where(p: (row: Record<string, Field>) => unknown): Collection<T>; orderBy(v: unknown): Collection<T>; limit(n: number): Collection<T>; include(n: string, cb: (q: Collection<unknown>) => Collection<unknown>): Collection<T>; all(): Promise<T[]> };
 
