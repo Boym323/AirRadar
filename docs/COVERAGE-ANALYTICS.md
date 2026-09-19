@@ -22,6 +22,18 @@ AirRadar coverage intelligence is a receiver-observed analytics view. It is not
 an air-traffic authority dataset and it does not claim complete traffic or RF
 coverage outside what the local receiver actually observed.
 
+### Polar coverage map
+
+The coverage page also renders the existing azimuth×range aggregate as a
+receiver-centric SVG polar map. Angle is the receiver bearing, clockwise from
+North (0° North, 90° East, 180° South, 270° West); radius is distance from the
+receiver, bounded by the configured comparison radius. Each annular cell shows
+the network-reference capture ratio `CAPTURED / AVAILABLE`. Empty cells mean
+there were no eligible observations; cells below the shared insufficient-data
+threshold are marked low-confidence and are not presented as a reliable ratio.
+Capture ratio is not absolute receiver efficiency or message reception rate.
+The table remains available for exact values and accessibility.
+
 ## V1.4B data path
 
 `GET /api/statistics/coverage-intelligence?range=7d|30d` is a page-scoped read.

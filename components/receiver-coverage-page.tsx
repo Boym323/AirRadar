@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { CoverageResponse, CoveragePeriod } from "@/lib/server/receiver-coverage-analytics";
+import { ReceiverCoveragePolar } from "@/components/receiver-coverage-polar";
 
 const periods: CoveragePeriod[] = ["live", "today", "7d", "30d"];
 function pct(captured: number, available: number): string { return available ? `${(captured / available * 100).toFixed(2)} %` : "No data"; }
@@ -19,6 +20,7 @@ export default function ReceiverCoveragePage() {
     {!data && !error && <div className="statistics-card statistics-loading">Loading…</div>}
     {data && <>
       <section className="statistics-overview"><div className="statistics-stat-card"><div className="statistics-stat-value">{data.summary.captured} / {data.summary.available}</div><div className="statistics-stat-label">Capture ratio · {pct(data.summary.captured, data.summary.available)}</div></div><div className="statistics-stat-card"><div className="statistics-stat-value">{data.comparisonRadiusNm} NM</div><div className="statistics-stat-label">Comparison radius</div></div><div className="statistics-stat-card"><div className="statistics-stat-value">{data.metadata.referenceProviders.join(", ") || "—"}</div><div className="statistics-stat-label">Reference provider</div></div></section>
+      <ReceiverCoveragePolar data={data} />
       <CoverageTable title="Azimuth" rows={data.azimuth} />
       <CoverageTable title="Range" rows={data.range} />
       <CoverageTable title="Altitude" rows={data.altitude} />
