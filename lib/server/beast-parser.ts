@@ -8,7 +8,9 @@ export interface BeastFrame {
 }
 
 const ESCAPE = 0x1a;
-const FRAME_LENGTHS: Record<BeastFrameType, number> = { 0x31: 9, 0x32: 16, 0x33: 23 };
+// Total unescaped bytes after the leading escape byte: type + timestamp +
+// signal + payload. Short Mode-S frames carry a two-byte payload.
+const FRAME_LENGTHS: Record<BeastFrameType, number> = { 0x31: 11, 0x32: 16, 0x33: 23 };
 
 /** Incremental, bounded Beast binary protocol parser. */
 export class BeastParser {

@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.62] - 2026-09-19
+
+Changes since v1.0.61:
+
+- fix: keep valid Beast frames out of error counter (3301d58c)
+- Merge pull request #62 from Boym323/fix/beast-decoder-metric (d2e8a4af)
+
 ## [1.0.61] - 2026-09-19
 
 Changes since v1.0.60:
