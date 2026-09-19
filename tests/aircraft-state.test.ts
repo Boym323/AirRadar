@@ -10,6 +10,7 @@ import type { AircraftAlert } from "@/lib/server/alert-notifier";
 import type { AircraftProvider, NetworkAircraftProvider } from "@/lib/server/provider";
 import type { AtcSector, AtcSectorMatch } from "@/lib/atc/types";
 import { recordAircraftSnapshot } from "@/lib/server/history";
+import { logger } from "@/lib/server/logger";
 
 vi.mock("@/lib/server/history", () => ({
   recordAircraftSnapshot: vi.fn().mockImplementation((aircraft: Aircraft[]) => Promise.resolve({
@@ -416,7 +417,7 @@ describe("aircraft state service", () => {
     const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
     const persistHistory = (service as unknown as { persistHistory: (snapshot: ProviderSnapshot) => Promise<void> }).persistHistory;
     vi.mocked(recordAircraftSnapshot).mockClear();
-    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const error = vi.spyOn(logger, "error").mockImplementation(() => logger);
 
     await persistHistory({ aircraft: [], receiver: { lat: 50, lon: 14, name: "Test" }, fetchedAt: "invalid", provider: "test" });
 
