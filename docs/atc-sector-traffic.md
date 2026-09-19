@@ -58,3 +58,38 @@ rendered as gaps/“No data”; they are not converted to zero. Summary values
 Charts describe aircraft observed within published SOUTH sector volumes and do
 not represent the operational ATC sector configuration. Results depend on
 AirRadar ADS-B coverage and retained `FlightPosition` data.
+
+## Performance characteristics
+
+`getSectorTrafficHistoryBatch()` performs one read query against
+`public.FlightPosition` for the requested half-open `[from, to)` interval. The
+current query predicates are `recordedAt >= from` and `recordedAt < to`, with a
+hard cap of 200,000 rows. It reads the position fields needed by the current
+row model (`flightId`, `recordedAt`, `lat`, `lon`, `altitude`, `groundSpeed`,
+and `verticalRate`); the lightweight database collection boundary currently
+does not expose a select projection.
+
+Rows are bucketed in memory, then each requested sector applies the existing
+point, validity-time, and altitude-aware `matchSector()` matcher. Entries and
+exits are inferred from consecutive samples per flight inside each bucket.
+Thus the dominant application-side work is proportional to positions ×
+requested sectors, with additional per-sector transition grouping and sorting.
+No spatial database predicate is used.
+
+The verified `FlightPosition` indexes are `@@index([recordedAt])` and
+`@@index([flightId, recordedAt])`. No new index or migration was added. The
+timestamp index supports the historical range predicate; the composite index
+supports the per-flight transition ordering. There are no verified latitude,
+longitude, altitude, or combined spatial indexes.
+
+Live-database benchmark and `EXPLAIN ANALYZE` execution were intentionally not
+run in the production-capable checkout because `DATABASE_URL` is configured
+and the repository rules prohibit unbounded or potentially load-producing
+production diagnostics without an isolated development database. Therefore no
+runtime, row-count, memory, query-plan, or response-size figures are claimed
+here. A representative benchmark must be run against a separately provisioned
+development snapshot before making an optimization decision.
+
+No cache or preaggregation was introduced. At present there is insufficient
+isolated benchmark evidence to claim that preaggregation is required or that a
+cache would provide a meaningful benefit.
