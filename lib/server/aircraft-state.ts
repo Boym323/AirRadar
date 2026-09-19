@@ -138,6 +138,7 @@ export class AircraftStateService {
   private readonly statistics: ReceiverStatistics;
   private readonly atcResolutionKeys = new Map<string, string>();
   private readonly atcShadowPredictionKeys = new Map<string, string>();
+  private readonly atcShadowPredictionInFlight = new Set<string>();
   private lifetimeReceptionRecord: ReceiverDailyReceptionRecord | null = null;
   private lifetimeReceptionRecordLoaded = false;
   private lastEvaluatedDailyReceptionRecord: ReceiverDailyReceptionRecord | null = null;
@@ -492,6 +493,7 @@ export class AircraftStateService {
     this.aircraft.delete(hex);
     this.atcResolutionKeys.delete(hex);
     this.atcShadowPredictionKeys.delete(hex);
+    this.atcShadowPredictionInFlight.delete(hex);
     getAtcPredictionValidation().remove(hex);
   }
 
@@ -707,8 +709,9 @@ export class AircraftStateService {
   }
 
   private async evaluateShadowPrediction(aircraft: Aircraft, currentSector: string | null, resolutionKey: string): Promise<void> {
-    if (this.atcShadowPredictionKeys.get(aircraft.icaoHex) === resolutionKey) return;
+    if (this.atcShadowPredictionInFlight.has(aircraft.icaoHex) || this.atcShadowPredictionKeys.get(aircraft.icaoHex) === resolutionKey) return;
     this.atcShadowPredictionKeys.set(aircraft.icaoHex, resolutionKey);
+    this.atcShadowPredictionInFlight.add(aircraft.icaoHex);
     try {
       const input = inputFromAircraft(aircraft);
       const dataset = input ? await loadAtcContextDataset() : null;
@@ -740,6 +743,8 @@ export class AircraftStateService {
     } catch (error) {
       if (this.atcShadowPredictionKeys.get(aircraft.icaoHex) === resolutionKey) this.atcShadowPredictionKeys.delete(aircraft.icaoHex);
       logger.debug({ error, hex: aircraft.icaoHex }, "AirRadar ATC shadow prediction skipped");
+    } finally {
+      this.atcShadowPredictionInFlight.delete(aircraft.icaoHex);
     }
   }
 }
