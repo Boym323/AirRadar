@@ -3,6 +3,10 @@ node_modules.stale*/
 .next/
 out/
 coverage/
+!app/receiver/coverage/
+!app/receiver/coverage/page.tsx
+!app/api/receiver/coverage/
+!app/api/receiver/coverage/route.ts
 .cache/
 generated/
 generated/build-version.json
