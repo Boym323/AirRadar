@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.63] - 2026-09-19
+
+Changes since v1.0.62:
+
+- fix(beast): parse short Mode-S frame length (8fde1ee3)
+- Merge pull request #63 from Boym323/fix/beast-short-frame-length (6646cfd2)
+
 ## [1.0.62] - 2026-09-19
 
 Changes since v1.0.61:
