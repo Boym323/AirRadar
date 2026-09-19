@@ -379,8 +379,14 @@ export const en = {
   intelligence: {
     title: "Live intelligence",
     description: "Probable events inferred from local ADS-B observations.",
+    disclaimer: "Events are estimates from this receiver’s data, not confirmed ATC information.",
+    summary: "Event summary",
+    recentEvents: "events in the recent feed",
+    noLocation: "Location not identified",
+    emptyHint: "Matching flight patterns will appear here when detected by the receiver.",
     empty: "No intelligence events have been detected yet.",
     evidence: "Evidence",
+    confidence: { low: "Low confidence", medium: "Medium confidence", high: "High confidence" },
     types: { APPROACH: "Probable approach", LANDING: "Likely landing", TAKEOFF: "Likely takeoff", GO_AROUND: "Go-around", HOLDING: "Probable holding", AIRSPACE_ENTRY: "Airspace entry", AIRSPACE_EXIT: "Airspace exit" },
   },
   recap: {

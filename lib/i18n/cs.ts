@@ -377,8 +377,14 @@ export const cs = {
   intelligence: {
     title: "Živá intelligence",
     description: "Pravděpodobné události odvozené z lokálních ADS-B pozorování.",
+    disclaimer: "Události jsou odhady z dat tohoto přijímače, nikoli potvrzené informace ATC.",
+    summary: "Souhrn událostí",
+    recentEvents: "událostí v posledním výpisu",
+    noLocation: "Bez určeného místa",
+    emptyHint: "Jakmile přijímač zachytí odpovídající průběh letu, zobrazí se zde.",
     empty: "Zatím nebyly zjištěny žádné intelligence události.",
     evidence: "Důkazy",
+    confidence: { low: "Nízká jistota", medium: "Střední jistota", high: "Vysoká jistota" },
     types: { APPROACH: "Pravděpodobné přiblížení", LANDING: "Pravděpodobné přistání", TAKEOFF: "Pravděpodobný vzlet", GO_AROUND: "Go-around", HOLDING: "Pravděpodobný holding", AIRSPACE_ENTRY: "Vstup do vzdušného prostoru", AIRSPACE_EXIT: "Opusťění vzdušného prostoru" },
   },
   recap: {
