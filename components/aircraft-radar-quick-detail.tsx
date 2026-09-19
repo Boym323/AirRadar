@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
-import type { AircraftView } from "@/lib/aircraft/types";
+import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
 import type { RouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { RouteIntelligencePanel } from "@/components/route-intelligence-panel";
@@ -61,6 +61,20 @@ function RouteEndpoint({ code, airport }: { code: string | null; airport: Airpor
   const label = airport?.iataCode || airport?.icaoCode || code;
   if (!label) return null;
   return airport ? <Link className="airport-link" href={aircraftAirportHref(airport.icaoCode)}>{label}</Link> : <span>{label}</span>;
+}
+
+function RouteSection({ route, callsign, visible }: { route: FlightRoute | undefined; callsign: string; visible: boolean }) {
+  if (!visible || !route) return null;
+  return <>
+    <div className="aircraft-quick-header-route" aria-label={t.route.context}>
+      <RouteEndpoint code={route.origin} airport={route.originAirport} />
+      <span aria-hidden="true">→</span>
+      <span>{callsign}</span>
+      <span aria-hidden="true">→</span>
+      <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
+    </div>
+    <p className="aircraft-quick-header-route-note">{t.route.contextDisclaimer}</p>
+  </>;
 }
 
 function durationLabel(start: string | null | undefined, end: string | null | undefined): string | null {
@@ -222,14 +236,7 @@ export function AircraftRadarQuickDetail({
           <span className="aircraft-quick-eyebrow">{t.history.aircraftDetail}</span>
           <h1>{aircraft.callsign || registration || aircraft.icaoHex}</h1>
           {(operator || registration || headerType) && <p>{[operator, registration, headerType].filter(Boolean).join(" · ")}</p>}
-          {hasRouteData && route && <div className="aircraft-quick-header-route" aria-label={t.route.context}>
-            <RouteEndpoint code={route.origin} airport={route.originAirport} />
-            <span aria-hidden="true">→</span>
-            <span>{aircraft.callsign || aircraft.icaoHex}</span>
-            <span aria-hidden="true">→</span>
-            <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
-          </div>}
-          {hasRouteData && <p className="aircraft-quick-header-route-note">{t.route.contextDisclaimer}</p>}
+          <RouteSection route={route} callsign={aircraft.callsign || aircraft.icaoHex} visible={hasRouteData} />
         </div>
         <button type="button" className={`aircraft-quick-watchlist ${watchlisted ? "active" : ""}`} aria-pressed={watchlisted} aria-label={watchlisted ? t.watchlist.onWatchlist : t.watchlist.followAircraft} onClick={onToggleWatchlist}>
           <span aria-hidden="true">{watchlisted ? "★" : "☆"}</span>
