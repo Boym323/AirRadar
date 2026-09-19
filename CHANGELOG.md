@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.87] - 2026-09-19
+
+Changes since v1.0.86:
+
+- feat: add receiver coverage API and page components (c1ce1ad6)
+- fix(coverage): use receiver timezone for historical periods (d72c8cd7)
+
 ## [1.0.86] - 2026-09-19
 
 Changes since v1.0.85:
