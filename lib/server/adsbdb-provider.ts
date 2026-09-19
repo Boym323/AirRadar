@@ -93,6 +93,7 @@ async function fetchAdsbDb<T>(baseUrl: string, path: string): Promise<T | null> 
 export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProvider {
   readonly name = "adsbdb";
   private providerStatus: "online" | "degraded" | "offline" = "offline";
+  private hasAttempted = false;
   private lastSuccessAt: string | null = null;
   private lastFailureAt: string | null = null;
   private consecutiveFailures = 0;
@@ -103,6 +104,7 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
   ) {}
 
   async getMetadata(icaoHex: string): Promise<AircraftMetadata | null> {
+    this.hasAttempted = true;
     let payload: AdsbDbResponse | null;
     try {
       payload = await fetchAdsbDb<AdsbDbResponse>(this.baseUrl, `/aircraft/${encodeURIComponent(icaoHex.toLowerCase())}`);
@@ -130,6 +132,7 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
   }
 
   async getRoute(callsign: string, observedAt: Date): Promise<FlightRoute | null> {
+    this.hasAttempted = true;
     let payload: AdsbDbResponse | null;
     try {
       payload = await fetchAdsbDb<AdsbDbResponse>(this.baseUrl, `/callsign/${encodeURIComponent(callsign.trim().toLowerCase())}`);
@@ -162,6 +165,9 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
   getAdsbDbDiagnostics() {
     return {
       providerStatus: this.providerStatus,
+      hasAttempted: this.hasAttempted,
+      operationalState: !this.hasAttempted ? "on_demand" : this.providerStatus === "offline" ? "offline" : this.providerStatus === "degraded" ? "degraded" : "ok",
+      reasonCode: !this.hasAttempted ? "NOT_INITIALIZED" : this.providerStatus === "offline" ? "UPSTREAM_UNAVAILABLE" : this.providerStatus === "degraded" ? "LAST_REFRESH_FAILED" : null,
       lastSuccessAt: this.lastSuccessAt,
       lastFailureAt: this.lastFailureAt,
       consecutiveFailures: this.consecutiveFailures,
@@ -169,6 +175,7 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
   }
 
   private recordSuccess(): void {
+    this.hasAttempted = true;
     const recovered = this.providerStatus === "degraded" || this.providerStatus === "offline";
     this.providerStatus = "online";
     this.lastSuccessAt = new Date().toISOString();
@@ -177,6 +184,7 @@ export class AdsbDbProvider implements AircraftMetadataProvider, FlightRouteProv
   }
 
   private recordFailure(): void {
+    this.hasAttempted = true;
     const wasOnline = this.providerStatus === "online";
     this.providerStatus = this.lastSuccessAt ? "degraded" : "offline";
     this.lastFailureAt = new Date().toISOString();

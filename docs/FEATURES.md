@@ -30,7 +30,7 @@ whether an operator has configured an optional provider.
 | `/recap/daily` | Daily receiver recap with Prague-local boundaries and partial-day labeling. | Production when PostgreSQL history/aggregates are available. |
 | `/recap/weekly` | Seven-day receiver recap with bounded comparison to the preceding seven days. | Production when PostgreSQL history/aggregates are available. |
 | `/fleet` | Concrete aircraft from ICAO watchlist rules, live/offline state, recent observed-flight counts, routes/airports, and lazy photos. | Production; non-identity watchlist rules are omitted, PostgreSQL history is optional. |
-| `/system` | Sanitized runtime, receiver, persistence, statistics, ATC, weather, OGN, alerts, and airport status. | Production read-only diagnostics. |
+| `/system` | Sanitized runtime, receiver, persistence, statistics, ATC, weather, OGN, alerts, and airport status. Lazy weather/radar/wind/ADSBDB providers expose `ON DEMAND`/`LOADING` cold-start states and bounded safe reasons for degraded/offline states. | Production read-only diagnostics; it never triggers optional upstream requests. |
 
 ## APIs
 

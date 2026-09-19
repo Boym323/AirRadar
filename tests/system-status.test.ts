@@ -88,6 +88,9 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(value.statistics).toMatchObject({ uniqueAircraftToday: 12, maxConcurrentToday: 4, coverageBucketCount: 36, coverageBucketsWithData: 1 });
     expect(value.atc).toMatchObject({ status: "ok", configured: true, freshness: "current", sectorCount: 42 });
     expect(value.weather).toMatchObject({ enabled: true, cache: { status: "warm", entries: 2 } });
+    expect(value.weather.diagnostic).toMatchObject({ operationalState: "on_demand", reasonCode: "NOT_INITIALIZED" });
+    expect(value.mapLayers.radar.diagnostic).toMatchObject({ operationalState: "on_demand", reasonCode: "NOT_INITIALIZED" });
+    expect(value.mapLayers.wind.diagnostic).toMatchObject({ operationalState: "on_demand", reasonCode: "NOT_INITIALIZED" });
     expect(value.alerts).toMatchObject({ status: "ok", enabled: true, ruleCount: 2 });
     expect(value.airportData).toMatchObject({ source: "database", rowCount: 5886, bounded: true });
     expect(value.dataSources).toMatchObject({
@@ -153,6 +156,21 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     } });
     expect(value.status).toBe("ok");
     expect(value.weather).toMatchObject({ status: "degraded", requests: 6, failures: 2, activeSigmets: 7, sigmetStale: true, retryAfterMs: 30_000 });
+    expect(value.weather.diagnostic).toMatchObject({ operationalState: "degraded", reasonCode: "RATE_LIMITED" });
+  });
+
+  it("uses safe reason codes for real offline and degraded states", () => {
+    const value = build({
+      adsbdb: {
+        providerStatus: "offline", hasAttempted: true, lastSuccessAt: null, lastFailureAt: checkedAt.toISOString(), consecutiveFailures: 1,
+        memory: { metadataEntries: 0, routeEntries: 0 }, persistence: { enabled: false, cacheFile: "/tmp/cache.json", loadedFromDisk: false, loadedMetadataEntries: 0, loadedRouteEntries: 0, rejectedEntries: 0, lastLoadAt: null, lastLoadError: null, dirty: false, lastSaveAt: null, lastSaveError: null, lastSaveEntries: 0, fileSizeBytes: null, writes: 0 }, hits: { memory: 0, persistent: 0, live: 0, staleFallback: 0 },
+      },
+      mapContext: { radar: { status: "offline", operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE", hasAttempted: true, inFlight: false, latestFrameId: null, latestObservedAt: null, catalogAgeMs: null, cachedFrames: 0, failures: 1, consecutiveFailures: 1, lastFailureAt: checkedAt.toISOString(), lastSuccessAt: null }, wind: { status: "offline", operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE", model: "ICON-EU", modelRun: null, validTimes: 0, cacheEntries: 0, lastSuccessAt: null, hasAttempted: true, inFlight: false, attempts: 1, lastAttemptAt: checkedAt.toISOString(), lastFailureAt: checkedAt.toISOString(), consecutiveFailures: 1 } },
+    });
+    expect(value.adsbdb.diagnostic).toMatchObject({ operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE" });
+    expect(value.mapLayers.radar.diagnostic).toMatchObject({ operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE" });
+    expect(value.mapLayers.wind.diagnostic).toMatchObject({ operationalState: "offline", reasonCode: "UPSTREAM_UNAVAILABLE" });
+    expect(JSON.stringify(value)).not.toContain("timeout");
   });
 
   it("exposes per-dataset SIGMET freshness and keeps partial degradation visible", () => {

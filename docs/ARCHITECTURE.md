@@ -225,6 +225,13 @@ The SIGMET layer is disabled initially and its DOM popups use text-only safe
 properties. Weather diagnostics are read-only and are included in `/system`
 without probing the upstream provider.
 
+System diagnostics retain the legacy four-state `status` for API consumers and
+also expose a bounded `operationalState`: `on_demand`, `loading`, `ok`,
+`degraded`, `offline`, or `disabled`. Radar, wind, weather, and ADSBDB use
+fixed `reasonCode` values for non-healthy states. Cold-start lazy providers are
+therefore not reported as offline/disabled, and recovered providers are not
+held degraded by lifetime failure counters.
+
 `/api/system/status` exposes sanitized process RSS/heap/external/ArrayBuffer
 metrics, kernel RSS splits, the active SSE count and limit, metadata cache
 counts, the byte-bounded tar1090 fallback cache, and the cgroup memory values

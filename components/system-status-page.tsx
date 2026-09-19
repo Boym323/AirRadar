@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatDateTime, formatDistance, formatNumber, getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
-import type { SystemStatus, SystemStatusResponse } from "@/lib/server/system-status";
+import type { OperationalState, SystemStatus, SystemStatusResponse } from "@/lib/server/system-status";
 
 function formatUptime(seconds: number, dictionary: LocaleDictionary): string {
   const total = Math.max(0, Math.floor(seconds));
@@ -27,7 +27,7 @@ function formatBytes(value: number | null, dictionary: LocaleDictionary): string
   return `${formatNumber(value / (1024 * 1024), 1, dictionary.locale)} MiB`;
 }
 
-function formatStatus(status: SystemStatus | "demo", dictionary: LocaleDictionary): string {
+function formatStatus(status: SystemStatus | OperationalState | "demo", dictionary: LocaleDictionary): string {
   return dictionary.system.statusLabels[status];
 }
 
@@ -36,8 +36,12 @@ function formatSigmetDataset(dataset: SystemStatusResponse["weather"]["sigmet"][
   return `${freshness} · ${formatNumber(dataset.featureCount, 0, dictionary.locale)} ${dictionary.system.sigmetFeatures} · ${formatDateTime(dataset.lastSuccessAt, dictionary)}`;
 }
 
-function StatusBadge({ status, dictionary }: { status: SystemStatus | "demo"; dictionary: LocaleDictionary }) {
+function StatusBadge({ status, dictionary }: { status: SystemStatus | OperationalState | "demo"; dictionary: LocaleDictionary }) {
   return <span className={`system-status-badge ${status}`} data-status={status}>{formatStatus(status, dictionary)}</span>;
+}
+
+function Diagnostic({ diagnostic, dictionary }: { diagnostic: SystemStatusResponse["weather"]["diagnostic"]; dictionary: LocaleDictionary }) {
+  return <div className="system-diagnostic"><StatusBadge status={diagnostic.operationalState} dictionary={dictionary} />{diagnostic.reason && <span>{diagnostic.reason}</span>}</div>;
 }
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -51,7 +55,7 @@ function Card({
   children,
 }: {
   title: string;
-  status: SystemStatus | "demo";
+  status: SystemStatus | OperationalState | "demo";
   dictionary: LocaleDictionary;
   children: React.ReactNode;
 }) {
@@ -250,7 +254,8 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.blocking} value={formatCount(data.atc.comparison.blocking, dictionary)} />
       </Card>
 
-      <Card title={dictionary.system.weather} status={data.weather.status} dictionary={dictionary}>
+      <Card title={dictionary.system.weather} status={data.weather.diagnostic.operationalState} dictionary={dictionary}>
+        <Field label={dictionary.system.diagnosticStatus} value={<Diagnostic diagnostic={data.weather.diagnostic} dictionary={dictionary} />} />
         <Field label={dictionary.system.provider} value={data.weather.provider} />
         <Field label={dictionary.system.enabled} value={data.weather.enabled ? dictionary.system.configured : dictionary.system.disabled} />
         <Field label={dictionary.system.cache} value={`${data.weather.cache.status === "warm" ? dictionary.system.cacheWarm : dictionary.system.cacheEmpty} · ${formatNumber(data.weather.cache.entries, 0, dictionary.locale)} ${dictionary.system.entries}`} />
@@ -269,15 +274,15 @@ export function SystemStatusPage() {
         {data.weather.retryAfterMs !== null && <Field label={dictionary.system.retryAfter} value={`${formatNumber(data.weather.retryAfterMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />}
       </Card>
 
-      <Card title={dictionary.system.mapContext} status={data.mapLayers.radar.state} dictionary={dictionary}>
-        <Field label={dictionary.system.radar} value={<StatusBadge status={data.mapLayers.radar.state} dictionary={dictionary} />} />
+      <Card title={dictionary.system.mapContext} status={data.mapLayers.radar.diagnostic.operationalState} dictionary={dictionary}>
+        <Field label={dictionary.system.radar} value={<Diagnostic diagnostic={data.mapLayers.radar.diagnostic} dictionary={dictionary} />} />
         <Field label={dictionary.system.latestFrame} value={data.mapLayers.radar.latestFrameId ?? dictionary.system.notAvailable} />
         <Field label={dictionary.system.cachedFrames} value={formatNumber(data.mapLayers.radar.cachedFrames, 0, dictionary.locale)} />
         <Field label={dictionary.system.failures} value={formatNumber(data.mapLayers.radar.failures, 0, dictionary.locale)} />
         <Field label={dictionary.system.metarMap} value={<StatusBadge status={data.mapLayers.metar.state} dictionary={dictionary} />} />
         <Field label={dictionary.system.stations} value={formatNumber(data.mapLayers.metar.stations, 0, dictionary.locale)} />
         <Field label={dictionary.system.lastSuccess} value={formatDateTime(data.mapLayers.metar.lastSuccessAt, dictionary)} />
-        <Field label={dictionary.system.windAloft} value={<StatusBadge status={data.mapLayers.wind.state} dictionary={dictionary} />} />
+        <Field label={dictionary.system.windAloft} value={<Diagnostic diagnostic={data.mapLayers.wind.diagnostic} dictionary={dictionary} />} />
         <Field label={dictionary.system.model} value={data.mapLayers.wind.model} />
         <Field label={dictionary.system.validTimes} value={formatNumber(data.mapLayers.wind.availableValidTimes, 0, dictionary.locale)} />
         <Field label={dictionary.system.cacheEntries} value={formatNumber(data.mapLayers.wind.cacheEntries, 0, dictionary.locale)} />
@@ -302,7 +307,7 @@ export function SystemStatusPage() {
       </Card>
 
       <Card title={dictionary.system.dataSources} status={data.dataSources.ourAirports.status} dictionary={dictionary}>
-        <Field label={dictionary.system.adsbdb} value={<StatusBadge status={data.dataSources.adsbdb.status} dictionary={dictionary} />} />
+        <Field label={dictionary.system.adsbdb} value={data.dataSources.adsbdb.diagnostic ? <Diagnostic diagnostic={data.dataSources.adsbdb.diagnostic} dictionary={dictionary} /> : <StatusBadge status={data.dataSources.adsbdb.status} dictionary={dictionary} />} />
         <Field label={dictionary.system.enabled} value={data.dataSources.adsbdb.enabled ? dictionary.system.configured : dictionary.system.disabled} />
         <Field label={dictionary.system.photos} value={<StatusBadge status={data.dataSources.aircraftPhotos.status} dictionary={dictionary} />} />
         <Field label={dictionary.system.enabled} value={data.dataSources.aircraftPhotos.enabled ? dictionary.system.configured : dictionary.system.disabled} />
