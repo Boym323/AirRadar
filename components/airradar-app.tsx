@@ -1552,7 +1552,8 @@ export function AirRadarApp() {
     const mobile = window.matchMedia("(max-width: 820px)").matches;
     const panelHeight = mobile ? document.querySelector(".sidebar")?.getBoundingClientRect().height ?? 0 : 0;
     if (!centeredTrafficRef.current && (snapshot.receiver.lat === null || snapshot.receiver.lon === null) && snapshot.aircraft.length) {
-      const positioned = snapshot.aircraft.filter((aircraft) => aircraft.lat !== null && aircraft.lon !== null);
+      const positioned = snapshot.aircraft.filter((aircraft) => aircraft.lat !== null && aircraft.lon !== null
+        && Number.isFinite(aircraft.lat) && Number.isFinite(aircraft.lon));
       if (positioned.length) {
         const bounds = new maplibregl.LngLatBounds();
         for (const aircraft of positioned) bounds.extend([aircraft.lon!, aircraft.lat!]);
@@ -1858,7 +1859,11 @@ export function AirRadarApp() {
     if (showAtc && !atcAutoFitRef.current && atcData.sectors.length) {
       const bounds = new maplibregl.LngLatBounds();
       for (const sector of atcData.sectors) for (const polygon of sector.polygons) {
-        for (const [lon, lat] of polygon) bounds.extend([lon, lat]);
+        for (const [lon, lat] of polygon) {
+          if (Number.isFinite(lon) && Number.isFinite(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90) {
+            bounds.extend([lon, lat]);
+          }
+        }
       }
       if (!bounds.isEmpty()) {
         atcAutoFitRef.current = true;
