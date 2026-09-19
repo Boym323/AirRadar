@@ -22,7 +22,8 @@ import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { haversineDistanceKm } from "@/lib/geo";
 import { logger } from "@/lib/server/logger";
-import { getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
+import { classifyAtcPrediction, getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
+import { computeAtcContext, inputFromAircraft, loadAtcContextDataset } from "@/lib/atc-context/engine";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -136,6 +137,7 @@ export class AircraftStateService {
   private readonly intelligence = getFlightIntelligenceService();
   private readonly statistics: ReceiverStatistics;
   private readonly atcResolutionKeys = new Map<string, string>();
+  private readonly atcShadowPredictionKeys = new Map<string, string>();
   private lifetimeReceptionRecord: ReceiverDailyReceptionRecord | null = null;
   private lifetimeReceptionRecordLoaded = false;
   private lastEvaluatedDailyReceptionRecord: ReceiverDailyReceptionRecord | null = null;
@@ -489,6 +491,7 @@ export class AircraftStateService {
   private removeAircraft(hex: string): void {
     this.aircraft.delete(hex);
     this.atcResolutionKeys.delete(hex);
+    this.atcShadowPredictionKeys.delete(hex);
     getAtcPredictionValidation().remove(hex);
   }
 
@@ -692,12 +695,51 @@ export class AircraftStateService {
       // result. The coarse key is intentional throttling; a changed key is a
       // new resolution generation.
       if (!result.resolved || !current || current.callsign !== result.incoming.callsign || atcResolutionKey(current) !== result.key) continue;
-      getAtcPredictionValidation().observeCurrentSector(current.icaoHex, result.assignment?.sectorId ?? null, Date.parse(current.lastSeen));
+      const validation = getAtcPredictionValidation();
+      validation.observeCurrentSector(current.icaoHex, result.assignment?.sectorId ?? null, Date.parse(current.lastSeen));
+      void this.evaluateShadowPrediction(current, result.assignment?.sectorId ?? null, result.key);
       if (JSON.stringify(current.atc) === JSON.stringify(result.assignment)) continue;
       this.aircraft.set(current.icaoHex, { ...current, atc: result.assignment });
       changed = true;
     }
     if (changed && !this.shuttingDown) this.notify();
+  }
+
+  private async evaluateShadowPrediction(aircraft: Aircraft, currentSector: string | null, resolutionKey: string): Promise<void> {
+    if (this.atcShadowPredictionKeys.get(aircraft.icaoHex) === resolutionKey) return;
+    this.atcShadowPredictionKeys.set(aircraft.icaoHex, resolutionKey);
+    try {
+      const input = inputFromAircraft(aircraft);
+      const dataset = input ? await loadAtcContextDataset() : null;
+      if (!input || !dataset || !this.aircraft.has(aircraft.icaoHex)) {
+        if (!dataset && this.atcShadowPredictionKeys.get(aircraft.icaoHex) === resolutionKey) this.atcShadowPredictionKeys.delete(aircraft.icaoHex);
+        return;
+      }
+      const result = computeAtcContext(input, dataset);
+      const observedAtMs = Date.parse(aircraft.lastSeen);
+      const reason = classifyAtcPrediction({
+        currentSector,
+        hasNextSector: result.nextSector !== null,
+        onGround: aircraft.onGround,
+        observedAtMs,
+        seenPosSeconds: aircraft.seenPosSeconds,
+        lat: aircraft.lat,
+        lon: aircraft.lon,
+        track: aircraft.track,
+        groundSpeed: aircraft.groundSpeed,
+        currentAirspaces: result.currentAirspaces.length,
+      });
+      getAtcPredictionValidation().observePrediction({
+        hex: aircraft.icaoHex,
+        currentSector,
+        predictedSector: result.nextSector?.airspace.id ?? null,
+        predictedEtaSeconds: result.nextSector?.estimatedSeconds ?? null,
+        suppressionReason: reason,
+      });
+    } catch (error) {
+      if (this.atcShadowPredictionKeys.get(aircraft.icaoHex) === resolutionKey) this.atcShadowPredictionKeys.delete(aircraft.icaoHex);
+      logger.debug({ error, hex: aircraft.icaoHex }, "AirRadar ATC shadow prediction skipped");
+    }
   }
 }
 

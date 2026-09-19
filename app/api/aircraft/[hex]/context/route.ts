@@ -2,7 +2,7 @@ import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { inputFromAircraft, computeAtcContext, loadAtcContextDataset } from "@/lib/atc-context/engine";
 import { normalizeIcaoHex } from "@/lib/server/validation";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
-import { getAtcPredictionValidation, type AtcPredictionSuppressionReason } from "@/lib/server/atc-prediction-validation";
+import { classifyAtcPrediction, getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -29,14 +29,19 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
     const dataset = await loadAtcContextDataset();
     if (!dataset) return Response.json({ status: "unavailable", reason: "ATC/ATS dataset unavailable" }, { headers: { "Cache-Control": "no-store" } });
     const result = computeAtcContext(input, dataset);
-    const ageMs = Math.max(0, Date.now() - observed);
-    const reason: AtcPredictionSuppressionReason | undefined = !aircraft.atc?.sectorId ? "outside_coverage" : result.nextSector ? undefined
-      : aircraft.onGround ? "ground"
-        : ageMs > 120_000 || (aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds > 120) ? "stale"
-          : !Number.isFinite(aircraft.lat ?? Number.NaN) || !Number.isFinite(aircraft.lon ?? Number.NaN) ? "invalid_position"
-            : aircraft.track === null ? "missing_track"
-              : aircraft.groundSpeed === null || aircraft.groundSpeed <= 20 ? "slow"
-                : result.currentAirspaces.length === 0 ? "outside_coverage" : "no_stable_next_sector";
+    const reason = classifyAtcPrediction({
+      currentSector: validation.getCurrentSector(hex) ?? aircraft.atc?.sectorId ?? null,
+      hasNextSector: result.nextSector !== null,
+      onGround: aircraft.onGround,
+      observedAtMs: observed,
+      seenPosSeconds: aircraft.seenPosSeconds,
+      nowMs: Date.now(),
+      lat: aircraft.lat,
+      lon: aircraft.lon,
+      track: aircraft.track,
+      groundSpeed: aircraft.groundSpeed,
+      currentAirspaces: result.currentAirspaces.length,
+    });
     validation.observePrediction({ hex, currentSector: validation.getCurrentSector(hex) ?? aircraft.atc?.sectorId ?? null, predictedSector: result.nextSector?.airspace.id ?? null, predictedEtaSeconds: result.nextSector?.estimatedSeconds ?? null, suppressionReason: reason });
     return Response.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

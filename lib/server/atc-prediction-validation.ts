@@ -6,6 +6,35 @@ export const ATC_PREDICTION_SUPPRESSION_REASONS = [
 ] as const;
 
 export type AtcPredictionSuppressionReason = typeof ATC_PREDICTION_SUPPRESSION_REASONS[number];
+export interface AtcPredictionClassificationInput {
+  currentSector: string | null;
+  hasNextSector: boolean;
+  onGround: boolean;
+  observedAtMs: number;
+  seenPosSeconds?: number | null;
+  nowMs?: number;
+  lat: number | null;
+  lon: number | null;
+  track: number | null;
+  groundSpeed: number | null;
+  currentAirspaces: number;
+}
+
+/** Shared suppression semantics for selected-aircraft and shadow evaluation. */
+export function classifyAtcPrediction(input: AtcPredictionClassificationInput): AtcPredictionSuppressionReason | undefined {
+  const now = input.nowMs ?? Date.now();
+  const ageMs = Number.isFinite(input.observedAtMs) ? Math.max(0, now - input.observedAtMs) : Number.POSITIVE_INFINITY;
+  if (input.currentSector === null) return "outside_coverage";
+  if (input.hasNextSector) return undefined;
+  if (input.onGround) return "ground";
+  if (ageMs > 120_000 || (input.seenPosSeconds !== null && input.seenPosSeconds !== undefined && input.seenPosSeconds > 120)) return "stale";
+  if (!Number.isFinite(input.lat ?? Number.NaN) || !Number.isFinite(input.lon ?? Number.NaN)) return "invalid_position";
+  if (input.track === null) return "missing_track";
+  if (input.groundSpeed === null || input.groundSpeed <= 20) return "slow";
+  if (input.currentAirspaces === 0) return "outside_coverage";
+  return "no_stable_next_sector";
+}
+
 type Prediction = { fromSector: string; predictedSector: string; createdAtMs: number; predictedAtMs: number };
 type AircraftValidationState = { currentSector: string | null; pendingSector: string | null; pendingCount: number; prediction: Prediction | null; lastTouchedMs: number };
 
