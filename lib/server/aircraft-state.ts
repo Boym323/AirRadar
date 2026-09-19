@@ -60,8 +60,11 @@ function historyAircraftForSnapshot(snapshotItem: Aircraft, current: Aircraft | 
 }
 
 function atcResolutionKey(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude">): string | null {
-  if (aircraft.lat === null || aircraft.lon === null) return null;
-  return `${aircraft.lat.toFixed(2)}:${aircraft.lon.toFixed(2)}:${aircraft.altitude === null ? "unknown" : Math.round(aircraft.altitude / 1000)}`;
+  const lat = aircraft.lat;
+  const lon = aircraft.lon;
+  if (typeof lat !== "number" || !Number.isFinite(lat) || typeof lon !== "number" || !Number.isFinite(lon)) return null;
+  const altitude = typeof aircraft.altitude === "number" && Number.isFinite(aircraft.altitude) ? aircraft.altitude : null;
+  return `${lat.toFixed(2)}:${lon.toFixed(2)}:${altitude === null ? "unknown" : Math.round(altitude / 1000)}`;
 }
 
 export class AircraftStateService {

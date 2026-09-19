@@ -982,9 +982,17 @@ export async function recordAircraftSnapshot(
   const result: RecordAircraftSnapshotResult = { succeeded: [], failed: [], newAircraft: [] };
 
   await runWithConcurrency(uniqueAircraftByHex(aircraft), 8, async (item) => {
-    if (item.lat === null || item.lon === null) return;
-    const latitude = item.lat;
-    const longitude = item.lon;
+    // Provider adapters may omit numeric fields at runtime even though the
+    // normalized TypeScript type represents them as `null`. Never pass
+    // undefined/NaN through to the ORM: one malformed observation must not
+    // turn the whole history lane degraded.
+    if (typeof item.lat !== "number" || !Number.isFinite(item.lat) || typeof item.lon !== "number" || !Number.isFinite(item.lon)) return;
+    const latitude: number = item.lat;
+    const longitude: number = item.lon;
+    const altitude: number | undefined = typeof item.altitude === "number" && Number.isFinite(item.altitude) ? item.altitude : undefined;
+    const groundSpeed: number | undefined = typeof item.groundSpeed === "number" && Number.isFinite(item.groundSpeed) ? item.groundSpeed : undefined;
+    const track: number | undefined = typeof item.track === "number" && Number.isFinite(item.track) ? item.track : undefined;
+    const verticalRate: number | undefined = typeof item.verticalRate === "number" && Number.isFinite(item.verticalRate) ? item.verticalRate : undefined;
     try {
       const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime());
       const wasNewAircraft = await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
@@ -1056,7 +1064,7 @@ export async function recordAircraftSnapshot(
           airline: item.enrichment?.route?.airline ?? null,
           origin: item.enrichment?.route?.origin ?? null,
           destination: item.enrichment?.route?.destination ?? null,
-          maxAltitude: item.altitude,
+          maxAltitude: altitude ?? null,
           minDistanceKm: item.distanceKm,
           startTime: recordedAtInstant,
           lastSeenAt: recordedAtInstant,
@@ -1069,7 +1077,7 @@ export async function recordAircraftSnapshot(
           airline: flight.airline ?? item.enrichment?.route?.airline,
           origin: flight.origin ?? item.enrichment?.route?.origin,
           destination: flight.destination ?? item.enrichment?.route?.destination,
-          maxAltitude: Math.max(flight.maxAltitude ?? 0, item.altitude ?? 0) || null,
+          maxAltitude: Math.max(flight.maxAltitude ?? 0, altitude ?? 0) || null,
           minDistanceKm: Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
             ? null
             : Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY),
@@ -1082,10 +1090,10 @@ export async function recordAircraftSnapshot(
         recordedAt: recordedAtInstant,
         lat: latitude,
         lon: longitude,
-        ...(item.altitude === null ? {} : { altitude: item.altitude }),
-        ...(item.groundSpeed === null ? {} : { groundSpeed: item.groundSpeed }),
-        ...(item.track === null ? {} : { track: item.track }),
-        ...(item.verticalRate === null ? {} : { verticalRate: item.verticalRate }),
+        ...(altitude === undefined ? {} : { altitude }),
+        ...(groundSpeed === undefined ? {} : { groundSpeed }),
+        ...(track === undefined ? {} : { track }),
+        ...(verticalRate === undefined ? {} : { verticalRate }),
       });
       return firstDurableFlight;
       }));
