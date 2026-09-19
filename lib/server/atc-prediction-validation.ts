@@ -42,6 +42,8 @@ export interface AtcPredictionValidationSnapshot {
   attempts: number;
   created: number;
   suppressed: number;
+  retained: number;
+  updated: number;
   confirmed: number;
   changed: number;
   wrong: number;
@@ -54,6 +56,7 @@ export interface AtcPredictionValidationSnapshot {
   medianLeadTimeSeconds: number | null;
   p90LeadTimeSeconds: number | null;
   activeStates: number;
+  attemptOutcomes: { created: number; suppressed: number; retained: number; updated: number };
 }
 
 const MAX_STATES = 4096;
@@ -78,6 +81,8 @@ export class AtcPredictionValidation {
   private attempts = 0;
   private created = 0;
   private suppressed = 0;
+  private retained = 0;
+  private updated = 0;
   private confirmed = 0;
   private changed = 0;
   private wrong = 0;
@@ -96,14 +101,13 @@ export class AtcPredictionValidation {
     this.cleanup(now);
     const state = this.stateFor(input.hex, now);
     this.attempts += 1;
-    if (input.suppressionReason) {
-      this.suppressed += 1;
-      this.suppressionReasons[input.suppressionReason] += 1;
-    }
     const usable = input.currentSector !== null && input.predictedSector !== null
       && input.currentSector !== input.predictedSector && input.predictedEtaSeconds !== null
       && Number.isFinite(input.predictedEtaSeconds);
     if (!usable) {
+      const suppressionReason = input.suppressionReason ?? "other";
+      this.suppressed += 1;
+      this.suppressionReasons[suppressionReason] += 1;
       if (state.prediction) {
         this.changed += 1;
         logger.debug({ event: "atc_prediction_changed", change: "withdrawn", fromSector: state.prediction.fromSector, predictedSector: state.prediction.predictedSector }, "ATC prediction withdrawn");
@@ -118,9 +122,11 @@ export class AtcPredictionValidation {
       logger.debug({ event: "atc_prediction_created", fromSector: prediction.fromSector, predictedSector: prediction.predictedSector }, "ATC prediction created");
     } else if (state.prediction.fromSector !== prediction.fromSector || state.prediction.predictedSector !== prediction.predictedSector) {
       this.changed += 1;
+      this.updated += 1;
       logger.debug({ event: "atc_prediction_changed", change: "changed_to_other_sector", fromSector: prediction.fromSector, predictedSector: prediction.predictedSector }, "ATC prediction changed");
       state.prediction = prediction;
     } else {
+      this.retained += 1;
       state.prediction.predictedAtMs = prediction.predictedAtMs;
     }
   }
@@ -176,6 +182,7 @@ export class AtcPredictionValidation {
     const resolved = this.confirmed + this.wrong;
     return {
       attempts: this.attempts, created: this.created, suppressed: this.suppressed, confirmed: this.confirmed,
+      retained: this.retained, updated: this.updated,
       changed: this.changed, wrong: this.wrong, transitionWithoutPrediction: this.transitionWithoutPrediction,
       suppressionReasons: { ...this.suppressionReasons },
       confirmationRate: resolved ? this.confirmed / resolved : null,
@@ -183,6 +190,7 @@ export class AtcPredictionValidation {
       medianEtaErrorSeconds: percentile(this.etaErrors, 0.5), p95EtaErrorSeconds: percentile(this.etaErrors, 0.95),
       medianLeadTimeSeconds: percentile(this.leadTimes, 0.5), p90LeadTimeSeconds: percentile(this.leadTimes, 0.9),
       activeStates: this.states.size,
+      attemptOutcomes: { created: this.created, suppressed: this.suppressed, retained: this.retained, updated: this.updated },
     };
   }
 
