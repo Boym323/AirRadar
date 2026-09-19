@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.61] - 2026-09-19
+
+Changes since v1.0.60:
+
+- fix: count valid Beast transport frames (247b656f)
+- Merge pull request #61 from Boym323/fix/beast-frame-counter (76f5e648)
+
 ## [1.0.60] - 2026-09-19
 
 Changes since v1.0.59:
