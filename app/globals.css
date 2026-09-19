@@ -685,6 +685,9 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .time-machine-card { overflow:hidden; border:1px solid var(--line); border-radius:8px; background:rgba(13,25,39,.82); }
 .time-machine-context { display:flex; justify-content:space-between; gap:12px; padding:13px 16px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px; }
 .time-machine-context strong { color:#f3b95f; letter-spacing:.1em; font-size:11px; }
+.time-machine-context { background:rgba(95,66,22,.12); }
+.time-machine-context span { color:var(--text-primary); font-variant-numeric:tabular-nums; }
+.time-machine-header .back-link { min-height:40px; display:inline-flex; align-items:center; padding:0 13px; border:1px solid rgba(243,185,95,.65); border-radius:6px; color:#ffd88d; background:rgba(95,66,22,.24); font-weight:700; }
 .time-machine-map { height:min(62vh,680px); min-height:380px; background:#0b1725; }
 .time-machine-controls { padding:15px 16px 17px; }
 .time-machine-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -693,6 +696,7 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .time-machine-toolbar select { min-height:34px; color:var(--text-primary); background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:0 8px; }
 .time-machine-toolbar strong { color:var(--text-primary); font-variant-numeric:tabular-nums; }
 .time-machine-slider { width:100%; margin:16px 0 5px; accent-color:#f3b95f; }
+.time-machine-slider { min-height:28px; cursor:pointer; }
 .time-machine-timeline { position:relative; }
 .time-machine-timeline .time-machine-slider { position:relative; z-index:1; }
 .time-machine-event-markers { position:absolute; inset:0 8px; pointer-events:none; }
@@ -2468,6 +2472,15 @@ button, input, select, textarea { color-scheme: dark; }
 .weather-radar-controls, .wind-controls { display: grid; gap: .35rem; }
 .weather-radar-controls input[type="range"] { width: 100%; }
 .map-layer-notice { margin-top: .4rem; padding: .45rem .6rem; border-radius: .4rem; color: #f4c95d; background: rgba(106, 73, 24, .38); font-size: .75rem; }
+.aviation-layer-legend { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem .7rem; }
+.aviation-layer-legend strong { color:var(--text-primary); }
+.aviation-layer-legend .legend-line { display:inline-block; width:1.2rem; height:0; border-top:2px solid currentColor; vertical-align:middle; }
+.aviation-layer-legend .legend-line.atc-context { color:#d8b4fe; }
+.aviation-layer-legend .legend-line.atc-background { color:#b899ef; opacity:.58; }
+.aviation-layer-legend .legend-line.planned { color:#8bd2ed; border-top-style:dashed; }
+.aviation-layer-legend .legend-line.ats-network { color:#37d6c0; opacity:.68; }
+.aviation-layer-legend .legend-line.ats-selected { color:#ffe08a; border-top-width:3px; }
+.aviation-layer-legend .legend-line.weather-radar { color:#9bd4ff; opacity:.55; }
 
 /* UI Foundation primitives. Feature-specific layout remains above this layer. */
 .ui-panel {
