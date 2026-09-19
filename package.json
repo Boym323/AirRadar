@@ -45,6 +45,7 @@
     "atc:status:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-status-sk.ts",
     "atc:sync:at": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-sync-at.ts",
     "atc:status:at": "JITI_TSCONFIG_PATHS=true jiti scripts/atc-status-at.ts",
+    "benchmark:atc": "ATC_BENCHMARK_NON_PRODUCTION=true JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-atc-lookup.ts",
     "ats:sync:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-sync-cz.ts",
     "ats:status:cz": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-cz.ts",
     "ats:status:sk": "JITI_TSCONFIG_PATHS=true jiti scripts/ats-status-sk.ts",
