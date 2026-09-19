@@ -61,7 +61,12 @@ function coordinate(value: unknown, minimum: number, maximum: number): number | 
 
 function emergency(value: unknown): string | null {
   const normalized = text(value)?.toLowerCase() ?? null;
-  return normalized && normalized !== "none" && normalized !== "unknown" ? normalized : null;
+  if (!normalized || normalized === "none" || normalized === "unknown") return null;
+  // readsb's numeric emergency-state field is not a user-facing emergency
+  // status. Only the three emergency squawks and explicit textual states are
+  // allowed through to alerts and the map marker.
+  if (/^\d+$/.test(normalized) && !new Set(["7500", "7600", "7700"]).has(normalized)) return null;
+  return normalized;
 }
 
 function sourceFor(raw: RawReadsbAircraft): AircraftSource {

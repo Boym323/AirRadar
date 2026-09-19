@@ -126,7 +126,9 @@ function provenance(local: Aircraft | undefined, network: Aircraft | undefined, 
 
 function emergencyValue(aircraft: Aircraft): string | null {
   const value = aircraft.emergency?.trim().toLowerCase();
-  return value && value !== "none" && value !== "unknown" ? value : null;
+  if (!value || value === "none" || value === "unknown") return null;
+  if (/^\d+$/.test(value) && !["7500", "7600", "7700"].includes(value)) return null;
+  return value;
 }
 
 function selectedEmergencyObservation(
