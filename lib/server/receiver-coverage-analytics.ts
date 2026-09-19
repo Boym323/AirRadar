@@ -2,7 +2,7 @@ import "temporal-polyfill/full/global";
 import type { Aircraft, ReceiverPosition, NetworkProviderDiagnostics } from "@/lib/aircraft/types";
 import { eligibleNetworkObservation, type CoverageEligibility } from "@/lib/aircraft/source-awareness";
 import { getPrisma } from "@/lib/server/db";
-import { getAircraftStaleAfterMs, getAdsbLolStaleAfterMs, getReceiverComparisonRadiusNm } from "@/lib/server/config";
+import { getAircraftStaleAfterMs, getAdsbLolStaleAfterMs, getAppTimezone, getReceiverComparisonRadiusNm } from "@/lib/server/config";
 
 export const AZIMUTH_BUCKETS = 36;
 export const RANGE_BANDS = [25, 50, 75, 100, 125, 150, 175];
@@ -106,7 +106,11 @@ export class ReceiverCoverageAnalytics {
 export function createReceiverCoverageAnalytics(): ReceiverCoverageAnalytics { return new ReceiverCoverageAnalytics(); }
 
 export async function getHistoricalReceiverCoverage(period: Exclude<CoveragePeriod, "live">): Promise<CoverageResponse> {
-  const now = new Date(); const days = period === "today" ? 1 : period === "7d" ? 7 : 30; const from = new Date(now.getTime() - days * 86_400_000);
+  const timezone = getAppTimezone();
+  const localNow = Temporal.Now.zonedDateTimeISO(timezone);
+  const now = new Date(localNow.toInstant().epochMilliseconds);
+  const days = period === "today" ? 0 : period === "7d" ? 6 : 29;
+  const from = new Date(localNow.startOfDay().subtract({ days }).toInstant().epochMilliseconds);
   const database = getPrisma(); const aggregate: Aggregate = new Map(); const providers = new Set<string>();
   if (database) {
     const rows = await database.orm.public.ReceiverCoverageHourly.all();
