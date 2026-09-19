@@ -209,6 +209,18 @@ These are behavior and safety contracts for changes to the current system.
   disconnected, or invalid geometry fails before the import transaction. No
   straight-line guess is allowed.
 
+## Global Map Time
+
+- Global Map Time never owns live aircraft state.
+- Time Machine is the master clock in historical mode; there is no second playback timer.
+- Historical context never substitutes current data silently.
+- Radar resolution uses observed frame `<= T`; METAR resolution never uses observation `> T`.
+- Wind preserves model run and valid time and rejects future model runs for as-known playback.
+- AUP/UUP preserves planned and revision provenance; planned data is never claimed actual.
+- Context layer failure never stops historical aircraft playback.
+- Historical archives are bounded and writers never block `AircraftStateService`.
+- Historical playback is read-only and never creates FlightEvents or alerts.
+
 ## MapLibre namespaces and cleanup
 
 Map Context layers are optional enrichment and never own aircraft state. Radar

@@ -29,8 +29,10 @@ identity, flight context, current historical values, a five-minute historical
 trail, and a link to the captured Flight detail.
 
 The map uses isolated MapLibre source/layer names beginning with
-`time-machine-`; it does not share live markers or trails. No historical
-weather, NOTAM, dynamic airspace, or per-frame Route Intelligence is inferred.
+`time-machine-`; it does not share live markers or trails. Map Context V2 adds
+historical radar, METAR, wind and AUP/UUP resolution through Global Map Time.
+Each layer is independent and can be unavailable without hiding aircraft.
+SIGMET history is not claimed when no archive exists.
 
 ## Retention and future boundary
 
@@ -39,4 +41,4 @@ of days. All API instants are explicit UTC ISO timestamps; UI formatting uses
 the existing AirRadar locale/timezone policy. The repository/service boundary
 is intentionally suitable for a future PostgreSQL plus cold-archive source and
 for Flight Story V1. Time Machine remains read-only and database failure is
-isolated from live ingest and SSE.
+isolated from live ingest and SSE. See [MAP-TIME.md](MAP-TIME.md).

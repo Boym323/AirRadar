@@ -271,6 +271,10 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.cacheEntries} value={formatNumber(data.mapLayers.wind.cacheEntries, 0, dictionary.locale)} />
         <Field label={dictionary.system.airspaceActivity} value={data.mapLayers.airspaceActivity.state} />
         <Field label={dictionary.system.planned} value={data.mapLayers.airspaceActivity.stale ? dictionary.system.stale : dictionary.system.current} />
+        <Field label={`${dictionary.system.radar} ${dictionary.system.archive}`} value={`${formatDateTime(data.mapLayers.historicalContext.radar.oldest, dictionary)} → ${formatDateTime(data.mapLayers.historicalContext.radar.latest, dictionary)} · ${formatNumber(data.mapLayers.historicalContext.radar.frames, 0, dictionary.locale)} ${dictionary.system.frames}`} />
+        <Field label={`${dictionary.system.metarMap} ${dictionary.system.archive}`} value={`${formatDateTime(data.mapLayers.historicalContext.metar.oldest, dictionary)} → ${formatDateTime(data.mapLayers.historicalContext.metar.latest, dictionary)} · ${formatNumber(data.mapLayers.historicalContext.metar.entries, 0, dictionary.locale)} ${dictionary.system.entries}`} />
+        <Field label={`${dictionary.system.windAloft} ${dictionary.system.archive}`} value={`${formatDateTime(data.mapLayers.historicalContext.wind.oldest, dictionary)} → ${formatDateTime(data.mapLayers.historicalContext.wind.latest, dictionary)} · ${formatNumber(data.mapLayers.historicalContext.wind.entries, 0, dictionary.locale)} ${dictionary.system.entries}`} />
+        <Field label={`${dictionary.system.airspaceActivity} ${dictionary.system.archive}`} value={`${formatDateTime(data.mapLayers.historicalContext.aup.oldest, dictionary)} → ${formatDateTime(data.mapLayers.historicalContext.aup.latest, dictionary)} · ${formatNumber(data.mapLayers.historicalContext.aup.entries, 0, dictionary.locale)} ${dictionary.system.entries}`} />
       </Card>
 
       <Card title={dictionary.system.alerts} status={data.alerts.status} dictionary={dictionary}>

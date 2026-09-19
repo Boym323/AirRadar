@@ -668,6 +668,14 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .time-machine-picker { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:13px; color:var(--muted); font-size:12px; }
 .time-machine-picker label { display:flex; align-items:center; gap:8px; }
 .time-machine-picker input { color:var(--text-primary); background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:7px 8px; }
+.time-machine-context-panel { margin-top:15px; padding:12px 13px; border:1px solid rgba(155,212,255,.2); border-radius:6px; background:rgba(7,17,29,.5); color:var(--muted); font-size:11px; }
+.time-machine-context-panel > div:first-child, .time-machine-context-layers, .time-machine-context-statuses { display:flex; align-items:center; flex-wrap:wrap; gap:8px 13px; }
+.time-machine-context-panel > div:first-child { justify-content:space-between; margin-bottom:8px; }
+.time-machine-context-panel strong { color:var(--text-primary); letter-spacing:.08em; text-transform:uppercase; }
+.time-machine-context-layers label { color:var(--text-primary); }
+.time-machine-context-statuses { margin-top:9px; }
+.time-machine-context-statuses .available { color:#73d9b7; }
+.time-machine-context-statuses .unavailable { color:#e5a6a6; }
 .time-machine-lower { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; margin-top:16px; }
 .time-machine-aircraft-panel, .time-machine-events { min-height:180px; padding:17px; border:1px solid var(--line); border-radius:8px; background:rgba(13,25,39,.74); }
 .time-machine-lower h2 { margin:0 0 12px; font-size:15px; }
@@ -687,6 +695,7 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .time-machine-map { min-height:53svh; height:53svh; }
   .time-machine-toolbar label { margin-left:0; }
   .time-machine-picker { align-items:flex-start; flex-direction:column; }
+  .time-machine-context-panel > div:first-child { align-items:flex-start; flex-direction:column; }
   .time-machine-lower { grid-template-columns:1fr; }
   .time-machine-events button { grid-template-columns:52px 1fr; }
   .time-machine-events button span { grid-column:2; }

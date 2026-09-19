@@ -20,6 +20,7 @@ import { loadCzAtsRoutes } from "@/lib/ats/cz-routes";
 import { defaultWeatherRadarProvider } from "@/lib/server/weather-radar/provider";
 import type { WeatherRadarDiagnostics } from "@/lib/server/weather-radar/types";
 import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
+import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 
 export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
 
@@ -266,6 +267,12 @@ export interface SystemStatusResponse {
     radar: { state: SystemStatus; latestFrameId: string | null; latestObservedAt: string | null; ageMs: number | null; cachedFrames: number; failures: number };
     metar: { state: SystemStatus; stations: number; lastSuccessAt: string | null; cacheAgeMs: number | null };
     wind: { state: SystemStatus; model: string; modelRun: string | null; availableValidTimes: number; cacheEntries: number; lastSuccessAt: string | null };
+    historicalContext: {
+      radar: { oldest: string | null; latest: string | null; frames: number; diskBytes: number | null; status: string };
+      metar: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
+      wind: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
+      aup: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
+    };
   };
   dataSources: {
     adsbdb: SystemDataSourceStatus;
@@ -307,7 +314,7 @@ export interface SystemStatusBuildInput {
     effectiveDate: string | null;
   };
   weather?: Partial<AviationWeatherDiagnostics> & { entries?: number; airports?: number };
-  mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; };
+  mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
   adsbLol?: NetworkProviderDiagnostics;
   adsbdb?: {
     providerStatus: "online" | "degraded" | "offline" | "unknown";
@@ -966,6 +973,33 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
         cacheEntries: nonNegativeInteger(input.mapContext?.wind?.cacheEntries ?? 0, 8),
         lastSuccessAt: safeTimestamp(input.mapContext?.wind?.lastSuccessAt),
       },
+      historicalContext: {
+        radar: {
+          oldest: safeTimestamp(input.mapContext?.radarArchive?.oldest),
+          latest: safeTimestamp(input.mapContext?.radarArchive?.latest),
+          frames: nonNegativeInteger(input.mapContext?.radarArchive?.frames ?? 0, 10_000),
+          diskBytes: input.mapContext?.radarArchive?.diskBytes === null || input.mapContext?.radarArchive?.diskBytes === undefined ? null : nonNegativeInteger(input.mapContext.radarArchive.diskBytes, 20 * 1024 * 1024 * 1024),
+          status: input.mapContext?.radarArchive?.status ?? "offline",
+        },
+        metar: {
+          oldest: safeTimestamp(input.mapContext?.archive?.metar.oldest),
+          latest: safeTimestamp(input.mapContext?.archive?.metar.latest),
+          entries: nonNegativeInteger(input.mapContext?.archive?.metar.entries ?? 0, 100_000),
+          fileBytes: input.mapContext?.archive?.metar.fileBytes === null || input.mapContext?.archive?.metar.fileBytes === undefined ? null : nonNegativeInteger(input.mapContext.archive.metar.fileBytes, 100 * 1024 * 1024),
+        },
+        wind: {
+          oldest: safeTimestamp(input.mapContext?.archive?.wind.oldest),
+          latest: safeTimestamp(input.mapContext?.archive?.wind.latest),
+          entries: nonNegativeInteger(input.mapContext?.archive?.wind.entries ?? 0, 1_024),
+          fileBytes: input.mapContext?.archive?.wind.fileBytes === null || input.mapContext?.archive?.wind.fileBytes === undefined ? null : nonNegativeInteger(input.mapContext.archive.wind.fileBytes, 500 * 1024 * 1024),
+        },
+        aup: {
+          oldest: safeTimestamp(input.mapContext?.archive?.aup.oldest),
+          latest: safeTimestamp(input.mapContext?.archive?.aup.latest),
+          entries: nonNegativeInteger(input.mapContext?.archive?.aup.entries ?? 0, 512),
+          fileBytes: input.mapContext?.archive?.aup.fileBytes === null || input.mapContext?.archive?.aup.fileBytes === undefined ? null : nonNegativeInteger(input.mapContext.archive.aup.fileBytes, 100 * 1024 * 1024),
+        },
+      },
     },
     dataSources: {
       // These are configuration-safe states. Opening /system never probes an
@@ -1044,6 +1078,8 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     mapContext: {
       radar: defaultWeatherRadarProvider.getDiagnostics(),
       wind: defaultWindAloftProvider.diagnostics(),
+      archive: await defaultMapContextArchive.diagnostics(),
+      radarArchive: await defaultWeatherRadarArchive.diagnostics(),
     },
     adsbLol: service.getNetworkDiagnostics?.(),
     adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
