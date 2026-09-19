@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.82] - 2026-09-19
+
+Changes since v1.0.81:
+
+- Fix ADSBHub position freshness and bound network trails (b30247fd)
+
 ## [1.0.81] - 2026-09-19
 
 Changes since v1.0.80:
