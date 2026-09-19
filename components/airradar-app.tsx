@@ -174,6 +174,10 @@ const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
 const KNOT_TO_KM_PER_HOUR = 1.852;
 const MAX_PREDICTION_AGE_MS = 15_000;
 const MAX_PREDICTION_CORRECTION_KM = 12;
+// The tar1090 aircraft silhouettes render nose-first opposite to MapLibre's
+// map-aligned marker rotation. Keep the ADS-B track untouched and correct only
+// the visual marker orientation at this boundary.
+const AIRCRAFT_ICON_ROTATION_OFFSET_DEG = 180;
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1725,7 +1729,7 @@ export function AirRadarApp() {
       }
       // readsb's track is clockwise from geographic north. Let MapLibre apply
       // it in map coordinates, so it remains correct when the user rotates map.
-      if (aircraft.track !== null) marker.setRotation(aircraft.track);
+      if (aircraft.track !== null) marker.setRotation(aircraft.track + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
     }
 
     for (const [hex, marker] of aircraftMarkersRef.current) {
