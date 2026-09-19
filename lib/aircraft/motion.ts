@@ -5,7 +5,7 @@ export const MAX_PREDICTION_AGE_MS = 15_000;
 export const MAX_PREDICTION_CORRECTION_KM = 12;
 
 export type MotionSource = {
-  lat: number; lon: number; observedAt: number | null; receivedAt: number;
+  lat: number; lon: number; observedAt: number | null; receivedAt?: number;
   groundSpeed: number | null; track: number | null;
   positionOrigin?: string | null; positionSource?: string | null;
 };
@@ -36,12 +36,18 @@ export function predictedPosition(source: MotionSource, timestamp: number): [num
   return destinationPoint(source.lat, source.lon, speed * KNOT_TO_KM_PER_HOUR * Math.max(0, timestamp - source.observedAt) / 3_600_000, heading);
 }
 
+export function predictionIsActive(source: MotionSource, timestamp: number): boolean {
+  const heading = normalizeHeading(source.track);
+  return source.observedAt !== null && timestamp >= source.observedAt && timestamp - source.observedAt <= MAX_PREDICTION_AGE_MS
+    && source.groundSpeed !== null && Number.isFinite(source.groundSpeed) && source.groundSpeed >= 0.5 && heading !== null;
+}
+
 export function motionAt(source: MotionSource, timestamp: number, correction?: { lon: number; lat: number; startedAt: number; durationMs: number }): MotionResult {
   const [lon, lat] = predictedPosition(source, timestamp);
   const stale = source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS;
   const progress = correction ? Math.max(0, Math.min(1, (timestamp - correction.startedAt) / correction.durationMs)) : 1;
   const active = Boolean(correction && progress < 1 && !stale);
-  return { lon: normalizeLongitude(lon + (correction?.lon ?? 0) * (1 - progress)), lat: lat + (correction?.lat ?? 0) * (1 - progress), heading: normalizeHeading(source.track), predictionActive: !stale && source.observedAt !== null && predictedPosition(source, timestamp)[0] !== source.lon, correctionActive: active, stale };
+  return { lon: normalizeLongitude(lon + (correction?.lon ?? 0) * (1 - progress)), lat: lat + (correction?.lat ?? 0) * (1 - progress), heading: normalizeHeading(source.track), predictionActive: predictionIsActive(source, timestamp), correctionActive: active, stale };
 }
 
 export function correctionFor(current: { lon: number; lat: number }, source: MotionSource, timestamp: number, durationMs: number) {

@@ -1,3 +1,4 @@
+import "temporal-polyfill/full/global";
 import type { Aircraft, ReceiverPosition, NetworkProviderDiagnostics } from "@/lib/aircraft/types";
 import { eligibleNetworkObservation, type CoverageEligibility } from "@/lib/aircraft/source-awareness";
 import { getPrisma } from "@/lib/server/db";
@@ -29,6 +30,7 @@ type Aggregate = Map<string, Counter>;
 function bucket(map: Aggregate, key: string): Counter { let value = map.get(key); if (!value) { value = { available: 0, captured: 0 }; map.set(key, value); } return value; }
 function ratio(value: Counter): number | null { return value.available > 0 ? value.captured / value.available * 100 : null; }
 function normalizeHour(date: Date): Date { return new Date(Math.floor(date.getTime() / 3_600_000) * 3_600_000); }
+function instant(date: Date): Temporal.Instant { return Temporal.Instant.fromEpochMilliseconds(date.getTime()); }
 function rangeBucket(distanceNm: number): number | null { const index = RANGE_BANDS.findIndex((edge) => distanceNm < edge); return index < 0 && distanceNm <= RANGE_BANDS.at(-1)! ? RANGE_BANDS.length - 1 : index < 0 ? null : index; }
 function altitudeBucket(altitude: number | null): number | null { if (altitude === null || altitude < 0) return null; if (altitude < 5_000) return 0; if (altitude < 10_000) return 1; if (altitude < 20_000) return 2; if (altitude < 30_000) return 3; if (altitude < 40_000) return 4; return 5; }
 function add(map: Aggregate, key: string, item: CoverageEligibility): void { const value = bucket(map, key); value.available += 1; if (item.captured) value.captured += 1; }
@@ -91,10 +93,10 @@ export class ReceiverCoverageAnalytics {
     if (!result.available) return;
     const hour = normalizeHour(new Date(now)); if (!this.lastHour || this.lastHour.getTime() !== hour.getTime()) this.lastHour = hour;
     for (const [key, value] of result.buckets) { const target = bucket(this.pending, key); target.available += value.available; target.captured += value.captured; }
-    this.providers.add(snapshot.network.selectedSource ?? "unknown"); this.state.lastSampleAt = new Date(now).toISOString(); this.state.samplesProcessed += 1; this.state.availableObservations += result.available; this.state.capturedObservations += result.captured; this.state.pendingBuckets = this.pending.size;
+    this.providers.add(snapshot.providerDiagnostics.selectedSource ?? "unknown"); this.state.lastSampleAt = new Date(now).toISOString(); this.state.samplesProcessed += 1; this.state.availableObservations += result.available; this.state.capturedObservations += result.captured; this.state.pendingBuckets = this.pending.size;
   }
   async flush(): Promise<void> {
-    if (!this.pending.size || !getPrisma() || !this.lastHour) return; const started = Date.now(); const rows = [...this.pending.entries()].map(([key, value]) => ({ hour: this.lastHour!, dimension: key.split(":")[0], bucketKey: key, availableCount: value.available, capturedCount: value.captured, referenceProviders: [...this.providers].sort().join(",") }));
+    if (!this.pending.size || !getPrisma() || !this.lastHour) return; const started = Date.now(); const rows = [...this.pending.entries()].map(([key, value]) => ({ hour: instant(this.lastHour!), dimension: key.split(":")[0], bucketKey: key, availableCount: value.available, capturedCount: value.captured, referenceProviders: [...this.providers].sort().join(",") }));
     try { const database = getPrisma(); if (!database) return; await database.transaction(async (transaction) => { const schema = transaction.orm.public; for (const row of rows) { const existing = await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).first(); if (existing) await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).update({ availableCount: existing.availableCount + row.availableCount, capturedCount: existing.capturedCount + row.capturedCount, referenceProviders: [existing.referenceProviders, row.referenceProviders].filter(Boolean).join(",") }); else await schema.ReceiverCoverageHourly.create(row); } }); this.pending.clear(); this.state.pendingBuckets = 0; this.state.lastFlushAt = new Date().toISOString(); this.state.lastFlushDurationMs = Date.now() - started; this.state.lastFlushRows = rows.length; this.state.lastError = null; } catch (error) { this.state.flushFailures += 1; this.state.lastError = error instanceof Error ? error.message : "coverage flush failed"; }
   }
   getDiagnostics(): CoverageDiagnostics { return { ...this.state }; }

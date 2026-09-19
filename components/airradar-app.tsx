@@ -187,6 +187,8 @@ interface AircraftAnimationJob {
     observedAt: number | null;
     groundSpeed: number | null;
     track: number | null;
+    positionOrigin: string | null;
+    positionSource: string | null;
   };
   correctionLon: number;
   correctionLat: number;
@@ -195,9 +197,9 @@ interface AircraftAnimationJob {
   sourceReceivedAt: number;
 }
 
-function sourceObservedPerformanceTime(aircraft: AircraftView): number | null {
+function sourceObservedPerformanceTime(aircraft: AircraftView, receivedAt: number): number | null {
   const observedAt = positionObservedAt(aircraft);
-  return observedAt;
+  return observedAt === null ? null : receivedAt - Math.max(0, Date.now() - observedAt);
 }
 
 function predictedMarkerPosition(job: AircraftAnimationJob, timestamp: number): [number, number] {
@@ -1556,9 +1558,11 @@ export function AirRadarApp() {
       const source: AircraftAnimationJob["source"] = {
         lat: aircraft.lat!,
         lon: aircraft.lon!,
-        observedAt: sourceObservedPerformanceTime(aircraft),
+        observedAt: sourceObservedPerformanceTime(aircraft, now),
         groundSpeed: aircraft.groundSpeed,
         track: aircraft.track,
+        positionOrigin: aircraft.provenance?.positionOrigin ?? null,
+        positionSource: aircraft.provenance?.positionSource ?? null,
       };
       const previous = animationJobs.get(aircraft.icaoHex);
 
@@ -1584,6 +1588,17 @@ export function AirRadarApp() {
 
       if (previous) {
         const current = marker.getLngLat();
+        const sourceChanged = previous.source.positionOrigin !== source.positionOrigin || previous.source.positionSource !== source.positionSource;
+        if (sourceChanged) {
+          marker.setLngLat(target);
+          previous.source = source;
+          previous.correctionLon = 0;
+          previous.correctionLat = 0;
+          previous.correctionStartedAt = now;
+          previous.sourceReceivedAt = now;
+          animationSchedulerRef.current?.();
+          return;
+        }
         const [predictedLon, predictedLat] = predictedPosition(source, now);
         const correctionDistance = haversineDistanceKm(current.lat, current.lng, predictedLat, predictedLon);
         const correctionDurationMs = Math.min(
