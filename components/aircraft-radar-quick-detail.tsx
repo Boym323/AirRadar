@@ -108,7 +108,8 @@ function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftVi
   const primaryFrequency = frequencies[0] ?? assignment?.primaryFrequencyMhz ?? null;
   const additionalFrequencies = frequencies.length > 0 ? frequencies.slice(1) : assignment?.alternateFrequenciesMhz ?? [];
   const route = context?.status === "available" ? context.atsRoute ?? context.nearestAtsCandidate : null;
-  const next = context?.status === "available" ? context.nextPoint ?? context.ahead : null;
+  const nextSector = context?.status === "available" ? context.nextSector : null;
+  const next = nextSector ?? (context?.status === "available" ? context.nextPoint ?? context.ahead : null);
   if (!airspaceName && !fir && !route && !next && !primaryFrequency) return null;
 
   const lowerLimit = contextAirspace?.lowerLimitFt ?? assignment?.lowerAltitudeFt ?? null;
@@ -130,7 +131,8 @@ function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftVi
     </div>
     {(route || next) && <div className="aircraft-quick-atc-context">
       {route && <DetailValue label={route === context?.atsRoute ? t.atc.contextAts : t.atc.contextNearestAts} value={`${route.routeId} · ${formatNumber(route.distanceNm, 1)} NM`} />}
-      {next && <DetailValue label={t.atc.contextNext} value={"identifier" in next ? `${next.identifier} · ${formatNumber(next.distanceNm, 0)} NM` : `${next.airspace.name} · ${formatNumber(next.distanceNm, 0)} NM`} />}
+      {nextSector && <DetailValue label={t.atc.nextSector} value={`${nextSector.airspace.name} · ~${formatNumber(nextSector.distanceNm * 1.852, 0)} km · ~${Math.max(1, Math.round(nextSector.estimatedSeconds / 60))} min`} />}
+      {!nextSector && next && <DetailValue label={t.atc.contextNext} value={"identifier" in next ? `${next.identifier} · ${formatNumber(next.distanceNm, 0)} NM` : `${next.airspace.name} · ${formatNumber(next.distanceNm, 0)} NM`} />}
     </div>}
     {additionalFrequencies.length > 0 && <details className="aircraft-quick-atc-more">
       <summary>{t.atc.moreFrequencies}</summary>

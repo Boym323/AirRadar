@@ -78,7 +78,7 @@ function routeMatch(routeId: string, countryCode: string | null, sourceReference
 export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDataset | PreparedAtcContextDataset, now = new Date(), diagnostics?: AtcContextLookupDiagnostics): AtcContextResult {
   const prepared = "prepared" in dataset && dataset.prepared ? dataset : prepareAtcContextDataset(dataset);
   const computedAt = now.toISOString();
-  if (!validPosition(input.lat, input.lon)) return { status: "invalid", position: { lat: input.lat, lon: input.lon, altitude: input.altitude, altitudeSource: input.altitudeSource ?? "none" }, supportedCountry: false, fir: null, currentAirspaces: [], primaryAirspace: null, atsRoute: null, nearestAtsCandidate: null, nearestPoint: null, nextPoint: null, ahead: null, limitation: "Invalid aircraft position", computedAt, dataset: { atcVersion: "none", atsVersion: "none", atcCount: dataset.sectors.length, atsSegmentCount: 0 } };
+  if (!validPosition(input.lat, input.lon)) return { status: "invalid", position: { lat: input.lat, lon: input.lon, altitude: input.altitude, altitudeSource: input.altitudeSource ?? "none" }, supportedCountry: false, fir: null, currentAirspaces: [], primaryAirspace: null, atsRoute: null, nearestAtsCandidate: null, nearestPoint: null, nextPoint: null, ahead: null, nextSector: null, limitation: "Invalid aircraft position", computedAt, dataset: { atcVersion: "none", atsVersion: "none", atcCount: dataset.sectors.length, atsSegmentCount: 0 } };
   const point: [number, number] = [input.lon, input.lat];
   const matches: ContextAirspace[] = [];
   for (const index of queryGrid(prepared.atcGrid, point)) {
@@ -130,6 +130,46 @@ export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDat
   if (atsRoute) { const item = segments.find((s) => s.segment.id === atsRoute.segmentId && s.routeId === atsRoute.routeId); if (item) { const forward = input.track !== null && angleDifference(input.track, item.forwardBearing) <= angleDifference(input.track, item.reverseBearing); const destinationPoint = forward ? item.segment.to : item.segment.from; nextPoint = { identifier: forward ? item.segment.toName : item.segment.fromName, distanceNm: Number(distanceNm(point, destinationPoint).toFixed(1)), bearing: Number(bearing(point, destinationPoint).toFixed(1)), kind: "DESIGNATED_POINT" }; } }
   let ahead: AtcContextResult["ahead"] = null;
   const currentIds = new Set(matches.map((m) => m.id));
+  let nextSector: AtcContextResult["nextSector"] = null;
+  const inputAgeMs = Math.max(0, now.getTime() - new Date(input.timestamp).getTime());
+  const projectionTimes = [30, 60, 120, 180, 300];
+  // A projected sector is accepted only after two consecutive samples agree.
+  // This keeps a single boundary hit from becoming a confident transition.
+  if (!input.onGround && inputAgeMs <= 120_000 && input.track !== null && Number.isFinite(input.track)
+    && input.groundSpeed !== null && Number.isFinite(input.groundSpeed) && input.groundSpeed > 20) {
+    const projected: Array<{ seconds: number; distanceNm: number; airspace: ContextAirspace }> = [];
+    for (const seconds of projectionTimes) {
+      const distance = input.groundSpeed * seconds / 3600;
+      const pointAtTime = destination(point, distance, input.track);
+      const altitudeDelta = input.verticalRate !== null && Number.isFinite(input.verticalRate)
+        ? Math.max(-30_000, Math.min(30_000, input.verticalRate * seconds / 60)) : 0;
+      const projectedInput: AtcContextInput = {
+        ...input,
+        lat: pointAtTime[1], lon: pointAtTime[0], altitude: input.altitude === null ? null : input.altitude + altitudeDelta,
+        baroAltitude: input.baroAltitude === null || input.baroAltitude === undefined ? input.baroAltitude : input.baroAltitude + altitudeDelta,
+        geomAltitude: input.geomAltitude === null || input.geomAltitude === undefined ? input.geomAltitude : input.geomAltitude + altitudeDelta,
+      };
+      const candidates = queryGrid(prepared.atcGrid, pointAtTime)
+        .map((index) => prepared.airspaces[index]?.sector)
+        .filter((sector): sector is AtcSector => Boolean(sector) && !currentIds.has(sector.id))
+        .map((sector) => {
+          const horizontal = sector.polygons.some((polygon) => pointInPolygon(pointAtTime, [polygon as unknown as [number, number][]]) !== null);
+          if (!horizontal || verticalMatch(sector, projectedInput).match === "false") return null;
+          return airspace(sector, "inside", verticalMatch(sector, projectedInput).match);
+        })
+        .filter((value): value is ContextAirspace => value !== null)
+        .sort((a, b) => (ORDER[a.airspaceType] ?? 90) - (ORDER[b.airspaceType] ?? 90) || a.id.localeCompare(b.id));
+      if (diagnostics) { diagnostics.aheadProjectedSteps += 1; diagnostics.aheadAirspaceQueries += 1; }
+      if (candidates[0]) projected.push({ seconds, distanceNm: distance, airspace: candidates[0] });
+    }
+    for (let index = 0; index < projected.length - 1; index += 1) {
+      if (projected[index].airspace.id !== projected[index + 1].airspace.id) continue;
+      const item = projected[index];
+      const confidence: "high" | "medium" = input.verticalRate === null ? "medium" : "high";
+      nextSector = { airspace: item.airspace, distanceNm: Number(item.distanceNm.toFixed(1)), estimatedSeconds: item.seconds, confidence };
+      break;
+    }
+  }
   if (!input.onGround && input.track !== null && input.groundSpeed !== null && input.groundSpeed > 20) {
     for (let nm = 2; nm <= 45; nm += 2) {
       if (diagnostics) diagnostics.aheadProjectedSteps += 1;
@@ -139,7 +179,7 @@ export function computeAtcContext(input: AtcContextInput, dataset: AtcContextDat
       if (candidate) { const match = airspace(candidate, "inside", verticalMatch(candidate, input).match); ahead = { airspace: match, distanceNm: nm, estimatedMinutes: Number((nm / input.groundSpeed * 60).toFixed(1)), confidence: nm <= 15 ? "medium" : "low" }; break; }
     }
   }
-  return { status: "available", position: { lat: input.lat, lon: input.lon, altitude: input.altitude, altitudeSource: input.altitudeSource ?? "none" }, supportedCountry: fir?.countryCode ? SUPPORTED.has(fir.countryCode) : matches.some((m) => m.countryCode !== null && SUPPORTED.has(m.countryCode!)), fir, currentAirspaces: matches, primaryAirspace: matches[0] ?? null, atsRoute, nearestAtsCandidate, nearestPoint, nextPoint, ahead, limitation: input.onGround ? "Ground aircraft: en-route ATS route prediction skipped" : ahead ? "Ahead on current track only; no turn or flight-plan prediction" : null, computedAt, dataset: { atcVersion: prepared.sectors.map((s) => s.lastVerifiedAt).sort().at(-1) ?? "none", atsVersion: docs.map((d) => d.source.effectiveDate).sort().at(-1) ?? "none", atcCount: prepared.sectors.length, atsSegmentCount: segments.length } };
+  return { status: "available", position: { lat: input.lat, lon: input.lon, altitude: input.altitude, altitudeSource: input.altitudeSource ?? "none" }, supportedCountry: fir?.countryCode ? SUPPORTED.has(fir.countryCode) : matches.some((m) => m.countryCode !== null && SUPPORTED.has(m.countryCode!)), fir, currentAirspaces: matches, primaryAirspace: matches[0] ?? null, atsRoute, nearestAtsCandidate, nearestPoint, nextPoint, ahead, nextSector, limitation: input.onGround ? "Ground aircraft: en-route ATS route prediction skipped" : ahead ? "Ahead on current track only; no turn or flight-plan prediction" : null, computedAt, dataset: { atcVersion: prepared.sectors.map((s) => s.lastVerifiedAt).sort().at(-1) ?? "none", atsVersion: docs.map((d) => d.source.effectiveDate).sort().at(-1) ?? "none", atcCount: prepared.sectors.length, atsSegmentCount: segments.length } };
 }
 
 export function inputFromAircraft(aircraft: Pick<Aircraft, "lat" | "lon" | "altitude" | "baroAltitude" | "geomAltitude" | "groundSpeed" | "track" | "verticalRate" | "lastSeen" | "onGround">): AtcContextInput | null {

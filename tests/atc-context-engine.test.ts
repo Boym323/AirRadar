@@ -55,4 +55,26 @@ describe("ATC Context Engine", () => {
     expect(diagnostics.atcBboxCandidates).toBe(2);
     expect(diagnostics.atcExactPolygonTests).toBe(2);
   });
+
+  it("predicts a stable next sector with distance and ETA", () => {
+    const next = sector({ id: "CZ-NEXT", name: "NEXT RADAR", polygons: [[[15, 49], [16, 49], [16, 50], [15, 50], [15, 49]]] });
+    const result = computeAtcContext(input({ lon: 14.9 }), dataset([sector(), next]), new Date("2026-01-01T12:00:00.000Z"));
+    expect(result.nextSector).toMatchObject({ airspace: { id: "CZ-NEXT" } });
+    expect(result.nextSector?.estimatedSeconds).toBeGreaterThan(0);
+    expect(result.nextSector?.distanceNm).toBeGreaterThan(0);
+    expect(result.nextSector?.confidence).toBe("high");
+  });
+
+  it("does not predict a transition when the projected track stays in the current sector", () => {
+    const result = computeAtcContext(input(), dataset([sector()]), new Date("2026-01-01T12:00:00.000Z"));
+    expect(result.nextSector).toBeNull();
+  });
+
+  it("suppresses prediction for ground, slow, and stale aircraft", () => {
+    const next = sector({ id: "CZ-NEXT", polygons: [[[15, 49], [16, 49], [16, 50], [15, 50], [15, 49]]] });
+    const sectors = dataset([sector(), next]);
+    expect(computeAtcContext(input({ lon: 14.9, onGround: true }), sectors, new Date("2026-01-01T12:00:00.000Z")).nextSector).toBeNull();
+    expect(computeAtcContext(input({ lon: 14.9, groundSpeed: 10 }), sectors, new Date("2026-01-01T12:00:00.000Z")).nextSector).toBeNull();
+    expect(computeAtcContext(input({ lon: 14.9, timestamp: "2026-01-01T11:55:00.000Z" }), sectors, new Date("2026-01-01T12:00:00.000Z")).nextSector).toBeNull();
+  });
 });

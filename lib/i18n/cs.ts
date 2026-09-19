@@ -878,6 +878,7 @@ export const cs = {
     contextAts: "ATS trať",
     contextNearestAts: "Nejbližší ATS",
     contextNext: "Před letadlem na současném kurzu",
+    nextSector: "Pravděpodobný další sektor · odhad",
     contextDirect: "Direct / neurčeno",
     contextUnavailable: "ATC kontext není dostupný",
     contextStale: "ATC kontext je zastaralý",

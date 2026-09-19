@@ -880,6 +880,7 @@ export const en = {
     contextAts: "ATS route",
     contextNearestAts: "Nearest ATS",
     contextNext: "Ahead on current track",
+    nextSector: "Likely next sector · estimated",
     contextDirect: "Direct / not identified",
     contextUnavailable: "ATC context unavailable",
     contextStale: "ATC context is stale",

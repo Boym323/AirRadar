@@ -4,6 +4,7 @@ import type { CzAtsRouteDocument } from "@/lib/ats/cz-routes";
 export type AltitudeSource = "baro" | "geom" | "none";
 export type VerticalMatch = "true" | "false" | "uncertain";
 export type ContextConfidence = "high" | "medium" | "low" | "partial";
+export type AtcPredictionConfidence = "high" | "medium" | "low";
 
 export interface AtcContextInput {
   lat: number;
@@ -64,6 +65,8 @@ export interface AtcContextResult {
   nearestPoint: ContextPoint | null;
   nextPoint: ContextPoint | null;
   ahead: { airspace: ContextAirspace; distanceNm: number; estimatedMinutes: number | null; confidence: ContextConfidence } | null;
+  /** A short-horizon, track-based estimate; this is not an observed handoff. */
+  nextSector: { airspace: ContextAirspace; distanceNm: number; estimatedSeconds: number; confidence: AtcPredictionConfidence } | null;
   limitation: string | null;
   computedAt: string;
   dataset: { atcVersion: string; atsVersion: string; atcCount: number; atsSegmentCount: number };
