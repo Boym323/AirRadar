@@ -32,8 +32,8 @@ describe("production release metadata gate", () => {
 
   it("validates the complete checked-in migration chain", () => {
     const result = assertMigrationSource(process.cwd());
-    expect(result.directories).toHaveLength(11);
-    expect(result.directories.at(-1)).toBe("20260917T2030_flight_intelligence");
+    expect(result.directories).toHaveLength(12);
+    expect(result.directories.at(-1)).toBe("20260919T1908_receiver_coverage_hourly");
     expect(result.finalContractHash).toMatch(/^[a-f0-9]{64}$/);
   });
 });

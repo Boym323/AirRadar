@@ -26,7 +26,8 @@ import {
   watchlistKindLabel,
   watchlistSummary,
 } from "@/lib/i18n";
-import { destinationPoint, haversineDistanceKm } from "@/lib/geo";
+import { haversineDistanceKm } from "@/lib/geo";
+import { MAX_PREDICTION_CORRECTION_KM, motionAt, normalizeHeading, predictedPosition, shortestLongitudeDelta } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -171,13 +172,6 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 
 const MIN_AIRCRAFT_ANIMATION_MS = 650;
 const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
-const KNOT_TO_KM_PER_HOUR = 1.852;
-const MAX_PREDICTION_AGE_MS = 15_000;
-const MAX_PREDICTION_CORRECTION_KM = 12;
-// The tar1090 aircraft silhouettes render nose-first opposite to MapLibre's
-// map-aligned marker rotation. Keep the ADS-B track untouched and correct only
-// the visual marker orientation at this boundary.
-const AIRCRAFT_ICON_ROTATION_OFFSET_DEG = 180;
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -190,7 +184,7 @@ interface AircraftAnimationJob {
   source: {
     lat: number;
     lon: number;
-    observedAt: number;
+    observedAt: number | null;
     groundSpeed: number | null;
     track: number | null;
   };
@@ -201,50 +195,19 @@ interface AircraftAnimationJob {
   sourceReceivedAt: number;
 }
 
-function normalizeLongitude(longitude: number): number {
-  return ((longitude + 540) % 360) - 180;
-}
-
-function shortestLongitudeDelta(from: number, to: number): number {
-  let delta = from - to;
-  if (delta > 180) delta -= 360;
-  if (delta < -180) delta += 360;
-  return delta;
-}
-
-function sourceObservedPerformanceTime(aircraft: AircraftView, receivedAt: number): number {
+function sourceObservedPerformanceTime(aircraft: AircraftView): number | null {
   const observedAt = positionObservedAt(aircraft);
-  if (observedAt === null) return receivedAt;
-  const age = Math.min(MAX_PREDICTION_AGE_MS, Math.max(0, Date.now() - observedAt));
-  return receivedAt - age;
-}
-
-function predictedPosition(source: AircraftAnimationJob["source"], timestamp: number): [number, number] {
-  const speed = source.groundSpeed;
-  const track = source.track;
-  if (speed === null || !Number.isFinite(speed) || speed < 0.5 || track === null || !Number.isFinite(track)) {
-    return [source.lon, source.lat];
-  }
-  const elapsedHours = Math.max(0, timestamp - source.observedAt) / 3_600_000;
-  return destinationPoint(source.lat, source.lon, speed * KNOT_TO_KM_PER_HOUR * elapsedHours, track);
+  return observedAt;
 }
 
 function predictedMarkerPosition(job: AircraftAnimationJob, timestamp: number): [number, number] {
-  const [predictedLon, predictedLat] = predictedPosition(job.source, timestamp);
-  const correctionProgress = Math.min(1, Math.max(0, (timestamp - job.correctionStartedAt) / job.correctionDurationMs));
-  const correctionWeight = 1 - correctionProgress;
-  return [
-    normalizeLongitude(predictedLon + job.correctionLon * correctionWeight),
-    predictedLat + job.correctionLat * correctionWeight,
-  ];
+  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs });
+  return [motion.lon, motion.lat];
 }
 
 function hasContinuousPrediction(job: AircraftAnimationJob, timestamp: number): boolean {
-  const speed = job.source.groundSpeed;
-  const moving = speed !== null && Number.isFinite(speed) && speed >= 0.5
-    && job.source.track !== null && Number.isFinite(job.source.track);
-  const correcting = timestamp - job.correctionStartedAt < job.correctionDurationMs;
-  return moving || correcting;
+  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs });
+  return motion.predictionActive || motion.correctionActive;
 }
 
 const MAP_STYLE: StyleSpecification = {
@@ -1593,7 +1556,7 @@ export function AirRadarApp() {
       const source: AircraftAnimationJob["source"] = {
         lat: aircraft.lat!,
         lon: aircraft.lon!,
-        observedAt: sourceObservedPerformanceTime(aircraft, now),
+        observedAt: sourceObservedPerformanceTime(aircraft),
         groundSpeed: aircraft.groundSpeed,
         track: aircraft.track,
       };
@@ -1729,7 +1692,13 @@ export function AirRadarApp() {
       }
       // readsb's track is clockwise from geographic north. Let MapLibre apply
       // it in map coordinates, so it remains correct when the user rotates map.
-      if (aircraft.track !== null) marker.setRotation(aircraft.track + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
+      const motionJob = animationJobs.get(aircraft.icaoHex);
+      const renderedMotion = motionJob ? motionAt(motionJob.source, performance.now(), {
+        lon: motionJob.correctionLon, lat: motionJob.correctionLat,
+        startedAt: motionJob.correctionStartedAt, durationMs: motionJob.correctionDurationMs,
+      }) : null;
+      const renderedHeading = renderedMotion?.heading ?? normalizeHeading(aircraft.track);
+      if (renderedHeading !== null) marker.setRotation(renderedHeading);
     }
 
     for (const [hex, marker] of aircraftMarkersRef.current) {

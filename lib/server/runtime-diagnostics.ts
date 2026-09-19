@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { getSseDiagnostics, MAX_SSE_CLIENTS } from "@/lib/server/sse-capacity";
 
 export interface RuntimeDiagnostics {
+  coverageAnalytics?: Record<string, unknown>;
   processRssBytes: number;
   processRssAnonBytes: number | null;
   processRssFileBytes: number | null;

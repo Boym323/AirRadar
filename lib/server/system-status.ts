@@ -1240,6 +1240,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
         metadataFallbackCacheBytesLimit: serviceDiagnostics.enrichment.metadata?.fallbackCacheBytesLimit ?? null,
         providerCacheEntries: serviceDiagnostics.enrichment.providerCacheEntries,
         providerCacheLimit: serviceDiagnostics.enrichment.providerCacheLimit,
+        coverageAnalytics: serviceDiagnostics.coverageAnalytics,
       } : undefined,
     },
   });
