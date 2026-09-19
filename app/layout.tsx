@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   description: "Soukromý radar pro přehled leteckého provozu v okolí.",
   applicationName: "AirRadar",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
