@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.66] - 2026-09-19
+
+Changes since v1.0.65:
+
+- feat: add sector traffic history API endpoint and validation logic (c2e18dc8)
+- fix: reject invalid map bounds coordinates (deb06097)
+
 ## [1.0.65] - 2026-09-19
 
 Changes since v1.0.64:
