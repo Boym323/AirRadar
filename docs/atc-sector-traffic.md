@@ -42,3 +42,19 @@ import format exposes them explicitly.
 
 Aircraft traffic inside a published sector volume must not be interpreted as
 evidence that the sector is currently operated independently.
+
+## Traffic history UI
+
+The `Traffic history` section is lazy-loaded from the historical API and is
+not polled with the live map. Ranges map centrally to buckets as follows:
+`1h` → `1m`, `6h` → `5m`, `24h` → `15m`, and `7d` → `1h`. Single-sector
+history uses one sector request; comparison and SOUTH history use one batch
+request for up to three sectors (`TB`, `SL`, and `S`).
+
+The history window ends at the effective Global Map Time. In Time Machine mode
+the `at` instant is used rather than the real current time. Missing values are
+rendered as gaps/“No data”; they are not converted to zero. Summary values
+(peak, average, entries, and exits) are taken from the backend response.
+Charts describe aircraft observed within published SOUTH sector volumes and do
+not represent the operational ATC sector configuration. Results depend on
+AirRadar ADS-B coverage and retained `FlightPosition` data.
