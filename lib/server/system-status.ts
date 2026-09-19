@@ -58,7 +58,7 @@ export interface SystemStatusResponse {
   adsbLol: {
     status: SystemStatus;
     enabled: boolean;
-    endpoint: "Public API" | "Raw BEAST + SBS/MLAT";
+    endpoint: "Public API" | "Raw BEAST + SBS/MLAT" | "SBS/30003";
     license: "ODbL 1.0";
     radiusNm: number;
     pollIntervalMs: number;
@@ -71,7 +71,7 @@ export interface SystemStatusResponse {
     consecutiveFailures: number;
     rateLimited: boolean;
     retryAfterMs: number | null;
-    selectedSource?: "raw" | "http-fallback" | "unavailable";
+    selectedSource?: "adsbhub" | "adsblol-raw" | "adsblol-http" | "raw" | "http-fallback" | "unavailable";
     beastConnected?: boolean;
     mlatConnected?: boolean;
     beastFramesReceived?: number;
@@ -85,6 +85,17 @@ export interface SystemStatusResponse {
     adsbPositionCount?: number;
     mlatPositionCount?: number;
     droppedTracks?: number;
+    connected?: boolean;
+    connectionSince?: string | null;
+    lastLineAt?: string | null;
+    linesReceived?: number;
+    linesParsed?: number;
+    malformedLines?: number;
+    invalidIcao?: number;
+    invalidPosition?: number;
+    bytesReceived?: number;
+    linesPerSecond?: number;
+    stale?: boolean;
   };
   adsbdb: {
     status: SystemStatus;
@@ -497,7 +508,7 @@ function adsbLolResponse(diagnostics: NetworkProviderDiagnostics | undefined): S
   return {
     status: adsbLolStatus(value),
     enabled: value.enabled,
-    endpoint: value.selectedSource === "raw" ? "Raw BEAST + SBS/MLAT" : "Public API",
+    endpoint: value.selectedSource === "adsbhub" ? "SBS/30003" : value.selectedSource === "raw" || value.selectedSource === "adsblol-raw" ? "Raw BEAST + SBS/MLAT" : "Public API",
     license: "ODbL 1.0",
     radiusNm: nonNegativeInteger(value.radiusNm, 250),
     pollIntervalMs: nonNegativeInteger(value.pollIntervalMs, 86_400_000),
@@ -525,6 +536,17 @@ function adsbLolResponse(diagnostics: NetworkProviderDiagnostics | undefined): S
       adsbPositionCount: nonNegativeInteger(value.adsbPositionCount ?? 0, 100_000_000),
       mlatPositionCount: nonNegativeInteger(value.mlatPositionCount ?? 0, 100_000_000),
       droppedTracks: nonNegativeInteger(value.droppedTracks ?? 0, 100_000_000),
+      connected: value.connected,
+      connectionSince: safeTimestamp(value.connectionSince ?? null),
+      lastLineAt: safeTimestamp(value.lastLineAt ?? null),
+      linesReceived: nonNegativeInteger(value.linesReceived ?? 0, 100_000_000),
+      linesParsed: nonNegativeInteger(value.linesParsed ?? 0, 100_000_000),
+      malformedLines: nonNegativeInteger(value.malformedLines ?? 0, 100_000_000),
+      invalidIcao: nonNegativeInteger(value.invalidIcao ?? 0, 100_000_000),
+      invalidPosition: nonNegativeInteger(value.invalidPosition ?? 0, 100_000_000),
+      bytesReceived: nonNegativeInteger(value.bytesReceived ?? 0, 10_000_000_000),
+      linesPerSecond: Number.isFinite(value.linesPerSecond) ? Math.max(0, value.linesPerSecond ?? 0) : 0,
+      stale: value.stale,
     } : {}),
   };
 }

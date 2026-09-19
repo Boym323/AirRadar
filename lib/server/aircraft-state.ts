@@ -470,7 +470,7 @@ export class AircraftStateService {
     for (const incoming of snapshot.aircraft) {
       currentHexes.add(incoming.icaoHex);
       const previous = this.networkAircraft.get(incoming.icaoHex);
-      const networkIncoming = plausiblePosition(previous, { ...incoming, origin: "adsblol" as const });
+      const networkIncoming = plausiblePosition(previous, { ...incoming, origin: incoming.origin ?? "adsblol" });
       const trail = this.updateTrail(previous, networkIncoming);
       this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
     }

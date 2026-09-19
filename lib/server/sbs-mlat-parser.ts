@@ -1,7 +1,7 @@
 import type { Aircraft, ReceiverPosition } from "@/lib/aircraft/types";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 
-export interface SbsParseResult { aircraft: Aircraft | null; error: string | null; }
+export interface SbsParseResult { aircraft: Aircraft | null; error: string | null; messageType?: number; }
 
 function number(value: string | undefined): number | null {
   if (!value?.trim()) return null;
@@ -14,33 +14,46 @@ function coordinate(value: string | undefined, min: number, max: number): number
 }
 function text(value: string | undefined): string | null { const result = value?.trim() ?? ""; return result || null; }
 
-/** BaseStation/SBS MSG parser used by readsb's sbs_in_mlat input. */
-export function parseSbsMlatLine(line: string, receiver: ReceiverPosition, now = Date.now()): SbsParseResult {
+export interface SbsParserOptions {
+  origin?: "adsblol" | "adsbhub";
+  source?: Aircraft["source"];
+}
+
+/** Generic BaseStation/SBS MSG parser. Remote timestamps are retained only as diagnostics; freshness is arrival time. */
+export function parseSbsLine(line: string, receiver: ReceiverPosition, now = Date.now(), options: SbsParserOptions = {}): SbsParseResult {
   const fields = line.trim().split(",");
-  if (fields.length < 22 || fields[0] !== "MSG") return { aircraft: null, error: "malformed" };
-  const icaoHex = fields[4]?.trim().toUpperCase();
-  if (!/^[0-9A-F]{6}$/.test(icaoHex ?? "")) return { aircraft: null, error: "invalid_icao" };
+  const messageType = Number(fields[1]);
+  if (fields.length < 22 || fields[0] !== "MSG" || !Number.isInteger(messageType) || messageType < 1 || messageType > 8) return { aircraft: null, error: "malformed", messageType };
+  const rawIcao = fields[4]?.trim().toUpperCase();
+  if (!/^[0-9A-F]{1,6}$/.test(rawIcao ?? "")) return { aircraft: null, error: "invalid_icao", messageType };
+  const icaoHex = rawIcao.padStart(6, "0");
   const lat = coordinate(fields[14], -90, 90);
   const lon = coordinate(fields[15], -180, 180);
-  if ((fields[14]?.trim() || fields[15]?.trim()) && (lat === null || lon === null)) return { aircraft: null, error: "invalid_position" };
+  if ((fields[14]?.trim() || fields[15]?.trim()) && (lat === null || lon === null)) return { aircraft: null, error: "invalid_position", messageType };
   const altitude = number(fields[11]);
   const groundSpeed = number(fields[12]);
   const track = number(fields[13]);
   const verticalRate = number(fields[16]);
   const lastSeen = new Date(now).toISOString();
-  const source = "MLAT" as const;
+  const source = options.source ?? "UNKNOWN";
+  const origin = options.origin ?? "adsblol";
   return { aircraft: {
     icaoHex, callsign: text(fields[10]), registration: null, aircraftType: null, aircraftDescription: null,
     lat, lon, altitude, baroAltitude: altitude, geomAltitude: null, groundSpeed, track,
     verticalRate, baroRate: verticalRate, geomRate: null, squawk: text(fields[17]), category: null,
     emergency: text(fields[19]), rssi: null, messages: null, seenSeconds: 0, seenPosSeconds: lat !== null ? 0 : null,
-    lastSeen, source, origin: "adsblol", provenance: { seenLocal: false, seenNetwork: true, lastLocalSeen: null,
-      lastNetworkSeen: lastSeen, positionOrigin: lat !== null ? "adsblol" : null, positionSource: lat !== null ? source : "UNKNOWN" },
-    sourceType: "sbs_in_mlat", onGround: fields[21]?.trim().toLowerCase() === "-1" || fields[21]?.trim().toLowerCase() === "true",
+    lastSeen, source, origin, provenance: { seenLocal: false, seenNetwork: true, lastLocalSeen: null,
+      lastNetworkSeen: lastSeen, positionOrigin: lat !== null ? origin : null, positionSource: lat !== null ? source : "UNKNOWN" },
+    sourceType: origin === "adsblol" ? "sbs_in_mlat" : "sbs_30003", onGround: fields[21]?.trim().toLowerCase() === "-1" || fields[21]?.trim().toLowerCase() === "true",
     distanceKm: lat !== null && lon !== null ? haversineDistanceKm(receiver.lat, receiver.lon, lat, lon) : null,
     bearing: lat !== null && lon !== null ? initialBearing(receiver.lat, receiver.lon, lat, lon) : null,
     trail: lat !== null && lon !== null ? [{ lat, lon, recordedAt: lastSeen, altitude, groundSpeed, track }] : [],
-  }, error: null };
+  }, error: null, messageType };
+}
+
+/** Compatibility wrapper for the ADSB.lol SBS/MLAT lane. */
+export function parseSbsMlatLine(line: string, receiver: ReceiverPosition, now = Date.now()): SbsParseResult {
+  return parseSbsLine(line, receiver, now, { origin: "adsblol", source: "MLAT" });
 }
 
 export class SbsLineBuffer {
@@ -53,7 +66,7 @@ export class SbsLineBuffer {
     while ((index = this.buffer.indexOf("\n")) >= 0) {
       const line = this.buffer.slice(0, index).replace(/\r$/, "");
       this.buffer = this.buffer.slice(index + 1);
-      if (line) lines.push(line);
+      if (line && Buffer.byteLength(line, "utf8") <= this.maxLineBytes) lines.push(line);
     }
     if (Buffer.byteLength(this.buffer, "utf8") > this.maxLineBytes) this.buffer = "";
     return lines;

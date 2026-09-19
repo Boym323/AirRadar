@@ -2,7 +2,7 @@ import type { AtcAssignment, AtcFrequencySummary } from "@/lib/atc/types";
 import type { Airport } from "@/lib/airports/types";
 
 export type AircraftSource = "ADS-B" | "MLAT" | "TIS-B" | "Mode-S" | "UNKNOWN";
-export type AircraftDataOrigin = "local" | "adsblol";
+export type AircraftDataOrigin = "local" | "adsblol" | "adsbhub";
 
 export interface AircraftProvenance {
   seenLocal: boolean;
@@ -181,7 +181,7 @@ export interface NetworkProviderDiagnostics {
   radiusNm: number;
   pollIntervalMs: number;
   retryAfterMs: number | null;
-  selectedSource?: "raw" | "http-fallback" | "unavailable";
+  selectedSource?: "adsbhub" | "adsblol-raw" | "adsblol-http" | "raw" | "http-fallback" | "unavailable";
   beastConnected?: boolean;
   mlatConnected?: boolean;
   beastLastFrameAt?: string | null;
@@ -194,6 +194,7 @@ export interface NetworkProviderDiagnostics {
   mlatParseErrors?: number;
   beastReconnects?: number;
   mlatReconnects?: number;
+  reconnects?: number;
   activeInternalTracks?: number;
   publishedAircraftCount?: number;
   adsbPositionCount?: number;
@@ -202,6 +203,17 @@ export interface NetworkProviderDiagnostics {
   configuredRadiusNm?: number;
   lastSourceTransitionAt?: string | null;
   lastError?: string | null;
+  connected?: boolean;
+  connectionSince?: string | null;
+  lastLineAt?: string | null;
+  linesReceived?: number;
+  linesParsed?: number;
+  malformedLines?: number;
+  invalidIcao?: number;
+  invalidPosition?: number;
+  bytesReceived?: number;
+  linesPerSecond?: number;
+  stale?: boolean;
 }
 
 export interface SourceStatusSnapshot {

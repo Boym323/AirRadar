@@ -18,8 +18,8 @@ LocalReadsbProvider (or MockReadsbProvider when READSB_BASE_URL is empty)
         ▼
 one global AircraftStateService
   ├─ RAM aircraft map, stale cleanup, distance/bearing, bounded live trails
-  ├─ optional AdsbLolRawProvider (BEAST + SBS/MLAT) → bounded network RAM map
-  │    └─ AdsbLolProvider HTTP fallback (never summed with raw)
+  ├─ optional NetworkFailoverProvider: ADSBHub SBS/30003 → ADSB.lol raw → HTTP
+  │    └─ bounded network RAM map (never summed across sources)
   ├─ async enrichment and ATC resolution
   ├─ async sampled history persistence
   ├─ daily ReceiverStatistics aggregate
@@ -44,8 +44,11 @@ The server-side provider boundary is `AircraftProvider`. The configured local
 provider fetches the readsb/tar1090 web root; the empty base URL selects the
 deterministic demo provider. The frontend never selects a provider.
 `NetworkAircraftProvider` is a separate optional boundary for live-only
-coverage. `AdsbLolRawProvider` consumes the two authorized outbound ADSB.lol
-streams, decodes global CPR, and merges BEAST and SBS/MLAT by ICAO.
+coverage. `AdsbHubProvider` consumes the generic aggregated SBS/30003 stream
+from `data.adsbhub.org:5002`; these rows are not classified as MLAT. The
+explicit priority is ADSBHub TCP, ADSB.lol raw, then ADSB.lol HTTP.
+`AdsbLolRawProvider` consumes the two authorized outbound ADSB.lol streams,
+decodes global CPR, and merges BEAST and SBS/MLAT by ICAO.
 `AdsbLolProvider` is selected only as a fallback and keeps its validated
 snapshot in RAM. Neither lane enters the local history,
 statistics, alert, enrichment, or ATC input lanes.

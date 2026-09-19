@@ -66,6 +66,7 @@ function publicSources(snapshot: StateSnapshot): PublicStateSnapshot["sources"] 
       radiusNm: Math.max(0, Math.min(250, Math.trunc(network.radiusNm))),
       pollIntervalMs: Math.max(0, Math.min(86_400_000, Math.trunc(network.pollIntervalMs))),
       retryAfterMs: network.retryAfterMs === null ? null : Math.max(0, Math.min(86_400_000, Math.trunc(network.retryAfterMs))),
+      ...(network.selectedSource ? { selectedSource: network.selectedSource } : {}),
     },
   };
 }

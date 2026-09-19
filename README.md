@@ -78,6 +78,13 @@ ADSBLOL_REQUEST_TIMEOUT_MS=4000
 ADSBLOL_STALE_AFTER_MS=30000
 ADSBLOL_MAX_RETRY_INTERVAL_MS=60000
 ADSBLOL_MAX_AIRCRAFT=3000
+ADSBHUB_ENABLED=false
+ADSBHUB_HOST=data.adsbhub.org
+ADSBHUB_PORT=5002
+ADSBHUB_RADIUS_NM=500
+ADSBHUB_STALE_MS=15000
+ADSBHUB_RECONNECT_MAX_MS=30000
+ADSBHUB_MAX_TRACKS=20000
 ```
 
 The default is conservative: one server-side poll every 10 seconds, bounded
@@ -99,6 +106,11 @@ receiver statistics or reception records, and never use network RSSI/message
 counts as local measurements. Existing local enrichment, ATC matching, and
 default push-alert semantics remain local-only; network-only aircraft do not
 trigger an enrichment fan-out or push notification.
+
+When enabled, network priority is ADSBHub TCP SBS/30003, ADSB.lol raw, then
+ADSB.lol HTTP. The ADSBHub feeder contribution is external to this repository:
+`192.168.1.50:30002` → `data.adsbhub.org:5001`; AirRadar consumes
+`data.adsbhub.org:5002` and never manages the feeder service.
 
 The public API is dynamically rate-limited. AirRadar sends no per-browser
 requests, never overlaps ADSB.lol requests, honors `Retry-After` on HTTP 429,

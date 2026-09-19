@@ -147,6 +147,15 @@ export function isAdsbLolEnabled(): boolean {
   return process.env.ADSBLOL_ENABLED?.trim().toLowerCase() === "true";
 }
 
+export function isAdsbHubEnabled(): boolean { return process.env.ADSBHUB_ENABLED?.trim().toLowerCase() === "true"; }
+export function getAdsbHubHost(): string { return validHost("ADSBHUB_HOST", "data.adsbhub.org"); }
+export function getAdsbHubPort(): number { return boundedInteger("ADSBHUB_PORT", 5002, 1, 65535); }
+export function getAdsbHubRadiusNm(): number { return boundedInteger("ADSBHUB_RADIUS_NM", 500, 1, 2000); }
+export function getAdsbHubStaleMs(): number { return boundedMilliseconds("ADSBHUB_STALE_MS", 15000, 2000, 120000); }
+export function getAdsbHubReconnectMaxMs(): number { return boundedMilliseconds("ADSBHUB_RECONNECT_MAX_MS", 30000, 1000, 300000); }
+export function getAdsbHubMaxTracks(): number { return boundedInteger("ADSBHUB_MAX_TRACKS", 20000, 100, 100000); }
+export function getAdsbHubPublishIntervalMs(): number { return boundedMilliseconds("ADSBHUB_PUBLISH_INTERVAL_MS", 1000, 100, 10000); }
+
 function boundedInteger(name: string, fallback: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, Math.trunc(envNumber(name, fallback))));
 }

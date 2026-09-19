@@ -27,7 +27,13 @@ use independent APIs and fail independently.
    stale threshold, updates the RAM map by ICAO identity, appends a changed
    position to a bounded trail, and removes aircraft absent from the current
    snapshot. A failed poll removes only entries that have become stale.
-4. When enabled, the service runs an outbound ADSB.lol raw lane on its own
+4. When enabled, the service first consumes ADSBHub SBS/30003:
+   `data.adsbhub.org:5002` → AirRadar. The independent feeder contribution is
+   `192.168.1.50:30002` → `data.adsbhub.org:5001`; AirRadar does not manage it.
+   The consumer uses arrival-time freshness, bounded tracks, field-aware MSG
+   merging, and publishes only positioned aircraft inside the configured
+   radius. Its origin is `adsbhub`, never `local` or MLAT. If ADSBHub is
+   unavailable, the service runs an outbound ADSB.lol raw lane on its own
    schedule: `out.adsb.lol:1365` BEAST plus `:1366` SBS/MLAT. It decodes global
    CPR, merges both streams by ICAO, and publishes only fresh positions inside
    `ADSBLOL_NETWORK_RADIUS_NM` into a bounded network map. If raw is

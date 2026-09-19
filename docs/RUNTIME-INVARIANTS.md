@@ -108,6 +108,14 @@ These are behavior and safety contracts for changes to the current system.
 
 ## Extended network coverage
 
+- ADSBHub is a generic aggregated SBS/30003 network source with
+  `origin: "adsbhub"`; it is never labeled MLAT or local. Priority is
+  ADSBHub → ADSB.lol raw → ADSB.lol HTTP. Short valid SBS HexIdent values are
+  normalized by uppercase and left-padding to six hex characters.
+- Network SBS freshness uses arrival time, and MSG fields merge by field so a
+  callsign-only row cannot erase position and a position row cannot erase a
+  callsign. The bounded global track map publishes only fresh positions inside
+  the configured radius.
 - ADSB.lol raw output is optional, outbound-only, and always `origin: "adsblol"`.
   It is never sent to `192.168.1.50` or any feeder. The public API is a
   fallback and raw/HTTP snapshots are never summed.
