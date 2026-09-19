@@ -2,6 +2,8 @@ import type { AtcAssignment, AtcFrequencySummary, AtcLookup, AtcSector, AtcSecto
 import { isSupportedAtcFrequencyMhz } from "@/lib/atc/frequency-policy";
 import type { AtcSectorProvider } from "@/lib/server/provider";
 import { isAtcValidityValid } from "@/lib/server/atc-validity";
+import { getAtcSectorCandidates, prepareAtcContextDataset } from "@/lib/atc-context/engine";
+import type { PreparedAtcContextDataset } from "@/lib/atc-context/types";
 
 export class EmptyAtcSectorProvider implements AtcSectorProvider {
   readonly name = "empty";
@@ -259,12 +261,13 @@ export function summarizeRelevantAtcFrequencies(input: ReadonlyArray<AtcAssigned
 
 export class AtcSectorService {
   private sectors: AtcSector[] | null = null;
+  private preparedDataset: PreparedAtcContextDataset | null = null;
   private loading: Promise<AtcSector[]> | null = null;
 
   constructor(private readonly provider: AtcSectorProvider) {}
 
   async lookup(lookup: AtcLookup): Promise<AtcSectorMatch | null> {
-    const sectors = await this.getSectors();
+    const sectors = await this.getCandidates(lookup);
     const matches = sectors
       .map((sector) => matchSector(sector, lookup))
       .filter((match): match is AtcSectorMatch => match !== null)
@@ -273,7 +276,7 @@ export class AtcSectorService {
   }
 
   async lookupAll(lookup: AtcLookup): Promise<AtcSectorMatch[]> {
-    const sectors = await this.getSectors();
+    const sectors = await this.getCandidates(lookup);
     return sectors
       .map((sector) => matchSector(sector, lookup))
       .filter((match): match is AtcSectorMatch => match !== null)
@@ -286,6 +289,7 @@ export class AtcSectorService {
 
   invalidate(): void {
     this.sectors = null;
+    this.preparedDataset = null;
   }
 
   private async getSectors(): Promise<AtcSector[]> {
@@ -293,11 +297,18 @@ export class AtcSectorService {
     this.loading ??= this.provider.getSectors()
       .then((sectors) => {
         this.sectors = sectors;
+        this.preparedDataset = prepareAtcContextDataset({ sectors, routeDocuments: [] });
         return sectors;
       })
       .finally(() => {
         this.loading = null;
       });
     return this.loading;
+  }
+
+  private async getCandidates(lookup: AtcLookup): Promise<AtcSector[]> {
+    await this.getSectors();
+    if (!this.preparedDataset) return [];
+    return getAtcSectorCandidates(this.preparedDataset, lookup.longitude, lookup.latitude);
   }
 }

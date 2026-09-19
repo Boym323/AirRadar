@@ -34,6 +34,19 @@ export function prepareAtcContextDataset(dataset: AtcContextDataset): PreparedAt
   return Object.freeze({ ...dataset, prepared: true as const, airspaces: Object.freeze(airspaces), segments: Object.freeze(segments), points: Object.freeze(points), atcGrid: immutableGrid(atcGrid), atsGrid: immutableGrid(atsGrid), pointGrid: immutableGrid(pointGrid), builtAt: new Date().toISOString() });
 }
 
+/** Returns only the sectors whose polygon bboxes cover the position. */
+export function getAtcSectorCandidates(dataset: PreparedAtcContextDataset, longitude: number, latitude: number): AtcSector[] {
+  const candidates: AtcSector[] = [];
+  const seen = new Set<string>();
+  for (const index of queryGrid(dataset.atcGrid, [longitude, latitude])) {
+    const sector = dataset.airspaces[index]?.sector;
+    if (!sector || seen.has(sector.id)) continue;
+    seen.add(sector.id);
+    candidates.push(sector);
+  }
+  return candidates.sort((a, b) => a.id.localeCompare(b.id));
+}
+
 function validPosition(lat: number, lon: number): boolean { return Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0); }
 function typeOf(sector: AtcSector): string { const raw = sector.airspaceType?.trim().toUpperCase() || (/\bFIR\b/i.test(sector.name) ? "FIR" : "OTHER"); return raw; }
 function ref(value: string | null | undefined): string { return value?.trim().toUpperCase().replace(/\s+/g, " ") ?? ""; }

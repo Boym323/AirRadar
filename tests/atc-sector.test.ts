@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { AtcSectorService, matchSector, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
+import { AtcSectorService, compareAtcMatches, matchSector, summarizeRelevantAtcFrequencies } from "@/lib/server/atc-sector-service";
 import { normalizeAtcActivationStatus } from "@/lib/atc/types";
 import type { AtcAssignment, AtcSector, SectorPolygon } from "@/lib/atc/types";
 import type { AtcAssignedAircraft } from "@/lib/server/atc-sector-service";
+import { getAtcSectorCandidates, prepareAtcContextDataset } from "@/lib/atc-context/engine";
 
 const sector: AtcSector = {
   id: "LKAA-TMA",
@@ -93,6 +94,28 @@ describe("ATC sector matching", () => {
     const lowAltitudeMatches = await service.lookupAll({ latitude: 50.5, longitude: 14.5, altitudeFt: 4000, observedAt: new Date("2026-09-15T12:00:00Z") });
     expect(lowAltitudeMatches.map((match) => match.sector.id)).toEqual(["CTR", "APP", "ACC"]);
     await expect(service.lookup({ latitude: 50.5, longitude: 14.5, altitudeFt: 4000, observedAt: new Date("2026-09-15T12:00:00Z") })).resolves.toMatchObject({ sector: { id: "CTR" } });
+  });
+
+  it("uses grid candidates without changing linear matching results", async () => {
+    const acrossCells: AtcSector = { ...sector, id: "ACROSS-CELLS", polygons: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] };
+    const multiPolygon: AtcSector = { ...sector, id: "MULTIPOLYGON", polygons: [[[10, 10], [11, 10], [11, 11], [10, 11]], [[14, 14], [15, 14], [15, 15], [14, 15]]] };
+    const sectors = [sector, acrossCells, multiPolygon];
+    const prepared = prepareAtcContextDataset({ sectors, routeDocuments: [] });
+    const service = new AtcSectorService({ name: "test", getSectors: async () => sectors });
+    const lookups = [
+      { latitude: 0.5, longitude: 0.5, altitudeFt: 8000 },
+      { latitude: 1, longitude: 1, altitudeFt: 8000 },
+      { latitude: 14.5, longitude: 14.5, altitudeFt: 8000 },
+      { latitude: 20, longitude: 20, altitudeFt: 8000 },
+    ];
+    for (const lookup of lookups) {
+      const linear = sectors.map((candidate) => matchSector(candidate, lookup)).filter((match): match is NonNullable<typeof match> => match !== null).sort(compareAtcMatches);
+      const candidates = getAtcSectorCandidates(prepared, lookup.longitude, lookup.latitude);
+      const indexed = candidates.map((candidate) => matchSector(candidate, lookup)).filter((match): match is NonNullable<typeof match> => match !== null).sort((a, b) => a.sector.id.localeCompare(b.sector.id));
+      expect(indexed).toEqual(linear);
+      expect(await service.lookupAll(lookup)).toEqual(linear);
+      expect(new Set(candidates.map((candidate) => candidate.id)).size).toBe(candidates.length);
+    }
   });
 
   it("keeps altitude confidence unknown when an AGL limit cannot be compared to MSL", () => {
