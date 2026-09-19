@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.60] - 2026-09-19
+
+Changes since v1.0.59:
+
+- fix: classify Mode-S frames in Beast diagnostics (c2df232b)
+- Merge pull request #60 from Boym323/fix/beast-diagnostics (3126295b)
+
 ## [1.0.59] - 2026-09-19
 
 Changes since v1.0.58:
