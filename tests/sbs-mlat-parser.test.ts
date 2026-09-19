@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 import type net from "node:net";
 import { AdsbHubProvider } from "@/lib/server/adsbhub-provider";
@@ -55,5 +55,24 @@ describe("SBS MLAT parser", () => {
     expect(snapshot.aircraft[0]).toMatchObject({ icaoHex: "001234", callsign: "TEST123", lat: 49.3, lon: 17.8, altitude: 12000, groundSpeed: 420, track: 180, verticalRate: 640, origin: "adsbhub" });
     expect(provider.getDiagnostics()).toMatchObject({ connected: true, linesReceived: 3, linesParsed: 3, activeInternalTracks: 1 });
     await provider.stop();
+  });
+
+  it("does not keep a position fresh from non-position messages", async () => {
+    vi.useFakeTimers();
+    const socket = new EventEmitter() as EventEmitter & Partial<net.Socket>;
+    socket.setNoDelay = () => socket as never;
+    socket.setTimeout = () => socket as never;
+    socket.destroy = () => socket as never;
+    const provider = new AdsbHubProvider(receiver, { staleMs: 1_000, socketFactory: () => socket as net.Socket });
+    provider.start();
+    socket.emit("connect");
+    const sbs = (type: number, values: Record<number, string>) => { const fields = Array.from({ length: 22 }, () => ""); fields[0] = "MSG"; fields[1] = String(type); fields[4] = "1234"; for (const [index, value] of Object.entries(values)) fields[Number(index)] = value; return fields.join(","); };
+    socket.emit("data", `${sbs(3, { 14: "49.3", 15: "17.8" })}\n`);
+    vi.advanceTimersByTime(900);
+    socket.emit("data", `${sbs(1, { 10: "KEEPALIVE" })}\n`);
+    vi.advanceTimersByTime(200);
+    await expect(provider.getSnapshot()).resolves.toMatchObject({ aircraft: [] });
+    await provider.stop();
+    vi.useRealTimers();
   });
 });

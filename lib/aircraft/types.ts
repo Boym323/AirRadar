@@ -160,6 +160,7 @@ export interface CoverageStats {
 export type NetworkProviderStatus =
   | "disabled"
   | "connecting"
+  | "disconnected"
   | "degraded"
   | "online"
   | "stale"

@@ -63,7 +63,7 @@ export class NetworkFailoverProvider implements NetworkAircraftProvider {
 
 export function createNetworkFailoverProvider(receiver: ReceiverPosition, enabled: boolean): NetworkFailoverProvider {
   const hub = new AdsbHubProvider(receiver, { enabled });
-  const raw = isAdsbLolRawEnabled() ? new AdsbLolRawProvider(receiver) : null;
-  const http = isAdsbLolHttpFallbackEnabled() ? new AdsbLolProvider(receiver, { enabled: true }) : null;
+  const raw = enabled && isAdsbLolRawEnabled() ? new AdsbLolRawProvider(receiver) : null;
+  const http = enabled && isAdsbLolHttpFallbackEnabled() ? new AdsbLolProvider(receiver, { enabled: true }) : null;
   return new NetworkFailoverProvider(hub, raw, http);
 }

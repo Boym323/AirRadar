@@ -1,6 +1,4 @@
 import { getAdsbDbBaseUrl, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getFlightAwareMaxCostUsdPerDay, getFlightAwareMaxCostUsdPerMonth, getReadsbBeastHost, getReadsbBeastPort, getReadsbBeastReconnectMaxMs, getReadsbBeastStaleMs, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbBeastEnabled, isReadsbJsonFailoverEnabled, shouldUseSampleAtcData } from "@/lib/server/config";
-import { AdsbLolProvider } from "@/lib/server/adsblol-provider";
-import { AdsbLolFailoverProvider } from "@/lib/server/adsblol-failover-provider";
 import { createNetworkFailoverProvider } from "@/lib/server/network-failover-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
 import { BeastLocalProvider } from "@/lib/server/beast-local-provider";
@@ -13,7 +11,7 @@ import { AdsbDbProvider } from "@/lib/server/adsbdb-provider";
 import { AircraftMetadataCatalog } from "@/lib/server/aircraft-metadata-catalog";
 import { FlightAwareFlightPlanProvider } from "@/lib/server/flightaware-provider";
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
-import { isAdsbHubEnabled, isAdsbLolHttpFallbackEnabled, isAdsbLolRawEnabled } from "@/lib/server/config";
+import { isAdsbHubEnabled } from "@/lib/server/config";
 import type { AircraftMetadataDiagnostics, AircraftMetadataProvider, AircraftProvider, FlightRouteProvider, NetworkAircraftProvider, ProviderRegistry } from "@/lib/server/provider";
 import { DatabaseAtcSectorProvider, getStoredAtcData, SAMPLE_ATC_SECTORS, SAMPLE_ATC_TRANSMITTERS, SampleAtcSectorProvider } from "@/lib/server/atc-data";
 import type { AtcDataResponse } from "@/lib/atc/types";
@@ -28,11 +26,9 @@ export function createAircraftProvider(): AircraftProvider {
 }
 
 export function createNetworkAircraftProvider(): NetworkAircraftProvider {
-  if (isAdsbHubEnabled()) return createNetworkFailoverProvider(getReceiverPosition(), true);
-  const enabled = isAdsbLolEnabled();
-  if (!enabled) return new AdsbLolProvider(getReceiverPosition(), { enabled: false });
-  if (isAdsbLolRawEnabled()) return AdsbLolFailoverProvider.create(getReceiverPosition(), { enabled });
-  return new AdsbLolProvider(getReceiverPosition(), { enabled: enabled && isAdsbLolHttpFallbackEnabled() });
+  // Keep one explicit priority chain even when ADSBHub is disabled, so the
+  // selected source and fallback behavior remain observable and testable.
+  return createNetworkFailoverProvider(getReceiverPosition(), isAdsbHubEnabled() || isAdsbLolEnabled());
 }
 
 /** Combines metadata sources while keeping the first non-empty value per field. */

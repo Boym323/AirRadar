@@ -63,7 +63,7 @@ function publicSources(snapshot: StateSnapshot): PublicStateSnapshot["sources"] 
       aircraftCount: Math.max(0, Math.min(10_000, Math.trunc(network.aircraftCount))),
       positionedAircraftCount: Math.max(0, Math.min(10_000, Math.trunc(network.positionedAircraftCount))),
       mlatAircraftCount: Math.max(0, Math.min(10_000, Math.trunc(network.mlatAircraftCount))),
-      radiusNm: Math.max(0, Math.min(250, Math.trunc(network.radiusNm))),
+      radiusNm: Math.max(0, Math.min(2_000, Math.trunc(network.radiusNm))),
       pollIntervalMs: Math.max(0, Math.min(86_400_000, Math.trunc(network.pollIntervalMs))),
       retryAfterMs: network.retryAfterMs === null ? null : Math.max(0, Math.min(86_400_000, Math.trunc(network.retryAfterMs))),
       ...(network.selectedSource ? { selectedSource: network.selectedSource } : {}),

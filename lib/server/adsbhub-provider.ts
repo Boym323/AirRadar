@@ -8,7 +8,12 @@ import {
   getAdsbHubRadiusNm, getAdsbHubReconnectMaxMs, getAdsbHubStaleMs,
 } from "@/lib/server/config";
 
-type Track = { aircraft: Aircraft; receivedAt: number; fields: Partial<Record<keyof Aircraft, number>> };
+type Track = {
+  aircraft: Aircraft;
+  receivedAt: number;
+  positionReceivedAt: number | null;
+  fields: Partial<Record<keyof Aircraft, number>>;
+};
 type SocketFactory = (options: { host: string; port: number }) => net.Socket;
 
 /** Bounded, arrival-time-driven consumer for the generic ADSBHub SBS/30003 feed. */
@@ -83,7 +88,7 @@ export class AdsbHubProvider implements NetworkAircraftProvider {
   getDiagnostics(): NetworkProviderDiagnostics {
     const now = Date.now();
     const stale = !this.lastDataAt || now - this.lastDataAt > this.staleMs;
-    const status = !this.enabled ? "disabled" : this.connected && !stale ? "online" : this.connected ? "stale" : this.socket ? "connecting" : "stale";
+    const status = !this.enabled ? "disabled" : this.connected && !stale ? "online" : this.connected ? "stale" : this.socket ? "connecting" : "disconnected";
     const linesPerSecond = this.connectionSince ? this.linesReceived / Math.max(1, (now - this.connectionSince) / 1000) : 0;
     return {
       enabled: this.enabled, status, lastAttemptAt: null,
@@ -161,7 +166,13 @@ export class AdsbHubProvider implements NetworkAircraftProvider {
     next.provenance = { ...(next.provenance ?? { seenLocal: false, seenNetwork: true, lastLocalSeen: null, lastNetworkSeen: null, positionOrigin: null, positionSource: "UNKNOWN" }), seenLocal: false, seenNetwork: true, lastNetworkSeen: next.lastSeen, positionOrigin: next.lat !== null && next.lon !== null ? "adsbhub" : next.provenance?.positionOrigin ?? null, positionSource: "UNKNOWN" };
     if (next.lat !== null && next.lon !== null) { next.distanceKm = haversineDistanceKm(this.receiver.lat, this.receiver.lon, next.lat, next.lon); next.bearing = initialBearing(this.receiver.lat, this.receiver.lon, next.lat, next.lon); }
     next.trail = existing?.aircraft.trail ?? (next.lat !== null && next.lon !== null ? [{ lat: next.lat, lon: next.lon, recordedAt: next.lastSeen, altitude: next.altitude, groundSpeed: next.groundSpeed, track: next.track }] : []);
-    this.tracks.set(incoming.icaoHex, { aircraft: next, receivedAt, fields: freshness });
+    const hasPosition = incoming.lat !== null && incoming.lon !== null;
+    this.tracks.set(incoming.icaoHex, {
+      aircraft: next,
+      receivedAt,
+      positionReceivedAt: hasPosition ? receivedAt : existing?.positionReceivedAt ?? null,
+      fields: freshness,
+    });
     if (this.tracks.size > this.maxTracks) {
       let oldest: string | null = null; let oldestAt = Number.POSITIVE_INFINITY;
       for (const [hex, track] of this.tracks) if (track.receivedAt < oldestAt) { oldest = hex; oldestAt = track.receivedAt; }
@@ -172,7 +183,7 @@ export class AdsbHubProvider implements NetworkAircraftProvider {
   private publish(now: number): Aircraft[] {
     const radiusKm = this.radiusNm * 1.852;
     const result: Aircraft[] = [];
-    for (const track of this.tracks.values()) if (now - track.receivedAt <= this.staleMs && track.aircraft.lat !== null && track.aircraft.lon !== null && (track.aircraft.distanceKm ?? Infinity) <= radiusKm) result.push(track.aircraft);
+    for (const track of this.tracks.values()) if (track.positionReceivedAt !== null && now - track.positionReceivedAt <= this.staleMs && track.aircraft.lat !== null && track.aircraft.lon !== null && (track.aircraft.distanceKm ?? Infinity) <= radiusKm) result.push(track.aircraft);
     return result;
   }
 }
