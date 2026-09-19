@@ -53,3 +53,8 @@ provider policy changes, update this document and the relevant source metadata
 before enabling the integration.
 
 OGN implementation references: the [OGN APRS protocol TOCALL catalog](https://github.com/glidernet/ogn-aprs-protocol), the [OGN DDB schema and download contract](https://github.com/glidernet/ogn-ddb), the [APRS-IS connection contract](https://www.aprs-is.net/Connecting.aspx), and the [OGN data-usage rules](https://github.com/glidernet/glidernet.github.io/tree/master/ogn-data-usage). These upstream documents are checked when the parser contract changes; a newly listed device is not accepted automatically unless its position semantics and privacy treatment are safe.
+# Receiver coverage provenance
+
+Receiver coverage is a derived comparison against the active network
+reference provider. Hourly aggregates retain provider names and expose mixed
+provider periods; they do not retain raw ADS-BHub or ADSB.lol observations.

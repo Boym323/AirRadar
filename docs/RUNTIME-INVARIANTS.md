@@ -313,3 +313,13 @@ component that created it.
 - Production builds hold `/var/lib/airradar/build.lock`. The start wrapper
   waits for that lock and requires `.next/BUILD_ID` before importing Next. A
   build/start lock change must preserve this race-prevention contract.
+# Receiver coverage invariants
+
+- `AVAILABLE` is a fresh, positioned, valid-ICAO network observation inside
+  the configured comparison radius.
+- `CAPTURED` requires a fresh local observation of the same normalized ICAO;
+  provenance history, trails, and stale local rows do not count.
+- Network or local unhealthy state skips sampling; it never records a zero
+  capture sample.
+- Coverage writes are bounded hourly aggregates and cannot enter local
+  history/statistics lanes.

@@ -469,6 +469,7 @@ export default function StatisticsPage() {
         <nav className="statistics-nav" aria-label={t.statistics.navigation}>
           <Link className="back-link" href="/">{t.statistics.backToRadar}</Link>
           <Link className="back-link" href="/history">{t.statistics.viewHistory}</Link>
+          <Link className="back-link" href="/receiver/coverage">Receiver coverage</Link>
         </nav>
       </header>
 

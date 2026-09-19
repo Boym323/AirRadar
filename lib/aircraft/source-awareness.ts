@@ -1,5 +1,5 @@
 import type { AircraftView, ReceiverPosition } from "@/lib/aircraft/types";
-import { haversineDistanceKm } from "@/lib/geo";
+import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 
 export type AircraftSourceClassification = "LOCAL_ONLY" | "NETWORK_ONLY" | "OVERLAP" | "UNKNOWN";
 export type AircraftSourceFilter = "all" | "local" | "network" | "overlap";
@@ -56,17 +56,47 @@ export interface LocalCoverageRatio {
   percentage: number | null;
 }
 
-export function computeLocalCoverageRatio(aircraft: readonly AircraftView[], receiver: ReceiverPosition, radiusNm: number, now = Date.now(), maxNetworkAgeMs = 60_000): LocalCoverageRatio {
+export interface CoverageEligibility {
+  icaoHex: string;
+  distanceKm: number;
+  bearing: number;
+  altitude: number | null;
+  captured: boolean;
+}
+
+/** The shared comparison cohort used by both live and historical coverage. */
+export function eligibleNetworkObservation(
+  network: AircraftView,
+  local: AircraftView | undefined,
+  receiver: ReceiverPosition,
+  radiusNm: number,
+  now = Date.now(),
+  networkFreshMs = 60_000,
+  localFreshMs = networkFreshMs,
+): CoverageEligibility | null {
+  if (network.provenance?.seenNetwork !== true || !network.icaoHex || /^~|^0+$/.test(network.icaoHex)) return null;
+  if (typeof network.lat !== "number" || !Number.isFinite(network.lat) || typeof network.lon !== "number" || !Number.isFinite(network.lon)) return null;
+  const networkSeen = network.provenance.lastNetworkSeen ? Date.parse(network.provenance.lastNetworkSeen) : NaN;
+  if (!Number.isFinite(networkSeen) || now - networkSeen < 0 || now - networkSeen > networkFreshMs) return null;
+  const distanceKm = haversineDistanceKm(receiver.lat, receiver.lon, network.lat, network.lon);
+  if (!Number.isFinite(distanceKm)) return null;
+  if (distanceKm > radiusNm * 1.852) return null;
+  const bearing = ((typeof network.bearing === "number" && Number.isFinite(network.bearing)
+    ? network.bearing : initialBearing(receiver.lat, receiver.lon, network.lat, network.lon)) + 360) % 360;
+  const localSeen = local?.provenance?.lastLocalSeen ? Date.parse(local.provenance.lastLocalSeen) : NaN;
+  const captured = local?.provenance?.seenLocal === true && Number.isFinite(localSeen)
+    && now - localSeen >= 0 && now - localSeen <= localFreshMs;
+  return { icaoHex: network.icaoHex.toUpperCase(), distanceKm, bearing, altitude: Number.isFinite(network.baroAltitude ?? NaN) ? network.baroAltitude : (Number.isFinite(network.altitude ?? NaN) ? network.altitude : null), captured };
+}
+
+export function computeLocalCoverageRatio(aircraft: readonly AircraftView[], receiver: ReceiverPosition, radiusNm: number, now = Date.now(), maxNetworkAgeMs = 60_000, maxLocalAgeMs = maxNetworkAgeMs): LocalCoverageRatio {
   let denominator = 0;
   let numerator = 0;
   for (const item of aircraft) {
-    if (item.provenance?.seenNetwork !== true || typeof item.lat !== "number" || typeof item.lon !== "number") continue;
-    if (haversineDistanceKm(receiver.lat, receiver.lon, item.lat, item.lon) > radiusNm * 1.852) continue;
-    const networkSeen = item.provenance.lastNetworkSeen ? Date.parse(item.provenance.lastNetworkSeen) : NaN;
-    if (!Number.isFinite(networkSeen) || now - networkSeen > maxNetworkAgeMs) continue;
+    const eligible = eligibleNetworkObservation(item, item, receiver, radiusNm, now, maxNetworkAgeMs, maxLocalAgeMs);
+    if (!eligible) continue;
     denominator += 1;
-    const localSeen = item.provenance.lastLocalSeen ? Date.parse(item.provenance.lastLocalSeen) : NaN;
-    if (item.provenance.seenLocal && Number.isFinite(localSeen) && now - localSeen <= maxNetworkAgeMs) numerator += 1;
+    if (eligible.captured) numerator += 1;
   }
   return { radiusNm, numerator, denominator, percentage: denominator > 0 ? (numerator / denominator) * 100 : null };
 }

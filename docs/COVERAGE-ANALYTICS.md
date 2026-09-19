@@ -1,5 +1,23 @@
 # Coverage analytics
 
+## Network-reference receiver coverage
+
+The Receiver coverage page (`/receiver/coverage`) and
+`GET /api/receiver/coverage?period=live|today|7d|30d` use the active network
+snapshot as a comparison reference. `AVAILABLE` is one eligible, fresh,
+positioned network aircraft observation in the configured comparison radius;
+`CAPTURED` is the same normalized ICAO with a fresh local observation in the
+same snapshot. The ratio is `CAPTURED / AVAILABLE` and is not antenna
+efficiency, packet reception rate, message loss, or a unique-aircraft share.
+
+Sampling is bounded (10–30 seconds by configuration) and runs over the merged
+RAM state, never per SBS line. Hourly rows contain only aggregate counters for
+overall, 10-degree azimuth, range, altitude, and azimuth×range buckets. The
+maximum is 302 rows per hour, approximately 7,248 rows/day and 652,320 rows
+per 90 days if every bucket is populated. Provider provenance is retained and
+mixed-provider periods are reported. Network outages and local receiver
+outages skip samples rather than creating zero or false misses.
+
 AirRadar coverage intelligence is a receiver-observed analytics view. It is not
 an air-traffic authority dataset and it does not claim complete traffic or RF
 coverage outside what the local receiver actually observed.

@@ -99,6 +99,20 @@ model ReceiverDailyCoverageAltitude {
   @@id([date, azimuthBucket, altitudeBand])
 }
 
+model ReceiverCoverageHourly {
+  hour               DateTime
+  dimension          String
+  bucketKey          String
+  availableCount     Int      @default(0)
+  capturedCount      Int      @default(0)
+  referenceProviders String
+  updatedAt          DateTime @default(now())
+
+  @@id([hour, bucketKey])
+  @@index([hour])
+  @@index([dimension, hour])
+}
+
 model Flight {
   id         Int              @id @default(autoincrement())
   instanceKey String          @unique

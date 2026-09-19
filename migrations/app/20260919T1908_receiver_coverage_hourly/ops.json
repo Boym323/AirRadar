@@ -1,0 +1,119 @@
+[
+  {
+    "id": "table.receiverCoverageHourly",
+    "label": "Create table \"receiverCoverageHourly\"",
+    "summary": "Creates table \"receiverCoverageHourly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "receiverCoverageHourly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"receiverCoverageHourly\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverCoverageHourly\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"receiverCoverageHourly\"",
+        "sql": "CREATE TABLE \"public\".\"receiverCoverageHourly\" (\n  \"availableCount\" int4 DEFAULT 0 NOT NULL,\n  \"bucketKey\" text NOT NULL,\n  \"capturedCount\" int4 DEFAULT 0 NOT NULL,\n  \"dimension\" text NOT NULL,\n  \"hour\" timestamptz NOT NULL,\n  \"referenceProviders\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"hour\", \"bucketKey\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"receiverCoverageHourly\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverCoverageHourly\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.receiverCoverageHourly.receiverCoverageHourly_hour_idx",
+    "label": "Create index \"receiverCoverageHourly_hour_idx\" on \"receiverCoverageHourly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "receiverCoverageHourly_hour_idx",
+        "table": "receiverCoverageHourly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"receiverCoverageHourly_hour_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverCoverageHourly_hour_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"receiverCoverageHourly_hour_idx\"",
+        "sql": "CREATE INDEX \"receiverCoverageHourly_hour_idx\" ON \"public\".\"receiverCoverageHourly\" (\"hour\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"receiverCoverageHourly_hour_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverCoverageHourly_hour_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.receiverCoverageHourly.receiverCoverageHourly_dimension_hour_idx",
+    "label": "Create index \"receiverCoverageHourly_dimension_hour_idx\" on \"receiverCoverageHourly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "receiverCoverageHourly_dimension_hour_idx",
+        "table": "receiverCoverageHourly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"receiverCoverageHourly_dimension_hour_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverCoverageHourly_dimension_hour_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"receiverCoverageHourly_dimension_hour_idx\"",
+        "sql": "CREATE INDEX \"receiverCoverageHourly_dimension_hour_idx\" ON \"public\".\"receiverCoverageHourly\" (\"dimension\", \"hour\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"receiverCoverageHourly_dimension_hour_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"receiverCoverageHourly_dimension_hour_idx\""
+        ]
+      }
+    ]
+  }
+]

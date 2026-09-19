@@ -32,6 +32,11 @@ one global AircraftStateService
         └─ health, statistics, search, watchlist and UI consumers
 ```
 
+Receiver coverage analytics is a separate bounded derived lane. Its sampler
+reads the local and active network RAM maps, persists only hourly aggregate
+counters, and never writes network aircraft to history, local statistics,
+FlightPosition, alerts, or trails.
+
 `getAircraftStateService()` stores one service in `globalThis`. `start()` is
 idempotent: it loads statistics and starts the first local and network refresh;
 the two lanes schedule their later refreshes independently. `subscribe()` and

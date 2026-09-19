@@ -2,6 +2,13 @@
 
 ## Live ingest to browser
 
+Receiver coverage sampling periodically evaluates the active network snapshot
+against the local map using the same fresh-position, radius, normalized-ICAO
+eligibility semantics as the live capture ratio. `AVAILABLE` counts eligible
+network observations and `CAPTURED` counts same-snapshot fresh local matches.
+Outages skip a sample. Aggregates are flushed hourly-bucket deltas; raw
+network observations are not persisted.
+
 ## Map Context V1/V2
 
 Map Context is a separate optional read path. Radar catalog/frame requests,

@@ -28,6 +28,7 @@ import { haversineDistanceKm } from "@/lib/geo";
 import { logger } from "@/lib/server/logger";
 import { classifyAtcPrediction, getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
 import { computeAtcContext, inputFromAircraft, loadAtcContextDataset } from "@/lib/atc-context/engine";
+import { ReceiverCoverageAnalytics, type CoverageResponse } from "@/lib/server/receiver-coverage-analytics";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -140,6 +141,7 @@ export class AircraftStateService {
   private readonly alerts: AlertEngine;
   private readonly intelligence = getFlightIntelligenceService();
   private readonly statistics: ReceiverStatistics;
+  private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly atcResolutionKeys = new Map<string, string>();
   private readonly atcShadowPredictionKeys = new Map<string, string>();
   private readonly atcShadowPredictionInFlight = new Set<string>();
@@ -183,6 +185,11 @@ export class AircraftStateService {
     const refresh = this.refresh();
     this.initialRefresh = Promise.all([this.statisticsReady, refresh]).then(() => undefined);
     void this.refreshNetwork();
+    this.receiverCoverage.start(() => ({
+      network: [...this.networkAircraft.values()], local: this.localAircraft, receiver: this.currentReceiver,
+      localHealthy: this.lastSourceUpdate !== null && this.lastError === null,
+      providerDiagnostics: this.networkProvider.getDiagnostics(),
+    }));
   }
 
   async waitForReady(): Promise<void> {
@@ -203,6 +210,7 @@ export class AircraftStateService {
     await this.awaitUntil(this.initialRefresh, deadline);
     await this.awaitUntil(networkStop, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
+    await this.awaitUntil(this.receiverCoverage.stop(), deadline);
     if (options.closeStatistics !== false) await this.awaitUntil(this.statistics.close(), deadline);
     if (options.closeProvider !== false) await this.awaitUntil(this.closeProviders(), deadline);
   }
@@ -301,7 +309,7 @@ export class AircraftStateService {
       coverageStats: displayedCoverageStats,
       sourceStats,
       localCoverageRatio: coverage === "extended"
-        ? computeLocalCoverageRatio(aircraft, this.currentReceiver, getReceiverComparisonRadiusNm())
+        ? computeLocalCoverageRatio(aircraft, this.currentReceiver, getReceiverComparisonRadiusNm(), Date.now(), getAdsbLolStaleAfterMs(), getAircraftStaleAfterMs())
         : undefined,
     };
   }
@@ -380,6 +388,9 @@ export class AircraftStateService {
   getNetworkDiagnostics() {
     return this.networkProvider.getDiagnostics();
   }
+
+  getReceiverCoverageDiagnostics() { return this.receiverCoverage.getDiagnostics(); }
+  getLiveReceiverCoverage(): CoverageResponse { return this.receiverCoverage.getLive(); }
 
   private currentReceiver = getReceiverPosition();
 
