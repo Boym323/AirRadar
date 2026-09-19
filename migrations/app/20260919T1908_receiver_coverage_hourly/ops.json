@@ -39,79 +39,79 @@
     ]
   },
   {
-    "id": "index.receiverCoverageHourly.receiverCoverageHourly_hour_idx",
-    "label": "Create index \"receiverCoverageHourly_hour_idx\" on \"receiverCoverageHourly\"",
+    "id": "index.receiverCoverageHourly.receiverCoverageHourly_hour_idx_4913b1c9",
+    "label": "Create index \"receiverCoverageHourly_hour_idx_4913b1c9\" on \"receiverCoverageHourly\"",
     "operationClass": "additive",
     "target": {
       "id": "postgres",
       "details": {
         "schema": "public",
         "objectType": "index",
-        "name": "receiverCoverageHourly_hour_idx",
+        "name": "receiverCoverageHourly_hour_idx_4913b1c9",
         "table": "receiverCoverageHourly"
       }
     },
     "precheck": [
       {
-        "description": "ensure index \"receiverCoverageHourly_hour_idx\" does not exist",
+        "description": "ensure index \"receiverCoverageHourly_hour_idx_4913b1c9\" does not exist",
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
-          "\"public\".\"receiverCoverageHourly_hour_idx\""
+          "\"public\".\"receiverCoverageHourly_hour_idx_4913b1c9\""
         ]
       }
     ],
     "execute": [
       {
-        "description": "create index \"receiverCoverageHourly_hour_idx\"",
-        "sql": "CREATE INDEX \"receiverCoverageHourly_hour_idx\" ON \"public\".\"receiverCoverageHourly\" (\"hour\")",
+        "description": "create index \"receiverCoverageHourly_hour_idx_4913b1c9\"",
+        "sql": "CREATE INDEX \"receiverCoverageHourly_hour_idx_4913b1c9\" ON \"public\".\"receiverCoverageHourly\" (\"hour\")",
         "params": []
       }
     ],
     "postcheck": [
       {
-        "description": "verify index \"receiverCoverageHourly_hour_idx\" exists",
+        "description": "verify index \"receiverCoverageHourly_hour_idx_4913b1c9\" exists",
         "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
         "params": [
-          "\"public\".\"receiverCoverageHourly_hour_idx\""
+          "\"public\".\"receiverCoverageHourly_hour_idx_4913b1c9\""
         ]
       }
     ]
   },
   {
-    "id": "index.receiverCoverageHourly.receiverCoverageHourly_dimension_hour_idx",
-    "label": "Create index \"receiverCoverageHourly_dimension_hour_idx\" on \"receiverCoverageHourly\"",
+    "id": "index.receiverCoverageHourly.receiverCoverageHourly_dimension_hour_idx_ba706ddd",
+    "label": "Create index \"receiverCoverageHourly_dimension_hour_idx_ba706ddd\" on \"receiverCoverageHourly\"",
     "operationClass": "additive",
     "target": {
       "id": "postgres",
       "details": {
         "schema": "public",
         "objectType": "index",
-        "name": "receiverCoverageHourly_dimension_hour_idx",
+        "name": "receiverCoverageHourly_dimension_hour_idx_ba706ddd",
         "table": "receiverCoverageHourly"
       }
     },
     "precheck": [
       {
-        "description": "ensure index \"receiverCoverageHourly_dimension_hour_idx\" does not exist",
+        "description": "ensure index \"receiverCoverageHourly_dimension_hour_idx_ba706ddd\" does not exist",
         "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
         "params": [
-          "\"public\".\"receiverCoverageHourly_dimension_hour_idx\""
+          "\"public\".\"receiverCoverageHourly_dimension_hour_idx_ba706ddd\""
         ]
       }
     ],
     "execute": [
       {
-        "description": "create index \"receiverCoverageHourly_dimension_hour_idx\"",
-        "sql": "CREATE INDEX \"receiverCoverageHourly_dimension_hour_idx\" ON \"public\".\"receiverCoverageHourly\" (\"dimension\", \"hour\")",
+        "description": "create index \"receiverCoverageHourly_dimension_hour_idx_ba706ddd\"",
+        "sql": "CREATE INDEX \"receiverCoverageHourly_dimension_hour_idx_ba706ddd\" ON \"public\".\"receiverCoverageHourly\" (\"dimension\", \"hour\")",
         "params": []
       }
     ],
     "postcheck": [
       {
-        "description": "verify index \"receiverCoverageHourly_dimension_hour_idx\" exists",
+        "description": "verify index \"receiverCoverageHourly_dimension_hour_idx_ba706ddd\" exists",
         "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
         "params": [
-          "\"public\".\"receiverCoverageHourly_dimension_hour_idx\""
+          "\"public\".\"receiverCoverageHourly_dimension_hour_idx_ba706ddd\""
         ]
       }
     ]

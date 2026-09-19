@@ -18,8 +18,8 @@ export default class M extends Migration<Start, End> {
       col('referenceProviders', 'text', { notNull: true, codecRef: { codecId: 'pg/text@1' } }),
       col('updatedAt', 'timestamptz', { notNull: true, default: fn('now()'), codecRef: { codecId: 'pg/timestamptz-temporal@1' } }),
     ], constraints: [primaryKey(['hour', 'bucketKey'])] }),
-    this.createIndex({ schema: 'public', table: 'receiverCoverageHourly', index: 'receiverCoverageHourly_hour_idx', columns: ['hour'] }),
-    this.createIndex({ schema: 'public', table: 'receiverCoverageHourly', index: 'receiverCoverageHourly_dimension_hour_idx', columns: ['dimension', 'hour'] })];
+    this.createIndex({ schema: 'public', table: 'receiverCoverageHourly', index: 'receiverCoverageHourly_hour_idx_4913b1c9', columns: ['hour'] }),
+    this.createIndex({ schema: 'public', table: 'receiverCoverageHourly', index: 'receiverCoverageHourly_dimension_hour_idx_ba706ddd', columns: ['dimension', 'hour'] })];
   }
 }
 MigrationCLI.run(import.meta.url, M);
