@@ -26,7 +26,7 @@ import {
   watchlistKindLabel,
   watchlistSummary,
 } from "@/lib/i18n";
-import { destinationPoint, haversineDistanceKm } from "@/lib/geo";
+import { haversineDistanceKm } from "@/lib/geo";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -85,6 +85,7 @@ import {
   isMapAircraftFilterActive,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
+import { createMotionHistory, predictedAircraftMotion, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
 
 declare global {
   interface Window {
@@ -170,7 +171,6 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 
 const MIN_AIRCRAFT_ANIMATION_MS = 650;
 const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
-const KNOT_TO_KM_PER_HOUR = 1.852;
 const MAX_PREDICTION_AGE_MS = 15_000;
 const MAX_PREDICTION_CORRECTION_KM = 12;
 
@@ -188,16 +188,14 @@ interface AircraftAnimationJob {
     observedAt: number;
     groundSpeed: number | null;
     track: number | null;
+    sourceKey: string;
   };
+  motion: MotionHistory;
   correctionLon: number;
   correctionLat: number;
   correctionStartedAt: number;
   correctionDurationMs: number;
   sourceReceivedAt: number;
-}
-
-function normalizeLongitude(longitude: number): number {
-  return ((longitude + 540) % 360) - 180;
 }
 
 function shortestLongitudeDelta(from: number, to: number): number {
@@ -214,30 +212,16 @@ function sourceObservedPerformanceTime(aircraft: AircraftView, receivedAt: numbe
   return receivedAt - age;
 }
 
-function predictedPosition(source: AircraftAnimationJob["source"], timestamp: number): [number, number] {
-  const speed = source.groundSpeed;
-  const track = source.track;
-  if (speed === null || !Number.isFinite(speed) || speed < 0.5 || track === null || !Number.isFinite(track)) {
-    return [source.lon, source.lat];
-  }
-  const elapsedHours = Math.max(0, timestamp - source.observedAt) / 3_600_000;
-  return destinationPoint(source.lat, source.lon, speed * KNOT_TO_KM_PER_HOUR * elapsedHours, track);
-}
-
-function predictedMarkerPosition(job: AircraftAnimationJob, timestamp: number): [number, number] {
-  const [predictedLon, predictedLat] = predictedPosition(job.source, timestamp);
+function predictedMarkerMotion(job: AircraftAnimationJob, timestamp: number) {
   const correctionProgress = Math.min(1, Math.max(0, (timestamp - job.correctionStartedAt) / job.correctionDurationMs));
   const correctionWeight = 1 - correctionProgress;
-  return [
-    normalizeLongitude(predictedLon + job.correctionLon * correctionWeight),
-    predictedLat + job.correctionLat * correctionWeight,
-  ];
+  return predictedAircraftMotion(job.source, job.motion, timestamp, job.correctionLon, job.correctionLat, correctionWeight);
 }
 
 function hasContinuousPrediction(job: AircraftAnimationJob, timestamp: number): boolean {
   const speed = job.source.groundSpeed;
   const moving = speed !== null && Number.isFinite(speed) && speed >= 0.5
-    && job.source.track !== null && Number.isFinite(job.source.track);
+    && (job.motion.lastRenderHeading !== null || job.source.track !== null);
   const correcting = timestamp - job.correctionStartedAt < job.correctionDurationMs;
   return moving || correcting;
 }
@@ -1138,13 +1122,19 @@ export function AirRadarApp() {
         return;
       }
       if (prefersReducedMotion()) {
-        for (const job of animationJobs.values()) job.marker.setLngLat([job.source.lon, job.source.lat]);
+        for (const job of animationJobs.values()) {
+          const motion = predictedMarkerMotion(job, timestamp);
+          job.marker.setLngLat([motion.lng, motion.lat]);
+          if (motion.track !== null) job.marker.setRotation(motion.track);
+        }
         animationJobs.clear();
         return;
       }
       let continueAnimation = false;
       for (const job of animationJobs.values()) {
-        job.marker.setLngLat(predictedMarkerPosition(job, timestamp));
+        const motion = predictedMarkerMotion(job, timestamp);
+        job.marker.setLngLat([motion.lng, motion.lat]);
+        if (motion.track !== null) job.marker.setRotation(motion.track);
         if (timestamp - job.correctionStartedAt >= job.correctionDurationMs) {
           job.correctionLon = 0;
           job.correctionLat = 0;
@@ -1585,6 +1575,7 @@ export function AirRadarApp() {
         observedAt: sourceObservedPerformanceTime(aircraft, now),
         groundSpeed: aircraft.groundSpeed,
         track: aircraft.track,
+        sourceKey: `${aircraft.origin ?? "local"}:${aircraft.source}`,
       };
       const previous = animationJobs.get(aircraft.icaoHex);
 
@@ -1599,6 +1590,7 @@ export function AirRadarApp() {
         animationJobs.set(aircraft.icaoHex, {
           marker,
           source,
+          motion: createMotionHistory(source),
           correctionLon: 0,
           correctionLat: 0,
           correctionStartedAt: now,
@@ -1610,32 +1602,38 @@ export function AirRadarApp() {
 
       if (previous) {
         const current = marker.getLngLat();
-        const [predictedLon, predictedLat] = predictedPosition(source, now);
-        const correctionDistance = haversineDistanceKm(current.lat, current.lng, predictedLat, predictedLon);
+        const motion = updateMotionHistory(previous.motion, source);
+        const predicted = predictedAircraftMotion(source, motion, now);
+        const correctionDistance = haversineDistanceKm(current.lat, current.lng, predicted.lat, predicted.lng);
         const correctionDurationMs = Math.min(
           MAX_AIRCRAFT_ANIMATION_MS,
           Math.max(MIN_AIRCRAFT_ANIMATION_MS, now - previous.sourceReceivedAt),
         );
         previous.source = source;
+        previous.motion = motion;
         previous.sourceReceivedAt = now;
         previous.correctionStartedAt = now;
         previous.correctionDurationMs = correctionDurationMs;
         if (correctionDistance <= MAX_PREDICTION_CORRECTION_KM) {
-          previous.correctionLon = shortestLongitudeDelta(current.lng, predictedLon);
-          previous.correctionLat = current.lat - predictedLat;
+          previous.correctionLon = shortestLongitudeDelta(current.lng, predicted.lng);
+          previous.correctionLat = current.lat - predicted.lat;
         } else {
           // A large discrepancy usually means a stale/changed source position,
           // not a correction that should be animated across the map.
-          marker.setLngLat(predictedPosition(source, now));
+          marker.setLngLat([predicted.lng, predicted.lat]);
+          if (predicted.track !== null) marker.setRotation(predicted.track);
           previous.correctionLon = 0;
           previous.correctionLat = 0;
         }
       } else {
-        const initialPosition = predictedPosition(source, now);
-        marker.setLngLat(initialPosition);
+        const motion = createMotionHistory(source);
+        const initialPosition = predictedAircraftMotion(source, motion, now);
+        marker.setLngLat([initialPosition.lng, initialPosition.lat]);
+        if (initialPosition.track !== null) marker.setRotation(initialPosition.track);
         animationJobs.set(aircraft.icaoHex, {
           marker,
           source,
+          motion: createMotionHistory(source),
           correctionLon: 0,
           correctionLat: 0,
           correctionStartedAt: now,
@@ -1687,7 +1685,9 @@ export function AirRadarApp() {
           .addTo(map);
         aircraftMarkersRef.current.set(aircraft.icaoHex, marker);
       }
-      upsertPrediction(aircraft, marker);
+      // Keep the render input immutable to satisfy React's hook immutability
+      // contract; the bounded animation job owns all mutable motion state.
+      upsertPrediction({ ...aircraft }, marker);
       const root = marker.getElement();
       root.setAttribute("aria-label", labelForAircraft(aircraft));
       root.setAttribute("aria-pressed", String(aircraft.icaoHex === selectedHex));
@@ -1714,9 +1714,8 @@ export function AirRadarApp() {
         label.textContent = labelText ?? "";
         label.hidden = labelText === null;
       }
-      // readsb's track is clockwise from geographic north. Let MapLibre apply
-      // it in map coordinates, so it remains correct when the user rotates map.
-      if (aircraft.track !== null) marker.setRotation(aircraft.track);
+      // The shared predicted motion result owns both position and heading.
+      // The SVG silhouettes point north; MapLibre is the sole rotation owner.
     }
 
     for (const [hex, marker] of aircraftMarkersRef.current) {
