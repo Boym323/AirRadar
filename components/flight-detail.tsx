@@ -40,10 +40,12 @@ const HISTORY_MAP_STYLE: StyleSpecification = {
 function HistoryMap({ positions, sample, events, selectedEventId }: { positions: PlaybackPosition[]; sample: PlaybackSample | null; events: FlightStoryEvent[]; selectedEventId: number | null }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const selectedEventIdRef = useRef<number | null>(selectedEventId);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const markerPlaneRef = useRef<HTMLDivElement | null>(null);
   const sampleRef = useRef<PlaybackSample | null>(sample);
   sampleRef.current = sample;
+  selectedEventIdRef.current = selectedEventId;
 
   useEffect(() => {
     if (!containerRef.current || !positions.length) return;
@@ -113,7 +115,7 @@ function HistoryMap({ positions, sample, events, selectedEventId }: { positions:
         type: "geojson",
         data: { type: "FeatureCollection", features: events.filter((event) => event.latitude !== null && event.longitude !== null).map((event) => ({
           type: "Feature" as const,
-          properties: { id: event.id, selected: event.id === selectedEventId, type: event.type },
+          properties: { id: event.id, selected: event.id === selectedEventIdRef.current, type: event.type },
           geometry: { type: "Point" as const, coordinates: [event.longitude!, event.latitude!] },
         })) },
       });
