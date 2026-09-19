@@ -82,3 +82,8 @@ whether an operator has configured an optional provider.
 | `GET /api/version` | Safe release/build metadata. | Production release metadata endpoint. |
 
 The server alert engine is evaluated only from the local ADS-B aircraft state. Its bounded cooldown/durable-event state is atomically persisted outside PostgreSQL so a process restart does not reset recent deduplication. The browser-only local watchlist filter on `/` remains separate from server alert rules. Optional enrichment and PostgreSQL failures are represented as empty, stale, unavailable, or degraded feature data rather than taking down the live radar.
+# Flight Story V1
+
+Flight detail is a synchronized story view with event timeline, historical
+position playback, profile cursor, and whole-sky Time Machine context. Partial
+data remains usable and historical facts are not fabricated.

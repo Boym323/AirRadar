@@ -84,6 +84,56 @@ export interface HistoryFlightDetail {
     verticalRate: number | null;
   }>;
   truncated: boolean;
+  positionSampling: {
+    originalPositionCount: number;
+    returnedPositionCount: number;
+    sampled: boolean;
+  };
+  events: FlightStoryEvent[];
+}
+
+export type FlightStoryEventType = "TAKEOFF" | "APPROACH" | "LANDING" | "GO_AROUND" | "HOLDING" | "AIRSPACE_ENTRY" | "AIRSPACE_EXIT";
+
+export interface FlightStoryEvent {
+  id: number;
+  type: FlightStoryEventType | string;
+  occurredAt: string;
+  latitude: number | null;
+  longitude: number | null;
+  altitude: number | null;
+  confidence: number;
+  airportIcao: string | null;
+  runway: string | null;
+  sectorId: string | null;
+  summary: string | null;
+}
+
+type HistoryPositionValue = HistoryFlightDetail["positions"][number];
+
+/** Deterministic full-span sampling for bounded Flight Story payloads. */
+export function sampleFlightPositions(
+  positions: HistoryPositionValue[],
+  eventTimes: readonly string[] = [],
+  limit = HISTORY_POSITION_LIMIT,
+): HistoryPositionValue[] {
+  if (positions.length <= limit) return positions;
+  const selected = new Set<number>([0, positions.length - 1]);
+  for (const eventTime of eventTimes) {
+    const target = Date.parse(eventTime);
+    if (!Number.isFinite(target)) continue;
+    let nearest = 0;
+    let distance = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < positions.length; index += 1) {
+      const candidateDistance = Math.abs(Date.parse(positions[index]!.recordedAt) - target);
+      if (candidateDistance < distance) { nearest = index; distance = candidateDistance; }
+    }
+    selected.add(nearest);
+  }
+  const remaining = Math.max(0, limit - selected.size);
+  for (let index = 1; index <= remaining; index += 1) {
+    selected.add(Math.round((index * (positions.length - 1)) / (remaining + 1)));
+  }
+  return [...selected].sort((a, b) => a - b).slice(0, limit).map((index) => positions[index]!);
 }
 
 export interface AircraftDetailMetadata {
@@ -356,21 +406,46 @@ export async function getHistoryFlight(id: number): Promise<HistoryFlightDetail 
     const positionRows = await schema.FlightPosition
       .where({ flightId: id })
       .orderBy((position) => position.recordedAt.asc())
-      .limit(HISTORY_POSITION_LIMIT + 1)
       .all();
-    const truncated = positionRows.length > HISTORY_POSITION_LIMIT;
+    const allPositions = positionRows.map((position) => ({
+      recordedAt: timestampAsIso(position.recordedAt),
+      lat: position.lat,
+      lon: position.lon,
+      altitude: position.altitude,
+      groundSpeed: position.groundSpeed,
+      track: position.track,
+      verticalRate: position.verticalRate,
+    }));
+    const eventCollection = (schema as unknown as { FlightEvent?: { where: (filter: { flightId: number }) => { orderBy: (sort: (event: { occurredAt: { asc: () => unknown } }) => unknown) => { all: () => Promise<Array<Record<string, unknown>>> } } } }).FlightEvent;
+    const eventRows = eventCollection
+      ? await eventCollection.where({ flightId: id }).orderBy((event) => event.occurredAt.asc()).all()
+      : [];
+    const events: FlightStoryEvent[] = eventRows
+      .map((event) => ({
+        id: Number(event.id),
+        type: String(event.type),
+        occurredAt: timestampAsIso(event.occurredAt as Temporal.Instant | Date),
+        latitude: typeof event.latitude === "number" ? event.latitude : null,
+        longitude: typeof event.longitude === "number" ? event.longitude : null,
+        altitude: typeof event.altitude === "number" ? event.altitude : null,
+        confidence: typeof event.confidence === "number" ? event.confidence : 0,
+        airportIcao: typeof event.airportIcao === "string" ? event.airportIcao : null,
+        runway: typeof event.runway === "string" ? event.runway : null,
+        sectorId: typeof event.sectorId === "string" ? event.sectorId : null,
+        summary: typeof event.airportIcao === "string" || typeof event.runway === "string" || typeof event.sectorId === "string"
+          ? [event.airportIcao, event.runway, event.sectorId].filter((value): value is string => typeof value === "string" && value.length > 0).join(" · ")
+          : null,
+      }))
+      .filter((event) => Number.isSafeInteger(event.id) && Number.isFinite(Date.parse(event.occurredAt)))
+      .sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt) || a.id - b.id);
+    const positions = sampleFlightPositions(allPositions, events.map((event) => event.occurredAt));
+    const truncated = positions.length < allPositions.length;
     return {
       flight: flightSummaryFromRow(row),
       truncated,
-      positions: positionRows.slice(0, HISTORY_POSITION_LIMIT).map((position) => ({
-        recordedAt: timestampAsIso(position.recordedAt),
-        lat: position.lat,
-        lon: position.lon,
-        altitude: position.altitude,
-        groundSpeed: position.groundSpeed,
-        track: position.track,
-        verticalRate: position.verticalRate,
-      })),
+      positionSampling: { originalPositionCount: allPositions.length, returnedPositionCount: positions.length, sampled: truncated },
+      positions,
+      events,
     };
   } catch {
     throw new HistoryDatabaseUnavailableError();

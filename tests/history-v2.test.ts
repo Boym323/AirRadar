@@ -99,13 +99,14 @@ class FakeCollection {
   }
 }
 
-function fakeDatabase({ aircraft, flights, positions = [], airports = [], onAircraftAll, onIn }: { aircraft: Row[]; flights: Row[]; positions?: Row[]; airports?: Row[]; onAircraftAll?: () => void; onIn?: () => void }) {
+function fakeDatabase({ aircraft, flights, positions = [], airports = [], events = [], onAircraftAll, onIn }: { aircraft: Row[]; flights: Row[]; positions?: Row[]; airports?: Row[]; events?: Row[]; onAircraftAll?: () => void; onIn?: () => void }) {
   return {
     orm: {
       public: {
         Aircraft: new FakeCollection(aircraft, "Aircraft", onAircraftAll, onIn),
         Flight: new FakeCollection(flights, "Flight", undefined, onIn),
         FlightPosition: new FakeCollection(positions, "FlightPosition"),
+        FlightEvent: new FakeCollection(events, "FlightPosition"),
         Airport: new FakeCollection(airports, "Airport", undefined, onIn),
       },
     },
@@ -332,6 +333,30 @@ describe("flight history v2", () => {
     const firstRecordedAt = result?.positions[0]?.recordedAt;
     const lastRecordedAt = result?.positions.at(-1)?.recordedAt;
     expect(firstRecordedAt !== undefined && lastRecordedAt !== undefined && firstRecordedAt < lastRecordedAt).toBe(true);
+  });
+
+  it("returns safe persisted FlightEvent DTOs in occurrence order", async () => {
+    const eventTypes = ["LANDING", "TAKEOFF", "APPROACH", "GO_AROUND", "HOLDING", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"];
+    const events = eventTypes.map((type, index) => ({
+      id: index + 1,
+      flightId: 1,
+      type,
+      occurredAt: new Date(Date.UTC(2026, 0, 1, 12, index)),
+      latitude: 50 + index / 100,
+      longitude: 14,
+      altitude: 10_000,
+      confidence: .8,
+      airportIcao: index === 0 ? "LKPR" : null,
+      runway: index === 0 ? "24" : null,
+      sectorId: null,
+      evidenceJson: '{"internal":"secret"}',
+      metadataJson: '{"internal":"secret"}',
+    }));
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights: [flight(1, "2026-01-01T12:00:00Z", "TEST")], events }) as never);
+    const result = await getHistoryFlight(1);
+    expect(result?.events.map((event) => event.type)).toEqual(eventTypes);
+    expect(result?.events[0]).toMatchObject({ airportIcao: "LKPR", runway: "24", summary: "LKPR · 24" });
+    expect(result?.events[0]).not.toHaveProperty("evidenceJson");
   });
 
   it("resolves a hex deep-link to the latest flight instance", async () => {

@@ -13,8 +13,10 @@ import {
   formatTrack,
   t,
 } from "@/lib/i18n";
-import type { HistoryFlightDetail } from "@/lib/server/history";
+import type { FlightStoryEvent, HistoryFlightDetail } from "@/lib/server/history";
 import { playbackSampleAt, playbackTimeRange, type PlaybackPosition, type PlaybackSample } from "@/lib/history/playback";
+import { MapTimeController, contextResolutionBucket } from "@/lib/map-time/controller";
+import type { MapContextManifest } from "@/lib/server/map-context";
 import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
 import { FlightProfile } from "@/components/flight-profile";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
@@ -35,8 +37,9 @@ const HISTORY_MAP_STYLE: StyleSpecification = {
   ],
 };
 
-function HistoryMap({ positions, sample }: { positions: PlaybackPosition[]; sample: PlaybackSample | null }) {
+function HistoryMap({ positions, sample, events, selectedEventId }: { positions: PlaybackPosition[]; sample: PlaybackSample | null; events: FlightStoryEvent[]; selectedEventId: number | null }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const markerPlaneRef = useRef<HTMLDivElement | null>(null);
   const sampleRef = useRef<PlaybackSample | null>(sample);
@@ -52,6 +55,7 @@ function HistoryMap({ positions, sample }: { positions: PlaybackPosition[]; samp
       zoom: 7,
       attributionControl: false,
     });
+    mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
 
@@ -105,6 +109,20 @@ function HistoryMap({ positions, sample }: { positions: PlaybackPosition[]; samp
         },
       });
 
+      map.addSource("flight-story-events", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: events.filter((event) => event.latitude !== null && event.longitude !== null).map((event) => ({
+          type: "Feature" as const,
+          properties: { id: event.id, selected: event.id === selectedEventId, type: event.type },
+          geometry: { type: "Point" as const, coordinates: [event.longitude!, event.latitude!] },
+        })) },
+      });
+      map.addLayer({ id: "flight-story-events", type: "circle", source: "flight-story-events", paint: {
+        "circle-radius": ["case", ["get", "selected"], 8, 5],
+        "circle-color": ["case", ["get", "selected"], "#f3b95f", "#9b8cff"],
+        "circle-stroke-color": "#08111d", "circle-stroke-width": 2,
+      } });
+
       const bounds = new maplibregl.LngLatBounds([positions[0].lon, positions[0].lat], [positions[0].lon, positions[0].lat]);
       for (const position of positions.slice(1)) bounds.extend([position.lon, position.lat]);
       if (positions.length === 1 || (bounds.getEast() === bounds.getWest() && bounds.getNorth() === bounds.getSouth())) {
@@ -135,7 +153,17 @@ function HistoryMap({ positions, sample }: { positions: PlaybackPosition[]; samp
       markerPlaneRef.current = null;
       map.remove();
     };
-  }, [positions]);
+  }, [events, positions]);
+
+  useEffect(() => {
+    const source = mapRef.current?.getSource("flight-story-events");
+    if (!source || !("setData" in source)) return;
+    (source as maplibregl.GeoJSONSource).setData({ type: "FeatureCollection", features: events.filter((event) => event.latitude !== null && event.longitude !== null).map((event) => ({
+      type: "Feature" as const,
+      properties: { id: event.id, selected: event.id === selectedEventId, type: event.type },
+      geometry: { type: "Point" as const, coordinates: [event.longitude!, event.latitude!] },
+    })) });
+  }, [events, selectedEventId]);
 
   useEffect(() => {
     if (!sample || !markerRef.current) return;
@@ -157,21 +185,36 @@ function PlaybackRouteContext({ flight }: { flight: HistoryFlightDetail["flight"
   </div>;
 }
 
-function FlightPlayback({ positions, flight, onPlaybackChange }: { positions: PlaybackPosition[]; flight: HistoryFlightDetail["flight"]; onPlaybackChange: (timestamp: number) => void }) {
+function FlightStoryTimeline({ events, start, end, currentTime, selectedEventId, onSeek, onSelect }: { events: FlightStoryEvent[]; start: number; end: number; currentTime: number; selectedEventId: number | null; onSeek: (timestamp: number) => void; onSelect: (event: FlightStoryEvent) => void }) {
+  return <section className="flight-story-timeline" aria-label={t.history.timeline}>
+    <div className="flight-story-timeline-heading"><strong>{t.history.timeline}</strong><span>{events.length ? `${events.length} ${t.history.events.toLowerCase()}` : t.history.noEvents}</span></div>
+    <div className="flight-story-timeline-track" role="list">
+      <button type="button" className="flight-story-boundary" onClick={() => onSeek(start)}>{formatTime(new Date(start).toISOString())} · {t.history.start}</button>
+      {events.map((event) => <button key={event.id} type="button" role="listitem" className={`flight-story-event${event.id === selectedEventId ? " selected" : ""}`} onClick={() => onSelect(event)}><span>{formatTime(event.occurredAt)}</span><strong>{event.type.replaceAll("_", " ")}</strong><small>{event.summary || t.common.emptyValue}</small></button>)}
+      <button type="button" className="flight-story-boundary" onClick={() => onSeek(end)}>{formatTime(new Date(end).toISOString())} · {t.history.end}</button>
+    </div>
+    <div className="flight-story-timeline-position" style={{ left: `${end > start ? Math.max(0, Math.min(100, ((currentTime - start) / (end - start)) * 100)) : 0}%` }} aria-hidden="true" />
+  </section>;
+}
+
+function FlightPlayback({ positions, flight, events, initialAt, selectedEventId, onPlaybackChange, onEventSelect }: { positions: PlaybackPosition[]; flight: HistoryFlightDetail["flight"]; events: FlightStoryEvent[]; initialAt?: number | null; selectedEventId: number | null; onPlaybackChange: (timestamp: number) => void; onEventSelect: (event: FlightStoryEvent) => void }) {
   const range = useMemo(() => playbackTimeRange(positions), [positions]);
   const start = range?.start ?? 0;
   const end = range?.end ?? 0;
-  const [playbackAt, setPlaybackAt] = useState(start);
+  const [playbackAt, setPlaybackAt] = useState(() => initialAt !== null && initialAt !== undefined && initialAt >= start && initialAt <= end ? initialAt : start);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const playbackRef = useRef(start);
+  const mapTime = useRef(new MapTimeController());
 
   useEffect(() => {
-    playbackRef.current = start;
-    setPlaybackAt(start);
-    onPlaybackChange(start);
+    const initial = initialAt !== null && initialAt !== undefined && initialAt >= start && initialAt <= end ? initialAt : start;
+    playbackRef.current = initial;
+    setPlaybackAt(initial);
+    mapTime.current.seek(new Date(initial));
+    onPlaybackChange(initial);
     setPlaying(false);
-  }, [end, onPlaybackChange, start]);
+  }, [end, initialAt, onPlaybackChange, start]);
 
   useEffect(() => {
     if (!playing || !range || end <= start) return;
@@ -182,6 +225,7 @@ function FlightPlayback({ positions, flight, onPlaybackChange }: { positions: Pl
       previousFrame = now;
       playbackRef.current = next;
       setPlaybackAt(next);
+      mapTime.current.seek(new Date(next));
       onPlaybackChange(next);
       if (next >= end) {
         setPlaying(false);
@@ -200,13 +244,14 @@ function FlightPlayback({ positions, flight, onPlaybackChange }: { positions: Pl
     const next = Math.min(end, Math.max(start, value));
     playbackRef.current = next;
     setPlaybackAt(next);
+    mapTime.current.seek(new Date(next));
     onPlaybackChange(next);
     if (next < end) setPlaying(false);
   }
 
   return (
     <div className="history-playback">
-      <HistoryMap positions={positions} sample={sample} />
+      <HistoryMap positions={positions} sample={sample} events={events} selectedEventId={selectedEventId} />
       <div className="history-playback-controls">
         <div className="history-playback-toolbar">
           <button
@@ -246,6 +291,7 @@ function FlightPlayback({ positions, flight, onPlaybackChange }: { positions: Pl
           <div><span>{t.aircraft.track}</span><strong>{formatTrack(sample.track)}</strong></div>
         </div>
         <PlaybackRouteContext flight={flight} />
+        <FlightStoryTimeline events={events} start={start} end={end} currentTime={playbackAt} selectedEventId={selectedEventId} onSeek={setTime} onSelect={(event) => { onEventSelect(event); setTime(Date.parse(event.occurredAt)); }} />
       </div>
     </div>
   );
@@ -256,9 +302,35 @@ function AirportCodeLink({ code }: { code: string | null }) {
   return <Link className="airport-link" href={aircraftAirportHref(code)}>{code}</Link>;
 }
 
-export function FlightDetailPanel({ detail }: { detail: HistoryFlightDetail }) {
+function FlightStoryContext({ playbackAt }: { playbackAt: number | null }) {
+  const [context, setContext] = useState<MapContextManifest | null>(null);
+  const playbackAtRef = useRef(playbackAt);
+  playbackAtRef.current = playbackAt;
+  const contextBucket = playbackAt === null ? null : contextResolutionBucket(playbackAt, 5 * 60_000);
+  useEffect(() => {
+    if (contextBucket === null) return;
+    const currentPlaybackAt = playbackAtRef.current;
+    if (currentPlaybackAt === null) return;
+    const requestedAt = new Date(currentPlaybackAt).toISOString();
+    const controller = new AbortController();
+    void fetch(`/api/map-context/at?at=${encodeURIComponent(requestedAt)}`, { cache: "no-store", signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<MapContextManifest> : null)
+      .then((value) => setContext(value))
+      .catch(() => { if (!controller.signal.aborted) setContext(null); });
+    return () => controller.abort();
+  }, [contextBucket]);
+  if (playbackAt === null) return null;
+  const layer = (value: { available: boolean; resolution: { resolvedAt: string | null }; source: string }): string => value.available ? `${value.resolution.resolvedAt ?? t.common.unknown} · ${value.source}` : t.history.noHistoricalContext;
+  return <section className="flight-story-context" aria-label={t.history.contextAt}>
+    <div className="flight-story-context-heading"><strong>{t.history.contextAt} {formatTime(new Date(playbackAt).toISOString())}</strong><Link className="history-link" href={`/time-machine?at=${encodeURIComponent(new Date(playbackAt).toISOString())}`}>{t.history.openWholeSky}</Link></div>
+    <div className="flight-story-context-grid"><span>{t.layers.weatherRadar}</span><strong>{layer(context?.radar ?? { available: false, source: "OBSERVED", resolution: { resolvedAt: null } } as MapContextManifest["radar"])}</strong><span>{t.layers.metar}</span><strong>{layer(context?.metar ?? { available: false, source: "OBSERVED", resolution: { resolvedAt: null } } as MapContextManifest["metar"])}</strong><span>{t.layers.windAloft}</span><strong>{layer(context?.wind ?? { available: false, source: "MODEL", resolution: { resolvedAt: null } } as MapContextManifest["wind"])}</strong><span>{t.layers.airspaceActivity}</span><strong>{layer(context?.aup ?? { available: false, source: "PLANNED", resolution: { resolvedAt: null } } as MapContextManifest["aup"])}</strong></div>
+  </section>;
+}
+
+export function FlightDetailPanel({ detail, initialAt }: { detail: HistoryFlightDetail; initialAt?: number | null }) {
   const { flight } = detail;
   const [playbackAt, setPlaybackAt] = useState<number | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const route = flight.origin && flight.destination ? (
     <>
       <AirportCodeLink code={flight.origin} /> <span aria-hidden="true">→</span> <AirportCodeLink code={flight.destination} />
@@ -285,15 +357,17 @@ export function FlightDetailPanel({ detail }: { detail: HistoryFlightDetail }) {
       {detail.positions.length ? (
         <>
           {detail.truncated && <div className="history-note history-truncated">{t.history.playbackTruncated}</div>}
-          <FlightPlayback positions={detail.positions} flight={flight} onPlaybackChange={setPlaybackAt} />
+          <FlightPlayback positions={detail.positions} flight={flight} events={detail.events} initialAt={initialAt} selectedEventId={selectedEventId} onPlaybackChange={setPlaybackAt} onEventSelect={(event) => setSelectedEventId(event.id)} />
           <FlightProfile positions={detail.positions} playbackAt={playbackAt} />
+          <FlightStoryContext playbackAt={playbackAt} />
+          {playbackAt !== null && <Link className="history-link flight-story-time-machine-link" href={`/time-machine?at=${encodeURIComponent(new Date(playbackAt).toISOString())}`}>{t.history.openWholeSky}</Link>}
         </>
       ) : <div className="history-note">{t.history.flightWithoutPositions}</div>}
     </div>
   );
 }
 
-export function FlightDetailPage({ detail }: { detail: HistoryFlightDetail }) {
+export function FlightDetailPage({ detail, initialAt }: { detail: HistoryFlightDetail; initialAt?: number | null }) {
   const { flight } = detail;
   return (
     <main className="flight-page">
@@ -310,7 +384,8 @@ export function FlightDetailPage({ detail }: { detail: HistoryFlightDetail }) {
         <Link className="back-link" href={`/history?flightId=${encodeURIComponent(String(flight.id))}`}>{t.history.viewHistory}</Link>
       </header>
       <section className="history-card flight-detail-card" aria-label={t.history.flightDetails}>
-        <FlightDetailPanel detail={detail} />
+        {/* Legacy shape: <FlightDetailPanel detail={detail} />; initialAt extends it without changing the route. */}
+        <FlightDetailPanel detail={detail} initialAt={initialAt} />
       </section>
     </main>
   );
