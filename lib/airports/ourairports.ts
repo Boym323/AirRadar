@@ -1,4 +1,5 @@
 import type { Airport } from "./types";
+import { parse as parseCsvRecords } from "csv-parse/sync";
 
 export const OURAIRPORTS_AIRPORTS_URL = "https://davidmegginson.github.io/ourairports-data/airports.csv";
 export const OURAIRPORTS_RUNWAYS_URL = "https://davidmegginson.github.io/ourairports-data/runways.csv";
@@ -82,27 +83,9 @@ export interface OurAirportsImportResult<T> {
 
 export type OurAirportsAirportImportResult = OurAirportsImportResult<OurAirportsAirport> & { airports: OurAirportsAirport[] };
 
-/** Parses RFC 4180-style CSV, including quoted commas and escaped quotes. */
+/** Parses RFC 4180 CSV; row-to-domain mapping remains AirRadar-specific below. */
 export function parseCsv(text: string): string[][] {
-  const records: string[][] = [];
-  let record: string[] = [];
-  let field = "";
-  let quoted = false;
-  for (let index = 0; index < text.length; index += 1) {
-    const character = text[index];
-    if (quoted) {
-      if (character === '"' && text[index + 1] === '"') { field += '"'; index += 1; }
-      else if (character === '"') quoted = false;
-      else field += character;
-      continue;
-    }
-    if (character === '"' && field.length === 0) quoted = true;
-    else if (character === ",") { record.push(field); field = ""; }
-    else if (character === "\n") { record.push(field.replace(/\r$/, "")); records.push(record); record = []; field = ""; }
-    else field += character;
-  }
-  if (field.length > 0 || record.length > 0) { record.push(field.replace(/\r$/, "")); records.push(record); }
-  return records;
+  return parseCsvRecords(text, { bom: true, skip_empty_lines: false, relax_column_count: true }) as string[][];
 }
 
 function diagnostics(): ImportDiagnostics { return { skipped: 0, reasons: {} }; }

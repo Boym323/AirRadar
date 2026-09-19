@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { z } from "zod";
 import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
@@ -72,7 +73,7 @@ import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
 import { IntelligenceFeed } from "@/components/intelligence-feed";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
-import { useRetryingDataset, type DatasetState } from "@/components/use-retrying-dataset";
+import { useDatasetQuery, type DatasetState } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { createProcedureGeoJSON } from "@/lib/procedure-visualization";
@@ -114,27 +115,25 @@ interface SectorTrafficView { sectorId: string; name: string; at: string; vertic
 const WIND_PRESSURE_LEVELS: WindLevelHpa[] = [850, 700, 500, 300, 200];
 interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; routes?: CzAtsRoute[]; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
 
-function parseAirportDataset(value: unknown): value is Airport[] {
-  return Array.isArray(value) && value.every((item) => {
-    if (!item || typeof item !== "object") return false;
-    const airport = item as Partial<Airport>;
-    return typeof airport.icaoCode === "string" && typeof airport.name === "string"
-      && Number.isFinite(airport.latitude) && Number.isFinite(airport.longitude);
-  });
-}
+const airportDatasetSchema = z.array(z.object({
+  icaoCode: z.string(), name: z.string(), latitude: z.number().finite(), longitude: z.number().finite(),
+}).passthrough());
+const atcDatasetSchema = z.object({ sectors: z.array(z.unknown()), transmitters: z.array(z.unknown()), metadata: z.record(z.string(), z.unknown()) }).passthrough();
+const atsDatasetSchema = z.object({ available: z.boolean() }).passthrough();
+const airspaceDatasetSchema = z.object({ planned: z.unknown(), historicalActual: z.unknown() }).passthrough();
+
+function parseAirportDataset(value: unknown): value is Airport[] { return airportDatasetSchema.safeParse(value).success; }
 
 function parseAtcDataset(value: unknown): value is AtcDataResponse {
-  return Boolean(value) && typeof value === "object" && Array.isArray((value as AtcDataResponse).sectors)
-    && Array.isArray((value as AtcDataResponse).transmitters) && Boolean((value as AtcDataResponse).metadata);
+  return atcDatasetSchema.safeParse(value).success;
 }
 
 function parseAtsDataset(value: unknown): value is AtsRoutesResponse {
-  return Boolean(value) && typeof value === "object" && typeof (value as AtsRoutesResponse).available === "boolean";
+  return atsDatasetSchema.safeParse(value).success;
 }
 
 function parseAirspaceDataset(value: unknown): value is AirspaceActivityResponse {
-  return Boolean(value) && typeof value === "object" && Boolean((value as AirspaceActivityResponse).planned)
-    && Boolean((value as AirspaceActivityResponse).historicalActual);
+  return airspaceDatasetSchema.safeParse(value).success;
 }
 
 async function parseJsonDataset<T>(response: Response, validator: (value: unknown) => value is T): Promise<T> {
@@ -653,26 +652,26 @@ export function AirRadarApp() {
     onSnapshot: setSnapshot,
   });
 
-  const airportsDataset = useRetryingDataset<Airport[]>({
+  const airportsDataset = useDatasetQuery<Airport[]>({
     url: "/api/airports",
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAirportDataset),
     itemCount: (value) => value.length,
   });
-  const atcDataset = useRetryingDataset<AtcDataResponse>({
+  const atcDataset = useDatasetQuery<AtcDataResponse>({
     url: "/api/atc/sectors",
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtcDataset),
     itemCount: (value) => value.sectors.length,
   });
-  const atsDataset = useRetryingDataset<AtsRoutesResponse>({
+  const atsDataset = useDatasetQuery<AtsRoutesResponse>({
     url: "/api/ats/routes",
     enabled: showAtsRoutes || Boolean(atsPointFocus) || Boolean(selectedHex),
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtsDataset),
     itemCount: (value) => value.counts?.routes ?? value.routes?.length ?? 0,
   });
-  const airspaceDataset = useRetryingDataset<AirspaceActivityResponse>({
+  const airspaceDataset = useDatasetQuery<AirspaceActivityResponse>({
     url: "/api/airspace/activity",
     enabled: showAtc || showAupUup,
     cache: "no-store",

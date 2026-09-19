@@ -4,6 +4,7 @@ import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import { BeastDecoder } from "@/lib/server/beast-decoder";
 import { BeastParser } from "@/lib/server/beast-parser";
 import { parseSbsMlatLine, SbsLineBuffer } from "@/lib/server/sbs-mlat-parser";
+import { logger } from "@/lib/server/logger";
 import type { NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import {
   getAdsbLolBeastHost, getAdsbLolBeastPort, getAdsbLolMlatHost, getAdsbLolMlatPort,
@@ -72,5 +73,5 @@ export class AdsbLolRawProvider implements NetworkAircraftProvider {
   private merge(old: Aircraft, incoming: Aircraft): Aircraft { const value = { ...old }; for (const key of ["callsign", "altitude", "baroAltitude", "groundSpeed", "track", "verticalRate", "baroRate", "squawk", "lat", "lon", "seenPosSeconds"] as const) if (incoming[key] !== null && incoming[key] !== undefined) (value as Record<string, unknown>)[key] = incoming[key]; value.lastSeen = incoming.lastSeen; value.origin = "adsblol"; const incomingPosition = incoming.lat !== null && incoming.lon !== null; if (incomingPosition) { value.source = "MLAT"; value.provenance = incoming.provenance; } else { value.provenance = { ...(old.provenance ?? { seenLocal: false, seenNetwork: true, lastLocalSeen: null, lastNetworkSeen: null, positionOrigin: null, positionSource: old.source }), seenNetwork: true, lastNetworkSeen: incoming.lastSeen }; } if (value.lat !== null && value.lon !== null) { value.distanceKm = haversineDistanceKm(this.receiver.lat, this.receiver.lon, value.lat, value.lon); value.bearing = initialBearing(this.receiver.lat, this.receiver.lon, value.lat, value.lon); } return value; }
   private expireMlat(): void { const cutoff = Date.now() - this.staleMs; for (const [hex, aircraft] of this.mlatAircraft) if (Date.parse(aircraft.lastSeen) < cutoff) this.mlatAircraft.delete(hex); }
   private publish(): Aircraft[] { const merged = new Map<string, Aircraft>(); for (const aircraft of this.beastDecoder.snapshot()) merged.set(aircraft.icaoHex, aircraft); for (const mlat of this.mlatAircraft.values()) { const old = merged.get(mlat.icaoHex); merged.set(mlat.icaoHex, old ? this.merge(old, mlat) : mlat); } const result = [...merged.values()].filter((aircraft) => aircraft.lat !== null && aircraft.lon !== null && (aircraft.distanceKm ?? Infinity) <= this.radiusNm * 1.852); this.droppedTracks += Math.max(0, merged.size - result.length); return result; }
-  private transition(message: string): void { this.lastTransitionAt = new Date().toISOString(); if (message === "beast connected" || message === "mlat connected") console.info(`[adsb.lol raw] ${message}`); }
+  private transition(message: string): void { this.lastTransitionAt = new Date().toISOString(); if (message === "beast connected" || message === "mlat connected") logger.info({ subsystem: "adsb.lol-raw", message }, "Raw provider connection state changed"); }
 }

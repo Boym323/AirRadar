@@ -3,6 +3,9 @@ import { distanceToGreatCircleSegmentKm } from "@/lib/geo";
 import { getAdsbDbCacheFile } from "@/lib/server/config";
 import { AdsbDbPersistence, disabledAdsbDbPersistence, type AdsbDbPersistenceDiagnostics } from "@/lib/server/adsbdb-persistence";
 import type { AircraftMetadataDiagnostics, ProviderRegistry } from "@/lib/server/provider";
+import { LRUCache } from "lru-cache";
+import pLimit from "p-limit";
+import { logger } from "@/lib/server/logger";
 
 export const ENRICHMENT_TTLS = {
   metadataMs: 24 * 60 * 60_000,
@@ -54,45 +57,16 @@ interface CacheOptions {
   cacheLoaderErrors?: boolean;
 }
 
-/** Runs different provider keys in parallel only up to the provider budget. */
-export class ConcurrencyLimiter {
-  private active = 0;
-  private readonly queue: Array<{
-    task: () => Promise<unknown>;
-    resolve: (value: unknown) => void;
-    reject: (reason?: unknown) => void;
-  }> = [];
-
-  constructor(private readonly limit: number) {}
-
-  run<T>(task: () => Promise<T>): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      this.queue.push({ task, resolve: resolve as (value: unknown) => void, reject });
-      this.drain();
-    });
-  }
-
-  private drain(): void {
-    while (this.active < this.limit && this.queue.length) {
-      const entry = this.queue.shift();
-      if (!entry) return;
-      this.active += 1;
-      void entry.task()
-        .then(entry.resolve, entry.reject)
-        .finally(() => {
-          this.active -= 1;
-          this.drain();
-        });
-    }
-  }
-}
-
 /** Small bounded TTL cache with negative caching and in-flight request coalescing. */
 export class ProviderCache {
-  private readonly entries = new Map<string, CacheEntry<unknown>>();
+  private readonly entries: LRUCache<string, CacheEntry<unknown>>;
   private readonly inFlight = new Map<string, Promise<unknown>>();
+  private readonly maxEntries: number;
 
-  constructor(private readonly maxEntries = 10_000) {}
+  constructor(maxEntries = 10_000) {
+    this.maxEntries = maxEntries;
+    this.entries = new LRUCache({ max: maxEntries });
+  }
 
   async get<T>(key: string, loader: () => Promise<T | null>, options: CacheOptions): Promise<T | null> {
     const now = Date.now();
@@ -108,7 +82,6 @@ export class ProviderCache {
         value,
         expiresAt: Date.now() + (value === null ? options.negativeTtlMs : options.ttlMs),
       });
-      this.evictIfNeeded();
       return value;
     };
 
@@ -143,7 +116,6 @@ export class ProviderCache {
     if (expiresAt <= Date.now()) return;
     this.entries.delete(key);
     this.entries.set(key, { value, expiresAt });
-    this.evictIfNeeded();
   }
 
   count(prefix: string): number {
@@ -158,11 +130,6 @@ export class ProviderCache {
     return this.maxEntries;
   }
 
-  private evictIfNeeded(): void {
-    if (this.entries.size <= this.maxEntries) return;
-    const oldest = this.entries.keys().next().value;
-    if (oldest !== undefined) this.entries.delete(oldest);
-  }
 }
 
 function normalizeHex(hex: string): string {
@@ -217,9 +184,9 @@ function getFlightPlanProviderDiagnostics(provider: ProviderRegistry["flightPlan
 }
 
 export class EnrichmentService {
-  private readonly metadataLimiter: ConcurrencyLimiter;
-  private readonly routeLimiter: ConcurrencyLimiter;
-  private readonly flightPlanLimiter = new ConcurrencyLimiter(2);
+  private readonly metadataLimiter: ReturnType<typeof pLimit>;
+  private readonly routeLimiter: ReturnType<typeof pLimit>;
+  private readonly flightPlanLimiter = pLimit(2);
   private flightPlanCacheHits = 0;
   private readonly adsbDbPersistence: AdsbDbPersistence | null;
   private readonly adsbDbHits = { memory: 0, persistent: 0, live: 0, staleFallback: 0 };
@@ -237,10 +204,10 @@ export class EnrichmentService {
     const sharedAdsbDbLimiter = providers.aircraftMetadata
       && providers.flightRoute
       && (providers.aircraftMetadata as object) === (providers.flightRoute as object)
-      ? new ConcurrencyLimiter(6)
+      ? pLimit(6)
       : null;
-    this.metadataLimiter = sharedAdsbDbLimiter ?? new ConcurrencyLimiter(6);
-    this.routeLimiter = sharedAdsbDbLimiter ?? new ConcurrencyLimiter(6);
+    this.metadataLimiter = sharedAdsbDbLimiter ?? pLimit(6);
+    this.routeLimiter = sharedAdsbDbLimiter ?? pLimit(6);
     this.adsbDbPersistence = adsbDbPersistence ?? null;
     for (const kind of ["metadata", "route"] as const) {
       for (const entry of this.adsbDbPersistence?.hydrateEntries(kind) ?? []) {
@@ -327,13 +294,13 @@ export class EnrichmentService {
     if (!this.hasProviders) return null;
     const [metadata, route] = await Promise.all([
       this.providers.aircraftMetadata
-        ? this.getAdsbDbCached("metadata", metadataCacheKey(aircraft.icaoHex), () => this.metadataLimiter.run(() => this.providers.aircraftMetadata!.getMetadata(aircraft.icaoHex)), {
+        ? this.getAdsbDbCached("metadata", metadataCacheKey(aircraft.icaoHex), () => this.metadataLimiter(() => this.providers.aircraftMetadata!.getMetadata(aircraft.icaoHex)), {
             ttlMs: ENRICHMENT_TTLS.metadataMs,
             negativeTtlMs: ENRICHMENT_TTLS.metadataNegativeMs,
           })
         : Promise.resolve(null),
       aircraft.callsign && this.providers.flightRoute
-        ? this.getAdsbDbCached("route", routeCacheKey(aircraft.callsign, observedAt, aircraft.icaoHex), () => this.routeLimiter.run(() => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt)), {
+        ? this.getAdsbDbCached("route", routeCacheKey(aircraft.callsign, observedAt, aircraft.icaoHex), () => this.routeLimiter(() => this.providers.flightRoute!.getRoute(aircraft.callsign!, observedAt)), {
             ttlMs: ENRICHMENT_TTLS.routeMs,
             negativeTtlMs: ENRICHMENT_TTLS.routeNegativeMs,
           }).then((route) => route && routeMatchesAircraftPosition(aircraft, route) ? route : null)
@@ -361,7 +328,7 @@ export class EnrichmentService {
     try {
       return await this.cache.get(
         key,
-        () => this.flightPlanLimiter.run(() => provider.getFlightPlan(callsign, observedAt)),
+        () => this.flightPlanLimiter(() => provider.getFlightPlan(callsign, observedAt)),
         {
           ttlMs: ENRICHMENT_TTLS.flightPlanMs,
           negativeTtlMs: ENRICHMENT_TTLS.flightPlanNegativeMs,
@@ -447,7 +414,7 @@ export class EnrichmentService {
         const logKey = `${kind}:${key}`;
         if (!this.staleFallbackLogged.has(logKey)) {
           this.staleFallbackLogged.add(logKey);
-          console.warn(`[adsbdb] provider unavailable; using stale ${kind} age=${Math.max(0, Date.now() - stale.fetchedAtMs)}ms`);
+          logger.warn({ subsystem: "adsbdb", kind, ageMs: Math.max(0, Date.now() - stale.fetchedAtMs) }, "Provider unavailable; using stale cache");
         }
         return stale.value as T;
       }

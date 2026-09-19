@@ -1,6 +1,6 @@
 import type { AircraftMetadata } from "@/lib/aircraft/types";
 import type { AircraftMetadataProvider } from "@/lib/server/provider";
-import { BoundedTtlLruCache } from "@/lib/server/bounded-cache";
+import { LRUCache } from "lru-cache";
 
 type Tar1090DatabaseBlock = Record<string, unknown>;
 type Tar1090DatabaseRecord = unknown[];
@@ -44,18 +44,19 @@ export class Tar1090DbProvider implements AircraftMetadataProvider {
   private databaseFolder: string | null | undefined;
   private databaseFolderExpiresAt = 0;
   private databaseFolderRequest: Promise<string | null> | null = null;
-  private readonly blockCache = new BoundedTtlLruCache<Tar1090DatabaseBlock>(
-    TAR1090_BLOCK_CACHE_MAX_ENTRIES,
-    TAR1090_BLOCK_CACHE_TTL_MS,
-    TAR1090_BLOCK_CACHE_MAX_BYTES,
-    (block) => {
+  private readonly blockCache = new LRUCache<string, Tar1090DatabaseBlock>({
+    max: TAR1090_BLOCK_CACHE_MAX_ENTRIES,
+    ttl: TAR1090_BLOCK_CACHE_TTL_MS,
+    ttlAutopurge: true,
+    maxSize: TAR1090_BLOCK_CACHE_MAX_BYTES,
+    sizeCalculation: (block) => {
       try {
         return Buffer.byteLength(JSON.stringify(block));
       } catch {
         return 1;
       }
     },
-  );
+  });
   private readonly blockInFlight = new Map<string, Promise<Tar1090DatabaseBlock | null>>();
 
   constructor(private readonly baseUrl: string) {}
@@ -148,7 +149,7 @@ export class Tar1090DbProvider implements AircraftMetadataProvider {
     return {
       blockCacheSize: this.blockCache.size,
       blockCacheLimit: TAR1090_BLOCK_CACHE_MAX_ENTRIES,
-      blockCacheBytes: this.blockCache.weightBytes,
+      blockCacheBytes: this.blockCache.calculatedSize ?? 0,
       blockCacheBytesLimit: TAR1090_BLOCK_CACHE_MAX_BYTES,
     };
   }

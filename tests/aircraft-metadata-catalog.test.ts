@@ -1,29 +1,33 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Readable } from "node:stream";
 import { createGzip } from "node:zlib";
-import { BoundedTtlLruCache, METADATA_IMPORT_BATCH_SIZE, parseAircraftMetadataCsv } from "@/lib/server/aircraft-metadata-catalog";
+import { LRUCache } from "lru-cache";
+import { METADATA_IMPORT_BATCH_SIZE, parseAircraftMetadataCsv } from "@/lib/server/aircraft-metadata-catalog";
 import { AircraftMetadataCatalog } from "@/lib/server/aircraft-metadata-catalog";
 
 describe("aircraft metadata catalog memory bounds", () => {
   it("evicts least-recently-used records and expires them", () => {
-    const cache = new BoundedTtlLruCache<string | null>(2, 100);
-    cache.set("one", "1", 0);
-    cache.set("two", "2", 0);
-    expect(cache.get("one", 1)).toBe("1");
-    cache.set("three", "3", 1);
-    expect(cache.get("two", 1)).toBeUndefined();
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const cache = new LRUCache<string, string>({ max: 2, ttl: 100, ttlAutopurge: true });
+    cache.set("one", "1");
+    cache.set("two", "2");
+    expect(cache.get("one")).toBe("1");
+    cache.set("three", "3");
+    expect(cache.get("two")).toBeUndefined();
     expect(cache.size).toBe(2);
-    expect(cache.get("one", 101)).toBeUndefined();
-    expect(cache.size).toBe(1);
+    expect(cache.getRemainingTTL("one")).toBeGreaterThan(0);
+    expect(cache.size).toBe(2);
+    vi.useRealTimers();
   });
 
   it("evicts by weight as well as entry count", () => {
-    const cache = new BoundedTtlLruCache<string>(10, 100, 5, (value) => value.length);
-    cache.set("one", "1234", 0);
-    cache.set("two", "123", 0);
-    expect(cache.get("one", 1)).toBeUndefined();
-    expect(cache.get("two", 1)).toBe("123");
-    expect(cache.weightBytes).toBe(3);
+    const cache = new LRUCache<string, string>({ max: 10, ttl: 100, maxSize: 5, sizeCalculation: (value) => value.length });
+    cache.set("one", "1234");
+    cache.set("two", "123");
+    expect(cache.get("one")).toBeUndefined();
+    expect(cache.get("two")).toBe("123");
+    expect(cache.calculatedSize).toBe(3);
   });
 
   it("keeps CSV parsing compatible while exposing a bounded import batch", () => {

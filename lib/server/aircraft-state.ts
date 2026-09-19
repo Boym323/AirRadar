@@ -21,6 +21,7 @@ import { getReceptionRecords } from "@/lib/server/reception-records";
 import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { haversineDistanceKm } from "@/lib/geo";
+import { logger } from "@/lib/server/logger";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -164,7 +165,7 @@ export class AircraftStateService {
       .catch((error) => {
         // Statistics are optional; a load failure must not prevent the first
         // live provider refresh.
-        console.error("AirRadar statistics startup failed", error);
+        logger.error({ error }, "AirRadar statistics startup failed");
       })
       .then(() => {
         this.lastEvaluatedDailyReceptionRecord = this.statistics.getDailyReceptionRecord();
@@ -396,7 +397,7 @@ export class AircraftStateService {
         void this.enrichSnapshot(localSnapshot);
         void this.resolveAtc(localSnapshot).catch((error) => {
           // ATC is optional enrichment; a provider failure must never affect live tracking.
-          console.error("AirRadar ATC resolution failed", error);
+          logger.error({ error }, "AirRadar ATC resolution failed");
         });
       }
     } finally {
@@ -510,7 +511,7 @@ export class AircraftStateService {
   private async persistHistory(snapshot: ProviderSnapshot): Promise<void> {
     const sampledAt = Date.parse(snapshot.fetchedAt);
     if (!Number.isFinite(sampledAt)) {
-      console.error("AirRadar history snapshot skipped: invalid fetchedAt");
+      logger.error("AirRadar history snapshot skipped: invalid fetchedAt");
       return;
     }
 
@@ -531,11 +532,11 @@ export class AircraftStateService {
           if (current) this.alerts.observeNewAircraft(current);
         }
         if (result.failed.length) {
-          console.error(`AirRadar history persistence failed for ${result.failed.length} aircraft`);
+          logger.error({ failedAircraft: result.failed.length }, "AirRadar history persistence failed");
         }
       } catch (error) {
         // History is best-effort and must never make a healthy receiver look offline.
-        console.error("AirRadar history persistence failed", error);
+        logger.error({ error }, "AirRadar history persistence failed");
       }
     } else {
       // Let the throttled history maintenance run even when no position sample
@@ -599,7 +600,7 @@ export class AircraftStateService {
         try {
           await this.persistHistory(snapshot);
         } catch (error) {
-          console.error("AirRadar history queue failed", error);
+          logger.error({ error }, "AirRadar history queue failed");
         }
       }
     } finally {
@@ -681,7 +682,7 @@ export class AircraftStateService {
       }
     }));
     if (this.shuttingDown) return;
-    if (failures.length) console.error(`AirRadar ATC resolution failed for ${failures.length} aircraft`);
+    if (failures.length) logger.error({ failedAircraft: failures.length }, "AirRadar ATC resolution failed");
     let changed = false;
     for (const result of results) {
       const current = this.aircraft.get(result.incoming.icaoHex);

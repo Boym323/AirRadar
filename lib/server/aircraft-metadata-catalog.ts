@@ -8,9 +8,7 @@ import { getAircraftMetadataUrl } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 import { Tar1090DbProvider } from "@/lib/server/tar1090-db-provider";
 import type { AircraftMetadataProvider } from "@/lib/server/provider";
-import { BoundedTtlLruCache } from "@/lib/server/bounded-cache";
-
-export { BoundedTtlLruCache } from "@/lib/server/bounded-cache";
+import { LRUCache } from "lru-cache";
 
 const SOURCE = "tar1090-db";
 const SYNC_ID = "tar1090-db";
@@ -145,7 +143,7 @@ export class AircraftMetadataCatalog implements AircraftMetadataProvider {
   readonly name = SOURCE;
   private readonly fallback: Tar1090DbProvider | null;
   private readonly sourceUrl: string;
-  private readonly hotCache = new BoundedTtlLruCache<AircraftMetadataRecord | null>(METADATA_HOT_CACHE_MAX_ENTRIES, METADATA_HOT_CACHE_TTL_MS);
+  private readonly hotCache = new LRUCache<string, { record: AircraftMetadataRecord | null }>({ max: METADATA_HOT_CACHE_MAX_ENTRIES, ttl: METADATA_HOT_CACHE_TTL_MS, ttlAutopurge: true });
   private initialLoad: Promise<void> | null = null;
   private syncInFlight: Promise<void> | null = null;
   private lastCheckedAt = 0;
@@ -362,11 +360,11 @@ export class AircraftMetadataCatalog implements AircraftMetadataProvider {
   }
 
   private getHot(hex: string): AircraftMetadataRecord | null | undefined {
-    return this.hotCache.get(hex);
+    return this.hotCache.get(hex)?.record;
   }
 
   private setHot(hex: string, record: AircraftMetadataRecord | null): void {
-    this.hotCache.set(hex, record);
+    this.hotCache.set(hex, { record });
   }
 
   getDiagnostics(): {
