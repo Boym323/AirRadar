@@ -806,6 +806,7 @@ async function main() {
       WATCHLIST_ADMIN_TOKEN: "production-gate-token",
       AIRRADAR_CHANNEL: gateChannel === "rc" ? "release-candidate" : "production",
       AIRRADAR_RUNTIME_STATE_DIRECTORY: runtimeStateDirectory,
+      WEATHER_RADAR_ARCHIVE_DIR: resolve(runtimeStateDirectory, "weather-radar"),
     },
     stdio: ["ignore", "pipe", "pipe"],
   });

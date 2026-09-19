@@ -1714,6 +1714,7 @@ button, input, select, textarea { color-scheme: dark; }
   .traffic-source-tabs { margin-top: 6px; }
   .sidebar.compact .coverage-switch, .sidebar.compact .coverage-subcount { display: none; }
   .sidebar:not(.compact) .atc-relevance-panel.is-compact .atc-panel-mobile-summary { display: block; }
+  .sidebar.compact .atc-relevance-panel { height: 50px; max-height: 50px; margin: 0; box-sizing: border-box; }
   .sidebar-header { padding: 0 13px 8px; }
   .aircraft-row { min-height: 60px; padding: 7px 8px; }
   .aircraft-row-meta { flex-wrap: wrap; gap: 3px 7px; font-size: 11px; }
