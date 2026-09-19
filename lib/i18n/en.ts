@@ -66,7 +66,7 @@ export const en = {
   },
   layers: {
     title: "Map layers",
-    groups: { traffic: "Traffic", aviation: "Aviation", weather: "Weather", operationalAirspace: "Operational airspace", display: "Display" },
+    groups: { traffic: "Traffic", aviation: "Aviation", atcAirspace: "ATC / airspace", atsProcedures: "ATS / procedures", weather: "Weather", operationalAirspace: "Operational airspace", display: "Display" },
     aircraft: "Aircraft",
     ogn: "OGN / FLARM",
     rangeRings: "Receiver range rings",
@@ -197,6 +197,11 @@ export const en = {
   filters: {
     title: "Filters",
     reset: "Reset filters",
+    clearSearch: "Clear search",
+    filterGroup: "Filter",
+    sortGroup: "Sort",
+    displayGroup: "Display",
+    active: "Active filters",
     status: "Status",
     statusAll: "All",
     statusAirborne: "Airborne",

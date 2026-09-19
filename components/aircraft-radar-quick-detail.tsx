@@ -10,6 +10,7 @@ import type { RouteIntelligenceViewDTO } from "@/lib/route-intelligence";
 import { RouteIntelligencePanel } from "@/components/route-intelligence-panel";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
+import { StatusBadge } from "@/components/ui-primitives";
 import {
   formatAge,
   formatAltitude,
@@ -83,22 +84,6 @@ function trackingSummary(aircraft: AircraftView, historyTrail: QuickHistoryTrail
   ].filter((value): value is string => Boolean(value));
 }
 
-function RouteSection({ aircraft }: { aircraft: AircraftView }) {
-  const route = aircraft.enrichment?.route;
-  const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
-  if (!hasRouteData || !route) return null;
-  return <QuickSection id="aircraft-quick-route-title" title={t.route.context} className="aircraft-quick-route">
-    <div className="aircraft-quick-route-value" aria-label={t.route.context}>
-      <RouteEndpoint code={route.origin} airport={route.originAirport} />
-      <span aria-hidden="true">→</span>
-      <strong>{aircraft.callsign || aircraft.icaoHex}</strong>
-      <span aria-hidden="true">→</span>
-      <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
-    </div>
-    <p className="aircraft-quick-disclaimer">{t.route.contextDisclaimer}</p>
-  </QuickSection>;
-}
-
 function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftView; context: AtcContextResult | null; sectorTraffic?: Map<string, { trafficLevel: string; traffic: { aircraftCount: number }; frequencies: Array<{ channel: string }> }> }) {
   const contextAirspace = context?.status === "available" ? context.primaryAirspace : null;
   const assignment = contextAirspace ? null : aircraft.atc ?? null;
@@ -150,7 +135,6 @@ function AircraftIdentitySection({ aircraft, databaseAircraft }: { aircraft: Air
   const metadata = aircraft.enrichment?.metadata;
   const entries = [
     [t.aircraft.registration, aircraft.registration ?? metadata?.registration ?? databaseAircraft?.registration],
-    [t.aircraft.icaoHex, aircraft.icaoHex],
     [t.aircraft.aircraftType, metadata?.icaoTypeCode ?? metadata?.aircraftType ?? aircraft.aircraftType ?? databaseAircraft?.aircraftType],
     [t.aircraft.modelType, metadata?.aircraftDescription ?? aircraft.aircraftDescription ?? databaseAircraft?.model],
     [t.aircraft.manufacturer, metadata?.manufacturer ?? databaseAircraft?.manufacturer],
@@ -216,10 +200,14 @@ export function AircraftRadarQuickDetail({
   const metadata = aircraft.enrichment?.metadata;
   const registration = aircraft.registration ?? metadata?.registration ?? databaseAircraft?.registration;
   const headerType = metadata?.aircraftDescription ?? metadata?.icaoTypeCode ?? aircraft.aircraftType ?? databaseAircraft?.aircraftType;
+  const route = aircraft.enrichment?.route;
+  const hasRouteData = Boolean(route && (route.origin || route.originAirport || route.destination || route.destinationAirport));
+  const operator = route?.airline || metadata?.operator || null;
   const summary = trackingSummary(aircraft, historyTrail);
   const livePoint = aircraft.altitude === null ? null : { recordedAt: aircraft.lastSeen, altitude: aircraft.altitude };
   const chartPoints = historyTrail?.points ?? aircraft.trail ?? [];
   const emergency = aircraft.emergency && aircraft.emergency.toLowerCase() !== "none" ? aircraft.emergency : null;
+  const emergencySquawk = aircraft.squawk && ["7500", "7600", "7700"].includes(aircraft.squawk) ? aircraft.squawk : null;
   const fullDetailHref = `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`;
   const historyHref = `/history?hex=${encodeURIComponent(aircraft.icaoHex)}`;
 
@@ -233,7 +221,15 @@ export function AircraftRadarQuickDetail({
         <div className="aircraft-quick-identity">
           <span className="aircraft-quick-eyebrow">{t.history.aircraftDetail}</span>
           <h1>{aircraft.callsign || registration || aircraft.icaoHex}</h1>
-          {(registration || headerType) && <p>{[registration, headerType].filter(Boolean).join(" · ")}</p>}
+          {(operator || registration || headerType) && <p>{[operator, registration, headerType].filter(Boolean).join(" · ")}</p>}
+          {hasRouteData && route && <div className="aircraft-quick-header-route" aria-label={t.route.context}>
+            <RouteEndpoint code={route.origin} airport={route.originAirport} />
+            <span aria-hidden="true">→</span>
+            <span>{aircraft.callsign || aircraft.icaoHex}</span>
+            <span aria-hidden="true">→</span>
+            <RouteEndpoint code={route.destination} airport={route.destinationAirport} />
+          </div>}
+          {hasRouteData && <p className="aircraft-quick-header-route-note">{t.route.contextDisclaimer}</p>}
         </div>
         <button type="button" className={`aircraft-quick-watchlist ${watchlisted ? "active" : ""}`} aria-pressed={watchlisted} aria-label={watchlisted ? t.watchlist.onWatchlist : t.watchlist.followAircraft} onClick={onToggleWatchlist}>
           <span aria-hidden="true">{watchlisted ? "★" : "☆"}</span>
@@ -241,7 +237,9 @@ export function AircraftRadarQuickDetail({
       </div>
     </header>
 
-    <RouteSection aircraft={aircraft} />
+    {(emergency || emergencySquawk) && <div className="aircraft-quick-status-row" role="status">
+      <StatusBadge variant="danger">{emergency ?? `${t.aircraft.squawk} ${emergencySquawk}`}</StatusBadge>
+    </div>}
 
     <QuickSection id="aircraft-quick-metrics-title" title={t.aircraft.liveAdsb} className="aircraft-quick-metrics-section">
       <div className="aircraft-quick-metrics">
@@ -250,7 +248,6 @@ export function AircraftRadarQuickDetail({
         <div><strong>{formatTrack(aircraft.track)}</strong><span>{t.aircraft.track}</span></div>
         <div><strong>{aircraft.verticalRate === null ? t.common.emptyValue : `${aircraft.verticalRate > 0 ? "+" : ""}${formatNumber(aircraft.verticalRate)} ft/min`}</strong><span>{t.aircraft.verticalRate}</span></div>
       </div>
-      {emergency && <div className="aircraft-quick-emergency" role="status"><span aria-hidden="true">!</span>{emergency}</div>}
     </QuickSection>
 
     <nav className="aircraft-quick-actions" aria-label={t.aircraft.quickActions}>

@@ -2023,6 +2023,20 @@ export function AirRadarApp() {
     distanceFilter !== "all",
     watchlistOnly,
   ].filter(Boolean).length;
+  const activeFilterChips = [
+    mapFilters.status === "airborne" ? t.filters.statusAirborne : mapFilters.status === "onGround" ? t.filters.statusOnGround : null,
+    mapFilters.minAltitude.trim() ? `≥ ${mapFilters.minAltitude} ft` : null,
+    mapFilters.maxAltitude.trim() ? `≤ ${mapFilters.maxAltitude} ft` : null,
+    mapFilters.callsign.trim() ? `${t.filters.callsign}: ${mapFilters.callsign.trim()}` : null,
+    mapFilters.registration.trim() ? `${t.filters.registrationInput}: ${mapFilters.registration.trim()}` : null,
+    mapFilters.icaoHex.trim() ? `${t.filters.icaoHexInput}: ${mapFilters.icaoHex.trim()}` : null,
+    mapFilters.aircraftType.trim() ? mapFilters.aircraftType.trim() : null,
+    mapFilters.operator.trim() ? mapFilters.operator.trim() : null,
+    mapFilters.emergencyOnly ? t.filters.emergencyOnly : null,
+    watchlistOnly ? t.filters.watchlistOnly : null,
+    search.trim() ? `${t.search.aircraftLabel}: ${search.trim()}` : null,
+    distanceFilter !== "all" ? `${t.filters.maximumDistance}: ${distanceFilter} km` : null,
+  ].filter((value): value is string => Boolean(value));
 
   const isDemo = snapshot.provider === "mock";
   const hasSourceSnapshot = snapshot.lastSourceUpdate !== null;
@@ -2139,9 +2153,10 @@ export function AirRadarApp() {
             {showAtcTraffic && <><AtcVerticalTraffic traffic={sectorTraffic} /><SectorFlowsPanel flows={sectorFlows} windowMinutes={sectorFlowWindow} onWindowChange={setSectorFlowWindow} /></>}
             <div className="map-overlay-primary">
               <Panel className="map-overlay-card map-summary-card">
-                <div className="map-summary-item"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
-                <div className="map-summary-item"><strong>{snapshot.stats.messagesPerSecond === null ? t.common.emptyValue : `${formatNumber(snapshot.stats.messagesPerSecond, 1)}/s`}</strong><span>{t.statistics.messagesPerSecond}</span></div>
-                <div className="map-summary-item"><strong>{formatDistance(snapshot.stats.maxDistanceKm)}</strong><span>{t.stats.maxDistance}</span></div>
+                <div className="map-summary-item map-summary-count"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
+                {hasActiveMapFilters && <div className="map-summary-filter-state" aria-label={`${t.filters.active}: ${activeFilterCount}`}>
+                  <span>{t.filters.title}</span><strong>{activeFilterCount}</strong>
+                </div>}
               </Panel>
               <MapControlGroup className="map-control-group-primary">
               <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
@@ -2173,10 +2188,12 @@ export function AirRadarApp() {
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showSignificantAirports} disabled={!showAirports} onChange={(event) => setShowSignificantAirports(event.target.checked)} /> {t.layers.significantAirports}</label>
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>
                     <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
+                    <div className="map-layer-subgroup-heading">{t.layers.groups.atcAirspace}</div>
                     <label data-testid="map-layer-atc"><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {datasetStateLabel(t.layers.atc, atcDataset, (count) => t.layers.sectorsCount(formatNumber(count)))}</label>
                     <label data-testid="map-layer-atc-traffic"><input type="checkbox" checked={showAtcTraffic} onChange={(event) => setShowAtcTraffic(event.target.checked)} /> ATC Sector Traffic</label>
                     {showAtcTraffic && <div className="map-layer-sublevel">NONE · LOW · MEDIUM · HIGH · VERY HIGH<br /><small>Traffic intensity within published ATC sector volumes.<br />Does not indicate official ATC sector activation.{sectorTrafficState === "stale" ? " · STALE" : sectorTrafficState === "unavailable" ? " · NO DATA" : ""}</small></div>}
                     {showAtc && airspaceActivity?.planned.status !== "unavailable" && <div className="map-layer-sublevel">{activityT.legendCurrent} · {activityT.legendUpcoming}{airspaceActivity?.planned.status === "stale" ? ` · ${activityT.stale}` : ""}<br /><small>{activityT.disclaimer}</small></div>}
+                    <div className="map-layer-subgroup-heading">{t.layers.groups.atsProcedures}</div>
                     <label data-testid="map-layer-ats"><input type="checkbox" checked={showAtsRoutes} onChange={(event) => { setShowAtsRoutes(event.target.checked); if (!event.target.checked) setSelectedAtsRoute(null); }} /> {datasetStateLabel(t.layers.atsRoutes, atsDataset, (count) => t.layers.routesCount(formatNumber(count)))}</label>
                     <label data-testid="map-layer-sid"><input type="checkbox" checked={showSids} onChange={(event) => setShowSids(event.target.checked)} /> {t.layers.sids}</label>
                     <label data-testid="map-layer-star"><input type="checkbox" checked={showStars} onChange={(event) => setShowStars(event.target.checked)} /> {t.layers.stars}</label>
@@ -2225,8 +2242,7 @@ export function AirRadarApp() {
               {networkNotice && <span className="network-notice">{networkNotice}</span>}
               {networkEnabled && <span className="network-attribution">{t.radar.networkAttribution}</span>}
             </div>}
-            {(showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null) || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) ? <Panel className="map-overlay-card contextual-legend">
-              {showRangeRings && snapshot.receiver.lat !== null && snapshot.receiver.lon !== null && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong>{RANGE_RING_RADII_KM.map((radiusKm) => <span key={radiusKm}><i className="legend-dot" /> {radiusKm} km</span>)}</span>}
+            {colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) ? <Panel className="map-overlay-card contextual-legend">
               {colorMode !== "default" && <span className="color-mode-legend"><strong>{t.layers.colorModes[colorMode]}</strong><span><i className="color-legend-swatch low" /> {t.layers.colorLegendLow}</span><span><i className="color-legend-swatch high" /> {t.layers.colorLegendHigh}</span><span><i className="color-legend-swatch fallback" /> {t.layers.colorLegendFallback}</span></span>}
               {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <span className="layer-legend"><span><i className="legend-line actual" /> {t.route.actualTrail}</span><span><i className="legend-line completed" /> {t.route.originToCurrent}</span><span><i className="legend-line remaining" /> {t.route.currentToDestination}</span><small>{t.route.contextDisclaimer}</small></span>}
             </Panel> : null}
@@ -2258,13 +2274,20 @@ export function AirRadarApp() {
             <div className="search-wrap">
               <span className="search-icon" aria-hidden="true">⌕</span>
               <input ref={searchInputRef} className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={trafficSource === "ogn" ? t.search.ognPlaceholder : t.search.placeholder} aria-label={trafficSource === "ogn" ? t.search.ognLabel : t.search.aircraftLabel} />
+              {search && <button type="button" className="search-clear-button" onClick={() => setSearch("")} aria-label={t.filters.clearSearch}>×</button>}
             </div>
               {trafficSource === "adsb" && <div className="radar-options">
               <button type="button" className="filter-button" aria-expanded={filtersOpen} aria-controls="map-filters-panel" onClick={() => setFiltersOpen((value) => !value)}>
                 <span>{t.filters.title}{hasActiveMapFilters ? ` · ${activeFilterCount}` : ""}</span>
-                {hasActiveMapFilters && <span className="filter-active-dot" aria-label={t.filters.reset}>ACTIVE</span>}
+                {hasActiveMapFilters && <span className="filter-active-dot" aria-label={t.filters.active}>{t.filters.active}</span>}
               </button>
+              {hasActiveMapFilters && <div className="active-filter-chips" aria-label={t.filters.active}>
+                {activeFilterChips.slice(0, 3).map((chip) => <span className="filter-chip" key={chip}>{chip}</span>)}
+                {activeFilterChips.length > 3 && <span className="filter-chip filter-chip-overflow">+{activeFilterChips.length - 3}</span>}
+                <button type="button" className="filter-chip-reset" onClick={resetMapFilters}>{t.filters.reset}</button>
+              </div>}
               {filtersOpen && <div id="map-filters-panel" className="map-filters-panel" role="region" aria-label={t.filters.title}>
+                <div className="filter-panel-heading">{t.filters.filterGroup}</div>
                 <fieldset className="map-filter-group">
                   <legend>{t.filters.status}</legend>
                   <div className="map-filter-choice-row">
@@ -2300,6 +2323,7 @@ export function AirRadarApp() {
                   <label className="filter-toggle"><input type="checkbox" checked={mapFilters.emergencyOnly} onChange={(event) => updateMapFilter("emergencyOnly", event.target.checked)} /> {t.filters.emergencyOnly}</label>
                   <label className="filter-toggle"><input type="checkbox" checked={watchlistOnly} onChange={(event) => setWatchlistOnly(event.target.checked)} /> {t.filters.watchlistOnly}</label>
                 </fieldset>
+                <div className="filter-panel-heading filter-panel-heading-sort">{t.filters.sortGroup}</div>
                 <div className="map-filter-legacy-row">
                   <label className="map-filter-field"><span>{t.filters.sortLabel}</span><select className="filter-select" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}><option value="distance">{t.filters.sortDistance}</option><option value="altitude">{t.filters.sortAltitude}</option><option value="callsign">{t.filters.sortCallsign}</option></select></label>
                   <label className="map-filter-field"><span>{t.filters.maximumDistance}</span><select className="filter-select" value={distanceFilter} onChange={(event) => setDistanceFilter(event.target.value)}><option value="all">{t.filters.distanceAll}</option><option value="25">{t.filters.distanceWithin25}</option><option value="75">{t.filters.distanceWithin75}</option></select></label>

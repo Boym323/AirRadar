@@ -64,7 +64,7 @@ export const cs = {
   },
   layers: {
     title: "Vrstvy mapy",
-    groups: { traffic: "Provoz", aviation: "Letectví", weather: "Počasí", operationalAirspace: "Provozní prostor", display: "Zobrazení" },
+    groups: { traffic: "Provoz", aviation: "Letectví", atcAirspace: "ATC / vzdušný prostor", atsProcedures: "ATS / postupy", weather: "Počasí", operationalAirspace: "Provozní prostor", display: "Zobrazení" },
     aircraft: "Letadla",
     ogn: "OGN / FLARM",
     rangeRings: "Kruhy dosahu přijímače",
@@ -195,6 +195,11 @@ export const cs = {
   filters: {
     title: "Filtry",
     reset: "Resetovat filtry",
+    clearSearch: "Vymazat hledání",
+    filterGroup: "Filtrovat",
+    sortGroup: "Řazení",
+    displayGroup: "Zobrazení",
+    active: "Aktivní filtry",
     status: "Stav",
     statusAll: "Všechna",
     statusAirborne: "Ve vzduchu",

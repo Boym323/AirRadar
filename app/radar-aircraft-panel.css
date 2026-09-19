@@ -26,6 +26,9 @@
 }
 
 .aircraft-quick-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-drawer);
   margin: 0 -14px;
   padding: 0 14px 15px;
   border-bottom: 1px solid var(--border-default);
@@ -95,6 +98,35 @@
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.aircraft-quick-header-route {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+  margin-top: 10px;
+  color: var(--text-primary);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.aircraft-quick-header-route > span:not(.airport-link),
+.aircraft-quick-header-route > a { color: var(--accent-primary); }
+
+.aircraft-quick-header-route-note {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.aircraft-quick-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: 13px;
 }
 
 .aircraft-quick-watchlist {
@@ -244,7 +276,7 @@
   min-width: 0;
   padding: 10px;
   border: 1px solid rgba(190, 214, 232, .14);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: rgba(7, 19, 31, .34);
 }
 
@@ -417,6 +449,11 @@
   color: var(--text-secondary);
   font-size: 10px;
 }
+
+.aircraft-quick-detail .status-badge { min-height: 30px; padding-block: 5px; font-size: 10px; }
+.aircraft-quick-detail .aircraft-quick-action { border-radius: var(--radius-md); }
+.aircraft-quick-detail .aircraft-quick-section h2 { font-size: 11px; }
+.sidebar.drawer-aircraft > .detail-panel > .detail-heading { position: sticky; top: 0; z-index: var(--z-drawer); }
 
 .aircraft-quick-atc-more {
   margin-top: 9px;

@@ -2551,3 +2551,19 @@ button, input, select, textarea { color-scheme: dark; }
   .ui-icon-button { min-height: var(--control-height-touch); }
   .status-badge { min-height: 36px; padding-inline: var(--space-2); font-size: 10px; }
 }
+
+/* Phase 2 core-experience refinements. */
+.map-summary-count strong { font-size: 18px; }
+.map-summary-filter-state { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text-secondary); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.map-summary-filter-state strong { display: grid; place-items: center; min-width: 22px; min-height: 22px; padding-inline: 5px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--selected) 14%, transparent); color: var(--selected); font-family: var(--font-geist-mono), monospace; font-size: 11px; }
+.search-clear-button { position: absolute; top: 50%; right: 7px; display: grid; place-items: center; width: 28px; height: 28px; transform: translateY(-50%); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; }
+.search-clear-button:hover { background: var(--surface-hover); color: var(--text-primary); }
+.active-filter-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.filter-chip { display: inline-flex; align-items: center; min-height: 24px; max-width: 150px; overflow: hidden; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--selected) 34%, transparent); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--selected) 8%, transparent); color: var(--selected); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.filter-chip-overflow { border-color: var(--border-default); background: transparent; color: var(--text-secondary); }
+.filter-chip-reset { min-height: 24px; padding: 3px 6px; border: 0; background: transparent; color: var(--accent); font-size: 10px; cursor: pointer; }
+.filter-chip-reset:hover { text-decoration: underline; }
+.filter-panel-heading { margin: 0 0 2px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.filter-panel-heading-sort { margin-top: 12px; }
+.map-layer-subgroup-heading { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.map-layers-menu { max-height: min(72vh, 680px); overflow-y: auto; }
