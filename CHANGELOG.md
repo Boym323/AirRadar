@@ -2,6 +2,14 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.64] - 2026-09-19
+
+Changes since v1.0.63:
+
+- feat: implement sector traffic context retrieval and API endpoints (4f61b985)
+- feat: add sector transitions API and update documentation (6c64c09d)
+- fix: validate geographic coordinates for sectors, airports, and transmitters (84396a4f)
+
 ## [1.0.63] - 2026-09-19
 
 Changes since v1.0.62:
