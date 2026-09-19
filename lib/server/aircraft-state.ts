@@ -694,10 +694,11 @@ export class AircraftStateService {
       // A slower lookup from an older position must never overwrite a newer
       // result. The coarse key is intentional throttling; a changed key is a
       // new resolution generation.
-      if (!result.resolved || !current || current.callsign !== result.incoming.callsign || atcResolutionKey(current) !== result.key) continue;
+      const resolutionKey = result.key;
+      if (!result.resolved || !resolutionKey || !current || current.callsign !== result.incoming.callsign || atcResolutionKey(current) !== resolutionKey) continue;
       const validation = getAtcPredictionValidation();
       validation.observeCurrentSector(current.icaoHex, result.assignment?.sectorId ?? null, Date.parse(current.lastSeen));
-      void this.evaluateShadowPrediction(current, result.assignment?.sectorId ?? null, result.key);
+      void this.evaluateShadowPrediction(current, result.assignment?.sectorId ?? null, resolutionKey);
       if (JSON.stringify(current.atc) === JSON.stringify(result.assignment)) continue;
       this.aircraft.set(current.icaoHex, { ...current, atc: result.assignment });
       changed = true;
