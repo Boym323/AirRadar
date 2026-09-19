@@ -53,6 +53,7 @@ describe("SBS MLAT parser", () => {
     const snapshot = await provider.getSnapshot();
     expect(snapshot.aircraft).toHaveLength(1);
     expect(snapshot.aircraft[0]).toMatchObject({ icaoHex: "001234", callsign: "TEST123", lat: 49.3, lon: 17.8, altitude: 12000, groundSpeed: 420, track: 180, verticalRate: 640, origin: "adsbhub" });
+    expect(snapshot.aircraft[0]?.seenPosSeconds).toBe(0);
     expect(provider.getDiagnostics()).toMatchObject({ connected: true, linesReceived: 3, linesParsed: 3, activeInternalTracks: 1 });
     await provider.stop();
   });

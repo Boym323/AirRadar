@@ -117,6 +117,13 @@ describe("aircraft source merge", () => {
     expect(value?.provenance).toMatchObject({ positionOrigin: "adsblol", positionSource: "MLAT" });
   });
 
+  it("keeps an ADSBHub position fresh across later non-position messages", () => {
+    const adsbhub: Aircraft = { ...make("ABC123", "adsblol", { lat: 50.12, lon: 14.12 }), origin: "adsbhub", lastSeen: observedAt.toISOString(), seenSeconds: 0, seenPosSeconds: 5 };
+    const value = mergeAircraftObservations(undefined, adsbhub, receiver, options);
+    expect(value).toMatchObject({ lat: 50.12, lon: 14.12, origin: "adsbhub" });
+    expect(isFreshPosition(adsbhub, options.networkStaleAfterMs, options.now)).toBe(true);
+  });
+
   it("keeps local last-known position semantics when both positions are stale", () => {
     const staleLocal = make("ABC123", "local", { seen: 1, seen_pos: 20, lat: 50.11, lon: 14.11 });
     const staleNetwork = make("ABC123", "adsblol", { seen: 1, seen_pos: 90, lat: 50.12, lon: 14.12 });

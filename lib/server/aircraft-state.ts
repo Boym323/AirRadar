@@ -6,6 +6,8 @@ import {
   getMaxProviderRetryIntervalMs,
   getPollIntervalMs,
   getReceiverPosition,
+  getNetworkTrailMaxAgeMs,
+  getNetworkTrailMaxPoints,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 import { createAircraftProvider, createEnrichmentService, createNetworkAircraftProvider } from "@/lib/server/providers";
@@ -512,6 +514,14 @@ export class AircraftStateService {
           track: incoming.track,
         }]
       : previousTrail;
+    if (incoming.origin !== "local") {
+      const cutoff = Date.parse(incoming.lastSeen) - getNetworkTrailMaxAgeMs();
+      const bounded = next.filter((point) => {
+        const recordedAt = Date.parse(point.recordedAt);
+        return !Number.isFinite(cutoff) || (Number.isFinite(recordedAt) && recordedAt >= cutoff);
+      });
+      return bounded.slice(-getNetworkTrailMaxPoints());
+    }
     return next;
   }
 

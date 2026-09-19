@@ -152,6 +152,8 @@ export function getAdsbHubHost(): string { return validHost("ADSBHUB_HOST", "dat
 export function getAdsbHubPort(): number { return boundedInteger("ADSBHUB_PORT", 5002, 1, 65535); }
 export function getAdsbHubRadiusNm(): number { return boundedInteger("ADSBHUB_RADIUS_NM", 500, 1, 2000); }
 export function getAdsbHubStaleMs(): number { return boundedMilliseconds("ADSBHUB_STALE_MS", 15000, 2000, 120000); }
+export function getNetworkTrailMaxPoints(): number { return boundedInteger("NETWORK_TRAIL_MAX_POINTS", 120, 1, 1000); }
+export function getNetworkTrailMaxAgeMs(): number { return boundedMilliseconds("NETWORK_TRAIL_MAX_AGE_MS", 600_000, 10_000, 3_600_000); }
 export function getAdsbHubReconnectMaxMs(): number { return boundedMilliseconds("ADSBHUB_RECONNECT_MAX_MS", 30000, 1000, 300000); }
 export function getAdsbHubMaxTracks(): number { return boundedInteger("ADSBHUB_MAX_TRACKS", 20000, 100, 100000); }
 export function getAdsbHubPublishIntervalMs(): number { return boundedMilliseconds("ADSBHUB_PUBLISH_INTERVAL_MS", 1000, 100, 10000); }

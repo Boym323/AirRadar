@@ -151,6 +151,7 @@ export class AdsbHubProvider implements NetworkAircraftProvider {
   }
   private merge(incoming: Aircraft, receivedAt: number): void {
     const existing = this.tracks.get(incoming.icaoHex);
+    const hasPosition = incoming.lat !== null && incoming.lon !== null;
     const fields: (keyof Aircraft)[] = ["callsign", "altitude", "baroAltitude", "lat", "lon", "groundSpeed", "track", "verticalRate", "baroRate", "squawk", "onGround"];
     const next: Aircraft = existing ? { ...existing.aircraft } : { ...incoming };
     const freshness = existing?.fields ?? {};
@@ -162,15 +163,19 @@ export class AdsbHubProvider implements NetworkAircraftProvider {
       }
     }
     next.lastSeen = new Date(receivedAt).toISOString();
+    const latestPositionReceivedAt = hasPosition ? receivedAt : existing?.positionReceivedAt ?? null;
+    next.seenSeconds = 0;
+    next.seenPosSeconds = latestPositionReceivedAt === null
+      ? null
+      : Math.max(0, (receivedAt - latestPositionReceivedAt) / 1000);
     next.origin = "adsbhub";
     next.provenance = { ...(next.provenance ?? { seenLocal: false, seenNetwork: true, lastLocalSeen: null, lastNetworkSeen: null, positionOrigin: null, positionSource: "UNKNOWN" }), seenLocal: false, seenNetwork: true, lastNetworkSeen: next.lastSeen, positionOrigin: next.lat !== null && next.lon !== null ? "adsbhub" : next.provenance?.positionOrigin ?? null, positionSource: "UNKNOWN" };
     if (next.lat !== null && next.lon !== null) { next.distanceKm = haversineDistanceKm(this.receiver.lat, this.receiver.lon, next.lat, next.lon); next.bearing = initialBearing(this.receiver.lat, this.receiver.lon, next.lat, next.lon); }
     next.trail = existing?.aircraft.trail ?? (next.lat !== null && next.lon !== null ? [{ lat: next.lat, lon: next.lon, recordedAt: next.lastSeen, altitude: next.altitude, groundSpeed: next.groundSpeed, track: next.track }] : []);
-    const hasPosition = incoming.lat !== null && incoming.lon !== null;
     this.tracks.set(incoming.icaoHex, {
       aircraft: next,
       receivedAt,
-      positionReceivedAt: hasPosition ? receivedAt : existing?.positionReceivedAt ?? null,
+      positionReceivedAt: latestPositionReceivedAt,
       fields: freshness,
     });
     if (this.tracks.size > this.maxTracks) {
