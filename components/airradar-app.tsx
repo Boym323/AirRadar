@@ -1650,7 +1650,7 @@ export function AirRadarApp() {
     const selectedTrailForMap = selectedAircraftVisible ? selectedTrail(liveTrailsRef.current, selectedHex, historyTrail, Date.now()) : [];
 
     for (const aircraft of filteredAircraft) {
-      if (aircraft.lat === null || aircraft.lon === null) continue;
+      if (aircraft.lat === null || aircraft.lon === null || !Number.isFinite(aircraft.lat) || !Number.isFinite(aircraft.lon)) continue;
       currentHexes.add(aircraft.icaoHex);
       let marker = aircraftMarkersRef.current.get(aircraft.icaoHex);
       const target: [number, number] = [aircraft.lon, aircraft.lat];
