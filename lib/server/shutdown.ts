@@ -1,6 +1,7 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getOgnStateService } from "@/lib/server/ogn-state";
 import { closePrisma } from "@/lib/server/db";
+import { defaultMapContextArchiveService } from "@/lib/server/map-context";
 
 export const SHUTDOWN_BUDGET_MS = 10_000;
 export type ShutdownState = "RUNNING" | "SHUTTING_DOWN" | "COMPLETE";
@@ -11,6 +12,7 @@ type Cleanup = {
   closeStatistics: () => Promise<void>;
   closeProvider: () => Promise<void>;
   closeDatabase: () => Promise<void>;
+  stopMapContext?: () => Promise<void>;
 };
 
 export function createShutdownCoordinator(cleanup: Cleanup, budgetMs = SHUTDOWN_BUDGET_MS) {
@@ -53,6 +55,10 @@ export function createShutdownCoordinator(cleanup: Cleanup, budgetMs = SHUTDOWN_
         console.info("[shutdown] stopping OGN state");
         await phase("OGN state stop", cleanup.stopOgn, deadline);
       }
+      if (cleanup.stopMapContext) {
+        console.info("[shutdown] stopping map-context archives");
+        await phase("map-context archive stop", cleanup.stopMapContext, deadline);
+      }
       console.info("[shutdown] closing statistics");
       await phase("statistics close", cleanup.closeStatistics, deadline);
       console.info("[shutdown] closing provider");
@@ -83,6 +89,7 @@ export function getShutdownCoordinator() {
   globalForShutdown.airRadarShutdown ??= createShutdownCoordinator({
     stopAircraft: (deadline) => getAircraftStateService().stop({ deadline, closeStatistics: false, closeProvider: false }),
     stopOgn: () => getOgnStateService().stop(),
+    stopMapContext: () => defaultMapContextArchiveService.stop(),
     closeStatistics: () => getAircraftStateService().closeStatistics(),
     closeProvider: () => getAircraftStateService().closeProvider(),
     closeDatabase: closePrisma,

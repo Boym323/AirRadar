@@ -1,6 +1,6 @@
 # Features and routes
 
-## Map Context V1
+## Map Context V1/V2
 
 The home radar includes optional, persisted-off layers for ČHMÚ weather radar
 with a two-hour frame timeline, batched AWC METAR markers, cached DWD ICON-EU
@@ -8,7 +8,8 @@ wind aloft at 850/700/500/300/200 hPa, and a dedicated AUP/UUP planned-airspace
 view. Public endpoints are `/api/weather/radar/frames`,
 `/api/weather/radar/frame/:id`, `/api/weather/metar-map`, and
 `/api/weather/wind`. Detailed provider semantics and attribution are in
-[MAP-CONTEXT.md](MAP-CONTEXT.md).
+[MAP-CONTEXT.md](MAP-CONTEXT.md). Time Machine adds Global Map Time V2 with
+bounded historical radar, METAR, ICON-EU wind and AUP/UUP context.
 
 Status describes the current code path, not a transient runtime count or
 whether an operator has configured an optional provider.
@@ -22,7 +23,7 @@ whether an operator has configured an optional provider.
 | `/flights/:id` | Standalone captured-flight detail with aircraft and airport links, clearly labeled observed sampled path versus airport route context, bounded playback, and altitude/speed/vertical-rate profiles synchronized to the playback timeline. | Production with PostgreSQL history. |
 | `/airports/:icao` | Airport Intelligence detail with catalog metadata, source runway geometry, decoded/raw METAR and TAF, wind-favored runway calculations, live nearby ADS-B traffic, bounded inferred movement intelligence, observed movement evidence, associated navaids, nearby airports, and 7/30-day receiver traffic summary. | Production; movement results are inferred from local sampled history and are not authoritative ATC data. |
 | `/history` | Bounded flight-instance search/list, sampled position detail, playback map. | Production; PostgreSQL feature, no live-polling dependency. |
-| `/time-machine` | Bounded all-aircraft historical radar playback with UTC selection, timeline, event markers, aircraft selection, and selected trail. | Production with PostgreSQL `FlightPosition` history; separate read-only historical context. |
+| `/time-machine` | Bounded all-aircraft historical radar playback with UTC selection, timeline, event markers, aircraft selection, selected trail, and optional historical radar/METAR/wind/AUP-UUP context. | Production with PostgreSQL `FlightPosition` history; context availability follows bounded archive activation and retention. |
 | `/statistics` | Today/7-day/30-day receiver aggregate, current-versus-previous period comparison, trends, coverage visualization, reception records, bounded CSV export, receiver-observed traffic intelligence, and 7/30-day coverage reliability/receiver analytics. | Production core; traffic and range analytics use bounded PostgreSQL reads, while current receiver counters remain RAM-backed. |
 | `/watchlist` | Server alert-rule editor with 10/25/50/100 km distance presets, current matching state, enable/disable controls, and the last persisted trigger time for each rule. | Production; shared `/var/lib/airradar/alerts.json` rules plus bounded `/var/lib/airradar/alert-engine-state.json` dedup/trigger state. Read-only state is public and mutations require the server-side admin session. |
 | `/alerts` | Bounded history of watchlist appearance/radius transitions, individual 7500/7600/7700 emergency transitions, new-aircraft/reception-record events, and notification outcomes, with server-side event filtering before pagination. | Production; safe append-only `/var/lib/airradar/alert-events.jsonl` ledger, notifier payloads excluded. |
@@ -46,6 +47,13 @@ whether an operator has configured an optional provider.
 | `GET /api/history/flights/:id` | One flight instance and capped sampled positions. | Production with PostgreSQL. |
 | `GET /api/time-machine/range` | Actual min/max persisted `FlightPosition` timestamps. | Production with PostgreSQL; bounded read. |
 | `GET /api/time-machine/window?from=&to=` | Maximum five-minute all-aircraft observations plus persistent event markers. | Production with PostgreSQL; 40,000 positions/500 aircraft/200 events per response. |
+| `GET /api/map-context/at?at=` | Small temporal manifest for historical map context. | Production; fail-soft per layer. |
+| `GET /api/map-context/range` | Bounded traffic and context archive availability ranges. | Production; cheap archive diagnostics. |
+| `GET /api/map-context/radar?at=` | Historical radar frame metadata resolved at or before the selected instant. | Production when the archive contains a matching frame. |
+| `GET /api/map-context/radar/frame/:id` | Archived validated CHMI PNG frame. | Production when the frame is retained. |
+| `GET /api/map-context/metar?at=` | Batched normalized historical METAR observations. | Production when archived observations exist. |
+| `GET /api/map-context/wind?at=&level=` | Historical ICON-EU snapshot with model-run and valid-time provenance. | Production when archived snapshots exist. |
+| `GET /api/map-context/aup?at=` | Historical planned AUP/UUP revision and validity context. | Production when an as-known revision exists. |
 | `GET /api/airports` | PostgreSQL airport catalog or bundled fallback catalog. | Production with import/fallback. |
 | `GET /api/airports/:icao` | Canonical airport detail plus locally persisted runways, communication frequencies, and associated navaids. | Production after `airports:sync`; empty infrastructure is a valid response. |
 | `GET /api/airports/:icao/traffic?range=7d\|30d` | Bounded airport traffic summary from persisted Flights captured by this receiver, including route, aircraft, callsign, and recent-traffic rankings. The response marks itself incomplete when a safe query cap is exceeded instead of silently presenting partial totals as complete. | Production when PostgreSQL history is configured; default range is 30 days. |

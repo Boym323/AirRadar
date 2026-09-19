@@ -3,6 +3,7 @@ import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-pr
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getPrisma } from "@/lib/server/db";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
+import { defaultMapContextArchive } from "@/lib/server/map-context";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!stations.length) return Response.json({ enabled: true, available: true, source: "Aviation Weather Center", observations: [], fetchedAt: new Date().toISOString(), stale: false }, { headers: { "Cache-Control": "no-store" } });
   try {
     const result = await defaultAviationWeatherProvider.getMetarMap(stations, request.signal);
+    void defaultMapContextArchive.addMetar(result.observations, result.fetchedAt);
     return Response.json({ enabled: true, available: true, source: result.source, stations: result.observations.length, observations: result.observations, fetchedAt: result.fetchedAt, stale: result.stale }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ error: "METAR map data temporarily unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });

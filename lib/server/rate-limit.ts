@@ -83,6 +83,7 @@ export const PUBLIC_RATE_LIMITS = {
   airportTraffic: { limit: 12, windowMs: 60_000 },
   airportMovements: { limit: 12, windowMs: 60_000 },
   weather: { limit: 30, windowMs: 60_000 },
+  mapContext: { limit: 30, windowMs: 60_000 },
   atcSectors: { limit: 30, windowMs: 60_000 },
   airspaceActivity: { limit: 30, windowMs: 60_000 },
   health: { limit: 60, windowMs: 60_000 },

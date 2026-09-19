@@ -16,6 +16,7 @@ export const DEFAULT_APP_TIMEZONE = "Europe/Prague";
 export const DEFAULT_AIRCRAFT_METADATA_URL = "https://raw.githubusercontent.com/wiedehopf/tar1090-db/refs/heads/csv/aircraft.csv.gz";
 export const DEFAULT_AVIATION_WEATHER_BASE_URL = "https://aviationweather.gov";
 export const DEFAULT_AVIATION_WEATHER_CACHE_FILE = "/var/lib/airradar/weather/weather-cache-v1.json";
+export const DEFAULT_WEATHER_RADAR_ARCHIVE_DIR = "/var/lib/airradar/weather-radar";
 export const DEFAULT_ADSBDB_CACHE_FILE = "/var/lib/airradar/adsbdb/adsbdb-cache-v1.json";
 export const DEFAULT_OGN_HOST = "aprs.glidernet.org";
 export const DEFAULT_OGN_PORT = 14580;
@@ -98,6 +99,24 @@ export function getHistorySampleIntervalMs(): number {
 
 export function getHistoryRetentionDays(): number {
   return Math.max(1, envNumber("HISTORY_RETENTION_DAYS", 30));
+}
+
+export function getMapContextRetentionDays(): number {
+  return boundedInteger("MAP_CONTEXT_RETENTION_DAYS", getHistoryRetentionDays(), 1, 365);
+}
+
+export function getMapContextPollIntervalMs(): number {
+  return boundedMilliseconds("MAP_CONTEXT_POLL_INTERVAL_MS", 60_000, 30_000, 15 * 60_000);
+}
+
+export function getWeatherRadarArchiveDir(): string {
+  const configured = process.env.WEATHER_RADAR_ARCHIVE_DIR?.trim();
+  if (configured && configured.length <= 4_096 && configured.startsWith("/") && !/[\0\r\n]/.test(configured)) return configured;
+  return process.env.NODE_ENV === "production" ? DEFAULT_WEATHER_RADAR_ARCHIVE_DIR : path.join(process.cwd(), "data", "weather-radar");
+}
+
+export function getWeatherRadarArchiveMaxBytes(): number {
+  return boundedInteger("WEATHER_RADAR_ARCHIVE_MAX_BYTES", 2 * 1024 * 1024 * 1024, 32 * 1024 * 1024, 20 * 1024 * 1024 * 1024);
 }
 
 export function getFlightContinuityGapMs(): number {

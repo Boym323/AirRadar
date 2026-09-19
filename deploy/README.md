@@ -73,6 +73,14 @@ The production service user already has access through `StateDirectory=airradar`
 development and test processes keep persistence disabled unless explicitly
 enabled with `AVIATION_WEATHER_PERSIST_CACHE=true` and a suitable cache path.
 
+Map Context V2 archives validated CHMI frames in
+`/var/lib/airradar/weather-radar` by default and stores bounded normalized
+METAR, ICON-EU and AUP/UUP archives beside it. Override the radar directory
+with `WEATHER_RADAR_ARCHIVE_DIR` only when it points to persistent storage.
+`MAP_CONTEXT_RETENTION_DAYS` follows `HISTORY_RETENTION_DAYS` by default and
+`WEATHER_RADAR_ARCHIVE_MAX_BYTES` provides an additional disk bound. Archive
+writers are best-effort and never block live aircraft polling.
+
 ADSBDB persistence uses the same systemd-managed state directory and stores
 `/var/lib/airradar/adsbdb/adsbdb-cache-v1.json`. The snapshot is versioned,
 bounded, validated, written atomically with mode `0600`, and contains only

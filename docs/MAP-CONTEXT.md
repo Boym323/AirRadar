@@ -1,8 +1,10 @@
-# Map Context V1
+# Map Context V1/V2
 
 Map Context is optional enrichment rendered beside the live aircraft map. It
 never owns aircraft state and is not part of `/api/stream`, readsb polling,
-history, statistics, OGN, or flight intelligence.
+history, statistics, OGN, or flight intelligence. V2 adds Global Map Time and
+bounded historical archives; missing context is unavailable rather than a
+silent current-data fallback. See [MAP-TIME.md](MAP-TIME.md).
 
 ## Weather radar
 
@@ -25,7 +27,9 @@ The browser uses one MapLibre image source and swaps its URL without recreating
 the map. The radar is below labels, airports, procedures, SIGMET, airspace
 outlines, trails, and aircraft. The UI has latest/history mode, real-frame
 timeline, play/pause, bounded neighbour prefetch, stale indication after 18
-minutes, and persisted opacity (20–100%, default 65%).
+minutes, and persisted opacity (20–100%, default 65%). V2 archives validated
+frames under a persistent bounded file directory and resolves the newest frame
+at or before Global Map Time.
 
 ## METAR map
 

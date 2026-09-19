@@ -2,7 +2,7 @@
 
 ## Live ingest to browser
 
-## Map Context V1
+## Map Context V1/V2
 
 Map Context is a separate optional read path. Radar catalog/frame requests,
 batch METAR, ICON-EU wind, and AUP/UUP activity are independently cached and
@@ -10,6 +10,11 @@ serialized into bounded map DTOs. Their browser state is isolated from
 `/api/stream`; provider failures leave live aircraft and other map layers
 usable. The radar uses observed frames, wind uses model valid times, METAR uses
 latest observations, and AUP/UUP uses validity intervals.
+
+V2 publishes one Global Map Time instant from Time Machine to the context
+resolver. A single-process archive service samples radar, METAR, wind and
+AUP/UUP into bounded persistent files. Manifests stay small; layer payloads
+use independent APIs and fail independently.
 
 1. `LocalReadsbProvider` fetches `<READSB_BASE_URL>/data/aircraft.json` on
    the poll interval and refreshes `/data/receiver.json` less often. A missing
