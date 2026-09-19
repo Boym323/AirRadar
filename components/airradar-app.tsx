@@ -281,7 +281,7 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivi
     features: visible ? sectors.flatMap((sector) => {
       const plan = matchAirspacePlanForSector(sector, planIndex);
       const planLabel = plan?.state === "planned-now" ? activityT.plannedNow : plan?.state === "upcoming" ? activityT.upcoming : null;
-      return sector.polygons.map((polygon) => ({
+      return sector.polygons.filter((polygon) => polygon.length >= 3 && polygon.every(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90)).map((polygon) => ({
         type: "Feature" as const,
         properties: {
           id: sector.id,
@@ -324,7 +324,10 @@ function createAtcGeoJSON(sectors: AtcSector[], visible: boolean, airspaceActivi
 
 function createAirportGeoJSON(airports: Airport[], excludedAirportCodes: ReadonlySet<string> = new Set()) {
   const unique = new Map(airports
-    .filter((airport) => !excludedAirportCodes.has(airport.icaoCode.trim().toUpperCase()))
+    .filter((airport) => Number.isFinite(airport.latitude) && Number.isFinite(airport.longitude)
+      && airport.latitude >= -90 && airport.latitude <= 90
+      && airport.longitude >= -180 && airport.longitude <= 180
+      && !excludedAirportCodes.has(airport.icaoCode.trim().toUpperCase()))
     .map((airport) => [airport.icaoCode, airport]));
   return {
     type: "FeatureCollection" as const,
@@ -1745,7 +1748,9 @@ export function AirRadarApp() {
     const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc || showAupUup, airspaceActivity);
     const transmitterGeoJson: FeatureCollection = {
       type: "FeatureCollection",
-      features: showAtc ? atcData.transmitters.map((transmitter) => ({
+      features: showAtc ? atcData.transmitters.filter((transmitter) => Number.isFinite(transmitter.longitude) && Number.isFinite(transmitter.latitude)
+        && transmitter.longitude >= -180 && transmitter.longitude <= 180
+        && transmitter.latitude >= -90 && transmitter.latitude <= 90).map((transmitter) => ({
         type: "Feature" as const,
         properties: { name: transmitter.name, service: formatAtcService(transmitter.service), frequency: formatAtcFrequency(transmitter.frequencyMhz), notes: formatAtcNote(transmitter.notes), source: transmitter.source, sourceReference: transmitter.sourceReference, validFrom: transmitter.validFrom, validTo: transmitter.validTo, lastVerifiedAt: transmitter.lastVerifiedAt },
         geometry: { type: "Point" as const, coordinates: [transmitter.longitude, transmitter.latitude] },
