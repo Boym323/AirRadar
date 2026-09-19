@@ -54,6 +54,7 @@ export interface SystemStatusResponse {
       snapshotAgeSeconds: number | null;
     };
   };
+  localAdsb?: Record<string, unknown>;
   adsbLol: {
     status: SystemStatus;
     enabled: boolean;
@@ -316,6 +317,7 @@ export interface SystemStatusBuildInput {
   weather?: Partial<AviationWeatherDiagnostics> & { entries?: number; airports?: number };
   mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
   adsbLol?: NetworkProviderDiagnostics;
+  localAdsb?: Record<string, unknown>;
   adsbdb?: {
     providerStatus: "online" | "degraded" | "offline" | "unknown";
     lastSuccessAt: string | null;
@@ -841,6 +843,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
         snapshotAgeSeconds: ageSeconds(lastSnapshot, now),
       },
     },
+    ...(input.localAdsb ? { localAdsb: input.localAdsb } : {}),
     adsbLol: adsbLolResponse(input.adsbLol),
     adsbdb: adsbDbResponse(input.adsbdb),
     ogn: ognResponse(input.ogn),
@@ -1082,6 +1085,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       radarArchive: await defaultWeatherRadarArchive.diagnostics(),
     },
     adsbLol: service.getNetworkDiagnostics?.(),
+    localAdsb: serviceDiagnostics?.local && typeof serviceDiagnostics.local === "object" ? serviceDiagnostics.local as Record<string, unknown> : undefined,
     adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
     ogn: ognService.getDiagnostics(),
     runtime: {

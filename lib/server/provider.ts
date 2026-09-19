@@ -7,6 +7,7 @@ export interface AircraftProvider {
   /** Cancel an in-flight read without necessarily closing provider resources. */
   abort?(): void;
   close?(): Promise<void>;
+  getDiagnostics?(): unknown;
 }
 
 export interface ExternalAdsbProvider extends AircraftProvider {
