@@ -152,6 +152,18 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.snapshotAge} value={data.receiver.readsb.snapshotAgeSeconds === null ? dictionary.system.notAvailable : `${formatNumber(data.receiver.readsb.snapshotAgeSeconds, 0, dictionary.locale)} ${dictionary.system.seconds}`} />
       </Card>
 
+      {data.localAdsb && <Card title={dictionary.system.localAdsb} status={data.localAdsb.status === "healthy" ? "ok" : data.localAdsb.status === "connecting" ? "degraded" : "offline"} dictionary={dictionary}>
+        <Field label={dictionary.system.source} value={`${data.localAdsb.activeSource ?? "beast"} · ${data.localAdsb.host ?? dictionary.system.notAvailable}:${data.localAdsb.port ?? "?"}`} />
+        <Field label={dictionary.system.connected} value={data.localAdsb.connected ? dictionary.system.online : dictionary.system.offline} />
+        <Field label={dictionary.system.lastSnapshot} value={formatDateTime(data.localAdsb.lastFrameAt as string | null, dictionary)} />
+        <Field label={dictionary.system.aircraftVisible} value={formatNumber(Number(data.localAdsb.aircraftCount ?? 0), 0, dictionary.locale)} />
+        <Field label={dictionary.system.beastFrames} value={formatNumber(Number(data.localAdsb.framesReceived ?? 0), 0, dictionary.locale)} />
+        <Field label={dictionary.system.beastDecodedFrames} value={formatNumber(Number(data.localAdsb.framesDecoded ?? 0), 0, dictionary.locale)} />
+        <Field label={dictionary.system.beastDecodeErrors} value={formatNumber(Number(data.localAdsb.decodeErrors ?? 0), 0, dictionary.locale)} />
+        <Field label={dictionary.system.beastReconnects} value={formatNumber(Number(data.localAdsb.reconnects ?? 0), 0, dictionary.locale)} />
+        <Field label={dictionary.system.beastFallback} value={data.localAdsb.activeSource === "json-fallback" ? dictionary.system.configured : dictionary.system.disabled} />
+      </Card>}
+
       <Card title={dictionary.system.networkCoverage} status={data.adsbLol.status} dictionary={dictionary}>
         <Field label={dictionary.system.provider} value={data.adsbLol.endpoint} />
         <Field label={dictionary.system.license} value={data.adsbLol.license} />

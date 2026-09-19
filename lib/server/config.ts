@@ -81,6 +81,18 @@ export function isReadsbConfigured(): boolean {
   return Boolean(process.env.READSB_BASE_URL?.trim());
 }
 
+export function isReadsbBeastEnabled(): boolean {
+  return process.env.READSB_BEAST_ENABLED?.trim().toLowerCase() === "true" && Boolean(process.env.READSB_BEAST_HOST?.trim());
+}
+export function getReadsbBeastHost(): string { return process.env.READSB_BEAST_HOST?.trim() || ""; }
+export function getReadsbBeastPort(): number { return boundedInteger("READSB_BEAST_PORT", 30005, 1, 65535); }
+export function getReadsbBeastStaleMs(): number { return boundedMilliseconds("READSB_BEAST_STALE_MS", 7000, 2000, 120000); }
+export function getReadsbBeastReconnectMaxMs(): number { return boundedMilliseconds("READSB_BEAST_RECONNECT_MAX_MS", 30000, 1000, 300000); }
+export function isReadsbJsonFailoverEnabled(): boolean {
+  const raw = process.env.READSB_JSON_FAILOVER_ENABLED?.trim().toLowerCase();
+  return raw !== "false";
+}
+
 /** Sample ATC is useful in demo mode, but is opt-in once a real receiver is configured. */
 export function shouldUseSampleAtcData(): boolean {
   const explicit = process.env.ATC_SAMPLE_ENABLED?.trim().toLowerCase();
@@ -90,7 +102,7 @@ export function shouldUseSampleAtcData(): boolean {
 }
 
 export function getPollIntervalMs(): number {
-  return Math.max(1000, envNumber("READSB_POLL_INTERVAL_MS", 3000));
+  return Math.max(1000, envNumber("READSB_POLL_INTERVAL_MS", isReadsbBeastEnabled() ? 1000 : 3000));
 }
 
 export function getHistorySampleIntervalMs(): number {

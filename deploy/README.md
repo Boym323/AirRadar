@@ -32,6 +32,10 @@ For the real receiver, `/var/www/airradar/.env` must at minimum contain:
 
 ```dotenv
 READSB_BASE_URL=http://192.168.1.50:8080
+READSB_BEAST_ENABLED=false
+READSB_BEAST_HOST=192.168.1.50
+READSB_BEAST_PORT=30005
+READSB_JSON_FAILOVER_ENABLED=true
 RECEIVER_LAT=50.0755
 RECEIVER_LON=14.4378
 DATABASE_URL=postgresql://airradar:<password>@127.0.0.1:5432/airradar?schema=public
@@ -105,6 +109,14 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now airradar
 sudo journalctl -u airradar -f
 ```
+
+When enabled, AirRadar connects read-only to the configured readsb Beast binary
+TCP output. The parser handles fragmentation and Beast escaping, keeps bounded
+aircraft state, and publishes through the existing state/SSE/history pipeline.
+If valid frames stop, JSON becomes active automatically; three healthy
+observations are required before switching back. Set `READSB_BEAST_ENABLED=false`
+for the emergency JSON-only rollback. Diagnostics are under `localAdsb` in
+`/api/system/status`.
 
 ### ADSB.lol polling watchdog
 

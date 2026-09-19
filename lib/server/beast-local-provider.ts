@@ -1,0 +1,20 @@
+import net from "node:net";
+import type { AircraftProvider } from "@/lib/server/provider";
+import type { ProviderSnapshot, ReceiverPosition } from "@/lib/aircraft/types";
+import { BeastDecoder } from "@/lib/server/beast-decoder";
+import { BeastParser } from "@/lib/server/beast-parser";
+
+export interface BeastDiagnostics { enabled: true; status: "connecting" | "healthy" | "stale" | "disconnected"; host: string; port: number; connected: boolean; lastFrameAt: string | null; framesReceived: number; framesDecoded: number; decodeErrors: number; reconnects: number; aircraftCount: number; }
+export class BeastLocalProvider implements AircraftProvider {
+  readonly name = "readsb-beast";
+  private socket: net.Socket | null = null; private timer: ReturnType<typeof setTimeout> | null = null; private stopped = false; private connecting = false; private retryMs = 1000; private lastFrameAt: number | null = null; private connected = false; private status: BeastDiagnostics["status"] = "disconnected"; private framesReceived = 0; private framesDecoded = 0; private decodeErrors = 0; private reconnects = 0; private readonly parser = new BeastParser(); private readonly decoder: BeastDecoder;
+  constructor(private readonly options: { host: string; port: number; receiver: ReceiverPosition; staleMs: number; reconnectMaxMs: number }) { this.decoder = new BeastDecoder(options.receiver); }
+  async getSnapshot(): Promise<ProviderSnapshot> { this.ensureConnected(); const now = Date.now(); return { aircraft: this.decoder.snapshot(now), receiver: this.options.receiver, fetchedAt: new Date(now).toISOString(), provider: this.name, messagesPerSecond: null }; }
+  getDiagnostics(): BeastDiagnostics { const stale = this.lastFrameAt !== null && Date.now() - this.lastFrameAt > this.options.staleMs; return { enabled: true, status: stale ? "stale" : this.status, host: this.options.host, port: this.options.port, connected: this.connected, lastFrameAt: this.lastFrameAt === null ? null : new Date(this.lastFrameAt).toISOString(), framesReceived: this.framesReceived, framesDecoded: this.framesDecoded, decodeErrors: this.decodeErrors, reconnects: this.reconnects, aircraftCount: this.decoder.snapshot().length }; }
+  abort(): void { this.stop(); }
+  async close(): Promise<void> { this.stop(); }
+  private ensureConnected(): void { if (!this.stopped && !this.socket && !this.connecting) this.connect(); }
+  private connect(): void { this.connecting = true; this.status = "connecting"; const socket = net.createConnection({ host: this.options.host, port: this.options.port }); this.socket = socket; socket.setNoDelay(true); socket.setTimeout(this.options.staleMs); socket.on("connect", () => { this.connecting = false; this.connected = true; this.status = "connecting"; this.retryMs = 1000; }); socket.on("data", (chunk) => { for (const frame of this.parser.push(chunk)) { this.framesReceived += 1; try { if (this.decoder.decode(frame)) { this.framesDecoded += 1; this.lastFrameAt = Date.now(); this.status = "healthy"; } else this.decodeErrors += 1; } catch { this.decodeErrors += 1; } } }); socket.on("timeout", () => socket.destroy()); socket.on("error", () => undefined); socket.on("close", () => { if (this.socket === socket) this.socket = null; this.connecting = false; this.connected = false; if (!this.stopped) this.scheduleReconnect(); }); }
+  private scheduleReconnect(): void { if (this.timer || this.stopped) return; const delay = this.retryMs; this.reconnects += 1; this.retryMs = Math.min(this.options.reconnectMaxMs, this.retryMs * 2); this.timer = setTimeout(() => { this.timer = null; this.connect(); }, delay); }
+  private stop(): void { this.stopped = true; if (this.timer) clearTimeout(this.timer); this.timer = null; this.socket?.destroy(); this.socket = null; this.connected = false; this.connecting = false; }
+}

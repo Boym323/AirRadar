@@ -267,6 +267,7 @@ export class AircraftStateService {
     running: boolean;
     enrichment: ReturnType<EnrichmentService["getDiagnostics"]>;
     network: ReturnType<NetworkAircraftProvider["getDiagnostics"]>;
+    local: ReturnType<NonNullable<AircraftProvider["getDiagnostics"]>> | null;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -281,6 +282,7 @@ export class AircraftStateService {
       running: this.running,
       enrichment: this.enrichment.getDiagnostics(),
       network: this.networkProvider.getDiagnostics(),
+      local: "getDiagnostics" in this.provider && typeof this.provider.getDiagnostics === "function" ? this.provider.getDiagnostics() : null,
     };
   }
 

@@ -1,6 +1,8 @@
-import { getAdsbDbBaseUrl, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getFlightAwareMaxCostUsdPerDay, getFlightAwareMaxCostUsdPerMonth, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbConfigured, shouldUseSampleAtcData } from "@/lib/server/config";
+import { getAdsbDbBaseUrl, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getFlightAwareMaxCostUsdPerDay, getFlightAwareMaxCostUsdPerMonth, getReadsbBeastHost, getReadsbBeastPort, getReadsbBeastReconnectMaxMs, getReadsbBeastStaleMs, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbBeastEnabled, isReadsbConfigured, isReadsbJsonFailoverEnabled, shouldUseSampleAtcData } from "@/lib/server/config";
 import { AdsbLolProvider } from "@/lib/server/adsblol-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
+import { BeastLocalProvider } from "@/lib/server/beast-local-provider";
+import { FailoverLocalProvider } from "@/lib/server/failover-local-provider";
 import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
 import { EnrichmentService } from "@/lib/server/enrichment-cache";
 import { ENRICHMENT_TTLS } from "@/lib/server/enrichment-cache";
@@ -15,9 +17,11 @@ import type { AtcDataResponse } from "@/lib/atc/types";
 
 export function createAircraftProvider(): AircraftProvider {
   const baseUrl = process.env.READSB_BASE_URL?.trim();
-  return baseUrl
-    ? new LocalReadsbProvider(baseUrl, getReceiverPosition())
-    : new MockReadsbProvider(getReceiverPosition());
+  if (!baseUrl) return new MockReadsbProvider(getReceiverPosition());
+  const json = new LocalReadsbProvider(baseUrl, getReceiverPosition());
+  if (!isReadsbBeastEnabled()) return json;
+  const beast = new BeastLocalProvider({ host: getReadsbBeastHost(), port: getReadsbBeastPort(), receiver: getReceiverPosition(), staleMs: getReadsbBeastStaleMs(), reconnectMaxMs: getReadsbBeastReconnectMaxMs() });
+  return new FailoverLocalProvider(beast, json, isReadsbJsonFailoverEnabled());
 }
 
 export function createNetworkAircraftProvider(): NetworkAircraftProvider {
