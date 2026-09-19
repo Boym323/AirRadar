@@ -2,6 +2,15 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.88] - 2026-09-19
+
+Changes since v1.0.87:
+
+- feat: add receiver polar coverage component and related styles, tests, and utility functions (fbe49506)
+- fix: polish radar UI and ATC translations (226197e1)
+- feat: update CI workflow to conditionally run tests and add unit/integration test configurations (430afec6)
+- fix(i18n): update aircraft count formatting and improve localization tests (f4c307f3)
+
 ## [1.0.87] - 2026-09-19
 
 Changes since v1.0.86:
