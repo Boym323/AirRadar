@@ -40,6 +40,7 @@ export interface AircraftRadarQuickDetailProps {
   onClose: () => void;
   onCenter: () => void;
   onToggleWatchlist: () => void;
+  sectorTraffic?: Map<string, { trafficLevel: string; traffic: { aircraftCount: number }; frequencies: Array<{ channel: string }> }>;
 }
 
 function DetailValue({ label, value, children }: { label: string; value?: string | null; children?: ReactNode }) {
@@ -98,7 +99,7 @@ function RouteSection({ aircraft }: { aircraft: AircraftView }) {
   </QuickSection>;
 }
 
-function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: AtcContextResult | null }) {
+function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftView; context: AtcContextResult | null; sectorTraffic?: Map<string, { trafficLevel: string; traffic: { aircraftCount: number }; frequencies: Array<{ channel: string }> }> }) {
   const contextAirspace = context?.status === "available" ? context.primaryAirspace : null;
   const assignment = contextAirspace ? null : aircraft.atc ?? null;
   const fir = context?.status === "available" ? context.fir?.name : null;
@@ -116,6 +117,7 @@ function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: At
   const lowerReference = contextAirspace?.lowerLimitReference ?? assignment?.lowerAltitudeReference;
   const upperReference = contextAirspace?.upperLimitReference ?? assignment?.upperAltitudeReference;
   const hasLimits = lowerLimit !== null || upperLimit !== null;
+  const traffic = contextAirspace ? sectorTraffic?.get(contextAirspace.id) : undefined;
 
   return <QuickSection id="aircraft-quick-atc-title" title={t.atc.contextTitle} className="aircraft-quick-atc" >
     <div className="aircraft-quick-atc-primary">
@@ -136,6 +138,7 @@ function AtcSection({ aircraft, context }: { aircraft: AircraftView; context: At
       <div className="aircraft-quick-frequency-list">{additionalFrequencies.map((frequency) => <span key={frequency}>{formatAtcFrequency(frequency)}</span>)}</div>
     </details>}
     <p className="aircraft-quick-disclaimer">{t.atc.contextDisclaimer}</p>
+    {contextAirspace && <p className="aircraft-quick-disclaimer">Published sector: {contextAirspace.name}{traffic ? ` · Sector traffic: ${traffic.traffic.aircraftCount} aircraft · ${traffic.trafficLevel}` : " · Sector traffic: —"}. Aircraft is within the published sector volume. Traffic does not represent the official operational sector configuration.</p>}
   </QuickSection>;
 }
 
@@ -208,6 +211,7 @@ export function AircraftRadarQuickDetail({
   onClose,
   onCenter,
   onToggleWatchlist,
+  sectorTraffic,
 }: AircraftRadarQuickDetailProps) {
   const metadata = aircraft.enrichment?.metadata;
   const registration = aircraft.registration ?? metadata?.registration ?? databaseAircraft?.registration;
@@ -238,6 +242,7 @@ export function AircraftRadarQuickDetail({
     </header>
 
     <RouteSection aircraft={aircraft} />
+    <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
 
     <QuickSection id="aircraft-quick-metrics-title" title={t.aircraft.liveAdsb} className="aircraft-quick-metrics-section">
       <div className="aircraft-quick-metrics">

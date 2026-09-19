@@ -19,6 +19,21 @@ flight transitions. Unknown observations are not transitions. Short boundary
 jitter is collapsed before counting, but transitions are still observational
 inferences from sampled history.
 
+The map overlay provides an optional `ATC Sector Traffic` view over the shared
+sector source. The `ATC Vertical Traffic` panel currently exposes the verified
+SOUTH stack (`LKAAS`, `LKAANSL`, `LKAATB`) in published vertical order. NORTH
+and WEST are intentionally not presented until their relationships are
+unambiguous across imported AIRAC data. The Sector flows panel uses one
+transitions request for the selected 1, 5, or 15 minute window; its entries
+represent movement between published volumes, not confirmed ATC handoffs.
+
+The aircraft quick detail reuses the existing point/altitude sector match and
+the already loaded batch traffic context. It uses “Published sector” and
+“Sector traffic” wording and reports unavailable data as `—` rather than
+claiming a current operational assignment. Historical requests use the same
+map-time timestamp for traffic, flows, and aircraft context; live requests
+refresh traffic at 12 seconds and flows at 15 seconds.
+
 Published frequencies remain owned by the existing `AtcSector` model. No
 database migration is required for the current context and transition APIs;
 the current model is sufficient for its normalized MHz representation. Channel

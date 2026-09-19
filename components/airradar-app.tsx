@@ -39,6 +39,7 @@ import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/air
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import { AircraftRadarQuickDetail } from "@/components/aircraft-radar-quick-detail";
+import { AtcVerticalTraffic, SectorFlowsPanel, type SectorFlow } from "@/components/atc-sector-traffic-panels";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
@@ -560,7 +561,11 @@ export function AirRadarApp() {
   const [showAtc, setShowAtc] = useState(false);
   const [showAtcTraffic, setShowAtcTraffic] = useState(false);
   const [sectorTraffic, setSectorTraffic] = useState<Map<string, SectorTrafficView>>(new Map());
+  const sectorTrafficRef = useRef<Map<string, SectorTrafficView>>(new Map());
   const [sectorTrafficState, setSectorTrafficState] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
+  const [sectorFlowWindow, setSectorFlowWindow] = useState<1 | 5 | 15>(5);
+  const [sectorFlows, setSectorFlows] = useState<SectorFlow[]>([]);
+  sectorTrafficRef.current = sectorTraffic;
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
@@ -704,6 +709,17 @@ export function AirRadarApp() {
     const timer = requestedAt ? undefined : window.setInterval(() => void load(), 12000);
     return () => { active = false; controller?.abort(); if (timer) window.clearInterval(timer); };
   }, [searchParams, showAtcTraffic]);
+
+  useEffect(() => {
+    let active = true; let controller: AbortController | null = null;
+    const requestedAt = searchParams.get("at");
+    const load = async () => {
+      controller?.abort(); controller = new AbortController();
+      try { const query = `${requestedAt ? `&at=${encodeURIComponent(new Date(requestedAt).toISOString())}` : ""}`; const response = await fetch(`/api/atc/sectors/transitions?window=${sectorFlowWindow}m${query}`, { cache: "no-store", signal: controller.signal }); if (!response.ok) throw new Error("flows unavailable"); const payload = await response.json() as { transitions?: SectorFlow[] }; if (active) setSectorFlows(Array.isArray(payload.transitions) ? payload.transitions : []); } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError") && active) setSectorFlows([]); }
+    };
+    void load(); const timer = requestedAt ? undefined : window.setInterval(() => void load(), 15000);
+    return () => { active = false; controller?.abort(); if (timer) window.clearInterval(timer); };
+  }, [searchParams, sectorFlowWindow]);
 
   useEffect(() => {
     try {
@@ -1296,7 +1312,7 @@ export function AirRadarApp() {
       map.on("mouseleave", "atc-sectors-fill", () => { map.getCanvas().style.cursor = ""; });
       map.on("click", "atc-sector-traffic-fill", (event: MapLayerMouseEvent) => {
         const properties = event.features?.[0]?.properties; if (!properties) return;
-        const traffic = sectorTraffic.get(String(properties.id)); const content = document.createElement("div"); content.className = "map-popup";
+        const traffic = sectorTrafficRef.current.get(String(properties.id)); const content = document.createElement("div"); content.className = "map-popup";
         const title = document.createElement("strong"); title.textContent = `PRAHA ACC — ${String(properties.name)}`; content.append(title);
         const add = (label: string, value: unknown) => { const line = document.createElement("span"); line.textContent = `${label}: ${value == null || value === "" ? "—" : String(value)}`; content.append(line); };
         if (!traffic) add("Traffic", "NO DATA"); else { add("Vertical", `${traffic.vertical.lower ?? "—"}–${traffic.vertical.upper ?? "—"}`); add("Aircraft now", traffic.traffic.aircraftCount); add("Last 5 min", `+${traffic.traffic.entering5m} entered · -${traffic.traffic.leaving5m} left`); add("Vertical movement", `${traffic.traffic.climbing} climbing · ${traffic.traffic.descending} descending · ${traffic.traffic.level} level`); add("Altitude", `avg ${traffic.traffic.averageAltitude ?? "—"} · median ${traffic.traffic.medianAltitude ?? "—"}`); add("Ground speed", traffic.traffic.averageGroundSpeed == null ? "—" : `${traffic.traffic.averageGroundSpeed} kt`); add("Traffic", traffic.trafficLevel); add("Map time", traffic.at); add("Source", "Czech eAIP + AirRadar ADS-B"); }
@@ -2107,6 +2123,7 @@ export function AirRadarApp() {
         <div className="map-panel">
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
+            {showAtcTraffic && <><AtcVerticalTraffic traffic={sectorTraffic} /><SectorFlowsPanel flows={sectorFlows} windowMinutes={sectorFlowWindow} onWindowChange={setSectorFlowWindow} /></>}
             <div className="map-overlay-primary">
               <div className="map-overlay-card map-summary-card">
                 <div className="map-summary-item"><strong>{formatNumber(displayedAircraftCount)}</strong><span>{t.stats.trackingNow}</span></div>
@@ -2343,6 +2360,7 @@ export function AirRadarApp() {
                 databaseAircraft={selectedDatabaseAircraft}
                 historyTrail={selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
                 atcContext={selectedAtcContext}
+                sectorTraffic={sectorTraffic}
                 routeIntelligence={routeIntelligenceView}
                 watchlisted={isWatchlisted(selectedAircraft)}
                 onBack={backToTraffic}
