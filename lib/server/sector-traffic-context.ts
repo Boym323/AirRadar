@@ -89,7 +89,9 @@ export async function getSectorTrafficHistoryBatch(input: { sectorIds?: string[]
       for (const sector of sectors) {
         const key = `${sector.id}|${bucket}`; const acc = accumulators.get(key) ?? { snapshots: new Map(), entering: 0, leaving: 0, climbing: 0, descending: 0, level: 0, altitudeSum: 0, altitudeCount: 0, speedSum: 0, speedCount: 0 };
         const snapshot = acc.snapshots.get(recordedAt.getTime()) ?? new Set<number>(); snapshot.add(row.flightId); acc.snapshots.set(recordedAt.getTime(), snapshot);
-        const inside = Boolean(matchSector(sector, { latitude: row.lat, longitude: row.lon, altitudeFt: row.altitude, observedAt: recordedAt })); const previousKey = `${key}|${row.flightId}`; const prior = previous.get(previousKey);
+        const inside = Boolean(matchSector(sector, { latitude: row.lat, longitude: row.lon, altitudeFt: row.altitude, observedAt: recordedAt }));
+        // Flight continuity is independent of analytics buckets and DB chunks.
+        const previousKey = `${sector.id}|${row.flightId}`; const prior = previous.get(previousKey);
         if (prior !== undefined && prior !== inside) { if (inside) acc.entering++; else acc.leaving++; }
         previous.set(previousKey, inside);
         if (inside) { if ((row.verticalRate ?? 0) > 100) acc.climbing++; else if ((row.verticalRate ?? 0) < -100) acc.descending++; else acc.level++; if (row.altitude !== null) { acc.altitudeSum += row.altitude; acc.altitudeCount++; } if (row.groundSpeed !== null) { acc.speedSum += row.groundSpeed; acc.speedCount++; } }

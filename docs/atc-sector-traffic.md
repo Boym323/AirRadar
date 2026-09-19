@@ -96,6 +96,23 @@ cache would provide a meaningful benefit.
 
 ## Historical processing and benchmarking
 
+### Streaming correctness
+
+The streaming history evaluator is covered by a test-only database adapter. The
+suite checks chunk-boundary independence, equal-timestamp ordering, transition
+continuity, vertical classification, and complete coverage metadata. Production
+chunks remain half-open (`[start, end)`) and production limits are unchanged.
+
+### Synthetic benchmark
+
+`JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-atc-history-synthetic.ts`
+generates deterministic, bounded in-memory positions and reports processing
+time, positions/second, heap, and RSS. Optional numeric arguments select sizes,
+for example `... 100000 500000`. This is a development-only read-free tool.
+Synthetic benchmark – does not include PostgreSQL fetch, Prisma overhead or
+network/API serialization. It must not be used as a production response-time
+claim.
+
 Historical processing uses sequential half-open time chunks with a
 `limit + 1` sentinel per chunk. Dense chunks are recursively split down to a
 1-second minimum; a still-too-dense minimum chunk fails explicitly with
