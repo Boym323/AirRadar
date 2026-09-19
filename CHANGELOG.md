@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.59] - 2026-09-19
+
+Changes since v1.0.58:
+
+- feat: use Beast stream as local ADS-B primary (b15f3895)
+- Merge pull request #59 from Boym323/feature/local-beast-stream (69acf3b8)
+
 ## [1.0.47] - 2026-09-17
 
 Changes since v1.0.46:
