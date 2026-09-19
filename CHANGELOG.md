@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.86] - 2026-09-19
+
+Changes since v1.0.85:
+
+- Add tests for receiver coverage eligibility and aggregation logic (385ae918)
+- feat: enhance aircraft motion handling and add coverage analytics diagnostics (4acdd69b)
+
 ## [1.0.84] - 2026-09-19
 
 Changes since v1.0.83:
