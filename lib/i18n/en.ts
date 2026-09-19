@@ -833,6 +833,7 @@ export const en = {
   },
   atc: {
     defaultService: "ATC",
+    verticalTraffic: "ATC Vertical Traffic", sectorFlows: "Sector flows", trafficHistory: "Traffic history", metric: "Metric", aircraft: "Aircraft", entries: "Entries", exits: "Exits", averageAltitude: "Average altitude", averageSpeed: "Average speed", close: "Close", loadingHistory: "Loading history…", historyUnavailable: "History unavailable.", noRetainedObservations: "No retained observations in this interval.", incompleteHistory: "History is incomplete because the requested interval exceeds the current processing limit. Summary values are incomplete.", peak: "Peak", average: "Average", showHistory: "Show history", publishedDisclaimer: "Published sector volumes only. Does not indicate official ATC sector activation.", southDisclaimer: "Shows aircraft observed within the published SOUTH sector volumes. Does not represent the operational ATC sector configuration.", noSectorTransitions: "No sector transitions in this interval", flowDisclaimer: "Flows represent aircraft movement between published ATC sector volumes, not confirmed ATC handoffs.", historyChart: "Traffic history chart", historyDisclaimer: "Statistics reflect aircraft observed by AirRadar and depend on ADS-B coverage and retained FlightPosition data.",
     relevantTitle: "What to tune now?",
     relevantDescription: "Probably relevant to current traffic",
     relevantDisclaimer: "This is an estimate from position and altitude; ADS-B does not report the frequency actually tuned in the aircraft.",

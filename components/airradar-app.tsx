@@ -86,7 +86,7 @@ import {
   isMapAircraftFilterActive,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
-import { classifyAircraftSource, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
+import { aircraftSourceLabel, classifyAircraftSource, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
 
 declare global {
   interface Window {
@@ -231,13 +231,6 @@ const MAP_STYLE: StyleSpecification = {
 
 function labelForAircraft(aircraft: AircraftView): string {
   return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
-}
-
-function aircraftPositionSourceLabel(aircraft: AircraftView): string {
-  if (aircraft.lat === null || aircraft.lon === null) return t.common.emptyValue;
-  const positionOrigin = aircraft.provenance?.positionOrigin ?? aircraft.origin;
-  const originLabel = positionOrigin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver;
-  return `${originLabel} · ${aircraft.provenance?.positionSource ?? aircraft.source}`;
 }
 
 function formatAirspaceUtc(value: string): string {
@@ -2382,7 +2375,7 @@ export function AirRadarApp() {
               <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""} ${aircraft.emergency ? "emergency" : ""}`} aria-pressed={selectedHex === aircraft.icaoHex} onClick={() => selectAircraft(aircraft.icaoHex)}>
                 <span className="aircraft-row-icon"><AircraftIcon aircraft={aircraft} /></span>
                 <span className="aircraft-row-main">
-                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> <span className="source-badge">{classifyAircraftSource(aircraft)} · {aircraftPositionSourceLabel(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
+                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> <span className="source-badge">{aircraftSourceLabel(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
                   <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}{aircraft.registration || aircraft.enrichment?.metadata?.registration ? ` · ${aircraft.registration || aircraft.enrichment?.metadata?.registration}` : ""}</span>
                   <span className="aircraft-row-meta"><span><b>{formatAltitude(aircraft.altitude)}</b></span><span><b>{formatSpeed(aircraft.groundSpeed)}</b></span><span><b>{formatTrack(aircraft.track)}</b></span><span className="aircraft-row-hex">{aircraft.icaoHex}</span></span>
                 </span>

@@ -20,6 +20,9 @@ const datasetSource = readFileSync(new URL("../components/use-dataset-query.ts",
 const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");
 const aircraftDetailSource = readFileSync(new URL("../components/aircraft-detail-v2.tsx", import.meta.url), "utf8");
 const globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+const atcTrafficSource = readFileSync(new URL("../components/atc-sector-traffic-panels.tsx", import.meta.url), "utf8");
+const englishSource = readFileSync(new URL("../lib/i18n/en.ts", import.meta.url), "utf8");
+const czechSource = readFileSync(new URL("../lib/i18n/cs.ts", import.meta.url), "utf8");
 const maplibreCss = readFileSync(new URL("../node_modules/maplibre-gl/dist/maplibre-gl.css", import.meta.url), "utf8");
 
 describe("radar UI polish helpers", () => {
@@ -71,6 +74,32 @@ describe("radar UI polish helpers", () => {
     expect(shellSource).toContain('href="/alerts"');
     expect(shellSource).toContain('href="/recap/daily"');
     expect(globalCss).toContain(".mobile-bottom-more > div");
+  });
+
+  it("keeps the five-item mobile navigation and compact source counters", () => {
+    expect(globalCss).toMatch(/\.mobile-bottom-nav\s*\{[^}]*grid-template-columns:\s*repeat\(5/);
+    expect(globalCss).not.toMatch(/\.mobile-bottom-nav\s*\{[^}]*grid-template-columns:\s*repeat\(4/);
+    expect(globalCss).toMatch(/\.source-counter-strip\s*\{[^}]*display:\s*grid/);
+    expect(globalCss).toMatch(/\.source-counter-strip\s*\{[^}]*repeat\(4/);
+  });
+
+  it("uses one layers icon and an explicit ATC history stroke", () => {
+    expect(globalCss).not.toContain('.map-layers > summary::before { content: "☷"');
+    expect(globalCss).toMatch(/\.atc-history-series[^}]*stroke:/);
+    expect(atcTrafficSource).toContain('<path key={i} d={path} fill="none" stroke="currentColor" />');
+    expect(atcTrafficSource).toContain('aria-label={t.atc.historyChart}');
+  });
+
+  it("keeps ATC UI copy translated and source badges compact", () => {
+    for (const key of ["verticalTraffic", "trafficHistory", "showHistory", "sectorFlows", "loadingHistory"]) {
+      expect(englishSource).toContain(`${key}:`);
+      expect(czechSource).toContain(`${key}:`);
+    }
+    expect(atcTrafficSource).not.toContain("ATC Vertical Traffic");
+    expect(atcTrafficSource).not.toContain("Traffic history");
+    expect(atcTrafficSource).not.toContain("Show history");
+    expect(appSource).not.toContain("classifyAircraftSource(aircraft)} · {aircraftPositionSourceLabel");
+    expect(appSource).toContain("aircraftSourceLabel(aircraft)");
   });
 
   it("keeps MapLibre in control of DOM marker positioning", () => {

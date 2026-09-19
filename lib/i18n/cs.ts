@@ -831,6 +831,7 @@ export const cs = {
   },
   atc: {
     defaultService: "ATC",
+    verticalTraffic: "Vertikální provoz ATC", sectorFlows: "Toky mezi sektory", trafficHistory: "Historie provozu", metric: "Metrika", aircraft: "Letadla", entries: "Vstupy", exits: "Výstupy", averageAltitude: "Průměrná výška", averageSpeed: "Průměrná rychlost", close: "Zavřít", loadingHistory: "Načítám historii…", historyUnavailable: "Historie není dostupná.", noRetainedObservations: "V tomto intervalu nejsou uložená pozorování.", incompleteHistory: "Historie je neúplná, protože požadovaný interval přesahuje aktuální limit zpracování. Souhrnné hodnoty jsou neúplné.", peak: "Maximum", average: "Průměr", showHistory: "Zobrazit historii", publishedDisclaimer: "Pouze publikované objemy sektorů. Neznamená oficiální aktivaci sektoru.", southDisclaimer: "Zobrazuje letadla zachycená v publikovaných objemech jižních sektorů. Nepředstavuje aktuální konfiguraci sektorů ATC.", noSectorTransitions: "V tomto intervalu nejsou přechody mezi sektory", flowDisclaimer: "Toky představují pohyb letadel mezi publikovanými objemy sektorů, nikoli potvrzené předání mezi sektory ATC.", historyChart: "Graf historie provozu", historyDisclaimer: "Statistiky odrážejí letadla zachycená AirRadarem a závisí na ADS-B pokrytí a uchovaných datech FlightPosition.",
     relevantTitle: "Co teď naladit?",
     relevantDescription: "Pravděpodobně relevantní pro aktuální provoz",
     relevantDisclaimer: "Jde o odhad podle polohy a výšky; ADS-B nehlásí frekvenci skutečně naladěnou v letadle.",

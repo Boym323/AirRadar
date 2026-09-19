@@ -2,6 +2,15 @@ import type { AircraftView, ReceiverPosition } from "@/lib/aircraft/types";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 
 export type AircraftSourceClassification = "LOCAL_ONLY" | "NETWORK_ONLY" | "OVERLAP" | "UNKNOWN";
+
+export function aircraftSourceLabel(aircraft: Pick<AircraftView, "provenance">): string {
+  switch (classifyAircraftSource(aircraft)) {
+    case "LOCAL_ONLY": return "LOCAL";
+    case "NETWORK_ONLY": return "NETWORK";
+    case "OVERLAP": return "LOCAL + NETWORK";
+    default: return "UNKNOWN";
+  }
+}
 export type AircraftSourceFilter = "all" | "local" | "network" | "overlap";
 
 export interface SourceStats {
