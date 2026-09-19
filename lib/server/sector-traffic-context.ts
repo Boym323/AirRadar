@@ -19,8 +19,9 @@ export interface SectorTransition { fromSectorId: string; toSectorId: string; co
 export interface SectorTransitions { at: string; windowMinutes: 1 | 5 | 15; transitions: SectorTransition[]; totalTransitions: number; }
 export type SectorHistoryBucket = "1m" | "5m" | "15m" | "1h";
 export interface SectorTrafficHistoryPoint { time: string; aircraftCount: number; entering: number; leaving: number; climbing: number; descending: number; level: number; averageAltitude: number | null; averageGroundSpeed: number | null; }
-export interface SectorTrafficHistory { sectorId: string; from: string; to: string; bucket: SectorHistoryBucket; points: SectorTrafficHistoryPoint[]; peakAircraftCount: number; peakAircraftAt: string | null; averageAircraftCount: number; totalEntries: number; totalExits: number; busiestBucket: string | null; quietestBucket: string | null; averageGroundSpeed: number | null; averageAltitude: number | null; }
-export interface SectorTrafficHistoryBatch { from: string; to: string; bucket: SectorHistoryBucket; sectors: Array<SectorTrafficHistory & { name: string }>; }
+export interface SectorTrafficHistoryCoverage { complete: boolean; truncated: boolean; positionsProcessed: number; chunksProcessed?: number; adaptiveSplits?: number; }
+export interface SectorTrafficHistory { sectorId: string; from: string; to: string; bucket: SectorHistoryBucket; points: SectorTrafficHistoryPoint[]; peakAircraftCount: number; peakAircraftAt: string | null; averageAircraftCount: number; totalEntries: number; totalExits: number; busiestBucket: string | null; quietestBucket: string | null; averageGroundSpeed: number | null; averageAltitude: number | null; coverage: SectorTrafficHistoryCoverage; }
+export interface SectorTrafficHistoryBatch { from: string; to: string; bucket: SectorHistoryBucket; sectors: Array<SectorTrafficHistory & { name: string }>; coverage: SectorTrafficHistoryCoverage; }
 
 type Position = { flightId: number; recordedAt: Date | Temporal.Instant; lat: number; lon: number; altitude: number | null; groundSpeed: number | null; verticalRate: number | null };
 type Field = { lte(v: unknown): unknown; gte(v: unknown): unknown; lt(v: unknown): unknown; asc(): unknown; desc(): unknown; };
@@ -45,6 +46,10 @@ function context(sector: AtcSector, at: Date, positions: Position[], all: Positi
 
 const HISTORY_LIMITS: Record<SectorHistoryBucket, number> = { "1m": 24 * 60 * 60_000, "5m": 7 * 24 * 60 * 60_000, "15m": 30 * 24 * 60 * 60_000, "1h": 365 * 24 * 60 * 60_000 };
 const HISTORY_MS: Record<SectorHistoryBucket, number> = { "1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000 };
+const MAX_POSITIONS_PER_CHUNK = 200_000;
+const MAX_TOTAL_POSITIONS_PER_REQUEST = 5_000_000;
+const MIN_CHUNK_MS = 1_000;
+const INITIAL_CHUNK_MS = 60 * 60_000;
 export function validateSectorHistoryRange(from: Date, to: Date, bucket: SectorHistoryBucket): void {
   if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime()) || to <= from) throw new Error("Invalid history range");
   if (to.getTime() - from.getTime() > HISTORY_LIMITS[bucket]) throw new Error("History range exceeds bucket limit");
@@ -66,8 +71,21 @@ export async function getSectorTrafficHistoryBatch(input: { sectorIds?: string[]
   const sectors = ids.map((id) => available.find((s) => s.id === id)).filter((s): s is AtcSector => Boolean(s));
   if (sectors.length !== ids.length) throw new Error("Invalid sector selection");
   const db = getPrisma(); const size = HISTORY_MS[input.bucket];
-  if (!db) return { from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, sectors: sectors.map((s) => ({ sectorId: s.id, name: s.name, from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, points: [], peakAircraftCount: 0, peakAircraftAt: null, averageAircraftCount: 0, totalEntries: 0, totalExits: 0, busiestBucket: null, quietestBucket: null, averageGroundSpeed: null, averageAltitude: null })) };
-  const rows = await (db.orm.public.FlightPosition as unknown as Collection<Position>).where((r) => r.recordedAt.gte(input.from)).where((r) => r.recordedAt.lt(input.to)).limit(200000).all();
+  if (!db) { const coverage = { complete: true, truncated: false, positionsProcessed: 0 }; return { from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, sectors: sectors.map((s) => ({ sectorId: s.id, name: s.name, from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, points: [], peakAircraftCount: 0, peakAircraftAt: null, averageAircraftCount: 0, totalEntries: 0, totalExits: 0, busiestBucket: null, quietestBucket: null, averageGroundSpeed: null, averageAltitude: null, coverage })), coverage }; }
+  const rows: Position[] = []; let chunksProcessed = 0; let adaptiveSplits = 0;
+  const pending: Array<[number, number]> = [];
+  for (let start = input.from.getTime(); start < input.to.getTime(); start += INITIAL_CHUNK_MS) pending.push([start, Math.min(input.to.getTime(), start + INITIAL_CHUNK_MS)]);
+  while (pending.length) {
+    const [start, end] = pending.shift()!;
+    const chunkRows = await (db.orm.public.FlightPosition as unknown as Collection<Position>).where((r) => r.recordedAt.gte(new Date(start))).where((r) => r.recordedAt.lt(new Date(end))).orderBy({ recordedAt: "asc" }).limit(MAX_POSITIONS_PER_CHUNK + 1).all();
+    if (chunkRows.length > MAX_POSITIONS_PER_CHUNK) {
+      if (end - start <= MIN_CHUNK_MS) throw new Error("ATC_HISTORY_CHUNK_TOO_DENSE");
+      const midpoint = start + Math.floor((end - start) / 2); pending.unshift([midpoint, end], [start, midpoint]); adaptiveSplits++; continue;
+    }
+    if (rows.length + chunkRows.length > MAX_TOTAL_POSITIONS_PER_REQUEST) throw new Error("ATC_HISTORY_PROCESSING_LIMIT");
+    rows.push(...chunkRows); chunksProcessed++;
+  }
+  const coverage = { complete: true, truncated: false, positionsProcessed: rows.length, chunksProcessed, adaptiveSplits };
   const buckets = new Map<number, Position[]>(); for (const row of rows) { const key = bucketStart(date(row.recordedAt).getTime(), size); const list = buckets.get(key) ?? []; list.push(row); buckets.set(key, list); }
   const histories = sectors.map((sector) => {
   const ordered = [...buckets.entries()].sort((a, b) => a[0] - b[0]); const points = ordered.map(([key, bucketRows]) => {
@@ -80,7 +98,7 @@ export async function getSectorTrafficHistoryBatch(input: { sectorIds?: string[]
   const peak = points.reduce((best, point) => !best || point.aircraftCount > best.aircraftCount ? point : best, null as SectorTrafficHistoryPoint | null); const avg = points.length ? points.reduce((sum, p) => sum + p.aircraftCount, 0) / points.length : 0; const mean = (field: "averageAltitude" | "averageGroundSpeed") => { const values = points.map((p) => p[field]).filter((v): v is number => v !== null); return values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null; };
   return { sectorId: sector.id, name: sector.name, from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, points, peakAircraftCount: peak?.aircraftCount ?? 0, peakAircraftAt: peak?.time ?? null, averageAircraftCount: Number(avg.toFixed(1)), totalEntries: points.reduce((sum, p) => sum + p.entering, 0), totalExits: points.reduce((sum, p) => sum + p.leaving, 0), busiestBucket: peak?.time ?? null, quietestBucket: points.reduce((best, p) => !best || p.aircraftCount < best.aircraftCount ? p : best, null as SectorTrafficHistoryPoint | null)?.time ?? null, averageGroundSpeed: mean("averageGroundSpeed"), averageAltitude: mean("averageAltitude") };
   });
-  return { from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, sectors: histories };
+  return { from: input.from.toISOString(), to: input.to.toISOString(), bucket: input.bucket, sectors: histories.map((history) => ({ ...history, coverage })), coverage };
 }
 function transitionCount(sector: AtcSector, rows: Position[], from: Date, to: Date, key: number, size: number, kind: "enter" | "leave"): number {
   const byFlight = new Map<number, Position[]>(); for (const row of rows) { const list = byFlight.get(row.flightId) ?? []; list.push(row); byFlight.set(row.flightId, list); } let count = 0;

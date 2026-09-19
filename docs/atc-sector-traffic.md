@@ -93,3 +93,29 @@ development snapshot before making an optimization decision.
 No cache or preaggregation was introduced. At present there is insufficient
 isolated benchmark evidence to claim that preaggregation is required or that a
 cache would provide a meaningful benefit.
+
+## Historical processing and benchmarking
+
+Historical processing uses sequential half-open time chunks with a
+`limit + 1` sentinel per chunk. Dense chunks are recursively split down to a
+1-second minimum; a still-too-dense minimum chunk fails explicitly with
+`ATC_HISTORY_CHUNK_TOO_DENSE`. A 5,000,000-position request guard fails with
+`ATC_HISTORY_PROCESSING_LIMIT`. The response exposes `coverage.complete`,
+`coverage.truncated`, `coverage.positionsProcessed`, `chunksProcessed`, and
+`adaptiveSplits`. Chunk boundaries use `recordedAt >= start` and
+`recordedAt < end`, so boundary rows are neither lost nor duplicated. Cursor
+pagination is intentionally not used.
+
+The current aggregation retains fetched rows until the existing batch
+analytics pass completes, preserving exact existing semantics. Database load
+is sequential and bounded per query; a future streaming accumulator can
+reduce total application memory after benchmark evidence justifies that
+refactor.
+
+The development-only benchmark helper is
+`scripts/benchmark-atc-history.ts`. Run it only with an explicitly verified
+non-production `DATABASE_URL` and `ATC_BENCHMARK_NON_PRODUCTION=true`, using
+`JITI_TSCONFIG_PATHS=true jiti scripts/benchmark-atc-history.ts`. It is
+read-only, is not part of build/test/deploy, and reports actual rows,
+completeness, timing, response size, and RSS measurements. No benchmark was
+run in this production-capable checkout.
