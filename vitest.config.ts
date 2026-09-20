@@ -5,8 +5,8 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     exclude: ["tests/scale/**"],
-    // Keep SQLite-heavy suites from being starved when CI exposes dozens of CPUs.
-    maxWorkers: 4,
+    // Two workers match the local CPU budget and avoid contention in the mixed suite.
+    maxWorkers: 2,
   },
   resolve: { alias: { "@": new URL("./", import.meta.url).pathname } },
 });

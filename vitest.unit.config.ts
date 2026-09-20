@@ -24,7 +24,8 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     exclude: ["tests/scale/**", ...integrationSuites],
-    maxWorkers: 4,
+    // Two workers are the fastest stable setting on the supported low-CPU dev host.
+    maxWorkers: 2,
   },
   resolve: { alias: { "@": new URL("./", import.meta.url).pathname } },
 });
