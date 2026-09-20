@@ -1,4 +1,4 @@
-import { destinationPoint, haversineDistanceKm } from "@/lib/geo";
+import { destinationPoint, haversineDistanceKm, initialBearing } from "@/lib/geo";
 
 export const KNOT_TO_KM_PER_HOUR = 1.852;
 export const MAX_PREDICTION_AGE_MS = 15_000;
@@ -15,10 +15,10 @@ export type MotionSource = {
 };
 
 export type MotionResult = { lon: number; lat: number; heading: number | null; predictionActive: boolean; correctionActive: boolean; stale: boolean };
-export type MotionHistory = { lastTrack: number | null; previousTrack: number | null; lastObservedAt: number | null; previousObservedAt: number | null; turnRateDegPerSec: number; lastLat: number | null; lastLon: number | null; source: string | null };
+export type MotionHistory = { lastTrack: number | null; previousTrack: number | null; lastObservedAt: number | null; previousObservedAt: number | null; turnRateDegPerSec: number; positionHeading: number | null; lastLat: number | null; lastLon: number | null; source: string | null };
 
 export function createMotionHistory(): MotionHistory {
-  return { lastTrack: null, previousTrack: null, lastObservedAt: null, previousObservedAt: null, turnRateDegPerSec: 0, lastLat: null, lastLon: null, source: null };
+  return { lastTrack: null, previousTrack: null, lastObservedAt: null, previousObservedAt: null, turnRateDegPerSec: 0, positionHeading: null, lastLat: null, lastLon: null, source: null };
 }
 
 export function updateMotionHistory(history: MotionHistory, source: MotionSource): MotionHistory {
@@ -37,6 +37,7 @@ export function updateMotionHistory(history: MotionHistory, source: MotionSource
   if (next.lastLat !== null && next.lastLon !== null) {
     const jump = haversineDistanceKm(next.lastLat, next.lastLon, source.lat, source.lon);
     if (jump > MAX_PREDICTION_CORRECTION_KM) return Object.assign(createMotionHistory(), { source: sourceKey, lastLat: source.lat, lastLon: source.lon });
+    if (jump > 0.01) next.positionHeading = normalizeHeading(initialBearing(next.lastLat, next.lastLon, source.lat, source.lon));
   }
   if (source.track !== null) {
     if (next.lastTrack !== null && next.lastObservedAt !== null) {
@@ -98,7 +99,7 @@ export function motionAt(source: MotionSource, timestamp: number, correction?: {
   const stale = source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS;
   const progress = correction ? Math.max(0, Math.min(1, (timestamp - correction.startedAt) / correction.durationMs)) : 1;
   const active = Boolean(correction && progress < 1 && !stale);
-  const baseHeading = normalizeHeading(source.track) ?? history?.lastTrack ?? null;
+  const baseHeading = normalizeHeading(source.track) ?? history?.lastTrack ?? history?.positionHeading ?? null;
   const heading = baseHeading === null ? null : normalizeHeading(baseHeading + (history?.turnRateDegPerSec ?? 0) * Math.max(0, timestamp - (source.observedAt ?? timestamp)) / 1000);
   return { lon: normalizeLongitude(lon + (correction?.lon ?? 0) * (1 - progress)), lat: lat + (correction?.lat ?? 0) * (1 - progress), heading, predictionActive: predictionIsActive(source, timestamp, history), correctionActive: active, stale };
 }

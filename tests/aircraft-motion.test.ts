@@ -25,6 +25,12 @@ describe("aircraft motion", () => {
     history = updateMotionHistory(history, source(null, 2_000));
     expect(motionAt(source(null, 2_000), 2_500, undefined, history).heading).not.toBeNull();
   });
+  it("infers heading from position-only updates", () => {
+    let history = createMotionHistory();
+    history = updateMotionHistory(history, { ...source(null, 1_000), lat: 50, lon: 14 });
+    history = updateMotionHistory(history, { ...source(null, 2_000), lat: 49.999, lon: 14 });
+    expect(motionAt({ ...source(null, 2_000), lat: 49.999, lon: 14 }, 2_000, undefined, history).heading).toBe(180);
+  });
   it("keeps history and turn rate for normal movement from the same source", () => {
     let history = createMotionHistory();
     history = updateMotionHistory(history, source(90, 1_000));

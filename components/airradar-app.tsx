@@ -176,6 +176,11 @@ function trailEndpointKey(point: TrailPoint | undefined): string {
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
+
+function hasRenderableAircraftMotion(source: { track: number | null; groundSpeed: number | null }): boolean {
+  return source.track !== null && source.groundSpeed !== null && Number.isFinite(source.groundSpeed) && source.groundSpeed >= 0.5;
+}
+
 type TrafficSource = "adsb" | "ogn";
 type RadarDrawerState = "closed" | "traffic" | "aircraft" | "ogn";
 
@@ -1568,6 +1573,23 @@ export function AirRadarApp() {
           && source.observedAt !== null
           && source.observedAt < previous.source.observedAt;
         if (delayedPosition) return;
+        // Without a current track and groundspeed there is no safe way to
+        // extrapolate or animate a correction. Interpolating such a packet
+        // from the previous predicted position makes the aircraft visibly
+        // move backwards, especially for readsb position-only updates.
+        if (!hasRenderableAircraftMotion(source)) {
+          previous.history = updateMotionHistory(previous.history, source);
+          previous.source = source;
+          previous.sourceReceivedAt = now;
+          previous.correctionLon = 0;
+          previous.correctionLat = 0;
+          previous.correctionStartedAt = now;
+          previous.correctionDurationMs = MIN_AIRCRAFT_ANIMATION_MS;
+          marker.setLngLat(target);
+          const heading = motionAt(source, now, undefined, previous.history).heading;
+          if (heading !== null) marker.setRotation(heading + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
+          return;
+        }
         if (sourceChanged) {
           const nextHistory = updateMotionHistory(previous.history, source);
           const correctionDurationMs = Math.min(
