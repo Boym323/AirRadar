@@ -194,7 +194,7 @@ describe("radar UI polish helpers", () => {
   it("keeps selection details while hiding filtered map overlays and supports a client reset", () => {
     expect(appSource).toContain("filterAircraftForMap(snapshot.aircraft, mapFilters)");
     expect(appSource).toContain("const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some");
-    expect(appSource).toContain("selectedAircraftVisible ? selectedTrail");
+    expect(appSource).toContain("selectedTrailForMap = selectedConfirmedTrailRef.current");
     expect(appSource).toContain("selectedAircraftVisible ? selectedAircraftInSnapshot");
     expect(appSource).toContain('map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none")');
     expect(appSource).toContain('map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && showAirports ? "visible" : "none")');
