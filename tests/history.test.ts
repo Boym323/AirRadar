@@ -14,7 +14,7 @@ describe("historical flight maintenance", () => {
   it("deduplicates aircraft by ICAO hex and retries a concurrent insert conflict", async () => {
     const recordedAt = new Date("2026-01-01T12:00:00Z");
     const aircraft = normalizeAircraft(
-      { hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 },
+      { hex: "ABC123", flight: "TEST123", lat: 50, lon: 14, seen: 0, seen_pos: 8 },
       { lat: 50, lon: 14, name: "Test" },
       recordedAt,
     );
@@ -59,6 +59,8 @@ describe("historical flight maintenance", () => {
     expect(upsert).toHaveBeenCalledTimes(1);
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ conflictOn: { icaoHex: "ABC123" } }));
     expect(flightCreate).toHaveBeenCalledTimes(1);
+    const positionCreate = (database.orm.public.FlightPosition.create as ReturnType<typeof vi.fn>);
+    expect(positionCreate).toHaveBeenCalledWith(expect.objectContaining({ recordedAt: expect.objectContaining({ epochMilliseconds: recordedAt.getTime() - 8_000 }) }));
     expect(transactionAttempts).toBe(2);
   });
 

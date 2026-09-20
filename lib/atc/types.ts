@@ -10,6 +10,8 @@ export interface AtcFrequency {
   frequencyMhz: number;
   label: string | null;
   isPrimary: boolean;
+  /** Only present when the authoritative source explicitly publishes spacing. */
+  spacing?: "KHZ_25" | "KHZ_8_33" | "UNKNOWN";
 }
 
 export interface AtcSector {

@@ -11,6 +11,7 @@ import { airportFromCode } from "@/lib/server/airport-catalog";
 import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport-resolver";
 import { getPrisma } from "@/lib/server/db";
 import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/server/logbook";
+import { positionObservedAt } from "@/lib/aircraft/source-merge";
 
 export interface HistoryResponse {
   source: "postgres" | "memory";
@@ -994,7 +995,9 @@ export async function recordAircraftSnapshot(
     const track: number | undefined = typeof item.track === "number" && Number.isFinite(item.track) ? item.track : undefined;
     const verticalRate: number | undefined = typeof item.verticalRate === "number" && Number.isFinite(item.verticalRate) ? item.verticalRate : undefined;
     try {
-      const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(recordedAt.getTime());
+      const observedAt = positionObservedAt(item);
+      const effectiveRecordedAt = observedAt === null ? recordedAt : new Date(observedAt);
+      const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(effectiveRecordedAt.getTime());
       const wasNewAircraft = await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const metadata = item.enrichment?.metadata;

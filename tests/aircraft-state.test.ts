@@ -453,6 +453,8 @@ describe("aircraft state service", () => {
         alt_baro: observation.altitude,
         gs: observation.groundSpeed,
         track: observation.track,
+        seen: 0,
+        seen_pos: 0,
       }, receiver, new Date(observation.at));
       if (!aircraft) throw new Error("test aircraft could not be normalized");
       applySnapshot(aircraft);

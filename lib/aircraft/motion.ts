@@ -22,26 +22,29 @@ export function createMotionHistory(): MotionHistory {
 }
 
 export function updateMotionHistory(history: MotionHistory, source: MotionSource): MotionHistory {
+  // MotionHistory is owned by the animation job. Return a new value for every
+  // update so a reset cannot leave a caller mutating the pre-reset object.
+  const next = { ...history };
   const sourceKey = `${source.positionOrigin ?? ""}:${source.positionSource ?? ""}`;
-  if (history.source !== null && history.source !== sourceKey) return Object.assign(createMotionHistory(), { source: sourceKey, lastLat: source.lat, lastLon: source.lon });
-  history.source = sourceKey;
-  if (history.lastLat !== null && history.lastLon !== null) {
-    const jump = haversineDistanceKm(history.lastLat, history.lastLon, source.lat, source.lon);
+  if (next.source !== null && next.source !== sourceKey) return Object.assign(createMotionHistory(), { source: sourceKey, lastLat: source.lat, lastLon: source.lon });
+  next.source = sourceKey;
+  if (next.lastLat !== null && next.lastLon !== null) {
+    const jump = haversineDistanceKm(next.lastLat, next.lastLon, source.lat, source.lon);
     if (jump > MAX_PREDICTION_CORRECTION_KM) return Object.assign(createMotionHistory(), { source: sourceKey, lastLat: source.lat, lastLon: source.lon });
   }
-  if (source.track !== null && source.observedAt !== null && (history.lastObservedAt === null || source.observedAt > history.lastObservedAt)) {
-    if (history.lastTrack !== null && history.lastObservedAt !== null) {
-      const gap = source.observedAt - history.lastObservedAt;
+  if (source.track !== null && source.observedAt !== null && (next.lastObservedAt === null || source.observedAt > next.lastObservedAt)) {
+    if (next.lastTrack !== null && next.lastObservedAt !== null) {
+      const gap = source.observedAt - next.lastObservedAt;
       if (gap >= MIN_TURN_OBSERVATION_GAP_MS && gap <= MAX_TURN_OBSERVATION_GAP_MS) {
-        const rate = shortestAngleDelta(history.lastTrack, source.track) / (gap / 1000);
-        if (Math.abs(rate) <= MAX_TURN_RATE_DEG_PER_SEC) history.turnRateDegPerSec = history.turnRateDegPerSec * 0.7 + rate * 0.3;
+        const rate = shortestAngleDelta(next.lastTrack, source.track) / (gap / 1000);
+        if (Math.abs(rate) <= MAX_TURN_RATE_DEG_PER_SEC) next.turnRateDegPerSec = next.turnRateDegPerSec * 0.7 + rate * 0.3;
       }
     }
-    history.previousTrack = history.lastTrack; history.previousObservedAt = history.lastObservedAt;
-    history.lastTrack = normalizeHeading(source.track); history.lastObservedAt = source.observedAt;
+    next.previousTrack = next.lastTrack; next.previousObservedAt = next.lastObservedAt;
+    next.lastTrack = normalizeHeading(source.track); next.lastObservedAt = source.observedAt;
   }
-  history.lastLat = source.lat; history.lastLon = source.lon;
-  return history;
+  next.lastLat = source.lat; next.lastLon = source.lon;
+  return next;
 }
 
 export function normalizeHeading(value: number | null | undefined): number | null {

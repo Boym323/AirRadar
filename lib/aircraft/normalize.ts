@@ -1,6 +1,7 @@
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import type { Aircraft, AircraftSource, ReceiverPosition } from "@/lib/aircraft/types";
 import { normalizeAircraftIdentifier } from "@/lib/aircraft/identity";
+import { positionObservedAt } from "@/lib/aircraft/source-merge";
 
 export interface RawReadsbAircraft {
   hex?: unknown;
@@ -107,7 +108,7 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
   const seenPosSeconds = seenPosSecondsValue !== null && seenPosSecondsValue >= 0 ? seenPosSecondsValue : null;
   const lastSeen = new Date(now.getTime() - (seenSeconds ?? 0) * 1000).toISOString();
 
-  return {
+  const normalized: Aircraft = {
     icaoHex,
     callsign: text(raw.flight) ?? text(raw.callsign),
     registration: text(raw.r),
@@ -145,8 +146,13 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
     onGround: isOnGround(raw),
     distanceKm,
     bearing,
-    trail: lat !== null && lon !== null ? [{ lat, lon, recordedAt: now.toISOString(), altitude, groundSpeed, track }] : [],
+    trail: [],
   };
+  const observedAt = positionObservedAt(normalized);
+  normalized.trail = lat !== null && lon !== null && observedAt !== null
+    ? [{ lat, lon, recordedAt: new Date(observedAt).toISOString(), altitude, groundSpeed, track }]
+    : [];
+  return normalized;
 }
 
 export function normalizeNetworkAircraft(

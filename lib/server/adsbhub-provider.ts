@@ -2,6 +2,7 @@ import net from "node:net";
 import type { Aircraft, NetworkProviderDiagnostics, ReceiverPosition } from "@/lib/aircraft/types";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import { parseSbsLine, SbsLineBuffer } from "@/lib/server/sbs-mlat-parser";
+import { trailPointFromAircraft } from "@/lib/aircraft/trail";
 import type { NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import {
   getAdsbHubHost, getAdsbHubMaxTracks, getAdsbHubPort, getAdsbHubPublishIntervalMs,
@@ -171,7 +172,8 @@ export class AdsbHubProvider implements NetworkAircraftProvider {
     next.origin = "adsbhub";
     next.provenance = { ...(next.provenance ?? { seenLocal: false, seenNetwork: true, lastLocalSeen: null, lastNetworkSeen: null, positionOrigin: null, positionSource: "UNKNOWN" }), seenLocal: false, seenNetwork: true, lastNetworkSeen: next.lastSeen, positionOrigin: next.lat !== null && next.lon !== null ? "adsbhub" : next.provenance?.positionOrigin ?? null, positionSource: "UNKNOWN" };
     if (next.lat !== null && next.lon !== null) { next.distanceKm = haversineDistanceKm(this.receiver.lat, this.receiver.lon, next.lat, next.lon); next.bearing = initialBearing(this.receiver.lat, this.receiver.lon, next.lat, next.lon); }
-    next.trail = existing?.aircraft.trail ?? (next.lat !== null && next.lon !== null ? [{ lat: next.lat, lon: next.lon, recordedAt: next.lastSeen, altitude: next.altitude, groundSpeed: next.groundSpeed, track: next.track }] : []);
+    const initialPoint = trailPointFromAircraft(next);
+    next.trail = existing?.aircraft.trail?.length ? existing.aircraft.trail : (initialPoint ? [initialPoint] : []);
     this.tracks.set(incoming.icaoHex, {
       aircraft: next,
       receivedAt,

@@ -1,5 +1,6 @@
 import type { Aircraft, ReceiverPosition } from "@/lib/aircraft/types";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
+import { positionObservedAt } from "@/lib/aircraft/source-merge";
 
 export interface SbsParseResult { aircraft: Aircraft | null; error: string | null; messageType?: number; }
 
@@ -37,7 +38,7 @@ export function parseSbsLine(line: string, receiver: ReceiverPosition, now = Dat
   const lastSeen = new Date(now).toISOString();
   const source = options.source ?? "UNKNOWN";
   const origin = options.origin ?? "adsblol";
-  return { aircraft: {
+  const aircraft: Aircraft = {
     icaoHex, callsign: text(fields[10]), registration: null, aircraftType: null, aircraftDescription: null,
     lat, lon, altitude, baroAltitude: altitude, geomAltitude: null, groundSpeed, track,
     verticalRate, baroRate: verticalRate, geomRate: null, squawk: text(fields[17]), category: null,
@@ -47,8 +48,13 @@ export function parseSbsLine(line: string, receiver: ReceiverPosition, now = Dat
     sourceType: origin === "adsblol" ? "sbs_in_mlat" : "sbs_30003", onGround: fields[21]?.trim().toLowerCase() === "-1" || fields[21]?.trim().toLowerCase() === "true",
     distanceKm: lat !== null && lon !== null ? haversineDistanceKm(receiver.lat, receiver.lon, lat, lon) : null,
     bearing: lat !== null && lon !== null ? initialBearing(receiver.lat, receiver.lon, lat, lon) : null,
-    trail: lat !== null && lon !== null ? [{ lat, lon, recordedAt: lastSeen, altitude, groundSpeed, track }] : [],
-  }, error: null, messageType };
+    trail: [],
+  };
+  const observedAt = positionObservedAt(aircraft);
+  aircraft.trail = lat !== null && lon !== null && observedAt !== null
+    ? [{ lat, lon, recordedAt: new Date(observedAt).toISOString(), altitude, groundSpeed, track }]
+    : [];
+  return { aircraft, error: null, messageType };
 }
 
 /** Compatibility wrapper for the ADSB.lol SBS/MLAT lane. */

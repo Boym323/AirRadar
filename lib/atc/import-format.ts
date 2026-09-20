@@ -2,6 +2,7 @@ import { ATC_MAX_FREQUENCY_MHZ, ATC_MIN_FREQUENCY_MHZ, isSupportedAtcFrequencyMh
 
 export type ImportAltitude = number | "SFC" | "UNL" | `FL${number}` | `${number} AGL`;
 export type ImportAltitudeReference = "AMSL" | "AGL" | "FL" | "SFC" | "UNL";
+export type AtcChannelSpacing = "KHZ_25" | "KHZ_8_33" | "UNKNOWN";
 
 export interface AtcImportSource {
   name: string;
@@ -13,6 +14,7 @@ export interface AtcImportSource {
 export interface AtcImportFrequency {
   frequencyMhz: number;
   label?: string | null;
+  spacing?: AtcChannelSpacing;
 }
 
 export interface AtcImportSector {
@@ -61,6 +63,7 @@ export interface AtcImportDocument {
 export interface NormalizedAtcFrequency {
   frequencyMhz: number;
   label: string | null;
+  spacing: AtcChannelSpacing;
 }
 
 export interface NormalizedAtcSector {
@@ -414,7 +417,12 @@ function frequencies(raw: Record<string, unknown>, path: string, issues: string[
       return [];
     }
     seen.add(value);
-    return [{ frequencyMhz: value, label }];
+    const spacing: AtcChannelSpacing = rawFrequency.spacing === undefined ? "UNKNOWN" : rawFrequency.spacing as AtcChannelSpacing;
+    if (spacing !== "KHZ_25" && spacing !== "KHZ_8_33" && spacing !== "UNKNOWN") {
+      issues.push(`${path}.alternateFrequencies[${index}].spacing must be KHZ_25, KHZ_8_33 or UNKNOWN`);
+      return [];
+    }
+    return [{ frequencyMhz: value, label, spacing }];
   });
   return { primary, alternates };
 }

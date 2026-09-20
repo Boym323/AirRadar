@@ -1,4 +1,5 @@
 import type { Aircraft, NetworkProviderDiagnostics, ReceiverPosition } from "@/lib/aircraft/types";
+import { hasUsablePosition, positionObservedAt } from "@/lib/aircraft/source-merge";
 import type { NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
 import { AdsbHubProvider } from "@/lib/server/adsbhub-provider";
 import { AdsbLolProvider } from "@/lib/server/adsblol-provider";
@@ -101,7 +102,7 @@ function sourceName(item: Aircraft): "adsbhub" | "adsblol" {
   return item.origin === "adsbhub" ? "adsbhub" : "adsblol";
 }
 
-function mergeNetworkObservations(left: Aircraft, right: Aircraft): Aircraft {
+export function mergeNetworkObservations(left: Aircraft, right: Aircraft): Aircraft {
   const leftTime = Date.parse(left.lastSeen);
   const rightTime = Date.parse(right.lastSeen);
   const winner = rightTime >= leftTime ? right : left;
@@ -110,14 +111,84 @@ function mergeNetworkObservations(left: Aircraft, right: Aircraft): Aircraft {
   const provenance = {
     ...(winner.provenance ?? { seenLocal: false, seenNetwork: true, lastLocalSeen: null, lastNetworkSeen: winner.lastSeen, positionOrigin: winner.origin ?? "adsblol", positionSource: winner.source }),
     seenNetwork: true,
-    lastNetworkSeen: winner.lastSeen,
+    lastNetworkSeen: latestNetworkSeen(left.lastSeen, right.lastSeen),
     networkSources: sources,
   };
-  const merged = { ...winner, provenance };
-  for (const key of ["callsign", "registration", "aircraftType", "aircraftDescription", "lat", "lon", "altitude", "baroAltitude", "geomAltitude", "groundSpeed", "track", "verticalRate", "baroRate", "squawk"] as const) {
-    if (merged[key] === null && other[key] !== null) (merged as Record<string, unknown>)[key] = other[key];
+  const position = [winner, other]
+    .filter((item) => hasUsablePosition(item))
+    .sort(comparePositionCandidates)[0];
+  const merged = {
+    ...winner,
+    callsign: winner.callsign ?? other.callsign,
+    registration: winner.registration ?? other.registration,
+    aircraftType: winner.aircraftType ?? other.aircraftType,
+    aircraftDescription: winner.aircraftDescription ?? other.aircraftDescription,
+    squawk: winner.squawk ?? other.squawk,
+    provenance,
+  };
+
+  if (position) {
+    // Coordinates and all data derived from them are one atomic bundle. A
+    // message winner may still provide descriptive metadata, but it cannot
+    // contribute one half of a position or its age/provenance.
+    const snapshotAt = Date.parse(winner.lastSeen) + Math.max(0, winner.seenSeconds ?? 0) * 1000;
+    const observedAt = positionObservedAt(position);
+    const seenPosSeconds = observedAt !== null && Number.isFinite(snapshotAt)
+      ? Math.max(0, (snapshotAt - observedAt) / 1000)
+      : position.seenPosSeconds;
+    Object.assign(merged, {
+      lat: position.lat,
+      lon: position.lon,
+      altitude: position.altitude,
+      baroAltitude: position.baroAltitude,
+      geomAltitude: position.geomAltitude,
+      groundSpeed: position.groundSpeed,
+      track: position.track,
+      verticalRate: position.verticalRate,
+      baroRate: position.baroRate,
+      geomRate: position.geomRate,
+      seenPosSeconds,
+      source: position.source,
+      distanceKm: position.distanceKm,
+      bearing: position.bearing,
+      trail: position.trail,
+      provenance: { ...provenance, positionOrigin: position.origin ?? null, positionSource: position.source },
+    });
+  } else {
+    // No valid position exists. Keep the message winner's nullable position
+    // fields and never synthesize coordinates from independent fields.
+    Object.assign(merged, {
+      lat: null,
+      lon: null,
+      distanceKm: null,
+      bearing: null,
+      trail: winner.trail,
+      provenance: { ...provenance, positionOrigin: null, positionSource: "UNKNOWN" },
+    });
   }
   return merged;
+}
+
+function comparePositionCandidates(left: Aircraft, right: Aircraft): number {
+  const leftObservedAt = positionObservedAt(left);
+  const rightObservedAt = positionObservedAt(right);
+  if (leftObservedAt !== null || rightObservedAt !== null) {
+    if (leftObservedAt === null) return 1;
+    if (rightObservedAt === null) return -1;
+    if (leftObservedAt !== rightObservedAt) return rightObservedAt - leftObservedAt;
+  }
+  const leftMessage = Date.parse(left.lastSeen);
+  const rightMessage = Date.parse(right.lastSeen);
+  return (Number.isFinite(rightMessage) ? rightMessage : Number.NEGATIVE_INFINITY)
+    - (Number.isFinite(leftMessage) ? leftMessage : Number.NEGATIVE_INFINITY);
+}
+
+function latestNetworkSeen(left: string, right: string): string {
+  const leftTime = Date.parse(left);
+  const rightTime = Date.parse(right);
+  if (!Number.isFinite(leftTime)) return right;
+  if (!Number.isFinite(rightTime)) return left;
+  return rightTime >= leftTime ? right : left;
 }
 
 export function createNetworkFailoverProvider(receiver: ReceiverPosition, enabled: boolean): NetworkFailoverProvider {

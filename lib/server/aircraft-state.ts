@@ -29,6 +29,8 @@ import { logger } from "@/lib/server/logger";
 import { classifyAtcPrediction, getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
 import { computeAtcContext, inputFromAircraft, loadAtcContextDataset } from "@/lib/atc-context/engine";
 import { ReceiverCoverageAnalytics, type CoverageResponse } from "@/lib/server/receiver-coverage-analytics";
+import { appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
+import { positionObservedAt } from "@/lib/aircraft/source-merge";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -42,9 +44,9 @@ function plausiblePosition(previous: Aircraft | undefined, incoming: Aircraft): 
   if (!previous || incoming.lat === null || incoming.lon === null) return incoming;
   const previousPoint = previous.trail[previous.trail.length - 1];
   if (!previousPoint) return incoming;
-  const incomingAt = Date.parse(incoming.lastSeen);
+  const incomingAt = positionObservedAt(incoming);
   const previousAt = Date.parse(previousPoint.recordedAt);
-  if (!Number.isFinite(incomingAt) || !Number.isFinite(previousAt) || incomingAt <= previousAt) return incoming;
+  if (incomingAt === null || !Number.isFinite(previousAt) || incomingAt <= previousAt) return incoming;
   const distanceKm = haversineDistanceKm(previousPoint.lat, previousPoint.lon, incoming.lat, incoming.lon);
   const elapsedHours = (incomingAt - previousAt) / 3_600_000;
   const maximumKm = Math.max(MIN_POSITION_STEP_KM, MAX_PLAUSIBLE_GROUND_SPEED_KT * 1.852 * elapsedHours * 1.5);
@@ -521,19 +523,12 @@ export class AircraftStateService {
 
   private updateTrail(previous: Aircraft | undefined, incoming: Aircraft): TrailPoint[] {
     const previousTrail = previous?.trail ?? [];
-    const last = previousTrail[previousTrail.length - 1];
-    const canAppend = incoming.lat !== null && incoming.lon !== null &&
-      (!last || Math.abs(last.lat - incoming.lat) > 0.00001 || Math.abs(last.lon - incoming.lon) > 0.00001);
-    const next = canAppend && incoming.lat !== null && incoming.lon !== null
-      ? [...previousTrail, {
-          lat: incoming.lat,
-          lon: incoming.lon,
-          recordedAt: incoming.lastSeen,
-          altitude: incoming.altitude,
-          groundSpeed: incoming.groundSpeed,
-          track: incoming.track,
-        }]
-      : previousTrail;
+    const sourceChanged = Boolean(previous?.provenance?.positionOrigin && incoming.provenance?.positionOrigin
+      && (previous.provenance.positionOrigin !== incoming.provenance.positionOrigin
+        || previous.provenance.positionSource !== incoming.provenance.positionSource));
+    const base = sourceChanged ? [] : previousTrail;
+    const point = trailPointFromAircraft(incoming);
+    const next = point ? appendTrailPoint(base, point) : base;
     if (incoming.origin !== "local") {
       const cutoff = Date.parse(incoming.lastSeen) - getNetworkTrailMaxAgeMs();
       const bounded = next.filter((point) => {

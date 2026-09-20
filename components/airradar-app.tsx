@@ -1532,6 +1532,7 @@ export function AirRadarApp() {
         const sourceChanged = previous.source.positionOrigin !== source.positionOrigin || previous.source.positionSource !== source.positionSource;
         if (sourceChanged) {
           marker.setLngLat(target);
+          previous.history = updateMotionHistory(previous.history, source);
           previous.source = source;
           previous.correctionLon = 0;
           previous.correctionLat = 0;
@@ -1540,7 +1541,7 @@ export function AirRadarApp() {
           animationSchedulerRef.current?.();
           return;
         }
-        updateMotionHistory(previous.history, source);
+        previous.history = updateMotionHistory(previous.history, source);
         const [predictedLon, predictedLat] = predictedPosition(source, now, previous.history);
         const correctionDistance = haversineDistanceKm(current.lat, current.lng, predictedLat, predictedLon);
         const correctionDurationMs = Math.min(

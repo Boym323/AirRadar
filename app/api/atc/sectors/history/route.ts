@@ -1,9 +1,11 @@
 import { getSectorTrafficHistoryBatch, type SectorHistoryBucket } from "@/lib/server/sector-traffic-context";
+import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 const buckets = new Set<SectorHistoryBucket>(["1m", "5m", "15m", "1h"]);
 
 export async function GET(request: Request): Promise<Response> {
+  const rateLimit = checkPublicRateLimit("atcSectors", request); if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const query = new URL(request.url).searchParams;
   const bucket = query.get("bucket") as SectorHistoryBucket;
   if (!buckets.has(bucket)) return Response.json({ error: "Invalid bucket" }, { status: 400 });
