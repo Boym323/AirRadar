@@ -1039,6 +1039,9 @@ export function AirRadarApp() {
         return;
       }
       let continueAnimation = false;
+      const selectedAnimationHex = selectedHexRef.current;
+      const selectedAnimationJob = selectedAnimationHex ? animationJobs.get(selectedAnimationHex) : undefined;
+      let selectedAnimationMotion: ReturnType<typeof motionAt> | null = null;
       for (const job of animationJobs.values()) {
         const motion = motionAt(job.source, timestamp, {
           lon: job.correctionLon,
@@ -1051,20 +1054,21 @@ export function AirRadarApp() {
         // motion model. Updating rotation only from the SSE/React effect made
         // turns appear to snap at packet boundaries.
         if (motion.heading !== null) job.marker.setRotation(motion.heading + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
+        if (job === selectedAnimationJob) selectedAnimationMotion = motion;
         if (timestamp - job.correctionStartedAt >= job.correctionDurationMs) {
           job.correctionLon = 0;
           job.correctionLat = 0;
         }
-        if (hasContinuousPrediction(job, timestamp)) continueAnimation = true;
+        if (motion.predictionActive || motion.correctionActive) continueAnimation = true;
       }
-      const selectedAnimationHex = selectedHexRef.current;
-      const selectedAnimationJob = selectedAnimationHex ? animationJobs.get(selectedAnimationHex) : undefined;
       const selectedTrailTailSource = map.getSource("selected-trail-live-tail") as GeoJSONSource | undefined;
       if (selectedAnimationHex && selectedAnimationJob && selectedTrailTailSource) {
         const history = selectedHistoryTrailRef.current;
         const historyPoints = history?.icaoHex === selectedAnimationHex.toUpperCase() ? history.points : [];
         const confirmed = selectedTrail(liveTrails, selectedAnimationHex, historyPoints, Date.now());
-        const rendered = predictedMarkerPosition(selectedAnimationJob, timestamp);
+        const rendered = selectedAnimationMotion
+          ? [selectedAnimationMotion.lon, selectedAnimationMotion.lat] as [number, number]
+          : predictedMarkerPosition(selectedAnimationJob, timestamp);
         const last = confirmed.at(-1);
         const coordinates = last && (Math.abs(last.lon - rendered[0]) > 0.000001 || Math.abs(last.lat - rendered[1]) > 0.000001)
           ? [[last.lon, last.lat], rendered]
