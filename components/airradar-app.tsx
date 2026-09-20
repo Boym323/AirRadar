@@ -174,6 +174,11 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 
 const MIN_AIRCRAFT_ANIMATION_MS = 650;
 const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
+const EMPTY_TRAIL: TrailPoint[] = [];
+
+function trailEndpointKey(point: TrailPoint | undefined): string {
+  return point ? `${point.recordedAt}|${point.lat}|${point.lon}` : "";
+}
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -504,7 +509,14 @@ export function AirRadarApp() {
   const animationHiddenAtRef = useRef<number | null>(null);
   const animationSchedulerRef = useRef<(() => void) | null>(null);
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
-  const selectedHistoryTrailRef = useRef<typeof selectedHistoryTrail>(null);
+  const selectedConfirmedTrailRef = useRef<readonly TrailPoint[]>(EMPTY_TRAIL);
+  const selectedTrailInputsRef = useRef<{
+    icaoHex: string;
+    history: readonly TrailPoint[];
+    liveLength: number;
+    liveEndpointKey: string;
+  } | null>(null);
+  const selectedTrailSourceRef = useRef<readonly TrailPoint[] | null>(null);
   const selectedHexRef = useRef<string | null>(null);
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
@@ -936,9 +948,6 @@ export function AirRadarApp() {
   useEffect(() => {
     selectedHexRef.current = selectedHex;
   }, [selectedHex]);
-  useEffect(() => {
-    selectedHistoryTrailRef.current = selectedHistoryTrail;
-  }, [selectedHistoryTrail]);
 
   useEffect(() => {
     if (!selectedHex) {
@@ -1062,10 +1071,8 @@ export function AirRadarApp() {
         if (motion.predictionActive || motion.correctionActive) continueAnimation = true;
       }
       const selectedTrailTailSource = map.getSource("selected-trail-live-tail") as GeoJSONSource | undefined;
-      if (selectedAnimationHex && selectedAnimationJob && selectedTrailTailSource) {
-        const history = selectedHistoryTrailRef.current;
-        const historyPoints = history?.icaoHex === selectedAnimationHex.toUpperCase() ? history.points : [];
-        const confirmed = selectedTrail(liveTrails, selectedAnimationHex, historyPoints, Date.now());
+      if (selectedTrailTailSource && selectedAnimationHex && selectedAnimationJob) {
+        const confirmed = selectedConfirmedTrailRef.current;
         const rendered = selectedAnimationMotion
           ? [selectedAnimationMotion.lon, selectedAnimationMotion.lat] as [number, number]
           : predictedMarkerPosition(selectedAnimationJob, timestamp);
@@ -1609,8 +1616,31 @@ export function AirRadarApp() {
     const selectedAircraftInSnapshot = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex);
     const selectedAircraftVisible = Boolean(selectedAircraftInSnapshot && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedHex));
     const historySnapshot = selectedHistoryTrail;
-    const historyTrail = selectedAircraftVisible && historySnapshot && historySnapshot.icaoHex === selectedHex?.toUpperCase() ? historySnapshot.points : [];
-    const selectedTrailForMap = selectedAircraftVisible ? selectedTrail(liveTrailsRef.current, selectedHex, historyTrail, Date.now()) : [];
+    const historyTrail = selectedAircraftVisible && historySnapshot && historySnapshot.icaoHex === selectedHex?.toUpperCase() ? historySnapshot.points : EMPTY_TRAIL;
+    let selectedTrailForMap: readonly TrailPoint[] = EMPTY_TRAIL;
+    if (selectedAircraftVisible && selectedHex) {
+      const liveTrail = liveTrailsRef.current.get(selectedHex) ?? EMPTY_TRAIL;
+      const inputs = {
+        icaoHex: selectedHex,
+        history: historyTrail,
+        liveLength: liveTrail.length,
+        liveEndpointKey: trailEndpointKey(liveTrail.at(-1)),
+      };
+      const previousInputs = selectedTrailInputsRef.current;
+      const inputsChanged = !previousInputs
+        || previousInputs.icaoHex !== inputs.icaoHex
+        || previousInputs.history !== inputs.history
+        || previousInputs.liveLength !== inputs.liveLength
+        || previousInputs.liveEndpointKey !== inputs.liveEndpointKey;
+      if (inputsChanged) {
+        selectedConfirmedTrailRef.current = selectedTrail(liveTrailsRef.current, selectedHex, historyTrail, Date.now());
+        selectedTrailInputsRef.current = inputs;
+      }
+      selectedTrailForMap = selectedConfirmedTrailRef.current;
+    } else {
+      selectedTrailInputsRef.current = null;
+      selectedConfirmedTrailRef.current = EMPTY_TRAIL;
+    }
 
     for (const aircraft of filteredAircraft) {
       if (aircraft.lat === null || aircraft.lon === null || !Number.isFinite(aircraft.lat) || !Number.isFinite(aircraft.lon)) continue;
@@ -1706,9 +1736,12 @@ export function AirRadarApp() {
 
     const selected = selectedAircraftVisible ? selectedAircraftInSnapshot : undefined;
     const trailSource = map.getSource("selected-trail") as GeoJSONSource | undefined;
-    trailSource?.setData(selectedAircraftVisible && selectedTrailForMap.length > 1
-      ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
-      : { type: "FeatureCollection", features: [] });
+    if (trailSource && selectedTrailSourceRef.current !== selectedTrailForMap) {
+      trailSource.setData(selectedAircraftVisible && selectedTrailForMap.length > 1
+        ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
+        : { type: "FeatureCollection", features: [] });
+      selectedTrailSourceRef.current = selectedTrailForMap;
+    }
     for (const layer of ["selected-trail-line", "selected-trail-live-tail-line", ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none");
     }
