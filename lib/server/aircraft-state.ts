@@ -152,6 +152,9 @@ export class AircraftStateService {
   private lastEvaluatedDailyReceptionRecord: ReceiverDailyReceptionRecord | null = null;
   private receptionEvaluationPending = false;
   private networkStopPromise: Promise<void> | null = null;
+  private snapshotVersion = 0;
+  private readonly snapshotCache = new Map<string, { version: number; snapshot: StateSnapshot }>();
+  private readonly snapshotBuildCounts: Record<CoverageMode, number> = { local: 0, extended: 0 };
 
   constructor(
     provider: AircraftProvider = createAircraftProvider(),
@@ -266,6 +269,34 @@ export class AircraftStateService {
 
   getSnapshot(options: { coverage?: CoverageMode; includeTrails?: boolean } = {}): StateSnapshot {
     const coverage = options.coverage ?? "local";
+    const includeTrails = options.includeTrails === true;
+    const cacheKey = `${coverage}:${includeTrails ? "trails" : "compact"}`;
+    const cached = this.snapshotCache.get(cacheKey);
+    if (cached?.version === this.snapshotVersion) return cached.snapshot;
+
+    const snapshot = this.buildSnapshot(coverage, includeTrails);
+    this.snapshotCache.set(cacheKey, { version: this.snapshotVersion, snapshot });
+    return snapshot;
+  }
+
+  /**
+   * Exposes bounded counters for diagnostics and performance tests. The
+   * counters count snapshot construction, not callers of getSnapshot().
+   */
+  getSnapshotCacheDiagnostics(): {
+    version: number;
+    cachedSnapshots: number;
+    builds: Record<CoverageMode, number>;
+  } {
+    return {
+      version: this.snapshotVersion,
+      cachedSnapshots: this.snapshotCache.size,
+      builds: { ...this.snapshotBuildCounts },
+    };
+  }
+
+  private buildSnapshot(coverage: CoverageMode, includeTrails: boolean): StateSnapshot {
+    this.snapshotBuildCounts[coverage] += 1;
     const aircraft = (coverage === "extended"
       ? mergeAircraftMaps(this.localAircraft, this.networkAircraft, this.currentReceiver, {
           localStaleAfterMs: getAircraftStaleAfterMs(),
@@ -274,7 +305,7 @@ export class AircraftStateService {
       : Array.from(this.localAircraft.values()))
       .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
       .map((item) => {
-        if (options.includeTrails) return { ...item, trail: item.trail.slice() };
+        if (includeTrails) return { ...item, trail: item.trail.slice() };
         return { ...item, trail: undefined };
       });
     const displayedCoverageStats = coverage === "extended"
@@ -314,6 +345,11 @@ export class AircraftStateService {
         ? computeLocalCoverageRatio(aircraft, this.currentReceiver, getReceiverComparisonRadiusNm(), Date.now(), getAdsbLolStaleAfterMs(), getAircraftStaleAfterMs())
         : undefined,
     };
+  }
+
+  private invalidateSnapshotCache(): void {
+    this.snapshotVersion += 1;
+    this.snapshotCache.clear();
   }
 
   getProviderName(): string {
@@ -416,6 +452,7 @@ export class AircraftStateService {
         this.messagesPerSecond = null;
         this.consecutiveFailures += 1;
         this.removeStaleAircraft();
+        this.invalidateSnapshotCache();
       }
 
       if (!this.running) return;
@@ -490,6 +527,7 @@ export class AircraftStateService {
     this.alerts.observe(previousAircraft, this.localAircraft);
     this.intelligence.cleanup(currentHexes);
     for (const current of this.localAircraft.values()) this.intelligence.observe(previousAircraft.get(current.icaoHex), current, Date.parse(snapshot.fetchedAt));
+    this.invalidateSnapshotCache();
   }
 
   private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {
@@ -504,6 +542,7 @@ export class AircraftStateService {
     for (const hex of this.networkAircraft.keys()) {
       if (!currentHexes.has(hex)) this.networkAircraft.delete(hex);
     }
+    this.invalidateSnapshotCache();
   }
 
   private removeStaleAircraft(): void {
@@ -687,6 +726,7 @@ export class AircraftStateService {
         const updated = this.aircraft.get(result.value.item.icaoHex);
         if (updated && !this.shuttingDown) this.statistics.observe([updated], this.currentReceiver, new Date());
       }
+      this.invalidateSnapshotCache();
       this.notify();
     }
   }
@@ -730,7 +770,10 @@ export class AircraftStateService {
       this.aircraft.set(current.icaoHex, { ...current, atc: result.assignment });
       changed = true;
     }
-    if (changed && !this.shuttingDown) this.notify();
+    if (changed && !this.shuttingDown) {
+      this.invalidateSnapshotCache();
+      this.notify();
+    }
   }
 
   private async evaluateShadowPrediction(aircraft: Aircraft, currentSector: string | null, resolutionKey: string): Promise<void> {
