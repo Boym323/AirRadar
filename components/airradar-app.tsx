@@ -1048,16 +1048,17 @@ export function AirRadarApp() {
       }
       const selectedAnimationHex = selectedHexRef.current;
       const selectedAnimationJob = selectedAnimationHex ? animationJobs.get(selectedAnimationHex) : undefined;
-      const selectedTrailSource = map.getSource("selected-trail") as GeoJSONSource | undefined;
-      if (selectedAnimationHex && selectedAnimationJob && selectedTrailSource) {
+      const selectedTrailTailSource = map.getSource("selected-trail-live-tail") as GeoJSONSource | undefined;
+      if (selectedAnimationHex && selectedAnimationJob && selectedTrailTailSource) {
         const history = selectedHistoryTrailRef.current;
         const historyPoints = history?.icaoHex === selectedAnimationHex.toUpperCase() ? history.points : [];
         const confirmed = selectedTrail(liveTrails, selectedAnimationHex, historyPoints, Date.now());
         const rendered = predictedMarkerPosition(selectedAnimationJob, timestamp);
         const last = confirmed.at(-1);
-        const coordinates = confirmed.map((point) => [point.lon, point.lat] as [number, number]);
-        if (!last || Math.abs(last.lon - rendered[0]) > 0.000001 || Math.abs(last.lat - rendered[1]) > 0.000001) coordinates.push(rendered);
-        selectedTrailSource.setData(coordinates.length > 1
+        const coordinates = last && (Math.abs(last.lon - rendered[0]) > 0.000001 || Math.abs(last.lat - rendered[1]) > 0.000001)
+          ? [[last.lon, last.lat], rendered]
+          : [];
+        selectedTrailTailSource.setData(coordinates.length > 1
           ? { type: "Feature", properties: { icaoHex: selectedAnimationHex }, geometry: { type: "LineString", coordinates } }
           : { type: "FeatureCollection", features: [] });
       }
@@ -1127,6 +1128,8 @@ export function AirRadarApp() {
       for (const layer of ["ats-routes-line", "ats-routes-cdr", "ats-routes-selected"] as const) { map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; }); }
       map.addSource("selected-trail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "selected-trail-line", type: "line", source: "selected-trail", paint: { "line-color": "#f3b95f", "line-opacity": 0.85, "line-width": 2.5 } });
+      map.addSource("selected-trail-live-tail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({ id: "selected-trail-live-tail-line", type: "line", source: "selected-trail-live-tail", paint: { "line-color": "#f3b95f", "line-opacity": 0.85, "line-width": 2.5 } });
       map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
         id: ROUTE_V2_COMPLETED_LAYER_ID,
@@ -1678,7 +1681,7 @@ export function AirRadarApp() {
     trailSource?.setData(selectedAircraftVisible && selectedTrailForMap.length > 1
       ? { type: "Feature", properties: { icaoHex: selectedHex }, geometry: { type: "LineString", coordinates: selectedTrailForMap.map((point) => [point.lon, point.lat]) } }
       : { type: "FeatureCollection", features: [] });
-    for (const layer of ["selected-trail-line", ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
+    for (const layer of ["selected-trail-line", "selected-trail-live-tail-line", ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none");
     }
     for (const layer of [ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, ROUTE_V2_AIRPORT_LABEL_LAYER_ID] as const) {

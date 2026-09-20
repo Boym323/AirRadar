@@ -92,7 +92,7 @@ describe("feature integration", () => {
     ];
 
     expect(new Set(routeIds).size).toBe(routeIds.length);
-    expect(new Set([...routeIds, "selected-trail", "selected-trail-line"]).size).toBe(routeIds.length + 2);
+    expect(new Set([...routeIds, "selected-trail", "selected-trail-line", "selected-trail-live-tail", "selected-trail-live-tail-line"]).size).toBe(routeIds.length + 4);
     expect(radarSource).not.toContain('map.addSource("selected-route"');
     expect(radarSource).not.toContain('id: "selected-route-line"');
   });
