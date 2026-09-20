@@ -23,6 +23,8 @@ describe("aircraft radar quick detail", () => {
     expect(order.every((index) => index >= 0)).toBe(true);
     expect(order).toEqual([...order].sort((left, right) => left - right));
     expect(componentSource).not.toContain("FlightAware");
+    expect(componentSource).not.toContain("RouteIntelligencePanel");
+    expect(componentSource).not.toContain("routeIntelligence");
     expect(componentSource).not.toContain("useEffect");
     expect(componentSource).not.toContain("fetch(");
   });

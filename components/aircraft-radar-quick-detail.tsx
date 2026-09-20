@@ -7,8 +7,6 @@ import type { Airport } from "@/lib/airports/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
 import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
-import type { RouteIntelligenceViewDTO } from "@/lib/route-intelligence";
-import { RouteIntelligencePanel } from "@/components/route-intelligence-panel";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
@@ -38,7 +36,6 @@ export interface AircraftRadarQuickDetailProps {
   databaseAircraft: AircraftDetailMetadata | null;
   historyTrail: QuickHistoryTrail | null;
   atcContext: AtcContextResult | null;
-  routeIntelligence: RouteIntelligenceViewDTO | null;
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -144,10 +141,6 @@ function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftVi
     <p className="aircraft-quick-disclaimer">{t.atc.contextDisclaimer}</p>
     {contextAirspace && <p className="aircraft-quick-disclaimer">Published sector: {contextAirspace.name}{traffic ? ` · Sector traffic: ${traffic.traffic.aircraftCount} aircraft · ${traffic.trafficLevel}` : " · Sector traffic: —"}. Aircraft is within the published sector volume. Traffic does not represent the official operational sector configuration.</p>}
   </QuickSection>;
-}
-
-function RouteIntelligenceSection({ result }: { result: RouteIntelligenceViewDTO | null }) {
-  return result ? <section className="aircraft-quick-section aircraft-quick-route-intelligence"><RouteIntelligencePanel route={result} compact /></section> : null;
 }
 
 function AircraftIdentitySection({ aircraft, databaseAircraft }: { aircraft: AircraftView; databaseAircraft: AircraftDetailMetadata | null }) {
@@ -330,7 +323,6 @@ export function AircraftRadarQuickDetail({
   databaseAircraft,
   historyTrail,
   atcContext,
-  routeIntelligence,
   watchlisted,
   onBack,
   onClose,
@@ -384,7 +376,6 @@ export function AircraftRadarQuickDetail({
         {!hasRouteData && <p className="aircraft-quick-empty">{t.aircraft.noRouteData}</p>}
       </QuickSection>
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
-      <RouteIntelligenceSection result={routeIntelligence} />
       {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
     </div>}
     {activeTab === "aircraft" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-aircraft" aria-labelledby="aircraft-tab-aircraft"><AircraftIdentitySection aircraft={aircraft} databaseAircraft={databaseAircraft} /></div>}
