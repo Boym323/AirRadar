@@ -2,6 +2,25 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.91] - 2026-09-20
+
+Changes since v1.0.90:
+
+- feat: enhance browser smoke tests with detailed error handling and mobile navigation checks (16fa7a29)
+- feat: implement aircraft icon classification logic and corresponding tests (48349d67)
+- feat: enhance aircraft icon classification logic and add comprehensive tests (ee86284d)
+- feat: enhance browser smoke tests with deterministic viewport matrix and API response handling (65b64206)
+- test(browser): stabilize production smoke gate (07cdb863)
+- feat: enhance aircraft motion logic with history tracking and update tests (925bd6f2)
+- feat: enhance aircraft trail logic with plausibility checks and update tests (687113df)
+- feat: add live tail source and layer for selected trail in AirRadarApp (72040c28)
+- feat: enhance network failover provider to support concurrent data sources and deduplication (ce622840)
+- fix: increase timeout for browser smoke test to accommodate CI context effects (a46cecff)
+- feat: update AdsbLolProvider to support re-api circle queries and enhance response validation (645da0a8)
+- feat: enhance browser smoke test with detailed diagnostics and fixture request tracking (11d06bdf)
+- fix: improve browser smoke test context handling and layer validation (ade2c616)
+- fix: refine browser smoke test viewport handling and error logging (9123ff65)
+
 ## [1.0.88] - 2026-09-19
 
 Changes since v1.0.87:
