@@ -244,17 +244,28 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await routeSmoke.close();
     for (const viewport of [
+      { width: 320, height: 844 },
+      { width: 360, height: 844 },
       { width: 375, height: 812 },
       { width: 390, height: 844 },
+      { width: 430, height: 932 },
+      { width: 768, height: 1024 },
       { width: 820, height: 1180 },
       { width: 821, height: 1000 },
+      { width: 899, height: 900 },
       { width: 900, height: 900 },
       { width: 901, height: 900 },
+      { width: 902, height: 900 },
+      { width: 1024, height: 768 },
+      { width: 1099, height: 900 },
       { width: 1100, height: 900 },
       { width: 1101, height: 900 },
-      { width: 1024, height: 768 },
+      { width: 1102, height: 900 },
+      { width: 1150, height: 900 },
+      { width: 1200, height: 900 },
       { width: 1280, height: 800 },
       { width: 1440, height: 900 },
+      { width: 1920, height: 1080 },
     ]) {
       console.log(`[production-gates] browser viewport ${viewport.width}x${viewport.height}`);
       const fullSmoke = viewport.width === 375 || viewport.width === 821;
@@ -606,6 +617,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }).length;
           return {
             overflow: document.documentElement.scrollWidth > window.innerWidth,
+            documentScrollWidth: document.documentElement.scrollWidth,
+            viewportWidth: window.innerWidth,
+            overflowingElements: [...document.querySelectorAll("body *")].map((element) => {
+              const box = element.getBoundingClientRect();
+              const style = getComputedStyle(element);
+              return { tag: element.tagName.toLowerCase(), className: typeof element.className === "string" ? element.className : "", id: element.id, left: box.left, right: box.right, width: box.width, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, overflowX: style.overflowX };
+            }).filter((item) => item.right > window.innerWidth + 1 || item.left < -1 || item.scrollWidth > item.clientWidth + 1).slice(0, 20),
+            radarChildren: [...document.querySelector(".radar-content")?.children ?? []].map((element) => ({ tag: element.tagName.toLowerCase(), className: typeof element.className === "string" ? element.className : "", scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, rect: (() => { const box = element.getBoundingClientRect(); return { left: box.left, right: box.right, width: box.width }; })() })),
             layerMenu: rect(".map-layers-menu"),
             sidebar: rect('[data-testid="radar-sidebar"]'),
             sidebarVisible: Boolean(document.querySelector('[data-testid="radar-sidebar"]') && !document.querySelector('[data-testid="radar-sidebar"]').classList.contains("drawer-closed")),

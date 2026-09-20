@@ -31,7 +31,7 @@ import { MAX_PREDICTION_CORRECTION_KM, motionAt, normalizeHeading, predictedPosi
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
-import { TAR1090_ICON_CODES, TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
+import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
@@ -389,67 +389,13 @@ const AIRCRAFT_GLYPH_PATHS: Record<AircraftMarkerKind, string> = {
 
 type AircraftIconInput = Pick<AircraftView, "aircraftType" | "aircraftDescription" | "enrichment" | "category" | "onGround">;
 
-function aircraftTypeCandidates(aircraft: AircraftIconInput): string[] {
-  const values = [
-    aircraft.enrichment?.metadata?.icaoTypeCode,
-    aircraft.aircraftType,
-    aircraft.enrichment?.metadata?.aircraftType,
-    aircraft.aircraftDescription,
-  ];
-  const candidates: string[] = [];
-  for (const value of values) {
-    if (!value) continue;
-    const normalized = value.trim().toUpperCase().replaceAll("-", "");
-    if (normalized) candidates.push(normalized);
-    for (const token of value.toUpperCase().match(/[A-Z][A-Z0-9]{2,3}/g) ?? []) candidates.push(token);
-  }
-  return [...new Set(candidates)];
-}
-
-function aircraftTypeCode(aircraft: AircraftIconInput): string {
-  const candidates = aircraftTypeCandidates(aircraft);
-  return candidates.find((candidate) => TAR1090_ICON_CODES.has(candidate)) ?? candidates[0] ?? "";
-}
-
 function aircraftIconAsset(aircraft: AircraftIconInput): string {
   return classifyAircraftIcon(aircraft).asset ?? TAR1090_UNKNOWN_ICON_ASSET;
 }
 
 function aircraftMarkerKind(aircraft: AircraftIconInput): AircraftMarkerKind {
   const canonical = classifyAircraftIcon(aircraft);
-  if (canonical.kind === "helicopter" || canonical.kind === "glider" || canonical.kind === "drone" || canonical.kind === "ground") return canonical.kind;
-  const type = aircraftTypeCode(aircraft);
-  const category = aircraft.category?.trim().toUpperCase() ?? "";
-  if (/^C[0-3]$/.test(category) || ["GND", "GRND", "SERV", "EMER", "TWR"].includes(type)) return "ground";
-  if (["A318", "A319", "A320", "A321", "A19N", "A20N", "A21N"].includes(type)) return "a320";
-  if (/^(BCS1|BCS3|A221|A223)/.test(type)) return "a220";
-  if (/^(A306|A310|A342|A343|A345|A346)/.test(type)) return "a330";
-  if (/^(A332|A333|A338|A339)/.test(type)) return "a330";
-  if (/^(A359|A35K)/.test(type)) return "a350";
-  if (type === "A388") return "a380";
-  if (/^(B712|B717)/.test(type)) return "b717";
-  if (/^(B721|B722|B727)/.test(type)) return "b727";
-  if (/^(B731|B732|B733|B734|B735|B736|B737|B738|B739|B37M|B38M|B39M|B3XM)/.test(type)) return "b737";
-  if (/^(B741|B742|B743|B744|B748)/.test(type)) return "b747";
-  if (/^(B752|B753|B757)/.test(type)) return "b757";
-  if (/^(B762|B763|B764|B767)/.test(type)) return "b767";
-  if (/^(B772|B773|B77L|B77W|B777)/.test(type)) return "b777";
-  if (/^(B781|B788|B789|B78J|B787)/.test(type)) return "b787";
-  if (/^(AT4|AT7|DH8|DHC|SF3|F50|JS4)/.test(type)) return "turboprop";
-  if (/^(E1[3-9]|E2[0-9]|CRJ|RJ[0-9]|ARJ)/.test(type)) return "regional";
-  if (/^(GLF|CL[0-9]|LJ[0-9]|E55|FA[0-9]|C5[0-9]|C68|C7[0-9]|PRM|H25|DA[0-9])/.test(type)) return "business-jet";
-  if (/^(C[0-4]|P28|P32|P46|PA[0-9]|PC1|TBM|BE[0-9]|SR2|M20|DA4)/.test(type)) return "general-aviation";
-  if (aircraft.onGround) return "ground";
-  switch (category) {
-    case "A7": return "helicopter";
-    case "B1": return "glider";
-    case "B6": return "drone";
-    case "C0":
-    case "C1":
-    case "C2":
-    case "C3": return "ground";
-    default: return "airplane";
-  }
+  return canonical.presentationKind as AircraftMarkerKind;
 }
 
 function AircraftGlyph({ kind = "airplane" }: { kind?: AircraftMarkerKind }) {
