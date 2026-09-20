@@ -5,7 +5,7 @@ import { createCzAtsGeoJSON } from "@/lib/ats/geojson";
 
 export const dynamic = "force-dynamic";
 
- type AtsDocument = NonNullable<ReturnType<typeof loadCzAtsRoutes>>;
+type AtsDocument = NonNullable<ReturnType<typeof loadCzAtsRoutes>>;
 type AtsPayload = {
   available: true;
   source: AtsDocument["source"];
