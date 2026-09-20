@@ -564,6 +564,44 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         const buttonsReady = [...document.querySelectorAll("button")].every((button) => Boolean(button.textContent?.trim() || button.getAttribute("aria-label")));
         return mapReady && imagesReady && buttonsReady;
       });
+      await page.waitForFunction(() => {
+        const marker = document.querySelector(".aircraft-marker");
+        const rotator = marker?.querySelector(".aircraft-plane-rotator");
+        const label = marker?.querySelector(".aircraft-label");
+        return Boolean(marker && rotator && label && rotator instanceof HTMLElement && rotator.style.transform.startsWith("rotate("));
+      });
+      const markerPresentation = await page.evaluate(() => {
+        const marker = document.querySelector(".aircraft-marker");
+        const rotator = marker?.querySelector(".aircraft-plane-rotator");
+        const label = marker?.querySelector(".aircraft-label");
+        if (!(marker instanceof HTMLElement) || !(rotator instanceof HTMLElement) || !(label instanceof HTMLElement)) return null;
+        const rootRotation = marker.style.transform.match(/rotateZ\((-?[0-9.]+)deg\)/)?.[1] ?? "0";
+        const labelTransform = getComputedStyle(label).transform;
+        return {
+          role: marker.getAttribute("role"),
+          tabindex: marker.getAttribute("tabindex"),
+          rootRotation: Number(rootRotation),
+          rotatorTransform: rotator.style.transform,
+          labelTransform,
+          labelAriaHidden: label.getAttribute("aria-hidden"),
+        };
+      });
+      if (!markerPresentation
+        || markerPresentation.role !== "button"
+        || markerPresentation.tabindex !== "0"
+        || markerPresentation.rootRotation !== 0
+        || !markerPresentation.rotatorTransform.startsWith("rotate(")
+        || markerPresentation.labelAriaHidden !== "true"
+        || !/^(none|matrix\(1(?:\.0+)?,[ ]*0(?:\.0+)?,[ ]*0(?:\.0+)?,[ ]*1(?:\.0+)?)/.test(markerPresentation.labelTransform)) {
+        throw new Error(`Aircraft marker presentation contract failed at ${viewport.width}px: ${JSON.stringify(markerPresentation)}`);
+      }
+      const beforeBearing = markerPresentation.rotatorTransform;
+      await page.evaluate(() => window.__airradarMapForDiagnostics?.rotateTo(90, { duration: 0 }));
+      await page.waitForFunction((previous) => {
+        const transform = document.querySelector(".aircraft-plane-rotator")?.getAttribute("style") || "";
+        return transform !== previous;
+      }, beforeBearing);
+      await page.evaluate(() => window.__airradarMapForDiagnostics?.rotateTo(0, { duration: 0 }));
       if (viewport.width >= 821) {
         const trafficTrigger = page.getByTestId("traffic-trigger");
         const sidebar = page.getByTestId("radar-sidebar");
