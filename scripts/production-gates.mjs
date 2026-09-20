@@ -243,19 +243,21 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await routeSmoke.close();
-    const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
-    await sweepPage.goto(`${baseUrl}/?mapDiagnostics=1`, { waitUntil: "domcontentloaded" });
-    await sweepPage.locator("h1").first().waitFor({ state: "visible" });
-    const sweepFailures = [];
-    for (let width = 821; width <= 1200; width += 1) {
-      await sweepPage.setViewportSize({ width, height: 900 });
-      const metrics = await sweepPage.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
-      if (metrics.scrollWidth > metrics.innerWidth + 1) sweepFailures.push({ width, ...metrics });
-    }
-    await sweepPage.close();
-    if (sweepFailures.length) throw new Error(`Responsive width sweep failed: ${JSON.stringify(sweepFailures.slice(0, 10))}`);
-    console.log("[production-gates] responsive width sweep 821-1200 step=1 failures=0 pageReloads=1");
     const configuredViewport = process.env.PRODUCTION_GATE_BROWSER_VIEWPORT;
+    if (!configuredViewport) {
+      const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
+      await sweepPage.goto(`${baseUrl}/?mapDiagnostics=1`, { waitUntil: "domcontentloaded" });
+      await sweepPage.locator("h1").first().waitFor({ state: "visible" });
+      const sweepFailures = [];
+      for (let width = 821; width <= 1200; width += 1) {
+        await sweepPage.setViewportSize({ width, height: 900 });
+        const metrics = await sweepPage.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
+        if (metrics.scrollWidth > metrics.innerWidth + 1) sweepFailures.push({ width, ...metrics });
+      }
+      await sweepPage.close();
+      if (sweepFailures.length) throw new Error(`Responsive width sweep failed: ${JSON.stringify(sweepFailures.slice(0, 10))}`);
+      console.log("[production-gates] responsive width sweep 821-1200 step=1 failures=0 pageReloads=1");
+    }
     const browserViewports = [
       { width: 320, height: 844 },
       { width: 360, height: 844 },
@@ -326,15 +328,34 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       };
       const browserErrors = [];
       let expectedTransientFailures = 0;
+      let expectedRateLimitedTileErrors = 0;
       let airportAttempts = 0;
       let atcAttempts = 0;
-      page.on("console", (message) => { if (message.type() === "error" && !message.text().includes("503")) browserErrors.push(`console: ${message.text()}`); });
+      page.on("console", (message) => {
+        if (message.type() !== "error" || message.text().includes("503")) return;
+        const location = message.location().url || "(unknown location)";
+        if (message.text().includes("429") && expectedRateLimitedTileErrors > 0) {
+          expectedRateLimitedTileErrors -= 1;
+          return;
+        }
+        browserErrors.push(`console: ${message.text()} location=${location}`);
+      });
       page.on("pageerror", (error) => browserErrors.push(`page: ${error.message}`));
       page.on("worker", (worker) => worker.on("error", (error) => browserErrors.push(`worker: ${error.message}`)));
       page.on("response", (response) => {
-        if (response.status() >= 500) {
-          if (expectedTransientFailures > 0) expectedTransientFailures -= 1;
-          else browserErrors.push(`http ${response.status()}: ${response.url()}`);
+        if (response.status() >= 400) {
+          if (response.status() === 429 && response.url().includes("tile.openstreetmap.org")) {
+            expectedRateLimitedTileErrors += 1;
+            const request = response.request();
+            console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${request.resourceType()} initiator=${request.frame()?.url() ?? "(no frame)"}`);
+            return;
+          }
+          if (response.status() === 503 && expectedTransientFailures > 0) expectedTransientFailures -= 1;
+          else {
+            const request = response.request();
+            const frameUrl = request.frame()?.url() ?? "(no frame)";
+            browserErrors.push(`http ${response.status()}: ${response.url()} resourceType=${request.resourceType()} initiator=${frameUrl}`);
+          }
         }
       });
       await page.route("**/api/airports**", async (route) => {
