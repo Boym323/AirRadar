@@ -5,6 +5,16 @@ import { normalizeIcaoHex } from "@/lib/server/validation";
 
 export const dynamic = "force-dynamic";
 
+const DEFAULT_HISTORY_LIMIT = 500;
+const MAX_HISTORY_LIMIT = 500;
+
+function requestedLimit(request: Request): number {
+  const raw = new URL(request.url).searchParams.get("limit");
+  if (raw === null || raw.trim() === "") return DEFAULT_HISTORY_LIMIT;
+  const value = Number(raw);
+  return Number.isInteger(value) && value > 0 ? Math.min(MAX_HISTORY_LIMIT, value) : DEFAULT_HISTORY_LIMIT;
+}
+
 export async function GET(request: Request, context: { params: Promise<{ hex: string }> }): Promise<Response> {
   const { hex } = await context.params;
   const rateLimit = checkPublicRateLimit("history", request);
@@ -22,6 +32,6 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
   const service = getAircraftStateService();
   await service.waitForReady();
   const current = service.getAircraft(normalizedHex);
-  const history = await getAircraftHistory(normalizedHex, current);
+  const history = await getAircraftHistory(normalizedHex, current, requestedLimit(request));
   return Response.json({ icaoHex: normalizedHex, ...history }, { headers: { "Cache-Control": "no-store" } });
 }

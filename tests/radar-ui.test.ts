@@ -144,7 +144,7 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("checked={showAtc}");
     expect(appSource).toContain("useDatasetQuery");
     expect(appSource).toContain('url: "/api/airspace/activity"');
-    expect(appSource).toContain('url: "/api/ats/routes"');
+    expect(appSource).toContain('url: "/api/ats/routes?view=map"');
     expect(datasetSource).toContain('"retrying"');
     expect(datasetSource).toContain("retry-after");
     expect(datasetSource).toContain("signal");

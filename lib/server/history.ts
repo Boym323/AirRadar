@@ -1115,7 +1115,8 @@ export async function recordAircraftSnapshot(
   return result;
 }
 
-export async function getAircraftHistory(hex: string, fallback: Aircraft | null): Promise<HistoryResponse> {
+export async function getAircraftHistory(hex: string, fallback: Aircraft | null, limit = 500): Promise<HistoryResponse> {
+  const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(500, limit) : 500;
   const database = getPrisma();
   if (database) {
     try {
@@ -1131,7 +1132,7 @@ export async function getAircraftHistory(hex: string, fallback: Aircraft | null)
         const positions = await schema.FlightPosition
           .where({ flightId: flight.id })
           .orderBy((row) => row.recordedAt.desc())
-          .limit(500)
+          .limit(safeLimit)
           .all();
         return {
           source: "postgres",
@@ -1182,7 +1183,7 @@ export async function getAircraftHistory(hex: string, fallback: Aircraft | null)
           minDistanceKm: fallback.distanceKm,
         }
       : null,
-    positions: fallback?.trail.map((position) => ({
+    positions: fallback?.trail.slice(-safeLimit).map((position) => ({
       recordedAt: position.recordedAt,
       lat: position.lat,
       lon: position.lon,
