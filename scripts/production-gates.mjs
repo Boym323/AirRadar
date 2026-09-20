@@ -243,6 +243,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await routeSmoke.close();
+    const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
+    await sweepPage.goto(`${baseUrl}/?mapDiagnostics=1`, { waitUntil: "domcontentloaded" });
+    await sweepPage.locator("h1").first().waitFor({ state: "visible" });
+    const sweepFailures = [];
+    for (let width = 821; width <= 1200; width += 1) {
+      await sweepPage.setViewportSize({ width, height: 900 });
+      const metrics = await sweepPage.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
+      if (metrics.scrollWidth > metrics.innerWidth + 1) sweepFailures.push({ width, ...metrics });
+    }
+    await sweepPage.close();
+    if (sweepFailures.length) throw new Error(`Responsive width sweep failed: ${JSON.stringify(sweepFailures.slice(0, 10))}`);
+    console.log("[production-gates] responsive width sweep 821-1200 step=1 failures=0 pageReloads=1");
     for (const viewport of [
       { width: 320, height: 844 },
       { width: 360, height: 844 },
@@ -292,7 +304,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           else browserErrors.push(`http ${response.status()}: ${response.url()}`);
         }
       });
-      await page.route("**/api/airports", async (route) => {
+      await page.route("**/api/airports**", async (route) => {
         airportAttempts += 1;
         if (viewport.width === 375 && airportAttempts === 1) {
           expectedTransientFailures += 1;
@@ -308,7 +320,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           ]),
         });
       });
-      await page.route("**/api/atc/sectors", async (route) => {
+      await page.route("**/api/atc/sectors**", async (route) => {
         atcAttempts += 1;
         if (viewport.width === 375 && atcAttempts === 1) {
           expectedTransientFailures += 1;

@@ -21,7 +21,7 @@
     "lint": "eslint . --cache --cache-location .cache/eslint/",
     "typecheck": "prisma contract emit && next typegen && tsc --noEmit",
     "typecheck:prepared": "next typegen && tsc --noEmit",
-    "test": "vitest run --changed",
+    "test": "vitest run",
     "test:changed": "node scripts/test-changed.mjs",
     "test:targeted": "vitest run",
     "test:full": "vitest run",
