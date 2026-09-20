@@ -80,16 +80,31 @@ export function appendTrailPoint(
   point: TrailPosition,
   now = Date.now(),
 ): TrailPoint[] {
+  void now;
+  const next: TrailPoint = {
+    lat: point.lat,
+    lon: point.lon,
+    recordedAt: point.recordedAt,
+    altitude: point.altitude ?? null,
+    groundSpeed: point.groundSpeed ?? null,
+    track: point.track ?? null,
+  };
+  const nextAt = recordedAtMs(next);
+  if (!Number.isFinite(nextAt)) return [...trail];
+
   const previous = trail.at(-1);
   if (previous) {
     const previousAt = recordedAtMs(previous);
-    const nextAt = recordedAtMs(point);
-    // The live tail is append-only. A delayed source or a source switch may
-    // not rewrite the already confirmed endpoint or create a false segment.
-    if (!Number.isFinite(nextAt) || nextAt <= previousAt) return [...trail];
-    if (!isPlausibleTransition(previous, point)) return [...trail];
+    // The live tail is already chronological and sanitized. Keep appends on an
+    // O(n) array-copy fast path instead of re-sorting and re-deduplicating the
+    // complete trail for every SSE position update.
+    if (nextAt <= previousAt) return [...trail];
+    if (!isPlausibleTransition(previous, next)) return [...trail];
+    if (Math.abs(previous.lat - next.lat) <= 0.00001 && Math.abs(previous.lon - next.lon) <= 0.00001) {
+      return [...trail.slice(0, -1), next];
+    }
   }
-  return boundTrailPoints([...trail, point], now);
+  return [...trail, next];
 }
 
 export function trailPointFromAircraft(aircraft: Pick<AircraftView, "lat" | "lon" | "lastSeen" | "seenSeconds" | "seenPosSeconds" | "altitude" | "groundSpeed" | "track">): TrailPoint | null {
