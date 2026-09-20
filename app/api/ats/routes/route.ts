@@ -77,11 +77,15 @@ export async function GET(): Promise<Response> {
     );
   }
 
-  const sourceUnchanged = cachedPayload
+  let value: AtsPayload;
+  if (cachedPayload
     && cachedPayload.documents.length === documents.length
-    && cachedPayload.documents.every((document, index) => document === documents[index]);
-  const value = sourceUnchanged ? cachedPayload.value : buildPayload(documents);
-  if (!sourceUnchanged) cachedPayload = { documents, value };
+    && cachedPayload.documents.every((document, index) => document === documents[index])) {
+    value = cachedPayload.value;
+  } else {
+    value = buildPayload(documents);
+    cachedPayload = { documents, value };
+  }
 
   return Response.json(value, {
     headers: { "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400" },
