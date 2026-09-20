@@ -27,7 +27,7 @@ import {
   watchlistSummary,
 } from "@/lib/i18n";
 import { haversineDistanceKm } from "@/lib/geo";
-import { MAX_PREDICTION_CORRECTION_KM, motionAt, normalizeHeading, predictedPosition, shortestLongitudeDelta } from "@/lib/aircraft/motion";
+import { MAX_PREDICTION_CORRECTION_KM, motionAt, normalizeHeading, predictedPosition, shortestLongitudeDelta, createMotionHistory, updateMotionHistory, AIRCRAFT_ICON_ROTATION_OFFSET_DEG, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -196,6 +196,7 @@ interface AircraftAnimationJob {
   correctionStartedAt: number;
   correctionDurationMs: number;
   sourceReceivedAt: number;
+  history: MotionHistory;
 }
 
 function sourceObservedPerformanceTime(aircraft: AircraftView, receivedAt: number): number | null {
@@ -204,12 +205,12 @@ function sourceObservedPerformanceTime(aircraft: AircraftView, receivedAt: numbe
 }
 
 function predictedMarkerPosition(job: AircraftAnimationJob, timestamp: number): [number, number] {
-  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs });
+  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs }, job.history);
   return [motion.lon, motion.lat];
 }
 
 function hasContinuousPrediction(job: AircraftAnimationJob, timestamp: number): boolean {
-  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs });
+  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs }, job.history);
   return motion.predictionActive || motion.correctionActive;
 }
 
@@ -1499,6 +1500,7 @@ export function AirRadarApp() {
           correctionStartedAt: now,
           correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
           sourceReceivedAt: now,
+          history: updateMotionHistory(createMotionHistory(), source),
         });
         return;
       }
@@ -1516,7 +1518,8 @@ export function AirRadarApp() {
           animationSchedulerRef.current?.();
           return;
         }
-        const [predictedLon, predictedLat] = predictedPosition(source, now);
+        updateMotionHistory(previous.history, source);
+        const [predictedLon, predictedLat] = predictedPosition(source, now, previous.history);
         const correctionDistance = haversineDistanceKm(current.lat, current.lng, predictedLat, predictedLon);
         const correctionDurationMs = Math.min(
           MAX_AIRCRAFT_ANIMATION_MS,
@@ -1532,7 +1535,7 @@ export function AirRadarApp() {
         } else {
           // A large discrepancy usually means a stale/changed source position,
           // not a correction that should be animated across the map.
-          marker.setLngLat(predictedPosition(source, now));
+          marker.setLngLat(predictedPosition(source, now, previous.history));
           previous.correctionLon = 0;
           previous.correctionLat = 0;
         }
@@ -1547,6 +1550,7 @@ export function AirRadarApp() {
           correctionStartedAt: now,
           correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
           sourceReceivedAt: now,
+          history: updateMotionHistory(createMotionHistory(), source),
         });
       }
       animationSchedulerRef.current?.();
@@ -1628,9 +1632,9 @@ export function AirRadarApp() {
       const renderedMotion = motionJob ? motionAt(motionJob.source, performance.now(), {
         lon: motionJob.correctionLon, lat: motionJob.correctionLat,
         startedAt: motionJob.correctionStartedAt, durationMs: motionJob.correctionDurationMs,
-      }) : null;
+      }, motionJob.history) : null;
       const renderedHeading = renderedMotion?.heading ?? normalizeHeading(aircraft.track);
-      if (renderedHeading !== null) marker.setRotation(renderedHeading);
+      if (renderedHeading !== null) marker.setRotation(renderedHeading + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
     }
 
     for (const [hex, marker] of aircraftMarkersRef.current) {

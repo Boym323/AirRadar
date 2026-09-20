@@ -3,6 +3,10 @@ import { destinationPoint, haversineDistanceKm } from "@/lib/geo";
 export const KNOT_TO_KM_PER_HOUR = 1.852;
 export const MAX_PREDICTION_AGE_MS = 15_000;
 export const MAX_PREDICTION_CORRECTION_KM = 12;
+export const AIRCRAFT_ICON_ROTATION_OFFSET_DEG = 0;
+export const MAX_TURN_RATE_DEG_PER_SEC = 12;
+export const MIN_TURN_OBSERVATION_GAP_MS = 250;
+export const MAX_TURN_OBSERVATION_GAP_MS = 12_000;
 
 export type MotionSource = {
   lat: number; lon: number; observedAt: number | null; receivedAt?: number;
@@ -11,6 +15,34 @@ export type MotionSource = {
 };
 
 export type MotionResult = { lon: number; lat: number; heading: number | null; predictionActive: boolean; correctionActive: boolean; stale: boolean };
+export type MotionHistory = { lastTrack: number | null; previousTrack: number | null; lastObservedAt: number | null; previousObservedAt: number | null; turnRateDegPerSec: number; lastLat: number | null; lastLon: number | null; source: string | null };
+
+export function createMotionHistory(): MotionHistory {
+  return { lastTrack: null, previousTrack: null, lastObservedAt: null, previousObservedAt: null, turnRateDegPerSec: 0, lastLat: null, lastLon: null, source: null };
+}
+
+export function updateMotionHistory(history: MotionHistory, source: MotionSource): MotionHistory {
+  const sourceKey = `${source.positionOrigin ?? ""}:${source.positionSource ?? ""}`;
+  if (history.source !== null && history.source !== sourceKey) return Object.assign(createMotionHistory(), { source: sourceKey, lastLat: source.lat, lastLon: source.lon });
+  history.source = sourceKey;
+  if (history.lastLat !== null && history.lastLon !== null) {
+    const jump = haversineDistanceKm(history.lastLat, history.lastLon, source.lat, source.lon);
+    if (jump > MAX_PREDICTION_CORRECTION_KM) return Object.assign(createMotionHistory(), { source: sourceKey, lastLat: source.lat, lastLon: source.lon });
+  }
+  if (source.track !== null && source.observedAt !== null && (history.lastObservedAt === null || source.observedAt > history.lastObservedAt)) {
+    if (history.lastTrack !== null && history.lastObservedAt !== null) {
+      const gap = source.observedAt - history.lastObservedAt;
+      if (gap >= MIN_TURN_OBSERVATION_GAP_MS && gap <= MAX_TURN_OBSERVATION_GAP_MS) {
+        const rate = shortestAngleDelta(history.lastTrack, source.track) / (gap / 1000);
+        if (Math.abs(rate) <= MAX_TURN_RATE_DEG_PER_SEC) history.turnRateDegPerSec = history.turnRateDegPerSec * 0.7 + rate * 0.3;
+      }
+    }
+    history.previousTrack = history.lastTrack; history.previousObservedAt = history.lastObservedAt;
+    history.lastTrack = normalizeHeading(source.track); history.lastObservedAt = source.observedAt;
+  }
+  history.lastLat = source.lat; history.lastLon = source.lon;
+  return history;
+}
 
 export function normalizeHeading(value: number | null | undefined): number | null {
   return value == null || !Number.isFinite(value) ? null : ((value % 360) + 360) % 360;
@@ -29,25 +61,37 @@ export function shortestLongitudeDelta(from: number, to: number): number {
   let delta = from - to; if (delta > 180) delta -= 360; if (delta < -180) delta += 360; return delta;
 }
 
-export function predictedPosition(source: MotionSource, timestamp: number): [number, number] {
+export function predictedPosition(source: MotionSource, timestamp: number, history?: MotionHistory): [number, number] {
   if (source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS) return [source.lon, source.lat];
-  const speed = source.groundSpeed; const heading = normalizeHeading(source.track);
+  const speed = source.groundSpeed; const heading = normalizeHeading(source.track) ?? history?.lastTrack ?? null;
   if (speed === null || !Number.isFinite(speed) || speed < 0.5 || heading === null) return [source.lon, source.lat];
-  return destinationPoint(source.lat, source.lon, speed * KNOT_TO_KM_PER_HOUR * Math.max(0, timestamp - source.observedAt) / 3_600_000, heading);
+  const elapsed = Math.min(MAX_PREDICTION_AGE_MS, Math.max(0, timestamp - source.observedAt));
+  const turnRate = history?.turnRateDegPerSec ?? 0;
+  if (!history || Math.abs(turnRate) < 0.05) return destinationPoint(source.lat, source.lon, speed * KNOT_TO_KM_PER_HOUR * elapsed / 3_600_000, heading);
+  let lat = source.lat; let lon = source.lon; let course = heading;
+  const stepMs = 250;
+  for (let remaining = elapsed; remaining > 0; remaining -= stepMs) {
+    const dt = Math.min(stepMs, remaining) / 1000;
+    [lon, lat] = destinationPoint(lat, lon, speed * KNOT_TO_KM_PER_HOUR * dt / 3600, course);
+    course = normalizeHeading(course + turnRate * dt)!;
+  }
+  return [lon, lat];
 }
 
-export function predictionIsActive(source: MotionSource, timestamp: number): boolean {
-  const heading = normalizeHeading(source.track);
+export function predictionIsActive(source: MotionSource, timestamp: number, history?: MotionHistory): boolean {
+  const heading = normalizeHeading(source.track) ?? history?.lastTrack ?? null;
   return source.observedAt !== null && timestamp >= source.observedAt && timestamp - source.observedAt <= MAX_PREDICTION_AGE_MS
     && source.groundSpeed !== null && Number.isFinite(source.groundSpeed) && source.groundSpeed >= 0.5 && heading !== null;
 }
 
-export function motionAt(source: MotionSource, timestamp: number, correction?: { lon: number; lat: number; startedAt: number; durationMs: number }): MotionResult {
-  const [lon, lat] = predictedPosition(source, timestamp);
+export function motionAt(source: MotionSource, timestamp: number, correction?: { lon: number; lat: number; startedAt: number; durationMs: number }, history?: MotionHistory): MotionResult {
+  const [lon, lat] = predictedPosition(source, timestamp, history);
   const stale = source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS;
   const progress = correction ? Math.max(0, Math.min(1, (timestamp - correction.startedAt) / correction.durationMs)) : 1;
   const active = Boolean(correction && progress < 1 && !stale);
-  return { lon: normalizeLongitude(lon + (correction?.lon ?? 0) * (1 - progress)), lat: lat + (correction?.lat ?? 0) * (1 - progress), heading: normalizeHeading(source.track), predictionActive: predictionIsActive(source, timestamp), correctionActive: active, stale };
+  const baseHeading = normalizeHeading(source.track) ?? history?.lastTrack ?? null;
+  const heading = baseHeading === null ? null : normalizeHeading(baseHeading + (history?.turnRateDegPerSec ?? 0) * Math.max(0, timestamp - (source.observedAt ?? timestamp)) / 1000);
+  return { lon: normalizeLongitude(lon + (correction?.lon ?? 0) * (1 - progress)), lat: lat + (correction?.lat ?? 0) * (1 - progress), heading, predictionActive: predictionIsActive(source, timestamp, history), correctionActive: active, stale };
 }
 
 export function correctionFor(current: { lon: number; lat: number }, source: MotionSource, timestamp: number, durationMs: number) {
