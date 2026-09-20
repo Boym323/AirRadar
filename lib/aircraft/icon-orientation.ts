@@ -1,13 +1,12 @@
 import type { AircraftPresentationKind } from "@/lib/aircraft/icon-classification";
 
-export const TAR1090_ICON_ROTATION_OFFSET_DEG = 180;
+export const TAR1090_ICON_ROTATION_OFFSET_DEG = 0;
 const TAR1090_ASSET_PREFIX = "/aircraft-icons-tar1090/";
 
 /**
- * The bundled tar1090 SVG family uses the opposite visual basis from the
- * geographic heading used by AirRadar. This 180° presentation correction was
- * previously applied at the marker boundary; keep it asset-scoped so other
- * icon families and the motion model remain untouched.
+ * The bundled tar1090 SVG family is north-up at zero degrees. Keep this
+ * lookup explicit so future asset families can declare their own basis
+ * without reintroducing a global rotation correction.
  */
 const AIRCRAFT_ICON_ROTATION_OFFSETS: Partial<Record<AircraftPresentationKind | string, number>> = {};
 

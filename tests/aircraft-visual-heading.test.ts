@@ -32,13 +32,13 @@ describe("aircraft visual heading", () => {
   });
 
 
-  it("restores the tar1090 presentation basis without changing motion heading", () => {
+  it("keeps the tar1090 north-up presentation basis without changing motion heading", () => {
     const assetOffset = aircraftIconRotationOffset("/aircraft-icons-tar1090/A320.svg");
-    expect(resolveAircraftVisualHeading({ track: 0, mapBearing: 0, assetOffset })).toBe(180);
-    expect(resolveAircraftVisualHeading({ track: 90, mapBearing: 0, assetOffset })).toBe(270);
-    expect(resolveAircraftVisualHeading({ track: 180, mapBearing: 0, assetOffset })).toBe(0);
-    expect(resolveAircraftVisualHeading({ track: 270, mapBearing: 0, assetOffset })).toBe(90);
-    expect(resolveAircraftVisualHeading({ track: 90, mapBearing: 45, assetOffset })).toBe(225);
+    expect(resolveAircraftVisualHeading({ track: 0, mapBearing: 0, assetOffset })).toBe(0);
+    expect(resolveAircraftVisualHeading({ track: 90, mapBearing: 0, assetOffset })).toBe(90);
+    expect(resolveAircraftVisualHeading({ track: 180, mapBearing: 0, assetOffset })).toBe(180);
+    expect(resolveAircraftVisualHeading({ track: 270, mapBearing: 0, assetOffset })).toBe(270);
+    expect(resolveAircraftVisualHeading({ track: 90, mapBearing: 45, assetOffset })).toBe(45);
   });
 
   it("normalizes north crossing without a 180 degree flip", () => {
