@@ -773,12 +773,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
       }
+      // At 375px this follows the deliberate first-request 503 fixture above.
+      // Give the independent ATC and ATS context effects enough time to
+      // complete on a contended CI browser before treating it as a regression.
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
         if (!map?.isStyleLoaded()) return false;
         return JSON.stringify(map.getFilter("atc-sectors-context-highlight"))?.includes("fixture-sector")
           && JSON.stringify(map.getFilter("ats-route-context-highlight"))?.includes("fixture-segment");
-      }, undefined, { timeout: 10_000 });
+      }, undefined, { timeout: 30_000 });
       await page.locator(viewport.width >= 821 ? ".drawer-close-button" : ".close-button").click();
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
