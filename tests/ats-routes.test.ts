@@ -47,6 +47,15 @@ describe("CZ ATS routes", () => {
     expect(body.routes[0].segments[0]).toHaveProperty("availabilityStatus", "UNKNOWN");
   });
 
+  it("omits full route records from the map view", async () => {
+    useDataset(validFixturePath);
+    const response = await GET(new Request("http://localhost/api/ats/routes?view=map"));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body).not.toHaveProperty("routes");
+    expect(body).toMatchObject({ available: true, segments: expect.any(Object), labels: expect.any(Object), points: expect.any(Object) });
+  });
+
   it("fails closed for a missing dataset", () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "airradar-ats-"));
     useDataset(path.join(directory, "missing.json"));

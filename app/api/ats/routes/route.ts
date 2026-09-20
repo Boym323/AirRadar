@@ -22,6 +22,8 @@ type AtsPayload = {
   points: ReturnType<typeof createCzAtsGeoJSON>["points"];
 };
 
+type AtsMapPayload = Omit<AtsPayload, "routes">;
+
 let cachedPayload: { documents: AtsDocument[]; value: AtsPayload } | null = null;
 
 function buildPayload(documents: AtsDocument[]): AtsPayload {
@@ -66,13 +68,14 @@ function buildPayload(documents: AtsDocument[]): AtsPayload {
   };
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request?: Request): Promise<Response> {
+  const view = request ? new URL(request.url).searchParams.get("view") : null;
   const documents = [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()]
     .filter((value): value is AtsDocument => value !== null);
   if (!documents.length) {
     cachedPayload = null;
     return Response.json(
-      { available: false, status: "unavailable", routes: [] },
+      view === "map" ? { available: false, status: "unavailable" } : { available: false, status: "unavailable", routes: [] },
       { status: 503, headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } },
     );
   }
@@ -87,7 +90,10 @@ export async function GET(): Promise<Response> {
     cachedPayload = { documents, value };
   }
 
-  return Response.json(value, {
+  const payload: AtsPayload | AtsMapPayload = view === "map"
+    ? { available: value.available, source: value.source, counts: value.counts, segments: value.segments, labels: value.labels, points: value.points }
+    : value;
+  return Response.json(payload, {
     headers: { "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400" },
   });
 }

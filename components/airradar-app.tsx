@@ -49,7 +49,7 @@ import type { MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
-import { airportVisibilityFilter, airportVisibilityTier, airportsWithinMapRadius, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility } from "@/lib/airport-visibility";
+import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
@@ -66,7 +66,6 @@ import {
 } from "@/lib/route-visualization";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
 import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
-import type { CzAtsRoute } from "@/lib/ats/cz-routes";
 import { LogbookSummary } from "@/components/logbook-summary";
 import { IntelligenceFeed } from "@/components/intelligence-feed";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
@@ -112,7 +111,7 @@ interface WeatherRadarCatalogResponse { available: boolean; frames: Array<{ id: 
 interface WindResponse { model: string; modelRun: string | null; validAt: string; availableValidTimes: string[]; levelHpa: WindLevelHpa; points: Array<{ lat: number; lon: number; speedKt: number | null; directionDeg: number | null }>; stale: boolean; }
 interface SectorTrafficView { sectorId: string; name: string; at: string; vertical: { lower: string | null; upper: string | null }; traffic: { aircraftCount: number; entering1m: number; entering5m: number; entering15m: number; leaving1m: number; leaving5m: number; leaving15m: number; climbing: number; descending: number; level: number; averageAltitude: number | null; medianAltitude: number | null; averageGroundSpeed: number | null }; trafficLevel: "NONE" | "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH"; frequencies: Array<{ channel: string }>; source: { airspace: string; traffic: string }; }
 const WIND_PRESSURE_LEVELS: WindLevelHpa[] = [850, 700, 500, 300, 200];
-interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; routes?: CzAtsRoute[]; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
+interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
 
 const airportDatasetSchema = z.array(z.object({
   icaoCode: z.string(), name: z.string(), latitude: z.number().finite(), longitude: z.number().finite(),
@@ -427,6 +426,8 @@ export function AirRadarApp() {
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
   const [showOgn, setShowOgn] = useState(false);
   const ognLoadStartedRef = useRef(false);
+  const [intelligenceOpened, setIntelligenceOpened] = useState(false);
+  const [logbookOpened, setLogbookOpened] = useState(false);
   const [trafficSource, setTrafficSource] = useState<TrafficSource>("adsb");
   const [selectedOgnId, setSelectedOgnId] = useState<string | null>(null);
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
@@ -551,7 +552,7 @@ export function AirRadarApp() {
   });
 
   const airportsDataset = useDatasetQuery<Airport[]>({
-    url: "/api/airports",
+    url: receiverPositionAvailable ? `/api/airports?lat=${encodeURIComponent(String(snapshot.receiver.lat))}&lon=${encodeURIComponent(String(snapshot.receiver.lon))}&radiusNm=${AIRPORT_MAP_RADIUS_NM}` : "/api/airports",
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAirportDataset),
     itemCount: (value) => value.length,
@@ -564,11 +565,11 @@ export function AirRadarApp() {
     itemCount: (value) => value.sectors.length,
   });
   const atsDataset = useDatasetQuery<AtsRoutesResponse>({
-    url: "/api/ats/routes",
+    url: "/api/ats/routes?view=map",
     enabled: showAtsRoutes || Boolean(atsPointFocus),
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtsDataset),
-    itemCount: (value) => value.counts?.routes ?? value.routes?.length ?? 0,
+    itemCount: (value) => value.counts?.routes ?? 0,
   });
   const airspaceDataset = useDatasetQuery<AirspaceActivityResponse>({
     url: "/api/airspace/activity",
@@ -657,10 +658,12 @@ export function AirRadarApp() {
       .catch(() => undefined);
   }, []);
 
-  // OGN is a secondary layer. Wait for the first real readsb snapshot so
-  // the primary ADS-B picture wins the initial render race.
   useEffect(() => {
-    if (snapshot.lastSourceUpdate === null || ognLoadStartedRef.current) return;
+    if (!showOgn) {
+      ognLoadStartedRef.current = false;
+      return;
+    }
+    if (ognLoadStartedRef.current) return;
     ognLoadStartedRef.current = true;
     void fetch("/api/ogn/state", { cache: "no-store" })
       .then((response) => response.ok ? response.json() as Promise<OgnStateSnapshot> : null)
@@ -671,11 +674,11 @@ export function AirRadarApp() {
         if (!data.enabled) setShowOgn(false);
       })
       .catch(() => setOgnEnabled(false));
-  }, [snapshot.lastSourceUpdate]);
+  }, [showOgn]);
 
   useEffect(() => {
-    if (ognEnabled !== true && trafficSource === "ogn") setTrafficSource("adsb");
-  }, [ognEnabled, trafficSource]);
+    if ((ognEnabled !== true || !showOgn) && trafficSource === "ogn") setTrafficSource("adsb");
+  }, [ognEnabled, showOgn, trafficSource]);
 
   useEffect(() => {
     try { window.localStorage.setItem("airradar-watchlist", JSON.stringify(watchlist)); } catch { /* optional */ }
@@ -974,7 +977,9 @@ export function AirRadarApp() {
     setSelectedHistoryTrail(null);
     if (!selectedHex) return;
     let active = true;
-    void fetch(`/api/history/${encodeURIComponent(selectedHex)}`, { cache: "no-store" })
+    // 120 samples cover the live trail at the current history sampling cadence
+    // while keeping the selected-aircraft request and boundTrailPoints work small.
+    void fetch(`/api/history/${encodeURIComponent(selectedHex)}?limit=120`, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Aircraft trail history unavailable");
         return (await response.json()) as HistoryResponse & { icaoHex?: string };
@@ -991,7 +996,7 @@ export function AirRadarApp() {
   }, [selectedHex]);
 
   useEffect(() => {
-    if (ognEnabled !== true || snapshot.lastSourceUpdate === null) return;
+    if (ognEnabled !== true || !showOgn) return;
     let active = true;
     const source = new EventSource("/api/ogn/stream");
     const onSnapshot = (event: Event) => {
@@ -1008,7 +1013,7 @@ export function AirRadarApp() {
       source.removeEventListener("snapshot", onSnapshot);
       source.close();
     };
-  }, [ognEnabled, snapshot.lastSourceUpdate]);
+  }, [ognEnabled, showOgn]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -1881,8 +1886,7 @@ export function AirRadarApp() {
 
   useEffect(() => {
     const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
-    const nearbyAirports = airportsWithinMapRadius(airports, { lat: snapshot.receiver.lat, lon: snapshot.receiver.lon });
-    const airportGeoJson = createAirportGeoJSON(nearbyAirports, selectedRouteAirportCodes);
+    const airportGeoJson = createAirportGeoJSON(airports, selectedRouteAirportCodes);
     airportGeoJsonRef.current = airportGeoJson;
     mapReplayRef.current.airports.setData(airportGeoJson);
     const map = mapRef.current;
@@ -2170,7 +2174,7 @@ export function AirRadarApp() {
                   <div className="map-layer-group">
                     <span className="map-layer-group-title">{t.layers.groups.traffic}</span>
                     <label><input type="checkbox" checked={showAircraft} onChange={(event) => setShowAircraft(event.target.checked)} /> {t.layers.aircraft}</label>
-                    {ognEnabled === true && <label><input type="checkbox" checked={showOgn} onChange={(event) => setShowOgn(event.target.checked)} /> {t.layers.ogn}</label>}
+                    <label><input type="checkbox" checked={showOgn} onChange={(event) => setShowOgn(event.target.checked)} /> {t.layers.ogn}</label>
                   </div>
                   <div className="map-layer-group">
                     <span className="map-layer-group-title">{t.layers.groups.aviation}</span>
@@ -2350,7 +2354,10 @@ export function AirRadarApp() {
           </div>
 
           <RelevantAtcPanel summaries={snapshot.relevantAtcFrequencies} expanded={atcExpanded} onOpen={() => setAtcExpanded(true)} />
-          <IntelligenceFeed />
+          <details className="sidebar-secondary-tools" onToggle={(event) => setIntelligenceOpened(event.currentTarget.open)}>
+            <summary>{t.intelligence.title}<span>{t.common.more}</span></summary>
+            {intelligenceOpened && <IntelligenceFeed />}
+          </details>
 
           <div id="traffic-list" className={`aircraft-list ${trafficSource === "ogn" ? "ogn-traffic-list" : ""}`}>
             {trafficSource === "ogn" ? (
@@ -2383,9 +2390,9 @@ export function AirRadarApp() {
             ))}
           </div>
 
-          <details className="sidebar-secondary-tools">
+          <details className="sidebar-secondary-tools" onToggle={(event) => setLogbookOpened(event.currentTarget.open)}>
             <summary>{t.dashboard.logbookTitle}<span>{t.dashboard.openStatistics}</span></summary>
-            <LogbookSummary />
+            {logbookOpened && <LogbookSummary />}
           </details>
 
           </div>
