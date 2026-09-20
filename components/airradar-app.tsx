@@ -31,7 +31,8 @@ import { MAX_PREDICTION_CORRECTION_KM, motionAt, normalizeHeading, predictedPosi
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
-import { TAR1090_CATEGORY_ICON_ASSETS, TAR1090_GROUND_SQUARE_ICON_ASSET, TAR1090_ICON_CODES, TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
+import { TAR1090_ICON_CODES, TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
+import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
@@ -411,35 +412,12 @@ function aircraftTypeCode(aircraft: AircraftIconInput): string {
 }
 
 function aircraftIconAsset(aircraft: AircraftIconInput): string {
-  const type = aircraftTypeCode(aircraft);
-  // Normalize a few common provider codes when their closest tar1090 drawing
-  // exists; otherwise the tar1090 category or fallback asset below is used.
-  const aliases: Record<string, string> = {
-    A319: "A320",
-    C25A: "C25B",
-    C30J: "C130",
-    C340: "DA42",
-    C56X: "C25B",
-    C68A: "C208",
-    E190: "E195",
-    E295: "E195",
-    GALX: "GLF6",
-    GLF5: "GLF6",
-    BE40: "C25B",
-    M20P: "PA46",
-  };
-  const code = TAR1090_ICON_CODES.has(type) ? type : aliases[type] ?? type;
-  const category = aircraft.category?.trim().toUpperCase() ?? "";
-  const categoryAsset = TAR1090_CATEGORY_ICON_ASSETS[category as keyof typeof TAR1090_CATEGORY_ICON_ASSETS];
-  // C0-C3 are surface-vehicle categories. They must win over a stale or
-  // misleading type-designator so ground vehicles never get an aircraft glyph.
-  if (/^C[0-3]$/.test(category) && categoryAsset) return categoryAsset;
-  if (TAR1090_ICON_CODES.has(code)) return `/aircraft-icons-tar1090/${code}.svg`;
-  if (categoryAsset) return categoryAsset;
-  return aircraft.onGround ? TAR1090_GROUND_SQUARE_ICON_ASSET : TAR1090_UNKNOWN_ICON_ASSET;
+  return classifyAircraftIcon(aircraft).asset ?? TAR1090_UNKNOWN_ICON_ASSET;
 }
 
 function aircraftMarkerKind(aircraft: AircraftIconInput): AircraftMarkerKind {
+  const canonical = classifyAircraftIcon(aircraft);
+  if (canonical.kind === "helicopter" || canonical.kind === "glider" || canonical.kind === "drone" || canonical.kind === "ground") return canonical.kind;
   const type = aircraftTypeCode(aircraft);
   const category = aircraft.category?.trim().toUpperCase() ?? "";
   if (/^C[0-3]$/.test(category) || ["GND", "GRND", "SERV", "EMER", "TWR"].includes(type)) return "ground";
