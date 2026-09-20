@@ -255,7 +255,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await sweepPage.close();
     if (sweepFailures.length) throw new Error(`Responsive width sweep failed: ${JSON.stringify(sweepFailures.slice(0, 10))}`);
     console.log("[production-gates] responsive width sweep 821-1200 step=1 failures=0 pageReloads=1");
-    for (const viewport of [
+    const configuredViewport = process.env.PRODUCTION_GATE_BROWSER_VIEWPORT;
+    const browserViewports = [
       { width: 320, height: 844 },
       { width: 360, height: 844 },
       { width: 375, height: 812 },
@@ -278,17 +279,49 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       { width: 1280, height: 800 },
       { width: 1440, height: 900 },
       { width: 1920, height: 1080 },
-    ]) {
+    ];
+    const viewports = configuredViewport
+      ? browserViewports.filter((viewport) => `${viewport.width}x${viewport.height}` === configuredViewport)
+      : browserViewports;
+    if (configuredViewport && viewports.length !== 1) throw new Error(`Unknown PRODUCTION_GATE_BROWSER_VIEWPORT=${configuredViewport}`);
+    for (const viewport of viewports) {
       console.log(`[production-gates] browser viewport ${viewport.width}x${viewport.height}`);
       const fullSmoke = viewport.width === 375 || viewport.width === 821;
       const page = await browser.newPage({ viewport });
+      const fixtureRequests = { airports: 0, atc: 0, ats: 0, context: 0 };
       const originalWaitForFunction = page.waitForFunction.bind(page);
       page.waitForFunction = async (...args) => {
         try {
           return await originalWaitForFunction(...args);
         } catch (error) {
           const predicate = typeof args[0] === "function" ? args[0].toString().replace(/\s+/g, " ").slice(0, 240) : String(args[0]);
-          throw new Error(`browser predicate timed out at ${viewport.width}px: ${predicate}; ${error instanceof Error ? error.message : String(error)}`);
+          const diagnostics = await page.evaluate(() => {
+            const map = window.__airradarMapForDiagnostics;
+            const layerIds = ["atc-sectors-context-highlight", "ats-route-context-highlight"];
+            const sourceFeature = (sourceId, property, value) => {
+              try { return Boolean(map?.getSource(sourceId) && map.querySourceFeatures(sourceId).some((feature) => feature.properties?.[property] === value)); } catch { return false; }
+            };
+            const layer = (id) => ({
+              exists: Boolean(map?.getLayer(id)),
+              filter: map?.getLayer(id) ? map.getFilter(id) : null,
+              visibility: map?.getLayer(id) ? map.getLayoutProperty(id, "visibility") : null,
+            });
+            return {
+              url: window.location.href,
+              query: Object.fromEntries(new URLSearchParams(window.location.search)),
+              navigation: performance.getEntriesByType("navigation").map((entry) => ({ type: entry.type, redirectCount: entry.redirectCount })),
+              map: {
+                exists: Boolean(map),
+                styleLoaded: Boolean(map?.isStyleLoaded()),
+                layers: Object.fromEntries(layerIds.map((id) => [id, layer(id)])),
+                fixtureData: {
+                  atc: sourceFeature("atc-sectors", "id", "fixture-sector"),
+                  ats: sourceFeature("ats-routes", "segmentId", "fixture-segment"),
+                },
+              },
+            };
+          }).catch((diagnosticError) => ({ evaluationError: String(diagnosticError) }));
+          throw new Error(`browser predicate timed out at ${viewport.width}px: ${predicate}; diagnostics=${JSON.stringify({ ...diagnostics, fixtureRequests })}; ${error instanceof Error ? error.message : String(error)}`);
         }
       };
       const browserErrors = [];
@@ -305,6 +338,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }
       });
       await page.route("**/api/airports**", async (route) => {
+        fixtureRequests.airports += 1;
         airportAttempts += 1;
         if (viewport.width === 375 && airportAttempts === 1) {
           expectedTransientFailures += 1;
@@ -321,6 +355,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         });
       });
       await page.route("**/api/atc/sectors**", async (route) => {
+        fixtureRequests.atc += 1;
         atcAttempts += 1;
         if (viewport.width === 375 && atcAttempts === 1) {
           expectedTransientFailures += 1;
@@ -414,7 +449,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           ],
         }),
       }));
-      await page.route("**/api/aircraft/*/context", (route) => route.fulfill({
+      await page.route("**/api/aircraft/*/context", (route) => {
+        fixtureRequests.context += 1;
+        return route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
@@ -428,7 +465,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           nearestAtsCandidate: null, nearestPoint: null, nextPoint: null, ahead: null, limitation: null,
           computedAt: "2026-09-12T00:00:00.000Z", dataset: { atcVersion: "fixture", atsVersion: "fixture", atcCount: 1, atsSegmentCount: 1 },
         }),
-      }));
+        });
+      });
       await page.route("**/api/weather/sigmet", (route) => route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -464,7 +502,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         contentType: "application/json",
         body: JSON.stringify({ available: false, points: [], stale: false, validAt: null }),
       }));
-      await page.route("**/api/ats/routes", (route) => route.fulfill({
+      await page.route("**/api/ats/routes", (route) => {
+        fixtureRequests.ats += 1;
+        return route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
@@ -476,7 +516,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           labels: { type: "FeatureCollection", features: [] },
           points: { type: "FeatureCollection", features: [] },
         }),
-      }));
+        });
+      });
       await page.goto(`${baseUrl}/?mapDiagnostics=1`, { waitUntil: "domcontentloaded" });
       await page.locator("h1").first().waitFor({ state: "visible" });
       // MapLibre controls and React controls settle asynchronously after the
