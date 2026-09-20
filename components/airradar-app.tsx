@@ -517,6 +517,8 @@ export function AirRadarApp() {
     liveEndpointKey: string;
   } | null>(null);
   const selectedTrailSourceRef = useRef<readonly TrailPoint[] | null>(null);
+  const routeSourceKeyRef = useRef<string | null>(null);
+  const routeAirportSourceKeyRef = useRef<string | null>(null);
   const selectedHexRef = useRef<string | null>(null);
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
@@ -563,13 +565,16 @@ export function AirRadarApp() {
   });
   const atcDataset = useDatasetQuery<AtcDataResponse>({
     url: "/api/atc/sectors",
+    enabled: showAtc || showAtcTraffic || showAupUup,
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtcDataset),
     itemCount: (value) => value.sectors.length,
   });
+  const selectedAircraftForData = selectedHex ? snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : null;
+  const selectedHasRouteData = Boolean(selectedAircraftForData?.enrichment?.route || aircraftDetail?.liveEnrichment?.route);
   const atsDataset = useDatasetQuery<AtsRoutesResponse>({
     url: "/api/ats/routes",
-    enabled: showAtsRoutes || Boolean(atsPointFocus) || Boolean(selectedHex),
+    enabled: showAtsRoutes || Boolean(atsPointFocus) || selectedHasRouteData,
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtsDataset),
     itemCount: (value) => value.counts?.routes ?? value.routes?.length ?? 0,
@@ -616,6 +621,10 @@ export function AirRadarApp() {
   }, [searchParams, showAtcTraffic]);
 
   useEffect(() => {
+    if (!showAtcTraffic) {
+      setSectorFlows([]);
+      return;
+    }
     let active = true; let controller: AbortController | null = null;
     const requestedAt = searchParams.get("at");
     const load = async () => {
@@ -628,7 +637,7 @@ export function AirRadarApp() {
     };
     void load().then(schedule);
     return () => { active = false; controller?.abort(); if (timer !== undefined) window.clearTimeout(timer); };
-  }, [searchParams, sectorFlowWindow]);
+  }, [searchParams, sectorFlowWindow, showAtcTraffic]);
 
   useEffect(() => {
     try {
@@ -1487,6 +1496,17 @@ export function AirRadarApp() {
     ].filter(Boolean).join(" ").toUpperCase().includes(query));
   }, [ognSnapshot.targets, search]);
 
+  const selectedRouteAirportCodesKey = useMemo(() => {
+    const selectedRoute = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex)?.enrichment?.route;
+    return [
+      selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin,
+      selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination,
+    ]
+      .filter((icao): icao is string => Boolean(icao))
+      .map((icao) => icao.trim().toUpperCase())
+      .join("|");
+  }, [selectedHex, snapshot.aircraft]);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -1677,19 +1697,23 @@ export function AirRadarApp() {
           .addTo(map);
         aircraftMarkersRef.current.set(aircraft.icaoHex, marker);
       }
-      // Pass a shallow copy because the motion history updater mutates its
-      // internal source state and React's immutability lint treats snapshot
-      // values as render-owned.
+      // Pass a shallow copy because React's immutability lint treats snapshot
+      // values as render-owned when they cross the animation helper boundary.
       upsertPrediction({ ...aircraft }, marker);
       const root = marker.getElement();
-      root.setAttribute("aria-label", labelForAircraft(aircraft));
-      root.setAttribute("aria-pressed", String(aircraft.icaoHex === selectedHex));
-      root.classList.toggle("selected", aircraft.icaoHex === selectedHex);
+      const aircraftLabel = labelForAircraft(aircraft);
+      if (root.getAttribute("aria-label") !== aircraftLabel) root.setAttribute("aria-label", aircraftLabel);
+      const selectedState = aircraft.icaoHex === selectedHex;
+      const ariaPressed = String(selectedState);
+      if (root.getAttribute("aria-pressed") !== ariaPressed) root.setAttribute("aria-pressed", ariaPressed);
+      root.classList.toggle("selected", selectedState);
       root.classList.toggle("watchlisted", isWatchlisted(aircraft));
       root.classList.toggle("emergency", Boolean(aircraft.emergency));
-      root.classList.toggle("network-only", classifyAircraftSource(aircraft) === "NETWORK_ONLY");
-      root.classList.toggle("source-overlap", classifyAircraftSource(aircraft) === "OVERLAP");
-      root.style.visibility = showAircraft ? "visible" : "hidden";
+      const sourceClass = classifyAircraftSource(aircraft);
+      root.classList.toggle("network-only", sourceClass === "NETWORK_ONLY");
+      root.classList.toggle("source-overlap", sourceClass === "OVERLAP");
+      const markerVisibility = showAircraft ? "visible" : "hidden";
+      if (root.style.visibility !== markerVisibility) root.style.visibility = markerVisibility;
       const plane = root.querySelector<HTMLElement>(".aircraft-plane");
       if (plane) {
         const markerKind = aircraftMarkerKind(aircraft);
@@ -1706,8 +1730,10 @@ export function AirRadarApp() {
       const label = root.querySelector<HTMLElement>(".aircraft-label");
       if (label) {
         const labelText = aircraftMapLabel(aircraft, mapZoom, formatAltitude(aircraft.altitude));
-        label.textContent = labelText ?? "";
-        label.hidden = labelText === null;
+        const nextLabelText = labelText ?? "";
+        if (label.textContent !== nextLabelText) label.textContent = nextLabelText;
+        const labelHidden = labelText === null;
+        if (label.hidden !== labelHidden) label.hidden = labelHidden;
       }
       // readsb's track is clockwise from geographic north. Let MapLibre apply
       // it in map coordinates, so it remains correct when the user rotates map.
@@ -1749,13 +1775,23 @@ export function AirRadarApp() {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && showAirports ? "visible" : "none");
     }
     const routeSource = map.getSource(ROUTE_V2_SOURCE_ID) as GeoJSONSource | undefined;
-    routeSource?.setData(selectedAircraftVisible ? createRouteGeoJSON(
+    const routeSourceKey = selectedAircraftVisible && selected
+      ? `${selected.icaoHex}|${positionObservedAt(selected) ?? ""}|${selected.lat ?? ""}|${selected.lon ?? ""}|${selectedRouteAirportCodesKey}`
+      : "";
+    if (routeSource && routeSourceKeyRef.current !== routeSourceKey) {
+      routeSource.setData(selectedAircraftVisible ? createRouteGeoJSON(
         selected?.enrichment?.route,
         selected && selected.lat !== null && selected.lon !== null ? { lat: selected.lat, lon: selected.lon } : null,
       ) : { type: "FeatureCollection", features: [] });
+      routeSourceKeyRef.current = routeSourceKey;
+    }
     const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
-    routeAirportSource?.setData(selectedAircraftVisible ? createRouteAirportGeoJSON(selected?.enrichment?.route) : createRouteAirportGeoJSON(null));
-  }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+    const routeAirportSourceKey = selectedAircraftVisible ? selectedRouteAirportCodesKey : "";
+    if (routeAirportSource && routeAirportSourceKeyRef.current !== routeAirportSourceKey) {
+      routeAirportSource.setData(selectedAircraftVisible ? createRouteAirportGeoJSON(selected?.enrichment?.route) : createRouteAirportGeoJSON(null));
+      routeAirportSourceKeyRef.current = routeAirportSourceKey;
+    }
+  }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const visible = showAtsRoutes && atsRoutes?.available === true;
@@ -1792,17 +1828,6 @@ export function AirRadarApp() {
     map.flyTo({ center: [coordinates[0], coordinates[1]], zoom: Math.max(map.getZoom(), 9.5), duration: prefersReducedMotion() ? 0 : 700 });
   }, [atsPointFocus, atsRoutes, mapReady]);
 
-  const selectedRouteAirportCodesKey = useMemo(() => {
-    const selectedRoute = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex)?.enrichment?.route;
-    return [
-      selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin,
-      selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination,
-    ]
-      .filter((icao): icao is string => Boolean(icao))
-      .map((icao) => icao.trim().toUpperCase())
-      .join("|");
-  }, [selectedHex, snapshot.aircraft]);
-
   useEffect(() => {
     if (!showSids && !showStars) { setProcedures([]); return; }
     const controller = new AbortController();
@@ -1823,7 +1848,6 @@ export function AirRadarApp() {
   }, [mapReady, procedures, showSids, showStars]);
 
   useEffect(() => {
-    const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
     const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc || showAupUup || showAtcTraffic, airspaceActivity, sectorTraffic);
     const transmitterGeoJson: FeatureCollection = {
       type: "FeatureCollection",
@@ -1839,18 +1863,10 @@ export function AirRadarApp() {
     transmitterGeoJsonRef.current = transmitterGeoJson;
     mapReplayRef.current.atc.setData(atcGeoJson);
     mapReplayRef.current.transmitters.setData(transmitterGeoJson);
-    const nearbyAirports = airportsWithinMapRadius(airports, { lat: snapshot.receiver.lat, lon: snapshot.receiver.lon });
-    const airportGeoJson = createAirportGeoJSON(nearbyAirports, selectedRouteAirportCodes);
-    airportGeoJsonRef.current = airportGeoJson;
-    mapReplayRef.current.airports.setData(airportGeoJson);
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const atcSource = map.getSource("atc-sectors") as GeoJSONSource | undefined;
-    atcSource?.setData(atcGeoJson);
-    const transmitterSource = map.getSource("atc-transmitters") as GeoJSONSource | undefined;
-    transmitterSource?.setData(transmitterGeoJson);
-    const airportSource = map.getSource("route-airports") as GeoJSONSource | undefined;
-    airportSource?.setData(airportGeoJson);
+    (map.getSource("atc-sectors") as GeoJSONSource | undefined)?.setData(atcGeoJson);
+    (map.getSource("atc-transmitters") as GeoJSONSource | undefined)?.setData(transmitterGeoJson);
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
@@ -1860,16 +1876,13 @@ export function AirRadarApp() {
     for (const layer of ["airspace-plan-fill", "airspace-plan-line", "airspace-plan-label"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAupUup ? "visible" : "none");
     }
-    // The initial radar view is receiver-centred on Czechia.  Without this
-    // fit, valid Slovak/Austrian sectors are loaded but remain outside the
-    // viewport, which makes the ATC layer appear Czech-only.
+    // The initial radar view is receiver-centred on Czechia. Without this fit,
+    // valid Slovak/Austrian sectors are loaded but remain outside the viewport.
     if (showAtc && !atcAutoFitRef.current && atcData.sectors.length) {
       const bounds = new maplibregl.LngLatBounds();
       for (const sector of atcData.sectors) for (const polygon of sector.polygons) {
         for (const [lon, lat] of polygon) {
-          if (Number.isFinite(lon) && Number.isFinite(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90) {
-            bounds.extend([lon, lat]);
-          }
+          if (Number.isFinite(lon) && Number.isFinite(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90) bounds.extend([lon, lat]);
         }
       }
       if (!bounds.isEmpty()) {
@@ -1878,7 +1891,18 @@ export function AirRadarApp() {
       }
     }
     if (!showAtc) atcAutoFitRef.current = false;
-  }, [airports, airspaceActivity, atcData, mapReady, sectorTraffic, selectedRouteAirportCodesKey, showAtc, showAtcTraffic, showAupUup, snapshot.receiver.lat, snapshot.receiver.lon]);
+  }, [airspaceActivity, atcData, mapReady, sectorTraffic, showAtc, showAtcTraffic, showAupUup]);
+
+  useEffect(() => {
+    const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
+    const nearbyAirports = airportsWithinMapRadius(airports, { lat: snapshot.receiver.lat, lon: snapshot.receiver.lon });
+    const airportGeoJson = createAirportGeoJSON(nearbyAirports, selectedRouteAirportCodes);
+    airportGeoJsonRef.current = airportGeoJson;
+    mapReplayRef.current.airports.setData(airportGeoJson);
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    (map.getSource("route-airports") as GeoJSONSource | undefined)?.setData(airportGeoJson);
+  }, [airports, mapReady, selectedRouteAirportCodesKey, snapshot.receiver.lat, snapshot.receiver.lon]);
 
   useEffect(() => {
     const map = mapRef.current;

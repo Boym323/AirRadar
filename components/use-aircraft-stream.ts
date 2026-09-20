@@ -31,6 +31,8 @@ export function useAircraftStream({
         const point = trailPointFromAircraft(aircraft);
         if (!point) continue;
         const trail = liveTrailsRef.current.get(aircraft.icaoHex) ?? [];
+        const previous = trail.at(-1);
+        if (previous && Date.parse(point.recordedAt) <= Date.parse(previous.recordedAt)) continue;
         liveTrailsRef.current.set(aircraft.icaoHex, appendTrailPoint(trail, point));
       }
       const visibleHexes = new Set(next.aircraft.map((aircraft) => aircraft.icaoHex));

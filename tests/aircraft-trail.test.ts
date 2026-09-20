@@ -46,6 +46,19 @@ describe("selected aircraft live trail", () => {
     expect(appendTrailPoint([normal], absurd)).toEqual([normal]);
   });
 
+  it("appends live points without reordering and replaces a same-position endpoint", () => {
+    const first = point(0, 14);
+    const second = point(1, 14.01);
+    const stationaryUpdate = point(2, 14.01);
+
+    const appended = appendTrailPoint([first], second);
+    expect(appended.map((item) => item.lon)).toEqual([14, 14.01]);
+
+    const replaced = appendTrailPoint(appended, stationaryUpdate);
+    expect(replaced).toHaveLength(2);
+    expect(replaced[1]?.recordedAt).toBe(stationaryUpdate.recordedAt);
+  });
+
   it("rejects a cross-map history jump that is below the old overly generous limit", () => {
     const first = point(0, 14);
     const jump = point(1, 14.4);
