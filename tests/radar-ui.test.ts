@@ -202,8 +202,9 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("setMapFilters(DEFAULT_MAP_AIRCRAFT_FILTERS)");
   });
 
-  it("loads ATS data whenever route intelligence or ATS point focus needs it", () => {
-    expect(appSource).toContain("enabled: showAtsRoutes || Boolean(atsPointFocus) || Boolean(selectedHex)");
+  it("loads ATS data only when the ATS layer, point focus, or selected route needs it", () => {
+    expect(appSource).toContain("const selectedHasRouteData = Boolean(selectedAircraftForData?.enrichment?.route || aircraftDetail?.liveEnrichment?.route)");
+    expect(appSource).toContain("enabled: showAtsRoutes || Boolean(atsPointFocus) || selectedHasRouteData");
     expect(appSource).toContain("selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin");
     expect(appSource).toContain("selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination");
   });
