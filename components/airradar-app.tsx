@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
@@ -41,8 +42,7 @@ import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
 import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/airspace-activity/map";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
-import { AircraftRadarQuickDetail } from "@/components/aircraft-radar-quick-detail";
-import { AtcVerticalTraffic, SectorFlowsPanel, type SectorFlow } from "@/components/atc-sector-traffic-panels";
+import type { SectorFlow } from "@/components/atc-sector-traffic-panels";
 import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
@@ -66,8 +66,6 @@ import {
 } from "@/lib/route-visualization";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
 import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
-import { LogbookSummary } from "@/components/logbook-summary";
-import { IntelligenceFeed } from "@/components/intelligence-feed";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import { useDatasetQuery, type DatasetState } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
@@ -101,6 +99,11 @@ const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_RADAR_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+const AircraftRadarQuickDetail = dynamic(() => import("@/components/aircraft-radar-quick-detail").then((module) => module.AircraftRadarQuickDetail));
+const AtcVerticalTraffic = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.AtcVerticalTraffic));
+const SectorFlowsPanel = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.SectorFlowsPanel));
+const LogbookSummary = dynamic(() => import("@/components/logbook-summary").then((module) => module.LogbookSummary));
+const IntelligenceFeed = dynamic(() => import("@/components/intelligence-feed").then((module) => module.IntelligenceFeed));
 const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, number], [number, number]] = [
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.north],
   [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.north],
