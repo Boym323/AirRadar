@@ -1,10 +1,13 @@
 import type { AircraftView } from "@/lib/aircraft/types";
+import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
 import { matchesAircraftSourceFilter, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
 
 export type AircraftStatusFilter = "all" | "airborne" | "onGround";
+export type AircraftQuickFilter = "all" | "airborne" | "onGround" | "helicopters" | "gliders" | "uav" | "emergency";
 
 export interface MapAircraftFilters {
   source: AircraftSourceFilter;
+  quick: AircraftQuickFilter;
   status: AircraftStatusFilter;
   minAltitude: string;
   maxAltitude: string;
@@ -18,6 +21,7 @@ export interface MapAircraftFilters {
 
 export const DEFAULT_MAP_AIRCRAFT_FILTERS: MapAircraftFilters = {
   source: "all",
+  quick: "all",
   status: "all",
   minAltitude: "",
   maxAltitude: "",
@@ -62,6 +66,7 @@ function operatorForAircraft(aircraft: AircraftView): string | null {
 
 export function isMapAircraftFilterActive(filters: MapAircraftFilters): boolean {
   return filters.source !== "all"
+    || filters.quick !== "all"
     || filters.status !== "all"
     || filters.minAltitude.trim() !== ""
     || filters.maxAltitude.trim() !== ""
@@ -75,6 +80,12 @@ export function isMapAircraftFilterActive(filters: MapAircraftFilters): boolean 
 
 export function matchesMapAircraftFilters(aircraft: AircraftView, filters: MapAircraftFilters): boolean {
   if (!matchesAircraftSourceFilter(aircraft, filters.source)) return false;
+  if (filters.quick === "airborne" && aircraft.onGround) return false;
+  if (filters.quick === "onGround" && !aircraft.onGround) return false;
+  if (filters.quick === "helicopters" && classifyAircraftIcon(aircraft).kind !== "helicopter") return false;
+  if (filters.quick === "gliders" && classifyAircraftIcon(aircraft).kind !== "glider") return false;
+  if (filters.quick === "uav" && classifyAircraftIcon(aircraft).kind !== "drone") return false;
+  if (filters.quick === "emergency" && !aircraft.emergency) return false;
   if (filters.status === "airborne" && aircraft.onGround) return false;
   if (filters.status === "onGround" && !aircraft.onGround) return false;
 

@@ -11,6 +11,19 @@ export function aircraftSourceLabel(aircraft: Pick<AircraftView, "provenance">):
     default: return "UNKNOWN";
   }
 }
+
+/** A compact label for the source that supplied the aircraft's current position.
+ * This is intentionally separate from seen-by coverage, which may include more
+ * than one provider for the same ICAO identity. */
+export function aircraftPositionSourceLabel(aircraft: Pick<AircraftView, "provenance" | "source">): string {
+  const origin = aircraft.provenance?.positionOrigin;
+  if (origin === "adsblol") return "ADSB.LOL";
+  if (origin === "adsbhub") return "ADSBHUB";
+  if (origin === "local") return aircraft.provenance?.positionSource === "MLAT" ? "LOCAL · MLAT" : "LOCAL ADS-B";
+  if (aircraft.provenance?.positionSource === "MLAT") return "MLAT";
+  if (aircraft.provenance?.positionSource === "ADS-B") return "ADS-B";
+  return aircraft.provenance?.positionSource ?? aircraft.source ?? "UNKNOWN";
+}
 export type AircraftSourceFilter = "all" | "local" | "network" | "overlap";
 
 export interface SourceStats {

@@ -623,32 +623,30 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
         const quickDetail = sidebar.getByTestId("aircraft-quick-detail");
         await quickDetail.waitFor({ state: "visible" });
+        await quickDetail.getByRole("tab", { name: "Let", exact: true }).click();
         await quickDetail.locator(".aircraft-quick-atc").waitFor({ state: "visible" });
         await quickDetail.locator(".route-weather-summary").first().waitFor({ state: "visible" });
         const quickContract = await quickDetail.evaluate((element) => ({
-          order: [...element.children].map((child) => child.className),
+          tabs: [...element.querySelectorAll('[role="tab"]')].map((tab) => ({ id: tab.id, selected: tab.getAttribute("aria-selected") })),
+          activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
           liveMetricGrids: element.querySelectorAll(".aircraft-quick-metrics").length,
           technicalOpen: element.querySelector(".aircraft-quick-advanced")?.hasAttribute("open") ?? false,
           fullDetailHref: element.querySelector("a[href^='/aircraft/']")?.getAttribute("href") ?? null,
           atcPrimary: Boolean(element.querySelector(".aircraft-quick-atc-primary")),
+          dataDisclosure: Boolean(element.querySelector('[role="tab"]#aircraft-tab-data')),
         }));
-        const expectedQuickOrder = [
-          "aircraft-quick-header",
-          "aircraft-quick-section aircraft-quick-metrics-section",
-          "aircraft-quick-actions",
-          "aircraft-quick-section aircraft-quick-tracking",
-          "aircraft-quick-section aircraft-quick-atc",
-          "aircraft-quick-section aircraft-quick-aircraft",
-          "aircraft-quick-section aircraft-quick-route-intelligence",
-          "route-weather-card route-weather-card-compact",
-          "aircraft-quick-advanced",
-        ];
-        if (JSON.stringify(quickContract.order) !== JSON.stringify(expectedQuickOrder)
-          || quickContract.liveMetricGrids !== 1
+        if (quickContract.tabs.length !== 6
+          || quickContract.activePanel !== "aircraft-tabpanel-flight"
+          || quickContract.liveMetricGrids !== 0
           || quickContract.technicalOpen
-          || !/^\/aircraft\/[0-9A-Fa-f~]+$/.test(quickContract.fullDetailHref ?? "")
-          || !quickContract.atcPrimary) {
+          || !quickContract.atcPrimary
+          || !quickContract.dataDisclosure) {
           throw new Error(`Aircraft quick-detail contract failed at ${viewport.width}px: ${JSON.stringify(quickContract)}`);
+        }
+        await quickDetail.getByRole("tab", { name: "Přehled" }).click();
+        const fullDetailHref = await quickDetail.locator("a[href^='/aircraft/']").getAttribute("href");
+        if (!/^\/aircraft\/[0-9A-Fa-f~]+$/.test(fullDetailHref ?? "")) {
+          throw new Error(`Aircraft quick-detail full link missing at ${viewport.width}px`);
         }
         if (await sidebar.locator(".drawer-close-button:visible, .detail-panel .close-button:visible").count() !== 1) {
           throw new Error(`Desktop detail has more than one visible Close action at ${viewport.width}px`);

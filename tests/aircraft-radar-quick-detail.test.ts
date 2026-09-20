@@ -11,14 +11,13 @@ describe("aircraft radar quick detail", () => {
     const order = [
       "aircraft-quick-header",
       "<RouteSection",
-      "aircraft-quick-metrics-title",
-      "aircraft-quick-actions",
-      "aircraft-quick-tracking-title",
-      "<AtcSection",
-      "<AircraftIdentitySection",
-      "<RouteIntelligenceSection",
-      "FlightRouteWeather compact",
-      "<TechnicalDetails",
+      "<DetailTabs",
+      "<AircraftOverview",
+      "aircraft-tabpanel-flight",
+      "aircraft-tabpanel-aircraft",
+      "aircraft-tabpanel-track",
+      "<TelemetrySection",
+      "<DataSection",
     ].map((marker) => renderSource.indexOf(marker));
 
     expect(order.every((index) => index >= 0)).toBe(true);
@@ -30,6 +29,8 @@ describe("aircraft radar quick detail", () => {
 
   it("renders one live metric grid, progressive ATC frequencies, technical disclosure and accessible actions", () => {
     expect(componentSource.match(/className="aircraft-quick-metrics"/g)).toHaveLength(1);
+    expect(componentSource).toContain("detailSections");
+    expect(componentSource).toContain("aircraftPositionSourceLabel");
     expect(componentSource).toContain("t.atc.moreFrequencies");
     expect(componentSource).toContain('data-testid="technical-details"');
     expect(componentSource).toContain("aria-pressed={watchlisted}");

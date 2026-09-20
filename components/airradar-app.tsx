@@ -85,9 +85,10 @@ import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   filterAircraftForMap,
   isMapAircraftFilterActive,
+  type AircraftQuickFilter,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
-import { aircraftSourceLabel, classifyAircraftSource, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
+import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
 
 declare global {
   interface Window {
@@ -1957,7 +1958,9 @@ export function AirRadarApp() {
     || distanceFilter !== "all"
     || watchlistOnly;
   const activeFilterCount = [
+    mapFilters.source !== "all",
     mapFilters.status !== "all",
+    mapFilters.quick !== "all",
     mapFilters.minAltitude.trim() !== "",
     mapFilters.maxAltitude.trim() !== "",
     mapFilters.callsign.trim() !== "",
@@ -1970,20 +1973,31 @@ export function AirRadarApp() {
     distanceFilter !== "all",
     watchlistOnly,
   ].filter(Boolean).length;
-  const activeFilterChips = [
-    mapFilters.status === "airborne" ? t.filters.statusAirborne : mapFilters.status === "onGround" ? t.filters.statusOnGround : null,
-    mapFilters.minAltitude.trim() ? `≥ ${mapFilters.minAltitude} ft` : null,
-    mapFilters.maxAltitude.trim() ? `≤ ${mapFilters.maxAltitude} ft` : null,
-    mapFilters.callsign.trim() ? `${t.filters.callsign}: ${mapFilters.callsign.trim()}` : null,
-    mapFilters.registration.trim() ? `${t.filters.registrationInput}: ${mapFilters.registration.trim()}` : null,
-    mapFilters.icaoHex.trim() ? `${t.filters.icaoHexInput}: ${mapFilters.icaoHex.trim()}` : null,
-    mapFilters.aircraftType.trim() ? mapFilters.aircraftType.trim() : null,
-    mapFilters.operator.trim() ? mapFilters.operator.trim() : null,
-    mapFilters.emergencyOnly ? t.filters.emergencyOnly : null,
-    watchlistOnly ? t.filters.watchlistOnly : null,
-    search.trim() ? `${t.search.aircraftLabel}: ${search.trim()}` : null,
-    distanceFilter !== "all" ? `${t.filters.maximumDistance}: ${distanceFilter} km` : null,
-  ].filter((value): value is string => Boolean(value));
+  const quickFilterLabels: Record<AircraftQuickFilter, string> = {
+    all: t.filters.quickAll,
+    airborne: t.filters.quickAirborne,
+    onGround: t.filters.quickOnGround,
+    helicopters: t.filters.quickHelicopters,
+    gliders: t.filters.quickGliders,
+    uav: t.filters.quickUav,
+    emergency: t.filters.quickEmergency,
+  };
+  const activeFilterChips: Array<{ id: string; label: string; onRemove: () => void }> = [
+    mapFilters.source !== "all" ? { id: "source", label: mapFilters.source.toUpperCase(), onRemove: () => updateMapFilter("source", "all") } : null,
+    mapFilters.quick !== "all" ? { id: "quick", label: quickFilterLabels[mapFilters.quick], onRemove: () => updateMapFilter("quick", "all") } : null,
+    mapFilters.status !== "all" ? { id: "status", label: mapFilters.status === "airborne" ? t.filters.statusAirborne : t.filters.statusOnGround, onRemove: () => updateMapFilter("status", "all") } : null,
+    mapFilters.minAltitude.trim() ? { id: "min-altitude", label: `≥ ${mapFilters.minAltitude} ft`, onRemove: () => updateMapFilter("minAltitude", "") } : null,
+    mapFilters.maxAltitude.trim() ? { id: "max-altitude", label: `≤ ${mapFilters.maxAltitude} ft`, onRemove: () => updateMapFilter("maxAltitude", "") } : null,
+    mapFilters.callsign.trim() ? { id: "callsign", label: `${t.filters.callsign}: ${mapFilters.callsign.trim()}`, onRemove: () => updateMapFilter("callsign", "") } : null,
+    mapFilters.registration.trim() ? { id: "registration", label: `${t.filters.registrationInput}: ${mapFilters.registration.trim()}`, onRemove: () => updateMapFilter("registration", "") } : null,
+    mapFilters.icaoHex.trim() ? { id: "icao", label: `${t.filters.icaoHexInput}: ${mapFilters.icaoHex.trim()}`, onRemove: () => updateMapFilter("icaoHex", "") } : null,
+    mapFilters.aircraftType.trim() ? { id: "type", label: mapFilters.aircraftType.trim(), onRemove: () => updateMapFilter("aircraftType", "") } : null,
+    mapFilters.operator.trim() ? { id: "operator", label: mapFilters.operator.trim(), onRemove: () => updateMapFilter("operator", "") } : null,
+    mapFilters.emergencyOnly ? { id: "emergency", label: t.filters.emergencyOnly, onRemove: () => updateMapFilter("emergencyOnly", false) } : null,
+    watchlistOnly ? { id: "watchlist", label: t.filters.watchlistOnly, onRemove: () => setWatchlistOnly(false) } : null,
+    search.trim() ? { id: "search", label: `${t.search.aircraftLabel}: ${search.trim()}`, onRemove: () => setSearch("") } : null,
+    distanceFilter !== "all" ? { id: "distance", label: `${t.filters.maximumDistance}: ${distanceFilter} km`, onRemove: () => setDistanceFilter("all") } : null,
+  ].filter((value): value is { id: string; label: string; onRemove: () => void } => Boolean(value));
 
   const isDemo = snapshot.provider === "mock";
   const hasSourceSnapshot = snapshot.lastSourceUpdate !== null;
@@ -2236,15 +2250,23 @@ export function AirRadarApp() {
               <input ref={searchInputRef} className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={trafficSource === "ogn" ? t.search.ognPlaceholder : t.search.placeholder} aria-label={trafficSource === "ogn" ? t.search.ognLabel : t.search.aircraftLabel} />
               {search && <button type="button" className="search-clear-button" onClick={() => setSearch("")} aria-label={t.filters.clearSearch}><UiIcon name="close" /></button>}
             </div>
-              {trafficSource === "adsb" && <div className="radar-options">
+            {trafficSource === "adsb" && <div className="radar-options">
+              <div className="quick-filter-row" role="group" aria-label={t.filters.title}>
+                {(["all", "airborne", "onGround", "helicopters", "gliders", "uav", "emergency"] as AircraftQuickFilter[]).map((filter) => <button
+                  key={filter}
+                  type="button"
+                  className={`quick-filter-chip ${mapFilters.quick === filter ? "active" : ""}`}
+                  aria-pressed={mapFilters.quick === filter}
+                  onClick={() => updateMapFilter("quick", filter)}
+                >{quickFilterLabels[filter]}</button>)}
+              </div>
               <button type="button" className="filter-button" aria-expanded={filtersOpen} aria-controls="map-filters-panel" onClick={() => setFiltersOpen((value) => !value)}>
                 <span>{t.filters.title}{hasActiveMapFilters ? ` · ${activeFilterCount}` : ""}</span>
                 {hasActiveMapFilters && <span className="filter-active-dot" aria-label={t.filters.active}>{t.filters.active}</span>}
               </button>
               {hasActiveMapFilters && <div className="active-filter-chips" aria-label={t.filters.active}>
-                {activeFilterChips.slice(0, 3).map((chip) => <span className="filter-chip" key={chip}>{chip}</span>)}
-                {activeFilterChips.length > 3 && <span className="filter-chip filter-chip-overflow">+{activeFilterChips.length - 3}</span>}
-                <button type="button" className="filter-chip-reset" onClick={resetMapFilters}>{t.filters.reset}</button>
+                {activeFilterChips.map((chip) => <button type="button" className="filter-chip" key={chip.id} onClick={chip.onRemove} title={t.filters.clearAll}>{chip.label}<span aria-hidden="true"> ×</span><span className="sr-only">{t.filters.clearSearch}</span></button>)}
+                {activeFilterChips.length > 1 && <button type="button" className="filter-chip-reset" onClick={resetMapFilters}>{t.filters.clearAll}</button>}
               </div>}
               {filtersOpen && <div id="map-filters-panel" className="map-filters-panel" role="region" aria-label={t.filters.title}>
                 <div className="filter-panel-heading">{t.filters.filterGroup}</div>
@@ -2329,7 +2351,7 @@ export function AirRadarApp() {
               <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""} ${aircraft.emergency ? "emergency" : ""}`} aria-pressed={selectedHex === aircraft.icaoHex} onClick={() => selectAircraft(aircraft.icaoHex)}>
                 <span className="aircraft-row-icon"><AircraftIcon aircraft={aircraft} /></span>
                 <span className="aircraft-row-main">
-                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> <span className="source-badge">{aircraftSourceLabel(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
+                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> <span className="source-badge" title={`Seen by ${aircraftSourceLabel(aircraft)}`}>{aircraftPositionSourceLabel(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
                   <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}{aircraft.registration || aircraft.enrichment?.metadata?.registration ? ` · ${aircraft.registration || aircraft.enrichment?.metadata?.registration}` : ""}</span>
                   <span className="aircraft-row-meta"><span><b>{formatAltitude(aircraft.altitude)}</b></span><span><b>{formatSpeed(aircraft.groundSpeed)}</b></span><span><b>{formatTrack(aircraft.track)}</b></span><span className="aircraft-row-hex">{aircraft.icaoHex}</span></span>
                 </span>

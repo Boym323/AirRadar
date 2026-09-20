@@ -72,6 +72,15 @@ describe("map aircraft filters", () => {
     expect(filterAircraftForMap([live, ground], allFilters({ status: "onGround" })).map((item) => item.icaoHex)).toEqual(["DEF456"]);
   });
 
+  it("supports only quick categories with reliable live semantics", () => {
+    const helicopter = aircraft({ icaoHex: "HELI01", aircraftType: "H125", category: "A7" });
+    const glider = aircraft({ icaoHex: "GLID01", aircraftType: null, category: "B1" });
+    const uav = aircraft({ icaoHex: "UAV001", aircraftType: null, category: "B6" });
+    expect(filterAircraftForMap([live, helicopter, glider, uav], allFilters({ quick: "helicopters" })).map((item) => item.icaoHex)).toEqual(["HELI01"]);
+    expect(filterAircraftForMap([live, helicopter, glider, uav], allFilters({ quick: "gliders" })).map((item) => item.icaoHex)).toEqual(["GLID01"]);
+    expect(filterAircraftForMap([live, helicopter, glider, uav], allFilters({ quick: "uav" })).map((item) => item.icaoHex)).toEqual(["UAV001"]);
+  });
+
   it("filters minimum and maximum altitude inclusively", () => {
     expect(filterAircraftForMap([live, emergency], allFilters({ minAltitude: "12000", maxAltitude: "38000" }))).toHaveLength(2);
     expect(filterAircraftForMap([live, emergency], allFilters({ minAltitude: "12001" }))).toEqual([emergency]);

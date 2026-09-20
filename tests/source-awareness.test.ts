@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AircraftView, ReceiverPosition } from "@/lib/aircraft/types";
-import { classifyAircraftSource, computeLocalCoverageRatio, computeSourceStats, filterAircraftBySource } from "@/lib/aircraft/source-awareness";
+import { aircraftPositionSourceLabel, classifyAircraftSource, computeLocalCoverageRatio, computeSourceStats, filterAircraftBySource } from "@/lib/aircraft/source-awareness";
 
 function aircraft(hex: string, provenance?: AircraftView["provenance"], lat = 50, lon = 14): AircraftView {
   return { icaoHex: hex, callsign: null, registration: null, aircraftType: null, aircraftDescription: null, lat, lon, altitude: 10000, baroAltitude: 10000, geomAltitude: null, groundSpeed: 200, track: 90, verticalRate: 0, baroRate: 0, geomRate: null, squawk: null, category: null, emergency: null, rssi: null, messages: null, seenSeconds: 0, seenPosSeconds: 0, lastSeen: "2026-09-19T12:00:00.000Z", source: "ADS-B", origin: "local", provenance, sourceType: null, onGround: false, distanceKm: null, bearing: null };
@@ -16,6 +16,13 @@ describe("source-aware live aircraft", () => {
     expect(classifyAircraftSource(aircraft("B", network))).toBe("NETWORK_ONLY");
     expect(classifyAircraftSource(aircraft("C", overlap))).toBe("OVERLAP");
     expect(classifyAircraftSource(aircraft("D"))).toBe("UNKNOWN");
+  });
+
+  it("labels the current position source separately from seen-by coverage", () => {
+    expect(aircraft("A", local)).toBeTruthy();
+    expect(aircraftPositionSourceLabel(aircraft("A", local))).toBe("LOCAL ADS-B");
+    expect(aircraftPositionSourceLabel(aircraft("B", { ...network, positionSource: "MLAT" }))).toBe("ADSBHUB");
+    expect(aircraftPositionSourceLabel(aircraft("C", { ...network, positionOrigin: "adsblol" }))).toBe("ADSB.LOL");
   });
 
   it("computes source counter mathematics from one snapshot", () => {
