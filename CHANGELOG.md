@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.101] - 2026-09-20
+
+Changes since v1.0.101:
+
+- No user-facing changes.
+
 ## [1.0.91] - 2026-09-20
 
 Changes since v1.0.90:
