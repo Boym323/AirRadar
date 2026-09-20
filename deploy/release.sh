@@ -26,6 +26,8 @@ readonly LEGACY_ALERT_CONFIG_PATH="${APP_DIR}/data/alerts.json"
 readonly RELEASE_BUILD_DIR=".next-release-${BASHPID}"
 readonly RELEASE_BUILD_BACKUP_DIR=".next-release-backup-${BASHPID}"
 readonly BUILD_SOURCE_SNAPSHOT_DIR="/tmp/airradar-release-sources-${BASHPID}"
+readonly SMOKE_VALIDATION_TMP_PREFIX="airradar-smoke-validation-"
+readonly SMOKE_VALIDATION_TMP_MAX_AGE_MINUTES=360
 
 DEPLOY_BRANCH="main"
 RELEASE_MODE="stable"
@@ -177,6 +179,22 @@ restore_build_source_files() {
   cp -- "${BUILD_SOURCE_SNAPSHOT_DIR}/tsconfig.json" "${APP_DIR}/tsconfig.json"
   rm -rf -- "${BUILD_SOURCE_SNAPSHOT_DIR}"
   BUILD_SOURCE_SNAPSHOT_CREATED=0
+}
+
+cleanup_stale_smoke_validation_dirs() {
+  local removed
+
+  # Browser validation can leave a copied checkout in tmpfs when its runner is
+  # interrupted. Only remove our exact prefix, only directories older than six
+  # hours, and only direct children of /tmp so an active validation run is not
+  # touched.
+  removed="$(find /tmp -mindepth 1 -maxdepth 1 -type d \
+    -name "${SMOKE_VALIDATION_TMP_PREFIX}*" \
+    -mmin "+${SMOKE_VALIDATION_TMP_MAX_AGE_MINUTES}" \
+    -print -exec rm -rf -- {} +)"
+  if [[ -n "${removed}" ]]; then
+    log "Removed stale smoke-validation temporary directories: ${removed//$'\n'/, }"
+  fi
 }
 
 trap 'on_error "$?" "$LINENO"' ERR
@@ -516,6 +534,8 @@ generate_release_changelog() {
 }
 
 run_release_steps() {
+  cleanup_stale_smoke_validation_dirs
+
   log "Installing dependencies"
   npm ci --prefer-offline --no-audit --no-fund
 
