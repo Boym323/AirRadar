@@ -2,6 +2,13 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.105] - 2026-09-20
+
+Changes since v1.0.104:
+
+- fix: correct tar1090 icon rotation to maintain north-up orientation (9b4702bf)
+- Merge pull request #75 from Boym323/fix/aircraft-marker-heading (3465cf47)
+
 ## [1.0.101] - 2026-09-20
 
 Changes since v1.0.101:
