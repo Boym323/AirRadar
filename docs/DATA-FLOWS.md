@@ -39,13 +39,11 @@ use independent APIs and fail independently.
    `192.168.1.50:30002` → `data.adsbhub.org:5001`; AirRadar does not manage it.
    The consumer uses arrival-time freshness, bounded tracks, field-aware MSG
    merging, and publishes only positioned aircraft inside the configured
-   radius. Its origin is `adsbhub`, never `local` or MLAT. If ADSBHub is
-   unavailable, the service runs an outbound ADSB.lol raw lane on its own
-   schedule: `out.adsb.lol:1365` BEAST plus `:1366` SBS/MLAT. It decodes global
-   CPR, merges both streams by ICAO, and publishes only fresh positions inside
-   `ADSBLOL_NETWORK_RADIUS_NM` into a bounded network map. If raw is
-   unavailable, the existing geographic HTTP provider is selected as fallback;
-   the snapshots are never summed. These failures never mark the local
+   radius. Its origin is `adsbhub`, never `local` or MLAT. Enabled ADSBHub,
+   outbound ADSB.lol raw (`out.adsb.lol:1365` BEAST plus `:1366` SBS/MLAT), and
+   the geographic HTTP provider run concurrently. Their snapshots are
+   deduplicated by ICAO into one bounded network map while retaining source
+   provenance. These failures never mark the local
    receiver offline.
 5. The service notifies listeners with a snapshot. `GET /api/aircraft` waits
    for the first refresh and returns the safe public DTO. `GET /api/stream`

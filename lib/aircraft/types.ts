@@ -11,6 +11,8 @@ export interface AircraftProvenance {
   lastNetworkSeen: string | null;
   positionOrigin: AircraftDataOrigin | null;
   positionSource: AircraftSource;
+  /** Network providers that contributed the current observation. */
+  networkSources?: Array<"adsbhub" | "adsblol">;
 }
 
 export interface ReceiverPosition {
@@ -189,7 +191,7 @@ export interface NetworkProviderDiagnostics {
   radiusNm: number;
   pollIntervalMs: number;
   retryAfterMs: number | null;
-  selectedSource?: "adsbhub" | "adsblol-raw" | "adsblol-http" | "raw" | "http-fallback" | "unavailable";
+  selectedSource?: "mixed" | "adsbhub" | "adsblol-raw" | "adsblol-http" | "raw" | "http-fallback" | "unavailable";
   beastConnected?: boolean;
   mlatConnected?: boolean;
   beastLastFrameAt?: string | null;

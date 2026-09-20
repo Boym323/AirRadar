@@ -18,8 +18,8 @@ LocalReadsbProvider (or MockReadsbProvider when READSB_BASE_URL is empty)
         ▼
 one global AircraftStateService
   ├─ RAM aircraft map, stale cleanup, distance/bearing, bounded live trails
-  ├─ optional NetworkFailoverProvider: ADSBHub SBS/30003 → ADSB.lol raw → HTTP
-  │    └─ bounded network RAM map (never summed across sources)
+  ├─ optional NetworkFailoverProvider: ADSBHub SBS/30003 + ADSB.lol raw + HTTP
+  │    └─ bounded network RAM map (deduplicated union across sources)
   ├─ async enrichment and ATC resolution
   ├─ async sampled history persistence
   ├─ daily ReceiverStatistics aggregate
@@ -51,11 +51,11 @@ deterministic demo provider. The frontend never selects a provider.
 `NetworkAircraftProvider` is a separate optional boundary for live-only
 coverage. `AdsbHubProvider` consumes the generic aggregated SBS/30003 stream
 from `data.adsbhub.org:5002`; these rows are not classified as MLAT. The
-explicit priority is ADSBHub TCP, ADSB.lol raw, then ADSB.lol HTTP.
+All enabled network lanes run concurrently and are deduplicated by normalized
+ICAO hex with network-source provenance retained.
 `AdsbLolRawProvider` consumes the two authorized outbound ADSB.lol streams,
 decodes global CPR, and merges BEAST and SBS/MLAT by ICAO.
-`AdsbLolProvider` is selected only as a fallback and keeps its validated
-snapshot in RAM. Neither lane enters the local history,
+`AdsbLolProvider` keeps its validated snapshot in RAM. Neither lane enters the local history,
 statistics, alert, enrichment, or ATC input lanes.
 
 `OgnProvider` and `OgnStateService` form a second optional live-only boundary.
@@ -87,7 +87,7 @@ independent lanes:
 - `LocalReadsbProvider` normalizes raw readsb observations into the shared
   `Aircraft` shape. It prefers barometric altitude/rate, retains geometric
   values, and computes distance/bearing from the internal receiver position.
-- The ADSB.lol raw/fallback network lane is opt-in, bounded, and non-overlapping.
+- The ADSB.lol raw/HTTP network lanes are opt-in and bounded.
   The state service invokes it independently of the local retry loop; raw
   validates BEAST/SBS input and the HTTP fallback validates its public response,
   applies

@@ -124,8 +124,9 @@ These are behavior and safety contracts for changes to the current system.
 ## Extended network coverage
 
 - ADSBHub is a generic aggregated SBS/30003 network source with
-  `origin: "adsbhub"`; it is never labeled MLAT or local. Priority is
-  ADSBHub → ADSB.lol raw → ADSB.lol HTTP. Short valid SBS HexIdent values are
+  `origin: "adsbhub"`; it is never labeled MLAT or local. Enabled ADSBHub,
+  ADSB.lol raw, and ADSB.lol HTTP lanes run concurrently and are deduplicated
+  by ICAO with source provenance retained. Short valid SBS HexIdent values are
   normalized by uppercase and left-padding to six hex characters.
 - Network SBS freshness uses arrival time, and MSG fields merge by field so a
   callsign-only row cannot erase position and a position row cannot erase a
@@ -133,7 +134,8 @@ These are behavior and safety contracts for changes to the current system.
   the configured radius.
 - ADSB.lol raw output is optional, outbound-only, and always `origin: "adsblol"`.
   It is never sent to `192.168.1.50` or any feeder. The public API is a
-  fallback and raw/HTTP snapshots are never summed.
+  additional bounded network observation source; duplicate aircraft are merged
+  by ICAO and network-only observations remain RAM-only.
 - The provider has one in-flight request, bounded timeout/retry/backoff,
   response validation, bounded aircraft/trail state, stale-if-error behavior,
   and safe diagnostics. `Retry-After` is honored for HTTP 429 responses.

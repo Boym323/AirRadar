@@ -69,7 +69,7 @@ export interface SystemStatusResponse {
   adsbLol: {
     status: SystemStatus;
     enabled: boolean;
-    endpoint: "Public API" | "Raw BEAST + SBS/MLAT" | "SBS/30003";
+    endpoint: "Combined feeds" | "Public API" | "Raw BEAST + SBS/MLAT" | "SBS/30003";
     license: "ODbL 1.0";
     radiusNm: number;
     pollIntervalMs: number;
@@ -82,7 +82,7 @@ export interface SystemStatusResponse {
     consecutiveFailures: number;
     rateLimited: boolean;
     retryAfterMs: number | null;
-    selectedSource?: "adsbhub" | "adsblol-raw" | "adsblol-http" | "raw" | "http-fallback" | "unavailable";
+    selectedSource?: "mixed" | "adsbhub" | "adsblol-raw" | "adsblol-http" | "raw" | "http-fallback" | "unavailable";
     beastConnected?: boolean;
     mlatConnected?: boolean;
     beastFramesReceived?: number;
@@ -523,7 +523,7 @@ function adsbLolResponse(diagnostics: NetworkProviderDiagnostics | undefined): S
   return {
     status: adsbLolStatus(value),
     enabled: value.enabled,
-    endpoint: value.selectedSource === "adsbhub" ? "SBS/30003" : value.selectedSource === "raw" || value.selectedSource === "adsblol-raw" ? "Raw BEAST + SBS/MLAT" : "Public API",
+    endpoint: value.selectedSource === "mixed" ? "Combined feeds" : value.selectedSource === "adsbhub" ? "SBS/30003" : value.selectedSource === "raw" || value.selectedSource === "adsblol-raw" ? "Raw BEAST + SBS/MLAT" : "Public API",
     license: "ODbL 1.0",
     radiusNm: nonNegativeInteger(value.radiusNm, 250),
     pollIntervalMs: nonNegativeInteger(value.pollIntervalMs, 86_400_000),
