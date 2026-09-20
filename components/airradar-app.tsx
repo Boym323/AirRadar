@@ -1766,7 +1766,7 @@ export function AirRadarApp() {
     }
     const routeSource = map.getSource(ROUTE_V2_SOURCE_ID) as GeoJSONSource | undefined;
     const routeSourceKey = selectedAircraftVisible && selected
-      ? `${selected.icaoHex}|${positionObservedAt(selected) ?? ""}|${selectedRouteAirportCodesKey}`
+      ? `${selected.icaoHex}|${positionObservedAt(selected) ?? ""}|${selected.lat ?? ""}|${selected.lon ?? ""}|${selectedRouteAirportCodesKey}`
       : "";
     if (routeSource && routeSourceKeyRef.current !== routeSourceKey) {
       routeSource.setData(selectedAircraftVisible ? createRouteGeoJSON(
