@@ -71,7 +71,7 @@ describe("AdsbLolProvider", () => {
 
     const snapshot = await value.getSnapshot();
 
-    expect(String(fetcher.mock.calls[0]?.[0])).toBe("https://re-api.adsb.lol/?circle=49.22%2C17.67%2C200");
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe("https://re-api.adsb.lol/?circle=49.22,17.67,200");
     expect(snapshot.aircraft).toHaveLength(1);
   });
 

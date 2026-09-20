@@ -88,8 +88,10 @@ function responseNow(value: unknown, fallback: number): number {
 function endpoint(baseUrl: string, receiver: ReceiverPosition, radiusNm: number): string {
   const configured = new URL(baseUrl);
   if (configured.hostname.toLowerCase().replace(/\.$/, "") === "re-api.adsb.lol") {
-    configured.search = "";
-    configured.searchParams.set("circle", `${receiver.lat},${receiver.lon},${radiusNm}`);
+    // re-api.adsb.lol expects the circle tuple with literal commas. Using
+    // URLSearchParams percent-encodes them as %2C, which this endpoint
+    // rejects with HTTP 400 even though the equivalent unencoded URL works.
+    configured.search = `?circle=${receiver.lat},${receiver.lon},${radiusNm}`;
     return configured.toString();
   }
   const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
