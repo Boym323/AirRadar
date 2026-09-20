@@ -468,7 +468,8 @@ update_repository() {
     log "Fast-forwarding ${DEPLOY_BRANCH} to ${remote_sha}"
     git_cmd merge --ff-only FETCH_HEAD
   elif (( AUTOMATED == 1 )); then
-    log "Automated release aligned ${DEPLOY_BRANCH} to ${remote_sha}."
+    log "Automated release aligning ${DEPLOY_BRANCH} to ${remote_sha}."
+    git_cmd reset --hard FETCH_HEAD
   else
     log "Local ${DEPLOY_BRANCH} is ahead of origin/${DEPLOY_BRANCH}; keeping the local fast-forward-only state."
   fi
