@@ -27,12 +27,18 @@ export function updateMotionHistory(history: MotionHistory, source: MotionSource
   const next = { ...history };
   const sourceKey = `${source.positionOrigin ?? ""}:${source.positionSource ?? ""}`;
   if (next.source !== null && next.source !== sourceKey) return Object.assign(createMotionHistory(), { source: sourceKey, lastLat: source.lat, lastLon: source.lon });
+  // A source without a trusted observation timestamp cannot advance the
+  // confirmed motion state while an aircraft is stale.
+  if (source.observedAt === null) return next;
+  // Position observations are monotonic. A delayed packet must not move the
+  // motion history (or its turn estimate) back in time.
+  if (next.lastObservedAt !== null && source.observedAt <= next.lastObservedAt) return next;
   next.source = sourceKey;
   if (next.lastLat !== null && next.lastLon !== null) {
     const jump = haversineDistanceKm(next.lastLat, next.lastLon, source.lat, source.lon);
     if (jump > MAX_PREDICTION_CORRECTION_KM) return Object.assign(createMotionHistory(), { source: sourceKey, lastLat: source.lat, lastLon: source.lon });
   }
-  if (source.track !== null && source.observedAt !== null && (next.lastObservedAt === null || source.observedAt > next.lastObservedAt)) {
+  if (source.track !== null) {
     if (next.lastTrack !== null && next.lastObservedAt !== null) {
       const gap = source.observedAt - next.lastObservedAt;
       if (gap >= MIN_TURN_OBSERVATION_GAP_MS && gap <= MAX_TURN_OBSERVATION_GAP_MS) {
@@ -42,7 +48,7 @@ export function updateMotionHistory(history: MotionHistory, source: MotionSource
     }
     next.previousTrack = next.lastTrack; next.previousObservedAt = next.lastObservedAt;
     next.lastTrack = normalizeHeading(source.track); next.lastObservedAt = source.observedAt;
-  }
+  } else next.lastObservedAt = source.observedAt;
   next.lastLat = source.lat; next.lastLon = source.lon;
   return next;
 }
@@ -97,8 +103,8 @@ export function motionAt(source: MotionSource, timestamp: number, correction?: {
   return { lon: normalizeLongitude(lon + (correction?.lon ?? 0) * (1 - progress)), lat: lat + (correction?.lat ?? 0) * (1 - progress), heading, predictionActive: predictionIsActive(source, timestamp, history), correctionActive: active, stale };
 }
 
-export function correctionFor(current: { lon: number; lat: number }, source: MotionSource, timestamp: number, durationMs: number) {
-  const [lon, lat] = predictedPosition(source, timestamp);
+export function correctionFor(current: { lon: number; lat: number }, source: MotionSource, timestamp: number, durationMs: number, history?: MotionHistory) {
+  const [lon, lat] = predictedPosition(source, timestamp, history);
   const distance = haversineDistanceKm(current.lat, current.lon, lat, lon);
   if (distance > MAX_PREDICTION_CORRECTION_KM || source.observedAt === null) return null;
   return { lon: shortestLongitudeDelta(current.lon, lon), lat: current.lat - lat, startedAt: timestamp, durationMs };

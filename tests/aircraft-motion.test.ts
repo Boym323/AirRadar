@@ -34,6 +34,27 @@ describe("aircraft motion", () => {
     expect(next.lastTrack).toBe(110);
     expect(next.previousTrack).toBe(100);
   });
+  it("does not let an out-of-order position roll motion history back", () => {
+    let history = createMotionHistory();
+    history = updateMotionHistory(history, source(90, 10_000, 50, 14));
+    history = updateMotionHistory(history, source(100, 11_000, 50.001, 14.001));
+    const delayed = updateMotionHistory(history, source(270, 8_000, 51, 15));
+
+    expect(delayed).toEqual(history);
+    expect(delayed.lastObservedAt).toBe(11_000);
+    expect(delayed.lastLat).toBe(50.001);
+    expect(delayed.lastLon).toBe(14.001);
+  });
+  it("keeps predicted heading continuous through north while turning", () => {
+    let history = createMotionHistory();
+    history = updateMotionHistory(history, source(359, 1_000));
+    history = updateMotionHistory(history, source(1, 2_000));
+
+    const headings = [2_000, 2_250, 2_500, 2_750, 3_000].map((timestamp) => motionAt(source(1, 2_000), timestamp, undefined, history).heading!);
+    expect(headings.every((heading, index) => index === 0 || shortestAngleDelta(headings[index - 1]!, heading) >= 0)).toBe(true);
+    expect(shortestAngleDelta(headings[0]!, headings.at(-1)!)).toBeGreaterThanOrEqual(0);
+    expect(shortestAngleDelta(headings[0]!, headings.at(-1)!)).toBeLessThan(10);
+  });
   it("resets all motion state on a source switch", () => {
     let history = createMotionHistory();
     history = updateMotionHistory(history, source(90, 1_000));

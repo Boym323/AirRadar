@@ -27,7 +27,7 @@ import {
   watchlistSummary,
 } from "@/lib/i18n";
 import { haversineDistanceKm } from "@/lib/geo";
-import { MAX_PREDICTION_CORRECTION_KM, motionAt, normalizeHeading, predictedPosition, shortestLongitudeDelta, createMotionHistory, updateMotionHistory, AIRCRAFT_ICON_ROTATION_OFFSET_DEG, type MotionHistory } from "@/lib/aircraft/motion";
+import { MAX_PREDICTION_CORRECTION_KM, correctionFor, motionAt, normalizeHeading, predictedPosition, shortestLongitudeDelta, createMotionHistory, updateMotionHistory, AIRCRAFT_ICON_ROTATION_OFFSET_DEG, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -1040,7 +1040,17 @@ export function AirRadarApp() {
       }
       let continueAnimation = false;
       for (const job of animationJobs.values()) {
-        job.marker.setLngLat(predictedMarkerPosition(job, timestamp));
+        const motion = motionAt(job.source, timestamp, {
+          lon: job.correctionLon,
+          lat: job.correctionLat,
+          startedAt: job.correctionStartedAt,
+          durationMs: job.correctionDurationMs,
+        }, job.history);
+        job.marker.setLngLat([motion.lon, motion.lat]);
+        // Position and heading must be rendered from the same frame of the
+        // motion model. Updating rotation only from the SSE/React effect made
+        // turns appear to snap at packet boundaries.
+        if (motion.heading !== null) job.marker.setRotation(motion.heading + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
         if (timestamp - job.correctionStartedAt >= job.correctionDurationMs) {
           job.correctionLon = 0;
           job.correctionLat = 0;
@@ -1531,14 +1541,26 @@ export function AirRadarApp() {
       if (previous) {
         const current = marker.getLngLat();
         const sourceChanged = previous.source.positionOrigin !== source.positionOrigin || previous.source.positionSource !== source.positionSource;
+        const delayedPosition = !sourceChanged
+          && previous.source.observedAt !== null
+          && source.observedAt !== null
+          && source.observedAt < previous.source.observedAt;
+        if (delayedPosition) return;
         if (sourceChanged) {
-          marker.setLngLat(target);
-          previous.history = updateMotionHistory(previous.history, source);
+          const nextHistory = updateMotionHistory(previous.history, source);
+          const correctionDurationMs = Math.min(
+            MAX_AIRCRAFT_ANIMATION_MS,
+            Math.max(MIN_AIRCRAFT_ANIMATION_MS, now - previous.sourceReceivedAt),
+          );
+          const correction = correctionFor({ lon: current.lng, lat: current.lat }, source, now, correctionDurationMs, nextHistory);
+          previous.history = nextHistory;
           previous.source = source;
-          previous.correctionLon = 0;
-          previous.correctionLat = 0;
+          previous.correctionLon = correction?.lon ?? 0;
+          previous.correctionLat = correction?.lat ?? 0;
           previous.correctionStartedAt = now;
+          previous.correctionDurationMs = correctionDurationMs;
           previous.sourceReceivedAt = now;
+          if (!correction) marker.setLngLat(predictedPosition(source, now, nextHistory));
           animationSchedulerRef.current?.();
           return;
         }
