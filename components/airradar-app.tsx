@@ -517,6 +517,8 @@ export function AirRadarApp() {
     liveEndpointKey: string;
   } | null>(null);
   const selectedTrailSourceRef = useRef<readonly TrailPoint[] | null>(null);
+  const routeSourceKeyRef = useRef<string | null>(null);
+  const routeAirportSourceKeyRef = useRef<string | null>(null);
   const selectedHexRef = useRef<string | null>(null);
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
@@ -1763,12 +1765,22 @@ export function AirRadarApp() {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && showAirports ? "visible" : "none");
     }
     const routeSource = map.getSource(ROUTE_V2_SOURCE_ID) as GeoJSONSource | undefined;
-    routeSource?.setData(selectedAircraftVisible ? createRouteGeoJSON(
+    const routeSourceKey = selectedAircraftVisible && selected
+      ? `${selected.icaoHex}|${positionObservedAt(selected) ?? ""}|${selectedRouteAirportCodesKey}`
+      : "";
+    if (routeSource && routeSourceKeyRef.current !== routeSourceKey) {
+      routeSource.setData(selectedAircraftVisible ? createRouteGeoJSON(
         selected?.enrichment?.route,
         selected && selected.lat !== null && selected.lon !== null ? { lat: selected.lat, lon: selected.lon } : null,
       ) : { type: "FeatureCollection", features: [] });
+      routeSourceKeyRef.current = routeSourceKey;
+    }
     const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
-    routeAirportSource?.setData(selectedAircraftVisible ? createRouteAirportGeoJSON(selected?.enrichment?.route) : createRouteAirportGeoJSON(null));
+    const routeAirportSourceKey = selectedAircraftVisible ? selectedRouteAirportCodesKey : "";
+    if (routeAirportSource && routeAirportSourceKeyRef.current !== routeAirportSourceKey) {
+      routeAirportSource.setData(selectedAircraftVisible ? createRouteAirportGeoJSON(selected?.enrichment?.route) : createRouteAirportGeoJSON(null));
+      routeAirportSourceKeyRef.current = routeAirportSourceKey;
+    }
   }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
@@ -1837,7 +1849,6 @@ export function AirRadarApp() {
   }, [mapReady, procedures, showSids, showStars]);
 
   useEffect(() => {
-    const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
     const atcGeoJson = createAtcGeoJSON(atcData.sectors, showAtc || showAupUup || showAtcTraffic, airspaceActivity, sectorTraffic);
     const transmitterGeoJson: FeatureCollection = {
       type: "FeatureCollection",
@@ -1853,18 +1864,10 @@ export function AirRadarApp() {
     transmitterGeoJsonRef.current = transmitterGeoJson;
     mapReplayRef.current.atc.setData(atcGeoJson);
     mapReplayRef.current.transmitters.setData(transmitterGeoJson);
-    const nearbyAirports = airportsWithinMapRadius(airports, { lat: snapshot.receiver.lat, lon: snapshot.receiver.lon });
-    const airportGeoJson = createAirportGeoJSON(nearbyAirports, selectedRouteAirportCodes);
-    airportGeoJsonRef.current = airportGeoJson;
-    mapReplayRef.current.airports.setData(airportGeoJson);
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const atcSource = map.getSource("atc-sectors") as GeoJSONSource | undefined;
-    atcSource?.setData(atcGeoJson);
-    const transmitterSource = map.getSource("atc-transmitters") as GeoJSONSource | undefined;
-    transmitterSource?.setData(transmitterGeoJson);
-    const airportSource = map.getSource("route-airports") as GeoJSONSource | undefined;
-    airportSource?.setData(airportGeoJson);
+    (map.getSource("atc-sectors") as GeoJSONSource | undefined)?.setData(atcGeoJson);
+    (map.getSource("atc-transmitters") as GeoJSONSource | undefined)?.setData(transmitterGeoJson);
     for (const layer of ["atc-sectors-fill", "atc-sectors-line", "atc-sectors-label", "atc-transmitters-circle"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAtc ? "visible" : "none");
     }
@@ -1874,16 +1877,13 @@ export function AirRadarApp() {
     for (const layer of ["airspace-plan-fill", "airspace-plan-line", "airspace-plan-label"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAupUup ? "visible" : "none");
     }
-    // The initial radar view is receiver-centred on Czechia.  Without this
-    // fit, valid Slovak/Austrian sectors are loaded but remain outside the
-    // viewport, which makes the ATC layer appear Czech-only.
+    // The initial radar view is receiver-centred on Czechia. Without this fit,
+    // valid Slovak/Austrian sectors are loaded but remain outside the viewport.
     if (showAtc && !atcAutoFitRef.current && atcData.sectors.length) {
       const bounds = new maplibregl.LngLatBounds();
       for (const sector of atcData.sectors) for (const polygon of sector.polygons) {
         for (const [lon, lat] of polygon) {
-          if (Number.isFinite(lon) && Number.isFinite(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90) {
-            bounds.extend([lon, lat]);
-          }
+          if (Number.isFinite(lon) && Number.isFinite(lat) && lon >= -180 && lon <= 180 && lat >= -90 && lat <= 90) bounds.extend([lon, lat]);
         }
       }
       if (!bounds.isEmpty()) {
@@ -1892,7 +1892,18 @@ export function AirRadarApp() {
       }
     }
     if (!showAtc) atcAutoFitRef.current = false;
-  }, [airports, airspaceActivity, atcData, mapReady, sectorTraffic, selectedRouteAirportCodesKey, showAtc, showAtcTraffic, showAupUup, snapshot.receiver.lat, snapshot.receiver.lon]);
+  }, [airspaceActivity, atcData, mapReady, sectorTraffic, showAtc, showAtcTraffic, showAupUup]);
+
+  useEffect(() => {
+    const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
+    const nearbyAirports = airportsWithinMapRadius(airports, { lat: snapshot.receiver.lat, lon: snapshot.receiver.lon });
+    const airportGeoJson = createAirportGeoJSON(nearbyAirports, selectedRouteAirportCodes);
+    airportGeoJsonRef.current = airportGeoJson;
+    mapReplayRef.current.airports.setData(airportGeoJson);
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    (map.getSource("route-airports") as GeoJSONSource | undefined)?.setData(airportGeoJson);
+  }, [airports, mapReady, selectedRouteAirportCodesKey, snapshot.receiver.lat, snapshot.receiver.lon]);
 
   useEffect(() => {
     const map = mapRef.current;
