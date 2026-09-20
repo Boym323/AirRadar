@@ -15,9 +15,9 @@ describe("aircraft icon orientation metadata", () => {
     "/aircraft-icons-tar1090/category-A7.svg",
     "/aircraft-icons-tar1090/category-B1.svg",
     "/aircraft-icons-tar1090/ground_square.svg",
-  ])("applies the tar1090 180 degree visual basis for %s", (asset) => {
+  ])("keeps the north-up tar1090 visual basis for %s", (asset) => {
     expect(aircraftIconRotationOffset(asset)).toBe(TAR1090_ICON_ROTATION_OFFSET_DEG);
-    expect(TAR1090_ICON_ROTATION_OFFSET_DEG).toBe(180);
+    expect(TAR1090_ICON_ROTATION_OFFSET_DEG).toBe(0);
   });
 
   it("does not apply the tar1090 correction to unrelated future asset families", () => {
