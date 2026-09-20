@@ -637,16 +637,25 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .airport-navaid { grid-template-columns: minmax(48px, .5fr) minmax(75px, 1fr) minmax(95px, 1fr) minmax(80px, 1fr); }
 .airport-navaid span { color: var(--muted); font-size: 11px; }
 
-.aircraft-marker { width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; z-index: 2; }
+/* Radar marker presentation: MapLibre owns geographic placement. The
+ * aircraft rotator owns screen heading; labels stay outside it and therefore
+ * remain horizontal while the map or aircraft turns. */
+.aircraft-marker { position: relative; width: 42px; height: 42px; display: grid; place-items: center; cursor: pointer; z-index: 2; }
 .aircraft-marker.selected { z-index: 30; }
 .aircraft-marker.watchlisted { z-index: 8; outline: 1px solid rgba(243,185,95,.72); outline-offset: 3px; border-radius: 50%; }
 .aircraft-marker.emergency { z-index: 12; outline: 1px solid rgba(251,113,133,.9); outline-offset: 3px; border-radius: 50%; }
 .aircraft-marker.network-only { opacity: .82; }
 .aircraft-marker.network-only .aircraft-plane { outline: 1px dashed rgba(144,164,184,.72); outline-offset: 3px; border-radius: 50%; }
 .aircraft-marker.source-overlap .aircraft-plane { outline: 1px solid rgba(55,214,192,.72); outline-offset: 3px; border-radius: 50%; }
-.aircraft-marker.selected::before { content: ""; position: absolute; inset: 1px; border: 2px solid var(--amber); border-radius: 50%; box-shadow: 0 0 0 4px rgba(243,185,95,.14), 0 0 14px rgba(243,185,95,.5); pointer-events: none; }
-.aircraft-plane { width: 31px; height: 31px; display: grid; place-items: center; color: var(--aircraft-color, var(--mint)); background: transparent; border: 0; box-shadow: none; line-height: 1; transition: color .18s, filter .18s, transform .18s; }
+.aircraft-plane-rotator { width: 34px; height: 34px; display: grid; place-items: center; transform-origin: center; will-change: transform; }
+.aircraft-plane { width: 32px; height: 32px; display: grid; place-items: center; color: var(--aircraft-color, var(--mint)); background: transparent; border: 0; box-shadow: none; line-height: 1; transition: color .18s, filter .18s, transform .18s; }
 .aircraft-marker:hover .aircraft-plane, .aircraft-marker:focus-visible .aircraft-plane { transform: scale(1.1); }
+.aircraft-marker.selected .aircraft-plane { color: var(--amber); filter: drop-shadow(0 0 8px rgba(243,185,95,.84)); transform: scale(1.16); }
+.aircraft-marker.watchlisted .aircraft-plane { filter: drop-shadow(0 0 6px rgba(243,185,95,.82)); }
+.aircraft-marker.selected::before { content: ""; position: absolute; inset: -3px; border: 2px solid var(--amber); border-radius: 50%; box-shadow: 0 0 0 4px rgba(243,185,95,.13), 0 0 16px rgba(243,185,95,.48); pointer-events: none; }
+.aircraft-marker.selected::after { display: none; }
+.aircraft-marker.emergency::before { content: ""; position: absolute; inset: 1px; border: 1px solid var(--danger); border-radius: 50%; animation: airradar-emergency-pulse 1.9s ease-out infinite; pointer-events: none; }
+.aircraft-marker.emergency .aircraft-plane { filter: drop-shadow(0 0 7px rgba(251,113,133,.74)); }
 .aircraft-plane svg, .aircraft-row-icon svg { fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .aircraft-plane svg { width: 23px; height: 23px; }
 .aircraft-row-icon svg { width: 20px; height: 20px; }
@@ -658,11 +667,23 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .aircraft-glyph-helicopter, .aircraft-glyph-drone, .aircraft-glyph-turboprop { fill: none; }
 .aircraft-plane[data-kind="ground"] svg { width: 16px; }
 .aircraft-plane[data-kind="ground"] .aircraft-glyph-asset { width: 16px; height: 16px; }
-.aircraft-label { position: absolute; top: 28px; left: 50%; max-width: 130px; transform: translateX(-50%); padding: 2px 4px; border: 1px solid rgba(153,181,207,.16); border-radius: 4px; background: rgba(8,17,29,.82); color: var(--text); font-size: 8px; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; text-overflow: ellipsis; overflow: hidden; }
-.aircraft-marker.selected .aircraft-label { border-color: rgba(243,185,95,.42); color: var(--amber); }
-.aircraft-marker.selected .aircraft-plane { color: var(--amber); filter: drop-shadow(0 0 7px rgba(243, 185, 95, .84)); transform: scale(1.12); }
-.aircraft-marker.watchlisted .aircraft-plane { filter: drop-shadow(0 0 6px rgba(243, 185, 95, .82)); }
+.aircraft-label { position: absolute; top: calc(50% + 25px); left: 50%; right: auto; bottom: auto; max-width: 140px; padding: 3px 5px; border: 1px solid rgba(190,214,232,.2); border-radius: 3px; background: rgba(8,17,29,.9); color: var(--text); font-family: var(--font-geist-mono), monospace; font-size: 10px; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; text-overflow: ellipsis; overflow: hidden; transform: translateX(-50%); }
+.aircraft-label[data-content-empty="true"] { display: none; }
+.aircraft-label[data-collision-hidden="true"] { visibility: hidden; }
+.aircraft-label[data-placement="top"] { top: auto; bottom: calc(50% + 25px); transform: translateX(-50%); }
+.aircraft-label[data-placement="right"] { top: 50%; left: calc(50% + 25px); transform: translateY(-50%); }
+.aircraft-label[data-placement="left"] { top: 50%; left: auto; right: calc(50% + 25px); transform: translateY(-50%); }
+.aircraft-label[data-placement="bottom"] { top: calc(50% + 25px); left: 50%; transform: translateX(-50%); }
+.aircraft-marker.selected .aircraft-label { border-color: rgba(243,185,95,.72); background: rgba(8,17,29,.96); color: var(--warning); font-weight: 700; }
+.aircraft-marker.emergency .aircraft-label { border-color: rgba(251,113,133,.78); }
 .aircraft-marker.selected .aircraft-glyph-asset { filter: brightness(0) saturate(100%) invert(81%) sepia(52%) saturate(652%) hue-rotate(344deg) brightness(101%) contrast(91%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .aircraft-plane-rotator,
+  .aircraft-plane { transition: none; }
+  .aircraft-marker.emergency::before { animation: none; }
+}
+
 .ogn-marker { width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; z-index: 3; }
 .ogn-marker.selected { z-index: 30; }
 .ogn-marker.stale { opacity: .72; }
@@ -1483,15 +1504,6 @@ button, input, select, textarea { color-scheme: dark; }
 .primary-button:hover { background: var(--accent-hover); }
 .detail-footer { margin-top: 17px; padding-top: 13px; border-top-color: var(--border); font-size: 11px; }
 
-.aircraft-marker { width: 40px; height: 40px; }
-.aircraft-marker.selected { z-index: 30; }
-.aircraft-marker.selected::before { border-color: var(--warning); box-shadow: 0 0 0 4px rgba(243, 185, 95, .12), 0 0 12px rgba(243, 185, 95, .42); }
-.aircraft-marker.emergency { outline-color: rgba(251, 113, 133, .88); }
-.aircraft-marker.emergency::before { content: ""; position: absolute; inset: 1px; border: 1px solid var(--danger); border-radius: 50%; animation: airradar-emergency-pulse 1.9s ease-out infinite; pointer-events: none; }
-.aircraft-plane { width: 32px; height: 32px; }
-.aircraft-label { top: 29px; max-width: 140px; padding: 3px 5px; border-color: rgba(190, 214, 232, .2); border-radius: 3px; background: rgba(8, 17, 29, .88); font-family: var(--font-geist-mono), monospace; font-size: 10px; line-height: 1.2; }
-.aircraft-marker.selected .aircraft-label { border-color: rgba(243, 185, 95, .58); color: var(--warning); }
-.aircraft-marker.selected .aircraft-plane { filter: drop-shadow(0 0 6px rgba(243, 185, 95, .72)); }
 .receiver-marker { width: 18px; height: 18px; border-color: var(--warning); background: rgba(243, 185, 95, .16); box-shadow: 0 0 0 6px rgba(243, 185, 95, .08); }
 .maplibregl-ctrl-group { border-color: var(--border-strong) !important; border-radius: 4px !important; background: rgba(8, 17, 29, .94) !important; overflow: hidden; }
 .maplibregl-ctrl-group button { width: 34px; height: 34px; filter: invert(1) sepia(.2) saturate(.5) hue-rotate(145deg); }
@@ -1778,8 +1790,6 @@ button, input, select, textarea { color-scheme: dark; }
   .detail-callsign { font-size: 21px; }
   .detail-hero-metrics { gap: 11px 13px; }
   .detail-hero-metrics strong { font-size: 15px; }
-  .aircraft-marker { width: 42px; height: 42px; }
-  .aircraft-label { font-size: 10px; }
   .map-panel .maplibregl-ctrl-bottom-right { bottom: calc(min(54svh, 520px) + max(6px, env(safe-area-inset-bottom))); }
   .radar-content:has(.sidebar.compact) .maplibregl-ctrl-bottom-right { bottom: calc(92px + max(6px, env(safe-area-inset-bottom))); }
   .history-page, .flight-page, .aircraft-page, .airport-page, .statistics-page, .watchlist-page, .fleet-page, .system-page { padding-top: 20px; }
@@ -2240,26 +2250,6 @@ button, input, select, textarea { color-scheme: dark; }
   background: linear-gradient(90deg, rgba(245, 189, 98, .16), rgba(67, 216, 194, .06));
   border-color: rgba(245, 189, 98, .68);
   box-shadow: inset 3px 0 0 var(--warning), 0 5px 18px rgba(0, 0, 0, .13);
-}
-
-.aircraft-marker.selected::before {
-  inset: -3px;
-  border-width: 2px;
-  box-shadow: 0 0 0 5px rgba(243, 185, 95, .16), 0 0 22px rgba(243, 185, 95, .62);
-}
-.aircraft-marker.selected::after {
-  content: "";
-  position: absolute;
-  inset: -9px;
-  border: 1px solid rgba(243, 185, 95, .32);
-  border-radius: 50%;
-  pointer-events: none;
-}
-.aircraft-marker.selected .aircraft-plane { transform: scale(1.18); filter: drop-shadow(0 0 9px rgba(243, 185, 95, .92)); }
-.aircraft-marker.selected .aircraft-label {
-  border-color: rgba(243, 185, 95, .72);
-  background: rgba(8, 17, 29, .96);
-  font-weight: 700;
 }
 
 .detail-heading { border-left: 3px solid var(--accent-primary); }

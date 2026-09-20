@@ -28,13 +28,13 @@ import {
   watchlistSummary,
 } from "@/lib/i18n";
 import { haversineDistanceKm } from "@/lib/geo";
-import { MAX_PREDICTION_CORRECTION_KM, correctionFor, motionAt, normalizeHeading, predictedPosition, shortestLongitudeDelta, createMotionHistory, updateMotionHistory, AIRCRAFT_ICON_ROTATION_OFFSET_DEG, type MotionHistory } from "@/lib/aircraft/motion";
+import { MAX_PREDICTION_CORRECTION_KM, correctionFor, motionAt, predictedPosition, shortestLongitudeDelta, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
+import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
-import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -50,10 +50,8 @@ import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
-import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
-import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
-import { aircraftMapLabel } from "@/lib/aircraft/map-labels";
+import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
 import {
   createRouteAirportGeoJSON,
   createRouteGeoJSON,
@@ -79,7 +77,15 @@ import {
   type AircraftQuickFilter,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
-import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
+import { aircraftPositionSourceLabel, aircraftSourceLabel, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
+import {
+  createAircraftMarkerHandle,
+  setAircraftMarkerHeading,
+  updateAircraftMarkerHandle,
+  type AircraftMarkerHandle,
+} from "@/lib/radar/aircraft-marker-controller";
+import { createLabelCollisionScheduler } from "@/lib/radar/aircraft-label-collision";
+import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-controller";
 
 declare global {
   interface Window {
@@ -188,7 +194,7 @@ type TrafficSource = "adsb" | "ogn";
 type RadarDrawerState = "closed" | "traffic" | "aircraft" | "ogn";
 
 interface AircraftAnimationJob {
-  marker: maplibregl.Marker;
+  handle: AircraftMarkerHandle;
   source: {
     lat: number;
     lon: number;
@@ -204,6 +210,13 @@ interface AircraftAnimationJob {
   correctionDurationMs: number;
   sourceReceivedAt: number;
   history: MotionHistory;
+}
+
+interface OgnMarkerHandle {
+  marker: maplibregl.Marker;
+  root: HTMLElement;
+  icon: HTMLElement;
+  label: HTMLElement;
 }
 
 function sourceObservedPerformanceTime(aircraft: AircraftView, receivedAt: number): number | null {
@@ -417,13 +430,6 @@ function AircraftIcon({ aircraft }: { aircraft: AircraftView }) {
     : <AircraftGlyph kind={aircraftMarkerKind(aircraft)} />;
 }
 
-function aircraftGlyphMarkup(aircraft: AircraftView): string {
-  const asset = aircraftIconAsset(aircraft);
-  if (asset) return `<img class="aircraft-glyph aircraft-glyph-asset" src="${asset}" alt="" draggable="false" />`;
-  const kind = aircraftMarkerKind(aircraft);
-  return `<svg class="aircraft-glyph aircraft-glyph-${kind}" viewBox="0 0 32 32" aria-hidden="true"><path d="${AIRCRAFT_GLYPH_PATHS[kind]}" /></svg>`;
-}
-
 export function AirRadarApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -505,12 +511,13 @@ export function AirRadarApp() {
   const centeredTrafficRef = useRef(false);
   const focusedAircraftRef = useRef<string | null>(null);
   const receiverMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const aircraftMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
-  const ognMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+  const aircraftMarkersRef = useRef<Map<string, AircraftMarkerHandle>>(new Map());
+  const ognMarkersRef = useRef<Map<string, OgnMarkerHandle>>(new Map());
   const animationJobsRef = useRef<Map<string, AircraftAnimationJob>>(new Map());
   const animationFrameRef = useRef<number | null>(null);
   const animationHiddenAtRef = useRef<number | null>(null);
   const animationSchedulerRef = useRef<(() => void) | null>(null);
+  const labelCollisionSchedulerRef = useRef<(() => void) | null>(null);
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const liveAircraftByHexRef = useRef<Map<string, AircraftView>>(new Map());
   const pendingAircraftChangesRef = useRef<{ full: boolean; changedHexes: Set<string>; removedHexes: Set<string> } | null>(null);
@@ -524,6 +531,7 @@ export function AirRadarApp() {
   const selectedTrailSourceRef = useRef<readonly TrailPoint[] | null>(null);
   const routeSourceKeyRef = useRef<string | null>(null);
   const routeAirportSourceKeyRef = useRef<string | null>(null);
+  const routeAirportGeoJsonRef = useRef<ReturnType<typeof createRouteAirportGeoJSON>>(createRouteAirportGeoJSON(null));
   const selectedHexRef = useRef<string | null>(null);
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
@@ -1068,6 +1076,15 @@ export function AirRadarApp() {
     const liveTrails = liveTrailsRef.current;
     const mapReplays = mapReplayRef.current;
 
+    const runLabelCollision = () => applyAircraftLabelCollisionLayout({
+      map,
+      aircraftMarkers,
+      routeAirportFeatures: routeAirportGeoJsonRef.current.features,
+      routeAirportLabelLayerId: ROUTE_V2_AIRPORT_LABEL_LAYER_ID,
+    });
+    const labelCollisionScheduler = createLabelCollisionScheduler(runLabelCollision);
+    labelCollisionSchedulerRef.current = () => labelCollisionScheduler.schedule();
+
     const runAnimations = (timestamp: number) => {
       animationFrameRef.current = null;
       if (document.hidden) {
@@ -1075,7 +1092,7 @@ export function AirRadarApp() {
         return;
       }
       if (prefersReducedMotion()) {
-        for (const job of animationJobs.values()) job.marker.setLngLat([job.source.lon, job.source.lat]);
+        for (const job of animationJobs.values()) job.handle.marker.setLngLat([job.source.lon, job.source.lat]);
         animationJobs.clear();
         return;
       }
@@ -1090,11 +1107,12 @@ export function AirRadarApp() {
           startedAt: job.correctionStartedAt,
           durationMs: job.correctionDurationMs,
         }, job.history);
-        job.marker.setLngLat([motion.lon, motion.lat]);
+        job.handle.marker.setLngLat([motion.lon, motion.lat]);
         // Position and heading must be rendered from the same frame of the
         // motion model. Updating rotation only from the SSE/React effect made
         // turns appear to snap at packet boundaries.
-        if (motion.heading !== null) job.marker.setRotation(motion.heading + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
+        if (motion.heading !== null) setAircraftMarkerHeading(job.handle, motion.heading, map.getBearing());
+        labelCollisionSchedulerRef.current?.();
         if (job === selectedAnimationJob) selectedAnimationMotion = motion;
         if (timestamp - job.correctionStartedAt >= job.correctionDurationMs) {
           job.correctionLon = 0;
@@ -1254,7 +1272,7 @@ export function AirRadarApp() {
       map.on("mouseleave", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = ""; });
       map.addSource(ROUTE_V2_AIRPORT_SOURCE_ID, { type: "geojson", data: createRouteAirportGeoJSON(null) });
       map.addLayer({ id: ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, type: "circle", source: ROUTE_V2_AIRPORT_SOURCE_ID, paint: { "circle-color": "#37d6c0", "circle-opacity": 0.92, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4.5, 12, 6], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.8 } });
-      map.addLayer({ id: ROUTE_V2_AIRPORT_LABEL_LAYER_ID, type: "symbol", source: ROUTE_V2_AIRPORT_SOURCE_ID, layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 10, 10, 13, 11], "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#72e5d3", "text-opacity": 0.9, "text-halo-color": "#08111d", "text-halo-width": 1 } });
+      map.addLayer({ id: ROUTE_V2_AIRPORT_LABEL_LAYER_ID, type: "symbol", source: ROUTE_V2_AIRPORT_SOURCE_ID, filter: ["==", ["get", "labelVisible"], true], layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 10, 10, 13, 11], "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#72e5d3", "text-opacity": 0.9, "text-halo-color": "#08111d", "text-halo-width": 1 } });
       map.on("click", "atc-sectors-fill", (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
         if (!feature) return;
@@ -1342,7 +1360,17 @@ export function AirRadarApp() {
         map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
       }
-      map.on("zoomend", () => setMapZoom(map.getZoom()));
+      const updateAircraftHeadingsForMapBearing = () => {
+        const bearing = map.getBearing();
+        for (const handle of aircraftMarkers.values()) {
+          if (handle.geographicHeading !== null) setAircraftMarkerHeading(handle, handle.geographicHeading, bearing);
+        }
+      };
+      const scheduleLabelCollision = () => labelCollisionSchedulerRef.current?.();
+      map.on("zoomend", () => { setMapZoom(map.getZoom()); scheduleLabelCollision(); });
+      map.on("moveend", scheduleLabelCollision);
+      map.on("rotate", updateAircraftHeadingsForMapBearing);
+      map.on("rotateend", scheduleLabelCollision);
       // Dataset fetches and map construction are independent lifecycles. The
       // refs retain the newest payload so a dataset that arrived before the
       // map load is applied to this map instance as soon as its sources exist.
@@ -1359,6 +1387,8 @@ export function AirRadarApp() {
     return () => {
       for (const replay of Object.values(mapReplays)) replay.setReady(false);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      labelCollisionScheduler.dispose();
+      labelCollisionSchedulerRef.current = null;
       if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
       animationHiddenAtRef.current = null;
@@ -1366,9 +1396,9 @@ export function AirRadarApp() {
       animationJobs.clear();
       receiverMarkerRef.current?.remove();
       receiverMarkerRef.current = null;
-      for (const marker of aircraftMarkers.values()) marker.remove();
+      for (const handle of aircraftMarkers.values()) handle.marker.remove();
       aircraftMarkers.clear();
-      for (const marker of ognMarkers.values()) marker.remove();
+      for (const handle of ognMarkers.values()) handle.marker.remove();
       ognMarkers.clear();
       liveTrails.clear();
       map.remove();
@@ -1430,8 +1460,8 @@ export function AirRadarApp() {
     for (const target of ognSnapshot.targets) {
       if (!Number.isFinite(target.latitude) || !Number.isFinite(target.longitude)) continue;
       currentIds.add(target.id);
-      let marker = ognMarkers.get(target.id);
-      if (!marker) {
+      let handle = ognMarkers.get(target.id);
+      if (!handle) {
         const root = document.createElement("div");
         root.className = "ogn-marker";
         root.setAttribute("role", "button");
@@ -1449,31 +1479,34 @@ export function AirRadarApp() {
             selectOgn(target.id);
           }
         });
-        marker = new maplibregl.Marker({ element: root, anchor: "center" })
-          .setLngLat([target.longitude, target.latitude])
-          .addTo(map);
-        ognMarkers.set(target.id, marker);
+        handle = {
+          marker: new maplibregl.Marker({ element: root, anchor: "center" })
+            .setLngLat([target.longitude, target.latitude])
+            .addTo(map),
+          root,
+          icon,
+          label,
+        };
+        ognMarkers.set(target.id, handle);
       } else {
-        marker.setLngLat([target.longitude, target.latitude]);
+        handle.marker.setLngLat([target.longitude, target.latitude]);
       }
-      const root = marker.getElement();
-      root.setAttribute("aria-label", ognTargetLabel(target));
-      root.setAttribute("aria-pressed", String(target.id === selectedOgnId));
-      root.classList.toggle("selected", target.id === selectedOgnId);
-      root.classList.toggle("stale", target.stale);
-      root.style.visibility = visible ? "visible" : "hidden";
-      const icon = root.querySelector<HTMLElement>(".ogn-marker-icon");
-      if (icon && icon.dataset.aircraftType !== target.aircraftType) {
-        icon.dataset.aircraftType = target.aircraftType;
-        icon.innerHTML = ognGlyphMarkup(target.aircraftType);
+      handle.root.setAttribute("aria-label", ognTargetLabel(target));
+      handle.root.setAttribute("aria-pressed", String(target.id === selectedOgnId));
+      handle.root.classList.toggle("selected", target.id === selectedOgnId);
+      handle.root.classList.toggle("stale", target.stale);
+      handle.root.style.visibility = visible ? "visible" : "hidden";
+      if (handle.icon.dataset.aircraftType !== target.aircraftType) {
+        handle.icon.dataset.aircraftType = target.aircraftType;
+        handle.icon.innerHTML = ognGlyphMarkup(target.aircraftType);
       }
-      const label = root.querySelector<HTMLElement>(".ogn-marker-label");
-      if (label) label.textContent = ognTargetLabel(target);
+      const nextLabel = ognTargetLabel(target);
+      if (handle.label.textContent !== nextLabel) handle.label.textContent = nextLabel;
     }
 
-    for (const [id, marker] of ognMarkers) {
+    for (const [id, handle] of ognMarkers) {
       if (currentIds.has(id)) continue;
-      marker.remove();
+      handle.marker.remove();
       ognMarkers.delete(id);
     }
   }, [mapReady, ognEnabled, ognSnapshot.targets, selectOgn, selectedOgnId, showOgn]);
@@ -1564,7 +1597,8 @@ export function AirRadarApp() {
       : [...(pending?.changedHexes ?? [])]
         .map((hex) => liveAircraftByHexRef.current.get(hex))
         .filter((aircraft): aircraft is AircraftView => Boolean(aircraft && filteredAircraftByHex.has(aircraft.icaoHex)));
-    const upsertPrediction = (aircraft: AircraftView, marker: maplibregl.Marker) => {
+    const upsertPrediction = (aircraft: AircraftView, handle: AircraftMarkerHandle) => {
+      const marker = handle.marker;
       const now = performance.now();
       const target: [number, number] = [aircraft.lon!, aircraft.lat!];
       const source: AircraftAnimationJob["source"] = {
@@ -1587,7 +1621,7 @@ export function AirRadarApp() {
       if (document.hidden) {
         marker.setLngLat(target);
         animationJobs.set(aircraft.icaoHex, {
-          marker,
+          handle,
           source,
           correctionLon: 0,
           correctionLat: 0,
@@ -1621,7 +1655,7 @@ export function AirRadarApp() {
           previous.correctionDurationMs = MIN_AIRCRAFT_ANIMATION_MS;
           marker.setLngLat(target);
           const heading = motionAt(source, now, undefined, previous.history).heading;
-          if (heading !== null) marker.setRotation(heading + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
+          if (heading !== null) setAircraftMarkerHeading(handle, heading, map.getBearing());
           return;
         }
         if (sourceChanged) {
@@ -1667,7 +1701,7 @@ export function AirRadarApp() {
         const initialPosition = predictedPosition(source, now);
         marker.setLngLat(initialPosition);
         animationJobs.set(aircraft.icaoHex, {
-          marker,
+          handle,
           source,
           correctionLon: 0,
           correctionLat: 0,
@@ -1711,86 +1745,35 @@ export function AirRadarApp() {
 
     for (const aircraft of aircraftToUpdate) {
       if (aircraft.lat === null || aircraft.lon === null || !Number.isFinite(aircraft.lat) || !Number.isFinite(aircraft.lon)) continue;
-      let marker = aircraftMarkersRef.current.get(aircraft.icaoHex);
+      let handle = aircraftMarkersRef.current.get(aircraft.icaoHex);
       const target: [number, number] = [aircraft.lon, aircraft.lat];
-      if (!marker) {
-        const root = document.createElement("div");
-        root.className = aircraftMarkerClassNames({ selected: false, watchlisted: false, emergency: false, source: classifyAircraftSource(aircraft) }).join(" ");
-        root.setAttribute("role", "button");
-        root.setAttribute("tabindex", "0");
-        root.setAttribute("aria-label", labelForAircraft(aircraft));
-        const plane = document.createElement("div");
-        plane.className = "aircraft-plane";
-        const markerKind = aircraftMarkerKind(aircraft);
-        plane.dataset.kind = markerKind;
-        const iconAsset = aircraftIconAsset(aircraft);
-        plane.dataset.iconAsset = iconAsset ?? "fallback";
-        plane.innerHTML = aircraftGlyphMarkup(aircraft);
-        root.appendChild(plane);
-        const label = document.createElement("div");
-        label.className = "aircraft-label";
-        label.setAttribute("aria-hidden", "true");
-        root.appendChild(label);
-        root.addEventListener("click", () => selectAircraft(aircraft.icaoHex));
-        root.addEventListener("keydown", (event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            selectAircraft(aircraft.icaoHex);
-          }
-        });
-        marker = new maplibregl.Marker({ element: root, anchor: "center", rotationAlignment: "map" })
-          .setLngLat(target)
-          .addTo(map);
-        aircraftMarkersRef.current.set(aircraft.icaoHex, marker);
+      if (!handle) {
+        handle = createAircraftMarkerHandle(map, aircraft, target, selectAircraft, () => labelCollisionSchedulerRef.current?.());
+        aircraftMarkersRef.current.set(aircraft.icaoHex, handle);
       }
       // Pass a shallow copy because React's immutability lint treats snapshot
       // values as render-owned when they cross the animation helper boundary.
-      upsertPrediction({ ...aircraft }, marker);
-      const root = marker.getElement();
-      const aircraftLabel = labelForAircraft(aircraft);
-      if (root.getAttribute("aria-label") !== aircraftLabel) root.setAttribute("aria-label", aircraftLabel);
+      upsertPrediction({ ...aircraft }, handle);
       const selectedState = aircraft.icaoHex === selectedHex;
-      const ariaPressed = String(selectedState);
-      if (root.getAttribute("aria-pressed") !== ariaPressed) root.setAttribute("aria-pressed", ariaPressed);
-      root.classList.toggle("selected", selectedState);
-      root.classList.toggle("watchlisted", isWatchlisted(aircraft));
-      root.classList.toggle("emergency", Boolean(aircraft.emergency));
-      const sourceClass = classifyAircraftSource(aircraft);
-      root.classList.toggle("network-only", sourceClass === "NETWORK_ONLY");
-      root.classList.toggle("source-overlap", sourceClass === "OVERLAP");
-      const markerVisibility = showAircraft ? "visible" : "hidden";
-      if (root.style.visibility !== markerVisibility) root.style.visibility = markerVisibility;
-      const plane = root.querySelector<HTMLElement>(".aircraft-plane");
-      if (plane) {
-        const markerKind = aircraftMarkerKind(aircraft);
-        const iconAsset = aircraftIconAsset(aircraft);
-        if (plane.dataset.kind !== markerKind || plane.dataset.iconAsset !== (iconAsset ?? "fallback")) {
-          plane.dataset.kind = markerKind;
-          plane.dataset.iconAsset = iconAsset ?? "fallback";
-          plane.innerHTML = aircraftGlyphMarkup(aircraft);
-        }
-        const color = aircraftColor(aircraft, colorMode);
-        if (color) plane.style.setProperty("--aircraft-color", color);
-        else plane.style.removeProperty("--aircraft-color");
-      }
-      const label = root.querySelector<HTMLElement>(".aircraft-label");
-      if (label) {
-        const labelText = aircraftMapLabel(aircraft, mapZoom, formatAltitude(aircraft.altitude));
-        const nextLabelText = labelText ?? "";
-        if (label.textContent !== nextLabelText) label.textContent = nextLabelText;
-        const labelHidden = labelText === null;
-        if (label.hidden !== labelHidden) label.hidden = labelHidden;
-      }
-      // readsb's track is clockwise from geographic north. Let MapLibre apply
-      // it in map coordinates, so it remains correct when the user rotates map.
       const motionJob = animationJobs.get(aircraft.icaoHex);
       const renderedMotion = motionJob ? motionAt(motionJob.source, performance.now(), {
         lon: motionJob.correctionLon, lat: motionJob.correctionLat,
         startedAt: motionJob.correctionStartedAt, durationMs: motionJob.correctionDurationMs,
       }, motionJob.history) : null;
-      const renderedHeading = renderedMotion?.heading ?? normalizeHeading(aircraft.track);
-      if (renderedHeading !== null) marker.setRotation(renderedHeading + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
+      const renderedHeading = renderedMotion?.heading ?? aircraft.track;
+      const labelChanged = updateAircraftMarkerHandle(handle, { ...aircraft }, {
+        selected: selectedState,
+        watchlisted: isWatchlisted(aircraft),
+        emergency: Boolean(aircraft.emergency),
+        showAircraft,
+        zoom: mapZoom,
+        colorMode,
+        mapBearing: map.getBearing(),
+        heading: renderedHeading,
+      });
+      if (labelChanged) labelCollisionSchedulerRef.current?.();
     }
+    labelCollisionSchedulerRef.current?.();
 
     const markerRemovalCandidates = fullMarkerUpdate
       ? [...aircraftMarkersRef.current.keys()]
@@ -1802,17 +1785,18 @@ export function AirRadarApp() {
         }),
       ])];
     for (const hex of markerRemovalCandidates) {
-      const marker = aircraftMarkersRef.current.get(hex);
-      if (!marker || (fullMarkerUpdate && currentHexes?.has(hex))) continue;
+      const handle = aircraftMarkersRef.current.get(hex);
+      if (!handle || (fullMarkerUpdate && currentHexes?.has(hex))) continue;
       if (hex === selectedHex && selectedAircraftVisible && selectedTrailForMap.length > 0) {
         const lastKnown = selectedTrailForMap[selectedTrailForMap.length - 1];
-        marker.setLngLat([lastKnown.lon, lastKnown.lat]);
-        marker.getElement().style.visibility = showAircraft ? "visible" : "hidden";
+        handle.marker.setLngLat([lastKnown.lon, lastKnown.lat]);
+        handle.root.style.visibility = showAircraft ? "visible" : "hidden";
         continue;
       }
       animationJobsRef.current.delete(hex);
-      marker.remove();
+      handle.marker.remove();
       aircraftMarkersRef.current.delete(hex);
+      labelCollisionSchedulerRef.current?.();
     }
 
     const selected = selectedAircraftVisible ? selectedAircraftInSnapshot : undefined;
@@ -1843,8 +1827,13 @@ export function AirRadarApp() {
     const routeAirportSource = map.getSource(ROUTE_V2_AIRPORT_SOURCE_ID) as GeoJSONSource | undefined;
     const routeAirportSourceKey = selectedAircraftVisible ? selectedRouteAirportCodesKey : "";
     if (routeAirportSource && routeAirportSourceKeyRef.current !== routeAirportSourceKey) {
-      routeAirportSource.setData(selectedAircraftVisible ? createRouteAirportGeoJSON(selected?.enrichment?.route) : createRouteAirportGeoJSON(null));
+      const routeAirportGeoJson = selectedAircraftVisible
+        ? createRouteAirportGeoJSON(selected?.enrichment?.route)
+        : createRouteAirportGeoJSON(null);
+      routeAirportGeoJsonRef.current = routeAirportGeoJson;
+      routeAirportSource.setData(routeAirportGeoJson);
       routeAirportSourceKeyRef.current = routeAirportSourceKey;
+      labelCollisionSchedulerRef.current?.();
     }
   }, [colorMode, filteredAircraft, filteredAircraftByHex, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
