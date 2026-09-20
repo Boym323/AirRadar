@@ -59,11 +59,11 @@ describe("aircraft source merge", () => {
     expect(isFreshPosition(local, options.localStaleAfterMs, options.now)).toBe(true);
   });
 
-  it("uses fresh network kinematics when the local position is stale and then returns to local", () => {
+  it("keeps the last local position when the network feed is fresher", () => {
     const staleLocal = make("ABC123", "local", { lon: 14.11, seen: 18, seen_pos: 18 });
     const freshNetwork = make("ABC123", "adsblol", { lon: 14.12, seen: 2, seen_pos: 2 });
     const networkValue = mergeAircraftObservations(staleLocal, freshNetwork, receiver, options);
-    expect(networkValue).toMatchObject({ lon: 14.12, origin: "adsblol", source: "MLAT" });
+    expect(networkValue).toMatchObject({ lon: 14.11, origin: "local", source: "ADS-B" });
 
     const freshLocal = make("ABC123", "local", { lon: 14.13, seen: 1, seen_pos: 1 });
     const localValue = mergeAircraftObservations(freshLocal, freshNetwork, receiver, options);
@@ -234,7 +234,7 @@ describe("aircraft source merge", () => {
     expect(mergeAircraftObservations(local, normalNetwork, receiver, options)?.squawk).toBe("7600");
   });
 
-  it("reports network MLAT as the position provenance when local position is stale", () => {
+  it("keeps local position provenance when network MLAT is fresher", () => {
     const local = make("ABC123", "local", { seen: 1, seen_pos: 20, type: "adsb_icao" });
     const network = make("ABC123", "adsblol", { seen: 2, seen_pos: 2, type: "mlat" });
     const value = mergeAircraftObservations(local, network, receiver, options);
@@ -242,8 +242,8 @@ describe("aircraft source merge", () => {
     expect(value?.provenance).toMatchObject({
       seenLocal: true,
       seenNetwork: true,
-      positionOrigin: "adsblol",
-      positionSource: "MLAT",
+      positionOrigin: "local",
+      positionSource: "ADS-B",
     });
   });
 

@@ -97,12 +97,14 @@ export function selectPositionObservation(
   options: { localStaleAfterMs: number; networkStaleAfterMs: number },
   now: number,
 ): Aircraft | undefined {
-  // Provenance is the first arbitration boundary: a fresh usable local
-  // position is authoritative even when the network position is newer.
-  const localCandidates = local && isFreshPosition(local, options.localStaleAfterMs, now) ? [local] : [];
-  if (localCandidates.length) {
-    return localCandidates.sort((left, right) => compareObservationFreshness(left, right, now, POSITION_TIE_MS))[0];
-  }
+  // Provenance is the first arbitration boundary. Once the local receiver has
+  // a usable position for an aircraft, keep that position authoritative for
+  // the whole local observation lifetime. Falling back to a network position
+  // merely because one local position aged past the short freshness window
+  // makes the marker switch local → network → local as the two feeds arrive
+  // on different schedules. Network positions remain available for aircraft
+  // that have no usable local position at all.
+  if (local && hasUsablePosition(local)) return local;
 
   const networkCandidates = network && isFreshPosition(network, options.networkStaleAfterMs, now) ? [network] : [];
   return networkCandidates.sort((left, right) => compareObservationFreshness(left, right, now, POSITION_TIE_MS))[0];
