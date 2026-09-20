@@ -108,14 +108,15 @@ describe("radar UI polish helpers", () => {
     const receiverRule = globalCss.match(/\.receiver-marker\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(maplibreCss).toContain(".maplibregl-marker");
     expect(maplibreCss).toMatch(/\.maplibregl-marker\{[^}]*position:absolute/);
-    expect(aircraftRule).toMatch(/\bposition\s*:\s*relative/);
+    expect(aircraftRule).not.toMatch(/\bposition\s*:/);
+    expect(globalCss).toMatch(/\.aircraft-marker-visual\s*\{[^}]*position:\s*relative/);
     expect(aircraftRule).not.toMatch(/\btransform\s*:/);
     expect(receiverRule).not.toMatch(/\bposition\s*:/);
     expect(receiverRule).not.toMatch(/\btransform\s*:/);
   });
 
   it("keeps aircraft visual effects off the MapLibre root", () => {
-    expect(globalCss).toContain(".aircraft-marker.selected::before");
+    expect(globalCss).toContain(".aircraft-marker.selected .aircraft-marker-visual::before");
     expect(globalCss).toContain("position: absolute");
     expect(globalCss).toMatch(/\.aircraft-marker:hover \.aircraft-plane[^}]*transform:\s*scale/);
     expect(globalCss).toMatch(/\.aircraft-marker\.selected \.aircraft-plane[^}]*transform:\s*scale/);
@@ -127,6 +128,8 @@ describe("radar UI polish helpers", () => {
     expect(markerControllerSource).toContain('rotationAlignment: "viewport"');
     expect(markerControllerSource).toContain('pitchAlignment: "viewport"');
     expect(markerControllerSource).toContain('const rotator = document.createElement("div")');
+    expect(markerControllerSource).toContain('visual.className = "aircraft-marker-visual"');
+    expect(markerControllerSource).toContain('name.startsWith("maplibregl-")');
     expect(markerControllerSource).toContain('rotator.className = "aircraft-plane-rotator"');
     expect(markerControllerSource).toContain('label.className = "aircraft-label"');
     expect(appSource).not.toContain("setRotation(");

@@ -90,6 +90,7 @@ import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-co
 declare global {
   interface Window {
     __airradarMapForDiagnostics?: maplibregl.Map;
+    __airradarAircraftMarkersForDiagnostics?: Map<string, AircraftMarkerHandle>;
   }
 }
 
@@ -1075,6 +1076,9 @@ export function AirRadarApp() {
     const ognMarkers = ognMarkersRef.current;
     const liveTrails = liveTrailsRef.current;
     const mapReplays = mapReplayRef.current;
+    if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
+      window.__airradarAircraftMarkersForDiagnostics = aircraftMarkers;
+    }
 
     const runLabelCollision = () => applyAircraftLabelCollisionLayout({
       map,
@@ -1403,6 +1407,7 @@ export function AirRadarApp() {
       liveTrails.clear();
       map.remove();
       if (window.__airradarMapForDiagnostics === map) delete window.__airradarMapForDiagnostics;
+      if (window.__airradarAircraftMarkersForDiagnostics === aircraftMarkers) delete window.__airradarAircraftMarkersForDiagnostics;
       mapRef.current = null;
       setMapReady(false);
     };
