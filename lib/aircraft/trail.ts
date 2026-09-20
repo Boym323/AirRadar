@@ -23,9 +23,11 @@ function isPlausibleTransition(previous: TrailPosition, next: TrailPosition): bo
 }
 
 /**
- * Returns a chronological, duplicate-free trail. Invalid timestamps are ignored
- * so a malformed provider/history point cannot disturb the line. The trail is
- * retained for as long as its aircraft remains present in the live state.
+ * Returns a chronological, duplicate-free trail. Invalid timestamps and
+ * physically impossible transitions are ignored so a malformed or previously
+ * persisted provider/history point cannot draw a false line across the map.
+ * The trail is retained for as long as its aircraft remains present in the
+ * live state.
  */
 export function boundTrailPoints(points: readonly TrailPosition[], now = Date.now()): TrailPoint[] {
   void now;
@@ -55,7 +57,18 @@ export function boundTrailPoints(points: readonly TrailPosition[], now = Date.no
       deduplicated.push(point);
     }
   }
-  return deduplicated;
+
+  // appendTrailPoint() already protects the live tail, but history loaded from
+  // PostgreSQL can contain samples written before that guard existed (or from a
+  // transient bad provider/source switch). The selected trail is rendered as a
+  // single LineString, so even one impossible persisted point would otherwise
+  // create the long orange cross-map segments seen on the radar.
+  const plausible: TrailPoint[] = [];
+  for (const point of deduplicated) {
+    const previous = plausible.at(-1);
+    if (!previous || isPlausibleTransition(previous, point)) plausible.push(point);
+  }
+  return plausible;
 }
 
 export function appendTrailPoint(

@@ -46,6 +46,18 @@ describe("selected aircraft live trail", () => {
     expect(appendTrailPoint([normal], absurd)).toEqual([normal]);
   });
 
+  it("filters implausible persisted history jumps before rendering the selected trail", () => {
+    const history = [
+      point(-4, 14),
+      point(-3, 20), // persisted stale/provider outlier that would draw a cross-map segment
+      point(-2, 14.02),
+      point(-1, 14.03),
+    ];
+
+    expect(boundTrailPoints(history, now).map((item) => item.lon)).toEqual([14, 14.02, 14.03]);
+    expect(selectedTrail(new Map(), "ABC123", history, now).map((item) => item.lon)).toEqual([14, 14.02, 14.03]);
+  });
+
   it("lets history expand the past without moving the live endpoint", () => {
     const live = new Map<string, TrailPoint[]>([["ABC123", [point(0, 14.2), point(1, 14.3)]]]);
     const history = [point(-2, 14), point(-1, 14.1)];
