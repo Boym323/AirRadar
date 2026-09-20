@@ -1,7 +1,9 @@
 name: CI
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
 
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production-main' }}
@@ -44,7 +46,7 @@ jobs:
           test_status=0
           npm run lint & lint_pid=$!
           npm run typecheck:prepared & typecheck_pid=$!
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/main" ]]; then
             npm run test:full & test_pid=$!
           else
             export AIRRADAR_TEST_BASE_SHA="$(git merge-base HEAD "origin/${GITHUB_BASE_REF:-main}")"

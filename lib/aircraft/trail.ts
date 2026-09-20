@@ -12,7 +12,11 @@ function trailPointKey(point: TrailPosition): string {
   return `${point.recordedAt}|${point.lat}|${point.lon}`;
 }
 
-const MAX_TRAIL_SPEED_KM_PER_SECOND = 1.5;
+// A persisted position can be several polling intervals old, so this is
+// deliberately above normal airliner groundspeed.  The former 1.5 km/s
+// ceiling (5,400 km/h) still admitted receiver glitches and produced long
+// cross-map segments in the selected trail.
+const MAX_TRAIL_SPEED_KM_PER_SECOND = 0.45;
 
 function isPlausibleTransition(previous: TrailPosition, next: TrailPosition): boolean {
   const previousAt = recordedAtMs(previous);

@@ -46,6 +46,12 @@ describe("selected aircraft live trail", () => {
     expect(appendTrailPoint([normal], absurd)).toEqual([normal]);
   });
 
+  it("rejects a cross-map history jump that is below the old overly generous limit", () => {
+    const first = point(0, 14);
+    const jump = point(1, 14.4);
+    expect(appendTrailPoint([first], jump)).toEqual([first]);
+  });
+
   it("filters implausible persisted history jumps before rendering the selected trail", () => {
     const history = [
       point(-4, 14),

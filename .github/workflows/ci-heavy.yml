@@ -2,6 +2,8 @@ name: CI heavy
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
 
 concurrency:
   group: heavy-${{ github.ref }}
