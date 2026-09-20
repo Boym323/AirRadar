@@ -537,7 +537,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         contentType: "application/json",
         body: JSON.stringify({ available: false, points: [], stale: false, validAt: null }),
       }));
-      await page.route("**/api/ats/routes", (route) => {
+      await page.route(/\/api\/ats\/routes(?:\?.*)?$/, (route) => {
         fixtureRequests.ats += 1;
         return route.fulfill({
         status: 200,
