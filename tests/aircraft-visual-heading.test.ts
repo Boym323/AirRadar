@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { shortestAngleDelta } from "@/lib/aircraft/motion";
 import { resolveAircraftVisualHeading } from "@/lib/aircraft/visual-heading";
+import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
 
 describe("aircraft visual heading", () => {
   it.each([
@@ -28,6 +29,16 @@ describe("aircraft visual heading", () => {
   it("applies an asset-specific offset without changing geographic heading", () => {
     expect(resolveAircraftVisualHeading({ track: 0, mapBearing: 0, assetOffset: 12 })).toBe(12);
     expect(resolveAircraftVisualHeading({ track: 5, mapBearing: 10, assetOffset: -12 })).toBe(343);
+  });
+
+
+  it("restores the tar1090 presentation basis without changing motion heading", () => {
+    const assetOffset = aircraftIconRotationOffset("/aircraft-icons-tar1090/A320.svg");
+    expect(resolveAircraftVisualHeading({ track: 0, mapBearing: 0, assetOffset })).toBe(180);
+    expect(resolveAircraftVisualHeading({ track: 90, mapBearing: 0, assetOffset })).toBe(270);
+    expect(resolveAircraftVisualHeading({ track: 180, mapBearing: 0, assetOffset })).toBe(0);
+    expect(resolveAircraftVisualHeading({ track: 270, mapBearing: 0, assetOffset })).toBe(90);
+    expect(resolveAircraftVisualHeading({ track: 90, mapBearing: 45, assetOffset })).toBe(225);
   });
 
   it("normalizes north crossing without a 180 degree flip", () => {
