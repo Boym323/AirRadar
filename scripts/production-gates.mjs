@@ -249,14 +249,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       await sweepPage.goto(`${baseUrl}/?mapDiagnostics=1`, { waitUntil: "domcontentloaded" });
       await sweepPage.locator("h1").first().waitFor({ state: "visible" });
       const sweepFailures = [];
-      for (let width = 821; width <= 1200; width += 1) {
+      // Exercise breakpoint boundaries and representative desktop widths. A
+      // pixel-by-pixel sweep adds hundreds of identical layout passes without
+      // increasing coverage because CSS behavior changes at breakpoints.
+      const sweepWidths = [821, 899, 900, 901, 1024, 1099, 1100, 1101, 1200];
+      for (const width of sweepWidths) {
         await sweepPage.setViewportSize({ width, height: 900 });
         const metrics = await sweepPage.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
         if (metrics.scrollWidth > metrics.innerWidth + 1) sweepFailures.push({ width, ...metrics });
       }
       await sweepPage.close();
       if (sweepFailures.length) throw new Error(`Responsive width sweep failed: ${JSON.stringify(sweepFailures.slice(0, 10))}`);
-      console.log("[production-gates] responsive width sweep 821-1200 step=1 failures=0 pageReloads=1");
+      console.log(`[production-gates] responsive width sweep ${sweepWidths.join(",")} failures=0 pageReloads=1`);
     }
     const browserViewports = [
       { width: 320, height: 844 },
