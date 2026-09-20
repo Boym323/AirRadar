@@ -2,6 +2,12 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.106] - 2026-09-20
+
+Changes since v1.0.105:
+
+- fix: implement source affinity to prevent aircraft feed switching during outages (afb16f9d)
+
 ## [1.0.105] - 2026-09-20
 
 Changes since v1.0.104:
