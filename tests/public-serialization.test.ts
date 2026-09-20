@@ -76,7 +76,11 @@ describe("public snapshot serialization", () => {
   });
 
   it("uses the same safe transformation shape for repeated API/SSE serialization", () => {
-    expect(toPublicStateSnapshot(snapshot(), "hidden")).toEqual(toPublicStateSnapshot(snapshot(), "hidden"));
+    const internal = snapshot();
+    const first = toPublicStateSnapshot(internal, "hidden");
+    const second = toPublicStateSnapshot(internal, "hidden");
+    expect(second).toBe(first);
+    expect(toPublicLiveStateSnapshot(internal, "hidden")).toBe(first);
   });
 
   it("preserves the local subset in both API and live SSE serialization", () => {

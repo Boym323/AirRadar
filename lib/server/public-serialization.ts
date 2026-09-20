@@ -11,6 +11,19 @@ import { getPublicReceiverPositionMode, type PublicReceiverPositionMode } from "
 
 export type { PublicReceiverPositionMode } from "@/lib/server/config";
 
+export interface PublicAircraftChangeSet {
+  changed: AircraftView[];
+  removed: string[];
+}
+
+const publicSnapshotCache = new WeakMap<StateSnapshot, Map<PublicReceiverPositionMode, PublicStateSnapshot>>();
+const publicAircraftFingerprintCache = new WeakMap<PublicStateSnapshot, Map<string, string>>();
+const publicAircraftDeltaCache = new WeakMap<PublicStateSnapshot, WeakMap<PublicStateSnapshot, PublicAircraftChangeSet>>();
+
+function publicAircraftFingerprint(aircraft: AircraftView): string {
+  return JSON.stringify(aircraft);
+}
+
 function roundedCoordinate(value: number): number {
   return Math.round(value * 100) / 100;
 }
@@ -95,6 +108,45 @@ function publicAircraft(item: AircraftView): PublicAircraft {
   };
 }
 
+function publicAircraftFingerprints(snapshot: PublicStateSnapshot): Map<string, string> {
+  const cached = publicAircraftFingerprintCache.get(snapshot);
+  if (cached) return cached;
+  const fingerprints = new Map<string, string>();
+  for (const aircraft of snapshot.aircraft) fingerprints.set(aircraft.icaoHex, publicAircraftFingerprint(aircraft));
+  publicAircraftFingerprintCache.set(snapshot, fingerprints);
+  return fingerprints;
+}
+
+/**
+ * Computes a public delta once per snapshot pair. SSE clients share the
+ * public snapshot object produced for a state generation, so the expensive
+ * fingerprint work is no longer repeated for every connection.
+ */
+export function getPublicAircraftChangeSet(
+  previous: PublicStateSnapshot,
+  current: PublicStateSnapshot,
+): PublicAircraftChangeSet {
+  let byPrevious = publicAircraftDeltaCache.get(current);
+  if (!byPrevious) {
+    byPrevious = new WeakMap<PublicStateSnapshot, PublicAircraftChangeSet>();
+    publicAircraftDeltaCache.set(current, byPrevious);
+  }
+  const cached = byPrevious.get(previous);
+  if (cached) return cached;
+
+  const previousFingerprints = publicAircraftFingerprints(previous);
+  const currentFingerprints = publicAircraftFingerprints(current);
+  const currentByHex = new Map(current.aircraft.map((aircraft) => [aircraft.icaoHex, aircraft]));
+  const changed: AircraftView[] = [];
+  for (const aircraft of current.aircraft) {
+    if (previousFingerprints.get(aircraft.icaoHex) !== currentFingerprints.get(aircraft.icaoHex)) changed.push(aircraft);
+  }
+  const removed = [...previousFingerprints.keys()].filter((hex) => !currentByHex.has(hex)).sort();
+  const result = { changed, removed };
+  byPrevious.set(previous, result);
+  return result;
+}
+
 /**
  * Converts the internal state into the only snapshot shape allowed on the
  * public API and SSE wire. Internal coordinates and raw provider errors never
@@ -104,7 +156,9 @@ export function toPublicStateSnapshot(
   snapshot: StateSnapshot,
   mode: PublicReceiverPositionMode = getPublicReceiverPositionMode(),
 ): PublicStateSnapshot {
-  return {
+  const cached = publicSnapshotCache.get(snapshot)?.get(mode);
+  if (cached) return cached;
+  const value: PublicStateSnapshot = {
     aircraft: snapshot.aircraft.map(publicAircraft),
     relevantAtcFrequencies: snapshot.relevantAtcFrequencies,
     receiver: toPublicReceiverPosition(snapshot.receiver, mode),
@@ -122,6 +176,13 @@ export function toPublicStateSnapshot(
     sourceStats: snapshot.sourceStats,
     localCoverageRatio: snapshot.localCoverageRatio,
   };
+  let byMode = publicSnapshotCache.get(snapshot);
+  if (!byMode) {
+    byMode = new Map();
+    publicSnapshotCache.set(snapshot, byMode);
+  }
+  byMode.set(mode, value);
+  return value;
 }
 
 /**

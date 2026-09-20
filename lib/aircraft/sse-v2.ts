@@ -17,8 +17,15 @@ export type SseV2DeltaPayload = Omit<PublicStateSnapshot, "aircraft"> & {
 
 export type SseV2Payload = SseV2SnapshotPayload | SseV2DeltaPayload;
 
+export interface SseV2ClientState {
+  snapshot: PublicStateSnapshot;
+  sequence: string;
+  aircraftByHex: Map<string, AircraftView>;
+  sortedAircraftIds: string[];
+}
+
 export type SseV2ApplyResult =
-  | { status: "applied"; snapshot: PublicStateSnapshot; sequence: string }
+  | { status: "applied"; snapshot: PublicStateSnapshot; sequence: string; state: SseV2ClientState; changedHexes: string[]; changedAircraft: AircraftView[]; removedHexes: string[] }
   | { status: "duplicate"; snapshot: PublicStateSnapshot; sequence: string }
   | { status: "invalid" };
 
@@ -60,12 +67,34 @@ function incrementSequence(value: string): string {
   return carry ? `1${digits.join("")}` : digits.join("");
 }
 
-function sortAircraft(aircraft: AircraftView[]): AircraftView[] {
-  return aircraft.sort((left, right) => {
-    const leftDistance = left.distanceKm ?? Number.POSITIVE_INFINITY;
-    const rightDistance = right.distanceKm ?? Number.POSITIVE_INFINITY;
-    return leftDistance - rightDistance || left.icaoHex.localeCompare(right.icaoHex);
-  });
+function compareAircraft(left: AircraftView, right: AircraftView): number {
+  const leftDistance = left.distanceKm ?? Number.POSITIVE_INFINITY;
+  const rightDistance = right.distanceKm ?? Number.POSITIVE_INFINITY;
+  return leftDistance - rightDistance || left.icaoHex.localeCompare(right.icaoHex);
+}
+
+function normalizedState(snapshot: PublicStateSnapshot, sequence: string): SseV2ClientState {
+  const aircraftByHex = new Map(snapshot.aircraft.map((item) => [item.icaoHex, item]));
+  return { snapshot, sequence, aircraftByHex, sortedAircraftIds: snapshot.aircraft.map((item) => item.icaoHex) };
+}
+
+function removeSortedAircraft(ids: string[], hex: string): void {
+  const index = ids.indexOf(hex);
+  if (index >= 0) ids.splice(index, 1);
+}
+
+function insertSortedAircraft(ids: string[], aircraftByHex: Map<string, AircraftView>, hex: string): void {
+  const aircraft = aircraftByHex.get(hex);
+  if (!aircraft) return;
+  let low = 0;
+  let high = ids.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    const middleAircraft = aircraftByHex.get(ids[middle]);
+    if (middleAircraft && compareAircraft(middleAircraft, aircraft) <= 0) low = middle + 1;
+    else high = middle;
+  }
+  ids.splice(low, 0, hex);
 }
 
 function isBasePayload(value: unknown): value is { protocol: typeof SSE_V2_PROTOCOL; sequence: string } & Record<string, unknown> {
@@ -73,7 +102,7 @@ function isBasePayload(value: unknown): value is { protocol: typeof SSE_V2_PROTO
 }
 
 export function applySseV2Event(
-  current: { snapshot: PublicStateSnapshot; sequence: string } | null,
+  current: Pick<SseV2ClientState, "snapshot" | "sequence"> | SseV2ClientState | null,
   eventName: "snapshot" | "delta",
   value: unknown,
 ): SseV2ApplyResult {
@@ -90,6 +119,10 @@ export function applySseV2Event(
       status: "applied",
       sequence,
       snapshot: { ...snapshot, aircraft: value.aircraft } as unknown as PublicStateSnapshot,
+      state: normalizedState({ ...snapshot, aircraft: value.aircraft } as unknown as PublicStateSnapshot, sequence),
+      changedHexes: value.aircraft.map((aircraft) => aircraft.icaoHex),
+      changedAircraft: value.aircraft,
+      removedHexes: [],
     };
   }
 
@@ -104,9 +137,21 @@ export function applySseV2Event(
     return { status: "invalid" };
   }
 
-  const aircraft = new Map(current.snapshot.aircraft.map((item) => [item.icaoHex, item]));
-  for (const hex of value.removed) aircraft.delete(hex);
-  for (const item of value.changed) aircraft.set(item.icaoHex, item);
+  const state = "aircraftByHex" in current && current.aircraftByHex && "sortedAircraftIds" in current && current.sortedAircraftIds
+    ? current as SseV2ClientState
+    : normalizedState(current.snapshot, current.sequence);
+  for (const hex of value.removed) {
+    if (!state.aircraftByHex.delete(hex)) continue;
+    removeSortedAircraft(state.sortedAircraftIds, hex);
+  }
+  for (const item of value.changed) {
+    if (state.aircraftByHex.has(item.icaoHex)) removeSortedAircraft(state.sortedAircraftIds, item.icaoHex);
+    state.aircraftByHex.set(item.icaoHex, item);
+    insertSortedAircraft(state.sortedAircraftIds, state.aircraftByHex, item.icaoHex);
+  }
+  const aircraft = value.changed.length || value.removed.length
+    ? state.sortedAircraftIds.map((hex) => state.aircraftByHex.get(hex)!).filter(Boolean)
+    : current.snapshot.aircraft;
   const snapshot: Record<string, unknown> = { ...value };
   delete snapshot.protocol;
   delete snapshot.sequence;
@@ -115,7 +160,11 @@ export function applySseV2Event(
   return {
     status: "applied",
     sequence,
-    snapshot: { ...snapshot, aircraft: sortAircraft([...aircraft.values()]) } as unknown as PublicStateSnapshot,
+    snapshot: { ...snapshot, aircraft } as unknown as PublicStateSnapshot,
+    state: { ...state, snapshot: { ...snapshot, aircraft } as unknown as PublicStateSnapshot, sequence },
+    changedHexes: value.changed.map((aircraft) => aircraft.icaoHex),
+    changedAircraft: value.changed,
+    removedHexes: [...value.removed],
   };
 }
 

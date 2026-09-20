@@ -53,11 +53,30 @@ describe("aircraft state service", () => {
     services.push(service);
     await service.waitForReady();
     const compact = service.getSnapshot();
+    const compactAgain = service.getSnapshot();
     const full = service.getSnapshot({ includeTrails: true });
+    const fullAgain = service.getSnapshot({ includeTrails: true });
 
+    expect(compactAgain).toBe(compact);
+    expect(fullAgain).toBe(full);
+    expect(service.getSnapshotCacheDiagnostics().builds.local).toBe(2);
     expect(compact.aircraft[0].trail).toBeUndefined();
     expect(full.aircraft[0].trail).toHaveLength(1);
     expect(service.getAircraft(full.aircraft[0].icaoHex)?.trail).toHaveLength(1);
+  });
+
+  it("shares one cached snapshot construction across many listeners", async () => {
+    const service = new AircraftStateService(new MockReadsbProvider({ lat: 50, lon: 14, name: "Test" }));
+    services.push(service);
+    const unsubscribers = Array.from({ length: 20 }, () => service.subscribe(() => undefined));
+    await service.waitForReady();
+    const before = service.getSnapshotCacheDiagnostics();
+    (service as unknown as { notify: () => void }).notify();
+    const after = service.getSnapshotCacheDiagnostics();
+
+    expect(after.builds.local).toBe(before.builds.local);
+    expect(after.cachedSnapshots).toBeGreaterThanOrEqual(1);
+    for (const unsubscribe of unsubscribers) unsubscribe();
   });
 
   it("does not trigger AviationWeather fetches during the live poll and subscription path", async () => {

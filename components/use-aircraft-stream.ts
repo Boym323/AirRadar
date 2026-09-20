@@ -1,17 +1,19 @@
 import { useEffect, useState, type MutableRefObject } from "react";
 import type { CoverageMode, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
-import { applySseV2Event } from "@/lib/aircraft/sse-v2";
+import { applySseV2Event, type SseV2ClientState } from "@/lib/aircraft/sse-v2";
 import { appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
 
 interface UseAircraftStreamOptions {
+  enabled?: boolean;
   activeCoverage: CoverageMode;
   liveTrailsRef: MutableRefObject<Map<string, TrailPoint[]>>;
   selectedHexRef: MutableRefObject<string | null>;
   onSelectedAircraftRemoved: () => void;
-  onSnapshot: (snapshot: PublicStateSnapshot) => void;
+  onSnapshot: (snapshot: PublicStateSnapshot, change: { full: boolean; changedAircraft: PublicStateSnapshot["aircraft"]; removedHexes: string[] }) => void;
 }
 
 export function useAircraftStream({
+  enabled = true,
   activeCoverage,
   liveTrailsRef,
   selectedHexRef,
@@ -21,13 +23,20 @@ export function useAircraftStream({
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    if (!enabled) {
+      setConnected(false);
+      return;
+    }
     let active = true;
     let source: EventSource | null = null;
     let reconnectTimer: number | null = null;
-    let current: { snapshot: PublicStateSnapshot; sequence: string } | null = null;
+    let current: SseV2ClientState | null = null;
 
-    const updateTrails = (next: PublicStateSnapshot) => {
-      for (const aircraft of next.aircraft) {
+    const updateTrails = (next: PublicStateSnapshot, changedHexes: string[], removedHexes: string[], full: boolean) => {
+      const changed = full ? next.aircraft.map((aircraft) => aircraft.icaoHex) : changedHexes;
+      for (const hex of changed) {
+        const aircraft = current?.aircraftByHex.get(hex);
+        if (!aircraft) continue;
         const point = trailPointFromAircraft(aircraft);
         if (!point) continue;
         const trail = liveTrailsRef.current.get(aircraft.icaoHex) ?? [];
@@ -35,14 +44,18 @@ export function useAircraftStream({
         if (previous && Date.parse(point.recordedAt) <= Date.parse(previous.recordedAt)) continue;
         liveTrailsRef.current.set(aircraft.icaoHex, appendTrailPoint(trail, point));
       }
-      const visibleHexes = new Set(next.aircraft.map((aircraft) => aircraft.icaoHex));
-      for (const [hex, trail] of liveTrailsRef.current) {
-        if (!visibleHexes.has(hex)) {
-          liveTrailsRef.current.delete(hex);
-          continue;
+      if (full) {
+        const visibleHexes = new Set(next.aircraft.map((aircraft) => aircraft.icaoHex));
+        for (const [hex, trail] of liveTrailsRef.current) {
+          if (!visibleHexes.has(hex)) {
+            liveTrailsRef.current.delete(hex);
+            continue;
+          }
+          if (trail.length || hex === selectedHexRef.current) liveTrailsRef.current.set(hex, trail);
+          else liveTrailsRef.current.delete(hex);
         }
-        if (trail.length || hex === selectedHexRef.current) liveTrailsRef.current.set(hex, trail);
-        else liveTrailsRef.current.delete(hex);
+      } else {
+        for (const hex of removedHexes) liveTrailsRef.current.delete(hex);
       }
     };
 
@@ -67,11 +80,11 @@ export function useAircraftStream({
         }
         if (result.status === "duplicate") return;
         const previousHex = selectedHexRef.current;
-        current = { snapshot: result.snapshot, sequence: result.sequence };
-        updateTrails(result.snapshot);
-        if (previousHex && !result.snapshot.aircraft.some((aircraft) => aircraft.icaoHex === previousHex)) onSelectedAircraftRemoved();
+        current = result.state;
+        updateTrails(result.snapshot, result.changedHexes, result.removedHexes, eventName === "snapshot");
+        if (previousHex && (eventName === "snapshot" ? !result.state.aircraftByHex.has(previousHex) : result.removedHexes.includes(previousHex))) onSelectedAircraftRemoved();
         if (active) {
-          onSnapshot(result.snapshot);
+          onSnapshot(result.snapshot, { full: eventName === "snapshot", changedAircraft: result.changedAircraft, removedHexes: result.removedHexes });
           setConnected(true);
         }
       } catch {
@@ -95,7 +108,7 @@ export function useAircraftStream({
       source?.close();
       source = null;
     };
-  }, [activeCoverage, liveTrailsRef, onSelectedAircraftRemoved, onSnapshot, selectedHexRef]);
+  }, [activeCoverage, enabled, liveTrailsRef, onSelectedAircraftRemoved, onSnapshot, selectedHexRef]);
 
   return { connected };
 }
