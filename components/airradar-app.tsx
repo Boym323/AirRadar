@@ -1496,6 +1496,17 @@ export function AirRadarApp() {
     ].filter(Boolean).join(" ").toUpperCase().includes(query));
   }, [ognSnapshot.targets, search]);
 
+  const selectedRouteAirportCodesKey = useMemo(() => {
+    const selectedRoute = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex)?.enrichment?.route;
+    return [
+      selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin,
+      selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination,
+    ]
+      .filter((icao): icao is string => Boolean(icao))
+      .map((icao) => icao.trim().toUpperCase())
+      .join("|");
+  }, [selectedHex, snapshot.aircraft]);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
@@ -1686,10 +1697,9 @@ export function AirRadarApp() {
           .addTo(map);
         aircraftMarkersRef.current.set(aircraft.icaoHex, marker);
       }
-      // upsertPrediction derives its own mutable motion source and never mutates
-      // the React-owned aircraft snapshot, so avoid allocating one shallow copy
-      // per aircraft on every SSE update.
-      upsertPrediction(aircraft, marker);
+      // Pass a shallow copy because React's immutability lint treats snapshot
+      // values as render-owned when they cross the animation helper boundary.
+      upsertPrediction({ ...aircraft }, marker);
       const root = marker.getElement();
       const aircraftLabel = labelForAircraft(aircraft);
       if (root.getAttribute("aria-label") !== aircraftLabel) root.setAttribute("aria-label", aircraftLabel);
@@ -1781,7 +1791,7 @@ export function AirRadarApp() {
       routeAirportSource.setData(selectedAircraftVisible ? createRouteAirportGeoJSON(selected?.enrichment?.route) : createRouteAirportGeoJSON(null));
       routeAirportSourceKeyRef.current = routeAirportSourceKey;
     }
-  }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const visible = showAtsRoutes && atsRoutes?.available === true;
@@ -1817,17 +1827,6 @@ export function AirRadarApp() {
     if (!map) return;
     map.flyTo({ center: [coordinates[0], coordinates[1]], zoom: Math.max(map.getZoom(), 9.5), duration: prefersReducedMotion() ? 0 : 700 });
   }, [atsPointFocus, atsRoutes, mapReady]);
-
-  const selectedRouteAirportCodesKey = useMemo(() => {
-    const selectedRoute = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex)?.enrichment?.route;
-    return [
-      selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin,
-      selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination,
-    ]
-      .filter((icao): icao is string => Boolean(icao))
-      .map((icao) => icao.trim().toUpperCase())
-      .join("|");
-  }, [selectedHex, snapshot.aircraft]);
 
   useEffect(() => {
     if (!showSids && !showStars) { setProcedures([]); return; }
