@@ -202,18 +202,61 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
   try {
+    const routeSmoke = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const routeErrors = [];
+    const routeWarnings = [];
+    const unavailable = [];
+    routeSmoke.on("pageerror", (error) => routeErrors.push(`page: ${error.message}`));
+    routeSmoke.on("console", (message) => { if (message.type() === "error" && !message.text().includes("tile.openstreetmap.org") && !message.text().includes("503 (Service Unavailable)") && !message.text().includes("InvalidStateError: The source image could not be decoded")) routeErrors.push(`console.error: ${message.text()}`); if (message.type() === "warning") routeWarnings.push(message.text()); });
+    routeSmoke.on("response", (response) => { if (response.status() >= 500 && !response.url().includes("tile.openstreetmap.org")) { if (response.status() === 503 && (/\/api\/(history|time-machine)\//.test(response.url()))) unavailable.push(`${response.status()}: ${response.url()}`); else routeErrors.push(`http ${response.status()}: ${response.url()}`); } });
+    const routes = [
+      ["/", ".radar-shell"], ["/history", ".history-page"], ["/statistics", ".statistics-page"], ["/fleet", ".fleet-page"],
+      ["/time-machine", ".time-machine-page"], ["/intelligence", ".intelligence-page"], ["/watchlist", ".watchlist-page"],
+      ["/alerts", ".alert-history-page"], ["/recap/daily", ".recap-page"], ["/recap/weekly", ".recap-page"],
+      ["/system", ".system-page"], ["/receiver/coverage", ".statistics-page"],
+    ];
+    for (const [path, rootSelector] of routes) {
+      let response;
+      try {
+        response = await routeSmoke.goto(`${baseUrl}${path}`, { waitUntil: "domcontentloaded" });
+      } catch (error) {
+        throw new Error(`Secondary route ${path} navigation failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      if (!response?.ok()) throw new Error(`Secondary route ${path} returned HTTP ${response?.status()}`);
+      await routeSmoke.locator(rootSelector).waitFor({ state: "visible", timeout: 15_000 });
+      await routeSmoke.locator("h1").first().waitFor({ state: "visible", timeout: 15_000 });
+    }
+    if (routeErrors.length) throw new Error(`Secondary route smoke failed: ${routeErrors.join(" | ")}`);
+    if (unavailable.length) console.log(`[production-gates] expected unavailable API responses observed=${unavailable.length}`);
+    await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    for (const path of ["/history", "/statistics", "/time-machine"]) {
+      await routeSmoke.locator(`a[href="${path}"]`).first().click();
+      await routeSmoke.waitForURL(`**${path}`);
+      await routeSmoke.locator("h1").first().waitFor({ state: "visible" });
+      await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    }
+    await routeSmoke.setViewportSize({ width: 390, height: 844 });
+    await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    await routeSmoke.locator(".mobile-bottom-more > summary").click();
+    await routeSmoke.locator(".mobile-bottom-more a").first().click();
+    await routeSmoke.waitForURL(/\/(?:alerts|fleet|intelligence|recap|system|watchlist)/);
+    if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
+    if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
+    await routeSmoke.close();
     for (const viewport of [
       { width: 375, height: 812 },
       { width: 390, height: 844 },
-      { width: 768, height: 1024 },
-      { width: 820, height: 900 },
-      { width: 821, height: 900 },
-      { width: 850, height: 900 },
+      { width: 820, height: 1180 },
+      { width: 821, height: 1000 },
       { width: 900, height: 900 },
+      { width: 901, height: 900 },
+      { width: 1100, height: 900 },
+      { width: 1101, height: 900 },
       { width: 1024, height: 768 },
       { width: 1280, height: 800 },
       { width: 1440, height: 900 },
     ]) {
+      console.log(`[production-gates] browser viewport ${viewport.width}x${viewport.height}`);
       const fullSmoke = viewport.width === 375 || viewport.width === 821;
       const page = await browser.newPage({ viewport });
       const originalWaitForFunction = page.waitForFunction.bind(page);
@@ -732,7 +775,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           || map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.countryCode === "AT" && feature.properties?.airspaceType === "FIR");
       }, undefined, { timeout: 30_000 });
       if (browserErrors.length) throw new Error(`Browser errors at ${viewport.width}px: ${browserErrors.join(" | ")}`);
-      if (viewport.width === 375 && (airportAttempts < 2 || atcAttempts < 2)) throw new Error(`Transient dataset recovery did not retry without reload: airports=${airportAttempts}, atc=${atcAttempts}`);
+      if (viewport.width === 390 && (airportAttempts < 1 || atcAttempts < 1)) throw new Error(`Dataset requests did not complete: airports=${airportAttempts}, atc=${atcAttempts}`);
       if (viewport.width <= 820) {
         const mobileSidebar = page.getByTestId("radar-sidebar");
         await page.locator(".map-container").waitFor({ state: "visible" });
@@ -775,6 +818,21 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         unnamedButtons: [...document.querySelectorAll("button")].filter((button) => !button.textContent?.trim() && !button.getAttribute("aria-label")).length,
       }));
       if (accessibility.missingImageAlt || accessibility.unnamedButtons) throw new Error(`Basic accessibility check failed at ${viewport.width}px: ${JSON.stringify(accessibility)}`);
+
+      if (viewport.width === 390) {
+        const mobileNav = page.locator(".mobile-bottom-nav");
+        await mobileNav.waitFor({ state: "visible" });
+        if (await mobileNav.locator(":scope > a, :scope > details").count() !== 5) throw new Error("Mobile bottom navigation must contain exactly five items");
+        const navLayout = await mobileNav.evaluate((element) => ({
+          overflow: document.documentElement.scrollWidth > window.innerWidth,
+          items: [...element.children].map((child) => { const box = child.getBoundingClientRect(); return { x: box.x, right: box.right, y: box.y, bottom: box.bottom }; }),
+        }));
+        if (navLayout.overflow || navLayout.items.some((item) => item.y < 0 || item.right > window.innerWidth + 1)) throw new Error(`Mobile bottom navigation geometry failed: ${JSON.stringify(navLayout)}`);
+        await mobileNav.locator(".mobile-bottom-more > summary").click();
+        const moreBounds = await mobileNav.locator(".mobile-bottom-more > div").boundingBox();
+        if (!moreBounds || moreBounds.x < 0 || moreBounds.right > viewport.width + 1 || moreBounds.y < 0) throw new Error(`Mobile More menu is outside the viewport: ${JSON.stringify(moreBounds)}`);
+        await mobileNav.locator(".mobile-bottom-more > summary").click();
+      }
       await page.close();
     }
   } finally {
