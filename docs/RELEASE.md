@@ -51,6 +51,13 @@ the self-hosted Linux x64 runner. The runner executes:
 sudo -n /var/www/airradar/deploy/release.sh --branch main --automated --commit COMMIT_SHA
 ```
 
+This is the fast production deployment path: CI has already run lint,
+typecheck, the full Vitest suite, and the desktop/mobile browser gate, so the
+release script skips that duplicate quality suite. It still runs dependency
+installation, the isolated production build, Prisma migrations, systemd
+validation, restart, and local/public health checks. The explicit commit pin
+prevents deploying a different or unvalidated commit.
+
 The runner needs only outbound HTTPS access to GitHub. Install it through
 GitHub's **Settings → Actions → Runners → New self-hosted runner**, configure
 the default labels `self-hosted`, `linux`, and `x64`, and run it as a

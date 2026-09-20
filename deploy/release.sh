@@ -60,14 +60,15 @@ Usage: sudo ./deploy/release.sh [options]
 Options:
   --branch BRANCH  Release the current checkout of BRANCH instead of main.
   --channel MODE    Release channel: stable (default) or rc.
-  --automated       Continuous-deployment mode; keep origin/main fast-forwardable.
+  --automated       Deploy an already CI-validated commit; skip duplicate quality gates.
   --commit SHA       Require the release branch to resolve to this exact commit.
   --allow-dirty    Release uncommitted changes without updating from origin.
   --dry-run        Run preflight checks and print the release plan only.
   --help           Show this help.
 
-The default release runs all quality gates. Automated CI releases reuse the
-validated commit's lint, typecheck, and test results.
+The default versioned release runs all quality gates. Automated releases must
+pin --commit to the exact CI-validated commit and reuse its lint, typecheck,
+test, and browser-gate results.
 EOF
 }
 
