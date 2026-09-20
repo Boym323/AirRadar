@@ -503,6 +503,7 @@ export function AirRadarApp() {
   const animationHiddenAtRef = useRef<number | null>(null);
   const animationSchedulerRef = useRef<(() => void) | null>(null);
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
+  const selectedHistoryTrailRef = useRef<typeof selectedHistoryTrail>(null);
   const selectedHexRef = useRef<string | null>(null);
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
@@ -934,6 +935,9 @@ export function AirRadarApp() {
   useEffect(() => {
     selectedHexRef.current = selectedHex;
   }, [selectedHex]);
+  useEffect(() => {
+    selectedHistoryTrailRef.current = selectedHistoryTrail;
+  }, [selectedHistoryTrail]);
 
   useEffect(() => {
     if (!selectedHex) {
@@ -1041,6 +1045,21 @@ export function AirRadarApp() {
           job.correctionLat = 0;
         }
         if (hasContinuousPrediction(job, timestamp)) continueAnimation = true;
+      }
+      const selectedAnimationHex = selectedHexRef.current;
+      const selectedAnimationJob = selectedAnimationHex ? animationJobs.get(selectedAnimationHex) : undefined;
+      const selectedTrailSource = map.getSource("selected-trail") as GeoJSONSource | undefined;
+      if (selectedAnimationHex && selectedAnimationJob && selectedTrailSource) {
+        const history = selectedHistoryTrailRef.current;
+        const historyPoints = history?.icaoHex === selectedAnimationHex.toUpperCase() ? history.points : [];
+        const confirmed = selectedTrail(liveTrails, selectedAnimationHex, historyPoints, Date.now());
+        const rendered = predictedMarkerPosition(selectedAnimationJob, timestamp);
+        const last = confirmed.at(-1);
+        const coordinates = confirmed.map((point) => [point.lon, point.lat] as [number, number]);
+        if (!last || Math.abs(last.lon - rendered[0]) > 0.000001 || Math.abs(last.lat - rendered[1]) > 0.000001) coordinates.push(rendered);
+        selectedTrailSource.setData(coordinates.length > 1
+          ? { type: "Feature", properties: { icaoHex: selectedAnimationHex }, geometry: { type: "LineString", coordinates } }
+          : { type: "FeatureCollection", features: [] });
       }
       if (continueAnimation) animationFrameRef.current = window.requestAnimationFrame(runAnimations);
     };
@@ -1597,7 +1616,10 @@ export function AirRadarApp() {
           .addTo(map);
         aircraftMarkersRef.current.set(aircraft.icaoHex, marker);
       }
-      upsertPrediction(aircraft, marker);
+      // Pass a shallow copy because the motion history updater mutates its
+      // internal source state and React's immutability lint treats snapshot
+      // values as render-owned.
+      upsertPrediction({ ...aircraft }, marker);
       const root = marker.getElement();
       root.setAttribute("aria-label", labelForAircraft(aircraft));
       root.setAttribute("aria-pressed", String(aircraft.icaoHex === selectedHex));

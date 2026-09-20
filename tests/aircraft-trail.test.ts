@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrailPoint } from "@/lib/aircraft/types";
-import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
+import { boundTrailPoints, selectedTrail, trailPointFromAircraft, appendTrailPoint } from "@/lib/aircraft/trail";
 
 const now = Date.parse("2026-09-08T12:20:00.000Z");
 
@@ -16,6 +16,43 @@ function point(minutes: number, lon: number, lat = 50): TrailPoint {
 }
 
 describe("selected aircraft live trail", () => {
+  it("timestamps coordinates at the position observation, not the last message", () => {
+    const point = trailPointFromAircraft({
+      lat: 50,
+      lon: 14,
+      lastSeen: "2026-09-08T12:00:10.000Z",
+      seenSeconds: 0,
+      seenPosSeconds: 8,
+      altitude: 10_000,
+      groundSpeed: 250,
+      track: 90,
+    });
+
+    expect(point?.recordedAt).toBe("2026-09-08T12:00:02.000Z");
+  });
+
+  it("does not add untrusted or delayed position observations to the live tail", () => {
+    const first = point(0, 14);
+    const later = point(1, 14.01);
+    expect(trailPointFromAircraft({ lat: 50, lon: 14, lastSeen: first.recordedAt, seenSeconds: 0, seenPosSeconds: null, altitude: null, groundSpeed: null, track: null })).toBeNull();
+    expect(appendTrailPoint([later], first)).toEqual([later]);
+  });
+
+  it("accepts normal movement but rejects an implausible stale-source jump", () => {
+    const first = point(0, 14);
+    const normal = point(1, 14.01);
+    const absurd = point(2, 20);
+    expect(appendTrailPoint([first], normal)).toHaveLength(2);
+    expect(appendTrailPoint([normal], absurd)).toEqual([normal]);
+  });
+
+  it("lets history expand the past without moving the live endpoint", () => {
+    const live = new Map<string, TrailPoint[]>([["ABC123", [point(0, 14.2), point(1, 14.3)]]]);
+    const history = [point(-2, 14), point(-1, 14.1)];
+    const result = selectedTrail(live, "ABC123", history, now);
+    expect(result.map((item) => item.lon)).toEqual([14, 14.1, 14.2, 14.3]);
+    expect(result.at(-1)?.lon).toBe(14.3);
+  });
   it("shows the selected aircraft trail and never mixes another ICAO identity", () => {
     const trails = new Map<string, TrailPoint[]>([
       ["ABC123", [point(-2, 14.01), point(-1, 14.02)]],

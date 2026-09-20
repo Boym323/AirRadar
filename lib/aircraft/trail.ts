@@ -1,4 +1,6 @@
 import type { AircraftView, TrailPoint } from "@/lib/aircraft/types";
+import { haversineDistanceKm } from "@/lib/geo";
+import { positionObservedAt } from "@/lib/aircraft/source-merge";
 
 export type TrailPosition = Pick<TrailPoint, "lat" | "lon" | "recordedAt"> & Partial<Pick<TrailPoint, "altitude" | "groundSpeed" | "track">>;
 
@@ -8,6 +10,16 @@ function recordedAtMs(point: TrailPosition): number {
 
 function trailPointKey(point: TrailPosition): string {
   return `${point.recordedAt}|${point.lat}|${point.lon}`;
+}
+
+const MAX_TRAIL_SPEED_KM_PER_SECOND = 1.5;
+
+function isPlausibleTransition(previous: TrailPosition, next: TrailPosition): boolean {
+  const previousAt = recordedAtMs(previous);
+  const nextAt = recordedAtMs(next);
+  const elapsedSeconds = (nextAt - previousAt) / 1000;
+  if (!Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0) return false;
+  return haversineDistanceKm(previous.lat, previous.lon, next.lat, next.lon) / elapsedSeconds <= MAX_TRAIL_SPEED_KM_PER_SECOND;
 }
 
 /**
@@ -51,15 +63,26 @@ export function appendTrailPoint(
   point: TrailPosition,
   now = Date.now(),
 ): TrailPoint[] {
+  const previous = trail.at(-1);
+  if (previous) {
+    const previousAt = recordedAtMs(previous);
+    const nextAt = recordedAtMs(point);
+    // The live tail is append-only. A delayed source or a source switch may
+    // not rewrite the already confirmed endpoint or create a false segment.
+    if (!Number.isFinite(nextAt) || nextAt <= previousAt) return [...trail];
+    if (!isPlausibleTransition(previous, point)) return [...trail];
+  }
   return boundTrailPoints([...trail, point], now);
 }
 
-export function trailPointFromAircraft(aircraft: Pick<AircraftView, "lat" | "lon" | "lastSeen" | "altitude" | "groundSpeed" | "track">): TrailPoint | null {
+export function trailPointFromAircraft(aircraft: Pick<AircraftView, "lat" | "lon" | "lastSeen" | "seenSeconds" | "seenPosSeconds" | "altitude" | "groundSpeed" | "track">): TrailPoint | null {
   if (aircraft.lat === null || aircraft.lon === null) return null;
+  const observedAt = positionObservedAt(aircraft);
+  if (observedAt === null) return null;
   return {
     lat: aircraft.lat,
     lon: aircraft.lon,
-    recordedAt: aircraft.lastSeen,
+    recordedAt: new Date(observedAt).toISOString(),
     altitude: aircraft.altitude,
     groundSpeed: aircraft.groundSpeed,
     track: aircraft.track,
@@ -73,5 +96,11 @@ export function selectedTrail(
   now = Date.now(),
 ): TrailPoint[] {
   if (!selectedIcaoHex) return [];
-  return boundTrailPoints([...(trails.get(selectedIcaoHex) ?? []), ...history], now);
+  const live = trails.get(selectedIcaoHex) ?? [];
+  const liveEndpoint = live.at(-1);
+  const liveEndpointAt = liveEndpoint ? recordedAtMs(liveEndpoint) : Number.POSITIVE_INFINITY;
+  // History can arrive after the live stream. It may enrich the past, but it
+  // must never replace the already visible live endpoint with an older point.
+  const historyBeforeLive = history.filter((point) => recordedAtMs(point) <= liveEndpointAt);
+  return boundTrailPoints([...historyBeforeLive, ...live], now);
 }
