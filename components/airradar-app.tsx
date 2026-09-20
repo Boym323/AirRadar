@@ -563,13 +563,16 @@ export function AirRadarApp() {
   });
   const atcDataset = useDatasetQuery<AtcDataResponse>({
     url: "/api/atc/sectors",
+    enabled: showAtc || showAtcTraffic || showAupUup,
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtcDataset),
     itemCount: (value) => value.sectors.length,
   });
+  const selectedAircraftForData = selectedHex ? snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : null;
+  const selectedHasRouteData = Boolean(selectedAircraftForData?.enrichment?.route || aircraftDetail?.liveEnrichment?.route);
   const atsDataset = useDatasetQuery<AtsRoutesResponse>({
     url: "/api/ats/routes",
-    enabled: showAtsRoutes || Boolean(atsPointFocus) || Boolean(selectedHex),
+    enabled: showAtsRoutes || Boolean(atsPointFocus) || selectedHasRouteData,
     cache: "force-cache",
     parse: (response) => parseJsonDataset(response, parseAtsDataset),
     itemCount: (value) => value.counts?.routes ?? value.routes?.length ?? 0,
@@ -616,6 +619,10 @@ export function AirRadarApp() {
   }, [searchParams, showAtcTraffic]);
 
   useEffect(() => {
+    if (!showAtcTraffic) {
+      setSectorFlows([]);
+      return;
+    }
     let active = true; let controller: AbortController | null = null;
     const requestedAt = searchParams.get("at");
     const load = async () => {
@@ -628,7 +635,7 @@ export function AirRadarApp() {
     };
     void load().then(schedule);
     return () => { active = false; controller?.abort(); if (timer !== undefined) window.clearTimeout(timer); };
-  }, [searchParams, sectorFlowWindow]);
+  }, [searchParams, sectorFlowWindow, showAtcTraffic]);
 
   useEffect(() => {
     try {
@@ -1677,19 +1684,24 @@ export function AirRadarApp() {
           .addTo(map);
         aircraftMarkersRef.current.set(aircraft.icaoHex, marker);
       }
-      // Pass a shallow copy because the motion history updater mutates its
-      // internal source state and React's immutability lint treats snapshot
-      // values as render-owned.
-      upsertPrediction({ ...aircraft }, marker);
+      // upsertPrediction derives its own mutable motion source and never mutates
+      // the React-owned aircraft snapshot, so avoid allocating one shallow copy
+      // per aircraft on every SSE update.
+      upsertPrediction(aircraft, marker);
       const root = marker.getElement();
-      root.setAttribute("aria-label", labelForAircraft(aircraft));
-      root.setAttribute("aria-pressed", String(aircraft.icaoHex === selectedHex));
-      root.classList.toggle("selected", aircraft.icaoHex === selectedHex);
+      const aircraftLabel = labelForAircraft(aircraft);
+      if (root.getAttribute("aria-label") !== aircraftLabel) root.setAttribute("aria-label", aircraftLabel);
+      const selectedState = aircraft.icaoHex === selectedHex;
+      const ariaPressed = String(selectedState);
+      if (root.getAttribute("aria-pressed") !== ariaPressed) root.setAttribute("aria-pressed", ariaPressed);
+      root.classList.toggle("selected", selectedState);
       root.classList.toggle("watchlisted", isWatchlisted(aircraft));
       root.classList.toggle("emergency", Boolean(aircraft.emergency));
-      root.classList.toggle("network-only", classifyAircraftSource(aircraft) === "NETWORK_ONLY");
-      root.classList.toggle("source-overlap", classifyAircraftSource(aircraft) === "OVERLAP");
-      root.style.visibility = showAircraft ? "visible" : "hidden";
+      const sourceClass = classifyAircraftSource(aircraft);
+      root.classList.toggle("network-only", sourceClass === "NETWORK_ONLY");
+      root.classList.toggle("source-overlap", sourceClass === "OVERLAP");
+      const markerVisibility = showAircraft ? "visible" : "hidden";
+      if (root.style.visibility !== markerVisibility) root.style.visibility = markerVisibility;
       const plane = root.querySelector<HTMLElement>(".aircraft-plane");
       if (plane) {
         const markerKind = aircraftMarkerKind(aircraft);
@@ -1706,8 +1718,10 @@ export function AirRadarApp() {
       const label = root.querySelector<HTMLElement>(".aircraft-label");
       if (label) {
         const labelText = aircraftMapLabel(aircraft, mapZoom, formatAltitude(aircraft.altitude));
-        label.textContent = labelText ?? "";
-        label.hidden = labelText === null;
+        const nextLabelText = labelText ?? "";
+        if (label.textContent !== nextLabelText) label.textContent = nextLabelText;
+        const labelHidden = labelText === null;
+        if (label.hidden !== labelHidden) label.hidden = labelHidden;
       }
       // readsb's track is clockwise from geographic north. Let MapLibre apply
       // it in map coordinates, so it remains correct when the user rotates map.
