@@ -44,8 +44,8 @@ reviewed in `vitest.integration.config.ts` rather than inferred from timing.
 
 The production-scale metadata importer test is intentionally separate from
 the normal suite because its 617,000-record fixture tests resource behavior,
-not ordinary correctness. Run it with `npm run test:scale`; CI runs it in the
-nightly/manual heavy workflow. The normal metadata test still proves multiple
+not ordinary correctness. Run it with `npm run test:scale`; the heavy workflow
+is manual only. The normal metadata test still proves multiple
 full batches, a remainder batch, bounded batch size, streaming, and record
 counts.
 

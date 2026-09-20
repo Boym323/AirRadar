@@ -40,38 +40,26 @@ health-check. To inspect an RC candidate without mutations, use:
 sudo ./deploy/release.sh --channel rc --dry-run
 ```
 
-## Continuous deployment
+## CI and manual release
 
-`.github/workflows/ci.yml` runs the full validation gate on every pull request
-and push. A push to `main` automatically runs the production smoke checks,
-including the desktop/mobile browser gate, and then starts the `deploy` job on
-the self-hosted Linux x64 runner. The runner executes:
+Automated GitHub Actions runs are intentionally disabled during development.
+Both `.github/workflows/ci.yml` and `.github/workflows/ci-heavy.yml` are
+available through **Actions → Run workflow** only. The regular workflow runs
+the full validation gate, including the production smoke checks and the
+desktop/mobile browser gate; the heavy workflow runs the scale test.
+
+The regular workflow no longer deploys automatically. Production deployment
+remains an explicit operation from the canonical checkout:
 
 ```bash
-sudo -n /var/www/airradar/deploy/release.sh --branch main --automated --commit COMMIT_SHA
+sudo ./deploy/release.sh
 ```
 
-This is the fast production deployment path: CI has already run lint,
-typecheck, the full Vitest suite, and the desktop/mobile browser gate, so the
-release script skips that duplicate quality suite. It still runs dependency
-installation, the isolated production build, Prisma migrations, systemd
-validation, restart, and local/public health checks. The explicit commit pin
-prevents deploying a different or unvalidated commit.
-
-The runner needs only outbound HTTPS access to GitHub. Install it through
-GitHub's **Settings → Actions → Runners → New self-hosted runner**, configure
-the default labels `self-hosted`, `linux`, and `x64`, and run it as a
-dedicated non-root user. That user needs passwordless sudo for the release
-script. Do not allow workflows from untrusted pull requests to run on this
-runner. Configure required reviewers on the GitHub `production` environment if
-an approval step is desired.
-
-Automated mode deploys the exact tested commit, does not create a local
-changelog commit or release tag, and keeps the production checkout
-fast-forwardable from `origin/main`. After production health checks pass, the
-workflow creates a GitHub Release with generated release notes, targeting the
-exact tested commit. Versioned stable/RC releases continue to use the normal
-command above.
+The standard release invocation runs its own lint, typecheck, and full Vitest
+quality gates. It then performs dependency installation, the isolated
+production build, Prisma migrations, systemd validation, restart, and
+local/public health checks. Versioned stable/RC releases continue to use the
+normal command above.
 
 ## Exact release order
 
@@ -101,7 +89,7 @@ command above.
 5. It runs `npm ci` with the local cache and without npm audit/fund network
    checks, emits the Prisma contract, then runs lint, typecheck, and the full
    Vitest suite in parallel. The release test invocation uses Vitest
-   `--pool=threads`; all tests still run.
+   `--pool=threads`; all tests still run for an explicitly requested release.
 6. It acquires `/var/lib/airradar/build.lock`, writes ignored
    `generated/build-version.json`, and runs `npm run build` with Next.js output
    directed to an isolated `.next-release-*` directory. The active `.next`
