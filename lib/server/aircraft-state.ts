@@ -121,6 +121,8 @@ export class AircraftStateService {
   /** Compatibility alias for local-only internals and existing tests. */
   private readonly aircraft = this.localAircraft;
   private readonly networkAircraft = new Map<string, Aircraft>();
+  /** Identity-level source affinity prevents local/network hand-offs for one ICAO. */
+  private readonly sourcePreferences = new Map<string, "local" | "network">();
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -301,6 +303,7 @@ export class AircraftStateService {
       ? mergeAircraftMaps(this.localAircraft, this.networkAircraft, this.currentReceiver, {
           localStaleAfterMs: getAircraftStaleAfterMs(),
           networkStaleAfterMs: getAdsbLolStaleAfterMs(),
+          sourcePreferences: this.sourcePreferences,
         })
       : Array.from(this.localAircraft.values()))
       .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
@@ -422,6 +425,7 @@ export class AircraftStateService {
     return mergeAircraftMaps(this.localAircraft, this.networkAircraft, this.currentReceiver, {
       localStaleAfterMs: getAircraftStaleAfterMs(),
       networkStaleAfterMs: getAdsbLolStaleAfterMs(),
+      sourcePreferences: this.sourcePreferences,
     }).find((item) => item.icaoHex === normalized) ?? null;
   }
 
@@ -508,6 +512,7 @@ export class AircraftStateService {
     for (const incoming of snapshot.aircraft) {
       if (Date.parse(incoming.lastSeen) < Date.now() - getAircraftStaleAfterMs()) continue;
       currentHexes.add(incoming.icaoHex);
+      this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "local");
       const previous = this.localAircraft.get(incoming.icaoHex);
       const localIncoming = plausiblePosition(previous, { ...incoming, origin: "local" as const });
       const trail = this.updateTrail(previous, localIncoming);
@@ -521,6 +526,7 @@ export class AircraftStateService {
     for (const hex of this.localAircraft.keys()) {
       if (!currentHexes.has(hex)) this.removeAircraft(hex);
     }
+    this.cleanupSourcePreferences();
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) this.statistics.observe([...this.localAircraft.values()], this.currentReceiver, new Date());
     this.scheduleReceptionRecordEvaluation();
@@ -534,6 +540,7 @@ export class AircraftStateService {
     const currentHexes = new Set<string>();
     for (const incoming of snapshot.aircraft) {
       currentHexes.add(incoming.icaoHex);
+      this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "network");
       const previous = this.networkAircraft.get(incoming.icaoHex);
       const networkIncoming = plausiblePosition(previous, { ...incoming, origin: incoming.origin ?? "adsblol" });
       const trail = this.updateTrail(previous, networkIncoming);
@@ -542,7 +549,14 @@ export class AircraftStateService {
     for (const hex of this.networkAircraft.keys()) {
       if (!currentHexes.has(hex)) this.networkAircraft.delete(hex);
     }
+    this.cleanupSourcePreferences();
     this.invalidateSnapshotCache();
+  }
+
+  private cleanupSourcePreferences(): void {
+    for (const hex of this.sourcePreferences.keys()) {
+      if (!this.localAircraft.has(hex) && !this.networkAircraft.has(hex)) this.sourcePreferences.delete(hex);
+    }
   }
 
   private removeStaleAircraft(): void {

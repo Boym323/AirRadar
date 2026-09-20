@@ -275,10 +275,12 @@ present. The merger deduplicates by normalized ICAO hex and treats an
 observation as a position candidate only when both coordinates are valid and
 `seen_pos` is fresh. Aircraft existence is separate from position usability:
 the extended result is the full local/network identity union, so local
-aircraft without a fresh position are retained. A fresh usable local position
-wins before network freshness is considered; network position is the extended
-fallback. If neither source has a fresh position, the local last-known
-position is retained when usable, otherwise coordinates remain null. Displayed
+aircraft without a fresh position are retained. The state service assigns
+each ICAO a source affinity and keeps the aircraft on that source while either
+observation remains in RAM; a temporary source outage therefore cannot make
+the marker switch local ↔ network. Within the selected source, a fresh
+position is preferred and its last-known usable position is retained when
+necessary; coordinates otherwise remain null. Displayed
 network-only aircraft are marked with source provenance; they do not enter
 history, local daily statistics, alerts, metadata enrichment, ATC resolution,
 or the local receiver health state. Public UI/API output includes ADSB.lol and

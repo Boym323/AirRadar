@@ -145,14 +145,16 @@ These are behavior and safety contracts for changes to the current system.
   the true observation union: every local aircraft ID is present in extended,
   including observations without a fresh usable position.
 - Merge arbitration is explicit: a position candidate must have valid `lat`
-  and `lon` plus fresh `seen_pos`; a fresh usable local position wins before a
-  network position is considered, and network is the extended fallback when
-  local position is missing or stale. If no fresh candidate exists, the local
-  last-known position is retained when usable; an aircraft with no position is
-  still retained with nullable coordinates. Source type is only a tie-break
-  within an origin. Local descriptive fields and receiver-local RSSI/message
-  counters remain authoritative. Network-only aircraft have null local
-  measurements.
+  and `lon` plus fresh `seen_pos`. The state service assigns each ICAO a
+  source affinity (`local` or `network`) and keeps that choice while either
+  source still retains the aircraft. A temporary disappearance from the
+  preferred feed therefore does not fall back to the other feed and cannot
+  make the marker jump; the affinity is released only after both observations
+  are gone. Within the selected origin, a fresh position is preferred and a
+  local last-known position is retained when usable. An aircraft with no
+  position is still retained with nullable coordinates. Local descriptive
+  fields and receiver-local RSSI/message counters remain authoritative for a
+  local-affinity aircraft. Network-only aircraft have null local measurements.
 - Network-only observations are excluded from PostgreSQL history, daily
   statistics/coverage, alerts, metadata enrichment, and ATC resolution. Public
   output includes safe source/provenance and ADSB.lol ODbL attribution, but no

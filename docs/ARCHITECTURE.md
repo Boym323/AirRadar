@@ -93,10 +93,10 @@ independent lanes:
   applies
   timeout/rate-limit/backoff handling, keeps a stale-if-error network snapshot,
   and exposes sanitized diagnostics. Its aircraft are merged with local
-  observations only when an extended live snapshot is requested; local
-  observations win metadata and local receiver measurements while position
-  arbitration gives a fresh usable local position priority over network
-  freshness.
+  observations only when an extended live snapshot is requested. The state
+  service assigns a stable local/network source affinity per ICAO, so a
+  temporary outage cannot hand the same aircraft from one feed to the other;
+  the selected source owns the displayed observation and its metadata.
 - `EnrichmentService` invokes configured metadata, route, and flight-plan
   providers asynchronously. It uses normalized keys, positive/negative TTLs,
   in-flight coalescing, and bounded concurrency.

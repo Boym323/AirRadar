@@ -59,6 +59,21 @@ describe("aircraft source merge", () => {
     expect(isFreshPosition(local, options.localStaleAfterMs, options.now)).toBe(true);
   });
 
+  it("keeps the selected source when the other feed is fresher", () => {
+    const local = make("ABC123", "local", { lon: 14.101 });
+    const network = make("ABC123", "adsblol", { lon: 14.202, seen: 0, seen_pos: 0 });
+    const localLocked = mergeAircraftObservations(local, network, receiver, { ...options, preferredOrigin: "local" });
+    const networkLocked = mergeAircraftObservations(local, network, receiver, { ...options, preferredOrigin: "network" });
+
+    expect(localLocked).toMatchObject({ lon: 14.101, origin: "local", callsign: "LOCAL123" });
+    expect(networkLocked).toMatchObject({ lon: 14.202, origin: "adsblol", callsign: "NETWORK123" });
+  });
+
+  it("does not fall back to the other source while the preferred source is absent", () => {
+    const network = make("ABC123", "adsblol");
+    expect(mergeAircraftObservations(undefined, network, receiver, { ...options, preferredOrigin: "local" })).toBeNull();
+  });
+
   it("keeps the last local position when the network feed is fresher", () => {
     const staleLocal = make("ABC123", "local", { lon: 14.11, seen: 18, seen_pos: 18 });
     const freshNetwork = make("ABC123", "adsblol", { lon: 14.12, seen: 2, seen_pos: 2 });

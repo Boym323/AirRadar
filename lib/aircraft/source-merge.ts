@@ -197,9 +197,14 @@ export function mergeAircraftObservations(
   local: Aircraft | undefined,
   network: Aircraft | undefined,
   receiver: ReceiverPosition,
-  options: { localStaleAfterMs: number; networkStaleAfterMs: number; now?: number },
+  options: { localStaleAfterMs: number; networkStaleAfterMs: number; now?: number; preferredOrigin?: "local" | "network" },
 ): Aircraft | null {
-  if (!local && !network) return null;
+  // A source preference is an identity-level decision made by the state
+  // service. It deliberately prevents a temporary outage in one feed from
+  // making the same ICAO switch feeds and jump on the map.
+  const selectedLocal = options.preferredOrigin === "network" ? undefined : local;
+  const selectedNetwork = options.preferredOrigin === "local" ? undefined : network;
+  if (!selectedLocal && !selectedNetwork) return null;
   const now = options.now ?? Date.now();
   // Aircraft existence is based on an observation, not on whether that
   // observation currently has a fresh usable position. Position arbitration
@@ -207,22 +212,22 @@ export function mergeAircraftObservations(
   // preserve only the local observation's last known position. A network
   // observation must never re-enter through this fallback after its stale
   // position was rejected by selectPositionObservation().
-  const base = local ?? network!;
-  const selectedPosition = selectPositionObservation(local, network, options, now);
-  const fallbackPosition = local && hasUsablePosition(local) ? local : undefined;
+  const base = selectedLocal ?? selectedNetwork!;
+  const selectedPosition = selectPositionObservation(selectedLocal, selectedNetwork, options, now);
+  const fallbackPosition = selectedLocal && hasUsablePosition(selectedLocal) ? selectedLocal : undefined;
   const kinematics = selectedPosition ?? base;
   const position = selectedPosition ?? fallbackPosition;
-  const emergencyObservation = selectedEmergencyObservation(local, network, options, now);
+  const emergencyObservation = selectedEmergencyObservation(selectedLocal, selectedNetwork, options, now);
   const lat = position?.lat ?? null;
   const lon = position?.lon ?? null;
   const distanceKm = lat !== null && lon !== null ? haversineDistanceKm(receiver.lat, receiver.lon, lat, lon) : null;
   const bearing = lat !== null && lon !== null ? initialBearing(receiver.lat, receiver.lon, lat, lon) : null;
   const merged: Aircraft = {
     icaoHex: base.icaoHex,
-    callsign: nonEmpty(local?.callsign, network?.callsign),
-    registration: nonEmpty(local?.registration, network?.registration),
-    aircraftType: nonEmpty(local?.aircraftType, network?.aircraftType),
-    aircraftDescription: nonEmpty(local?.aircraftDescription, network?.aircraftDescription),
+    callsign: nonEmpty(selectedLocal?.callsign, selectedNetwork?.callsign),
+    registration: nonEmpty(selectedLocal?.registration, selectedNetwork?.registration),
+    aircraftType: nonEmpty(selectedLocal?.aircraftType, selectedNetwork?.aircraftType),
+    aircraftDescription: nonEmpty(selectedLocal?.aircraftDescription, selectedNetwork?.aircraftDescription),
     lat,
     lon,
     altitude: kinematics.altitude,
@@ -233,13 +238,13 @@ export function mergeAircraftObservations(
     verticalRate: kinematics.verticalRate,
     baroRate: kinematics.baroRate,
     geomRate: kinematics.geomRate,
-    squawk: selectedSquawk(local, network, options, now, emergencyObservation),
-    category: nonEmpty(local?.category, network?.category),
-    emergency: selectedEmergency(local, network, options, now),
+    squawk: selectedSquawk(selectedLocal, selectedNetwork, options, now, emergencyObservation),
+    category: nonEmpty(selectedLocal?.category, selectedNetwork?.category),
+    emergency: selectedEmergency(selectedLocal, selectedNetwork, options, now),
     // RSSI and message counts are receiver-local measurements. Network-only
     // aircraft deliberately expose neither value.
-    rssi: local ? local.rssi : null,
-    messages: local ? local.messages : null,
+    rssi: selectedLocal ? selectedLocal.rssi : null,
+    messages: selectedLocal ? selectedLocal.messages : null,
     seenSeconds: kinematics.seenSeconds,
     seenPosSeconds: kinematics.seenPosSeconds,
     lastSeen: kinematics.lastSeen,
@@ -247,15 +252,15 @@ export function mergeAircraftObservations(
     distanceKm,
     bearing,
     origin: originOf(kinematics),
-    provenance: provenance(local, network, position),
+    provenance: provenance(selectedLocal, selectedNetwork, position),
     sourceType: kinematics.sourceType,
     onGround: kinematics.onGround,
     trail: selectedTrail(position),
   };
-  if (local?.enrichment) merged.enrichment = local.enrichment;
-  else if (network?.enrichment) merged.enrichment = network.enrichment;
-  if (local?.atc !== undefined) merged.atc = local.atc;
-  else if (network?.atc !== undefined) merged.atc = network.atc;
+  if (selectedLocal?.enrichment) merged.enrichment = selectedLocal.enrichment;
+  else if (selectedNetwork?.enrichment) merged.enrichment = selectedNetwork.enrichment;
+  if (selectedLocal?.atc !== undefined) merged.atc = selectedLocal.atc;
+  else if (selectedNetwork?.atc !== undefined) merged.atc = selectedNetwork.atc;
   return merged;
 }
 
@@ -263,13 +268,16 @@ export function mergeAircraftMaps(
   local: ReadonlyMap<string, Aircraft>,
   network: ReadonlyMap<string, Aircraft>,
   receiver: ReceiverPosition,
-  options: { localStaleAfterMs: number; networkStaleAfterMs: number; now?: number },
+  options: { localStaleAfterMs: number; networkStaleAfterMs: number; now?: number; sourcePreferences?: ReadonlyMap<string, "local" | "network"> },
 ): Aircraft[] {
   const keys = new Set([...local.keys(), ...network.keys()]);
   const merged: Aircraft[] = [];
   const mergedKeys = new Set<string>();
   for (const key of keys) {
-    const value = mergeAircraftObservations(local.get(key), network.get(key), receiver, options);
+    const value = mergeAircraftObservations(local.get(key), network.get(key), receiver, {
+      ...options,
+      preferredOrigin: options.sourcePreferences?.get(key),
+    });
     if (value) {
       merged.push(value);
       mergedKeys.add(key);
