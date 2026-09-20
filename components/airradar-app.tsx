@@ -490,6 +490,7 @@ export function AirRadarApp() {
   const [showHeliports, setShowHeliports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showHeliports);
   const [atcExpanded, setAtcExpanded] = useState(false);
   const [coverage, setCoverage] = useState<CoverageMode>("local");
+  const [preferencesResolved, setPreferencesResolved] = useState(false);
   const [serverAlertsEnabled, setServerAlertsEnabled] = useState<boolean | null>(null);
   const [mobileCompact, setMobileCompact] = useState(true);
   const [trafficOpen, setTrafficOpen] = useState(false);
@@ -508,6 +509,8 @@ export function AirRadarApp() {
   const animationHiddenAtRef = useRef<number | null>(null);
   const animationSchedulerRef = useRef<(() => void) | null>(null);
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
+  const liveAircraftByHexRef = useRef<Map<string, AircraftView>>(new Map());
+  const pendingAircraftChangesRef = useRef<{ full: boolean; changedHexes: Set<string>; removedHexes: Set<string> } | null>(null);
   const selectedConfirmedTrailRef = useRef<readonly TrailPoint[]>(EMPTY_TRAIL);
   const selectedTrailInputsRef = useRef<{
     icaoHex: string;
@@ -543,17 +546,30 @@ export function AirRadarApp() {
   const radarFrameGenerationRef = useRef(0);
   const windGenerationRef = useRef(0);
   const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
-  const activeCoverage: CoverageMode = networkEnabled ? coverage : "local";
+  const activeCoverage: CoverageMode = preferencesResolved ? coverage : "local";
   const onSelectedAircraftRemoved = useCallback(() => {
     selectedHexRef.current = null;
     setSelectedHex(null);
   }, []);
+  const onAircraftSnapshot = useCallback((next: PublicStateSnapshot, change: { full: boolean; changedAircraft: AircraftView[]; removedHexes: string[] }) => {
+    const aircraftByHex = liveAircraftByHexRef.current;
+    if (change.full) aircraftByHex.clear();
+    for (const hex of change.removedHexes) aircraftByHex.delete(hex);
+    for (const aircraft of change.changedAircraft) aircraftByHex.set(aircraft.icaoHex, aircraft);
+    const pending = pendingAircraftChangesRef.current ?? { full: false, changedHexes: new Set<string>(), removedHexes: new Set<string>() };
+    pending.full ||= change.full;
+    for (const aircraft of change.changedAircraft) pending.changedHexes.add(aircraft.icaoHex);
+    for (const hex of change.removedHexes) pending.removedHexes.add(hex);
+    pendingAircraftChangesRef.current = pending;
+    setSnapshot(next);
+  }, []);
   const { connected: streamConnected } = useAircraftStream({
+    enabled: preferencesResolved,
     activeCoverage,
     liveTrailsRef,
     selectedHexRef,
     onSelectedAircraftRemoved,
-    onSnapshot: setSnapshot,
+    onSnapshot: onAircraftSnapshot,
   });
 
   const airportsDataset = useDatasetQuery<Airport[]>({
@@ -656,6 +672,8 @@ export function AirRadarApp() {
       setShowAupUup(window.localStorage.getItem("airradar-aup-uup-layer") === "true");
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
+    } finally {
+      setPreferencesResolved(true);
     }
     void fetch("/api/health", { cache: "no-store" })
       .then((response) => response.ok ? response.json() as Promise<{ alerts?: PublicAlertStatus }> : null)
@@ -690,8 +708,9 @@ export function AirRadarApp() {
   }, [watchlist]);
 
   useEffect(() => {
+    if (!preferencesResolved) return;
     try { window.localStorage.setItem("airradar-coverage", coverage); } catch { /* optional */ }
-  }, [coverage]);
+  }, [coverage, preferencesResolved]);
 
   useEffect(() => {
     try { window.localStorage.setItem("airradar-sigmet-layer", String(showSigmet)); } catch { /* optional */ }
@@ -1478,6 +1497,10 @@ export function AirRadarApp() {
       return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
     });
   }, [distanceFilter, isWatchlisted, mapFilteredAircraft, search, sortBy, watchlistOnly]);
+  const filteredAircraftByHex = useMemo(
+    () => new Map(filteredAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const)),
+    [filteredAircraft],
+  );
   const filteredOgnTargets = useMemo(() => {
     const query = search.trim().toUpperCase();
     if (!query) return ognSnapshot.targets;
@@ -1529,7 +1552,15 @@ export function AirRadarApp() {
       }
     }
     const animationJobs = animationJobsRef.current;
-    const currentHexes = new Set<string>();
+    const pending = pendingAircraftChangesRef.current;
+    pendingAircraftChangesRef.current = null;
+    const fullMarkerUpdate = pending === null || pending.full;
+    const currentHexes = fullMarkerUpdate ? new Set(filteredAircraft.map((aircraft) => aircraft.icaoHex)) : null;
+    const aircraftToUpdate = fullMarkerUpdate
+      ? filteredAircraft
+      : [...(pending?.changedHexes ?? [])]
+        .map((hex) => liveAircraftByHexRef.current.get(hex))
+        .filter((aircraft): aircraft is AircraftView => Boolean(aircraft && filteredAircraftByHex.has(aircraft.icaoHex)));
     const upsertPrediction = (aircraft: AircraftView, marker: maplibregl.Marker) => {
       const now = performance.now();
       const target: [number, number] = [aircraft.lon!, aircraft.lat!];
@@ -1646,8 +1677,8 @@ export function AirRadarApp() {
       animationSchedulerRef.current?.();
     };
 
-    const selectedAircraftInSnapshot = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex);
-    const selectedAircraftVisible = Boolean(selectedAircraftInSnapshot && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedHex));
+    const selectedAircraftInSnapshot = selectedHex ? liveAircraftByHexRef.current.get(selectedHex) ?? snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : undefined;
+    const selectedAircraftVisible = Boolean(selectedAircraftInSnapshot && selectedHex && filteredAircraftByHex.has(selectedHex));
     const historySnapshot = selectedHistoryTrail;
     const historyTrail = selectedAircraftVisible && historySnapshot && historySnapshot.icaoHex === selectedHex?.toUpperCase() ? historySnapshot.points : EMPTY_TRAIL;
     let selectedTrailForMap: readonly TrailPoint[] = EMPTY_TRAIL;
@@ -1675,9 +1706,8 @@ export function AirRadarApp() {
       selectedConfirmedTrailRef.current = EMPTY_TRAIL;
     }
 
-    for (const aircraft of filteredAircraft) {
+    for (const aircraft of aircraftToUpdate) {
       if (aircraft.lat === null || aircraft.lon === null || !Number.isFinite(aircraft.lat) || !Number.isFinite(aircraft.lon)) continue;
-      currentHexes.add(aircraft.icaoHex);
       let marker = aircraftMarkersRef.current.get(aircraft.icaoHex);
       const target: [number, number] = [aircraft.lon, aircraft.lat];
       if (!marker) {
@@ -1759,18 +1789,27 @@ export function AirRadarApp() {
       if (renderedHeading !== null) marker.setRotation(renderedHeading + AIRCRAFT_ICON_ROTATION_OFFSET_DEG);
     }
 
-    for (const [hex, marker] of aircraftMarkersRef.current) {
-      if (!currentHexes.has(hex)) {
-        if (hex === selectedHex && selectedAircraftVisible && selectedTrailForMap.length > 0) {
-          const lastKnown = selectedTrailForMap[selectedTrailForMap.length - 1];
-          marker.setLngLat([lastKnown.lon, lastKnown.lat]);
-          marker.getElement().style.visibility = showAircraft ? "visible" : "hidden";
-          continue;
-        }
-        animationJobsRef.current.delete(hex);
-        marker.remove();
-        aircraftMarkersRef.current.delete(hex);
+    const markerRemovalCandidates = fullMarkerUpdate
+      ? [...aircraftMarkersRef.current.keys()]
+      : [...new Set([
+        ...(pending?.removedHexes ?? []),
+        ...[...(pending?.changedHexes ?? [])].filter((hex) => {
+          const aircraft = filteredAircraftByHex.get(hex);
+          return !aircraft || aircraft.lat === null || aircraft.lon === null || !Number.isFinite(aircraft.lat) || !Number.isFinite(aircraft.lon);
+        }),
+      ])];
+    for (const hex of markerRemovalCandidates) {
+      const marker = aircraftMarkersRef.current.get(hex);
+      if (!marker || (fullMarkerUpdate && currentHexes?.has(hex))) continue;
+      if (hex === selectedHex && selectedAircraftVisible && selectedTrailForMap.length > 0) {
+        const lastKnown = selectedTrailForMap[selectedTrailForMap.length - 1];
+        marker.setLngLat([lastKnown.lon, lastKnown.lat]);
+        marker.getElement().style.visibility = showAircraft ? "visible" : "hidden";
+        continue;
       }
+      animationJobsRef.current.delete(hex);
+      marker.remove();
+      aircraftMarkersRef.current.delete(hex);
     }
 
     const selected = selectedAircraftVisible ? selectedAircraftInSnapshot : undefined;
@@ -1804,7 +1843,7 @@ export function AirRadarApp() {
       routeAirportSource.setData(selectedAircraftVisible ? createRouteAirportGeoJSON(selected?.enrichment?.route) : createRouteAirportGeoJSON(null));
       routeAirportSourceKeyRef.current = routeAirportSourceKey;
     }
-  }, [colorMode, filteredAircraft, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [colorMode, filteredAircraft, filteredAircraftByHex, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const visible = showAtsRoutes && atsRoutes?.available === true;
