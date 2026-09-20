@@ -94,7 +94,9 @@ export function aircraftGlyphMarkup(aircraft: AircraftView): string {
 }
 
 function setClassName(element: HTMLElement, value: string): void {
-  if (element.className !== value) element.className = value;
+  const mapLibreClasses = [...element.classList].filter((name) => name.startsWith("maplibregl-"));
+  const nextClassName = [...mapLibreClasses, ...value.split(/\s+/).filter(Boolean)].join(" ");
+  if (element.className !== nextClassName) element.className = nextClassName;
 }
 
 export function createAircraftMarkerHandle(
@@ -109,6 +111,8 @@ export function createAircraftMarkerHandle(
   root.setAttribute("role", "button");
   root.setAttribute("tabindex", "0");
   root.setAttribute("aria-hidden", "false");
+  const visual = document.createElement("div");
+  visual.className = "aircraft-marker-visual";
   const rotator = document.createElement("div");
   rotator.className = "aircraft-plane-rotator";
   const plane = document.createElement("div");
@@ -118,7 +122,8 @@ export function createAircraftMarkerHandle(
   label.setAttribute("aria-hidden", "true");
   label.dataset.placement = "bottom";
   label.dataset.collisionHidden = "false";
-  root.append(rotator, label);
+  root.append(visual);
+  visual.append(rotator, label);
   rotator.append(plane);
   const handle: AircraftMarkerHandle = {
     marker: new maplibregl.Marker({ element: root, anchor: "center", rotationAlignment: "viewport", pitchAlignment: "viewport" })

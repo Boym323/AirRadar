@@ -595,6 +595,69 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         || !/^(none|matrix\(1(?:\.0+)?,[ ]*0(?:\.0+)?,[ ]*0(?:\.0+)?,[ ]*1(?:\.0+)?)/.test(markerPresentation.labelTransform)) {
         throw new Error(`Aircraft marker presentation contract failed at ${viewport.width}px: ${JSON.stringify(markerPresentation)}`);
       }
+      const anchorRegression = await page.evaluate(async () => {
+        const map = window.__airradarMapForDiagnostics;
+        const root = document.querySelector(".aircraft-marker");
+        const handles = window.__airradarAircraftMarkersForDiagnostics;
+        const marker = handles && root instanceof HTMLElement
+          ? [...handles.values()].find((handle) => handle.root === root)?.marker
+          : null;
+        if (!map || !(root instanceof HTMLElement) || !marker) return { error: "aircraft marker diagnostic fixture unavailable" };
+        const waitForIdle = () => new Promise((resolve) => {
+          let settled = false;
+          const finish = () => { if (!settled) { settled = true; resolve(); } };
+          map.once("idle", finish);
+          window.setTimeout(finish, 250);
+        });
+        const measure = (step) => {
+          const mapRect = map.getContainer().getBoundingClientRect();
+          const markerRect = root.getBoundingClientRect();
+          const expected = map.project(marker.getLngLat());
+          const actual = {
+            x: markerRect.left - mapRect.left + markerRect.width / 2,
+            y: markerRect.top - mapRect.top + markerRect.height / 2,
+          };
+          return {
+            step,
+            zoom: map.getZoom(),
+            bearing: map.getBearing(),
+            errorX: actual.x - expected.x,
+            errorY: actual.y - expected.y,
+            width: markerRect.width,
+            height: markerRect.height,
+            position: getComputedStyle(root).position,
+          };
+        };
+        const measurements = [];
+        for (const zoom of [4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+          map.setZoom(zoom);
+          await waitForIdle();
+          measurements.push(measure(`zoom-${zoom}`));
+        }
+        const origin = map.getCenter();
+        for (const delta of [[200, 100], [-200, -100], [-200, 0], [200, 0], [0, -100], [0, 100]]) {
+          map.panBy(delta, { duration: 0 });
+          await waitForIdle();
+          measurements.push(measure(`pan-${delta.join("-")}`));
+        }
+        for (const bearing of [0, 45, 90, 180]) {
+          map.setBearing(bearing);
+          await waitForIdle();
+          measurements.push(measure(`bearing-${bearing}`));
+        }
+        map.jumpTo({ center: origin, zoom: 5, bearing: 0 });
+        await waitForIdle();
+        for (const zoom of [10, 12, 7, 5]) {
+          map.setZoom(zoom);
+          await waitForIdle();
+          measurements.push(measure(`roundtrip-${zoom}`));
+        }
+        return { measurements };
+      });
+      const anchorFailures = anchorRegression.error
+        ? [anchorRegression.error]
+        : anchorRegression.measurements.filter((measurement) => Math.abs(measurement.errorX) > 1 || Math.abs(measurement.errorY) > 1 || measurement.width !== 42 || measurement.height !== 42 || measurement.position !== "absolute");
+      if (anchorFailures.length) throw new Error(`Aircraft marker anchor regression failed at ${viewport.width}px: ${JSON.stringify(anchorFailures.slice(0, 8))}`);
       const beforeBearing = markerPresentation.rotatorTransform;
       await page.evaluate(() => window.__airradarMapForDiagnostics?.rotateTo(90, { duration: 0 }));
       await page.waitForFunction((previous) => {
