@@ -434,6 +434,24 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           stale: false,
         }),
       }));
+      // Keep the viewport matrix deterministic. These layers are loaded by
+      // the radar shell on every full-smoke page, and letting them reach the
+      // process-local public limiter makes later viewports fail with 429s.
+      await page.route("**/api/weather/radar/frames", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ available: false, frames: [], latestFrameId: null }),
+      }));
+      await page.route("**/api/weather/metar-map", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ available: false, observations: [], stale: false }),
+      }));
+      await page.route(/\/api\/weather\/wind(?:\?.*)?$/, (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ available: false, points: [], stale: false, validAt: null }),
+      }));
       await page.route("**/api/ats/routes", (route) => route.fulfill({
         status: 200,
         contentType: "application/json",
