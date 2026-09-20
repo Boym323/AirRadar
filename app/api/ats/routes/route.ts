@@ -5,9 +5,7 @@ import { createCzAtsGeoJSON } from "@/lib/ats/geojson";
 
 export const dynamic = "force-dynamic";
 
-const ATS_PAYLOAD_CACHE_MS = 5 * 60_000;
-
-type AtsDocument = NonNullable<ReturnType<typeof loadCzAtsRoutes>>;
+ type AtsDocument = NonNullable<ReturnType<typeof loadCzAtsRoutes>>;
 type AtsPayload = {
   available: true;
   source: AtsDocument["source"];
@@ -24,7 +22,7 @@ type AtsPayload = {
   points: ReturnType<typeof createCzAtsGeoJSON>["points"];
 };
 
-let cachedPayload: { expiresAt: number; value: AtsPayload } | null = null;
+let cachedPayload: { documents: AtsDocument[]; value: AtsPayload } | null = null;
 
 function buildPayload(documents: AtsDocument[]): AtsPayload {
   const prepared = documents.map((document) => ({ document, geojson: createCzAtsGeoJSON(document) }));
@@ -69,24 +67,22 @@ function buildPayload(documents: AtsDocument[]): AtsPayload {
 }
 
 export async function GET(): Promise<Response> {
-  const now = Date.now();
-  if (cachedPayload && cachedPayload.expiresAt > now) {
-    return Response.json(cachedPayload.value, {
-      headers: { "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400" },
-    });
-  }
-
   const documents = [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()]
     .filter((value): value is AtsDocument => value !== null);
   if (!documents.length) {
+    cachedPayload = null;
     return Response.json(
       { available: false, status: "unavailable", routes: [] },
       { status: 503, headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } },
     );
   }
 
-  const value = buildPayload(documents);
-  cachedPayload = { expiresAt: now + ATS_PAYLOAD_CACHE_MS, value };
+  const sourceUnchanged = cachedPayload
+    && cachedPayload.documents.length === documents.length
+    && cachedPayload.documents.every((document, index) => document === documents[index]);
+  const value = sourceUnchanged ? cachedPayload.value : buildPayload(documents);
+  if (!sourceUnchanged) cachedPayload = { documents, value };
+
   return Response.json(value, {
     headers: { "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400" },
   });
