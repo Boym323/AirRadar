@@ -329,6 +329,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       const browserErrors = [];
       let expectedTransientFailures = 0;
       let expectedRateLimitedTileErrors = 0;
+      let expectedRateLimitedApiErrors = 0;
       let airportAttempts = 0;
       let atcAttempts = 0;
       page.on("console", (message) => {
@@ -336,6 +337,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         const location = message.location().url || "(unknown location)";
         if (message.text().includes("429") && expectedRateLimitedTileErrors > 0) {
           expectedRateLimitedTileErrors -= 1;
+          return;
+        }
+        if (message.text().includes("429") && expectedRateLimitedApiErrors > 0) {
+          expectedRateLimitedApiErrors -= 1;
           return;
         }
         browserErrors.push(`console: ${message.text()} location=${location}`);
@@ -348,6 +353,11 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             expectedRateLimitedTileErrors += 1;
             const request = response.request();
             console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${request.resourceType()} initiator=${request.frame()?.url() ?? "(no frame)"}`);
+            return;
+          }
+          if (response.status() === 429 && new URL(response.url()).pathname === "/api/logbook/summary") {
+            expectedRateLimitedApiErrors += 1;
+            console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${response.request().resourceType()} initiator=${response.request().frame()?.url() ?? "(no frame)"}`);
             return;
           }
           if (response.status() === 503 && expectedTransientFailures > 0) expectedTransientFailures -= 1;
