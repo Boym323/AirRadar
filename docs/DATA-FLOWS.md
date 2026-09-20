@@ -265,8 +265,10 @@ from the complete-record list and called out in the UI.
 
 ## Extended coverage
 
-The optional ADSB.lol raw provider is a live display source only. It uses
-`/v2/lat/{lat}/lon/{lon}/dist/{radius}`, with a bounded radius/poll interval,
+The optional ADSB.lol HTTP provider is a live display source only. With
+`ADSBLOL_BASE_URL=https://re-api.adsb.lol` it uses the feeder-authorized
+`?circle={lat},{lon},{radius}` readsb endpoint; the public API variant uses
+`/v2/lat/{lat}/lon/{lon}/dist/{radius}`. Both use a bounded radius/poll interval,
 request timeout, maximum aircraft count, stale threshold, and exponential
 retry capped by configuration. A 429 response honors `Retry-After` when
 present. The merger deduplicates by normalized ICAO hex and treats an

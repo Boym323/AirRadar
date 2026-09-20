@@ -64,6 +64,17 @@ describe("AdsbLolProvider", () => {
     expect(value.getDiagnostics()).toMatchObject({ status: "online", aircraftCount: 1, positionedAircraftCount: 1 });
   });
 
+  it("uses re-api circle queries and accepts its readsb aircraft response", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ now: Date.now() / 1000, aircraft: [aircraft()] }), { status: 200 }));
+    vi.stubGlobal("fetch", fetcher);
+    const value = provider({ baseUrl: "https://re-api.adsb.lol", radiusNm: 200 });
+
+    const snapshot = await value.getSnapshot();
+
+    expect(String(fetcher.mock.calls[0]?.[0])).toBe("https://re-api.adsb.lol/?circle=49.22%2C17.67%2C200");
+    expect(snapshot.aircraft).toHaveLength(1);
+  });
+
   it("accepts an empty response without treating it as a provider failure", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(payload()), { status: 200 })));
     const value = provider();

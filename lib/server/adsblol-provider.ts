@@ -86,6 +86,12 @@ function responseNow(value: unknown, fallback: number): number {
 }
 
 function endpoint(baseUrl: string, receiver: ReceiverPosition, radiusNm: number): string {
+  const configured = new URL(baseUrl);
+  if (configured.hostname.toLowerCase().replace(/\.$/, "") === "re-api.adsb.lol") {
+    configured.search = "";
+    configured.searchParams.set("circle", `${receiver.lat},${receiver.lon},${radiusNm}`);
+    return configured.toString();
+  }
   const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   const url = new URL(`v2/lat/${receiver.lat}/lon/${receiver.lon}/dist/${radiusNm}`, base);
   return url.toString();
@@ -276,9 +282,11 @@ export class AdsbLolProvider implements NetworkAircraftProvider {
   }
 
   private validateResponse(value: unknown, now: number): RawReadsbAircraftResponse {
-    if (!isRecord(value) || !Array.isArray(value.ac)) {
+    if (!isRecord(value)) {
       throw new AdsbLolProviderError("invalid_response", "invalid aircraft response");
     }
+    const aircraft = Array.isArray(value.ac) ? value.ac : value.aircraft;
+    if (!Array.isArray(aircraft)) throw new AdsbLolProviderError("invalid_response", "invalid aircraft response");
     responseNow(value.now, now);
     for (const key of ["ctime", "ptime"] as const) {
       const timestamp = finiteNumber(value[key]);
@@ -290,7 +298,7 @@ export class AdsbLolProvider implements NetworkAircraftProvider {
     if (value.total !== undefined && (total === null || total < 0 || !Number.isInteger(total))) {
       throw new AdsbLolProviderError("invalid_response", "invalid response total");
     }
-    const rows = value.ac.slice(0, this.maxAircraft).filter(validRawAircraft);
+    const rows = aircraft.slice(0, this.maxAircraft).filter(validRawAircraft);
     return { ac: rows, now: value.now };
   }
 

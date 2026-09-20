@@ -168,7 +168,6 @@ export function getAdsbLolBaseUrl(): string {
   try {
     const url = new URL(configured);
     if (url.protocol !== "https:" && url.protocol !== "http:") return "https://api.adsb.lol";
-    if (url.hostname.toLowerCase().replace(/\.$/, "") === "re-api.adsb.lol") return "https://api.adsb.lol";
     return url.toString().replace(/\/$/, "");
   } catch {
     return "https://api.adsb.lol";
