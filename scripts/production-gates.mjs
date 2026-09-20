@@ -787,12 +787,24 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         if (atcPanelBounds.y + atcPanelBounds.height > sidebarBounds.y + sidebarBounds.height + 2) {
           throw new Error(`Compact ATC panel is clipped at ${viewport.width}px: sidebar=${JSON.stringify(sidebarBounds)}, atc=${JSON.stringify(atcPanelBounds)}`);
         }
-        if (await page.locator('[data-testid="radar-sidebar"].compact .sidebar-secondary-tools').isVisible()) {
+        const compactSecondaryTools = page.locator('[data-testid="radar-sidebar"].compact .sidebar-secondary-tools');
+        const compactSecondaryToolsVisible = await compactSecondaryTools.evaluateAll((elements) => elements.some((element) => {
+          const style = getComputedStyle(element);
+          const bounds = element.getBoundingClientRect();
+          return style.display !== "none" && style.visibility !== "hidden" && bounds.width > 0 && bounds.height > 0;
+        }));
+        if (compactSecondaryToolsVisible) {
           throw new Error(`Secondary tools remain visible in compact sidebar at ${viewport.width}px`);
         }
         await page.locator(".mobile-collapse").click();
         await page.locator('[data-testid="radar-sidebar"]:not(.compact)').waitFor({ state: "visible" });
-        if (!await page.locator('[data-testid="radar-sidebar"]:not(.compact) .sidebar-secondary-tools').isVisible()) {
+        const expandedSecondaryTools = page.locator('[data-testid="radar-sidebar"]:not(.compact) .sidebar-secondary-tools');
+        const expandedSecondaryToolsVisible = await expandedSecondaryTools.evaluateAll((elements) => elements.some((element) => {
+          const style = getComputedStyle(element);
+          const bounds = element.getBoundingClientRect();
+          return style.display !== "none" && style.visibility !== "hidden" && bounds.width > 0 && bounds.height > 0;
+        }));
+        if (!expandedSecondaryToolsVisible) {
           throw new Error(`Secondary tools are not available after expanding sidebar at ${viewport.width}px`);
         }
         await page.locator(".mobile-collapse").click();
