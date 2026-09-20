@@ -27,6 +27,7 @@ interface RouteAirportFeature {
     icao: string;
     code: string;
     name: string;
+    labelVisible: boolean;
   };
   geometry: {
     type: "Point";
@@ -315,6 +316,7 @@ export function createRouteGeoJSON(
 
 export function createRouteAirportGeoJSON(
   route: FlightRoute | null | undefined,
+  hiddenLabelIcaos: ReadonlySet<string> = new Set(),
 ): RouteAirportGeoJSON {
   const features: RouteAirportFeature[] = [];
   if (!route) return { type: "FeatureCollection", features };
@@ -331,7 +333,7 @@ export function createRouteAirportGeoJSON(
     seen.add(icao);
     features.push({
       type: "Feature",
-      properties: { role, icao, code: airportLabel(airport, icao), name: airport.name },
+      properties: { role, icao, code: airportLabel(airport, icao), name: airport.name, labelVisible: !hiddenLabelIcaos.has(icao) },
       geometry: { type: "Point", coordinates: [airport.longitude, airport.latitude] },
     });
   }

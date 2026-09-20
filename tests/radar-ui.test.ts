@@ -13,6 +13,7 @@ import {
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
 const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
@@ -107,7 +108,7 @@ describe("radar UI polish helpers", () => {
     const receiverRule = globalCss.match(/\.receiver-marker\s*\{([^}]*)\}/)?.[1] ?? "";
     expect(maplibreCss).toContain(".maplibregl-marker");
     expect(maplibreCss).toMatch(/\.maplibregl-marker\{[^}]*position:absolute/);
-    expect(aircraftRule).not.toMatch(/\bposition\s*:/);
+    expect(aircraftRule).toMatch(/\bposition\s*:\s*relative/);
     expect(aircraftRule).not.toMatch(/\btransform\s*:/);
     expect(receiverRule).not.toMatch(/\bposition\s*:/);
     expect(receiverRule).not.toMatch(/\btransform\s*:/);
@@ -120,6 +121,18 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toMatch(/\.aircraft-marker\.selected \.aircraft-plane[^}]*transform:\s*scale/);
     expect(appSource).toContain("const target: [number, number] = [aircraft.lon, aircraft.lat]");
     expect(appSource).toContain("setLngLat([receiver.lon, receiver.lat])");
+  });
+
+  it("keeps aircraft rotation on the rotator and labels outside it", () => {
+    expect(markerControllerSource).toContain('rotationAlignment: "viewport"');
+    expect(markerControllerSource).toContain('pitchAlignment: "viewport"');
+    expect(markerControllerSource).toContain('const rotator = document.createElement("div")');
+    expect(markerControllerSource).toContain('rotator.className = "aircraft-plane-rotator"');
+    expect(markerControllerSource).toContain('label.className = "aircraft-label"');
+    expect(appSource).not.toContain("setRotation(");
+    expect(appSource).not.toContain('root.querySelector<HTMLElement>(".aircraft-plane")');
+    expect(globalCss).toContain(".aircraft-label[data-placement=\"right\"]");
+    expect(globalCss).toContain(".aircraft-label[data-collision-hidden=\"true\"]");
   });
 
   it("shows seen-by and position provenance as separate signals", () => {
