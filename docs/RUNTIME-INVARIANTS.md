@@ -148,11 +148,12 @@ These are behavior and safety contracts for changes to the current system.
   including observations without a fresh usable position.
 - Merge arbitration is explicit: a position candidate must have valid `lat`
   and `lon` plus fresh `seen_pos`. The state service assigns each ICAO a
-  source affinity (`local` or `network`) and keeps that choice while either
-  source still retains the aircraft. A temporary disappearance from the
-  preferred feed keeps the aircraft identity in the extended union but
-  suppresses the alternate feed's position so the marker cannot jump; the
-  affinity is released only after both observations are gone. Within the selected origin, a fresh position is preferred and a
+  source affinity (`local` or `network`). A temporary disappearance from
+  the preferred feed keeps the aircraft identity in the extended union and
+  suppresses the alternate feed's position during a bounded grace period so
+  the marker cannot jump. If the preferred feed remains absent while the
+  alternate observation stays live, affinity fails over to that source; if
+  both observations disappear, affinity is released. Within the selected origin, a fresh position is preferred and a
   local last-known position is retained when usable. An aircraft with no
   position is still retained with nullable coordinates. Local descriptive
   fields and receiver-local RSSI/message counters remain authoritative for a
@@ -165,7 +166,8 @@ These are behavior and safety contracts for changes to the current system.
   overlap`, `NETWORK = networkOnly + overlap`, and `TOTAL = localOnly +
   networkOnly + overlap`. Source filtering uses provenance and never substitutes
   `origin` for membership. The LOCAL capture ratio is bounded to
-  `RECEIVER_COMPARISON_RADIUS_NM` and is not persisted.
+  `RECEIVER_COMPARISON_RADIUS_NM`, is calculated from raw network observations
+  matched against raw local observations, and is not persisted.
 
 ## OGN / FLARM integration
 
