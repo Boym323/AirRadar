@@ -81,6 +81,16 @@ function sseBytes(eventName: string, payload: unknown): number {
 }
 
 describe("SSE Delta V2", () => {
+  it("rejects delta before initialization without consuming sequence one", () => {
+    const initial = snapshot([aircraft(1)]);
+    const encoder = new SseDeltaEncoder();
+
+    expect(() => encoder.delta(initial)).toThrow("requires an initial snapshot");
+    const first = encoder.next(initial);
+    expect(first.event).toBe("snapshot");
+    expect(first.payload.sequence).toBe("1");
+  });
+
   it("converges from a full snapshot through changed, appeared and removed aircraft", () => {
     const initial = snapshot(Array.from({ length: 100 }, (_, index) => aircraft(index + 1)));
     const next = snapshot([
