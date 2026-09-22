@@ -2691,6 +2691,12 @@ button, input, select, textarea { color-scheme: dark; }
   gap: 12px;
 }
 
+.map-overlay-primary .map-summary-card {
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
+}
+
 .map-overlay-context-row {
   display: flex;
   align-items: flex-start;
