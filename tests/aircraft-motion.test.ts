@@ -125,6 +125,19 @@ describe("aircraft motion", () => {
     expect(halfway.lat).toBeLessThan(source.lat);
   });
 
+  it("rejects stale corrections so callers snap instead of scheduling an inert animation", () => {
+    const source = {
+      lat: 50.002,
+      lon: 14.002,
+      observedAt: 1_000,
+      groundSpeed: 180,
+      track: 90,
+      positionOrigin: "local",
+      positionSource: "readsb",
+    };
+    expect(correctionFor({ lat: 50, lon: 14 }, source, 16_001, 1_000)).toBeNull();
+  });
+
   it("throttles only high-density bulk marker rendering", () => {
     expect(motionRenderIntervalMs(79)).toBe(0);
     expect(motionRenderIntervalMs(80)).toBeCloseTo(1000 / 30, 8);
