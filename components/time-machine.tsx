@@ -9,11 +9,13 @@ import { sampleHistoricalTraffic, type HistoricalAircraftSample, type Historical
 import type { TimeMachineEvent, TimeMachineRange } from "@/lib/server/time-machine";
 import { AirRadarPageShell } from "@/components/airradar-shell";
 import { MapTimeController, contextResolutionBucket } from "@/lib/map-time/controller";
+import { mapContextRetryDelayMs } from "@/lib/map-time/retry";
 import type { TemporalResolution } from "@/lib/map-time/types";
 import { useTimeMachinePreferences } from "@/lib/ui-preferences";
 
 const MAP_STYLE: maplibregl.StyleSpecification = { version: 8, sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© OpenStreetMap contributors" } }, layers: [{ id: "background", type: "background", paint: { "background-color": "#0b1725" } }, { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": .58, "raster-saturation": -.8 } }] };
 const WINDOW_MS = 5 * 60_000;
+const CONTEXT_BUCKET_MS = 5 * 60_000;
 const EMPTY_CONTEXT_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/Sc6sGQAAAABJRU5ErkJggg==";
 const RADAR_COORDINATES: [[number, number], [number, number], [number, number], [number, number]] = [[11.267, 52.167], [20.77, 52.167], [20.77, 48.047], [11.267, 48.047]];
 
@@ -50,13 +52,66 @@ function TimeMachineMap({ samples, selected, track, at, onSelect, context, showR
 }
 
 export function TimeMachine() {
-  const [range, setRange] = useState<TimeMachineRange | null>(null); const [tracks, setTracks] = useState<HistoricalAircraftTrack[]>([]); const [events, setEvents] = useState<TimeMachineEvent[]>([]); const [windowRange, setWindowRange] = useState<{ start: number; end: number } | null>(null); const [at, setAt] = useState<number | null>(null); const [selected, setSelected] = useState<string | null>(null); const [speed, setSpeed] = useState(1); const [playing, setPlaying] = useState(false); const [error, setError] = useState<string | null>(null); const [context, setContext] = useState<HistoricalContext>({ manifest: null, radar: null, metar: null, wind: null, aup: null, status: "idle" }); const { showRadar, showMetar, showWind, showAup, setShowRadar, setShowMetar, setShowWind, setShowAup } = useTimeMachinePreferences(); const generation = useRef(0); const contextGeneration = useRef(0); const contextRequestKey = useRef<string | null>(null); const initialAt = useRef<number | null>(null); const playbackAt = useRef(0); const mapTime = useRef(new MapTimeController()); playbackAt.current = at ?? 0;
+  const [range, setRange] = useState<TimeMachineRange | null>(null); const [tracks, setTracks] = useState<HistoricalAircraftTrack[]>([]); const [events, setEvents] = useState<TimeMachineEvent[]>([]); const [windowRange, setWindowRange] = useState<{ start: number; end: number } | null>(null); const [at, setAt] = useState<number | null>(null); const [selected, setSelected] = useState<string | null>(null); const [speed, setSpeed] = useState(1); const [playing, setPlaying] = useState(false); const [error, setError] = useState<string | null>(null); const [context, setContext] = useState<HistoricalContext>({ manifest: null, radar: null, metar: null, wind: null, aup: null, status: "idle" }); const [contextRetryRevision, setContextRetryRevision] = useState(0); const { showRadar, showMetar, showWind, showAup, setShowRadar, setShowMetar, setShowWind, setShowAup } = useTimeMachinePreferences(); const generation = useRef(0); const contextGeneration = useRef(0); const contextRequestKey = useRef<string | null>(null); const contextRetryAttempt = useRef(0); const contextRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null); const contextAtRef = useRef<number | null>(null); const initialAt = useRef<number | null>(null); const playbackAt = useRef(0); const mapTime = useRef(new MapTimeController()); playbackAt.current = at ?? 0; contextAtRef.current = at;
   const loadWindow = useCallback(async (requested: number, signal?: AbortSignal) => { if (!range?.min || !range.max) return; const id = ++generation.current; const rangeMin = Date.parse(range.min); const rangeMax = Date.parse(range.max); const start = Math.max(rangeMin, requested - WINDOW_MS / 2); const end = Math.min(rangeMax, start + WINDOW_MS); const response = await fetch(`/api/time-machine/window?from=${encodeURIComponent(new Date(start).toISOString())}&to=${encodeURIComponent(new Date(end).toISOString())}`, { cache: "no-store", signal }); if (!response.ok) throw new Error(response.status === 503 ? t.timeMachine.unavailable : t.timeMachine.loadFailed); const data = await response.json() as { aircraft: HistoricalAircraftTrack[]; events: TimeMachineEvent[]; windowStart: string; windowEnd: string }; if (id !== generation.current) return; setTracks(data.aircraft); setEvents(data.events); setWindowRange({ start: Date.parse(data.windowStart), end: Date.parse(data.windowEnd) }); setAt((current) => current === null ? requested : current); }, [range]);
   useEffect(() => { const controller = new AbortController(); void fetch("/api/time-machine/range", { cache: "no-store", signal: controller.signal }).then(async (response) => { if (!response.ok) throw new Error(t.timeMachine.unavailable); return response.json() as Promise<TimeMachineRange>; }).then((next) => { setRange(next); if (next.max) { const availableMin = next.min ? Date.parse(next.min) : 0; const availableMax = Date.parse(next.max); const requested = new URL(window.location.href).searchParams.get("at"); const requestedAt = requested && Number.isFinite(Date.parse(requested)) ? Date.parse(requested) : availableMax; const valid = requestedAt >= availableMin && requestedAt <= availableMax; initialAt.current = valid ? requestedAt : availableMax; if (!valid && requested) setError(t.timeMachine.outOfRange); setAt((current) => current ?? initialAt.current); } }).catch((caught) => { if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : t.timeMachine.unavailable); }); return () => controller.abort(); }, []);
   useEffect(() => { if (!range || windowRange || initialAt.current === null) return; const controller = new AbortController(); void loadWindow(initialAt.current, controller.signal).catch((caught) => { if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : t.timeMachine.loadFailed); }); return () => controller.abort(); }, [loadWindow, range, windowRange]);
   useEffect(() => { if (!playing || !windowRange) return; let frame = 0; let previous = performance.now(); const tick = (now: number) => { const next = playbackAt.current + (now - previous) * speed; previous = now; if (next >= windowRange.end) { setPlaying(false); setAt(windowRange.end); return; } setAt(next); frame = requestAnimationFrame(tick); }; frame = requestAnimationFrame(tick); return () => cancelAnimationFrame(frame); }, [playing, speed, windowRange]);
   useEffect(() => { if (at !== null) mapTime.current.setTime(new Date(at)); }, [at]);
-  useEffect(() => { if (at === null) return; const bucket = contextResolutionBucket(at, 5 * 60_000); const key = `${bucket}:${showRadar ? 1 : 0}${showMetar ? 1 : 0}${showWind ? 1 : 0}${showAup ? 1 : 0}`; if (key === contextRequestKey.current) return; contextRequestKey.current = key; const controller = new AbortController(); const currentGeneration = ++contextGeneration.current; setContext((previous) => ({ ...previous, status: "loading" })); const requestedAt = new Date(at).toISOString(); void (async () => { const manifestResponse = await fetch(`/api/map-context/at?at=${encodeURIComponent(requestedAt)}`, { cache: "no-store", signal: controller.signal }); if (!manifestResponse.ok) throw new Error("Map context unavailable"); const manifest = await manifestResponse.json() as ContextManifest; const load = async <T,>(path: string): Promise<T | null> => { const response = await fetch(`${path}${path.includes("?") ? "&" : "?"}at=${encodeURIComponent(requestedAt)}`, { cache: "no-store", signal: controller.signal }); return response.ok ? await response.json() as T : null; }; const [radar, metar, wind, aup] = await Promise.all([showRadar ? load<ContextLayer<{ id: string; observedAt: string; imageUrl: string }>>("/api/map-context/radar") : Promise.resolve(null), showMetar ? load<ContextLayer<{ observations: HistoricalMetar[] }>>("/api/map-context/metar") : Promise.resolve(null), showWind ? load<ContextLayer<{ points: HistoricalWind[]; validAt: string; modelRun: string | null; model: string }>>("/api/map-context/wind?level=300") : Promise.resolve(null), showAup ? load<ContextLayer<{ windows: Array<{ startsAt: string; endsAt: string; designator: string; lowerLimit: string; upperLimit: string }>; sectors: Array<{ id: string; name: string; polygons: Array<Array<[number, number]>> }> }>>("/api/map-context/aup") : Promise.resolve(null)]); if (currentGeneration !== contextGeneration.current) return; const hasUnavailable = [showRadar && !radar?.available, showMetar && !metar?.available, showWind && !wind?.available, showAup && !aup?.available].some(Boolean); setContext({ manifest, radar, metar, wind, aup, status: hasUnavailable ? "partial" : "ready" }); })().catch(() => { if (!controller.signal.aborted && currentGeneration === contextGeneration.current) setContext((previous) => ({ ...previous, status: "partial" })); }); return () => controller.abort(); }, [at, showAup, showMetar, showRadar, showWind]);
+  const contextBucket = at === null ? null : contextResolutionBucket(at, CONTEXT_BUCKET_MS);
+  useEffect(() => {
+    if (contextBucket === null) return;
+    const key = `${contextBucket}:${showRadar ? 1 : 0}${showMetar ? 1 : 0}${showWind ? 1 : 0}${showAup ? 1 : 0}`;
+    if (key === contextRequestKey.current) return;
+    if (contextRetryTimer.current) {
+      clearTimeout(contextRetryTimer.current);
+      contextRetryTimer.current = null;
+    }
+    contextRequestKey.current = key;
+    const controller = new AbortController();
+    const currentGeneration = ++contextGeneration.current;
+    setContext((previous) => ({ ...previous, status: "loading" }));
+    const requestedMs = contextAtRef.current ?? contextBucket * CONTEXT_BUCKET_MS;
+    const requestedAt = new Date(requestedMs).toISOString();
+
+    void (async () => {
+      const manifestResponse = await fetch(`/api/map-context/at?at=${encodeURIComponent(requestedAt)}`, { cache: "no-store", signal: controller.signal });
+      if (!manifestResponse.ok) throw new Error("Map context unavailable");
+      const manifest = await manifestResponse.json() as ContextManifest;
+      const load = async <T,>(path: string): Promise<T | null> => {
+        const response = await fetch(`${path}${path.includes("?") ? "&" : "?"}at=${encodeURIComponent(requestedAt)}`, { cache: "no-store", signal: controller.signal });
+        return response.ok ? await response.json() as T : null;
+      };
+      const [radar, metar, wind, aup] = await Promise.all([
+        showRadar ? load<ContextLayer<{ id: string; observedAt: string; imageUrl: string }>>("/api/map-context/radar") : Promise.resolve(null),
+        showMetar ? load<ContextLayer<{ observations: HistoricalMetar[] }>>("/api/map-context/metar") : Promise.resolve(null),
+        showWind ? load<ContextLayer<{ points: HistoricalWind[]; validAt: string; modelRun: string | null; model: string }>>("/api/map-context/wind?level=300") : Promise.resolve(null),
+        showAup ? load<ContextLayer<{ windows: Array<{ startsAt: string; endsAt: string; designator: string; lowerLimit: string; upperLimit: string }>; sectors: Array<{ id: string; name: string; polygons: Array<Array<[number, number]>> }> }>>("/api/map-context/aup") : Promise.resolve(null),
+      ]);
+      if (currentGeneration !== contextGeneration.current) return;
+      contextRetryAttempt.current = 0;
+      const hasUnavailable = [showRadar && !radar?.available, showMetar && !metar?.available, showWind && !wind?.available, showAup && !aup?.available].some(Boolean);
+      setContext({ manifest, radar, metar, wind, aup, status: hasUnavailable ? "partial" : "ready" });
+    })().catch(() => {
+      if (controller.signal.aborted || currentGeneration !== contextGeneration.current) return;
+      if (contextRequestKey.current === key) contextRequestKey.current = null;
+      const delayMs = mapContextRetryDelayMs(contextRetryAttempt.current);
+      contextRetryAttempt.current += 1;
+      contextRetryTimer.current = setTimeout(() => {
+        contextRetryTimer.current = null;
+        setContextRetryRevision((value) => value + 1);
+      }, delayMs);
+      setContext((previous) => ({ ...previous, status: "partial" }));
+    });
+
+    return () => {
+      controller.abort();
+      if (contextRetryTimer.current) {
+        clearTimeout(contextRetryTimer.current);
+        contextRetryTimer.current = null;
+      }
+    };
+  }, [contextBucket, contextRetryRevision, showAup, showMetar, showRadar, showWind]);
   const currentAt = at ?? 0; const samples = useMemo(() => sampleHistoricalTraffic(tracks, currentAt), [currentAt, tracks]); const selectedSample = samples.find((sample) => sample.id === selected) ?? null; const selectedTrack = tracks.find((track) => track.id === selected);
   function seek(next: number): void { setPlaying(false); setAt(next); window.history.replaceState(null, "", `/time-machine?at=${encodeURIComponent(new Date(next).toISOString())}`); if (!windowRange || next < windowRange.start || next > windowRange.end) void loadWindow(next).catch((caught) => setError(caught instanceof Error ? caught.message : t.timeMachine.loadFailed)); }
   function selectEvent(event: TimeMachineEvent): void { seek(Date.parse(event.occurredAt)); if (event.icaoHex) setSelected(event.icaoHex); }
