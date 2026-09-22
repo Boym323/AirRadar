@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 // @ts-expect-error Runtime-only ESM release helper.
 import { createGitHubRelease } from "../scripts/create-github-release.mjs";
@@ -8,6 +9,15 @@ function response(status: number, payload: unknown): Response {
     headers: { "content-type": "application/json" },
   });
 }
+
+describe("continuous deploy release workflow", () => {
+  it("syncs remote release tags before deployment and delegates idempotency to the publisher", () => {
+    const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+    expect(workflow).toContain("git -C /var/www/airradar fetch --force --tags origin");
+    expect(workflow).toContain('RELEASE_TAG="${release_tag}" node /var/www/airradar/scripts/create-github-release.mjs');
+    expect(workflow).not.toContain('if git rev-parse --verify --quiet "refs/tags/${release_tag}"');
+  });
+});
 
 describe("GitHub release publishing", () => {
   const base = {
