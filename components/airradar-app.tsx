@@ -1000,7 +1000,7 @@ export function AirRadarApp() {
     setSelectedHex(null);
     setSelectedOgnId(null);
     setTrafficOpen(true);
-    setMobileCompact(false);
+    setMobileCompact(shortcut ? false : window.matchMedia("(max-width: 820px)").matches);
     setFiltersOpen(false);
     if (shortcut === "search") {
       focusSearchOnTrafficOpenRef.current = true;
