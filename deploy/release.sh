@@ -444,6 +444,10 @@ update_repository() {
 
   log "Updating repository from origin/${DEPLOY_BRANCH}"
   git_cmd fetch origin "${DEPLOY_BRANCH}"
+  # Automated GitHub Releases create remote release tags after deployment.
+  # Keep the production checkout's tag namespace synchronized so the
+  # post-deploy release resolver can continue the stable patch sequence.
+  git_cmd fetch --force --tags origin
 
   # Some Git configurations fetch a named branch only into FETCH_HEAD and do
   # not update the remote-tracking ref.  FETCH_HEAD is the result of this
