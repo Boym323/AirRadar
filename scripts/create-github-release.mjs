@@ -14,25 +14,69 @@ const headers = {
   "content-type": "application/json",
 };
 
-async function github(path, body) {
+class GitHubApiError extends Error {
+  constructor(status, payload) {
+    super(`GitHub API ${status}: ${JSON.stringify(payload)}`);
+    this.name = "GitHubApiError";
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+async function github(method, path, body) {
   const response = await fetch(`https://api.github.com/repos/${repository}${path}`, {
-    method: "POST",
+    method,
     headers,
-    body: JSON.stringify(body),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(`GitHub API ${response.status}: ${JSON.stringify(payload)}`);
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new GitHubApiError(response.status, payload);
   return payload;
 }
 
-const notes = await github("/releases/generate-notes", {
-  tag_name: tag,
-  target_commitish: target,
+async function existingRelease() {
+  try {
+    return await github("GET", `/releases/tags/${encodeURIComponent(tag)}`);
+  } catch (error) {
+    if (error instanceof GitHubApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+async function main() {
+  const existing = await existingRelease();
+  if (existing) {
+    console.log(`GitHub release ${tag} already exists at ${existing.html_url}; leaving it unchanged.`);
+    return;
+  }
+
+  const notes = await github("POST", "/releases/generate-notes", {
+    tag_name: tag,
+    target_commitish: target,
+  });
+
+  try {
+    const release = await github("POST", "/releases", {
+      tag_name: tag,
+      target_commitish: target,
+      name: notes.name || tag,
+      body: notes.body || "",
+    });
+    console.log(`Created GitHub release ${release.html_url}`);
+  } catch (error) {
+    // A rerun/race may create the release between the initial GET and POST.
+    if (error instanceof GitHubApiError && error.status === 422) {
+      const raced = await existingRelease();
+      if (raced) {
+        console.log(`GitHub release ${tag} was created concurrently at ${raced.html_url}; treating it as success.`);
+        return;
+      }
+    }
+    throw error;
+  }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
 });
-const release = await github("/releases", {
-  tag_name: tag,
-  target_commitish: target,
-  name: notes.name || tag,
-  body: notes.body || "",
-});
-console.log(`Created GitHub release ${release.html_url}`);
