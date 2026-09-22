@@ -2131,23 +2131,24 @@ button, input, select, textarea { color-scheme: dark; }
 .coverage-visual { padding-bottom: 14px; }
 
 @media (max-width: 820px) {
-  .topbar { height: 58px; padding: 0 10px; }
+  .topbar { height: var(--radar-topbar-height-mobile); padding: 0 10px; }
   .brand > span { min-width: 0; }
   .brand-subtitle { display: none; }
   .global-search { min-width: 0; margin: 0 5px; }
   .global-search-input { min-height: 38px; font-size: 14px; }
-  .radar-content { height: calc(100svh - 58px); }
-  .secondary-page-content { min-height: calc(100svh - 58px); }
-  .sidebar { top: auto; right: 6px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 6px; width: auto; border-radius: 9px; }
-  .sidebar.drawer-closed { display: block; visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
+  .radar-content { height: calc(100svh - var(--radar-topbar-height-mobile)); }
+  .secondary-page-content { min-height: calc(100svh - var(--radar-topbar-height-mobile)); }
+  .sidebar { top: auto; right: 6px; bottom: calc(var(--radar-mobile-nav-height) + 2px + env(safe-area-inset-bottom)); left: 6px; width: auto; border-radius: 9px; }
+  .sidebar.drawer-closed { display: block; visibility: hidden; opacity: 0; transform: translateY(12px); pointer-events: none; }
   .traffic-trigger { display: none; }
-  .drawer-close-button { display: none; }
+  .radar-content:has(.sidebar.drawer-closed) .traffic-trigger { display: inline-flex; }
+  .drawer-close-button { display: grid; }
   .sidebar.compact { height: 122px; }
   .sidebar:not(.compact) { height: min(54svh, 500px); }
   .sidebar.has-selection { height: min(66svh, 580px); }
-  .map-panel .maplibregl-ctrl-bottom-right { bottom: calc(min(54svh, 500px) + 74px + env(safe-area-inset-bottom)); }
-  .radar-content:has(.sidebar.compact) .maplibregl-ctrl-bottom-right { bottom: calc(130px + env(safe-area-inset-bottom)); }
-  .radar-content:has(.sidebar.has-selection) .maplibregl-ctrl-bottom-right { bottom: calc(min(66svh, 580px) + 74px + env(safe-area-inset-bottom)); }
+  .radar-content .map-panel .maplibregl-ctrl-bottom-right,
+  .radar-content:has(.sidebar.compact) .maplibregl-ctrl-bottom-right,
+  .radar-content:has(.sidebar.has-selection) .maplibregl-ctrl-bottom-right { bottom: var(--radar-map-control-bottom, 74px); }
 .mobile-bottom-nav {
     position: fixed;
     z-index: 8;
@@ -2156,7 +2157,7 @@ button, input, select, textarea { color-scheme: dark; }
     left: 0;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    min-height: calc(64px + env(safe-area-inset-bottom));
+    min-height: calc(var(--radar-mobile-nav-height) + env(safe-area-inset-bottom));
     padding: 5px 6px env(safe-area-inset-bottom);
     border-top: 1px solid var(--border-default);
     background: rgba(7, 19, 31, .98);
@@ -2664,3 +2665,72 @@ button, input, select, textarea { color-scheme: dark; }
   .map-overlay { top: 8px; bottom: 8px; }
   .contextual-legend { max-height: 54px; overflow: hidden; }
 }
+
+/* Layout V4: one canonical geometry layer for the radar workspace.
+   Feature styling stays above; viewport/drawer/nav geometry is defined here. */
+:root {
+  --radar-topbar-height: 60px;
+  --radar-topbar-height-mobile: 58px;
+  --radar-mobile-nav-height: 64px;
+  --radar-map-control-bottom: 10px;
+}
+
+.radar-content {
+  height: calc(100svh - var(--radar-topbar-height));
+  position: relative;
+  display: block;
+  overflow: clip;
+}
+
+.secondary-page-content { min-height: calc(100svh - var(--radar-topbar-height)); }
+
+.map-overlay-primary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.map-overlay-context-row {
+  display: flex;
+  align-items: flex-start;
+  width: min(100%, 28rem);
+  margin-top: 8px;
+  pointer-events: none;
+}
+
+.map-overlay-context-row > * { pointer-events: auto; }
+
+.map-overlay-context-row .weather-radar-timeline,
+.map-overlay-context-row .map-layer-notice {
+  width: 100%;
+  max-width: 28rem;
+  margin-top: 0;
+}
+
+.weather-radar-timeline-controls { flex-wrap: wrap; }
+.weather-radar-timeline-controls input[type="range"] { flex: 1 1 9rem; }
+
+@media (max-width: 820px) {
+  .radar-content { height: calc(100svh - var(--radar-topbar-height-mobile)); }
+  .secondary-page-content { min-height: calc(100svh - var(--radar-topbar-height-mobile)); }
+
+  .map-overlay-primary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .map-overlay-primary .map-summary-card { grid-column: 1 / -1; width: fit-content; max-width: 100%; }
+  .map-control-group-primary { grid-column: 1; grid-row: 2; justify-self: start; }
+  .map-layers { grid-column: 2; grid-row: 2; justify-self: end; }
+  .map-overlay-context-row { width: 100%; max-width: calc(100vw - 76px); }
+  .map-overlay-context-row .weather-radar-timeline,
+  .map-overlay-context-row .map-layer-notice { max-width: 100%; }
+
+  .radar-content .map-panel .maplibregl-ctrl-bottom-right,
+  .radar-content:has(.sidebar.compact) .maplibregl-ctrl-bottom-right,
+  .radar-content:has(.sidebar.has-selection) .maplibregl-ctrl-bottom-right {
+    bottom: var(--radar-map-control-bottom, calc(var(--radar-mobile-nav-height) + 10px));
+  }
+}
+
