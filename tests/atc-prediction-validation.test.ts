@@ -49,6 +49,22 @@ describe("ATC prediction validation", () => {
     expect(validation.getSnapshot()).toMatchObject({ attempts: 1, suppressed: 1, suppressionReasons: { other: 1 } });
   });
 
+  it("keeps a five-minute prediction alive long enough for stabilized confirmation", () => {
+    const validation = new AtcPredictionValidation();
+    validation.observeCurrentSector("ABC", "A", 0);
+    validation.observePrediction({ hex: "ABC", currentSector: "A", predictedSector: "B", predictedEtaSeconds: 300, now: 1_000 });
+
+    validation.getSnapshot(302_000);
+    validation.observeCurrentSector("ABC", "B", 303_000);
+    validation.observeCurrentSector("ABC", "B", 304_000);
+
+    expect(validation.getSnapshot(304_000)).toMatchObject({
+      confirmed: 1,
+      wrong: 0,
+      transitionWithoutPrediction: 0,
+    });
+  });
+
   it("expires an old prediction without deleting current-sector tracking", () => {
     const validation = new AtcPredictionValidation();
     validation.observeCurrentSector("ABC", "A", 0);
