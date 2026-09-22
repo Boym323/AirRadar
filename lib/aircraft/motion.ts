@@ -111,8 +111,13 @@ export function motionAt(source: MotionSource, timestamp: number, correction?: {
 }
 
 export function correctionFor(current: { lon: number; lat: number }, source: MotionSource, timestamp: number, durationMs: number, history?: MotionHistory) {
+  if (
+    source.observedAt === null
+    || timestamp < source.observedAt
+    || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS
+  ) return null;
   const [lon, lat] = predictedPosition(source, timestamp, history);
   const distance = haversineDistanceKm(current.lat, current.lon, lat, lon);
-  if (distance > MAX_PREDICTION_CORRECTION_KM || source.observedAt === null) return null;
+  if (distance > MAX_PREDICTION_CORRECTION_KM) return null;
   return { lon: shortestLongitudeDelta(current.lon, lon), lat: current.lat - lat, startedAt: timestamp, durationMs };
 }
