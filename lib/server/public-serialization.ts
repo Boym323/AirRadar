@@ -8,6 +8,7 @@ import type {
   PublicAircraft,
 } from "@/lib/aircraft/types";
 import { getPublicReceiverPositionMode, type PublicReceiverPositionMode } from "@/lib/server/config";
+import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 
 export type { PublicReceiverPositionMode } from "@/lib/server/config";
 
@@ -84,14 +85,34 @@ function publicSources(snapshot: StateSnapshot): PublicStateSnapshot["sources"] 
   };
 }
 
-function publicAircraft(item: AircraftView): PublicAircraft {
+function publicAircraft(
+  item: AircraftView,
+  receiver: PublicReceiverPosition,
+  mode: PublicReceiverPositionMode,
+): PublicAircraft {
   const { icaoHex, callsign, registration, aircraftType, aircraftDescription, lat, lon,
     altitude, baroAltitude, geomAltitude, groundSpeed, track, verticalRate, baroRate,
     geomRate, squawk, category, emergency, rssi, messages, seenSeconds, seenPosSeconds,
-    lastSeen, source, origin, provenance, sourceType, onGround, distanceKm, bearing, trail,
-    enrichment } = item;
+    lastSeen, source, origin, provenance, sourceType, onGround, trail, enrichment } = item;
   const route = enrichment?.route;
   const metadata = enrichment?.metadata;
+  const hasPublicGeometry = mode !== "hidden"
+    && receiver.lat !== null
+    && receiver.lon !== null
+    && typeof lat === "number"
+    && Number.isFinite(lat)
+    && typeof lon === "number"
+    && Number.isFinite(lon);
+  const distanceKm = mode === "exact"
+    ? item.distanceKm
+    : hasPublicGeometry
+      ? haversineDistanceKm(receiver.lat!, receiver.lon!, lat!, lon!)
+      : null;
+  const bearing = mode === "exact"
+    ? item.bearing
+    : hasPublicGeometry
+      ? initialBearing(receiver.lat!, receiver.lon!, lat!, lon!)
+      : null;
   return {
     icaoHex, callsign, registration, aircraftType, aircraftDescription, lat, lon,
     altitude, baroAltitude, geomAltitude, groundSpeed, track, verticalRate, baroRate,
@@ -158,10 +179,11 @@ export function toPublicStateSnapshot(
 ): PublicStateSnapshot {
   const cached = publicSnapshotCache.get(snapshot)?.get(mode);
   if (cached) return cached;
+  const receiver = toPublicReceiverPosition(snapshot.receiver, mode);
   const value: PublicStateSnapshot = {
-    aircraft: snapshot.aircraft.map(publicAircraft),
+    aircraft: snapshot.aircraft.map((item) => publicAircraft(item, receiver, mode)),
     relevantAtcFrequencies: snapshot.relevantAtcFrequencies,
-    receiver: toPublicReceiverPosition(snapshot.receiver, mode),
+    receiver,
     fetchedAt: snapshot.fetchedAt,
     provider: snapshot.provider,
     sourceOnline: snapshot.sourceOnline,
