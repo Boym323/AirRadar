@@ -1,7 +1,8 @@
 import { destinationPoint, haversineDistanceKm, initialBearing } from "@/lib/geo";
 
 export const KNOT_TO_KM_PER_HOUR = 1.852;
-export const MAX_PREDICTION_AGE_MS = 15_000;
+export const MAX_PREDICTION_AGE_MS = 8_000;
+export const MOTION_OBSERVATION_TOLERANCE_MS = 100;
 export const MAX_PREDICTION_CORRECTION_KM = 12;
 export const AIRCRAFT_ICON_ROTATION_OFFSET_DEG = 0;
 export const MAX_TURN_RATE_DEG_PER_SEC = 12;
@@ -79,19 +80,22 @@ export function shortestLongitudeDelta(from: number, to: number): number {
 
 export function predictedPosition(source: MotionSource, timestamp: number, history?: MotionHistory): [number, number] {
   if (source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS) return [source.lon, source.lat];
-  const speed = source.groundSpeed; const heading = normalizeHeading(source.track) ?? history?.lastTrack ?? null;
+  const speed = source.groundSpeed;
+  const heading = normalizeHeading(source.track) ?? history?.lastTrack ?? null;
   if (speed === null || !Number.isFinite(speed) || speed < 0.5 || heading === null) return [source.lon, source.lat];
   const elapsed = Math.min(MAX_PREDICTION_AGE_MS, Math.max(0, timestamp - source.observedAt));
-  const turnRate = history?.turnRateDegPerSec ?? 0;
-  if (!history || Math.abs(turnRate) < 0.05) return destinationPoint(source.lat, source.lon, speed * KNOT_TO_KM_PER_HOUR * elapsed / 3_600_000, heading);
-  let lat = source.lat; let lon = source.lon; let course = heading;
-  const stepMs = 250;
-  for (let remaining = elapsed; remaining > 0; remaining -= stepMs) {
-    const dt = Math.min(stepMs, remaining) / 1000;
-    [lon, lat] = destinationPoint(lat, lon, speed * KNOT_TO_KM_PER_HOUR * dt / 3600, course);
-    course = normalizeHeading(course + turnRate * dt)!;
-  }
-  return [lon, lat];
+  // Keep visual dead reckoning deliberately simple and stable. Inferring a
+  // curved path from noisy ADS-B track deltas makes markers "hunt" around the
+  // actual trajectory and then correct back on every confirmed position.
+  return destinationPoint(source.lat, source.lon, speed * KNOT_TO_KM_PER_HOUR * elapsed / 3_600_000, heading);
+}
+
+export function motionObservationAdvances(previous: MotionSource, next: MotionSource): boolean {
+  const previousSource = `${previous.positionOrigin ?? ""}:${previous.positionSource ?? ""}`;
+  const nextSource = `${next.positionOrigin ?? ""}:${next.positionSource ?? ""}`;
+  if (previousSource !== nextSource) return true;
+  if (previous.observedAt === null || next.observedAt === null) return true;
+  return next.observedAt > previous.observedAt + MOTION_OBSERVATION_TOLERANCE_MS;
 }
 
 export function predictionIsActive(source: MotionSource, timestamp: number, history?: MotionHistory): boolean {
@@ -106,7 +110,9 @@ export function motionAt(source: MotionSource, timestamp: number, correction?: {
   const progress = correction ? Math.max(0, Math.min(1, (timestamp - correction.startedAt) / correction.durationMs)) : 1;
   const active = Boolean(correction && progress < 1 && !stale);
   const baseHeading = normalizeHeading(source.track) ?? history?.lastTrack ?? history?.positionHeading ?? null;
-  const heading = baseHeading === null ? null : normalizeHeading(baseHeading + (history?.turnRateDegPerSec ?? 0) * Math.max(0, timestamp - (source.observedAt ?? timestamp)) / 1000);
+  // Render the reported/fallback course directly. Extrapolating visual heading
+  // with an inferred turn rate causes obvious over-rotation when track jitters.
+  const heading = baseHeading;
   return { lon: normalizeLongitude(lon + (correction?.lon ?? 0) * (1 - progress)), lat: lat + (correction?.lat ?? 0) * (1 - progress), heading, predictionActive: predictionIsActive(source, timestamp, history), correctionActive: active, stale };
 }
 

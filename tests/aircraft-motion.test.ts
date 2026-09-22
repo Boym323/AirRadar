@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { correctionFor, createMotionHistory, interpolateHeading, motionAt, motionRenderIntervalMs, normalizeHeading, predictedPosition, predictionIsActive, shortestAngleDelta, updateMotionHistory } from "@/lib/aircraft/motion";
+import { MAX_PREDICTION_AGE_MS, correctionFor, createMotionHistory, interpolateHeading, motionAt, motionObservationAdvances, motionRenderIntervalMs, normalizeHeading, predictedPosition, predictionIsActive, shortestAngleDelta, updateMotionHistory } from "@/lib/aircraft/motion";
 
 const source = (track: number | null, observedAt: number, lat = 50, lon = 14) => ({ lat, lon, observedAt, groundSpeed: 120, track, positionOrigin: "local", positionSource: "readsb" });
 
@@ -10,13 +10,18 @@ describe("aircraft motion", () => {
     expect(shortestAngleDelta(1, 359)).toBe(-2);
   });
 
-  it("estimates and applies a filtered turn rate", () => {
+  it("keeps dead reckoning on the reported track even when history detects a turn", () => {
     let history = createMotionHistory();
     history = updateMotionHistory(history, source(90, 1_000));
     history = updateMotionHistory(history, source(95, 2_000));
     history = updateMotionHistory(history, source(100, 3_000));
     expect(history.turnRateDegPerSec).toBeGreaterThan(0);
-    expect(motionAt(source(100, 3_000), 4_000, undefined, history).heading).toBeGreaterThan(100);
+    expect(motionAt(source(100, 3_000), 4_000, undefined, history).heading).toBe(100);
+
+    const withHistory = predictedPosition(source(100, 3_000), 4_000, history);
+    const straight = predictedPosition(source(100, 3_000), 4_000);
+    expect(withHistory[0]).toBeCloseTo(straight[0], 10);
+    expect(withHistory[1]).toBeCloseTo(straight[1], 10);
   });
 
   it("preserves heading when a report omits track", () => {
@@ -51,15 +56,13 @@ describe("aircraft motion", () => {
     expect(delayed.lastLat).toBe(50.001);
     expect(delayed.lastLon).toBe(14.001);
   });
-  it("keeps predicted heading continuous through north while turning", () => {
+  it("does not keep rotating past the latest reported track", () => {
     let history = createMotionHistory();
     history = updateMotionHistory(history, source(359, 1_000));
     history = updateMotionHistory(history, source(1, 2_000));
 
-    const headings = [2_000, 2_250, 2_500, 2_750, 3_000].map((timestamp) => motionAt(source(1, 2_000), timestamp, undefined, history).heading!);
-    expect(headings.every((heading, index) => index === 0 || shortestAngleDelta(headings[index - 1]!, heading) >= 0)).toBe(true);
-    expect(shortestAngleDelta(headings[0]!, headings.at(-1)!)).toBeGreaterThanOrEqual(0);
-    expect(shortestAngleDelta(headings[0]!, headings.at(-1)!)).toBeLessThan(10);
+    const headings = [2_000, 2_250, 2_500, 2_750, 3_000].map((timestamp) => motionAt(source(1, 2_000), timestamp, undefined, history).heading);
+    expect(headings).toEqual([1, 1, 1, 1, 1]);
   });
   it("resets all motion state on a source switch", () => {
     let history = createMotionHistory();
@@ -92,7 +95,7 @@ describe("aircraft motion", () => {
   });
   it("stops prediction and correction after the absolute horizon", () => {
     const s = { lat: 50, lon: 14, observedAt: 0, receivedAt: 0, groundSpeed: 360, track: 90 };
-    const result = motionAt(s, 15_001, { lon: 0.001, lat: 0, startedAt: 0, durationMs: 5000 });
+    const result = motionAt(s, MAX_PREDICTION_AGE_MS + 1, { lon: 0.001, lat: 0, startedAt: 0, durationMs: 5000 });
     expect(result.predictionActive).toBe(false);
     expect(result.correctionActive).toBe(false);
   });
@@ -135,7 +138,20 @@ describe("aircraft motion", () => {
       positionOrigin: "local",
       positionSource: "readsb",
     };
-    expect(correctionFor({ lat: 50, lon: 14 }, source, 16_001, 1_000)).toBeNull();
+    expect(correctionFor({ lat: 50, lon: 14 }, source, MAX_PREDICTION_AGE_MS + 1_001, 1_000)).toBeNull();
+  });
+
+  it("does not treat duplicate position timestamps as a new motion observation", () => {
+    const previous = source(90, 10_000, 50, 14);
+    expect(motionObservationAdvances(previous, { ...previous, groundSpeed: 130, track: 91 })).toBe(false);
+    expect(motionObservationAdvances(previous, { ...previous, observedAt: 10_050, lat: 50.0001 })).toBe(false);
+    expect(motionObservationAdvances(previous, { ...previous, observedAt: 10_101, lat: 50.0001 })).toBe(true);
+  });
+
+  it("accepts an immediate observation when the position source changes", () => {
+    const previous = source(90, 10_000, 50, 14);
+    const switched = { ...previous, observedAt: 10_000, positionOrigin: "network", positionSource: "ADS-B" };
+    expect(motionObservationAdvances(previous, switched)).toBe(true);
   });
 
   it("throttles only high-density bulk marker rendering", () => {
