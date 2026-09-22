@@ -2143,7 +2143,7 @@ button, input, select, textarea { color-scheme: dark; }
   .traffic-trigger { display: none; }
   .radar-content:has(.sidebar.drawer-closed) .traffic-trigger { display: inline-flex; }
   .drawer-close-button { display: grid; }
-  .sidebar.compact { height: 122px; }
+  .sidebar.compact { height: 144px; }
   .sidebar:not(.compact) { height: min(54svh, 500px); }
   .sidebar.has-selection { height: min(66svh, 580px); }
   .radar-content .map-panel .maplibregl-ctrl-bottom-right,
