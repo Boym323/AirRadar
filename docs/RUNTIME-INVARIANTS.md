@@ -98,9 +98,11 @@ These are behavior and safety contracts for changes to the current system.
 
 - Live state belongs in RAM; PostgreSQL stores sampled positions and durable
   reference data, not every ADS-B update.
-- Live trails are retained in RAM for the full time an aircraft remains in the
+- Server-side live trails are retained in RAM for the full time an aircraft remains in the
   live state and are removed with stale-aircraft cleanup; they are not bounded
-  by a time window or point count. The history queue is coalesced and its writer is single-lane. Per-aircraft
+  by a time window or point count. Browser SSE trail caches are independently
+  bounded so long-lived tabs cannot accumulate unbounded per-aircraft arrays.
+  The history queue is coalesced and its writer is single-lane. Per-aircraft
   writes have bounded concurrency; one failed aircraft does not reject other
   samples or mark the receiver offline.
 - `FlightPosition` is sampled only for valid positions and is capped by the
@@ -148,9 +150,9 @@ These are behavior and safety contracts for changes to the current system.
   and `lon` plus fresh `seen_pos`. The state service assigns each ICAO a
   source affinity (`local` or `network`) and keeps that choice while either
   source still retains the aircraft. A temporary disappearance from the
-  preferred feed therefore does not fall back to the other feed and cannot
-  make the marker jump; the affinity is released only after both observations
-  are gone. Within the selected origin, a fresh position is preferred and a
+  preferred feed keeps the aircraft identity in the extended union but
+  suppresses the alternate feed's position so the marker cannot jump; the
+  affinity is released only after both observations are gone. Within the selected origin, a fresh position is preferred and a
   local last-known position is retained when usable. An aircraft with no
   position is still retained with nullable coordinates. Local descriptive
   fields and receiver-local RSSI/message counters remain authoritative for a

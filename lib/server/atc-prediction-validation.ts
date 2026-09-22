@@ -207,8 +207,12 @@ export class AtcPredictionValidation {
 
   private cleanup(now: number): void {
     for (const [hex, state] of this.states) {
-      if (now - state.lastTouchedMs > STATE_TTL_MS || (state.prediction && now - state.prediction.createdAtMs > MAX_PREDICTION_AGE_MS)) {
+      if (now - state.lastTouchedMs > STATE_TTL_MS) {
         this.states.delete(hex);
+        continue;
+      }
+      if (state.prediction && now - state.prediction.createdAtMs > MAX_PREDICTION_AGE_MS) {
+        state.prediction = null;
       }
     }
     if (this.etaErrors.length > MAX_SAMPLES) this.etaErrors.splice(0, this.etaErrors.length - MAX_SAMPLES);

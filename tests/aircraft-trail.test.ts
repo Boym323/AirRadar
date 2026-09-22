@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrailPoint } from "@/lib/aircraft/types";
-import { boundTrailPoints, selectedTrail, trailPointFromAircraft, appendTrailPoint } from "@/lib/aircraft/trail";
+import { appendBoundedLiveTrailPoint, BROWSER_LIVE_TRAIL_MAX_POINTS, boundTrailPoints, selectedTrail, trailPointFromAircraft, appendTrailPoint } from "@/lib/aircraft/trail";
 
 const now = Date.parse("2026-09-08T12:20:00.000Z");
 
@@ -116,6 +116,18 @@ describe("selected aircraft live trail", () => {
     expect(result).toHaveLength(131);
     expect(result[0]?.lon).toBe(13.99);
     expect(result.every((item, index) => index === 0 || item.recordedAt >= result[index - 1]!.recordedAt)).toBe(true);
+  });
+
+  it("bounds the browser live trail cache without changing server trail semantics", () => {
+    const points = Array.from(
+      { length: 400 },
+      (_, index) => point(-20 + index * 0.05, 14 + index * 0.00002),
+    );
+    const result = points.reduce<TrailPoint[]>((trail, next) => appendBoundedLiveTrailPoint(trail, next), []);
+
+    expect(result).toHaveLength(BROWSER_LIVE_TRAIL_MAX_POINTS);
+    expect(result.at(-1)?.recordedAt).toBe(points.at(-1)?.recordedAt);
+    expect(result[0]?.recordedAt).toBe(points[100]?.recordedAt);
   });
 
   it("uses current-session points when history contributes nothing and clears on aircraft switch", () => {

@@ -1,7 +1,15 @@
 import { useEffect, useState, type MutableRefObject } from "react";
 import type { CoverageMode, PublicStateSnapshot, TrailPoint } from "@/lib/aircraft/types";
 import { applySseV2Event, type SseV2ClientState } from "@/lib/aircraft/sse-v2";
-import { appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
+import { appendBoundedLiveTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
+
+const FORCED_RECONNECT_BASE_MS = 250;
+const FORCED_RECONNECT_MAX_MS = 10_000;
+
+export function forcedReconnectDelayMs(attempt: number): number {
+  const boundedAttempt = Math.min(10, Math.max(0, Math.floor(attempt)));
+  return Math.min(FORCED_RECONNECT_MAX_MS, FORCED_RECONNECT_BASE_MS * (2 ** boundedAttempt));
+}
 
 interface UseAircraftStreamOptions {
   enabled?: boolean;
@@ -30,6 +38,7 @@ export function useAircraftStream({
     let active = true;
     let source: EventSource | null = null;
     let reconnectTimer: number | null = null;
+    let reconnectAttempt = 0;
     let current: SseV2ClientState | null = null;
 
     const updateTrails = (next: PublicStateSnapshot, changedHexes: string[], removedHexes: string[], full: boolean) => {
@@ -42,7 +51,7 @@ export function useAircraftStream({
         const trail = liveTrailsRef.current.get(aircraft.icaoHex) ?? [];
         const previous = trail.at(-1);
         if (previous && Date.parse(point.recordedAt) <= Date.parse(previous.recordedAt)) continue;
-        liveTrailsRef.current.set(aircraft.icaoHex, appendTrailPoint(trail, point));
+        liveTrailsRef.current.set(aircraft.icaoHex, appendBoundedLiveTrailPoint(trail, point));
       }
       if (full) {
         const visibleHexes = new Set(next.aircraft.map((aircraft) => aircraft.icaoHex));
@@ -64,10 +73,12 @@ export function useAircraftStream({
       source?.close();
       source = null;
       setConnected(false);
+      const delayMs = forcedReconnectDelayMs(reconnectAttempt);
+      reconnectAttempt += 1;
       reconnectTimer = window.setTimeout(() => {
         reconnectTimer = null;
         connect();
-      }, 0);
+      }, delayMs);
     };
 
     const handleEvent = (eventName: "snapshot" | "delta", event: Event) => {
@@ -78,7 +89,11 @@ export function useAircraftStream({
           reconnect();
           return;
         }
-        if (result.status === "duplicate") return;
+        if (result.status === "duplicate") {
+          reconnectAttempt = 0;
+          return;
+        }
+        reconnectAttempt = 0;
         const previousHex = selectedHexRef.current;
         current = result.state;
         updateTrails(result.snapshot, result.changedHexes, result.removedHexes, eventName === "snapshot");

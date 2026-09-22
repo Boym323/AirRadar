@@ -199,12 +199,20 @@ export function mergeAircraftObservations(
   receiver: ReceiverPosition,
   options: { localStaleAfterMs: number; networkStaleAfterMs: number; now?: number; preferredOrigin?: "local" | "network" },
 ): Aircraft | null {
-  // A source preference is an identity-level decision made by the state
-  // service. It deliberately prevents a temporary outage in one feed from
-  // making the same ICAO switch feeds and jump on the map.
-  const selectedLocal = options.preferredOrigin === "network" ? undefined : local;
-  const selectedNetwork = options.preferredOrigin === "local" ? undefined : network;
-  if (!selectedLocal && !selectedNetwork) return null;
+  // Source affinity controls which observation may drive the marker, but it
+  // must never remove an identity from the extended local ∪ network union.
+  // When the preferred source is temporarily absent, keep the alternate
+  // observation for identity/metadata while suppressing its position so the
+  // marker cannot jump to a different feed.
+  if (!local && !network) return null;
+  const preferredAvailable = options.preferredOrigin === "local"
+    ? Boolean(local)
+    : options.preferredOrigin === "network"
+      ? Boolean(network)
+      : false;
+  const preferredUnavailable = options.preferredOrigin !== undefined && !preferredAvailable;
+  const selectedLocal = options.preferredOrigin === "network" && network ? undefined : local;
+  const selectedNetwork = options.preferredOrigin === "local" && local ? undefined : network;
   const now = options.now ?? Date.now();
   // Aircraft existence is based on an observation, not on whether that
   // observation currently has a fresh usable position. Position arbitration
@@ -213,8 +221,8 @@ export function mergeAircraftObservations(
   // observation must never re-enter through this fallback after its stale
   // position was rejected by selectPositionObservation().
   const base = selectedLocal ?? selectedNetwork!;
-  const selectedPosition = selectPositionObservation(selectedLocal, selectedNetwork, options, now);
-  const fallbackPosition = selectedLocal && hasUsablePosition(selectedLocal) ? selectedLocal : undefined;
+  const selectedPosition = preferredUnavailable ? undefined : selectPositionObservation(selectedLocal, selectedNetwork, options, now);
+  const fallbackPosition = !preferredUnavailable && selectedLocal && hasUsablePosition(selectedLocal) ? selectedLocal : undefined;
   const kinematics = selectedPosition ?? base;
   const position = selectedPosition ?? fallbackPosition;
   const emergencyObservation = selectedEmergencyObservation(selectedLocal, selectedNetwork, options, now);
@@ -252,7 +260,7 @@ export function mergeAircraftObservations(
     distanceKm,
     bearing,
     origin: originOf(kinematics),
-    provenance: provenance(selectedLocal, selectedNetwork, position),
+    provenance: provenance(local, network, position),
     sourceType: kinematics.sourceType,
     onGround: kinematics.onGround,
     trail: selectedTrail(position),
