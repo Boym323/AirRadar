@@ -88,7 +88,10 @@ export function aircraftLabelFor(aircraft: AircraftView): string {
 
 export function aircraftGlyphMarkup(aircraft: AircraftView): string {
   const asset = aircraftIconAsset(aircraft);
-  if (asset) return `<img class="aircraft-glyph aircraft-glyph-asset" src="${asset}" alt="" draggable="false" />`;
+  if (asset) {
+    const escapedAsset = asset.replace(/["'()\\]/g, (value) => `\\${value}`);
+    return `<span class="aircraft-glyph aircraft-glyph-asset" aria-hidden="true" style="--aircraft-icon-mask:url('${escapedAsset}')"></span>`;
+  }
   const kind = aircraftMarkerKind(aircraft);
   return `<svg class="aircraft-glyph aircraft-glyph-${kind}" viewBox="0 0 32 32" aria-hidden="true"><path d="${AIRCRAFT_GLYPH_PATHS[kind]}"></path></svg>`;
 }
