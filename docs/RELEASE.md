@@ -68,10 +68,14 @@ an approval step is desired.
 
 Automated mode deploys the exact tested commit, does not create a local
 changelog commit or release tag, and keeps the production checkout
-fast-forwardable from `origin/main`. After production health checks pass, the
-workflow creates a GitHub Release with generated release notes, targeting the
-exact tested commit. Versioned stable/RC releases continue to use the normal
-command above.
+fast-forwardable from `origin/main`. During the privileged repository update,
+the release script synchronizes remote release tags into the production
+checkout so post-deploy version resolution sees prior automated releases. After
+production health checks pass, the workflow creates
+a GitHub Release with generated release notes, targeting the exact tested
+commit. Release publishing is idempotent: an already-existing GitHub Release
+for the resolved tag is treated as success, including rerun/race cases.
+Versioned stable/RC releases continue to use the normal command above.
 
 ## Exact release order
 
