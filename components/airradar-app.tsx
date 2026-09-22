@@ -2033,11 +2033,11 @@ export function AirRadarApp() {
       }
       if (!bounds.isEmpty()) {
         atcAutoFitRef.current = true;
-        map.fitBounds(bounds, { padding: 48, maxZoom: 7.5, duration: 500 });
+        map.fitBounds(bounds, { padding: currentRadarPadding({ top: 48, right: 48, bottom: 48, left: 48 }), maxZoom: 7.5, duration: 500 });
       }
     }
     if (!showAtc) atcAutoFitRef.current = false;
-  }, [airspaceActivity, atcData, mapReady, sectorTraffic, showAtc, showAtcTraffic, showAupUup]);
+  }, [airspaceActivity, atcData, currentRadarPadding, mapReady, sectorTraffic, showAtc, showAtcTraffic, showAupUup]);
 
   useEffect(() => {
     const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
