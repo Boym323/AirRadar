@@ -69,9 +69,33 @@ describe("aircraft source merge", () => {
     expect(networkLocked).toMatchObject({ lon: 14.202, origin: "adsblol", callsign: "NETWORK123" });
   });
 
-  it("does not fall back to the other source while the preferred source is absent", () => {
+  it("keeps identity but suppresses alternate position while the preferred source is absent", () => {
     const network = make("ABC123", "adsblol");
-    expect(mergeAircraftObservations(undefined, network, receiver, { ...options, preferredOrigin: "local" })).toBeNull();
+    const value = mergeAircraftObservations(undefined, network, receiver, { ...options, preferredOrigin: "local" });
+
+    expect(value).toMatchObject({
+      icaoHex: "ABC123",
+      lat: null,
+      lon: null,
+      origin: "adsblol",
+      provenance: { seenLocal: false, seenNetwork: true, positionOrigin: null },
+    });
+  });
+
+  it("keeps the extended result as the local-network identity union during affinity outages", () => {
+    const localOnly = make("AAA001", "local");
+    const networkOnly = make("BBB002", "adsblol");
+    const local = new Map([[localOnly.icaoHex, localOnly]]);
+    const network = new Map([[networkOnly.icaoHex, networkOnly]]);
+    const sourcePreferences = new Map<string, "local" | "network">([
+      ["AAA001", "network"],
+      ["BBB002", "local"],
+    ]);
+
+    const merged = mergeAircraftMaps(local, network, receiver, { ...options, sourcePreferences });
+
+    expect(new Set(merged.map((aircraft) => aircraft.icaoHex))).toEqual(new Set(["AAA001", "BBB002"]));
+    expect(merged.every((aircraft) => aircraft.lat === null && aircraft.lon === null)).toBe(true);
   });
 
   it("keeps the last local position when the network feed is fresher", () => {
