@@ -111,14 +111,39 @@ export function eligibleNetworkObservation(
   return { icaoHex: network.icaoHex.toUpperCase(), distanceKm, bearing, altitude: Number.isFinite(network.baroAltitude ?? NaN) ? network.baroAltitude : (Number.isFinite(network.altitude ?? NaN) ? network.altitude : null), captured };
 }
 
-export function computeLocalCoverageRatio(aircraft: readonly AircraftView[], receiver: ReceiverPosition, radiusNm: number, now = Date.now(), maxNetworkAgeMs = 60_000, maxLocalAgeMs = maxNetworkAgeMs): LocalCoverageRatio {
+function ratioFromEligibility(
+  eligibleObservations: Iterable<CoverageEligibility | null>,
+  radiusNm: number,
+): LocalCoverageRatio {
   let denominator = 0;
   let numerator = 0;
-  for (const item of aircraft) {
-    const eligible = eligibleNetworkObservation(item, item, receiver, radiusNm, now, maxNetworkAgeMs, maxLocalAgeMs);
+  for (const eligible of eligibleObservations) {
     if (!eligible) continue;
     denominator += 1;
     if (eligible.captured) numerator += 1;
   }
   return { radiusNm, numerator, denominator, percentage: denominator > 0 ? (numerator / denominator) * 100 : null };
+}
+
+export function computeLocalCoverageRatio(aircraft: readonly AircraftView[], receiver: ReceiverPosition, radiusNm: number, now = Date.now(), maxNetworkAgeMs = 60_000, maxLocalAgeMs = maxNetworkAgeMs): LocalCoverageRatio {
+  return ratioFromEligibility(
+    aircraft.map((item) => eligibleNetworkObservation(item, item, receiver, radiusNm, now, maxNetworkAgeMs, maxLocalAgeMs)),
+    radiusNm,
+  );
+}
+
+export function computeLocalCoverageRatioFromSources(
+  networkAircraft: ReadonlyMap<string, AircraftView>,
+  localAircraft: ReadonlyMap<string, AircraftView>,
+  receiver: ReceiverPosition,
+  radiusNm: number,
+  now = Date.now(),
+  maxNetworkAgeMs = 60_000,
+  maxLocalAgeMs = maxNetworkAgeMs,
+): LocalCoverageRatio {
+  return ratioFromEligibility(
+    [...networkAircraft.values()].map((network) =>
+      eligibleNetworkObservation(network, localAircraft.get(network.icaoHex), receiver, radiusNm, now, maxNetworkAgeMs, maxLocalAgeMs)),
+    radiusNm,
+  );
 }
