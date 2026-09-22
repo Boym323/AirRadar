@@ -24,6 +24,7 @@ export interface HistoricalAircraftTrack {
 
 export interface HistoricalAircraftSample extends Omit<HistoricalObservation, "timestamp"> {
   id: string;
+  hex: string;
   timestamp: number;
   flightId: number | null;
   callsign: string | null;
@@ -45,19 +46,20 @@ export function sampleHistoricalAircraft(track: HistoricalAircraftTrack, at: num
   const last = track.positions[track.positions.length - 1];
   const lastAt = time(last.timestamp);
   if (at < firstAt || at > lastAt + TIME_MACHINE_STALE_AFTER_MS) return null;
-  if (at >= lastAt) return { ...last, id: track.id, timestamp: lastAt, flightId: track.flightId, callsign: track.callsign, registration: track.registration, type: track.type };
+  if (at >= lastAt) return { ...last, id: track.id, hex: track.hex, timestamp: lastAt, flightId: track.flightId, callsign: track.callsign, registration: track.registration, type: track.type };
   let nextIndex = 1;
   while (nextIndex < track.positions.length && time(track.positions[nextIndex].timestamp) < at) nextIndex += 1;
   const previous = track.positions[nextIndex - 1];
   const next = track.positions[nextIndex];
   const previousAt = time(previous.timestamp);
   const nextAt = time(next.timestamp);
-  if (at === nextAt) return { ...next, id: track.id, timestamp: nextAt, flightId: track.flightId, callsign: track.callsign, registration: track.registration, type: track.type };
+  if (at === nextAt) return { ...next, id: track.id, hex: track.hex, timestamp: nextAt, flightId: track.flightId, callsign: track.callsign, registration: track.registration, type: track.type };
   const gap = nextAt - previousAt;
   if (gap <= 0 || gap > TIME_MACHINE_MAX_INTERPOLATION_GAP_MS) return null;
   const ratio = Math.max(0, Math.min(1, (at - previousAt) / gap));
   return {
     id: track.id,
+    hex: track.hex,
     timestamp: at,
     lat: previous.lat + (next.lat - previous.lat) * ratio,
     lon: previous.lon + (next.lon - previous.lon) * ratio,
