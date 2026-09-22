@@ -107,6 +107,23 @@ export function appendTrailPoint(
   return [...trail, next];
 }
 
+export const BROWSER_LIVE_TRAIL_MAX_POINTS = 300;
+export const BROWSER_LIVE_TRAIL_MAX_AGE_MS = 30 * 60_000;
+
+export function appendBoundedLiveTrailPoint(
+  trail: readonly TrailPoint[],
+  point: TrailPosition,
+): TrailPoint[] {
+  const next = appendTrailPoint(trail, point);
+  const anchorAt = next.length ? recordedAtMs(next[next.length - 1]!) : recordedAtMs(point);
+  const cutoff = Number.isFinite(anchorAt) ? anchorAt - BROWSER_LIVE_TRAIL_MAX_AGE_MS : Number.NEGATIVE_INFINITY;
+  const bounded = next.filter((item) => {
+    const at = recordedAtMs(item);
+    return Number.isFinite(at) && at >= cutoff;
+  });
+  return bounded.slice(-BROWSER_LIVE_TRAIL_MAX_POINTS);
+}
+
 export function trailPointFromAircraft(aircraft: Pick<AircraftView, "lat" | "lon" | "lastSeen" | "seenSeconds" | "seenPosSeconds" | "altitude" | "groundSpeed" | "track">): TrailPoint | null {
   if (aircraft.lat === null || aircraft.lon === null) return null;
   const observedAt = positionObservedAt(aircraft);
