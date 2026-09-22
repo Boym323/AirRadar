@@ -116,11 +116,6 @@ jobs:
           console.log(`[deploy] ATS routes OK effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
           NODE
 
-      - name: Sync release tags
-        run: |
-          set -Eeuo pipefail
-          git -C /var/www/airradar fetch --force --tags origin
-
       - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
