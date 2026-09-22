@@ -660,8 +660,22 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .aircraft-plane svg, .aircraft-row-icon svg { fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .aircraft-plane svg { width: 23px; height: 23px; }
 .aircraft-row-icon svg { width: 20px; height: 20px; }
-.aircraft-plane .aircraft-glyph-asset { width: 27px; height: 27px; object-fit: contain; pointer-events: none; filter: brightness(0) saturate(100%) invert(76%) sepia(61%) saturate(579%) hue-rotate(122deg) brightness(91%) contrast(88%); }
-.aircraft-row-icon .aircraft-glyph-asset { width: 21px; height: 21px; object-fit: contain; pointer-events: none; filter: brightness(0) saturate(100%) invert(76%) sepia(61%) saturate(579%) hue-rotate(122deg) brightness(91%) contrast(88%); }
+.aircraft-glyph-asset {
+  display: block;
+  flex: 0 0 auto;
+  background: currentColor;
+  pointer-events: none;
+  -webkit-mask-image: var(--aircraft-icon-mask);
+  mask-image: var(--aircraft-icon-mask);
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.aircraft-plane .aircraft-glyph-asset { width: 27px; height: 27px; }
+.aircraft-row-icon .aircraft-glyph-asset { width: 21px; height: 21px; }
 .aircraft-plane[data-kind="a380"] svg { width: 29px; height: 29px; }
 .aircraft-plane[data-kind="a330"] svg, .aircraft-plane[data-kind="a350"] svg, .aircraft-plane[data-kind="b747"] svg { width: 26px; height: 26px; }
 .aircraft-plane[data-kind="glider"] svg { width: 26px; }
@@ -677,7 +691,6 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .aircraft-label[data-placement="bottom"] { top: calc(50% + 25px); left: 50%; transform: translateX(-50%); }
 .aircraft-marker.selected .aircraft-label { border-color: rgba(243,185,95,.72); background: rgba(8,17,29,.96); color: var(--warning); font-weight: 700; }
 .aircraft-marker.emergency .aircraft-label { border-color: rgba(251,113,133,.78); }
-.aircraft-marker.selected .aircraft-glyph-asset { filter: brightness(0) saturate(100%) invert(81%) sepia(52%) saturate(652%) hue-rotate(344deg) brightness(101%) contrast(91%); }
 
 @media (prefers-reduced-motion: reduce) {
   .aircraft-plane-rotator,
