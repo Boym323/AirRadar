@@ -60,22 +60,23 @@ export async function getTimeMachineWindow(fromValue: string | null, toValue: st
       .limit(TIME_MACHINE_MAX_POSITIONS + 1).all() as PositionRow[];
     const truncated = positions.length > TIME_MACHINE_MAX_POSITIONS;
     const boundedPositions = positions.slice(0, TIME_MACHINE_MAX_POSITIONS);
-    const flightIds = [...new Set(boundedPositions.map((row) => row.flightId))].slice(0, TIME_MACHINE_MAX_AIRCRAFT);
+    const allFlightIds = [...new Set(boundedPositions.map((row) => row.flightId))];
+    const flightIds = allFlightIds.slice(0, TIME_MACHINE_MAX_AIRCRAFT);
     const flights = flightIds.length ? await database.orm.public.Flight
       .where((row: QueryRow) => row.id.in?.(flightIds))
       .include("aircraft", (aircraft: QueryCollection<unknown>) => aircraft.select("icaoHex", "registration", "aircraftType"))
       .limit(TIME_MACHINE_MAX_AIRCRAFT).all() as FlightRow[] : [];
     const byFlight = new Map(flights.map((flight) => [flight.id, flight]));
-    const tracks = new Map<string, HistoricalAircraftTrack>();
+    const tracks = new Map<number, HistoricalAircraftTrack>();
     for (const position of boundedPositions) {
       const flight = byFlight.get(position.flightId); if (!flight) continue;
       const hex = flight.aircraft.icaoHex.toUpperCase();
-      const track = tracks.get(hex) ?? { id: hex, hex, callsign: flight.callsign, registration: flight.registration ?? flight.aircraft.registration, type: flight.aircraftType ?? flight.aircraft.aircraftType, flightId: flight.id, origin: flight.origin, destination: flight.destination, positions: [] };
+      const track = tracks.get(flight.id) ?? { id: `${hex}:${flight.id}`, hex, callsign: flight.callsign, registration: flight.registration ?? flight.aircraft.registration, type: flight.aircraftType ?? flight.aircraft.aircraftType, flightId: flight.id, origin: flight.origin, destination: flight.destination, positions: [] };
       track.positions.push({ timestamp: iso(position.recordedAt), lat: position.lat, lon: position.lon, altitude: position.altitude, speed: position.groundSpeed, track: position.track });
-      tracks.set(hex, track);
+      tracks.set(flight.id, track);
     }
     const events = await getTimeMachineEvents(database, from, to);
-    return { windowStart: from.toISOString(), windowEnd: to.toISOString(), aircraft: [...tracks.values()], events, truncated: truncated || flightIds.length > TIME_MACHINE_MAX_AIRCRAFT };
+    return { windowStart: from.toISOString(), windowEnd: to.toISOString(), aircraft: [...tracks.values()], events, truncated: truncated || allFlightIds.length > TIME_MACHINE_MAX_AIRCRAFT };
   } catch (error) {
     if (error instanceof TimeMachineValidationError) throw error;
     throw new TimeMachineDatabaseUnavailableError();
