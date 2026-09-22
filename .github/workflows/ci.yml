@@ -116,6 +116,11 @@ jobs:
           console.log(`[deploy] ATS routes OK effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
           NODE
 
+      - name: Sync release tags
+        run: |
+          set -Eeuo pipefail
+          git -C /var/www/airradar fetch --force --tags origin
+
       - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
@@ -131,11 +136,7 @@ jobs:
           set -Eeuo pipefail
           release_version="$(node /var/www/airradar/scripts/version.mjs resolve-release-version --channel stable)"
           release_tag="v${release_version}"
-          if git rev-parse --verify --quiet "refs/tags/${release_tag}" >/dev/null; then
-            echo "Release ${release_tag} already exists; leaving it unchanged."
-          else
-            RELEASE_TAG="${release_tag}" node /var/www/airradar/scripts/create-github-release.mjs
-          fi
+          RELEASE_TAG="${release_tag}" node /var/www/airradar/scripts/create-github-release.mjs
 
       - name: Verify production ATS routes after release
         run: |
