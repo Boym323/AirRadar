@@ -124,6 +124,27 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("setLngLat([receiver.lon, receiver.lat])");
   });
 
+  it("keeps tar1090 icons colorable and map motion visually continuous", () => {
+    expect(markerControllerSource).toContain("--aircraft-icon-mask");
+    expect(globalCss).toContain("mask-image: var(--aircraft-icon-mask)");
+    expect(globalCss).toContain("background: currentColor");
+    expect(globalCss).not.toMatch(/\.aircraft-plane \.aircraft-glyph-asset[^}]*filter:/);
+    expect(appSource).toContain("aircraftMarkersRef.current.get(selectedHex)?.marker.getLngLat()");
+    expect(appSource).toContain("POSITION_ONLY_CORRECTION_MAX_MS");
+    expect(appSource).toContain("motionRenderIntervalMs(animationJobs.size)");
+    expect(appSource).toContain("job === selectedAnimationJob || bulkFrameDue");
+    expect(appSource).toContain('map.on("zoom", updateLiveZoomLabels)');
+    expect(appSource).toContain('map.on("move", scheduleLabelCollision)');
+  });
+
+  it("animates the desktop drawer instead of removing it before the transition", () => {
+    const closedRule = globalCss.match(/\.sidebar\.drawer-closed\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(closedRule).toContain("visibility: hidden");
+    expect(closedRule).toContain("transform: translateX(100%)");
+    expect(closedRule).not.toContain("display: none");
+    expect(globalCss).toContain("visibility 0s linear 190ms");
+  });
+
   it("keeps aircraft rotation on the rotator and labels outside it", () => {
     expect(markerControllerSource).toContain('rotationAlignment: "viewport"');
     expect(markerControllerSource).toContain('pitchAlignment: "viewport"');
