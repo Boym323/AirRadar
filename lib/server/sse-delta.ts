@@ -21,8 +21,8 @@ export class SseDeltaEncoder {
   }
 
   delta(snapshot: PublicStateSnapshot): SseV2DeltaPayload {
+    if (!this.previous) throw new Error("SseDeltaEncoder.delta() requires an initial snapshot");
     this.sequence += 1n;
-    if (!this.previous) return this.initial(snapshot) as unknown as SseV2DeltaPayload;
     const { changed, removed } = getPublicAircraftChangeSet(this.previous, snapshot);
     this.previous = snapshot;
     const metadata: Record<string, unknown> = { ...snapshot };
