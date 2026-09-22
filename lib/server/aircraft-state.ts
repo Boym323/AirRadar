@@ -9,6 +9,7 @@ import {
   getNetworkTrailMaxAgeMs,
   getNetworkTrailMaxPoints,
   getReceiverComparisonRadiusNm,
+  getSourceAffinityFailoverGraceMs,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 import { createAircraftProvider, createEnrichmentService, createNetworkAircraftProvider } from "@/lib/server/providers";
@@ -22,7 +23,7 @@ import { loadAlertConfig } from "@/lib/server/alert-config";
 import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { getReceptionRecords } from "@/lib/server/reception-records";
 import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
-import { computeLocalCoverageRatio, computeSourceStats } from "@/lib/aircraft/source-awareness";
+import { computeLocalCoverageRatioFromSources, computeSourceStats } from "@/lib/aircraft/source-awareness";
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { haversineDistanceKm } from "@/lib/geo";
 import { logger } from "@/lib/server/logger";
@@ -123,6 +124,8 @@ export class AircraftStateService {
   private readonly networkAircraft = new Map<string, Aircraft>();
   /** Identity-level source affinity prevents local/network hand-offs for one ICAO. */
   private readonly sourcePreferences = new Map<string, "local" | "network">();
+  /** Start of a preferred-source outage while the alternate observation remains live. */
+  private readonly sourcePreferenceMissingSince = new Map<string, number>();
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -345,7 +348,15 @@ export class AircraftStateService {
       coverageStats: displayedCoverageStats,
       sourceStats,
       localCoverageRatio: coverage === "extended"
-        ? computeLocalCoverageRatio(aircraft, this.currentReceiver, getReceiverComparisonRadiusNm(), Date.now(), getAdsbLolStaleAfterMs(), getAircraftStaleAfterMs())
+        ? computeLocalCoverageRatioFromSources(
+            this.networkAircraft,
+            this.localAircraft,
+            this.currentReceiver,
+            getReceiverComparisonRadiusNm(),
+            Date.now(),
+            getAdsbLolStaleAfterMs(),
+            getAircraftStaleAfterMs(),
+          )
         : undefined,
     };
   }
@@ -526,7 +537,7 @@ export class AircraftStateService {
     for (const hex of this.localAircraft.keys()) {
       if (!currentHexes.has(hex)) this.removeAircraft(hex);
     }
-    this.cleanupSourcePreferences();
+    this.reconcileSourcePreferences();
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) this.statistics.observe([...this.localAircraft.values()], this.currentReceiver, new Date());
     this.scheduleReceptionRecordEvaluation();
@@ -549,13 +560,36 @@ export class AircraftStateService {
     for (const hex of this.networkAircraft.keys()) {
       if (!currentHexes.has(hex)) this.networkAircraft.delete(hex);
     }
-    this.cleanupSourcePreferences();
+    this.reconcileSourcePreferences();
     this.invalidateSnapshotCache();
   }
 
-  private cleanupSourcePreferences(): void {
-    for (const hex of this.sourcePreferences.keys()) {
-      if (!this.localAircraft.has(hex) && !this.networkAircraft.has(hex)) this.sourcePreferences.delete(hex);
+  private reconcileSourcePreferences(now = Date.now()): void {
+    const graceMs = getSourceAffinityFailoverGraceMs();
+    for (const [hex, preferred] of this.sourcePreferences) {
+      const preferredPresent = preferred === "local" ? this.localAircraft.has(hex) : this.networkAircraft.has(hex);
+      const alternate: "local" | "network" = preferred === "local" ? "network" : "local";
+      const alternatePresent = alternate === "local" ? this.localAircraft.has(hex) : this.networkAircraft.has(hex);
+
+      if (preferredPresent) {
+        this.sourcePreferenceMissingSince.delete(hex);
+        continue;
+      }
+      if (!alternatePresent) {
+        this.sourcePreferences.delete(hex);
+        this.sourcePreferenceMissingSince.delete(hex);
+        continue;
+      }
+
+      const missingSince = this.sourcePreferenceMissingSince.get(hex);
+      if (missingSince === undefined) {
+        this.sourcePreferenceMissingSince.set(hex, now);
+        continue;
+      }
+      if (now - missingSince >= graceMs) {
+        this.sourcePreferences.set(hex, alternate);
+        this.sourcePreferenceMissingSince.delete(hex);
+      }
     }
   }
 
