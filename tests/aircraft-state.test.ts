@@ -224,6 +224,97 @@ describe("aircraft state service", () => {
     expect(extended.coverageStats).toMatchObject({ displayedAircraft: 2, localAircraft: 2, networkAircraft: 0, networkOnlyAircraft: 0 });
   });
 
+  it("fails over source affinity after a bounded preferred-source outage", () => {
+    vi.useFakeTimers();
+    vi.stubEnv("SOURCE_AFFINITY_FAILOVER_GRACE_MS", "1000");
+    const base = new Date("2026-09-22T08:00:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 }, receiver, base);
+    const network = normalizeAircraft({ hex: "ABC123", flight: "NETWORK123", lat: 50.2, lon: 14.2, seen: 0, seen_pos: 0 }, receiver, base);
+    if (!local || !network) throw new Error("test aircraft could not be normalized");
+    const networkObservation: Aircraft = {
+      ...network,
+      origin: "adsblol",
+      provenance: {
+        seenLocal: false,
+        seenNetwork: true,
+        lastLocalSeen: null,
+        lastNetworkSeen: network.lastSeen,
+        positionOrigin: "adsblol",
+        positionSource: network.source,
+      },
+    };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      applySnapshot: (snapshot: ProviderSnapshot) => void;
+      applyNetworkSnapshot: (snapshot: { aircraft: Aircraft[]; fetchedAt: string | null; provider: string }) => void;
+      sourcePreferences: Map<string, "local" | "network">;
+    };
+
+    internal.applyNetworkSnapshot({ aircraft: [networkObservation], fetchedAt: base.toISOString(), provider: "adsb.lol" });
+    internal.applySnapshot({ aircraft: [local], receiver, fetchedAt: base.toISOString(), provider: "readsb" });
+    expect(internal.sourcePreferences.get("ABC123")).toBe("network");
+
+    internal.applyNetworkSnapshot({ aircraft: [], fetchedAt: base.toISOString(), provider: "adsb.lol" });
+    expect(service.getSnapshot({ coverage: "extended" }).aircraft[0]).toMatchObject({
+      icaoHex: "ABC123",
+      lat: null,
+      lon: null,
+    });
+
+    const afterGrace = new Date(base.getTime() + 1_100);
+    vi.setSystemTime(afterGrace);
+    const refreshedLocal = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.11, lon: 14.11, seen: 0, seen_pos: 0 }, receiver, afterGrace);
+    if (!refreshedLocal) throw new Error("test aircraft could not be normalized");
+    internal.applySnapshot({ aircraft: [refreshedLocal], receiver, fetchedAt: afterGrace.toISOString(), provider: "readsb" });
+
+    expect(internal.sourcePreferences.get("ABC123")).toBe("local");
+    expect(service.getSnapshot({ coverage: "extended" }).aircraft[0]).toMatchObject({
+      icaoHex: "ABC123",
+      lat: 50.11,
+      lon: 14.11,
+      origin: "local",
+    });
+  });
+
+  it("computes extended local coverage ratio from raw network observations", () => {
+    vi.useFakeTimers();
+    const base = new Date("2026-09-22T08:10:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 55, lon: 14, seen: 0, seen_pos: 0 }, receiver, base);
+    const network = normalizeAircraft({ hex: "ABC123", flight: "NETWORK123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 }, receiver, base);
+    if (!local || !network) throw new Error("test aircraft could not be normalized");
+    const networkObservation: Aircraft = {
+      ...network,
+      origin: "adsblol",
+      provenance: {
+        seenLocal: false,
+        seenNetwork: true,
+        lastLocalSeen: null,
+        lastNetworkSeen: network.lastSeen,
+        positionOrigin: "adsblol",
+        positionSource: network.source,
+      },
+    };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as {
+      applySnapshot: (snapshot: ProviderSnapshot) => void;
+      applyNetworkSnapshot: (snapshot: { aircraft: Aircraft[]; fetchedAt: string | null; provider: string }) => void;
+    };
+
+    internal.applySnapshot({ aircraft: [local], receiver, fetchedAt: base.toISOString(), provider: "readsb" });
+    internal.applyNetworkSnapshot({ aircraft: [networkObservation], fetchedAt: base.toISOString(), provider: "adsb.lol" });
+
+    expect(service.getSnapshot({ coverage: "extended" }).localCoverageRatio).toEqual({
+      radiusNm: 175,
+      numerator: 1,
+      denominator: 1,
+      percentage: 100,
+    });
+  });
+
   it("degrades extended coverage to exactly local after network state is cleared", () => {
     const receiver = { lat: 50, lon: 14, name: "Test" };
     const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 }, receiver);

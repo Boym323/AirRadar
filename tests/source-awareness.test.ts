@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AircraftView, ReceiverPosition } from "@/lib/aircraft/types";
-import { aircraftPositionSourceLabel, classifyAircraftSource, computeLocalCoverageRatio, computeSourceStats, filterAircraftBySource } from "@/lib/aircraft/source-awareness";
+import { aircraftPositionSourceLabel, classifyAircraftSource, computeLocalCoverageRatio, computeLocalCoverageRatioFromSources, computeSourceStats, filterAircraftBySource } from "@/lib/aircraft/source-awareness";
 
 function aircraft(hex: string, provenance?: AircraftView["provenance"], lat = 50, lon = 14): AircraftView {
   return { icaoHex: hex, callsign: null, registration: null, aircraftType: null, aircraftDescription: null, lat, lon, altitude: 10000, baroAltitude: 10000, geomAltitude: null, groundSpeed: 200, track: 90, verticalRate: 0, baroRate: 0, geomRate: null, squawk: null, category: null, emergency: null, rssi: null, messages: null, seenSeconds: 0, seenPosSeconds: 0, lastSeen: "2026-09-19T12:00:00.000Z", source: "ADS-B", origin: "local", provenance, sourceType: null, onGround: false, distanceKm: null, bearing: null };
@@ -37,6 +37,23 @@ describe("source-aware live aircraft", () => {
     expect(filterAircraftBySource(data, "local").map((item) => item.icaoHex)).toEqual(["A", "C"]);
     expect(filterAircraftBySource(data, "network").map((item) => item.icaoHex)).toEqual(["B", "C"]);
     expect(filterAircraftBySource(data, "overlap").map((item) => item.icaoHex)).toEqual(["C"]);
+  });
+
+  it("computes source-based coverage from raw network coordinates instead of merged local coordinates", () => {
+    const receiver: ReceiverPosition = { lat: 50, lon: 14, name: "test" };
+    const now = Date.parse("2026-09-19T12:00:30.000Z");
+    const rawNetwork = aircraft("ABC123", network, 50.1, 14.1);
+    const rawLocal = aircraft("ABC123", local, 55, 14);
+
+    const result = computeLocalCoverageRatioFromSources(
+      new Map([[rawNetwork.icaoHex, rawNetwork]]),
+      new Map([[rawLocal.icaoHex, rawLocal]]),
+      receiver,
+      175,
+      now,
+    );
+
+    expect(result).toEqual({ radiusNm: 175, numerator: 1, denominator: 1, percentage: 100 });
   });
 
   it("computes a bounded live local capture ratio and avoids divide by zero", () => {

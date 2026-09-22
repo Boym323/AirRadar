@@ -63,6 +63,7 @@ const MAX_STATES = 4096;
 const MAX_SAMPLES = 4096;
 const STATE_TTL_MS = 15 * 60_000;
 const MAX_PREDICTION_AGE_MS = 5 * 60_000;
+const PREDICTION_CONFIRMATION_GRACE_MS = 30_000;
 
 function emptyReasons(): Record<AtcPredictionSuppressionReason, number> {
   return Object.fromEntries(ATC_PREDICTION_SUPPRESSION_REASONS.map((reason) => [reason, 0])) as Record<AtcPredictionSuppressionReason, number>;
@@ -211,8 +212,12 @@ export class AtcPredictionValidation {
         this.states.delete(hex);
         continue;
       }
-      if (state.prediction && now - state.prediction.createdAtMs > MAX_PREDICTION_AGE_MS) {
-        state.prediction = null;
+      if (state.prediction) {
+        const expiresAtMs = Math.max(
+          state.prediction.createdAtMs + MAX_PREDICTION_AGE_MS,
+          state.prediction.predictedAtMs + PREDICTION_CONFIRMATION_GRACE_MS,
+        );
+        if (now > expiresAtMs) state.prediction = null;
       }
     }
     if (this.etaErrors.length > MAX_SAMPLES) this.etaErrors.splice(0, this.etaErrors.length - MAX_SAMPLES);

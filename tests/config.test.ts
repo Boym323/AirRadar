@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getAviationWeatherBaseUrl, getAviationWeatherRequestTimeoutMs, getAviationWeatherUserAgent, getPublicReceiverPositionMode, getReceiverPosition, isAviationWeatherEnabled } from "@/lib/server/config";
+import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getAviationWeatherBaseUrl, getAviationWeatherRequestTimeoutMs, getAviationWeatherUserAgent, getPublicReceiverPositionMode, getReceiverPosition, getSourceAffinityFailoverGraceMs, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAtcData } from "@/lib/server/providers";
 import { getAlertConfigPath } from "@/lib/server/alert-config";
 import { getRuntimeStateDirectory, getRuntimeStatePath } from "@/lib/server/runtime-state";
@@ -64,6 +64,13 @@ describe("numeric environment configuration", () => {
   it.each([undefined, "", "invalid", "EXACTLY"])("defaults invalid public receiver mode %j to approximate", (mode) => {
     vi.stubEnv("PUBLIC_RECEIVER_POSITION_MODE", mode ?? "");
     expect(getPublicReceiverPositionMode()).toBe("approximate");
+  });
+
+  it("bounds source affinity failover grace", () => {
+    vi.stubEnv("SOURCE_AFFINITY_FAILOVER_GRACE_MS", "10");
+    expect(getSourceAffinityFailoverGraceMs()).toBe(1_000);
+    vi.stubEnv("SOURCE_AFFINITY_FAILOVER_GRACE_MS", "999999");
+    expect(getSourceAffinityFailoverGraceMs()).toBe(120_000);
   });
 
   it("does not leak demo ATC data for a real receiver without an imported database dataset", async () => {
