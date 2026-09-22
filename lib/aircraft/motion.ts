@@ -7,6 +7,8 @@ export const AIRCRAFT_ICON_ROTATION_OFFSET_DEG = 0;
 export const MAX_TURN_RATE_DEG_PER_SEC = 12;
 export const MIN_TURN_OBSERVATION_GAP_MS = 250;
 export const MAX_TURN_OBSERVATION_GAP_MS = 12_000;
+export const HIGH_DENSITY_MOTION_THRESHOLD = 80;
+export const HIGH_DENSITY_MOTION_FRAME_MS = 1_000 / 30;
 
 export type MotionSource = {
   lat: number; lon: number; observedAt: number | null; receivedAt?: number;
@@ -52,6 +54,10 @@ export function updateMotionHistory(history: MotionHistory, source: MotionSource
   } else next.lastObservedAt = source.observedAt;
   next.lastLat = source.lat; next.lastLon = source.lon;
   return next;
+}
+
+export function motionRenderIntervalMs(activeAircraft: number): number {
+  return activeAircraft >= HIGH_DENSITY_MOTION_THRESHOLD ? HIGH_DENSITY_MOTION_FRAME_MS : 0;
 }
 
 export function normalizeHeading(value: number | null | undefined): number | null {
