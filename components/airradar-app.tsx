@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { z } from "zod";
 import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
@@ -430,7 +430,7 @@ function AircraftIcon({ aircraft }: { aircraft: AircraftView }) {
     ? <span
         className="aircraft-glyph aircraft-glyph-asset"
         aria-hidden="true"
-        style={{ "--aircraft-icon-mask": `url('${asset}')` } as React.CSSProperties}
+        style={{ "--aircraft-icon-mask": `url('${asset}')` } as CSSProperties}
       />
     : <AircraftGlyph kind={aircraftMarkerKind(aircraft)} />;
 }
