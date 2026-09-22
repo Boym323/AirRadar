@@ -54,7 +54,7 @@ describe("GitHub release publishing", () => {
   });
 
   it("treats a concurrent already-exists race as success after rechecking the release", async () => {
-    const fetchImpl = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
       response(500, { message: "unexpected call" }))
       .mockResolvedValueOnce(response(404, { message: "Not Found" }))
       .mockResolvedValueOnce(response(200, { name: "v1.0.1", body: "notes" }))
