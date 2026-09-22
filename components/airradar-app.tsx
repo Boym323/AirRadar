@@ -427,7 +427,11 @@ function AircraftGlyph({ kind = "airplane" }: { kind?: AircraftMarkerKind }) {
 function AircraftIcon({ aircraft }: { aircraft: AircraftView }) {
   const asset = aircraftIconAsset(aircraft);
   return asset
-    ? <Image className="aircraft-glyph aircraft-glyph-asset" src={asset} alt="" width={21} height={21} draggable={false} unoptimized />
+    ? <span
+        className="aircraft-glyph aircraft-glyph-asset"
+        aria-hidden="true"
+        style={{ "--aircraft-icon-mask": `url('${asset}')` } as React.CSSProperties}
+      />
     : <AircraftGlyph kind={aircraftMarkerKind(aircraft)} />;
 }
 
