@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { z } from "zod";
 import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
@@ -28,11 +27,12 @@ import {
   watchlistSummary,
 } from "@/lib/i18n";
 import { haversineDistanceKm } from "@/lib/geo";
-import { MAX_PREDICTION_CORRECTION_KM, correctionFor, motionAt, predictedPosition, shortestLongitudeDelta, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
+import { MAX_PREDICTION_CORRECTION_KM, correctionFor, motionAt, motionRenderIntervalMs, predictedPosition, shortestLongitudeDelta, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
+import { aircraftMapLabelLevel } from "@/lib/aircraft/map-labels";
 import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
 import type { Airport } from "@/lib/airports/types";
@@ -176,6 +176,7 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 };
 
 const MIN_AIRCRAFT_ANIMATION_MS = 650;
+const POSITION_ONLY_CORRECTION_MAX_MS = 1_200;
 const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
 const EMPTY_TRAIL: TrailPoint[] = [];
 
@@ -427,7 +428,11 @@ function AircraftGlyph({ kind = "airplane" }: { kind?: AircraftMarkerKind }) {
 function AircraftIcon({ aircraft }: { aircraft: AircraftView }) {
   const asset = aircraftIconAsset(aircraft);
   return asset
-    ? <Image className="aircraft-glyph aircraft-glyph-asset" src={asset} alt="" width={21} height={21} draggable={false} unoptimized />
+    ? <span
+        className="aircraft-glyph aircraft-glyph-asset"
+        aria-hidden="true"
+        style={{ "--aircraft-icon-mask": `url('${asset}')` } as CSSProperties}
+      />
     : <AircraftGlyph kind={aircraftMarkerKind(aircraft)} />;
 }
 
@@ -980,8 +985,12 @@ export function AirRadarApp() {
   function centerSelectedAircraft(): void {
     const map = mapRef.current;
     const aircraft = snapshot.aircraft.find((item) => item.icaoHex === selectedHex);
-    if (!map || !aircraft || aircraft.lat === null || aircraft.lon === null) return;
-    map.easeTo({ center: [aircraft.lon, aircraft.lat], padding: { top: 70, bottom: 40, left: 40, right: 40 }, duration: prefersReducedMotion() ? 0 : 350 });
+    if (!map || !aircraft || !selectedHex) return;
+    const rendered = aircraftMarkersRef.current.get(selectedHex)?.marker.getLngLat();
+    const lon = rendered?.lng ?? aircraft.lon;
+    const lat = rendered?.lat ?? aircraft.lat;
+    if (lon === null || lat === null) return;
+    map.easeTo({ center: [lon, lat], padding: { top: 70, bottom: 40, left: 40, right: 40 }, duration: prefersReducedMotion() ? 0 : 350 });
   }
 
   useEffect(() => {
@@ -1089,6 +1098,7 @@ export function AirRadarApp() {
     const labelCollisionScheduler = createLabelCollisionScheduler(runLabelCollision);
     labelCollisionSchedulerRef.current = () => labelCollisionScheduler.schedule();
 
+    let lastBulkAnimationRenderAt = Number.NEGATIVE_INFINITY;
     const runAnimations = (timestamp: number) => {
       animationFrameRef.current = null;
       if (document.hidden) {
@@ -1098,12 +1108,18 @@ export function AirRadarApp() {
       if (prefersReducedMotion()) {
         for (const job of animationJobs.values()) job.handle.marker.setLngLat([job.source.lon, job.source.lat]);
         animationJobs.clear();
+        labelCollisionSchedulerRef.current?.();
         return;
       }
       let continueAnimation = false;
       const selectedAnimationHex = selectedHexRef.current;
       const selectedAnimationJob = selectedAnimationHex ? animationJobs.get(selectedAnimationHex) : undefined;
       let selectedAnimationMotion: ReturnType<typeof motionAt> | null = null;
+      const bulkFrameIntervalMs = motionRenderIntervalMs(animationJobs.size);
+      const bulkFrameDue = bulkFrameIntervalMs === 0 || timestamp - lastBulkAnimationRenderAt >= bulkFrameIntervalMs;
+      const mapBearing = map.getBearing();
+      let renderedAnyMarker = false;
+
       for (const job of animationJobs.values()) {
         const motion = motionAt(job.source, timestamp, {
           lon: job.correctionLon,
@@ -1111,12 +1127,12 @@ export function AirRadarApp() {
           startedAt: job.correctionStartedAt,
           durationMs: job.correctionDurationMs,
         }, job.history);
-        job.handle.marker.setLngLat([motion.lon, motion.lat]);
-        // Position and heading must be rendered from the same frame of the
-        // motion model. Updating rotation only from the SSE/React effect made
-        // turns appear to snap at packet boundaries.
-        if (motion.heading !== null) setAircraftMarkerHeading(job.handle, motion.heading, map.getBearing());
-        labelCollisionSchedulerRef.current?.();
+        const renderThisFrame = job === selectedAnimationJob || bulkFrameDue;
+        if (renderThisFrame) {
+          job.handle.marker.setLngLat([motion.lon, motion.lat]);
+          if (motion.heading !== null) setAircraftMarkerHeading(job.handle, motion.heading, mapBearing);
+          renderedAnyMarker = true;
+        }
         if (job === selectedAnimationJob) selectedAnimationMotion = motion;
         if (timestamp - job.correctionStartedAt >= job.correctionDurationMs) {
           job.correctionLon = 0;
@@ -1124,6 +1140,9 @@ export function AirRadarApp() {
         }
         if (motion.predictionActive || motion.correctionActive) continueAnimation = true;
       }
+      if (bulkFrameDue) lastBulkAnimationRenderAt = timestamp;
+      if (renderedAnyMarker) labelCollisionSchedulerRef.current?.();
+
       const selectedTrailTailSource = map.getSource("selected-trail-live-tail") as GeoJSONSource | undefined;
       if (selectedTrailTailSource && selectedAnimationHex && selectedAnimationJob) {
         const confirmed = selectedConfirmedTrailRef.current;
@@ -1371,9 +1390,29 @@ export function AirRadarApp() {
         }
       };
       const scheduleLabelCollision = () => labelCollisionSchedulerRef.current?.();
-      map.on("zoomend", () => { setMapZoom(map.getZoom()); scheduleLabelCollision(); });
+      let liveLabelLevel = aircraftMapLabelLevel(map.getZoom());
+      const updateLiveZoomLabels = () => {
+        const zoom = map.getZoom();
+        const nextLevel = aircraftMapLabelLevel(zoom);
+        if (nextLevel !== liveLabelLevel) {
+          liveLabelLevel = nextLevel;
+          setMapZoom(zoom);
+        }
+        scheduleLabelCollision();
+      };
+      map.on("zoom", updateLiveZoomLabels);
+      map.on("zoomend", () => {
+        const zoom = map.getZoom();
+        liveLabelLevel = aircraftMapLabelLevel(zoom);
+        setMapZoom(zoom);
+        scheduleLabelCollision();
+      });
+      map.on("move", scheduleLabelCollision);
       map.on("moveend", scheduleLabelCollision);
-      map.on("rotate", updateAircraftHeadingsForMapBearing);
+      map.on("rotate", () => {
+        updateAircraftHeadingsForMapBearing();
+        scheduleLabelCollision();
+      });
       map.on("rotateend", scheduleLabelCollision);
       // Dataset fetches and map construction are independent lifecycles. The
       // refs retain the newest payload so a dataset that arrived before the
@@ -1586,9 +1625,12 @@ export function AirRadarApp() {
       const aircraft = snapshot.aircraft.find((item) => item.icaoHex === selectedHex);
       if (!selectedHex) focusedAircraftRef.current = null;
       else if (aircraft?.lat != null && aircraft.lon != null) {
-        // Keep the selected aircraft in the visible map above the mobile panel.
+        // Center on the marker's rendered position so prediction does not leave
+        // the selected aircraft visibly ahead of the camera target.
+        const rendered = aircraftMarkersRef.current.get(selectedHex)?.marker.getLngLat();
+        const center: [number, number] = [rendered?.lng ?? aircraft.lon, rendered?.lat ?? aircraft.lat];
         const expandedHeight = mobile ? Math.min(window.innerHeight * 0.46, 440) : 0;
-        map.easeTo({ center: [aircraft.lon, aircraft.lat], padding: { top: 70, bottom: expandedHeight + 20, left: 40, right: 40 }, duration: prefersReducedMotion() ? 0 : 350 });
+        map.easeTo({ center, padding: { top: 70, bottom: expandedHeight + 20, left: 40, right: 40 }, duration: prefersReducedMotion() ? 0 : 350 });
         focusedAircraftRef.current = selectedHex;
       }
     }
@@ -1646,21 +1688,27 @@ export function AirRadarApp() {
           && source.observedAt !== null
           && source.observedAt < previous.source.observedAt;
         if (delayedPosition) return;
-        // Without a current track and groundspeed there is no safe way to
-        // extrapolate or animate a correction. Interpolating such a packet
-        // from the previous predicted position makes the aircraft visibly
-        // move backwards, especially for readsb position-only updates.
+        // Position-only reports cannot be safely extrapolated, but a bounded
+        // correction to the newly confirmed point is still smoother than a
+        // hard DOM-marker snap. Large/stale corrections continue to snap.
         if (!hasRenderableAircraftMotion(source)) {
-          previous.history = updateMotionHistory(previous.history, source);
+          const nextHistory = updateMotionHistory(previous.history, source);
+          const correctionDurationMs = Math.min(
+            POSITION_ONLY_CORRECTION_MAX_MS,
+            Math.max(MIN_AIRCRAFT_ANIMATION_MS, now - previous.sourceReceivedAt),
+          );
+          const correction = correctionFor({ lon: current.lng, lat: current.lat }, source, now, correctionDurationMs, nextHistory);
+          previous.history = nextHistory;
           previous.source = source;
           previous.sourceReceivedAt = now;
-          previous.correctionLon = 0;
-          previous.correctionLat = 0;
           previous.correctionStartedAt = now;
-          previous.correctionDurationMs = MIN_AIRCRAFT_ANIMATION_MS;
-          marker.setLngLat(target);
-          const heading = motionAt(source, now, undefined, previous.history).heading;
+          previous.correctionDurationMs = correctionDurationMs;
+          previous.correctionLon = correction?.lon ?? 0;
+          previous.correctionLat = correction?.lat ?? 0;
+          if (!correction) marker.setLngLat(target);
+          const heading = motionAt(source, now, correction ?? undefined, nextHistory).heading;
           if (heading !== null) setAircraftMarkerHeading(handle, heading, map.getBearing());
+          if (correction) animationSchedulerRef.current?.();
           return;
         }
         if (sourceChanged) {

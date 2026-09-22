@@ -660,8 +660,22 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .aircraft-plane svg, .aircraft-row-icon svg { fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .aircraft-plane svg { width: 23px; height: 23px; }
 .aircraft-row-icon svg { width: 20px; height: 20px; }
-.aircraft-plane .aircraft-glyph-asset { width: 27px; height: 27px; object-fit: contain; pointer-events: none; filter: brightness(0) saturate(100%) invert(76%) sepia(61%) saturate(579%) hue-rotate(122deg) brightness(91%) contrast(88%); }
-.aircraft-row-icon .aircraft-glyph-asset { width: 21px; height: 21px; object-fit: contain; pointer-events: none; filter: brightness(0) saturate(100%) invert(76%) sepia(61%) saturate(579%) hue-rotate(122deg) brightness(91%) contrast(88%); }
+.aircraft-glyph-asset {
+  display: block;
+  flex: 0 0 auto;
+  background: currentColor;
+  pointer-events: none;
+  -webkit-mask-image: var(--aircraft-icon-mask);
+  mask-image: var(--aircraft-icon-mask);
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.aircraft-plane .aircraft-glyph-asset { width: 27px; height: 27px; }
+.aircraft-row-icon .aircraft-glyph-asset { width: 21px; height: 21px; }
 .aircraft-plane[data-kind="a380"] svg { width: 29px; height: 29px; }
 .aircraft-plane[data-kind="a330"] svg, .aircraft-plane[data-kind="a350"] svg, .aircraft-plane[data-kind="b747"] svg { width: 26px; height: 26px; }
 .aircraft-plane[data-kind="glider"] svg { width: 26px; }
@@ -677,9 +691,9 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .aircraft-label[data-placement="bottom"] { top: calc(50% + 25px); left: 50%; transform: translateX(-50%); }
 .aircraft-marker.selected .aircraft-label { border-color: rgba(243,185,95,.72); background: rgba(8,17,29,.96); color: var(--warning); font-weight: 700; }
 .aircraft-marker.emergency .aircraft-label { border-color: rgba(251,113,133,.78); }
-.aircraft-marker.selected .aircraft-glyph-asset { filter: brightness(0) saturate(100%) invert(81%) sepia(52%) saturate(652%) hue-rotate(344deg) brightness(101%) contrast(91%); }
 
 @media (prefers-reduced-motion: reduce) {
+  .sidebar,
   .aircraft-plane-rotator,
   .aircraft-plane { transition: none; }
   .aircraft-marker.emergency::before { animation: none; }
@@ -1996,8 +2010,11 @@ button, input, select, textarea { color-scheme: dark; }
 .traffic-trigger:hover, .traffic-trigger.active { border-color: rgba(67,216,194,.62); background: rgba(13,32,49,.96); }
 .traffic-trigger-label { color: var(--text-secondary); }
 .traffic-trigger strong { color: var(--accent-primary); font-family: var(--font-geist-mono), monospace; font-size: 13px; }
-.sidebar { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: var(--radar-drawer-width); border-left: 1px solid var(--border-default); box-shadow: -18px 0 40px rgba(0,0,0,.24); transform: translateX(0); transition: transform 190ms ease; }
-.sidebar.drawer-closed { display: none; visibility: hidden; transform: translateX(100%); pointer-events: none; }
+.sidebar { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: var(--radar-drawer-width); border-left: 1px solid var(--border-default); box-shadow: -18px 0 40px rgba(0,0,0,.24); visibility: visible; opacity: 1; transition: opacity 150ms ease, visibility 0s linear 0s; }
+.sidebar.drawer-closed { visibility: hidden; opacity: 0; pointer-events: none; transition: opacity 150ms ease, visibility 0s linear 150ms; }
+@media (min-width: 821px) {
+  .sidebar.drawer-closed > * { display: none; }
+}
 .sidebar.drawer-aircraft .sidebar-browse, .sidebar.drawer-ogn .sidebar-browse { display: none; }
 .drawer-close-button { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; border: 1px solid var(--border-default); border-radius: 5px; background: transparent; color: var(--text-muted); font-size: 20px; line-height: 1; }
 .drawer-close-button:hover { color: var(--text-primary); border-color: rgba(67,216,194,.5); }
@@ -2122,7 +2139,7 @@ button, input, select, textarea { color-scheme: dark; }
   .radar-content { height: calc(100svh - 58px); }
   .secondary-page-content { min-height: calc(100svh - 58px); }
   .sidebar { top: auto; right: 6px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 6px; width: auto; border-radius: 9px; }
-  .sidebar.drawer-closed { display: block; visibility: visible; transform: none; pointer-events: auto; }
+  .sidebar.drawer-closed { display: block; visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
   .traffic-trigger { display: none; }
   .drawer-close-button { display: none; }
   .sidebar.compact { height: 122px; }

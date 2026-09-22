@@ -124,6 +124,31 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("setLngLat([receiver.lon, receiver.lat])");
   });
 
+  it("keeps tar1090 icons colorable and map motion visually continuous", () => {
+    expect(markerControllerSource).toContain("--aircraft-icon-mask");
+    expect(globalCss).toContain("mask-image: var(--aircraft-icon-mask)");
+    expect(globalCss).toContain("background: currentColor");
+    expect(globalCss).not.toMatch(/\.aircraft-plane \.aircraft-glyph-asset[^}]*filter:/);
+    expect(appSource).toContain("aircraftMarkersRef.current.get(selectedHex)?.marker.getLngLat()");
+    expect(appSource).toContain("POSITION_ONLY_CORRECTION_MAX_MS");
+    expect(appSource).toContain("motionRenderIntervalMs(animationJobs.size)");
+    expect(appSource).toContain("job === selectedAnimationJob || bulkFrameDue");
+    expect(appSource).toContain('map.on("zoom", updateLiveZoomLabels)');
+    expect(appSource).toContain('map.on("move", scheduleLabelCollision)');
+  });
+
+  it("fades the desktop drawer while removing closed contents from overflow geometry", () => {
+    const drawerRules = [...globalCss.matchAll(/\.sidebar(?:\.drawer-closed)?\s*\{([^}]*)\}/g)].map((match) => match[1] ?? "");
+    const closedRule = drawerRules.find((rule) => rule.includes("visibility: hidden")) ?? "";
+    expect(closedRule).toContain("visibility: hidden");
+    expect(closedRule).toContain("opacity: 0");
+    expect(closedRule).not.toContain("translateX(100%)");
+    expect(closedRule).not.toContain("scaleX(0)");
+    expect(globalCss).toContain("transition: opacity 150ms ease");
+    expect(globalCss).toContain("visibility 0s linear 150ms");
+    expect(globalCss).toMatch(/@media \(min-width: 821px\)[\s\S]*?\.sidebar\.drawer-closed > \*\s*\{\s*display: none;/);
+  });
+
   it("keeps aircraft rotation on the rotator and labels outside it", () => {
     expect(markerControllerSource).toContain('rotationAlignment: "viewport"');
     expect(markerControllerSource).toContain('pitchAlignment: "viewport"');
