@@ -26,8 +26,7 @@ import {
   watchlistKindLabel,
   watchlistSummary,
 } from "@/lib/i18n";
-import { haversineDistanceKm } from "@/lib/geo";
-import { MAX_PREDICTION_CORRECTION_KM, correctionFor, motionAt, motionRenderIntervalMs, predictedPosition, shortestLongitudeDelta, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
+import { correctionFor, motionAt, motionRenderIntervalMs, predictedPosition, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -1730,25 +1729,28 @@ export function AirRadarApp() {
           return;
         }
         previous.history = updateMotionHistory(previous.history, source);
-        const [predictedLon, predictedLat] = predictedPosition(source, now, previous.history);
-        const correctionDistance = haversineDistanceKm(current.lat, current.lng, predictedLat, predictedLon);
         const correctionDurationMs = Math.min(
           MAX_AIRCRAFT_ANIMATION_MS,
           Math.max(MIN_AIRCRAFT_ANIMATION_MS, now - previous.sourceReceivedAt),
+        );
+        const correction = correctionFor(
+          { lon: current.lng, lat: current.lat },
+          source,
+          now,
+          correctionDurationMs,
+          previous.history,
         );
         previous.source = source;
         previous.sourceReceivedAt = now;
         previous.correctionStartedAt = now;
         previous.correctionDurationMs = correctionDurationMs;
-        if (correctionDistance <= MAX_PREDICTION_CORRECTION_KM) {
-          previous.correctionLon = shortestLongitudeDelta(current.lng, predictedLon);
-          previous.correctionLat = current.lat - predictedLat;
-        } else {
-          // A large discrepancy usually means a stale/changed source position,
-          // not a correction that should be animated across the map.
+        previous.correctionLon = correction?.lon ?? 0;
+        previous.correctionLat = correction?.lat ?? 0;
+        if (!correction) {
+          // Large, stale or untrusted observations must snap to their confirmed
+          // position instead of creating a correction the animation loop will
+          // refuse to render.
           marker.setLngLat(predictedPosition(source, now, previous.history));
-          previous.correctionLon = 0;
-          previous.correctionLat = 0;
         }
       } else {
         const initialPosition = predictedPosition(source, now);
