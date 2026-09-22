@@ -55,7 +55,7 @@ interface FlightEventTable extends FlightEventQuery {
 interface FlightTable {
   where(filter: Record<string, unknown>): {
     orderBy(order: Record<string, string>): {
-      limit(value: number): { all(): Promise<Array<{ id: number }> };
+      limit(value: number): { all(): Promise<Array<{ id: number }>> };
     };
   };
 }
