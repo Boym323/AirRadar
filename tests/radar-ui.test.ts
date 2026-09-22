@@ -137,14 +137,16 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain('map.on("move", scheduleLabelCollision)');
   });
 
-  it("animates the desktop drawer without expanding document overflow", () => {
+  it("animates the desktop drawer without placing hidden descendants outside the viewport", () => {
+    const sidebarRule = globalCss.match(/\.sidebar\s*\{([^}]*)\}/)?.[1] ?? "";
     const closedRule = globalCss.match(/\.sidebar\.drawer-closed\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(sidebarRule).toContain("transform-origin: right center");
     expect(closedRule).toContain("visibility: hidden");
-    expect(closedRule).toContain("clip-path: inset(0 0 0 100%)");
+    expect(closedRule).toContain("transform: scaleX(0)");
     expect(closedRule).toContain("opacity: 0");
     expect(closedRule).not.toContain("display: none");
     expect(closedRule).not.toContain("translateX(100%)");
-    expect(globalCss).toContain("clip-path 190ms ease");
+    expect(globalCss).toContain("transform 190ms ease");
     expect(globalCss).toContain("visibility 0s linear 190ms");
   });
 
