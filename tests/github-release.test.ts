@@ -30,7 +30,7 @@ describe("GitHub release publishing", () => {
   };
 
   it("treats an existing release as success without trying to recreate it", async () => {
-    const fetchImpl = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
       response(200, { html_url: "https://github.com/Boym323/AirRadar/releases/tag/v1.0.1" }));
 
     const result = await createGitHubRelease({ ...base, fetchImpl });
@@ -41,7 +41,7 @@ describe("GitHub release publishing", () => {
   });
 
   it("creates release notes and a release when the tag has no GitHub Release", async () => {
-    const fetchImpl = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
       response(500, { message: "unexpected call" }))
       .mockResolvedValueOnce(response(404, { message: "Not Found" }))
       .mockResolvedValueOnce(response(200, { name: "v1.0.1", body: "notes" }))
