@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { StateSnapshot } from "@/lib/aircraft/types";
 import { toPublicLiveStateSnapshot, toPublicStateSnapshot } from "@/lib/server/public-serialization";
 import { toPublicHealthResponse } from "@/lib/server/public-health";
+import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 
 function snapshot(): StateSnapshot {
   return {
@@ -61,18 +62,23 @@ describe("public snapshot serialization", () => {
     expect(toPublicStateSnapshot(snapshot(), "exact").receiver).toEqual({ lat: 50.123456, lon: 14.654321, name: "Test receiver" });
   });
 
-  it("rounds coordinates deterministically in approximate mode", () => {
+  it("rounds receiver coordinates and recomputes public geometry from the rounded position", () => {
     const value = toPublicStateSnapshot(snapshot(), "approximate");
     expect(value.receiver).toEqual({ lat: 50.12, lon: 14.65, name: "Test receiver" });
-    expect(value.aircraft[0]).toMatchObject({ lat: 50.123456, lon: 14.654321, distanceKm: 15.25, bearing: 123.4 });
+    expect(value.aircraft[0]).toMatchObject({ lat: 50.123456, lon: 14.654321 });
+    expect(value.aircraft[0].distanceKm).toBeCloseTo(haversineDistanceKm(50.12, 14.65, 50.123456, 14.654321), 8);
+    expect(value.aircraft[0].bearing).toBeCloseTo(initialBearing(50.12, 14.65, 50.123456, 14.654321), 8);
+    expect(value.aircraft[0].distanceKm).not.toBe(15.25);
+    expect(value.aircraft[0].bearing).not.toBe(123.4);
   });
 
-  it("hides coordinates without changing aircraft calculations", () => {
+  it("hides receiver coordinates and receiver-derived per-aircraft geometry together", () => {
     const internal = snapshot();
     const value = toPublicStateSnapshot(internal, "hidden");
     expect(value.receiver).toEqual({ lat: null, lon: null, name: "Test receiver" });
-    expect(value.aircraft[0]).toMatchObject({ distanceKm: 15.25, bearing: 123.4 });
+    expect(value.aircraft[0]).toMatchObject({ distanceKm: null, bearing: null });
     expect(internal.receiver).toEqual({ lat: 50.123456, lon: 14.654321, name: "Test receiver" });
+    expect(internal.aircraft[0]).toMatchObject({ distanceKm: 15.25, bearing: 123.4 });
   });
 
   it("uses the same safe transformation shape for repeated API/SSE serialization", () => {
