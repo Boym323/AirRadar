@@ -138,8 +138,10 @@ describe("radar UI polish helpers", () => {
   });
 
   it("animates the desktop drawer without placing hidden descendants outside the viewport", () => {
-    const sidebarRule = globalCss.match(/\.sidebar\s*\{([^}]*)\}/)?.[1] ?? "";
-    const closedRule = globalCss.match(/\.sidebar\.drawer-closed\s*\{([^}]*)\}/)?.[1] ?? "";
+    const drawerRules = [...globalCss.matchAll(/\.sidebar(?:\.drawer-closed)?\s*\{([^}]*)\}/g)].map((match) => match[1] ?? "");
+    const sidebarRule = drawerRules.find((rule) => rule.includes("transform-origin: right center")) ?? "";
+    const closedRule = drawerRules.find((rule) => rule.includes("visibility: hidden")) ?? "";
+    expect(sidebarRule).toContain("transform: scaleX(1)");
     expect(sidebarRule).toContain("transform-origin: right center");
     expect(closedRule).toContain("visibility: hidden");
     expect(closedRule).toContain("transform: scaleX(0)");
