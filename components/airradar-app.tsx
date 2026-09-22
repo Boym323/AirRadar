@@ -26,7 +26,7 @@ import {
   watchlistKindLabel,
   watchlistSummary,
 } from "@/lib/i18n";
-import { correctionFor, motionAt, motionRenderIntervalMs, predictedPosition, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
+import { correctionFor, motionAt, motionObservationAdvances, motionRenderIntervalMs, predictedPosition, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -175,9 +175,9 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
   stats: { currentAircraft: 0, aircraftSeenToday: 0, uniqueAircraftToday: 0, maxConcurrentAircraft: 0, maxDistanceKm: 0, aircraftTypes: [], airlines: [], messagesPerSecond: null },
 };
 
-const MIN_AIRCRAFT_ANIMATION_MS = 650;
-const POSITION_ONLY_CORRECTION_MAX_MS = 1_200;
-const MAX_AIRCRAFT_ANIMATION_MS = 8_000;
+const MIN_AIRCRAFT_ANIMATION_MS = 350;
+const POSITION_ONLY_CORRECTION_MAX_MS = 900;
+const MAX_AIRCRAFT_ANIMATION_MS = 1_100;
 const EMPTY_TRAIL: TrailPoint[] = [];
 
 function trailEndpointKey(point: TrailPoint | undefined): string {
@@ -1729,11 +1729,10 @@ export function AirRadarApp() {
       if (previous) {
         const current = marker.getLngLat();
         const sourceChanged = previous.source.positionOrigin !== source.positionOrigin || previous.source.positionSource !== source.positionSource;
-        const delayedPosition = !sourceChanged
-          && previous.source.observedAt !== null
-          && source.observedAt !== null
-          && source.observedAt < previous.source.observedAt;
-        if (delayedPosition) return;
+        // Metadata/kinematic SSE deltas often repeat the exact same position
+        // observation. Restarting a correction for those duplicate reports
+        // makes the marker continuously chase a moving predicted target.
+        if (!motionObservationAdvances(previous.source, source)) return;
         // Position-only reports cannot be safely extrapolated, but a bounded
         // correction to the newly confirmed point is still smoother than a
         // hard DOM-marker snap. Large/stale corrections continue to snap.
