@@ -842,7 +842,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         });
         const outOfViewport = (box) => box && (box.x < -1 || box.right > viewport.width + 1);
         if (contract.overflow || outOfViewport(contract.layerMenu) || (contract.sidebarVisible && outOfViewport(contract.sidebar))
-          || contract.controls.some(outOfViewport) || (viewport.width <= 820 ? contract.traffic !== 0 : contract.traffic !== 1)
+          || contract.controls.some(outOfViewport) || contract.traffic !== 1
           || contract.close !== 0 || !contract.imagesNamed || !contract.buttonsNamed) {
           throw new Error(`Responsive contract failed at ${viewport.width}px: ${JSON.stringify(contract)}`);
         }
@@ -879,8 +879,17 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
 
       if (viewport.width <= 820) {
         const trafficTrigger = page.getByTestId("traffic-trigger");
-        if (await trafficTrigger.isVisible()) throw new Error(`Traffic trigger is visible on mobile at ${viewport.width}px`);
+        if (!await trafficTrigger.isVisible()) throw new Error(`Traffic trigger is not visible in mobile map-only mode at ${viewport.width}px`);
         const sidebar = page.getByTestId("radar-sidebar");
+        if (!await sidebar.evaluate((element) => element.classList.contains("drawer-closed"))) {
+          throw new Error(`Mobile radar is not initially in map-only mode at ${viewport.width}px`);
+        }
+
+        await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
+        await trafficTrigger.click();
+        await page.locator('[data-testid="radar-sidebar"].drawer-traffic.compact').waitFor({ state: "visible" });
+        await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
+
         const atcPanel = page.getByTestId("atc-relevance-panel");
         const sidebarBounds = await sidebar.boundingBox();
         const atcPanelBounds = await atcPanel.boundingBox();
@@ -909,6 +918,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           throw new Error(`Secondary tools are not available after expanding sidebar at ${viewport.width}px`);
         }
         await page.locator(".mobile-collapse").click();
+        await page.locator("details.map-layers > summary").click();
       }
 
       const airportLayer = page.getByTestId("map-layer-airports");
@@ -1016,10 +1026,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       if (viewport.width === 390 && (airportAttempts < 1 || atcAttempts < 1)) throw new Error(`Dataset requests did not complete: airports=${airportAttempts}, atc=${atcAttempts}`);
       if (viewport.width <= 820) {
         const mobileSidebar = page.getByTestId("radar-sidebar");
+        const mobileTrafficTrigger = page.getByTestId("traffic-trigger");
         await page.locator(".map-container").waitFor({ state: "visible" });
-        if (!await mobileSidebar.evaluate((element) => element.classList.contains("compact"))) {
-          throw new Error("Mobile traffic sheet is not compact initially");
-        }
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
+        if (!await mobileTrafficTrigger.isVisible()) throw new Error("Mobile map-only Traffic trigger is unavailable");
+
+        await mobileTrafficTrigger.click();
+        await page.locator('[data-testid="radar-sidebar"].drawer-traffic.compact').waitFor({ state: "visible" });
         await page.locator(".mobile-collapse").click();
         await page.locator('[data-testid="radar-sidebar"]:not(.compact)').waitFor({ state: "visible" });
         await mobileSidebar.locator(".aircraft-row").first().click();
@@ -1042,7 +1055,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           throw new Error(`Mobile map controls are outside the viewport at ${viewport.width}px: ${JSON.stringify(mobileControlBounds)}`);
         }
         await mobileSidebar.locator(".close-button").click();
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("compact"));
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
+        if (!await mobileTrafficTrigger.isVisible()) throw new Error("Mobile Traffic trigger did not return after closing aircraft detail");
       }
       await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [14.2, 50.1], zoom: 8 }));
       await page.waitForFunction(() => {
