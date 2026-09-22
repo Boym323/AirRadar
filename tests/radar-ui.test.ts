@@ -258,6 +258,28 @@ describe("radar UI polish helpers", () => {
     expect(getTranslations("en").layers).toMatchObject({ aircraft: "Aircraft", airports: "Airports", atc: "ATC", heliports: "Heliports" });
   });
 
+  it("keeps responsive map geometry driven by measured occlusions", () => {
+    expect(appSource).toContain("radarContentRef");
+    expect(appSource).toContain("sidebarRef");
+    expect(appSource).toContain("currentRadarPadding()");
+    expect(appSource).toContain("radarBottomControlOffset(layout)");
+    expect(appSource).not.toContain("window.innerHeight * 0.46");
+    expect(appSource).not.toContain("panelHeight + 40");
+    expect(globalCss).toContain("--radar-map-control-bottom");
+    expect(globalCss).toContain(".radar-content:has(.sidebar.drawer-closed) .traffic-trigger");
+    expect(globalCss).toMatch(/\.sidebar\.drawer-closed\s*\{[^}]*visibility:\s*hidden[^}]*pointer-events:\s*none/);
+  });
+
+  it("keeps contextual map controls in an explicit second overlay row", () => {
+    expect(appSource).toContain('className="map-overlay-context-row"');
+    expect(globalCss).toMatch(/\.map-overlay-primary\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto auto/);
+    expect(globalCss).toContain(".map-overlay-context-row .weather-radar-timeline");
+    const primaryStart = appSource.indexOf('<div className="map-overlay-primary">');
+    const contextRow = appSource.indexOf('className="map-overlay-context-row"');
+    expect(primaryStart).toBeGreaterThan(-1);
+    expect(contextRow).toBeGreaterThan(primaryStart);
+  });
+
   it("keeps the layer overlay drawer-aware without changing mobile placement", () => {
     expect(globalCss).toContain("--radar-drawer-width");
     expect(globalCss).toContain(".radar-content:has(.drawer-traffic) .map-overlay");
