@@ -85,6 +85,7 @@ import {
 } from "@/lib/radar/aircraft-marker-controller";
 import { createLabelCollisionScheduler } from "@/lib/radar/aircraft-label-collision";
 import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-controller";
+import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
 
 declare global {
   interface Window {
@@ -511,6 +512,8 @@ export function AirRadarApp() {
   const trafficTriggerRef = useRef<HTMLButtonElement | null>(null);
   const drawerActionGenerationRef = useRef(0);
   const previousDrawerStateRef = useRef<RadarDrawerState>("closed");
+  const radarContentRef = useRef<HTMLElement | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const centeredTrafficRef = useRef(false);
@@ -542,6 +545,52 @@ export function AirRadarApp() {
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
   const [mapReady, setMapReady] = useState(false);
+
+  const readRadarLayout = useCallback(() => {
+    const mapElement = mapContainerRef.current;
+    if (!mapElement || typeof window === "undefined") return null;
+    const mobile = window.matchMedia("(max-width: 820px)").matches;
+    const drawerVisible = trafficOpen || selectedHex !== null || selectedOgnId !== null;
+    const bottomNav = mobile ? document.querySelector<HTMLElement>(".mobile-bottom-nav") : null;
+    return {
+      mapRect: mapElement.getBoundingClientRect(),
+      drawerRect: drawerVisible ? sidebarRef.current?.getBoundingClientRect() ?? null : null,
+      bottomNavRect: bottomNav?.getBoundingClientRect() ?? null,
+      mobile,
+    };
+  }, [selectedHex, selectedOgnId, trafficOpen]);
+
+  const currentRadarPadding = useCallback((base?: RadarMapPadding): RadarMapPadding => {
+    const fallback = base ?? { top: 70, right: 40, bottom: 40, left: 40 };
+    const layout = readRadarLayout();
+    return layout ? radarCameraPadding(layout, fallback) : fallback;
+  }, [readRadarLayout]);
+
+  useEffect(() => {
+    const content = radarContentRef.current;
+    const mapElement = mapContainerRef.current;
+    if (!content || !mapElement) return;
+
+    const updateLayoutMetrics = () => {
+      const layout = readRadarLayout();
+      const bottom = layout ? radarBottomControlOffset(layout) : 10;
+      content.style.setProperty("--radar-map-control-bottom", `${bottom}px`);
+      mapRef.current?.resize();
+    };
+
+    updateLayoutMetrics();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateLayoutMetrics) : null;
+    observer?.observe(mapElement);
+    if (sidebarRef.current) observer?.observe(sidebarRef.current);
+    const bottomNav = document.querySelector<HTMLElement>(".mobile-bottom-nav");
+    if (bottomNav) observer?.observe(bottomNav);
+    window.addEventListener("resize", updateLayoutMetrics);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateLayoutMetrics);
+    };
+  }, [mapReady, mobileCompact, readRadarLayout]);
+
   const receiverPositionAvailable = snapshot.receiver.lat !== null && snapshot.receiver.lon !== null;
   const airportGeoJsonRef = useRef<ReturnType<typeof createAirportGeoJSON>>(createAirportGeoJSON([]));
   const atcGeoJsonRef = useRef<ReturnType<typeof createAtcGeoJSON>>(createAtcGeoJSON([], false));
@@ -951,7 +1000,7 @@ export function AirRadarApp() {
     setSelectedHex(null);
     setSelectedOgnId(null);
     setTrafficOpen(true);
-    setMobileCompact(false);
+    setMobileCompact(shortcut ? false : window.matchMedia("(max-width: 820px)").matches);
     setFiltersOpen(false);
     if (shortcut === "search") {
       focusSearchOnTrafficOpenRef.current = true;
@@ -989,7 +1038,7 @@ export function AirRadarApp() {
     const lon = rendered?.lng ?? aircraft.lon;
     const lat = rendered?.lat ?? aircraft.lat;
     if (lon === null || lat === null) return;
-    map.easeTo({ center: [lon, lat], padding: { top: 70, bottom: 40, left: 40, right: 40 }, duration: prefersReducedMotion() ? 0 : 350 });
+    map.easeTo({ center: [lon, lat], padding: currentRadarPadding(), duration: prefersReducedMotion() ? 0 : 350 });
   }
 
   useEffect(() => {
@@ -1608,15 +1657,14 @@ export function AirRadarApp() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
-    const mobile = window.matchMedia("(max-width: 820px)").matches;
-    const panelHeight = mobile ? document.querySelector(".sidebar")?.getBoundingClientRect().height ?? 0 : 0;
+    const trafficPadding = currentRadarPadding({ top: 100, right: 45, bottom: 40, left: 45 });
     if (!centeredTrafficRef.current && (snapshot.receiver.lat === null || snapshot.receiver.lon === null) && snapshot.aircraft.length) {
       const positioned = snapshot.aircraft.filter((aircraft) => aircraft.lat !== null && aircraft.lon !== null
         && Number.isFinite(aircraft.lat) && Number.isFinite(aircraft.lon));
       if (positioned.length) {
         const bounds = new maplibregl.LngLatBounds();
         for (const aircraft of positioned) bounds.extend([aircraft.lon!, aircraft.lat!]);
-        map.fitBounds(bounds, { padding: { top: 100, bottom: panelHeight + 40, left: 45, right: 45 }, maxZoom: 8, duration: 0 });
+        map.fitBounds(bounds, { padding: trafficPadding, maxZoom: 8, duration: 0 });
         centeredTrafficRef.current = true;
       }
     }
@@ -1628,8 +1676,7 @@ export function AirRadarApp() {
         // the selected aircraft visibly ahead of the camera target.
         const rendered = aircraftMarkersRef.current.get(selectedHex)?.marker.getLngLat();
         const center: [number, number] = [rendered?.lng ?? aircraft.lon, rendered?.lat ?? aircraft.lat];
-        const expandedHeight = mobile ? Math.min(window.innerHeight * 0.46, 440) : 0;
-        map.easeTo({ center, padding: { top: 70, bottom: expandedHeight + 20, left: 40, right: 40 }, duration: prefersReducedMotion() ? 0 : 350 });
+        map.easeTo({ center, padding: currentRadarPadding(), duration: prefersReducedMotion() ? 0 : 350 });
         focusedAircraftRef.current = selectedHex;
       }
     }
@@ -1890,7 +1937,7 @@ export function AirRadarApp() {
       routeAirportSourceKeyRef.current = routeAirportSourceKey;
       labelCollisionSchedulerRef.current?.();
     }
-  }, [colorMode, filteredAircraft, filteredAircraftByHex, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [colorMode, currentRadarPadding, filteredAircraft, filteredAircraftByHex, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const visible = showAtsRoutes && atsRoutes?.available === true;
@@ -1986,11 +2033,11 @@ export function AirRadarApp() {
       }
       if (!bounds.isEmpty()) {
         atcAutoFitRef.current = true;
-        map.fitBounds(bounds, { padding: 48, maxZoom: 7.5, duration: 500 });
+        map.fitBounds(bounds, { padding: currentRadarPadding({ top: 48, right: 48, bottom: 48, left: 48 }), maxZoom: 7.5, duration: 500 });
       }
     }
     if (!showAtc) atcAutoFitRef.current = false;
-  }, [airspaceActivity, atcData, mapReady, sectorTraffic, showAtc, showAtcTraffic, showAupUup]);
+  }, [airspaceActivity, atcData, currentRadarPadding, mapReady, sectorTraffic, showAtc, showAtcTraffic, showAupUup]);
 
   useEffect(() => {
     const selectedRouteAirportCodes = new Set(selectedRouteAirportCodesKey.split("|").filter(Boolean));
@@ -2242,7 +2289,7 @@ export function AirRadarApp() {
         </>
       } />
 
-      <section className="radar-content">
+      <section ref={radarContentRef} className="radar-content">
         <div className="map-panel">
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
@@ -2266,16 +2313,6 @@ export function AirRadarApp() {
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>
               </MapControlGroup>
-              {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
-                <div className="weather-radar-timeline-heading"><strong>{t.layers.weatherRadar}</strong><span>{selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></div>
-                <div className="weather-radar-timeline-controls">
-                  <button type="button" aria-label={t.layers.previousFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.max(0, index - 1)].id); }}><UiIcon name="back" /></button>
-                  <button type="button" aria-pressed={radarPlaying} aria-label={radarPlaying ? t.layers.pause : t.layers.play} onClick={() => { setRadarLatestMode(false); setRadarPlaying((value) => !value); }}><UiIcon name={radarPlaying ? "pause" : "play"} /></button>
-                  <button type="button" aria-label={t.layers.nextFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.min(radarCatalog.frames.length - 1, index + 1)].id); }}><span className="ui-icon ui-icon-flipped"><UiIcon name="back" /></span></button>
-                  <input type="range" min="0" max={Math.max(0, radarCatalog.frames.length - 1)} value={Math.max(0, radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId))} aria-label={t.layers.weatherRadar} onChange={(event) => { setRadarLatestMode(false); setRadarPlaying(false); setRadarFrameId(radarCatalog.frames[Number(event.target.value)].id); }} />
-                  <button type="button" className={radarLatestMode ? "active" : ""} aria-pressed={radarLatestMode} onClick={() => { setRadarLatestMode(true); setRadarPlaying(false); setRadarFrameId(radarCatalog.latestFrameId); }}>{t.layers.latest}</button>
-                </div>
-              </div> : showWeatherRadar && radarStatus === "unavailable" ? <div className="map-layer-notice">{t.layers.radarUnavailable}</div> : null}
               <details className="map-layers">
                 <MapControl as="summary"><UiIcon name="layers" />{t.layers.title}</MapControl>
                 <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
@@ -2340,6 +2377,18 @@ export function AirRadarApp() {
                 </div>
               </details>
             </div>
+            {(showWeatherRadar && radarCatalog?.frames.length) || (showWeatherRadar && radarStatus === "unavailable") ? <div className="map-overlay-context-row">
+              {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
+                <div className="weather-radar-timeline-heading"><strong>{t.layers.weatherRadar}</strong><span>{selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></div>
+                <div className="weather-radar-timeline-controls">
+                  <button type="button" aria-label={t.layers.previousFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.max(0, index - 1)].id); }}><UiIcon name="back" /></button>
+                  <button type="button" aria-pressed={radarPlaying} aria-label={radarPlaying ? t.layers.pause : t.layers.play} onClick={() => { setRadarLatestMode(false); setRadarPlaying((value) => !value); }}><UiIcon name={radarPlaying ? "pause" : "play"} /></button>
+                  <button type="button" aria-label={t.layers.nextFrame} onClick={() => { const index = radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId); setRadarLatestMode(false); setRadarFrameId(radarCatalog.frames[Math.min(radarCatalog.frames.length - 1, index + 1)].id); }}><span className="ui-icon ui-icon-flipped"><UiIcon name="back" /></span></button>
+                  <input type="range" min="0" max={Math.max(0, radarCatalog.frames.length - 1)} value={Math.max(0, radarCatalog.frames.findIndex((frame) => frame.id === radarFrameId))} aria-label={t.layers.weatherRadar} onChange={(event) => { setRadarLatestMode(false); setRadarPlaying(false); setRadarFrameId(radarCatalog.frames[Number(event.target.value)].id); }} />
+                  <button type="button" className={radarLatestMode ? "active" : ""} aria-pressed={radarLatestMode} onClick={() => { setRadarLatestMode(true); setRadarPlaying(false); setRadarFrameId(radarCatalog.latestFrameId); }}>{t.layers.latest}</button>
+                </div>
+              </div> : <div className="map-layer-notice">{t.layers.radarUnavailable}</div>}
+            </div> : null}
             {(networkNotice || networkEnabled) && <div className="map-source-notice">
               {networkNotice && <span className="network-notice">{networkNotice}</span>}
               {networkEnabled && <span className="network-attribution">{t.radar.networkAttribution}</span>}
@@ -2355,7 +2404,7 @@ export function AirRadarApp() {
           </div>
         </div>
 
-        <aside id="radar-sidebar" data-testid="radar-sidebar" className={`sidebar drawer-${drawerState} ${mobileCompact ? "compact" : ""} ${selectedAircraft || selectedOgnTarget ? "has-selection" : ""}`}>
+        <aside ref={sidebarRef} id="radar-sidebar" data-testid="radar-sidebar" aria-hidden={drawerState === "closed"} className={`sidebar drawer-${drawerState} ${mobileCompact ? "compact" : ""} ${selectedAircraft || selectedOgnTarget ? "has-selection" : ""}`}>
           <div className="sidebar-heading">
               <div className="sidebar-heading-main">
                 <div className="sidebar-title">{t.radar.trafficNearby}</div>
