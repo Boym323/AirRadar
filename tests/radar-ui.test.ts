@@ -137,19 +137,16 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain('map.on("move", scheduleLabelCollision)');
   });
 
-  it("animates the desktop drawer without placing hidden descendants outside the viewport", () => {
+  it("fades the desktop drawer while removing closed contents from overflow geometry", () => {
     const drawerRules = [...globalCss.matchAll(/\.sidebar(?:\.drawer-closed)?\s*\{([^}]*)\}/g)].map((match) => match[1] ?? "");
-    const sidebarRule = drawerRules.find((rule) => rule.includes("transform-origin: right center")) ?? "";
     const closedRule = drawerRules.find((rule) => rule.includes("visibility: hidden")) ?? "";
-    expect(sidebarRule).toContain("transform: scaleX(1)");
-    expect(sidebarRule).toContain("transform-origin: right center");
     expect(closedRule).toContain("visibility: hidden");
-    expect(closedRule).toContain("transform: scaleX(0)");
     expect(closedRule).toContain("opacity: 0");
-    expect(closedRule).not.toContain("display: none");
     expect(closedRule).not.toContain("translateX(100%)");
-    expect(globalCss).toContain("transform 190ms ease");
-    expect(globalCss).toContain("visibility 0s linear 190ms");
+    expect(closedRule).not.toContain("scaleX(0)");
+    expect(globalCss).toContain("transition: opacity 150ms ease");
+    expect(globalCss).toContain("visibility 0s linear 150ms");
+    expect(globalCss).toMatch(/@media \(min-width: 821px\)[\s\S]*?\.sidebar\.drawer-closed > \*\s*\{\s*display: none;/);
   });
 
   it("keeps aircraft rotation on the rotator and labels outside it", () => {
