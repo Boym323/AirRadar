@@ -1098,7 +1098,7 @@ export function AirRadarApp() {
     const labelCollisionScheduler = createLabelCollisionScheduler(runLabelCollision);
     labelCollisionSchedulerRef.current = () => labelCollisionScheduler.schedule();
 
-    let lastBulkAnimationRenderAt = 0;
+    let lastBulkAnimationRenderAt = Number.NEGATIVE_INFINITY;
     const runAnimations = (timestamp: number) => {
       animationFrameRef.current = null;
       if (document.hidden) {
