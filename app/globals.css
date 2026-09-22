@@ -2010,8 +2010,8 @@ button, input, select, textarea { color-scheme: dark; }
 .traffic-trigger:hover, .traffic-trigger.active { border-color: rgba(67,216,194,.62); background: rgba(13,32,49,.96); }
 .traffic-trigger-label { color: var(--text-secondary); }
 .traffic-trigger strong { color: var(--accent-primary); font-family: var(--font-geist-mono), monospace; font-size: 13px; }
-.sidebar { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: var(--radar-drawer-width); border-left: 1px solid var(--border-default); box-shadow: -18px 0 40px rgba(0,0,0,.24); visibility: visible; opacity: 1; clip-path: inset(0 0 0 0); transition: clip-path 190ms ease, opacity 150ms ease, visibility 0s linear 0s; }
-.sidebar.drawer-closed { visibility: hidden; opacity: 0; clip-path: inset(0 0 0 100%); pointer-events: none; transition: clip-path 190ms ease, opacity 150ms ease, visibility 0s linear 190ms; }
+.sidebar { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: var(--radar-drawer-width); border-left: 1px solid var(--border-default); box-shadow: -18px 0 40px rgba(0,0,0,.24); visibility: visible; opacity: 1; transform: scaleX(1); transform-origin: right center; transition: transform 190ms ease, opacity 150ms ease, visibility 0s linear 0s; }
+.sidebar.drawer-closed { visibility: hidden; opacity: 0; transform: scaleX(0); pointer-events: none; transition: transform 190ms ease, opacity 150ms ease, visibility 0s linear 190ms; }
 .sidebar.drawer-aircraft .sidebar-browse, .sidebar.drawer-ogn .sidebar-browse { display: none; }
 .drawer-close-button { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; border: 1px solid var(--border-default); border-radius: 5px; background: transparent; color: var(--text-muted); font-size: 20px; line-height: 1; }
 .drawer-close-button:hover { color: var(--text-primary); border-color: rgba(67,216,194,.5); }
@@ -2136,7 +2136,7 @@ button, input, select, textarea { color-scheme: dark; }
   .radar-content { height: calc(100svh - 58px); }
   .secondary-page-content { min-height: calc(100svh - 58px); }
   .sidebar { top: auto; right: 6px; bottom: calc(66px + env(safe-area-inset-bottom)); left: 6px; width: auto; border-radius: 9px; }
-  .sidebar.drawer-closed { display: block; visibility: visible; opacity: 1; clip-path: inset(0); transform: none; pointer-events: auto; }
+  .sidebar.drawer-closed { display: block; visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
   .traffic-trigger { display: none; }
   .drawer-close-button { display: none; }
   .sidebar.compact { height: 122px; }
