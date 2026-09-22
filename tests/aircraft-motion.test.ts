@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMotionHistory, interpolateHeading, motionAt, normalizeHeading, predictedPosition, predictionIsActive, shortestAngleDelta, updateMotionHistory } from "@/lib/aircraft/motion";
+import { correctionFor, createMotionHistory, interpolateHeading, motionAt, motionRenderIntervalMs, normalizeHeading, predictedPosition, predictionIsActive, shortestAngleDelta, updateMotionHistory } from "@/lib/aircraft/motion";
 
 const source = (track: number | null, observedAt: number, lat = 50, lon = 14) => ({ lat, lon, observedAt, groundSpeed: 120, track, positionOrigin: "local", positionSource: "readsb" });
 
@@ -95,5 +95,39 @@ describe("aircraft motion", () => {
     const result = motionAt(s, 15_001, { lon: 0.001, lat: 0, startedAt: 0, durationMs: 5000 });
     expect(result.predictionActive).toBe(false);
     expect(result.correctionActive).toBe(false);
+  });
+
+  it("smooths bounded position-only corrections without enabling extrapolation", () => {
+    const history = updateMotionHistory(createMotionHistory(), {
+      lat: 50,
+      lon: 14,
+      observedAt: 1_000,
+      groundSpeed: null,
+      track: null,
+      positionOrigin: "local",
+      positionSource: "readsb",
+    });
+    const source = {
+      lat: 50.002,
+      lon: 14.002,
+      observedAt: 2_000,
+      groundSpeed: null,
+      track: null,
+      positionOrigin: "local",
+      positionSource: "readsb",
+    };
+    const correction = correctionFor({ lat: 50, lon: 14 }, source, 2_000, 1_000, history);
+    expect(correction).not.toBeNull();
+    const halfway = motionAt(source, 2_500, correction!, updateMotionHistory(history, source));
+    expect(halfway.predictionActive).toBe(false);
+    expect(halfway.correctionActive).toBe(true);
+    expect(halfway.lat).toBeGreaterThan(50);
+    expect(halfway.lat).toBeLessThan(source.lat);
+  });
+
+  it("throttles only high-density bulk marker rendering", () => {
+    expect(motionRenderIntervalMs(79)).toBe(0);
+    expect(motionRenderIntervalMs(80)).toBeCloseTo(1000 / 30, 8);
+    expect(motionRenderIntervalMs(200)).toBeCloseTo(1000 / 30, 8);
   });
 });
