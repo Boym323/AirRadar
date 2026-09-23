@@ -16,6 +16,11 @@ const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
 const aircraftTrafficRowSource = readFileSync(new URL("../components/aircraft-traffic-row.tsx", import.meta.url), "utf8");
 const aircraftTrafficListSource = readFileSync(new URL("../components/aircraft-traffic-list.tsx", import.meta.url), "utf8");
+const radarTrafficBrowserSource = readFileSync(new URL("../components/radar/radar-traffic-browser.tsx", import.meta.url), "utf8");
+const radarDrawerDetailsSource = readFileSync(new URL("../components/radar/radar-drawer-details.tsx", import.meta.url), "utf8");
+const radarMapLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
+const radarDrawerInteractionsSource = readFileSync(new URL("../components/radar/use-radar-drawer-interactions.ts", import.meta.url), "utf8");
+const radarLiveAircraftSource = readFileSync(new URL("../components/radar/use-radar-live-aircraft.ts", import.meta.url), "utf8");
 const trafficVirtualizationSource = readFileSync(new URL("../lib/radar/traffic-virtualization.ts", import.meta.url), "utf8");
 const radarPerformanceSource = readFileSync(new URL("../lib/radar/performance-diagnostics.ts", import.meta.url), "utf8");
 const liveSnapshotSchedulerSource = readFileSync(new URL("../lib/radar/live-snapshot-scheduler.ts", import.meta.url), "utf8");
@@ -155,7 +160,7 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("aircraftSearchTextCache");
     expect(appSource).toContain("watchlistedHexes");
     expect(appSource).toContain("default view avoids a redundant O(n log n) sort");
-    expect(appSource).toContain("<AircraftTrafficList");
+    expect(radarTrafficBrowserSource).toContain("<AircraftTrafficList");
     expect(trafficVirtualizationSource).toContain("AIRCRAFT_TRAFFIC_VIRTUALIZATION_THRESHOLD = 40");
     expect(trafficVirtualizationSource).toContain("AIRCRAFT_TRAFFIC_OVERSCAN_ROWS = 6");
     expect(aircraftTrafficListSource).toContain("window.requestAnimationFrame(update)");
@@ -168,6 +173,25 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toMatch(/\.aircraft-list-virtual-row > \.aircraft-row\s*\{[^}]*min-height:\s*0/);
     expect(globalCss).toMatch(/\.aircraft-row\s*\{[^}]*content-visibility:\s*auto/);
     expect(globalCss).toMatch(/\.aircraft-row\s*\{[^}]*contain-intrinsic-size:\s*62px/);
+  });
+
+  it("keeps radar presentation and drawer lifecycles outside the map owner", () => {
+    expect(appSource).toContain("<RadarTrafficBrowser");
+    expect(appSource).toContain("<RadarDrawerDetails");
+    expect(appSource).toContain("<RadarMapLayerMenu");
+    expect(appSource).toContain("useRadarDrawerInteractions({");
+    expect(appSource).toContain("useRadarLiveAircraft({");
+    expect(radarLiveAircraftSource).toContain("useAircraftStream({");
+    expect(appSource).not.toContain("useAircraftStream({");
+    expect(appSource).not.toContain("function OgnDetailContent");
+    expect(appSource).not.toContain("watchlistKind");
+    expect(appSource).not.toContain("intelligenceOpened");
+    expect(appSource).not.toContain("logbookOpened");
+    expect(radarTrafficBrowserSource).toContain("const [watchlistKind, setWatchlistKind]");
+    expect(radarTrafficBrowserSource).toContain("<RelevantAtcPanel");
+    expect(radarDrawerDetailsSource).toContain("<AircraftRadarQuickDetail");
+    expect(radarMapLayerMenuSource).toContain('data-testid="map-layer-atc"');
+    expect(radarDrawerInteractionsSource).toContain('window.addEventListener("keydown", handleKeyboardShortcut, true)');
   });
 
   it("keeps performance diagnostics opt-in and off the default hot path", () => {
@@ -186,11 +210,12 @@ describe("radar UI polish helpers", () => {
 
   it("keeps high-frequency aircraft deltas off the main React render cadence", () => {
     expect(liveSnapshotSchedulerSource).toContain("RADAR_REACT_SNAPSHOT_INTERVAL_MS = 200");
-    expect(appSource).toContain("liveSnapshotRef.current = next");
-    expect(appSource).toContain("scheduleAircraftMapSync()");
+    expect(appSource).toContain("useRadarLiveAircraft({");
+    expect(radarLiveAircraftSource).toContain("liveSnapshotRef.current = next");
+    expect(radarLiveAircraftSource).toContain("scheduleMapSync()");
     expect(appSource).toContain("if (document.hidden)");
     expect(appSource).toContain("aircraftMapSyncRef.current?.(false)");
-    expect(appSource).toContain("reactSnapshotSchedulerRef.current?.push(next, change.full)");
+    expect(radarLiveAircraftSource).toContain("reactSnapshotSchedulerRef.current?.push(next, change.full)");
     expect(appSource).toContain("const syncAircraftMap = useCallback");
     expect(appSource).toContain("const liveSnapshot = liveSnapshotRef.current");
     expect(appSource).toContain("aircraftMapSyncRef.current = syncAircraftMap");
@@ -237,12 +262,12 @@ describe("radar UI polish helpers", () => {
   });
 
   it("exposes the layer state and keeps aircraft detail loading bounded", () => {
-    expect(appSource).toContain("checked={showAircraft}");
+    expect(radarMapLayerMenuSource).toContain("checked={showAircraft}");
     expect(appSource).toContain('root.className = "ogn-marker"');
     expect(appSource).toContain('root.style.visibility = visible ? "visible" : "hidden"');
     expect(globalCss).toContain(".ogn-marker");
-    expect(appSource).toContain("checked={showAirports}");
-    expect(appSource).toContain("checked={showAtc}");
+    expect(radarMapLayerMenuSource).toContain("checked={showAirports}");
+    expect(radarMapLayerMenuSource).toContain("checked={showAtc}");
     expect(appSource).toContain("useDatasetQuery");
     expect(appSource).toContain('url: "/api/airspace/activity"');
     expect(appSource).toContain('url: "/api/ats/routes?view=map"');
@@ -276,9 +301,9 @@ describe("radar UI polish helpers", () => {
 
   it("keeps radar keyboard shortcuts out of editable controls", () => {
     expect(appSource).toContain("searchInputRef.current?.focus()");
-    expect(appSource).toContain('event.key.toLowerCase() === "f"');
+    expect(radarDrawerInteractionsSource).toContain('event.key.toLowerCase() === "f"');
     expect(appSource).toContain("setSelectedHex(null);");
-    expect(appSource).toContain("isEditableTarget(event.target)");
+    expect(radarDrawerInteractionsSource).toContain("isEditableTarget(event.target)");
   });
 
   it("keeps search shortcuts source-independent while filters stay ADS-B-only", () => {

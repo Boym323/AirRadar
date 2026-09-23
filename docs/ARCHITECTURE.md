@@ -200,7 +200,20 @@ work directly, independently of the main React render cadence. React-facing
 snapshot consumers receive the newest coalesced snapshot on a bounded 200 ms
 UI interval; full SSE snapshots commit immediately. This split does not change
 the SSE protocol, confirmed-position motion semantics, or MapLibre marker
-ownership. See [Runtime invariants](RUNTIME-INVARIANTS.md#maplibre-namespaces-and-cleanup)
+ownership.
+
+`AirRadarApp` remains the owner of the MapLibre instance, animation jobs,
+layer data, and cross-feature orchestration. Focused radar boundaries live
+under `components/radar/`: `useRadarLiveAircraft` owns the single browser
+aircraft-stream subscription plus live refs and React snapshot coalescing;
+`RadarMapLayerMenu` owns the layer-menu presentation; `RadarTrafficBrowser`
+owns traffic/filter/watchlist presentation and its drawer-local state;
+`RadarDrawerDetails` owns selected-target rendering; and
+`useRadarDrawerInteractions` owns focus/keyboard drawer effects. The live
+controller receives the map-sync scheduler from `AirRadarApp`; it does not
+own MapLibre. These boundaries must not create a second map, aircraft stream,
+or server live-state owner.
+See [Runtime invariants](RUNTIME-INVARIANTS.md#maplibre-namespaces-and-cleanup)
 for the complete ownership list and cleanup contract.
 
 Airport infrastructure is an offline maintenance path. OurAirports source

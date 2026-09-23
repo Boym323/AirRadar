@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,22 +7,14 @@ import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import {
-  formatAge,
-  formatAltitude,
   formatAtcFrequency,
   formatAtcLimit,
   formatAtcNote,
   formatAtcService,
-  formatCoordinate,
   formatDateTime,
-  formatDistance,
   formatNumber,
-  formatSpeed,
-  formatTrack,
   t,
   visibleAircraft,
-  watchlistKindLabel,
-  watchlistSummary,
 } from "@/lib/i18n";
 import { confirmedInterpolationDurationMs, correctionFor, motionAt, motionObservationAdvances, motionRenderIntervalMs, createMotionHistory, updateMotionHistory, visualHeadingForConfirmedPosition, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
@@ -37,7 +28,6 @@ import type { AtcContextResult } from "@/lib/atc-context/types";
 import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
 import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/airspace-activity/map";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
-import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import type { SectorFlow } from "@/components/atc-sector-traffic-panels";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
@@ -59,10 +49,13 @@ import {
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
-import { AircraftTrafficList } from "@/components/aircraft-traffic-list";
-import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
-import { useAircraftStream } from "@/components/use-aircraft-stream";
-import { useDatasetQuery, type DatasetState } from "@/components/use-dataset-query";
+import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
+import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
+import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
+import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
+import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
+import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
+import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { createProcedureGeoJSON } from "@/lib/procedure-visualization";
@@ -71,10 +64,8 @@ import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   filterAircraftForMap,
   isMapAircraftFilterActive,
-  type AircraftQuickFilter,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
-import type { AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
 import {
   createAircraftMarkerHandle,
   setAircraftMarkerHeading,
@@ -85,8 +76,6 @@ import { createLabelCollisionScheduler } from "@/lib/radar/aircraft-label-collis
 import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-controller";
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
-import { createLatestSnapshotScheduler, type LatestSnapshotScheduler } from "@/lib/radar/live-snapshot-scheduler";
-import { mergePendingAircraftChanges, type PendingAircraftChanges } from "@/lib/radar/live-aircraft-changes";
 
 declare global {
   interface Window {
@@ -107,11 +96,8 @@ const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_RADAR_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
-const AircraftRadarQuickDetail = dynamic(() => import("@/components/aircraft-radar-quick-detail").then((module) => module.AircraftRadarQuickDetail));
 const AtcVerticalTraffic = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.AtcVerticalTraffic));
 const SectorFlowsPanel = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.SectorFlowsPanel));
-const LogbookSummary = dynamic(() => import("@/components/logbook-summary").then((module) => module.LogbookSummary));
-const IntelligenceFeed = dynamic(() => import("@/components/intelligence-feed").then((module) => module.IntelligenceFeed));
 const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, number], [number, number]] = [
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.north],
   [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.north],
@@ -161,13 +147,6 @@ async function parseJsonDataset<T>(response: Response, validator: (value: unknow
   return value;
 }
 
-function datasetStateLabel(label: string, dataset: DatasetState<unknown>, countLabel: (count: number) => string): string {
-  if ((dataset.status === "ready" || dataset.status === "stale") && dataset.itemCount > 0) return `${label} · ${countLabel(dataset.itemCount)}`;
-  if (dataset.status === "retrying" || dataset.status === "loading" || dataset.status === "stale") return `${label} · ${t.layers.reconnecting}`;
-  if (dataset.status === "unavailable") return `${label} · ${t.layers.unavailable}`;
-  return label;
-}
-
 interface PublicAlertStatus {
   enabled: boolean;
 }
@@ -198,8 +177,6 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-type TrafficSource = "adsb" | "ogn";
-type RadarDrawerState = "closed" | "traffic" | "aircraft" | "ogn";
 
 interface AircraftAnimationJob {
   handle: AircraftMarkerHandle;
@@ -395,10 +372,6 @@ function ognGlyphPath(aircraftType: OgnTargetView["aircraftType"]): string {
         : "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z";
 }
 
-function OgnGlyph({ aircraftType }: { aircraftType: OgnTargetView["aircraftType"] }) {
-  return <svg className="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d={ognGlyphPath(aircraftType)} /></svg>;
-}
-
 function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {
   return `<svg class="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d="${ognGlyphPath(aircraftType)}"></path></svg>`;
 }
@@ -409,14 +382,10 @@ export function AirRadarApp() {
   const atsPointFocus = searchParams.get("atsPoint");
   const aircraftFocus = searchParams.get("aircraft")?.trim().toUpperCase() ?? null;
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
-  const liveSnapshotRef = useRef<PublicStateSnapshot>(EMPTY_SNAPSHOT);
-  const reactSnapshotSchedulerRef = useRef<LatestSnapshotScheduler<PublicStateSnapshot> | null>(null);
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
   const [showOgn, setShowOgn] = useState(false);
   const ognLoadStartedRef = useRef(false);
-  const [intelligenceOpened, setIntelligenceOpened] = useState(false);
-  const [logbookOpened, setLogbookOpened] = useState(false);
   const [trafficSource, setTrafficSource] = useState<TrafficSource>("adsb");
   const [selectedOgnId, setSelectedOgnId] = useState<string | null>(null);
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
@@ -430,8 +399,6 @@ export function AirRadarApp() {
   const [mapFilters, setMapFilters] = useState<MapAircraftFilters>(DEFAULT_MAP_AIRCRAFT_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [watchlist, setWatchlist] = useState<Array<{ kind: string; value: string }>>([]);
-  const [watchlistKind, setWatchlistKind] = useState("callsign");
-  const [watchlistValue, setWatchlistValue] = useState("");
   const [showAircraft, setShowAircraft] = useState(true);
   const [colorMode, setColorMode] = useState<AircraftColorMode>("default");
   const [showRangeRings, setShowRangeRings] = useState(true);
@@ -496,9 +463,6 @@ export function AirRadarApp() {
   const animationHiddenAtRef = useRef<number | null>(null);
   const animationSchedulerRef = useRef<(() => void) | null>(null);
   const labelCollisionSchedulerRef = useRef<(() => void) | null>(null);
-  const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
-  const liveAircraftByHexRef = useRef<Map<string, AircraftView>>(new Map());
-  const pendingAircraftChangesRef = useRef<PendingAircraftChanges | null>(null);
   const aircraftMapSyncRef = useRef<((forceFull?: boolean) => void) | null>(null);
   const aircraftMapSyncFrameRef = useRef<number | null>(null);
   const selectedConfirmedTrailRef = useRef<readonly TrailPoint[]>(EMPTY_TRAIL);
@@ -584,16 +548,6 @@ export function AirRadarApp() {
   const windGenerationRef = useRef(0);
   const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
   const activeCoverage: CoverageMode = preferencesResolved ? coverage : "local";
-  useEffect(() => {
-    const scheduler = createLatestSnapshotScheduler<PublicStateSnapshot>({ commit: setSnapshot });
-    reactSnapshotSchedulerRef.current = scheduler;
-    return () => {
-      if (reactSnapshotSchedulerRef.current === scheduler) reactSnapshotSchedulerRef.current = null;
-      scheduler.dispose();
-      if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
-      aircraftMapSyncFrameRef.current = null;
-    };
-  }, []);
   const scheduleAircraftMapSync = useCallback(() => {
     // Hidden tabs do not reliably receive animation frames. Preserve the
     // existing hidden-tab contract by applying confirmed positions directly;
@@ -614,26 +568,20 @@ export function AirRadarApp() {
     selectedHexRef.current = null;
     setSelectedHex(null);
   }, []);
-  const onAircraftSnapshot = useCallback((next: PublicStateSnapshot, change: { full: boolean; changedAircraft: AircraftView[]; removedHexes: string[] }) => {
-    liveSnapshotRef.current = next;
-    const aircraftByHex = liveAircraftByHexRef.current;
-    if (change.full) aircraftByHex.clear();
-    for (const hex of change.removedHexes) aircraftByHex.delete(hex);
-    for (const aircraft of change.changedAircraft) aircraftByHex.set(aircraft.icaoHex, aircraft);
-    pendingAircraftChangesRef.current = mergePendingAircraftChanges(pendingAircraftChangesRef.current, change);
-
-    // Map markers consume every live delta through refs; React receives only
-    // the latest snapshot in a bounded UI cadence.
-    scheduleAircraftMapSync();
-    reactSnapshotSchedulerRef.current?.push(next, change.full);
-  }, [scheduleAircraftMapSync]);
-  const { connected: streamConnected } = useAircraftStream({
+  const {
+    connected: streamConnected,
+    liveSnapshotRef,
+    liveTrailsRef,
+    liveAircraftByHexRef,
+    pendingAircraftChangesRef,
+  } = useRadarLiveAircraft({
     enabled: preferencesResolved,
     activeCoverage,
-    liveTrailsRef,
     selectedHexRef,
+    initialSnapshot: EMPTY_SNAPSHOT,
+    commitSnapshot: setSnapshot,
     onSelectedAircraftRemoved,
-    onSnapshot: onAircraftSnapshot,
+    scheduleMapSync: scheduleAircraftMapSync,
   });
 
   const airportsDataset = useDatasetQuery<Airport[]>({
@@ -957,14 +905,6 @@ export function AirRadarApp() {
     setWatchlistOnly(false);
     setSortBy("distance");
   }, []);
-
-  function addWatchlistRule(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const value = watchlistValue.trim().toUpperCase();
-    if (!value || watchlist.some((rule) => rule.kind === watchlistKind && rule.value === value)) return;
-    setWatchlist((current) => [...current, { kind: watchlistKind, value }]);
-    setWatchlistValue("");
-  }
 
   const selectAircraft = useCallback((hex: string) => {
     drawerActionGenerationRef.current += 1;
@@ -1520,6 +1460,8 @@ export function AirRadarApp() {
       labelCollisionSchedulerRef.current = null;
       if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
+      if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
+      aircraftMapSyncFrameRef.current = null;
       animationHiddenAtRef.current = null;
       animationSchedulerRef.current = null;
       animationJobs.clear();
@@ -2188,32 +2130,6 @@ export function AirRadarApp() {
     distanceFilter !== "all",
     watchlistOnly,
   ].filter(Boolean).length;
-  const quickFilterLabels: Record<AircraftQuickFilter, string> = {
-    all: t.filters.quickAll,
-    airborne: t.filters.quickAirborne,
-    onGround: t.filters.quickOnGround,
-    helicopters: t.filters.quickHelicopters,
-    gliders: t.filters.quickGliders,
-    uav: t.filters.quickUav,
-    emergency: t.filters.quickEmergency,
-  };
-  const activeFilterChips: Array<{ id: string; label: string; onRemove: () => void }> = [
-    mapFilters.source !== "all" ? { id: "source", label: mapFilters.source.toUpperCase(), onRemove: () => updateMapFilter("source", "all") } : null,
-    mapFilters.quick !== "all" ? { id: "quick", label: quickFilterLabels[mapFilters.quick], onRemove: () => updateMapFilter("quick", "all") } : null,
-    mapFilters.status !== "all" ? { id: "status", label: mapFilters.status === "airborne" ? t.filters.statusAirborne : t.filters.statusOnGround, onRemove: () => updateMapFilter("status", "all") } : null,
-    mapFilters.minAltitude.trim() ? { id: "min-altitude", label: `≥ ${mapFilters.minAltitude} ft`, onRemove: () => updateMapFilter("minAltitude", "") } : null,
-    mapFilters.maxAltitude.trim() ? { id: "max-altitude", label: `≤ ${mapFilters.maxAltitude} ft`, onRemove: () => updateMapFilter("maxAltitude", "") } : null,
-    mapFilters.callsign.trim() ? { id: "callsign", label: `${t.filters.callsign}: ${mapFilters.callsign.trim()}`, onRemove: () => updateMapFilter("callsign", "") } : null,
-    mapFilters.registration.trim() ? { id: "registration", label: `${t.filters.registrationInput}: ${mapFilters.registration.trim()}`, onRemove: () => updateMapFilter("registration", "") } : null,
-    mapFilters.icaoHex.trim() ? { id: "icao", label: `${t.filters.icaoHexInput}: ${mapFilters.icaoHex.trim()}`, onRemove: () => updateMapFilter("icaoHex", "") } : null,
-    mapFilters.aircraftType.trim() ? { id: "type", label: mapFilters.aircraftType.trim(), onRemove: () => updateMapFilter("aircraftType", "") } : null,
-    mapFilters.operator.trim() ? { id: "operator", label: mapFilters.operator.trim(), onRemove: () => updateMapFilter("operator", "") } : null,
-    mapFilters.emergencyOnly ? { id: "emergency", label: t.filters.emergencyOnly, onRemove: () => updateMapFilter("emergencyOnly", false) } : null,
-    watchlistOnly ? { id: "watchlist", label: t.filters.watchlistOnly, onRemove: () => setWatchlistOnly(false) } : null,
-    search.trim() ? { id: "search", label: `${t.search.aircraftLabel}: ${search.trim()}`, onRemove: () => setSearch("") } : null,
-    distanceFilter !== "all" ? { id: "distance", label: `${t.filters.maximumDistance}: ${distanceFilter} km`, onRemove: () => setDistanceFilter("all") } : null,
-  ].filter((value): value is { id: string; label: string; onRemove: () => void } => Boolean(value));
-
   const isDemo = snapshot.provider === "mock";
   const hasSourceSnapshot = snapshot.lastSourceUpdate !== null;
   const statusOffline = !isDemo && hasSourceSnapshot && !snapshot.sourceOnline;
@@ -2232,67 +2148,18 @@ export function AirRadarApp() {
       : trafficOpen
         ? "traffic"
         : "closed";
-  useEffect(() => {
-    if (drawerState === "closed" && previousDrawerStateRef.current !== "closed") {
-      const trigger = trafficTriggerRef.current;
-      if (trigger?.getClientRects().length && !trigger.disabled) trigger.focus();
-    }
-    previousDrawerStateRef.current = drawerState;
-  }, [drawerState]);
-  useEffect(() => {
-    if (drawerState !== "traffic" || !focusSearchOnTrafficOpenRef.current) return;
-    const focusSearch = window.setTimeout(() => {
-      if (drawerState === "traffic" && searchInputRef.current) {
-        searchInputRef.current.focus();
-        focusSearchOnTrafficOpenRef.current = false;
-      }
-    }, 0);
-    return () => window.clearTimeout(focusSearch);
-  }, [drawerState]);
-  useEffect(() => {
-    function isEditableTarget(target: EventTarget | null): boolean {
-      const element = target instanceof HTMLElement ? target : null;
-      if (!element) return false;
-      return element instanceof HTMLInputElement
-        || element instanceof HTMLTextAreaElement
-        || element instanceof HTMLSelectElement
-        || element.isContentEditable;
-    }
-
-    function handleKeyboardShortcut(event: KeyboardEvent): void {
-      if (event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
-      if (event.key === "Escape") {
-        if (filtersOpen) {
-          setFiltersOpen(false);
-          event.preventDefault();
-        } else if (drawerState !== "closed") {
-          closeRadarDrawer();
-          event.preventDefault();
-        }
-        return;
-      }
-      if (isEditableTarget(event.target)) return;
-      if (event.key === "/") {
-        event.preventDefault();
-        if (window.matchMedia("(min-width: 821px)").matches && drawerState !== "traffic") {
-          openTrafficDrawer("search");
-        } else {
-          searchInputRef.current?.focus();
-        }
-      } else if (event.key.toLowerCase() === "f") {
-        event.preventDefault();
-        if (window.matchMedia("(min-width: 821px)").matches && drawerState !== "traffic") {
-          openTrafficDrawer("filters");
-        } else if (trafficSource === "adsb") {
-          setFiltersOpen((current) => !current);
-        }
-      }
-    }
-
-    // Handle Escape before document-level details/popup handlers can consume it.
-    window.addEventListener("keydown", handleKeyboardShortcut, true);
-    return () => window.removeEventListener("keydown", handleKeyboardShortcut, true);
-  }, [closeRadarDrawer, drawerState, filtersOpen, openTrafficDrawer, trafficSource]);
+  useRadarDrawerInteractions({
+    drawerState,
+    trafficSource,
+    filtersOpen,
+    setFiltersOpen,
+    closeRadarDrawer,
+    openTrafficDrawer,
+    searchInputRef,
+    focusSearchOnTrafficOpenRef,
+    trafficTriggerRef,
+    previousDrawerStateRef,
+  });
   const networkStatus = snapshot.sources?.adsbLol.status;
   const networkNotice = activeCoverage === "extended" && networkStatus === "rate_limited"
     ? t.radar.networkRateLimited
@@ -2346,69 +2213,71 @@ export function AirRadarApp() {
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>
               </MapControlGroup>
-              <details className="map-layers">
-                <MapControl as="summary"><UiIcon name="layers" />{t.layers.title}</MapControl>
-                <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.traffic}</span>
-                    <label><input type="checkbox" checked={showAircraft} onChange={(event) => setShowAircraft(event.target.checked)} /> {t.layers.aircraft}</label>
-                    <label><input type="checkbox" checked={showOgn} onChange={(event) => setShowOgn(event.target.checked)} /> {t.layers.ogn}</label>
-                  </div>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.aviation}</span>
-                    <label data-testid="map-layer-airports"><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> {datasetStateLabel(t.layers.airports, airportsDataset, (count) => t.layers.airportsCount(formatNumber(count)))}</label>
-                    <label className="map-layer-sublevel"><input type="checkbox" checked={showSignificantAirports} disabled={!showAirports} onChange={(event) => setShowSignificantAirports(event.target.checked)} /> {t.layers.significantAirports}</label>
-                    <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>
-                    <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
-                    <div className="map-layer-subgroup-heading">{t.layers.groups.atcAirspace}</div>
-                    <label data-testid="map-layer-atc"><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {datasetStateLabel(t.layers.atc, atcDataset, (count) => t.layers.sectorsCount(formatNumber(count)))}</label>
-                    <label data-testid="map-layer-atc-traffic"><input type="checkbox" checked={showAtcTraffic} onChange={(event) => setShowAtcTraffic(event.target.checked)} /> {t.layers.atcTraffic}</label>
-                    {showAtcTraffic && <div className="map-layer-sublevel">{t.layers.atcTrafficLegend}<br /><small>{t.layers.atcTrafficDescription}<br />{t.layers.atcTrafficDisclaimer}{sectorTrafficState === "stale" ? " · STALE" : sectorTrafficState === "unavailable" ? ` · ${t.layers.atcTrafficNoData}` : ""}</small></div>}
-                    {showAtc && airspaceActivity?.planned.status !== "unavailable" && <div className="map-layer-sublevel">{activityT.legendCurrent} · {activityT.legendUpcoming}{airspaceActivity?.planned.status === "stale" ? ` · ${activityT.stale}` : ""}<br /><small>{activityT.disclaimer}</small></div>}
-                    <div className="map-layer-subgroup-heading">{t.layers.groups.atsProcedures}</div>
-                    <label data-testid="map-layer-ats"><input type="checkbox" checked={showAtsRoutes} onChange={(event) => { setShowAtsRoutes(event.target.checked); if (!event.target.checked) setSelectedAtsRoute(null); }} /> {datasetStateLabel(t.layers.atsRoutes, atsDataset, (count) => t.layers.routesCount(formatNumber(count)))}</label>
-                    <label data-testid="map-layer-sid"><input type="checkbox" checked={showSids} onChange={(event) => setShowSids(event.target.checked)} /> {t.layers.sids}</label>
-                    <label data-testid="map-layer-star"><input type="checkbox" checked={showStars} onChange={(event) => setShowStars(event.target.checked)} /> {t.layers.stars}</label>
-                    {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
-                    {showAtsRoutes && atsRoutes && !atsRoutes.available && <div className="map-layer-sublevel">{t.layers.atsRoutesUnavailable}</div>}
-                    {sigmetEnabled !== false && <label data-testid="map-layer-sigmet"><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>}
-                  </div>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.weather}</span>
-                    <label data-testid="map-layer-weather-radar"><input type="checkbox" checked={showWeatherRadar} onChange={(event) => { setShowWeatherRadar(event.target.checked); if (!event.target.checked) setRadarPlaying(false); }} /> {t.layers.weatherRadar}</label>
-                    {showWeatherRadar && <div className="map-layer-sublevel weather-radar-controls">
-                      <label className="map-layer-mode"><span>{t.layers.opacity}</span><input type="range" min="0.2" max="1" step="0.05" value={radarOpacity} aria-label={t.layers.opacity} onChange={(event) => setRadarOpacity(Number(event.target.value))} /></label>
-                      <span>{selectedRadarFrame ? `${t.layers.currentTimestamp}: ${formatDateTime(selectedRadarFrame.observedAt, t)}${selectedRadarFrame.stale ? ` · ${t.layers.radarStale}` : ""}` : radarStatus === "unavailable" ? t.layers.radarUnavailable : t.common.loading}</span>
-                    </div>}
-                    <label data-testid="map-layer-metar"><input type="checkbox" checked={showMetar} onChange={(event) => setShowMetar(event.target.checked)} /> {t.layers.metar}</label>
-                    <label data-testid="map-layer-wind"><input type="checkbox" checked={showWind} onChange={(event) => setShowWind(event.target.checked)} /> {t.layers.windAloft}</label>
-                    {showWind && <div className="map-layer-sublevel wind-controls">
-                      <label className="map-layer-mode"><span>{t.layers.pressureLevel}</span><select value={windLevel} aria-label={t.layers.pressureLevel} onChange={(event) => { setWindLevel(Number(event.target.value) as WindLevelHpa); setWindValidAt(null); }}>{WIND_PRESSURE_LEVELS.map((level) => <option key={level} value={level}>{level} hPa</option>)}</select></label>
-                      {windData && <label className="map-layer-mode"><span>{t.layers.valid}</span><select value={windValidAt ?? windData.validAt} aria-label={t.layers.valid} onChange={(event) => setWindValidAt(event.target.value)}>{windData.availableValidTimes.map((valid) => <option key={valid} value={valid}>{formatDateTime(valid, t)}</option>)}</select></label>}
-                      {windData && <span>{windData.model} · {t.layers.windModelForecast}{windData.modelRun ? ` · ${t.layers.modelRun}: ${formatDateTime(windData.modelRun, t)}` : ""} · {t.layers.valid}: {formatDateTime(windData.validAt, t)}</span>}
-                      {windStatus === "unavailable" && <span>{t.layers.windUnavailable}</span>}
-                    </div>}
-                    {showMetar && metarStatus === "unavailable" && <div className="map-layer-sublevel">{t.layers.metarUnavailable}</div>}
-                    {showMetar && <div className="map-layer-sublevel metar-legend"><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span><span><i className="metar-dot lifr" /> {t.layers.lifr}</span></div>}
-                  </div>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.operationalAirspace}</span>
-                    <label data-testid="map-layer-aup-uup"><input type="checkbox" checked={showAupUup} onChange={(event) => setShowAupUup(event.target.checked)} /> {t.layers.airspaceActivity}</label>
-                    {showAupUup && airspaceDataset.status === "unavailable" && <div className="map-layer-sublevel">{t.layers.airspaceUnavailable}</div>}
-                    {showAupUup && <div className="map-layer-sublevel">{t.layers.airspacePlannedActive} · {t.layers.airspaceDisclaimer}</div>}
-                  </div>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.display}</span>
-                    {receiverPositionAvailable && <label><input type="checkbox" checked={showRangeRings} onChange={(event) => setShowRangeRings(event.target.checked)} /> {t.layers.rangeRings}</label>}
-                    <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => setColorMode(event.target.value as AircraftColorMode)}>
-                      <option value="default">{t.layers.colorModes.default}</option>
-                      <option value="altitude">{t.layers.colorModes.altitude}</option>
-                      <option value="speed">{t.layers.colorModes.speed}</option>
-                      <option value="verticalRate">{t.layers.colorModes.verticalRate}</option>
-                    </select></label>
-                  </div>
-                </div>
-              </details>
+              <RadarMapLayerMenu
+                showAircraft={showAircraft}
+                onShowAircraftChange={setShowAircraft}
+                showOgn={showOgn}
+                onShowOgnChange={setShowOgn}
+                showAirports={showAirports}
+                onShowAirportsChange={setShowAirports}
+                showSignificantAirports={showSignificantAirports}
+                onShowSignificantAirportsChange={setShowSignificantAirports}
+                showSmallAirports={showSmallAirports}
+                onShowSmallAirportsChange={setShowSmallAirports}
+                showHeliports={showHeliports}
+                onShowHeliportsChange={setShowHeliports}
+                airportsDataset={airportsDataset}
+                showAtc={showAtc}
+                onShowAtcChange={setShowAtc}
+                showAtcTraffic={showAtcTraffic}
+                onShowAtcTrafficChange={setShowAtcTraffic}
+                atcDataset={atcDataset}
+                sectorTrafficState={sectorTrafficState}
+                airspaceActivity={airspaceActivity}
+                showAtsRoutes={showAtsRoutes}
+                onShowAtsRoutesChange={(value) => {
+                  setShowAtsRoutes(value);
+                  if (!value) setSelectedAtsRoute(null);
+                }}
+                atsDataset={atsDataset}
+                atsRoutes={atsRoutes}
+                showSids={showSids}
+                onShowSidsChange={setShowSids}
+                showStars={showStars}
+                onShowStarsChange={setShowStars}
+                sigmetEnabled={sigmetEnabled}
+                showSigmet={showSigmet}
+                onShowSigmetChange={setShowSigmet}
+                showWeatherRadar={showWeatherRadar}
+                onShowWeatherRadarChange={(value) => {
+                  setShowWeatherRadar(value);
+                  if (!value) setRadarPlaying(false);
+                }}
+                radarOpacity={radarOpacity}
+                onRadarOpacityChange={setRadarOpacity}
+                selectedRadarFrame={selectedRadarFrame}
+                radarStatus={radarStatus}
+                showMetar={showMetar}
+                onShowMetarChange={setShowMetar}
+                metarStatus={metarStatus}
+                showWind={showWind}
+                onShowWindChange={setShowWind}
+                windLevel={windLevel}
+                windPressureLevels={WIND_PRESSURE_LEVELS}
+                onWindLevelChange={setWindLevel}
+                windValidAt={windValidAt}
+                onWindValidAtChange={setWindValidAt}
+                windData={windData}
+                windStatus={windStatus}
+                showAupUup={showAupUup}
+                onShowAupUupChange={setShowAupUup}
+                airspaceDataset={airspaceDataset}
+                receiverPositionAvailable={receiverPositionAvailable}
+                showRangeRings={showRangeRings}
+                onShowRangeRingsChange={setShowRangeRings}
+                colorMode={colorMode}
+                onColorModeChange={setColorMode}
+              />
             </div>
             {(showWeatherRadar && radarCatalog?.frames.length) || (showWeatherRadar && radarStatus === "unavailable") ? <div className="map-overlay-context-row">
               {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
@@ -2452,7 +2321,7 @@ export function AirRadarApp() {
                 </div>}
                 {trafficSource === "adsb" && activeCoverage === "extended" && snapshot.coverageStats && <div className="coverage-subcount">{t.radar.localOnlyCount(formatNumber(snapshot.coverageStats.localAircraft))} · {t.radar.networkOnlyCount(formatNumber(snapshot.coverageStats.networkOnlyAircraft))}</div>}
                 {trafficSource === "adsb" && activeCoverage === "extended" && <div className="coverage-switch source-filter-switch" role="group" aria-label="Source filter">
-                  {(["all", "local", "network", "overlap"] as AircraftSourceFilter[]).map((source) => <button key={source} type="button" className={mapFilters.source === source ? "active" : ""} aria-pressed={mapFilters.source === source} onClick={() => updateMapFilter("source", source)}>{source.toUpperCase()}</button>)}
+                  {(["all", "local", "network", "overlap"] as const).map((source) => <button key={source} type="button" className={mapFilters.source === source ? "active" : ""} aria-pressed={mapFilters.source === source} onClick={() => updateMapFilter("source", source)}>{source.toUpperCase()}</button>)}
                 </div>}
               </div>
               <IconButton className="mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-expanded={!mobileCompact} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
@@ -2460,215 +2329,67 @@ export function AirRadarApp() {
               </IconButton>
               <button type="button" className="drawer-close-button" onClick={closeRadarDrawer} aria-label={drawerState === "traffic" ? t.history.closeTrafficPanel : drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}><UiIcon name="close" /></button>
             </div>
-          <div ref={sidebarBrowseRef} className="sidebar-browse">
-          <div className="sidebar-header">
-            <div className="search-wrap">
-              <span className="search-icon" aria-hidden="true">⌕</span>
-              <input ref={searchInputRef} className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={trafficSource === "ogn" ? t.search.ognPlaceholder : t.search.placeholder} aria-label={trafficSource === "ogn" ? t.search.ognLabel : t.search.aircraftLabel} />
-              {search && <button type="button" className="search-clear-button" onClick={() => setSearch("")} aria-label={t.filters.clearSearch}><UiIcon name="close" /></button>}
-            </div>
-            {trafficSource === "adsb" && <div className="radar-options">
-              <div className="quick-filter-row" role="group" aria-label={t.filters.title}>
-                {(["all", "airborne", "onGround", "helicopters", "gliders", "uav", "emergency"] as AircraftQuickFilter[]).map((filter) => <button
-                  key={filter}
-                  type="button"
-                  className={`quick-filter-chip ${mapFilters.quick === filter ? "active" : ""}`}
-                  aria-pressed={mapFilters.quick === filter}
-                  onClick={() => updateMapFilter("quick", filter)}
-                >{quickFilterLabels[filter]}</button>)}
-              </div>
-              <button type="button" className="filter-button" aria-expanded={filtersOpen} aria-controls="map-filters-panel" onClick={() => setFiltersOpen((value) => !value)}>
-                <span>{t.filters.title}{hasActiveMapFilters ? ` · ${activeFilterCount}` : ""}</span>
-                {hasActiveMapFilters && <span className="filter-active-dot" aria-label={t.filters.active}>{t.filters.active}</span>}
-              </button>
-              {hasActiveMapFilters && <div className="active-filter-chips" aria-label={t.filters.active}>
-                {activeFilterChips.map((chip) => <button type="button" className="filter-chip" key={chip.id} onClick={chip.onRemove} title={t.filters.clearAll}>{chip.label}<span aria-hidden="true"> ×</span><span className="sr-only">{t.filters.clearSearch}</span></button>)}
-                {activeFilterChips.length > 1 && <button type="button" className="filter-chip-reset" onClick={resetMapFilters}>{t.filters.clearAll}</button>}
-              </div>}
-              {filtersOpen && <div id="map-filters-panel" className="map-filters-panel" role="region" aria-label={t.filters.title}>
-                <div className="filter-panel-heading">{t.filters.filterGroup}</div>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.status}</legend>
-                  <div className="map-filter-choice-row">
-                    <label><input type="radio" name="aircraft-status" value="all" checked={mapFilters.status === "all"} onChange={(event) => updateMapFilter("status", event.target.value as MapAircraftFilters["status"])} /> {t.filters.statusAll}</label>
-                    <label><input type="radio" name="aircraft-status" value="airborne" checked={mapFilters.status === "airborne"} onChange={(event) => updateMapFilter("status", event.target.value as MapAircraftFilters["status"])} /> {t.filters.statusAirborne}</label>
-                    <label><input type="radio" name="aircraft-status" value="onGround" checked={mapFilters.status === "onGround"} onChange={(event) => updateMapFilter("status", event.target.value as MapAircraftFilters["status"])} /> {t.filters.statusOnGround}</label>
-                  </div>
-                </fieldset>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.altitude}</legend>
-                  <div className="map-filter-fields">
-                    <label className="map-filter-field"><span>{t.filters.minimumAltitudeInput}</span><input type="number" inputMode="numeric" min="0" step="100" value={mapFilters.minAltitude} onChange={(event) => updateMapFilter("minAltitude", event.target.value)} /></label>
-                    <label className="map-filter-field"><span>{t.filters.maximumAltitudeInput}</span><input type="number" inputMode="numeric" min="0" step="100" value={mapFilters.maxAltitude} onChange={(event) => updateMapFilter("maxAltitude", event.target.value)} /></label>
-                  </div>
-                </fieldset>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.identity}</legend>
-                  <div className="map-filter-fields">
-                    <label className="map-filter-field"><span>{t.filters.callsign}</span><input value={mapFilters.callsign} onChange={(event) => updateMapFilter("callsign", event.target.value.toUpperCase())} autoComplete="off" /></label>
-                    <label className="map-filter-field"><span>{t.filters.registrationInput}</span><input value={mapFilters.registration} onChange={(event) => updateMapFilter("registration", event.target.value.toUpperCase())} autoComplete="off" /></label>
-                    <label className="map-filter-field map-filter-field-wide"><span>{t.filters.icaoHexInput}</span><input value={mapFilters.icaoHex} onChange={(event) => updateMapFilter("icaoHex", event.target.value.toUpperCase())} autoComplete="off" /></label>
-                  </div>
-                </fieldset>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.aircraft}</legend>
-                  <div className="map-filter-fields">
-                    <label className="map-filter-field"><span>{t.filters.aircraftType}</span><input value={mapFilters.aircraftType} onChange={(event) => updateMapFilter("aircraftType", event.target.value)} autoComplete="off" /></label>
-                    <label className="map-filter-field"><span>{t.filters.operator}</span><input value={mapFilters.operator} onChange={(event) => updateMapFilter("operator", event.target.value)} autoComplete="off" /></label>
-                  </div>
-                </fieldset>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.special}</legend>
-                  <label className="filter-toggle"><input type="checkbox" checked={mapFilters.emergencyOnly} onChange={(event) => updateMapFilter("emergencyOnly", event.target.checked)} /> {t.filters.emergencyOnly}</label>
-                  <label className="filter-toggle"><input type="checkbox" checked={watchlistOnly} onChange={(event) => setWatchlistOnly(event.target.checked)} /> {t.filters.watchlistOnly}</label>
-                </fieldset>
-                <div className="filter-panel-heading filter-panel-heading-sort">{t.filters.sortGroup}</div>
-                <div className="map-filter-legacy-row">
-                  <label className="map-filter-field"><span>{t.filters.sortLabel}</span><select className="filter-select" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}><option value="distance">{t.filters.sortDistance}</option><option value="altitude">{t.filters.sortAltitude}</option><option value="callsign">{t.filters.sortCallsign}</option></select></label>
-                  <label className="map-filter-field"><span>{t.filters.maximumDistance}</span><select className="filter-select" value={distanceFilter} onChange={(event) => setDistanceFilter(event.target.value)}><option value="all">{t.filters.distanceAll}</option><option value="25">{t.filters.distanceWithin25}</option><option value="75">{t.filters.distanceWithin75}</option></select></label>
-                </div>
-                <button type="button" className="filter-reset-button" onClick={resetMapFilters}>{t.filters.reset}</button>
-              </div>}
-              </div>}
-            {trafficSource === "adsb" && <details className="watchlist-box">
-              <summary>{t.watchlist.title} <span>{watchlistSummary(watchlist.length)}</span></summary>
-              <form onSubmit={addWatchlistRule} className="watchlist-form">
-                <select value={watchlistKind} onChange={(event) => setWatchlistKind(event.target.value)} aria-label={t.watchlist.ruleType}>
-                  <option value="icao">{t.watchlist.ruleKinds.icao}</option><option value="registration">{t.watchlist.ruleKinds.registration}</option><option value="callsign">{t.watchlist.exactCallsign}</option><option value="pattern">{t.watchlist.callsignPattern}</option><option value="type">{t.watchlist.ruleKinds.type}</option><option value="airline">{t.watchlist.ruleKinds.airline}</option>
-                </select>
-                <input value={watchlistValue} onChange={(event) => setWatchlistValue(event.target.value)} placeholder={watchlistKind === "pattern" ? "UAE*" : "A6-EVL"} aria-label={t.watchlist.value} />
-                <button type="submit" className="watchlist-add">{t.watchlist.add}</button>
-              </form>
-              {watchlist.length > 0 && <div className="watchlist-rules">{watchlist.map((rule) => <button key={`${rule.kind}-${rule.value}`} type="button" onClick={() => setWatchlist((current) => current.filter((item) => item !== rule))}>{watchlistKindLabel(rule.kind)}: {rule.value} ×</button>)}</div>}
-            </details>}
-          </div>
+          <RadarTrafficBrowser
+            trafficSource={trafficSource}
+            search={search}
+            onSearchChange={setSearch}
+            searchInputRef={searchInputRef}
+            sidebarBrowseRef={sidebarBrowseRef}
+            mapFilters={mapFilters}
+            onMapFilterChange={updateMapFilter}
+            filtersOpen={filtersOpen}
+            onFiltersOpenChange={setFiltersOpen}
+            hasActiveMapFilters={hasActiveMapFilters}
+            activeFilterCount={activeFilterCount}
+            watchlistOnly={watchlistOnly}
+            onWatchlistOnlyChange={setWatchlistOnly}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            distanceFilter={distanceFilter}
+            onDistanceFilterChange={setDistanceFilter}
+            onResetMapFilters={resetMapFilters}
+            watchlist={watchlist}
+            onWatchlistChange={setWatchlist}
+            relevantAtcFrequencies={snapshot.relevantAtcFrequencies}
+            atcExpanded={atcExpanded}
+            onAtcOpen={() => setAtcExpanded(true)}
+            filteredAircraft={filteredAircraft}
+            totalAircraftCount={snapshot.aircraft.length}
+            selectedHex={selectedHex}
+            watchlistedHexes={watchlistedHexes}
+            onSelectAircraft={selectAircraft}
+            ognSnapshot={ognSnapshot}
+            filteredOgnTargets={filteredOgnTargets}
+            selectedOgnId={selectedOgnId}
+            onSelectOgn={selectOgn}
+            ognLabel={ognTargetLabel}
+          />
 
-          <RelevantAtcPanel summaries={snapshot.relevantAtcFrequencies} expanded={atcExpanded} onOpen={() => setAtcExpanded(true)} />
-          <details className="sidebar-secondary-tools" onToggle={(event) => setIntelligenceOpened(event.currentTarget.open)}>
-            <summary>{t.intelligence.title}<span>{t.common.more}</span></summary>
-            {intelligenceOpened && <IntelligenceFeed />}
-          </details>
-
-          {trafficSource === "ogn" ? (
-            <div id="traffic-list" className="aircraft-list ogn-traffic-list">
-              {filteredOgnTargets.length === 0 ? <div className="empty-list ogn-empty"><strong>{ognSnapshot.targets.length === 0 ? t.ogn.empty : t.ogn.noMatching}</strong></div> : filteredOgnTargets.map((target) => (
-                <button key={target.id} type="button" className={`aircraft-row ogn-row ${selectedOgnId === target.id ? "selected" : ""} ${target.stale ? "stale" : ""}`} aria-pressed={selectedOgnId === target.id} onClick={() => selectOgn(target.id)}>
-                  <span className="aircraft-row-icon ogn-row-icon"><OgnGlyph aircraftType={target.aircraftType} /></span>
-                  <span className="aircraft-row-main">
-                    <span className="aircraft-row-topline"><span className="aircraft-row-name">{ognTargetLabel(target)}</span> <span className="source-badge ogn-source-badge">{t.ogn.badge} · {t.ogn.trackingSources[target.trackingSource]}</span> {target.stale && <span className="ogn-stale-badge">{t.ogn.stale}</span>}</span>
-                    <span className="aircraft-row-type">{target.identityVisible && target.model ? `${target.aircraftType.replaceAll("_", " ")} · ${target.model}` : target.aircraftType.replaceAll("_", " ")}</span>
-                    <span className="aircraft-row-meta"><span><b>{formatAltitude(target.altitudeFt)}</b></span><span><b>{formatSpeed(target.groundSpeedKt)}</b></span><span><b>{formatTrack(target.trackDeg)}</b></span></span>
-                  </span>
-                  <span className="aircraft-row-distance">{formatDistance(target.distanceKm)}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <AircraftTrafficList
-              aircraft={filteredAircraft}
-              totalAircraftCount={snapshot.aircraft.length}
-              selectedHex={selectedHex}
-              watchlistedHexes={watchlistedHexes}
-              onSelect={selectAircraft}
-              scrollRootRef={sidebarBrowseRef}
-            />
-          )}
-
-          <details className="sidebar-secondary-tools" onToggle={(event) => setLogbookOpened(event.currentTarget.open)}>
-            <summary>{t.dashboard.logbookTitle}<span>{t.dashboard.openStatistics}</span></summary>
-            {logbookOpened && <LogbookSummary />}
-          </details>
-
-          </div>
-
-          {(drawerState === "aircraft" || drawerState === "ogn") && (
-            <div className="detail-panel" key={selectedOgnTarget ? `ogn-${selectedOgnTarget.id}` : selectedIdentity}>
-              {selectedOgnTarget ? <>
-                <div className="detail-heading">
-                  <button type="button" className="detail-back-button" onClick={backToTraffic}>← {t.radar.trafficNearby}</button>
-                  <div><div className="detail-eyebrow">{t.ogn.title}</div><div className="detail-callsign">{ognTargetLabel(selectedOgnTarget)}</div><div className="detail-registration">{t.ogn.badge} · {t.ogn.trackingSources[selectedOgnTarget.trackingSource]}</div></div>
-                  <button className="close-button" onClick={closeRadarDrawer} aria-label={t.history.closePanel}>×</button>
-                </div>
-                <OgnDetailContent target={selectedOgnTarget} />
-              </> : selectedAircraft ? <AircraftRadarQuickDetail
-                aircraft={selectedAircraft}
-                databaseAircraft={selectedDatabaseAircraft}
-                historyTrail={selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
-                atcContext={selectedAtcContext}
-                sectorTraffic={sectorTraffic}
-                watchlisted={isWatchlisted(selectedAircraft)}
-                onBack={backToTraffic}
-                onClose={closeRadarDrawer}
-                onCenter={centerSelectedAircraft}
-                onToggleWatchlist={() => setWatchlist((current) => current.some((rule) => rule.kind === "icao" && rule.value === selectedAircraft.icaoHex)
-                  ? current.filter((rule) => !(rule.kind === "icao" && rule.value === selectedAircraft.icaoHex))
-                  : [...current, { kind: "icao", value: selectedAircraft.icaoHex }])}
-              /> : <div className="detail-content">
-                <div className="detail-disclaimer aircraft-offline-notice">{t.aircraft.notCurrentlyInRange}</div>
-                <DetailSection title={t.history.aircraftDetail}>
-                  <DetailItem label={t.aircraft.icaoHex} value={selectedIdentity || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.registration} value={selectedDatabaseAircraft?.registration || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.currentCallsign} value={t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.aircraftType} value={selectedDatabaseAircraft?.aircraftType || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.manufacturer} value={selectedDatabaseAircraft?.manufacturer || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.modelType} value={selectedDatabaseAircraft?.model || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.operator} value={selectedDatabaseAircraft?.operator || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.registrationCountry} value={selectedDatabaseAircraft?.registrationCountryCode || selectedDatabaseAircraft?.registrationCountry || t.common.emptyValue} />
-                </DetailSection>
-                <div className="detail-footer"><Link className="history-link" href={`/aircraft/${encodeURIComponent(selectedIdentity || "")}`}>{t.history.aircraftDetail} →</Link></div>
-              </div>}
-            </div>
-          )}
+          <RadarDrawerDetails
+            drawerState={drawerState}
+            selectedOgnTarget={selectedOgnTarget}
+            ognLabel={ognTargetLabel}
+            selectedIdentity={selectedIdentity}
+            selectedAircraft={selectedAircraft}
+            databaseAircraft={selectedDatabaseAircraft}
+            historyTrail={selectedAircraft && selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
+            atcContext={selectedAtcContext}
+            sectorTraffic={sectorTraffic}
+            watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
+            onBack={backToTraffic}
+            onClose={closeRadarDrawer}
+            onCenter={centerSelectedAircraft}
+            onToggleWatchlist={() => {
+              if (!selectedAircraft) return;
+              setWatchlist((current) => current.some((rule) => rule.kind === "icao" && rule.value === selectedAircraft.icaoHex)
+                ? current.filter((rule) => !(rule.kind === "icao" && rule.value === selectedAircraft.icaoHex))
+                : [...current, { kind: "icao", value: selectedAircraft.icaoHex }]);
+            }}
+          />
         </aside>
       </section>
 
       <MobileBottomNav />
     </main>
   );
-}
-
-function OgnDetailContent({ target }: { target: OgnTargetView }) {
-  const typeLabel = target.aircraftType.replaceAll("_", " ");
-  const ageSeconds = Math.max(0, (Date.now() - Date.parse(target.receivedAt)) / 1000);
-  const position = `${formatCoordinate(target.latitude)}, ${formatCoordinate(target.longitude)}`;
-  return <div className="detail-content ogn-detail-content">
-    <div className="detail-hero">
-      <div className="detail-hero-type">{typeLabel}</div>
-      <div className="detail-hero-metrics">
-        <div><strong>{formatAltitude(target.altitudeFt)}</strong><span>{t.ogn.altitude}</span></div>
-        <div><strong>{formatSpeed(target.groundSpeedKt)}</strong><span>{t.ogn.groundSpeed}</span></div>
-        <div><strong>{formatTrack(target.trackDeg)}</strong><span>{t.ogn.track}</span></div>
-        <div><strong>{target.verticalRateFpm === null ? t.common.emptyValue : `${target.verticalRateFpm > 0 ? "+" : ""}${formatNumber(target.verticalRateFpm)} ft/min`}</strong><span>{t.ogn.verticalRate}</span></div>
-      </div>
-    </div>
-    <DetailSection title={t.ogn.identity}>
-      {target.identityVisible ? <>
-        <DetailItem label={t.ogn.address} value={target.address || t.common.emptyValue} />
-        <DetailItem label={t.ogn.addressType} value={target.addressType} />
-        <DetailItem label={t.ogn.callsign} value={target.senderCallsign || t.common.emptyValue} />
-        <DetailItem label={t.ogn.registration} value={target.registration || t.common.emptyValue} />
-        <DetailItem label={t.ogn.competitionNumber} value={target.competitionNumber || t.common.emptyValue} />
-        <DetailItem label={t.ogn.model} value={target.model || t.common.emptyValue} />
-      </> : <div className="detail-disclaimer">{t.ogn.anonymous} · {t.ogn.hiddenIdentity}</div>}
-    </DetailSection>
-    <DetailSection title={t.ogn.position}>
-      <DetailItem label={t.ogn.aircraftType} value={typeLabel} />
-      <DetailItem label={t.ogn.position} value={position} />
-      <DetailItem label={t.ogn.distance} value={formatDistance(target.distanceKm)} />
-      <DetailItem label={t.ogn.bearing} value={formatTrack(target.bearing)} />
-      <DetailItem label={t.ogn.lastSeen} value={formatAge(ageSeconds)} />
-      {target.identityVisible && <DetailItem label={t.ogn.receiver} value={target.lastReceiver || t.common.emptyValue} />}
-      <DetailItem label={t.ogn.title} value={`${t.ogn.trackingSources[target.trackingSource]}${target.stale ? ` · ${t.ogn.stale}` : ""}`} />
-    </DetailSection>
-    <div className="detail-disclaimer ogn-privacy-note">{t.ogn.sourceDisclaimer}</div>
-  </div>;
-}
-
-function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
-  if (value === t.common.emptyValue) return null;
-  return <div><div className="detail-item-label">{label}</div><div className="detail-item-value">{value}</div></div>;
-}
-
-function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="detail-section"><h3>{title}</h3><div className="detail-grid">{children}</div></section>;
 }
