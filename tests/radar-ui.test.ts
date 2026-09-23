@@ -20,6 +20,7 @@ const radarTrafficBrowserSource = readFileSync(new URL("../components/radar/rada
 const radarDrawerDetailsSource = readFileSync(new URL("../components/radar/radar-drawer-details.tsx", import.meta.url), "utf8");
 const radarMapLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
 const radarDrawerInteractionsSource = readFileSync(new URL("../components/radar/use-radar-drawer-interactions.ts", import.meta.url), "utf8");
+const radarLiveAircraftSource = readFileSync(new URL("../components/radar/use-radar-live-aircraft.ts", import.meta.url), "utf8");
 const trafficVirtualizationSource = readFileSync(new URL("../lib/radar/traffic-virtualization.ts", import.meta.url), "utf8");
 const radarPerformanceSource = readFileSync(new URL("../lib/radar/performance-diagnostics.ts", import.meta.url), "utf8");
 const liveSnapshotSchedulerSource = readFileSync(new URL("../lib/radar/live-snapshot-scheduler.ts", import.meta.url), "utf8");
@@ -179,6 +180,9 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("<RadarDrawerDetails");
     expect(appSource).toContain("<RadarMapLayerMenu");
     expect(appSource).toContain("useRadarDrawerInteractions({");
+    expect(appSource).toContain("useRadarLiveAircraft({");
+    expect(radarLiveAircraftSource).toContain("useAircraftStream({");
+    expect(appSource).not.toContain("useAircraftStream({");
     expect(appSource).not.toContain("function OgnDetailContent");
     expect(appSource).not.toContain("watchlistKind");
     expect(appSource).not.toContain("intelligenceOpened");
@@ -206,11 +210,12 @@ describe("radar UI polish helpers", () => {
 
   it("keeps high-frequency aircraft deltas off the main React render cadence", () => {
     expect(liveSnapshotSchedulerSource).toContain("RADAR_REACT_SNAPSHOT_INTERVAL_MS = 200");
-    expect(appSource).toContain("liveSnapshotRef.current = next");
-    expect(appSource).toContain("scheduleAircraftMapSync()");
+    expect(appSource).toContain("useRadarLiveAircraft({");
+    expect(radarLiveAircraftSource).toContain("liveSnapshotRef.current = next");
+    expect(radarLiveAircraftSource).toContain("scheduleMapSync()");
     expect(appSource).toContain("if (document.hidden)");
     expect(appSource).toContain("aircraftMapSyncRef.current?.(false)");
-    expect(appSource).toContain("reactSnapshotSchedulerRef.current?.push(next, change.full)");
+    expect(radarLiveAircraftSource).toContain("reactSnapshotSchedulerRef.current?.push(next, change.full)");
     expect(appSource).toContain("const syncAircraftMap = useCallback");
     expect(appSource).toContain("const liveSnapshot = liveSnapshotRef.current");
     expect(appSource).toContain("aircraftMapSyncRef.current = syncAircraftMap");
