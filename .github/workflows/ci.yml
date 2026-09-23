@@ -79,8 +79,12 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          npm run benchmark:radar
-          cat artifacts/radar-performance-baseline.md >> "${GITHUB_STEP_SUMMARY}"
+          benchmark_status=0
+          npm run benchmark:radar || benchmark_status=$?
+          if [[ -f artifacts/radar-performance-baseline.md ]]; then
+            cat artifacts/radar-performance-baseline.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          exit "${benchmark_status}"
       - name: Upload radar performance baseline
         if: always()
         uses: actions/upload-artifact@v4
