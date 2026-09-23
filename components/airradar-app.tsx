@@ -1737,7 +1737,7 @@ export function AirRadarApp() {
           && now - previous.correctionStartedAt < previous.correctionDurationMs;
         const visualHeading = correction
           ? visualHeadingForConfirmedPosition({ lon: current.lng, lat: current.lat }, source, nextHistory)
-          : null;
+          : visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, nextHistory);
 
         previous.history = nextHistory;
         previous.source = source;
@@ -1746,10 +1746,10 @@ export function AirRadarApp() {
         previous.correctionDurationMs = interpolationDurationMs;
         previous.correctionLon = correction?.lon ?? 0;
         previous.correctionLat = correction?.lat ?? 0;
+        // A rejected correction snaps directly to the confirmed target, so the
+        // heading from the previous interpolated leg must not survive the snap.
         previous.visualHeading = visualHeading
-          ?? (previousInterpolationActive
-            ? previous.visualHeading
-            : visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, nextHistory));
+          ?? (correction && previousInterpolationActive ? previous.visualHeading : null);
 
         // Large, stale or otherwise untrusted jumps are safer as a direct
         // confirmed-position snap than as a long interpolation across the map.
