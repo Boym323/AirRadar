@@ -19,11 +19,12 @@ describe("aircraft visual heading", () => {
     expect(resolveAircraftVisualHeading({ track: 90, mapBearing: 180 })).toBe(270);
   });
 
-  it("uses motion, track, then position heading in that order", () => {
+  it("uses rendered motion, position heading, track, then last known track", () => {
     expect(resolveAircraftVisualHeading({ motionHeading: 180, track: 90, positionHeading: 0 })).toBe(180);
-    expect(resolveAircraftVisualHeading({ track: 90, positionHeading: 0 })).toBe(90);
-    expect(resolveAircraftVisualHeading({ positionHeading: 180 })).toBe(180);
-    expect(resolveAircraftVisualHeading({ track: null, positionHeading: null })).toBeNull();
+    expect(resolveAircraftVisualHeading({ track: 90, positionHeading: 0 })).toBe(0);
+    expect(resolveAircraftVisualHeading({ track: 90, positionHeading: null, lastKnownTrack: 180 })).toBe(90);
+    expect(resolveAircraftVisualHeading({ track: null, positionHeading: null, lastKnownTrack: 180 })).toBe(180);
+    expect(resolveAircraftVisualHeading({ track: null, positionHeading: null, lastKnownTrack: null })).toBeNull();
   });
 
   it("applies an asset-specific offset without changing geographic heading", () => {
@@ -45,6 +46,10 @@ describe("aircraft visual heading", () => {
     const before = resolveAircraftVisualHeading({ track: 359, mapBearing: 0 });
     const after = resolveAircraftVisualHeading({ track: 1, mapBearing: 0 });
     expect(shortestAngleDelta(before!, after!)).toBe(2);
+  });
+
+  it("renders confirmed movement at 315 degrees even when reported track is 90", () => {
+    expect(resolveAircraftVisualHeading({ motionHeading: 315, track: 90, mapBearing: 0 })).toBe(315);
   });
 
   it("does not add a presentation flip when the motion source changes", () => {

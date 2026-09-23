@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PREDICTION_AGE_MS, confirmedInterpolationDurationMs, correctionFor, createMotionHistory, interpolateHeading, motionAt, motionObservationAdvances, motionRenderIntervalMs, normalizeHeading, predictedPosition, predictionIsActive, shortestAngleDelta, updateMotionHistory } from "@/lib/aircraft/motion";
+import { MAX_PREDICTION_AGE_MS, confirmedInterpolationDurationMs, correctionFor, createMotionHistory, interpolateHeading, motionAt, motionObservationAdvances, motionRenderIntervalMs, normalizeHeading, predictedPosition, predictionIsActive, shortestAngleDelta, updateMotionHistory, visualHeadingForConfirmedPosition } from "@/lib/aircraft/motion";
+import { destinationPoint } from "@/lib/geo";
 
 const source = (track: number | null, observedAt: number, lat = 50, lon = 14) => ({ lat, lon, observedAt, groundSpeed: 120, track, positionOrigin: "local", positionSource: "readsb" });
 
@@ -35,6 +36,47 @@ describe("aircraft motion", () => {
     history = updateMotionHistory(history, { ...source(null, 1_000), lat: 50, lon: 14 });
     history = updateMotionHistory(history, { ...source(null, 2_000), lat: 49.999, lon: 14 });
     expect(motionAt({ ...source(null, 2_000), lat: 49.999, lon: 14 }, 2_000, undefined, history).heading).toBe(180);
+  });
+  it.each([
+    0, 90, 180, 270, 135, 315,
+  ])("derives visual heading from confirmed %s movement", (bearing) => {
+    const current = { lat: 50, lon: 14 };
+    const [lon, lat] = destinationPoint(current.lat, current.lon, 0.1, bearing);
+    const next = source(90, 2_000, lat, lon);
+    const history = updateMotionHistory(createMotionHistory(), source(90, 1_000, current.lat, current.lon));
+
+    expect(visualHeadingForConfirmedPosition(current, next, history)).toBeCloseTo(bearing, 5);
+  });
+  it("keeps the reported track out of a confirmed movement mismatch", () => {
+    const current = { lat: 50, lon: 14 };
+    const [lon, lat] = destinationPoint(current.lat, current.lon, 0.1, 315);
+    const next = { ...source(90, 2_000, lat, lon), allowPrediction: false as const };
+    const history = updateMotionHistory(createMotionHistory(), source(90, 1_000, current.lat, current.lon));
+    const visualHeading = visualHeadingForConfirmedPosition(current, next, history);
+    const correction = { lon: current.lon - next.lon, lat: current.lat - next.lat, startedAt: 2_000, durationMs: 1_000 };
+
+    expect(visualHeading).toBeCloseTo(315, 5);
+    expect(motionAt(next, 2_500, correction, history, visualHeading).heading).toBeCloseTo(315, 5);
+  });
+  it("uses the confirmed position heading before track for small movement noise", () => {
+    const history = { ...createMotionHistory(), positionHeading: 225, lastTrack: 180 };
+    const current = { lat: 50, lon: 14 };
+    const next = source(90, 2_000, 50.0001, 14);
+
+    expect(visualHeadingForConfirmedPosition(current, next, history)).toBe(225);
+  });
+  it("falls back from reported track to the last known track", () => {
+    const history = { ...createMotionHistory(), lastTrack: 270 };
+    const current = { lat: 50, lon: 14 };
+    expect(visualHeadingForConfirmedPosition(current, source(90, 2_000), history)).toBe(90);
+    expect(visualHeadingForConfirmedPosition(current, source(null, 2_000), history)).toBe(270);
+  });
+  it("keeps a stored visual heading stable for every interpolation frame", () => {
+    const next = { ...source(90, 2_000, 50.002, 14.002), allowPrediction: false as const };
+    const correction = { lon: -0.002, lat: -0.002, startedAt: 2_000, durationMs: 1_000 };
+    const headings = [2_000, 2_250, 2_500, 2_750, 3_000].map((timestamp) => motionAt(next, timestamp, correction, undefined, 315).heading);
+
+    expect(headings).toEqual([315, 315, 315, 315, 315]);
   });
   it("keeps history and turn rate for normal movement from the same source", () => {
     let history = createMotionHistory();

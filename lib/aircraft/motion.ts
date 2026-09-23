@@ -5,6 +5,7 @@ export const MAX_PREDICTION_AGE_MS = 8_000;
 export const MOTION_OBSERVATION_TOLERANCE_MS = 100;
 export const MAX_PREDICTION_CORRECTION_KM = 12;
 export const AIRCRAFT_ICON_ROTATION_OFFSET_DEG = 0;
+export const MIN_VISUAL_HEADING_DISTANCE_KM = 0.025;
 export const MAX_TURN_RATE_DEG_PER_SEC = 12;
 export const MIN_TURN_OBSERVATION_GAP_MS = 250;
 export const MAX_TURN_OBSERVATION_GAP_MS = 12_000;
@@ -41,7 +42,7 @@ export function updateMotionHistory(history: MotionHistory, source: MotionSource
   if (next.lastLat !== null && next.lastLon !== null) {
     const jump = haversineDistanceKm(next.lastLat, next.lastLon, source.lat, source.lon);
     if (jump > MAX_PREDICTION_CORRECTION_KM) return Object.assign(createMotionHistory(), { source: sourceKey, lastLat: source.lat, lastLon: source.lon });
-    if (jump > 0.01) next.positionHeading = normalizeHeading(initialBearing(next.lastLat, next.lastLon, source.lat, source.lon));
+    if (jump >= MIN_VISUAL_HEADING_DISTANCE_KM) next.positionHeading = normalizeHeading(initialBearing(next.lastLat, next.lastLon, source.lat, source.lon));
   }
   if (source.track !== null) {
     if (next.lastTrack !== null && next.lastObservedAt !== null) {
@@ -56,6 +57,28 @@ export function updateMotionHistory(history: MotionHistory, source: MotionSource
   } else next.lastObservedAt = source.observedAt;
   next.lastLat = source.lat; next.lastLon = source.lon;
   return next;
+}
+
+/**
+ * Resolves the presentation heading for a confirmed position update. The
+ * current rendered movement is deliberately preferred to the reported track:
+ * interpolation can be correcting the marker along a different path than the
+ * latest ADS-B kinematic observation describes.
+ */
+export function visualHeadingForConfirmedPosition(
+  current: { lat: number; lon: number },
+  source: MotionSource,
+  history?: MotionHistory,
+): number | null {
+  const distance = haversineDistanceKm(current.lat, current.lon, source.lat, source.lon);
+  const renderedMovementHeading = distance >= MIN_VISUAL_HEADING_DISTANCE_KM
+    ? initialBearing(current.lat, current.lon, source.lat, source.lon)
+    : null;
+  return normalizeHeading(renderedMovementHeading)
+    ?? history?.positionHeading
+    ?? normalizeHeading(source.track)
+    ?? history?.lastTrack
+    ?? null;
 }
 
 export function motionRenderIntervalMs(activeAircraft: number): number {
@@ -132,14 +155,15 @@ export function predictionIsActive(source: MotionSource, timestamp: number, hist
     && source.groundSpeed !== null && Number.isFinite(source.groundSpeed) && source.groundSpeed >= 0.5 && heading !== null;
 }
 
-export function motionAt(source: MotionSource, timestamp: number, correction?: { lon: number; lat: number; startedAt: number; durationMs: number }, history?: MotionHistory): MotionResult {
+export function motionAt(source: MotionSource, timestamp: number, correction?: { lon: number; lat: number; startedAt: number; durationMs: number }, history?: MotionHistory, visualHeading?: number | null): MotionResult {
   const [lon, lat] = predictedPosition(source, timestamp, history);
   const stale = source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS;
   const progress = correction ? Math.max(0, Math.min(1, (timestamp - correction.startedAt) / correction.durationMs)) : 1;
   const active = Boolean(correction && progress < 1 && (source.allowPrediction === false || !stale));
-  const baseHeading = normalizeHeading(source.track) ?? history?.lastTrack ?? history?.positionHeading ?? null;
-  // Render the reported/fallback course directly. Extrapolating visual heading
-  // with an inferred turn rate causes obvious over-rotation when track jitters.
+  const baseHeading = normalizeHeading(visualHeading) ?? history?.positionHeading ?? normalizeHeading(source.track) ?? history?.lastTrack ?? null;
+  // Render the stored visual/fallback course directly. Extrapolating visual
+  // heading with an inferred turn rate causes obvious over-rotation when track
+  // jitters.
   const heading = baseHeading;
   return { lon: normalizeLongitude(lon + (correction?.lon ?? 0) * (1 - progress)), lat: lat + (correction?.lat ?? 0) * (1 - progress), heading, predictionActive: predictionIsActive(source, timestamp, history), correctionActive: active, stale };
 }

@@ -82,8 +82,15 @@ being emitted twice in one process.
 
 The live radar page creates one `EventSource`, maintains a bounded client-side
 live trail, animates MapLibre DOM markers, and reconnects through the browser's
-`EventSource` behavior after a network interruption. The statistics page has
-its own page-scoped stream for live counters.
+`EventSource` behavior after a network interruption. Confirmed-position
+interpolation owns a presentation-only visual heading on each animation job:
+it follows the marker's rendered A → B movement when that displacement is at
+least 25 m, then falls back to confirmed position heading, reported track, and
+last known track. The reported ADS-B track remains the source for prediction
+and data semantics. The original heading bug came from using that reported
+track during interpolation even when the marker was visibly correcting along a
+different confirmed-position path. The statistics page has its own page-scoped
+stream for live counters.
 
 ## OGN / FLARM live flow
 

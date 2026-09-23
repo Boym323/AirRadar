@@ -25,7 +25,7 @@ import {
   watchlistKindLabel,
   watchlistSummary,
 } from "@/lib/i18n";
-import { confirmedInterpolationDurationMs, correctionFor, motionAt, motionObservationAdvances, motionRenderIntervalMs, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
+import { confirmedInterpolationDurationMs, correctionFor, motionAt, motionObservationAdvances, motionRenderIntervalMs, createMotionHistory, updateMotionHistory, visualHeadingForConfirmedPosition, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -216,6 +216,7 @@ interface AircraftAnimationJob {
   correctionDurationMs: number;
   sourceReceivedAt: number;
   history: MotionHistory;
+  visualHeading: number | null;
 }
 
 interface OgnMarkerHandle {
@@ -231,12 +232,12 @@ function sourceObservedPerformanceTime(aircraft: AircraftView, receivedAt: numbe
 }
 
 function predictedMarkerPosition(job: AircraftAnimationJob, timestamp: number): [number, number] {
-  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs }, job.history);
+  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs }, job.history, job.visualHeading);
   return [motion.lon, motion.lat];
 }
 
 function hasContinuousPrediction(job: AircraftAnimationJob, timestamp: number): boolean {
-  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs }, job.history);
+  const motion = motionAt(job.source, timestamp, { lon: job.correctionLon, lat: job.correctionLat, startedAt: job.correctionStartedAt, durationMs: job.correctionDurationMs }, job.history, job.visualHeading);
   return motion.predictionActive || motion.correctionActive;
 }
 
@@ -1158,7 +1159,7 @@ export function AirRadarApp() {
           lat: job.correctionLat,
           startedAt: job.correctionStartedAt,
           durationMs: job.correctionDurationMs,
-        }, job.history);
+        }, job.history, job.visualHeading);
         job.handle.marker.setLngLat([motion.lon, motion.lat]);
         if (motion.heading !== null) setAircraftMarkerHeading(job.handle, motion.heading, mapBearing);
         renderedAnyMarker = true;
@@ -1685,6 +1686,7 @@ export function AirRadarApp() {
         allowPrediction: false,
       };
       const previous = animationJobs.get(aircraft.icaoHex);
+      const createHistory = () => updateMotionHistory(createMotionHistory(), source);
 
       if (prefersReducedMotion()) {
         marker.setLngLat(target);
@@ -1694,6 +1696,7 @@ export function AirRadarApp() {
 
       if (document.hidden) {
         marker.setLngLat(target);
+        const history = createHistory();
         animationJobs.set(aircraft.icaoHex, {
           handle,
           source,
@@ -1702,7 +1705,8 @@ export function AirRadarApp() {
           correctionStartedAt: now,
           correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
           sourceReceivedAt: now,
-          history: updateMotionHistory(createMotionHistory(), source),
+          history,
+          visualHeading: visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, history),
         });
         return;
       }
@@ -1729,6 +1733,11 @@ export function AirRadarApp() {
           interpolationDurationMs,
           nextHistory,
         );
+        const previousInterpolationActive = (previous.correctionLon !== 0 || previous.correctionLat !== 0)
+          && now - previous.correctionStartedAt < previous.correctionDurationMs;
+        const visualHeading = correction
+          ? visualHeadingForConfirmedPosition({ lon: current.lng, lat: current.lat }, source, nextHistory)
+          : visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, nextHistory);
 
         previous.history = nextHistory;
         previous.source = source;
@@ -1737,18 +1746,23 @@ export function AirRadarApp() {
         previous.correctionDurationMs = interpolationDurationMs;
         previous.correctionLon = correction?.lon ?? 0;
         previous.correctionLat = correction?.lat ?? 0;
+        // A rejected correction snaps directly to the confirmed target, so the
+        // heading from the previous interpolated leg must not survive the snap.
+        previous.visualHeading = visualHeading
+          ?? (correction && previousInterpolationActive ? previous.visualHeading : null);
 
         // Large, stale or otherwise untrusted jumps are safer as a direct
         // confirmed-position snap than as a long interpolation across the map.
         if (!correction) marker.setLngLat(target);
 
-        const heading = motionAt(source, now, correction ?? undefined, nextHistory).heading;
+        const heading = motionAt(source, now, correction ?? undefined, nextHistory, previous.visualHeading).heading;
         if (heading !== null) setAircraftMarkerHeading(handle, heading, map.getBearing());
         if (correction) animationSchedulerRef.current?.();
         return;
       }
 
       marker.setLngLat(target);
+      const history = createHistory();
       animationJobs.set(aircraft.icaoHex, {
         handle,
         source,
@@ -1757,7 +1771,8 @@ export function AirRadarApp() {
         correctionStartedAt: now,
         correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
         sourceReceivedAt: now,
-        history: updateMotionHistory(createMotionHistory(), source),
+        history,
+        visualHeading: visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, history),
       });
     };
 
@@ -1806,7 +1821,7 @@ export function AirRadarApp() {
       const renderedMotion = motionJob ? motionAt(motionJob.source, performance.now(), {
         lon: motionJob.correctionLon, lat: motionJob.correctionLat,
         startedAt: motionJob.correctionStartedAt, durationMs: motionJob.correctionDurationMs,
-      }, motionJob.history) : null;
+      }, motionJob.history, motionJob.visualHeading) : null;
       const renderedHeading = renderedMotion?.heading ?? aircraft.track;
       const labelChanged = updateAircraftMarkerHandle(handle, { ...aircraft }, {
         selected: selectedState,
