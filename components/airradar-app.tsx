@@ -374,10 +374,6 @@ function ognGlyphPath(aircraftType: OgnTargetView["aircraftType"]): string {
         : "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z";
 }
 
-function OgnGlyph({ aircraftType }: { aircraftType: OgnTargetView["aircraftType"] }) {
-  return <svg className="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d={ognGlyphPath(aircraftType)} /></svg>;
-}
-
 function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {
   return `<svg class="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d="${ognGlyphPath(aircraftType)}"></path></svg>`;
 }
