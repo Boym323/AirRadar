@@ -188,7 +188,7 @@ describe("radar UI polish helpers", () => {
     expect(liveSnapshotSchedulerSource).toContain("RADAR_REACT_SNAPSHOT_INTERVAL_MS = 200");
     expect(appSource).toContain("liveSnapshotRef.current = next");
     expect(appSource).toContain("scheduleAircraftMapSync()");
-    expect(appSource).toContain("reactSnapshotScheduler.push(next, change.full)");
+    expect(appSource).toContain("reactSnapshotSchedulerRef.current?.push(next, change.full)");
     expect(appSource).toContain("const syncAircraftMap = useCallback");
     expect(appSource).toContain("const liveSnapshot = liveSnapshotRef.current");
     expect(appSource).toContain("aircraftMapSyncRef.current = syncAircraftMap");
