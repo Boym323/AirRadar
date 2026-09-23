@@ -30,25 +30,52 @@ const transparentPng = Buffer.from(
 
 async function waitForHealthyServer(child, exitPromise) {
   const deadline = Date.now() + 30_000;
-  while (Date.now() < deadline) {
-    if (child.exitCode !== null) throw new Error(`Radar performance server exited during startup with code ${child.exitCode}`);
+  const timeoutError = () => new Error("Radar performance server did not become healthy within 30 seconds");
+  const exitError = (exit) => new Error(
+    `Radar performance server exited during startup with code ${exit?.code ?? child.exitCode ?? "null"} signal ${exit?.signal ?? child.signalCode ?? "none"}`,
+  );
+
+  while (true) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) throw timeoutError();
+    if (child.exitCode !== null || child.signalCode !== null) throw exitError(null);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), remainingMs);
     try {
-      const response = await fetch(`${baseUrl}/api/health`);
-      if (response.ok) {
+      const outcome = await Promise.race([
+        fetch(`${baseUrl}/api/health`, { signal: controller.signal }).then(
+          (response) => ({ type: "response", response }),
+          (error) => ({ type: "request-error", error }),
+        ),
+        exitPromise.then((exit) => ({ type: "exit", exit })),
+      ]);
+
+      if (outcome.type === "exit") {
+        controller.abort();
+        throw exitError(outcome.exit);
+      }
+      if (outcome.type === "request-error") {
+        if (controller.signal.aborted || Date.now() >= deadline) throw timeoutError();
+        // Next.js is still starting.
+      } else if (outcome.response.ok) {
+        const stabilityWindowMs = Math.min(200, Math.max(0, deadline - Date.now()));
+        if (stabilityWindowMs <= 0) throw timeoutError();
         const earlyExit = await Promise.race([
           exitPromise.then((exit) => exit),
-          wait(200).then(() => null),
+          wait(stabilityWindowMs).then(() => null),
         ]);
-        if (earlyExit) throw new Error(`Radar performance server exited during startup with code ${earlyExit.code ?? "null"} signal ${earlyExit.signal ?? "none"}`);
+        if (earlyExit) throw exitError(earlyExit);
         return;
       }
-    } catch (error) {
-      if (child.exitCode !== null) throw error;
-      // Next.js is still starting.
+    } finally {
+      clearTimeout(timeout);
     }
-    await wait(100);
+
+    const retryDelayMs = Math.min(100, Math.max(0, deadline - Date.now()));
+    if (retryDelayMs <= 0) throw timeoutError();
+    await wait(retryDelayMs);
   }
-  throw new Error("Radar performance server did not become healthy within 30 seconds");
 }
 
 async function installSyntheticAircraftStream(page, count) {
