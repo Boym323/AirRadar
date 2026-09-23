@@ -4,6 +4,7 @@ import { RADAR_PERFORMANCE_SCENARIOS, evaluateRadarPerformanceBaseline } from ".
 
 const baselineSource = readFileSync(new URL("../scripts/radar-performance-baseline.mjs", import.meta.url), "utf8");
 const ciSource = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+const gitignoreSource = readFileSync(new URL("../.gitignore", import.meta.url), "utf8");
 
 function passingResult(aircraft) {
   return {
@@ -96,6 +97,11 @@ describe("radar production performance budgets", () => {
     expect(ciSource).toContain('if [[ -f artifacts/radar-performance-baseline.md ]]');
     expect(ciSource).toContain('cat artifacts/radar-performance-baseline.md >> "${GITHUB_STEP_SUMMARY}"');
     expect(ciSource).toContain('exit "${benchmark_status}"');
+  });
+
+  it("keeps generated radar baseline reports out of the worktree", () => {
+    expect(gitignoreSource).toContain("artifacts/radar-performance-baseline.json");
+    expect(gitignoreSource).toContain("artifacts/radar-performance-baseline.md");
   });
 
   it("keeps hosted-runner timing observations informational instead of gating CI", () => {
