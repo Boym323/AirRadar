@@ -209,13 +209,32 @@ describe("aircraft motion", () => {
   });
 
 
-  it("matches interpolation duration to the confirmed observation cadence", () => {
+  it("matches interpolation duration to browser delivery cadence without stop-go gaps", () => {
     const previous = source(90, 10_000);
     const next = source(90, 11_000, 50.001, 14.001);
-    expect(confirmedInterpolationDurationMs(previous, next, 3_000)).toBe(900);
-    expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: 13_000 }, 3_000)).toBe(2_700);
-    expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: 20_000 }, 10_000, 300, 9_000)).toBe(9_000);
+
+    // Delivery cadence wins over the noisier observation cadence.
+    expect(confirmedInterpolationDurationMs(previous, next, 3_000)).toBe(3_240);
+    expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: 13_000 }, 3_000)).toBe(3_240);
+
+    // Slow network tracks may bridge the full delivery cadence instead of
+    // stopping early and waiting for the next point.
+    expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: 20_000 }, 10_000, 300, 12_000)).toBe(10_800);
+
+    // Invalid/too-small delivery gaps still use a safe bounded fallback.
     expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: null }, 200)).toBe(300);
+  });
+
+  it("keeps confirmed interpolation active through the next expected delivery", () => {
+    const previous = source(90, 10_000, 50, 14);
+    const next = { ...source(90, 11_000, 50.001, 14.001), allowPrediction: false };
+    const durationMs = confirmedInterpolationDurationMs(previous, next, 1_000);
+    const correction = correctionFor({ lat: 50, lon: 14 }, next, 11_000, durationMs);
+
+    expect(durationMs).toBe(1_080);
+    expect(correction).not.toBeNull();
+    expect(motionAt(next, 12_000, correction!).correctionActive).toBe(true);
+    expect(motionAt(next, 12_080, correction!).correctionActive).toBe(false);
   });
 
   it("throttles only high-density bulk marker rendering", () => {
