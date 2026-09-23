@@ -143,6 +143,8 @@ describe("radar UI polish helpers", () => {
 
   it("bounds React and layout work for dense live traffic", () => {
     expect(appSource).not.toContain('from "zod"');
+    expect(appSource).toContain("aircraftSearchTextCache");
+    expect(appSource).toContain("default view avoids a redundant O(n log n) sort");
     expect(appSource).toContain("<AircraftTrafficRow");
     expect(aircraftTrafficRowSource).toContain("memo(");
     expect(aircraftTrafficRowSource).toContain("previous.aircraft === next.aircraft");
