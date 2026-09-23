@@ -104,6 +104,14 @@ describe("radar production performance budgets", () => {
     expect(gitignoreSource).toContain("artifacts/radar-performance-baseline.md");
   });
 
+  it("bounds each startup health request by the remaining deadline and child exit", () => {
+    expect(baselineSource).toContain("const controller = new AbortController()");
+    expect(baselineSource).toContain('fetch(`${baseUrl}/api/health`, { signal: controller.signal })');
+    expect(baselineSource).toContain('exitPromise.then((exit) => ({ type: "exit", exit }))');
+    expect(baselineSource).toContain("const timeout = setTimeout(() => controller.abort(), remainingMs)");
+    expect(baselineSource).toContain("if (controller.signal.aborted || Date.now() >= deadline) throw timeoutError()");
+  });
+
   it("keeps hosted-runner timing observations informational instead of gating CI", () => {
     const scenario = RADAR_PERFORMANCE_SCENARIOS.at(-1);
     const result = passingResult(scenario.aircraft);
