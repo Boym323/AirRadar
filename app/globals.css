@@ -341,7 +341,7 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .ogn-row-meta b { color: var(--text); font-weight: 550; }
 .ogn-row-distance { color: var(--warning); font-family: var(--font-geist-mono), monospace; font-size: 10px; white-space: nowrap; }
 .ogn-detail-content .detail-disclaimer { border-color: rgba(102, 216, 207, .22); }
-.aircraft-row { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: transparent; border: 1px solid transparent; color: var(--text); border-radius: 9px; padding: 9px 10px; transition: background .18s, border-color .18s; }
+.aircraft-row { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: transparent; border: 1px solid transparent; color: var(--text); border-radius: 9px; padding: 9px 10px; transition: background .18s, border-color .18s; content-visibility: auto; contain-intrinsic-size: 62px; }
 .aircraft-row:hover { background: rgba(55, 214, 192, .06); border-color: rgba(55, 214, 192, .18); }
 .aircraft-row.selected { background: linear-gradient(90deg, rgba(55, 214, 192, .13), rgba(55, 214, 192, .04)); border-color: rgba(55, 214, 192, .42); }
 .aircraft-row.watchlisted { box-shadow: inset 3px 0 0 var(--amber); }
