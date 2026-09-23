@@ -409,7 +409,10 @@ export function AirRadarApp() {
   const aircraftFocus = searchParams.get("aircraft")?.trim().toUpperCase() ?? null;
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
   const liveSnapshotRef = useRef<PublicStateSnapshot>(EMPTY_SNAPSHOT);
-  const reactSnapshotSchedulerRef = useRef<LatestSnapshotScheduler<PublicStateSnapshot> | null>(null);
+  const reactSnapshotScheduler = useMemo<LatestSnapshotScheduler<PublicStateSnapshot>>(
+    () => createLatestSnapshotScheduler({ commit: setSnapshot }),
+    [setSnapshot],
+  );
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
   const [showOgn, setShowOgn] = useState(false);
@@ -583,16 +586,11 @@ export function AirRadarApp() {
   const windGenerationRef = useRef(0);
   const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
   const activeCoverage: CoverageMode = preferencesResolved ? coverage : "local";
-  useEffect(() => {
-    const scheduler = createLatestSnapshotScheduler<PublicStateSnapshot>({ commit: setSnapshot });
-    reactSnapshotSchedulerRef.current = scheduler;
-    return () => {
-      reactSnapshotSchedulerRef.current = null;
-      scheduler.dispose();
-      if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
-      aircraftMapSyncFrameRef.current = null;
-    };
-  }, []);
+  useEffect(() => () => {
+    reactSnapshotScheduler.dispose();
+    if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
+    aircraftMapSyncFrameRef.current = null;
+  }, [reactSnapshotScheduler]);
   const scheduleAircraftMapSync = useCallback(() => {
     if (aircraftMapSyncFrameRef.current !== null) return;
     aircraftMapSyncFrameRef.current = window.requestAnimationFrame(() => {
@@ -619,10 +617,8 @@ export function AirRadarApp() {
     // Map markers consume every live delta through refs; React receives only
     // the latest snapshot in a bounded UI cadence.
     scheduleAircraftMapSync();
-    const scheduler = reactSnapshotSchedulerRef.current;
-    if (scheduler) scheduler.push(next, change.full);
-    else setSnapshot(next);
-  }, [scheduleAircraftMapSync]);
+    reactSnapshotScheduler.push(next, change.full);
+  }, [reactSnapshotScheduler, scheduleAircraftMapSync]);
   const { connected: streamConnected } = useAircraftStream({
     enabled: preferencesResolved,
     activeCoverage,
