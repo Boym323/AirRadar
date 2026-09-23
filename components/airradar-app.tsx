@@ -2357,7 +2357,7 @@ export function AirRadarApp() {
                 </div>}
                 {trafficSource === "adsb" && activeCoverage === "extended" && snapshot.coverageStats && <div className="coverage-subcount">{t.radar.localOnlyCount(formatNumber(snapshot.coverageStats.localAircraft))} · {t.radar.networkOnlyCount(formatNumber(snapshot.coverageStats.networkOnlyAircraft))}</div>}
                 {trafficSource === "adsb" && activeCoverage === "extended" && <div className="coverage-switch source-filter-switch" role="group" aria-label="Source filter">
-                  {(["all", "local", "network", "overlap"] as AircraftSourceFilter[]).map((source) => <button key={source} type="button" className={mapFilters.source === source ? "active" : ""} aria-pressed={mapFilters.source === source} onClick={() => updateMapFilter("source", source)}>{source.toUpperCase()}</button>)}
+                  {(["all", "local", "network", "overlap"] as const).map((source) => <button key={source} type="button" className={mapFilters.source === source ? "active" : ""} aria-pressed={mapFilters.source === source} onClick={() => updateMapFilter("source", source)}>{source.toUpperCase()}</button>)}
                 </div>}
               </div>
               <IconButton className="mobile-collapse" onClick={() => setMobileCompact((value) => !value)} aria-expanded={!mobileCompact} aria-label={mobileCompact ? t.radar.expandAircraftPanel : t.radar.collapseAircraftPanel}>
@@ -2365,126 +2365,41 @@ export function AirRadarApp() {
               </IconButton>
               <button type="button" className="drawer-close-button" onClick={closeRadarDrawer} aria-label={drawerState === "traffic" ? t.history.closeTrafficPanel : drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}><UiIcon name="close" /></button>
             </div>
-          <div ref={sidebarBrowseRef} className="sidebar-browse">
-          <div className="sidebar-header">
-            <div className="search-wrap">
-              <span className="search-icon" aria-hidden="true">⌕</span>
-              <input ref={searchInputRef} className="search-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={trafficSource === "ogn" ? t.search.ognPlaceholder : t.search.placeholder} aria-label={trafficSource === "ogn" ? t.search.ognLabel : t.search.aircraftLabel} />
-              {search && <button type="button" className="search-clear-button" onClick={() => setSearch("")} aria-label={t.filters.clearSearch}><UiIcon name="close" /></button>}
-            </div>
-            {trafficSource === "adsb" && <div className="radar-options">
-              <div className="quick-filter-row" role="group" aria-label={t.filters.title}>
-                {(["all", "airborne", "onGround", "helicopters", "gliders", "uav", "emergency"] as AircraftQuickFilter[]).map((filter) => <button
-                  key={filter}
-                  type="button"
-                  className={`quick-filter-chip ${mapFilters.quick === filter ? "active" : ""}`}
-                  aria-pressed={mapFilters.quick === filter}
-                  onClick={() => updateMapFilter("quick", filter)}
-                >{quickFilterLabels[filter]}</button>)}
-              </div>
-              <button type="button" className="filter-button" aria-expanded={filtersOpen} aria-controls="map-filters-panel" onClick={() => setFiltersOpen((value) => !value)}>
-                <span>{t.filters.title}{hasActiveMapFilters ? ` · ${activeFilterCount}` : ""}</span>
-                {hasActiveMapFilters && <span className="filter-active-dot" aria-label={t.filters.active}>{t.filters.active}</span>}
-              </button>
-              {hasActiveMapFilters && <div className="active-filter-chips" aria-label={t.filters.active}>
-                {activeFilterChips.map((chip) => <button type="button" className="filter-chip" key={chip.id} onClick={chip.onRemove} title={t.filters.clearAll}>{chip.label}<span aria-hidden="true"> ×</span><span className="sr-only">{t.filters.clearSearch}</span></button>)}
-                {activeFilterChips.length > 1 && <button type="button" className="filter-chip-reset" onClick={resetMapFilters}>{t.filters.clearAll}</button>}
-              </div>}
-              {filtersOpen && <div id="map-filters-panel" className="map-filters-panel" role="region" aria-label={t.filters.title}>
-                <div className="filter-panel-heading">{t.filters.filterGroup}</div>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.status}</legend>
-                  <div className="map-filter-choice-row">
-                    <label><input type="radio" name="aircraft-status" value="all" checked={mapFilters.status === "all"} onChange={(event) => updateMapFilter("status", event.target.value as MapAircraftFilters["status"])} /> {t.filters.statusAll}</label>
-                    <label><input type="radio" name="aircraft-status" value="airborne" checked={mapFilters.status === "airborne"} onChange={(event) => updateMapFilter("status", event.target.value as MapAircraftFilters["status"])} /> {t.filters.statusAirborne}</label>
-                    <label><input type="radio" name="aircraft-status" value="onGround" checked={mapFilters.status === "onGround"} onChange={(event) => updateMapFilter("status", event.target.value as MapAircraftFilters["status"])} /> {t.filters.statusOnGround}</label>
-                  </div>
-                </fieldset>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.altitude}</legend>
-                  <div className="map-filter-fields">
-                    <label className="map-filter-field"><span>{t.filters.minimumAltitudeInput}</span><input type="number" inputMode="numeric" min="0" step="100" value={mapFilters.minAltitude} onChange={(event) => updateMapFilter("minAltitude", event.target.value)} /></label>
-                    <label className="map-filter-field"><span>{t.filters.maximumAltitudeInput}</span><input type="number" inputMode="numeric" min="0" step="100" value={mapFilters.maxAltitude} onChange={(event) => updateMapFilter("maxAltitude", event.target.value)} /></label>
-                  </div>
-                </fieldset>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.identity}</legend>
-                  <div className="map-filter-fields">
-                    <label className="map-filter-field"><span>{t.filters.callsign}</span><input value={mapFilters.callsign} onChange={(event) => updateMapFilter("callsign", event.target.value.toUpperCase())} autoComplete="off" /></label>
-                    <label className="map-filter-field"><span>{t.filters.registrationInput}</span><input value={mapFilters.registration} onChange={(event) => updateMapFilter("registration", event.target.value.toUpperCase())} autoComplete="off" /></label>
-                    <label className="map-filter-field map-filter-field-wide"><span>{t.filters.icaoHexInput}</span><input value={mapFilters.icaoHex} onChange={(event) => updateMapFilter("icaoHex", event.target.value.toUpperCase())} autoComplete="off" /></label>
-                  </div>
-                </fieldset>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.aircraft}</legend>
-                  <div className="map-filter-fields">
-                    <label className="map-filter-field"><span>{t.filters.aircraftType}</span><input value={mapFilters.aircraftType} onChange={(event) => updateMapFilter("aircraftType", event.target.value)} autoComplete="off" /></label>
-                    <label className="map-filter-field"><span>{t.filters.operator}</span><input value={mapFilters.operator} onChange={(event) => updateMapFilter("operator", event.target.value)} autoComplete="off" /></label>
-                  </div>
-                </fieldset>
-                <fieldset className="map-filter-group">
-                  <legend>{t.filters.special}</legend>
-                  <label className="filter-toggle"><input type="checkbox" checked={mapFilters.emergencyOnly} onChange={(event) => updateMapFilter("emergencyOnly", event.target.checked)} /> {t.filters.emergencyOnly}</label>
-                  <label className="filter-toggle"><input type="checkbox" checked={watchlistOnly} onChange={(event) => setWatchlistOnly(event.target.checked)} /> {t.filters.watchlistOnly}</label>
-                </fieldset>
-                <div className="filter-panel-heading filter-panel-heading-sort">{t.filters.sortGroup}</div>
-                <div className="map-filter-legacy-row">
-                  <label className="map-filter-field"><span>{t.filters.sortLabel}</span><select className="filter-select" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}><option value="distance">{t.filters.sortDistance}</option><option value="altitude">{t.filters.sortAltitude}</option><option value="callsign">{t.filters.sortCallsign}</option></select></label>
-                  <label className="map-filter-field"><span>{t.filters.maximumDistance}</span><select className="filter-select" value={distanceFilter} onChange={(event) => setDistanceFilter(event.target.value)}><option value="all">{t.filters.distanceAll}</option><option value="25">{t.filters.distanceWithin25}</option><option value="75">{t.filters.distanceWithin75}</option></select></label>
-                </div>
-                <button type="button" className="filter-reset-button" onClick={resetMapFilters}>{t.filters.reset}</button>
-              </div>}
-              </div>}
-            {trafficSource === "adsb" && <details className="watchlist-box">
-              <summary>{t.watchlist.title} <span>{watchlistSummary(watchlist.length)}</span></summary>
-              <form onSubmit={addWatchlistRule} className="watchlist-form">
-                <select value={watchlistKind} onChange={(event) => setWatchlistKind(event.target.value)} aria-label={t.watchlist.ruleType}>
-                  <option value="icao">{t.watchlist.ruleKinds.icao}</option><option value="registration">{t.watchlist.ruleKinds.registration}</option><option value="callsign">{t.watchlist.exactCallsign}</option><option value="pattern">{t.watchlist.callsignPattern}</option><option value="type">{t.watchlist.ruleKinds.type}</option><option value="airline">{t.watchlist.ruleKinds.airline}</option>
-                </select>
-                <input value={watchlistValue} onChange={(event) => setWatchlistValue(event.target.value)} placeholder={watchlistKind === "pattern" ? "UAE*" : "A6-EVL"} aria-label={t.watchlist.value} />
-                <button type="submit" className="watchlist-add">{t.watchlist.add}</button>
-              </form>
-              {watchlist.length > 0 && <div className="watchlist-rules">{watchlist.map((rule) => <button key={`${rule.kind}-${rule.value}`} type="button" onClick={() => setWatchlist((current) => current.filter((item) => item !== rule))}>{watchlistKindLabel(rule.kind)}: {rule.value} ×</button>)}</div>}
-            </details>}
-          </div>
-
-          <RelevantAtcPanel summaries={snapshot.relevantAtcFrequencies} expanded={atcExpanded} onOpen={() => setAtcExpanded(true)} />
-          <details className="sidebar-secondary-tools" onToggle={(event) => setIntelligenceOpened(event.currentTarget.open)}>
-            <summary>{t.intelligence.title}<span>{t.common.more}</span></summary>
-            {intelligenceOpened && <IntelligenceFeed />}
-          </details>
-
-          {trafficSource === "ogn" ? (
-            <div id="traffic-list" className="aircraft-list ogn-traffic-list">
-              {filteredOgnTargets.length === 0 ? <div className="empty-list ogn-empty"><strong>{ognSnapshot.targets.length === 0 ? t.ogn.empty : t.ogn.noMatching}</strong></div> : filteredOgnTargets.map((target) => (
-                <button key={target.id} type="button" className={`aircraft-row ogn-row ${selectedOgnId === target.id ? "selected" : ""} ${target.stale ? "stale" : ""}`} aria-pressed={selectedOgnId === target.id} onClick={() => selectOgn(target.id)}>
-                  <span className="aircraft-row-icon ogn-row-icon"><OgnGlyph aircraftType={target.aircraftType} /></span>
-                  <span className="aircraft-row-main">
-                    <span className="aircraft-row-topline"><span className="aircraft-row-name">{ognTargetLabel(target)}</span> <span className="source-badge ogn-source-badge">{t.ogn.badge} · {t.ogn.trackingSources[target.trackingSource]}</span> {target.stale && <span className="ogn-stale-badge">{t.ogn.stale}</span>}</span>
-                    <span className="aircraft-row-type">{target.identityVisible && target.model ? `${target.aircraftType.replaceAll("_", " ")} · ${target.model}` : target.aircraftType.replaceAll("_", " ")}</span>
-                    <span className="aircraft-row-meta"><span><b>{formatAltitude(target.altitudeFt)}</b></span><span><b>{formatSpeed(target.groundSpeedKt)}</b></span><span><b>{formatTrack(target.trackDeg)}</b></span></span>
-                  </span>
-                  <span className="aircraft-row-distance">{formatDistance(target.distanceKm)}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <AircraftTrafficList
-              aircraft={filteredAircraft}
-              totalAircraftCount={snapshot.aircraft.length}
-              selectedHex={selectedHex}
-              watchlistedHexes={watchlistedHexes}
-              onSelect={selectAircraft}
-              scrollRootRef={sidebarBrowseRef}
-            />
-          )}
-
-          <details className="sidebar-secondary-tools" onToggle={(event) => setLogbookOpened(event.currentTarget.open)}>
-            <summary>{t.dashboard.logbookTitle}<span>{t.dashboard.openStatistics}</span></summary>
-            {logbookOpened && <LogbookSummary />}
-          </details>
-
-          </div>
+          <RadarTrafficBrowser
+            trafficSource={trafficSource}
+            search={search}
+            onSearchChange={setSearch}
+            searchInputRef={searchInputRef}
+            sidebarBrowseRef={sidebarBrowseRef}
+            mapFilters={mapFilters}
+            onMapFilterChange={updateMapFilter}
+            filtersOpen={filtersOpen}
+            onFiltersOpenChange={setFiltersOpen}
+            hasActiveMapFilters={hasActiveMapFilters}
+            activeFilterCount={activeFilterCount}
+            watchlistOnly={watchlistOnly}
+            onWatchlistOnlyChange={setWatchlistOnly}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            distanceFilter={distanceFilter}
+            onDistanceFilterChange={setDistanceFilter}
+            onResetMapFilters={resetMapFilters}
+            watchlist={watchlist}
+            onWatchlistChange={setWatchlist}
+            relevantAtcFrequencies={snapshot.relevantAtcFrequencies}
+            atcExpanded={atcExpanded}
+            onAtcOpen={() => setAtcExpanded(true)}
+            filteredAircraft={filteredAircraft}
+            totalAircraftCount={snapshot.aircraft.length}
+            selectedHex={selectedHex}
+            watchlistedHexes={watchlistedHexes}
+            onSelectAircraft={selectAircraft}
+            ognSnapshot={ognSnapshot}
+            filteredOgnTargets={filteredOgnTargets}
+            selectedOgnId={selectedOgnId}
+            onSelectOgn={selectOgn}
+            ognLabel={ognTargetLabel}
+          />
 
           {(drawerState === "aircraft" || drawerState === "ogn") && (
             <div className="detail-panel" key={selectedOgnTarget ? `ogn-${selectedOgnTarget.id}` : selectedIdentity}>
