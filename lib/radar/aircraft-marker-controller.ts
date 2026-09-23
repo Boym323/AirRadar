@@ -129,7 +129,7 @@ export function createAircraftMarkerHandle(
   visual.append(rotator, label);
   rotator.append(plane);
   const handle: AircraftMarkerHandle = {
-    marker: new maplibregl.Marker({ element: root, anchor: "center", rotationAlignment: "viewport", pitchAlignment: "viewport" })
+    marker: new maplibregl.Marker({ element: root, anchor: "center", rotationAlignment: "viewport", pitchAlignment: "viewport", subpixelPositioning: true })
       .setLngLat(position)
       .addTo(map),
     root,
