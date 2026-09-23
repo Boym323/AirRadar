@@ -261,6 +261,19 @@ function labelForAircraft(aircraft: AircraftView): string {
   return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
 }
 
+const aircraftSearchTextCache = new WeakMap<AircraftView, string>();
+
+function aircraftSearchText(aircraft: AircraftView): string {
+  const cached = aircraftSearchTextCache.get(aircraft);
+  if (cached !== undefined) return cached;
+  const value = [aircraft.callsign, aircraft.registration, aircraft.enrichment?.metadata?.registration, aircraft.icaoHex]
+    .filter(Boolean)
+    .join(" ")
+    .toUpperCase();
+  aircraftSearchTextCache.set(aircraft, value);
+  return value;
+}
+
 function formatAirspaceUtc(value: string): string {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return t.common.emptyValue;
@@ -1573,17 +1586,16 @@ export function AirRadarApp() {
   const filteredAircraft = useMemo(() => {
     const query = search.trim().toUpperCase();
     const filtered = mapFilteredAircraft.filter((aircraft) => {
-      const searchable = [aircraft.callsign, aircraft.registration, aircraft.enrichment?.metadata?.registration, aircraft.icaoHex].filter(Boolean).join(" ").toUpperCase();
-      if (query && !searchable.includes(query)) return false;
+      if (query && !aircraftSearchText(aircraft).includes(query)) return false;
       if (distanceFilter !== "all" && (aircraft.distanceKm === null || aircraft.distanceKm > Number(distanceFilter))) return false;
       if (watchlistOnly && !isWatchlisted(aircraft)) return false;
       return true;
     });
-    return filtered.sort((a, b) => {
-      if (sortBy === "callsign") return labelForAircraft(a).localeCompare(labelForAircraft(b));
-      if (sortBy === "altitude") return (b.altitude ?? -Infinity) - (a.altitude ?? -Infinity);
-      return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
-    });
+    if (sortBy === "callsign") return filtered.sort((a, b) => labelForAircraft(a).localeCompare(labelForAircraft(b)));
+    if (sortBy === "altitude") return filtered.sort((a, b) => (b.altitude ?? -Infinity) - (a.altitude ?? -Infinity));
+    // SSE snapshots are already distance-sorted and filters preserve input
+    // order, so the default view avoids a redundant O(n log n) sort.
+    return filtered;
   }, [distanceFilter, isWatchlisted, mapFilteredAircraft, search, sortBy, watchlistOnly]);
   const filteredAircraftByHex = useMemo(
     () => new Map(filteredAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const)),
