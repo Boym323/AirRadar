@@ -4,11 +4,8 @@ import { memo, useEffect, useRef, useState, type RefObject } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
 import { t } from "@/lib/i18n";
 import { recordRadarTrafficList } from "@/lib/radar/performance-diagnostics";
+import { AIRCRAFT_TRAFFIC_ROW_HEIGHT, AIRCRAFT_TRAFFIC_VIRTUALIZATION_THRESHOLD, aircraftTrafficVirtualRange } from "@/lib/radar/traffic-virtualization";
 import { AircraftTrafficRow } from "@/components/aircraft-traffic-row";
-
-const VIRTUAL_ROW_HEIGHT = 62;
-const VIRTUAL_OVERSCAN_ROWS = 6;
-const VIRTUALIZATION_THRESHOLD = 40;
 
 interface VisibleRange {
   start: number;
@@ -36,7 +33,7 @@ function AircraftTrafficListComponent({
   onSelect,
   scrollRootRef,
 }: AircraftTrafficListProps) {
-  const virtualized = aircraft.length >= VIRTUALIZATION_THRESHOLD;
+  const virtualized = aircraft.length >= AIRCRAFT_TRAFFIC_VIRTUALIZATION_THRESHOLD;
   const spaceRef = useRef<HTMLDivElement | null>(null);
   const [visibleRange, setVisibleRange] = useState<VisibleRange>(() => ({
     start: 0,
@@ -58,15 +55,12 @@ function AircraftTrafficListComponent({
       frame = null;
       const rootRect = root.getBoundingClientRect();
       const spaceRect = space.getBoundingClientRect();
-      const visibleTop = Math.max(0, rootRect.top - spaceRect.top);
-      const visibleBottom = Math.max(0, Math.min(spaceRect.height, rootRect.bottom - spaceRect.top));
-      const intersectsViewport = visibleBottom > visibleTop || (spaceRect.top >= rootRect.top && spaceRect.top < rootRect.bottom);
-      const next = intersectsViewport
-        ? {
-            start: Math.max(0, Math.floor(visibleTop / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN_ROWS),
-            end: Math.min(aircraft.length, Math.ceil(visibleBottom / VIRTUAL_ROW_HEIGHT) + VIRTUAL_OVERSCAN_ROWS),
-          }
-        : { start: 0, end: 0 };
+      const next = aircraftTrafficVirtualRange({
+        count: aircraft.length,
+        rootTop: rootRect.top,
+        rootBottom: rootRect.bottom,
+        spaceTop: spaceRect.top,
+      });
       setVisibleRange((current) => sameRange(current, next) ? current : next);
       recordRadarTrafficList(aircraft.length, Math.max(0, next.end - next.start), true);
     };
@@ -115,13 +109,13 @@ function AircraftTrafficListComponent({
 
   const visibleAircraft = aircraft.slice(visibleRange.start, visibleRange.end);
   return <div id="traffic-list" className="aircraft-list aircraft-list-virtualized" data-total-rows={aircraft.length}>
-    <div ref={spaceRef} className="aircraft-list-virtual-space" style={{ height: `${aircraft.length * VIRTUAL_ROW_HEIGHT}px` }}>
+    <div ref={spaceRef} className="aircraft-list-virtual-space" style={{ height: `${aircraft.length * AIRCRAFT_TRAFFIC_ROW_HEIGHT}px` }}>
       {visibleAircraft.map((item, offset) => {
         const index = visibleRange.start + offset;
         return <div
           key={item.icaoHex}
           className="aircraft-list-virtual-row"
-          style={{ transform: `translateY(${index * VIRTUAL_ROW_HEIGHT}px)` }}
+          style={{ transform: `translateY(${index * AIRCRAFT_TRAFFIC_ROW_HEIGHT}px)` }}
         >
           <AircraftTrafficRow
             aircraft={item}
