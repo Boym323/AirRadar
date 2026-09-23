@@ -16,6 +16,7 @@ const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
 const aircraftTrafficRowSource = readFileSync(new URL("../components/aircraft-traffic-row.tsx", import.meta.url), "utf8");
 const aircraftTrafficListSource = readFileSync(new URL("../components/aircraft-traffic-list.tsx", import.meta.url), "utf8");
+const trafficVirtualizationSource = readFileSync(new URL("../lib/radar/traffic-virtualization.ts", import.meta.url), "utf8");
 const radarPerformanceSource = readFileSync(new URL("../lib/radar/performance-diagnostics.ts", import.meta.url), "utf8");
 const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
@@ -154,8 +155,8 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("watchlistedHexes");
     expect(appSource).toContain("default view avoids a redundant O(n log n) sort");
     expect(appSource).toContain("<AircraftTrafficList");
-    expect(aircraftTrafficListSource).toContain("VIRTUALIZATION_THRESHOLD = 40");
-    expect(aircraftTrafficListSource).toContain("VIRTUAL_OVERSCAN_ROWS = 6");
+    expect(trafficVirtualizationSource).toContain("AIRCRAFT_TRAFFIC_VIRTUALIZATION_THRESHOLD = 40");
+    expect(trafficVirtualizationSource).toContain("AIRCRAFT_TRAFFIC_OVERSCAN_ROWS = 6");
     expect(aircraftTrafficListSource).toContain("window.requestAnimationFrame(update)");
     expect(aircraftTrafficListSource).toContain("aircraft.slice(visibleRange.start, visibleRange.end)");
     expect(aircraftTrafficListSource).toContain("memo(AircraftTrafficListComponent)");
