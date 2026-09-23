@@ -86,6 +86,7 @@ import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-co
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 import { createLatestSnapshotScheduler, type LatestSnapshotScheduler } from "@/lib/radar/live-snapshot-scheduler";
+import { mergePendingAircraftChanges, type PendingAircraftChanges } from "@/lib/radar/live-aircraft-changes";
 
 declare global {
   interface Window {
@@ -500,7 +501,7 @@ export function AirRadarApp() {
   const labelCollisionSchedulerRef = useRef<(() => void) | null>(null);
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const liveAircraftByHexRef = useRef<Map<string, AircraftView>>(new Map());
-  const pendingAircraftChangesRef = useRef<{ full: boolean; changedHexes: Set<string>; removedHexes: Set<string> } | null>(null);
+  const pendingAircraftChangesRef = useRef<PendingAircraftChanges | null>(null);
   const aircraftMapSyncRef = useRef<((forceFull?: boolean) => void) | null>(null);
   const aircraftMapSyncFrameRef = useRef<number | null>(null);
   const selectedConfirmedTrailRef = useRef<readonly TrailPoint[]>(EMPTY_TRAIL);
@@ -608,11 +609,7 @@ export function AirRadarApp() {
     if (change.full) aircraftByHex.clear();
     for (const hex of change.removedHexes) aircraftByHex.delete(hex);
     for (const aircraft of change.changedAircraft) aircraftByHex.set(aircraft.icaoHex, aircraft);
-    const pending = pendingAircraftChangesRef.current ?? { full: false, changedHexes: new Set<string>(), removedHexes: new Set<string>() };
-    pending.full ||= change.full;
-    for (const aircraft of change.changedAircraft) pending.changedHexes.add(aircraft.icaoHex);
-    for (const hex of change.removedHexes) pending.removedHexes.add(hex);
-    pendingAircraftChangesRef.current = pending;
+    pendingAircraftChangesRef.current = mergePendingAircraftChanges(pendingAircraftChangesRef.current, change);
 
     // Map markers consume every live delta through refs; React receives only
     // the latest snapshot in a bounded UI cadence.
@@ -1684,6 +1681,9 @@ export function AirRadarApp() {
   const syncAircraftMap = useCallback((forceFull = false) => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
+    const pending = pendingAircraftChangesRef.current;
+    if (!forceFull && pending === null) return;
+    pendingAircraftChangesRef.current = null;
     const liveSnapshot = liveSnapshotRef.current;
     const liveMapFilteredAircraft = filterAircraftForMap(liveSnapshot.aircraft, mapFilters);
     const query = search.trim().toUpperCase();
@@ -1718,8 +1718,6 @@ export function AirRadarApp() {
       }
     }
     const animationJobs = animationJobsRef.current;
-    const pending = pendingAircraftChangesRef.current;
-    pendingAircraftChangesRef.current = null;
     const fullMarkerUpdate = forceFull || pending?.full === true;
     const currentHexes = fullMarkerUpdate ? new Set(liveFilteredAircraft.map((aircraft) => aircraft.icaoHex)) : null;
     const aircraftToUpdate = fullMarkerUpdate
