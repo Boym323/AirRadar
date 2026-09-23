@@ -28,15 +28,30 @@ export function evaluateRadarPerformanceBaseline(result, scenario) {
   }
 
   // These are health/instrumentation invariants rather than timing budgets.
-  // They prove the measured production path was actually active.
-  if (result.animation.frames < 1) fail("animation diagnostics did not record a frame");
-  if (result.animation.markerWrites < aircraft) {
+  // They prove the measured production path was actually active. Validate the
+  // counters before applying thresholds so missing/renamed/NaN fields cannot
+  // accidentally pass comparisons such as undefined < 1.
+  const finiteCounter = (label, value) => {
+    if (!Number.isFinite(value)) {
+      fail(`${label} must be a finite number, got ${String(value)}`);
+      return false;
+    }
+    return true;
+  };
+
+  const framesValid = finiteCounter("animation frames", result.animation.frames);
+  const markerWritesValid = finiteCounter("marker writes", result.animation.markerWrites);
+  const activeJobsValid = finiteCounter("active animation jobs", result.animation.maxActiveJobs);
+  const collisionRunsValid = finiteCounter("label collision runs", result.labelCollision.runs);
+
+  if (framesValid && result.animation.frames < 1) fail("animation diagnostics did not record a frame");
+  if (markerWritesValid && result.animation.markerWrites < aircraft) {
     fail(`marker writes ${result.animation.markerWrites} < one full aircraft sweep ${aircraft}`);
   }
-  if (result.animation.maxActiveJobs > aircraft) {
+  if (activeJobsValid && result.animation.maxActiveJobs > aircraft) {
     fail(`active animation jobs ${result.animation.maxActiveJobs} > aircraft ${aircraft}`);
   }
-  if (result.labelCollision.runs < 1) fail("label collision diagnostics did not record a run");
+  if (collisionRunsValid && result.labelCollision.runs < 1) fail("label collision diagnostics did not record a run");
 
   return violations;
 }
