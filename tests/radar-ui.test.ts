@@ -18,6 +18,7 @@ const aircraftTrafficRowSource = readFileSync(new URL("../components/aircraft-tr
 const aircraftTrafficListSource = readFileSync(new URL("../components/aircraft-traffic-list.tsx", import.meta.url), "utf8");
 const trafficVirtualizationSource = readFileSync(new URL("../lib/radar/traffic-virtualization.ts", import.meta.url), "utf8");
 const radarPerformanceSource = readFileSync(new URL("../lib/radar/performance-diagnostics.ts", import.meta.url), "utf8");
+const liveSnapshotSchedulerSource = readFileSync(new URL("../lib/radar/live-snapshot-scheduler.ts", import.meta.url), "utf8");
 const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
@@ -181,6 +182,19 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("const frameStartedAt = performanceDiagnostics ? performance.now() : 0");
     expect(radarPerformanceSource).toContain("__airradarPerformanceDiagnostics");
     expect(radarPerformanceSource).toContain('includes("longtask")');
+  });
+
+  it("keeps high-frequency aircraft deltas off the main React render cadence", () => {
+    expect(liveSnapshotSchedulerSource).toContain("RADAR_REACT_SNAPSHOT_INTERVAL_MS = 200");
+    expect(appSource).toContain("liveSnapshotRef.current = next");
+    expect(appSource).toContain("scheduleAircraftMapSync()");
+    expect(appSource).toContain("if (document.hidden)");
+    expect(appSource).toContain("aircraftMapSyncRef.current?.(false)");
+    expect(appSource).toContain("reactSnapshotSchedulerRef.current?.push(next, change.full)");
+    expect(appSource).toContain("const syncAircraftMap = useCallback");
+    expect(appSource).toContain("const liveSnapshot = liveSnapshotRef.current");
+    expect(appSource).toContain("aircraftMapSyncRef.current = syncAircraftMap");
+    expect(appSource).not.toContain("setSnapshot(next)");
   });
 
   it("fades the desktop drawer while removing closed contents from overflow geometry", () => {

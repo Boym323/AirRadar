@@ -194,8 +194,13 @@ and ODbL attribution without exposing raw provider errors or exact receiver
 coordinates.
 
 The live map is a MapLibre map with DOM markers keyed by ICAO hex and GeoJSON
-overlays. Route visualization is a separate Route V2 namespace. See
-[Runtime invariants](RUNTIME-INVARIANTS.md#maplibre-namespaces-and-cleanup)
+overlays. Route visualization is a separate Route V2 namespace. High-frequency
+SSE aircraft deltas update the live aircraft refs and schedule MapLibre marker
+work directly, independently of the main React render cadence. React-facing
+snapshot consumers receive the newest coalesced snapshot on a bounded 200 ms
+UI interval; full SSE snapshots commit immediately. This split does not change
+the SSE protocol, confirmed-position motion semantics, or MapLibre marker
+ownership. See [Runtime invariants](RUNTIME-INVARIANTS.md#maplibre-namespaces-and-cleanup)
 for the complete ownership list and cleanup contract.
 
 Airport infrastructure is an offline maintenance path. OurAirports source
