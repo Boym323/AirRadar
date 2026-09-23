@@ -105,6 +105,23 @@ reports animation-frame work, marker writes, label-collision duration, virtual
 traffic rows, and browser long tasks. The probe is disabled by default and must
 not change live-state, SSE, or motion semantics.
 
+After a prepared production build, run `npm run benchmark:radar` to execute the
+production radar performance baseline. The Playwright benchmark replaces only
+the browser's aircraft EventSource with deterministic synthetic SSE V2 traffic,
+then measures the real production radar at 50, 100, 250, and 500 aircraft. It
+records animation average/max duration, marker writes per second, label
+collision average/max duration, browser long tasks, DOM/MapLibre marker counts,
+and mounted/virtualized traffic rows. Results are written to
+`artifacts/radar-performance-baseline.json`; CI uploads that report and fails
+when a scenario exceeds the checked-in budgets in
+`scripts/radar-performance-budget.mjs`.
+
+For a quicker local sample, select scenarios or shorten the measurement window,
+for example `RADAR_PERF_SCENARIOS=50,250 RADAR_PERF_MEASURE_MS=1200 npm run
+benchmark:radar`. Performance budgets should be changed only with a measured
+baseline and an explanation in the PR; do not raise a budget merely to make a
+regression green.
+
 Documentation-only changes that do not touch code, package files, schema,
 migrations, or build configuration do not require the build/full suite unless
 the user asks for it. Still run relevant lightweight checks such as link
