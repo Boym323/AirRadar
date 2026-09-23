@@ -250,7 +250,7 @@ function ognGlyphPath(aircraftType: OgnTargetView["aircraftType"]): string {
   return aircraftType === "glider" || aircraftType === "paraglider" || aircraftType === "hang_glider"
     ? "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z"
     : aircraftType === "helicopter"
-      ? "M5 9h22M16 9v5m-7 0h14l3 5H6l3-5Zm7 0h14l3 5H6l3-5Zm7 5v8m-5 0h10"
+      ? "M5 9h22M16 9v5m-7 0h14l3 5H6l3-5Zm7 5v8m-5 0h10"
       : aircraftType === "balloon" || aircraftType === "airship"
         ? "M16 3c5 0 8 4 8 9 0 5-3 8-8 8s-8-3-8-8c0-5 3-9 8-9Zm0 17v6m-4 0h8"
         : "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z";
