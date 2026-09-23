@@ -599,6 +599,8 @@ export function AirRadarApp() {
     // existing hidden-tab contract by applying confirmed positions directly;
     // syncAircraftMap already snaps instead of animating while hidden.
     if (document.hidden) {
+      if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
+      aircraftMapSyncFrameRef.current = null;
       aircraftMapSyncRef.current?.(false);
       return;
     }
