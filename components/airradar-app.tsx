@@ -59,7 +59,7 @@ import {
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
-import { AircraftTrafficRow } from "@/components/aircraft-traffic-row";
+import { AircraftTrafficList } from "@/components/aircraft-traffic-list";
 import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import { useDatasetQuery, type DatasetState } from "@/components/use-dataset-query";
@@ -84,6 +84,7 @@ import {
 import { createLabelCollisionScheduler } from "@/lib/radar/aircraft-label-collision";
 import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-controller";
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
+import { recordRadarAnimationFrame, recordRadarLabelCollision, startRadarPerformanceDiagnostics } from "@/lib/radar/performance-diagnostics";
 
 declare global {
   interface Window {
@@ -478,6 +479,7 @@ export function AirRadarApp() {
   const previousDrawerStateRef = useRef<RadarDrawerState>("closed");
   const radarContentRef = useRef<HTMLElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
+  const sidebarBrowseRef = useRef<HTMLDivElement | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const centeredTrafficRef = useRef(false);
@@ -1105,16 +1107,21 @@ export function AirRadarApp() {
     const ognMarkers = ognMarkersRef.current;
     const liveTrails = liveTrailsRef.current;
     const mapReplays = mapReplayRef.current;
+    const stopPerformanceDiagnostics = startRadarPerformanceDiagnostics(window.location.search);
     if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
       window.__airradarAircraftMarkersForDiagnostics = aircraftMarkers;
     }
 
-    const runLabelCollision = () => applyAircraftLabelCollisionLayout({
-      map,
-      aircraftMarkers,
-      routeAirportFeatures: routeAirportGeoJsonRef.current.features,
-      routeAirportLabelLayerId: ROUTE_V2_AIRPORT_LABEL_LAYER_ID,
-    });
+    const runLabelCollision = () => {
+      const startedAt = performance.now();
+      applyAircraftLabelCollisionLayout({
+        map,
+        aircraftMarkers,
+        routeAirportFeatures: routeAirportGeoJsonRef.current.features,
+        routeAirportLabelLayerId: ROUTE_V2_AIRPORT_LABEL_LAYER_ID,
+      });
+      recordRadarLabelCollision(performance.now() - startedAt);
+    };
     const labelCollisionScheduler = createLabelCollisionScheduler(runLabelCollision);
     labelCollisionSchedulerRef.current = () => labelCollisionScheduler.schedule();
 
@@ -1131,6 +1138,8 @@ export function AirRadarApp() {
         labelCollisionSchedulerRef.current?.();
         return;
       }
+      const frameStartedAt = performance.now();
+      let markerWrites = 0;
       let continueAnimation = false;
       const selectedAnimationHex = selectedHexRef.current;
       const selectedAnimationJob = selectedAnimationHex ? animationJobs.get(selectedAnimationHex) : undefined;
@@ -1161,6 +1170,7 @@ export function AirRadarApp() {
           durationMs: job.correctionDurationMs,
         }, job.history, job.visualHeading);
         job.handle.marker.setLngLat([motion.lon, motion.lat]);
+        markerWrites += 1;
         if (motion.heading !== null) setAircraftMarkerHeading(job.handle, motion.heading, mapBearing);
         renderedAnyMarker = true;
         if (job === selectedAnimationJob) selectedAnimationMotion = motion;
@@ -1187,6 +1197,7 @@ export function AirRadarApp() {
           ? { type: "Feature", properties: { icaoHex: selectedAnimationHex }, geometry: { type: "LineString", coordinates } }
           : { type: "FeatureCollection", features: [] });
       }
+      recordRadarAnimationFrame(performance.now() - frameStartedAt, markerWrites, animationJobs.size);
       if (continueAnimation) animationFrameRef.current = window.requestAnimationFrame(runAnimations);
     };
     const ensureAnimationFrame = () => {
@@ -1474,6 +1485,7 @@ export function AirRadarApp() {
       for (const handle of ognMarkers.values()) handle.marker.remove();
       ognMarkers.clear();
       liveTrails.clear();
+      stopPerformanceDiagnostics();
       map.remove();
       if (window.__airradarMapForDiagnostics === map) delete window.__airradarMapForDiagnostics;
       if (window.__airradarAircraftMarkersForDiagnostics === aircraftMarkers) delete window.__airradarAircraftMarkersForDiagnostics;
@@ -2387,7 +2399,7 @@ export function AirRadarApp() {
               </IconButton>
               <button type="button" className="drawer-close-button" onClick={closeRadarDrawer} aria-label={drawerState === "traffic" ? t.history.closeTrafficPanel : drawerState === "ogn" ? t.history.closePanel : t.history.closeAircraftDetails}><UiIcon name="close" /></button>
             </div>
-          <div className="sidebar-browse">
+          <div ref={sidebarBrowseRef} className="sidebar-browse">
           <div className="sidebar-header">
             <div className="search-wrap">
               <span className="search-icon" aria-hidden="true">⌕</span>
@@ -2476,9 +2488,9 @@ export function AirRadarApp() {
             {intelligenceOpened && <IntelligenceFeed />}
           </details>
 
-          <div id="traffic-list" className={`aircraft-list ${trafficSource === "ogn" ? "ogn-traffic-list" : ""}`}>
-            {trafficSource === "ogn" ? (
-              filteredOgnTargets.length === 0 ? <div className="empty-list ogn-empty"><strong>{ognSnapshot.targets.length === 0 ? t.ogn.empty : t.ogn.noMatching}</strong></div> : filteredOgnTargets.map((target) => (
+          {trafficSource === "ogn" ? (
+            <div id="traffic-list" className="aircraft-list ogn-traffic-list">
+              {filteredOgnTargets.length === 0 ? <div className="empty-list ogn-empty"><strong>{ognSnapshot.targets.length === 0 ? t.ogn.empty : t.ogn.noMatching}</strong></div> : filteredOgnTargets.map((target) => (
                 <button key={target.id} type="button" className={`aircraft-row ogn-row ${selectedOgnId === target.id ? "selected" : ""} ${target.stale ? "stale" : ""}`} aria-pressed={selectedOgnId === target.id} onClick={() => selectOgn(target.id)}>
                   <span className="aircraft-row-icon ogn-row-icon"><OgnGlyph aircraftType={target.aircraftType} /></span>
                   <span className="aircraft-row-main">
@@ -2488,22 +2500,18 @@ export function AirRadarApp() {
                   </span>
                   <span className="aircraft-row-distance">{formatDistance(target.distanceKm)}</span>
                 </button>
-              ))
-            ) : filteredAircraft.length === 0 ? (
-              <div className="empty-list">
-                <strong>{snapshot.aircraft.length === 0 ? t.radar.waitingForTraffic : t.radar.noMatchingAircraft}</strong>
-                {snapshot.aircraft.length === 0 ? t.radar.waitingForTrafficDescription : t.radar.noMatchingAircraftDescription}
-              </div>
-            ) : filteredAircraft.map((aircraft) => (
-              <AircraftTrafficRow
-                key={aircraft.icaoHex}
-                aircraft={aircraft}
-                selected={selectedHex === aircraft.icaoHex}
-                watchlisted={isWatchlisted(aircraft)}
-                onSelect={selectAircraft}
-              />
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <AircraftTrafficList
+              aircraft={filteredAircraft}
+              totalAircraftCount={snapshot.aircraft.length}
+              selectedHex={selectedHex}
+              watchlistedHexes={watchlistedHexes}
+              onSelect={selectAircraft}
+              scrollRootRef={sidebarBrowseRef}
+            />
+          )}
 
           <details className="sidebar-secondary-tools" onToggle={(event) => setLogbookOpened(event.currentTarget.open)}>
             <summary>{t.dashboard.logbookTitle}<span>{t.dashboard.openStatistics}</span></summary>
