@@ -4,16 +4,17 @@ import { getAircraftHistory } from "@/lib/server/history";
 import { GET as getAirports } from "@/app/api/airports/route";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const trafficBrowserSource = readFileSync(new URL("../components/radar/radar-traffic-browser.tsx", import.meta.url), "utf8");
 const intelligenceHook = readFileSync(new URL("../components/use-intelligence-stream.ts", import.meta.url), "utf8");
 const airportsRoute = readFileSync(new URL("../app/api/airports/route.ts", import.meta.url), "utf8");
 const historyRoute = readFileSync(new URL("../app/api/history/[hex]/route.ts", import.meta.url), "utf8");
 
 describe("secondary data loading", () => {
   it("does not mount Intelligence or Logbook before their details are opened", () => {
-    expect(appSource).toContain("{intelligenceOpened && <IntelligenceFeed />}");
-    expect(appSource).toContain("{logbookOpened && <LogbookSummary />}");
-    expect(appSource).toContain("onToggle={(event) => setIntelligenceOpened(event.currentTarget.open)}");
-    expect(appSource).toContain("onToggle={(event) => setLogbookOpened(event.currentTarget.open)}");
+    expect(trafficBrowserSource).toContain("{intelligenceOpened && <IntelligenceFeed />}");
+    expect(trafficBrowserSource).toContain("{logbookOpened && <LogbookSummary />}");
+    expect(trafficBrowserSource).toContain("onToggle={(event) => setIntelligenceOpened(event.currentTarget.open)}");
+    expect(trafficBrowserSource).toContain("onToggle={(event) => setLogbookOpened(event.currentTarget.open)}");
     expect(intelligenceHook).toContain("source.close()");
     expect(intelligenceHook).toContain("controller.abort()");
   });
