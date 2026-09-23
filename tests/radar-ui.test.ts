@@ -130,7 +130,9 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toContain("background: currentColor");
     expect(globalCss).not.toMatch(/\.aircraft-plane \.aircraft-glyph-asset[^}]*filter:/);
     expect(appSource).toContain("aircraftMarkersRef.current.get(selectedHex)?.marker.getLngLat()");
-    expect(appSource).toContain("POSITION_ONLY_CORRECTION_MAX_MS");
+    expect(appSource).toContain("confirmedInterpolationDurationMs(");
+    expect(appSource).toContain("allowPrediction: false");
+    expect(appSource).not.toContain("predictedPosition(");
     expect(appSource).toContain("motionRenderIntervalMs(animationJobs.size)");
     expect(appSource).toContain("job === selectedAnimationJob || bulkFrameDue");
     expect(appSource).toContain('map.on("zoom", updateLiveZoomLabels)');
