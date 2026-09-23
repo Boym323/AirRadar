@@ -75,6 +75,25 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Production core and browser gates
         run: npm run test:production:all
+      - name: Radar production performance baseline
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          benchmark_status=0
+          npm run benchmark:radar || benchmark_status=$?
+          if [[ -f artifacts/radar-performance-baseline.md ]]; then
+            cat artifacts/radar-performance-baseline.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          exit "${benchmark_status}"
+      - name: Upload radar performance baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-performance-baseline-${{ github.sha }}
+          path: |
+            artifacts/radar-performance-baseline.json
+            artifacts/radar-performance-baseline.md
+          if-no-files-found: ignore
 
   deploy:
     name: Deploy production

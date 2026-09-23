@@ -23,3 +23,5 @@ npm-debug.log*
 *.tsbuildinfo
 .next*/
 data/flightaware-usage.json
+artifacts/radar-performance-baseline.json
+artifacts/radar-performance-baseline.md

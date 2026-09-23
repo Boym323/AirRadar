@@ -58,7 +58,8 @@
     "aviation-data:sync": "node scripts/aviation-data-sync.mjs",
     "generate:boundary:at": "node scripts/generate-at-boundary.mjs",
     "changelog": "node scripts/changelog.mjs generate",
-    "changelog:backfill": "node scripts/changelog.mjs backfill"
+    "changelog:backfill": "node scripts/changelog.mjs backfill",
+    "benchmark:radar": "node scripts/radar-performance-baseline.mjs"
   },
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.9",
