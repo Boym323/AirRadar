@@ -176,7 +176,7 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
 };
 
 const MIN_AIRCRAFT_ANIMATION_MS = 300;
-const MAX_AIRCRAFT_ANIMATION_MS = 2_000;
+const MAX_AIRCRAFT_ANIMATION_MS = 9_000;
 const EMPTY_TRAIL: TrailPoint[] = [];
 
 function trailEndpointKey(point: TrailPoint | undefined): string {
