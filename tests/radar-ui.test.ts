@@ -170,10 +170,11 @@ describe("radar UI polish helpers", () => {
 
   it("keeps performance diagnostics opt-in and off the default hot path", () => {
     expect(appSource).toContain("startRadarPerformanceDiagnostics(window.location.search)");
-    expect(appSource).toContain("recordRadarAnimationFrame(");
-    expect(appSource).toContain("recordRadarLabelCollision(");
+    expect(appSource).toContain("performanceDiagnostics.recordAnimationFrame(");
+    expect(appSource).toContain("performanceDiagnostics.recordLabelCollision(");
     expect(aircraftTrafficListSource).toContain("recordRadarTrafficList(");
     expect(radarPerformanceSource).toContain('get("perfDiagnostics") !== "1"');
+    expect(appSource).toContain("const frameStartedAt = performanceDiagnostics ? performance.now() : 0");
     expect(radarPerformanceSource).toContain("__airradarPerformanceDiagnostics");
     expect(radarPerformanceSource).toContain('includes("longtask")');
   });
