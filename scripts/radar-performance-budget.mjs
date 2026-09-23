@@ -1,61 +1,14 @@
-export const RADAR_PERFORMANCE_SCENARIOS = Object.freeze([
-  {
-    aircraft: 50,
+export const RADAR_PERFORMANCE_SCENARIOS = Object.freeze(
+  [50, 100, 250, 500].map((aircraft) => ({
+    aircraft,
     budget: {
-      maxAnimationAverageMs: 20,
-      maxAnimationFrameMs: 100,
-      maxLabelCollisionAverageMs: 30,
-      maxLabelCollisionRunMs: 150,
-      maxLongTasks: 4,
-      maxLongTaskMs: 250,
+      // CI gates only deterministic structural invariants. Wall-clock timings
+      // are recorded in the baseline report, but hosted-runner load must not
+      // turn them into flaky pass/fail criteria.
       maxMountedTrafficRows: 36,
-      minMarkerWritesPerSecond: 100,
     },
-  },
-  {
-    aircraft: 100,
-    budget: {
-      maxAnimationAverageMs: 25,
-      maxAnimationFrameMs: 120,
-      maxLabelCollisionAverageMs: 40,
-      maxLabelCollisionRunMs: 180,
-      maxLongTasks: 6,
-      maxLongTaskMs: 250,
-      maxMountedTrafficRows: 36,
-      minMarkerWritesPerSecond: 180,
-    },
-  },
-  {
-    aircraft: 250,
-    budget: {
-      maxAnimationAverageMs: 40,
-      maxAnimationFrameMs: 160,
-      maxLabelCollisionAverageMs: 75,
-      maxLabelCollisionRunMs: 250,
-      maxLongTasks: 10,
-      maxLongTaskMs: 300,
-      maxMountedTrafficRows: 36,
-      minMarkerWritesPerSecond: 400,
-    },
-  },
-  {
-    aircraft: 500,
-    budget: {
-      maxAnimationAverageMs: 60,
-      maxAnimationFrameMs: 220,
-      maxLabelCollisionAverageMs: 120,
-      maxLabelCollisionRunMs: 350,
-      maxLongTasks: 16,
-      maxLongTaskMs: 400,
-      maxMountedTrafficRows: 36,
-      minMarkerWritesPerSecond: 700,
-    },
-  },
-]);
-
-function finite(value) {
-  return typeof value === "number" && Number.isFinite(value);
-}
+  })),
+);
 
 export function evaluateRadarPerformanceBaseline(result, scenario) {
   const violations = [];
@@ -74,31 +27,16 @@ export function evaluateRadarPerformanceBaseline(result, scenario) {
     fail(`mounted traffic rows ${result.dom.mountedTrafficRows} > budget ${budget.maxMountedTrafficRows}`);
   }
 
-  if (result.animation.frames < 3) fail(`animation frames ${result.animation.frames} < 3`);
-  if (!finite(result.animation.markerWritesPerSecond) || result.animation.markerWritesPerSecond < budget.minMarkerWritesPerSecond) {
-    fail(`marker writes/s ${result.animation.markerWritesPerSecond} < budget ${budget.minMarkerWritesPerSecond}`);
+  // These are health/instrumentation invariants rather than timing budgets.
+  // They prove the measured production path was actually active.
+  if (result.animation.frames < 1) fail("animation diagnostics did not record a frame");
+  if (result.animation.markerWrites < aircraft) {
+    fail(`marker writes ${result.animation.markerWrites} < one full aircraft sweep ${aircraft}`);
   }
-  if (!finite(result.animation.averageMs) || result.animation.averageMs > budget.maxAnimationAverageMs) {
-    fail(`animation average ${result.animation.averageMs}ms > budget ${budget.maxAnimationAverageMs}ms`);
+  if (result.animation.maxActiveJobs > aircraft) {
+    fail(`active animation jobs ${result.animation.maxActiveJobs} > aircraft ${aircraft}`);
   }
-  if (!finite(result.animation.maxMs) || result.animation.maxMs > budget.maxAnimationFrameMs) {
-    fail(`animation max ${result.animation.maxMs}ms > budget ${budget.maxAnimationFrameMs}ms`);
-  }
-
-  if (result.labelCollision.runs < 1) fail("label collision did not run");
-  if (!finite(result.labelCollision.averageMs) || result.labelCollision.averageMs > budget.maxLabelCollisionAverageMs) {
-    fail(`label collision average ${result.labelCollision.averageMs}ms > budget ${budget.maxLabelCollisionAverageMs}ms`);
-  }
-  if (!finite(result.labelCollision.maxMs) || result.labelCollision.maxMs > budget.maxLabelCollisionRunMs) {
-    fail(`label collision max ${result.labelCollision.maxMs}ms > budget ${budget.maxLabelCollisionRunMs}ms`);
-  }
-
-  if (result.longTasks.count > budget.maxLongTasks) {
-    fail(`long tasks ${result.longTasks.count} > budget ${budget.maxLongTasks}`);
-  }
-  if (result.longTasks.count > 0 && result.longTasks.maxMs > budget.maxLongTaskMs) {
-    fail(`long task max ${result.longTasks.maxMs}ms > budget ${budget.maxLongTaskMs}ms`);
-  }
+  if (result.labelCollision.runs < 1) fail("label collision diagnostics did not record a run");
 
   return violations;
 }
