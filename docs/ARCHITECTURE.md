@@ -289,8 +289,8 @@ Flight Intelligence loads the imported PostgreSQL airport catalog once into a
 bounded runtime index; it does not scan a sample/world list on each aircraft
 poll. Track memory is limited to 120 samples and a five-minute holding window,
 and stale aircraft tracks are removed with live-state cleanup. Event persistence
-stores the newest matching Flight's `flightId` when available; database failures
-remain best-effort.
+stores the Flight whose persisted time range covers the event's observation
+time when available; database failures remain best-effort.
 
 Source awareness is centralized in `lib/aircraft/source-awareness.ts`.
 `LOCAL` and `NETWORK` are provenance memberships, not the dominant `origin`

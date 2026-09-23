@@ -4,12 +4,13 @@ import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { formatTime, t } from "@/lib/i18n";
 import type { FlightEventType } from "@/lib/intelligence/types";
 
-const eventTypes: FlightEventType[] = ["APPROACH", "LANDING", "TAKEOFF", "GO_AROUND", "HOLDING", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"];
+const eventTypes: FlightEventType[] = ["APPROACH", "LANDING", "TAKEOFF", "GO_AROUND", "HOLDING", "DIVERSION", "TOP_OF_DESCENT", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"];
 
 export const dynamic = "force-dynamic";
 export default async function IntelligencePage() {
   const events = await getFlightIntelligenceService().query({ limit: 50 });
   const counts = new Map(eventTypes.map((type) => [type, events.filter((event) => event.type === type).length]));
+  const evidenceTypes = t.intelligence.evidenceTypes as Record<string, string>;
   return <AirRadarPageShell><main className="secondary-page intelligence-page">
     <header className="intelligence-header">
       <div>
@@ -32,7 +33,7 @@ export default async function IntelligencePage() {
         </div>
         <div className="intelligence-aircraft"><Link href={`/aircraft/${event.icaoHex}`}>{event.callsign || event.registration || event.icaoHex}</Link><span>{event.icaoHex}</span></div>
         <div className="intelligence-location">{event.airportIcao ?? event.sectorId ?? t.intelligence.noLocation}</div>
-        <div className="intelligence-evidence"><strong>{t.intelligence.evidence}</strong><ul>{event.evidence.slice(0, 4).map((item) => <li key={item}>{item}</li>)}</ul></div>
+        <div className="intelligence-evidence"><strong>{t.intelligence.evidence}</strong><ul>{event.evidence.slice(0, 4).map((item) => <li key={item}>{evidenceTypes[item] ?? item}</li>)}</ul></div>
       </article>) : <div className="intelligence-empty"><strong>{t.intelligence.empty}</strong><span>{t.intelligence.emptyHint}</span></div>}
     </section>
   </main></AirRadarPageShell>;
