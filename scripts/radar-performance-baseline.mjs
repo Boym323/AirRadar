@@ -83,7 +83,7 @@ async function installSyntheticAircraftStream(page, count) {
         geomRate: 0,
         squawk: "2000",
         category: "A3",
-        emergency: "none",
+        emergency: null,
         rssi: -15,
         messages: 1000 + tick,
         seenSeconds: 0,
