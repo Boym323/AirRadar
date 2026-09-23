@@ -1111,7 +1111,9 @@ export function AirRadarApp() {
     let performanceDiagnosticsDisposed = false;
     if (new URLSearchParams(window.location.search).get("perfDiagnostics") === "1") {
       void import("@/lib/radar/performance-diagnostics").then(({ startRadarPerformanceDiagnostics }) => {
-        if (!performanceDiagnosticsDisposed) performanceDiagnostics = startRadarPerformanceDiagnostics(window.location.search);
+        if (performanceDiagnosticsDisposed) return;
+        performanceDiagnostics = startRadarPerformanceDiagnostics(window.location.search);
+        if (performanceDiagnostics) window.dispatchEvent(new Event("airradar:performance-diagnostics-ready"));
       });
     }
     if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
