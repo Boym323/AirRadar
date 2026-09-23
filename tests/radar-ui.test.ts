@@ -15,6 +15,8 @@ import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
 const aircraftTrafficRowSource = readFileSync(new URL("../components/aircraft-traffic-row.tsx", import.meta.url), "utf8");
+const aircraftTrafficListSource = readFileSync(new URL("../components/aircraft-traffic-list.tsx", import.meta.url), "utf8");
+const radarPerformanceSource = readFileSync(new URL("../lib/radar/performance-diagnostics.ts", import.meta.url), "utf8");
 const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
@@ -151,12 +153,28 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("aircraftSearchTextCache");
     expect(appSource).toContain("watchlistedHexes");
     expect(appSource).toContain("default view avoids a redundant O(n log n) sort");
-    expect(appSource).toContain("<AircraftTrafficRow");
+    expect(appSource).toContain("<AircraftTrafficList");
+    expect(aircraftTrafficListSource).toContain("VIRTUALIZATION_THRESHOLD = 40");
+    expect(aircraftTrafficListSource).toContain("VIRTUAL_OVERSCAN_ROWS = 6");
+    expect(aircraftTrafficListSource).toContain("window.requestAnimationFrame(update)");
+    expect(aircraftTrafficListSource).toContain("aircraft.slice(visibleRange.start, visibleRange.end)");
+    expect(aircraftTrafficListSource).toContain("memo(AircraftTrafficListComponent)");
     expect(aircraftTrafficRowSource).toContain("memo(");
     expect(aircraftTrafficRowSource).toContain("previous.aircraft === next.aircraft");
     expect(aircraftTrafficRowSource).toContain("previous.selected === next.selected");
+    expect(globalCss).toMatch(/\.aircraft-list-virtual-row\s*\{[^}]*position:\s*absolute/);
     expect(globalCss).toMatch(/\.aircraft-row\s*\{[^}]*content-visibility:\s*auto/);
     expect(globalCss).toMatch(/\.aircraft-row\s*\{[^}]*contain-intrinsic-size:\s*62px/);
+  });
+
+  it("keeps performance diagnostics opt-in and off the default hot path", () => {
+    expect(appSource).toContain("startRadarPerformanceDiagnostics(window.location.search)");
+    expect(appSource).toContain("recordRadarAnimationFrame(");
+    expect(appSource).toContain("recordRadarLabelCollision(");
+    expect(aircraftTrafficListSource).toContain("recordRadarTrafficList(");
+    expect(radarPerformanceSource).toContain('get("perfDiagnostics") !== "1"');
+    expect(radarPerformanceSource).toContain("__airradarPerformanceDiagnostics");
+    expect(radarPerformanceSource).toContain('includes("longtask")');
   });
 
   it("fades the desktop drawer while removing closed contents from overflow geometry", () => {
