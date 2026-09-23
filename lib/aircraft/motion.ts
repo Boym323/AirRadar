@@ -136,11 +136,13 @@ export function motionAt(source: MotionSource, timestamp: number, correction?: {
 }
 
 export function correctionFor(current: { lon: number; lat: number }, source: MotionSource, timestamp: number, durationMs: number, history?: MotionHistory) {
-  if (
-    source.observedAt === null
-    || timestamp < source.observedAt
-    || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS
-  ) return null;
+  if (source.observedAt === null || timestamp < source.observedAt) return null;
+  // Prediction must stop after the stale horizon, but confirmed-position
+  // interpolation is different: a slow provider may legitimately deliver a
+  // newer confirmed point whose observation time is already older than the
+  // prediction horizon. Rejecting that point here turns a smooth interpolation
+  // into an immediate marker snap.
+  if (source.allowPrediction !== false && timestamp - source.observedAt > MAX_PREDICTION_AGE_MS) return null;
   const [lon, lat] = predictedPosition(source, timestamp, history);
   const distance = haversineDistanceKm(current.lat, current.lon, lat, lon);
   if (distance > MAX_PREDICTION_CORRECTION_KM) return null;
