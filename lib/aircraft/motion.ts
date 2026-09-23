@@ -96,7 +96,7 @@ export function confirmedInterpolationDurationMs(
   next: MotionSource,
   receivedGapMs: number,
   minimumMs = 300,
-  maximumMs = 2_000,
+  maximumMs = 10_000,
 ): number {
   const observedGap = previous.observedAt !== null
     && next.observedAt !== null
@@ -127,7 +127,7 @@ export function motionAt(source: MotionSource, timestamp: number, correction?: {
   const [lon, lat] = predictedPosition(source, timestamp, history);
   const stale = source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS;
   const progress = correction ? Math.max(0, Math.min(1, (timestamp - correction.startedAt) / correction.durationMs)) : 1;
-  const active = Boolean(correction && progress < 1 && !stale);
+  const active = Boolean(correction && progress < 1 && (source.allowPrediction === false || !stale));
   const baseHeading = normalizeHeading(source.track) ?? history?.lastTrack ?? history?.positionHeading ?? null;
   // Render the reported/fallback course directly. Extrapolating visual heading
   // with an inferred turn rate causes obvious over-rotation when track jitters.
