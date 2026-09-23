@@ -1656,10 +1656,6 @@ export function AirRadarApp() {
     // order, so the default view avoids a redundant O(n log n) sort.
     return filtered;
   }, [distanceFilter, isWatchlisted, mapFilteredAircraft, search, sortBy, watchlistOnly]);
-  const filteredAircraftByHex = useMemo(
-    () => new Map(filteredAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const)),
-    [filteredAircraft],
-  );
   const filteredOgnTargets = useMemo(() => {
     const query = search.trim().toUpperCase();
     if (!query) return ognSnapshot.targets;
