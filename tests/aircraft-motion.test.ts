@@ -166,11 +166,23 @@ describe("aircraft motion", () => {
     expect(halfway.lon).toBeLessThan(14);
   });
 
+  it("keeps confirmed interpolation active beyond the prediction horizon", () => {
+    const s = { ...source(90, 1_000), allowPrediction: false };
+    const correction = { lon: -0.01, lat: 0, startedAt: 1_000, durationMs: 9_000 };
+    const result = motionAt(s, 8_500, correction);
+    expect(result.stale).toBe(false);
+    expect(result.correctionActive).toBe(true);
+    const later = motionAt(s, 9_500, correction);
+    expect(later.stale).toBe(true);
+    expect(later.correctionActive).toBe(true);
+  });
+
   it("matches interpolation duration to the confirmed observation cadence", () => {
     const previous = source(90, 10_000);
     const next = source(90, 11_000, 50.001, 14.001);
     expect(confirmedInterpolationDurationMs(previous, next, 3_000)).toBe(900);
-    expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: 13_000 }, 3_000)).toBe(2_000);
+    expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: 13_000 }, 3_000)).toBe(2_700);
+    expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: 20_000 }, 10_000, 300, 9_000)).toBe(9_000);
     expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: null }, 200)).toBe(300);
   });
 
