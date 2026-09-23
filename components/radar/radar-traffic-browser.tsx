@@ -7,7 +7,7 @@ import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import { UiIcon } from "@/components/ui-primitives";
 import type { AircraftView, PublicStateSnapshot } from "@/lib/aircraft/types";
 import type { AircraftQuickFilter, MapAircraftFilters } from "@/lib/aircraft/map-filters";
-import { formatAltitude, formatDistance, formatNumber, formatSpeed, formatTrack, t, watchlistKindLabel, watchlistSummary } from "@/lib/i18n";
+import { formatAltitude, formatDistance, formatSpeed, formatTrack, t, watchlistKindLabel, watchlistSummary } from "@/lib/i18n";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 
 const IntelligenceFeed = dynamic(() => import("@/components/intelligence-feed").then((module) => module.IntelligenceFeed));
