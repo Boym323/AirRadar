@@ -28,13 +28,22 @@ const transparentPng = Buffer.from(
   "base64",
 );
 
-async function waitForHealthyServer() {
+async function waitForHealthyServer(child, exitPromise) {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error(`Radar performance server exited during startup with code ${child.exitCode}`);
     try {
       const response = await fetch(`${baseUrl}/api/health`);
-      if (response.ok) return;
-    } catch {
+      if (response.ok) {
+        const earlyExit = await Promise.race([
+          exitPromise.then((exit) => exit),
+          wait(200).then(() => null),
+        ]);
+        if (earlyExit) throw new Error(`Radar performance server exited during startup with code ${earlyExit.code ?? "null"} signal ${earlyExit.signal ?? "none"}`);
+        return;
+      }
+    } catch (error) {
+      if (child.exitCode !== null) throw error;
       // Next.js is still starting.
     }
     await wait(100);
@@ -321,15 +330,18 @@ async function main() {
     stdio: ["ignore", "pipe", "pipe"],
   });
   const serverLogs = [];
+  const exitPromise = new Promise((resolveExit) => child.once("exit", (code, signal) => resolveExit({ code, signal })));
   child.stdout.on("data", (chunk) => serverLogs.push(chunk.toString()));
   child.stderr.on("data", (chunk) => serverLogs.push(chunk.toString()));
-  const stop = () => child.kill("SIGTERM");
+  const stop = () => {
+    if (child.exitCode === null && child.signalCode === null) child.kill("SIGTERM");
+  };
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
 
   let browser;
   try {
-    await waitForHealthyServer();
+    await waitForHealthyServer(child, exitPromise);
     browser = await chromium.launch({ headless: true });
     const results = [];
     for (const scenario of scenarios) results.push(await measureScenario(browser, scenario));
@@ -360,7 +372,7 @@ async function main() {
   } finally {
     await browser?.close();
     stop();
-    await new Promise((resolveExit) => child.once("exit", resolveExit));
+    await exitPromise;
     process.removeListener("SIGINT", stop);
     process.removeListener("SIGTERM", stop);
     rmSync(runtimeStateDirectory, { recursive: true, force: true });
