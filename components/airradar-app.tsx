@@ -1957,7 +1957,15 @@ export function AirRadarApp() {
       routeAirportSourceKeyRef.current = routeAirportSourceKey;
       labelCollisionSchedulerRef.current?.();
     }
-  }, [colorMode, currentRadarPadding, liveFilteredAircraft, liveFilteredAircraftByHex, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, liveSnapshot.aircraft, liveSnapshot.receiver.lat, liveSnapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [colorMode, currentRadarPadding, distanceFilter, isWatchlisted, mapFilters, mapReady, mapZoom, search, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, selectedHex, selectAircraft, watchlistOnly]);
+
+  useEffect(() => {
+    aircraftMapSyncRef.current = syncAircraftMap;
+    syncAircraftMap();
+    return () => {
+      if (aircraftMapSyncRef.current === syncAircraftMap) aircraftMapSyncRef.current = null;
+    };
+  }, [syncAircraftMap]);
 
   useEffect(() => {
     const visible = showAtsRoutes && atsRoutes?.available === true;
