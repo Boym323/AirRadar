@@ -98,6 +98,13 @@ rewritten, which mixes old HTML references with new static assets. Use a
 separate worktree or local/staging process during implementation, then use
 `deploy/release.sh` for production.
 
+The live radar has an opt-in browser performance probe. Add
+`?perfDiagnostics=1` to the radar URL, then inspect
+`window.__airradarPerformanceDiagnostics.snapshot()` in DevTools. The snapshot
+reports animation-frame work, marker writes, label-collision duration, virtual
+traffic rows, and browser long tasks. The probe is disabled by default and must
+not change live-state, SSE, or motion semantics.
+
 Documentation-only changes that do not touch code, package files, schema,
 migrations, or build configuration do not require the build/full suite unless
 the user asks for it. Still run relevant lightweight checks such as link

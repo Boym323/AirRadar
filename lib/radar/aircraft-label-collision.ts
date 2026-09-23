@@ -64,6 +64,44 @@ const DEFAULT_PLACEMENTS: Record<AircraftLabelPriority, readonly AircraftLabelPl
   regularAirport: ["bottom", "top", "right", "left"],
 };
 
+const COLLISION_GRID_SIZE = 96;
+
+function collisionGridCells(rect: ScreenRect, gap = 0): Array<[number, number]> {
+  const minX = Math.floor((rect.x - gap) / COLLISION_GRID_SIZE);
+  const maxX = Math.floor((rect.x + rect.width + gap) / COLLISION_GRID_SIZE);
+  const minY = Math.floor((rect.y - gap) / COLLISION_GRID_SIZE);
+  const maxY = Math.floor((rect.y + rect.height + gap) / COLLISION_GRID_SIZE);
+  const cells: Array<[number, number]> = [];
+  for (let x = minX; x <= maxX; x += 1) {
+    for (let y = minY; y <= maxY; y += 1) cells.push([x, y]);
+  }
+  return cells;
+}
+
+function collisionGridKey(x: number, y: number): string {
+  return `${x}:${y}`;
+}
+
+function addCollisionRect(grid: Map<string, ScreenRect[]>, rect: ScreenRect): void {
+  for (const [x, y] of collisionGridCells(rect)) {
+    const key = collisionGridKey(x, y);
+    const bucket = grid.get(key);
+    if (bucket) bucket.push(rect);
+    else grid.set(key, [rect]);
+  }
+}
+
+function collisionGridIntersects(grid: ReadonlyMap<string, readonly ScreenRect[]>, rect: ScreenRect, gap: number): boolean {
+  for (const [x, y] of collisionGridCells(rect, gap)) {
+    const bucket = grid.get(collisionGridKey(x, y));
+    if (!bucket) continue;
+    for (const placed of bucket) {
+      if (screenRectsIntersect(rect, placed, gap)) return true;
+    }
+  }
+  return false;
+}
+
 export function aircraftLabelPriorityRank(priority: AircraftLabelPriority): number {
   return PRIORITY_ORDER[priority];
 }
@@ -112,23 +150,24 @@ export function layoutAircraftLabels(
   const placements = new Map<string, AircraftLabelPlacement>();
   const hidden = new Set<string>();
   const candidates = new Map<string, AircraftLabelCandidate[]>();
-  const placed: ScreenRect[] = [...occupied];
+  const collisionGrid = new Map<string, ScreenRect[]>();
+  for (const rect of occupied) addCollisionRect(collisionGrid, rect);
 
   for (const item of ordered) {
     const itemCandidates = (item.placements ?? aircraftLabelPlacements(item.priority))
       .map((placement) => labelCandidate(item.point, item.width, item.height, placement));
     candidates.set(item.id, itemCandidates);
-    const selected = itemCandidates.find((candidate) => !placed.some((rect) => screenRectsIntersect(candidate.rect, rect, 2)));
+    const selected = itemCandidates.find((candidate) => !collisionGridIntersects(collisionGrid, candidate.rect, 2));
     if (selected) {
       placements.set(item.id, selected.placement);
-      placed.push(selected.rect);
+      addCollisionRect(collisionGrid, selected.rect);
       continue;
     }
     if (item.forceVisible || item.priority === "selected" || item.priority === "emergency") {
       const fallback = itemCandidates[0];
       if (fallback) {
         placements.set(item.id, fallback.placement);
-        placed.push(fallback.rect);
+        addCollisionRect(collisionGrid, fallback.rect);
       }
     } else {
       hidden.add(item.id);

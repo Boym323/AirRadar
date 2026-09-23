@@ -36,6 +36,29 @@ describe("aircraft label collision policy", () => {
     expect(result.placements.has("emergency")).toBe(true);
   });
 
+  it("detects collisions across spatial grid boundaries", () => {
+    const result = layoutAircraftLabels([
+      { id: "first", point: { x: 70, y: 80 }, width: 30, height: 14, priority: "watchlisted", placements: ["right"] },
+      { id: "second", point: { x: 72, y: 80 }, width: 30, height: 14, priority: "normal", placements: ["right"] },
+    ]);
+    expect(result.placements.has("first")).toBe(true);
+    expect(result.hidden.has("second")).toBe(true);
+  });
+
+  it("keeps dense non-overlapping label placement bounded and complete", () => {
+    const items = Array.from({ length: 250 }, (_, index) => ({
+      id: `aircraft-${String(index).padStart(3, "0")}`,
+      point: { x: (index % 25) * 140, y: Math.floor(index / 25) * 90 },
+      width: 42,
+      height: 14,
+      priority: "normal" as const,
+      placements: ["right"] as const,
+    }));
+    const result = layoutAircraftLabels(items);
+    expect(result.hidden.size).toBe(0);
+    expect(result.placements.size).toBe(250);
+  });
+
   it("keeps rectangle intersection deterministic", () => {
     expect(screenRectsIntersect({ x: 0, y: 0, width: 10, height: 10 }, { x: 9, y: 9, width: 10, height: 10 })).toBe(true);
     expect(screenRectsIntersect({ x: 0, y: 0, width: 10, height: 10 }, { x: 10, y: 0, width: 10, height: 10 })).toBe(false);
