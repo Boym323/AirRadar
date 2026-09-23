@@ -3,8 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { z } from "zod";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
@@ -32,8 +31,6 @@ import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSna
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
 import { aircraftMapLabelLevel } from "@/lib/aircraft/map-labels";
-import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
-import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -62,6 +59,7 @@ import {
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
+import { AircraftTrafficRow } from "@/components/aircraft-traffic-row";
 import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import { useDatasetQuery, type DatasetState } from "@/components/use-dataset-query";
@@ -76,7 +74,7 @@ import {
   type AircraftQuickFilter,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
-import { aircraftPositionSourceLabel, aircraftSourceLabel, type AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
+import type { AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
 import {
   createAircraftMarkerHandle,
   setAircraftMarkerHeading,
@@ -123,25 +121,35 @@ interface SectorTrafficView { sectorId: string; name: string; at: string; vertic
 const WIND_PRESSURE_LEVELS: WindLevelHpa[] = [850, 700, 500, 300, 200];
 interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
 
-const airportDatasetSchema = z.array(z.object({
-  icaoCode: z.string(), name: z.string(), latitude: z.number().finite(), longitude: z.number().finite(),
-}).passthrough());
-const atcDatasetSchema = z.object({ sectors: z.array(z.unknown()), transmitters: z.array(z.unknown()), metadata: z.record(z.string(), z.unknown()) }).passthrough();
-const atsDatasetSchema = z.object({ available: z.boolean() }).passthrough();
-const airspaceDatasetSchema = z.object({ planned: z.unknown(), historicalActual: z.unknown() }).passthrough();
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
 
-function parseAirportDataset(value: unknown): value is Airport[] { return airportDatasetSchema.safeParse(value).success; }
+function parseAirportDataset(value: unknown): value is Airport[] {
+  return Array.isArray(value) && value.every((airport) => isRecord(airport)
+    && typeof airport.icaoCode === "string"
+    && typeof airport.name === "string"
+    && typeof airport.latitude === "number"
+    && Number.isFinite(airport.latitude)
+    && typeof airport.longitude === "number"
+    && Number.isFinite(airport.longitude));
+}
 
 function parseAtcDataset(value: unknown): value is AtcDataResponse {
-  return atcDatasetSchema.safeParse(value).success;
+  return isRecord(value)
+    && Array.isArray(value.sectors)
+    && Array.isArray(value.transmitters)
+    && isRecord(value.metadata);
 }
 
 function parseAtsDataset(value: unknown): value is AtsRoutesResponse {
-  return atsDatasetSchema.safeParse(value).success;
+  return isRecord(value) && typeof value.available === "boolean";
 }
 
 function parseAirspaceDataset(value: unknown): value is AirspaceActivityResponse {
-  return airspaceDatasetSchema.safeParse(value).success;
+  return isRecord(value)
+    && Object.prototype.hasOwnProperty.call(value, "planned")
+    && Object.prototype.hasOwnProperty.call(value, "historicalActual");
 }
 
 async function parseJsonDataset<T>(response: Response, validator: (value: unknown) => value is T): Promise<T> {
@@ -376,60 +384,6 @@ function OgnGlyph({ aircraftType }: { aircraftType: OgnTargetView["aircraftType"
 
 function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {
   return `<svg class="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d="${ognGlyphPath(aircraftType)}"></path></svg>`;
-}
-
-type AircraftMarkerKind = "airplane" | "a220" | "a320" | "a330" | "a350" | "a380" | "b717" | "b727" | "b737" | "b747" | "b757" | "b767" | "b777" | "b787" | "regional" | "turboprop" | "business-jet" | "general-aviation" | "helicopter" | "glider" | "drone" | "ground";
-
-const AIRCRAFT_GLYPH_PATHS: Record<AircraftMarkerKind, string> = {
-  // Every silhouette points north at 0°, matching ADS-B track semantics.
-  airplane: "m16 2 4 12 8 5-1 2-9-2-2 10-2-10-9 2-1-2 8-5 4-12Z",
-  a220: "m16 2 3 12 8 5-1 2-9-2-1 11h-2l-1-11-9 2-1-2 8-5 3-12Z",
-  a320: "m16 2 3 12 9 5-1 2-10-2-1 11-2 0-1-11-10 2-1-2 9-5 3-12ZM10 15a1 1 0 1 0 2 0m8 0a1 1 0 1 0 2 0",
-  a330: "m16 2 4 11 9 5-1 3-10-2-1 11h-2l-1-11-10 2-1-3 9-5 4-11ZM10 15a1 1 0 1 0 2 0m8 0a1 1 0 1 0 2 0",
-  a350: "m16 2 4 11 9 5-1 3-10-2-1 11h-2l-1-11-10 2-1-3 9-5 4-11ZM11 16l-3 1m13-1 3 1M10 15a1 1 0 1 0 2 0m8 0a1 1 0 1 0 2 0",
-  a380: "m16 1 5 12 10 5-1 3-11-2-1 12h-2l-1-12-11 2-1-3 10-5 5-12ZM9 15a1 1 0 1 0 2 0m3 0a1 1 0 1 0 2 0m4 0a1 1 0 1 0 2 0m3 0a1 1 0 1 0 2 0M14 6h4",
-  b717: "m16 3 2 12 8 4-1 2-9-2-1 9h-1l-1-9-9 2-1-2 8-4 2-12Z",
-  b727: "m16 2 3 12 9 5-1 2-10-2-1 11h-2l-1-11-10 2-1-2 9-5 3-12ZM13 24l-3 2m9-2 3 2",
-  b737: "m16 2 3 12 9 5-1 2-10-2-1 11h-2l-1-11-10 2-1-2 9-5 3-12ZM11 16l-2 1m12-1 2 1M12 15a1 1 0 1 0 2 0m6 0a1 1 0 1 0 2 0",
-  b747: "m16 2 5 11 9 5-1 3-11-2-1 11h-2l-1-11-11 2-1-3 9-5 5-11ZM14 7h4M10 15a1 1 0 1 0 2 0m8 0a1 1 0 1 0 2 0",
-  b757: "m16 2 3 12 10 5-1 2-11-2-1 11h-2l-1-11-11 2-1-2 10-5 3-12Z",
-  b767: "m16 2 4 11 9 5-1 3-10-2-1 11h-2l-1-11-10 2-1-3 9-5 4-11ZM10 17l-2 1m14-1 2 1",
-  b777: "m16 2 4 11 10 5-1 3-11-2-1 11h-2l-1-11-11 2-1-3 10-5 4-11Z",
-  b787: "m16 2 4 11 9 5-1 3-10-2-1 11h-2l-1-11-10 2-1-3 9-5 4-11ZM11 17l-3 1m13-1 3 1",
-  regional: "m16 3 2 12 8 4-1 2-9-2-1 9h-1l-1-9-9 2-1-2 8-4 2-12Z",
-  turboprop: "m16 4 2 11 8 4-1 2-9-2-1 9h-1l-1-9-9 2-1-2 8-4 2-11ZM8 13H4m4 3H4m20-3h4m-4 3h4",
-  "business-jet": "m16 2 2 13 8 5-1 2-9-3-1 9h-1l-1-9-9 3-1-2 8-5 2-13Z",
-  "general-aviation": "m16 3 1 13 9 4-1 2-10-2-1 8h-1l-1-8-10 2-1-2 9-4 1-13Z",
-  helicopter: "M16 8v15M9 12h14M6 8h20M16 5v3M12 23h8l3 4H9l3-4Z",
-  glider: "m16 3 3 12 10 5-1 2-10-2-2 9-2-9-10 2-1-2 10-5 3-12Z",
-  drone: "M16 8v16M8 16h16M10 10h4v4h-4zM18 10h4v4h-4zM10 18h4v4h-4zM18 18h4v4h-4z",
-  ground: "M10 11h12l3 8v5H7v-5l3-8Zm1 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z",
-};
-
-type AircraftIconInput = Pick<AircraftView, "aircraftType" | "aircraftDescription" | "enrichment" | "category" | "onGround">;
-
-function aircraftIconAsset(aircraft: AircraftIconInput): string {
-  return classifyAircraftIcon(aircraft).asset ?? TAR1090_UNKNOWN_ICON_ASSET;
-}
-
-function aircraftMarkerKind(aircraft: AircraftIconInput): AircraftMarkerKind {
-  const canonical = classifyAircraftIcon(aircraft);
-  return canonical.presentationKind as AircraftMarkerKind;
-}
-
-function AircraftGlyph({ kind = "airplane" }: { kind?: AircraftMarkerKind }) {
-  return <svg className={`aircraft-glyph aircraft-glyph-${kind}`} viewBox="0 0 32 32" aria-hidden="true"><path d={AIRCRAFT_GLYPH_PATHS[kind]} /></svg>;
-}
-
-function AircraftIcon({ aircraft }: { aircraft: AircraftView }) {
-  const asset = aircraftIconAsset(aircraft);
-  return asset
-    ? <span
-        className="aircraft-glyph aircraft-glyph-asset"
-        aria-hidden="true"
-        style={{ "--aircraft-icon-mask": `url('${asset}')` } as CSSProperties}
-      />
-    : <AircraftGlyph kind={aircraftMarkerKind(aircraft)} />;
 }
 
 export function AirRadarApp() {
@@ -1165,20 +1119,30 @@ export function AirRadarApp() {
       let renderedAnyMarker = false;
 
       for (const job of animationJobs.values()) {
+        const correctionElapsed = timestamp - job.correctionStartedAt >= job.correctionDurationMs;
+        const hasCorrection = job.correctionLon !== 0 || job.correctionLat !== 0;
+        const renderFinalCorrection = hasCorrection && correctionElapsed;
+        const renderThisFrame = job === selectedAnimationJob || bulkFrameDue || renderFinalCorrection;
+
+        // Live radar jobs use confirmed positions only. On high-density frames
+        // that are intentionally skipped, avoid recomputing motion for every
+        // aircraft; only the selected aircraft remains full-rate.
+        if (!renderThisFrame) {
+          if (hasCorrection && !correctionElapsed) continueAnimation = true;
+          continue;
+        }
+
         const motion = motionAt(job.source, timestamp, {
           lon: job.correctionLon,
           lat: job.correctionLat,
           startedAt: job.correctionStartedAt,
           durationMs: job.correctionDurationMs,
         }, job.history);
-        const renderThisFrame = job === selectedAnimationJob || bulkFrameDue;
-        if (renderThisFrame) {
-          job.handle.marker.setLngLat([motion.lon, motion.lat]);
-          if (motion.heading !== null) setAircraftMarkerHeading(job.handle, motion.heading, mapBearing);
-          renderedAnyMarker = true;
-        }
+        job.handle.marker.setLngLat([motion.lon, motion.lat]);
+        if (motion.heading !== null) setAircraftMarkerHeading(job.handle, motion.heading, mapBearing);
+        renderedAnyMarker = true;
         if (job === selectedAnimationJob) selectedAnimationMotion = motion;
-        if (timestamp - job.correctionStartedAt >= job.correctionDurationMs) {
+        if (correctionElapsed) {
           job.correctionLon = 0;
           job.correctionLat = 0;
         }
@@ -2496,15 +2460,13 @@ export function AirRadarApp() {
                 {snapshot.aircraft.length === 0 ? t.radar.waitingForTrafficDescription : t.radar.noMatchingAircraftDescription}
               </div>
             ) : filteredAircraft.map((aircraft) => (
-              <button key={aircraft.icaoHex} className={`aircraft-row ${selectedHex === aircraft.icaoHex ? "selected" : ""} ${isWatchlisted(aircraft) ? "watchlisted" : ""} ${aircraft.emergency ? "emergency" : ""}`} aria-pressed={selectedHex === aircraft.icaoHex} onClick={() => selectAircraft(aircraft.icaoHex)}>
-                <span className="aircraft-row-icon"><AircraftIcon aircraft={aircraft} /></span>
-                <span className="aircraft-row-main">
-                  <span className="aircraft-row-topline"><span className="aircraft-row-name">{labelForAircraft(aircraft)}</span> <span className="source-badge" title={`Seen by ${aircraftSourceLabel(aircraft)}`}>{aircraftPositionSourceLabel(aircraft)}</span> {isWatchlisted(aircraft) && <span className="watch-badge">{t.watchlist.badge}</span>} {aircraft.emergency && <span className="emergency-badge"><span aria-hidden="true">!</span> {aircraft.emergency}</span>}</span>
-                  <span className="aircraft-row-type">{aircraft.enrichment?.metadata?.icaoTypeCode || aircraft.aircraftType || t.aircraft.unknownType}{aircraft.registration || aircraft.enrichment?.metadata?.registration ? ` · ${aircraft.registration || aircraft.enrichment?.metadata?.registration}` : ""}</span>
-                  <span className="aircraft-row-meta"><span><b>{formatAltitude(aircraft.altitude)}</b></span><span><b>{formatSpeed(aircraft.groundSpeed)}</b></span><span><b>{formatTrack(aircraft.track)}</b></span><span className="aircraft-row-hex">{aircraft.icaoHex}</span></span>
-                </span>
-                <span className="aircraft-row-distance">{formatDistance(aircraft.distanceKm)}</span>
-              </button>
+              <AircraftTrafficRow
+                key={aircraft.icaoHex}
+                aircraft={aircraft}
+                selected={selectedHex === aircraft.icaoHex}
+                watchlisted={isWatchlisted(aircraft)}
+                onSelect={selectAircraft}
+              />
             ))}
           </div>
 
