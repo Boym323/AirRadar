@@ -3,7 +3,6 @@
 import { memo, useEffect, useRef, useState, type RefObject } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
 import { t } from "@/lib/i18n";
-import { recordRadarTrafficList } from "@/lib/radar/performance-diagnostics";
 import { AIRCRAFT_TRAFFIC_ROW_HEIGHT, AIRCRAFT_TRAFFIC_VIRTUALIZATION_THRESHOLD, aircraftTrafficVirtualRange } from "@/lib/radar/traffic-virtualization";
 import { AircraftTrafficRow } from "@/components/aircraft-traffic-row";
 
@@ -25,6 +24,11 @@ function sameRange(left: VisibleRange, right: VisibleRange): boolean {
   return left.start === right.start && left.end === right.end;
 }
 
+function recordTrafficList(totalRows: number, renderedRows: number, virtualized: boolean): void {
+  if (typeof window === "undefined") return;
+  window.__airradarPerformanceDiagnostics?.recordTrafficList(totalRows, renderedRows, virtualized);
+}
+
 function AircraftTrafficListComponent({
   aircraft,
   totalAircraftCount,
@@ -42,7 +46,7 @@ function AircraftTrafficListComponent({
 
   useEffect(() => {
     if (!virtualized) {
-      recordRadarTrafficList(aircraft.length, aircraft.length, false);
+      recordTrafficList(aircraft.length, aircraft.length, false);
       return;
     }
 
@@ -62,7 +66,7 @@ function AircraftTrafficListComponent({
         spaceTop: spaceRect.top,
       });
       setVisibleRange((current) => sameRange(current, next) ? current : next);
-      recordRadarTrafficList(aircraft.length, Math.max(0, next.end - next.start), true);
+      recordTrafficList(aircraft.length, Math.max(0, next.end - next.start), true);
     };
     const schedule = () => {
       if (frame !== null) return;
