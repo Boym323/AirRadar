@@ -96,17 +96,26 @@ export function confirmedInterpolationDurationMs(
   next: MotionSource,
   receivedGapMs: number,
   minimumMs = 300,
-  maximumMs = 10_000,
+  maximumMs = 12_000,
 ): number {
   const observedGap = previous.observedAt !== null
     && next.observedAt !== null
     && next.observedAt > previous.observedAt
     ? next.observedAt - previous.observedAt
     : null;
-  const gap = observedGap ?? receivedGapMs;
-  // Finish slightly before the next expected report. This keeps movement
-  // continuous without letting visual latency accumulate over time.
-  return Math.min(maximumMs, Math.max(minimumMs, gap * 0.9));
+  // Render against the cadence at which confirmed positions actually reach
+  // the browser. The raw observation cadence (seen_pos) is intentionally not
+  // preferred here: ADS-B position frames arrive irregularly and using that
+  // interval directly makes marker speed pulse even when snapshots reach the
+  // client at a steady rate.
+  const deliveryGap = Number.isFinite(receivedGapMs) && receivedGapMs > 0
+    ? receivedGapMs
+    : observedGap ?? minimumMs;
+  // Keep the interpolation alive just beyond the expected next delivery.
+  // A small overlap avoids the old move-stop-move rhythm without building up
+  // meaningful visual latency: the next confirmed point retargets from the
+  // marker's currently rendered position.
+  return Math.min(maximumMs, Math.max(minimumMs, deliveryGap * 1.08));
 }
 
 export function motionObservationAdvances(previous: MotionSource, next: MotionSource): boolean {
