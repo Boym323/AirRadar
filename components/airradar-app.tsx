@@ -1480,7 +1480,7 @@ export function AirRadarApp() {
       mapRef.current = null;
       setMapReady(false);
     };
-  }, [router, selectAircraft, selectOgn]);
+  }, [liveTrailsRef, router, selectAircraft, selectOgn]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1904,7 +1904,7 @@ export function AirRadarApp() {
       routeAirportSourceKeyRef.current = routeAirportSourceKey;
       labelCollisionSchedulerRef.current?.();
     }
-  }, [colorMode, currentRadarPadding, distanceFilter, isLiveAircraftWatchlisted, mapFilters, mapReady, mapZoom, search, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, selectedHex, selectAircraft, watchlistOnly]);
+  }, [colorMode, currentRadarPadding, distanceFilter, isLiveAircraftWatchlisted, liveAircraftByHexRef, liveSnapshotRef, liveTrailsRef, mapFilters, mapReady, mapZoom, pendingAircraftChangesRef, search, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, selectedHex, selectAircraft, watchlistOnly]);
 
   useEffect(() => {
     aircraftMapSyncRef.current = syncAircraftMap;
