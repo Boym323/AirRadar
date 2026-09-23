@@ -39,7 +39,7 @@ import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/air
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import type { SectorFlow } from "@/components/atc-sector-traffic-panels";
-import { matchesAircraftRule, normalizeAircraftRuleType } from "@/lib/aircraft/watchlist";
+import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
@@ -890,12 +890,19 @@ export function AirRadarApp() {
     };
   }, [showSigmet]);
 
-  const isWatchlisted = useCallback((aircraft: AircraftView) => watchlist.some((rule) => {
+  const normalizedWatchlist = useMemo<AircraftMatchRule[]>(() => watchlist.flatMap((rule) => {
     const value = rule.value.trim().toUpperCase();
-    if (!value) return false;
     const type = normalizeAircraftRuleType(rule.kind);
-    return type ? matchesAircraftRule(aircraft, { type, value }) : false;
+    return value && type ? [{ type, value }] : [];
   }), [watchlist]);
+  const watchlistMatchCache = useMemo(() => new WeakMap<AircraftView, boolean>(), [normalizedWatchlist]);
+  const isWatchlisted = useCallback((aircraft: AircraftView) => {
+    const cached = watchlistMatchCache.get(aircraft);
+    if (cached !== undefined) return cached;
+    const matches = normalizedWatchlist.some((rule) => matchesAircraftRule(aircraft, rule));
+    watchlistMatchCache.set(aircraft, matches);
+    return matches;
+  }, [normalizedWatchlist, watchlistMatchCache]);
 
   function updateMapFilter<Key extends keyof MapAircraftFilters>(key: Key, value: MapAircraftFilters[Key]) {
     setMapFilters((current) => ({ ...current, [key]: value }));
