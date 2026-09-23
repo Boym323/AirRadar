@@ -76,13 +76,19 @@ jobs:
       - name: Production core and browser gates
         run: npm run test:production:all
       - name: Radar production performance baseline
-        run: npm run benchmark:radar
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          npm run benchmark:radar
+          cat artifacts/radar-performance-baseline.md >> "${GITHUB_STEP_SUMMARY}"
       - name: Upload radar performance baseline
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: radar-performance-baseline-${{ github.sha }}
-          path: artifacts/radar-performance-baseline.json
+          path: |
+            artifacts/radar-performance-baseline.json
+            artifacts/radar-performance-baseline.md
           if-no-files-found: ignore
 
   deploy:
