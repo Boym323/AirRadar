@@ -164,6 +164,7 @@ describe("radar UI polish helpers", () => {
     expect(aircraftTrafficRowSource).toContain("previous.aircraft === next.aircraft");
     expect(aircraftTrafficRowSource).toContain("previous.selected === next.selected");
     expect(globalCss).toMatch(/\.aircraft-list-virtual-row\s*\{[^}]*position:\s*absolute/);
+    expect(globalCss).toMatch(/\.aircraft-list-virtual-row > \.aircraft-row\s*\{[^}]*min-height:\s*0/);
     expect(globalCss).toMatch(/\.aircraft-row\s*\{[^}]*content-visibility:\s*auto/);
     expect(globalCss).toMatch(/\.aircraft-row\s*\{[^}]*contain-intrinsic-size:\s*62px/);
   });
@@ -171,6 +172,8 @@ describe("radar UI polish helpers", () => {
   it("keeps performance diagnostics opt-in and off the default hot path", () => {
     expect(appSource).toContain('import("@/lib/radar/performance-diagnostics")');
     expect(appSource).toContain("startRadarPerformanceDiagnostics(window.location.search)");
+    expect(appSource).toContain('window.dispatchEvent(new Event("airradar:performance-diagnostics-ready"))');
+    expect(aircraftTrafficListSource).toContain('window.addEventListener("airradar:performance-diagnostics-ready"');
     expect(appSource).toContain("performanceDiagnostics.recordAnimationFrame(");
     expect(appSource).toContain("performanceDiagnostics.recordLabelCollision(");
     expect(aircraftTrafficListSource).toContain("recordTrafficList(");
