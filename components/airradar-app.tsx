@@ -1685,12 +1685,22 @@ export function AirRadarApp() {
       .join("|");
   }, [selectedHex, snapshot.aircraft]);
 
-  useEffect(() => {
+  const syncAircraftMap = useCallback(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
+    const liveSnapshot = liveSnapshotRef.current;
+    const liveMapFilteredAircraft = filterAircraftForMap(liveSnapshot.aircraft, mapFilters);
+    const query = search.trim().toUpperCase();
+    const liveFilteredAircraft = liveMapFilteredAircraft.filter((aircraft) => {
+      if (query && !aircraftSearchText(aircraft).includes(query)) return false;
+      if (distanceFilter !== "all" && (aircraft.distanceKm === null || aircraft.distanceKm > Number(distanceFilter))) return false;
+      if (watchlistOnly && !isWatchlisted(aircraft)) return false;
+      return true;
+    });
+    const liveFilteredAircraftByHex = new Map(liveFilteredAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const));
     const trafficPadding = currentRadarPadding({ top: 100, right: 45, bottom: 40, left: 45 });
-    if (!centeredTrafficRef.current && (snapshot.receiver.lat === null || snapshot.receiver.lon === null) && snapshot.aircraft.length) {
-      const positioned = snapshot.aircraft.filter((aircraft) => aircraft.lat !== null && aircraft.lon !== null
+    if (!centeredTrafficRef.current && (liveSnapshot.receiver.lat === null || liveSnapshot.receiver.lon === null) && liveSnapshot.aircraft.length) {
+      const positioned = liveSnapshot.aircraft.filter((aircraft) => aircraft.lat !== null && aircraft.lon !== null
         && Number.isFinite(aircraft.lat) && Number.isFinite(aircraft.lon));
       if (positioned.length) {
         const bounds = new maplibregl.LngLatBounds();
@@ -1700,7 +1710,7 @@ export function AirRadarApp() {
       }
     }
     if (selectedHex !== focusedAircraftRef.current) {
-      const aircraft = snapshot.aircraft.find((item) => item.icaoHex === selectedHex);
+      const aircraft = liveSnapshot.aircraft.find((item) => item.icaoHex === selectedHex);
       if (!selectedHex) focusedAircraftRef.current = null;
       else if (aircraft?.lat != null && aircraft.lon != null) {
         // Center on the marker's rendered position so prediction does not leave
@@ -1715,12 +1725,12 @@ export function AirRadarApp() {
     const pending = pendingAircraftChangesRef.current;
     pendingAircraftChangesRef.current = null;
     const fullMarkerUpdate = pending === null || pending.full;
-    const currentHexes = fullMarkerUpdate ? new Set(filteredAircraft.map((aircraft) => aircraft.icaoHex)) : null;
+    const currentHexes = fullMarkerUpdate ? new Set(liveFilteredAircraft.map((aircraft) => aircraft.icaoHex)) : null;
     const aircraftToUpdate = fullMarkerUpdate
-      ? filteredAircraft
+      ? liveFilteredAircraft
       : [...(pending?.changedHexes ?? [])]
         .map((hex) => liveAircraftByHexRef.current.get(hex))
-        .filter((aircraft): aircraft is AircraftView => Boolean(aircraft && filteredAircraftByHex.has(aircraft.icaoHex)));
+        .filter((aircraft): aircraft is AircraftView => Boolean(aircraft && liveFilteredAircraftByHex.has(aircraft.icaoHex)));
     const upsertPrediction = (aircraft: AircraftView, handle: AircraftMarkerHandle) => {
       const marker = handle.marker;
       const now = performance.now();
@@ -1826,8 +1836,8 @@ export function AirRadarApp() {
       });
     };
 
-    const selectedAircraftInSnapshot = selectedHex ? liveAircraftByHexRef.current.get(selectedHex) ?? snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : undefined;
-    const selectedAircraftVisible = Boolean(selectedAircraftInSnapshot && selectedHex && filteredAircraftByHex.has(selectedHex));
+    const selectedAircraftInSnapshot = selectedHex ? liveAircraftByHexRef.current.get(selectedHex) ?? liveSnapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : undefined;
+    const selectedAircraftVisible = Boolean(selectedAircraftInSnapshot && selectedHex && liveFilteredAircraftByHex.has(selectedHex));
     const historySnapshot = selectedHistoryTrail;
     const historyTrail = selectedAircraftVisible && historySnapshot && historySnapshot.icaoHex === selectedHex?.toUpperCase() ? historySnapshot.points : EMPTY_TRAIL;
     let selectedTrailForMap: readonly TrailPoint[] = EMPTY_TRAIL;
@@ -1892,7 +1902,7 @@ export function AirRadarApp() {
       : [...new Set([
         ...(pending?.removedHexes ?? []),
         ...[...(pending?.changedHexes ?? [])].filter((hex) => {
-          const aircraft = filteredAircraftByHex.get(hex);
+          const aircraft = liveFilteredAircraftByHex.get(hex);
           return !aircraft || aircraft.lat === null || aircraft.lon === null || !Number.isFinite(aircraft.lat) || !Number.isFinite(aircraft.lon);
         }),
       ])];
@@ -1947,7 +1957,7 @@ export function AirRadarApp() {
       routeAirportSourceKeyRef.current = routeAirportSourceKey;
       labelCollisionSchedulerRef.current?.();
     }
-  }, [colorMode, currentRadarPadding, filteredAircraft, filteredAircraftByHex, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, snapshot.aircraft, snapshot.receiver.lat, snapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
+  }, [colorMode, currentRadarPadding, liveFilteredAircraft, liveFilteredAircraftByHex, isWatchlisted, mapZoom, selectedHistoryTrail, selectedRouteAirportCodesKey, showAircraft, showAirports, liveSnapshot.aircraft, liveSnapshot.receiver.lat, liveSnapshot.receiver.lon, selectedHex, mapReady, selectAircraft]);
 
   useEffect(() => {
     const visible = showAtsRoutes && atsRoutes?.available === true;
