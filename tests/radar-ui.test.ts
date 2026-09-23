@@ -14,6 +14,7 @@ import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
+const aircraftTrafficRowSource = readFileSync(new URL("../components/aircraft-traffic-row.tsx", import.meta.url), "utf8");
 const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
@@ -100,7 +101,7 @@ describe("radar UI polish helpers", () => {
     expect(atcTrafficSource).not.toContain("Traffic history");
     expect(atcTrafficSource).not.toContain("Show history");
     expect(appSource).not.toContain("classifyAircraftSource(aircraft)} · {aircraftPositionSourceLabel");
-    expect(appSource).toContain("aircraftSourceLabel(aircraft)");
+    expect(aircraftTrafficRowSource).toContain("aircraftSourceLabel(aircraft)");
   });
 
   it("keeps MapLibre in control of DOM marker positioning", () => {
@@ -134,9 +135,20 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("allowPrediction: false");
     expect(appSource).not.toContain("predictedPosition(");
     expect(appSource).toContain("motionRenderIntervalMs(animationJobs.size)");
-    expect(appSource).toContain("job === selectedAnimationJob || bulkFrameDue");
+    expect(appSource).toContain("job === selectedAnimationJob || bulkFrameDue || renderFinalCorrection");
+    expect(appSource).toContain("if (!renderThisFrame)");
     expect(appSource).toContain('map.on("zoom", updateLiveZoomLabels)');
     expect(appSource).toContain('map.on("move", scheduleLabelCollision)');
+  });
+
+  it("bounds React and layout work for dense live traffic", () => {
+    expect(appSource).not.toContain('from "zod"');
+    expect(appSource).toContain("<AircraftTrafficRow");
+    expect(aircraftTrafficRowSource).toContain("memo(");
+    expect(aircraftTrafficRowSource).toContain("previous.aircraft === next.aircraft");
+    expect(aircraftTrafficRowSource).toContain("previous.selected === next.selected");
+    expect(globalCss).toMatch(/\.aircraft-row\s*\{[^}]*content-visibility:\s*auto/);
+    expect(globalCss).toMatch(/\.aircraft-row\s*\{[^}]*contain-intrinsic-size:\s*62px/);
   });
 
   it("fades the desktop drawer while removing closed contents from overflow geometry", () => {
