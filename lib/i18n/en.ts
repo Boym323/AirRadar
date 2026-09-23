@@ -409,7 +409,7 @@ export const en = {
     empty: "No intelligence events have been detected yet.",
     evidence: "Evidence",
     confidence: { low: "Low confidence", medium: "Medium confidence", high: "High confidence" },
-    types: { APPROACH: "Probable approach", LANDING: "Likely landing", TAKEOFF: "Likely takeoff", GO_AROUND: "Go-around", HOLDING: "Probable holding", AIRSPACE_ENTRY: "Airspace entry", AIRSPACE_EXIT: "Airspace exit" },
+    types: { APPROACH: "Probable approach", LANDING: "Likely landing", TAKEOFF: "Likely takeoff", GO_AROUND: "Go-around", HOLDING: "Probable holding", DIVERSION: "Probable diversion", TOP_OF_DESCENT: "Top of descent", AIRSPACE_ENTRY: "Airspace entry", AIRSPACE_EXIT: "Airspace exit" },
   },
   recap: {
     dailyTitle: "Daily recap",

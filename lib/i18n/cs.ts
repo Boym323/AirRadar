@@ -407,7 +407,7 @@ export const cs = {
     empty: "Zatím nebyly zjištěny žádné intelligence události.",
     evidence: "Důkazy",
     confidence: { low: "Nízká jistota", medium: "Střední jistota", high: "Vysoká jistota" },
-    types: { APPROACH: "Pravděpodobné přiblížení", LANDING: "Pravděpodobné přistání", TAKEOFF: "Pravděpodobný vzlet", GO_AROUND: "Go-around", HOLDING: "Pravděpodobný holding", AIRSPACE_ENTRY: "Vstup do vzdušného prostoru", AIRSPACE_EXIT: "Opusťění vzdušného prostoru" },
+    types: { APPROACH: "Pravděpodobné přiblížení", LANDING: "Pravděpodobné přistání", TAKEOFF: "Pravděpodobný vzlet", GO_AROUND: "Go-around", HOLDING: "Pravděpodobný holding", DIVERSION: "Pravděpodobné odklonění", TOP_OF_DESCENT: "Začátek klesání", AIRSPACE_ENTRY: "Vstup do vzdušného prostoru", AIRSPACE_EXIT: "Opusťění vzdušného prostoru" },
   },
   recap: {
     dailyTitle: "Denní recap",

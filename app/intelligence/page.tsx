@@ -4,7 +4,7 @@ import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { formatTime, t } from "@/lib/i18n";
 import type { FlightEventType } from "@/lib/intelligence/types";
 
-const eventTypes: FlightEventType[] = ["APPROACH", "LANDING", "TAKEOFF", "GO_AROUND", "HOLDING", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"];
+const eventTypes: FlightEventType[] = ["APPROACH", "LANDING", "TAKEOFF", "GO_AROUND", "HOLDING", "DIVERSION", "TOP_OF_DESCENT", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"];
 
 export const dynamic = "force-dynamic";
 export default async function IntelligencePage() {

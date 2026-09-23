@@ -1,7 +1,9 @@
 import type { Aircraft } from "@/lib/aircraft/types";
+import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { getPrisma } from "@/lib/server/db";
 import { FlightIntelligenceDetector } from "@/lib/intelligence/detector";
-import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligence/types";
+import { confidenceLevel, type FlightIntelligenceEvent, type FlightEventType, type FlightPhase } from "@/lib/intelligence/types";
+import type { RunwayContext } from "@/lib/route-intelligence/contracts";
 
 const MAX_EVENTS = 500;
 const AIRPORT_INDEX_RETRY_MS = 60_000;
@@ -26,6 +28,7 @@ interface FlightEventRow {
   type: FlightEventType;
   icaoHex: string;
   flightId?: number | null;
+  metadataJson?: string | null;
   occurredAt: Date | string;
   detectedAt: Date | string;
   latitude?: number | null;
@@ -52,16 +55,27 @@ interface FlightEventTable extends FlightEventQuery {
   create(input: { data: Record<string, unknown> }): Promise<unknown>;
 }
 
+interface FlightRow {
+  id: number;
+  startTime?: Date | string;
+  lastSeenAt?: Date | string;
+  endTime?: Date | string | null;
+}
+
+interface FlightQuery {
+  where(filter: Record<string, unknown>): FlightQuery;
+  orderBy(order: Record<string, string>): FlightQuery;
+  limit(value: number): FlightQuery;
+  all(): Promise<FlightRow[]>;
+}
+
 interface FlightTable {
-  where(filter: Record<string, unknown>): {
-    orderBy(order: Record<string, string>): {
-      limit(value: number): { all(): Promise<Array<{ id: number }>> };
-    };
-  };
+  where(filter: Record<string, unknown>): FlightQuery;
 }
 
 interface AirportTable {
   all(): Promise<Array<{
+    id?: number;
     icao: string;
     iata: string | null;
     name: string;
@@ -70,6 +84,10 @@ interface AirportTable {
     latitude: number;
     longitude: number;
   }>>;
+}
+
+interface AirportRunwayTable {
+  all(): Promise<AirportRunway[]>;
 }
 
 export class FlightIntelligenceService {
@@ -99,9 +117,22 @@ export class FlightIntelligenceService {
     this.airportIndexLoading = (async () => {
       try {
         const rows = await table.all();
+        const runwayTable = (database!.orm.public as unknown as { AirportRunway?: AirportRunwayTable }).AirportRunway;
+        const runwayResult = runwayTable && typeof runwayTable.all === "function"
+          ? await Promise.allSettled([runwayTable.all()])
+          : [];
+        const runways = runwayResult[0]?.status === "fulfilled" ? runwayResult[0].value.slice(0, 200_000) : [];
+        const runwaysByAirportId = new Map<number, AirportRunway[]>();
+        for (const runway of runways) {
+          const values = runwaysByAirportId.get(runway.airportId) ?? [];
+          if (values.length < 64) values.push(runway);
+          runwaysByAirportId.set(runway.airportId, values);
+        }
+        const runwaysByAirport = new Map<string, readonly AirportRunway[]>();
         this.detector.setAirports(rows
           .filter((row) => Number.isFinite(row.latitude) && Number.isFinite(row.longitude))
-          .map((row) => ({
+          .map((row) => {
+            const airport = {
             icaoCode: row.icao,
             iataCode: row.iata,
             name: row.name,
@@ -109,7 +140,11 @@ export class FlightIntelligenceService {
             country: row.country,
             latitude: row.latitude,
             longitude: row.longitude,
-          })));
+            };
+            if (row.id !== undefined) runwaysByAirport.set(row.icao.toUpperCase(), runwaysByAirportId.get(row.id) ?? []);
+            return airport;
+          }));
+        this.detector.setRunways(runwaysByAirport);
         this.airportIndexLoaded = true;
         this.airportIndexRetryAt = 0;
       } catch {
@@ -124,7 +159,15 @@ export class FlightIntelligenceService {
 
   observe(previous: Aircraft | undefined, aircraft: Aircraft, observedAt?: number): void {
     void this.ensureAirportIndex();
-    for (const event of this.detector.observe(previous, aircraft, observedAt)) {
+    let detected: FlightIntelligenceEvent[];
+    try {
+      detected = this.detector.observe(previous, aircraft, observedAt);
+    } catch {
+      // Intelligence is optional enrichment. A malformed observation must not
+      // reject the live snapshot or stop the single state owner.
+      return;
+    }
+    for (const event of detected) {
       this.events.unshift(event);
       if (this.events.length > MAX_EVENTS) this.events.length = MAX_EVENTS;
       for (const listener of this.listeners) {
@@ -154,7 +197,7 @@ export class FlightIntelligenceService {
       .filter((event) =>
         (!query.type || event.type === query.type)
         && (!query.aircraft || event.icaoHex === query.aircraft.toUpperCase())
-        && (!query.flightId || false)
+        && (query.flightId === undefined || event.flightId === query.flightId)
         && (!Number.isFinite(since) || Date.parse(event.occurredAt) >= since))
       .slice(0, limit);
   }
@@ -194,14 +237,22 @@ export class FlightIntelligenceService {
       const flights = await schema.Flight
         .where({ aircraft: { icaoHex: event.icaoHex } })
         .orderBy({ lastSeenAt: "desc" })
-        .limit(1)
+        .limit(8)
         .all();
+      const occurredAt = Date.parse(event.occurredAt);
+      const hasTemporalRows = flights.some((flight) => flight.startTime !== undefined || flight.lastSeenAt !== undefined || flight.endTime !== undefined);
+      const linkedFlight = flights.find((flight) => {
+        const start = typeof flight.startTime === "undefined" ? NaN : Date.parse(String(flight.startTime));
+        const end = flight.endTime == null ? Number.POSITIVE_INFINITY : Date.parse(String(flight.endTime));
+        return !Number.isFinite(occurredAt) || (!Number.isFinite(start) && !Number.isFinite(end)) || (occurredAt >= start && occurredAt <= end);
+      }) ?? (hasTemporalRows ? undefined : flights[0]);
+      event.flightId = linkedFlight?.id ?? null;
       await schema.FlightEvent.create({
         data: {
           eventKey: event.eventKey,
           type: event.type,
           icaoHex: event.icaoHex,
-          flightId: flights[0]?.id ?? null,
+          flightId: linkedFlight?.id ?? null,
           occurredAt: new Date(event.occurredAt),
           detectedAt: new Date(event.detectedAt),
           latitude: event.latitude,
@@ -212,6 +263,7 @@ export class FlightIntelligenceService {
           runway: event.runway,
           sectorId: event.sectorId,
           evidenceJson: JSON.stringify(event.evidence),
+          metadataJson: JSON.stringify({ phase: event.phase, lifecycleKey: event.lifecycleKey, runwayContext: event.runwayContext ?? null }),
         },
       });
     } catch {
@@ -221,11 +273,15 @@ export class FlightIntelligenceService {
 
   private fromRow(row: FlightEventRow): FlightIntelligenceEvent {
     const confidence = typeof row.confidence === "number" ? row.confidence : 0;
+    const metadata = this.safeMetadata(row.metadataJson);
     return {
       id: String(row.id ?? row.eventKey),
       eventKey: row.eventKey,
+      lifecycleKey: typeof metadata.lifecycleKey === "string" ? metadata.lifecycleKey : row.eventKey,
       type: row.type,
+      phase: this.safePhase(metadata.phase),
       icaoHex: row.icaoHex,
+      flightId: row.flightId ?? null,
       callsign: row.flight?.callsign ?? null,
       registration: row.flight?.registration ?? row.aircraft?.registration ?? null,
       occurredAt: new Date(row.occurredAt).toISOString(),
@@ -234,9 +290,10 @@ export class FlightIntelligenceService {
       longitude: row.longitude ?? null,
       altitude: row.altitude ?? null,
       confidence,
-      confidenceLevel: confidence >= .8 ? "high" : confidence >= .6 ? "medium" : "low",
+      confidenceLevel: confidenceLevel(confidence),
       airportIcao: row.airportIcao ?? null,
       runway: row.runway ?? null,
+      runwayContext: this.safeRunwayContext(metadata.runwayContext),
       sectorId: row.sectorId ?? null,
       evidence: this.safeEvidence(row.evidenceJson),
     };
@@ -251,6 +308,36 @@ export class FlightIntelligenceService {
     } catch {
       return [];
     }
+  }
+
+  private safeMetadata(value: unknown): Record<string, unknown> {
+    try {
+      const parsed = JSON.parse(String(value));
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private safePhase(value: unknown): FlightPhase {
+    const phases: FlightPhase[] = ["GROUND", "TAKEOFF", "CLIMB", "CRUISE", "DESCENT", "APPROACH", "LANDING"];
+    return typeof value === "string" && phases.includes(value as FlightPhase) ? value as FlightPhase : "CRUISE";
+  }
+
+  private safeRunwayContext(value: unknown): RunwayContext | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const context = value as Partial<RunwayContext>;
+    if (!["REPORTED", "INFERRED", "UNKNOWN"].includes(String(context.status))) return null;
+    return {
+      reportedRunway: typeof context.reportedRunway === "string" ? context.reportedRunway : null,
+      inferredRunway: typeof context.inferredRunway === "string" ? context.inferredRunway : null,
+      status: context.status as RunwayContext["status"],
+      conflict: context.conflict === true,
+      effectiveRunway: typeof context.effectiveRunway === "string" ? context.effectiveRunway : null,
+      displayRunway: typeof context.displayRunway === "string" ? context.displayRunway : null,
+      source: context.source,
+      confidence: context.confidence ?? null,
+    };
   }
 }
 
