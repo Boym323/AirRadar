@@ -46,8 +46,10 @@ function AircraftTrafficListComponent({
 
   useEffect(() => {
     if (!virtualized) {
-      recordTrafficList(aircraft.length, aircraft.length, false);
-      return;
+      const record = () => recordTrafficList(aircraft.length, aircraft.length, false);
+      record();
+      window.addEventListener("airradar:performance-diagnostics-ready", record);
+      return () => window.removeEventListener("airradar:performance-diagnostics-ready", record);
     }
 
     const root = scrollRootRef.current;
@@ -75,6 +77,7 @@ function AircraftTrafficListComponent({
 
     root.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
+    window.addEventListener("airradar:performance-diagnostics-ready", schedule);
     const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
     resizeObserver?.observe(root);
     resizeObserver?.observe(space);
@@ -83,6 +86,7 @@ function AircraftTrafficListComponent({
     return () => {
       root.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
+      window.removeEventListener("airradar:performance-diagnostics-ready", schedule);
       resizeObserver?.disconnect();
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
