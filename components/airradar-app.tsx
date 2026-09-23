@@ -2168,32 +2168,6 @@ export function AirRadarApp() {
     distanceFilter !== "all",
     watchlistOnly,
   ].filter(Boolean).length;
-  const quickFilterLabels: Record<AircraftQuickFilter, string> = {
-    all: t.filters.quickAll,
-    airborne: t.filters.quickAirborne,
-    onGround: t.filters.quickOnGround,
-    helicopters: t.filters.quickHelicopters,
-    gliders: t.filters.quickGliders,
-    uav: t.filters.quickUav,
-    emergency: t.filters.quickEmergency,
-  };
-  const activeFilterChips: Array<{ id: string; label: string; onRemove: () => void }> = [
-    mapFilters.source !== "all" ? { id: "source", label: mapFilters.source.toUpperCase(), onRemove: () => updateMapFilter("source", "all") } : null,
-    mapFilters.quick !== "all" ? { id: "quick", label: quickFilterLabels[mapFilters.quick], onRemove: () => updateMapFilter("quick", "all") } : null,
-    mapFilters.status !== "all" ? { id: "status", label: mapFilters.status === "airborne" ? t.filters.statusAirborne : t.filters.statusOnGround, onRemove: () => updateMapFilter("status", "all") } : null,
-    mapFilters.minAltitude.trim() ? { id: "min-altitude", label: `≥ ${mapFilters.minAltitude} ft`, onRemove: () => updateMapFilter("minAltitude", "") } : null,
-    mapFilters.maxAltitude.trim() ? { id: "max-altitude", label: `≤ ${mapFilters.maxAltitude} ft`, onRemove: () => updateMapFilter("maxAltitude", "") } : null,
-    mapFilters.callsign.trim() ? { id: "callsign", label: `${t.filters.callsign}: ${mapFilters.callsign.trim()}`, onRemove: () => updateMapFilter("callsign", "") } : null,
-    mapFilters.registration.trim() ? { id: "registration", label: `${t.filters.registrationInput}: ${mapFilters.registration.trim()}`, onRemove: () => updateMapFilter("registration", "") } : null,
-    mapFilters.icaoHex.trim() ? { id: "icao", label: `${t.filters.icaoHexInput}: ${mapFilters.icaoHex.trim()}`, onRemove: () => updateMapFilter("icaoHex", "") } : null,
-    mapFilters.aircraftType.trim() ? { id: "type", label: mapFilters.aircraftType.trim(), onRemove: () => updateMapFilter("aircraftType", "") } : null,
-    mapFilters.operator.trim() ? { id: "operator", label: mapFilters.operator.trim(), onRemove: () => updateMapFilter("operator", "") } : null,
-    mapFilters.emergencyOnly ? { id: "emergency", label: t.filters.emergencyOnly, onRemove: () => updateMapFilter("emergencyOnly", false) } : null,
-    watchlistOnly ? { id: "watchlist", label: t.filters.watchlistOnly, onRemove: () => setWatchlistOnly(false) } : null,
-    search.trim() ? { id: "search", label: `${t.search.aircraftLabel}: ${search.trim()}`, onRemove: () => setSearch("") } : null,
-    distanceFilter !== "all" ? { id: "distance", label: `${t.filters.maximumDistance}: ${distanceFilter} km`, onRemove: () => setDistanceFilter("all") } : null,
-  ].filter((value): value is { id: string; label: string; onRemove: () => void } => Boolean(value));
-
   const isDemo = snapshot.provider === "mock";
   const hasSourceSnapshot = snapshot.lastSourceUpdate !== null;
   const statusOffline = !isDemo && hasSourceSnapshot && !snapshot.sourceOnline;
@@ -2212,67 +2186,18 @@ export function AirRadarApp() {
       : trafficOpen
         ? "traffic"
         : "closed";
-  useEffect(() => {
-    if (drawerState === "closed" && previousDrawerStateRef.current !== "closed") {
-      const trigger = trafficTriggerRef.current;
-      if (trigger?.getClientRects().length && !trigger.disabled) trigger.focus();
-    }
-    previousDrawerStateRef.current = drawerState;
-  }, [drawerState]);
-  useEffect(() => {
-    if (drawerState !== "traffic" || !focusSearchOnTrafficOpenRef.current) return;
-    const focusSearch = window.setTimeout(() => {
-      if (drawerState === "traffic" && searchInputRef.current) {
-        searchInputRef.current.focus();
-        focusSearchOnTrafficOpenRef.current = false;
-      }
-    }, 0);
-    return () => window.clearTimeout(focusSearch);
-  }, [drawerState]);
-  useEffect(() => {
-    function isEditableTarget(target: EventTarget | null): boolean {
-      const element = target instanceof HTMLElement ? target : null;
-      if (!element) return false;
-      return element instanceof HTMLInputElement
-        || element instanceof HTMLTextAreaElement
-        || element instanceof HTMLSelectElement
-        || element.isContentEditable;
-    }
-
-    function handleKeyboardShortcut(event: KeyboardEvent): void {
-      if (event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
-      if (event.key === "Escape") {
-        if (filtersOpen) {
-          setFiltersOpen(false);
-          event.preventDefault();
-        } else if (drawerState !== "closed") {
-          closeRadarDrawer();
-          event.preventDefault();
-        }
-        return;
-      }
-      if (isEditableTarget(event.target)) return;
-      if (event.key === "/") {
-        event.preventDefault();
-        if (window.matchMedia("(min-width: 821px)").matches && drawerState !== "traffic") {
-          openTrafficDrawer("search");
-        } else {
-          searchInputRef.current?.focus();
-        }
-      } else if (event.key.toLowerCase() === "f") {
-        event.preventDefault();
-        if (window.matchMedia("(min-width: 821px)").matches && drawerState !== "traffic") {
-          openTrafficDrawer("filters");
-        } else if (trafficSource === "adsb") {
-          setFiltersOpen((current) => !current);
-        }
-      }
-    }
-
-    // Handle Escape before document-level details/popup handlers can consume it.
-    window.addEventListener("keydown", handleKeyboardShortcut, true);
-    return () => window.removeEventListener("keydown", handleKeyboardShortcut, true);
-  }, [closeRadarDrawer, drawerState, filtersOpen, openTrafficDrawer, trafficSource]);
+  useRadarDrawerInteractions({
+    drawerState,
+    trafficSource,
+    filtersOpen,
+    setFiltersOpen,
+    closeRadarDrawer,
+    openTrafficDrawer,
+    searchInputRef,
+    focusSearchOnTrafficOpenRef,
+    trafficTriggerRef,
+    previousDrawerStateRef,
+  });
   const networkStatus = snapshot.sources?.adsbLol.status;
   const networkNotice = activeCoverage === "extended" && networkStatus === "rate_limited"
     ? t.radar.networkRateLimited
