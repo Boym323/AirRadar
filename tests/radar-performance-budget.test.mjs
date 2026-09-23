@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { RADAR_PERFORMANCE_SCENARIOS, evaluateRadarPerformanceBaseline } from "../scripts/radar-performance-budget.mjs";
 
 const baselineSource = readFileSync(new URL("../scripts/radar-performance-baseline.mjs", import.meta.url), "utf8");
+const ciSource = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
 
 function passingResult(aircraft) {
   return {
@@ -82,6 +83,19 @@ describe("radar production performance budgets", () => {
   it("disables inherited live network providers in the benchmark server", () => {
     expect(baselineSource).toContain('ADSBLOL_ENABLED: "false"');
     expect(baselineSource).toContain('ADSBHUB_ENABLED: "false"');
+  });
+
+  it("models ordinary synthetic aircraft as non-emergency", () => {
+    expect(baselineSource).toContain("emergency: null");
+    expect(baselineSource).not.toContain('emergency: "none"');
+  });
+
+  it("publishes the benchmark summary before returning a failing status", () => {
+    expect(ciSource).toContain("benchmark_status=0");
+    expect(ciSource).toContain("npm run benchmark:radar || benchmark_status=$?");
+    expect(ciSource).toContain('if [[ -f artifacts/radar-performance-baseline.md ]]');
+    expect(ciSource).toContain('cat artifacts/radar-performance-baseline.md >> "${GITHUB_STEP_SUMMARY}"');
+    expect(ciSource).toContain('exit "${benchmark_status}"');
   });
 
   it("keeps hosted-runner timing observations informational instead of gating CI", () => {
