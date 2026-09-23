@@ -53,8 +53,8 @@ import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
+import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
 import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
-import { useAircraftStream } from "@/components/use-aircraft-stream";
 import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
@@ -76,8 +76,6 @@ import { createLabelCollisionScheduler } from "@/lib/radar/aircraft-label-collis
 import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-controller";
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
-import { createLatestSnapshotScheduler, type LatestSnapshotScheduler } from "@/lib/radar/live-snapshot-scheduler";
-import { mergePendingAircraftChanges, type PendingAircraftChanges } from "@/lib/radar/live-aircraft-changes";
 
 declare global {
   interface Window {
@@ -384,8 +382,6 @@ export function AirRadarApp() {
   const atsPointFocus = searchParams.get("atsPoint");
   const aircraftFocus = searchParams.get("aircraft")?.trim().toUpperCase() ?? null;
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
-  const liveSnapshotRef = useRef<PublicStateSnapshot>(EMPTY_SNAPSHOT);
-  const reactSnapshotSchedulerRef = useRef<LatestSnapshotScheduler<PublicStateSnapshot> | null>(null);
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
   const [showOgn, setShowOgn] = useState(false);
@@ -467,9 +463,6 @@ export function AirRadarApp() {
   const animationHiddenAtRef = useRef<number | null>(null);
   const animationSchedulerRef = useRef<(() => void) | null>(null);
   const labelCollisionSchedulerRef = useRef<(() => void) | null>(null);
-  const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
-  const liveAircraftByHexRef = useRef<Map<string, AircraftView>>(new Map());
-  const pendingAircraftChangesRef = useRef<PendingAircraftChanges | null>(null);
   const aircraftMapSyncRef = useRef<((forceFull?: boolean) => void) | null>(null);
   const aircraftMapSyncFrameRef = useRef<number | null>(null);
   const selectedConfirmedTrailRef = useRef<readonly TrailPoint[]>(EMPTY_TRAIL);
@@ -555,16 +548,6 @@ export function AirRadarApp() {
   const windGenerationRef = useRef(0);
   const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
   const activeCoverage: CoverageMode = preferencesResolved ? coverage : "local";
-  useEffect(() => {
-    const scheduler = createLatestSnapshotScheduler<PublicStateSnapshot>({ commit: setSnapshot });
-    reactSnapshotSchedulerRef.current = scheduler;
-    return () => {
-      if (reactSnapshotSchedulerRef.current === scheduler) reactSnapshotSchedulerRef.current = null;
-      scheduler.dispose();
-      if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
-      aircraftMapSyncFrameRef.current = null;
-    };
-  }, []);
   const scheduleAircraftMapSync = useCallback(() => {
     // Hidden tabs do not reliably receive animation frames. Preserve the
     // existing hidden-tab contract by applying confirmed positions directly;
@@ -585,26 +568,20 @@ export function AirRadarApp() {
     selectedHexRef.current = null;
     setSelectedHex(null);
   }, []);
-  const onAircraftSnapshot = useCallback((next: PublicStateSnapshot, change: { full: boolean; changedAircraft: AircraftView[]; removedHexes: string[] }) => {
-    liveSnapshotRef.current = next;
-    const aircraftByHex = liveAircraftByHexRef.current;
-    if (change.full) aircraftByHex.clear();
-    for (const hex of change.removedHexes) aircraftByHex.delete(hex);
-    for (const aircraft of change.changedAircraft) aircraftByHex.set(aircraft.icaoHex, aircraft);
-    pendingAircraftChangesRef.current = mergePendingAircraftChanges(pendingAircraftChangesRef.current, change);
-
-    // Map markers consume every live delta through refs; React receives only
-    // the latest snapshot in a bounded UI cadence.
-    scheduleAircraftMapSync();
-    reactSnapshotSchedulerRef.current?.push(next, change.full);
-  }, [scheduleAircraftMapSync]);
-  const { connected: streamConnected } = useAircraftStream({
+  const {
+    connected: streamConnected,
+    liveSnapshotRef,
+    liveTrailsRef,
+    liveAircraftByHexRef,
+    pendingAircraftChangesRef,
+  } = useRadarLiveAircraft({
     enabled: preferencesResolved,
     activeCoverage,
-    liveTrailsRef,
     selectedHexRef,
+    initialSnapshot: EMPTY_SNAPSHOT,
+    commitSnapshot: setSnapshot,
     onSelectedAircraftRemoved,
-    onSnapshot: onAircraftSnapshot,
+    scheduleMapSync: scheduleAircraftMapSync,
   });
 
   const airportsDataset = useDatasetQuery<Airport[]>({
@@ -1483,6 +1460,8 @@ export function AirRadarApp() {
       labelCollisionSchedulerRef.current = null;
       if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
+      if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
+      aircraftMapSyncFrameRef.current = null;
       animationHiddenAtRef.current = null;
       animationSchedulerRef.current = null;
       animationJobs.clear();
