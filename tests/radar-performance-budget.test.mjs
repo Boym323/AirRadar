@@ -1,5 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { RADAR_PERFORMANCE_SCENARIOS, evaluateRadarPerformanceBaseline } from "../scripts/radar-performance-budget.mjs";
+
+const baselineSource = readFileSync(new URL("../scripts/radar-performance-baseline.mjs", import.meta.url), "utf8");
 
 function passingResult(aircraft) {
   return {
@@ -51,6 +54,34 @@ describe("radar production performance budgets", () => {
     expect(violations.some((message) => message.includes("marker writes"))).toBe(true);
     expect(violations.some((message) => message.includes("active animation jobs"))).toBe(true);
     expect(violations.some((message) => message.includes("label collision diagnostics"))).toBe(true);
+  });
+
+  it("rejects missing, NaN, or infinite instrumentation counters", () => {
+    const scenario = RADAR_PERFORMANCE_SCENARIOS.at(-1);
+    const invalidValues = [undefined, Number.NaN, Number.POSITIVE_INFINITY];
+
+    for (const invalid of invalidValues) {
+      const frames = passingResult(scenario.aircraft);
+      frames.animation.frames = invalid;
+      expect(evaluateRadarPerformanceBaseline(frames, scenario).some((message) => message.includes("animation frames must be a finite number"))).toBe(true);
+
+      const writes = passingResult(scenario.aircraft);
+      writes.animation.markerWrites = invalid;
+      expect(evaluateRadarPerformanceBaseline(writes, scenario).some((message) => message.includes("marker writes must be a finite number"))).toBe(true);
+
+      const jobs = passingResult(scenario.aircraft);
+      jobs.animation.maxActiveJobs = invalid;
+      expect(evaluateRadarPerformanceBaseline(jobs, scenario).some((message) => message.includes("active animation jobs must be a finite number"))).toBe(true);
+
+      const collision = passingResult(scenario.aircraft);
+      collision.labelCollision.runs = invalid;
+      expect(evaluateRadarPerformanceBaseline(collision, scenario).some((message) => message.includes("label collision runs must be a finite number"))).toBe(true);
+    }
+  });
+
+  it("disables inherited live network providers in the benchmark server", () => {
+    expect(baselineSource).toContain('ADSBLOL_ENABLED: "false"');
+    expect(baselineSource).toContain('ADSBHUB_ENABLED: "false"');
   });
 
   it("keeps hosted-runner timing observations informational instead of gating CI", () => {
