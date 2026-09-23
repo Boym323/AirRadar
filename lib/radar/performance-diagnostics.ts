@@ -50,6 +50,7 @@ declare global {
     __airradarPerformanceDiagnostics?: {
       snapshot: () => RadarPerformanceSnapshot;
       reset: () => void;
+      recordTrafficList: (totalRows: number, renderedRows: number, virtualized: boolean) => void;
     };
   }
 }
@@ -121,6 +122,13 @@ export function startRadarPerformanceDiagnostics(search: string): RadarPerforman
   const api = {
     snapshot: currentSnapshot,
     reset: () => { activeState = createState(); },
+    recordTrafficList: (totalRows: number, renderedRows: number, virtualized: boolean) => {
+      const state = activeState;
+      if (!state) return;
+      state.trafficRows = totalRows;
+      state.renderedTrafficRows = renderedRows;
+      state.trafficVirtualized = virtualized;
+    },
   };
   window.__airradarPerformanceDiagnostics = api;
 
@@ -164,10 +172,3 @@ export function startRadarPerformanceDiagnostics(search: string): RadarPerforman
   };
 }
 
-export function recordRadarTrafficList(totalRows: number, renderedRows: number, virtualized: boolean): void {
-  const state = activeState;
-  if (!state) return;
-  state.trafficRows = totalRows;
-  state.renderedTrafficRows = renderedRows;
-  state.trafficVirtualized = virtualized;
-}
