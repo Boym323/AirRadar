@@ -10,6 +10,7 @@ interface UseRadarLiveAircraftOptions {
   enabled: boolean;
   activeCoverage: CoverageMode;
   selectedHexRef: MutableRefObject<string | null>;
+  initialSnapshot: PublicStateSnapshot;
   commitSnapshot: (snapshot: PublicStateSnapshot) => void;
   onSelectedAircraftRemoved: () => void;
   scheduleMapSync: () => void;
@@ -27,24 +28,12 @@ export function useRadarLiveAircraft({
   enabled,
   activeCoverage,
   selectedHexRef,
+  initialSnapshot,
   commitSnapshot,
   onSelectedAircraftRemoved,
   scheduleMapSync,
 }: UseRadarLiveAircraftOptions): RadarLiveAircraftController {
-  const liveSnapshotRef = useRef<PublicStateSnapshot>({
-    aircraft: [],
-    relevantAtcFrequencies: [],
-    receiver: { lat: null, lon: null, name: "" },
-    fetchedAt: new Date(0).toISOString(),
-    provider: "connecting",
-    sourceOnline: false,
-    lastSourceUpdate: null,
-    sourceError: null,
-    readsbOnline: false,
-    lastReadsbUpdate: null,
-    lastError: null,
-    stats: { currentAircraft: 0, aircraftSeenToday: 0, uniqueAircraftToday: 0, maxConcurrentAircraft: 0, maxDistanceKm: 0, aircraftTypes: [], airlines: [], messagesPerSecond: null },
-  });
+  const liveSnapshotRef = useRef<PublicStateSnapshot>(initialSnapshot);
   const liveTrailsRef = useRef<Map<string, TrailPoint[]>>(new Map());
   const liveAircraftByHexRef = useRef<Map<string, AircraftView>>(new Map());
   const pendingAircraftChangesRef = useRef<PendingAircraftChanges | null>(null);
