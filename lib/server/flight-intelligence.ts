@@ -1,5 +1,6 @@
 import type { Aircraft } from "@/lib/aircraft/types";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
+import { getFlightContinuityGapMs } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 import { FlightIntelligenceDetector } from "@/lib/intelligence/detector";
 import { confidenceLevel, type FlightIntelligenceEvent, type FlightEventType, type FlightPhase } from "@/lib/intelligence/types";
@@ -234,18 +235,25 @@ export class FlightIntelligenceService {
     if (!database) return;
     try {
       const schema = database.orm.public as unknown as { FlightEvent: FlightEventTable; Flight: FlightTable };
-      const flights = await schema.Flight
-        .where({ aircraft: { icaoHex: event.icaoHex } })
-        .orderBy({ lastSeenAt: "desc" })
-        .limit(8)
-        .all();
       const occurredAt = Date.parse(event.occurredAt);
-      const hasTemporalRows = flights.some((flight) => flight.startTime !== undefined || flight.lastSeenAt !== undefined || flight.endTime !== undefined);
-      const linkedFlight = flights.find((flight) => {
-        const start = typeof flight.startTime === "undefined" ? NaN : Date.parse(String(flight.startTime));
-        const end = flight.endTime == null ? Number.POSITIVE_INFINITY : Date.parse(String(flight.endTime));
-        return !Number.isFinite(occurredAt) || (!Number.isFinite(start) && !Number.isFinite(end)) || (occurredAt >= start && occurredAt <= end);
-      }) ?? (hasTemporalRows ? undefined : flights[0]);
+      let linkedFlight: FlightRow | undefined;
+      for (let attempt = 0; attempt < 3 && !linkedFlight; attempt += 1) {
+        const flights = await schema.Flight
+          .where({ aircraft: { icaoHex: event.icaoHex } })
+          .orderBy({ lastSeenAt: "desc" })
+          .limit(8)
+          .all();
+        const hasTemporalRows = flights.some((flight) => flight.startTime !== undefined || flight.lastSeenAt !== undefined || flight.endTime !== undefined);
+        linkedFlight = flights.find((flight) => {
+          const start = typeof flight.startTime === "undefined" ? NaN : Date.parse(String(flight.startTime));
+          const lastSeen = typeof flight.lastSeenAt === "undefined" ? NaN : Date.parse(String(flight.lastSeenAt));
+          const end = flight.endTime == null
+            ? (Number.isFinite(lastSeen) ? lastSeen + getFlightContinuityGapMs() : Number.POSITIVE_INFINITY)
+            : Date.parse(String(flight.endTime));
+          return !Number.isFinite(occurredAt) || (!Number.isFinite(start) && !Number.isFinite(end)) || (occurredAt >= start && occurredAt <= end);
+        }) ?? (hasTemporalRows ? undefined : flights[0]);
+        if (!linkedFlight && attempt < 2) await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
+      }
       event.flightId = linkedFlight?.id ?? null;
       await schema.FlightEvent.create({
         data: {

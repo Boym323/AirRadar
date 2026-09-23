@@ -17,6 +17,51 @@ const PHASE_CONFIRMATIONS = 2;
 const AIRPORT_PROXIMITY_KM = 25;
 const RUNWAY_PROXIMITY_KM = 8;
 
+const EVIDENCE = {
+  lowInitialAltitude: "intelligence.evidence.lowInitialAltitude",
+  climbRateAndAltitude: "intelligence.evidence.climbRateAndAltitude",
+  airportProximity: "intelligence.evidence.airportProximity",
+  movingAway: "intelligence.evidence.movingAway",
+  airborne: "intelligence.evidence.airborne",
+  positiveVerticalRate: "intelligence.evidence.positiveVerticalRate",
+  altitudeIncreased: "intelligence.evidence.altitudeIncreased",
+  takeoffEstablished: "intelligence.evidence.takeoffEstablished",
+  verticalRateSettled: "intelligence.evidence.verticalRateSettled",
+  altitudeStable: "intelligence.evidence.altitudeStable",
+  normalGroundspeed: "intelligence.evidence.normalGroundspeed",
+  negativeVerticalRate: "intelligence.evidence.negativeVerticalRate",
+  descentPersisted: "intelligence.evidence.descentPersisted",
+  altitudeDecreased: "intelligence.evidence.altitudeDecreased",
+  sustainedDescent: "intelligence.evidence.sustainedDescent",
+  approachArea: "intelligence.evidence.approachArea",
+  movedCloser: "intelligence.evidence.movedCloser",
+  approachAltitude: "intelligence.evidence.approachAltitude",
+  precedingObservation: "intelligence.evidence.precedingObservation",
+  approachEstablished: "intelligence.evidence.approachEstablished",
+  onGround: "intelligence.evidence.onGround",
+  runwayProximity: "intelligence.evidence.runwayProximity",
+  lowAltitude: "intelligence.evidence.lowAltitude",
+  touchdownGroundspeed: "intelligence.evidence.touchdownGroundspeed",
+  climbNearRunway: "intelligence.evidence.climbNearRunway",
+  sustainedClimb: "intelligence.evidence.sustainedClimb",
+  movedAwayAfterClosest: "intelligence.evidence.movedAwayAfterClosest",
+  providerDiverted: "intelligence.evidence.providerDiverted",
+  alternateApproach: "intelligence.evidence.alternateApproach",
+  alternateProximity: "intelligence.evidence.alternateProximity",
+  destinationDiffers: "intelligence.evidence.destinationDiffers",
+  destinationAvailable: "intelligence.evidence.destinationAvailable",
+  descentBeforeDestination: "intelligence.evidence.descentBeforeDestination",
+  holdingDuration: "intelligence.evidence.holdingDuration",
+  holdingArea: "intelligence.evidence.holdingArea",
+  headingEvolution: "intelligence.evidence.headingEvolution",
+  holdingAltitude: "intelligence.evidence.holdingAltitude",
+  holdingAirborne: "intelligence.evidence.holdingAirborne",
+  sectorMatched: "intelligence.evidence.sectorMatched",
+  sectorStable: "intelligence.evidence.sectorStable",
+  atcGeographicContext: "intelligence.evidence.atcGeographicContext",
+  runwayResolved: "intelligence.evidence.runwayResolved",
+} as const;
+
 interface PendingPhase { phase: FlightPhase; count: number; }
 interface TrackState {
   history: FlightObservation[];
@@ -27,7 +72,7 @@ interface TrackState {
   inside: string | null;
   pendingBoundary?: { sector: string; inside: boolean; at: number };
   emitted: Set<string>;
-  flightLifecycle: number;
+  flightLifecycle: string;
   lastCallsign: string | null;
   airspaceSequence: number;
   holdingCycle: number;
@@ -81,10 +126,10 @@ export class FlightIntelligenceDetector {
     void previous;
     if (aircraft.origin === "adsblol" || aircraft.lat === null || aircraft.lon === null) return [];
     const at = Number.isFinite(observedAt) ? observedAt : observedAtOf(aircraft, Date.now());
-    const state = this.tracks.get(aircraft.icaoHex) ?? this.newState();
+    const state = this.tracks.get(aircraft.icaoHex) ?? this.newState(at);
     if (state.history.length && at <= state.history.at(-1)!.observedAt) return [];
     if (state.lastCallsign && aircraft.callsign && state.lastCallsign !== aircraft.callsign) {
-      state.flightLifecycle += 1;
+      state.flightLifecycle = `${at}:${aircraft.callsign}`;
       state.emitted.clear(); state.pendingPhase = undefined; state.approachCycle = 0; state.holdingCycle = 0; state.holdingActive = false; state.approachEventPending = false;
     }
     if (aircraft.callsign) state.lastCallsign = aircraft.callsign;
@@ -146,7 +191,7 @@ export class FlightIntelligenceDetector {
       if (this.transition(state, "DESCENT")) {
         const destination = this.plannedDestination(aircraft);
         if (destination && this.reliableTopOfDescent(state, aircraft, destination)) {
-          append(this.event("TOP_OF_DESCENT", aircraft, state, destination.icaoCode, "DESCENT", scoreSignals([...descentSignals, { active: true, weight: 2, evidence: "filed destination airport is available" }, { active: true, weight: 2, evidence: "descent started well before the destination" }]), null));
+          append(this.event("TOP_OF_DESCENT", aircraft, state, destination.icaoCode, "DESCENT", scoreSignals([...descentSignals, { active: true, weight: 2, evidence: EVIDENCE.destinationAvailable }, { active: true, weight: 2, evidence: EVIDENCE.descentBeforeDestination }]), null));
         }
       }
       } else if (state.phase === "DESCENT" && approachSignals.filter((signal) => signal.active).length >= 3 && this.transition(state, "APPROACH")) {
@@ -154,6 +199,8 @@ export class FlightIntelligenceDetector {
       state.approachEventPending = true;
       } else if (state.phase === "APPROACH" && landingSignals.filter((signal) => signal.active).length >= 3 && this.transition(state, "LANDING", aircraft.onGround && distanceKm !== null && distanceKm <= 2)) {
       append(this.event("LANDING", aircraft, state, airport?.icaoCode ?? null, "LANDING", scoreSignals(landingSignals), runwayFor("ARRIVAL")));
+      } else if (state.phase === "LANDING" && aircraft.onGround) {
+        this.transition(state, "GROUND", true);
       }
     }
 
@@ -162,7 +209,7 @@ export class FlightIntelligenceDetector {
       state.holdingMisses = 0;
       if (!state.holdingActive) {
         state.holdingActive = true; state.holdingCycle += 1;
-        append(this.event("HOLDING", aircraft, state, null, state.phase, scoreSignals([...holding.signals, { active: holding.durationMs >= MIN_HOLDING_MS, weight: 2, evidence: "observation lasted several minutes" }, { active: holding.maxRadiusKm <= 8, weight: 2, evidence: "track stayed inside a bounded area" }]), null, `holding-${state.holdingCycle}`));
+        append(this.event("HOLDING", aircraft, state, null, state.phase, scoreSignals([...holding.signals, { active: holding.durationMs >= MIN_HOLDING_MS, weight: 2, evidence: EVIDENCE.holdingDuration }, { active: holding.maxRadiusKm <= 8, weight: 2, evidence: EVIDENCE.holdingArea }]), null, `holding-${state.holdingCycle}`));
       }
     } else if (state.holdingActive && ++state.holdingMisses >= 2) {
       state.holdingActive = false;
@@ -172,8 +219,8 @@ export class FlightIntelligenceDetector {
     return events;
   }
 
-  private newState(): TrackState {
-    return { history: [], phase: "GROUND", initialized: false, airport: null, inside: null, emitted: new Set(), flightLifecycle: 1, lastCallsign: null, airspaceSequence: 0, holdingCycle: 0, holdingActive: false, holdingMisses: 0, approachCycle: 0, approachMinDistanceKm: null, approachEventPending: false };
+  private newState(lifecycle: number): TrackState {
+    return { history: [], phase: "GROUND", initialized: false, airport: null, inside: null, emitted: new Set(), flightLifecycle: String(lifecycle), lastCallsign: null, airspaceSequence: 0, holdingCycle: 0, holdingActive: false, holdingMisses: 0, approachCycle: 0, approachMinDistanceKm: null, approachEventPending: false };
   }
   private seedPhase(aircraft: Aircraft, distanceKm: number | null): FlightPhase {
     if (aircraft.onGround || (distanceKm !== null && distanceKm <= RUNWAY_PROXIMITY_KM && (aircraft.altitude ?? 0) < 500)) return "GROUND";
@@ -194,26 +241,26 @@ export class FlightIntelligenceDetector {
     const priorGround = prior?.onGround === true || lowInitialAltitude;
     const climb = (aircraft.verticalRate ?? 0) >= 300 && (aircraft.altitude ?? 0) >= (prior?.altitude ?? 0) + 50;
     const movingAway = distanceKm !== null && priorDistanceKm !== null && distanceKm > priorDistanceKm + 0.15;
-    return [{ active: priorGround, weight: 3, evidence: "aircraft was on ground or at low initial altitude" }, { active: climb, weight: 3, evidence: "vertical rate and altitude changed to climb" }, { active: distanceKm !== null && distanceKm <= RUNWAY_PROXIMITY_KM, weight: 2, evidence: "aircraft was close to an airport" }, { active: movingAway, weight: 2, evidence: "aircraft moved away from the airport" }, { active: aircraft.onGround === false, weight: 1, evidence: "aircraft is airborne" }];
+    return [{ active: priorGround, weight: 3, evidence: EVIDENCE.lowInitialAltitude }, { active: climb, weight: 3, evidence: EVIDENCE.climbRateAndAltitude }, { active: distanceKm !== null && distanceKm <= RUNWAY_PROXIMITY_KM, weight: 2, evidence: EVIDENCE.airportProximity }, { active: movingAway, weight: 2, evidence: EVIDENCE.movingAway }, { active: aircraft.onGround === false, weight: 1, evidence: EVIDENCE.airborne }];
   }
   private climbSignals(state: TrackState, aircraft: Aircraft): Signal[] {
-    return [{ active: (aircraft.verticalRate ?? 0) > 250, weight: 2, evidence: "sustained positive vertical rate" }, { active: (altitudeDelta(state.history) ?? 0) > 150, weight: 2, evidence: "altitude increased across recent observations" }, { active: state.phase === "TAKEOFF", weight: 1, evidence: "takeoff phase was already established" }];
+    return [{ active: (aircraft.verticalRate ?? 0) > 250, weight: 2, evidence: EVIDENCE.positiveVerticalRate }, { active: (altitudeDelta(state.history) ?? 0) > 150, weight: 2, evidence: EVIDENCE.altitudeIncreased }, { active: state.phase === "TAKEOFF", weight: 1, evidence: EVIDENCE.takeoffEstablished }];
   }
   private cruiseSignals(state: TrackState, aircraft: Aircraft): Signal[] {
     const recentRates = state.history.slice(-3).map((item) => item.aircraft.verticalRate).filter(finite);
     const delta = altitudeDelta(state.history);
-    return [{ active: recentRates.length >= 2 && recentRates.every((rate) => Math.abs(rate) < 250), weight: 2, evidence: "vertical rate settled near level flight" }, { active: finite(aircraft.altitude) && (delta === null || Math.abs(delta) < 500), weight: 2, evidence: "altitude remained stable" }, { active: (aircraft.groundSpeed ?? 0) > 120, weight: 1, evidence: "aircraft has normal airborne groundspeed" }];
+    return [{ active: recentRates.length >= 2 && recentRates.every((rate) => Math.abs(rate) < 250), weight: 2, evidence: EVIDENCE.verticalRateSettled }, { active: finite(aircraft.altitude) && (delta === null || Math.abs(delta) < 500), weight: 2, evidence: EVIDENCE.altitudeStable }, { active: (aircraft.groundSpeed ?? 0) > 120, weight: 1, evidence: EVIDENCE.normalGroundspeed }];
   }
   private descentSignals(state: TrackState, aircraft: Aircraft): Signal[] {
     const recent = state.history.slice(-4).map((item) => item.aircraft.verticalRate).filter(finite);
-    return [{ active: (aircraft.verticalRate ?? 0) < -200, weight: 2, evidence: "negative vertical rate" }, { active: recent.length >= 2 && recent.filter((rate) => rate < -150).length >= 2, weight: 3, evidence: "descent persisted across recent observations" }, { active: (altitudeDelta(state.history, 4) ?? 0) < -250, weight: 2, evidence: "altitude decreased across recent observations" }];
+    return [{ active: (aircraft.verticalRate ?? 0) < -200, weight: 2, evidence: EVIDENCE.negativeVerticalRate }, { active: recent.length >= 2 && recent.filter((rate) => rate < -150).length >= 2, weight: 3, evidence: EVIDENCE.descentPersisted }, { active: (altitudeDelta(state.history, 4) ?? 0) < -250, weight: 2, evidence: EVIDENCE.altitudeDecreased }];
   }
   private approachSignals(state: TrackState, aircraft: Aircraft, prior: Aircraft | undefined, distanceKm: number | null, priorDistanceKm: number | null): Signal[] {
     const descent = this.descentSignals(state, aircraft);
-    return [{ active: descent.filter((signal) => signal.active).length >= 2, weight: 3, evidence: "sustained descent toward the airport" }, { active: distanceKm !== null && distanceKm <= AIRPORT_PROXIMITY_KM, weight: 2, evidence: "aircraft is within the airport approach area" }, { active: distanceKm !== null && priorDistanceKm !== null && distanceKm < priorDistanceKm - 0.1, weight: 2, evidence: "aircraft moved closer to the airport" }, { active: finite(aircraft.altitude) && aircraft.altitude! < 7_000, weight: 1, evidence: "altitude is compatible with an approach" }, { active: prior !== undefined, weight: 1, evidence: "a preceding observation established a track" }];
+    return [{ active: descent.filter((signal) => signal.active).length >= 2, weight: 3, evidence: EVIDENCE.sustainedDescent }, { active: distanceKm !== null && distanceKm <= AIRPORT_PROXIMITY_KM, weight: 2, evidence: EVIDENCE.approachArea }, { active: distanceKm !== null && priorDistanceKm !== null && distanceKm < priorDistanceKm - 0.1, weight: 2, evidence: EVIDENCE.movedCloser }, { active: finite(aircraft.altitude) && aircraft.altitude! < 7_000, weight: 1, evidence: EVIDENCE.approachAltitude }, { active: prior !== undefined, weight: 1, evidence: EVIDENCE.precedingObservation }];
   }
   private landingSignals(aircraft: Aircraft, distanceKm: number | null, phase: FlightPhase): Signal[] {
-    return [{ active: phase === "APPROACH", weight: 3, evidence: "approach phase was established" }, { active: aircraft.onGround, weight: 4, evidence: "aircraft reported on ground" }, { active: distanceKm !== null && distanceKm <= 2, weight: 3, evidence: "aircraft is very close to the airport" }, { active: (aircraft.altitude ?? 99999) < 1_500, weight: 1, evidence: "altitude is low near the airport" }, { active: aircraft.groundSpeed === null || aircraft.groundSpeed <= 110, weight: 1, evidence: "groundspeed is compatible with touchdown" }];
+    return [{ active: phase === "APPROACH", weight: 3, evidence: EVIDENCE.approachEstablished }, { active: aircraft.onGround, weight: 4, evidence: EVIDENCE.onGround }, { active: distanceKm !== null && distanceKm <= 2, weight: 3, evidence: EVIDENCE.runwayProximity }, { active: (aircraft.altitude ?? 99999) < 1_500, weight: 1, evidence: EVIDENCE.lowAltitude }, { active: aircraft.groundSpeed === null || aircraft.groundSpeed <= 110, weight: 1, evidence: EVIDENCE.touchdownGroundspeed }];
   }
   private goAroundSignals(state: TrackState, aircraft: Aircraft, prior: Aircraft | undefined, distanceKm: number | null, priorDistanceKm: number | null): Signal[] | null {
     if (!prior || distanceKm === null || priorDistanceKm === null || distanceKm > RUNWAY_PROXIMITY_KM) return null;
@@ -221,7 +268,7 @@ export class FlightIntelligenceDetector {
     const climbing = (aircraft.verticalRate ?? 0) > 500 && (altitudeDelta(state.history, 3) ?? 0) > 150;
     const movingAway = distanceKm > minimum + 0.5 && distanceKm > priorDistanceKm + 0.15;
     if (!climbing || !movingAway) return null;
-    return [{ active: true, weight: 3, evidence: "approach was established before the climb" }, { active: true, weight: 2, evidence: "climb began near the runway or airport" }, { active: climbing, weight: 3, evidence: "vertical rate changed to a sustained climb" }, { active: movingAway, weight: 3, evidence: "aircraft moved away after the closest approach point" }];
+    return [{ active: true, weight: 3, evidence: EVIDENCE.approachEstablished }, { active: true, weight: 2, evidence: EVIDENCE.climbNearRunway }, { active: climbing, weight: 3, evidence: EVIDENCE.sustainedClimb }, { active: movingAway, weight: 3, evidence: EVIDENCE.movedAwayAfterClosest }];
   }
   private reliableTopOfDescent(state: TrackState, aircraft: Aircraft, destination: Airport): boolean {
     const distance = haversineDistanceKm(aircraft.lat!, aircraft.lon!, destination.latitude, destination.longitude);
@@ -238,7 +285,7 @@ export class FlightIntelligenceDetector {
     const destination = this.plannedDestination(aircraft);
     if (!destination || !airport || destination.icaoCode.toUpperCase() === airport.icaoCode.toUpperCase() || distanceKm === null || distanceKm > RUNWAY_PROXIMITY_KM) return null;
     const providerDiverted = aircraft.enrichment?.flightPlan?.flightAware?.diverted === true;
-    return [{ active: providerDiverted, weight: 4, evidence: "flight-plan provider marked the flight as diverted" }, { active: state.phase === "APPROACH", weight: 3, evidence: "an approach was established at a different airport" }, { active: distanceKm <= RUNWAY_PROXIMITY_KM, weight: 2, evidence: "aircraft is close to the alternate airport" }, { active: true, weight: 2, evidence: `observed airport differs from planned destination ${destination.icaoCode}` }];
+    return [{ active: providerDiverted, weight: 4, evidence: EVIDENCE.providerDiverted }, { active: state.phase === "APPROACH", weight: 3, evidence: EVIDENCE.alternateApproach }, { active: distanceKm <= RUNWAY_PROXIMITY_KM, weight: 2, evidence: EVIDENCE.alternateProximity }, { active: true, weight: 2, evidence: EVIDENCE.destinationDiffers }];
   }
 
   private detectHolding(history: FlightObservation[]): HoldingEvidence | null {
@@ -261,7 +308,7 @@ export class FlightIntelligenceDetector {
     const cumulativeTurn = meaningfulTurns.reduce((sum, turn) => sum + Math.abs(turn), 0);
     const sectors = new Set(tracks.map((track) => Math.floor(track / 45)));
     const meanAltitudeStep = altitudeValues.length > 1 ? altitudeValues.slice(1).reduce((sum, value, index) => sum + Math.abs(value - altitudeValues[index]!), 0) / (altitudeValues.length - 1) : Number.POSITIVE_INFINITY;
-    return { durationMs, maxRadiusKm, signals: [{ active: durationMs >= MIN_HOLDING_MS, weight: 3, evidence: "track duration met the holding minimum" }, { active: maxRadiusKm <= 8, weight: 3, evidence: "track remained inside a bounded area" }, { active: cumulativeTurn >= 300 && meaningfulTurns.length >= 5 && sectors.size >= 4, weight: 3, evidence: "heading changes evolved through repeated turns" }, { active: altitudeRange <= 900 && meanAltitudeStep <= 350, weight: 2, evidence: "altitude remained stable" }, { active: recent.every((item) => item.aircraft.onGround === false), weight: 1, evidence: "aircraft remained airborne" }] };
+    return { durationMs, maxRadiusKm, signals: [{ active: durationMs >= MIN_HOLDING_MS, weight: 3, evidence: EVIDENCE.holdingDuration }, { active: maxRadiusKm <= 8, weight: 3, evidence: EVIDENCE.holdingArea }, { active: cumulativeTurn >= 300 && meaningfulTurns.length >= 5 && sectors.size >= 4, weight: 3, evidence: EVIDENCE.headingEvolution }, { active: altitudeRange <= 900 && meanAltitudeStep <= 350, weight: 2, evidence: EVIDENCE.holdingAltitude }, { active: recent.every((item) => item.aircraft.onGround === false), weight: 1, evidence: EVIDENCE.holdingAirborne }] };
   }
   private nearestAirport(aircraft: Aircraft): AirportMatch | null {
     if (aircraft.lat === null || aircraft.lon === null) return null;
@@ -279,7 +326,7 @@ export class FlightIntelligenceDetector {
     const eventKey = [lifecycleKey, type, airportIcao ?? sectorId ?? "GLOBAL", semanticSuffix || state.approachCycle || "0"].join(":");
     if (state.emitted.has(eventKey)) return null;
     state.emitted.add(eventKey); while (state.emitted.size > MAX_EMITTED_KEYS) state.emitted.delete(state.emitted.values().next().value!);
-    return { id: eventKey, eventKey, lifecycleKey, type, phase, icaoHex: aircraft.icaoHex, flightId: null, callsign: aircraft.callsign, registration: aircraft.registration, occurredAt: aircraft.lastSeen || new Date().toISOString(), detectedAt: new Date().toISOString(), latitude: aircraft.lat, longitude: aircraft.lon, altitude: aircraft.altitude, confidence: scored.confidence, confidenceLevel: confidenceLevel(scored.confidence), airportIcao, runway, runwayContext, sectorId, evidence: [...scored.evidence, ...(runway ? [`runway context resolved to ${runway}`] : [])].slice(0, 8) };
+    return { id: eventKey, eventKey, lifecycleKey, type, phase, icaoHex: aircraft.icaoHex, flightId: null, callsign: aircraft.callsign, registration: aircraft.registration, occurredAt: aircraft.lastSeen || new Date().toISOString(), detectedAt: new Date().toISOString(), latitude: aircraft.lat, longitude: aircraft.lon, altitude: aircraft.altitude, confidence: scored.confidence, confidenceLevel: confidenceLevel(scored.confidence), airportIcao, runway, runwayContext, sectorId, evidence: [...scored.evidence, ...(runway ? [EVIDENCE.runwayResolved] : [])].slice(0, 8) };
   }
 
   private observeAirspace(state: TrackState, aircraft: Aircraft, observedAt: number, append: (event: FlightIntelligenceEvent | null) => void): void {
@@ -291,7 +338,7 @@ export class FlightIntelligenceDetector {
     if (!boundary || boundary.sector !== key || boundary.inside !== isEntry) state.pendingBoundary = { sector: key, inside: isEntry, at: observedAt };
     const pending = state.pendingBoundary;
     if (!pending || pending.inside !== isEntry || observedAt - pending.at < AIRSPACE_DEBOUNCE_MS || (isEntry && pending.sector !== sector)) return;
-    const scored = scoreSignals([{ active: true, weight: 3, evidence: isEntry ? "position matched sector polygon and altitude limits" : "position left matched sector polygon" }, { active: true, weight: 2, evidence: "sector state remained stable through the debounce interval" }, { active: isEntry ? sector !== null : state.inside !== null, weight: 1, evidence: "ATC assignment is geographic context only" }]);
+    const scored = scoreSignals([{ active: true, weight: 3, evidence: EVIDENCE.sectorMatched }, { active: true, weight: 2, evidence: EVIDENCE.sectorStable }, { active: isEntry ? sector !== null : state.inside !== null, weight: 1, evidence: EVIDENCE.atcGeographicContext }]);
     state.airspaceSequence += 1;
     append(this.event(isEntry ? "AIRSPACE_ENTRY" : "AIRSPACE_EXIT", aircraft, state, null, state.phase, scored, null, `airspace-${state.airspaceSequence}`, sector));
     state.inside = sector; state.pendingBoundary = undefined;

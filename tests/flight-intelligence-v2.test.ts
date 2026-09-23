@@ -12,13 +12,13 @@ function aircraft(overrides: Partial<Aircraft> = {}): Aircraft {
   return { icaoHex: "ABC123", callsign: "TEST01", registration: null, aircraftType: null, aircraftDescription: null, lat: 50.4, lon: 14.4, altitude: 8_000, baroAltitude: 8_000, geomAltitude: 8_000, groundSpeed: 220, track: 240, verticalRate: 0, baroRate: 0, geomRate: 0, squawk: null, category: null, emergency: null, rssi: null, messages: null, seenSeconds: 0, seenPosSeconds: 0, lastSeen: "2026-09-17T12:00:00.000Z", source: "ADS-B", origin: "local", sourceType: null, onGround: false, distanceKm: 40, bearing: 240, trail: [], ...overrides };
 }
 
-function observeSequence(detector: FlightIntelligenceDetector, values: Array<Partial<Aircraft>>, stepSeconds = 60): string[] {
-  const start = Date.parse("2026-09-17T12:00:00.000Z");
+function observeSequence(detector: FlightIntelligenceDetector, values: Array<Partial<Aircraft>>, stepSeconds = 60, startIso = "2026-09-17T12:00:00.000Z"): string[] {
+  const start = Date.parse(startIso);
   return values.flatMap((value, index) => detector.observe(undefined, aircraft({ ...value, lastSeen: new Date(start + index * stepSeconds * 1000).toISOString() })).map((event) => event.type));
 }
 
-function collectEvents(detector: FlightIntelligenceDetector, values: Array<Partial<Aircraft>>, stepSeconds = 60) {
-  const start = Date.parse("2026-09-17T12:00:00.000Z");
+function collectEvents(detector: FlightIntelligenceDetector, values: Array<Partial<Aircraft>>, stepSeconds = 60, startIso = "2026-09-17T12:00:00.000Z") {
+  const start = Date.parse(startIso);
   return values.flatMap((value, index) => detector.observe(undefined, aircraft({ ...value, lastSeen: new Date(start + index * stepSeconds * 1000).toISOString() })));
 }
 
@@ -59,7 +59,12 @@ describe("flight intelligence V2", () => {
     ]);
     expect(events).toContain("APPROACH");
     expect(events).toContain("LANDING");
-    expect(detector.getPhase("ABC123")).toBe("LANDING");
+    expect(detector.getPhase("ABC123")).toBe("GROUND");
+    const nextTakeoff = observeSequence(detector, [
+      { lat: 50.01, lon: 14.01, altitude: 600, verticalRate: 800, onGround: false },
+      { lat: 50.03, lon: 14.04, altitude: 2_000, verticalRate: 900, onGround: false },
+    ], 60, "2026-09-17T12:06:00.000Z");
+    expect(nextTakeoff).toContain("TAKEOFF");
   });
 
   it("requires an established approach and movement away for go-around", () => {
@@ -120,5 +125,24 @@ describe("flight intelligence V2", () => {
     ];
     const types = observeSequence(detector, [...values, ...values.map((value) => ({ ...value, lat: value.lat! + 0.0001 }))]);
     expect(types.filter((type) => type === "APPROACH")).toHaveLength(1);
+  });
+
+  it("starts a new semantic lifecycle after an inactive track is cleaned up", () => {
+    const detector = new FlightIntelligenceDetector([LKPR]);
+    const atc = { sectorId: "PRAHA-TMA" } as Aircraft["atc"];
+    const first = collectEvents(detector, [
+      { atc },
+      { atc },
+      { atc },
+    ]);
+    expect(first).toHaveLength(1);
+    detector.cleanup(new Set());
+    const second = collectEvents(detector, [
+      { atc },
+      { atc },
+      { atc },
+    ], 60, "2026-09-17T13:00:00.000Z");
+    expect(second).toHaveLength(1);
+    expect(second[0]?.eventKey).not.toBe(first[0]?.eventKey);
   });
 });
