@@ -895,14 +895,15 @@ export function AirRadarApp() {
     const type = normalizeAircraftRuleType(rule.kind);
     return value && type ? [{ type, value }] : [];
   }), [watchlist]);
-  const watchlistMatchCache = useMemo(() => new WeakMap<AircraftView, boolean>(), [normalizedWatchlist]);
-  const isWatchlisted = useCallback((aircraft: AircraftView) => {
-    const cached = watchlistMatchCache.get(aircraft);
-    if (cached !== undefined) return cached;
-    const matches = normalizedWatchlist.some((rule) => matchesAircraftRule(aircraft, rule));
-    watchlistMatchCache.set(aircraft, matches);
-    return matches;
-  }, [normalizedWatchlist, watchlistMatchCache]);
+  const watchlistedHexes = useMemo(() => new Set(
+    snapshot.aircraft
+      .filter((aircraft) => normalizedWatchlist.some((rule) => matchesAircraftRule(aircraft, rule)))
+      .map((aircraft) => aircraft.icaoHex),
+  ), [normalizedWatchlist, snapshot.aircraft]);
+  const isWatchlisted = useCallback(
+    (aircraft: AircraftView) => watchlistedHexes.has(aircraft.icaoHex),
+    [watchlistedHexes],
+  );
 
   function updateMapFilter<Key extends keyof MapAircraftFilters>(key: Key, value: MapAircraftFilters[Key]) {
     setMapFilters((current) => ({ ...current, [key]: value }));
