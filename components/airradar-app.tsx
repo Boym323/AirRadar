@@ -84,7 +84,7 @@ import {
 import { createLabelCollisionScheduler } from "@/lib/radar/aircraft-label-collision";
 import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-controller";
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
-import { startRadarPerformanceDiagnostics } from "@/lib/radar/performance-diagnostics";
+import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 
 declare global {
   interface Window {
@@ -1107,7 +1107,13 @@ export function AirRadarApp() {
     const ognMarkers = ognMarkersRef.current;
     const liveTrails = liveTrailsRef.current;
     const mapReplays = mapReplayRef.current;
-    const performanceDiagnostics = startRadarPerformanceDiagnostics(window.location.search);
+    let performanceDiagnostics: RadarPerformanceDiagnosticsSession | null = null;
+    let performanceDiagnosticsDisposed = false;
+    if (new URLSearchParams(window.location.search).get("perfDiagnostics") === "1") {
+      void import("@/lib/radar/performance-diagnostics").then(({ startRadarPerformanceDiagnostics }) => {
+        if (!performanceDiagnosticsDisposed) performanceDiagnostics = startRadarPerformanceDiagnostics(window.location.search);
+      });
+    }
     if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
       window.__airradarAircraftMarkersForDiagnostics = aircraftMarkers;
     }
@@ -1485,6 +1491,7 @@ export function AirRadarApp() {
       for (const handle of ognMarkers.values()) handle.marker.remove();
       ognMarkers.clear();
       liveTrails.clear();
+      performanceDiagnosticsDisposed = true;
       performanceDiagnostics?.stop();
       map.remove();
       if (window.__airradarMapForDiagnostics === map) delete window.__airradarMapForDiagnostics;
