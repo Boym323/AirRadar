@@ -108,8 +108,14 @@ function currentSnapshot(): RadarPerformanceSnapshot {
   };
 }
 
-export function startRadarPerformanceDiagnostics(search: string): () => void {
-  if (typeof window === "undefined" || new URLSearchParams(search).get("perfDiagnostics") !== "1") return () => {};
+export interface RadarPerformanceDiagnosticsSession {
+  recordAnimationFrame: (durationMs: number, markerWrites: number, activeJobs: number) => void;
+  recordLabelCollision: (durationMs: number) => void;
+  stop: () => void;
+}
+
+export function startRadarPerformanceDiagnostics(search: string): RadarPerformanceDiagnosticsSession | null {
+  if (typeof window === "undefined" || new URLSearchParams(search).get("perfDiagnostics") !== "1") return null;
 
   activeState = createState();
   const api = {
@@ -132,30 +138,30 @@ export function startRadarPerformanceDiagnostics(search: string): () => void {
     observer.observe({ entryTypes: ["longtask"] });
   }
 
-  return () => {
-    observer?.disconnect();
-    if (window.__airradarPerformanceDiagnostics === api) delete window.__airradarPerformanceDiagnostics;
-    activeState = null;
+  return {
+    recordAnimationFrame: (durationMs, markerWrites, activeJobs) => {
+      const state = activeState;
+      if (!state) return;
+      state.animationFrames += 1;
+      state.animationTotalMs += durationMs;
+      state.animationMaxMs = Math.max(state.animationMaxMs, durationMs);
+      state.markerWrites += markerWrites;
+      state.activeJobs = activeJobs;
+      state.maxActiveJobs = Math.max(state.maxActiveJobs, activeJobs);
+    },
+    recordLabelCollision: (durationMs) => {
+      const state = activeState;
+      if (!state) return;
+      state.collisionRuns += 1;
+      state.collisionTotalMs += durationMs;
+      state.collisionMaxMs = Math.max(state.collisionMaxMs, durationMs);
+    },
+    stop: () => {
+      observer?.disconnect();
+      if (window.__airradarPerformanceDiagnostics === api) delete window.__airradarPerformanceDiagnostics;
+      activeState = null;
+    },
   };
-}
-
-export function recordRadarAnimationFrame(durationMs: number, markerWrites: number, activeJobs: number): void {
-  const state = activeState;
-  if (!state) return;
-  state.animationFrames += 1;
-  state.animationTotalMs += durationMs;
-  state.animationMaxMs = Math.max(state.animationMaxMs, durationMs);
-  state.markerWrites += markerWrites;
-  state.activeJobs = activeJobs;
-  state.maxActiveJobs = Math.max(state.maxActiveJobs, activeJobs);
-}
-
-export function recordRadarLabelCollision(durationMs: number): void {
-  const state = activeState;
-  if (!state) return;
-  state.collisionRuns += 1;
-  state.collisionTotalMs += durationMs;
-  state.collisionMaxMs = Math.max(state.collisionMaxMs, durationMs);
 }
 
 export function recordRadarTrafficList(totalRows: number, renderedRows: number, virtualized: boolean): void {
