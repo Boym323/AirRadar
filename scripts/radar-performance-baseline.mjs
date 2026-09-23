@@ -349,6 +349,8 @@ async function main() {
       READSB_BASE_URL: "",
       ATC_SAMPLE_ENABLED: "true",
       ADSBDB_ENABLED: "false",
+      ADSBLOL_ENABLED: "false",
+      ADSBHUB_ENABLED: "false",
       AIRCRAFT_PHOTOS_ENABLED: "false",
       OGN_ENABLED: "false",
       FLIGHTAWARE_API_KEY: "",
