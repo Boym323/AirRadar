@@ -12,6 +12,7 @@ import {
 } from "@/lib/route-visualization";
 
 const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const radarLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
 const searchSource = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
@@ -112,7 +113,7 @@ describe("feature integration", () => {
     expect(rangeRingsSource).toContain("50, 100, 200, 300, 400");
     expect(radarSource).toContain("showRangeRings");
     expect(radarSource).toContain("snapshot.receiver.lat === null || snapshot.receiver.lon === null");
-    expect(radarSource).toContain("receiverPositionAvailable && <label>");
+    expect(radarLayerMenuSource).toContain("receiverPositionAvailable && <label>");
     expect(`${radarSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
   });
 
