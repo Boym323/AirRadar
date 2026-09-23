@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,18 +7,12 @@ import * as maplibregl from "maplibre-gl";
 import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import {
-  formatAge,
-  formatAltitude,
   formatAtcFrequency,
   formatAtcLimit,
   formatAtcNote,
   formatAtcService,
-  formatCoordinate,
   formatDateTime,
-  formatDistance,
   formatNumber,
-  formatSpeed,
-  formatTrack,
   t,
   visibleAircraft,
 } from "@/lib/i18n";
@@ -57,6 +50,7 @@ import {
 } from "@/lib/route-visualization";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
 import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
+import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
@@ -103,7 +97,6 @@ const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_RADAR_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
-const AircraftRadarQuickDetail = dynamic(() => import("@/components/aircraft-radar-quick-detail").then((module) => module.AircraftRadarQuickDetail));
 const AtcVerticalTraffic = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.AtcVerticalTraffic));
 const SectorFlowsPanel = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.SectorFlowsPanel));
 const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, number], [number, number]] = [
@@ -2401,94 +2394,31 @@ export function AirRadarApp() {
             ognLabel={ognTargetLabel}
           />
 
-          {(drawerState === "aircraft" || drawerState === "ogn") && (
-            <div className="detail-panel" key={selectedOgnTarget ? `ogn-${selectedOgnTarget.id}` : selectedIdentity}>
-              {selectedOgnTarget ? <>
-                <div className="detail-heading">
-                  <button type="button" className="detail-back-button" onClick={backToTraffic}>← {t.radar.trafficNearby}</button>
-                  <div><div className="detail-eyebrow">{t.ogn.title}</div><div className="detail-callsign">{ognTargetLabel(selectedOgnTarget)}</div><div className="detail-registration">{t.ogn.badge} · {t.ogn.trackingSources[selectedOgnTarget.trackingSource]}</div></div>
-                  <button className="close-button" onClick={closeRadarDrawer} aria-label={t.history.closePanel}>×</button>
-                </div>
-                <OgnDetailContent target={selectedOgnTarget} />
-              </> : selectedAircraft ? <AircraftRadarQuickDetail
-                aircraft={selectedAircraft}
-                databaseAircraft={selectedDatabaseAircraft}
-                historyTrail={selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
-                atcContext={selectedAtcContext}
-                sectorTraffic={sectorTraffic}
-                watchlisted={isWatchlisted(selectedAircraft)}
-                onBack={backToTraffic}
-                onClose={closeRadarDrawer}
-                onCenter={centerSelectedAircraft}
-                onToggleWatchlist={() => setWatchlist((current) => current.some((rule) => rule.kind === "icao" && rule.value === selectedAircraft.icaoHex)
-                  ? current.filter((rule) => !(rule.kind === "icao" && rule.value === selectedAircraft.icaoHex))
-                  : [...current, { kind: "icao", value: selectedAircraft.icaoHex }])}
-              /> : <div className="detail-content">
-                <div className="detail-disclaimer aircraft-offline-notice">{t.aircraft.notCurrentlyInRange}</div>
-                <DetailSection title={t.history.aircraftDetail}>
-                  <DetailItem label={t.aircraft.icaoHex} value={selectedIdentity || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.registration} value={selectedDatabaseAircraft?.registration || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.currentCallsign} value={t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.aircraftType} value={selectedDatabaseAircraft?.aircraftType || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.manufacturer} value={selectedDatabaseAircraft?.manufacturer || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.modelType} value={selectedDatabaseAircraft?.model || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.operator} value={selectedDatabaseAircraft?.operator || t.common.emptyValue} />
-                  <DetailItem label={t.aircraft.registrationCountry} value={selectedDatabaseAircraft?.registrationCountryCode || selectedDatabaseAircraft?.registrationCountry || t.common.emptyValue} />
-                </DetailSection>
-                <div className="detail-footer"><Link className="history-link" href={`/aircraft/${encodeURIComponent(selectedIdentity || "")}`}>{t.history.aircraftDetail} →</Link></div>
-              </div>}
-            </div>
-          )}
+          <RadarDrawerDetails
+            drawerState={drawerState}
+            selectedOgnTarget={selectedOgnTarget}
+            ognLabel={ognTargetLabel}
+            selectedIdentity={selectedIdentity}
+            selectedAircraft={selectedAircraft}
+            databaseAircraft={selectedDatabaseAircraft}
+            historyTrail={selectedAircraft && selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
+            atcContext={selectedAtcContext}
+            sectorTraffic={sectorTraffic}
+            watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
+            onBack={backToTraffic}
+            onClose={closeRadarDrawer}
+            onCenter={centerSelectedAircraft}
+            onToggleWatchlist={() => {
+              if (!selectedAircraft) return;
+              setWatchlist((current) => current.some((rule) => rule.kind === "icao" && rule.value === selectedAircraft.icaoHex)
+                ? current.filter((rule) => !(rule.kind === "icao" && rule.value === selectedAircraft.icaoHex))
+                : [...current, { kind: "icao", value: selectedAircraft.icaoHex }]);
+            }}
+          />
         </aside>
       </section>
 
       <MobileBottomNav />
     </main>
   );
-}
-
-function OgnDetailContent({ target }: { target: OgnTargetView }) {
-  const typeLabel = target.aircraftType.replaceAll("_", " ");
-  const ageSeconds = Math.max(0, (Date.now() - Date.parse(target.receivedAt)) / 1000);
-  const position = `${formatCoordinate(target.latitude)}, ${formatCoordinate(target.longitude)}`;
-  return <div className="detail-content ogn-detail-content">
-    <div className="detail-hero">
-      <div className="detail-hero-type">{typeLabel}</div>
-      <div className="detail-hero-metrics">
-        <div><strong>{formatAltitude(target.altitudeFt)}</strong><span>{t.ogn.altitude}</span></div>
-        <div><strong>{formatSpeed(target.groundSpeedKt)}</strong><span>{t.ogn.groundSpeed}</span></div>
-        <div><strong>{formatTrack(target.trackDeg)}</strong><span>{t.ogn.track}</span></div>
-        <div><strong>{target.verticalRateFpm === null ? t.common.emptyValue : `${target.verticalRateFpm > 0 ? "+" : ""}${formatNumber(target.verticalRateFpm)} ft/min`}</strong><span>{t.ogn.verticalRate}</span></div>
-      </div>
-    </div>
-    <DetailSection title={t.ogn.identity}>
-      {target.identityVisible ? <>
-        <DetailItem label={t.ogn.address} value={target.address || t.common.emptyValue} />
-        <DetailItem label={t.ogn.addressType} value={target.addressType} />
-        <DetailItem label={t.ogn.callsign} value={target.senderCallsign || t.common.emptyValue} />
-        <DetailItem label={t.ogn.registration} value={target.registration || t.common.emptyValue} />
-        <DetailItem label={t.ogn.competitionNumber} value={target.competitionNumber || t.common.emptyValue} />
-        <DetailItem label={t.ogn.model} value={target.model || t.common.emptyValue} />
-      </> : <div className="detail-disclaimer">{t.ogn.anonymous} · {t.ogn.hiddenIdentity}</div>}
-    </DetailSection>
-    <DetailSection title={t.ogn.position}>
-      <DetailItem label={t.ogn.aircraftType} value={typeLabel} />
-      <DetailItem label={t.ogn.position} value={position} />
-      <DetailItem label={t.ogn.distance} value={formatDistance(target.distanceKm)} />
-      <DetailItem label={t.ogn.bearing} value={formatTrack(target.bearing)} />
-      <DetailItem label={t.ogn.lastSeen} value={formatAge(ageSeconds)} />
-      {target.identityVisible && <DetailItem label={t.ogn.receiver} value={target.lastReceiver || t.common.emptyValue} />}
-      <DetailItem label={t.ogn.title} value={`${t.ogn.trackingSources[target.trackingSource]}${target.stale ? ` · ${t.ogn.stale}` : ""}`} />
-    </DetailSection>
-    <div className="detail-disclaimer ogn-privacy-note">{t.ogn.sourceDisclaimer}</div>
-  </div>;
-}
-
-function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
-  if (value === t.common.emptyValue) return null;
-  return <div><div className="detail-item-label">{label}</div><div className="detail-item-value">{value}</div></div>;
-}
-
-function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="detail-section"><h3>{title}</h3><div className="detail-grid">{children}</div></section>;
 }
