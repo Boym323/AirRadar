@@ -22,8 +22,6 @@ import {
   formatTrack,
   t,
   visibleAircraft,
-  watchlistKindLabel,
-  watchlistSummary,
 } from "@/lib/i18n";
 import { confirmedInterpolationDurationMs, correctionFor, motionAt, motionObservationAdvances, motionRenderIntervalMs, createMotionHistory, updateMotionHistory, visualHeadingForConfirmedPosition, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
@@ -37,7 +35,6 @@ import type { AtcContextResult } from "@/lib/atc-context/types";
 import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
 import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/airspace-activity/map";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
-import { RelevantAtcPanel } from "@/components/relevant-atc-panel";
 import type { SectorFlow } from "@/components/atc-sector-traffic-panels";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
@@ -59,7 +56,8 @@ import {
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
-import { AircraftTrafficList } from "@/components/aircraft-traffic-list";
+import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
+import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
 import { useDatasetQuery, type DatasetState } from "@/components/use-dataset-query";
@@ -71,10 +69,8 @@ import {
   DEFAULT_MAP_AIRCRAFT_FILTERS,
   filterAircraftForMap,
   isMapAircraftFilterActive,
-  type AircraftQuickFilter,
   type MapAircraftFilters,
 } from "@/lib/aircraft/map-filters";
-import type { AircraftSourceFilter } from "@/lib/aircraft/source-awareness";
 import {
   createAircraftMarkerHandle,
   setAircraftMarkerHeading,
@@ -110,8 +106,6 @@ const EMPTY_RADAR_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABC
 const AircraftRadarQuickDetail = dynamic(() => import("@/components/aircraft-radar-quick-detail").then((module) => module.AircraftRadarQuickDetail));
 const AtcVerticalTraffic = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.AtcVerticalTraffic));
 const SectorFlowsPanel = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.SectorFlowsPanel));
-const LogbookSummary = dynamic(() => import("@/components/logbook-summary").then((module) => module.LogbookSummary));
-const IntelligenceFeed = dynamic(() => import("@/components/intelligence-feed").then((module) => module.IntelligenceFeed));
 const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, number], [number, number]] = [
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.north],
   [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.north],
@@ -198,8 +192,6 @@ function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-type TrafficSource = "adsb" | "ogn";
-type RadarDrawerState = "closed" | "traffic" | "aircraft" | "ogn";
 
 interface AircraftAnimationJob {
   handle: AircraftMarkerHandle;
@@ -415,8 +407,6 @@ export function AirRadarApp() {
   const [ognEnabled, setOgnEnabled] = useState<boolean | null>(null);
   const [showOgn, setShowOgn] = useState(false);
   const ognLoadStartedRef = useRef(false);
-  const [intelligenceOpened, setIntelligenceOpened] = useState(false);
-  const [logbookOpened, setLogbookOpened] = useState(false);
   const [trafficSource, setTrafficSource] = useState<TrafficSource>("adsb");
   const [selectedOgnId, setSelectedOgnId] = useState<string | null>(null);
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
@@ -430,8 +420,6 @@ export function AirRadarApp() {
   const [mapFilters, setMapFilters] = useState<MapAircraftFilters>(DEFAULT_MAP_AIRCRAFT_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [watchlist, setWatchlist] = useState<Array<{ kind: string; value: string }>>([]);
-  const [watchlistKind, setWatchlistKind] = useState("callsign");
-  const [watchlistValue, setWatchlistValue] = useState("");
   const [showAircraft, setShowAircraft] = useState(true);
   const [colorMode, setColorMode] = useState<AircraftColorMode>("default");
   const [showRangeRings, setShowRangeRings] = useState(true);
@@ -957,14 +945,6 @@ export function AirRadarApp() {
     setWatchlistOnly(false);
     setSortBy("distance");
   }, []);
-
-  function addWatchlistRule(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const value = watchlistValue.trim().toUpperCase();
-    if (!value || watchlist.some((rule) => rule.kind === watchlistKind && rule.value === value)) return;
-    setWatchlist((current) => [...current, { kind: watchlistKind, value }]);
-    setWatchlistValue("");
-  }
 
   const selectAircraft = useCallback((hex: string) => {
     drawerActionGenerationRef.current += 1;
