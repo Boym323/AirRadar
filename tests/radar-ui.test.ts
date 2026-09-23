@@ -257,12 +257,12 @@ describe("radar UI polish helpers", () => {
   });
 
   it("exposes the layer state and keeps aircraft detail loading bounded", () => {
-    expect(appSource).toContain("checked={showAircraft}");
+    expect(radarMapLayerMenuSource).toContain("checked={showAircraft}");
     expect(appSource).toContain('root.className = "ogn-marker"');
     expect(appSource).toContain('root.style.visibility = visible ? "visible" : "hidden"');
     expect(globalCss).toContain(".ogn-marker");
-    expect(appSource).toContain("checked={showAirports}");
-    expect(appSource).toContain("checked={showAtc}");
+    expect(radarMapLayerMenuSource).toContain("checked={showAirports}");
+    expect(radarMapLayerMenuSource).toContain("checked={showAtc}");
     expect(appSource).toContain("useDatasetQuery");
     expect(appSource).toContain('url: "/api/airspace/activity"');
     expect(appSource).toContain('url: "/api/ats/routes?view=map"');
@@ -296,9 +296,9 @@ describe("radar UI polish helpers", () => {
 
   it("keeps radar keyboard shortcuts out of editable controls", () => {
     expect(appSource).toContain("searchInputRef.current?.focus()");
-    expect(appSource).toContain('event.key.toLowerCase() === "f"');
+    expect(radarDrawerInteractionsSource).toContain('event.key.toLowerCase() === "f"');
     expect(appSource).toContain("setSelectedHex(null);");
-    expect(appSource).toContain("isEditableTarget(event.target)");
+    expect(radarDrawerInteractionsSource).toContain("isEditableTarget(event.target)");
   });
 
   it("keeps search shortcuts source-independent while filters stay ADS-B-only", () => {
