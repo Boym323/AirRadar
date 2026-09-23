@@ -176,6 +176,38 @@ describe("aircraft motion", () => {
     expect(later.stale).toBe(true);
     expect(later.correctionActive).toBe(true);
   });
+  it("creates a correction for a slow confirmed report beyond the prediction horizon", () => {
+    const s = {
+      ...source(90, 1_000, 50.01, 14.01),
+      allowPrediction: false,
+    };
+    const correction = correctionFor(
+      { lat: 50, lon: 14 },
+      s,
+      MAX_PREDICTION_AGE_MS + 5_000,
+      9_000,
+    );
+
+    expect(correction).not.toBeNull();
+    const halfway = motionAt(s, MAX_PREDICTION_AGE_MS + 9_500, correction!);
+    expect(halfway.correctionActive).toBe(true);
+    expect(halfway.lat).toBeGreaterThan(50);
+    expect(halfway.lat).toBeLessThan(s.lat);
+  });
+
+  it("still rejects stale predictive corrections", () => {
+    const s = {
+      ...source(90, 1_000, 50.01, 14.01),
+      allowPrediction: true,
+    };
+    expect(correctionFor(
+      { lat: 50, lon: 14 },
+      s,
+      MAX_PREDICTION_AGE_MS + 5_000,
+      1_000,
+    )).toBeNull();
+  });
+
 
   it("matches interpolation duration to the confirmed observation cadence", () => {
     const previous = source(90, 10_000);
