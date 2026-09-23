@@ -51,10 +51,11 @@ import {
 import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
 import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
+import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
-import { IconButton, MapControl, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
+import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useAircraftStream } from "@/components/use-aircraft-stream";
-import { useDatasetQuery, type DatasetState } from "@/components/use-dataset-query";
+import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { createProcedureGeoJSON } from "@/lib/procedure-visualization";
@@ -146,13 +147,6 @@ async function parseJsonDataset<T>(response: Response, validator: (value: unknow
   const value: unknown = await response.json();
   if (!validator(value)) throw new SyntaxError("malformed dataset response");
   return value;
-}
-
-function datasetStateLabel(label: string, dataset: DatasetState<unknown>, countLabel: (count: number) => string): string {
-  if ((dataset.status === "ready" || dataset.status === "stale") && dataset.itemCount > 0) return `${label} · ${countLabel(dataset.itemCount)}`;
-  if (dataset.status === "retrying" || dataset.status === "loading" || dataset.status === "stale") return `${label} · ${t.layers.reconnecting}`;
-  if (dataset.status === "unavailable") return `${label} · ${t.layers.unavailable}`;
-  return label;
 }
 
 interface PublicAlertStatus {
@@ -2244,69 +2238,71 @@ export function AirRadarApp() {
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>
               </MapControlGroup>
-              <details className="map-layers">
-                <MapControl as="summary"><UiIcon name="layers" />{t.layers.title}</MapControl>
-                <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.traffic}</span>
-                    <label><input type="checkbox" checked={showAircraft} onChange={(event) => setShowAircraft(event.target.checked)} /> {t.layers.aircraft}</label>
-                    <label><input type="checkbox" checked={showOgn} onChange={(event) => setShowOgn(event.target.checked)} /> {t.layers.ogn}</label>
-                  </div>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.aviation}</span>
-                    <label data-testid="map-layer-airports"><input type="checkbox" checked={showAirports} onChange={(event) => setShowAirports(event.target.checked)} /> {datasetStateLabel(t.layers.airports, airportsDataset, (count) => t.layers.airportsCount(formatNumber(count)))}</label>
-                    <label className="map-layer-sublevel"><input type="checkbox" checked={showSignificantAirports} disabled={!showAirports} onChange={(event) => setShowSignificantAirports(event.target.checked)} /> {t.layers.significantAirports}</label>
-                    <label className="map-layer-sublevel"><input type="checkbox" checked={showSmallAirports} disabled={!showAirports} onChange={(event) => setShowSmallAirports(event.target.checked)} /> {t.layers.smallAirports}</label>
-                    <label className="map-layer-sublevel"><input type="checkbox" checked={showHeliports} disabled={!showAirports} onChange={(event) => setShowHeliports(event.target.checked)} /> {t.layers.heliports}</label>
-                    <div className="map-layer-subgroup-heading">{t.layers.groups.atcAirspace}</div>
-                    <label data-testid="map-layer-atc"><input type="checkbox" checked={showAtc} onChange={(event) => setShowAtc(event.target.checked)} /> {datasetStateLabel(t.layers.atc, atcDataset, (count) => t.layers.sectorsCount(formatNumber(count)))}</label>
-                    <label data-testid="map-layer-atc-traffic"><input type="checkbox" checked={showAtcTraffic} onChange={(event) => setShowAtcTraffic(event.target.checked)} /> {t.layers.atcTraffic}</label>
-                    {showAtcTraffic && <div className="map-layer-sublevel">{t.layers.atcTrafficLegend}<br /><small>{t.layers.atcTrafficDescription}<br />{t.layers.atcTrafficDisclaimer}{sectorTrafficState === "stale" ? " · STALE" : sectorTrafficState === "unavailable" ? ` · ${t.layers.atcTrafficNoData}` : ""}</small></div>}
-                    {showAtc && airspaceActivity?.planned.status !== "unavailable" && <div className="map-layer-sublevel">{activityT.legendCurrent} · {activityT.legendUpcoming}{airspaceActivity?.planned.status === "stale" ? ` · ${activityT.stale}` : ""}<br /><small>{activityT.disclaimer}</small></div>}
-                    <div className="map-layer-subgroup-heading">{t.layers.groups.atsProcedures}</div>
-                    <label data-testid="map-layer-ats"><input type="checkbox" checked={showAtsRoutes} onChange={(event) => { setShowAtsRoutes(event.target.checked); if (!event.target.checked) setSelectedAtsRoute(null); }} /> {datasetStateLabel(t.layers.atsRoutes, atsDataset, (count) => t.layers.routesCount(formatNumber(count)))}</label>
-                    <label data-testid="map-layer-sid"><input type="checkbox" checked={showSids} onChange={(event) => setShowSids(event.target.checked)} /> {t.layers.sids}</label>
-                    <label data-testid="map-layer-star"><input type="checkbox" checked={showStars} onChange={(event) => setShowStars(event.target.checked)} /> {t.layers.stars}</label>
-                    {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
-                    {showAtsRoutes && atsRoutes && !atsRoutes.available && <div className="map-layer-sublevel">{t.layers.atsRoutesUnavailable}</div>}
-                    {sigmetEnabled !== false && <label data-testid="map-layer-sigmet"><input type="checkbox" checked={showSigmet} onChange={(event) => setShowSigmet(event.target.checked)} /> {t.layers.sigmet}</label>}
-                  </div>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.weather}</span>
-                    <label data-testid="map-layer-weather-radar"><input type="checkbox" checked={showWeatherRadar} onChange={(event) => { setShowWeatherRadar(event.target.checked); if (!event.target.checked) setRadarPlaying(false); }} /> {t.layers.weatherRadar}</label>
-                    {showWeatherRadar && <div className="map-layer-sublevel weather-radar-controls">
-                      <label className="map-layer-mode"><span>{t.layers.opacity}</span><input type="range" min="0.2" max="1" step="0.05" value={radarOpacity} aria-label={t.layers.opacity} onChange={(event) => setRadarOpacity(Number(event.target.value))} /></label>
-                      <span>{selectedRadarFrame ? `${t.layers.currentTimestamp}: ${formatDateTime(selectedRadarFrame.observedAt, t)}${selectedRadarFrame.stale ? ` · ${t.layers.radarStale}` : ""}` : radarStatus === "unavailable" ? t.layers.radarUnavailable : t.common.loading}</span>
-                    </div>}
-                    <label data-testid="map-layer-metar"><input type="checkbox" checked={showMetar} onChange={(event) => setShowMetar(event.target.checked)} /> {t.layers.metar}</label>
-                    <label data-testid="map-layer-wind"><input type="checkbox" checked={showWind} onChange={(event) => setShowWind(event.target.checked)} /> {t.layers.windAloft}</label>
-                    {showWind && <div className="map-layer-sublevel wind-controls">
-                      <label className="map-layer-mode"><span>{t.layers.pressureLevel}</span><select value={windLevel} aria-label={t.layers.pressureLevel} onChange={(event) => { setWindLevel(Number(event.target.value) as WindLevelHpa); setWindValidAt(null); }}>{WIND_PRESSURE_LEVELS.map((level) => <option key={level} value={level}>{level} hPa</option>)}</select></label>
-                      {windData && <label className="map-layer-mode"><span>{t.layers.valid}</span><select value={windValidAt ?? windData.validAt} aria-label={t.layers.valid} onChange={(event) => setWindValidAt(event.target.value)}>{windData.availableValidTimes.map((valid) => <option key={valid} value={valid}>{formatDateTime(valid, t)}</option>)}</select></label>}
-                      {windData && <span>{windData.model} · {t.layers.windModelForecast}{windData.modelRun ? ` · ${t.layers.modelRun}: ${formatDateTime(windData.modelRun, t)}` : ""} · {t.layers.valid}: {formatDateTime(windData.validAt, t)}</span>}
-                      {windStatus === "unavailable" && <span>{t.layers.windUnavailable}</span>}
-                    </div>}
-                    {showMetar && metarStatus === "unavailable" && <div className="map-layer-sublevel">{t.layers.metarUnavailable}</div>}
-                    {showMetar && <div className="map-layer-sublevel metar-legend"><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span><span><i className="metar-dot lifr" /> {t.layers.lifr}</span></div>}
-                  </div>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.operationalAirspace}</span>
-                    <label data-testid="map-layer-aup-uup"><input type="checkbox" checked={showAupUup} onChange={(event) => setShowAupUup(event.target.checked)} /> {t.layers.airspaceActivity}</label>
-                    {showAupUup && airspaceDataset.status === "unavailable" && <div className="map-layer-sublevel">{t.layers.airspaceUnavailable}</div>}
-                    {showAupUup && <div className="map-layer-sublevel">{t.layers.airspacePlannedActive} · {t.layers.airspaceDisclaimer}</div>}
-                  </div>
-                  <div className="map-layer-group">
-                    <span className="map-layer-group-title">{t.layers.groups.display}</span>
-                    {receiverPositionAvailable && <label><input type="checkbox" checked={showRangeRings} onChange={(event) => setShowRangeRings(event.target.checked)} /> {t.layers.rangeRings}</label>}
-                    <label className="map-layer-mode"><span>{t.layers.colorMode}</span><select value={colorMode} aria-label={t.layers.colorMode} onChange={(event) => setColorMode(event.target.value as AircraftColorMode)}>
-                      <option value="default">{t.layers.colorModes.default}</option>
-                      <option value="altitude">{t.layers.colorModes.altitude}</option>
-                      <option value="speed">{t.layers.colorModes.speed}</option>
-                      <option value="verticalRate">{t.layers.colorModes.verticalRate}</option>
-                    </select></label>
-                  </div>
-                </div>
-              </details>
+              <RadarMapLayerMenu
+                showAircraft={showAircraft}
+                onShowAircraftChange={setShowAircraft}
+                showOgn={showOgn}
+                onShowOgnChange={setShowOgn}
+                showAirports={showAirports}
+                onShowAirportsChange={setShowAirports}
+                showSignificantAirports={showSignificantAirports}
+                onShowSignificantAirportsChange={setShowSignificantAirports}
+                showSmallAirports={showSmallAirports}
+                onShowSmallAirportsChange={setShowSmallAirports}
+                showHeliports={showHeliports}
+                onShowHeliportsChange={setShowHeliports}
+                airportsDataset={airportsDataset}
+                showAtc={showAtc}
+                onShowAtcChange={setShowAtc}
+                showAtcTraffic={showAtcTraffic}
+                onShowAtcTrafficChange={setShowAtcTraffic}
+                atcDataset={atcDataset}
+                sectorTrafficState={sectorTrafficState}
+                airspaceActivity={airspaceActivity}
+                showAtsRoutes={showAtsRoutes}
+                onShowAtsRoutesChange={(value) => {
+                  setShowAtsRoutes(value);
+                  if (!value) setSelectedAtsRoute(null);
+                }}
+                atsDataset={atsDataset}
+                atsRoutes={atsRoutes}
+                showSids={showSids}
+                onShowSidsChange={setShowSids}
+                showStars={showStars}
+                onShowStarsChange={setShowStars}
+                sigmetEnabled={sigmetEnabled}
+                showSigmet={showSigmet}
+                onShowSigmetChange={setShowSigmet}
+                showWeatherRadar={showWeatherRadar}
+                onShowWeatherRadarChange={(value) => {
+                  setShowWeatherRadar(value);
+                  if (!value) setRadarPlaying(false);
+                }}
+                radarOpacity={radarOpacity}
+                onRadarOpacityChange={setRadarOpacity}
+                selectedRadarFrame={selectedRadarFrame}
+                radarStatus={radarStatus}
+                showMetar={showMetar}
+                onShowMetarChange={setShowMetar}
+                metarStatus={metarStatus}
+                showWind={showWind}
+                onShowWindChange={setShowWind}
+                windLevel={windLevel}
+                windPressureLevels={WIND_PRESSURE_LEVELS}
+                onWindLevelChange={setWindLevel}
+                windValidAt={windValidAt}
+                onWindValidAtChange={setWindValidAt}
+                windData={windData}
+                windStatus={windStatus}
+                showAupUup={showAupUup}
+                onShowAupUupChange={setShowAupUup}
+                airspaceDataset={airspaceDataset}
+                receiverPositionAvailable={receiverPositionAvailable}
+                showRangeRings={showRangeRings}
+                onShowRangeRingsChange={setShowRangeRings}
+                colorMode={colorMode}
+                onColorModeChange={setColorMode}
+              />
             </div>
             {(showWeatherRadar && radarCatalog?.frames.length) || (showWeatherRadar && radarStatus === "unavailable") ? <div className="map-overlay-context-row">
               {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
