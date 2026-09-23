@@ -26,7 +26,7 @@ import {
   watchlistKindLabel,
   watchlistSummary,
 } from "@/lib/i18n";
-import { correctionFor, motionAt, motionObservationAdvances, motionRenderIntervalMs, predictedPosition, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
+import { confirmedInterpolationDurationMs, correctionFor, motionAt, motionObservationAdvances, motionRenderIntervalMs, createMotionHistory, updateMotionHistory, type MotionHistory } from "@/lib/aircraft/motion";
 import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
@@ -175,9 +175,8 @@ const EMPTY_SNAPSHOT: PublicStateSnapshot = {
   stats: { currentAircraft: 0, aircraftSeenToday: 0, uniqueAircraftToday: 0, maxConcurrentAircraft: 0, maxDistanceKm: 0, aircraftTypes: [], airlines: [], messagesPerSecond: null },
 };
 
-const MIN_AIRCRAFT_ANIMATION_MS = 350;
-const POSITION_ONLY_CORRECTION_MAX_MS = 900;
-const MAX_AIRCRAFT_ANIMATION_MS = 1_100;
+const MIN_AIRCRAFT_ANIMATION_MS = 300;
+const MAX_AIRCRAFT_ANIMATION_MS = 9_000;
 const EMPTY_TRAIL: TrailPoint[] = [];
 
 function trailEndpointKey(point: TrailPoint | undefined): string {
@@ -186,10 +185,6 @@ function trailEndpointKey(point: TrailPoint | undefined): string {
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-function hasRenderableAircraftMotion(source: { track: number | null; groundSpeed: number | null }): boolean {
-  return source.track !== null && source.groundSpeed !== null && Number.isFinite(source.groundSpeed) && source.groundSpeed >= 0.5;
 }
 
 type TrafficSource = "adsb" | "ogn";
@@ -205,6 +200,7 @@ interface AircraftAnimationJob {
     track: number | null;
     positionOrigin: string | null;
     positionSource: string | null;
+    allowPrediction: false;
   };
   correctionLon: number;
   correctionLat: number;
@@ -1702,6 +1698,7 @@ export function AirRadarApp() {
         track: aircraft.track,
         positionOrigin: aircraft.provenance?.positionOrigin ?? null,
         positionSource: aircraft.provenance?.positionSource ?? null,
+        allowPrediction: false,
       };
       const previous = animationJobs.get(aircraft.icaoHex);
 
@@ -1728,91 +1725,56 @@ export function AirRadarApp() {
 
       if (previous) {
         const current = marker.getLngLat();
-        const sourceChanged = previous.source.positionOrigin !== source.positionOrigin || previous.source.positionSource !== source.positionSource;
-        // Metadata/kinematic SSE deltas often repeat the exact same position
-        // observation. Restarting a correction for those duplicate reports
-        // makes the marker continuously chase a moving predicted target.
+        // Only a genuinely newer position report may retarget the marker.
+        // Metadata/kinematic deltas that repeat the same coordinates must not
+        // restart interpolation.
         if (!motionObservationAdvances(previous.source, source)) return;
-        // Position-only reports cannot be safely extrapolated, but a bounded
-        // correction to the newly confirmed point is still smoother than a
-        // hard DOM-marker snap. Large/stale corrections continue to snap.
-        if (!hasRenderableAircraftMotion(source)) {
-          const nextHistory = updateMotionHistory(previous.history, source);
-          const correctionDurationMs = Math.min(
-            POSITION_ONLY_CORRECTION_MAX_MS,
-            Math.max(MIN_AIRCRAFT_ANIMATION_MS, now - previous.sourceReceivedAt),
-          );
-          const correction = correctionFor({ lon: current.lng, lat: current.lat }, source, now, correctionDurationMs, nextHistory);
-          previous.history = nextHistory;
-          previous.source = source;
-          previous.sourceReceivedAt = now;
-          previous.correctionStartedAt = now;
-          previous.correctionDurationMs = correctionDurationMs;
-          previous.correctionLon = correction?.lon ?? 0;
-          previous.correctionLat = correction?.lat ?? 0;
-          if (!correction) marker.setLngLat(target);
-          const heading = motionAt(source, now, correction ?? undefined, nextHistory).heading;
-          if (heading !== null) setAircraftMarkerHeading(handle, heading, map.getBearing());
-          if (correction) animationSchedulerRef.current?.();
-          return;
-        }
-        if (sourceChanged) {
-          const nextHistory = updateMotionHistory(previous.history, source);
-          const correctionDurationMs = Math.min(
-            MAX_AIRCRAFT_ANIMATION_MS,
-            Math.max(MIN_AIRCRAFT_ANIMATION_MS, now - previous.sourceReceivedAt),
-          );
-          const correction = correctionFor({ lon: current.lng, lat: current.lat }, source, now, correctionDurationMs, nextHistory);
-          previous.history = nextHistory;
-          previous.source = source;
-          previous.correctionLon = correction?.lon ?? 0;
-          previous.correctionLat = correction?.lat ?? 0;
-          previous.correctionStartedAt = now;
-          previous.correctionDurationMs = correctionDurationMs;
-          previous.sourceReceivedAt = now;
-          if (!correction) marker.setLngLat(predictedPosition(source, now, nextHistory));
-          animationSchedulerRef.current?.();
-          return;
-        }
-        previous.history = updateMotionHistory(previous.history, source);
-        const correctionDurationMs = Math.min(
+
+        const nextHistory = updateMotionHistory(previous.history, source);
+        const interpolationDurationMs = confirmedInterpolationDurationMs(
+          previous.source,
+          source,
+          now - previous.sourceReceivedAt,
+          MIN_AIRCRAFT_ANIMATION_MS,
           MAX_AIRCRAFT_ANIMATION_MS,
-          Math.max(MIN_AIRCRAFT_ANIMATION_MS, now - previous.sourceReceivedAt),
         );
         const correction = correctionFor(
           { lon: current.lng, lat: current.lat },
           source,
           now,
-          correctionDurationMs,
-          previous.history,
+          interpolationDurationMs,
+          nextHistory,
         );
+
+        previous.history = nextHistory;
         previous.source = source;
         previous.sourceReceivedAt = now;
         previous.correctionStartedAt = now;
-        previous.correctionDurationMs = correctionDurationMs;
+        previous.correctionDurationMs = interpolationDurationMs;
         previous.correctionLon = correction?.lon ?? 0;
         previous.correctionLat = correction?.lat ?? 0;
-        if (!correction) {
-          // Large, stale or untrusted observations must snap to their confirmed
-          // position instead of creating a correction the animation loop will
-          // refuse to render.
-          marker.setLngLat(predictedPosition(source, now, previous.history));
-        }
-      } else {
-        const initialPosition = predictedPosition(source, now);
-        marker.setLngLat(initialPosition);
-        animationJobs.set(aircraft.icaoHex, {
-          handle,
-          source,
-          correctionLon: 0,
-          correctionLat: 0,
-          correctionStartedAt: now,
-          correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
-          sourceReceivedAt: now,
-          history: updateMotionHistory(createMotionHistory(), source),
-        });
+
+        // Large, stale or otherwise untrusted jumps are safer as a direct
+        // confirmed-position snap than as a long interpolation across the map.
+        if (!correction) marker.setLngLat(target);
+
+        const heading = motionAt(source, now, correction ?? undefined, nextHistory).heading;
+        if (heading !== null) setAircraftMarkerHeading(handle, heading, map.getBearing());
+        if (correction) animationSchedulerRef.current?.();
+        return;
       }
-      animationSchedulerRef.current?.();
+
+      marker.setLngLat(target);
+      animationJobs.set(aircraft.icaoHex, {
+        handle,
+        source,
+        correctionLon: 0,
+        correctionLat: 0,
+        correctionStartedAt: now,
+        correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
+        sourceReceivedAt: now,
+        history: updateMotionHistory(createMotionHistory(), source),
+      });
     };
 
     const selectedAircraftInSnapshot = selectedHex ? liveAircraftByHexRef.current.get(selectedHex) ?? snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : undefined;

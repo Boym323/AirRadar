@@ -15,6 +15,7 @@ export type MotionSource = {
   lat: number; lon: number; observedAt: number | null; receivedAt?: number;
   groundSpeed: number | null; track: number | null;
   positionOrigin?: string | null; positionSource?: string | null;
+  allowPrediction?: boolean;
 };
 
 export type MotionResult = { lon: number; lat: number; heading: number | null; predictionActive: boolean; correctionActive: boolean; stale: boolean };
@@ -79,7 +80,7 @@ export function shortestLongitudeDelta(from: number, to: number): number {
 }
 
 export function predictedPosition(source: MotionSource, timestamp: number, history?: MotionHistory): [number, number] {
-  if (source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS) return [source.lon, source.lat];
+  if (source.allowPrediction === false || source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS) return [source.lon, source.lat];
   const speed = source.groundSpeed;
   const heading = normalizeHeading(source.track) ?? history?.lastTrack ?? null;
   if (speed === null || !Number.isFinite(speed) || speed < 0.5 || heading === null) return [source.lon, source.lat];
@@ -88,6 +89,24 @@ export function predictedPosition(source: MotionSource, timestamp: number, histo
   // curved path from noisy ADS-B track deltas makes markers "hunt" around the
   // actual trajectory and then correct back on every confirmed position.
   return destinationPoint(source.lat, source.lon, speed * KNOT_TO_KM_PER_HOUR * elapsed / 3_600_000, heading);
+}
+
+export function confirmedInterpolationDurationMs(
+  previous: MotionSource,
+  next: MotionSource,
+  receivedGapMs: number,
+  minimumMs = 300,
+  maximumMs = 10_000,
+): number {
+  const observedGap = previous.observedAt !== null
+    && next.observedAt !== null
+    && next.observedAt > previous.observedAt
+    ? next.observedAt - previous.observedAt
+    : null;
+  const gap = observedGap ?? receivedGapMs;
+  // Finish slightly before the next expected report. This keeps movement
+  // continuous without letting visual latency accumulate over time.
+  return Math.min(maximumMs, Math.max(minimumMs, gap * 0.9));
 }
 
 export function motionObservationAdvances(previous: MotionSource, next: MotionSource): boolean {
@@ -100,7 +119,7 @@ export function motionObservationAdvances(previous: MotionSource, next: MotionSo
 
 export function predictionIsActive(source: MotionSource, timestamp: number, history?: MotionHistory): boolean {
   const heading = normalizeHeading(source.track) ?? history?.lastTrack ?? null;
-  return source.observedAt !== null && timestamp >= source.observedAt && timestamp - source.observedAt <= MAX_PREDICTION_AGE_MS
+  return source.allowPrediction !== false && source.observedAt !== null && timestamp >= source.observedAt && timestamp - source.observedAt <= MAX_PREDICTION_AGE_MS
     && source.groundSpeed !== null && Number.isFinite(source.groundSpeed) && source.groundSpeed >= 0.5 && heading !== null;
 }
 
@@ -108,7 +127,7 @@ export function motionAt(source: MotionSource, timestamp: number, correction?: {
   const [lon, lat] = predictedPosition(source, timestamp, history);
   const stale = source.observedAt === null || timestamp - source.observedAt > MAX_PREDICTION_AGE_MS;
   const progress = correction ? Math.max(0, Math.min(1, (timestamp - correction.startedAt) / correction.durationMs)) : 1;
-  const active = Boolean(correction && progress < 1 && !stale);
+  const active = Boolean(correction && progress < 1 && (source.allowPrediction === false || !stale));
   const baseHeading = normalizeHeading(source.track) ?? history?.lastTrack ?? history?.positionHeading ?? null;
   // Render the reported/fallback course directly. Extrapolating visual heading
   // with an inferred turn rate causes obvious over-rotation when track jitters.
