@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PREDICTION_AGE_MS, correctionFor, createMotionHistory, interpolateHeading, motionAt, motionObservationAdvances, motionRenderIntervalMs, normalizeHeading, predictedPosition, predictionIsActive, shortestAngleDelta, updateMotionHistory } from "@/lib/aircraft/motion";
+import { MAX_PREDICTION_AGE_MS, confirmedInterpolationDurationMs, correctionFor, createMotionHistory, interpolateHeading, motionAt, motionObservationAdvances, motionRenderIntervalMs, normalizeHeading, predictedPosition, predictionIsActive, shortestAngleDelta, updateMotionHistory } from "@/lib/aircraft/motion";
 
 const source = (track: number | null, observedAt: number, lat = 50, lon = 14) => ({ lat, lon, observedAt, groundSpeed: 120, track, positionOrigin: "local", positionSource: "readsb" });
 
@@ -152,6 +152,26 @@ describe("aircraft motion", () => {
     const previous = source(90, 10_000, 50, 14);
     const switched = { ...previous, observedAt: 10_000, positionOrigin: "network", positionSource: "ADS-B" };
     expect(motionObservationAdvances(previous, switched)).toBe(true);
+  });
+
+  it("disables forward prediction for confirmed-position interpolation", () => {
+    const s = { ...source(90, 1_000), groundSpeed: 420, allowPrediction: false };
+    expect(predictedPosition(s, 5_000)).toEqual([s.lon, s.lat]);
+    expect(predictionIsActive(s, 5_000)).toBe(false);
+
+    const correction = correctionFor({ lat: 50, lon: 13.99 }, s, 1_000, 900);
+    expect(correction).not.toBeNull();
+    const halfway = motionAt(s, 1_450, correction!);
+    expect(halfway.lon).toBeGreaterThan(13.99);
+    expect(halfway.lon).toBeLessThan(14);
+  });
+
+  it("matches interpolation duration to the confirmed observation cadence", () => {
+    const previous = source(90, 10_000);
+    const next = source(90, 11_000, 50.001, 14.001);
+    expect(confirmedInterpolationDurationMs(previous, next, 3_000)).toBe(900);
+    expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: 13_000 }, 3_000)).toBe(2_000);
+    expect(confirmedInterpolationDurationMs(previous, { ...next, observedAt: null }, 200)).toBe(300);
   });
 
   it("throttles only high-density bulk marker rendering", () => {
