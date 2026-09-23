@@ -111,10 +111,14 @@ describe("SSE Delta V2", () => {
     const appliedInitial = applySseV2Event(null, "snapshot", first.payload);
     expect(appliedInitial.status).toBe("applied");
     if (appliedInitial.status !== "applied") return;
+    const unchangedBefore = appliedInitial.snapshot.aircraft.find((item) => item.icaoHex === "000002");
+    const changedBefore = appliedInitial.snapshot.aircraft.find((item) => item.icaoHex === "000001");
     const appliedDelta = applySseV2Event({ snapshot: appliedInitial.snapshot, sequence: appliedInitial.sequence }, "delta", second.payload);
     expect(appliedDelta.status).toBe("applied");
     if (appliedDelta.status !== "applied") return;
     expect(new Map(appliedDelta.snapshot.aircraft.map((item) => [item.icaoHex, item]))).toEqual(new Map(next.aircraft.map((item) => [item.icaoHex, item])));
+    expect(appliedDelta.snapshot.aircraft.find((item) => item.icaoHex === "000002")).toBe(unchangedBefore);
+    expect(appliedDelta.snapshot.aircraft.find((item) => item.icaoHex === "000001")).not.toBe(changedBefore);
     expect(appliedDelta.snapshot.stats).toEqual(next.stats);
   });
 
