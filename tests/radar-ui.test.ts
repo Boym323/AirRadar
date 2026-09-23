@@ -132,6 +132,9 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).not.toMatch(/\.aircraft-plane \.aircraft-glyph-asset[^}]*filter:/);
     expect(appSource).toContain("aircraftMarkersRef.current.get(selectedHex)?.marker.getLngLat()");
     expect(appSource).toContain("confirmedInterpolationDurationMs(");
+    expect(appSource).toContain("visualHeadingForConfirmedPosition");
+    expect(appSource).toContain("previous.visualHeading");
+    expect(appSource).toContain("visualHeading: visualHeadingForConfirmedPosition");
     expect(appSource).toContain("allowPrediction: false");
     expect(appSource).not.toContain("predictedPosition(");
     expect(appSource).toContain("motionRenderIntervalMs(animationJobs.size)");

@@ -299,6 +299,13 @@ Route V2 must stay disjoint from `selected-trail`; switching/deselecting a
   are keyed by ICAO hex, and MapLibre retains ownership of marker positioning;
   application CSS applies visual effects to child elements.
 
+Aircraft animation keeps ADS-B track semantics and prediction separate from
+presentation heading. During confirmed-position interpolation, the animation
+job stores the bearing from the marker's rendered start position to its
+confirmed target (when the displacement is at least 25 m), so repeated frames
+cannot make the icon oscillate while the marker moves. Position-derived
+heading, reported track, and last known track are presentation fallbacks only.
+
 `AirRadarApp` cleanup cancels animation frames, removes receiver and aircraft
 markers, clears trail/animation maps, and calls `map.remove()`. `AirportMap`
 owns and removes its own map and airport marker. `HistoryMap` owns and removes
