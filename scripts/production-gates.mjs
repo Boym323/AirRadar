@@ -656,7 +656,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       });
       const anchorFailures = anchorRegression.error
         ? [anchorRegression.error]
-        : anchorRegression.measurements.filter((measurement) => Math.abs(measurement.errorX) > 1 || Math.abs(measurement.errorY) > 1 || measurement.width !== 42 || measurement.height !== 42 || measurement.position !== "absolute");
+        : anchorRegression.measurements.filter((measurement) => Math.abs(measurement.errorX) > 0.2 || Math.abs(measurement.errorY) > 0.2 || measurement.width !== 42 || measurement.height !== 42 || measurement.position !== "absolute");
       if (anchorFailures.length) throw new Error(`Aircraft marker anchor regression failed at ${viewport.width}px: ${JSON.stringify(anchorFailures.slice(0, 8))}`);
       const beforeBearing = markerPresentation.rotatorTransform;
       await page.evaluate(() => window.__airradarMapForDiagnostics?.rotateTo(90, { duration: 0 }));
