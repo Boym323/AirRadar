@@ -50,7 +50,7 @@ interface RadarMapLayerMenuProps {
   showAtsRoutes: boolean;
   onShowAtsRoutesChange: (value: boolean) => void;
   atsDataset: DatasetState<unknown>;
-  atsRoutes: AtsRoutesSummary | undefined;
+  atsRoutes: AtsRoutesSummary | null | undefined;
   showSids: boolean;
   onShowSidsChange: (value: boolean) => void;
   showStars: boolean;
