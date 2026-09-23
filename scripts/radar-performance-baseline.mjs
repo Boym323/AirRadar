@@ -309,6 +309,35 @@ async function measureScenario(browser, scenario) {
   }
 }
 
+function markdownReport(report) {
+  const lines = [
+    "# Radar production performance baseline",
+    "",
+    `Generated: ${report.generatedAt}`,
+    "",
+    "Timing metrics are observational only. CI pass/fail is based on deterministic structural/instrumentation budgets so hosted-runner load does not create flaky failures.",
+    "",
+    "| Aircraft | Markers | Mounted rows | Animation avg/max | Writes/s | Collision avg/max | Long tasks | Status |",
+    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | :---: |",
+  ];
+  for (const result of report.scenarios) {
+    lines.push(
+      `| ${result.aircraft} | ${result.dom.aircraftMarkers} | ${result.dom.mountedTrafficRows} | ${result.animation.averageMs} / ${result.animation.maxMs} ms | ${result.animation.markerWritesPerSecond} | ${result.labelCollision.averageMs} / ${result.labelCollision.maxMs} ms | ${result.longTasks.count} | ${result.violations.length ? "FAIL" : "PASS"} |`,
+    );
+    for (const violation of result.violations) lines.push(`|  |  |  |  |  |  |  | \`${violation}\` |`);
+  }
+  lines.push(
+    "",
+    "Deterministic budgets:",
+    "- DOM marker and MapLibre handle counts must equal the scenario aircraft count.",
+    "- Traffic-list total rows must equal the scenario count and virtualization must stay enabled.",
+    "- Mounted traffic rows must stay at or below the checked-in structural budget.",
+    "- Animation and collision diagnostics must record live work; active jobs may not exceed aircraft count.",
+    "",
+  );
+  return lines.join("\n");
+}
+
 async function main() {
   const runtimeStateDirectory = mkdtempSync(resolve(tmpdir(), "airradar-radar-perf-"));
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", host, "--port", String(port)], {
@@ -362,7 +391,9 @@ async function main() {
     };
     mkdirSync("artifacts", { recursive: true });
     writeFileSync("artifacts/radar-performance-baseline.json", JSON.stringify(report, null, 2) + "\n");
+    writeFileSync("artifacts/radar-performance-baseline.md", markdownReport(report) + "\n");
     console.log("[radar-perf] report=artifacts/radar-performance-baseline.json");
+    console.log("[radar-perf] summary=artifacts/radar-performance-baseline.md");
     if (failed.length) {
       throw new Error(`Radar performance baseline failed in ${failed.length}/${results.length} scenarios`);
     }
