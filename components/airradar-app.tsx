@@ -84,7 +84,7 @@ import {
 import { createLabelCollisionScheduler } from "@/lib/radar/aircraft-label-collision";
 import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-controller";
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
-import { recordRadarAnimationFrame, recordRadarLabelCollision, startRadarPerformanceDiagnostics } from "@/lib/radar/performance-diagnostics";
+import { startRadarPerformanceDiagnostics } from "@/lib/radar/performance-diagnostics";
 
 declare global {
   interface Window {
@@ -1107,20 +1107,20 @@ export function AirRadarApp() {
     const ognMarkers = ognMarkersRef.current;
     const liveTrails = liveTrailsRef.current;
     const mapReplays = mapReplayRef.current;
-    const stopPerformanceDiagnostics = startRadarPerformanceDiagnostics(window.location.search);
+    const performanceDiagnostics = startRadarPerformanceDiagnostics(window.location.search);
     if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
       window.__airradarAircraftMarkersForDiagnostics = aircraftMarkers;
     }
 
     const runLabelCollision = () => {
-      const startedAt = performance.now();
+      const startedAt = performanceDiagnostics ? performance.now() : 0;
       applyAircraftLabelCollisionLayout({
         map,
         aircraftMarkers,
         routeAirportFeatures: routeAirportGeoJsonRef.current.features,
         routeAirportLabelLayerId: ROUTE_V2_AIRPORT_LABEL_LAYER_ID,
       });
-      recordRadarLabelCollision(performance.now() - startedAt);
+      if (performanceDiagnostics) performanceDiagnostics.recordLabelCollision(performance.now() - startedAt);
     };
     const labelCollisionScheduler = createLabelCollisionScheduler(runLabelCollision);
     labelCollisionSchedulerRef.current = () => labelCollisionScheduler.schedule();
@@ -1138,7 +1138,7 @@ export function AirRadarApp() {
         labelCollisionSchedulerRef.current?.();
         return;
       }
-      const frameStartedAt = performance.now();
+      const frameStartedAt = performanceDiagnostics ? performance.now() : 0;
       let markerWrites = 0;
       let continueAnimation = false;
       const selectedAnimationHex = selectedHexRef.current;
@@ -1170,7 +1170,7 @@ export function AirRadarApp() {
           durationMs: job.correctionDurationMs,
         }, job.history, job.visualHeading);
         job.handle.marker.setLngLat([motion.lon, motion.lat]);
-        markerWrites += 1;
+        if (performanceDiagnostics) markerWrites += 1;
         if (motion.heading !== null) setAircraftMarkerHeading(job.handle, motion.heading, mapBearing);
         renderedAnyMarker = true;
         if (job === selectedAnimationJob) selectedAnimationMotion = motion;
@@ -1197,7 +1197,7 @@ export function AirRadarApp() {
           ? { type: "Feature", properties: { icaoHex: selectedAnimationHex }, geometry: { type: "LineString", coordinates } }
           : { type: "FeatureCollection", features: [] });
       }
-      recordRadarAnimationFrame(performance.now() - frameStartedAt, markerWrites, animationJobs.size);
+      if (performanceDiagnostics) performanceDiagnostics.recordAnimationFrame(performance.now() - frameStartedAt, markerWrites, animationJobs.size);
       if (continueAnimation) animationFrameRef.current = window.requestAnimationFrame(runAnimations);
     };
     const ensureAnimationFrame = () => {
@@ -1485,7 +1485,7 @@ export function AirRadarApp() {
       for (const handle of ognMarkers.values()) handle.marker.remove();
       ognMarkers.clear();
       liveTrails.clear();
-      stopPerformanceDiagnostics();
+      performanceDiagnostics?.stop();
       map.remove();
       if (window.__airradarMapForDiagnostics === map) delete window.__airradarMapForDiagnostics;
       if (window.__airradarAircraftMarkersForDiagnostics === aircraftMarkers) delete window.__airradarAircraftMarkersForDiagnostics;
