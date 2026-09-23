@@ -595,6 +595,13 @@ export function AirRadarApp() {
     };
   }, []);
   const scheduleAircraftMapSync = useCallback(() => {
+    // Hidden tabs do not reliably receive animation frames. Preserve the
+    // existing hidden-tab contract by applying confirmed positions directly;
+    // syncAircraftMap already snaps instead of animating while hidden.
+    if (document.hidden) {
+      aircraftMapSyncRef.current?.(false);
+      return;
+    }
     if (aircraftMapSyncFrameRef.current !== null) return;
     aircraftMapSyncFrameRef.current = window.requestAnimationFrame(() => {
       aircraftMapSyncFrameRef.current = null;
