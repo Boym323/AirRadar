@@ -91,7 +91,6 @@ function AircraftTrafficListComponent({
   }, [aircraft.length, scrollRootRef, virtualized]);
 
   if (aircraft.length === 0) {
-    recordRadarTrafficList(0, 0, false);
     return <div id="traffic-list" className="aircraft-list">
       <div className="empty-list">
         <strong>{totalAircraftCount === 0 ? t.radar.waitingForTraffic : t.radar.noMatchingAircraft}</strong>
