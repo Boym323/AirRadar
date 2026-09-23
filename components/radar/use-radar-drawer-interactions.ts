@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type Dispatch, type RefObject, type SetStateAction } from "react";
+import { useEffect, type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
 
 export type RadarDrawerState = "closed" | "traffic" | "aircraft" | "ogn";
 export type RadarTrafficSource = "adsb" | "ogn";
@@ -13,9 +13,9 @@ interface UseRadarDrawerInteractionsOptions {
   closeRadarDrawer: () => void;
   openTrafficDrawer: (shortcut?: "search" | "filters") => void;
   searchInputRef: RefObject<HTMLInputElement | null>;
-  focusSearchOnTrafficOpenRef: RefObject<boolean>;
+  focusSearchOnTrafficOpenRef: MutableRefObject<boolean>;
   trafficTriggerRef: RefObject<HTMLButtonElement | null>;
-  previousDrawerStateRef: RefObject<RadarDrawerState>;
+  previousDrawerStateRef: MutableRefObject<RadarDrawerState>;
 }
 
 export function useRadarDrawerInteractions({
