@@ -111,16 +111,24 @@ the browser's aircraft EventSource with deterministic synthetic SSE V2 traffic,
 then measures the real production radar at 50, 100, 250, and 500 aircraft. It
 records animation average/max duration, marker writes per second, label
 collision average/max duration, browser long tasks, DOM/MapLibre marker counts,
-and mounted/virtualized traffic rows. Results are written to
-`artifacts/radar-performance-baseline.json`; CI uploads that report and fails
-when a scenario exceeds the checked-in budgets in
-`scripts/radar-performance-budget.mjs`.
+and mounted/virtualized traffic rows. Results are written to both
+`artifacts/radar-performance-baseline.json` and
+`artifacts/radar-performance-baseline.md`; CI uploads both and puts the
+Markdown table in the GitHub Actions step summary.
+
+CI pass/fail intentionally uses only deterministic structural/instrumentation
+budgets from `scripts/radar-performance-budget.mjs`: exact marker/handle
+counts, bounded virtualized traffic rows, and proof that animation/collision
+diagnostics actually ran. Wall-clock animation/collision durations, writes per
+second, and browser long tasks are recorded as observational baseline data but
+are not CI gates because hosted-runner load makes those values noisy. Promote a
+timing metric to a gate only after it has a stable multi-run distribution on
+the target runner class.
 
 For a quicker local sample, select scenarios or shorten the measurement window,
 for example `RADAR_PERF_SCENARIOS=50,250 RADAR_PERF_MEASURE_MS=1200 npm run
-benchmark:radar`. Performance budgets should be changed only with a measured
-baseline and an explanation in the PR; do not raise a budget merely to make a
-regression green.
+benchmark:radar`. Structural budgets should be changed only with an explanation
+in the PR; do not loosen them merely to make a regression green.
 
 Documentation-only changes that do not touch code, package files, schema,
 migrations, or build configuration do not require the build/full suite unless
