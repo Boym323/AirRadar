@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
 import type { AircraftRadarQuickDetailProps } from "@/components/aircraft-radar-quick-detail";
 import type { RadarDrawerState } from "@/components/radar/use-radar-drawer-interactions";
 import type { AircraftView } from "@/lib/aircraft/types";
@@ -119,11 +120,11 @@ function OgnDetailContent({ target }: { target: OgnTargetView }) {
   </div>;
 }
 
-function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
+function DetailItem({ label, value }: { label: string; value: ReactNode }) {
   if (value === t.common.emptyValue) return null;
   return <div><div className="detail-item-label">{label}</div><div className="detail-item-value">{value}</div></div>;
 }
 
-function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+function DetailSection({ title, children }: { title: string; children: ReactNode }) {
   return <section className="detail-section"><h3>{title}</h3><div className="detail-grid">{children}</div></section>;
 }
