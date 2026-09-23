@@ -1572,7 +1572,7 @@ export function AirRadarApp() {
           }
         });
         handle = {
-          marker: new maplibregl.Marker({ element: root, anchor: "center" })
+          marker: new maplibregl.Marker({ element: root, anchor: "center", subpixelPositioning: true })
             .setLngLat([target.longitude, target.latitude])
             .addTo(map),
           root,
