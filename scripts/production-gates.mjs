@@ -860,6 +860,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       // Every configured viewport still exercises the layout/accessibility
       // contract and the 820/821 breakpoint remains explicit.
       if (!fullSmoke) {
+        // drawer-closed intentionally delays visibility:hidden until the
+        // 150 ms opacity transition completes. Wait for the rendered state,
+        // not only the React class, so the responsive contract cannot sample
+        // the close action during that transition window.
+        await page.waitForFunction(() => {
+          const sidebar = document.querySelector('[data-testid="radar-sidebar"]');
+          return !sidebar || !sidebar.classList.contains("drawer-closed") || getComputedStyle(sidebar).visibility === "hidden";
+        });
         await page.locator("details.map-layers > summary").click();
         const contract = await page.evaluate(() => {
           const rect = (selector) => {
