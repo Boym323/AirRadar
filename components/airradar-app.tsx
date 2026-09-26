@@ -1881,8 +1881,11 @@ export function AirRadarApp() {
         .catch(() => { if (active) setSelectedRouteWeather(null); });
     };
     refresh();
-    timer = window.setInterval(refresh, 120_000);
-    return () => { active = false; if (timer !== null) window.clearInterval(timer); };
+    const schedule = () => {
+      timer = window.setTimeout(() => { refresh(); schedule(); }, 120_000);
+    };
+    schedule();
+    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
   }, [contextAircraftHex, contextHasPosition]);
 
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
