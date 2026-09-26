@@ -40,12 +40,14 @@ function projectedEntry(
   trackDeg: number,
   speedKt: number,
   altitudeFt: number | null,
+  verticalRateFpm: number | null,
   feature: SigmetSnapshot["features"][number],
 ): { minutes: number; distanceNm: number } | null {
-  if (!altitudeMatches(altitudeFt, feature.properties)) return null;
   for (let minute = 1; minute <= PROJECTION_MINUTES; minute += 1) {
     const distanceNm = speedKt * minute / 60;
     const projected = projectPosition(lat, lon, trackDeg, distanceNm);
+    const projectedAltitudeFt = altitudeFt === null ? null : altitudeFt + (verticalRateFpm ?? 0) * minute;
+    if (!altitudeMatches(projectedAltitudeFt, feature.properties)) continue;
     if (pointInSigmetGeometry(projected.lon, projected.lat, feature.geometry)) return { minutes: minute, distanceNm };
   }
   return null;
@@ -96,6 +98,7 @@ export function detectSigmetTrajectoryDeviation(
       previous.track,
       previous.groundSpeed,
       previous.altitude,
+      0,
       feature,
     );
     if (!previousEntry) continue;
@@ -106,6 +109,7 @@ export function detectSigmetTrajectoryDeviation(
       aircraft.track,
       aircraft.groundSpeed,
       currentAltitude,
+      aircraft.verticalRate ?? aircraft.baroRate ?? aircraft.geomRate ?? null,
       feature,
     );
     if (currentEntry) continue;
