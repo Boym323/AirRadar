@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 // @ts-expect-error The release helper is runtime-only ESM consumed by Node.
 import { createBuildMetadata, parseReleaseVersion, resolveReleaseVersion } from "../scripts/version.mjs";
 // @ts-expect-error The changelog helper is runtime-only ESM consumed by Node.
-import { backfillChangelog, createChangelogEntry, normalizeChangelog, updateChangelog } from "../scripts/changelog.mjs";
+import { backfillChangelog, createChangelogEntry, missingChangelogVersions, normalizeChangelog, updateChangelog } from "../scripts/changelog.mjs";
 import { parseBuildMetadata } from "../lib/server/version";
 
 describe("automatic release versioning", () => {
@@ -195,6 +195,24 @@ describe("automatic changelog generation", () => {
   it("normalizes existing releases in descending version order", () => {
     const normalized = normalizeChangelog("# Changelog\n\nIntro\n\n## [0.1.9] - 2026-09-09\n\nold\n\n## [1.0.0] - 2026-09-09\n\nnew\n");
     expect(normalized.indexOf("## [1.0.0]")).toBeLessThan(normalized.indexOf("## [0.1.9]"));
+  });
+
+  it("reports release tags missing from the tracked changelog", () => {
+    expect(missingChangelogVersions({
+      existing: "# Changelog\n\n## [1.0.2] - 2026-09-20\n",
+      tags: ["v1.0.3", "v1.0.2"],
+    })).toEqual(["1.0.3"]);
+  });
+
+  it("syncs release changelog through a PR instead of pushing main", () => {
+    const workflow = readFileSync(new URL("../.github/workflows/changelog-sync.yml", import.meta.url), "utf8");
+    expect(workflow).toContain("release:");
+    expect(workflow).toContain("types: [published]");
+    expect(workflow).toContain("node scripts/changelog.mjs backfill");
+    expect(workflow).toContain("node scripts/changelog.mjs check");
+    expect(workflow).toContain('branch="automation/changelog-sync"');
+    expect(workflow).toContain("gh pr create");
+    expect(workflow).not.toContain("git push origin main");
   });
 
   it("backfills missing tagged releases in descending order", () => {
