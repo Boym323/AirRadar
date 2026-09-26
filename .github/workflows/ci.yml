@@ -292,5 +292,18 @@ jobs:
             exit 0
           fi
 
-          gh pr create             --repo "${GITHUB_REPOSITORY}"             --base main             --head "${branch}"             --title "docs: sync release changelog"             --body "Automated changelog backfill for published AirRadar releases. This PR updates only CHANGELOG.md; changelog-only merges are excluded from production deployment."
+          if ! gh pr create \
+            --repo "${GITHUB_REPOSITORY}" \
+            --base main \
+            --head "${branch}" \
+            --title "docs: sync release changelog" \
+            --body "Automated changelog backfill for published AirRadar releases. This PR updates only CHANGELOG.md; changelog-only merges are excluded from production deployment."; then
+            echo "::warning::GitHub Actions cannot create pull requests. Changelog branch ${branch} was pushed successfully and can be opened as a PR manually."
+            {
+              echo "### Changelog sync branch ready"
+              echo ""
+              echo "The branch \`${branch}\` was updated, but repository settings do not allow GitHub Actions to create pull requests."
+              echo "Open a PR from \`${branch}\` to \`main\` manually."
+            } >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
