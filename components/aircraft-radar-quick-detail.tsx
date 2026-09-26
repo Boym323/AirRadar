@@ -11,6 +11,7 @@ import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/histo
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import type { AircraftDestinationWindContext, AircraftWindAheadProfile, AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
+import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import type { RadarLayerDataStatus } from "@/components/radar/use-radar-weather-context";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
@@ -48,6 +49,7 @@ export interface AircraftRadarQuickDetailProps {
   windAhead: AircraftWindAheadProfile | null;
   destinationWind: AircraftDestinationWindContext | null;
   windStatus: RadarLayerDataStatus;
+  routeWeather: RouteWeatherContext | null;
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -205,6 +207,28 @@ function SigmetSection({ context, deviation, stale }: { context: AircraftSigmetC
         : hasProjection
           ? t.weather.sigmetProjectionDisclaimer
           : t.weather.sigmetAircraftDisclaimer}</p>
+  </QuickSection>;
+}
+
+function RouteWeatherSection({ context }: { context: RouteWeatherContext | null }) {
+  if (!context || context.status === "no_route") return null;
+  if (context.status === "unavailable" && context.matches.length === 0) return null;
+  const unresolved = context.unresolvedRouteTokens.length;
+  return <QuickSection id="aircraft-quick-route-weather-title" title={t.weather.routeWeatherTitle} className="aircraft-quick-route-weather">
+    {context.matches.length ? <div className="aircraft-quick-route-weather-list">
+      {context.matches.slice(0, 5).map((match) => <div key={`${match.sigmetId}:${match.segmentId}`} className="aircraft-quick-route-weather-item" data-testid="route-weather-match">
+        <strong>{match.hazard || t.weather.sigmetUnknownHazard}</strong>
+        <span>{match.routeDesignator} · {match.fromName} → {match.toName}</span>
+        <small>{t.weather.routeWeatherDistance(formatNumber(match.distanceAlongRouteNm, 0))}</small>
+        <small>{match.verticalMatch === "matched" ? t.weather.routeWeatherVerticalMatched : t.weather.routeWeatherVerticalUnknown}</small>
+      </div>)}
+    </div> : <p className="aircraft-quick-empty">{t.weather.routeWeatherClear}</p>}
+    <div className="aircraft-quick-detail-grid">
+      <DetailValue label={t.weather.routeWeatherCoverage} value={context.routeCoveragePercent === null ? t.common.emptyValue : `${formatNumber(context.routeCoveragePercent, 0)} %`} />
+      <DetailValue label={t.weather.routeWeatherSource} value={context.routeSource || t.common.emptyValue} />
+    </div>
+    {unresolved > 0 && <p className="aircraft-quick-disclaimer">{t.weather.routeWeatherUnresolved(formatNumber(unresolved))}</p>}
+    <p className="aircraft-quick-disclaimer">{context.stale ? t.weather.routeWeatherStale : t.weather.routeWeatherDisclaimer}</p>
   </QuickSection>;
 }
 
@@ -467,6 +491,7 @@ export function AircraftRadarQuickDetail({
   windAhead,
   destinationWind,
   windStatus,
+  routeWeather,
   watchlisted,
   onBack,
   onClose,
@@ -521,6 +546,7 @@ export function AircraftRadarQuickDetail({
       </QuickSection>
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
       <SigmetSection context={sigmetContext} deviation={sigmetDeviation} stale={sigmetStale} />
+      <RouteWeatherSection context={routeWeather} />
       <WindSection context={windContext} ahead={windAhead} destination={destinationWind} status={windStatus} />
       {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
     </div>}
