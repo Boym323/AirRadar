@@ -71,6 +71,44 @@ describe("aircraft SIGMET context", () => {
     expect(aircraftSigmetContext(aircraft(48, 15, 20_000), snapshot())).toEqual([]);
   });
 
+  it("projects a near-term entry using current track and speed without claiming a route", () => {
+    const advisory = snapshot();
+    advisory.features[0]!.geometry = {
+      type: "Polygon",
+      coordinates: [[[15.2, 49.8], [15.6, 49.8], [15.6, 50.2], [15.2, 50.2], [15.2, 49.8]]],
+    };
+    const target = Object.assign(aircraft(50, 15, 20_000), {
+      track: 90,
+      groundSpeed: 600,
+      verticalRate: 0,
+      baroRate: 0,
+      geomRate: null,
+      onGround: false,
+    });
+
+    expect(aircraftSigmetContext(target, advisory)).toEqual([
+      expect.objectContaining({
+        id: "LKAA-A1",
+        relation: "projected",
+        estimatedMinutes: expect.any(Number),
+        distanceNm: expect.any(Number),
+        verticalMatch: "matched",
+      }),
+    ]);
+  });
+
+  it("does not project SIGMET entry for an on-ground or directionless target", () => {
+    const advisory = snapshot();
+    advisory.features[0]!.geometry = {
+      type: "Polygon",
+      coordinates: [[[15.2, 49.8], [15.6, 49.8], [15.6, 50.2], [15.2, 50.2], [15.2, 49.8]]],
+    };
+    const groundTarget = Object.assign(aircraft(50, 15, 20_000), { track: 90, groundSpeed: 600, onGround: true });
+    const noTrack = Object.assign(aircraft(50, 15, 20_000), { track: null, groundSpeed: 600, onGround: false });
+    expect(aircraftSigmetContext(groundTarget, advisory)).toEqual([]);
+    expect(aircraftSigmetContext(noTrack, advisory)).toEqual([]);
+  });
+
   it("treats polygon boundaries as inside", () => {
     expect(pointInSigmetGeometry(14, 50, snapshot().features[0]!.geometry)).toBe(true);
   });
