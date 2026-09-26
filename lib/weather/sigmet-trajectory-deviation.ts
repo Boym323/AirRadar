@@ -114,8 +114,12 @@ export function detectSigmetTrajectoryDeviation(
     );
     if (currentEntry) continue;
 
+    const hasVerticalEvidence =
+      previous.altitude !== null
+      && currentAltitude !== null
+      && (feature.properties.lowerFt !== null || feature.properties.upperFt !== null);
     const confidence: "low" | "medium" =
-      delta >= 30 && previousAgeMinutes >= 3 && previousAgeMinutes <= 7 ? "medium" : "low";
+      hasVerticalEvidence && delta >= 30 && previousAgeMinutes >= 3 && previousAgeMinutes <= 7 ? "medium" : "low";
 
     const candidate: SigmetTrajectoryDeviation = {
       sigmetId: feature.id,
