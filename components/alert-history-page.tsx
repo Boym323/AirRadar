@@ -13,9 +13,14 @@ function isRecordEntry(entry: AlertHistoryEntry): boolean {
   return entry.type === "new_aircraft" || entry.type === "reception_record";
 }
 
+function isIntelligenceEntry(entry: AlertHistoryEntry): boolean {
+  return entry.type.startsWith("intelligence_");
+}
+
 function eventClass(entry: AlertHistoryEntry): string {
   if (isEmergencyEntry(entry)) return "emergency";
   if (isRecordEntry(entry)) return entry.type;
+  if (isIntelligenceEntry(entry)) return "intelligence";
   return "watchlist";
 }
 
@@ -29,6 +34,10 @@ function eventLabel(entry: AlertHistoryEntry, dictionary: ReturnType<typeof getT
   if (entry.type === "new_aircraft") return dictionary.alerts.types.newAircraft;
   if (entry.type === "reception_record") return entry.record?.scope === "lifetime" ? dictionary.alerts.types.lifetimeRecord : dictionary.alerts.types.dailyRecord;
   if (entry.type === "emergency") return dictionary.alerts.types.emergency;
+  if (isIntelligenceEntry(entry)) {
+    const raw = entry.intelligence?.eventType ?? entry.type.slice("intelligence_".length).toUpperCase();
+    return dictionary.intelligence.types[raw as keyof typeof dictionary.intelligence.types] ?? raw;
+  }
   return dictionary.alerts.types.watchlist;
 }
 
@@ -45,6 +54,13 @@ function reasonLabel(entry: AlertHistoryEntry, dictionary: ReturnType<typeof get
   if (entry.type === "new_aircraft") return dictionary.alerts.reasons.newAircraft;
   if (entry.type === "reception_record") return dictionary.alerts.reasons.record;
   if (entry.type === "emergency") return dictionary.alerts.reasons.emergency;
+  if (isIntelligenceEntry(entry)) {
+    const confidence = entry.intelligence?.confidenceLevel ? dictionary.intelligence.confidence[entry.intelligence.confidenceLevel] : null;
+    const context = [entry.intelligence?.airportIcao, entry.intelligence?.sectorId, confidence].filter(Boolean).join(" · ");
+    return dictionary.locale.startsWith("cs")
+      ? `Deterministická Flight Intelligence událost pro sledované letadlo${context ? ` · ${context}` : ""}.`
+      : `Deterministic Flight Intelligence event for a watchlisted aircraft${context ? ` · ${context}` : ""}.`;
+  }
   return dictionary.alerts.reasons.watchlist;
 }
 
@@ -53,6 +69,7 @@ function filterLabel(filter: AlertHistoryFilter, locale: LocaleKey): string {
   if (filter === "watchlist") return cs ? "Sledované" : "Watchlist";
   if (filter === "emergency") return cs ? "Nouzové" : "Emergency";
   if (filter === "records") return cs ? "Rekordy" : "Records";
+  if (filter === "intelligence") return "Intelligence";
   return cs ? "Vše" : "All";
 }
 
@@ -101,7 +118,7 @@ export function AlertHistoryPage() {
     </header>
     <p className="alert-history-intro">{dictionary.alerts.description}</p>
     <div className="watchlist-editor-actions" role="group" aria-label={locale === "cs" ? "Filtr upozornění" : "Alert filter"}>
-      {(["all", "watchlist", "emergency", "records"] as const).map((value) => <button key={value} type="button" className="secondary-button" aria-pressed={filter === value} onClick={() => setFilter(value)}>{filterLabel(value, locale)}</button>)}
+      {(["all", "watchlist", "intelligence", "emergency", "records"] as const).map((value) => <button key={value} type="button" className="secondary-button" aria-pressed={filter === value} onClick={() => setFilter(value)}>{filterLabel(value, locale)}</button>)}
     </div>
     {error && <p className="statistics-error" role="alert">{dictionary.alerts.loadFailed}</p>}
     {!data && !error && <p className="statistics-empty">{dictionary.common.loading}</p>}
