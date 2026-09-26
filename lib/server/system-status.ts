@@ -1314,10 +1314,10 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
           lastLoadError: null,
           lastSaveError: null,
         },
-        softRf: status.ogn.ddb.softRf ? {
+        softRf: {
           ...status.ogn.ddb.softRf,
           lastLoadError: null,
-        } : undefined,
+        },
       },
     },
     weather: {
