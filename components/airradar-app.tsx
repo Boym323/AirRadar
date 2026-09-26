@@ -459,7 +459,7 @@ export function AirRadarApp() {
   const ognMarkersRef = useRef<Map<string, OgnMarkerHandle>>(new Map());
   const aircraftMotionRuntimeRef = useRef<AircraftMotionRuntime | null>(null);
   const aircraftWebglRuntimeRef = useRef<AircraftWebglRuntime | null>(null);
-  const aircraftWebglFeatureHexesRef = useRef<Set<string>>(new Set());
+  const aircraftWebglInteractionUpdatedAtRef = useRef(Number.NEGATIVE_INFINITY);
   const labelCollisionSchedulerRef = useRef<(() => void) | null>(null);
   const aircraftMapSyncRef = useRef<((forceFull?: boolean) => void) | null>(null);
   const aircraftMapSyncFrameRef = useRef<number | null>(null);
@@ -1261,7 +1261,7 @@ export function AirRadarApp() {
       if (aircraftMotionRuntimeRef.current === aircraftMotionRuntime) aircraftMotionRuntimeRef.current = null;
       aircraftWebglRuntime.clear();
       if (aircraftWebglRuntimeRef.current === aircraftWebglRuntime) aircraftWebglRuntimeRef.current = null;
-      aircraftWebglFeatureHexesRef.current.clear();
+      aircraftWebglInteractionUpdatedAtRef.current = Number.NEGATIVE_INFINITY;
       if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
       aircraftMapSyncFrameRef.current = null;
       receiverMarkerRef.current?.remove();
@@ -1493,41 +1493,37 @@ export function AirRadarApp() {
     for (const layer of [AIRCRAFT_WEBGL_HIT_LAYER_ID, AIRCRAFT_WEBGL_LABEL_LAYER_ID] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAircraft ? "visible" : "none");
     }
-    const webglInteractionSource = map.getSource(AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID) as GeoJSONSource | undefined;
+
     if (fullMarkerUpdate) {
       aircraftWebglRuntime?.sync(liveBulkAircraft.map((aircraft) => ({ ...aircraft })), colorMode);
-      webglInteractionSource?.setData({
-        type: "FeatureCollection",
-        features: liveBulkAircraft.map((aircraft) => aircraftWebglInteractionFeature(aircraft, mapZoom)),
-      });
-      aircraftWebglFeatureHexesRef.current = new Set(liveBulkAircraft.map((aircraft) => aircraft.icaoHex));
     } else {
       const changedOrRemovedHexes = new Set([
         ...(pending?.changedHexes ?? []),
         ...(pending?.removedHexes ?? []),
       ]);
-      const remove: string[] = [];
-      const add: ReturnType<typeof aircraftWebglInteractionFeature>[] = [];
-      const featureHexes = aircraftWebglFeatureHexesRef.current;
-
       for (const hex of changedOrRemovedHexes) {
-        if (featureHexes.delete(hex)) remove.push(hex);
         const aircraft = liveFilteredAircraftByHex.get(hex);
         if (aircraft && isPositionedAircraft(aircraft) && !isHtmlSpecialAircraft(aircraft)) {
           aircraftWebglRuntime?.upsert({ ...aircraft }, colorMode);
-          add.push(aircraftWebglInteractionFeature(aircraft, mapZoom));
-          featureHexes.add(hex);
         } else {
           aircraftWebglRuntime?.remove(hex);
         }
       }
+    }
 
-      if (webglInteractionSource && (remove.length || add.length)) {
-        void webglInteractionSource.updateData({
-          ...(remove.length ? { remove } : {}),
-          ...(add.length ? { add } : {}),
-        });
-      }
+    // Bulk labels and pointer hit targets do not need aircraft-motion cadence.
+    // Keep them on a low-frequency GeoJSON lane so worker tiling cannot become
+    // the next bottleneck after moving icon rendering to WebGL.
+    const interactionNow = performance.now();
+    const interactionDue = fullMarkerUpdate
+      || interactionNow - aircraftWebglInteractionUpdatedAtRef.current >= 500;
+    if (interactionDue) {
+      const webglInteractionSource = map.getSource(AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID) as GeoJSONSource | undefined;
+      webglInteractionSource?.setData({
+        type: "FeatureCollection",
+        features: liveBulkAircraft.map((aircraft) => aircraftWebglInteractionFeature(aircraft, mapZoom)),
+      });
+      aircraftWebglInteractionUpdatedAtRef.current = interactionNow;
     }
 
     const selectedAircraftInSnapshot = selectedHex ? liveAircraftByHexRef.current.get(selectedHex) ?? liveSnapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : undefined;
