@@ -59,7 +59,8 @@
     "generate:boundary:at": "node scripts/generate-at-boundary.mjs",
     "changelog": "node scripts/changelog.mjs generate",
     "changelog:backfill": "node scripts/changelog.mjs backfill",
-    "benchmark:radar": "node scripts/radar-performance-baseline.mjs"
+    "benchmark:radar": "node scripts/radar-performance-baseline.mjs",
+    "benchmark:radar:soak": "RADAR_PERF_SOAK=1 RADAR_PERF_SCENARIOS=250,500 RADAR_PERF_MEASURE_MS=90000 node scripts/radar-performance-baseline.mjs"
   },
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.9",
