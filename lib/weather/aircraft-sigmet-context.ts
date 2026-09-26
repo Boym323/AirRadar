@@ -5,6 +5,9 @@ export type AircraftSigmetVerticalMatch = "matched" | "unknown";
 
 export interface AircraftSigmetContext {
   id: string;
+  relation: "current" | "projected";
+  estimatedMinutes: number | null;
+  distanceNm: number | null;
   hazard: string | null;
   phenomenon: string | null;
   qualifier: string | null;
@@ -66,18 +69,41 @@ function verticalMatch(altitudeFt: number | null, lowerFt: number | null, upperF
   return "matched";
 }
 
+function projectPosition(lat: number, lon: number, trackDeg: number, distanceNm: number): { lat: number; lon: number } {
+  const angularDistance = distanceNm / 3440.065;
+  const bearing = trackDeg * Math.PI / 180;
+  const lat1 = lat * Math.PI / 180;
+  const lon1 = lon * Math.PI / 180;
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(angularDistance)
+      + Math.cos(lat1) * Math.sin(angularDistance) * Math.cos(bearing),
+  );
+  const lon2 = lon1 + Math.atan2(
+    Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(lat1),
+    Math.cos(angularDistance) - Math.sin(lat1) * Math.sin(lat2),
+  );
+  const projectedLon = ((lon2 * 180 / Math.PI + 540) % 360) - 180;
+  return { lat: lat2 * 180 / Math.PI, lon: projectedLon };
+}
+
 export function aircraftSigmetContext(aircraft: AircraftView | null, snapshot: SigmetSnapshot): AircraftSigmetContext[] {
   if (!aircraft || aircraft.lat === null || aircraft.lon === null) return [];
 
   const altitudeFt = aircraft.baroAltitude ?? aircraft.altitude ?? aircraft.geomAltitude ?? null;
+  const verticalRateFpm = aircraft.verticalRate ?? aircraft.baroRate ?? aircraft.geomRate ?? null;
   const matches: AircraftSigmetContext[] = [];
+  const currentIds = new Set<string>();
 
   for (const feature of snapshot.features) {
     if (!pointInSigmetGeometry(aircraft.lon, aircraft.lat, feature.geometry)) continue;
     const match = verticalMatch(altitudeFt, feature.properties.lowerFt, feature.properties.upperFt);
     if (match === "outside") continue;
+    currentIds.add(feature.id);
     matches.push({
       id: feature.id,
+      relation: "current",
+      estimatedMinutes: 0,
+      distanceNm: 0,
       hazard: feature.properties.hazard,
       phenomenon: feature.properties.phenomenon,
       qualifier: feature.properties.qualifier,
@@ -90,7 +116,43 @@ export function aircraftSigmetContext(aircraft: AircraftView | null, snapshot: S
     });
   }
 
+  const speedKt = aircraft.groundSpeed;
+  const trackDeg = aircraft.track;
+  if (!aircraft.onGround && speedKt !== null && speedKt >= 30 && trackDeg !== null) {
+    for (const feature of snapshot.features) {
+      if (currentIds.has(feature.id)) continue;
+      for (let minute = 1; minute <= 15; minute += 1) {
+        const distanceNm = speedKt * minute / 60;
+        const projected = projectPosition(aircraft.lat, aircraft.lon, trackDeg, distanceNm);
+        if (!pointInSigmetGeometry(projected.lon, projected.lat, feature.geometry)) continue;
+        const projectedAltitude = altitudeFt === null
+          ? null
+          : altitudeFt + (verticalRateFpm ?? 0) * minute;
+        const match = verticalMatch(projectedAltitude, feature.properties.lowerFt, feature.properties.upperFt);
+        if (match === "outside") continue;
+        matches.push({
+          id: feature.id,
+          relation: "projected",
+          estimatedMinutes: minute,
+          distanceNm,
+          hazard: feature.properties.hazard,
+          phenomenon: feature.properties.phenomenon,
+          qualifier: feature.properties.qualifier,
+          firName: feature.properties.firName,
+          validTo: feature.properties.validTo,
+          lowerFt: feature.properties.lowerFt,
+          upperFt: feature.properties.upperFt,
+          verticalMatch: match,
+          source: feature.properties.source,
+        });
+        break;
+      }
+    }
+  }
+
   return matches.sort((left, right) => {
+    if (left.relation !== right.relation) return left.relation === "current" ? -1 : 1;
+    if ((left.estimatedMinutes ?? 0) !== (right.estimatedMinutes ?? 0)) return (left.estimatedMinutes ?? 0) - (right.estimatedMinutes ?? 0);
     if (left.verticalMatch !== right.verticalMatch) return left.verticalMatch === "matched" ? -1 : 1;
     return (left.validTo ?? "").localeCompare(right.validTo ?? "");
   });
