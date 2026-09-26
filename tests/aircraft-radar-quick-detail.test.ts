@@ -57,6 +57,11 @@ describe("aircraft radar quick detail", () => {
     expect(appSource).toContain("destinationWind={selectedWind.destination}");
     expect(appSource).toContain("useSelectedAircraftWindContext(");
     expect(appSource).toContain("selectedDestination ? { lat: selectedDestination.latitude, lon: selectedDestination.longitude } : null");
+    expect(componentSource).toContain("RouteWeatherSection");
+    expect(componentSource).toContain('data-testid="route-weather-match"');
+    expect(componentSource).toContain("t.weather.routeWeatherDisclaimer");
+    expect(appSource).toContain("/route-weather");
+    expect(appSource).toContain("routeWeather={selectedRouteWeather}");
     expect(componentSource).toContain('data-testid="technical-details"');
     expect(componentSource).toContain("aria-pressed={watchlisted}");
     expect(componentSource).toContain("fullDetailHref");

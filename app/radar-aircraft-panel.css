@@ -520,6 +520,31 @@
   margin: 0;
 }
 
+.aircraft-quick-route-weather {
+  border-top-color: rgba(245, 189, 98, .42);
+}
+
+.aircraft-quick-route-weather-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.aircraft-quick-route-weather-item {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid rgba(245, 189, 98, .28);
+  border-radius: var(--radius-md);
+  background: rgba(245, 189, 98, .06);
+}
+
+.aircraft-quick-route-weather-item > span,
+.aircraft-quick-route-weather-item > small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
 .aircraft-quick-wind-ahead {
   display: grid;
   gap: 8px;
