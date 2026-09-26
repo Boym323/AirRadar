@@ -213,6 +213,12 @@ describe("automatic changelog generation", () => {
     expect(workflow).toContain('branch="automation/changelog-sync"');
     expect(workflow).toContain("gh pr create");
     expect(workflow).not.toContain("git push origin main");
+
+    const ci = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+    expect(ci).toContain("release-scope:");
+    expect(ci).toContain('if [[ "${file}" != "CHANGELOG.md" ]]');
+    expect(ci).toContain("needs.release-scope.outputs.deploy == 'true'");
+    expect(ci).toContain("needs: [validate, release-scope]");
   });
 
   it("backfills missing tagged releases in descending order", () => {
