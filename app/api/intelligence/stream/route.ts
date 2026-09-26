@@ -1,5 +1,6 @@
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { acquireSseClient } from "@/lib/server/sse-capacity";
+import { getRateLimitClientKey } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,7 +10,7 @@ function frame(payload: unknown): Uint8Array {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const releaseSseClient = acquireSseClient("v1");
+  const releaseSseClient = acquireSseClient("v1", getRateLimitClientKey(request), "intelligence");
   if (!releaseSseClient) {
     return new Response("SSE capacity reached", {
       status: 503,
