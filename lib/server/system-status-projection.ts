@@ -13,6 +13,13 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
       nextVersion: null,
     },
     localAdsb: undefined,
+    database: {
+      ...status.database,
+      history: {
+        ...status.database.history,
+        retention: undefined,
+      },
+    },
     adsbLol: {
       ...status.adsbLol,
       selectedSource: undefined,
