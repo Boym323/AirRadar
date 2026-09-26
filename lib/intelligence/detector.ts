@@ -5,7 +5,7 @@ import type { Airport } from "@/lib/airports/types";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { resolveArrivalRunwayContext, resolveDepartureRunwayContext } from "@/lib/route-intelligence/runway-context";
 import type { RunwayContext } from "@/lib/route-intelligence/contracts";
-import type { FlightEventType, FlightIntelligenceEvent, FlightObservation, FlightPhase } from "@/lib/intelligence/types";
+import type { FlightEventType, FlightIntelligenceEvent, FlightObservation, FlightPhase, HoldingStatus } from "@/lib/intelligence/types";
 import { confidenceLevel } from "@/lib/intelligence/types";
 
 const MAX_HISTORY = 120;
@@ -16,6 +16,12 @@ const AIRSPACE_DEBOUNCE_MS = 45_000;
 const PHASE_CONFIRMATIONS = 2;
 const AIRPORT_PROXIMITY_KM = 25;
 const RUNWAY_PROXIMITY_KM = 8;
+const MAX_POSITION_AGE_MS = 60_000;
+const MAX_OBSERVATION_GAP_MS = 3 * 60_000;
+const MIN_LEVEL_OFF_HISTORY = 3;
+const HOLDING_CANDIDATE_MS = 90_000;
+const UNUSUAL_TURN_MIN_TURNS = 3;
+const UNUSUAL_TURN_MIN_DEGREES = 270;
 
 const EVIDENCE = {
   lowInitialAltitude: "intelligence.evidence.lowInitialAltitude",
@@ -60,6 +66,13 @@ const EVIDENCE = {
   sectorStable: "intelligence.evidence.sectorStable",
   atcGeographicContext: "intelligence.evidence.atcGeographicContext",
   runwayResolved: "intelligence.evidence.runwayResolved",
+  stalePosition: "intelligence.evidence.stalePosition",
+  discontinuousTrail: "intelligence.evidence.discontinuousTrail",
+  levelOffAfterClimb: "intelligence.evidence.levelOffAfterClimb",
+  levelOffAfterDescent: "intelligence.evidence.levelOffAfterDescent",
+  repeatedTurns: "intelligence.evidence.repeatedTurns",
+  compactOrbit: "intelligence.evidence.compactOrbit",
+  notHoldingConfirmed: "intelligence.evidence.notHoldingConfirmed",
 } as const;
 
 interface PendingPhase { phase: FlightPhase; count: number; }
@@ -81,6 +94,14 @@ interface TrackState {
   approachCycle: number;
   approachMinDistanceKm: number | null;
   approachEventPending: boolean;
+  lastVerticalTrend: "CLIMB" | "DESCENT" | null;
+  levelOffActive: boolean;
+  levelOffCycle: number;
+  holdingCandidateActive: boolean;
+  holdingConfirmed: boolean;
+  holdingStartedAt: number | null;
+  unusualTurnCycle: number;
+  lastUnusualTurnAt: number | null;
 }
 interface Signal { active: boolean; weight: number; evidence: string; }
 interface AirportMatch { airport: Airport; distanceKm: number; }
@@ -89,6 +110,32 @@ interface HoldingEvidence { signals: Signal[]; durationMs: number; maxRadiusKm: 
 function finite(value: number | null | undefined): value is number { return typeof value === "number" && Number.isFinite(value); }
 function signedAngularDifference(a: number, b: number): number { return ((b - a + 540) % 360) - 180; }
 function observedAtOf(aircraft: Aircraft, fallback: number): number { const value = Date.parse(aircraft.lastSeen); return Number.isFinite(value) ? value : fallback; }
+
+function positionAgeMs(aircraft: Aircraft): number {
+  return finite(aircraft.seenPosSeconds) && aircraft.seenPosSeconds >= 0 ? aircraft.seenPosSeconds * 1000 : 0;
+}
+
+function isFreshObservation(aircraft: Aircraft): boolean {
+  return positionAgeMs(aircraft) <= MAX_POSITION_AGE_MS;
+}
+
+function travelLimitKm(aircraft: Aircraft, gapMs: number): number {
+  const speedKms = finite(aircraft.groundSpeed) ? aircraft.groundSpeed * 0.514444 / 1000 : 0;
+  return Math.max(25, speedKms * (gapMs / 1000) * 2.5);
+}
+
+function isDiscontinuous(previous: Aircraft, current: Aircraft, gapMs: number): boolean {
+  if (previous.lat === null || previous.lon === null || current.lat === null || current.lon === null) return true;
+  const distanceKm = haversineDistanceKm(previous.lat, previous.lon, current.lat, current.lon);
+  return distanceKm > travelLimitKm(current, gapMs);
+}
+
+function verticalTrend(aircraft: Aircraft | undefined): "CLIMB" | "DESCENT" | null {
+  if (!aircraft || !finite(aircraft.verticalRate)) return null;
+  if (aircraft.verticalRate >= 250) return "CLIMB";
+  if (aircraft.verticalRate <= -250) return "DESCENT";
+  return null;
+}
 
 /** Scores are weighted observed signals, not hand-picked event confidences. */
 function scoreSignals(signals: readonly Signal[]): { confidence: number; evidence: string[] } {
@@ -119,7 +166,12 @@ export class FlightIntelligenceDetector {
       this.runwaysByAirport.set(icao.toUpperCase(), runways.slice(0, 64));
     }
   }
-  getPhase(icaoHex: string): FlightPhase | null { return this.tracks.get(icaoHex.toUpperCase())?.phase ?? null; }
+  getPhase(icaoHex: string): FlightPhase | null {
+    const phase = this.tracks.get(icaoHex.toUpperCase())?.phase;
+    return phase === "LANDED" ? "GROUND" : phase ?? null;
+  }
+  /** Exact V2 phase accessor. `getPhase()` keeps the legacy LANDED→GROUND view. */
+  getFlightPhase(icaoHex: string): FlightPhase | null { return this.tracks.get(icaoHex.toUpperCase())?.phase ?? null; }
   cleanup(activeHexes: ReadonlySet<string>): void { for (const hex of this.tracks.keys()) if (!activeHexes.has(hex)) this.tracks.delete(hex); }
 
   observe(previous: Aircraft | undefined, aircraft: Aircraft, observedAt = Date.parse(aircraft.lastSeen)): FlightIntelligenceEvent[] {
@@ -128,9 +180,16 @@ export class FlightIntelligenceDetector {
     const at = Number.isFinite(observedAt) ? observedAt : observedAtOf(aircraft, Date.now());
     const state = this.tracks.get(aircraft.icaoHex) ?? this.newState(at);
     if (state.history.length && at <= state.history.at(-1)!.observedAt) return [];
+    const prior = state.history.at(-1)?.aircraft;
+    const gapMs = state.history.length ? at - state.history.at(-1)!.observedAt : 0;
+    if (!isFreshObservation(aircraft) || (prior && (gapMs > MAX_OBSERVATION_GAP_MS || isDiscontinuous(prior, aircraft, gapMs)))) {
+      this.resetForUnusableObservation(state);
+      this.tracks.set(aircraft.icaoHex, state);
+      return [];
+    }
     if (state.lastCallsign && aircraft.callsign && state.lastCallsign !== aircraft.callsign) {
       state.flightLifecycle = `${at}:${aircraft.callsign}`;
-      state.emitted.clear(); state.pendingPhase = undefined; state.approachCycle = 0; state.holdingCycle = 0; state.holdingActive = false; state.approachEventPending = false;
+      state.emitted.clear(); state.pendingPhase = undefined; state.approachCycle = 0; state.holdingCycle = 0; state.holdingActive = false; state.holdingCandidateActive = false; state.holdingConfirmed = false; state.holdingStartedAt = null; state.approachEventPending = false;
     }
     if (aircraft.callsign) state.lastCallsign = aircraft.callsign;
     state.history.push({ aircraft, observedAt: at });
@@ -138,8 +197,8 @@ export class FlightIntelligenceDetector {
 
     const events: FlightIntelligenceEvent[] = [];
     const current = this.nearestAirport(aircraft);
-    const prior = state.history.at(-2)?.aircraft;
-    const priorMatch = prior ? this.nearestAirport(prior) : null;
+    const priorObservation = state.history.at(-2)?.aircraft;
+    const priorMatch = priorObservation ? this.nearestAirport(priorObservation) : null;
     const airport = current?.airport ?? null;
     const distanceKm = current?.distanceKm ?? null;
     const priorDistanceKm = priorMatch && airport?.icaoCode === priorMatch.airport.icaoCode ? priorMatch.distanceKm : null;
@@ -148,6 +207,7 @@ export class FlightIntelligenceDetector {
       if (state.approachMinDistanceKm === null || distanceKm! < state.approachMinDistanceKm) state.approachMinDistanceKm = distanceKm;
     }
     if (!state.initialized) { state.phase = this.seedPhase(aircraft, distanceKm); state.initialized = true; }
+    if (state.phase === "LANDED" && !aircraft.onGround && (aircraft.verticalRate ?? 0) > 250) state.phase = "GROUND";
 
     const runwayFor = (direction: "DEPARTURE" | "ARRIVAL"): RunwayContext | null => {
       if (!airport) return null;
@@ -162,17 +222,29 @@ export class FlightIntelligenceDetector {
       return direction === "DEPARTURE" ? resolveDepartureRunwayContext(input) : resolveArrivalRunwayContext(input);
     };
     const append = (event: FlightIntelligenceEvent | null): void => { if (event) events.push(event); };
-    const takeoffSignals = this.takeoffSignals(aircraft, prior, distanceKm, priorDistanceKm);
-    const approachSignals = this.approachSignals(state, aircraft, prior, distanceKm, priorDistanceKm);
+    const takeoffSignals = this.takeoffSignals(aircraft, priorObservation, distanceKm, priorDistanceKm);
+    const approachSignals = this.approachSignals(state, aircraft, priorObservation, distanceKm, priorDistanceKm);
     const landingSignals = this.landingSignals(aircraft, distanceKm, state.phase);
     const descentSignals = this.descentSignals(state, aircraft);
     const climbSignals = this.climbSignals(state, aircraft);
-    const goAroundSignals = state.phase === "APPROACH" ? this.goAroundSignals(state, aircraft, prior, distanceKm, priorDistanceKm) : null;
+    const goAroundSignals = state.phase === "APPROACH" ? this.goAroundSignals(state, aircraft, priorObservation, distanceKm, priorDistanceKm) : null;
+
+    const levelOff = this.levelOffSignals(state, aircraft);
+    if (levelOff && !state.levelOffActive) {
+      state.levelOffActive = true;
+      state.levelOffCycle += 1;
+      append(this.event("LEVEL_OFF", aircraft, state, airport?.icaoCode ?? null, state.phase, levelOff, null, `level-off-${state.levelOffCycle}`));
+    }
+    const trend = verticalTrend(aircraft);
+    if (trend) {
+      if (state.lastVerticalTrend && state.lastVerticalTrend !== trend) state.levelOffActive = false;
+      state.lastVerticalTrend = trend;
+    }
 
     if (goAroundSignals) {
       const scored = scoreSignals(goAroundSignals);
-      append(this.event("GO_AROUND", aircraft, state, airport?.icaoCode ?? null, "CLIMB", scored, runwayFor("ARRIVAL")));
-      state.phase = "CLIMB"; state.pendingPhase = undefined; state.approachCycle += 1; state.approachMinDistanceKm = distanceKm; state.approachEventPending = false;
+      append(this.event("GO_AROUND", aircraft, state, airport?.icaoCode ?? null, "GO_AROUND", scored, runwayFor("ARRIVAL")));
+      state.phase = "GO_AROUND"; state.pendingPhase = undefined; state.approachCycle += 1; state.approachMinDistanceKm = distanceKm; state.approachEventPending = false;
     } else {
       if (state.phase === "APPROACH" && state.approachEventPending) {
         const runwayContext = runwayFor("ARRIVAL");
@@ -181,7 +253,7 @@ export class FlightIntelligenceDetector {
         if (diversion) append(this.event("DIVERSION", aircraft, state, airport?.icaoCode ?? null, "APPROACH", scoreSignals(diversion), runwayContext));
         state.approachEventPending = false;
       }
-      if (state.phase === "GROUND" && takeoffSignals.every((signal) => signal.active || signal.weight < 2)) {
+      if ((state.phase === "GROUND" || state.phase === "LANDED") && takeoffSignals.every((signal) => signal.active || signal.weight < 2)) {
       if (this.transition(state, "TAKEOFF")) append(this.event("TAKEOFF", aircraft, state, airport?.icaoCode ?? null, "TAKEOFF", scoreSignals(takeoffSignals), runwayFor("DEPARTURE")));
       } else if (state.phase === "TAKEOFF" && climbSignals.some((signal) => signal.active)) {
       this.transition(state, "CLIMB");
@@ -197,21 +269,65 @@ export class FlightIntelligenceDetector {
       } else if (state.phase === "DESCENT" && approachSignals.filter((signal) => signal.active).length >= 3 && this.transition(state, "APPROACH")) {
       state.approachMinDistanceKm = distanceKm;
       state.approachEventPending = true;
-      } else if (state.phase === "APPROACH" && landingSignals.filter((signal) => signal.active).length >= 3 && this.transition(state, "LANDING", aircraft.onGround && distanceKm !== null && distanceKm <= 2)) {
-      append(this.event("LANDING", aircraft, state, airport?.icaoCode ?? null, "LANDING", scoreSignals(landingSignals), runwayFor("ARRIVAL")));
+      } else if (state.phase === "GO_AROUND" && climbSignals.some((signal) => signal.active)) {
+      this.transition(state, "CLIMB", true);
+      } else if (state.phase === "APPROACH" && landingSignals.filter((signal) => signal.active).length >= 3 && this.transition(state, aircraft.onGround ? "LANDED" : "FINAL", aircraft.onGround && distanceKm !== null && distanceKm <= 2)) {
+      append(this.event("LANDING", aircraft, state, airport?.icaoCode ?? null, aircraft.onGround ? "LANDED" : "FINAL", scoreSignals(landingSignals), runwayFor("ARRIVAL")));
+      } else if (state.phase === "FINAL" && aircraft.onGround) {
+        this.transition(state, "LANDED", true);
       } else if (state.phase === "LANDING" && aircraft.onGround) {
-        this.transition(state, "GROUND", true);
+        this.transition(state, "LANDED", true);
       }
     }
 
     const holding = this.detectHolding(state.history);
-    if (holding && scoreSignals(holding.signals).confidence >= 0.9) {
+    const holdingScore = holding ? scoreSignals(holding.signals) : null;
+    if (holding && holdingScore && holding.maxRadiusKm <= 8 && holdingScore.confidence >= 0.55 && holding.durationMs >= HOLDING_CANDIDATE_MS) {
       state.holdingMisses = 0;
-      if (!state.holdingActive) {
-        state.holdingActive = true; state.holdingCycle += 1;
-        append(this.event("HOLDING", aircraft, state, null, state.phase, scoreSignals([...holding.signals, { active: holding.durationMs >= MIN_HOLDING_MS, weight: 2, evidence: EVIDENCE.holdingDuration }, { active: holding.maxRadiusKm <= 8, weight: 2, evidence: EVIDENCE.holdingArea }]), null, `holding-${state.holdingCycle}`));
+      if (!state.holdingCandidateActive) {
+        state.holdingCandidateActive = true;
+        state.holdingStartedAt = at - holding.durationMs;
+        append(this.event("HOLDING_CANDIDATE", aircraft, state, null, state.phase, holdingScore, null, `holding-candidate-${state.holdingCycle + 1}`, null, {
+          holdingStatus: "HOLDING_CANDIDATE" satisfies HoldingStatus,
+        }));
       }
-    } else if (state.holdingActive && ++state.holdingMisses >= 2) {
+      const confirmed = holdingScore.confidence >= 0.9 && holding.durationMs >= MIN_HOLDING_MS;
+      if (confirmed && !state.holdingConfirmed) {
+        state.holdingConfirmed = true;
+        state.holdingActive = true;
+        state.holdingCycle += 1;
+        state.holdingStartedAt = state.holdingStartedAt ?? state.history[0]?.observedAt ?? at;
+        append(this.event("HOLDING", aircraft, state, null, state.phase, scoreSignals([...holding.signals, { active: true, weight: 2, evidence: EVIDENCE.holdingDuration }, { active: holding.maxRadiusKm <= 8, weight: 2, evidence: EVIDENCE.holdingArea }]), null, `holding-${state.holdingCycle}`, null, {
+          holdingStatus: "HOLDING_CONFIRMED" satisfies HoldingStatus,
+        }, state.holdingStartedAt));
+      }
+    } else if (state.holdingCandidateActive || state.holdingConfirmed) {
+      if (state.holdingActive) {
+        state.holdingMisses += 1;
+      } else {
+        state.holdingCandidateActive = false;
+      }
+      if (state.holdingActive && state.holdingMisses >= 2) {
+        append(this.event("HOLDING_ENDED", aircraft, state, null, state.phase, { confidence: 0.75, evidence: [EVIDENCE.holdingDuration] }, null, `holding-ended-${state.holdingCycle}`, null, {
+          holdingStatus: "HOLDING_ENDED" satisfies HoldingStatus,
+        }, state.holdingStartedAt ?? at, at));
+        state.holdingActive = false;
+        state.holdingConfirmed = false;
+        state.holdingCandidateActive = false;
+        state.holdingStartedAt = null;
+      }
+    }
+
+    const unusual = this.detectUnusualTurn(state.history, state.holdingConfirmed);
+    if (unusual && unusual.type && (state.lastUnusualTurnAt === null || at - state.lastUnusualTurnAt >= HOLDING_WINDOW_MS)) {
+      state.unusualTurnCycle += 1;
+      state.lastUnusualTurnAt = at;
+      append(this.event(unusual.type, aircraft, state, null, state.phase, unusual.scored, null, `unusual-turn-${state.unusualTurnCycle}`));
+    }
+    if (!holding && !state.holdingActive) {
+      state.holdingCandidateActive = false;
+    }
+    if (state.holdingActive && state.holdingMisses >= 2) {
       state.holdingActive = false;
     }
     this.observeAirspace(state, aircraft, at, append);
@@ -220,7 +336,30 @@ export class FlightIntelligenceDetector {
   }
 
   private newState(lifecycle: number): TrackState {
-    return { history: [], phase: "GROUND", initialized: false, airport: null, inside: null, emitted: new Set(), flightLifecycle: String(lifecycle), lastCallsign: null, airspaceSequence: 0, holdingCycle: 0, holdingActive: false, holdingMisses: 0, approachCycle: 0, approachMinDistanceKm: null, approachEventPending: false };
+    return {
+      history: [], phase: "GROUND", initialized: false, airport: null, inside: null,
+      emitted: new Set(), flightLifecycle: String(lifecycle), lastCallsign: null,
+      airspaceSequence: 0, holdingCycle: 0, holdingActive: false, holdingMisses: 0,
+      approachCycle: 0, approachMinDistanceKm: null, approachEventPending: false,
+      lastVerticalTrend: null, levelOffActive: false, levelOffCycle: 0,
+      holdingCandidateActive: false, holdingConfirmed: false, holdingStartedAt: null,
+      unusualTurnCycle: 0, lastUnusualTurnAt: null,
+    };
+  }
+  private resetForUnusableObservation(state: TrackState): void {
+    state.history = [];
+    state.phase = "UNKNOWN";
+    state.initialized = false;
+    state.pendingPhase = undefined;
+    state.lastVerticalTrend = null;
+    state.levelOffActive = false;
+    state.holdingActive = false;
+    state.holdingCandidateActive = false;
+    state.holdingConfirmed = false;
+    state.holdingStartedAt = null;
+    state.holdingMisses = 0;
+    state.approachEventPending = false;
+    state.approachMinDistanceKm = null;
   }
   private seedPhase(aircraft: Aircraft, distanceKm: number | null): FlightPhase {
     if (aircraft.onGround || (distanceKm !== null && distanceKm <= RUNWAY_PROXIMITY_KM && (aircraft.altitude ?? 0) < 500)) return "GROUND";
@@ -234,6 +373,21 @@ export class FlightIntelligenceDetector {
     state.pendingPhase.count += 1;
     if (strong || state.pendingPhase.count >= PHASE_CONFIRMATIONS) { state.phase = phase; state.pendingPhase = undefined; return true; }
     return false;
+  }
+
+  private levelOffSignals(state: TrackState, aircraft: Aircraft): { confidence: number; evidence: string[] } | null {
+    if (state.history.length < MIN_LEVEL_OFF_HISTORY || !state.lastVerticalTrend || !finite(aircraft.verticalRate)) return null;
+    const recentRates = state.history.slice(-(MIN_LEVEL_OFF_HISTORY - 1)).map((item) => item.aircraft.verticalRate).filter(finite);
+    const rates = [...recentRates, aircraft.verticalRate];
+    const settled = rates.length >= MIN_LEVEL_OFF_HISTORY && rates.every((rate) => Math.abs(rate) < 150);
+    const delta = altitudeDelta(state.history, MIN_LEVEL_OFF_HISTORY);
+    if (!settled || delta === null || Math.abs(delta) > 350) return null;
+    return scoreSignals([
+      { active: state.lastVerticalTrend === "CLIMB", weight: 2, evidence: EVIDENCE.levelOffAfterClimb },
+      { active: state.lastVerticalTrend === "DESCENT", weight: 2, evidence: EVIDENCE.levelOffAfterDescent },
+      { active: settled, weight: 3, evidence: EVIDENCE.verticalRateSettled },
+      { active: Math.abs(delta) <= 350, weight: 2, evidence: EVIDENCE.altitudeStable },
+    ]);
   }
 
   private takeoffSignals(aircraft: Aircraft, prior: Aircraft | undefined, distanceKm: number | null, priorDistanceKm: number | null): Signal[] {
@@ -310,6 +464,33 @@ export class FlightIntelligenceDetector {
     const meanAltitudeStep = altitudeValues.length > 1 ? altitudeValues.slice(1).reduce((sum, value, index) => sum + Math.abs(value - altitudeValues[index]!), 0) / (altitudeValues.length - 1) : Number.POSITIVE_INFINITY;
     return { durationMs, maxRadiusKm, signals: [{ active: durationMs >= MIN_HOLDING_MS, weight: 3, evidence: EVIDENCE.holdingDuration }, { active: maxRadiusKm <= 8, weight: 3, evidence: EVIDENCE.holdingArea }, { active: cumulativeTurn >= 300 && meaningfulTurns.length >= 5 && sectors.size >= 4, weight: 3, evidence: EVIDENCE.headingEvolution }, { active: altitudeRange <= 900 && meanAltitudeStep <= 350, weight: 2, evidence: EVIDENCE.holdingAltitude }, { active: recent.every((item) => item.aircraft.onGround === false), weight: 1, evidence: EVIDENCE.holdingAirborne }] };
   }
+  private detectUnusualTurn(history: FlightObservation[], holdingConfirmed: boolean): { type: "UNUSUAL_TURN" | "ORBIT"; scored: { confidence: number; evidence: string[] } } | null {
+    if (holdingConfirmed || history.length < 6) return null;
+    const last = history.at(-1)!;
+    const recent = history.filter((item) => last.observedAt - item.observedAt <= HOLDING_WINDOW_MS);
+    if (recent.length < 6) return null;
+    const tracks = recent.map((item) => item.aircraft.track).filter(finite);
+    const points = recent.map((item) => item.aircraft).filter((item) => item.lat !== null && item.lon !== null);
+    if (tracks.length < 6 || points.length < 6) return null;
+    const turns: number[] = [];
+    for (let index = 1; index < tracks.length; index += 1) turns.push(signedAngularDifference(tracks[index - 1]!, tracks[index]!));
+    const meaningfulTurns = turns.filter((turn) => Math.abs(turn) >= 20);
+    const cumulativeTurn = meaningfulTurns.reduce((sum, turn) => sum + Math.abs(turn), 0);
+    if (cumulativeTurn < UNUSUAL_TURN_MIN_DEGREES || meaningfulTurns.length < UNUSUAL_TURN_MIN_TURNS) return null;
+    const center = { lat: points.reduce((sum, item) => sum + item.lat!, 0) / points.length, lon: points.reduce((sum, item) => sum + item.lon!, 0) / points.length };
+    const maxRadiusKm = Math.max(...points.map((item) => haversineDistanceKm(center.lat, center.lon, item.lat!, item.lon!)));
+    const altitudeValues = recent.map((item) => item.aircraft.altitude).filter(finite);
+    const altitudeRange = altitudeValues.length > 1 ? Math.max(...altitudeValues) - Math.min(...altitudeValues) : Number.POSITIVE_INFINITY;
+    const orbit = maxRadiusKm <= 15 && altitudeRange <= 1_500 && meaningfulTurns.length >= 4;
+    const scored = scoreSignals([
+      { active: meaningfulTurns.length >= UNUSUAL_TURN_MIN_TURNS, weight: 3, evidence: EVIDENCE.repeatedTurns },
+      { active: cumulativeTurn >= UNUSUAL_TURN_MIN_DEGREES, weight: 3, evidence: EVIDENCE.headingEvolution },
+      { active: maxRadiusKm <= 25, weight: 2, evidence: EVIDENCE.holdingArea },
+      { active: orbit, weight: 2, evidence: EVIDENCE.compactOrbit },
+      { active: !holdingConfirmed, weight: 1, evidence: EVIDENCE.notHoldingConfirmed },
+    ]);
+    return { type: orbit ? "ORBIT" : "UNUSUAL_TURN", scored };
+  }
   private nearestAirport(aircraft: Aircraft): AirportMatch | null {
     if (aircraft.lat === null || aircraft.lon === null) return null;
     let best: AirportMatch | null = null;
@@ -320,13 +501,26 @@ export class FlightIntelligenceDetector {
     return best;
   }
 
-  private event(type: FlightEventType, aircraft: Aircraft, state: TrackState, airportIcao: string | null, phase: FlightPhase, scored: { confidence: number; evidence: string[] }, runwayContext: RunwayContext | null, semanticSuffix = "", sectorId: string | null = null): FlightIntelligenceEvent | null {
+  private event(type: FlightEventType, aircraft: Aircraft, state: TrackState, airportIcao: string | null, phase: FlightPhase, scored: { confidence: number; evidence: string[] }, runwayContext: RunwayContext | null, semanticSuffix = "", sectorId: string | null = null, metadata?: Record<string, unknown>, startedAt?: number, endedAt?: number): FlightIntelligenceEvent | null {
     const runway = runwayContext && !runwayContext.conflict && runwayContext.effectiveRunway && (runwayContext.confidence === "HIGH" || runwayContext.confidence === "MEDIUM") ? runwayContext.effectiveRunway : null;
     const lifecycleKey = `${aircraft.icaoHex}:${state.flightLifecycle}`;
     const eventKey = [lifecycleKey, type, airportIcao ?? sectorId ?? "GLOBAL", semanticSuffix || state.approachCycle || "0"].join(":");
     if (state.emitted.has(eventKey)) return null;
     state.emitted.add(eventKey); while (state.emitted.size > MAX_EMITTED_KEYS) state.emitted.delete(state.emitted.values().next().value!);
-    return { id: eventKey, eventKey, lifecycleKey, type, phase, icaoHex: aircraft.icaoHex, flightId: null, callsign: aircraft.callsign, registration: aircraft.registration, occurredAt: aircraft.lastSeen || new Date().toISOString(), detectedAt: new Date().toISOString(), latitude: aircraft.lat, longitude: aircraft.lon, altitude: aircraft.altitude, confidence: scored.confidence, confidenceLevel: confidenceLevel(scored.confidence), airportIcao, runway, runwayContext, sectorId, evidence: [...scored.evidence, ...(runway ? [EVIDENCE.runwayResolved] : [])].slice(0, 8) };
+    const occurredAt = aircraft.lastSeen || new Date().toISOString();
+    const started = startedAt ?? Date.parse(occurredAt);
+    return {
+      id: eventKey, eventKey, lifecycleKey, type, phase, icaoHex: aircraft.icaoHex,
+      flightId: null, callsign: aircraft.callsign, registration: aircraft.registration,
+      occurredAt, detectedAt: new Date().toISOString(), latitude: aircraft.lat,
+      longitude: aircraft.lon, altitude: aircraft.altitude, confidence: scored.confidence,
+      confidenceLevel: confidenceLevel(scored.confidence), airportIcao, runway,
+      runwayContext, sectorId, evidence: [...scored.evidence, ...(runway ? [EVIDENCE.runwayResolved] : [])].slice(0, 8),
+      startedAt: Number.isFinite(started) ? new Date(started).toISOString() : occurredAt,
+      ...(endedAt !== undefined ? { endedAt: new Date(endedAt).toISOString() } : {}),
+      reasonCodes: scored.evidence.slice(0, 8),
+      ...(metadata ? { metadata } : {}),
+    };
   }
 
   private observeAirspace(state: TrackState, aircraft: Aircraft, observedAt: number, append: (event: FlightIntelligenceEvent | null) => void): void {

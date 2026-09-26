@@ -154,6 +154,11 @@ describe("FlightIntelligenceService database reads", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ flightId: 42 }) }));
+    const persisted = create.mock.calls[0]?.[0]?.data as { metadataJson?: string };
+    expect(JSON.parse(persisted.metadataJson ?? "{}")).toMatchObject({
+      startedAt: expect.any(String),
+      reasonCodes: expect.arrayContaining(["intelligence.evidence.sectorMatched"]),
+    });
     mocks.getPrisma.mockReturnValue(null);
     expect(service.getRecent({ flightId: 42 })).toHaveLength(1);
     expect(service.getRecent({ flightId: 41 })).toHaveLength(0);

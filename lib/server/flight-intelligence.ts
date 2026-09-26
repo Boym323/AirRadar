@@ -286,7 +286,15 @@ export class FlightIntelligenceService {
           runway: event.runway,
           sectorId: event.sectorId,
           evidenceJson: JSON.stringify(event.evidence),
-          metadataJson: JSON.stringify({ phase: event.phase, lifecycleKey: event.lifecycleKey, runwayContext: event.runwayContext ?? null }),
+          metadataJson: JSON.stringify({
+            phase: event.phase,
+            lifecycleKey: event.lifecycleKey,
+            runwayContext: event.runwayContext ?? null,
+            startedAt: event.startedAt ?? event.occurredAt,
+            endedAt: event.endedAt ?? null,
+            reasonCodes: event.reasonCodes ?? event.evidence,
+            ...(event.metadata ?? {}),
+          }),
         },
       });
     } catch {
@@ -319,6 +327,12 @@ export class FlightIntelligenceService {
       runwayContext: this.safeRunwayContext(metadata.runwayContext),
       sectorId: row.sectorId ?? null,
       evidence: this.safeEvidence(row.evidenceJson),
+      startedAt: typeof metadata.startedAt === "string" ? metadata.startedAt : new Date(row.occurredAt).toISOString(),
+      ...(typeof metadata.endedAt === "string" ? { endedAt: metadata.endedAt } : {}),
+      reasonCodes: Array.isArray(metadata.reasonCodes)
+        ? metadata.reasonCodes.filter((item): item is string => typeof item === "string").slice(0, 8)
+        : this.safeEvidence(row.evidenceJson),
+      metadata,
     };
   }
 
@@ -343,7 +357,7 @@ export class FlightIntelligenceService {
   }
 
   private safePhase(value: unknown): FlightPhase {
-    const phases: FlightPhase[] = ["GROUND", "TAKEOFF", "CLIMB", "CRUISE", "DESCENT", "APPROACH", "LANDING"];
+    const phases: FlightPhase[] = ["GROUND", "TAKEOFF", "CLIMB", "CRUISE", "DESCENT", "APPROACH", "FINAL", "GO_AROUND", "LANDED", "UNKNOWN", "LANDING"];
     return typeof value === "string" && phases.includes(value as FlightPhase) ? value as FlightPhase : "CRUISE";
   }
 
