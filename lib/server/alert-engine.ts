@@ -11,6 +11,7 @@ import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligenc
 const MAX_DEDUP_ENTRIES = 10_000;
 const MAX_PENDING_ALERTS = 32;
 const HIGH_PRIORITY_RESERVE = 8;
+const MAX_NORMAL_PENDING_ALERTS = MAX_PENDING_ALERTS - HIGH_PRIORITY_RESERVE;
 const MAX_CONCURRENT_DELIVERIES = 2;
 const EMERGENCY_SQUAWKS = new Set(["7500", "7600", "7700"]);
 
@@ -367,23 +368,16 @@ export class AlertEngine {
       intelligence: alert.intelligence ?? null,
     }).catch(() => undefined);
 
-    if (this.pending.length >= MAX_PENDING_ALERTS) {
-      if (alert.priority === "high") {
-        const normalIndex = this.pending.findIndex((pending) => pending.priority !== "high");
-        if (normalIndex >= 0) {
-          const [evicted] = this.pending.splice(normalIndex, 1);
-          if (evicted?.eventId) void this.history.recordNotification(evicted.eventId, "failed").catch(() => undefined);
-          console.error(`AirRadar alert evicted: provider=${this.notifier.name} reason=priority_preemption`);
-        } else if (this.pending.length >= MAX_PENDING_ALERTS + HIGH_PRIORITY_RESERVE) {
-          console.error(`AirRadar alert dropped: provider=${this.notifier.name} reason=queue_full priority=high`);
-          void this.history.recordNotification(eventId, "failed").catch(() => undefined);
-          return false;
-        }
-      } else {
-        console.error(`AirRadar alert dropped: provider=${this.notifier.name} reason=queue_full priority=normal`);
-        void this.history.recordNotification(eventId, "failed").catch(() => undefined);
-        return false;
-      }
+    const normalPending = this.pending.reduce(
+      (count, pending) => count + (pending.priority === "high" ? 0 : 1),
+      0,
+    );
+    const queueFull = this.pending.length >= MAX_PENDING_ALERTS;
+    const normalCapacityFull = normalPending >= MAX_NORMAL_PENDING_ALERTS;
+    if (queueFull || (alert.priority !== "high" && normalCapacityFull)) {
+      console.error(`AirRadar alert dropped: provider=${this.notifier.name} reason=queue_full priority=${alert.priority}`);
+      void this.history.recordNotification(eventId, "failed").catch(() => undefined);
+      return false;
     }
 
     const queued = { ...alert, eventId, type, reason };
