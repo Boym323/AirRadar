@@ -306,6 +306,17 @@ export class AircraftWebglRuntime {
     this.map?.triggerRepaint();
   }
 
+  sync(aircraft: readonly AircraftView[], colorMode: AircraftColorMode): void {
+    const keep = new Set<string>();
+    for (const item of aircraft) {
+      keep.add(item.icaoHex);
+      this.upsert(item, colorMode);
+    }
+    for (const hex of [...this.jobs.keys()]) {
+      if (!keep.has(hex)) this.remove(hex);
+    }
+  }
+
   remove(icaoHex: string): void {
     if (!this.jobs.delete(icaoHex)) return;
     this.dirty = true;
@@ -417,8 +428,8 @@ export class AircraftWebglRuntime {
 
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
-    if (this.matrixLocation) gl.uniformMatrix4fv(this.matrixLocation, false, input.defaultProjectionData.mainMatrix);
-    if (this.pixelRatioLocation) gl.uniform1f(this.pixelRatioLocation, Math.max(1, globalThis.devicePixelRatio || 1));
+    if (this.matrixLocation !== null) gl.uniformMatrix4fv(this.matrixLocation, false, input.defaultProjectionData.mainMatrix);
+    if (this.pixelRatioLocation !== null) gl.uniform1f(this.pixelRatioLocation, Math.max(1, window.devicePixelRatio || 1));
     gl.drawArrays(gl.POINTS, 0, this.renderedCount);
     gl.bindVertexArray(null);
 
