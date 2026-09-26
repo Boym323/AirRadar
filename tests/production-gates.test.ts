@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error The production gate helper is runtime-only ESM consumed by Node.
 import { assertMigrationSource, assertProductionReleaseMetadata, resolveProductionGateChannel } from "../scripts/production-gates.mjs";
@@ -36,4 +37,10 @@ describe("production release metadata gate", () => {
     expect(result.directories.at(-1)).toBe("20260919T1908_receiver_coverage_hourly");
     expect(result.finalContractHash).toMatch(/^[a-f0-9]{64}$/);
   });
+  it("waits for the closed drawer visibility transition before responsive assertions", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain('getComputedStyle(sidebar).visibility === "hidden"');
+    expect(source).toContain("drawer-closed intentionally delays visibility:hidden");
+  });
+
 });
