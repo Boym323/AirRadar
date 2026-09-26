@@ -543,7 +543,10 @@ export class AircraftStateService {
     this.scheduleReceptionRecordEvaluation();
     this.alerts.observe(previousAircraft, this.localAircraft);
     this.intelligence.cleanup(currentHexes);
-    for (const current of this.localAircraft.values()) this.intelligence.observe(previousAircraft.get(current.icaoHex), current, Date.parse(snapshot.fetchedAt));
+    for (const current of this.localAircraft.values()) {
+      const events = this.intelligence.observe(previousAircraft.get(current.icaoHex), current, Date.parse(snapshot.fetchedAt));
+      for (const event of events) this.alerts.observeIntelligenceEvent(current, event);
+    }
     this.invalidateSnapshotCache();
   }
 

@@ -6,6 +6,7 @@ import { createAlertNotifier, type AlertNotifier, type AircraftAlert } from "@/l
 import { createAlertHistoryStore, type AlertHistoryReason, type AlertHistoryRecordValue, type AlertHistoryEventType, type JsonlAlertHistoryStore } from "@/lib/server/alert-history";
 import { createAlertStateStore, type AlertStateStore } from "@/lib/server/alert-state";
 import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
+import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligence/types";
 
 const MAX_DEDUP_ENTRIES = 10_000;
 const MAX_PENDING_ALERTS = 32;
@@ -51,6 +52,27 @@ function emergencyEvent(squawk: "7500" | "7600" | "7700"): { type: AlertHistoryE
 
 function matchesRuleIgnoringDistance(aircraft: Aircraft, rule: AlertRule): boolean {
   return matchesAircraftRule(aircraft, { type: rule.type, value: rule.value });
+}
+
+const INTELLIGENCE_ALERT_EVENTS = new Set<FlightEventType>([
+  "APPROACH",
+  "LANDING",
+  "TAKEOFF",
+  "GO_AROUND",
+  "HOLDING",
+  "DIVERSION",
+  "TOP_OF_DESCENT",
+]);
+
+function intelligenceAlertEvent(type: FlightEventType): { type: AlertHistoryEventType; reason: AlertHistoryReason } | null {
+  if (type === "APPROACH") return { type: "intelligence_approach", reason: "approach" };
+  if (type === "LANDING") return { type: "intelligence_landing", reason: "landing" };
+  if (type === "TAKEOFF") return { type: "intelligence_takeoff", reason: "takeoff" };
+  if (type === "GO_AROUND") return { type: "intelligence_go_around", reason: "go_around" };
+  if (type === "HOLDING") return { type: "intelligence_holding", reason: "holding" };
+  if (type === "DIVERSION") return { type: "intelligence_diversion", reason: "diversion" };
+  if (type === "TOP_OF_DESCENT") return { type: "intelligence_top_of_descent", reason: "top_of_descent" };
+  return null;
 }
 
 function watchlistEvent(
@@ -200,6 +222,39 @@ export class AlertEngine {
     if (stateDirty) this.persistState();
   }
 
+  /**
+   * Bridge detector lifecycle events into notifications only for aircraft that
+   * currently match an enabled watchlist rule. Airspace entry/exit is omitted
+   * deliberately because it is too noisy for push notifications.
+   */
+  observeIntelligenceEvent(aircraft: Aircraft, event: FlightIntelligenceEvent): void {
+    if (!INTELLIGENCE_ALERT_EVENTS.has(event.type)) return;
+    const matchedRules = this.rules.filter((rule) => matchesAircraftRule(aircraft, rule));
+    if (!matchedRules.length) return;
+    const mapped = intelligenceAlertEvent(event.type);
+    if (!mapped) return;
+    const key = `intelligence:${event.lifecycleKey}:${event.type}:${aircraft.icaoHex}`;
+    if (this.permanentEvents.has(key)) return;
+    this.rememberPermanentEvent(key);
+    for (const rule of matchedRules) this.ruleLastTriggered.set(rule.id, this.now());
+    this.enqueue({
+      aircraft,
+      matchedRules,
+      emergency: false,
+      priority: event.type === "GO_AROUND" || event.type === "DIVERSION" ? "high" : "normal",
+      type: mapped.type,
+      reason: mapped.reason,
+      eventId: key,
+      intelligence: {
+        eventType: event.type,
+        confidenceLevel: event.confidenceLevel,
+        airportIcao: event.airportIcao,
+        sectorId: event.sectorId,
+      },
+    });
+    this.persistState();
+  }
+
   /** Called only after durable history confirms that a first Flight exists. */
   observeNewAircraft(aircraft: Aircraft): void {
     const id = `new:${aircraft.icaoHex.toUpperCase()}`;
@@ -299,6 +354,7 @@ export class AlertEngine {
       radiusKm: alert.radiusKm ?? null,
       squawk: alert.squawk ?? null,
       record: alert.record,
+      intelligence: alert.intelligence ?? null,
     }).catch(() => undefined);
     if (this.pending.length >= MAX_PENDING_ALERTS) {
       console.error(`AirRadar alert dropped: provider=${this.notifier.name} reason=queue_full`);

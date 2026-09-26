@@ -158,7 +158,7 @@ export class FlightIntelligenceService {
     return this.airportIndexLoading;
   }
 
-  observe(previous: Aircraft | undefined, aircraft: Aircraft, observedAt?: number): void {
+  observe(previous: Aircraft | undefined, aircraft: Aircraft, observedAt?: number): FlightIntelligenceEvent[] {
     void this.ensureAirportIndex();
     let detected: FlightIntelligenceEvent[];
     try {
@@ -166,7 +166,7 @@ export class FlightIntelligenceService {
     } catch {
       // Intelligence is optional enrichment. A malformed observation must not
       // reject the live snapshot or stop the single state owner.
-      return;
+      return [];
     }
     for (const event of detected) {
       this.events.unshift(event);
@@ -180,6 +180,7 @@ export class FlightIntelligenceService {
       }
       void this.persist(event);
     }
+    return detected;
   }
 
   cleanup(activeHexes: ReadonlySet<string>): void {
