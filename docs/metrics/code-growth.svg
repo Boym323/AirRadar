@@ -1,8 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="400" viewBox="0 0 960 400" role="img" aria-labelledby="title desc">
   <title id="title">AirRadar codebase growth</title>
-  <desc id="desc">The first metrics snapshot will be generated after the workflow runs on main.</desc>
+  <desc id="desc">Line chart of non-empty physical source lines split between production code and tests.</desc>
   <rect width="100%" height="100%" rx="12" fill="#ffffff"/>
-  <text x="48" y="72" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="700" fill="#1f2328">AirRadar codebase growth</text>
-  <text x="48" y="110" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" fill="#59636e">Awaiting first metrics snapshot on main.</text>
+  <text x="48" y="48" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="700" fill="#1f2328">AirRadar codebase growth</text>
+  <text x="48" y="72" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" fill="#59636e">Non-empty physical source lines · snapshots only when code counts change</text>
+
+  <line x1="500" y1="47" x2="528" y2="47" stroke="#0969da" stroke-width="3" stroke-linecap="round"/>
+  <text x="536" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Production 60,295</text>
+  <line x1="700" y1="47" x2="728" y2="47" stroke="#8250df" stroke-width="3" stroke-linecap="round"/>
+  <text x="736" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Tests 17,233</text>
+
+  <line x1="72" y1="92.0" x2="928" y2="92.0" stroke="#d8dee4" stroke-width="1"/>
+  <text x="60" y="96.0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">100k</text>
+  <line x1="72" y1="142.4" x2="928" y2="142.4" stroke="#d8dee4" stroke-width="1"/>
+  <text x="60" y="146.4" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">80k</text>
+  <line x1="72" y1="192.8" x2="928" y2="192.8" stroke="#d8dee4" stroke-width="1"/>
+  <text x="60" y="196.8" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">60k</text>
+  <line x1="72" y1="243.2" x2="928" y2="243.2" stroke="#d8dee4" stroke-width="1"/>
+  <text x="60" y="247.2" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">40k</text>
+  <line x1="72" y1="293.6" x2="928" y2="293.6" stroke="#d8dee4" stroke-width="1"/>
+  <text x="60" y="297.6" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">20k</text>
+  <line x1="72" y1="344.0" x2="928" y2="344.0" stroke="#d8dee4" stroke-width="1"/>
+  <text x="60" y="348.0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">0</text>
+
+  <line x1="72" y1="92" x2="72" y2="344" stroke="#8c959f" stroke-width="1"/>
+  <line x1="72" y1="344" x2="928" y2="344" stroke="#8c959f" stroke-width="1"/>
+
+  <path d="M 500.0 192.1" fill="none" stroke="#0969da" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 500.0 300.6" fill="none" stroke="#8250df" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="500.0" cy="192.1" r="4.5" fill="#0969da"/>
+  <circle cx="500.0" cy="300.6" r="4.5" fill="#8250df"/>
+
+  <text x="500.0" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-26</text>
 </svg>
