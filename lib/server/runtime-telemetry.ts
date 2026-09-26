@@ -1,7 +1,9 @@
 import { readFileSync, statSync } from "node:fs";
 import { chmod, mkdir, open, rename, unlink } from "node:fs/promises";
 import path from "node:path";
+import type { NetworkProviderStatus } from "@/lib/aircraft/types";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
+import { getPrisma } from "@/lib/server/db";
 import { readRuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import { getRuntimeStateDirectory } from "@/lib/server/runtime-state";
 
@@ -18,6 +20,10 @@ export interface RuntimeTelemetrySample {
   activeSseClients: number;
   aircraftCount: number | null;
   listenerCount: number | null;
+  databaseState: "ok" | "offline" | "disabled";
+  databaseLatencyMs: number | null;
+  localProviderState: "online" | "offline";
+  networkProviderState: NetworkProviderStatus;
 }
 
 export interface RuntimeTelemetryHistory {
@@ -43,7 +49,7 @@ interface RuntimeTelemetryFile {
 export interface RuntimeTelemetryStoreOptions {
   file?: string;
   now?: () => number;
-  sample?: () => RuntimeTelemetrySample;
+  sample?: () => RuntimeTelemetrySample | Promise<RuntimeTelemetrySample>;
   intervalMs?: number;
   retentionMs?: number;
   maxSamples?: number;
@@ -71,6 +77,14 @@ function validSample(value: unknown, now: number, retentionMs: number): RuntimeT
   const cgroupMemoryCurrentBytes = nullableNonNegative(candidate.cgroupMemoryCurrentBytes);
   const aircraftCount = nullableNonNegative(candidate.aircraftCount);
   const listenerCount = nullableNonNegative(candidate.listenerCount);
+  const databaseLatencyMs = nullableNonNegative(candidate.databaseLatencyMs);
+  const databaseState = candidate.databaseState;
+  const localProviderState = candidate.localProviderState;
+  const networkProviderState = candidate.networkProviderState;
+  const validNetworkStates = new Set<NetworkProviderStatus>([
+    "disabled", "connecting", "disconnected", "degraded", "online", "stale",
+    "timeout", "rate_limited", "http_error", "invalid_response",
+  ]);
   if (
     processRssBytes === null
     || heapUsedBytes === null
@@ -78,6 +92,11 @@ function validSample(value: unknown, now: number, retentionMs: number): RuntimeT
     || cgroupMemoryCurrentBytes === undefined
     || aircraftCount === undefined
     || listenerCount === undefined
+    || databaseLatencyMs === undefined
+    || (databaseState !== "ok" && databaseState !== "offline" && databaseState !== "disabled")
+    || (localProviderState !== "online" && localProviderState !== "offline")
+    || typeof networkProviderState !== "string"
+    || !validNetworkStates.has(networkProviderState as NetworkProviderStatus)
   ) return null;
   return {
     recordedAt: new Date(recordedAt).toISOString(),
@@ -87,6 +106,10 @@ function validSample(value: unknown, now: number, retentionMs: number): RuntimeT
     activeSseClients,
     aircraftCount,
     listenerCount,
+    databaseState,
+    databaseLatencyMs,
+    localProviderState,
+    networkProviderState: networkProviderState as NetworkProviderStatus,
   };
 }
 
@@ -98,12 +121,31 @@ function errorCode(error: unknown): string {
   return "save_failed";
 }
 
-function defaultSample(now = Date.now()): RuntimeTelemetrySample {
-  const aircraft = getAircraftStateService().getDiagnostics();
+async function defaultSample(now = Date.now()): Promise<RuntimeTelemetrySample> {
+  const service = getAircraftStateService();
+  const aircraft = service.getDiagnostics();
+  const snapshot = service.getSnapshot();
+  const network = service.getNetworkDiagnostics();
   const runtime = readRuntimeDiagnostics({
     aircraftCount: aircraft.aircraftCount,
     listenerCount: aircraft.listenerCount,
   });
+
+  const database = getPrisma();
+  let databaseState: RuntimeTelemetrySample["databaseState"] = database ? "offline" : "disabled";
+  let databaseLatencyMs: number | null = null;
+  if (database) {
+    const startedAt = Date.now();
+    try {
+      await database.orm.public.Aircraft.select("id").limit(1).all();
+      databaseLatencyMs = Math.max(0, Date.now() - startedAt);
+      databaseState = "ok";
+    } catch {
+      databaseLatencyMs = Math.max(0, Date.now() - startedAt);
+      databaseState = "offline";
+    }
+  }
+
   return {
     recordedAt: new Date(now).toISOString(),
     processRssBytes: runtime.processRssBytes,
@@ -112,13 +154,17 @@ function defaultSample(now = Date.now()): RuntimeTelemetrySample {
     activeSseClients: runtime.activeSseClients,
     aircraftCount: runtime.aircraftCount,
     listenerCount: runtime.listenerCount,
+    databaseState,
+    databaseLatencyMs,
+    localProviderState: snapshot.sourceOnline ? "online" : "offline",
+    networkProviderState: network.status,
   };
 }
 
 export class RuntimeTelemetryStore {
   private readonly file: string;
   private readonly now: () => number;
-  private readonly sampleFactory: () => RuntimeTelemetrySample;
+  private readonly sampleFactory: () => RuntimeTelemetrySample | Promise<RuntimeTelemetrySample>;
   private readonly intervalMs: number;
   private readonly retentionMs: number;
   private readonly maxSamples: number;
@@ -126,6 +172,7 @@ export class RuntimeTelemetryStore {
   private samples: RuntimeTelemetrySample[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
   private saveInFlight: Promise<void> | null = null;
+  private sampleInFlight: Promise<void> | null = null;
   private dirty = false;
   private loadedFromDisk = false;
   private lastLoadError: string | null = null;
@@ -145,19 +192,33 @@ export class RuntimeTelemetryStore {
 
   start(): void {
     if (this.timer) return;
-    this.record(this.sampleFactory());
-    void this.flush();
-    this.timer = setInterval(() => {
-      this.record(this.sampleFactory());
-      void this.flush();
-    }, this.intervalMs);
+    void this.collectAndFlush();
+    this.timer = setInterval(() => { void this.collectAndFlush(); }, this.intervalMs);
     this.timer.unref?.();
   }
 
   async stop(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    if (this.sampleInFlight) await this.sampleInFlight;
     await this.flush();
+  }
+
+  private async collectAndFlush(): Promise<void> {
+    if (this.sampleInFlight) return this.sampleInFlight;
+    const operation = Promise.resolve(this.sampleFactory())
+      .then(async (sample) => {
+        this.record(sample);
+        await this.flush();
+      })
+      .catch((error) => {
+        console.warn(`[runtime-telemetry] sample failed: ${errorCode(error)}`);
+      });
+    const tracked = operation.finally(() => {
+      if (this.sampleInFlight === tracked) this.sampleInFlight = null;
+    });
+    this.sampleInFlight = tracked;
+    return tracked;
   }
 
   record(sample: RuntimeTelemetrySample): void {
