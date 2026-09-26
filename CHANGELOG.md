@@ -2,6 +2,315 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.145] - 2026-09-26
+
+Changes since v1.0.144:
+
+- feat(metrics): add codebase LOC collector (ffae064)
+- ci(metrics): automate codebase growth chart (1d0c513)
+- docs(metrics): initialize code history (4f1718a)
+- docs(metrics): add code growth chart placeholder (7397412)
+- chore(metrics): expose code metrics command (71df9d0)
+- docs(readme): add codebase growth chart (f1678cd)
+- test(metrics): cover LOC classification and chart (18b6dec)
+- ci(metrics): follow protected main review flow (2ba24e6)
+- docs(metrics): document automated review flow (f8e6ae1)
+- feat(intelligence): add flight intelligence v2 lifecycle signals (597164b)
+- Merge pull request #140 from Boym323/feat/codebase-growth-metrics (dbf957d)
+- chore(metrics): update codebase growth (9cf5f5e)
+- fix(metrics): quote workflow summary safely (62c4e15)
+- Merge pull request #142 from Boym323/automation/codebase-metrics (0a18fb6)
+- Merge pull request #141 from Boym323/feat/flight-intelligence-v2-stage1 (f71483b)
+- chore(metrics): update codebase growth (ce16185)
+- Merge pull request #143 from Boym323/automation/codebase-metrics (f2d931e)
+
+## [1.0.144] - 2026-09-26
+
+Changes since v1.0.143:
+
+- Add diagnostic script for auditing FlightAware routes (aadf157)
+
+## [1.0.143] - 2026-09-26
+
+Changes since v1.0.142:
+
+- fix(radar): keep WebGL aircraft icons north-up (33ec71f)
+- test(radar): guard WebGL icon orientation (fe48330)
+- Merge pull request #139 from Boym323/fix/webgl-aircraft-icon-orientation (df46519)
+
+## [1.0.142] - 2026-09-26
+
+Changes since v1.0.141:
+
+- fix(alerts): prioritize critical notifications (c3d62f2)
+- test(alerts): cover priority queue preemption (680cd50)
+- fix(sse): enforce per-client and channel capacity (e92145c)
+- fix(sse): identify aircraft stream clients (837e456)
+- fix(sse): isolate intelligence stream capacity (5cbf7c2)
+- fix(sse): isolate OGN stream capacity (eac91f7)
+- test(sse): cover client and channel fairness (0061910)
+- test(sse): assert intelligence stream identity (155ce55)
+- fix(intelligence): merge pending events into queries (44cd5c2)
+- test(intelligence): cover pending event query race (e496390)
+- fix(intelligence): suppress stale weather summary signals (debbc95)
+- fix(radar): pass SIGMET freshness into situation summary (27ee5ef)
+- test(intelligence): cover stale weather summary (5a1c3cf)
+- fix(weather): measure SIGMET entry along remaining route (6519f5d)
+- test(weather): verify SIGMET entry distance (ea02e5c)
+- fix(alerts): reserve queue capacity for critical events (7506bf3)
+- test(alerts): verify reserved critical queue capacity (d32cdac)
+- fix(intelligence): replay recent events on SSE connect (b5920f1)
+- fix(intelligence): merge REST and SSE event windows (d555211)
+- test(intelligence): cover SSE connection replay (32a069e)
+- test(sse): isolate shared-cap client identities (bcb4c62)
+- Merge pull request #138 from Boym323/fix/code-review-findings (81578be)
+
+## [1.0.141] - 2026-09-26
+
+Changes since v1.0.140:
+
+- feat(alerts): add flight-intelligence alert history types (28b7f60)
+- feat(alerts): format flight-intelligence notifications (2f56eee)
+- feat(alerts): bridge watchlisted flight-intelligence events (4e4590a)
+- feat(intelligence): return detected lifecycle events to state owner (624775a)
+- feat(alerts): notify on watchlisted intelligence events (d53a8df)
+- feat(alerts): expose intelligence history filter (91bd901)
+- feat(alerts): show flight-intelligence alert history (7f16658)
+- test(alerts): cover watchlisted intelligence notifications (401832b)
+- fix(intelligence): preserve low ATC prediction confidence (e8586df)
+- test(alerts): include intelligence metadata in history fixture (d35b2a2)
+- chore(alerts): retest against updated main (d9b81d4)
+- Merge pull request #137 from Boym323/feature/intelligence-alerts (d0a9fbb)
+
+## [1.0.140] - 2026-09-26
+
+Changes since v1.0.139:
+
+- feat(intelligence): derive deterministic flight situation summary (57bc1d7)
+- feat(intelligence): add situation summary copy (0361009)
+- feat(intelligence): add situation summary copy (ef21b94)
+- feat(intelligence): show deterministic flight situation summary (3cb9180)
+- style(intelligence): format flight situation summary (7f53d9d)
+- test(intelligence): cover flight situation summary (5ffa97c)
+- test(intelligence): require situation summary in radar detail (765a1e7)
+- fix(intelligence): preserve low ATC prediction confidence (2cfe3b4)
+- test(radar): make mobile close gate resilient to rerender (7b88409)
+- Merge pull request #136 from Boym323/feature/flight-situation-summary (524adb2)
+
+## [1.0.139] - 2026-09-26
+
+Changes since v1.0.138:
+
+- feat(weather): correlate reconstructed route with SIGMET (b4172d9)
+- feat(weather): add route-weather context API (439460a)
+- feat(weather): load route weather for selected aircraft (978ed7a)
+- feat(weather): pass route weather into aircraft detail (cbf0daa)
+- feat(weather): show SIGMETs along reconstructed route (366b0a6)
+- feat(weather): add route-weather copy (df1f697)
+- feat(weather): add route-weather copy (8a646ac)
+- style(weather): format route-weather context (7eda7e8)
+- test(weather): cover SIGMETs along reconstructed route (5bd994d)
+- test(weather): require reconstructed-route weather UI (8cdab57)
+- fix(weather): keep route context on bounded timeout refresh (2a6c3fd)
+- perf(weather): keep route context off enrichment critical path (b164362)
+- perf(weather): defer route context until ATC is ready (17d7da6)
+- test(weather): fixture reconstructed-route weather in browser gate (24b5c88)
+- Merge pull request #135 from Boym323/feature/route-weather-intelligence (b10bcae)
+
+## [1.0.138] - 2026-09-26
+
+Changes since v1.0.137:
+
+- feat(weather): derive wind relative to destination bearing (e836aa4)
+- feat(weather): expose destination wind context (4bd14f1)
+- feat(weather): derive destination-relative wind (7424571)
+- feat(weather): pass destination wind context (073ff3f)
+- feat(weather): show destination-relative wind (6c44458)
+- feat(weather): add destination-wind copy (73d4e76)
+- feat(weather): add destination-wind copy (8b2387c)
+- test(weather): cover destination-relative wind (84bba00)
+- test(weather): require destination-relative wind UI (eec0ea3)
+- test(weather): accept destination-aware wind hook (b1049cc)
+- Merge main into feature/weather-destination-wind (8832fd0)
+- Merge pull request #134 from Boym323/feature/weather-destination-wind (701af8c)
+
+## [1.0.137] - 2026-09-26
+
+Changes since v1.0.136:
+
+- feat(weather): derive wind profile ahead of aircraft (94b0df9)
+- feat(weather): expose wind-ahead profile (f97fb7f)
+- feat(weather): pass wind-ahead profile to detail (e0c4fb6)
+- feat(weather): pass wind-ahead profile to quick detail (5127d99)
+- feat(weather): show wind trend ahead of aircraft (0998ff8)
+- feat(weather): add wind-ahead copy (ae7ea06)
+- feat(weather): add wind-ahead copy (858ddfc)
+- test(weather): cover wind-ahead profile trends (3c03604)
+- test(weather): require wind-ahead profile UI (1651a18)
+- style(weather): format wind-ahead profile (d000fc7)
+- Merge pull request #133 from Boym323/feature/weather-wind-ahead (f3d9d01)
+
+## [1.0.136] - 2026-09-26
+
+Changes since v1.0.135:
+
+- feat(weather): reapply wind intelligence on optimized main (85b42f5)
+
+## [1.0.135] - 2026-09-26
+
+Changes since v1.0.134:
+
+- perf(test): reapply production gate optimization (components/use-dataset-query.ts) (b302baa)
+- perf(test): reapply production gate optimization (scripts/production-gates.mjs) (5a1f388)
+- perf(test): reapply production gate optimization (tests/dataset-query-retry.test.ts) (469221b)
+- perf(test): reapply production gate optimization (tests/production-gates.test.ts) (d1aa5f1)
+- perf(test): reapply production gate optimization (tests/radar-context-highlight.test.ts) (70fadd9)
+
+## [1.0.134] - 2026-09-26
+
+Changes since v1.0.133:
+
+- refactor(weather): expose short-horizon position projection (45620a7)
+- feat(weather): detect course deviation away from SIGMET (b1136ad)
+- feat(weather): derive SIGMET trajectory deviation (5cdc1a7)
+- feat(weather): pass trajectory deviation context (93360d8)
+- feat(weather): surface course deviation near SIGMET (e28d0af)
+- feat(weather): add SIGMET deviation copy (eaacf9e)
+- feat(weather): add SIGMET deviation copy (066e073)
+- style(weather): highlight SIGMET trajectory deviation (0f82451)
+- fix(weather): include vertical trend in current SIGMET projection (6747b86)
+- test(weather): cover SIGMET trajectory deviation (db19e13)
+- test(weather): require SIGMET deviation UI (1275807)
+- test(weather): cover turned track that still intersects SIGMET (d6e4435)
+- fix(weather): require vertical evidence for medium correlation (daa37c3)
+- test(weather): downgrade unknown vertical correlation (571acb2)
+- fix(weather): require horizontal SIGMET avoidance for course signal (c989109)
+- test(weather): require horizontal avoidance for course signal (1ce07e5)
+- Merge pull request #131 from Boym323/feature/weather-trajectory-deviation (19d8ff4)
+
+## [1.0.133] - 2026-09-26
+
+Changes since v1.0.132:
+
+- feat(weather): correlate aircraft with active SIGMETs (c9d3ced)
+- feat(weather): load SIGMET context for selected aircraft (5eacc12)
+- feat(weather): derive selected-aircraft SIGMET context (5ba3ece)
+- feat(weather): pass SIGMET context to aircraft detail (490b9b1)
+- feat(weather): show active SIGMET exposure in flight detail (86f26e5)
+- feat(weather): add aircraft SIGMET context copy (2ed3e17)
+- feat(weather): add aircraft SIGMET context copy (58d1c8e)
+- fix(weather): handle SIGMET boundaries and dateline polygons (68d2b22)
+- test(weather): cover aircraft SIGMET context (fc45ebb)
+- test(weather): require SIGMET context in aircraft detail (aef8095)
+- test(weather): cover selected-aircraft SIGMET loading (9525379)
+- refactor(weather): separate SIGMET loading from layer visibility (6cf6a9c)
+- refactor(weather): keep SIGMET layer state outside data loader (d50a416)
+- style(weather): format aircraft SIGMET context (5f211c3)
+- feat(weather): project near-term SIGMET entry (2eaa773)
+- feat(weather): show projected SIGMET entry ETA (15e4e67)
+- feat(weather): add projected SIGMET copy (9ccbbee)
+- feat(weather): add projected SIGMET copy (4e3f18a)
+- test(weather): cover projected SIGMET entry (2e9c545)
+- test(weather): require projected SIGMET UI (7eed9a1)
+- Merge pull request #128 from Boym323/feature/weather-intelligence-sigmet (91551a1)
+
+## [1.0.132] - 2026-09-26
+
+Changes since v1.0.131:
+
+- feat(atc): derive estimated handoff context (9b90a5b)
+- feat(atc): surface estimated next-sector handoff (d7cd676)
+- feat(atc): add handoff estimate copy (ceed09f)
+- feat(atc): add handoff estimate copy (fd89ee3)
+- test(atc): cover estimated handoff context (a3ba309)
+- test(atc): require handoff estimate in quick detail (98a0adb)
+- test(radar): wait for mobile drawer close transition (46811bc)
+- test(radar): cover drawer transition gate (464f543)
+- perf(sse): rebuild ordering once for dense deltas (28b4f96)
+- test(sse): cover dense delta order rebuild (e2749da)
+- test(radar): stabilize responsive drawer gate (250a781)
+- test(radar): stabilize responsive drawer gate (2a1d065)
+- test(radar): sync drawer gate fix with WebGL V2 (6cf7a8c)
+- test(radar): sync drawer gate fix with WebGL V2 (822f90a)
+- chore(radar): sync WebGL V2 base (9665d6c)
+- chore(radar): sync WebGL V2 base (afc8f1f)
+- chore(radar): sync WebGL V2 base (be5223a)
+- chore(radar): sync WebGL V2 base (6ba7fc6)
+- chore(radar): sync WebGL V2 base (599b76b)
+- chore(radar): sync WebGL V2 base (bf6437e)
+- fix(atc): downgrade uncertain handoff confidence (c1e082f)
+- test(atc): cover uncertain handoff confidence (3855209)
+- Merge pull request #126 from Boym323/test/stabilize-responsive-drawer-gate (cfa481c)
+- Merge pull request #127 from Boym323/perf/sse-v2-dense-delta-order (cfeeb71)
+- Merge pull request #125 from Boym323/feature/atc-handoff-v1 (a859c16)
+
+## [1.0.131] - 2026-09-26
+
+Changes since v1.0.130:
+
+- perf(radar): add direct indexed WebGL hit testing (fafc454)
+- perf(radar): route pointer hits directly to WebGL runtime (552b227)
+- test(radar): cover indexed WebGL pointer picking (46bf67b)
+- test(radar): gate direct WebGL picking contract (19901e4)
+- test(radar): wait for direct WebGL picking runtime (81f8242)
+- Merge pull request #124 from Boym323/perf/webgl-direct-hit-testing (141cb6c)
+
+## [1.0.130] - 2026-09-26
+
+Changes since v1.0.129:
+
+- fix(radar): render real aircraft icons in WebGL (d1d1f2c)
+- test(radar): require classified WebGL silhouettes (90cf301)
+- fix(radar): respect WebGL texture-array limits (c7db8ba)
+- Merge pull request #123 from Boym323/fix/webgl-real-aircraft-icons (62feaa5)
+
+## [1.0.129] - 2026-09-26
+
+Changes since v1.0.128:
+
+- perf(radar): add WebGL bulk aircraft runtime (8c3c5a1)
+- perf(radar): wire WebGL bulk aircraft layer (6088173)
+- perf(radar): split bulk WebGL and special HTML rendering (67e2674)
+- perf(radar): gate WebGL bulk renderer through 5000 aircraft (62ea931)
+- perf(radar): benchmark WebGL and HTML render paths separately (98af698)
+- perf(radar): soak WebGL renderer through 5000 aircraft (d8e6b33)
+- test(radar): validate WebGL bulk performance budgets (aea3e5b)
+- test(radar): cover WebGL headroom through 5000 aircraft (5c73e67)
+- test(radar): update WebGL soak scenarios (2227e84)
+- test(radar): cover WebGL aircraft hybrid renderer (781af4a)
+- chore(radar): keep WebGL budget lint-clean (46d3bc8)
+- perf(radar): preserve bulk motion state across full syncs (14261c9)
+- perf(radar): retain WebGL interpolation across full map syncs (784e214)
+- perf(radar): decouple bulk labels from motion cadence (07c1436)
+- fix(radar): address WebGL review findings (3c0cb4e)
+- fix(radar): keep WebGL hit targets on rendered positions (b5377ed)
+- test(radar): update production gate for WebGL bulk markers (895cda3)
+- test(radar): restore browser smoke state after marker selection (fe8d842)
+- Merge pull request #122 from Boym323/perf/webgl-aircraft-layer-v1 (0ce5418)
+
+## [1.0.128] - 2026-09-26
+
+Changes since v1.0.127:
+
+- perf(radar): add 1000-2000 aircraft scenarios (2ba2421)
+- perf(radar): capture p95 frame and collision diagnostics (30b25e5)
+- perf(radar): report p95 and browser footprint (261c4f3)
+- perf(radar): soak realistic 1600-aircraft load (345a5af)
+- test(radar): cover 1600-aircraft performance audit (f7714f9)
+- test(radar): update expanded performance scenarios (4c967d2)
+- test(radar): update 1600-aircraft soak expectation (fb003ee)
+- fix(radar-perf): snapshot timings before forced GC (f8a1dc3)
+- Merge pull request #120 from Boym323/perf/radar-1600-audit (5a979b7)
+
+## [1.0.127] - 2026-09-26
+
+Changes since v1.0.126:
+
+- docs: sync changelog through v1.0.126 (c3bd29d)
+- ci: tolerate changelog PR permission in ci.yml (58b7c3e)
+- ci: tolerate changelog PR permission in changelog-sync.yml (4d008c6)
+- Merge pull request #118 from Boym323/automation/changelog-sync (653c6d2)
+- Merge pull request #119 from Boym323/fix/changelog-sync-pr-permission (04cab03)
 ## [1.0.126] - 2026-09-26
 
 Changes since v1.0.125:
