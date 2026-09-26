@@ -544,6 +544,17 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
   const coverageBucketsWithData = input.statistics.coverage.filter((bucket) => Number.isFinite(bucket.maxDistanceKm) && bucket.maxDistanceKm > 0).length;
   const alertsStatus: SystemStatus = input.alerts.status === "ok" ? "ok" : input.alerts.status === "disabled" ? "disabled" : "degraded";
   const historyStatus = persistenceStatus(input.database.status, input.history.failureCount, "ok");
+  const historyRetention = (input.history as typeof input.history & {
+    retention?: {
+      lastRunAt: string | null;
+      cutoff: string | null;
+      durationMs: number | null;
+      rowsDeleted: number;
+      batches: number;
+      completed: boolean | null;
+      failureCount: number;
+    };
+  }).retention;
   const statisticsPersistenceStatus = persistenceStatus(input.database.status, input.statisticsPersistence.failureCount, input.statisticsPersistence.status);
   const topLevelStatus: SystemStatus = receiverStatus === "offline"
     || input.database.status === "offline"
@@ -580,7 +591,21 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
     database: {
       status: input.database.status,
       connected: input.database.connected,
-      history: { status: historyStatus, lastSuccessfulWrite: safeTimestamp(input.history.lastSuccessfulWriteAt) },
+      history: {
+        status: historyStatus,
+        lastSuccessfulWrite: safeTimestamp(input.history.lastSuccessfulWriteAt),
+        ...(historyRetention ? {
+          retention: {
+            lastRunAt: safeTimestamp(historyRetention.lastRunAt),
+            cutoff: safeTimestamp(historyRetention.cutoff),
+            durationMs: historyRetention.durationMs === null ? null : nonNegativeInteger(historyRetention.durationMs, 24 * 60 * 60_000),
+            rowsDeleted: nonNegativeInteger(historyRetention.rowsDeleted, 100_000_000),
+            batches: nonNegativeInteger(historyRetention.batches, 10_000),
+            completed: historyRetention.completed,
+            failureCount: nonNegativeInteger(historyRetention.failureCount, 1_000_000),
+          },
+        } : {}),
+      },
       statistics: { status: statisticsPersistenceStatus, lastSuccessfulWrite: safeTimestamp(input.statisticsPersistence.lastSuccessfulWriteAt) },
     },
     statistics: {
