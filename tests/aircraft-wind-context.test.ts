@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AircraftView } from "@/lib/aircraft/types";
 import {
+  buildAircraftWindAheadProfile,
   buildAircraftWindContext,
   windLevelForAltitude,
   type AircraftWindSnapshot,
@@ -86,6 +87,67 @@ describe("aircraft wind context", () => {
 
   it("does not present upper-air wind as ground wind", () => {
     expect(buildAircraftWindContext(aircraft(90, { onGround: true }), wind(90))).toBeNull();
+  });
+
+  it("builds a 25/50/100 NM wind-ahead profile and detects increasing headwind", () => {
+    const profile = buildAircraftWindAheadProfile(aircraft(90), wind(90, 20, {
+      points: [
+        { lat: 50, lon: 15, speedKt: 20, directionDeg: 90 },
+        { lat: 50, lon: 15.65, speedKt: 30, directionDeg: 90 },
+        { lat: 50, lon: 16.3, speedKt: 40, directionDeg: 90 },
+        { lat: 50, lon: 17.6, speedKt: 55, directionDeg: 90 },
+      ],
+    }));
+
+    expect(profile?.points.map((point) => point.distanceNm)).toEqual([25, 50, 100]);
+    expect(profile?.points.map((point) => Math.round(point.headwindKt))).toEqual([30, 40, 55]);
+    expect(profile?.trend).toBe("more_headwind");
+    expect(profile?.deltaAlongTrackKt).toBeCloseTo(35, 6);
+    expect(profile?.furthestDistanceNm).toBe(100);
+  });
+
+  it("detects increasing tailwind ahead", () => {
+    const profile = buildAircraftWindAheadProfile(aircraft(90), wind(270, 20, {
+      points: [
+        { lat: 50, lon: 15, speedKt: 20, directionDeg: 270 },
+        { lat: 50, lon: 15.65, speedKt: 30, directionDeg: 270 },
+        { lat: 50, lon: 16.3, speedKt: 40, directionDeg: 270 },
+        { lat: 50, lon: 17.6, speedKt: 50, directionDeg: 270 },
+      ],
+    }));
+    expect(profile?.trend).toBe("more_tailwind");
+    expect(profile?.deltaAlongTrackKt).toBeCloseTo(-30, 6);
+  });
+
+  it("labels mixed along-track changes as variable", () => {
+    const profile = buildAircraftWindAheadProfile(aircraft(90), wind(90, 20, {
+      points: [
+        { lat: 50, lon: 15, speedKt: 20, directionDeg: 90 },
+        { lat: 50, lon: 15.65, speedKt: 35, directionDeg: 90 },
+        { lat: 50, lon: 16.3, speedKt: 25, directionDeg: 270 },
+        { lat: 50, lon: 17.6, speedKt: 30, directionDeg: 90 },
+      ],
+    }));
+    expect(profile?.trend).toBe("variable");
+  });
+
+  it("keeps small along-track changes stable and tolerates missing far samples", () => {
+    const profile = buildAircraftWindAheadProfile(aircraft(90), wind(90, 20, {
+      points: [
+        { lat: 50, lon: 15, speedKt: 20, directionDeg: 90 },
+        { lat: 50, lon: 15.65, speedKt: 23, directionDeg: 90 },
+        { lat: 50, lon: 16.3, speedKt: 22, directionDeg: 90 },
+      ],
+    }));
+    expect(profile?.trend).toBe("stable");
+    expect(profile?.points.map((point) => point.distanceNm)).toEqual([25, 50, 100]);
+  });
+
+  it("suppresses the ahead profile on ground or without a usable current grid point", () => {
+    expect(buildAircraftWindAheadProfile(aircraft(90, { onGround: true }), wind(90))).toBeNull();
+    expect(buildAircraftWindAheadProfile(aircraft(90), wind(90, 20, {
+      points: [{ lat: 52, lon: 18, speedKt: 20, directionDeg: 90 }],
+    }))).toBeNull();
   });
 
   it("requires aircraft position, track and a valid wind vector", () => {

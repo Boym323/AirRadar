@@ -2145,6 +2145,7 @@ export function AirRadarApp() {
             sigmetDeviation={selectedSigmetDeviation}
             sigmetStale={sigmetData.stale}
             windContext={selectedWind.context}
+            windAhead={selectedWind.ahead}
             windStatus={selectedWind.status}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}

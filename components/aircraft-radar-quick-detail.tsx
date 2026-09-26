@@ -10,7 +10,7 @@ import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
-import type { AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
+import type { AircraftWindAheadProfile, AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { RadarLayerDataStatus } from "@/components/radar/use-radar-weather-context";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
@@ -45,6 +45,7 @@ export interface AircraftRadarQuickDetailProps {
   sigmetDeviation: SigmetTrajectoryDeviation | null;
   sigmetStale: boolean;
   windContext: AircraftWindContext | null;
+  windAhead: AircraftWindAheadProfile | null;
   windStatus: RadarLayerDataStatus;
   watchlisted: boolean;
   onBack: () => void;
@@ -206,7 +207,7 @@ function SigmetSection({ context, deviation, stale }: { context: AircraftSigmetC
   </QuickSection>;
 }
 
-function WindSection({ context, status }: { context: AircraftWindContext | null; status: RadarLayerDataStatus }) {
+function WindSection({ context, ahead, status }: { context: AircraftWindContext | null; ahead: AircraftWindAheadProfile | null; status: RadarLayerDataStatus }) {
   if (!context && status !== "loading" && status !== "unavailable") return null;
 
   const alongTrack = context
@@ -219,6 +220,15 @@ function WindSection({ context, status }: { context: AircraftWindContext | null;
       ? t.weather.windCrosswindCalm
       : `${formatNumber(context.crosswindKt, 0)} kt · ${context.crosswindFrom === "right" ? t.weather.windFromRight : t.weather.windFromLeft}`
     : null;
+  const trend = ahead
+    ? ahead.trend === "more_headwind"
+      ? t.weather.windAheadMoreHeadwind(formatNumber(Math.abs(ahead.deltaAlongTrackKt), 0), formatNumber(ahead.furthestDistanceNm, 0))
+      : ahead.trend === "more_tailwind"
+        ? t.weather.windAheadMoreTailwind(formatNumber(Math.abs(ahead.deltaAlongTrackKt), 0), formatNumber(ahead.furthestDistanceNm, 0))
+        : ahead.trend === "variable"
+          ? t.weather.windAheadVariable
+          : t.weather.windAheadStable
+    : null;
 
   return <QuickSection id="aircraft-quick-wind-title" title={t.weather.windAircraftTitle} className="aircraft-quick-wind">
     {context ? <>
@@ -230,6 +240,26 @@ function WindSection({ context, status }: { context: AircraftWindContext | null;
         <DetailValue label={t.weather.windGridDistance} value={`~${formatNumber(context.sourceDistanceKm, 0)} km`} />
         <DetailValue label={t.weather.windValidAt} value={formatTime(context.validAt)} />
       </div>
+      {ahead && <div className="aircraft-quick-wind-ahead" data-testid="aircraft-wind-ahead">
+        <strong>{t.weather.windAheadTitle}</strong>
+        {trend && <span>{trend}</span>}
+        <div className="aircraft-quick-wind-ahead-grid">
+          {ahead.points.map((point) => {
+            const component = point.headwindKt >= point.tailwindKt
+              ? `${t.weather.windHeadwind} ${formatNumber(point.headwindKt, 0)} kt`
+              : `${t.weather.windTailwind} ${formatNumber(point.tailwindKt, 0)} kt`;
+            const lateral = point.crosswindKt < 1
+              ? t.weather.windCrosswindCalm
+              : `${formatNumber(point.crosswindKt, 0)} kt ${point.crosswindFrom === "right" ? t.weather.windFromRight : t.weather.windFromLeft}`;
+            return <div key={point.distanceNm} className="aircraft-quick-wind-ahead-point">
+              <b>{formatNumber(point.distanceNm, 0)} NM</b>
+              <span>{component}</span>
+              <small>{lateral}</small>
+            </div>;
+          })}
+        </div>
+        <p>{t.weather.windAheadDisclaimer}</p>
+      </div>}
       <p className="aircraft-quick-disclaimer">{context.stale || status === "stale" || status === "unavailable" ? t.weather.windStaleWarning : t.weather.windAircraftDisclaimer}</p>
     </> : <p className="aircraft-quick-disclaimer">{status === "loading" ? t.weather.windLoading : t.weather.windUnavailable}</p>}
   </QuickSection>;
@@ -419,6 +449,7 @@ export function AircraftRadarQuickDetail({
   sigmetDeviation,
   sigmetStale,
   windContext,
+  windAhead,
   windStatus,
   watchlisted,
   onBack,
@@ -474,7 +505,7 @@ export function AircraftRadarQuickDetail({
       </QuickSection>
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
       <SigmetSection context={sigmetContext} deviation={sigmetDeviation} stale={sigmetStale} />
-      <WindSection context={windContext} status={windStatus} />
+      <WindSection context={windContext} ahead={windAhead} status={windStatus} />
       {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
     </div>}
     {activeTab === "aircraft" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-aircraft" aria-labelledby="aircraft-tab-aircraft"><AircraftIdentitySection aircraft={aircraft} databaseAircraft={databaseAircraft} /></div>}

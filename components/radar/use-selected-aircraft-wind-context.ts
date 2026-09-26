@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
 import {
+  buildAircraftWindAheadProfile,
   buildAircraftWindContext,
   windLevelForAltitude,
+  type AircraftWindAheadProfile,
   type AircraftWindContext,
   type AircraftWindSnapshot,
 } from "@/lib/weather/aircraft-wind-context";
@@ -14,6 +16,7 @@ const REFRESH_MS = 15 * 60_000;
 
 export interface SelectedAircraftWindState {
   context: AircraftWindContext | null;
+  ahead: AircraftWindAheadProfile | null;
   status: RadarLayerDataStatus;
 }
 
@@ -67,6 +70,10 @@ export function useSelectedAircraftWindContext(aircraft: AircraftView | null): S
     () => data && data.levelHpa === level ? buildAircraftWindContext(aircraft, data) : null,
     [aircraft, data, level],
   );
+  const ahead = useMemo(
+    () => data && data.levelHpa === level ? buildAircraftWindAheadProfile(aircraft, data) : null,
+    [aircraft, data, level],
+  );
 
-  return { context, status };
+  return { context, ahead, status };
 }
