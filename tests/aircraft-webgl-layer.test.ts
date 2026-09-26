@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { aircraftWebglColor } from "@/lib/radar/aircraft-webgl-layer";
+import { aircraftWebglColor, aircraftWebglIconAsset } from "@/lib/radar/aircraft-webgl-layer";
 import type { AircraftView } from "@/lib/aircraft/types";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
@@ -78,6 +78,15 @@ describe("WebGL aircraft layer", () => {
     expect(appSource).toContain("prefersReducedMotion,");
     expect(webglSource).toContain("this.options.prefersReducedMotion?.()");
     expect(webglSource).toContain("previous.correctionDurationMs = 0");
+  });
+
+  it("uses the classified tar1090 silhouette for each bulk aircraft", () => {
+    expect(aircraftWebglIconAsset(aircraft({ aircraftType: "A320", category: "A3" }))).toBe("/aircraft-icons-tar1090/A320.svg");
+    expect(aircraftWebglIconAsset(aircraft({ aircraftType: "B738", aircraftDescription: "Boeing 737-800", category: "A3" }))).toBe("/aircraft-icons-tar1090/B738.svg");
+    expect(aircraftWebglIconAsset(aircraft({ aircraftType: "R44", aircraftDescription: "Robinson R44", category: null }))).toBe("/aircraft-icons-tar1090/R44.svg");
+    expect(webglSource).toContain("sampler2DArray u_icon_atlas");
+    expect(webglSource).toContain("gl.texSubImage3D(");
+    expect(webglSource).toContain("job.iconLayer");
   });
 
   it("keeps source-aware colors for bulk aircraft", () => {

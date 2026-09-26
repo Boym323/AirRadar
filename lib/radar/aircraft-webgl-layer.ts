@@ -17,6 +17,7 @@ import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
+import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 
@@ -27,7 +28,9 @@ export const AIRCRAFT_WEBGL_LABEL_LAYER_ID = "aircraft-webgl-label";
 
 const MIN_AIRCRAFT_ANIMATION_MS = 300;
 const MAX_AIRCRAFT_ANIMATION_MS = 12_000;
-const FLOATS_PER_VERTEX = 8;
+const FLOATS_PER_VERTEX = 9;
+const ICON_ATLAS_SIZE = 64;
+const MAX_ICON_ATLAS_LAYERS = 512;
 
 type Rgba = readonly [number, number, number, number];
 
@@ -44,6 +47,8 @@ interface WebglAircraftJob {
   renderedLat: number;
   color: Rgba;
   pointSize: number;
+  iconAsset: string;
+  iconLayer: number;
   hovered: boolean;
 }
 
@@ -81,6 +86,10 @@ export function aircraftWebglColor(aircraft: AircraftView, mode: AircraftColorMo
   }
 }
 
+export function aircraftWebglIconAsset(aircraft: AircraftView): string {
+  return classifyAircraftIcon(aircraft).asset ?? TAR1090_UNKNOWN_ICON_ASSET;
+}
+
 function pointSizeFor(aircraft: AircraftView): number {
   switch (classifyAircraftIcon(aircraft).kind) {
     case "ground": return 12;
@@ -111,21 +120,26 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
     layout(location = 1) in float a_angle;
     layout(location = 2) in vec4 a_color;
     layout(location = 3) in float a_size;
+    layout(location = 4) in float a_icon_layer;
     uniform mat4 u_matrix;
     uniform float u_pixel_ratio;
     out float v_angle;
     out vec4 v_color;
+    flat out float v_icon_layer;
     void main() {
       gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0);
       gl_PointSize = a_size * u_pixel_ratio;
       v_angle = a_angle;
       v_color = a_color;
+      v_icon_layer = a_icon_layer;
     }
   `);
   const fragment = createShader(gl, gl.FRAGMENT_SHADER, `#version 300 es
     precision highp float;
     in float v_angle;
     in vec4 v_color;
+    flat in float v_icon_layer;
+    uniform highp sampler2DArray u_icon_atlas;
     out vec4 fragColor;
     void main() {
       vec2 p = gl_PointCoord - vec2(0.5);
@@ -134,13 +148,22 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
       float s = sin(-v_angle);
       vec2 q = mat2(c, -s, s, c) * p;
 
-      bool fuselage = abs(q.x) < 0.065 && q.y > -0.38 && q.y < 0.38;
-      bool nose = q.y >= 0.18 && q.y <= 0.44 && abs(q.x) < (0.44 - q.y) * 0.42 + 0.025;
-      bool wings = abs(q.y + 0.02) < 0.065 && abs(q.x) < 0.42;
-      bool tail = q.y > -0.34 && q.y < -0.20 && abs(q.x) < 0.19;
-      if (!(fuselage || nose || wings || tail)) discard;
+      float maskAlpha = 1.0;
+      if (v_icon_layer >= 0.0) {
+        vec2 uv = vec2(q.x + 0.5, 0.5 - q.y);
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) discard;
+        maskAlpha = texture(u_icon_atlas, vec3(uv, v_icon_layer)).a;
+        if (maskAlpha < 0.08) discard;
+      } else {
+        bool fuselage = abs(q.x) < 0.065 && q.y > -0.38 && q.y < 0.38;
+        bool nose = q.y >= 0.18 && q.y <= 0.44 && abs(q.x) < (0.44 - q.y) * 0.42 + 0.025;
+        bool wings = abs(q.y + 0.02) < 0.065 && abs(q.x) < 0.42;
+        bool tail = q.y > -0.34 && q.y < -0.20 && abs(q.x) < 0.19;
+        if (!(fuselage || nose || wings || tail)) discard;
+      }
 
-      fragColor = vec4(v_color.rgb * v_color.a, v_color.a);
+      float alpha = v_color.a * maskAlpha;
+      fragColor = vec4(v_color.rgb * alpha, alpha);
     }
   `);
 
@@ -173,6 +196,14 @@ export class AircraftWebglRuntime {
   private vao: WebGLVertexArrayObject | null = null;
   private matrixLocation: WebGLUniformLocation | null = null;
   private pixelRatioLocation: WebGLUniformLocation | null = null;
+  private iconAtlasLocation: WebGLUniformLocation | null = null;
+  private gl: WebGL2RenderingContext | null = null;
+  private iconTexture: WebGLTexture | null = null;
+  private readonly iconLayers = new Map<string, number>();
+  private readonly pendingIconAssets = new Set<string>();
+  private nextIconLayer = 0;
+  private maxIconAtlasLayers = 0;
+  private iconAtlasGeneration = 0;
   private dirty = true;
   private visible = true;
   private lastDataRenderAt = Number.NEGATIVE_INFINITY;
@@ -241,6 +272,9 @@ export class AircraftWebglRuntime {
     };
     const color = aircraftWebglColor(aircraft, colorMode);
     const pointSize = pointSizeFor(aircraft);
+    const iconAsset = aircraftWebglIconAsset(aircraft);
+    const iconLayer = this.iconLayers.get(iconAsset) ?? -1;
+    this.requestIconAsset(iconAsset);
     const previous = this.jobs.get(aircraft.icaoHex);
 
     if (!previous) {
@@ -258,6 +292,8 @@ export class AircraftWebglRuntime {
         renderedLat: aircraft.lat,
         color,
         pointSize,
+        iconAsset,
+        iconLayer,
         hovered: false,
       });
       this.dirty = true;
@@ -267,6 +303,8 @@ export class AircraftWebglRuntime {
 
     previous.color = color;
     previous.pointSize = pointSize;
+    previous.iconAsset = iconAsset;
+    previous.iconLayer = iconLayer;
     if (!motionObservationAdvances(previous.source, source)) {
       this.dirty = true;
       this.map?.triggerRepaint();
@@ -352,12 +390,97 @@ export class AircraftWebglRuntime {
     this.map?.triggerRepaint();
   }
 
+  private requestIconAsset(asset: string): void {
+    if (this.iconLayers.has(asset) || this.pendingIconAssets.has(asset)) return;
+    const gl = this.gl;
+    const texture = this.iconTexture;
+    if (!gl || !texture || this.nextIconLayer >= this.maxIconAtlasLayers) return;
+
+    const layer = this.nextIconLayer++;
+    const generation = this.iconAtlasGeneration;
+    this.pendingIconAssets.add(asset);
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => {
+      this.pendingIconAssets.delete(asset);
+      if (generation !== this.iconAtlasGeneration || this.gl !== gl || this.iconTexture !== texture) return;
+      const width = image.naturalWidth || ICON_ATLAS_SIZE;
+      const height = image.naturalHeight || ICON_ATLAS_SIZE;
+      const scale = Math.min((ICON_ATLAS_SIZE - 8) / width, (ICON_ATLAS_SIZE - 8) / height);
+      const drawWidth = Math.max(1, width * scale);
+      const drawHeight = Math.max(1, height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = ICON_ATLAS_SIZE;
+      canvas.height = ICON_ATLAS_SIZE;
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      context.clearRect(0, 0, ICON_ATLAS_SIZE, ICON_ATLAS_SIZE);
+      context.drawImage(
+        image,
+        (ICON_ATLAS_SIZE - drawWidth) / 2,
+        (ICON_ATLAS_SIZE - drawHeight) / 2,
+        drawWidth,
+        drawHeight,
+      );
+
+      const previousFlipY = Boolean(gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL));
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+      gl.texSubImage3D(
+        gl.TEXTURE_2D_ARRAY,
+        0,
+        0,
+        0,
+        layer,
+        ICON_ATLAS_SIZE,
+        ICON_ATLAS_SIZE,
+        1,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        canvas,
+      );
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, previousFlipY ? 1 : 0);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
+
+      this.iconLayers.set(asset, layer);
+      for (const job of this.jobs.values()) {
+        if (job.iconAsset === asset) job.iconLayer = layer;
+      }
+      this.dirty = true;
+      this.map?.triggerRepaint();
+    };
+    image.onerror = () => {
+      this.pendingIconAssets.delete(asset);
+    };
+    image.src = asset;
+  }
+
   private onAdd(map: MapLibreMap, gl: WebGL2RenderingContext): void {
     this.map = map;
+    this.gl = gl;
+    this.iconAtlasGeneration += 1;
+    this.iconLayers.clear();
+    this.pendingIconAssets.clear();
+    this.nextIconLayer = 0;
+    this.maxIconAtlasLayers = Math.min(
+      MAX_ICON_ATLAS_LAYERS,
+      Math.max(1, Number(gl.getParameter(gl.MAX_ARRAY_TEXTURE_LAYERS)) || 1),
+    );
     this.program = createProgram(gl);
     this.buffer = gl.createBuffer();
     this.vao = gl.createVertexArray();
-    if (!this.buffer || !this.vao) throw new Error("Unable to create aircraft WebGL buffers");
+    this.iconTexture = gl.createTexture();
+    if (!this.buffer || !this.vao || !this.iconTexture) throw new Error("Unable to create aircraft WebGL resources");
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.iconTexture);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, ICON_ATLAS_SIZE, ICON_ATLAS_SIZE, this.maxIconAtlasLayers);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
 
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
@@ -370,11 +493,18 @@ export class AircraftWebglRuntime {
     gl.vertexAttribPointer(2, 4, gl.FLOAT, false, stride, 3 * Float32Array.BYTES_PER_ELEMENT);
     gl.enableVertexAttribArray(3);
     gl.vertexAttribPointer(3, 1, gl.FLOAT, false, stride, 7 * Float32Array.BYTES_PER_ELEMENT);
+    gl.enableVertexAttribArray(4);
+    gl.vertexAttribPointer(4, 1, gl.FLOAT, false, stride, 8 * Float32Array.BYTES_PER_ELEMENT);
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
     this.matrixLocation = gl.getUniformLocation(this.program, "u_matrix");
     this.pixelRatioLocation = gl.getUniformLocation(this.program, "u_pixel_ratio");
+    this.iconAtlasLocation = gl.getUniformLocation(this.program, "u_icon_atlas");
+    for (const job of this.jobs.values()) {
+      job.iconLayer = -1;
+      this.requestIconAsset(job.iconAsset);
+    }
     this.dirty = true;
   }
 
@@ -422,6 +552,7 @@ export class AircraftWebglRuntime {
         data[offset++] = job.color[2];
         data[offset++] = job.color[3];
         data[offset++] = job.pointSize * (job.hovered ? 1.3 : 1);
+        data[offset++] = job.iconLayer;
       }
 
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
@@ -452,21 +583,36 @@ export class AircraftWebglRuntime {
     gl.bindVertexArray(this.vao);
     if (this.matrixLocation !== null) gl.uniformMatrix4fv(this.matrixLocation, false, input.defaultProjectionData.mainMatrix);
     if (this.pixelRatioLocation !== null) gl.uniform1f(this.pixelRatioLocation, Math.max(1, window.devicePixelRatio || 1));
+    if (this.iconTexture && this.iconAtlasLocation !== null) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.iconTexture);
+      gl.uniform1i(this.iconAtlasLocation, 0);
+    }
     gl.drawArrays(gl.POINTS, 0, this.renderedCount);
+    if (this.iconTexture) gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
     gl.bindVertexArray(null);
 
     if (activeCorrection) this.map.triggerRepaint();
   }
 
   private onRemove(gl: WebGL2RenderingContext): void {
+    this.iconAtlasGeneration += 1;
     if (this.vao) gl.deleteVertexArray(this.vao);
     if (this.buffer) gl.deleteBuffer(this.buffer);
+    if (this.iconTexture) gl.deleteTexture(this.iconTexture);
     if (this.program) gl.deleteProgram(this.program);
     this.vao = null;
     this.buffer = null;
+    this.iconTexture = null;
     this.program = null;
     this.matrixLocation = null;
     this.pixelRatioLocation = null;
+    this.iconAtlasLocation = null;
+    this.gl = null;
+    this.iconLayers.clear();
+    this.pendingIconAssets.clear();
+    this.nextIconLayer = 0;
+    this.maxIconAtlasLayers = 0;
     this.map = null;
     this.renderedCount = 0;
   }
