@@ -2,5 +2,19 @@
   "schemaVersion": 1,
   "metric": "non-empty-physical-lines",
   "description": "Tracked non-empty physical source lines. Production excludes tests, docs, migrations, generated output and public vendor assets.",
-  "snapshots": []
+  "snapshots": [
+    {
+      "timestamp": "2026-09-26T20:33:14.189Z",
+      "commit": "dbf957d87610",
+      "production": {
+        "files": 403,
+        "loc": 60295
+      },
+      "tests": {
+        "files": 183,
+        "loc": 17233
+      },
+      "totalLoc": 77528
+    }
+  ]
 }
