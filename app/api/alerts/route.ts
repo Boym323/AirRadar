@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function alertFilter(value: string | null): AlertHistoryFilter {
-  return value === "watchlist" || value === "emergency" || value === "records" ? value : "all";
+  return value === "watchlist" || value === "emergency" || value === "records" || value === "intelligence" ? value : "all";
 }
 
 export async function GET(request: Request): Promise<Response> {
