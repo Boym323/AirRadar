@@ -52,6 +52,9 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain("t.weather.windAheadDisclaimer");
     expect(componentSource).toContain("t.weather.windAheadMoreHeadwind");
     expect(appSource).toContain("windAhead={selectedWind.ahead}");
+    expect(componentSource).toContain('data-testid="aircraft-destination-wind"');
+    expect(componentSource).toContain("t.weather.windDestinationDisclaimer");
+    expect(appSource).toContain("destinationWind={selectedWind.destination}");
     expect(appSource).toContain("useSelectedAircraftWindContext(selectedAircraft)");
     expect(componentSource).toContain('data-testid="technical-details"');
     expect(componentSource).toContain("aria-pressed={watchlisted}");
