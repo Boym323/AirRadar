@@ -408,8 +408,6 @@ export function AirRadarApp() {
   const [showStars, setShowStars] = useState(false);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [selectedAtsRoute, setSelectedAtsRoute] = useState<string | null>(null);
-  const [sigmetEnabled, setSigmetEnabled] = useState<boolean | null>(null);
-  const [sigmetData, setSigmetData] = useState<SigmetSnapshot>(EMPTY_SIGMET_DATA);
   const [showAirports, setShowAirports] = useState(true);
   const [showSignificantAirports, setShowSignificantAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSignificant);
   const [showSmallAirports, setShowSmallAirports] = useState(DEFAULT_AIRPORT_LAYER_VISIBILITY.showSmall);
