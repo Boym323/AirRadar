@@ -20,7 +20,6 @@ import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 import {
   adsbDbDiagnostic,
-  diagnostic,
   legacyStatus,
   radarDiagnostic,
   weatherDiagnostic,
@@ -37,6 +36,7 @@ export type {
 } from "@/lib/server/system-status-projection";
 
 import type {
+  SystemDataSourceStatus,
   SystemStatus,
   SystemStatusBuildInput,
   SystemStatusResponse,
