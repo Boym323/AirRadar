@@ -66,13 +66,14 @@ describe("history retention v2", () => {
     const now = new Date("2026-09-26T00:00:00.000Z");
     const old = new Date("2026-01-01T00:00:00.000Z");
     const recent = new Date("2026-09-25T00:00:00.000Z");
-    const count = HISTORY_RETENTION_BATCH_SIZE + 23;
+    const batchSize = 5;
+    const count = batchSize + 3;
     const rows: Position[] = [
       ...Array.from({ length: count }, (_, index) => ({ id: index + 1, recordedAt: old })),
       { id: count + 1, recordedAt: recent },
     ];
 
-    const result = await pruneHistoryRetention(database(rows) as never, now);
+    const result = await pruneHistoryRetention(database(rows) as never, now, { batchSize, maxBatches: 4 });
 
     expect(result.rowsDeleted).toBe(count);
     expect(result.batches).toBe(2);
@@ -84,14 +85,16 @@ describe("history retention v2", () => {
   it("bounds each maintenance run when the backlog is very large", async () => {
     const now = new Date("2026-09-26T00:00:00.000Z");
     const old = new Date("2026-01-01T00:00:00.000Z");
-    const count = HISTORY_RETENTION_BATCH_SIZE * (HISTORY_RETENTION_MAX_BATCHES + 1);
+    const batchSize = 5;
+    const maxBatches = 3;
+    const count = batchSize * (maxBatches + 1);
     const rows: Position[] = Array.from({ length: count }, (_, index) => ({ id: index + 1, recordedAt: old }));
 
-    const result = await pruneHistoryRetention(database(rows) as never, now);
+    const result = await pruneHistoryRetention(database(rows) as never, now, { batchSize, maxBatches });
 
-    expect(result.rowsDeleted).toBe(HISTORY_RETENTION_BATCH_SIZE * HISTORY_RETENTION_MAX_BATCHES);
-    expect(result.batches).toBe(HISTORY_RETENTION_MAX_BATCHES);
+    expect(result.rowsDeleted).toBe(batchSize * maxBatches);
+    expect(result.batches).toBe(maxBatches);
     expect(result.completed).toBe(false);
-    expect(rows).toHaveLength(HISTORY_RETENTION_BATCH_SIZE);
+    expect(rows).toHaveLength(batchSize);
   });
 });
