@@ -103,13 +103,16 @@ export function detectSigmetTrajectoryDeviation(
     );
     if (!previousEntry) continue;
 
+    // For a course-deviation signal the new path must miss the SIGMET
+    // horizontally. Altitude alone must never make a crossing path look like
+    // a weather-related turn away from the advisory.
     const currentEntry = projectedEntry(
       aircraft.lat,
       aircraft.lon,
       aircraft.track,
       aircraft.groundSpeed,
-      currentAltitude,
-      aircraft.verticalRate ?? aircraft.baroRate ?? aircraft.geomRate ?? null,
+      null,
+      null,
       feature,
     );
     if (currentEntry) continue;
