@@ -31,6 +31,7 @@ import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity"
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { MetarMapObservation } from "@/lib/weather/types";
+import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
@@ -427,6 +428,7 @@ export function AirRadarApp() {
     sigmetData,
   } = useRadarWeatherContext({
     showSigmet,
+    loadSigmet: showSigmet || selectedHex !== null,
     showWeatherRadar,
     showMetar,
     showWind,
@@ -1824,6 +1826,7 @@ export function AirRadarApp() {
     ? { ...selectedAircraftSnapshot, enrichment: aircraftDetail.liveEnrichment }
     : selectedAircraftSnapshot, [aircraftDetail, selectedAircraftSnapshot]);
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
+  const selectedSigmetContext = useMemo(() => aircraftSigmetContext(selectedAircraft, sigmetData), [selectedAircraft, sigmetData]);
   const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
   const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
@@ -2131,6 +2134,8 @@ export function AirRadarApp() {
             databaseAircraft={selectedDatabaseAircraft}
             historyTrail={selectedAircraft && selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
             atcContext={selectedAtcContext}
+            sigmetContext={selectedSigmetContext}
+            sigmetStale={sigmetData.stale}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
             onBack={backToTraffic}
