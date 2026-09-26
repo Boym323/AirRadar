@@ -56,6 +56,7 @@ import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext, type WindResponse } from "@/components/radar/use-radar-weather-context";
+import { useSelectedAircraftWindContext } from "@/components/radar/use-selected-aircraft-wind-context";
 import { useRadarAtcMapContext, type SectorTrafficView } from "@/components/radar/use-radar-atc-map-context";
 import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useDatasetQuery } from "@/components/use-dataset-query";
@@ -1832,6 +1833,7 @@ export function AirRadarApp() {
     selectedHistoryTrail?.points ?? selectedAircraft?.trail ?? [],
     sigmetData,
   ), [selectedAircraft, selectedHistoryTrail, sigmetData]);
+  const selectedWind = useSelectedAircraftWindContext(selectedAircraft);
   const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
   const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
@@ -2142,6 +2144,8 @@ export function AirRadarApp() {
             sigmetContext={selectedSigmetContext}
             sigmetDeviation={selectedSigmetDeviation}
             sigmetStale={sigmetData.stale}
+            windContext={selectedWind.context}
+            windStatus={selectedWind.status}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
             onBack={backToTraffic}

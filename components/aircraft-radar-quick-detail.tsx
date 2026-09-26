@@ -10,6 +10,8 @@ import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
+import type { AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
+import type { RadarLayerDataStatus } from "@/components/radar/use-radar-weather-context";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
@@ -42,6 +44,8 @@ export interface AircraftRadarQuickDetailProps {
   sigmetContext: AircraftSigmetContext[];
   sigmetDeviation: SigmetTrajectoryDeviation | null;
   sigmetStale: boolean;
+  windContext: AircraftWindContext | null;
+  windStatus: RadarLayerDataStatus;
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -199,6 +203,35 @@ function SigmetSection({ context, deviation, stale }: { context: AircraftSigmetC
         : hasProjection
           ? t.weather.sigmetProjectionDisclaimer
           : t.weather.sigmetAircraftDisclaimer}</p>
+  </QuickSection>;
+}
+
+function WindSection({ context, status }: { context: AircraftWindContext | null; status: RadarLayerDataStatus }) {
+  if (!context && status !== "loading" && status !== "unavailable") return null;
+
+  const alongTrack = context
+    ? context.headwindKt >= context.tailwindKt
+      ? `${t.weather.windHeadwind} ${formatNumber(context.headwindKt, 0)} kt`
+      : `${t.weather.windTailwind} ${formatNumber(context.tailwindKt, 0)} kt`
+    : null;
+  const crosswind = context
+    ? context.crosswindKt < 1
+      ? t.weather.windCrosswindCalm
+      : `${formatNumber(context.crosswindKt, 0)} kt · ${context.crosswindFrom === "right" ? t.weather.windFromRight : t.weather.windFromLeft}`
+    : null;
+
+  return <QuickSection id="aircraft-quick-wind-title" title={t.weather.windAircraftTitle} className="aircraft-quick-wind">
+    {context ? <>
+      <div className="aircraft-quick-detail-grid" data-testid="aircraft-wind-context">
+        <DetailValue label={t.weather.windModelLevel} value={`${context.model} · ${context.levelHpa} hPa (~${formatNumber(context.representativeAltitudeFt, 0)} ft)`} />
+        <DetailValue label={t.weather.windVector} value={`${formatTrack(context.windFromDeg)} · ${formatNumber(context.windSpeedKt, 0)} kt`} />
+        <DetailValue label={t.weather.windAlongTrack} value={alongTrack} />
+        <DetailValue label={t.weather.windCrosswind} value={crosswind} />
+        <DetailValue label={t.weather.windGridDistance} value={`~${formatNumber(context.sourceDistanceKm, 0)} km`} />
+        <DetailValue label={t.weather.windValidAt} value={formatTime(context.validAt)} />
+      </div>
+      <p className="aircraft-quick-disclaimer">{context.stale || status === "stale" || status === "unavailable" ? t.weather.windStaleWarning : t.weather.windAircraftDisclaimer}</p>
+    </> : <p className="aircraft-quick-disclaimer">{status === "loading" ? t.weather.windLoading : t.weather.windUnavailable}</p>}
   </QuickSection>;
 }
 
@@ -385,6 +418,8 @@ export function AircraftRadarQuickDetail({
   sigmetContext,
   sigmetDeviation,
   sigmetStale,
+  windContext,
+  windStatus,
   watchlisted,
   onBack,
   onClose,
@@ -439,6 +474,7 @@ export function AircraftRadarQuickDetail({
       </QuickSection>
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
       <SigmetSection context={sigmetContext} deviation={sigmetDeviation} stale={sigmetStale} />
+      <WindSection context={windContext} status={windStatus} />
       {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
     </div>}
     {activeTab === "aircraft" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-aircraft" aria-labelledby="aircraft-tab-aircraft"><AircraftIdentitySection aircraft={aircraft} databaseAircraft={databaseAircraft} /></div>}

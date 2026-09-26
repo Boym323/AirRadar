@@ -45,6 +45,10 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain('data-testid="sigmet-trajectory-deviation"');
     expect(componentSource).toContain("t.weather.sigmetDeviationDisclaimer");
     expect(componentSource).toContain("t.weather.sigmetCorrelationConfidence");
+    expect(componentSource).toContain("WindSection");
+    expect(componentSource).toContain('data-testid="aircraft-wind-context"');
+    expect(componentSource).toContain("t.weather.windAircraftDisclaimer");
+    expect(appSource).toContain("useSelectedAircraftWindContext(selectedAircraft)");
     expect(componentSource).toContain('data-testid="technical-details"');
     expect(componentSource).toContain("aria-pressed={watchlisted}");
     expect(componentSource).toContain("fullDetailHref");
