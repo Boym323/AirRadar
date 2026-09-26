@@ -69,9 +69,15 @@ describe("WebGL aircraft layer", () => {
     expect(webglSource).toContain("MercatorCoordinate.fromLngLat");
     expect(webglSource).toContain("gl.drawArrays(gl.POINTS");
     expect(webglSource).toContain("getRenderedPosition(icaoHex");
+    expect(webglSource).toContain("pickAircraftAtPoint(point:");
+    expect(webglSource).toContain("spatialBuckets");
+    expect(webglSource).toContain("gl_VertexID == u_hovered_index");
+    expect(webglSource).not.toContain("for (const [hex, job] of this.jobs) {\n      const next = hex === icaoHex");
     expect(appSource).toContain("aircraftWebglRuntime.getRenderedPosition(aircraft.icaoHex)");
-    expect(appSource).toContain('map.on("render", refreshWebglInteractionGeometry)');
-    expect(appSource).toContain("aircraftWebglInteractionAircraftRef.current");
+    expect(appSource).toContain('map.on("render", refreshWebglLabelGeometry)');
+    expect(appSource).toContain("aircraftWebglLabelAircraftRef.current");
+    expect(appSource).toContain("aircraftWebglRuntime.pickAircraftAtPoint(event.point, 13)");
+    expect(appSource).not.toContain("aircraft-webgl-hit");
   });
 
   it("honors reduced motion on the bulk GPU path", () => {
