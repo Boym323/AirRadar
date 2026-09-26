@@ -1,5 +1,4 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
-import { enrichAircraftDetailView } from "@/lib/server/aircraft-detail-enrichment";
 import { loadAtcContextDataset } from "@/lib/atc-context/engine";
 import { analyzePublishedRoute, type RouteIntelligenceNetwork } from "@/lib/route-intelligence";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
@@ -45,25 +44,24 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
   if (!live || live.lat === null || live.lon === null) return noStore({ status: "unavailable", reason: "no_live_position" });
 
   try {
-    const [aircraft, dataset, sigmets] = await Promise.all([
-      enrichAircraftDetailView(live, new Date()),
+    const [dataset, sigmets] = await Promise.all([
       loadAtcContextDataset(),
       defaultAviationWeatherProvider.getSigmets(request.signal),
     ]);
     const network = mergedNetwork(dataset);
-    if (!aircraft || !network) return noStore({ status: "unavailable", reason: "route_dataset_unavailable" });
+    if (!network) return noStore({ status: "unavailable", reason: "route_dataset_unavailable" });
 
     const route = analyzePublishedRoute({
-      aircraftRoute: aircraft.enrichment ?? null,
+      aircraftRoute: live.enrichment ?? null,
       aircraftPosition: {
-        lat: aircraft.lat,
-        lon: aircraft.lon,
-        track: aircraft.track,
-        altitude: aircraft.baroAltitude ?? aircraft.altitude ?? aircraft.geomAltitude,
+        lat: live.lat,
+        lon: live.lon,
+        track: live.track,
+        altitude: live.baroAltitude ?? live.altitude ?? live.geomAltitude,
       },
       atsNetwork: network,
     });
-    return noStore(buildRouteWeatherContext(aircraft, route, sigmets));
+    return noStore(buildRouteWeatherContext(live, route, sigmets));
   } catch (error) {
     console.error("AirRadar route-weather context unavailable", error);
     return noStore({ status: "unavailable", reason: "route_weather_unavailable" }, 503);
