@@ -9,6 +9,7 @@ import { buildAtcHandoffEstimate } from "@/lib/atc-context/handoff";
 import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
+import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
@@ -39,6 +40,7 @@ export interface AircraftRadarQuickDetailProps {
   historyTrail: QuickHistoryTrail | null;
   atcContext: AtcContextResult | null;
   sigmetContext: AircraftSigmetContext[];
+  sigmetDeviation: SigmetTrajectoryDeviation | null;
   sigmetStale: boolean;
   watchlisted: boolean;
   onBack: () => void;
@@ -156,11 +158,22 @@ function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftVi
   </QuickSection>;
 }
 
-function SigmetSection({ context, stale }: { context: AircraftSigmetContext[]; stale: boolean }) {
-  if (!context.length) return null;
+function SigmetSection({ context, deviation, stale }: { context: AircraftSigmetContext[]; deviation: SigmetTrajectoryDeviation | null; stale: boolean }) {
+  if (!context.length && !deviation) return null;
   const hasProjection = context.some((item) => item.relation === "projected");
   return <QuickSection id="aircraft-quick-sigmet-title" title={t.weather.sigmetAircraftTitle} className="aircraft-quick-sigmet">
-    <div className="aircraft-quick-detail-grid">
+    {deviation && <div className="aircraft-quick-weather-deviation" data-testid="sigmet-trajectory-deviation">
+      <strong>{t.weather.sigmetDeviationSignal}</strong>
+      <span>{deviation.hazard || deviation.phenomenon || t.weather.sigmetUnknownHazard}</span>
+      <div className="aircraft-quick-detail-grid">
+        <DetailValue label={t.weather.sigmetTurn} value={`${formatNumber(deviation.headingChangeDeg, 0)}°`} />
+        <DetailValue label={t.weather.sigmetTracks} value={`${formatTrack(deviation.previousTrackDeg)} → ${formatTrack(deviation.currentTrackDeg)}`} />
+        <DetailValue label={t.weather.sigmetPreviousProjection} value={`~${deviation.previousProjectedEntryMinutes} min · ~${formatNumber(deviation.previousProjectedEntryDistanceNm, 0)} NM`} />
+        <DetailValue label={t.weather.sigmetCorrelationConfidence} value={deviation.confidence === "medium" ? t.weather.sigmetCorrelationMedium : t.weather.sigmetCorrelationLow} />
+      </div>
+      <p>{t.weather.sigmetDeviationSummary}</p>
+    </div>}
+    {context.length > 0 && <div className="aircraft-quick-detail-grid">
       {context.map((item) => {
         const hazard = item.hazard || item.phenomenon || t.weather.sigmetUnknownHazard;
         const limits = item.lowerFt !== null || item.upperFt !== null
@@ -178,8 +191,14 @@ function SigmetSection({ context, stale }: { context: AircraftSigmetContext[]; s
           {item.validTo && <DetailValue label={t.weather.sigmetValidTo} value={formatTime(item.validTo)} />}
         </div>;
       })}
-    </div>
-    <p className="aircraft-quick-disclaimer">{stale ? t.weather.sigmetStaleWarning : hasProjection ? t.weather.sigmetProjectionDisclaimer : t.weather.sigmetAircraftDisclaimer}</p>
+    </div>}
+    <p className="aircraft-quick-disclaimer">{stale
+      ? t.weather.sigmetStaleWarning
+      : deviation
+        ? t.weather.sigmetDeviationDisclaimer
+        : hasProjection
+          ? t.weather.sigmetProjectionDisclaimer
+          : t.weather.sigmetAircraftDisclaimer}</p>
   </QuickSection>;
 }
 
@@ -364,6 +383,7 @@ export function AircraftRadarQuickDetail({
   historyTrail,
   atcContext,
   sigmetContext,
+  sigmetDeviation,
   sigmetStale,
   watchlisted,
   onBack,
@@ -418,7 +438,7 @@ export function AircraftRadarQuickDetail({
         {!hasRouteData && <p className="aircraft-quick-empty">{t.aircraft.noRouteData}</p>}
       </QuickSection>
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
-      <SigmetSection context={sigmetContext} stale={sigmetStale} />
+      <SigmetSection context={sigmetContext} deviation={sigmetDeviation} stale={sigmetStale} />
       {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
     </div>}
     {activeTab === "aircraft" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-aircraft" aria-labelledby="aircraft-tab-aircraft"><AircraftIdentitySection aircraft={aircraft} databaseAircraft={databaseAircraft} /></div>}
