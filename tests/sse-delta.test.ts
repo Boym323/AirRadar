@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AircraftView, PublicStateSnapshot } from "@/lib/aircraft/types";
-import { applySseV2Event } from "@/lib/aircraft/sse-v2";
+import { applySseV2Event, shouldRebuildSseV2Order, SSE_V2_PROTOCOL } from "@/lib/aircraft/sse-v2";
 import { SseDeltaEncoder } from "@/lib/server/sse-delta";
 import { acquireSseClient, getSseDiagnostics, MAX_SSE_CLIENTS } from "@/lib/server/sse-capacity";
 
@@ -159,6 +159,46 @@ describe("SSE Delta V2", () => {
     expect(applySseV2Event({ snapshot: state.snapshot, sequence: "2" }, "delta", second.payload).status).toBe("duplicate");
     expect(applySseV2Event(current, "delta", { ...second.payload, sequence: "4" }).status).toBe("invalid");
     expect(applySseV2Event(current, "delta", { ...second.payload, changed: "not-an-array" }).status).toBe("invalid");
+  });
+
+  it("switches to one order rebuild only for dense deltas", () => {
+    expect(shouldRebuildSseV2Order(5_000, 1, 0)).toBe(false);
+    expect(shouldRebuildSseV2Order(5_000, 31, 0)).toBe(false);
+    expect(shouldRebuildSseV2Order(5_000, 400, 0)).toBe(true);
+    expect(shouldRebuildSseV2Order(100, 32, 0)).toBe(true);
+  });
+
+  it("keeps distance ordering correct after a dense client delta", () => {
+    const initialAircraft = Array.from({ length: 500 }, (_, index) => aircraft(index + 1));
+    const initialSnapshot = snapshot(initialAircraft);
+    const initialized = applySseV2Event(null, "snapshot", {
+      ...initialSnapshot,
+      protocol: SSE_V2_PROTOCOL,
+      sequence: "1",
+    });
+    expect(initialized.status).toBe("applied");
+    if (initialized.status !== "applied") return;
+
+    const changed = initialAircraft.slice(0, 100).map((item, index) => ({
+      ...item,
+      distanceKm: 10_000 - index,
+      groundSpeed: 430,
+    }));
+    const { aircraft: _aircraft, ...metadata } = snapshot(initialAircraft);
+    const applied = applySseV2Event(initialized.state, "delta", {
+      ...metadata,
+      protocol: SSE_V2_PROTOCOL,
+      sequence: "2",
+      changed,
+      removed: [],
+    });
+    expect(applied.status).toBe("applied");
+    if (applied.status !== "applied") return;
+
+    expect(applied.snapshot.aircraft).toHaveLength(500);
+    const distances = applied.snapshot.aircraft.map((item) => item.distanceKm ?? Number.POSITIVE_INFINITY);
+    expect(distances).toEqual([...distances].sort((left, right) => left - right));
+    expect(applied.snapshot.aircraft.filter((item) => item.groundSpeed === 430)).toHaveLength(100);
   });
 
   it("tracks V1/V2 capacity separately while enforcing the shared cap", () => {
