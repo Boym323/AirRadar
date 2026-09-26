@@ -202,6 +202,7 @@ export class AircraftWebglRuntime {
   private readonly iconLayers = new Map<string, number>();
   private readonly pendingIconAssets = new Set<string>();
   private nextIconLayer = 0;
+  private maxIconAtlasLayers = 0;
   private iconAtlasGeneration = 0;
   private dirty = true;
   private visible = true;
@@ -393,7 +394,7 @@ export class AircraftWebglRuntime {
     if (this.iconLayers.has(asset) || this.pendingIconAssets.has(asset)) return;
     const gl = this.gl;
     const texture = this.iconTexture;
-    if (!gl || !texture || this.nextIconLayer >= MAX_ICON_ATLAS_LAYERS) return;
+    if (!gl || !texture || this.nextIconLayer >= this.maxIconAtlasLayers) return;
 
     const layer = this.nextIconLayer++;
     const generation = this.iconAtlasGeneration;
@@ -462,6 +463,10 @@ export class AircraftWebglRuntime {
     this.iconLayers.clear();
     this.pendingIconAssets.clear();
     this.nextIconLayer = 0;
+    this.maxIconAtlasLayers = Math.min(
+      MAX_ICON_ATLAS_LAYERS,
+      Math.max(1, Number(gl.getParameter(gl.MAX_ARRAY_TEXTURE_LAYERS)) || 1),
+    );
     this.program = createProgram(gl);
     this.buffer = gl.createBuffer();
     this.vao = gl.createVertexArray();
@@ -474,7 +479,7 @@ export class AircraftWebglRuntime {
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, ICON_ATLAS_SIZE, ICON_ATLAS_SIZE, MAX_ICON_ATLAS_LAYERS);
+    gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, ICON_ATLAS_SIZE, ICON_ATLAS_SIZE, this.maxIconAtlasLayers);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, null);
 
     gl.bindVertexArray(this.vao);
@@ -607,6 +612,7 @@ export class AircraftWebglRuntime {
     this.iconLayers.clear();
     this.pendingIconAssets.clear();
     this.nextIconLayer = 0;
+    this.maxIconAtlasLayers = 0;
     this.map = null;
     this.renderedCount = 0;
   }
