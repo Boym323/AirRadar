@@ -1,22 +1,21 @@
 import nextPackage from "next/package.json" with { type: "json" };
 import type { AtcDataResponse } from "@/lib/atc/types";
 import type { NetworkProviderDiagnostics } from "@/lib/aircraft/types";
-import type { OgnDdbPersistenceDiagnostics, OgnProviderDiagnostics } from "@/lib/ogn/types";
+import type { OgnProviderDiagnostics } from "@/lib/ogn/types";
 import { getAdsbDbCacheFile, getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getOgnStateService } from "@/lib/server/ogn-state";
 import { getHistoryPersistenceStatus } from "@/lib/server/history";
 import { getAtcData } from "@/lib/server/providers";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
-import { defaultAviationWeatherProvider, type AviationWeatherDiagnostics, type SigmetDatasetDiagnostics } from "@/lib/server/aviation-weather-provider";
+import { defaultAviationWeatherProvider, type SigmetDatasetDiagnostics } from "@/lib/server/aviation-weather-provider";
 import type { AviationWeatherPersistenceDiagnostics } from "@/lib/server/aviation-weather-persistence";
 import type { AdsbDbPersistenceDiagnostics } from "@/lib/server/adsbdb-persistence";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getBuildMetadata } from "@/lib/server/version";
-import { readRuntimeDiagnostics, type RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
+import { readRuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import { loadCzAtsRoutes } from "@/lib/ats/cz-routes";
 import { defaultWeatherRadarProvider } from "@/lib/server/weather-radar/provider";
-import type { WeatherRadarDiagnostics } from "@/lib/server/weather-radar/types";
 import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 import {
@@ -38,8 +37,6 @@ export type {
 } from "@/lib/server/system-status-projection";
 
 import type {
-  DiagnosticReasonCode,
-  DiagnosticState,
   SystemStatus,
   SystemStatusBuildInput,
   SystemStatusResponse,
