@@ -40,14 +40,15 @@ export function buildFlightSituationSummary(input: {
   aircraft: AircraftView;
   atc: AtcContextResult | null;
   sigmets: AircraftSigmetContext[];
+  sigmetStale?: boolean;
   routeWeather: RouteWeatherContext | null;
   sigmetDeviation: SigmetTrajectoryDeviation | null;
   wind: AircraftWindContext | null;
   windAhead: AircraftWindAheadProfile | null;
 }): FlightSituationSummary {
-  const currentSigmet = input.sigmets.find((item) => item.relation === "current") ?? null;
-  const projectedSigmet = input.sigmets.find((item) => item.relation === "projected") ?? null;
-  const routeSigmet = input.routeWeather?.matches[0] ?? null;
+  const currentSigmet = input.sigmetStale ? null : input.sigmets.find((item) => item.relation === "current") ?? null;
+  const projectedSigmet = input.sigmetStale ? null : input.sigmets.find((item) => item.relation === "projected") ?? null;
+  const routeSigmet = input.routeWeather?.stale ? null : input.routeWeather?.matches[0] ?? null;
 
   let weatherState: SituationWeatherState = "unknown";
   let weatherHazard: string | null = null;
@@ -94,7 +95,7 @@ export function buildFlightSituationSummary(input: {
     weatherState,
     weatherHazard,
     weatherDistanceNm,
-    weatherStale: Boolean(input.routeWeather?.stale),
+    weatherStale: Boolean(input.sigmetStale || input.routeWeather?.stale),
     windKind,
     windKt,
     windTrend: input.windAhead?.trend ?? null,
