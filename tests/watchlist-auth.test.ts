@@ -19,7 +19,11 @@ describe("watchlist mutation authentication", () => {
     expect(verifyWatchlistAdminToken("test-admin-token")).toBe(true);
     expect(verifyWatchlistAdminToken("wrong-token")).toBe(false);
     const loginRequest = new Request("https://radar.example/api/watchlist/session", { headers: { host: "radar.example", "x-forwarded-proto": "https" } });
-    const cookie = watchlistSessionCookie(loginRequest, "test-admin-token").split(";", 1)[0];
+    const sessionCookie = watchlistSessionCookie(loginRequest, "test-admin-token");
+    expect(sessionCookie).toContain("Path=/;");
+    expect(sessionCookie).toContain("HttpOnly");
+    expect(sessionCookie).toContain("SameSite=Strict");
+    const cookie = sessionCookie.split(";", 1)[0];
     const authorized = requireWatchlistMutation(new Request("https://radar.example/api/watchlist", {
       method: "POST",
       headers: { host: "radar.example", "x-forwarded-proto": "https", origin: "https://radar.example", cookie },

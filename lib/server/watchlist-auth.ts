@@ -73,13 +73,13 @@ export function watchlistSessionCookie(request: Request, token: string): string 
   const value = sessionValue(token);
   const protocol = request.headers.get("x-forwarded-proto")?.split(",", 1)[0]?.trim().toLowerCase() || new URL(request.url).protocol.slice(0, -1);
   const secure = protocol === "https" ? "; Secure" : "";
-  return `${WATCHLIST_SESSION_COOKIE}=${value}; Max-Age=${SESSION_MAX_AGE_SECONDS}; Path=/api/watchlist; HttpOnly; SameSite=Strict${secure}`;
+  return `${WATCHLIST_SESSION_COOKIE}=${value}; Max-Age=${SESSION_MAX_AGE_SECONDS}; Path=/; HttpOnly; SameSite=Strict${secure}`;
 }
 
 export function clearWatchlistSessionCookie(request: Request): string {
   const protocol = request.headers.get("x-forwarded-proto")?.split(",", 1)[0]?.trim().toLowerCase() || new URL(request.url).protocol.slice(0, -1);
   const secure = protocol === "https" ? "; Secure" : "";
-  return `${WATCHLIST_SESSION_COOKIE}=; Max-Age=0; Path=/api/watchlist; HttpOnly; SameSite=Strict${secure}`;
+  return `${WATCHLIST_SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict${secure}`;
 }
 
 export function verifyWatchlistAdminToken(candidate: unknown): boolean {

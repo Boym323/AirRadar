@@ -1,0 +1,55 @@
+name: Radar Soak
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * *"
+
+concurrency:
+  group: radar-soak
+  cancel-in-progress: false
+
+jobs:
+  soak:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - run: npm run prisma:generate
+
+      - name: Build production app
+        run: npm run build:prepared
+        env:
+          AIRRADAR_CHANNEL: production
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run radar soak
+        id: soak
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          soak_status=0
+          npm run benchmark:radar:soak || soak_status=$?
+          if [[ -f artifacts/radar-performance-soak.md ]]; then
+            cat artifacts/radar-performance-soak.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          exit "${soak_status}"
+
+      - name: Upload soak report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radar-performance-soak-${{ github.sha }}
+          path: |
+            artifacts/radar-performance-soak.json
+            artifacts/radar-performance-soak.md
+          if-no-files-found: warn
