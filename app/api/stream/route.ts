@@ -3,6 +3,7 @@ import { toPublicLiveStateSnapshot } from "@/lib/server/public-serialization";
 import { acquireSseClient, recordSsePayload, type SseProtocol } from "@/lib/server/sse-capacity";
 import { parseCoverage } from "@/lib/server/coverage";
 import { SseDeltaEncoder } from "@/lib/server/sse-delta";
+import { getRateLimitClientKey } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,7 +15,7 @@ function event(name: string, payload: unknown): string {
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const protocol: SseProtocol = url.searchParams.get("v") === "2" ? "v2" : "v1";
-  const releaseSseClient = acquireSseClient(protocol);
+  const releaseSseClient = acquireSseClient(protocol, getRateLimitClientKey(request), "aircraft");
   if (!releaseSseClient) {
     return new Response("SSE capacity reached", {
       status: 503,

@@ -294,6 +294,37 @@ describe("server alerts", () => {
     expect(notifier.calls.every((item) => item.type === "emergency_7700")).toBe(true);
   });
 
+  it("keeps reserved queue capacity for a critical emergency behind a normal-alert burst", async () => {
+    vi.stubEnv("ALERT_EMERGENCY_ENABLED", "true");
+    const notifier: AlertNotifier = {
+      name: "blocked",
+      enabled: true,
+      send: vi.fn(() => new Promise<void>(() => undefined)),
+    };
+    const engine = createTestAlertEngine({
+      rules: [rule("uae", "callsignPattern", "UAE*")],
+      notifier,
+    });
+
+    // Two deliveries become active and 24 normal alerts fill the non-critical
+    // pending quota, leaving eight pending slots reserved for high priority.
+    for (let index = 1; index <= 26; index += 1) {
+      const hex = index.toString(16).padStart(6, "0").toUpperCase();
+      engine.observe([], [aircraft(hex)]);
+    }
+
+    const internal = engine as unknown as { pending: AircraftAlert[] };
+    expect(internal.pending).toHaveLength(24);
+    expect(internal.pending.every((item) => item.priority === "normal")).toBe(true);
+
+    const normal = aircraft("ABCDEF", { callsign: "OTHER1", squawk: "7000", emergency: null });
+    const emergency = aircraft("ABCDEF", { callsign: "OTHER1", squawk: "7700", emergency: "general" });
+    engine.observe([normal], [emergency]);
+
+    expect(internal.pending).toHaveLength(25);
+    expect(internal.pending[0]).toMatchObject({ priority: "high", type: "emergency_7700", squawk: "7700" });
+  });
+
   it("uses event-specific notification text and a deep aircraft link", () => {
     const value = aircraft("ABC123", { distanceKm: 42 });
     const message = formatAircraftAlert({ aircraft: value, matchedRules: [rule("near", "callsign", "UAE139", 50)], emergency: false, priority: "normal", type: "entered_radius", reason: "entered_radius", radiusKm: 50 });

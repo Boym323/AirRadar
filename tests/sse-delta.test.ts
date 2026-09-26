@@ -203,15 +203,20 @@ describe("SSE Delta V2", () => {
 
   it("tracks V1/V2 capacity separately while enforcing the shared cap", () => {
     const releases: Array<() => void> = [];
+    const channels = ["aircraft", "intelligence", "ogn"] as const;
     for (let index = 0; index < MAX_SSE_CLIENTS - 1; index += 1) {
-      const release = acquireSseClient(index % 2 ? "v1" : "v2");
+      const release = acquireSseClient(
+        index % 2 ? "v1" : "v2",
+        `capacity-client-${index}`,
+        channels[index % channels.length]!,
+      );
       expect(release).not.toBeNull();
       if (release) releases.push(release);
     }
-    const last = acquireSseClient("v2");
+    const last = acquireSseClient("v2", "capacity-client-last", "aircraft");
     expect(last).not.toBeNull();
     if (last) releases.push(last);
-    const overflow = acquireSseClient("v1");
+    const overflow = acquireSseClient("v1", "capacity-client-overflow", "intelligence");
     expect(overflow).toBeNull();
     const before = getSseDiagnostics();
     expect(before.activeClients).toBe(MAX_SSE_CLIENTS);

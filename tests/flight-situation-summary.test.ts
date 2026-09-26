@@ -98,6 +98,25 @@ describe("flight situation summary", () => {
     expect(buildFlightSituationSummary({ aircraft: aircraft(), atc: null, sigmets: [], routeWeather: clear, sigmetDeviation: null, wind: null, windAhead: null }).weatherState).toBe("unknown");
   });
 
+  it("does not present stale SIGMET or route-weather matches as current situation weather", () => {
+    const staleRoute = routeWeather();
+    staleRoute.stale = true;
+    const result = buildFlightSituationSummary({
+      aircraft: aircraft(),
+      atc: null,
+      sigmets: [{ id: "C", relation: "current", estimatedMinutes: 0, distanceNm: 0, hazard: "TS", phenomenon: null, qualifier: null, firName: null, validTo: null, lowerFt: null, upperFt: null, verticalMatch: "matched", source: "isigmet" }],
+      sigmetStale: true,
+      routeWeather: staleRoute,
+      sigmetDeviation: null,
+      wind: null,
+      windAhead: null,
+    });
+
+    expect(result.weatherState).toBe("unknown");
+    expect(result.weatherHazard).toBeNull();
+    expect(result.weatherStale).toBe(true);
+  });
+
   it("keeps route-deviation correlation separate from weather state", () => {
     const result = buildFlightSituationSummary({
       aircraft: aircraft({ onGround: true }),

@@ -205,7 +205,8 @@ export class FlightIntelligenceService {
   }
 
   async query(query: IntelligenceQuery = {}): Promise<FlightIntelligenceEvent[]> {
-    const memory = this.getRecent(query);
+    const limit = Math.min(100, Math.max(1, query.limit ?? 25));
+    const memory = this.getRecent({ ...query, limit });
     const database = getPrisma();
     if (!database) return memory;
 
@@ -213,7 +214,7 @@ export class FlightIntelligenceService {
       const where: Record<string, unknown> = {};
       if (query.type) where.type = query.type;
       if (query.aircraft) where.icaoHex = query.aircraft.toUpperCase();
-      if (query.flightId) where.flightId = query.flightId;
+      if (query.flightId !== undefined) where.flightId = query.flightId;
       if (query.since && Number.isFinite(Date.parse(query.since))) where.occurredAt = { gte: new Date(query.since) };
 
       const table = (database.orm.public as unknown as { FlightEvent: FlightEventTable }).FlightEvent;
@@ -222,10 +223,23 @@ export class FlightIntelligenceService {
         .orderBy({ occurredAt: "desc" })
         .include("aircraft", (aircraft) => aircraft.select("registration"))
         .include("flight", (flight) => flight.select("callsign", "registration"))
-        .limit(Math.min(100, Math.max(1, query.limit ?? 25)))
+        .limit(limit)
         .all();
 
-      return rows.map((row) => this.fromRow(row));
+      const merged = new Map<string, FlightIntelligenceEvent>();
+      for (const event of memory) merged.set(event.eventKey, event);
+      // Prefer the durable row when persistence has already completed because
+      // it may include linked Flight/aircraft relation data unavailable at detection time.
+      for (const row of rows) {
+        const event = this.fromRow(row);
+        merged.set(event.eventKey, event);
+      }
+      return [...merged.values()]
+        .sort((left, right) =>
+          Date.parse(right.occurredAt) - Date.parse(left.occurredAt)
+          || Date.parse(right.detectedAt) - Date.parse(left.detectedAt)
+          || right.eventKey.localeCompare(left.eventKey))
+        .slice(0, limit);
     } catch {
       return memory;
     }
