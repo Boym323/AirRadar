@@ -22,6 +22,7 @@ const radarDrawerDetailsSource = readFileSync(new URL("../components/radar/radar
 const radarMapLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
 const radarDrawerInteractionsSource = readFileSync(new URL("../components/radar/use-radar-drawer-interactions.ts", import.meta.url), "utf8");
 const radarLiveAircraftSource = readFileSync(new URL("../components/radar/use-radar-live-aircraft.ts", import.meta.url), "utf8");
+const radarAtcMapContextSource = readFileSync(new URL("../components/radar/use-radar-atc-map-context.ts", import.meta.url), "utf8");
 const trafficVirtualizationSource = readFileSync(new URL("../lib/radar/traffic-virtualization.ts", import.meta.url), "utf8");
 const radarPerformanceSource = readFileSync(new URL("../lib/radar/performance-diagnostics.ts", import.meta.url), "utf8");
 const liveSnapshotSchedulerSource = readFileSync(new URL("../lib/radar/live-snapshot-scheduler.ts", import.meta.url), "utf8");
@@ -270,7 +271,7 @@ describe("radar UI polish helpers", () => {
     expect(radarMapLayerMenuSource).toContain("checked={showAirports}");
     expect(radarMapLayerMenuSource).toContain("checked={showAtc}");
     expect(appSource).toContain("useDatasetQuery");
-    expect(appSource).toContain('url: "/api/airspace/activity"');
+    expect(radarAtcMapContextSource).toContain('url: "/api/airspace/activity"');
     expect(appSource).toContain('url: "/api/ats/routes?view=map"');
     expect(datasetSource).toContain('"retrying"');
     expect(datasetSource).toContain("retry-after");
