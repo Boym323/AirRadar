@@ -1,389 +1,57 @@
 import nextPackage from "next/package.json" with { type: "json" };
 import type { AtcDataResponse } from "@/lib/atc/types";
-import type { NetworkProviderDiagnostics, ReceiverStatisticsResponse, StateSnapshot } from "@/lib/aircraft/types";
-import type { OgnDdbPersistenceDiagnostics, OgnProviderDiagnostics, OgnProviderStatus } from "@/lib/ogn/types";
+import type { NetworkProviderDiagnostics } from "@/lib/aircraft/types";
+import type { OgnProviderDiagnostics } from "@/lib/ogn/types";
 import { getAdsbDbCacheFile, getAppTimezone, isAdsbDbEnabled, isAircraftPhotosEnabled, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getOgnStateService } from "@/lib/server/ogn-state";
-import { getHistoryPersistenceStatus, type HistoryPersistenceStatus } from "@/lib/server/history";
+import { getHistoryPersistenceStatus } from "@/lib/server/history";
 import { getAtcData } from "@/lib/server/providers";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
-import { defaultAviationWeatherProvider, type AviationWeatherDiagnostics, type SigmetDatasetDiagnostics } from "@/lib/server/aviation-weather-provider";
+import { defaultAviationWeatherProvider, type SigmetDatasetDiagnostics } from "@/lib/server/aviation-weather-provider";
 import type { AviationWeatherPersistenceDiagnostics } from "@/lib/server/aviation-weather-persistence";
 import type { AdsbDbPersistenceDiagnostics } from "@/lib/server/adsbdb-persistence";
-import type { AlertStatus } from "@/lib/server/alert-engine";
-import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getBuildMetadata } from "@/lib/server/version";
-import { readRuntimeDiagnostics, type RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
+import { readRuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import { loadCzAtsRoutes } from "@/lib/ats/cz-routes";
 import { defaultWeatherRadarProvider } from "@/lib/server/weather-radar/provider";
-import type { WeatherRadarDiagnostics } from "@/lib/server/weather-radar/types";
 import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
+import {
+  adsbDbDiagnostic,
+  legacyStatus,
+  radarDiagnostic,
+  weatherDiagnostic,
+  weatherStatus,
+  windDiagnostic,
+} from "@/lib/server/system-status-diagnostics";
+export {
+  toAdminSystemStatus,
+  toPublicSystemStatus,
+} from "@/lib/server/system-status-projection";
+export type {
+  SystemStatusApiResponse,
+  SystemStatusDetailLevel,
+} from "@/lib/server/system-status-projection";
 
-export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
-export type OperationalState = "ok" | "degraded" | "offline" | "disabled" | "on_demand" | "loading";
-export type DiagnosticReasonCode =
-  | "NOT_INITIALIZED" | "CONFIG_DISABLED" | "FIRST_LOAD_PENDING" | "UPSTREAM_UNAVAILABLE"
-  | "UPSTREAM_TIMEOUT" | "RATE_LIMITED" | "STALE_CACHE" | "STALE_DATASET" | "PARTIAL_DATA"
-  | "NO_VALID_TIMES" | "NO_CATALOG" | "NO_USABLE_CACHE" | "LAST_REFRESH_FAILED";
-
-export interface DiagnosticState {
-  operationalState: OperationalState;
-  reasonCode: DiagnosticReasonCode | null;
-  reason: string | null;
-}
-
-export interface SystemStatusResponse {
-  status: SystemStatus;
-  checkedAt: string;
-  application: {
-    status: SystemStatus;
-    name: "AirRadar";
-    version: string | null;
-    commit: string | null;
-    buildTime: string | null;
-    channel: string;
-    uptimeSeconds: number;
-    nodeVersion: string;
-    nextVersion: string | null;
-    environment: "production" | "development";
-    timezone: string;
-    startedAt: string;
-  };
-  receiver: {
-    status: SystemStatus;
-    readsb: {
-      status: "ok" | "offline" | "demo";
-      online: boolean;
-      provider: string;
-      sourceStatus: "live" | "demo" | "offline";
-      aircraftCount: number;
-      messagesPerSecond: number | null;
-      lastSnapshot: string | null;
-      snapshotAgeSeconds: number | null;
-    };
-  };
-  localAdsb?: Record<string, unknown>;
-  adsbLol: {
-    status: SystemStatus;
-    enabled: boolean;
-    endpoint: "Combined feeds" | "Public API" | "Raw BEAST + SBS/MLAT" | "SBS/30003";
-    license: "ODbL 1.0";
-    radiusNm: number;
-    pollIntervalMs: number;
-    lastAttemptAt: string | null;
-    lastSuccessAt: string | null;
-    latencyMs: number | null;
-    aircraftCount: number;
-    positionedAircraftCount: number;
-    mlatAircraftCount: number;
-    consecutiveFailures: number;
-    rateLimited: boolean;
-    retryAfterMs: number | null;
-    selectedSource?: "mixed" | "adsbhub" | "adsblol-raw" | "adsblol-http" | "raw" | "http-fallback" | "unavailable";
-    beastConnected?: boolean;
-    mlatConnected?: boolean;
-    beastFramesReceived?: number;
-    beastFramesDecoded?: number;
-    beastDecodeErrors?: number;
-    mlatLinesReceived?: number;
-    mlatLinesParsed?: number;
-    mlatParseErrors?: number;
-    activeInternalTracks?: number;
-    publishedAircraftCount?: number;
-    adsbPositionCount?: number;
-    mlatPositionCount?: number;
-    droppedTracks?: number;
-    connected?: boolean;
-    connectionSince?: string | null;
-    lastLineAt?: string | null;
-    linesReceived?: number;
-    linesParsed?: number;
-    malformedLines?: number;
-    invalidIcao?: number;
-    invalidPosition?: number;
-    bytesReceived?: number;
-    linesPerSecond?: number;
-    stale?: boolean;
-  };
-  adsbdb: {
-    status: SystemStatus;
-    diagnostic: DiagnosticState;
-    enabled: boolean;
-    providerStatus: "online" | "degraded" | "offline" | "unknown";
-    lastSuccessAt: string | null;
-    lastFailureAt: string | null;
-    consecutiveFailures: number;
-    memory: { metadataEntries: number; routeEntries: number };
-    persistence: AdsbDbPersistenceDiagnostics;
-    hits: { memory: number; persistent: number; live: number; staleFallback: number };
-  };
-  ogn: {
-    status: SystemStatus;
-    enabled: boolean;
-    providerStatus: OgnProviderStatus;
-    host: string;
-    port: number;
-    radiusKm: number;
-    connectedAt: string | null;
-    lastActivityAt: string | null;
-    lastPacketAt: string | null;
-    lastAircraftPacketAt: string | null;
-    loginAcknowledged: boolean;
-    packets: number;
-    positionPackets: number;
-    canonicalPositionUpdates: number;
-    duplicatePackets: number;
-    malformed: number;
-    droppedAdsb: number;
-    droppedGroundStatus: number;
-    droppedStatus: number;
-    droppedDelayed: number;
-    droppedPrivacy: number;
-    droppedDdbUnresolved: number;
-    ddbUnresolvable: number;
-    droppedStale: number;
-    droppedCapacity: number;
-    unknownTocall: number;
-    sourceCounts: Record<string, number>;
-    unknownTocalls: Array<{ tocall: string; count: number }>;
-    activeTargets: number;
-    freshTargets: number;
-    staleTargets: number;
-    reconnects: number;
-    configurationError: string | null;
-    ddb: {
-      source: "live" | "cache" | "softrf" | "unavailable";
-      status: OgnProviderDiagnostics["ddb"]["status"];
-      strategy: OgnProviderDiagnostics["ddb"]["strategy"];
-      representation: OgnProviderDiagnostics["ddb"]["representation"];
-      mode: OgnProviderDiagnostics["ddb"]["mode"];
-      endpoint: string;
-      entries: number;
-      cacheEntries: number;
-      positiveEntries: number;
-      negativeEntries: number;
-      pendingKeys: number;
-      queuedIds: number;
-      inFlight: boolean;
-      requests: number;
-      successfulRequests: number;
-      failedRequests: number;
-      batchCount: number;
-      lastBatchSize: number | null;
-      cacheHits: number;
-      cacheMisses: number;
-      evictions: number;
-      unexpectedRecords: number;
-      conflictingRecords: number;
-      lastAttemptAt: string | null;
-      lastRefreshAt: string | null;
-      lastSuccessAt: string | null;
-      lastPrimarySuccessAt: string | null;
-      lastPrimaryError: string | null;
-      lastHttpStatus: number | null;
-      ageMs: number | null;
-      failures: number;
-      fallbackCount: number;
-      fallbackUsed: boolean;
-      rateLimited: boolean;
-      retryAfterMs: number | null;
-      nextRetryAt: string | null;
-      aircraftTypeAvailable: boolean;
-      stale: boolean;
-      persistence: OgnDdbPersistenceDiagnostics;
-      softRf: {
-        enabled: boolean;
-        valid: boolean;
-        recordCount: number;
-        ageMs: number | null;
-        lastLoadAt: string | null;
-        lastLoadError: string | null;
-      };
-    };
-  };
-  database: {
-    status: "ok" | "offline" | "disabled";
-    connected: boolean;
-    history: {
-      status: SystemStatus;
-      lastSuccessfulWrite: string | null;
-    };
-    statistics: {
-      status: SystemStatus;
-      lastSuccessfulWrite: string | null;
-    };
-  };
-  statistics: {
-    status: SystemStatus;
-    date: string;
-    timezone: string;
-    uniqueAircraftToday: number;
-    maxConcurrentToday: number;
-    maxDistanceTodayKm: number;
-    coverageBucketCount: number;
-    coverageBucketsWithData: number;
-    coverageStatus: "ok" | "empty";
-  };
-  atc: {
-    status: SystemStatus;
-    configured: boolean;
-    freshness: "current" | "stale" | "disabled" | "unavailable";
-    source: string | null;
-    effectiveDate: string | null;
-    lastVerifiedAt: string | null;
-    sectorCount: number;
-    relevantFrequencyCount: number;
-    comparison: {
-      matching: number | null;
-      missing: number | null;
-      extra: number | null;
-      blocking: number | null;
-    };
-  };
-  weather: {
-    status: SystemStatus;
-    diagnostic: DiagnosticState;
-    providerStatus: AviationWeatherDiagnostics["status"];
-    enabled: boolean;
-    provider: "AviationWeather";
-    cache: {
-      status: "warm" | "empty";
-      entries: number;
-      airports: number;
-      memoryEntries: number;
-      persistentEnabled: boolean;
-      persistentPath: string;
-      loadedFromDisk: boolean;
-      lastLoadAt: string | null;
-      lastLoadError: string | null;
-      lastSaveAt: string | null;
-      lastSaveError: string | null;
-    };
-    lastAttemptAt: string | null;
-    lastSuccessAt: string | null;
-    latencyMs: number | null;
-    requests: number;
-    failures: number;
-    consecutiveFailures: number;
-    cacheHits: number;
-    cacheMisses: number;
-    activeSigmets: number;
-    sigmetStale: boolean;
-    sigmetSnapshotAgeMs: number | null;
-    sigmet: {
-      overallStatus: "online" | "degraded" | "offline";
-      international: SigmetDatasetDiagnostics;
-      airsigmet: SigmetDatasetDiagnostics;
-    };
-    metar: { entries: number; staleEntries: number };
-    taf: { entries: number; staleEntries: number };
-    persistence: AviationWeatherPersistenceDiagnostics;
-    retryAfterMs: number | null;
-    lastProviderError: null;
-  };
-  alerts: {
-    status: SystemStatus;
-    enabled: boolean;
-    notifier: string;
-    ruleCount: number;
-  };
-  airportData: {
-    status: SystemStatus;
-    source: "database" | "fallback" | "unavailable";
-    rowCount: number | null;
-    fallbackRowCount: number | null;
-    bounded: true;
-    rowCountIsLowerBound: boolean;
-  };
-  mapLayers: {
-    airports: { state: SystemStatus; count: number; lastSuccessAt: string | null };
-    atc: { state: SystemStatus; sectorCount: number; transmitterCount: number; source: string | null; effectiveDate: string | null };
-    ats: { state: SystemStatus; routeCount: number; pointCount: number; segmentCount: number; effectiveDate: string | null };
-    airspaceActivity: { state: "on_demand"; stale: boolean };
-    radar: { state: SystemStatus; diagnostic: DiagnosticState; latestFrameId: string | null; latestObservedAt: string | null; ageMs: number | null; cachedFrames: number; failures: number; consecutiveFailures: number };
-    metar: { state: SystemStatus; stations: number; lastSuccessAt: string | null; cacheAgeMs: number | null };
-    wind: { state: SystemStatus; diagnostic: DiagnosticState; model: string; modelRun: string | null; availableValidTimes: number; cacheEntries: number; lastSuccessAt: string | null };
-    historicalContext: {
-      radar: { oldest: string | null; latest: string | null; frames: number; diskBytes: number | null; status: string };
-      metar: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
-      wind: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
-      aup: { oldest: string | null; latest: string | null; entries: number; fileBytes: number | null };
-    };
-  };
-  dataSources: {
-    adsbdb: SystemDataSourceStatus;
-    aircraftPhotos: SystemDataSourceStatus;
-    ourAirports: SystemDataSourceStatus;
-  };
-  runtime: RuntimeDiagnostics;
-}
-
-export interface SystemDataSourceStatus {
-  status: SystemStatus;
-  diagnostic?: DiagnosticState;
-  enabled: boolean;
-  provider: string;
-  lastSuccessAt: string | null;
-  lastError: null;
-}
-
-export interface SystemStatusBuildInput {
-  snapshot: StateSnapshot;
-  statistics: ReceiverStatisticsResponse;
-  database: {
-    status: "ok" | "offline" | "disabled";
-    connected: boolean;
-  };
-  history: HistoryPersistenceStatus;
-  statisticsPersistence: ReceiverStatisticsPersistenceStatus;
-  atc: AtcDataResponse;
-  alerts: AlertStatus;
-  airportData: {
-    rowCount: number | null;
-    fallbackRowCount: number | null;
-    rowCountIsLowerBound?: boolean;
-  };
-  atsData?: {
-    available: boolean;
-    routeCount: number;
-    pointCount: number;
-    segmentCount: number;
-    effectiveDate: string | null;
-  };
-  weather?: Partial<AviationWeatherDiagnostics> & { entries?: number; airports?: number };
-  mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
-  adsbLol?: NetworkProviderDiagnostics;
-  localAdsb?: Record<string, unknown>;
-  adsbdb?: {
-    providerStatus: "online" | "degraded" | "offline" | "unknown";
-    lastSuccessAt: string | null;
-    lastFailureAt: string | null;
-    consecutiveFailures: number;
-    hasAttempted?: boolean;
-    memory: { metadataEntries: number; routeEntries: number };
-    persistence: AdsbDbPersistenceDiagnostics;
-    hits: { memory: number; persistent: number; live: number; staleFallback: number };
-  };
-  ogn?: OgnProviderDiagnostics;
-  now?: Date;
-  runtime?: Partial<Pick<SystemStatusResponse["application"], "version" | "commit" | "buildTime" | "channel" | "nodeVersion" | "nextVersion" | "environment" | "timezone">> & {
-    uptimeSeconds?: number;
-    startedAt?: string;
-    diagnostics?: Partial<RuntimeDiagnostics>;
-  };
-}
-
-export interface SystemStatusServiceLike {
-  waitForReady(): Promise<void>;
-  getSnapshot(): StateSnapshot;
-  getStatistics(): ReceiverStatisticsResponse;
-  getStatisticsPersistenceStatus(): ReceiverStatisticsPersistenceStatus;
-  getAlertStatus(): AlertStatus;
-  getNetworkDiagnostics?(): NetworkProviderDiagnostics;
-}
+import type {
+  SystemDataSourceStatus,
+  SystemStatus,
+  SystemStatusBuildInput,
+  SystemStatusResponse,
+  SystemStatusServiceLike,
+} from "@/lib/server/system-status-contract";
+export type {
+  DiagnosticReasonCode,
+  DiagnosticState,
+  OperationalState,
+  SystemDataSourceStatus,
+  SystemStatus,
+  SystemStatusBuildInput,
+  SystemStatusResponse,
+  SystemStatusServiceLike,
+} from "@/lib/server/system-status-contract";
 
 interface DatabaseProbe {
   status: "ok" | "offline" | "disabled";
@@ -625,37 +293,6 @@ function adsbDbPersistenceStatus(value: AdsbDbPersistenceDiagnostics | undefined
   };
 }
 
-function diagnostic(operationalState: OperationalState, reasonCode: DiagnosticReasonCode | null): DiagnosticState {
-  const reasons: Record<DiagnosticReasonCode, string> = {
-    NOT_INITIALIZED: "No request has been made since startup.",
-    CONFIG_DISABLED: "Disabled by configuration.",
-    FIRST_LOAD_PENDING: "The first data request is in progress.",
-    UPSTREAM_UNAVAILABLE: "The upstream provider is unavailable.",
-    UPSTREAM_TIMEOUT: "The upstream provider timed out.",
-    RATE_LIMITED: "The upstream provider is rate limiting requests.",
-    STALE_CACHE: "Using stale cached data.",
-    STALE_DATASET: "The dataset is stale.",
-    PARTIAL_DATA: "Only part of the dataset is available.",
-    NO_VALID_TIMES: "The provider returned no valid forecast times.",
-    NO_CATALOG: "No radar catalog is available.",
-    NO_USABLE_CACHE: "No usable cached data is available.",
-    LAST_REFRESH_FAILED: "The last refresh failed.",
-  };
-  return { operationalState, reasonCode, reason: reasonCode ? reasons[reasonCode] : null };
-}
-
-function legacyStatus(state: OperationalState): SystemStatus {
-  return state === "offline" ? "offline" : state === "degraded" ? "degraded" : state === "disabled" ? "disabled" : "ok";
-}
-
-function adsbDbDiagnostic(value: SystemStatusBuildInput["adsbdb"]): DiagnosticState {
-  if (!value) return diagnostic("disabled", "CONFIG_DISABLED");
-  if (value.hasAttempted === false || (value.providerStatus === "unknown" && !value.lastFailureAt && !value.lastSuccessAt)) return diagnostic("on_demand", "NOT_INITIALIZED");
-  if (value.providerStatus === "offline") return diagnostic("offline", "UPSTREAM_UNAVAILABLE");
-  if (value.providerStatus === "degraded") return diagnostic("degraded", value.hits.staleFallback > 0 ? "STALE_CACHE" : "LAST_REFRESH_FAILED");
-  return diagnostic("ok", null);
-}
-
 function adsbDbResponse(value: SystemStatusBuildInput["adsbdb"]): SystemStatusResponse["adsbdb"] {
   const enabled = Boolean(value);
   const providerStatus = value?.providerStatus ?? "unknown";
@@ -852,43 +489,6 @@ function ognResponse(diagnostics: OgnProviderDiagnostics | undefined): SystemSta
   };
 }
 
-function weatherStatus(value: SystemStatusBuildInput["weather"]): SystemStatus {
-  if (!value) return "disabled";
-  if (value?.status === "disabled" || value?.enabled === false) return "disabled";
-  if (value?.status === "offline") return "offline";
-  if (value?.status === "degraded" || value?.status === "rate_limited") return "degraded";
-  return "ok";
-}
-
-function weatherDiagnostic(value: SystemStatusBuildInput["weather"]): DiagnosticState {
-  if (!value || value.enabled === false || value.status === "disabled") return diagnostic("disabled", "CONFIG_DISABLED");
-  if (!value.hasAttempted && !value.lastAttemptAt) return diagnostic("on_demand", "NOT_INITIALIZED");
-  if (value.inFlight) return diagnostic("loading", "FIRST_LOAD_PENDING");
-  if (value.status === "rate_limited") return diagnostic("degraded", "RATE_LIMITED");
-  if (value.status === "offline") return diagnostic("offline", "UPSTREAM_UNAVAILABLE");
-  if (value.sigmet?.international?.status === "stale" || value.sigmet?.airsigmet?.status === "stale") return diagnostic("degraded", "STALE_DATASET");
-  if (value.sigmet?.international?.status === "unavailable" || value.sigmet?.airsigmet?.status === "unavailable") return diagnostic("degraded", "PARTIAL_DATA");
-  if (value.status === "degraded") return diagnostic("degraded", "LAST_REFRESH_FAILED");
-  return diagnostic("ok", null);
-}
-
-function radarDiagnostic(value: WeatherRadarDiagnostics | undefined): DiagnosticState {
-  if (!value) return diagnostic("on_demand", "NOT_INITIALIZED");
-  if (value.inFlight) return diagnostic("loading", "FIRST_LOAD_PENDING");
-  if (!value.hasAttempted) return diagnostic("on_demand", "NOT_INITIALIZED");
-  if (value.status === "offline") return diagnostic("offline", value.latestFrameId ? "NO_USABLE_CACHE" : "UPSTREAM_UNAVAILABLE");
-  if (value.status === "degraded") return diagnostic("degraded", value.latestFrameId ? "STALE_CACHE" : "LAST_REFRESH_FAILED");
-  return diagnostic("ok", null);
-}
-
-function windDiagnostic(value: ReturnType<typeof defaultWindAloftProvider.diagnostics> | undefined): DiagnosticState {
-  if (!value || !value.hasAttempted) return diagnostic("on_demand", "NOT_INITIALIZED");
-  if (value.inFlight) return diagnostic("loading", "FIRST_LOAD_PENDING");
-  if (value.status === "offline") return diagnostic("offline", "UPSTREAM_UNAVAILABLE");
-  if (value.status === "degraded") return diagnostic("degraded", value.validTimes ? "STALE_CACHE" : "NO_VALID_TIMES");
-  return diagnostic("ok", null);
-}
-
 function sigmetDatasetStatus(value: Partial<SigmetDatasetDiagnostics> | undefined): SigmetDatasetDiagnostics {
   const status = value?.status === "fresh" || value?.status === "stale" ? value.status : "unavailable";
   return {
@@ -944,6 +544,17 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
   const coverageBucketsWithData = input.statistics.coverage.filter((bucket) => Number.isFinite(bucket.maxDistanceKm) && bucket.maxDistanceKm > 0).length;
   const alertsStatus: SystemStatus = input.alerts.status === "ok" ? "ok" : input.alerts.status === "disabled" ? "disabled" : "degraded";
   const historyStatus = persistenceStatus(input.database.status, input.history.failureCount, "ok");
+  const historyRetention = (input.history as typeof input.history & {
+    retention?: {
+      lastRunAt: string | null;
+      cutoff: string | null;
+      durationMs: number | null;
+      rowsDeleted: number;
+      batches: number;
+      completed: boolean | null;
+      failureCount: number;
+    };
+  }).retention;
   const statisticsPersistenceStatus = persistenceStatus(input.database.status, input.statisticsPersistence.failureCount, input.statisticsPersistence.status);
   const topLevelStatus: SystemStatus = receiverStatus === "offline"
     || input.database.status === "offline"
@@ -980,7 +591,21 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
     database: {
       status: input.database.status,
       connected: input.database.connected,
-      history: { status: historyStatus, lastSuccessfulWrite: safeTimestamp(input.history.lastSuccessfulWriteAt) },
+      history: {
+        status: historyStatus,
+        lastSuccessfulWrite: safeTimestamp(input.history.lastSuccessfulWriteAt),
+        ...(historyRetention ? {
+          retention: {
+            lastRunAt: safeTimestamp(historyRetention.lastRunAt),
+            cutoff: safeTimestamp(historyRetention.cutoff),
+            durationMs: historyRetention.durationMs === null ? null : nonNegativeInteger(historyRetention.durationMs, 24 * 60 * 60_000),
+            rowsDeleted: nonNegativeInteger(historyRetention.rowsDeleted, 100_000_000),
+            batches: nonNegativeInteger(historyRetention.batches, 10_000),
+            completed: historyRetention.completed,
+            failureCount: nonNegativeInteger(historyRetention.failureCount, 1_000_000),
+          },
+        } : {}),
+      },
       statistics: { status: statisticsPersistenceStatus, lastSuccessfulWrite: safeTimestamp(input.statisticsPersistence.lastSuccessfulWriteAt) },
     },
     statistics: {
@@ -1244,149 +869,4 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       } : undefined,
     },
   });
-}
-
-
-export type SystemStatusDetailLevel = "public" | "admin";
-export type SystemStatusApiResponse = SystemStatusResponse & { detailLevel: SystemStatusDetailLevel };
-
-export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatusApiResponse {
-  return {
-    ...status,
-    detailLevel: "public",
-    application: {
-      ...status.application,
-      nodeVersion: "hidden",
-      nextVersion: null,
-    },
-    localAdsb: undefined,
-    adsbLol: {
-      ...status.adsbLol,
-      selectedSource: undefined,
-      beastConnected: undefined,
-      mlatConnected: undefined,
-      beastFramesReceived: undefined,
-      beastFramesDecoded: undefined,
-      beastDecodeErrors: undefined,
-      mlatLinesReceived: undefined,
-      mlatLinesParsed: undefined,
-      mlatParseErrors: undefined,
-      activeInternalTracks: undefined,
-      publishedAircraftCount: undefined,
-      adsbPositionCount: undefined,
-      mlatPositionCount: undefined,
-      droppedTracks: undefined,
-      connected: undefined,
-      connectionSince: undefined,
-      lastLineAt: undefined,
-      linesReceived: undefined,
-      linesParsed: undefined,
-      malformedLines: undefined,
-      invalidIcao: undefined,
-      invalidPosition: undefined,
-      bytesReceived: undefined,
-      linesPerSecond: undefined,
-      stale: undefined,
-    },
-    adsbdb: {
-      ...status.adsbdb,
-      persistence: {
-        ...status.adsbdb.persistence,
-        cacheFile: "",
-        lastLoadError: null,
-        lastSaveError: null,
-      },
-    },
-    ogn: {
-      ...status.ogn,
-      host: "hidden",
-      port: 0,
-      sourceCounts: {},
-      unknownTocalls: [],
-      configurationError: null,
-      ddb: {
-        ...status.ogn.ddb,
-        endpoint: "hidden",
-        lastPrimaryError: null,
-        persistence: {
-          ...status.ogn.ddb.persistence,
-          cacheFile: "",
-          lastLoadError: null,
-          lastSaveError: null,
-        },
-        softRf: {
-          ...status.ogn.ddb.softRf,
-          lastLoadError: null,
-        },
-      },
-    },
-    weather: {
-      ...status.weather,
-      cache: {
-        ...status.weather.cache,
-        persistentPath: "",
-        lastLoadError: null,
-        lastSaveError: null,
-      },
-      persistence: {
-        ...status.weather.persistence,
-        cacheFile: "",
-        lastLoadError: null,
-        lastSaveError: null,
-      },
-    },
-    mapLayers: {
-      ...status.mapLayers,
-      historicalContext: {
-        radar: { ...status.mapLayers.historicalContext.radar, diskBytes: null },
-        metar: { ...status.mapLayers.historicalContext.metar, fileBytes: null },
-        wind: { ...status.mapLayers.historicalContext.wind, fileBytes: null },
-        aup: { ...status.mapLayers.historicalContext.aup, fileBytes: null },
-      },
-    },
-    runtime: {
-      ...status.runtime,
-      coverageAnalytics: undefined,
-      processRssBytes: 0,
-      processRssAnonBytes: null,
-      processRssFileBytes: null,
-      processPrivateDirtyBytes: null,
-      heapUsedBytes: 0,
-      heapTotalBytes: 0,
-      externalBytes: 0,
-      arrayBuffersBytes: 0,
-      activeSseClients: 0,
-      activeSseV1Clients: 0,
-      activeSseV2Clients: 0,
-      sseClientLimit: 0,
-      lastV2SnapshotBytes: null,
-      lastV2DeltaBytes: null,
-      recentV2DeltaChanged: 0,
-      recentV2DeltaRemoved: 0,
-      recentV2DeltaSamples: 0,
-      recentV2DeltaAverageBytes: null,
-      cgroupMemoryCurrentBytes: null,
-      cgroupMemoryMaxBytes: null,
-      aircraftCount: null,
-      localTrailAircraftCount: null,
-      networkTrailAircraftCount: null,
-      localTrailPointCount: null,
-      networkTrailPointCount: null,
-      trailEstimatedBytes: null,
-      listenerCount: null,
-      metadataHotCacheSize: null,
-      metadataHotCacheLimit: null,
-      metadataCatalogRecordCount: null,
-      metadataFallbackCacheSize: null,
-      metadataFallbackCacheLimit: null,
-      metadataFallbackCacheBytes: null,
-      metadataFallbackCacheBytesLimit: null,
-      providerCacheEntries: null,
-      providerCacheLimit: null,
-    },
-  };
-}
-
-export function toAdminSystemStatus(status: SystemStatusResponse): SystemStatusApiResponse {
-  return { ...status, detailLevel: "admin" };
 }
