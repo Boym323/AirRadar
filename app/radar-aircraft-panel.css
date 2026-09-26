@@ -477,6 +477,19 @@
   border-top-color: rgba(67, 216, 194, .42);
 }
 
+.aircraft-quick-situation {
+  border-top-color: rgba(88, 166, 255, .42);
+}
+
+.aircraft-quick-situation-signal {
+  margin: 9px 0 0;
+  padding: 8px 9px;
+  border: 1px solid rgba(245, 189, 98, .28);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
 .aircraft-quick-sigmet {
   border-top-color: rgba(245, 189, 98, .42);
 }
