@@ -5,7 +5,7 @@ import type {
   OperationalState,
   SystemStatus,
   SystemStatusBuildInput,
-} from "@/lib/server/system-status";
+} from "@/lib/server/system-status-contract";
 
 type WindDiagnostics = ReturnType<(typeof import("@/lib/server/wind-aloft"))["defaultWindAloftProvider"]["diagnostics"]>;
 
