@@ -12,7 +12,7 @@ function report(overrides: Partial<FlightIntelligenceReplayReport> = {}): Flight
       id: "1", eventKey: "1", lifecycleKey: "1", type: "HOLDING", phase: "CRUISE",
       icaoHex: "ABC123", flightId: 1, callsign: "TST1", registration: null,
       occurredAt: "2026-09-17T12:00:00.000Z", detectedAt: "2026-09-17T12:00:00.000Z",
-      latitude: 50, longitude: 14, altitude: 10000, confidence: 0.9, confidenceLevel: "HIGH",
+      latitude: 50, longitude: 14, altitude: 10000, confidence: 0.9, confidenceLevel: "high",
       airportIcao: null, runway: null, runwayContext: null, sectorId: null, evidence: [],
     }],
     persistedComparableEvents: [{ type: "HOLDING", occurredAt: "2026-09-17T12:00:30.000Z" }],
