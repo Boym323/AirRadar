@@ -698,6 +698,27 @@ export function AirRadarApp() {
   }, [showSigmet]);
 
   useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const source = map.getSource("weather-radar-image") as ImageSource | undefined;
+    const frame = radarCatalog?.frames.find((candidate) => candidate.id === radarFrameId);
+    if (!source) return;
+    source.updateImage({ url: frame?.imageUrl ?? EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
+    if (map.getLayer("weather-radar-layer")) map.setLayoutProperty("weather-radar-layer", "visibility", showWeatherRadar && Boolean(frame) ? "visible" : "none");
+    if (map.getLayer("weather-radar-layer")) map.setPaintProperty("weather-radar-layer", "raster-opacity", radarOpacity);
+    const generation = ++radarFrameGenerationRef.current;
+    if (frame) {
+      const frameIndex = radarCatalog?.frames.findIndex((candidate) => candidate.id === frame.id) ?? -1;
+      for (const neighbour of [radarCatalog?.frames[frameIndex - 1], radarCatalog?.frames[frameIndex + 1]]) {
+        if (!neighbour) continue;
+        const image = new window.Image();
+        image.onload = () => { if (generation !== radarFrameGenerationRef.current) image.src = ""; };
+        image.src = neighbour.imageUrl;
+      }
+    }
+  }, [mapReady, radarCatalog, radarFrameId, radarOpacity, showWeatherRadar]);
+
+  useEffect(() => {
     try { window.localStorage.setItem("airradar-ogn-layer", String(showOgn)); } catch { /* optional */ }
   }, [showOgn]);
 
