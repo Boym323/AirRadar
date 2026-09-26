@@ -40,6 +40,8 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain("SigmetSection");
     expect(componentSource).toContain('data-testid="aircraft-sigmet-context"');
     expect(componentSource).toContain("t.weather.sigmetAircraftDisclaimer");
+    expect(componentSource).toContain("t.weather.sigmetProjectionDisclaimer");
+    expect(componentSource).toContain("t.weather.sigmetProjectedEntry");
     expect(componentSource).toContain('data-testid="technical-details"');
     expect(componentSource).toContain("aria-pressed={watchlisted}");
     expect(componentSource).toContain("fullDetailHref");
