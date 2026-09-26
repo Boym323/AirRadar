@@ -21,6 +21,8 @@ interface RadarDrawerDetailsProps {
   databaseAircraft: AircraftRadarQuickDetailProps["databaseAircraft"];
   historyTrail: AircraftRadarQuickDetailProps["historyTrail"];
   atcContext: AtcContextResult | null;
+  sigmetContext: AircraftRadarQuickDetailProps["sigmetContext"];
+  sigmetStale: boolean;
   sectorTraffic: AircraftRadarQuickDetailProps["sectorTraffic"];
   watchlisted: boolean;
   onBack: () => void;
@@ -38,6 +40,8 @@ export function RadarDrawerDetails({
   databaseAircraft,
   historyTrail,
   atcContext,
+  sigmetContext,
+  sigmetStale,
   sectorTraffic,
   watchlisted,
   onBack,
@@ -60,6 +64,8 @@ export function RadarDrawerDetails({
       databaseAircraft={databaseAircraft}
       historyTrail={historyTrail}
       atcContext={atcContext}
+      sigmetContext={sigmetContext}
+      sigmetStale={sigmetStale}
       sectorTraffic={sectorTraffic}
       watchlisted={watchlisted}
       onBack={onBack}
