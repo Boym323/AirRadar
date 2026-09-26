@@ -27,7 +27,6 @@ import type { AtcContextResult } from "@/lib/atc-context/types";
 import type { AirspaceActivityResponse } from "@/lib/airspace-activity/types";
 import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/airspace-activity/map";
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
-import type { SectorFlow } from "@/components/atc-sector-traffic-panels";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { MetarMapObservation } from "@/lib/weather/types";
@@ -54,6 +53,7 @@ import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext, type WindResponse } from "@/components/radar/use-radar-weather-context";
+import { useRadarAtcMapContext, type SectorTrafficView } from "@/components/radar/use-radar-atc-map-context";
 import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
@@ -104,7 +104,6 @@ const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, n
   [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.south],
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.south],
 ];
-interface SectorTrafficView { sectorId: string; name: string; at: string; vertical: { lower: string | null; upper: string | null }; traffic: { aircraftCount: number; entering1m: number; entering5m: number; entering15m: number; leaving1m: number; leaving5m: number; leaving15m: number; climbing: number; descending: number; level: number; averageAltitude: number | null; medianAltitude: number | null; averageGroundSpeed: number | null }; trafficLevel: "NONE" | "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH"; frequencies: Array<{ channel: string }>; source: { airspace: string; traffic: string }; }
 const WIND_PRESSURE_LEVELS: WindLevelHpa[] = [850, 700, 500, 300, 200];
 interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
 
@@ -131,12 +130,6 @@ function parseAtcDataset(value: unknown): value is AtcDataResponse {
 
 function parseAtsDataset(value: unknown): value is AtsRoutesResponse {
   return isRecord(value) && typeof value.available === "boolean";
-}
-
-function parseAirspaceDataset(value: unknown): value is AirspaceActivityResponse {
-  return isRecord(value)
-    && Object.prototype.hasOwnProperty.call(value, "planned")
-    && Object.prototype.hasOwnProperty.call(value, "historicalActual");
 }
 
 async function parseJsonDataset<T>(response: Response, validator: (value: unknown) => value is T): Promise<T> {
@@ -364,12 +357,6 @@ export function AirRadarApp() {
   const [showRangeRings, setShowRangeRings] = useState(true);
   const [showAtc, setShowAtc] = useState(false);
   const [showAtcTraffic, setShowAtcTraffic] = useState(false);
-  const [sectorTraffic, setSectorTraffic] = useState<Map<string, SectorTrafficView>>(new Map());
-  const sectorTrafficRef = useRef<Map<string, SectorTrafficView>>(new Map());
-  const [sectorTrafficState, setSectorTrafficState] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
-  const [sectorFlowWindow, setSectorFlowWindow] = useState<1 | 5 | 15>(5);
-  const [sectorFlows, setSectorFlows] = useState<SectorFlow[]>([]);
-  sectorTrafficRef.current = sectorTraffic;
   const atcAutoFitRef = useRef(false);
   const [showSigmet, setShowSigmet] = useState(false);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
@@ -378,6 +365,22 @@ export function AirRadarApp() {
   const [showWind, setShowWind] = useState(false);
   const [windLevel, setWindLevel] = useState<WindLevelHpa>(300);
   const [showAupUup, setShowAupUup] = useState(false);
+  const {
+    airspaceDataset,
+    airspaceActivity,
+    sectorTraffic,
+    sectorTrafficState,
+    sectorFlowWindow,
+    setSectorFlowWindow,
+    sectorFlows,
+  } = useRadarAtcMapContext({
+    showAtc,
+    showAupUup,
+    showAtcTraffic,
+    searchParams,
+  });
+  const sectorTrafficRef = useRef<Map<string, SectorTrafficView>>(new Map());
+  sectorTrafficRef.current = sectorTraffic;
   const {
     radarCatalog,
     radarFrameId,
@@ -571,65 +574,9 @@ export function AirRadarApp() {
     parse: (response) => parseJsonDataset(response, parseAtsDataset),
     itemCount: (value) => value.counts?.routes ?? 0,
   });
-  const airspaceDataset = useDatasetQuery<AirspaceActivityResponse>({
-    url: "/api/airspace/activity",
-    enabled: showAtc || showAupUup,
-    cache: "no-store",
-    parse: (response) => parseJsonDataset(response, parseAirspaceDataset),
-    itemCount: () => 1,
-  });
   const airports = useMemo(() => airportsDataset.data ?? [], [airportsDataset.data]);
   const atcData = atcDataset.data ?? EMPTY_ATC_DATA;
   const atsRoutes = atsDataset.data;
-  const airspaceActivity = airspaceDataset.data;
-
-  useEffect(() => {
-    if (!showAtcTraffic) return;
-    let active = true;
-    let controller: AbortController | null = null;
-    const requestedAt = searchParams.get("at");
-    const load = async () => {
-      controller?.abort(); controller = new AbortController();
-      setSectorTrafficState((value) => value === "ready" ? value : "loading");
-      try {
-        const query = requestedAt ? `?at=${encodeURIComponent(new Date(requestedAt).toISOString())}` : "";
-        const response = await fetch(`/api/atc/sectors/traffic${query}`, { cache: "no-store", signal: controller.signal });
-        if (!response.ok) throw new Error("traffic unavailable");
-        const payload = await response.json() as { sectors?: SectorTrafficView[] };
-        if (!active || !Array.isArray(payload.sectors)) throw new Error("invalid traffic response");
-        setSectorTraffic(new Map(payload.sectors.map((item) => [item.sectorId, item])));
-        setSectorTrafficState("ready");
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        if (active) setSectorTrafficState((value) => value === "ready" ? "stale" : "unavailable");
-      }
-    };
-    let timer: number | undefined;
-    const schedule = () => {
-      if (!requestedAt && active) timer = window.setTimeout(async () => { await load(); schedule(); }, 12000);
-    };
-    void load().then(schedule);
-    return () => { active = false; controller?.abort(); if (timer !== undefined) window.clearTimeout(timer); };
-  }, [searchParams, showAtcTraffic]);
-
-  useEffect(() => {
-    if (!showAtcTraffic) {
-      setSectorFlows([]);
-      return;
-    }
-    let active = true; let controller: AbortController | null = null;
-    const requestedAt = searchParams.get("at");
-    const load = async () => {
-      controller?.abort(); controller = new AbortController();
-      try { const query = `${requestedAt ? `&at=${encodeURIComponent(new Date(requestedAt).toISOString())}` : ""}`; const response = await fetch(`/api/atc/sectors/transitions?window=${sectorFlowWindow}m${query}`, { cache: "no-store", signal: controller.signal }); if (!response.ok) throw new Error("flows unavailable"); const payload = await response.json() as { transitions?: SectorFlow[] }; if (active) setSectorFlows(Array.isArray(payload.transitions) ? payload.transitions : []); } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError") && active) setSectorFlows([]); }
-    };
-    let timer: number | undefined;
-    const schedule = () => {
-      if (!requestedAt && active) timer = window.setTimeout(async () => { await load(); schedule(); }, 15000);
-    };
-    void load().then(schedule);
-    return () => { active = false; controller?.abort(); if (timer !== undefined) window.clearTimeout(timer); };
-  }, [searchParams, sectorFlowWindow, showAtcTraffic]);
 
   useEffect(() => {
     try {
