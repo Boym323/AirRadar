@@ -22,8 +22,7 @@ import type { AircraftView } from "@/lib/aircraft/types";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 
 export const AIRCRAFT_WEBGL_LAYER_ID = "aircraft-webgl";
-export const AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID = "aircraft-webgl-interaction";
-export const AIRCRAFT_WEBGL_HIT_LAYER_ID = "aircraft-webgl-hit";
+export const AIRCRAFT_WEBGL_LABEL_SOURCE_ID = "aircraft-webgl-labels";
 export const AIRCRAFT_WEBGL_LABEL_LAYER_ID = "aircraft-webgl-label";
 
 const MIN_AIRCRAFT_ANIMATION_MS = 300;
@@ -31,6 +30,7 @@ const MAX_AIRCRAFT_ANIMATION_MS = 12_000;
 const FLOATS_PER_VERTEX = 9;
 const ICON_ATLAS_SIZE = 64;
 const MAX_ICON_ATLAS_LAYERS = 512;
+const SPATIAL_GRID_SIZE = 1024;
 
 type Rgba = readonly [number, number, number, number];
 
@@ -49,7 +49,7 @@ interface WebglAircraftJob {
   pointSize: number;
   iconAsset: string;
   iconLayer: number;
-  hovered: boolean;
+  spatialCell: number;
 }
 
 export interface AircraftWebglRuntimeOptions {
@@ -123,12 +123,14 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
     layout(location = 4) in float a_icon_layer;
     uniform mat4 u_matrix;
     uniform float u_pixel_ratio;
+    uniform int u_hovered_index;
     out float v_angle;
     out vec4 v_color;
     flat out float v_icon_layer;
     void main() {
       gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0);
-      gl_PointSize = a_size * u_pixel_ratio;
+      float hoverScale = gl_VertexID == u_hovered_index ? 1.3 : 1.0;
+      gl_PointSize = a_size * hoverScale * u_pixel_ratio;
       v_angle = a_angle;
       v_color = a_color;
       v_icon_layer = a_icon_layer;
@@ -196,6 +198,7 @@ export class AircraftWebglRuntime {
   private vao: WebGLVertexArrayObject | null = null;
   private matrixLocation: WebGLUniformLocation | null = null;
   private pixelRatioLocation: WebGLUniformLocation | null = null;
+  private hoveredIndexLocation: WebGLUniformLocation | null = null;
   private iconAtlasLocation: WebGLUniformLocation | null = null;
   private gl: WebGL2RenderingContext | null = null;
   private iconTexture: WebGLTexture | null = null;
@@ -204,6 +207,9 @@ export class AircraftWebglRuntime {
   private nextIconLayer = 0;
   private maxIconAtlasLayers = 0;
   private iconAtlasGeneration = 0;
+  private readonly renderIndexByHex = new Map<string, number>();
+  private readonly spatialBuckets = new Map<number, Set<string>>();
+  private hoveredHex: string | null = null;
   private dirty = true;
   private visible = true;
   private lastDataRenderAt = Number.NEGATIVE_INFINITY;
@@ -241,17 +247,54 @@ export class AircraftWebglRuntime {
   }
 
   setHovered(icaoHex: string | null): void {
-    let changed = false;
-    for (const [hex, job] of this.jobs) {
-      const next = hex === icaoHex;
-      if (job.hovered === next) continue;
-      job.hovered = next;
-      changed = true;
+    const next = icaoHex && this.jobs.has(icaoHex) ? icaoHex : null;
+    if (this.hoveredHex === next) return;
+    this.hoveredHex = next;
+    this.map?.triggerRepaint();
+  }
+
+  pickAircraftAtPoint(point: { x: number; y: number }, radiusPx = 13): string | null {
+    const map = this.map;
+    if (!map || !this.visible || !this.jobs.size || radiusPx <= 0) return null;
+
+    const corners = [
+      [point.x - radiusPx, point.y - radiusPx],
+      [point.x + radiusPx, point.y - radiusPx],
+      [point.x - radiusPx, point.y + radiusPx],
+      [point.x + radiusPx, point.y + radiusPx],
+    ] as const;
+    const mercatorCorners = corners.map(([x, y]) => MercatorCoordinate.fromLngLat(map.unproject([x, y])));
+    const minX = Math.min(...mercatorCorners.map((corner) => corner.x));
+    const maxX = Math.max(...mercatorCorners.map((corner) => corner.x));
+    const minY = Math.min(...mercatorCorners.map((corner) => corner.y));
+    const maxY = Math.max(...mercatorCorners.map((corner) => corner.y));
+    const clampIndex = (value: number) => Math.max(0, Math.min(SPATIAL_GRID_SIZE - 1, Math.floor(value * SPATIAL_GRID_SIZE)));
+    const minColumn = clampIndex(minX);
+    const maxColumn = clampIndex(maxX);
+    const minRow = clampIndex(minY);
+    const maxRow = clampIndex(maxY);
+
+    const radiusSquared = radiusPx * radiusPx;
+    let nearestHex: string | null = null;
+    let nearestDistanceSquared = radiusSquared;
+    for (let row = minRow; row <= maxRow; row += 1) {
+      for (let column = minColumn; column <= maxColumn; column += 1) {
+        const bucket = this.spatialBuckets.get(row * SPATIAL_GRID_SIZE + column);
+        if (!bucket) continue;
+        for (const hex of bucket) {
+          const job = this.jobs.get(hex);
+          if (!job) continue;
+          const projected = map.project([job.renderedLon, job.renderedLat]);
+          const dx = projected.x - point.x;
+          const dy = projected.y - point.y;
+          const distanceSquared = dx * dx + dy * dy;
+          if (distanceSquared > nearestDistanceSquared) continue;
+          nearestDistanceSquared = distanceSquared;
+          nearestHex = hex;
+        }
+      }
     }
-    if (changed) {
-      this.dirty = true;
-      this.map?.triggerRepaint();
-    }
+    return nearestHex;
   }
 
   upsert(aircraft: AircraftView, colorMode: AircraftColorMode): void {
@@ -294,7 +337,7 @@ export class AircraftWebglRuntime {
         pointSize,
         iconAsset,
         iconLayer,
-        hovered: false,
+        spatialCell: -1,
       });
       this.dirty = true;
       this.map?.triggerRepaint();
@@ -378,16 +421,51 @@ export class AircraftWebglRuntime {
   }
 
   remove(icaoHex: string): void {
-    if (!this.jobs.delete(icaoHex)) return;
+    const job = this.jobs.get(icaoHex);
+    if (!job) return;
+    this.removeSpatialCell(icaoHex, job);
+    this.jobs.delete(icaoHex);
+    this.renderIndexByHex.delete(icaoHex);
+    if (this.hoveredHex === icaoHex) this.hoveredHex = null;
     this.dirty = true;
     this.map?.triggerRepaint();
   }
 
   clear(): void {
-    if (!this.jobs.size) return;
+    if (!this.jobs.size && !this.spatialBuckets.size) return;
     this.jobs.clear();
+    this.renderIndexByHex.clear();
+    this.spatialBuckets.clear();
+    this.hoveredHex = null;
     this.dirty = true;
     this.map?.triggerRepaint();
+  }
+
+  private spatialCellFor(x: number, y: number): number {
+    const column = Math.max(0, Math.min(SPATIAL_GRID_SIZE - 1, Math.floor(x * SPATIAL_GRID_SIZE)));
+    const row = Math.max(0, Math.min(SPATIAL_GRID_SIZE - 1, Math.floor(y * SPATIAL_GRID_SIZE)));
+    return row * SPATIAL_GRID_SIZE + column;
+  }
+
+  private updateSpatialCell(icaoHex: string, job: WebglAircraftJob, x: number, y: number): void {
+    const nextCell = this.spatialCellFor(x, y);
+    if (job.spatialCell === nextCell) return;
+    this.removeSpatialCell(icaoHex, job);
+    let bucket = this.spatialBuckets.get(nextCell);
+    if (!bucket) {
+      bucket = new Set<string>();
+      this.spatialBuckets.set(nextCell, bucket);
+    }
+    bucket.add(icaoHex);
+    job.spatialCell = nextCell;
+  }
+
+  private removeSpatialCell(icaoHex: string, job: WebglAircraftJob): void {
+    if (job.spatialCell < 0) return;
+    const bucket = this.spatialBuckets.get(job.spatialCell);
+    bucket?.delete(icaoHex);
+    if (bucket?.size === 0) this.spatialBuckets.delete(job.spatialCell);
+    job.spatialCell = -1;
   }
 
   private requestIconAsset(asset: string): void {
@@ -500,6 +578,7 @@ export class AircraftWebglRuntime {
 
     this.matrixLocation = gl.getUniformLocation(this.program, "u_matrix");
     this.pixelRatioLocation = gl.getUniformLocation(this.program, "u_pixel_ratio");
+    this.hoveredIndexLocation = gl.getUniformLocation(this.program, "u_hovered_index");
     this.iconAtlasLocation = gl.getUniformLocation(this.program, "u_icon_atlas");
     for (const job of this.jobs.values()) {
       job.iconLayer = -1;
@@ -523,8 +602,10 @@ export class AircraftWebglRuntime {
       const startedAt = diagnostics ? performance.now() : 0;
       const data = new Float32Array(this.jobs.size * FLOATS_PER_VERTEX);
       let offset = 0;
+      let vertexIndex = 0;
+      this.renderIndexByHex.clear();
 
-      for (const job of this.jobs.values()) {
+      for (const [icaoHex, job] of this.jobs) {
         const motion = motionAt(job.source, now, {
           lon: job.correctionLon,
           lat: job.correctionLat,
@@ -542,6 +623,9 @@ export class AircraftWebglRuntime {
         }
 
         const mercator = MercatorCoordinate.fromLngLat({ lng: motion.lon, lat: motion.lat });
+        this.updateSpatialCell(icaoHex, job, mercator.x, mercator.y);
+        this.renderIndexByHex.set(icaoHex, vertexIndex);
+        vertexIndex += 1;
         const heading = normalizeHeading(motion.heading) ?? 0;
         const screenHeading = (heading - bearing) * Math.PI / 180;
         data[offset++] = mercator.x;
@@ -551,7 +635,7 @@ export class AircraftWebglRuntime {
         data[offset++] = job.color[1];
         data[offset++] = job.color[2];
         data[offset++] = job.color[3];
-        data[offset++] = job.pointSize * (job.hovered ? 1.3 : 1);
+        data[offset++] = job.pointSize;
         data[offset++] = job.iconLayer;
       }
 
@@ -583,6 +667,10 @@ export class AircraftWebglRuntime {
     gl.bindVertexArray(this.vao);
     if (this.matrixLocation !== null) gl.uniformMatrix4fv(this.matrixLocation, false, input.defaultProjectionData.mainMatrix);
     if (this.pixelRatioLocation !== null) gl.uniform1f(this.pixelRatioLocation, Math.max(1, window.devicePixelRatio || 1));
+    if (this.hoveredIndexLocation !== null) {
+      const hoveredIndex = this.hoveredHex ? this.renderIndexByHex.get(this.hoveredHex) ?? -1 : -1;
+      gl.uniform1i(this.hoveredIndexLocation, hoveredIndex);
+    }
     if (this.iconTexture && this.iconAtlasLocation !== null) {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.iconTexture);
@@ -607,9 +695,13 @@ export class AircraftWebglRuntime {
     this.program = null;
     this.matrixLocation = null;
     this.pixelRatioLocation = null;
+    this.hoveredIndexLocation = null;
     this.iconAtlasLocation = null;
     this.gl = null;
     this.iconLayers.clear();
+    this.renderIndexByHex.clear();
+    this.spatialBuckets.clear();
+    this.hoveredHex = null;
     this.pendingIconAssets.clear();
     this.nextIconLayer = 0;
     this.maxIconAtlasLayers = 0;
