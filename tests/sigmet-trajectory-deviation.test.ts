@@ -142,4 +142,16 @@ describe("SIGMET trajectory deviation", () => {
       snapshot(),
     )).toBeNull();
   });
+
+  it("keeps correlation low when vertical relevance cannot be verified", () => {
+    const advisory = snapshot();
+    advisory.features[0]!.properties.lowerFt = null;
+    advisory.features[0]!.properties.upperFt = null;
+    const result = detectSigmetTrajectoryDeviation(
+      aircraft({ track: 20 }),
+      [point("2026-09-26T14:55:00.000Z", 90), point("2026-09-26T14:59:30.000Z", 25)],
+      advisory,
+    );
+    expect(result?.confidence).toBe("low");
+  });
 });
