@@ -15,7 +15,7 @@ export interface FlightSituationSummary {
   currentUnit: string | null;
   nextSector: string | null;
   nextSectorMinutes: number | null;
-  nextSectorConfidence: "high" | "medium" | null;
+  nextSectorConfidence: "high" | "medium" | "low" | null;
   weatherState: SituationWeatherState;
   weatherHazard: string | null;
   weatherDistanceNm: number | null;
