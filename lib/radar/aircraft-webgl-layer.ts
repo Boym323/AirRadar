@@ -504,7 +504,9 @@ export class AircraftWebglRuntime {
       const previousFlipY = Boolean(gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL));
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+      // The shader maps the top of the screen-space point to v=0. Keep the
+      // north-up SVG source unflipped here, otherwise nose and tail swap.
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
       gl.texSubImage3D(
         gl.TEXTURE_2D_ARRAY,
         0,

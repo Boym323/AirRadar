@@ -95,6 +95,12 @@ describe("WebGL aircraft layer", () => {
     expect(webglSource).toContain("job.iconLayer");
   });
 
+  it("keeps north-up tar1090 atlas images unflipped during WebGL upload", () => {
+    expect(webglSource).toContain("vec2 uv = vec2(q.x + 0.5, 0.5 - q.y)");
+    expect(webglSource).toContain("gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);");
+    expect(webglSource).not.toContain("gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);");
+  });
+
   it("keeps source-aware colors for bulk aircraft", () => {
     expect(aircraftWebglColor(aircraft(), "default")[3]).toBeGreaterThan(0.9);
     expect(aircraftWebglColor(aircraft({
