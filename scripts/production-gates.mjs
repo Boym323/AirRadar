@@ -496,6 +496,31 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }),
         });
       });
+      await page.route("**/api/aircraft/*/route-weather", (route) => route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          status: "available",
+          routeStatus: "MATCHED",
+          routeCoveragePercent: 100,
+          routeSource: "browser fixture",
+          unresolvedRouteTokens: [],
+          stale: false,
+          matches: [{
+            sigmetId: "fixture-sigmet-route",
+            hazard: "Fixture route turbulence",
+            firName: "Prague FIR",
+            validTo: "2026-09-12T23:59:59.000Z",
+            routeDesignator: "FIXTURE1",
+            fromName: "A",
+            toName: "B",
+            segmentId: "fixture-segment",
+            segmentConfidence: "HIGH",
+            verticalMatch: "matched",
+            distanceAlongRouteNm: 12,
+          }],
+        }),
+      }));
       await page.route("**/api/weather/sigmet", (route) => route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -756,6 +781,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         await quickDetail.waitFor({ state: "visible" });
         await quickDetail.getByRole("tab", { name: "Let", exact: true }).click();
         await quickDetail.locator(".aircraft-quick-atc").waitFor({ state: "visible" });
+        await quickDetail.getByTestId("route-weather-match").waitFor({ state: "visible" });
         await quickDetail.locator(".route-weather-summary").first().waitFor({ state: "visible" });
         const quickContract = await quickDetail.evaluate((element) => ({
           tabs: [...element.querySelectorAll('[role="tab"]')].map((tab) => ({ id: tab.id, selected: tab.getAttribute("aria-selected") })),
