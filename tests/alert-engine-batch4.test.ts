@@ -36,6 +36,7 @@ function historyRecorder() {
         record: event.record ?? null,
         notificationStatus: "pending",
         notificationAttemptedAt: null,
+        intelligence: event.intelligence ?? null,
       });
     }),
     recordNotification: vi.fn(async () => undefined),
