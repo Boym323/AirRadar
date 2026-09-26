@@ -1833,7 +1833,11 @@ export function AirRadarApp() {
     selectedHistoryTrail?.points ?? selectedAircraft?.trail ?? [],
     sigmetData,
   ), [selectedAircraft, selectedHistoryTrail, sigmetData]);
-  const selectedWind = useSelectedAircraftWindContext(selectedAircraft);
+  const selectedDestination = selectedAircraft?.enrichment?.route?.destinationAirport ?? null;
+  const selectedWind = useSelectedAircraftWindContext(
+    selectedAircraft,
+    selectedDestination ? { lat: selectedDestination.latitude, lon: selectedDestination.longitude } : null,
+  );
   const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
   const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
@@ -2146,6 +2150,7 @@ export function AirRadarApp() {
             sigmetStale={sigmetData.stale}
             windContext={selectedWind.context}
             windAhead={selectedWind.ahead}
+            destinationWind={selectedWind.destination}
             windStatus={selectedWind.status}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
