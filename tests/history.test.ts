@@ -57,7 +57,7 @@ function retentionDatabase(rows: Array<{ id: number; recordedAt: Date }>) {
     async all() {
       return selected.map(({ id, recordedAt }) => ({ id, recordedAt }));
     },
-    async deleteCount() {
+    async deleteAndCount() {
       const ids = new Set(selected.map((row) => row.id));
       const before = stored.length;
       stored = stored.filter((row) => !ids.has(row.id));
