@@ -1,5 +1,5 @@
 export const RADAR_PERFORMANCE_SCENARIOS = Object.freeze(
-  [50, 100, 250, 500, 1000, 1600, 2000].map((aircraft) => ({
+  [50, 100, 250, 500, 1000, 1600, 2000, 3000, 5000].map((aircraft) => ({
     aircraft,
     budget: {
       // CI gates only deterministic structural invariants. Wall-clock timings
@@ -16,8 +16,9 @@ export function evaluateRadarPerformanceBaseline(result, scenario) {
   const fail = (message) => violations.push(message);
 
   if (result.aircraft !== aircraft) fail(`scenario aircraft mismatch: expected ${aircraft}, got ${result.aircraft}`);
-  if (result.dom.aircraftMarkers !== aircraft) fail(`DOM aircraft markers: expected ${aircraft}, got ${result.dom.aircraftMarkers}`);
-  if (result.dom.markerHandles !== aircraft) fail(`marker handles: expected ${aircraft}, got ${result.dom.markerHandles}`);
+  if (result.webgl.aircraft !== aircraft) fail(`WebGL aircraft: expected ${aircraft}, got ${result.webgl.aircraft}`);
+  if (result.dom.aircraftMarkers !== 0) fail(`DOM aircraft markers: expected 0 bulk markers, got ${result.dom.aircraftMarkers}`);
+  if (result.dom.markerHandles !== 0) fail(`HTML marker handles: expected 0 bulk handles, got ${result.dom.markerHandles}`);
   if (result.trafficList.totalRows !== aircraft) fail(`traffic rows: expected ${aircraft}, got ${result.trafficList.totalRows}`);
   if (!result.trafficList.virtualized) fail("traffic list must be virtualized for baseline scenarios");
   if (result.trafficList.renderedRows !== result.dom.mountedTrafficRows) {
@@ -42,7 +43,7 @@ export function evaluateRadarPerformanceBaseline(result, scenario) {
   const framesValid = finiteCounter("animation frames", result.animation.frames);
   const markerWritesValid = finiteCounter("marker writes", result.animation.markerWrites);
   const activeJobsValid = finiteCounter("active animation jobs", result.animation.maxActiveJobs);
-  const collisionRunsValid = finiteCounter("label collision runs", result.labelCollision.runs);
+  finiteCounter("label collision runs", result.labelCollision.runs);
 
   if (framesValid && result.animation.frames < 1) fail("animation diagnostics did not record a frame");
   if (markerWritesValid && result.animation.markerWrites < aircraft) {
@@ -51,7 +52,9 @@ export function evaluateRadarPerformanceBaseline(result, scenario) {
   if (activeJobsValid && result.animation.maxActiveJobs > aircraft) {
     fail(`active animation jobs ${result.animation.maxActiveJobs} > aircraft ${aircraft}`);
   }
-  if (collisionRunsValid && result.labelCollision.runs < 1) fail("label collision diagnostics did not record a run");
+  // Bulk labels are owned by MapLibre's symbol collision engine. The legacy
+  // HTML collision scheduler may legitimately stay idle when no special
+  // selected/watchlist/emergency marker is present.
 
   return violations;
 }

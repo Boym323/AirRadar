@@ -11,6 +11,7 @@ import {
   formatAtcLimit,
   formatAtcNote,
   formatAtcService,
+  formatAltitude,
   formatDateTime,
   formatNumber,
   t,
@@ -20,7 +21,7 @@ import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
-import { aircraftMapLabelLevel } from "@/lib/aircraft/map-labels";
+import { aircraftMapLabel, aircraftMapLabelLevel } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -77,11 +78,19 @@ import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-co
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
+import {
+  AIRCRAFT_WEBGL_HIT_LAYER_ID,
+  AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID,
+  AIRCRAFT_WEBGL_LABEL_LAYER_ID,
+  createAircraftWebglRuntime,
+  type AircraftWebglRuntime,
+} from "@/lib/radar/aircraft-webgl-layer";
 
 declare global {
   interface Window {
     __airradarMapForDiagnostics?: maplibregl.Map;
     __airradarAircraftMarkersForDiagnostics?: Map<string, AircraftMarkerHandle>;
+    __airradarWebglAircraftForDiagnostics?: AircraftWebglRuntime;
   }
 }
 
@@ -160,6 +169,25 @@ const EMPTY_TRAIL: TrailPoint[] = [];
 
 function trailEndpointKey(point: TrailPoint | undefined): string {
   return point ? `${point.recordedAt}|${point.lat}|${point.lon}` : "";
+}
+
+function aircraftWebglInteractionFeature(
+  aircraft: AircraftView,
+  zoom: number,
+  renderedPosition?: { lon: number; lat: number } | null,
+) {
+  return {
+    type: "Feature" as const,
+    id: aircraft.icaoHex,
+    properties: {
+      icaoHex: aircraft.icaoHex,
+      label: aircraftMapLabel(aircraft, zoom, formatAltitude(aircraft.altitude)) ?? "",
+    },
+    geometry: {
+      type: "Point" as const,
+      coordinates: [renderedPosition?.lon ?? aircraft.lon!, renderedPosition?.lat ?? aircraft.lat!] as [number, number],
+    },
+  };
 }
 
 function prefersReducedMotion(): boolean {
@@ -435,6 +463,9 @@ export function AirRadarApp() {
   const aircraftMarkersRef = useRef<Map<string, AircraftMarkerHandle>>(new Map());
   const ognMarkersRef = useRef<Map<string, OgnMarkerHandle>>(new Map());
   const aircraftMotionRuntimeRef = useRef<AircraftMotionRuntime | null>(null);
+  const aircraftWebglRuntimeRef = useRef<AircraftWebglRuntime | null>(null);
+  const aircraftWebglInteractionAircraftRef = useRef<Map<string, AircraftView>>(new Map());
+  const aircraftWebglInteractionUpdatedAtRef = useRef(Number.NEGATIVE_INFINITY);
   const labelCollisionSchedulerRef = useRef<(() => void) | null>(null);
   const aircraftMapSyncRef = useRef<((forceFull?: boolean) => void) | null>(null);
   const aircraftMapSyncFrameRef = useRef<number | null>(null);
@@ -918,6 +949,15 @@ export function AirRadarApp() {
     });
     aircraftMotionRuntimeRef.current = aircraftMotionRuntime;
 
+    const aircraftWebglRuntime = createAircraftWebglRuntime({
+      getPerformanceDiagnostics: () => performanceDiagnostics,
+      prefersReducedMotion,
+    });
+    aircraftWebglRuntimeRef.current = aircraftWebglRuntime;
+    if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
+      window.__airradarWebglAircraftForDiagnostics = aircraftWebglRuntime;
+    }
+
     map.on("load", () => {
       map.addSource("weather-radar-image", { type: "image", url: EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
       map.addLayer({ id: "weather-radar-layer", type: "raster", source: "weather-radar-image", layout: { visibility: "none" }, paint: { "raster-opacity": 0.42, "raster-fade-duration": 0 } });
@@ -1122,6 +1162,77 @@ export function AirRadarApp() {
         map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
       }
+      map.addLayer(aircraftWebglRuntime.layer);
+      map.addSource(AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: AIRCRAFT_WEBGL_HIT_LAYER_ID,
+        type: "circle",
+        source: AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID,
+        paint: {
+          "circle-radius": 13,
+          "circle-opacity": 0,
+        },
+      });
+      map.addLayer({
+        id: AIRCRAFT_WEBGL_LABEL_LAYER_ID,
+        type: "symbol",
+        source: AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID,
+        minzoom: 6.5,
+        layout: {
+          "text-field": ["get", "label"],
+          "text-font": ["Open Sans Semibold"],
+          "text-size": 10,
+          "text-offset": [0, 1.55],
+          "text-padding": 5,
+          "text-allow-overlap": false,
+          "text-ignore-placement": false,
+          "text-optional": true,
+        },
+        paint: {
+          "text-color": "#d9e7ed",
+          "text-halo-color": "#08111d",
+          "text-halo-width": 1.15,
+        },
+      });
+      const webglAircraftHex = (event: MapLayerMouseEvent): string | null => {
+        const value = event.features?.[0]?.properties?.icaoHex;
+        return typeof value === "string" && value ? value : null;
+      };
+      const selectWebglAircraft = (event: MapLayerMouseEvent) => {
+        const hex = webglAircraftHex(event);
+        if (hex) selectAircraft(hex);
+      };
+      map.on("click", AIRCRAFT_WEBGL_HIT_LAYER_ID, selectWebglAircraft);
+      map.on("click", AIRCRAFT_WEBGL_LABEL_LAYER_ID, selectWebglAircraft);
+      map.on("mousemove", AIRCRAFT_WEBGL_HIT_LAYER_ID, (event) => {
+        map.getCanvas().style.cursor = "pointer";
+        aircraftWebglRuntime.setHovered(webglAircraftHex(event));
+      });
+      map.on("mouseleave", AIRCRAFT_WEBGL_HIT_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "";
+        aircraftWebglRuntime.setHovered(null);
+      });
+      const refreshWebglInteractionGeometry = () => {
+        const now = performance.now();
+        if (now - aircraftWebglInteractionUpdatedAtRef.current < 500) return;
+        const source = map.getSource(AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID) as GeoJSONSource | undefined;
+        if (!source) return;
+        const zoom = map.getZoom();
+        source.setData({
+          type: "FeatureCollection",
+          features: [...aircraftWebglInteractionAircraftRef.current.values()].map((aircraft) => aircraftWebglInteractionFeature(
+            aircraft,
+            zoom,
+            aircraftWebglRuntime.getRenderedPosition(aircraft.icaoHex),
+          )),
+        });
+        aircraftWebglInteractionUpdatedAtRef.current = now;
+      };
+      map.on("render", refreshWebglInteractionGeometry);
+
       const updateAircraftHeadingsForMapBearing = () => {
         const bearing = map.getBearing();
         for (const handle of aircraftMarkers.values()) {
@@ -1172,6 +1283,10 @@ export function AirRadarApp() {
       labelCollisionSchedulerRef.current = null;
       aircraftMotionRuntime.dispose();
       if (aircraftMotionRuntimeRef.current === aircraftMotionRuntime) aircraftMotionRuntimeRef.current = null;
+      aircraftWebglRuntime.clear();
+      if (aircraftWebglRuntimeRef.current === aircraftWebglRuntime) aircraftWebglRuntimeRef.current = null;
+      aircraftWebglInteractionAircraftRef.current.clear();
+      aircraftWebglInteractionUpdatedAtRef.current = Number.NEGATIVE_INFINITY;
       if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
       aircraftMapSyncFrameRef.current = null;
       receiverMarkerRef.current?.remove();
@@ -1186,6 +1301,7 @@ export function AirRadarApp() {
       map.remove();
       if (window.__airradarMapForDiagnostics === map) delete window.__airradarMapForDiagnostics;
       if (window.__airradarAircraftMarkersForDiagnostics === aircraftMarkers) delete window.__airradarAircraftMarkersForDiagnostics;
+      if (window.__airradarWebglAircraftForDiagnostics === aircraftWebglRuntime) delete window.__airradarWebglAircraftForDiagnostics;
       mapRef.current = null;
       setMapReady(false);
     };
@@ -1356,6 +1472,16 @@ export function AirRadarApp() {
       return true;
     });
     const liveFilteredAircraftByHex = new Map(liveFilteredAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const));
+    const isPositionedAircraft = (aircraft: AircraftView) => aircraft.lat !== null
+      && aircraft.lon !== null
+      && Number.isFinite(aircraft.lat)
+      && Number.isFinite(aircraft.lon);
+    const isHtmlSpecialAircraft = (aircraft: AircraftView) => aircraft.icaoHex === selectedHex
+      || isLiveAircraftWatchlisted(aircraft)
+      || Boolean(aircraft.emergency);
+    const liveSpecialAircraft = liveFilteredAircraft.filter((aircraft) => isPositionedAircraft(aircraft) && isHtmlSpecialAircraft(aircraft));
+    const liveSpecialAircraftByHex = new Map(liveSpecialAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const));
+    const liveBulkAircraft = liveFilteredAircraft.filter((aircraft) => isPositionedAircraft(aircraft) && !isHtmlSpecialAircraft(aircraft));
     const trafficPadding = currentRadarPadding({ top: 100, right: 45, bottom: 40, left: 45 });
     if (!centeredTrafficRef.current && (liveSnapshot.receiver.lat === null || liveSnapshot.receiver.lon === null) && liveSnapshot.aircraft.length) {
       const positioned = liveSnapshot.aircraft.filter((aircraft) => aircraft.lat !== null && aircraft.lon !== null
@@ -1380,12 +1506,42 @@ export function AirRadarApp() {
       }
     }
     const fullMarkerUpdate = forceFull || pending?.full === true;
-    const currentHexes = fullMarkerUpdate ? new Set(liveFilteredAircraft.map((aircraft) => aircraft.icaoHex)) : null;
+    const currentHexes = fullMarkerUpdate ? new Set(liveSpecialAircraft.map((aircraft) => aircraft.icaoHex)) : null;
     const aircraftToUpdate = fullMarkerUpdate
-      ? liveFilteredAircraft
+      ? liveSpecialAircraft
       : [...(pending?.changedHexes ?? [])]
-        .map((hex) => liveAircraftByHexRef.current.get(hex))
-        .filter((aircraft): aircraft is AircraftView => Boolean(aircraft && liveFilteredAircraftByHex.has(aircraft.icaoHex)));
+        .map((hex) => liveSpecialAircraftByHex.get(hex))
+        .filter((aircraft): aircraft is AircraftView => Boolean(aircraft));
+
+    const aircraftWebglRuntime = aircraftWebglRuntimeRef.current;
+    aircraftWebglRuntime?.setVisible(showAircraft);
+    for (const layer of [AIRCRAFT_WEBGL_HIT_LAYER_ID, AIRCRAFT_WEBGL_LABEL_LAYER_ID] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAircraft ? "visible" : "none");
+    }
+
+    if (fullMarkerUpdate) {
+      const bulkAircraft = liveBulkAircraft.map((aircraft) => ({ ...aircraft }));
+      aircraftWebglRuntime?.sync(bulkAircraft, colorMode);
+      aircraftWebglInteractionAircraftRef.current = new Map(bulkAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const));
+      aircraftWebglInteractionUpdatedAtRef.current = Number.NEGATIVE_INFINITY;
+    } else {
+      const changedOrRemovedHexes = new Set([
+        ...(pending?.changedHexes ?? []),
+        ...(pending?.removedHexes ?? []),
+      ]);
+      for (const hex of changedOrRemovedHexes) {
+        const aircraft = liveFilteredAircraftByHex.get(hex);
+        if (aircraft && isPositionedAircraft(aircraft) && !isHtmlSpecialAircraft(aircraft)) {
+          const bulkAircraft = { ...aircraft };
+          aircraftWebglRuntime?.upsert(bulkAircraft, colorMode);
+          aircraftWebglInteractionAircraftRef.current.set(hex, bulkAircraft);
+        } else {
+          aircraftWebglRuntime?.remove(hex);
+          aircraftWebglInteractionAircraftRef.current.delete(hex);
+        }
+      }
+    }
+
     const selectedAircraftInSnapshot = selectedHex ? liveAircraftByHexRef.current.get(selectedHex) ?? liveSnapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : undefined;
     const selectedAircraftVisible = Boolean(selectedAircraftInSnapshot && selectedHex && liveFilteredAircraftByHex.has(selectedHex));
     const historySnapshot = selectedHistoryTrail;
@@ -1450,8 +1606,8 @@ export function AirRadarApp() {
       : [...new Set([
         ...(pending?.removedHexes ?? []),
         ...[...(pending?.changedHexes ?? [])].filter((hex) => {
-          const aircraft = liveFilteredAircraftByHex.get(hex);
-          return !aircraft || aircraft.lat === null || aircraft.lon === null || !Number.isFinite(aircraft.lat) || !Number.isFinite(aircraft.lon);
+          const aircraft = liveSpecialAircraftByHex.get(hex);
+          return !aircraft || !isPositionedAircraft(aircraft);
         }),
       ])];
     for (const hex of markerRemovalCandidates) {

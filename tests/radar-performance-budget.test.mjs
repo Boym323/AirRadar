@@ -9,7 +9,8 @@ const gitignoreSource = readFileSync(new URL("../.gitignore", import.meta.url), 
 function passingResult(aircraft) {
   return {
     aircraft,
-    dom: { aircraftMarkers: aircraft, markerHandles: aircraft, mountedTrafficRows: 24 },
+    webgl: { aircraft },
+    dom: { aircraftMarkers: 0, markerHandles: 0, mountedTrafficRows: 24 },
     trafficList: { totalRows: aircraft, renderedRows: 24, virtualized: true },
     animation: {
       frames: 12,
@@ -26,7 +27,7 @@ function passingResult(aircraft) {
 
 describe("radar production performance budgets", () => {
   it("covers baseline, current production, and headroom aircraft densities", () => {
-    expect(RADAR_PERFORMANCE_SCENARIOS.map((scenario) => scenario.aircraft)).toEqual([50, 100, 250, 500, 1000, 1600, 2000]);
+    expect(RADAR_PERFORMANCE_SCENARIOS.map((scenario) => scenario.aircraft)).toEqual([50, 100, 250, 500, 1000, 1600, 2000, 3000, 5000]);
   });
 
   it("accepts a healthy synthetic result for every scenario", () => {
@@ -38,8 +39,9 @@ describe("radar production performance budgets", () => {
   it("rejects structural and instrumentation regressions", () => {
     const scenario = RADAR_PERFORMANCE_SCENARIOS.at(-1);
     const result = passingResult(scenario.aircraft);
+    result.webgl.aircraft -= 1;
     result.dom.aircraftMarkers += 1;
-    result.dom.markerHandles -= 1;
+    result.dom.markerHandles += 1;
     result.dom.mountedTrafficRows = 100;
     result.trafficList.renderedRows = 99;
     result.animation.frames = 0;
@@ -48,14 +50,15 @@ describe("radar production performance budgets", () => {
     result.labelCollision.runs = 0;
 
     const violations = evaluateRadarPerformanceBaseline(result, scenario);
+    expect(violations.some((message) => message.includes("WebGL aircraft"))).toBe(true);
     expect(violations.some((message) => message.includes("DOM aircraft markers"))).toBe(true);
-    expect(violations.some((message) => message.includes("marker handles"))).toBe(true);
+    expect(violations.some((message) => message.includes("HTML marker handles"))).toBe(true);
     expect(violations.some((message) => message.includes("mounted row mismatch"))).toBe(true);
     expect(violations.some((message) => message.includes("mounted traffic rows"))).toBe(true);
     expect(violations.some((message) => message.includes("animation diagnostics"))).toBe(true);
     expect(violations.some((message) => message.includes("marker writes"))).toBe(true);
     expect(violations.some((message) => message.includes("active animation jobs"))).toBe(true);
-    expect(violations.some((message) => message.includes("label collision diagnostics"))).toBe(true);
+    expect(violations.some((message) => message.includes("label collision diagnostics"))).toBe(false);
   });
 
   it("rejects missing, NaN, or infinite instrumentation counters", () => {
