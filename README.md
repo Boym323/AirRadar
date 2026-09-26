@@ -27,9 +27,11 @@ only when the measured code counts change.
 ![AirRadar codebase growth](docs/metrics/code-growth.svg)
 
 The history is stored in
-[`docs/metrics/code-history.json`](docs/metrics/code-history.json) and is
-updated automatically on `main` by the codebase metrics workflow. Run
-`npm run metrics:code` to refresh it locally.
+[`docs/metrics/code-history.json`](docs/metrics/code-history.json). After a
+code-changing push to `main`, the codebase metrics workflow refreshes the
+snapshot on `automation/codebase-metrics` and opens or updates a normal PR,
+so branch protection and CI remain in the loop. Run `npm run metrics:code`
+to refresh it locally.
 
 ## Quick start — demo mode
 
