@@ -1,4 +1,4 @@
-import type { SystemStatusResponse } from "@/lib/server/system-status";
+import type { SystemStatusResponse } from "@/lib/server/system-status-contract";
 
 export type SystemStatusDetailLevel = "public" | "admin";
 export type SystemStatusApiResponse = SystemStatusResponse & { detailLevel: SystemStatusDetailLevel };
