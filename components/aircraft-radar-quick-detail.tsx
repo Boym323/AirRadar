@@ -12,6 +12,7 @@ import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-contex
 import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import type { AircraftDestinationWindContext, AircraftWindAheadProfile, AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
+import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
 import type { RadarLayerDataStatus } from "@/components/radar/use-radar-weather-context";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
@@ -376,6 +377,51 @@ function verticalRateLabel(value: number | null): string {
   return `${value > 0 ? "↑" : value < 0 ? "↓" : "→"} ${formatNumber(Math.abs(value))} ft/min`;
 }
 
+function SituationSummarySection({ summary }: { summary: FlightSituationSummary }) {
+  const phase = t.intelligence.situationPhases[summary.phase];
+  const atc = summary.currentSector
+    ? [summary.currentSector, summary.currentUnit].filter(Boolean).join(" · ")
+    : t.common.emptyValue;
+  const next = summary.nextSector && summary.nextSectorMinutes !== null
+    ? t.intelligence.situationNextSector(summary.nextSector, formatNumber(summary.nextSectorMinutes, 0))
+    : null;
+  const hazard = summary.weatherHazard || t.weather.sigmetUnknownHazard;
+  const weather = summary.weatherState === "current_sigmet"
+    ? t.intelligence.situationWeatherCurrent(hazard)
+    : summary.weatherState === "route_sigmet" && summary.weatherDistanceNm !== null
+      ? t.intelligence.situationWeatherRoute(hazard, formatNumber(summary.weatherDistanceNm, 0))
+      : summary.weatherState === "projected_sigmet" && summary.weatherDistanceNm !== null
+        ? t.intelligence.situationWeatherProjected(hazard, formatNumber(summary.weatherDistanceNm, 0))
+        : summary.weatherState === "clear"
+          ? t.intelligence.situationWeatherClear
+          : t.intelligence.situationWeatherUnknown;
+  const wind = summary.windKind === "headwind" && summary.windKt !== null
+    ? t.intelligence.situationHeadwind(formatNumber(summary.windKt, 0))
+    : summary.windKind === "tailwind" && summary.windKt !== null
+      ? t.intelligence.situationTailwind(formatNumber(summary.windKt, 0))
+      : summary.windKind === "calm"
+        ? t.intelligence.situationWindCalm
+        : t.intelligence.situationWindUnknown;
+  const windTrend = summary.windTrend === "more_headwind" && summary.windTrendDeltaKt !== null
+    ? t.intelligence.situationWindTrendHead(formatNumber(summary.windTrendDeltaKt, 0))
+    : summary.windTrend === "more_tailwind" && summary.windTrendDeltaKt !== null
+      ? t.intelligence.situationWindTrendTail(formatNumber(summary.windTrendDeltaKt, 0))
+      : summary.windTrend === "variable"
+        ? t.intelligence.situationWindTrendVariable
+        : null;
+
+  return <QuickSection id="aircraft-situation-summary-title" title={t.intelligence.situationTitle} className="aircraft-quick-situation">
+    <div className="aircraft-quick-detail-grid" data-testid="flight-situation-summary">
+      <DetailValue label={t.intelligence.situationPhase} value={phase} />
+      <DetailValue label={t.intelligence.situationAtc} value={next ? `${atc} · ${next}` : atc} />
+      <DetailValue label={t.intelligence.situationWeather} value={weather} />
+      <DetailValue label={t.intelligence.situationWind} value={windTrend ? `${wind} ${windTrend}` : wind} />
+    </div>
+    {summary.routeDeviationNearSigmet && <p className="aircraft-quick-situation-signal">{t.intelligence.situationDeviation}</p>}
+    <p className="aircraft-quick-disclaimer">{t.intelligence.situationDisclaimer}</p>
+  </QuickSection>;
+}
+
 function AircraftOverview({ aircraft, registration, operator, headerType, sourceAge, phase, emergency, emergencySquawk, onCenter, historyHref, fullDetailHref }: {
   aircraft: AircraftView;
   registration: string | null;
@@ -389,8 +435,7 @@ function AircraftOverview({ aircraft, registration, operator, headerType, source
   historyHref: string;
   fullDetailHref: string;
 }) {
-  return <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-overview" aria-labelledby="aircraft-tab-overview">
-    <section className="aircraft-quick-overview" aria-labelledby="aircraft-overview-title">
+  return <section className="aircraft-quick-overview" aria-labelledby="aircraft-overview-title">
       <h2 id="aircraft-overview-title">{t.aircraft.detailSections.overview}</h2>
       <div className="aircraft-quick-summary-line">
         <div><strong>{aircraft.callsign || registration || aircraft.icaoHex}</strong><span>{operator || t.aircraft.unknownAirline}</span></div>
@@ -412,8 +457,7 @@ function AircraftOverview({ aircraft, registration, operator, headerType, source
         <Link className="aircraft-quick-action" href={historyHref as `/history?hex=${string}`}>{t.aircraft.showFullTrail}</Link>
         <Link className="aircraft-quick-action primary" href={fullDetailHref as `/aircraft/${string}`}>{t.aircraft.fullDetail} <span aria-hidden="true">→</span></Link>
       </nav>
-    </section>
-  </div>;
+    </section>;
 }
 
 function TelemetrySection({ aircraft }: { aircraft: AircraftView }) {
@@ -513,6 +557,15 @@ export function AircraftRadarQuickDetail({
   const emergencySquawk = aircraft.squawk && ["7500", "7600", "7700"].includes(aircraft.squawk) ? aircraft.squawk : null;
   const sourceAge = aircraft.seenPosSeconds === null ? null : formatAge(aircraft.seenPosSeconds);
   const phase = flightPhase(aircraft);
+  const situation = buildFlightSituationSummary({
+    aircraft,
+    atc: atcContext,
+    sigmets: sigmetContext,
+    routeWeather,
+    sigmetDeviation,
+    wind: windContext,
+    windAhead,
+  });
   const fullDetailHref = `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`;
   const historyHref = `/history?hex=${encodeURIComponent(aircraft.icaoHex)}`;
 
@@ -538,7 +591,10 @@ export function AircraftRadarQuickDetail({
 
     <div className="aircraft-quick-source-header"><span className="source-badge source-badge-prominent">{aircraftPositionSourceLabel(aircraft)}</span>{sourceAge && <span>{t.aircraft.positionAge}: {sourceAge}</span>}{phase && <strong>{phase}</strong>}</div>
     <DetailTabs activeTab={activeTab} onChange={setActiveTab} />
-    {activeTab === "overview" && <AircraftOverview aircraft={aircraft} registration={registration} operator={operator} headerType={headerType} sourceAge={sourceAge} phase={phase} emergency={emergency} emergencySquawk={emergencySquawk} onCenter={onCenter} historyHref={historyHref} fullDetailHref={fullDetailHref} />}
+    {activeTab === "overview" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-overview" aria-labelledby="aircraft-tab-overview">
+      <SituationSummarySection summary={situation} />
+      <AircraftOverview aircraft={aircraft} registration={registration} operator={operator} headerType={headerType} sourceAge={sourceAge} phase={phase} emergency={emergency} emergencySquawk={emergencySquawk} onCenter={onCenter} historyHref={historyHref} fullDetailHref={fullDetailHref} />
+    </div>}
     {activeTab === "flight" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-flight" aria-labelledby="aircraft-tab-flight">
       <QuickSection id="aircraft-quick-flight-title" title={t.aircraft.detailSections.flight} className="aircraft-quick-flight">
         <RouteSection route={route} callsign={aircraft.callsign || aircraft.icaoHex} visible={hasRouteData} />
