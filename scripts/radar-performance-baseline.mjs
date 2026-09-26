@@ -531,6 +531,36 @@ function markdownReport(report) {
     "- Animation and collision diagnostics must record live work; active jobs may not exceed aircraft count.",
     "",
   );
+
+  if (report.environment.soakMode) {
+    lines.push(
+      "## Soak footprint",
+      "",
+      "| Aircraft | Heap growth | DOM nodes | Event listeners | Server RSS growth |",
+      "| ---: | ---: | ---: | ---: | ---: |",
+    );
+    for (const result of report.scenarios) {
+      const growth = result.soak?.growth;
+      const mib = (value) => value === null || value === undefined ? "n/a" : `${rounded(value / 1024 / 1024)} MiB`;
+      const count = (value) => value === null || value === undefined ? "n/a" : String(rounded(value));
+      lines.push(`| ${result.aircraft} | ${mib(growth?.jsHeapUsedBytes)} | ${count(growth?.nodes)} | ${count(growth?.jsEventListeners)} | ${mib(growth?.serverRssBytes)} |`);
+    }
+    if (report.sseReconnects) {
+      lines.push(
+        "",
+        "## SSE reconnect churn",
+        "",
+        `- Rounds: ${report.sseReconnects.rounds}`,
+        `- Clients per round: ${report.sseReconnects.clientsPerRound}`,
+        `- Peak active clients: ${report.sseReconnects.peakClients}`,
+        `- Final active clients: ${report.sseReconnects.finalActiveClients}`,
+        `- Status: ${report.sseReconnects.violations.length ? "FAIL" : "PASS"}`,
+        "",
+      );
+      for (const violation of report.sseReconnects.violations) lines.push(`- \`${violation}\``);
+      lines.push("");
+    }
+  }
   return lines.join("\n");
 }
 
@@ -599,7 +629,7 @@ async function main() {
     console.log(`[radar-perf] report=artifacts/${reportStem}.json`);
     console.log(`[radar-perf] summary=artifacts/${reportStem}.md`);
     if (failed.length) {
-      throw new Error(`Radar performance baseline failed in ${failed.length}/${results.length} scenarios`);
+      throw new Error(`Radar performance ${soakMode ? "soak" : "baseline"} failed with ${failed.length} failing check group(s)`);
     }
   } catch (error) {
     const detail = serverLogs.join("").slice(-4_000);
