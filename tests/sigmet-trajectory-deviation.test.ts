@@ -124,6 +124,17 @@ describe("SIGMET trajectory deviation", () => {
     )).toBeNull();
   });
 
+  it("does not call a horizontal SIGMET crossing an avoidance just because current altitude is outside the advisory", () => {
+    expect(detectSigmetTrajectoryDeviation(
+      aircraft({ track: 60, altitude: 35_000, baroAltitude: 35_000 }),
+      [
+        point("2026-09-26T14:55:00.000Z", 90, { altitude: 20_000 }),
+        point("2026-09-26T14:59:30.000Z", 62, { altitude: 30_000 }),
+      ],
+      snapshot(),
+    )).toBeNull();
+  });
+
   it("does not emit a signal for an on-ground target", () => {
     expect(detectSigmetTrajectoryDeviation(
       aircraft({ track: 20, onGround: true }),
