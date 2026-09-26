@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
+import { buildAtcHandoffEstimate } from "@/lib/atc-context/handoff";
 import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
@@ -109,6 +110,7 @@ function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftVi
   const additionalFrequencies = frequencies.length > 0 ? frequencies.slice(1) : assignment?.alternateFrequenciesMhz ?? [];
   const route = context?.status === "available" ? context.atsRoute ?? context.nearestAtsCandidate : null;
   const nextSector = context?.status === "available" ? context.nextSector : null;
+  const handoff = buildAtcHandoffEstimate(context);
   const next = nextSector ?? (context?.status === "available" ? context.nextPoint ?? context.ahead : null);
   if (!airspaceName && !fir && !route && !next && !primaryFrequency) return null;
 
@@ -131,13 +133,21 @@ function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftVi
     </div>
     {(route || next) && <div className="aircraft-quick-atc-context">
       {route && <DetailValue label={route === context?.atsRoute ? t.atc.contextAts : t.atc.contextNearestAts} value={`${route.routeId} · ${formatNumber(route.distanceNm, 1)} NM`} />}
-      {nextSector && <DetailValue label={t.atc.nextSector} value={`${nextSector.airspace.name} · ~${formatNumber(nextSector.distanceNm * 1.852, 0)} km · ~${Math.max(1, Math.round(nextSector.estimatedSeconds / 60))} min`} />}
+      {handoff && <div className="aircraft-quick-atc-handoff" data-testid="atc-handoff-estimate">
+        <DetailValue label={t.atc.handoffEstimate} value={handoff.toSectorName} />
+        {handoff.publishedUnit && <DetailValue label={t.atc.handoffUnit} value={formatAtcService(handoff.publishedUnit)} />}
+        {handoff.primaryFrequencyMhz !== null && <DetailValue label={t.atc.handoffFrequency} value={formatAtcFrequency(handoff.primaryFrequencyMhz)} />}
+        <DetailValue label={t.atc.handoffEta} value={`~${formatNumber(handoff.distanceNm * 1.852, 0)} km · ~${Math.max(1, Math.round(handoff.estimatedSeconds / 60))} min`} />
+        <DetailValue label={t.atc.relevantConfidence} value={t.atc.relevantConfidenceValues[handoff.confidence]} />
+      </div>}
+      {!handoff && nextSector && <DetailValue label={t.atc.nextSector} value={`${nextSector.airspace.name} · ~${formatNumber(nextSector.distanceNm * 1.852, 0)} km · ~${Math.max(1, Math.round(nextSector.estimatedSeconds / 60))} min`} />}
       {!nextSector && next && <DetailValue label={t.atc.contextNext} value={"identifier" in next ? `${next.identifier} · ${formatNumber(next.distanceNm, 0)} NM` : `${next.airspace.name} · ${formatNumber(next.distanceNm, 0)} NM`} />}
     </div>}
     {additionalFrequencies.length > 0 && <details className="aircraft-quick-atc-more">
       <summary>{t.atc.moreFrequencies}</summary>
       <div className="aircraft-quick-frequency-list">{additionalFrequencies.map((frequency) => <span key={frequency}>{formatAtcFrequency(frequency)}</span>)}</div>
     </details>}
+    {handoff && <p className="aircraft-quick-disclaimer">{t.atc.handoffDisclaimer}</p>}
     <p className="aircraft-quick-disclaimer">{t.atc.contextDisclaimer}</p>
     {contextAirspace && <p className="aircraft-quick-disclaimer">Published sector: {contextAirspace.name}{traffic ? ` · Sector traffic: ${traffic.traffic.aircraftCount} aircraft · ${traffic.trafficLevel}` : " · Sector traffic: —"}. Aircraft is within the published sector volume. Traffic does not represent the official operational sector configuration.</p>}
   </QuickSection>;

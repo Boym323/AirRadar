@@ -34,6 +34,9 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain("detailSections");
     expect(componentSource).toContain("aircraftPositionSourceLabel");
     expect(componentSource).toContain("t.atc.moreFrequencies");
+    expect(componentSource).toContain("buildAtcHandoffEstimate");
+    expect(componentSource).toContain('data-testid="atc-handoff-estimate"');
+    expect(componentSource).toContain("t.atc.handoffDisclaimer");
     expect(componentSource).toContain('data-testid="technical-details"');
     expect(componentSource).toContain("aria-pressed={watchlisted}");
     expect(componentSource).toContain("fullDetailHref");
