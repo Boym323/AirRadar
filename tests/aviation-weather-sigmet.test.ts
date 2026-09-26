@@ -215,6 +215,7 @@ describe("Aviation Weather SIGMET normalization", () => {
     expect(radarSource).toContain("generation !== sigmetGenerationRef.current");
     expect(radarSource).toContain("data.type === \"FeatureCollection\" && Array.isArray(data.features)");
     expect(radarSource).not.toContain("if (active) setSigmetData(EMPTY_SIGMET_DATA);");
+    expect(radarSource).toContain("if (!loadSigmet)");
   });
 
   it("serves a stale SIGMET snapshot after a failed refresh", async () => {
