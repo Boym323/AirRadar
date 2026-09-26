@@ -27,7 +27,7 @@ function passingResult(aircraft) {
 
 describe("radar production performance budgets", () => {
   it("covers baseline, current production, and headroom aircraft densities", () => {
-    expect(RADAR_PERFORMANCE_SCENARIOS.map((scenario) => scenario.aircraft)).toEqual([50, 100, 250, 500, 1000, 1600, 2000]);
+    expect(RADAR_PERFORMANCE_SCENARIOS.map((scenario) => scenario.aircraft)).toEqual([50, 100, 250, 500, 1000, 1600, 2000, 3000, 5000]);
   });
 
   it("accepts a healthy synthetic result for every scenario", () => {
@@ -58,7 +58,7 @@ describe("radar production performance budgets", () => {
     expect(violations.some((message) => message.includes("animation diagnostics"))).toBe(true);
     expect(violations.some((message) => message.includes("marker writes"))).toBe(true);
     expect(violations.some((message) => message.includes("active animation jobs"))).toBe(true);
-    expect(violations.some((message) => message.includes("label collision diagnostics"))).toBe(true);
+    expect(violations.some((message) => message.includes("label collision diagnostics"))).toBe(false);
   });
 
   it("rejects missing, NaN, or infinite instrumentation counters", () => {

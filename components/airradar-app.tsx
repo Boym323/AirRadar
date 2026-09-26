@@ -11,6 +11,7 @@ import {
   formatAtcLimit,
   formatAtcNote,
   formatAtcService,
+  formatAltitude,
   formatDateTime,
   formatNumber,
   t,
@@ -20,7 +21,7 @@ import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
-import { aircraftMapLabelLevel } from "@/lib/aircraft/map-labels";
+import { aircraftMapLabel, aircraftMapLabelLevel } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -170,7 +171,11 @@ function trailEndpointKey(point: TrailPoint | undefined): string {
   return point ? `${point.recordedAt}|${point.lat}|${point.lon}` : "";
 }
 
-function aircraftWebglInteractionFeature(aircraft: AircraftView, zoom: number) {
+function aircraftWebglInteractionFeature(
+  aircraft: AircraftView,
+  zoom: number,
+  renderedPosition?: { lon: number; lat: number } | null,
+) {
   return {
     type: "Feature" as const,
     id: aircraft.icaoHex,
@@ -180,7 +185,7 @@ function aircraftWebglInteractionFeature(aircraft: AircraftView, zoom: number) {
     },
     geometry: {
       type: "Point" as const,
-      coordinates: [aircraft.lon!, aircraft.lat!] as [number, number],
+      coordinates: [renderedPosition?.lon ?? aircraft.lon!, renderedPosition?.lat ?? aircraft.lat!] as [number, number],
     },
   };
 }
@@ -945,6 +950,7 @@ export function AirRadarApp() {
 
     const aircraftWebglRuntime = createAircraftWebglRuntime({
       getPerformanceDiagnostics: () => performanceDiagnostics,
+      prefersReducedMotion,
     });
     aircraftWebglRuntimeRef.current = aircraftWebglRuntime;
     if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
@@ -1521,7 +1527,11 @@ export function AirRadarApp() {
       const webglInteractionSource = map.getSource(AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID) as GeoJSONSource | undefined;
       webglInteractionSource?.setData({
         type: "FeatureCollection",
-        features: liveBulkAircraft.map((aircraft) => aircraftWebglInteractionFeature(aircraft, mapZoom)),
+        features: liveBulkAircraft.map((aircraft) => aircraftWebglInteractionFeature(
+          aircraft,
+          mapZoom,
+          aircraftWebglRuntime?.getRenderedPosition(aircraft.icaoHex),
+        )),
       });
       aircraftWebglInteractionUpdatedAtRef.current = interactionNow;
     }

@@ -68,6 +68,14 @@ describe("WebGL aircraft layer", () => {
     expect(webglSource).toContain("allowPrediction: false");
     expect(webglSource).toContain("MercatorCoordinate.fromLngLat");
     expect(webglSource).toContain("gl.drawArrays(gl.POINTS");
+    expect(webglSource).toContain("getRenderedPosition(icaoHex");
+    expect(appSource).toContain("aircraftWebglRuntime?.getRenderedPosition(aircraft.icaoHex)");
+  });
+
+  it("honors reduced motion on the bulk GPU path", () => {
+    expect(appSource).toContain("prefersReducedMotion,");
+    expect(webglSource).toContain("this.options.prefersReducedMotion?.()");
+    expect(webglSource).toContain("previous.correctionDurationMs = 0");
   });
 
   it("keeps source-aware colors for bulk aircraft", () => {

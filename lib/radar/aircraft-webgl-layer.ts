@@ -49,6 +49,7 @@ interface WebglAircraftJob {
 
 export interface AircraftWebglRuntimeOptions {
   getPerformanceDiagnostics(): RadarPerformanceDiagnosticsSession | null;
+  prefersReducedMotion?(): boolean;
 }
 
 function sourceObservedPerformanceTime(aircraft: AircraftView, receivedAt: number): number | null {
@@ -197,6 +198,11 @@ export class AircraftWebglRuntime {
     return this.jobs.has(icaoHex);
   }
 
+  getRenderedPosition(icaoHex: string): { lon: number; lat: number } | null {
+    const job = this.jobs.get(icaoHex);
+    return job ? { lon: job.renderedLon, lat: job.renderedLat } : null;
+  }
+
   setVisible(visible: boolean): void {
     if (this.visible === visible) return;
     this.visible = visible;
@@ -268,6 +274,22 @@ export class AircraftWebglRuntime {
     }
 
     const nextHistory = updateMotionHistory(previous.history, source);
+    if (this.options.prefersReducedMotion?.()) {
+      previous.history = nextHistory;
+      previous.source = source;
+      previous.sourceReceivedAt = now;
+      previous.correctionStartedAt = now;
+      previous.correctionDurationMs = 0;
+      previous.correctionLon = 0;
+      previous.correctionLat = 0;
+      previous.visualHeading = visualHeadingForConfirmedPosition(target, source, nextHistory);
+      previous.renderedLon = aircraft.lon;
+      previous.renderedLat = aircraft.lat;
+      this.dirty = true;
+      this.map?.triggerRepaint();
+      return;
+    }
+
     const interpolationDurationMs = confirmedInterpolationDurationMs(
       previous.source,
       source,
