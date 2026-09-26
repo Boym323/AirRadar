@@ -15,6 +15,12 @@ export interface AircraftAlert {
   radiusKm?: number | null;
   squawk?: string | null;
   record?: AlertHistoryRecordValue;
+  intelligence?: {
+    eventType: string;
+    confidenceLevel: "low" | "medium" | "high";
+    airportIcao: string | null;
+    sectorId: string | null;
+  };
 }
 
 export interface AlertNotifier {
@@ -63,6 +69,10 @@ function alertHeadline(alert: AircraftAlert, label: string): string {
   if (alert.type === "aircraft_appeared") return `✈ ${label} zachycen na watchlistu`;
   if (alert.type === "new_aircraft") return `✈ ${label} poprvé zachycen`;
   if (alert.type === "reception_record") return `✈ ${label} překonal rekord příjmu`;
+  if (alert.type?.startsWith("intelligence_")) {
+    const event = alert.type.slice("intelligence_".length).replaceAll("_", " ");
+    return `✈ ${label} · intelligence: ${event}`;
+  }
   return `✈ ${label} odpovídá sledovanému pravidlu`;
 }
 
@@ -82,6 +92,14 @@ export function formatAircraftAlert(alert: AircraftAlert): string {
     const registration = aircraft.registration || aircraft.enrichment?.metadata?.registration;
     const identity = registration ? `${type} · ${registration}` : type;
     lines.push(identity, `${formatDistance(aircraft.distanceKm)} · ${formatAltitude(aircraft.altitude)}`, formatTrack(aircraft.track));
+    if (alert.intelligence) {
+      const context = [
+        `jistota ${alert.intelligence.confidenceLevel}`,
+        alert.intelligence.airportIcao ? `letiště ${alert.intelligence.airportIcao}` : null,
+        alert.intelligence.sectorId ? `sektor ${alert.intelligence.sectorId}` : null,
+      ].filter(Boolean).join(" · ");
+      if (context) lines.push(context);
+    }
     if (alert.matchedRules.length === 1) lines.push(`Pravidlo: ${alert.matchedRules[0]?.name ?? alert.matchedRules[0]?.id}`);
   }
 
