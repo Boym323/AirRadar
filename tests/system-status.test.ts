@@ -208,6 +208,31 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(value.weather.status).toBe("ok");
   });
 
+  it("keeps history retention diagnostics admin-only", () => {
+    const value = build({
+      history: {
+        lastSuccessfulWriteAt: checkedAt.toISOString(),
+        failureCount: 0,
+        retention: {
+          lastRunAt: checkedAt.toISOString(),
+          cutoff: "2026-08-09T12:00:00.000Z",
+          durationMs: 321,
+          rowsDeleted: 12_345,
+          batches: 3,
+          completed: true,
+          failureCount: 0,
+        },
+      } as never,
+    });
+    expect(value.database.history.retention).toMatchObject({
+      durationMs: 321,
+      rowsDeleted: 12_345,
+      batches: 3,
+      completed: true,
+    });
+    expect(toPublicSystemStatus(value).database.history.retention).toBeUndefined();
+  });
+
   it("reports database unavailable while keeping the live status shape", () => {
     const value = build({ database: { status: "offline", connected: false }, airportData: { rowCount: null, fallbackRowCount: 6 } });
     expect(value.database).toMatchObject({ status: "offline", connected: false });
