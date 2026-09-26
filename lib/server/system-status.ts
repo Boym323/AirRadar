@@ -1245,3 +1245,148 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     },
   });
 }
+
+
+export type SystemStatusDetailLevel = "public" | "admin";
+export type SystemStatusApiResponse = SystemStatusResponse & { detailLevel: SystemStatusDetailLevel };
+
+export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatusApiResponse {
+  return {
+    ...status,
+    detailLevel: "public",
+    application: {
+      ...status.application,
+      nodeVersion: "hidden",
+      nextVersion: null,
+    },
+    localAdsb: undefined,
+    adsbLol: {
+      ...status.adsbLol,
+      selectedSource: undefined,
+      beastConnected: undefined,
+      mlatConnected: undefined,
+      beastFramesReceived: undefined,
+      beastFramesDecoded: undefined,
+      beastDecodeErrors: undefined,
+      mlatLinesReceived: undefined,
+      mlatLinesParsed: undefined,
+      mlatParseErrors: undefined,
+      activeInternalTracks: undefined,
+      publishedAircraftCount: undefined,
+      adsbPositionCount: undefined,
+      mlatPositionCount: undefined,
+      droppedTracks: undefined,
+      connected: undefined,
+      connectionSince: undefined,
+      lastLineAt: undefined,
+      linesReceived: undefined,
+      linesParsed: undefined,
+      malformedLines: undefined,
+      invalidIcao: undefined,
+      invalidPosition: undefined,
+      bytesReceived: undefined,
+      linesPerSecond: undefined,
+      stale: undefined,
+    },
+    adsbdb: {
+      ...status.adsbdb,
+      persistence: {
+        ...status.adsbdb.persistence,
+        cacheFile: "",
+        lastLoadError: null,
+        lastSaveError: null,
+      },
+    },
+    ogn: {
+      ...status.ogn,
+      host: "hidden",
+      port: 0,
+      sourceCounts: {},
+      unknownTocalls: [],
+      configurationError: null,
+      ddb: {
+        ...status.ogn.ddb,
+        endpoint: "hidden",
+        lastPrimaryError: null,
+        persistence: {
+          ...status.ogn.ddb.persistence,
+          cacheFile: "",
+          lastLoadError: null,
+          lastSaveError: null,
+        },
+        softRf: {
+          ...status.ogn.ddb.softRf,
+          lastLoadError: null,
+        },
+      },
+    },
+    weather: {
+      ...status.weather,
+      cache: {
+        ...status.weather.cache,
+        persistentPath: "",
+        lastLoadError: null,
+        lastSaveError: null,
+      },
+      persistence: {
+        ...status.weather.persistence,
+        cacheFile: "",
+        lastLoadError: null,
+        lastSaveError: null,
+      },
+    },
+    mapLayers: {
+      ...status.mapLayers,
+      historicalContext: {
+        radar: { ...status.mapLayers.historicalContext.radar, diskBytes: null },
+        metar: { ...status.mapLayers.historicalContext.metar, fileBytes: null },
+        wind: { ...status.mapLayers.historicalContext.wind, fileBytes: null },
+        aup: { ...status.mapLayers.historicalContext.aup, fileBytes: null },
+      },
+    },
+    runtime: {
+      ...status.runtime,
+      coverageAnalytics: undefined,
+      processRssBytes: 0,
+      processRssAnonBytes: null,
+      processRssFileBytes: null,
+      processPrivateDirtyBytes: null,
+      heapUsedBytes: 0,
+      heapTotalBytes: 0,
+      externalBytes: 0,
+      arrayBuffersBytes: 0,
+      activeSseClients: 0,
+      activeSseV1Clients: 0,
+      activeSseV2Clients: 0,
+      sseClientLimit: 0,
+      lastV2SnapshotBytes: null,
+      lastV2DeltaBytes: null,
+      recentV2DeltaChanged: 0,
+      recentV2DeltaRemoved: 0,
+      recentV2DeltaSamples: 0,
+      recentV2DeltaAverageBytes: null,
+      cgroupMemoryCurrentBytes: null,
+      cgroupMemoryMaxBytes: null,
+      aircraftCount: null,
+      localTrailAircraftCount: null,
+      networkTrailAircraftCount: null,
+      localTrailPointCount: null,
+      networkTrailPointCount: null,
+      trailEstimatedBytes: null,
+      listenerCount: null,
+      metadataHotCacheSize: null,
+      metadataHotCacheLimit: null,
+      metadataCatalogRecordCount: null,
+      metadataFallbackCacheSize: null,
+      metadataFallbackCacheLimit: null,
+      metadataFallbackCacheBytes: null,
+      metadataFallbackCacheBytesLimit: null,
+      providerCacheEntries: null,
+      providerCacheLimit: null,
+    },
+  };
+}
+
+export function toAdminSystemStatus(status: SystemStatusResponse): SystemStatusApiResponse {
+  return { ...status, detailLevel: "admin" };
+}

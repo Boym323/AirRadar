@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { NetworkProviderDiagnostics, StateSnapshot } from "@/lib/aircraft/types";
 import type { AtcDataResponse } from "@/lib/atc/types";
 import { getTranslations } from "@/lib/i18n";
-import { buildSystemStatus } from "@/lib/server/system-status";
+import { buildSystemStatus, toPublicSystemStatus } from "@/lib/server/system-status";
 
 const checkedAt = new Date("2026-09-08T12:00:00.000Z");
 const systemSource = readFileSync(new URL("../lib/server/system-status.ts", import.meta.url), "utf8");
@@ -224,6 +224,28 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     });
     expect(value.alerts).toMatchObject({ status: "disabled", enabled: false, ruleCount: 0 });
     expect(value.atc).toMatchObject({ status: "disabled", configured: false, freshness: "disabled" });
+  });
+
+  it("redacts implementation diagnostics from the anonymous system status", () => {
+    const value = build();
+    value.ogn.host = "internal-ogn.example";
+    value.ogn.ddb.endpoint = "https://internal.example/ddb";
+    value.ogn.ddb.persistence.cacheFile = "/var/lib/airradar/ogn-ddb.json";
+    value.weather.cache.persistentPath = "/var/lib/airradar/weather";
+    value.weather.persistence.cacheFile = "/var/lib/airradar/weather-cache.json";
+    value.adsbdb.persistence.cacheFile = "/var/lib/airradar/adsbdb.json";
+    value.localAdsb = { host: "192.168.1.10", port: 30005 };
+
+    const publicValue = toPublicSystemStatus(value);
+    const serialized = JSON.stringify(publicValue);
+    expect(publicValue.detailLevel).toBe("public");
+    expect(publicValue.localAdsb).toBeUndefined();
+    expect(publicValue.application.nodeVersion).toBe("hidden");
+    expect(publicValue.runtime.processRssBytes).toBe(0);
+    expect(serialized).not.toContain("internal-ogn.example");
+    expect(serialized).not.toContain("internal.example");
+    expect(serialized).not.toContain("192.168.1.10");
+    expect(serialized).not.toContain("/var/lib/airradar");
   });
 
   it("does not expose coordinates, secrets, raw errors, or arbitrary paths", () => {

@@ -1,4 +1,5 @@
-import { readSystemStatus } from "@/lib/server/system-status";
+import { readSystemStatus, toAdminSystemStatus, toPublicSystemStatus } from "@/lib/server/system-status";
+import { isWatchlistSessionValid } from "@/lib/server/watchlist-auth";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,9 @@ export async function GET(request: Request): Promise<Response> {
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
   try {
-    return Response.json(await readSystemStatus(), {
+    const status = await readSystemStatus();
+    const response = isWatchlistSessionValid(request) ? toAdminSystemStatus(status) : toPublicSystemStatus(status);
+    return Response.json(response, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch {
