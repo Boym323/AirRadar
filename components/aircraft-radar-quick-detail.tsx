@@ -158,6 +158,7 @@ function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftVi
 
 function SigmetSection({ context, stale }: { context: AircraftSigmetContext[]; stale: boolean }) {
   if (!context.length) return null;
+  const hasProjection = context.some((item) => item.relation === "projected");
   return <QuickSection id="aircraft-quick-sigmet-title" title={t.weather.sigmetAircraftTitle} className="aircraft-quick-sigmet">
     <div className="aircraft-quick-detail-grid">
       {context.map((item) => {
@@ -167,6 +168,10 @@ function SigmetSection({ context, stale }: { context: AircraftSigmetContext[]; s
           : t.weather.sigmetAltitudeUnknown;
         return <div className="aircraft-quick-sigmet-item" key={item.id} data-testid="aircraft-sigmet-context">
           <DetailValue label={t.weather.sigmetHazard} value={hazard} />
+          <DetailValue label={t.weather.sigmetRelation} value={item.relation === "current" ? t.weather.sigmetCurrent : t.weather.sigmetProjected} />
+          {item.relation === "projected" && item.estimatedMinutes !== null && item.distanceNm !== null
+            ? <DetailValue label={t.weather.sigmetProjectedEntry} value={`~${item.estimatedMinutes} min · ~${formatNumber(item.distanceNm, 0)} NM`} />
+            : null}
           {item.firName && <DetailValue label={t.atc.contextFir} value={item.firName} />}
           <DetailValue label={t.weather.sigmetAltitude} value={limits} />
           <DetailValue label={t.weather.sigmetVerticalMatch} value={item.verticalMatch === "matched" ? t.weather.sigmetVerticalMatched : t.weather.sigmetVerticalUnknown} />
@@ -174,7 +179,7 @@ function SigmetSection({ context, stale }: { context: AircraftSigmetContext[]; s
         </div>;
       })}
     </div>
-    <p className="aircraft-quick-disclaimer">{stale ? t.weather.sigmetStaleWarning : t.weather.sigmetAircraftDisclaimer}</p>
+    <p className="aircraft-quick-disclaimer">{stale ? t.weather.sigmetStaleWarning : hasProjection ? t.weather.sigmetProjectionDisclaimer : t.weather.sigmetAircraftDisclaimer}</p>
   </QuickSection>;
 }
 
