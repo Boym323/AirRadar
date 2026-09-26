@@ -97,6 +97,12 @@ export function normalizeChangelog(existing = "") {
   return `${intro.trimEnd()}\n\n${entries.join("\n\n")}\n`;
 }
 
+export function missingChangelogVersions({ existing = "", tags = releaseTags() } = {}) {
+  return tags
+    .map(tagVersion)
+    .filter((version) => !existing.includes(`## [${version}]`));
+}
+
 export function backfillChangelog({ existing = "", tags = releaseTags(), releases = {} }) {
   const missingEntries = [];
   for (let index = 0; index < tags.length; index += 1) {
@@ -129,6 +135,15 @@ function main() {
     process.stdout.write(`[AirRadar changelog] ${updated === existing ? "unchanged" : "backfilled"}\n`);
     return;
   }
+  if (command === "check") {
+    const existing = readFileSync(CHANGELOG_PATH, "utf8");
+    const missing = missingChangelogVersions({ existing });
+    if (missing.length) {
+      throw new Error(`CHANGELOG.md is missing release tags: ${missing.join(", ")}`);
+    }
+    process.stdout.write("[AirRadar changelog] synchronized\n");
+    return;
+  }
   if (command === "normalize") {
     const existing = readFileSync(CHANGELOG_PATH, "utf8");
     const updated = normalizeChangelog(existing);
@@ -137,7 +152,7 @@ function main() {
     return;
   }
   if (command !== "generate" || !version || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new Error("Usage: node scripts/changelog.mjs generate VERSION YYYY-MM-DD | backfill | normalize");
+    throw new Error("Usage: node scripts/changelog.mjs generate VERSION YYYY-MM-DD | backfill | check | normalize");
   }
   const existing = readFileSync(CHANGELOG_PATH, "utf8");
   const updated = updateChangelog({ version, date, existing });
