@@ -26,6 +26,7 @@ interface RadarDrawerDetailsProps {
   sigmetStale: boolean;
   windContext: AircraftRadarQuickDetailProps["windContext"];
   windAhead: AircraftRadarQuickDetailProps["windAhead"];
+  destinationWind: AircraftRadarQuickDetailProps["destinationWind"];
   windStatus: AircraftRadarQuickDetailProps["windStatus"];
   sectorTraffic: AircraftRadarQuickDetailProps["sectorTraffic"];
   watchlisted: boolean;
@@ -49,6 +50,7 @@ export function RadarDrawerDetails({
   sigmetStale,
   windContext,
   windAhead,
+  destinationWind,
   windStatus,
   sectorTraffic,
   watchlisted,
@@ -77,6 +79,7 @@ export function RadarDrawerDetails({
       sigmetStale={sigmetStale}
       windContext={windContext}
       windAhead={windAhead}
+      destinationWind={destinationWind}
       windStatus={windStatus}
       sectorTraffic={sectorTraffic}
       watchlisted={watchlisted}
