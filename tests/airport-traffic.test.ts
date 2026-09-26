@@ -60,6 +60,20 @@ class FakeCollection {
     return this;
   }
 
+  orderBy(callback: (fields: Row) => unknown): FakeCollection {
+    callback(new Proxy({}, {
+      get: (_target, property: string) => ({
+        asc: () => ({ property, direction: "asc" }),
+        desc: () => ({ property, direction: "desc" }),
+      }),
+    }));
+    return new FakeCollection([...this.rows].sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0)), this.kind, this.onAll, this.onIn);
+  }
+
+  offset(value: number): FakeCollection {
+    return new FakeCollection(this.rows.slice(value), this.kind, this.onAll, this.onIn);
+  }
+
   limit(value: number): FakeCollection {
     return new FakeCollection(this.rows.slice(0, value), this.kind, this.onAll, this.onIn);
   }
