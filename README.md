@@ -16,6 +16,21 @@ then only the linked document relevant to the task; do not assume the whole
 - [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md) — source provenance, security, and licensing
 - [`docs/FEATURES.md`](docs/FEATURES.md) — routes/API and production status
 
+## Codebase growth
+
+The chart tracks non-empty physical source lines and separates production code
+from test code. Production excludes documentation, migrations, generated output,
+and public/vendor assets; test code includes `tests/**`, `*.test.*`,
+`*.spec.*`, `__tests__`, and test-runner configuration. Snapshots are added
+only when the measured code counts change.
+
+![AirRadar codebase growth](docs/metrics/code-growth.svg)
+
+The history is stored in
+[`docs/metrics/code-history.json`](docs/metrics/code-history.json) and is
+updated automatically on `main` by the codebase metrics workflow. Run
+`npm run metrics:code` to refresh it locally.
+
 ## Quick start — demo mode
 
 Demo mode is automatic when `READSB_BASE_URL` is empty or absent.
