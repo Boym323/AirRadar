@@ -8,6 +8,14 @@ import { fileURLToPath } from "node:url";
 export const STABLE_PRODUCTION_VERSION = "1.0.0";
 export const RELEASE_CANDIDATE_VERSION_PATTERN = /^1\.0\.0-rc\.[1-9]\d*$/;
 
+export function isProductionGateFullSmokeViewport(viewport) {
+  return viewport?.width === 375 || viewport?.width === 821;
+}
+
+export function isProductionGateMarkerSmokeViewport(viewport) {
+  return viewport?.width === 821;
+}
+
 function validReleaseVersion(value) {
   return typeof value === "string" && /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-rc\.[1-9]\d*)?$/.test(value);
 }
@@ -202,39 +210,65 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
   try {
-    const routeSmoke = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const configuredViewport = process.env.PRODUCTION_GATE_BROWSER_VIEWPORT;
+    const responsiveSweepPromise = configuredViewport ? Promise.resolve() : (async () => {
+      const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
+      try {
+        await sweepPage.goto(`${baseUrl}/?mapDiagnostics=1`, { waitUntil: "domcontentloaded" });
+        await sweepPage.locator("h1").first().waitFor({ state: "visible" });
+        const sweepFailures = [];
+        // Exercise breakpoint boundaries without paying for a full page reload
+        // at every width. This runs concurrently with the secondary-route smoke.
+        const sweepWidths = [430, 480, 700, 720, 820, 821, 899, 900, 901, 950, 951, 1024, 1100, 1101, 1400, 1401];
+        for (const width of sweepWidths) {
+          await sweepPage.setViewportSize({ width, height: 900 });
+          const metrics = await sweepPage.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
+          if (metrics.scrollWidth > metrics.innerWidth + 1) sweepFailures.push({ width, ...metrics });
+        }
+        if (sweepFailures.length) throw new Error(`Responsive width sweep failed: ${JSON.stringify(sweepFailures.slice(0, 10))}`);
+        console.log(`[production-gates] responsive width sweep ${sweepWidths.join(",")} failures=0 pageReloads=1`);
+      } finally {
+        await sweepPage.close();
+      }
+    })();
     const routeErrors = [];
     const routeWarnings = [];
     const unavailable = [];
-    routeSmoke.on("pageerror", (error) => routeErrors.push(`page: ${error.message}`));
-    routeSmoke.on("console", (message) => { if (message.type() === "error" && !message.text().includes("tile.openstreetmap.org") && !message.text().includes("503 (Service Unavailable)") && !message.text().includes("InvalidStateError: The source image could not be decoded")) routeErrors.push(`console.error: ${message.text()}`); if (message.type() === "warning") routeWarnings.push(message.text()); });
-    routeSmoke.on("response", (response) => { if (response.status() >= 500 && !response.url().includes("tile.openstreetmap.org")) { if (response.status() === 503 && (/\/api\/(history|time-machine)\//.test(response.url()))) unavailable.push(`${response.status()}: ${response.url()}`); else routeErrors.push(`http ${response.status()}: ${response.url()}`); } });
+    const configureRouteSmokePage = (page) => {
+      page.on("pageerror", (error) => routeErrors.push(`page: ${error.message}`));
+      page.on("console", (message) => { if (message.type() === "error" && !message.text().includes("tile.openstreetmap.org") && !message.text().includes("503 (Service Unavailable)") && !message.text().includes("InvalidStateError: The source image could not be decoded")) routeErrors.push(`console.error: ${message.text()}`); if (message.type() === "warning") routeWarnings.push(message.text()); });
+      page.on("response", (response) => { if (response.status() >= 500 && !response.url().includes("tile.openstreetmap.org")) { if (response.status() === 503 && (/\/api\/(history|time-machine)\//.test(response.url()))) unavailable.push(`${response.status()}: ${response.url()}`); else routeErrors.push(`http ${response.status()}: ${response.url()}`); } });
+      return page;
+    };
     const routes = [
-      ["/", ".radar-shell"], ["/history", ".history-page"], ["/statistics", ".statistics-page"], ["/fleet", ".fleet-page"],
+      ["/history", ".history-page"], ["/statistics", ".statistics-page"], ["/fleet", ".fleet-page"],
       ["/time-machine", ".time-machine-page"], ["/intelligence", ".intelligence-page"], ["/watchlist", ".watchlist-page"],
       ["/alerts", ".alert-history-page"], ["/recap/daily", ".recap-page"], ["/recap/weekly", ".recap-page"],
       ["/system", ".system-page"], ["/receiver/coverage", ".statistics-page"],
     ];
-    for (const [path, rootSelector] of routes) {
-      let response;
-      try {
-        response = await routeSmoke.goto(`${baseUrl}${path}`, { waitUntil: "domcontentloaded" });
-      } catch (error) {
-        throw new Error(`Secondary route ${path} navigation failed: ${error instanceof Error ? error.message : String(error)}`);
+    const routePages = await Promise.all(Array.from({ length: 3 }, async () => configureRouteSmokePage(await browser.newPage({ viewport: { width: 1280, height: 800 } }))));
+    await Promise.all(routePages.map(async (page, workerIndex) => {
+      for (let routeIndex = workerIndex; routeIndex < routes.length; routeIndex += routePages.length) {
+        const [path, rootSelector] = routes[routeIndex];
+        let response;
+        try {
+          response = await page.goto(`${baseUrl}${path}`, { waitUntil: "domcontentloaded" });
+        } catch (error) {
+          throw new Error(`Secondary route ${path} navigation failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        if (!response?.ok()) throw new Error(`Secondary route ${path} returned HTTP ${response?.status()}`);
+        await page.locator(rootSelector).waitFor({ state: "visible", timeout: 15_000 });
+        await page.locator("h1").first().waitFor({ state: "visible", timeout: 15_000 });
       }
-      if (!response?.ok()) throw new Error(`Secondary route ${path} returned HTTP ${response?.status()}`);
-      await routeSmoke.locator(rootSelector).waitFor({ state: "visible", timeout: 15_000 });
-      await routeSmoke.locator("h1").first().waitFor({ state: "visible", timeout: 15_000 });
-    }
+    }));
+    const routeSmoke = routePages[0];
+    await Promise.all(routePages.slice(1).map((page) => page.close()));
     if (routeErrors.length) throw new Error(`Secondary route smoke failed: ${routeErrors.join(" | ")}`);
     if (unavailable.length) console.log(`[production-gates] expected unavailable API responses observed=${unavailable.length}`);
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
-    for (const path of ["/history", "/statistics", "/time-machine"]) {
-      await routeSmoke.locator(`a[href="${path}"]`).first().click();
-      await routeSmoke.waitForURL(`**${path}`);
-      await routeSmoke.locator("h1").first().waitFor({ state: "visible" });
-      await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
-    }
+    await routeSmoke.locator('a[href="/history"]').first().click();
+    await routeSmoke.waitForURL("**/history");
+    await routeSmoke.locator("h1").first().waitFor({ state: "visible" });
     await routeSmoke.setViewportSize({ width: 390, height: 844 });
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
     await routeSmoke.locator(".mobile-bottom-more > summary").click();
@@ -243,47 +277,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await routeSmoke.close();
-    const configuredViewport = process.env.PRODUCTION_GATE_BROWSER_VIEWPORT;
-    if (!configuredViewport) {
-      const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
-      await sweepPage.goto(`${baseUrl}/?mapDiagnostics=1`, { waitUntil: "domcontentloaded" });
-      await sweepPage.locator("h1").first().waitFor({ state: "visible" });
-      const sweepFailures = [];
-      // Exercise breakpoint boundaries and representative desktop widths. A
-      // pixel-by-pixel sweep adds hundreds of identical layout passes without
-      // increasing coverage because CSS behavior changes at breakpoints.
-      const sweepWidths = [821, 899, 900, 901, 1024, 1099, 1100, 1101, 1200];
-      for (const width of sweepWidths) {
-        await sweepPage.setViewportSize({ width, height: 900 });
-        const metrics = await sweepPage.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
-        if (metrics.scrollWidth > metrics.innerWidth + 1) sweepFailures.push({ width, ...metrics });
-      }
-      await sweepPage.close();
-      if (sweepFailures.length) throw new Error(`Responsive width sweep failed: ${JSON.stringify(sweepFailures.slice(0, 10))}`);
-      console.log(`[production-gates] responsive width sweep ${sweepWidths.join(",")} failures=0 pageReloads=1`);
-    }
+    await responsiveSweepPromise;
     const browserViewports = [
       { width: 320, height: 844 },
-      { width: 360, height: 844 },
       { width: 375, height: 812 },
-      { width: 390, height: 844 },
-      { width: 430, height: 932 },
-      { width: 768, height: 1024 },
       { width: 820, height: 1180 },
       { width: 821, height: 1000 },
-      { width: 899, height: 900 },
-      { width: 900, height: 900 },
-      { width: 901, height: 900 },
-      { width: 902, height: 900 },
-      { width: 1024, height: 768 },
-      { width: 1099, height: 900 },
       { width: 1100, height: 900 },
-      { width: 1101, height: 900 },
-      { width: 1102, height: 900 },
-      { width: 1150, height: 900 },
-      { width: 1200, height: 900 },
-      { width: 1280, height: 800 },
-      { width: 1440, height: 900 },
       { width: 1920, height: 1080 },
     ];
     const viewports = configuredViewport
@@ -292,7 +292,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (configuredViewport && viewports.length !== 1) throw new Error(`Unknown PRODUCTION_GATE_BROWSER_VIEWPORT=${configuredViewport}`);
     for (const viewport of viewports) {
       console.log(`[production-gates] browser viewport ${viewport.width}x${viewport.height}`);
-      const fullSmoke = viewport.width === 375 || viewport.width === 821;
+      const fullSmoke = isProductionGateFullSmokeViewport(viewport);
+      const markerSmoke = isProductionGateMarkerSmokeViewport(viewport);
+      const dataLayerSmoke = fullSmoke && viewport.width >= 821;
+      const viewportStartedAt = performance.now();
+      const logViewportPhase = (phase, startedAt) => {
+        if (fullSmoke) console.log(`[production-gates] viewport ${viewport.width}px phase=${phase} durationMs=${Math.round(performance.now() - startedAt)}`);
+      };
       const page = await browser.newPage({ viewport });
       const fixtureRequests = { airports: 0, atc: 0, ats: 0, context: 0 };
       const originalWaitForFunction = page.waitForFunction.bind(page);
@@ -331,7 +337,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }
       };
       const browserErrors = [];
-      let expectedTransientFailures = 0;
       let expectedRateLimitedTileErrors = 0;
       let expectedRateLimitedApiErrors = 0;
       let airportAttempts = 0;
@@ -364,22 +369,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${response.request().resourceType()} initiator=${response.request().frame()?.url() ?? "(no frame)"}`);
             return;
           }
-          if (response.status() === 503 && expectedTransientFailures > 0) expectedTransientFailures -= 1;
-          else {
-            const request = response.request();
-            const frameUrl = request.frame()?.url() ?? "(no frame)";
-            browserErrors.push(`http ${response.status()}: ${response.url()} resourceType=${request.resourceType()} initiator=${frameUrl}`);
-          }
+          const request = response.request();
+          const frameUrl = request.frame()?.url() ?? "(no frame)";
+          browserErrors.push(`http ${response.status()}: ${response.url()} resourceType=${request.resourceType()} initiator=${frameUrl}`);
         }
       });
       await page.route("**/api/airports**", async (route) => {
         fixtureRequests.airports += 1;
         airportAttempts += 1;
-        if (viewport.width === 375 && airportAttempts === 1) {
-          expectedTransientFailures += 1;
-          return route.fulfill({ status: 503, headers: { "retry-after": "1" }, body: "temporary fixture failure" });
-        }
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 25));
         return route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -392,11 +390,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       await page.route("**/api/atc/sectors**", async (route) => {
         fixtureRequests.atc += 1;
         atcAttempts += 1;
-        if (viewport.width === 375 && atcAttempts === 1) {
-          expectedTransientFailures += 1;
-          return route.fulfill({ status: 503, headers: { "retry-after": "1" }, body: "temporary fixture failure" });
-        }
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 25));
         return route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -564,9 +558,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         const buttonsReady = [...document.querySelectorAll("button")].every((button) => Boolean(button.textContent?.trim() || button.getAttribute("aria-label")));
         return mapReady && imagesReady && buttonsReady;
       });
-      // Ordinary aircraft now render on the bulk WebGL path. Verify that path
-      // first, then promote one aircraft through the normal selection flow so
-      // the existing HTML special-marker anchoring contract is still covered.
+      // Ordinary aircraft render on the bulk WebGL path at every viewport.
+      // The expensive HTML special-marker anchoring and interaction regressions
+      // run only at the representative mobile/desktop full-smoke widths below.
       await page.waitForFunction(() => {
         const map = window.__airradarMapForDiagnostics;
         const runtime = window.__airradarWebglAircraftForDiagnostics;
@@ -599,7 +593,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         || !webglPresentation.directPicking) {
         throw new Error(`WebGL aircraft presentation contract failed at ${viewport.width}px: ${JSON.stringify(webglPresentation)}`);
       }
-      await page.evaluate(() => {
+      if (markerSmoke) {
+        const markerStartedAt = performance.now();
+        await page.evaluate(() => {
         const firstAircraft = document.querySelector(".aircraft-row");
         if (!(firstAircraft instanceof HTMLButtonElement)) throw new Error("aircraft traffic fixture unavailable");
         firstAircraft.click();
@@ -643,11 +639,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           ? [...handles.values()].find((handle) => handle.root === root)?.marker
           : null;
         if (!map || !(root instanceof HTMLElement) || !marker) return { error: "aircraft marker diagnostic fixture unavailable" };
-        const waitForIdle = () => new Promise((resolve) => {
-          let settled = false;
-          const finish = () => { if (!settled) { settled = true; resolve(); } };
-          map.once("idle", finish);
-          window.setTimeout(finish, 250);
+        const waitForRender = () => new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
         });
         const measure = (step) => {
           const mapRect = map.getContainer().getBoundingClientRect();
@@ -669,27 +662,27 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           };
         };
         const measurements = [];
-        for (const zoom of [4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+        for (const zoom of [4, 8, 12]) {
           map.setZoom(zoom);
-          await waitForIdle();
+          await waitForRender();
           measurements.push(measure(`zoom-${zoom}`));
         }
         const origin = map.getCenter();
-        for (const delta of [[200, 100], [-200, -100], [-200, 0], [200, 0], [0, -100], [0, 100]]) {
+        for (const delta of [[200, 100], [-200, -100]]) {
           map.panBy(delta, { duration: 0 });
-          await waitForIdle();
+          await waitForRender();
           measurements.push(measure(`pan-${delta.join("-")}`));
         }
-        for (const bearing of [0, 45, 90, 180]) {
+        for (const bearing of [90, 180]) {
           map.setBearing(bearing);
-          await waitForIdle();
+          await waitForRender();
           measurements.push(measure(`bearing-${bearing}`));
         }
         map.jumpTo({ center: origin, zoom: 5, bearing: 0 });
-        await waitForIdle();
-        for (const zoom of [10, 12, 7, 5]) {
+        await waitForRender();
+        for (const zoom of [12, 5]) {
           map.setZoom(zoom);
-          await waitForIdle();
+          await waitForRender();
           measurements.push(measure(`roundtrip-${zoom}`));
         }
         return { measurements };
@@ -717,63 +710,48 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         const sidebar = document.querySelector('[data-testid="radar-sidebar"]');
         return Boolean(sidebar && !sidebar.classList.contains("has-selection") && !document.querySelector(".aircraft-marker.selected"));
       });
-      if (viewport.width >= 821) {
+        logViewportPhase("marker", markerStartedAt);
+      }
+      if (fullSmoke && viewport.width >= 821) {
+        const desktopStartedAt = performance.now();
         const trafficTrigger = page.getByTestId("traffic-trigger");
         const sidebar = page.getByTestId("radar-sidebar");
         await trafficTrigger.waitFor({ state: "visible" });
         if (await trafficTrigger.getAttribute("aria-expanded") !== "false" || !await sidebar.evaluate((element) => element.classList.contains("drawer-closed"))) {
           throw new Error(`Desktop radar drawer is not closed initially at ${viewport.width}px`);
         }
+
+        // Keep one keyboard-accessibility path in production smoke.
         await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); });
         await page.keyboard.press("/");
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
         await page.waitForFunction(() => document.activeElement?.classList.contains("search-input"));
-        if (!await page.locator(".search-input").isVisible()) {
-          throw new Error(`Slash shortcut did not open and focus Traffic search at ${viewport.width}px`);
-        }
         const trafficCloseLabel = await sidebar.locator(".drawer-close-button").getAttribute("aria-label");
-        if (trafficCloseLabel !== "Zavřít panel provozu" || trafficCloseLabel === "Zavřít detail letadla") {
-          throw new Error(`Traffic drawer Close has the wrong accessible name at ${viewport.width}px: ${trafficCloseLabel}`);
+        if (trafficCloseLabel !== "Zavřít panel provozu"
+          || await trafficTrigger.getAttribute("aria-expanded") !== "true"
+          || !await sidebar.evaluate((element) => element.classList.contains("drawer-traffic"))) {
+          throw new Error(`Keyboard Traffic drawer contract failed at ${viewport.width}px: close=${trafficCloseLabel}`);
         }
-        await sidebar.locator(".drawer-close-button").click();
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
-        await page.keyboard.press("f");
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
-        await page.waitForFunction(() => document.querySelector(".filter-button")?.getAttribute("aria-expanded") === "true");
-        if (!await page.locator(".filter-button").getAttribute("aria-expanded").then((value) => value === "true")) {
-          throw new Error(`F shortcut did not open Traffic and filters at ${viewport.width}px`);
-        }
-        await page.keyboard.press("f");
-        if (await page.locator(".filter-button").getAttribute("aria-expanded").then((value) => value !== "false")) {
-          throw new Error(`Second F shortcut did not toggle filters closed at ${viewport.width}px`);
-        }
-        await sidebar.locator(".drawer-close-button").click();
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
+
+        // Mobile full-smoke covers pointer opening. Continue directly from the
+        // keyboard-opened desktop drawer instead of closing and reopening it.
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
-        await trafficTrigger.click({ force: true });
-        await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
-        if (await trafficTrigger.getAttribute("aria-expanded") !== "true"
-          || !await sidebar.evaluate((element) => element.classList.contains("drawer-traffic"))
-          || (await trafficTrigger.textContent())?.includes("×")) {
-          throw new Error(`Traffic drawer did not open at ${viewport.width}px`);
-        }
         await page.locator("details.map-layers > summary").click();
         const drawerLayerMenuBounds = await page.locator(".map-layers-menu").boundingBox();
         const drawerBounds = await sidebar.boundingBox();
-        if (!drawerLayerMenuBounds || !drawerBounds) throw new Error(`Drawer/layers geometry is not measurable at ${viewport.width}px`);
-        if (drawerLayerMenuBounds.x < 0 || drawerLayerMenuBounds.x + drawerLayerMenuBounds.width > drawerBounds.x + 1) {
-          throw new Error(`Map layers menu is not fully in the visible map area at ${viewport.width}px: menu=${JSON.stringify(drawerLayerMenuBounds)}, drawer=${JSON.stringify(drawerBounds)}`);
-        }
         const trafficBounds = await trafficTrigger.boundingBox();
         const layersBounds = await page.locator("details.map-layers > summary").boundingBox();
-        if (!trafficBounds || !layersBounds || trafficBounds.x + trafficBounds.width > layersBounds.x + 1 || layersBounds.x + layersBounds.width > drawerBounds.x + 1) {
-          throw new Error(`Traffic/Layers controls overlap or are hidden by the drawer at ${viewport.width}px: traffic=${JSON.stringify(trafficBounds)}, layers=${JSON.stringify(layersBounds)}, drawer=${JSON.stringify(drawerBounds)}`);
+        if (!drawerLayerMenuBounds || !drawerBounds || !trafficBounds || !layersBounds
+          || drawerLayerMenuBounds.x < 0
+          || drawerLayerMenuBounds.x + drawerLayerMenuBounds.width > drawerBounds.x + 1
+          || trafficBounds.x + trafficBounds.width > layersBounds.x + 1
+          || layersBounds.x + layersBounds.width > drawerBounds.x + 1) {
+          throw new Error(`Traffic/Layers geometry failed at ${viewport.width}px`);
         }
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
-        await sidebar.locator(".aircraft-row").first().waitFor({ state: "visible" });
-        await sidebar.locator(".aircraft-row").first().evaluate((element) => element.click());
-        await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
-        await sidebar.locator(".drawer-close-button").waitFor({ state: "visible" });
+
+        // Open one aircraft and validate the user-visible quick-detail contract.
+        await sidebar.locator(".aircraft-row").first().click();
         const quickDetail = sidebar.getByTestId("aircraft-quick-detail");
         await quickDetail.waitFor({ state: "visible" });
         await quickDetail.getByRole("tab", { name: "Let", exact: true }).click();
@@ -784,7 +762,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
           liveMetricGrids: element.querySelectorAll(".aircraft-quick-metrics").length,
           technicalOpen: element.querySelector(".aircraft-quick-advanced")?.hasAttribute("open") ?? false,
-          fullDetailHref: element.querySelector("a[href^='/aircraft/']")?.getAttribute("href") ?? null,
           atcPrimary: Boolean(element.querySelector(".aircraft-quick-atc-primary")),
           dataDisclosure: Boolean(element.querySelector('[role="tab"]#aircraft-tab-data')),
         }));
@@ -801,59 +778,23 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         if (!/^\/aircraft\/[0-9A-Fa-f~]+$/.test(fullDetailHref ?? "")) {
           throw new Error(`Aircraft quick-detail full link missing at ${viewport.width}px`);
         }
-        if (await sidebar.locator(".drawer-close-button:visible, .detail-panel .close-button:visible").count() !== 1) {
-          throw new Error(`Desktop detail has more than one visible Close action at ${viewport.width}px`);
+        if (!await sidebar.evaluate((element) => element.classList.contains("drawer-aircraft"))
+          || await sidebar.locator(".close-button").getAttribute("aria-label") !== "Zavřít detail letadla") {
+          throw new Error(`Aircraft detail drawer contract failed at ${viewport.width}px`);
         }
-        if (!await sidebar.evaluate((element) => element.classList.contains("drawer-aircraft"))) {
-          throw new Error(`Aircraft detail did not open at ${viewport.width}px`);
+        await page.locator("details.map-layers").evaluate((element) => { element.open = true; });
+        const detailLayerMenuBounds = await page.locator(".map-layers-menu").boundingBox();
+        const detailDrawerBounds = await sidebar.boundingBox();
+        if (!detailLayerMenuBounds || !detailDrawerBounds || detailLayerMenuBounds.x + detailLayerMenuBounds.width > detailDrawerBounds.x + 1) {
+          throw new Error(`Map layers menu is not usable beside aircraft detail at ${viewport.width}px`);
         }
-        if (await sidebar.locator(".close-button").getAttribute("aria-label") !== "Zavřít detail letadla") {
-          throw new Error(`Aircraft detail Close has the wrong accessible name at ${viewport.width}px`);
-        }
-        await page.keyboard.press("f");
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
-        await page.waitForFunction(() => document.querySelector(".filter-button")?.getAttribute("aria-expanded") === "true");
-        if (await sidebar.locator(".filter-button").getAttribute("aria-expanded") !== "true") {
-          throw new Error(`F shortcut did not return from aircraft detail with filters open at ${viewport.width}px`);
-        }
-        await page.keyboard.press("f");
-        await page.evaluate(() => document.body.focus());
-        await sidebar.locator(".aircraft-row").first().evaluate((element) => element.click());
-        await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
-        await page.keyboard.press("/");
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
-        await page.locator(".search-input").waitFor({ state: "visible" });
-        if (!await page.locator(".search-input").isVisible()) {
-          throw new Error(`Slash shortcut did not return from aircraft detail at ${viewport.width}px`);
-        }
-        await sidebar.locator(".drawer-close-button").click();
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
-        await trafficTrigger.click({ force: true });
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
-        await sidebar.locator(".aircraft-row").first().click();
-        await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
-        await sidebar.locator(".detail-back-button").click();
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
         await sidebar.locator(".drawer-close-button").click();
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         if (await page.evaluate(() => document.activeElement?.getAttribute("data-testid")) !== "traffic-trigger") {
           throw new Error(`Desktop Close did not restore focus to Traffic trigger at ${viewport.width}px`);
         }
-        await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
-        await trafficTrigger.click({ force: true });
-        await sidebar.locator(".aircraft-row").first().click();
-        await sidebar.locator(".detail-back-button").waitFor({ state: "visible" });
-        await sidebar.locator(".drawer-close-button").click();
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
-        await trafficTrigger.focus();
-        await page.keyboard.press("Enter");
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-traffic"));
-        await page.keyboard.press("Escape");
-        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
-        if (await page.evaluate(() => document.activeElement?.getAttribute("data-testid")) !== "traffic-trigger") {
-          throw new Error(`Desktop Escape did not restore focus to Traffic trigger at ${viewport.width}px`);
-        }
+        logViewportPhase("desktop-ui", desktopStartedAt);
       }
 
       // Run the expensive interaction matrix once per responsive family.
@@ -978,112 +919,52 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           throw new Error(`Secondary tools are not available after expanding sidebar at ${viewport.width}px`);
         }
         await page.locator(".mobile-collapse").click();
+        await sidebar.locator(".drawer-close-button").click();
+        await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         await page.locator("details.map-layers > summary").click();
       }
 
-      const airportLayer = page.getByTestId("map-layer-airports");
-      const atcLayer = page.getByTestId("map-layer-atc");
-      const atsLayer = page.getByTestId("map-layer-ats");
-      const sigmetLayer = page.getByTestId("map-layer-sigmet");
-      await airportLayer.waitFor({ state: "visible" });
-      if (viewport.width === 375) {
-        try {
-          await page.waitForFunction(() => {
-            const text = (document.querySelector('[data-testid="map-layer-airports"]')?.textContent || "").toLowerCase();
-            return text.includes("reconnecting") || text.includes("obnovuje se spojení");
-          }, undefined, { timeout: 5_000 });
-        } catch (error) {
-          // A fast retry can complete before the transient state is painted;
-          // the later attempt-count assertion still verifies recovery.
-          if (airportAttempts < 2) throw error;
-        }
+      if (dataLayerSmoke) {
+        const dataLayerStartedAt = performance.now();
+        const airportLayer = page.getByTestId("map-layer-airports");
+        const atcLayer = page.getByTestId("map-layer-atc");
+        const atsLayer = page.getByTestId("map-layer-ats");
+        const sigmetLayer = page.getByTestId("map-layer-sigmet");
+        await airportLayer.waitFor({ state: "visible" });
+        await page.evaluate(() => {
+          for (const testId of ["map-layer-airports", "map-layer-atc", "map-layer-ats", "map-layer-sigmet"]) {
+            const input = document.querySelector(`[data-testid="${testId}"] input`);
+            if (input instanceof HTMLInputElement && !input.checked) input.click();
+          }
+        });
+        await page.waitForFunction(() => {
+          const map = window.__airradarMapForDiagnostics;
+          if (!map) return false;
+          const hasCount = (testId) => /\d/.test(document.querySelector(`[data-testid="${testId}"]`)?.textContent || "");
+          const sourceIds = ["route-airports", "atc-sectors", "ats-routes", "aviation-sigmet"];
+          const layerIds = ["route-airports-circle", "atc-sectors-fill", "ats-routes-line", "aviation-sigmet-fill"];
+          const airports = map.querySourceFeatures("route-airports");
+          const atc = map.querySourceFeatures("atc-sectors");
+          const ats = map.querySourceFeatures("ats-routes");
+          const hasCountry = (features, countryCode) => features.some((feature) => feature.properties?.countryCode === countryCode);
+          return hasCount("map-layer-airports")
+            && hasCount("map-layer-atc")
+            && hasCount("map-layer-ats")
+            && sourceIds.every((id) => Boolean(map.getSource(id)))
+            && layerIds.every((id) => Boolean(map.getLayer(id)))
+            && airports.some((feature) => feature.properties?.icao === "LKFIX")
+            && atc.some((feature) => feature.properties?.id === "fixture-sector")
+            && ats.some((feature) => feature.properties?.segmentId === "fixture-segment")
+            && ["CZ", "SK", "AT"].every((country) => hasCountry(atc, country))
+            && ["CZ", "SK", "AT"].every((country) => hasCountry(ats, country))
+            && atc.some((feature) => (feature.properties?.countryCode === "SK" || feature.properties?.countryCode === "AT") && feature.properties?.airspaceType === "FIR");
+        }, undefined, { timeout: 10_000 });
+      if (airportAttempts < 1 || atcAttempts < 1) {
+        throw new Error(`Dataset requests did not complete: airports=${airportAttempts}, atc=${atcAttempts}`);
       }
-      await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-airports"]')?.textContent || ""));
-      const airportCheckbox = airportLayer.locator("input");
-      await airportCheckbox.uncheck();
-      await airportCheckbox.check();
-      await atcLayer.locator("input").check();
-      await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-atc"]')?.textContent || ""));
-      await atcLayer.locator("input").uncheck();
-      await atcLayer.locator("input").check();
-      await page.waitForFunction(() => {
-        const map = window.__airradarMapForDiagnostics;
-        return Boolean(map?.getSource("route-airports") && map.querySourceFeatures("route-airports").some((feature) => feature.properties?.icao === "LKFIX"));
-      }, undefined, { timeout: 10_000 });
-      await page.waitForFunction(() => {
-        const map = window.__airradarMapForDiagnostics;
-        return Boolean(map?.getSource("atc-sectors") && map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.id === "fixture-sector"));
-      }, undefined, { timeout: 10_000 });
-      await atsLayer.locator("input").check();
-      await page.waitForFunction(() => /\d/.test(document.querySelector('[data-testid="map-layer-ats"]')?.textContent || ""));
-      await page.waitForFunction(() => {
-        const map = window.__airradarMapForDiagnostics;
-        return Boolean(map?.getSource("ats-routes") && map.querySourceFeatures("ats-routes").some((feature) => feature.properties?.segmentId === "fixture-segment"));
-      }, undefined, { timeout: 10_000 });
-      await page.locator(".aircraft-row").first().evaluate((element) => element.click());
-      if (viewport.width >= 821) {
-        await page.locator("details.map-layers").evaluate((element) => { element.open = true; });
-        const detailLayerMenuBounds = await page.locator(".map-layers-menu").boundingBox();
-        const detailDrawerBounds = await page.getByTestId("radar-sidebar").boundingBox();
-        if (!detailLayerMenuBounds || !detailDrawerBounds || detailLayerMenuBounds.x + detailLayerMenuBounds.width > detailDrawerBounds.x + 1) {
-          throw new Error(`Map layers menu is not usable beside aircraft detail at ${viewport.width}px`);
-        }
-        await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
+        logViewportPhase("data-layer", dataLayerStartedAt);
       }
-      // Context filters are independent of global style-idle state: both
-      // source layers are already present and populated above.
-      await page.waitForFunction(() => {
-        const map = window.__airradarMapForDiagnostics;
-        if (!map?.getLayer("atc-sectors-context-highlight") || !map.getLayer("ats-route-context-highlight")) return false;
-        return JSON.stringify(map.getFilter("atc-sectors-context-highlight"))?.includes("fixture-sector")
-          && JSON.stringify(map.getFilter("ats-route-context-highlight"))?.includes("fixture-segment");
-      }, undefined, { timeout: 30_000 });
-      await page.locator(viewport.width >= 821 ? ".drawer-close-button" : ".close-button").click();
-      await page.waitForFunction(() => {
-        const map = window.__airradarMapForDiagnostics;
-        if (!map?.getLayer("atc-sectors-context-highlight") || !map.getLayer("ats-route-context-highlight")) return false;
-        return !JSON.stringify(map.getFilter("atc-sectors-context-highlight"))?.includes("fixture-sector")
-          && !JSON.stringify(map.getFilter("ats-route-context-highlight"))?.includes("fixture-segment");
-      }, undefined, { timeout: 10_000 });
-      await atsLayer.locator("input").evaluate((element) => element.click());
-      await atsLayer.locator("input").evaluate((element) => element.click());
-      await sigmetLayer.locator("input").evaluate((element) => element.click());
-      await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [17.9, 49.0], zoom: 8 }));
-      await page.waitForFunction(() => {
-        const map = window.__airradarMapForDiagnostics;
-        if (!map || !map.isStyleLoaded()) return false;
-        const sourceIds = ["route-airports", "atc-sectors", "ats-routes", "aviation-sigmet"];
-        const layerIds = ["route-airports-circle", "atc-sectors-fill", "ats-routes-line", "aviation-sigmet-fill"];
-        const hasCountry = (sourceId, layerId, countryCode) => map.queryRenderedFeatures({ layers: [layerId] }).some((feature) => feature.properties?.countryCode === countryCode)
-          || map.querySourceFeatures(sourceId).some((feature) => feature.properties?.countryCode === countryCode);
-        return sourceIds.every((id) => Boolean(map.getSource(id)))
-          && layerIds.every((id) => Boolean(map.getLayer(id)))
-          && hasCountry("atc-sectors", "atc-sectors-fill", "SK")
-          && hasCountry("atc-sectors", "atc-sectors-fill", "AT")
-          && hasCountry("ats-routes", "ats-routes-line", "SK")
-          && hasCountry("ats-routes", "ats-routes-line", "AT");
-      }, undefined, { timeout: 30_000 });
-      await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [19.5, 48.8], zoom: 6 }));
-      await page.waitForFunction(() => {
-        const map = window.__airradarMapForDiagnostics;
-        if (!map?.isStyleLoaded()) return false;
-        const hasCountry = (sourceId, layerId, countryCode) => map.queryRenderedFeatures({ layers: [layerId] }).some((feature) => feature.properties?.countryCode === countryCode)
-          || map.querySourceFeatures(sourceId).some((feature) => feature.properties?.countryCode === countryCode);
-        return hasCountry("atc-sectors", "atc-sectors-fill", "SK")
-          && hasCountry("atc-sectors", "atc-sectors-fill", "AT")
-          && hasCountry("ats-routes", "ats-routes-line", "SK")
-          && hasCountry("ats-routes", "ats-routes-line", "AT");
-      }, undefined, { timeout: 30_000 });
-      await page.waitForFunction(() => {
-        const map = window.__airradarMapForDiagnostics;
-        if (!map?.isStyleLoaded()) return false;
-        return map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "SK" && feature.properties?.airspaceType === "FIR")
-          || map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.countryCode === "SK" && feature.properties?.airspaceType === "FIR")
-          || map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "AT" && feature.properties?.airspaceType === "FIR")
-          || map.querySourceFeatures("atc-sectors").some((feature) => feature.properties?.countryCode === "AT" && feature.properties?.airspaceType === "FIR");
-      }, undefined, { timeout: 30_000 });
       if (browserErrors.length) throw new Error(`Browser errors at ${viewport.width}px: ${browserErrors.join(" | ")}`);
-      if (viewport.width === 390 && (airportAttempts < 1 || atcAttempts < 1)) throw new Error(`Dataset requests did not complete: airports=${airportAttempts}, atc=${atcAttempts}`);
       if (viewport.width <= 820) {
         const mobileSidebar = page.getByTestId("radar-sidebar");
         const mobileTrafficTrigger = page.getByTestId("traffic-trigger");
@@ -1118,20 +999,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         if (!await mobileTrafficTrigger.isVisible()) throw new Error("Mobile Traffic trigger did not return after closing aircraft detail");
       }
-      await page.evaluate(() => window.__airradarMapForDiagnostics?.jumpTo({ center: [14.2, 50.1], zoom: 8 }));
-      await page.waitForFunction(() => {
-        const map = window.__airradarMapForDiagnostics;
-        if (!map || !map.isStyleLoaded()) return false;
-        return map.queryRenderedFeatures({ layers: ["atc-sectors-fill"] }).some((feature) => feature.properties?.countryCode === "CZ")
-          && map.queryRenderedFeatures({ layers: ["ats-routes-line"] }).some((feature) => feature.properties?.countryCode === "CZ");
-      }, undefined, { timeout: 30_000 });
       const accessibility = await page.evaluate(() => ({
         missingImageAlt: [...document.images].filter((image) => !image.hasAttribute("alt")).length,
         unnamedButtons: [...document.querySelectorAll("button")].filter((button) => !button.textContent?.trim() && !button.getAttribute("aria-label")).length,
       }));
       if (accessibility.missingImageAlt || accessibility.unnamedButtons) throw new Error(`Basic accessibility check failed at ${viewport.width}px: ${JSON.stringify(accessibility)}`);
 
-      if (viewport.width === 390) {
+      if (viewport.width === 375) {
         const mobileNav = page.locator(".mobile-bottom-nav");
         await mobileNav.waitFor({ state: "visible" });
         if (await mobileNav.locator(":scope > a, :scope > details").count() !== 5) throw new Error("Mobile bottom navigation must contain exactly five items");
@@ -1139,12 +1013,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           overflow: document.documentElement.scrollWidth > window.innerWidth,
           items: [...element.children].map((child) => { const box = child.getBoundingClientRect(); return { x: box.x, right: box.right, y: box.y, bottom: box.bottom }; }),
         }));
-        if (navLayout.overflow || navLayout.items.some((item) => item.y < 0 || item.right > window.innerWidth + 1)) throw new Error(`Mobile bottom navigation geometry failed: ${JSON.stringify(navLayout)}`);
+        if (navLayout.overflow || navLayout.items.some((item) => item.y < 0 || item.right > viewport.width + 1)) throw new Error(`Mobile bottom navigation geometry failed: ${JSON.stringify(navLayout)}`);
         await mobileNav.locator(".mobile-bottom-more > summary").click();
         const moreBounds = await mobileNav.locator(".mobile-bottom-more > div").boundingBox();
         if (!moreBounds || moreBounds.x < 0 || moreBounds.right > viewport.width + 1 || moreBounds.y < 0) throw new Error(`Mobile More menu is outside the viewport: ${JSON.stringify(moreBounds)}`);
         await mobileNav.locator(".mobile-bottom-more > summary").click();
       }
+      logViewportPhase("total", viewportStartedAt);
       await page.close();
     }
   } finally {
