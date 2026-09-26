@@ -143,6 +143,34 @@ jobs:
             --automated \
             --commit "${GITHUB_SHA}"
 
+      - name: Verify deployed release identity
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_version="$(node /var/www/airradar/scripts/version.mjs resolve-release-version --channel stable)"
+          expected_commit="${GITHUB_SHA:0:8}"
+          version_tmp="$(mktemp)"
+          trap 'rm -f "${version_tmp}"' EXIT
+          curl -fsS --retry 5 --retry-delay 2 --retry-all-errors https://airradar.pomykal.cz/api/version -o "${version_tmp}"
+          node - "${version_tmp}" "${expected_version}" "${expected_commit}" <<'NODE'
+          const fs = require("node:fs");
+          const [path, expectedVersion, expectedCommit] = process.argv.slice(2);
+          const payload = JSON.parse(fs.readFileSync(path, "utf8"));
+          if (payload.version !== expectedVersion) {
+            throw new Error(`Production version mismatch: expected ${expectedVersion}, got ${payload.version}`);
+          }
+          if (payload.commit !== expectedCommit) {
+            throw new Error(`Production commit mismatch: expected ${expectedCommit}, got ${payload.commit}`);
+          }
+          if (payload.channel !== "production") {
+            throw new Error(`Production channel mismatch: expected production, got ${payload.channel}`);
+          }
+          if (typeof payload.buildTime !== "string" || !Number.isFinite(Date.parse(payload.buildTime))) {
+            throw new Error(`Production build time is invalid: ${payload.buildTime}`);
+          }
+          console.log(`[deploy] release identity OK version=${payload.version} commit=${payload.commit}`);
+          NODE
+
       - name: Create GitHub release notes
         env:
           GITHUB_TOKEN: ${{ github.token }}
