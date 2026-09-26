@@ -427,7 +427,6 @@ export function AirRadarApp() {
     sigmetEnabled,
     sigmetData,
   } = useRadarWeatherContext({
-    showSigmet,
     loadSigmet: showSigmet || selectedHex !== null,
     showWeatherRadar,
     showMetar,
