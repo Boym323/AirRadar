@@ -464,6 +464,7 @@ export function AirRadarApp() {
   const ognMarkersRef = useRef<Map<string, OgnMarkerHandle>>(new Map());
   const aircraftMotionRuntimeRef = useRef<AircraftMotionRuntime | null>(null);
   const aircraftWebglRuntimeRef = useRef<AircraftWebglRuntime | null>(null);
+  const aircraftWebglInteractionAircraftRef = useRef<Map<string, AircraftView>>(new Map());
   const aircraftWebglInteractionUpdatedAtRef = useRef(Number.NEGATIVE_INFINITY);
   const labelCollisionSchedulerRef = useRef<(() => void) | null>(null);
   const aircraftMapSyncRef = useRef<((forceFull?: boolean) => void) | null>(null);
@@ -1214,6 +1215,23 @@ export function AirRadarApp() {
         map.getCanvas().style.cursor = "";
         aircraftWebglRuntime.setHovered(null);
       });
+      const refreshWebglInteractionGeometry = () => {
+        const now = performance.now();
+        if (now - aircraftWebglInteractionUpdatedAtRef.current < 500) return;
+        const source = map.getSource(AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID) as GeoJSONSource | undefined;
+        if (!source) return;
+        const zoom = map.getZoom();
+        source.setData({
+          type: "FeatureCollection",
+          features: [...aircraftWebglInteractionAircraftRef.current.values()].map((aircraft) => aircraftWebglInteractionFeature(
+            aircraft,
+            zoom,
+            aircraftWebglRuntime.getRenderedPosition(aircraft.icaoHex),
+          )),
+        });
+        aircraftWebglInteractionUpdatedAtRef.current = now;
+      };
+      map.on("render", refreshWebglInteractionGeometry);
 
       const updateAircraftHeadingsForMapBearing = () => {
         const bearing = map.getBearing();
@@ -1267,6 +1285,7 @@ export function AirRadarApp() {
       if (aircraftMotionRuntimeRef.current === aircraftMotionRuntime) aircraftMotionRuntimeRef.current = null;
       aircraftWebglRuntime.clear();
       if (aircraftWebglRuntimeRef.current === aircraftWebglRuntime) aircraftWebglRuntimeRef.current = null;
+      aircraftWebglInteractionAircraftRef.current.clear();
       aircraftWebglInteractionUpdatedAtRef.current = Number.NEGATIVE_INFINITY;
       if (aircraftMapSyncFrameRef.current !== null) window.cancelAnimationFrame(aircraftMapSyncFrameRef.current);
       aircraftMapSyncFrameRef.current = null;
@@ -1501,7 +1520,10 @@ export function AirRadarApp() {
     }
 
     if (fullMarkerUpdate) {
-      aircraftWebglRuntime?.sync(liveBulkAircraft.map((aircraft) => ({ ...aircraft })), colorMode);
+      const bulkAircraft = liveBulkAircraft.map((aircraft) => ({ ...aircraft }));
+      aircraftWebglRuntime?.sync(bulkAircraft, colorMode);
+      aircraftWebglInteractionAircraftRef.current = new Map(bulkAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const));
+      aircraftWebglInteractionUpdatedAtRef.current = Number.NEGATIVE_INFINITY;
     } else {
       const changedOrRemovedHexes = new Set([
         ...(pending?.changedHexes ?? []),
@@ -1510,30 +1532,14 @@ export function AirRadarApp() {
       for (const hex of changedOrRemovedHexes) {
         const aircraft = liveFilteredAircraftByHex.get(hex);
         if (aircraft && isPositionedAircraft(aircraft) && !isHtmlSpecialAircraft(aircraft)) {
-          aircraftWebglRuntime?.upsert({ ...aircraft }, colorMode);
+          const bulkAircraft = { ...aircraft };
+          aircraftWebglRuntime?.upsert(bulkAircraft, colorMode);
+          aircraftWebglInteractionAircraftRef.current.set(hex, bulkAircraft);
         } else {
           aircraftWebglRuntime?.remove(hex);
+          aircraftWebglInteractionAircraftRef.current.delete(hex);
         }
       }
-    }
-
-    // Bulk labels and pointer hit targets do not need aircraft-motion cadence.
-    // Keep them on a low-frequency GeoJSON lane so worker tiling cannot become
-    // the next bottleneck after moving icon rendering to WebGL.
-    const interactionNow = performance.now();
-    const interactionDue = fullMarkerUpdate
-      || interactionNow - aircraftWebglInteractionUpdatedAtRef.current >= 500;
-    if (interactionDue) {
-      const webglInteractionSource = map.getSource(AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID) as GeoJSONSource | undefined;
-      webglInteractionSource?.setData({
-        type: "FeatureCollection",
-        features: liveBulkAircraft.map((aircraft) => aircraftWebglInteractionFeature(
-          aircraft,
-          mapZoom,
-          aircraftWebglRuntime?.getRenderedPosition(aircraft.icaoHex),
-        )),
-      });
-      aircraftWebglInteractionUpdatedAtRef.current = interactionNow;
     }
 
     const selectedAircraftInSnapshot = selectedHex ? liveAircraftByHexRef.current.get(selectedHex) ?? liveSnapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : undefined;
