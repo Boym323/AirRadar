@@ -6,7 +6,7 @@ import { RADAR_PERFORMANCE_SCENARIOS } from "../scripts/radar-performance-budget
 describe("radar 1600-aircraft performance audit", () => {
   it("covers current and headroom traffic densities", () => {
     expect(RADAR_PERFORMANCE_SCENARIOS.map((scenario: { aircraft: number }) => scenario.aircraft))
-      .toEqual([50, 100, 250, 500, 1000, 1600, 2000]);
+      .toEqual([50, 100, 250, 500, 1000, 1600, 2000, 3000, 5000]);
   });
 
   it("calculates p95 deterministically", () => {
