@@ -26,17 +26,21 @@ function emptyFlightPositionStore() {
 
 function retentionDatabase(rows: Array<{ id: number; recordedAt: Date }>) {
   let stored = [...rows];
+  type RetentionField = { lt: (value: unknown) => boolean; in: (values: unknown[]) => boolean; asc: () => unknown };
   const query = (selected: Array<{ id: number; recordedAt: Date }>) => ({
-    where(predicate: (fields: Record<string, { lt?: (value: unknown) => boolean; in?: (values: unknown[]) => boolean; asc?: () => unknown }>) => boolean) {
+    where(predicate: (fields: Record<string, RetentionField>) => boolean) {
       const filtered = selected.filter((row) => {
         const fields = new Proxy({}, {
-          get: (_target, property: string) => ({
-            lt: (value: unknown) => row[property as keyof typeof row] instanceof Date
-              && (row[property as keyof typeof row] as Date).getTime() < Number((value as { epochMilliseconds?: number }).epochMilliseconds ?? value),
-            in: (values: unknown[]) => values.includes(row[property as keyof typeof row]),
-            asc: () => undefined,
-          }),
-        }) as Record<string, { lt: (value: unknown) => boolean; in: (values: unknown[]) => boolean; asc: () => unknown }>;
+          get: (_target, property: string) => {
+            const fieldValue = row[property as keyof typeof row];
+            return {
+              lt: (value: unknown) => fieldValue instanceof Date
+                && fieldValue.getTime() < Number((value as { epochMilliseconds?: number }).epochMilliseconds ?? value),
+              in: (values: unknown[]) => values.includes(fieldValue),
+              asc: () => undefined,
+            };
+          },
+        }) as Record<string, RetentionField>;
         return predicate(fields);
       });
       return query(filtered);
@@ -60,8 +64,13 @@ function retentionDatabase(rows: Array<{ id: number; recordedAt: Date }>) {
       return before - stored.length;
     },
   });
+  const table = {
+    where(predicate: (fields: Record<string, RetentionField>) => boolean) {
+      return query(stored).where(predicate);
+    },
+  };
   return {
-    database: { orm: { public: { FlightPosition: query(stored) } } },
+    database: { orm: { public: { FlightPosition: table } } },
     remaining: () => [...stored],
   };
 }
