@@ -43,7 +43,7 @@ export function evaluateRadarPerformanceBaseline(result, scenario) {
   const framesValid = finiteCounter("animation frames", result.animation.frames);
   const markerWritesValid = finiteCounter("marker writes", result.animation.markerWrites);
   const activeJobsValid = finiteCounter("active animation jobs", result.animation.maxActiveJobs);
-  const collisionRunsValid = finiteCounter("label collision runs", result.labelCollision.runs);
+  finiteCounter("label collision runs", result.labelCollision.runs);
 
   if (framesValid && result.animation.frames < 1) fail("animation diagnostics did not record a frame");
   if (markerWritesValid && result.animation.markerWrites < aircraft) {
