@@ -489,7 +489,9 @@ prepare_release_version() {
   local resolved_version
 
   if (( AUTOMATED == 1 )); then
-    RELEASE_VERSION="$(node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); process.stdout.write(pkg.version);')"
+    resolved_version="$(node "${VERSION_SCRIPT}" resolve-release-version --channel stable)" || die "Could not resolve the automated release version."
+    [[ "${resolved_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || die "Version helper returned an invalid automated stable version: ${resolved_version}"
+    RELEASE_VERSION="${resolved_version}"
     RELEASE_TAG="v${RELEASE_VERSION}"
     export AIRRADAR_VERSION="${RELEASE_VERSION}"
     export AIRRADAR_TAG="${RELEASE_TAG}"
