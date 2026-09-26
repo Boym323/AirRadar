@@ -149,7 +149,7 @@ describe("radar UI polish helpers", () => {
     expect(aircraftMotionRuntimeSource).toContain("visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, nextHistory)");
     expect(aircraftMotionRuntimeSource).toContain("allowPrediction: false");
     expect(aircraftMotionRuntimeSource).not.toContain("predictedPosition(");
-    expect(aircraftMotionRuntimeSource).toContain("motionRenderIntervalMs(animationJobs.size)");
+    expect(aircraftMotionRuntimeSource).toContain("motionRenderIntervalMs(this.jobs.size)");
     expect(aircraftMotionRuntimeSource).toContain("job === selectedAnimationJob || bulkFrameDue || renderFinalCorrection");
     expect(aircraftMotionRuntimeSource).toContain("if (!renderThisFrame)");
     expect(appSource).toContain('map.on("zoom", updateLiveZoomLabels)');
