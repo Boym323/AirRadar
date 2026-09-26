@@ -242,3 +242,55 @@ jobs:
           }
           console.log(`[deploy] ATS routes remain healthy effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
           NODE
+
+  sync-changelog:
+    name: Sync release changelog
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.deploy.result == 'success'
+    needs: deploy
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fetch release tags
+        run: git fetch --force --tags origin
+
+      - name: Backfill and verify changelog
+        run: |
+          set -Eeuo pipefail
+          node scripts/changelog.mjs backfill
+          node scripts/changelog.mjs check
+
+      - name: Open or refresh changelog PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md already synchronized."
+            exit 0
+          fi
+
+          latest_tag="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)"
+          branch="automation/changelog-sync"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${branch}"
+          git add CHANGELOG.md
+          git commit -m "docs: sync changelog through ${latest_tag:-latest-release}"
+          git push --force origin "${branch}"
+
+          existing_pr="$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${branch}" --base main --state open --json number --jq '.[0].number // empty')"
+          if [[ -n "${existing_pr}" ]]; then
+            echo "Updated changelog PR #${existing_pr}."
+            exit 0
+          fi
+
+          gh pr create             --repo "${GITHUB_REPOSITORY}"             --base main             --head "${branch}"             --title "docs: sync release changelog"             --body "Automated changelog backfill for published AirRadar releases. This PR updates only CHANGELOG.md; changelog-only merges are excluded from production deployment."
+
