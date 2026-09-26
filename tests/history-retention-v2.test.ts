@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  HISTORY_RETENTION_BATCH_SIZE,
-  HISTORY_RETENTION_MAX_BATCHES,
-  pruneHistoryRetention,
-} from "@/lib/server/history";
+import { pruneHistoryRetention } from "@/lib/server/history";
 
 type Position = { id: number; recordedAt: Date };
 
