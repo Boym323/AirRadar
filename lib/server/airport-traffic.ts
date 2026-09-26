@@ -303,15 +303,40 @@ interface PagedFlightQuery {
   limit(value: number): { all(): Promise<AirportTrafficFlightRow[]> | AirportTrafficFlightRow[] };
 }
 
-async function readAllFlightPages(query: PagedFlightQuery, pageSize = AIRPORT_TRAFFIC_PAGE_SIZE): Promise<AirportTrafficFlightRow[]> {
-  const rows: AirportTrafficFlightRow[] = [];
+async function forEachFlightPage(
+  query: PagedFlightQuery,
+  consume: (rows: AirportTrafficFlightRow[]) => void,
+  pageSize = AIRPORT_TRAFFIC_PAGE_SIZE,
+): Promise<void> {
   for (let offset = 0; ; offset += pageSize) {
     const page = await Promise.resolve(
       query.orderBy((flight) => flight.id.asc()).offset(offset).limit(pageSize).all(),
     );
-    rows.push(...page);
-    if (page.length < pageSize) return rows;
+    consume(page);
+    if (page.length < pageSize) return;
   }
+}
+
+function retainRecentFlight(
+  flights: AirportTrafficFlightRow[],
+  flight: AirportTrafficFlightRow,
+  limit = AIRPORT_TRAFFIC_RECENT_LIMIT,
+): void {
+  flights.push(flight);
+  flights.sort((a, b) => timestampAsDate(b.lastSeenAt).getTime() - timestampAsDate(a.lastSeenAt).getTime() || b.id - a.id);
+  if (flights.length > limit) flights.length = limit;
+}
+
+function canonicalRouteCounts(
+  counts: Map<string, number>,
+  airports: Map<string, AirportTrafficAirport>,
+): Map<string, number> {
+  const canonical = new Map<string, number>();
+  for (const [code, count] of counts) {
+    const resolved = airports.get(code);
+    if (resolved) canonical.set(resolved.icaoCode, (canonical.get(resolved.icaoCode) ?? 0) + count);
+  }
+  return canonical;
 }
 
 /**
@@ -364,61 +389,68 @@ export async function getAirportTrafficSummary(
       .where((flight) => flight.startTime.lt(toInstant))
       .where((flight) => flight.destination.in(targetCodes))
       .include("aircraft", (aircraft) => aircraft.select("id", "icaoHex", "registration", "aircraftType"));
-    const [originRows, destinationRows] = await Promise.all([
-      readAllFlightPages(originQuery as unknown as PagedFlightQuery),
-      readAllFlightPages(destinationQuery as unknown as PagedFlightQuery),
-    ]);
-    // The date range is the bound. Do not apply a row cap here: every field in
-    // this response (totals, heatmap, rankings and recent traffic) must be
-    // derived from the complete persisted Flight set for that range.
-    summary.complete = true;
-    const flights = new Map<number, AirportTrafficFlightRow>();
-    for (const row of [...originRows, ...destinationRows]) {
-      const flight = row as AirportTrafficFlightRow;
-      flights.set(flight.id, flight);
-    }
-    const relevantFlights = [...flights.values()];
-    summary.flights = relevantFlights.length;
-    if (relevantFlights.length === 0) return summary;
 
-    const origins = new Map<string, number>();
-    const destinations = new Map<string, number>();
+    const seenFlightIds = new Set<number>();
+    const rawOrigins = new Map<string, number>();
+    const rawDestinations = new Map<string, number>();
     const callsigns = new Map<string, number>();
     const aircraft = new Map<string, AirportTrafficAircraftCount>();
     const heatmapCells = new Map<string, AirportTrafficHeatmapCell>();
     const activeDays = new Set<string>();
-    const routeCodes = relevantFlights
-      .flatMap((flight) => [flight.origin, flight.destination])
-      .filter((code): code is string => code !== null);
-    const airports = await resolveTrafficAirports(schema, routeCodes);
+    const routeCodes = new Set<string>();
+    const recentFlights: AirportTrafficFlightRow[] = [];
+    const recentObservedFlights: AirportTrafficFlightRow[] = [];
     let firstCapturedAt: Date | null = null;
     let lastCapturedAt: Date | null = null;
 
-    for (const flight of relevantFlights) {
-      const startTime = timestampAsDate(flight.startTime);
-      const lastSeenAt = timestampAsDate(flight.lastSeenAt);
-      if (!firstCapturedAt || startTime < firstCapturedAt) firstCapturedAt = startTime;
-      const boundedLastSeenAt = new Date(Math.min(lastSeenAt.getTime(), to.getTime()));
-      if (!lastCapturedAt || boundedLastSeenAt > lastCapturedAt) lastCapturedAt = boundedLastSeenAt;
-      addActiveFlightDays(activeDays, startTime, lastSeenAt, from, to);
+    const consume = (rows: AirportTrafficFlightRow[]) => {
+      for (const flight of rows) {
+        if (seenFlightIds.has(flight.id)) continue;
+        seenFlightIds.add(flight.id);
 
-      const departure = flightAirportMatch(flight.origin, targetCodeSet);
-      const arrival = flightAirportMatch(flight.destination, targetCodeSet);
-      if (departure) summary.departures += 1;
-      if (arrival) summary.arrivals += 1;
-      const cell = heatmapCell(heatmapCells, startTime);
-      if (departure) cell.departures += 1;
-      if (arrival) cell.arrivals += 1;
+        const startTime = timestampAsDate(flight.startTime);
+        const lastSeenAt = timestampAsDate(flight.lastSeenAt);
+        if (!firstCapturedAt || startTime < firstCapturedAt) firstCapturedAt = startTime;
+        const boundedLastSeenAt = new Date(Math.min(lastSeenAt.getTime(), to.getTime()));
+        if (!lastCapturedAt || boundedLastSeenAt > lastCapturedAt) lastCapturedAt = boundedLastSeenAt;
+        addActiveFlightDays(activeDays, startTime, lastSeenAt, from, to);
 
-      const callsign = normalizedText(flight.callsign);
-      if (callsign) addCount(callsigns, callsign);
-      mergeAircraftCount(aircraft, flight);
+        const departure = flightAirportMatch(flight.origin, targetCodeSet);
+        const arrival = flightAirportMatch(flight.destination, targetCodeSet);
+        if (departure) summary.departures += 1;
+        if (arrival) summary.arrivals += 1;
 
-      const destinationCode = normalizedCode(flight.destination);
-      if (departure && destinationCode && airports.has(destinationCode)) addCount(destinations, airports.get(destinationCode)!.icaoCode);
-      const originCode = normalizedCode(flight.origin);
-      if (arrival && originCode && airports.has(originCode)) addCount(origins, airports.get(originCode)!.icaoCode);
-    }
+        const cell = heatmapCell(heatmapCells, startTime);
+        if (departure) cell.departures += 1;
+        if (arrival) cell.arrivals += 1;
+
+        const callsign = normalizedText(flight.callsign);
+        if (callsign) addCount(callsigns, callsign);
+        mergeAircraftCount(aircraft, flight);
+
+        const destinationCode = normalizedCode(flight.destination);
+        if (destinationCode) routeCodes.add(destinationCode);
+        if (departure && destinationCode) addCount(rawDestinations, destinationCode);
+
+        const originCode = normalizedCode(flight.origin);
+        if (originCode) routeCodes.add(originCode);
+        if (arrival && originCode) addCount(rawOrigins, originCode);
+
+        retainRecentFlight(recentFlights, flight);
+        if (hasReceiverProximityEvidence(airport, flight)) retainRecentFlight(recentObservedFlights, flight);
+      }
+    };
+
+    await forEachFlightPage(originQuery as unknown as PagedFlightQuery, consume);
+    await forEachFlightPage(destinationQuery as unknown as PagedFlightQuery, consume);
+
+    summary.complete = true;
+    summary.flights = seenFlightIds.size;
+    if (summary.flights === 0) return summary;
+
+    const airports = await resolveTrafficAirports(schema, [...routeCodes]);
+    const origins = canonicalRouteCounts(rawOrigins, airports);
+    const destinations = canonicalRouteCounts(rawDestinations, airports);
 
     summary.uniqueAircraft = aircraft.size;
     summary.activeDays = activeDays.size;
@@ -428,11 +460,18 @@ export async function getAirportTrafficSummary(
     summary.topOrigins = routeCount(origins, airports);
     summary.topAircraft = topAircraft(aircraft);
     summary.topCallsigns = topCallsigns(callsigns);
-    summary.recentTraffic = recentTraffic(relevantFlights, targetCodeSet, airports);
-    const observedTraffic = recentTraffic(relevantFlights.filter((flight) => hasReceiverProximityEvidence(airport, flight)), targetCodeSet, airports);
-    summary.observedArrivals = observedTraffic.filter((flight) => flight.direction === "arrival").slice(0, AIRPORT_TRAFFIC_MOVEMENT_LIMIT);
-    summary.observedDepartures = observedTraffic.filter((flight) => flight.direction === "departure").slice(0, AIRPORT_TRAFFIC_MOVEMENT_LIMIT);
-    const cells = emptyTrafficSummary(range).heatmap.cells.map((emptyCell) => heatmapCells.get(`${emptyCell.dayOfWeek}:${emptyCell.hour}`) ?? emptyCell);
+    summary.recentTraffic = recentTraffic(recentFlights, targetCodeSet, airports);
+
+    const observedTraffic = recentTraffic(recentObservedFlights, targetCodeSet, airports);
+    summary.observedArrivals = observedTraffic
+      .filter((flight) => flight.direction === "arrival")
+      .slice(0, AIRPORT_TRAFFIC_MOVEMENT_LIMIT);
+    summary.observedDepartures = observedTraffic
+      .filter((flight) => flight.direction === "departure")
+      .slice(0, AIRPORT_TRAFFIC_MOVEMENT_LIMIT);
+
+    const cells = emptyTrafficSummary(range).heatmap.cells
+      .map((emptyCell) => heatmapCells.get(`${emptyCell.dayOfWeek}:${emptyCell.hour}`) ?? emptyCell);
     summary.heatmap = {
       cells,
       maxCount: Math.max(...cells.map((cell) => cell.arrivals + cell.departures), 0),
@@ -443,3 +482,4 @@ export async function getAirportTrafficSummary(
     throw new AirportTrafficDatabaseUnavailableError();
   }
 }
+
