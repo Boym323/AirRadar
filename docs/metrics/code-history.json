@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "metric": "non-empty-physical-lines",
+  "description": "Tracked non-empty physical source lines. Production excludes tests, docs, migrations, generated output and public vendor assets.",
+  "snapshots": []
+}
