@@ -25,8 +25,8 @@ function passingResult(aircraft) {
 }
 
 describe("radar production performance budgets", () => {
-  it("covers 50, 100, 250, and 500 aircraft", () => {
-    expect(RADAR_PERFORMANCE_SCENARIOS.map((scenario) => scenario.aircraft)).toEqual([50, 100, 250, 500]);
+  it("covers baseline, current production, and headroom aircraft densities", () => {
+    expect(RADAR_PERFORMANCE_SCENARIOS.map((scenario) => scenario.aircraft)).toEqual([50, 100, 250, 500, 1000, 1600, 2000]);
   });
 
   it("accepts a healthy synthetic result for every scenario", () => {
