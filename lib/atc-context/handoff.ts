@@ -25,7 +25,12 @@ export function buildAtcHandoffEstimate(context: AtcContextResult | null): AtcHa
   const current = context.primaryAirspace;
   if (current?.id === next.airspace.id) return null;
 
+  if (next.airspace.verticalMatch === "false") return null;
+
   const frequencies = next.airspace.publishedFrequenciesMhz.filter((value) => Number.isFinite(value) && value > 0);
+  const confidence: AtcPredictionConfidence = next.airspace.verticalMatch === "uncertain"
+    ? next.confidence === "high" ? "medium" : "low"
+    : next.confidence;
 
   return {
     fromSectorId: current?.id ?? null,
@@ -37,6 +42,6 @@ export function buildAtcHandoffEstimate(context: AtcContextResult | null): AtcHa
     alternateFrequenciesMhz: frequencies.slice(1),
     distanceNm: next.distanceNm,
     estimatedSeconds: next.estimatedSeconds,
-    confidence: next.confidence,
+    confidence,
   };
 }
