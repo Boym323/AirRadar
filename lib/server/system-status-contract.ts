@@ -200,6 +200,15 @@ export interface SystemStatusResponse {
     history: {
       status: SystemStatus;
       lastSuccessfulWrite: string | null;
+      retention?: {
+        lastRunAt: string | null;
+        cutoff: string | null;
+        durationMs: number | null;
+        rowsDeleted: number;
+        batches: number;
+        completed: boolean | null;
+        failureCount: number;
+      };
     };
     statistics: {
       status: SystemStatus;
