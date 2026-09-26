@@ -9,6 +9,7 @@ import type { AlertStatus } from "@/lib/server/alert-engine";
 import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistics";
 import type { RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import type { WeatherRadarDiagnostics } from "@/lib/server/weather-radar/types";
+import type { ReceiverQuality } from "@/lib/server/receiver-quality";
 import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 
@@ -53,6 +54,7 @@ export interface SystemStatusResponse {
       messagesPerSecond: number | null;
       lastSnapshot: string | null;
       snapshotAgeSeconds: number | null;
+      quality?: ReceiverQuality;
     };
   };
   localAdsb?: Record<string, unknown>;
