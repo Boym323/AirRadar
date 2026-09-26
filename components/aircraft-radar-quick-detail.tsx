@@ -561,6 +561,7 @@ export function AircraftRadarQuickDetail({
     aircraft,
     atc: atcContext,
     sigmets: sigmetContext,
+    sigmetStale,
     routeWeather,
     sigmetDeviation,
     wind: windContext,
