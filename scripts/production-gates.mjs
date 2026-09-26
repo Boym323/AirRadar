@@ -575,9 +575,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           && runtime
           && runtime.size > 0
           && map.getLayer("aircraft-webgl")
-          && map.getLayer("aircraft-webgl-hit")
           && map.getLayer("aircraft-webgl-label")
-          && map.getSource("aircraft-webgl-interaction")
+          && map.getSource("aircraft-webgl-labels")
+          && typeof runtime.pickAircraftAtPoint === "function"
           && document.querySelector(".aircraft-row")
         );
       });
@@ -587,16 +587,16 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         return {
           aircraft: runtime?.size ?? 0,
           customLayer: Boolean(map?.getLayer("aircraft-webgl")),
-          hitLayer: Boolean(map?.getLayer("aircraft-webgl-hit")),
           labelLayer: Boolean(map?.getLayer("aircraft-webgl-label")),
-          interactionSource: Boolean(map?.getSource("aircraft-webgl-interaction")),
+          labelSource: Boolean(map?.getSource("aircraft-webgl-labels")),
+          directPicking: typeof runtime?.pickAircraftAtPoint === "function",
         };
       });
       if (webglPresentation.aircraft < 1
         || !webglPresentation.customLayer
-        || !webglPresentation.hitLayer
         || !webglPresentation.labelLayer
-        || !webglPresentation.interactionSource) {
+        || !webglPresentation.labelSource
+        || !webglPresentation.directPicking) {
         throw new Error(`WebGL aircraft presentation contract failed at ${viewport.width}px: ${JSON.stringify(webglPresentation)}`);
       }
       await page.evaluate(() => {
