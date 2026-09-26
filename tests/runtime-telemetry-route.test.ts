@@ -41,7 +41,7 @@ describe("runtime telemetry history route", () => {
       schemaVersion: 1,
       intervalMs: 60_000,
       retentionMs: 86_400_000,
-      samples: [{ recordedAt: "2026-09-26T06:00:00.000Z", processRssBytes: 1, heapUsedBytes: 1, cgroupMemoryCurrentBytes: 1, activeSseClients: 0, aircraftCount: 1, listenerCount: 0 }],
+      samples: [{ recordedAt: "2026-09-26T06:00:00.000Z", processRssBytes: 1, heapUsedBytes: 1, cgroupMemoryCurrentBytes: 1, activeSseClients: 0, aircraftCount: 1, listenerCount: 0, databaseState: "ok", databaseLatencyMs: 3, localProviderState: "online", networkProviderState: "online" }],
       diagnostics: { file: "/var/lib/airradar/runtime-telemetry-v1.json", loadedFromDisk: true, lastLoadError: null, lastSaveAt: null, lastSaveError: null },
     });
 
