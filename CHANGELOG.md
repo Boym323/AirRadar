@@ -2,6 +2,589 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.126] - 2026-09-26
+
+Changes since v1.0.125:
+
+- test(perf): add radar soak mode (ced271a)
+- test(perf): report soak footprint and SSE churn (390d55c)
+- chore: add radar soak benchmark command (367bda0)
+- chore: ignore radar soak reports (d5ded68)
+- ci: add scheduled radar soak workflow (877a616)
+- test: cover scheduled radar soak contract (5a6b117)
+- test(intelligence): add deterministic history replay core (ea31316)
+- test(intelligence): add history replay CLI (ef84e79)
+- test(intelligence): cover deterministic replay scoring (bca4030)
+- chore(intelligence): add replay command (3a10190)
+- test(intelligence): report sampled replay input (4f3697f)
+- fix(analytics): remove airport traffic row truncation (36a8f1e)
+- test(analytics): cover complete airport traffic sets (116bf36)
+- feat(intelligence): aggregate replay quality metrics (4f339c6)
+- feat(intelligence): add replay quality report CLI (a502d91)
+- chore: add intelligence quality command (9d315ee)
+- test(intelligence): cover replay quality metrics (8783bf2)
+- perf(analytics): page complete airport traffic reads (37a866d)
+- test(analytics): exercise paged airport traffic reads (12fd289)
+- perf(history): batch retention cleanup and expose metrics (4b08300)
+- test(history): cover batched retention cleanup (3b2f366)
+- refactor(radar): extract aircraft motion runtime (9f5a05f)
+- refactor(radar): delegate aircraft interpolation lifecycle (0004017)
+- refactor(radar): remove legacy animation job reference (7bc7233)
+- test(radar): enforce motion runtime boundary (4f26492)
+- refactor(radar): extract weather context data lifecycle (6f74d40)
+- refactor(radar): delegate weather context lifecycle (17d45c1)
+- fix(radar): keep weather image rendering in map boundary (b8608ea)
+- fix(radar): remove duplicate SIGMET state (74f11e9)
+- test(radar): enforce weather context boundary (91c35ac)
+- test(intelligence): use canonical confidence level (58f8cdc)
+- feat(runtime): persist bounded telemetry history (fb6f30f)
+- feat(runtime): start telemetry with node runtime (6a8597a)
+- feat(runtime): flush telemetry during shutdown (be0bf73)
+- security(runtime): rate limit telemetry history (acfe0aa)
+- feat(runtime): expose admin telemetry history (bf35f5a)
+- test(runtime): cover telemetry persistence and bounds (3780870)
+- test(runtime): cover telemetry startup (c97b623)
+- test(runtime): protect telemetry history endpoint (d6a2595)
+- test(runtime): flush telemetry before service shutdown (7ba418e)
+- refactor(system): extract status projections (11352c8)
+- refactor(system): extract diagnostic state mapping (0c11e56)
+- refactor(system): delegate projection and diagnostic mapping (f3ab6ab)
+- test(system): enforce status module boundaries (0e5eb1c)
+- fix(history): keep retention diagnostics backwards compatible (bd06e5e)
+- test(history): use bounded retention fixtures (26124cd)
+- test(history): remove obsolete retention constants (7e4d845)
+- refactor(system): extract status contract types (0ccd1ff)
+- refactor(system): consume extracted status contract (e20a81f)
+- refactor(system): remove diagnostics barrel cycle (e8370db)
+- refactor(system): remove projection barrel cycle (89607c6)
+- refactor(system): remove obsolete extracted type imports (7d5d2d1)
+- fix(system): restore extracted type dependency (cd9c617)
+- perf(analytics): aggregate airport traffic per page (ab63c44)
+- feat(runtime): trend database and provider health (b49d54b)
+- test(runtime): cover persisted health telemetry (896c6b1)
+- test(runtime): expose health telemetry to admin (6210db8)
+- refactor(radar): extract ATC map time context (cff233c)
+- refactor(radar): move map-time polling out of app (d75998b)
+- test(radar): cover global map-time boundary (3d9338b)
+- feat(system): expose history retention diagnostics (b9e01d5)
+- feat(system): sanitize history retention metrics (201c5d9)
+- security(system): keep retention metrics admin-only (a0adbac)
+- test(system): cover admin retention diagnostics (d60750f)
+- Merge pull request #101 from Boym323/test/radar-soak (5e89162)
+- chore: sync replay branch with main package scripts (284406c)
+- Merge pull request #103 from Boym323/fix/airport-traffic-completeness (e5edacb)
+- Merge pull request #106 from Boym323/perf/history-retention-v2 (ee2b983)
+- Merge pull request #107 from Boym323/refactor/aircraft-motion-runtime (7b2bc14)
+- Merge pull request #109 from Boym323/feat/runtime-telemetry-history (bafa45c)
+- Merge pull request #110 from Boym323/refactor/system-status-modules (116d858)
+- merge main into flight intelligence replay (c8ea9bf)
+- merge main into radar weather context (25b7d8b)
+- test(radar): follow extracted motion runtime boundaries (43e1ee0)
+- test(radar): align runtime animation assertion (2b3be6e)
+- test(radar): sync extracted runtime invariants (bcdf673)
+- test(radar): sync extracted runtime invariants (d4f0cb0)
+- Merge pull request #115 from Boym323/fix/radar-ui-refactor-invariants (779b4a7)
+- Merge pull request #102 from Boym323/test/flight-intelligence-replay (681167a)
+- chore: sync intelligence quality scripts with main (118c94d)
+- merge main into flight intelligence quality (262bf65)
+- Merge pull request #104 from Boym323/test/flight-intelligence-quality (885ca27)
+- Merge pull request #114 from Boym323/refactor/radar-map-context-clock (eb7e35e)
+- chore(release): sync .github/workflows/ci.yml (295dcae)
+- chore(release): sync package.json (b232e62)
+- chore(release): sync scripts/changelog.mjs (68ffdcc)
+- chore(release): sync CHANGELOG.md (d9caf6c)
+- chore(release): add changelog sync workflow (fb51756)
+- Merge pull request #108 from Boym323/refactor/radar-weather-context (588796a)
+- Merge pull request #116 from Boym323/chore/release-metadata-sync-v2 (ba28cac)
+- test(weather): follow extracted radar weather context (430b13f)
+- test(radar): follow extracted ATC map context (b0dec8a)
+- Merge pull request #117 from Boym323/fix/post-merge-radar-refactor-tests (7f3a410)
+
+## [1.0.125] - 2026-09-26
+
+Changes since v1.0.124:
+
+- security: add public system status projection (10a2063)
+- security: protect detailed system diagnostics (cb63c70)
+- security: share admin session with diagnostics (5f11a64)
+- ui: hide admin-only system diagnostics (36082ba)
+- test: cover public diagnostics redaction (2de0b88)
+- test: cover shared admin session cookie scope (9cf1b5c)
+- fix: preserve system status softRf shape (4db4454)
+- Merge pull request #100 from Boym323/fix/public-system-diagnostics (c80956a)
+
+## [1.0.104] - 2026-09-20
+
+Changes since v1.0.103:
+
+- fix: update aircraft marker styles and diagnostics integration (4c34230)
+- Merge pull request #74 from Boym323/fix/aircraft-marker-anchoring (4610e95)
+
+## [1.0.103] - 2026-09-20
+
+Changes since v1.0.102:
+
+- fix: restore tar1090 aircraft icon heading (fc9badf)
+
+## [1.0.102] - 2026-09-20
+
+Changes since v1.0.101:
+
+- docs: update changelog for v1.0.101 (e0174ae)
+
+## [1.0.100] - 2026-09-20
+
+Changes since v1.0.99:
+
+- perf: cache live snapshots and public SSE serialization (7d83152)
+- perf: apply aircraft deltas incrementally in the browser (82a5817)
+- perf: split secondary radar panels from initial bundle (1c134b8)
+- Merge pull request #71 from Boym323/perf/large-runtime-optimization (0adbe91)
+
+## [1.0.99] - 2026-09-20
+
+Changes since v1.0.98:
+
+- perf: lazy-load secondary radar data (af42f7f)
+- Merge pull request #69 from Boym323/perf/data-loading-round-2 (54df60c)
+- feat: add function to determine renderable aircraft motion and update motion history handling (86866e3)
+- fix: enhance visibility checks for secondary tools in compact and expanded sidebar (9fb4d1d)
+- fix: start aircraft state during server startup (309ef0f)
+- test: cover eager aircraft startup (b3937cc)
+- test: match ATS map query in production gate (368f72b)
+- docs: clarify eager aircraft startup lifecycle (3b4a5eb)
+- Merge pull request #70 from Boym323/fix/eager-aircraft-state-startup (9983218)
+
+## [1.0.98] - 2026-09-20
+
+Changes since v1.0.97:
+
+- fix: maintain local position authority over network updates in aircraft observation (e4fc29f)
+
+## [1.0.97] - 2026-09-20
+
+Changes since v1.0.96:
+
+- perf: remove route intelligence from live radar (5714cf7)
+
+## [1.0.96] - 2026-09-20
+
+Changes since v1.0.95:
+
+- perf: reduce optional data loading and radar hot-path work (f6f89d4)
+- test: reflect lazy ATS route loading (3d015f4)
+
+## [1.0.95] - 2026-09-20
+
+Changes since v1.0.94:
+
+- refactor: update CI workflows to use manual triggers and remove scheduled runs (c448835)
+- feat: enhance trail handling by introducing empty trail initialization and refactoring trail selection logic (025b8b8)
+- refactor: update CI workflows to remove scheduled runs and adjust trigger conditions fix: reduce maximum trail speed to prevent cross-map segments test: add case to reject implausible cross-map history jumps (5f28764)
+- fix: update selected trail handling in radar UI tests for accurate visibility checks (da5b746)
+
+## [1.0.94] - 2026-09-20
+
+Changes since v1.0.93:
+
+- feat: improve animation handling by refining motion selection and prediction logic (97f69ad)
+- fix: prevent false cross-map aircraft trail segments (15fe7a5)
+
+## [1.0.93] - 2026-09-20
+
+Changes since v1.0.92:
+
+- feat: enhance motion handling by preventing out-of-order position updates and ensuring continuous heading during turns (ceea2ae)
+
+## [1.0.92] - 2026-09-20
+
+Changes since v1.0.91:
+
+- feat: enhance aircraft radar quick detail with new tabs and filters (7cf46ca)
+- fix: correct URL parameter encoding for re-api.adsb.lol endpoint (04ebbe8)
+
+## [1.0.90] - 2026-09-20
+
+Changes since v1.0.89:
+
+- fix: reduce maxWorkers to 2 for improved stability in test configurations (96b1dae)
+
+## [1.0.89] - 2026-09-19
+
+Changes since v1.0.87:
+
+- feat: add receiver polar coverage component and related styles, tests, and utility functions (fbe4950)
+- fix: polish radar UI and ATC translations (226197e)
+- feat: update CI workflow to conditionally run tests and add unit/integration test configurations (430afec)
+- fix(i18n): update aircraft count formatting and improve localization tests (f4c307f)
+- chore(release): prepare v1.0.88 (9c5f5bd)
+- test: make changed test selection PR-safe (f1399e4)
+
+## [1.0.85] - 2026-09-19
+
+Changes since v1.0.84:
+
+- fix(aircraft): adjust icon rotation for correct visual alignment (7666641)
+
+## [1.0.83] - 2026-09-19
+
+Changes since v1.0.82:
+
+- fix(system): clarify lazy provider health states (19e9d6c)
+- Merge pull request #64 from Boym323/fix/system-status-semantics (3eaf05a)
+
+## [1.0.80] - 2026-09-19
+
+Changes since v1.0.79:
+
+- fix: update network provider status handling and improve track data structure (ed634dc)
+
+## [1.0.77] - 2026-09-19
+
+Changes since v1.0.76:
+
+- feat: implement ATC prediction validation and integrate with aircraft context (19de4be)
+
+## [1.0.76] - 2026-09-19
+
+Changes since v1.0.75:
+
+- feat: add next sector prediction to ATC context with distance and ETA estimates (806f290)
+
+## [1.0.75] - 2026-09-19
+
+Changes since v1.0.73:
+
+- feat: enhance UI components and improve status handling in AirRadarApp (55aa68a)
+- feat: add active filter chips and enhance filter functionality in AirRadarApp feat: integrate status badge for emergency squawk in AircraftRadarQuickDetail feat: update Czech and English translations for filter and search functionalities (69169bb)
+- feat: add RouteSection component to improve route display in AircraftRadarQuickDetail (c94bf8c)
+- Add new weather radar images for September 19, 2026 (f7818f7)
+- feat: add UI icons for navigation buttons and enhance ATC traffic labels in multiple languages (58e3111)
+- feat: add weather radar archive directory to production gate configuration (9dab8d8)
+- docs: update changelog for v1.0.74 (fad29bc)
+- refactor: remove unused class from expectedQuickOrder in assertBrowserSmoke function (93d21e5)
+
+## [1.0.73] - 2026-09-19
+
+Changes since v1.0.72:
+
+- feat: add benchmark script for ATC A/B correctness audit (f066f16)
+- feat: implement sector candidate retrieval and integrate with ATC sector service (c5a657c)
+
+## [1.0.71] - 2026-09-19
+
+Changes since v1.0.70:
+
+- feat: Enhance ADSB.lol integration with raw data support and failover mechanism (680b1c8)
+
+## [1.0.70] - 2026-09-19
+
+Changes since v1.0.69:
+
+- feat: enhance sector traffic processing with test configuration options and improve streaming tests (7fd3feb)
+
+## [1.0.69] - 2026-09-19
+
+Changes since v1.0.58:
+
+- feat: use Beast stream as local ADS-B primary (b15f389)
+- Merge pull request #59 from Boym323/feature/local-beast-stream (69acf3b)
+- docs: update changelog for v1.0.59 (a20b3cf)
+- fix: classify Mode-S frames in Beast diagnostics (c2df232)
+- Merge pull request #60 from Boym323/fix/beast-diagnostics (3126295)
+- docs: update changelog for v1.0.60 (b99c4d5)
+- fix: count valid Beast transport frames (247b656)
+- Merge pull request #61 from Boym323/fix/beast-frame-counter (76f5e64)
+- docs: update changelog for v1.0.61 (ea8bbc4)
+- fix: keep valid Beast frames out of error counter (3301d58)
+- Merge pull request #62 from Boym323/fix/beast-decoder-metric (d2e8a4a)
+- docs: update changelog for v1.0.62 (6c8079c)
+- fix(beast): parse short Mode-S frame length (8fde1ee)
+- Merge pull request #63 from Boym323/fix/beast-short-frame-length (6646cfd)
+- docs: update changelog for v1.0.63 (1a54124)
+- feat: implement sector traffic context retrieval and API endpoints (4f61b98)
+- feat: add sector transitions API and update documentation (6c64c09)
+- fix: validate geographic coordinates for sectors, airports, and transmitters (84396a4)
+- docs: update changelog for v1.0.64 (baa76dc)
+- fix: update release script to use FETCH_HEAD for branch resolution (d221255)
+- feat: add application icon and update metadata for better PWA support (f174a3d)
+- docs: update changelog for v1.0.65 (1db08e1)
+- feat: add sector traffic data handling and visualization in AirRadarApp (62bd728)
+- feat: implement ATC sector traffic handling and visualization in AirRadarApp (cab8d32)
+- fix: prevent service worker html fallback for runtime assets (6a16240)
+- fix: restore radar detail order and bounded polling (65fd8eb)
+- feat: add sector traffic history API endpoint and validation logic (c2e18dc)
+- fix: reject invalid map bounds coordinates (deb0609)
+- docs: update changelog for v1.0.66 (19ee6db)
+- fix: skip non-finite aircraft marker coordinates (7c1757e)
+- docs: update changelog for v1.0.67 (ad7aee2)
+- fix: ignore numeric emergency state as map alert (d4b0b9b)
+- docs: update changelog for v1.0.68 (1cc8bcd)
+- feat: add GET endpoint for sector traffic history with validation (d48ef54)
+- feat: implement traffic history UI with lazy loading and historical API integration (9f9c8ae)
+- fix: validate numeric fields in aircraft snapshot recording to prevent malformed data (59616b4)
+- docs: add performance characteristics section to ATC sector traffic documentation (facace1)
+- feat: enhance traffic history processing with coverage details and add benchmark script (68f68b4)
+- feat: optimize traffic history processing by releasing raw FlightPosition rows and improving accumulator management (882b816)
+- feat: add synthetic benchmark for ATC sector traffic processing and enhance streaming correctness tests (13bdcd6)
+
+## [1.0.58] - 2026-09-19
+
+Changes since v1.0.57:
+
+- feat(intelligence): enhance UI and add event summary with localization support (742fd33)
+
+## [1.0.57] - 2026-09-19
+
+Changes since v1.0.56:
+
+- feat(flights): add synchronized Flight Story (1ba0f60)
+- Merge pull request #57 from Boym323/feature/flight-story-v1 (70fe485)
+- fix(deploy): recover stale generated Next files (b3eeb31)
+- Merge pull request #58 from Boym323/feature/flight-story-v1 (adbb098)
+
+## [1.0.56] - 2026-09-19
+
+Changes since v1.0.55:
+
+- feat(time-machine): add global map time and historical context (c9aa6b7)
+- Merge pull request #56 from Boym323/feature/map-context-v2-global-time (f1cad60)
+
+## [1.0.55] - 2026-09-18
+
+Changes since v1.0.54:
+
+- feat(map): add weather and operational context layers (2b0c33f)
+- fix(ci): allow MapLibre data image placeholder (2ddf50d)
+- fix(map): use valid radar placeholder image (477c011)
+- Merge pull request #55 from Boym323/feature/map-context-v1 (f1d19fd)
+
+## [1.0.54] - 2026-09-18
+
+Changes since v1.0.53:
+
+- fix: add allowPublicationDateMismatch option to parseCzEaipEnr21 for flexible date handling (e369d11)
+
+## [1.0.53] - 2026-09-18
+
+Changes since v1.0.52:
+
+- fix: enhance polygon parsing to support both flat and GeoJSON formats for improved data handling (74a1d8a)
+- fix: enhance aircraft animation handling with predictive positioning and correction logic for improved accuracy (a4413a3)
+
+## [1.0.52] - 2026-09-18
+
+Changes since v1.0.51:
+
+- fix: refactor procedure visualization to merge consecutive geometry and improve feature generation (b50874e)
+- fix: add automatic fitting of ATC layer bounds to improve visibility of sectors (f7a8938)
+- fix: update event row structure to include flight callsign and refine aircraft registration handling (3c9f0e3)
+- fix: optimize aircraft animation handling for improved performance and visibility during tab changes (5ae9e46)
+
+## [1.0.51] - 2026-09-18
+
+Changes since v1.0.50:
+
+- fix: improve route data handling in aircraft detail components (81fdab9)
+- fix: add descending order support for time machine queries (f72e737)
+
+## [1.0.50] - 2026-09-18
+
+Changes since v1.0.49:
+
+- fix: enhance procedure visualization and coordinate extraction logic (7b67f6f)
+
+## [1.0.49] - 2026-09-18
+
+Changes since v1.0.38:
+
+- fix: harden airport movement inference and queries (73da420)
+- fix: correct ATC validity and airport visibility (37269c0)
+- test: strengthen map layer and migration production gates (5d6a47a)
+- fix: avoid runway label for airport overflights (88a3912)
+- Merge pull request #17 from Boym323/automation/harden-movement-atc-gates (af78331)
+- Improve airport movement intelligence UX (8643082)
+- Merge pull request #18 from Boym323/feature/airport-movement-ux (5236afe)
+- style: establish visual system v2 (ccaa4c2)
+- polish shared visual shell and secondary layouts (b500a1e)
+- style: finish visual system v2 mobile polish (46c26d0)
+- Merge pull request #19 from Boym323/feature/visual-system-v2 (ab01830)
+- docs: update changelog for v1.0.39 (37353dc)
+- refactor: improve diagnostics handling in computeAtcContext function (9eda63c)
+- refactor: clean up tsconfig.json by removing unnecessary type includes (2724067)
+- feat: make desktop radar map-first (e4e6e36)
+- fix: clarify traffic drawer trigger (59708aa)
+- chore: add 1280 drawer layer review (f812608)
+- fix: refine traffic drawer accessibility (d996edc)
+- fix: keep radar layers clear of desktop drawer (918b77e)
+- test: refresh frontend ux review captures (74d07f1)
+- fix: keep mobile traffic sheet above map (9d4ae48)
+- chore: remove temporary ux review artifacts (bd980f6)
+- fix: address frontend ux v3 review feedback (871915e)
+- fix: address final frontend ux review feedback (7b3f489)
+- fix: preserve OGN search shortcut focus (c7149c3)
+- Merge pull request #20 from Boym323/feature/frontend-ux-v3 (5fe864f)
+- fix: enhance live state snapshot to include public aircraft metadata (9890982)
+- docs: update changelog for v1.0.40 (a473e04)
+- fix: implement retry logic for ADSBDB failures with exponential backoff (fcfc262)
+- fix: keep layers menu above map content (c62f00d)
+- fix: keep layers menu above map content (8831c17)
+- Merge pull request #21 from Boym323/feature/frontend-ux-v3 (1eada41)
+- fix: add public metadata serialization for live state snapshots (43e879a)
+- Merge remote-tracking branch 'origin/main' (6c31d64)
+- ci: validate every public AirRadar domain (9b97c8a)
+- ci: restore configured production health domain (2ea0891)
+- fix: add turbopackIgnore comment to runtime state path function (37da2f4)
+- fix: update CI workflow for concurrency and simplify deployment steps feat: enhance public serialization for aircraft data and improve test coverage (2462d70)
+- docs: update changelog for v1.0.41 (18ed19a)
+- test: finalize FlightAware release coverage (64d42c5)
+- docs: update changelog for v1.0.0-rc.3 (d539439)
+- feat: show additional FlightAware flight plan details (691bab9)
+- docs: update changelog for v1.0.0-rc.4 (8bc8246)
+- feat: add FlightAware usage data JSON file (8e88ac6)
+- feat: enhance aircraft detail page with new layout and data sources (5bb0e22)
+- docs: update changelog for v1.0.42 (ed30aa2)
+- feat: update FlightAware usage data with new timestamps and request details (84ec575)
+- feat: finish aircraft detail v3 visual hierarchy (48a8898)
+- docs: update changelog for v1.0.43 (ca164a8)
+- style: simplify radar aircraft detail panel (fa8dda8)
+- style: load radar aircraft panel polish (fa198ec)
+- fix: preserve mobile aircraft drawer controls (26a24a5)
+- fix: align aircraft drawer close controls with responsive gate (0c88a97)
+- Merge pull request #23 from Boym323/ui/radar-aircraft-panel-polish (69f33d1)
+- chore: ignore FlightAware usage runtime state (ab01b00)
+- chore: add data/flightaware-usage.json to .gitignore (1e2224d)
+- Merge branch 'main' of https://github.com/Boym323/AirRadar (5728cf1)
+- docs: update changelog for v1.0.44 (13982bf)
+- fix: update RouteIntelligencePanel rendering conditions to exclude NO_ROUTE and NO_ATS_DATA statuses (a1aae78)
+- fix: update AirRadarApp to set selected ATC context and display additional details when available (fa76466)
+- fix: update AirRadarApp and AirspaceCard to improve ATC context handling and live tracking display (364a9fd)
+- fix: update aircraft trail handling to retain complete trails while aircraft are live (3753d34)
+- fix: add trail points and memory metrics to system status page and diagnostics (262e675)
+- fix: update global search to include aircraft focus and adjust href generation (589e3df)
+- fix: update href generation for aircraft search results to use a new path format (1b161c4)
+- fix: include registration in cache key for aircraft photo retrieval (677e7b3)
+- fix: enhance photo retrieval by prioritizing larger thumbnails from Planespotters API (1d4d282)
+- fix: update build lock file path to /var/lib/airradar/build.lock in scripts and documentation (e63b93a)
+- fix: improve OGN loading logic to ensure proper snapshot handling and prevent race conditions (7040631)
+- fix: add escape key functionality to close UI elements in various components (c11dc62)
+- fix: implement reduced motion preferences for smoother animations in AirRadarApp (a6232f2)
+- fix: enhance drawer action handling and keyboard shortcut event listener for improved UI responsiveness (417bc33)
+- fix: update legend line styles and translations for improved clarity in route visualization (81ef86e)
+- fix: update aircraft drawer layout for improved visual clarity and interaction (11eb37f)
+- fix: remove effective date display from ATC details for improved clarity (5d0c787)
+- fix: enhance SIGMET popup content with detailed information and improve translations for clarity (009bb69)
+- fix: update GeoJSON type references for improved type safety and consistency (4527353)
+- fix: add @types/geojson for improved type definitions and compatibility (0da0564)
+- fix: add timeout to SoftRF test suites for improved stability (1961edb)
+- Refactor radar aircraft quick detail (0b2e144)
+- Fix compact weather browser gate (0dd4a77)
+- Stabilize desktop shortcut browser gate (9747c18)
+- Stabilize traffic search focus (5cdaa31)
+- Retry traffic search focus after drawer render (2ac991d)
+- Avoid flaky repeated search focus assertion (7c5faa7)
+- Merge pull request #24 from Boym323/refactor/radar-aircraft-quick-detail (bb582bb)
+- Přidání watchdog služby a časovače pro sledování ADSB.lol polling (e6cdf63)
+- test: prove quick aircraft flow skips FlightAware (9529789)
+- Merge remote-tracking branch 'origin/main' (51d9e62)
+- perf: optimize CI test and production gates (7fb9d15)
+- perf: parallelize independent CI validation (737034e)
+- perf: speed up CI and production validation (d375262)
+- feat: add flight intelligence events (f9d5ce9)
+- fix: satisfy intelligence lint checks (7e4f715)
+- fix: chain flight intelligence migration (94a723c)
+- test: include flight intelligence migration (7b8fe82)
+- Merge pull request #28 from Boym323/feat/flight-intelligence (e74447d)
+- docs: update changelog for v1.0.45 (4aae461)
+- Merge pull request #29 from Boym323/chore/changelog-v1.0.45 (8ad173d)
+- feat: implement Route Intelligence V2 contracts and associated tests (96fc39a)
+- fix: align flight intelligence migration indexes (ebd36f7)
+- Merge branch 'main' into feat/route-intelligence-v2 (700d210)
+- Merge pull request #31 from Boym323/fix/flight-intelligence-migration (50a0307)
+- Merge branch 'main' into feat/route-intelligence-v2 (934bf2a)
+- Merge pull request #30 from Boym323/feat/route-intelligence-v2 (138756c)
+- feat(route-intelligence): unify runway context (1fc7858)
+- feat: add Route Intelligence V2 agent scripts and tasks (f1f310d)
+- Merge pull request #32 from Boym323/feat/route-intelligence-v2-agent-scripts (6246ce5)
+- Merge remote-tracking branch 'origin/main' into ri-v2/runway (0d7218a)
+- feat(route-intelligence): add terminal procedure pipeline (3d22cac)
+- Merge remote-tracking branch 'origin/main' into ri-v2/procedures (11afc5e)
+- feat(route-intelligence): add v2 static route engine (5d5dc2a)
+- Merge origin/main into ri-v2/static-engine (d9549c9)
+- feat(route-intelligence): add v2 static route engine (e8711ab)
+- feat(route-intelligence): add dynamic route analysis (52a2f61)
+- feat(route-intelligence): add v2 route UI and visualization (988fb62)
+- Merge remote-tracking branch 'origin/main' into ri-v2/dynamic (35f9f1e)
+- Merge remote-tracking branch 'origin/main' into ri-v2/ui (2322aac)
+- Merge branch 'main' into ri-v2/procedures (b047e40)
+- Merge branch 'main' into ri-v2/runway (c58e2dc)
+- fix(route-intelligence): complete empty dynamic snapshot (b1befcf)
+- Merge pull request #33 from Boym323/ri-v2/procedures (4f328cd)
+- Merge branch 'main' into ri-v2/runway (baa65e9)
+- Merge branch 'main' into ri-v2/dynamic (1a3908f)
+- Merge branch 'main' into ri-v2/ui (79915ac)
+- Merge pull request #35 from Boym323/ri-v2/runway (a1e7e6b)
+- Merge branch 'main' into ri-v2/ui (ed9d441)
+- merge: integrate latest main into dynamic route intelligence (4171962)
+- Merge remote-tracking branch 'origin/ri-v2/dynamic' into ri-v2/dynamic (e1ab680)
+- Merge pull request #37 from Boym323/ri-v2/ui (9fe094f)
+- Merge branch 'main' into ri-v2/dynamic (41ed539)
+- Merge remote-tracking branch 'origin/main' into ri-v2/dynamic (2977fba)
+- Přidání podmínky pro zobrazení rozsahu kroužků na základě dostupnosti pozice přijímače (09c442b)
+- fix(route-intelligence): complete view DTO contract (ef9ed93)
+- Merge remote-tracking branch 'origin/ri-v2/dynamic' into ri-v2/dynamic (ed3820e)
+- Merge pull request #36 from Boym323/ri-v2/dynamic (05354c7)
+- Merge branch 'main' into fix/receiver-range-availability (b7c89f4)
+- Merge pull request #38 from Boym323/fix/receiver-range-availability (737b171)
+- fix(enrichment): reject stale route destinations by position (4a44b73)
+- Merge pull request #39 from Boym323/fix/route-enrichment-position-gate (808c453)
+- docs: update changelog for v1.0.46 (da6e356)
+- Merge pull request #40 from Boym323/chore/changelog-v1.0.46 (fea01ba)
+- feat(map): add independent SID STAR procedure layers (45ceabd)
+- Merge branch 'main' into feat/procedure-map-layers (7bb878e)
+- Merge pull request #41 from Boym323/feat/procedure-map-layers (ec0b4cd)
+- docs: update changelog for v1.0.47 (9dce1b2)
+- feat(intelligence): complete route and flight intelligence integration (4a6c750)
+- fix(intelligence): remove duplicate procedure import (06c3416)
+- feat(time-machine): add historical traffic playback (c32db9a)
+- Merge pull request #42 from Boym323/chore/changelog-v1.0.47 (a7734fa)
+- fix(procedures): fail soft when dataset is unavailable (b3c1dc9)
+- test(procedures): cover unavailable dataset fallback (1698692)
+- fix(procedures): preserve existing procedure fixture (d684204)
+- feat(coordinates): add parsing for compact DMS coordinates and integrate into EAIP semantic HTML parsing (c723992)
+- Merge main into hardening/intelligence-integration (8d562bf)
+- Merge pull request #43 from Boym323/hardening/intelligence-integration (c06419e)
+- Merge branch 'main' into feat/coordinates-compact-dms (6095d9d)
+- Merge pull request #45 from Boym323/feat/coordinates-compact-dms (961f1c6)
+- fix(ui): show all route intelligence phases and sources (bde9dc3)
+- fix(i18n): label route departure and arrival phases (5ded0c4)
+- fix(i18n): add route phase labels (c65e3e8)
+- fix(radar): load aviation data needed by selected routes (6c1d754)
+- test(radar): cover route intelligence data loading (493b5e4)
+- test(i18n): cover dynamic route phases (b70b26c)
+- test(ui): cover route intelligence display semantics (5ef093a)
+- fix(ui): expose available receiver technical data (10608c4)
+- test(ui): cover receiver telemetry display (2f2aa46)
+- Merge pull request #46 from Boym323/fix/data-display-audit (f98ec3f)
+- merge main into feature/time-machine-v1 (f5cc221)
+- Merge pull request #47 from Boym323/feature/time-machine-v1 (c339746)
+- fix: use release-generated Next route types (dd3486c)
+- Merge pull request #48 from Boym323/fix/release-route-types (2b109c4)
+- fix: allow automated release from shared checkout branch (7dead24)
+- Merge pull request #49 from Boym323/fix/automated-release-branch (590be77)
+- fix: improve airport validation and streamline procedure fetching logic (c357386)
+- Merge pull request #50 from Boym323/fix/airport-validation-procedure-fetch (a39a82c)
+- fix: update CI workflow to create GitHub release notes and change permissions to write (2b0946d)
+- Merge branch 'main' into fix/github-release-notes-workflow (4f9f4b7)
+- Merge pull request #51 from Boym323/fix/github-release-notes-workflow (a70798b)
+- feat: add aviation data synchronization scripts and systemd service/timer (e44f3de)
+- fix: keep automated release checkout synchronized (8d6161d)
+- Merge branch 'main' into fix/automated-release-sync (6f2b270)
+- Merge pull request #52 from Boym323/fix/automated-release-sync (06e448e)
+- fix: resolve release version from production checkout (ea22eb7)
+- Merge pull request #53 from Boym323/fix/release-notes-production-version (ccb092d)
+- fix: remove fragile release workflow heredoc (4ae4049)
+- Merge pull request #54 from Boym323/fix/release-workflow-heredoc (f71fdd0)
 ## [1.0.124] - 2026-09-26
 
 ## What's Changed
