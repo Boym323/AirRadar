@@ -1,6 +1,8 @@
 import type { AircraftView, PublicStateSnapshot } from "@/lib/aircraft/types";
 
 export const SSE_V2_PROTOCOL = "airradar-sse-v2" as const;
+const DENSE_DELTA_MIN_MUTATIONS = 32;
+const DENSE_DELTA_REBUILD_RATIO = 0.08;
 
 export type SseV2SnapshotPayload = Omit<PublicStateSnapshot, "aircraft"> & {
   protocol: typeof SSE_V2_PROTOCOL;
@@ -65,6 +67,13 @@ function incrementSequence(value: string): string {
     carry = next >= 10 ? 1 : 0;
   }
   return carry ? `1${digits.join("")}` : digits.join("");
+}
+
+export function shouldRebuildSseV2Order(currentAircraftCount: number, changedCount: number, removedCount: number): boolean {
+  const mutations = Math.max(0, changedCount) + Math.max(0, removedCount);
+  if (mutations < DENSE_DELTA_MIN_MUTATIONS) return false;
+  const baseline = Math.max(1, currentAircraftCount);
+  return mutations >= Math.ceil(baseline * DENSE_DELTA_REBUILD_RATIO);
 }
 
 function compareAircraft(left: AircraftView, right: AircraftView): number {
@@ -140,14 +149,23 @@ export function applySseV2Event(
   const state = "aircraftByHex" in current && current.aircraftByHex && "sortedAircraftIds" in current && current.sortedAircraftIds
     ? current as SseV2ClientState
     : normalizedState(current.snapshot, current.sequence);
-  for (const hex of value.removed) {
-    if (!state.aircraftByHex.delete(hex)) continue;
-    removeSortedAircraft(state.sortedAircraftIds, hex);
-  }
-  for (const item of value.changed) {
-    if (state.aircraftByHex.has(item.icaoHex)) removeSortedAircraft(state.sortedAircraftIds, item.icaoHex);
-    state.aircraftByHex.set(item.icaoHex, item);
-    insertSortedAircraft(state.sortedAircraftIds, state.aircraftByHex, item.icaoHex);
+  const rebuildOrder = shouldRebuildSseV2Order(state.aircraftByHex.size, value.changed.length, value.removed.length);
+  if (rebuildOrder) {
+    for (const hex of value.removed) state.aircraftByHex.delete(hex);
+    for (const item of value.changed) state.aircraftByHex.set(item.icaoHex, item);
+    state.sortedAircraftIds = [...state.aircraftByHex.values()]
+      .sort(compareAircraft)
+      .map((aircraft) => aircraft.icaoHex);
+  } else {
+    for (const hex of value.removed) {
+      if (!state.aircraftByHex.delete(hex)) continue;
+      removeSortedAircraft(state.sortedAircraftIds, hex);
+    }
+    for (const item of value.changed) {
+      if (state.aircraftByHex.has(item.icaoHex)) removeSortedAircraft(state.sortedAircraftIds, item.icaoHex);
+      state.aircraftByHex.set(item.icaoHex, item);
+      insertSortedAircraft(state.sortedAircraftIds, state.aircraftByHex, item.icaoHex);
+    }
   }
   const aircraft = value.changed.length || value.removed.length
     ? state.sortedAircraftIds.map((hex) => state.aircraftByHex.get(hex)!).filter(Boolean)
