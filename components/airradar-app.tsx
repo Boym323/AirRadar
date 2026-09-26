@@ -1495,8 +1495,7 @@ export function AirRadarApp() {
     }
     const webglInteractionSource = map.getSource(AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID) as GeoJSONSource | undefined;
     if (fullMarkerUpdate) {
-      aircraftWebglRuntime?.clear();
-      for (const aircraft of liveBulkAircraft) aircraftWebglRuntime?.upsert({ ...aircraft }, colorMode);
+      aircraftWebglRuntime?.sync(liveBulkAircraft.map((aircraft) => ({ ...aircraft })), colorMode);
       webglInteractionSource?.setData({
         type: "FeatureCollection",
         features: liveBulkAircraft.map((aircraft) => aircraftWebglInteractionFeature(aircraft, mapZoom)),
