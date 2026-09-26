@@ -1,0 +1,60 @@
+name: Changelog Sync
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: changelog-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fetch release tags
+        run: git fetch --force --tags origin
+
+      - name: Backfill changelog
+        run: node scripts/changelog.mjs backfill
+
+      - name: Verify changelog covers published tags
+        run: node scripts/changelog.mjs check
+
+      - name: Open or refresh changelog PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || 'manual-sync' }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md already synchronized."
+            exit 0
+          fi
+
+          branch="automation/changelog-sync"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${branch}"
+          git add CHANGELOG.md
+          git commit -m "docs: sync changelog through ${RELEASE_TAG}"
+          git push --force origin "${branch}"
+
+          existing_pr="$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${branch}" --base main --state open --json number --jq '.[0].number // empty')"
+          if [[ -n "${existing_pr}" ]]; then
+            echo "Updated changelog PR #${existing_pr}."
+            exit 0
+          fi
+
+          gh pr create             --repo "${GITHUB_REPOSITORY}"             --base main             --head "${branch}"             --title "docs: sync release changelog"             --body "Automated changelog backfill for published AirRadar releases. This PR updates only CHANGELOG.md and does not bypass the normal main-branch review path."
