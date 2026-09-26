@@ -46,12 +46,24 @@ export interface RecordAircraftSnapshotResult {
   newAircraft?: string[];
 }
 
+export interface HistoryRetentionStatus {
+  lastRunAt: string | null;
+  lastDurationMs: number | null;
+  deletedRows: number;
+  batches: number;
+  backlogRemaining: boolean;
+  lastError: "cleanup_failed" | null;
+}
+
 export interface HistoryPersistenceStatus {
   lastSuccessfulWriteAt: string | null;
   failureCount: number;
+  retention?: HistoryRetentionStatus;
 }
 
 export const HISTORY_POSITION_LIMIT = 2_000;
+export const HISTORY_RETENTION_BATCH_SIZE = 5_000;
+export const HISTORY_RETENTION_MAX_BATCHES = 20;
 export const HISTORY_FLIGHT_LIMIT = 100;
 export const AIRCRAFT_RECENT_FLIGHT_LIMIT = 10;
 
@@ -227,12 +239,21 @@ let lastRetentionRunAt = 0;
 let lastFlightMaintenanceRunAt = 0;
 let lastSuccessfulHistoryWriteAt: string | null = null;
 let historyPersistenceFailureCount = 0;
+let historyRetentionStatus: HistoryRetentionStatus = {
+  lastRunAt: null,
+  lastDurationMs: null,
+  deletedRows: 0,
+  batches: 0,
+  backlogRemaining: false,
+  lastError: null,
+};
 
 /** Read-only runtime health for the existing history persistence lane. */
 export function getHistoryPersistenceStatus(): HistoryPersistenceStatus {
   return {
     lastSuccessfulWriteAt: lastSuccessfulHistoryWriteAt,
     failureCount: historyPersistenceFailureCount,
+    retention: { ...historyRetentionStatus },
   };
 }
 
@@ -912,10 +933,63 @@ async function retryAircraftUniqueViolation<T>(operation: () => Promise<T>): Pro
   throw new Error("Unreachable aircraft history retry state");
 }
 
+export interface HistoryRetentionResult {
+  deletedRows: number;
+  batches: number;
+  backlogRemaining: boolean;
+}
+
+/**
+ * Deletes expired position rows in bounded batches. Prisma ORM 8's singular
+ * `.delete()` removes only one matching record, so retention must explicitly
+ * select a bounded id set and use `.deleteCount()` for each batch.
+ */
+export async function deleteExpiredFlightPositions(
+  database: NonNullable<ReturnType<typeof getPrisma>>,
+  cutoff: Date,
+  options: { batchSize?: number; maxBatches?: number } = {},
+): Promise<HistoryRetentionResult> {
+  const batchSize = Math.min(20_000, Math.max(1, Math.trunc(options.batchSize ?? HISTORY_RETENTION_BATCH_SIZE)));
+  const maxBatches = Math.min(100, Math.max(1, Math.trunc(options.maxBatches ?? HISTORY_RETENTION_MAX_BATCHES)));
+  const cutoffInstant = Temporal.Instant.fromEpochMilliseconds(cutoff.getTime());
+  const table = database.orm.public.FlightPosition;
+  const selectExpiredIds = async (limit: number): Promise<number[]> => {
+    const rows = await table
+      .where((position) => position.recordedAt.lt(cutoffInstant))
+      .orderBy([(position) => position.recordedAt.asc(), (position) => position.id.asc()])
+      .select("id")
+      .limit(limit)
+      .all();
+    return rows
+      .map((row) => row.id)
+      .filter((id): id is number => Number.isSafeInteger(id) && id > 0);
+  };
+
+  let deletedRows = 0;
+  let batches = 0;
+  for (; batches < maxBatches; batches += 1) {
+    const ids = await selectExpiredIds(batchSize);
+    if (ids.length === 0) return { deletedRows, batches, backlogRemaining: false };
+
+    const deleted = await table
+      .where((position) => position.id.in(ids))
+      .deleteCount();
+    deletedRows += Math.max(0, Number.isFinite(deleted) ? Math.trunc(deleted) : 0);
+
+    if (ids.length < batchSize) {
+      return { deletedRows, batches: batches + 1, backlogRemaining: false };
+    }
+  }
+
+  const backlogRemaining = (await selectExpiredIds(1)).length > 0;
+  return { deletedRows, batches, backlogRemaining };
+}
+
 async function pruneHistoryIfDue(database: NonNullable<ReturnType<typeof getPrisma>>): Promise<void> {
   const now = Date.now();
   const maintenanceDue = now - lastFlightMaintenanceRunAt >= Math.max(getHistorySampleIntervalMs(), 5 * 60_000);
-  const retentionDue = now - lastRetentionRunAt >= 6 * 60 * 60_000;
+  const retentionIntervalMs = historyRetentionStatus.backlogRemaining ? 5 * 60_000 : 6 * 60 * 60_000;
+  const retentionDue = now - lastRetentionRunAt >= retentionIntervalMs;
   if (!maintenanceDue && !retentionDue) return;
   if (maintenanceDue) {
     lastFlightMaintenanceRunAt = now;
@@ -927,15 +1001,32 @@ async function pruneHistoryIfDue(database: NonNullable<ReturnType<typeof getPris
     }
   }
   if (!retentionDue) return;
+
   lastRetentionRunAt = now;
+  const startedAt = Date.now();
   try {
     const cutoff = new Date(now - getHistoryRetentionDays() * 24 * 60 * 60_000);
-    // This also removes old samples belonging to still-open flights. A later
-    // migration can partition this table if a larger installation needs it.
-    const cutoffInstant = Temporal.Instant.fromEpochMilliseconds(cutoff.getTime());
-    await database.orm.public.FlightPosition.where((position) => position.recordedAt.lt(cutoffInstant)).delete();
+    const result = await deleteExpiredFlightPositions(database, cutoff);
+    historyRetentionStatus = {
+      lastRunAt: new Date(now).toISOString(),
+      lastDurationMs: Math.max(0, Date.now() - startedAt),
+      deletedRows: result.deletedRows,
+      batches: result.batches,
+      backlogRemaining: result.backlogRemaining,
+      lastError: null,
+    };
+    console.info(
+      `AirRadar history retention cleanup completed rows=${result.deletedRows} batches=${result.batches} backlog=${result.backlogRemaining ? "yes" : "no"} durationMs=${historyRetentionStatus.lastDurationMs}`,
+    );
   } catch (error) {
-    lastRetentionRunAt = 0;
+    historyRetentionStatus = {
+      lastRunAt: new Date(now).toISOString(),
+      lastDurationMs: Math.max(0, Date.now() - startedAt),
+      deletedRows: 0,
+      batches: 0,
+      backlogRemaining: true,
+      lastError: "cleanup_failed",
+    };
     console.error("AirRadar history retention cleanup failed", error);
   }
 }
