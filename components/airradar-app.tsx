@@ -32,6 +32,7 @@ import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule 
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { MetarMapObservation } from "@/lib/weather/types";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
+import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
@@ -1826,6 +1827,11 @@ export function AirRadarApp() {
     : selectedAircraftSnapshot, [aircraftDetail, selectedAircraftSnapshot]);
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
   const selectedSigmetContext = useMemo(() => aircraftSigmetContext(selectedAircraft, sigmetData), [selectedAircraft, sigmetData]);
+  const selectedSigmetDeviation = useMemo(() => detectSigmetTrajectoryDeviation(
+    selectedAircraft,
+    selectedHistoryTrail?.points ?? selectedAircraft?.trail ?? [],
+    sigmetData,
+  ), [selectedAircraft, selectedHistoryTrail, sigmetData]);
   const selectedOgnTarget = ognSnapshot.targets.find((target) => target.id === selectedOgnId) ?? null;
   const selectedIdentity = selectedAircraft?.icaoHex ?? selectedDatabaseAircraft?.icaoHex ?? selectedHex;
   const contextAircraftHex = selectedAircraftSnapshot?.icaoHex ?? null;
@@ -2134,6 +2140,7 @@ export function AirRadarApp() {
             historyTrail={selectedAircraft && selectedHistoryTrail?.icaoHex === selectedAircraft.icaoHex ? selectedHistoryTrail : null}
             atcContext={selectedAtcContext}
             sigmetContext={selectedSigmetContext}
+            sigmetDeviation={selectedSigmetDeviation}
             sigmetStale={sigmetData.stale}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}

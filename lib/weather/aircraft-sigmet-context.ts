@@ -69,7 +69,7 @@ function verticalMatch(altitudeFt: number | null, lowerFt: number | null, upperF
   return "matched";
 }
 
-function projectPosition(lat: number, lon: number, trackDeg: number, distanceNm: number): { lat: number; lon: number } {
+export function projectPosition(lat: number, lon: number, trackDeg: number, distanceNm: number): { lat: number; lon: number } {
   const angularDistance = distanceNm / 3440.065;
   const bearing = trackDeg * Math.PI / 180;
   const lat1 = lat * Math.PI / 180;
