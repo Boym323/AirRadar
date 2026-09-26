@@ -53,6 +53,15 @@ export interface AircraftWindAheadProfile {
   furthestDistanceNm: number;
 }
 
+export interface AircraftDestinationWindContext {
+  distanceNm: number;
+  bearingDeg: number;
+  headwindKt: number;
+  tailwindKt: number;
+  crosswindKt: number;
+  crosswindFrom: "left" | "right" | null;
+}
+
 function normalizeDegrees(value: number): number {
   return ((value % 360) + 360) % 360;
 }
@@ -65,6 +74,16 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
     Math.sin(dLat / 2) ** 2
     + Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLon / 2) ** 2;
   return 2 * 6371.0088 * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+function initialBearingDeg(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = Math.PI / 180;
+  const phi1 = lat1 * toRad;
+  const phi2 = lat2 * toRad;
+  const deltaLon = (lon2 - lon1) * toRad;
+  const y = Math.sin(deltaLon) * Math.cos(phi2);
+  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLon);
+  return normalizeDegrees(Math.atan2(y, x) * 180 / Math.PI);
 }
 
 function projectPosition(lat: number, lon: number, trackDeg: number, distanceNm: number): { lat: number; lon: number } {
@@ -201,5 +220,29 @@ export function buildAircraftWindAheadProfile(
     trend,
     deltaAlongTrackKt,
     furthestDistanceNm: furthest.distanceNm,
+  };
+}
+
+export function buildAircraftDestinationWindContext(
+  aircraft: AircraftView | null,
+  destination: { lat: number; lon: number } | null | undefined,
+  wind: AircraftWindSnapshot | null,
+): AircraftDestinationWindContext | null {
+  if (!aircraft || aircraft.onGround || !destination || !wind || aircraft.lat === null || aircraft.lon === null) return null;
+  if (!Number.isFinite(destination.lat) || !Number.isFinite(destination.lon)) return null;
+
+  const distanceKm = haversineKm(aircraft.lat, aircraft.lon, destination.lat, destination.lon);
+  if (distanceKm < 1) return null;
+  const bearingDeg = initialBearingDeg(aircraft.lat, aircraft.lon, destination.lat, destination.lon);
+  const component = windAtPoint(aircraft.lat, aircraft.lon, bearingDeg, wind);
+  if (!component) return null;
+
+  return {
+    distanceNm: distanceKm / 1.852,
+    bearingDeg,
+    headwindKt: component.headwindKt,
+    tailwindKt: component.tailwindKt,
+    crosswindKt: component.crosswindKt,
+    crosswindFrom: component.crosswindFrom,
   };
 }
