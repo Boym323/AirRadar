@@ -75,6 +75,17 @@ describe("route weather context", () => {
     expect(result.matches[0]).toMatchObject({ hazard: "SEV TURB", routeDesignator: "L610", verticalMatch: "matched" });
   });
 
+  it("measures SIGMET entry from current progress instead of the airway segment start", () => {
+    const result = buildRouteWeatherContext(aircraft(), route(), sigmets());
+    const current = result.matches.find((match) => match.segmentId === "seg-1");
+    const next = result.matches.find((match) => match.segmentId === "seg-2");
+
+    expect(current?.distanceAlongRouteNm).toBeGreaterThan(7);
+    expect(current?.distanceAlongRouteNm).toBeLessThan(9);
+    expect(next?.distanceAlongRouteNm).toBeGreaterThan(18);
+    expect(next?.distanceAlongRouteNm).toBeLessThan(21);
+  });
+
   it("detects a polygon crossing even when both route-segment endpoints are outside", () => {
     const r = route();
     r.matchedSegments = [{ ...r.matchedSegments[0]!, from: [14, 50], to: [16, 50] }];
