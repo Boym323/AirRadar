@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { AviationWeatherProvider, normalizeSigmetGeoJson } from "@/lib/server/aviation-weather-provider";
 
-const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const radarSource = readFileSync(new URL("../components/radar/use-radar-weather-context.ts", import.meta.url), "utf8");
 
 const polygon = [[
   [14, 49], [15, 49], [15, 50], [14, 49],
@@ -211,7 +211,7 @@ describe("Aviation Weather SIGMET normalization", () => {
   });
 
   it("keeps the last good SIGMET polygons on a client refresh error and clears only on valid empty success", () => {
-    expect(radarSource).toContain("// A transient client/API failure must not erase the last good layer.");
+    expect(radarSource).toContain("// Keep the last good layer across transient client/API failures.");
     expect(radarSource).toContain("generation !== sigmetGenerationRef.current");
     expect(radarSource).toContain("data.type === \"FeatureCollection\" && Array.isArray(data.features)");
     expect(radarSource).not.toContain("if (active) setSigmetData(EMPTY_SIGMET_DATA);");
