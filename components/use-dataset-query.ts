@@ -33,13 +33,25 @@ function retryAfterMs(response: Response): number | null {
   return Number.isFinite(date) ? Math.min(Math.max(0, date - Date.now()), 15 * 60_000) : null;
 }
 
-function category(error: unknown): DatasetErrorCategory {
+export function datasetErrorCategory(error: unknown): DatasetErrorCategory {
   const status = error && typeof error === "object" && "status" in error ? Number(error.status) : null;
   if (status === 429) return "rate_limited";
   if (status !== null && status >= 500) return "server";
   if (status !== null && status >= 400) return "client";
   if (error instanceof TypeError) return "network";
   return "malformed";
+}
+
+export function shouldRetryDataset(failureCount: number, error: unknown): boolean {
+  const kind = datasetErrorCategory(error);
+  return (kind === "network" || kind === "server" || kind === "rate_limited" || kind === "malformed") && failureCount < 4;
+}
+
+export function datasetRetryDelayMs(attemptIndex: number, error: unknown): number {
+  const serverDelay = error && typeof error === "object" && "retryAfterMs" in error && typeof error.retryAfterMs === "number"
+    ? error.retryAfterMs
+    : null;
+  return serverDelay ?? [5_000, 15_000, 30_000, 60_000][Math.min(Math.max(0, Math.trunc(attemptIndex)), 3)];
 }
 
 export function useDatasetQuery<T>({ url, enabled = true, cache = "no-store", parse, itemCount = (value) => Array.isArray(value) ? value.length : 0 }: DatasetQueryOptions<T>): DatasetState<T> & { reload: () => void } {
@@ -58,14 +70,8 @@ export function useDatasetQuery<T>({ url, enabled = true, cache = "no-store", pa
       return parse(response);
     },
     staleTime: cache === "force-cache" ? Infinity : 0,
-    retry: (failureCount, error) => {
-      const kind = category(error);
-      return (kind === "network" || kind === "server" || kind === "rate_limited" || kind === "malformed") && failureCount < 4;
-    },
-    retryDelay: (attemptIndex, error) => {
-      const serverDelay = error && typeof error === "object" && "retryAfterMs" in error && typeof error.retryAfterMs === "number" ? error.retryAfterMs : null;
-      return serverDelay ?? [5_000, 15_000, 30_000, 60_000][Math.min(attemptIndex, 3)];
-    },
+    retry: shouldRetryDataset,
+    retryDelay: datasetRetryDelayMs,
   });
   const data = query.data ?? null;
   const isStale = query.isFetching && data !== null;
@@ -74,7 +80,7 @@ export function useDatasetQuery<T>({ url, enabled = true, cache = "no-store", pa
   return {
     data,
     status,
-    errorCategory: query.isError ? category(error) : null,
+    errorCategory: query.isError ? datasetErrorCategory(error) : null,
     lastAttemptAt: null,
     lastSuccessAt: query.dataUpdatedAt ? new Date(query.dataUpdatedAt).toISOString() : null,
     retryCount: query.failureCount,
