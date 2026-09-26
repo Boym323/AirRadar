@@ -32,6 +32,7 @@ import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule 
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
 import type { MetarMapObservation } from "@/lib/weather/types";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
+import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
@@ -374,6 +375,7 @@ export function AirRadarApp() {
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
   const [aircraftDetail, setAircraftDetail] = useState<AircraftQuickDetailResponse | null>(null);
   const [selectedAtcContext, setSelectedAtcContext] = useState<AtcContextResult | null>(null);
+  const [selectedRouteWeather, setSelectedRouteWeather] = useState<RouteWeatherContext | null>(null);
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
@@ -1864,6 +1866,25 @@ export function AirRadarApp() {
     return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
   }, [contextAircraftHex, contextHasPosition]);
 
+  useEffect(() => {
+    setSelectedRouteWeather(null);
+    if (!contextAircraftHex || !contextHasPosition) return;
+    let active = true;
+    let timer: number | null = null;
+    const refresh = () => {
+      void fetch(`/api/aircraft/${encodeURIComponent(contextAircraftHex)}/route-weather`, { cache: "no-store" })
+        .then(async (response) => {
+          if (!response.ok && response.status >= 500) throw new Error("route-weather unavailable");
+          return await response.json() as RouteWeatherContext;
+        })
+        .then((value) => { if (active) setSelectedRouteWeather(value); })
+        .catch(() => { if (active) setSelectedRouteWeather(null); });
+    };
+    refresh();
+    timer = window.setInterval(refresh, 120_000);
+    return () => { active = false; if (timer !== null) window.clearInterval(timer); };
+  }, [contextAircraftHex, contextHasPosition]);
+
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
 
   useEffect(() => {
@@ -2152,6 +2173,7 @@ export function AirRadarApp() {
             windAhead={selectedWind.ahead}
             destinationWind={selectedWind.destination}
             windStatus={selectedWind.status}
+            routeWeather={selectedRouteWeather}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
             onBack={backToTraffic}
