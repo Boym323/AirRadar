@@ -108,10 +108,10 @@ describe("SIGMET trajectory deviation", () => {
     expect(result?.previousProjectedEntryMinutes).toBeGreaterThan(0);
   });
 
-  it("does not infer an avoidance signal when the current track still projects into the same SIGMET", () => {
+  it("does not infer an avoidance signal when a meaningful turn still projects into the same SIGMET", () => {
     expect(detectSigmetTrajectoryDeviation(
-      aircraft({ track: 80 }),
-      [point("2026-09-26T14:55:00.000Z", 90), point("2026-09-26T14:59:30.000Z", 82)],
+      aircraft({ track: 60 }),
+      [point("2026-09-26T14:55:00.000Z", 90), point("2026-09-26T14:59:30.000Z", 62)],
       snapshot(),
     )).toBeNull();
   });
