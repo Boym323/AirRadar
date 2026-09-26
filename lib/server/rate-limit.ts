@@ -93,6 +93,7 @@ export const PUBLIC_RATE_LIMITS = {
   alertHistory: { limit: 12, windowMs: 60_000 },
   recap: { limit: 12, windowMs: 60_000 },
   systemStatus: { limit: 12, windowMs: 60_000 },
+  runtimeTelemetry: { limit: 12, windowMs: 60_000 },
   version: { limit: 60, windowMs: 60_000 },
   search: { limit: 60, windowMs: 60_000 },
   watchlist: { limit: 60, windowMs: 60_000 },

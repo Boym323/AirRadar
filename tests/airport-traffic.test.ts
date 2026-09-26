@@ -60,6 +60,20 @@ class FakeCollection {
     return this;
   }
 
+  orderBy(callback: (fields: Row) => unknown): FakeCollection {
+    callback(new Proxy({}, {
+      get: (_target, property: string) => ({
+        asc: () => ({ property, direction: "asc" }),
+        desc: () => ({ property, direction: "desc" }),
+      }),
+    }));
+    return new FakeCollection([...this.rows].sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0)), this.kind, this.onAll, this.onIn);
+  }
+
+  offset(value: number): FakeCollection {
+    return new FakeCollection(this.rows.slice(value), this.kind, this.onAll, this.onIn);
+  }
+
   limit(value: number): FakeCollection {
     return new FakeCollection(this.rows.slice(0, value), this.kind, this.onAll, this.onIn);
   }
@@ -234,7 +248,7 @@ describe("airport traffic summary v1", () => {
     expect(result.recentTraffic).toHaveLength(AIRPORT_TRAFFIC_RECENT_LIMIT);
   });
 
-  it("marks the response incomplete when a bounded route query is truncated", async () => {
+  it("keeps airport traffic exact beyond the old 500-row cap", async () => {
     const counters = { all: 0, in: 0 };
     const flights = Array.from({ length: 501 }, (_, index) => flight(index + 1, "2026-09-08T08:00:00Z", {
       origin: "PRG",
@@ -245,9 +259,26 @@ describe("airport traffic summary v1", () => {
 
     const result = await getAirportTrafficSummary(prague, { range: "30d", now: new Date("2026-09-08T12:00:00Z") });
 
-    expect(result.complete).toBe(false);
-    expect(result.flights).toBe(500);
-    expect(result.departures).toBe(500);
+    expect(result.complete).toBe(true);
+    expect(result.flights).toBe(501);
+    expect(result.departures).toBe(501);
+    expect(result.uniqueAircraft).toBe(501);
+  });
+
+  it("deduplicates loop routes after reading the complete origin and destination sets", async () => {
+    const counters = { all: 0, in: 0 };
+    const flights = Array.from({ length: 520 }, (_, index) => flight(index + 1, "2026-09-08T08:00:00Z", {
+      origin: "PRG",
+      destination: index === 519 ? "PRG" : "FRA",
+    }));
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase(flights, routeAirports, counters) as never);
+
+    const result = await getAirportTrafficSummary(prague, { range: "30d", now: new Date("2026-09-08T12:00:00Z") });
+
+    expect(result.complete).toBe(true);
+    expect(result.flights).toBe(520);
+    expect(result.departures).toBe(520);
+    expect(result.arrivals).toBe(1);
   });
 
   it("returns a true empty state without reading positions", async () => {

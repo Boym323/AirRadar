@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatDateTime, formatDistance, formatNumber, getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
-import type { OperationalState, SystemStatus, SystemStatusResponse } from "@/lib/server/system-status";
+import type { OperationalState, SystemStatus, SystemStatusApiResponse, SystemStatusResponse } from "@/lib/server/system-status";
 
 function formatUptime(seconds: number, dictionary: LocaleDictionary): string {
   const total = Math.max(0, Math.floor(seconds));
@@ -79,7 +79,7 @@ function LinkNav({ dictionary, locale, onLocaleChange }: { dictionary: LocaleDic
 export function SystemStatusPage() {
   const [locale, setLocale] = useState<LocaleKey>("cs");
   const dictionary = getTranslations(locale);
-  const [data, setData] = useState<SystemStatusResponse | null>(null);
+  const [data, setData] = useState<SystemStatusApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -88,7 +88,7 @@ export function SystemStatusPage() {
     try {
       const response = await fetch("/api/system/status", { cache: "no-store" });
       if (!response.ok) throw new Error("system status request failed");
-      setData(await response.json() as SystemStatusResponse);
+      setData(await response.json() as SystemStatusApiResponse);
       setError(false);
     } catch {
       setError(true);
@@ -98,6 +98,8 @@ export function SystemStatusPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const detailed = data?.detailLevel === "admin";
 
   return <main className="history-page system-page">
     <header className="history-page-header system-page-header">
@@ -128,14 +130,14 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.buildTime} value={formatDateTime(data.application.buildTime, dictionary)} />
         <Field label={dictionary.system.channel} value={data.application.channel} />
         <Field label={dictionary.system.uptime} value={formatUptime(data.application.uptimeSeconds, dictionary)} />
-        <Field label={dictionary.system.node} value={data.application.nodeVersion} />
-        <Field label={dictionary.system.next} value={data.application.nextVersion ?? dictionary.system.notAvailable} />
+        {detailed && <Field label={dictionary.system.node} value={data.application.nodeVersion} />}
+        {detailed && <Field label={dictionary.system.next} value={data.application.nextVersion ?? dictionary.system.notAvailable} />}
         <Field label={dictionary.system.environment} value={data.application.environment} />
         <Field label={dictionary.system.timezone} value={data.application.timezone} />
         <Field label={dictionary.system.startTime} value={formatDateTime(data.application.startedAt, dictionary)} />
       </Card>
 
-      <Card title={dictionary.system.runtime} status={data.application.status} dictionary={dictionary}>
+      {detailed && <Card title={dictionary.system.runtime} status={data.application.status} dictionary={dictionary}>
         <Field label={dictionary.system.processRss} value={formatBytes(data.runtime.processRssBytes, dictionary)} />
         <Field label={dictionary.system.heapUsed} value={formatBytes(data.runtime.heapUsedBytes, dictionary)} />
         <Field label={dictionary.system.cgroupMemory} value={data.runtime.cgroupMemoryMaxBytes === null ? formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary) : `${formatBytes(data.runtime.cgroupMemoryCurrentBytes, dictionary)} / ${formatBytes(data.runtime.cgroupMemoryMaxBytes, dictionary)}`} />
@@ -145,7 +147,7 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.trailMemory} value={formatBytes(data.runtime.trailEstimatedBytes, dictionary)} />
         <Field label={dictionary.system.metadataCache} value={data.runtime.metadataHotCacheLimit === null ? formatCount(data.runtime.metadataHotCacheSize, dictionary) : `${formatCount(data.runtime.metadataHotCacheSize, dictionary)} / ${formatCount(data.runtime.metadataHotCacheLimit, dictionary)}`} />
         <Field label={dictionary.system.providerCache} value={data.runtime.providerCacheLimit === null ? formatCount(data.runtime.providerCacheEntries, dictionary) : `${formatCount(data.runtime.providerCacheEntries, dictionary)} / ${formatCount(data.runtime.providerCacheLimit, dictionary)}`} />
-      </Card>
+      </Card>}
 
       <Card title={dictionary.system.receiver} status={data.receiver.readsb.status} dictionary={dictionary}>
         <Field label={dictionary.system.readsb} value={<StatusBadge status={data.receiver.readsb.status} dictionary={dictionary} />} />
@@ -156,7 +158,7 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.snapshotAge} value={data.receiver.readsb.snapshotAgeSeconds === null ? dictionary.system.notAvailable : `${formatNumber(data.receiver.readsb.snapshotAgeSeconds, 0, dictionary.locale)} ${dictionary.system.seconds}`} />
       </Card>
 
-      {data.localAdsb && <Card title={dictionary.system.localAdsb} status={data.localAdsb.status === "healthy" ? "ok" : data.localAdsb.status === "connecting" ? "degraded" : "offline"} dictionary={dictionary}>
+      {detailed && data.localAdsb && <Card title={dictionary.system.localAdsb} status={data.localAdsb.status === "healthy" ? "ok" : data.localAdsb.status === "connecting" ? "degraded" : "offline"} dictionary={dictionary}>
         <Field label={dictionary.system.source} value={`${data.localAdsb.activeSource ?? "beast"} · ${data.localAdsb.host ?? dictionary.system.notAvailable}:${data.localAdsb.port ?? "?"}`} />
         <Field label={dictionary.system.connected} value={data.localAdsb.connected ? dictionary.system.online : dictionary.system.offline} />
         <Field label={dictionary.system.lastSnapshot} value={formatDateTime(data.localAdsb.lastFrameAt as string | null, dictionary)} />
@@ -185,7 +187,7 @@ export function SystemStatusPage() {
       </Card>
 
       <Card title={dictionary.system.ogn} status={data.ogn.status} dictionary={dictionary}>
-        <Field label={dictionary.system.provider} value={`${data.ogn.host}:${data.ogn.port} · ${data.ogn.radiusKm} km`} />
+        <Field label={dictionary.system.provider} value={detailed ? `${data.ogn.host}:${data.ogn.port} · ${data.ogn.radiusKm} km` : `${data.ogn.providerStatus} · ${data.ogn.radiusKm} km`} />
         <Field label={dictionary.system.enabled} value={data.ogn.enabled ? dictionary.system.configured : dictionary.system.disabled} />
         <Field label={dictionary.system.connection} value={data.ogn.providerStatus} />
         <Field label={dictionary.system.login} value={data.ogn.loginAcknowledged ? dictionary.system.connected : dictionary.system.notAvailable} />
@@ -206,7 +208,7 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.ddbLastBatch} value={data.ogn.ddb.lastBatchSize === null ? dictionary.system.notAvailable : `${formatNumber(data.ogn.ddb.lastBatchSize, 0, dictionary.locale)} ${dictionary.system.entries}`} />
         <Field label={dictionary.system.ddbSuccessfulRequests} value={formatNumber(data.ogn.ddb.successfulRequests, 0, dictionary.locale)} />
         <Field label={dictionary.system.ddbEvictions} value={formatNumber(data.ogn.ddb.evictions, 0, dictionary.locale)} />
-        <Field label={dictionary.system.ddbEndpoint} value={data.ogn.ddb.endpoint} />
+        {detailed && <Field label={dictionary.system.ddbEndpoint} value={data.ogn.ddb.endpoint} />}
         <Field label={dictionary.system.ddbMode} value={data.ogn.ddb.mode ?? dictionary.system.notAvailable} />
         <Field label={dictionary.system.ddbLastAttempt} value={formatDateTime(data.ogn.ddb.lastAttemptAt, dictionary)} />
         <Field label={dictionary.system.ddbRefresh} value={formatDateTime(data.ogn.ddb.lastSuccessAt, dictionary)} />
@@ -220,7 +222,7 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.ddbAircraftType} value={data.ogn.ddb.aircraftTypeAvailable ? dictionary.system.yes : dictionary.system.no} />
         <Field label={dictionary.system.ddbUnresolvedDrops} value={formatNumber(data.ogn.droppedDdbUnresolved, 0, dictionary.locale)} />
         <Field label={dictionary.system.ddbUnresolvable} value={formatNumber(data.ogn.ddbUnresolvable, 0, dictionary.locale)} />
-        {data.ogn.configurationError && <Field label={dictionary.system.configurationError} value={data.ogn.configurationError} />}
+        {detailed && data.ogn.configurationError && <Field label={dictionary.system.configurationError} value={data.ogn.configurationError} />}
       </Card>
 
       <Card title={dictionary.system.database} status={data.database.status} dictionary={dictionary}>
