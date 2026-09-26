@@ -206,8 +206,8 @@ describe("automatic changelog generation", () => {
 
   it("syncs release changelog through a PR instead of pushing main", () => {
     const workflow = readFileSync(new URL("../.github/workflows/changelog-sync.yml", import.meta.url), "utf8");
-    expect(workflow).toContain("release:");
-    expect(workflow).toContain("types: [published]");
+    expect(workflow).toContain("workflow_dispatch:");
+    expect(workflow).not.toContain("types: [published]");
     expect(workflow).toContain("node scripts/changelog.mjs backfill");
     expect(workflow).toContain("node scripts/changelog.mjs check");
     expect(workflow).toContain('branch="automation/changelog-sync"');
@@ -219,6 +219,10 @@ describe("automatic changelog generation", () => {
     expect(ci).toContain('if [[ "${file}" != "CHANGELOG.md" ]]');
     expect(ci).toContain("needs.release-scope.outputs.deploy == 'true'");
     expect(ci).toContain("needs: [validate, release-scope]");
+    expect(ci).toContain("sync-changelog:");
+    expect(ci).toContain("needs.deploy.result == 'success'");
+    expect(ci).toContain("needs: deploy");
+    expect(ci).toContain('branch="automation/changelog-sync"');
   });
 
   it("backfills missing tagged releases in descending order", () => {
