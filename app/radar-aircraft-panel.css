@@ -477,6 +477,24 @@
   border-top-color: rgba(67, 216, 194, .42);
 }
 
+.aircraft-quick-sigmet {
+  border-top-color: rgba(245, 189, 98, .42);
+}
+
+.aircraft-quick-sigmet > .aircraft-quick-detail-grid {
+  grid-template-columns: 1fr;
+}
+
+.aircraft-quick-sigmet-item {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 13px;
+  padding: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: rgba(245, 189, 98, .06);
+}
+
 .aircraft-quick-atc-primary {
   display: grid;
   gap: 4px;
