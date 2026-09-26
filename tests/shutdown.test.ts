@@ -19,6 +19,7 @@ describe("shutdown coordinator", () => {
         order.push("aircraft");
         release = resolve;
       })),
+      stopTelemetry: vi.fn(async () => { order.push("telemetry"); }),
       closeStatistics: vi.fn(async () => { order.push("statistics"); }),
       closeProvider: vi.fn(async () => { order.push("provider"); }),
       closeDatabase: vi.fn(async () => { order.push("database"); }),
@@ -29,7 +30,7 @@ describe("shutdown coordinator", () => {
     expect(first).toBe(second);
     release?.();
     await first;
-    expect(order).toEqual(["aircraft", "statistics", "provider", "database"]);
+    expect(order).toEqual(["aircraft", "telemetry", "statistics", "provider", "database"]);
     expect(cleanup.stopAircraft).toHaveBeenCalledOnce();
     expect(coordinator.getState()).toBe("COMPLETE");
   });
