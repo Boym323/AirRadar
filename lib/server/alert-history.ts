@@ -12,7 +12,14 @@ export type AlertHistoryEventType =
   | "emergency"
   | "emergency_7500"
   | "emergency_7600"
-  | "emergency_7700";
+  | "emergency_7700"
+  | "intelligence_approach"
+  | "intelligence_landing"
+  | "intelligence_takeoff"
+  | "intelligence_go_around"
+  | "intelligence_holding"
+  | "intelligence_diversion"
+  | "intelligence_top_of_descent";
 export type AlertNotificationStatus = "pending" | "attempted" | "delivered" | "failed" | "disabled";
 export type AlertHistoryReason =
   | "watchlisted"
@@ -23,8 +30,15 @@ export type AlertHistoryReason =
   | "emergency"
   | "squawk_7500"
   | "squawk_7600"
-  | "squawk_7700";
-export type AlertHistoryFilter = "all" | "watchlist" | "emergency" | "records";
+  | "squawk_7700"
+  | "approach"
+  | "landing"
+  | "takeoff"
+  | "go_around"
+  | "holding"
+  | "diversion"
+  | "top_of_descent";
+export type AlertHistoryFilter = "all" | "watchlist" | "emergency" | "records" | "intelligence";
 export type ReceptionRecordScope = "daily" | "lifetime";
 
 export interface AlertHistoryRecordValue {
@@ -53,6 +67,12 @@ export interface AlertHistoryEntry {
   record: AlertHistoryRecordValue | null;
   notificationStatus: AlertNotificationStatus;
   notificationAttemptedAt: string | null;
+  intelligence: {
+    eventType: string;
+    confidenceLevel: "low" | "medium" | "high";
+    airportIcao: string | null;
+    sectorId: string | null;
+  } | null;
 }
 
 export interface AlertHistoryDetection {
@@ -66,6 +86,7 @@ export interface AlertHistoryDetection {
   radiusKm?: number | null;
   squawk?: string | null;
   record?: AlertHistoryRecordValue;
+  intelligence?: AlertHistoryEntry["intelligence"];
 }
 
 export interface AlertHistoryPage {
@@ -151,6 +172,7 @@ function entryFromDetection(detection: AlertHistoryDetection): AlertHistoryEntry
     } : null,
     notificationStatus: "pending",
     notificationAttemptedAt: null,
+    intelligence: detection.intelligence ?? null,
   };
 }
 
@@ -161,6 +183,7 @@ function normalizeLegacyEntry(entry: AlertHistoryEntry): AlertHistoryEntry {
     ruleNames: Array.isArray(entry.ruleNames) ? entry.ruleNames : [],
     radiusKm: typeof entry.radiusKm === "number" && Number.isFinite(entry.radiusKm) ? entry.radiusKm : null,
     squawk: typeof entry.squawk === "string" ? entry.squawk : null,
+    intelligence: entry.intelligence && typeof entry.intelligence === "object" ? entry.intelligence : null,
   };
 }
 
@@ -184,6 +207,7 @@ function matchesFilter(entry: AlertHistoryEntry, filter: AlertHistoryFilter): bo
   if (filter === "all") return true;
   if (filter === "watchlist") return entry.type === "watchlist" || entry.type === "aircraft_appeared" || entry.type === "entered_radius";
   if (filter === "emergency") return entry.type === "emergency" || entry.type === "emergency_7500" || entry.type === "emergency_7600" || entry.type === "emergency_7700";
+  if (filter === "intelligence") return entry.type.startsWith("intelligence_");
   return entry.type === "new_aircraft" || entry.type === "reception_record";
 }
 
