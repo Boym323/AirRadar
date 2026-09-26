@@ -32,6 +32,7 @@ export const EMPTY_SIGMET_DATA: SigmetSnapshot = {
 
 interface UseRadarWeatherContextOptions {
   showSigmet: boolean;
+  loadSigmet: boolean;
   showWeatherRadar: boolean;
   showMetar: boolean;
   showWind: boolean;
@@ -41,6 +42,7 @@ interface UseRadarWeatherContextOptions {
 
 export function useRadarWeatherContext({
   showSigmet,
+  loadSigmet,
   showWeatherRadar,
   showMetar,
   showWind,
@@ -198,7 +200,7 @@ export function useRadarWeatherContext({
 
   useEffect(() => {
     const generation = ++sigmetGenerationRef.current;
-    if (!showSigmet) {
+    if (!loadSigmet) {
       setSigmetData(EMPTY_SIGMET_DATA);
       return;
     }
@@ -242,7 +244,7 @@ export function useRadarWeatherContext({
       controller.abort();
       if (timer) clearTimeout(timer);
     };
-  }, [showSigmet]);
+  }, [loadSigmet]);
 
   return {
     radarCatalog,
