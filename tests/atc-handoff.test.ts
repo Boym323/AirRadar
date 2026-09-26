@@ -73,6 +73,31 @@ describe("ATC handoff estimate", () => {
     expect(buildAtcHandoffEstimate(context({ nextSector: null }))).toBeNull();
   });
 
+  it("downgrades confidence when target vertical containment is uncertain", () => {
+    const value = context();
+    const uncertainHigh = airspace("NEXT-UNCERTAIN-HIGH", "Uncertain high", { verticalMatch: "uncertain" });
+    const uncertainMedium = airspace("NEXT-UNCERTAIN-MEDIUM", "Uncertain medium", { verticalMatch: "uncertain" });
+
+    expect(buildAtcHandoffEstimate({
+      ...value,
+      nextSector: { airspace: uncertainHigh, distanceNm: 4, estimatedSeconds: 60, confidence: "high" },
+    })?.confidence).toBe("medium");
+
+    expect(buildAtcHandoffEstimate({
+      ...value,
+      nextSector: { airspace: uncertainMedium, distanceNm: 4, estimatedSeconds: 60, confidence: "medium" },
+    })?.confidence).toBe("low");
+  });
+
+  it("suppresses a target that is known to miss the vertical limits", () => {
+    const value = context();
+    const verticallyOutside = airspace("NEXT-OUTSIDE", "Outside sector", { verticalMatch: "false" });
+    expect(buildAtcHandoffEstimate({
+      ...value,
+      nextSector: { airspace: verticallyOutside, distanceNm: 4, estimatedSeconds: 60, confidence: "high" },
+    })).toBeNull();
+  });
+
   it("does not present the current sector as a handoff target", () => {
     const value = context();
     expect(buildAtcHandoffEstimate({ ...value, nextSector: { airspace: value.primaryAirspace!, distanceNm: 1, estimatedSeconds: 30, confidence: "medium" } })).toBeNull();
