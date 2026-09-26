@@ -1,0 +1,950 @@
+{
+  "generatedAt": "2026-09-26T19:59:52.931Z",
+  "tested": 20,
+  "matched": 20,
+  "detailed": 0,
+  "coverageAll": 0,
+  "coverageMatched": 0,
+  "filed": {
+    "altitude": 0,
+    "airspeed": 18,
+    "routeDistance": 18
+  },
+  "counters": {
+    "flight": 20,
+    "route": 0,
+    "other": 0,
+    "rateLimited": 0
+  },
+  "rows": [
+    {
+      "ident": "RYR2MM",
+      "hex": "4CAFC0",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 49.41297912597656,
+        "lon": 17.58242093599756
+      },
+      "flightAware": {
+        "id": "RYR4086-1790227414-airline-1861p",
+        "ident": "RYR4086",
+        "identIcao": "RYR4086",
+        "identIata": "FR4086",
+        "origin": "LKMT",
+        "destination": "LEMG",
+        "registration": "EI-GSK",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T19:30:00Z",
+        "estimatedOff": "2026-09-26T19:51:37Z",
+        "actualOff": "2026-09-26T19:51:37Z",
+        "scheduledOn": "2026-09-26T22:45:00Z",
+        "estimatedOn": "2026-09-26T23:11:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1443,
+        "filedAltitude": null,
+        "filedAirspeed": 386
+      },
+      "match": {
+        "candidateCount": 4,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "MGH648",
+      "hex": "4BB4EB",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 49.34160135560116,
+        "lon": 17.12103592722042
+      },
+      "flightAware": {
+        "id": "MGH648-1790443727-adhoc-2460p",
+        "ident": "MGH648",
+        "identIcao": "MGH648",
+        "identIata": "4M648",
+        "origin": "LTAI",
+        "destination": null,
+        "registration": "TC-MGK",
+        "status": "On The Way!",
+        "scheduledOff": "2026-09-26T17:44:30Z",
+        "estimatedOff": "2026-09-26T17:41:31Z",
+        "actualOff": "2026-09-26T17:41:31Z",
+        "scheduledOn": null,
+        "estimatedOn": null,
+        "actualOn": null,
+        "route": null,
+        "routeDistance": null,
+        "filedAltitude": null,
+        "filedAirspeed": null
+      },
+      "match": {
+        "candidateCount": 2,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "PGT1076",
+      "hex": "4B8E0B",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 48.97849390062235,
+        "lon": 18.948452598170206,
+        "track": 90
+      },
+      "flightAware": {
+        "id": "PGT1076-1790225851-airline-147p",
+        "ident": "PGT1076",
+        "identIcao": "PGT1076",
+        "identIata": "PC1076",
+        "origin": "EKCH",
+        "destination": "LTFJ",
+        "registration": "TC-CPK",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T19:00:00Z",
+        "estimatedOff": "2026-09-26T18:54:10Z",
+        "actualOff": "2026-09-26T18:54:10Z",
+        "scheduledOn": "2026-09-26T21:50:00Z",
+        "estimatedOn": "2026-09-26T21:32:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1268,
+        "filedAltitude": null,
+        "filedAirspeed": 389
+      },
+      "match": {
+        "candidateCount": 4,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "HYS243",
+      "hex": "504E61",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 48.72010803222656,
+        "lon": 18.943739670973628
+      },
+      "flightAware": {
+        "id": "HYS243-1790227194-airline-208p",
+        "ident": "HYS243",
+        "identIcao": "HYS243",
+        "identIata": "H4243",
+        "origin": "LRIA",
+        "destination": "EIDW",
+        "registration": "ER-SKY",
+        "status": "On The Way! / Delayed",
+        "scheduledOff": "2026-09-26T19:00:00Z",
+        "estimatedOff": "2026-09-26T19:02:57Z",
+        "actualOff": "2026-09-26T19:02:57Z",
+        "scheduledOn": "2026-09-26T22:00:00Z",
+        "estimatedOn": "2026-09-26T22:45:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1542,
+        "filedAltitude": null,
+        "filedAirspeed": 447
+      },
+      "match": {
+        "candidateCount": 3,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "RYR12HZ",
+      "hex": "4CAE4A",
+      "airradar": {
+        "origin": "LMML",
+        "destination": "EPMO",
+        "registration": null,
+        "lat": 48.412558345471396,
+        "lon": 28.41729415090458
+      },
+      "flightAware": {
+        "id": "RYR8901-1790227880-airline-914p",
+        "ident": "RYR8901",
+        "identIcao": "RYR8901",
+        "identIata": "FR8901",
+        "origin": "LMML",
+        "destination": "EPMO",
+        "registration": "EI-IHX",
+        "status": "On The Way! / Delayed",
+        "scheduledOff": "2026-09-26T16:55:00Z",
+        "estimatedOff": "2026-09-26T17:57:46Z",
+        "actualOff": "2026-09-26T17:57:46Z",
+        "scheduledOn": "2026-09-26T18:35:00Z",
+        "estimatedOn": "2026-09-26T20:31:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1187,
+        "filedAltitude": null,
+        "filedAirspeed": 400
+      },
+      "match": {
+        "candidateCount": 8,
+        "score": 155,
+        "confidence": "high",
+        "reason": "origin exact, destination exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "QTR87M",
+      "hex": "06A1ED",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 49.55909729003906,
+        "lon": 16.493875603926767,
+        "track": 90
+      },
+      "flightAware": {
+        "id": "QTR8204-1790236260-airline-1355p",
+        "ident": "QTR8204",
+        "identIcao": "QTR8204",
+        "identIata": "QR8204",
+        "origin": "EHAM",
+        "destination": "OTHH",
+        "registration": "A7-BFP",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T18:45:00Z",
+        "estimatedOff": "2026-09-26T18:58:06Z",
+        "actualOff": "2026-09-26T18:58:06Z",
+        "scheduledOn": "2026-09-27T00:40:00Z",
+        "estimatedOn": "2026-09-27T01:09:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 3062,
+        "filedAltitude": null,
+        "filedAirspeed": 450
+      },
+      "match": {
+        "candidateCount": 4,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "AUA96P",
+      "hex": "44029F",
+      "airradar": {
+        "origin": "ESSA",
+        "destination": "LOWW",
+        "registration": null,
+        "lat": 49.52622753078654,
+        "lon": 16.466872756545627
+      },
+      "flightAware": {
+        "id": "AUA968-1790234774-airline-798p",
+        "ident": "AUA968",
+        "identIcao": "AUA968",
+        "identIata": "OS968",
+        "origin": "ESSA",
+        "destination": "LOWW",
+        "registration": "OE-LXD",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T18:10:00Z",
+        "estimatedOff": "2026-09-26T18:33:21Z",
+        "actualOff": "2026-09-26T18:33:21Z",
+        "scheduledOn": "2026-09-26T19:59:00Z",
+        "estimatedOn": "2026-09-26T20:24:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 800,
+        "filedAltitude": null,
+        "filedAirspeed": 380
+      },
+      "match": {
+        "candidateCount": 6,
+        "score": 155,
+        "confidence": "high",
+        "reason": "origin exact, destination exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "AFR1694",
+      "hex": "39BDAC",
+      "airradar": {
+        "origin": "LFPG",
+        "destination": "LHBP",
+        "registration": null,
+        "lat": 48.443050061242054,
+        "lon": 16.44566586143094,
+        "track": 76
+      },
+      "flightAware": {
+        "id": "AFR1694-1790232904-airline-2685p",
+        "ident": "AFR1694",
+        "identIcao": "AFR1694",
+        "identIata": "AF1694",
+        "origin": "LFPG",
+        "destination": "LHBP",
+        "registration": "F-HPNM",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T18:25:00Z",
+        "estimatedOff": "2026-09-26T18:37:26Z",
+        "actualOff": "2026-09-26T18:37:26Z",
+        "scheduledOn": "2026-09-26T20:07:00Z",
+        "estimatedOn": "2026-09-26T20:24:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 776,
+        "filedAltitude": null,
+        "filedAirspeed": 368
+      },
+      "match": {
+        "candidateCount": 14,
+        "score": 155,
+        "confidence": "high",
+        "reason": "origin exact, destination exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "VKG562",
+      "hex": "45D970",
+      "airradar": {
+        "origin": "ENGM",
+        "destination": "LGSA",
+        "registration": null,
+        "lat": 48.223509707693324,
+        "lon": 19.036054109272186
+      },
+      "flightAware": {
+        "id": "VKG562-1790413562-ed-2001p",
+        "ident": "VKG562",
+        "identIcao": "VKG562",
+        "identIata": "DK562",
+        "origin": "ENGM",
+        "destination": null,
+        "registration": "OY-VKP",
+        "status": "On The Way!",
+        "scheduledOff": "2026-09-26T18:19:55Z",
+        "estimatedOff": "2026-09-26T18:16:47Z",
+        "actualOff": "2026-09-26T18:16:47Z",
+        "scheduledOn": null,
+        "estimatedOn": null,
+        "actualOn": null,
+        "route": null,
+        "routeDistance": null,
+        "filedAltitude": null,
+        "filedAirspeed": null
+      },
+      "match": {
+        "candidateCount": 2,
+        "score": 115,
+        "confidence": "high",
+        "reason": "origin exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "SXS4RX",
+      "hex": "4BCDA6",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 47.57671291545286,
+        "lon": 27.224895770733156
+      },
+      "flightAware": {
+        "id": "SXS612-1790232187-airline-541p",
+        "ident": "SXS612",
+        "identIcao": "SXS612",
+        "identIata": "XQ612",
+        "origin": "LTAI",
+        "destination": "EDDK",
+        "registration": "TC-SMF",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T16:55:00Z",
+        "estimatedOff": "2026-09-26T17:45:52Z",
+        "actualOff": "2026-09-26T17:45:52Z",
+        "scheduledOn": "2026-09-26T20:35:00Z",
+        "estimatedOn": "2026-09-26T21:04:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1513,
+        "filedAltitude": null,
+        "filedAirspeed": 359
+      },
+      "match": {
+        "candidateCount": 12,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "SXS2GX",
+      "hex": "4BCDEE",
+      "airradar": {
+        "origin": "EDDK",
+        "destination": "LTFH",
+        "registration": null,
+        "lat": 47.97752380371094,
+        "lon": 17.074607849121094,
+        "track": 90
+      },
+      "flightAware": {
+        "id": "SXS1317-1790232187-airline-333p",
+        "ident": "SXS1317",
+        "identIcao": "SXS1317",
+        "identIata": "XQ1317",
+        "origin": "EDDK",
+        "destination": "LTFH",
+        "registration": "TC-SON",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T19:00:00Z",
+        "estimatedOff": "2026-09-26T18:59:24Z",
+        "actualOff": "2026-09-26T18:59:24Z",
+        "scheduledOn": "2026-09-26T22:25:00Z",
+        "estimatedOn": "2026-09-26T22:25:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1547,
+        "filedAltitude": null,
+        "filedAirspeed": 394
+      },
+      "match": {
+        "candidateCount": 4,
+        "score": 155,
+        "confidence": "high",
+        "reason": "origin exact, destination exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "EJU59PD",
+      "hex": "440DA5",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 49.127288818359375,
+        "lon": 15.842778132511967,
+        "track": 90
+      },
+      "flightAware": {
+        "id": "EZY5368-1790236415-airline-809p",
+        "ident": "EZY5368",
+        "identIcao": "EZY5368",
+        "identIata": "U25368",
+        "origin": "LCLK",
+        "destination": "EDDB",
+        "registration": "OE-IDS",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T17:00:00Z",
+        "estimatedOff": "2026-09-26T17:04:15Z",
+        "actualOff": "2026-09-26T17:04:15Z",
+        "scheduledOn": "2026-09-26T20:40:00Z",
+        "estimatedOn": "2026-09-26T20:27:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1563,
+        "filedAltitude": null,
+        "filedAirspeed": 363
+      },
+      "match": {
+        "candidateCount": 6,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "AUA14GK",
+      "hex": "44065C",
+      "airradar": {
+        "origin": "LSZH",
+        "destination": "LOWW",
+        "registration": null,
+        "lat": 48.330047607421875,
+        "lon": 16.250046950120122,
+        "track": 82
+      },
+      "flightAware": {
+        "id": "AUA146-1790230560-airline-52p",
+        "ident": "AUA146",
+        "identIcao": "AUA146",
+        "identIata": "OS146",
+        "origin": "LSZH",
+        "destination": "LOWW",
+        "registration": "OE-LBX",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T19:00:00Z",
+        "estimatedOff": "2026-09-26T19:05:06Z",
+        "actualOff": "2026-09-26T19:05:06Z",
+        "scheduledOn": "2026-09-26T19:59:00Z",
+        "estimatedOn": "2026-09-26T20:06:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 375,
+        "filedAltitude": null,
+        "filedAirspeed": 326
+      },
+      "match": {
+        "candidateCount": 12,
+        "score": 155,
+        "confidence": "high",
+        "reason": "origin exact, destination exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "WMT8RW",
+      "hex": "4D24C2",
+      "airradar": {
+        "origin": "EDJA",
+        "destination": "LRIA",
+        "registration": null,
+        "lat": 47.70332336425781,
+        "lon": 17.86425018310547,
+        "track": 90
+      },
+      "flightAware": {
+        "id": "WMT3638-1790232093-airline-72p",
+        "ident": "WMT3638",
+        "identIcao": "WMT3638",
+        "identIata": "W43638",
+        "origin": "EDJA",
+        "destination": "LRIA",
+        "registration": "9H-WZW",
+        "status": "On The Way! / Delayed",
+        "scheduledOff": "2026-09-26T18:20:00Z",
+        "estimatedOff": "2026-09-26T19:13:25Z",
+        "actualOff": "2026-09-26T19:13:25Z",
+        "scheduledOn": "2026-09-26T19:56:00Z",
+        "estimatedOn": "2026-09-26T21:02:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 811,
+        "filedAltitude": null,
+        "filedAirspeed": 368
+      },
+      "match": {
+        "candidateCount": 4,
+        "score": 155,
+        "confidence": "high",
+        "reason": "origin exact, destination exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "WMT5HP",
+      "hex": "4D2429",
+      "airradar": {
+        "origin": "LRIA",
+        "destination": "EGGW",
+        "registration": null,
+        "lat": 49.437685174457094,
+        "lon": 15.64757475981844
+      },
+      "flightAware": {
+        "id": "WMT3653-1790232093-airline-79p",
+        "ident": "WMT3653",
+        "identIcao": "WMT3653",
+        "identIata": "W43653",
+        "origin": "LRIA",
+        "destination": "EGGW",
+        "registration": "9H-WAU",
+        "status": "On The Way! / Delayed",
+        "scheduledOff": "2026-09-26T16:00:00Z",
+        "estimatedOff": "2026-09-26T18:44:06Z",
+        "actualOff": "2026-09-26T18:44:06Z",
+        "scheduledOn": "2026-09-26T19:05:00Z",
+        "estimatedOn": "2026-09-26T21:43:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1289,
+        "filedAltitude": null,
+        "filedAirspeed": 364
+      },
+      "match": {
+        "candidateCount": 4,
+        "score": 155,
+        "confidence": "high",
+        "reason": "origin exact, destination exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "THY2RK",
+      "hex": "4BAACA",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 47.92459778866525,
+        "lon": 16.601820725661128
+      },
+      "flightAware": {
+        "id": "THY1173-1790232465-airline-292p",
+        "ident": "THY1173",
+        "identIcao": "THY1173",
+        "identIata": "TK1173",
+        "origin": "LTFM",
+        "destination": "EIDW",
+        "registration": "TC-JVJ",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T17:35:00Z",
+        "estimatedOff": "2026-09-26T18:22:49Z",
+        "actualOff": "2026-09-26T18:22:49Z",
+        "scheduledOn": "2026-09-26T21:55:00Z",
+        "estimatedOn": "2026-09-26T22:18:27Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1818,
+        "filedAltitude": null,
+        "filedAirspeed": 365
+      },
+      "match": {
+        "candidateCount": 10,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "RYR3MC",
+      "hex": "4CAF27",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 47.701240151615465,
+        "lon": 17.297621506911128
+      },
+      "flightAware": {
+        "id": "RYR6337-1790229187-airline-456p",
+        "ident": "RYR6337",
+        "identIcao": "RYR6337",
+        "identIata": "FR6337",
+        "origin": "LBSF",
+        "destination": "EGGP",
+        "registration": "EI-ILM",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T18:55:00Z",
+        "estimatedOff": "2026-09-26T18:58:08Z",
+        "actualOff": "2026-09-26T18:58:08Z",
+        "scheduledOn": "2026-09-26T22:10:00Z",
+        "estimatedOn": "2026-09-26T22:26:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1408,
+        "filedAltitude": null,
+        "filedAirspeed": 377
+      },
+      "match": {
+        "candidateCount": 5,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "SXS9KN",
+      "hex": "4BCDEF",
+      "airradar": {
+        "origin": "EDDF",
+        "destination": "LTAJ",
+        "registration": null,
+        "lat": 47.63236999511719,
+        "lon": 17.87798309326172,
+        "track": 89
+      },
+      "flightAware": {
+        "id": "SXS1621-1790232187-airline-378p",
+        "ident": "SXS1621",
+        "identIcao": "SXS1621",
+        "identIata": "XQ1621",
+        "origin": "EDDF",
+        "destination": "LTAJ",
+        "registration": "TC-SOO",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T18:50:00Z",
+        "estimatedOff": "2026-09-26T19:03:35Z",
+        "actualOff": "2026-09-26T19:03:35Z",
+        "scheduledOn": "2026-09-26T22:30:00Z",
+        "estimatedOn": "2026-09-26T22:33:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1695,
+        "filedAltitude": null,
+        "filedAirspeed": 402
+      },
+      "match": {
+        "candidateCount": 4,
+        "score": 155,
+        "confidence": "high",
+        "reason": "origin exact, destination exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "NSZ5283",
+      "hex": "4ACA0A",
+      "airradar": {
+        "origin": null,
+        "destination": null,
+        "registration": null,
+        "lat": 49.27935791015625,
+        "lon": 15.439453125,
+        "track": 270
+      },
+      "flightAware": {
+        "id": "NSZ5283-1790235731-airline-272p",
+        "ident": "NSZ5283",
+        "identIcao": "NSZ5283",
+        "identIata": "D85283",
+        "origin": "BKPR",
+        "destination": "ESGG",
+        "registration": "SE-RPJ",
+        "status": "On The Way! / On Time",
+        "scheduledOff": "2026-09-26T18:45:00Z",
+        "estimatedOff": "2026-09-26T18:45:06Z",
+        "actualOff": "2026-09-26T18:45:06Z",
+        "scheduledOn": "2026-09-26T21:25:00Z",
+        "estimatedOn": "2026-09-26T21:09:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1111,
+        "filedAltitude": null,
+        "filedAirspeed": 362
+      },
+      "match": {
+        "candidateCount": 4,
+        "score": 75,
+        "confidence": "medium",
+        "reason": "departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    },
+    {
+      "ident": "WMT9JC",
+      "hex": "471D6C",
+      "airradar": {
+        "origin": "LUKK",
+        "destination": "EDDK",
+        "registration": null,
+        "lat": 48.38728048033633,
+        "lon": 20.146106920744273
+      },
+      "flightAware": {
+        "id": "WMT3917-1790232093-airline-121p",
+        "ident": "WMT3917",
+        "identIcao": "WMT3917",
+        "identIata": "W43917",
+        "origin": "LUKK",
+        "destination": "EDDK",
+        "registration": "HA-LDS",
+        "status": "On The Way! / Delayed",
+        "scheduledOff": "2026-09-26T17:45:00Z",
+        "estimatedOff": "2026-09-26T19:03:56Z",
+        "actualOff": "2026-09-26T19:03:56Z",
+        "scheduledOn": "2026-09-26T20:10:00Z",
+        "estimatedOn": "2026-09-26T21:30:00Z",
+        "actualOn": null,
+        "route": null,
+        "routeDistance": 1023,
+        "filedAltitude": null,
+        "filedAirspeed": 368
+      },
+      "match": {
+        "candidateCount": 4,
+        "score": 155,
+        "confidence": "high",
+        "reason": "origin exact, destination exact, departed, not landed, time relevant"
+      },
+      "route": {
+        "classification": "NO_ROUTE",
+        "text": null,
+        "tokenCount": 0,
+        "tokens": []
+      },
+      "decodedRoute": null,
+      "result": "NO_ROUTE",
+      "error": null
+    }
+  ]
+}
