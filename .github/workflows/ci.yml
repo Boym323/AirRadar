@@ -95,10 +95,43 @@ jobs:
             artifacts/radar-performance-baseline.md
           if-no-files-found: ignore
 
-  deploy:
-    name: Deploy production
+  release-scope:
+    name: Release scope
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: validate
+    runs-on: ubuntu-24.04
+    outputs:
+      deploy: ${{ steps.scope.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+      - name: Detect changelog-only merge
+        id: scope
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          parent="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || true)"
+          if [[ -z "${parent}" ]]; then
+            echo "deploy=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          mapfile -t changed_files < <(git diff --name-only "${parent}" "${GITHUB_SHA}")
+          deploy=false
+          for file in "${changed_files[@]}"; do
+            if [[ "${file}" != "CHANGELOG.md" ]]; then
+              deploy=true
+              break
+            fi
+          done
+          echo "deploy=${deploy}" >> "${GITHUB_OUTPUT}"
+          echo "Release required: ${deploy}"
+
+  deploy:
+    name: Deploy production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
+    needs: [validate, release-scope]
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
     environment: production
