@@ -1447,6 +1447,16 @@ export function AirRadarApp() {
       return true;
     });
     const liveFilteredAircraftByHex = new Map(liveFilteredAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const));
+    const isPositionedAircraft = (aircraft: AircraftView) => aircraft.lat !== null
+      && aircraft.lon !== null
+      && Number.isFinite(aircraft.lat)
+      && Number.isFinite(aircraft.lon);
+    const isHtmlSpecialAircraft = (aircraft: AircraftView) => aircraft.icaoHex === selectedHex
+      || isLiveAircraftWatchlisted(aircraft)
+      || Boolean(aircraft.emergency);
+    const liveSpecialAircraft = liveFilteredAircraft.filter((aircraft) => isPositionedAircraft(aircraft) && isHtmlSpecialAircraft(aircraft));
+    const liveSpecialAircraftByHex = new Map(liveSpecialAircraft.map((aircraft) => [aircraft.icaoHex, aircraft] as const));
+    const liveBulkAircraft = liveFilteredAircraft.filter((aircraft) => isPositionedAircraft(aircraft) && !isHtmlSpecialAircraft(aircraft));
     const trafficPadding = currentRadarPadding({ top: 100, right: 45, bottom: 40, left: 45 });
     if (!centeredTrafficRef.current && (liveSnapshot.receiver.lat === null || liveSnapshot.receiver.lon === null) && liveSnapshot.aircraft.length) {
       const positioned = liveSnapshot.aircraft.filter((aircraft) => aircraft.lat !== null && aircraft.lon !== null
@@ -1471,12 +1481,56 @@ export function AirRadarApp() {
       }
     }
     const fullMarkerUpdate = forceFull || pending?.full === true;
-    const currentHexes = fullMarkerUpdate ? new Set(liveFilteredAircraft.map((aircraft) => aircraft.icaoHex)) : null;
+    const currentHexes = fullMarkerUpdate ? new Set(liveSpecialAircraft.map((aircraft) => aircraft.icaoHex)) : null;
     const aircraftToUpdate = fullMarkerUpdate
-      ? liveFilteredAircraft
+      ? liveSpecialAircraft
       : [...(pending?.changedHexes ?? [])]
-        .map((hex) => liveAircraftByHexRef.current.get(hex))
-        .filter((aircraft): aircraft is AircraftView => Boolean(aircraft && liveFilteredAircraftByHex.has(aircraft.icaoHex)));
+        .map((hex) => liveSpecialAircraftByHex.get(hex))
+        .filter((aircraft): aircraft is AircraftView => Boolean(aircraft));
+
+    const aircraftWebglRuntime = aircraftWebglRuntimeRef.current;
+    aircraftWebglRuntime?.setVisible(showAircraft);
+    for (const layer of [AIRCRAFT_WEBGL_HIT_LAYER_ID, AIRCRAFT_WEBGL_LABEL_LAYER_ID] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showAircraft ? "visible" : "none");
+    }
+    const webglInteractionSource = map.getSource(AIRCRAFT_WEBGL_INTERACTION_SOURCE_ID) as GeoJSONSource | undefined;
+    if (fullMarkerUpdate) {
+      aircraftWebglRuntime?.clear();
+      for (const aircraft of liveBulkAircraft) aircraftWebglRuntime?.upsert({ ...aircraft }, colorMode);
+      webglInteractionSource?.setData({
+        type: "FeatureCollection",
+        features: liveBulkAircraft.map((aircraft) => aircraftWebglInteractionFeature(aircraft, mapZoom)),
+      });
+      aircraftWebglFeatureHexesRef.current = new Set(liveBulkAircraft.map((aircraft) => aircraft.icaoHex));
+    } else {
+      const changedOrRemovedHexes = new Set([
+        ...(pending?.changedHexes ?? []),
+        ...(pending?.removedHexes ?? []),
+      ]);
+      const remove: string[] = [];
+      const add: ReturnType<typeof aircraftWebglInteractionFeature>[] = [];
+      const featureHexes = aircraftWebglFeatureHexesRef.current;
+
+      for (const hex of changedOrRemovedHexes) {
+        if (featureHexes.delete(hex)) remove.push(hex);
+        const aircraft = liveFilteredAircraftByHex.get(hex);
+        if (aircraft && isPositionedAircraft(aircraft) && !isHtmlSpecialAircraft(aircraft)) {
+          aircraftWebglRuntime?.upsert({ ...aircraft }, colorMode);
+          add.push(aircraftWebglInteractionFeature(aircraft, mapZoom));
+          featureHexes.add(hex);
+        } else {
+          aircraftWebglRuntime?.remove(hex);
+        }
+      }
+
+      if (webglInteractionSource && (remove.length || add.length)) {
+        void webglInteractionSource.updateData({
+          ...(remove.length ? { remove } : {}),
+          ...(add.length ? { add } : {}),
+        });
+      }
+    }
+
     const selectedAircraftInSnapshot = selectedHex ? liveAircraftByHexRef.current.get(selectedHex) ?? liveSnapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex) : undefined;
     const selectedAircraftVisible = Boolean(selectedAircraftInSnapshot && selectedHex && liveFilteredAircraftByHex.has(selectedHex));
     const historySnapshot = selectedHistoryTrail;
@@ -1541,8 +1595,8 @@ export function AirRadarApp() {
       : [...new Set([
         ...(pending?.removedHexes ?? []),
         ...[...(pending?.changedHexes ?? [])].filter((hex) => {
-          const aircraft = liveFilteredAircraftByHex.get(hex);
-          return !aircraft || aircraft.lat === null || aircraft.lon === null || !Number.isFinite(aircraft.lat) || !Number.isFinite(aircraft.lon);
+          const aircraft = liveSpecialAircraftByHex.get(hex);
+          return !aircraft || !isPositionedAircraft(aircraft);
         }),
       ])];
     for (const hex of markerRemovalCandidates) {
