@@ -60,6 +60,9 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain("RouteWeatherSection");
     expect(componentSource).toContain('data-testid="route-weather-match"');
     expect(componentSource).toContain("t.weather.routeWeatherDisclaimer");
+    expect(componentSource).toContain('data-testid="flight-situation-summary"');
+    expect(componentSource).toContain("buildFlightSituationSummary");
+    expect(componentSource).toContain("t.intelligence.situationDisclaimer");
     expect(appSource).toContain("/route-weather");
     expect(appSource).toContain("routeWeather={selectedRouteWeather}");
     expect(componentSource).toContain('data-testid="technical-details"');

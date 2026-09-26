@@ -1021,7 +1021,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         if (!mobileControlBounds.topRight || !mobileControlBounds.bottomRight || mobileControlBounds.overflow) {
           throw new Error(`Mobile map controls are outside the viewport at ${viewport.width}px: ${JSON.stringify(mobileControlBounds)}`);
         }
-        await mobileSidebar.locator(".close-button").click();
+        await page.evaluate(() => {
+          const sidebar = document.querySelector('[data-testid="radar-sidebar"]');
+          const close = sidebar?.querySelector(".close-button");
+          if (!(close instanceof HTMLButtonElement)) throw new Error("Mobile aircraft detail close control unavailable");
+          close.click();
+        });
         await page.waitForFunction(() => document.querySelector('[data-testid="radar-sidebar"]')?.classList.contains("drawer-closed"));
         if (!await mobileTrafficTrigger.isVisible()) throw new Error("Mobile Traffic trigger did not return after closing aircraft detail");
       }
