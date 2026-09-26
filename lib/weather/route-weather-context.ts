@@ -39,46 +39,94 @@ function distanceNm(a: [number, number], b: [number, number]): number {
   return 2 * EARTH_RADIUS_NM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-function orientation(a: [number, number], b: [number, number], c: [number, number]): number {
-  return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+function unwrapLongitude(value: number, reference: number): number {
+  let result = value;
+  while (result - reference > 180) result -= 360;
+  while (result - reference < -180) result += 360;
+  return result;
 }
 
-function onSegment(a: [number, number], b: [number, number], c: [number, number]): boolean {
-  return Math.abs(orientation(a, b, c)) < 1e-10
-    && c[0] >= Math.min(a[0], b[0]) - 1e-10 && c[0] <= Math.max(a[0], b[0]) + 1e-10
-    && c[1] >= Math.min(a[1], b[1]) - 1e-10 && c[1] <= Math.max(a[1], b[1]) + 1e-10;
+function clampFraction(value: number): number {
+  return Math.min(1, Math.max(0, value));
 }
 
-function segmentsIntersect(a: [number, number], b: [number, number], c: [number, number], d: [number, number]): boolean {
-  const o1 = orientation(a, b, c);
-  const o2 = orientation(a, b, d);
-  const o3 = orientation(c, d, a);
-  const o4 = orientation(c, d, b);
-  if ((o1 > 0) !== (o2 > 0) && (o3 > 0) !== (o4 > 0)) return true;
-  return (Math.abs(o1) < 1e-10 && onSegment(a, b, c))
-    || (Math.abs(o2) < 1e-10 && onSegment(a, b, d))
-    || (Math.abs(o3) < 1e-10 && onSegment(c, d, a))
-    || (Math.abs(o4) < 1e-10 && onSegment(c, d, b));
+function pointAtFraction(from: [number, number], to: [number, number], fraction: number): [number, number] {
+  const value = clampFraction(fraction);
+  const unwrappedToLon = unwrapLongitude(to[0], from[0]);
+  const lon = from[0] + (unwrappedToLon - from[0]) * value;
+  const normalizedLon = ((lon + 540) % 360) - 180;
+  return [normalizedLon, from[1] + (to[1] - from[1]) * value];
 }
 
-function routeSegmentIntersectsSigmet(
+function segmentIntersectionFraction(
+  from: [number, number],
+  to: [number, number],
+  left: [number, number],
+  right: [number, number],
+): number | null {
+  const epsilon = 1e-10;
+  const ax = from[0];
+  const ay = from[1];
+  const bx = unwrapLongitude(to[0], ax);
+  const by = to[1];
+  const cx = unwrapLongitude(left[0], ax);
+  const cy = left[1];
+  const dx = unwrapLongitude(right[0], ax);
+  const dy = right[1];
+
+  const rx = bx - ax;
+  const ry = by - ay;
+  const sx = dx - cx;
+  const sy = dy - cy;
+  const denominator = rx * sy - ry * sx;
+  const qpx = cx - ax;
+  const qpy = cy - ay;
+
+  if (Math.abs(denominator) < epsilon) {
+    const collinear = Math.abs(qpx * ry - qpy * rx) < epsilon;
+    const lengthSquared = rx * rx + ry * ry;
+    if (!collinear || lengthSquared < epsilon) return null;
+    const t0 = (qpx * rx + qpy * ry) / lengthSquared;
+    const t1 = ((dx - ax) * rx + (dy - ay) * ry) / lengthSquared;
+    const overlapStart = Math.max(0, Math.min(t0, t1));
+    const overlapEnd = Math.min(1, Math.max(t0, t1));
+    return overlapStart <= overlapEnd + epsilon ? clampFraction(overlapStart) : null;
+  }
+
+  const t = (qpx * sy - qpy * sx) / denominator;
+  const u = (qpx * ry - qpy * rx) / denominator;
+  if (t < -epsilon || t > 1 + epsilon || u < -epsilon || u > 1 + epsilon) return null;
+  return clampFraction(t);
+}
+
+function routeSegmentSigmetEntryFraction(
   from: [number, number],
   to: [number, number],
   geometry: SigmetSnapshot["features"][number]["geometry"],
-): boolean {
-  if (pointInSigmetGeometry(from[0], from[1], geometry) || pointInSigmetGeometry(to[0], to[1], geometry)) return true;
+  startFraction = 0,
+): number | null {
+  const start = clampFraction(startFraction);
+  const startPoint = pointAtFraction(from, to, start);
+  if (pointInSigmetGeometry(startPoint[0], startPoint[1], geometry)) return start;
+
+  let firstIntersection: number | null = null;
   const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
   for (const polygon of polygons) {
     for (const ring of polygon) {
-      for (let i = 1; i < ring.length; i += 1) {
-        const left = ring[i - 1];
-        const right = ring[i];
+      for (let index = 1; index < ring.length; index += 1) {
+        const left = ring[index - 1];
+        const right = ring[index];
         if (!left || !right) continue;
-        if (segmentsIntersect(from, to, [left[0], left[1]], [right[0], right[1]])) return true;
+        const fraction = segmentIntersectionFraction(from, to, [left[0], left[1]], [right[0], right[1]]);
+        if (fraction === null || fraction + 1e-10 < start) continue;
+        if (firstIntersection === null || fraction < firstIntersection) firstIntersection = fraction;
       }
     }
   }
-  return false;
+  if (firstIntersection !== null) return firstIntersection;
+
+  const endPoint = pointAtFraction(from, to, 1);
+  return pointInSigmetGeometry(endPoint[0], endPoint[1], geometry) ? 1 : null;
 }
 
 function verticalMatch(aircraft: Aircraft, lowerFt: number | null, upperFt: number | null): "matched" | "unknown" | "outside" {
@@ -128,9 +176,14 @@ export function buildRouteWeatherContext(
     const from: [number, number] = segment.from;
     const to: [number, number] = segment.to;
     const segmentLengthNm = distanceNm(from, to);
+    const startFraction = segment.segmentId === route.progress.currentSegmentId && typeof segment.alongTrackProgress === "number"
+      ? clampFraction(segment.alongTrackProgress)
+      : 0;
     for (const feature of sigmets.features) {
       const vertical = verticalMatch(aircraft, feature.properties.lowerFt, feature.properties.upperFt);
-      if (vertical === "outside" || !routeSegmentIntersectsSigmet(from, to, feature.geometry)) continue;
+      if (vertical === "outside") continue;
+      const entryFraction = routeSegmentSigmetEntryFraction(from, to, feature.geometry, startFraction);
+      if (entryFraction === null) continue;
       const key = `${feature.id}:${segment.segmentId}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -145,10 +198,10 @@ export function buildRouteWeatherContext(
         segmentId: segment.segmentId,
         segmentConfidence: segment.confidence,
         verticalMatch: vertical,
-        distanceAlongRouteNm: Number(cumulativeNm.toFixed(1)),
+        distanceAlongRouteNm: Number((cumulativeNm + segmentLengthNm * Math.max(0, entryFraction - startFraction)).toFixed(1)),
       });
     }
-    cumulativeNm += segmentLengthNm;
+    cumulativeNm += segmentLengthNm * (1 - startFraction);
   }
 
   matches.sort((a, b) => a.distanceAlongRouteNm - b.distanceAlongRouteNm || a.sigmetId.localeCompare(b.sigmetId));
