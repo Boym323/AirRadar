@@ -16,14 +16,31 @@ export interface AircraftSigmetContext {
   source: "isigmet" | "airsigmet";
 }
 
+function unwrapLongitude(value: number, reference: number): number {
+  let result = value;
+  while (result - reference > 180) result -= 360;
+  while (result - reference < -180) result += 360;
+  return result;
+}
+
+function pointOnSegment(lon: number, lat: number, ax: number, ay: number, bx: number, by: number): boolean {
+  const cross = (lon - ax) * (by - ay) - (lat - ay) * (bx - ax);
+  if (Math.abs(cross) > 1e-9) return false;
+  const dot = (lon - ax) * (lon - bx) + (lat - ay) * (lat - by);
+  return dot <= 1e-9;
+}
+
 function pointInRing(lon: number, lat: number, ring: number[][]): boolean {
   let inside = false;
   for (let current = 0, previous = ring.length - 1; current < ring.length; previous = current++) {
     const currentPoint = ring[current];
     const previousPoint = ring[previous];
     if (!currentPoint || !previousPoint) continue;
-    const [currentLon, currentLat] = currentPoint;
-    const [previousLon, previousLat] = previousPoint;
+    const currentLon = unwrapLongitude(currentPoint[0], lon);
+    const previousLon = unwrapLongitude(previousPoint[0], lon);
+    const currentLat = currentPoint[1];
+    const previousLat = previousPoint[1];
+    if (pointOnSegment(lon, lat, currentLon, currentLat, previousLon, previousLat)) return true;
     const intersects = ((currentLat > lat) !== (previousLat > lat))
       && lon < ((previousLon - currentLon) * (lat - currentLat)) / ((previousLat - currentLat) || Number.EPSILON) + currentLon;
     if (intersects) inside = !inside;
