@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AircraftView } from "@/lib/aircraft/types";
 import {
+  buildAircraftDestinationWindContext,
   buildAircraftWindAheadProfile,
   buildAircraftWindContext,
   windLevelForAltitude,
@@ -148,6 +149,31 @@ describe("aircraft wind context", () => {
     expect(buildAircraftWindAheadProfile(aircraft(90), wind(90, 20, {
       points: [{ lat: 52, lon: 18, speedKt: 20, directionDeg: 90 }],
     }))).toBeNull();
+  });
+
+  it("resolves wind against the direct bearing to destination", () => {
+    const result = buildAircraftDestinationWindContext(
+      aircraft(20),
+      { lat: 50, lon: 16 },
+      wind(90, 40),
+    );
+    expect(result?.bearingDeg).toBeCloseTo(89.6, 0);
+    expect(result?.distanceNm).toBeGreaterThan(35);
+    expect(result?.headwindKt).toBeGreaterThan(39);
+    expect(result?.tailwindKt).toBeCloseTo(0, 6);
+  });
+
+  it("keeps destination wind independent from the current aircraft track", () => {
+    const eastbound = buildAircraftDestinationWindContext(aircraft(90), { lat: 50, lon: 16 }, wind(90, 40));
+    const northbound = buildAircraftDestinationWindContext(aircraft(0), { lat: 50, lon: 16 }, wind(90, 40));
+    expect(eastbound?.headwindKt).toBeCloseTo(northbound?.headwindKt ?? 0, 6);
+    expect(eastbound?.bearingDeg).toBeCloseTo(northbound?.bearingDeg ?? 0, 6);
+  });
+
+  it("suppresses destination wind without a valid airborne position or meaningful destination distance", () => {
+    expect(buildAircraftDestinationWindContext(aircraft(90, { onGround: true }), { lat: 50, lon: 16 }, wind(90))).toBeNull();
+    expect(buildAircraftDestinationWindContext(aircraft(90), { lat: 50, lon: 15 }, wind(90))).toBeNull();
+    expect(buildAircraftDestinationWindContext(aircraft(90), null, wind(90))).toBeNull();
   });
 
   it("requires aircraft position, track and a valid wind vector", () => {

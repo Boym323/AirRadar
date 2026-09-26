@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AircraftView } from "@/lib/aircraft/types";
 import {
+  buildAircraftDestinationWindContext,
   buildAircraftWindAheadProfile,
   buildAircraftWindContext,
   windLevelForAltitude,
+  type AircraftDestinationWindContext,
   type AircraftWindAheadProfile,
   type AircraftWindContext,
   type AircraftWindSnapshot,
@@ -17,10 +19,14 @@ const REFRESH_MS = 15 * 60_000;
 export interface SelectedAircraftWindState {
   context: AircraftWindContext | null;
   ahead: AircraftWindAheadProfile | null;
+  destination: AircraftDestinationWindContext | null;
   status: RadarLayerDataStatus;
 }
 
-export function useSelectedAircraftWindContext(aircraft: AircraftView | null): SelectedAircraftWindState {
+export function useSelectedAircraftWindContext(
+  aircraft: AircraftView | null,
+  destination: { lat: number; lon: number } | null = null,
+): SelectedAircraftWindState {
   const altitudeFt = aircraft?.baroAltitude ?? aircraft?.altitude ?? aircraft?.geomAltitude ?? null;
   const level = aircraft?.onGround ? null : windLevelForAltitude(altitudeFt);
   const [data, setData] = useState<AircraftWindSnapshot | null>(null);
@@ -74,6 +80,10 @@ export function useSelectedAircraftWindContext(aircraft: AircraftView | null): S
     () => data && data.levelHpa === level ? buildAircraftWindAheadProfile(aircraft, data) : null,
     [aircraft, data, level],
   );
+  const destinationContext = useMemo(
+    () => data && data.levelHpa === level ? buildAircraftDestinationWindContext(aircraft, destination, data) : null,
+    [aircraft, data, destination, level],
+  );
 
-  return { context, ahead, status };
+  return { context, ahead, destination: destinationContext, status };
 }
