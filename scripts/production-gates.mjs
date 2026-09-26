@@ -705,6 +705,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         return transform !== previous;
       }, beforeBearing);
       await page.evaluate(() => window.__airradarMapForDiagnostics?.rotateTo(0, { duration: 0 }));
+      // Restore the unselected baseline state before responsive/drawer checks.
+      // Selection is only introduced above to exercise the HTML special-marker
+      // path after validating the ordinary WebGL path.
+      await page.evaluate(() => {
+        const close = document.querySelector(".drawer-close-button");
+        if (!(close instanceof HTMLButtonElement)) throw new Error("aircraft detail close control unavailable");
+        close.click();
+      });
+      await page.waitForFunction(() => {
+        const sidebar = document.querySelector('[data-testid="radar-sidebar"]');
+        return Boolean(sidebar && !sidebar.classList.contains("has-selection") && !document.querySelector(".aircraft-marker.selected"));
+      });
       if (viewport.width >= 821) {
         const trafficTrigger = page.getByTestId("traffic-trigger");
         const sidebar = page.getByTestId("radar-sidebar");
