@@ -4,7 +4,9 @@ export interface RadarPerformanceSnapshot {
   animation: {
     frames: number;
     averageMs: number;
+    p95Ms: number;
     maxMs: number;
+    frameIntervalP95Ms: number;
     markerWrites: number;
     activeJobs: number;
     maxActiveJobs: number;
@@ -12,6 +14,7 @@ export interface RadarPerformanceSnapshot {
   labelCollision: {
     runs: number;
     averageMs: number;
+    p95Ms: number;
     maxMs: number;
   };
   trafficList: {
@@ -22,6 +25,7 @@ export interface RadarPerformanceSnapshot {
   longTasks: {
     count: number;
     totalMs: number;
+    p95Ms: number;
     maxMs: number;
   };
 }
@@ -31,18 +35,23 @@ interface RadarPerformanceState {
   animationFrames: number;
   animationTotalMs: number;
   animationMaxMs: number;
+  animationSamples: number[];
+  frameIntervalSamples: number[];
+  lastAnimationRecordedAt: number | null;
   markerWrites: number;
   activeJobs: number;
   maxActiveJobs: number;
   collisionRuns: number;
   collisionTotalMs: number;
   collisionMaxMs: number;
+  collisionSamples: number[];
   trafficRows: number;
   renderedTrafficRows: number;
   trafficVirtualized: boolean;
   longTasks: number;
   longTaskTotalMs: number;
   longTaskMaxMs: number;
+  longTaskSamples: number[];
 }
 
 declare global {
@@ -55,6 +64,21 @@ declare global {
   }
 }
 
+const MAX_DIAGNOSTIC_SAMPLES = 4096;
+
+function recordSample(samples: number[], value: number): void {
+  if (!Number.isFinite(value) || value < 0) return;
+  if (samples.length >= MAX_DIAGNOSTIC_SAMPLES) samples.shift();
+  samples.push(value);
+}
+
+export function percentile95(samples: readonly number[]): number {
+  if (!samples.length) return 0;
+  const sorted = [...samples].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1);
+  return sorted[index] ?? 0;
+}
+
 let activeState: RadarPerformanceState | null = null;
 
 function createState(): RadarPerformanceState {
@@ -63,18 +87,23 @@ function createState(): RadarPerformanceState {
     animationFrames: 0,
     animationTotalMs: 0,
     animationMaxMs: 0,
+    animationSamples: [],
+    frameIntervalSamples: [],
+    lastAnimationRecordedAt: null,
     markerWrites: 0,
     activeJobs: 0,
     maxActiveJobs: 0,
     collisionRuns: 0,
     collisionTotalMs: 0,
     collisionMaxMs: 0,
+    collisionSamples: [],
     trafficRows: 0,
     renderedTrafficRows: 0,
     trafficVirtualized: false,
     longTasks: 0,
     longTaskTotalMs: 0,
     longTaskMaxMs: 0,
+    longTaskSamples: [],
   };
 }
 
@@ -86,7 +115,9 @@ function currentSnapshot(): RadarPerformanceSnapshot {
     animation: {
       frames: state.animationFrames,
       averageMs: state.animationFrames > 0 ? state.animationTotalMs / state.animationFrames : 0,
+      p95Ms: percentile95(state.animationSamples),
       maxMs: state.animationMaxMs,
+      frameIntervalP95Ms: percentile95(state.frameIntervalSamples),
       markerWrites: state.markerWrites,
       activeJobs: state.activeJobs,
       maxActiveJobs: state.maxActiveJobs,
@@ -94,6 +125,7 @@ function currentSnapshot(): RadarPerformanceSnapshot {
     labelCollision: {
       runs: state.collisionRuns,
       averageMs: state.collisionRuns > 0 ? state.collisionTotalMs / state.collisionRuns : 0,
+      p95Ms: percentile95(state.collisionSamples),
       maxMs: state.collisionMaxMs,
     },
     trafficList: {
@@ -104,6 +136,7 @@ function currentSnapshot(): RadarPerformanceSnapshot {
     longTasks: {
       count: state.longTasks,
       totalMs: state.longTaskTotalMs,
+      p95Ms: percentile95(state.longTaskSamples),
       maxMs: state.longTaskMaxMs,
     },
   };
@@ -141,6 +174,7 @@ export function startRadarPerformanceDiagnostics(search: string): RadarPerforman
         state.longTasks += 1;
         state.longTaskTotalMs += entry.duration;
         state.longTaskMaxMs = Math.max(state.longTaskMaxMs, entry.duration);
+        recordSample(state.longTaskSamples, entry.duration);
       }
     });
     observer.observe({ entryTypes: ["longtask"] });
@@ -150,9 +184,15 @@ export function startRadarPerformanceDiagnostics(search: string): RadarPerforman
     recordAnimationFrame: (durationMs, markerWrites, activeJobs) => {
       const state = activeState;
       if (!state) return;
+      const recordedAt = performance.now();
+      if (state.lastAnimationRecordedAt !== null) {
+        recordSample(state.frameIntervalSamples, recordedAt - state.lastAnimationRecordedAt);
+      }
+      state.lastAnimationRecordedAt = recordedAt;
       state.animationFrames += 1;
       state.animationTotalMs += durationMs;
       state.animationMaxMs = Math.max(state.animationMaxMs, durationMs);
+      recordSample(state.animationSamples, durationMs);
       state.markerWrites += markerWrites;
       state.activeJobs = activeJobs;
       state.maxActiveJobs = Math.max(state.maxActiveJobs, activeJobs);
@@ -163,6 +203,7 @@ export function startRadarPerformanceDiagnostics(search: string): RadarPerforman
       state.collisionRuns += 1;
       state.collisionTotalMs += durationMs;
       state.collisionMaxMs = Math.max(state.collisionMaxMs, durationMs);
+      recordSample(state.collisionSamples, durationMs);
     },
     stop: () => {
       observer?.disconnect();

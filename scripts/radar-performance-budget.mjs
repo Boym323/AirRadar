@@ -1,5 +1,5 @@
 export const RADAR_PERFORMANCE_SCENARIOS = Object.freeze(
-  [50, 100, 250, 500].map((aircraft) => ({
+  [50, 100, 250, 500, 1000, 1600, 2000].map((aircraft) => ({
     aircraft,
     budget: {
       // CI gates only deterministic structural invariants. Wall-clock timings
