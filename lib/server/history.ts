@@ -59,7 +59,7 @@ export interface HistoryRetentionDiagnostics {
 export interface HistoryPersistenceStatus {
   lastSuccessfulWriteAt: string | null;
   failureCount: number;
-  retention: HistoryRetentionDiagnostics;
+  retention?: HistoryRetentionDiagnostics;
 }
 
 export const HISTORY_POSITION_LIMIT = 2_000;
@@ -938,7 +938,10 @@ async function retryAircraftUniqueViolation<T>(operation: () => Promise<T>): Pro
 export async function pruneHistoryRetention(
   database: NonNullable<ReturnType<typeof getPrisma>>,
   now = new Date(),
+  options: { batchSize?: number; maxBatches?: number } = {},
 ): Promise<HistoryRetentionDiagnostics> {
+  const batchSize = Math.min(20_000, Math.max(1, Math.trunc(options.batchSize ?? HISTORY_RETENTION_BATCH_SIZE)));
+  const maxBatches = Math.min(100, Math.max(1, Math.trunc(options.maxBatches ?? HISTORY_RETENTION_MAX_BATCHES)));
   const startedAt = Date.now();
   const cutoff = new Date(now.getTime() - getHistoryRetentionDays() * 24 * 60 * 60_000);
   const cutoffInstant = Temporal.Instant.fromEpochMilliseconds(cutoff.getTime());
@@ -948,11 +951,11 @@ export async function pruneHistoryRetention(
   let completed = false;
 
   try {
-    while (batches < HISTORY_RETENTION_MAX_BATCHES) {
+    while (batches < maxBatches) {
       const candidates = await schema.FlightPosition
         .where((position) => position.recordedAt.lt(cutoffInstant))
         .orderBy((position) => position.id.asc())
-        .limit(HISTORY_RETENTION_BATCH_SIZE)
+        .limit(batchSize)
         .select("id")
         .all();
       const ids = candidates.map((row) => row.id);
@@ -965,7 +968,7 @@ export async function pruneHistoryRetention(
         .deleteAndCount();
       rowsDeleted += deleted;
       batches += 1;
-      if (ids.length < HISTORY_RETENTION_BATCH_SIZE) {
+      if (ids.length < batchSize) {
         completed = true;
         break;
       }
@@ -998,7 +1001,8 @@ export async function pruneHistoryRetention(
 async function pruneHistoryIfDue(database: NonNullable<ReturnType<typeof getPrisma>>): Promise<void> {
   const now = Date.now();
   const maintenanceDue = now - lastFlightMaintenanceRunAt >= Math.max(getHistorySampleIntervalMs(), 5 * 60_000);
-  const retentionDue = now - lastRetentionRunAt >= 6 * 60 * 60_000;
+  const retentionIntervalMs = historyRetentionDiagnostics.completed === false ? 5 * 60_000 : 6 * 60 * 60_000;
+  const retentionDue = now - lastRetentionRunAt >= retentionIntervalMs;
   if (!maintenanceDue && !retentionDue) return;
   if (maintenanceDue) {
     lastFlightMaintenanceRunAt = now;
@@ -1014,7 +1018,8 @@ async function pruneHistoryIfDue(database: NonNullable<ReturnType<typeof getPris
   try {
     await pruneHistoryRetention(database, new Date(now));
   } catch (error) {
-    lastRetentionRunAt = 0;
+    // Avoid retrying on every snapshot after a database failure. The failed
+    // diagnostics keep completed=false, so the next retry is scheduled in 5m.
     console.error("AirRadar history retention cleanup failed", error);
   }
 }
