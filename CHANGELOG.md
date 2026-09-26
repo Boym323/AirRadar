@@ -2,6 +2,156 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.124] - 2026-09-26
+
+## What's Changed
+* fix(release): keep production build and GitHub release identity aligned by @Boym323 in https://github.com/Boym323/AirRadar/pull/98
+* ci: verify production release identity after deploy by @Boym323 in https://github.com/Boym323/AirRadar/pull/99
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.123...v1.0.124
+
+## [1.0.123] - 2026-09-23
+
+## What's Changed
+* feat(intelligence): Flight Intelligence V2 by @Boym323 in https://github.com/Boym323/AirRadar/pull/97
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.122...v1.0.123
+
+## [1.0.122] - 2026-09-23
+
+## What's Changed
+* Add production radar performance baseline by @Boym323 in https://github.com/Boym323/AirRadar/pull/96
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.121...v1.0.122
+
+## [1.0.121] - 2026-09-23
+
+## What's Changed
+* Refactor AirRadarApp into focused radar UI boundaries by @Boym323 in https://github.com/Boym323/AirRadar/pull/94
+* Fix post-refactor CI boundary assertions by @Boym323 in https://github.com/Boym323/AirRadar/pull/95
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.120...v1.0.121
+
+## [1.0.120] - 2026-09-23
+
+## What's Changed
+* Decouple live aircraft deltas from React rendering by @Boym323 in https://github.com/Boym323/AirRadar/pull/93
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.119...v1.0.120
+
+## [1.0.119] - 2026-09-23
+
+## What's Changed
+* Optimize dense radar rendering and add performance diagnostics by @Boym323 in https://github.com/Boym323/AirRadar/pull/92
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.118...v1.0.119
+
+## [1.0.118] - 2026-09-23
+
+## What's Changed
+* fix: align aircraft icons with rendered motion by @Boym323 in https://github.com/Boym323/AirRadar/pull/91
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.117...v1.0.118
+
+## [1.0.117] - 2026-09-23
+
+## What's Changed
+* Optimize live radar frontend rendering by @Boym323 in https://github.com/Boym323/AirRadar/pull/90
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.116...v1.0.117
+
+## [1.0.116] - 2026-09-23
+
+## What's Changed
+* Remove stop-go jitter from live aircraft motion by @Boym323 in https://github.com/Boym323/AirRadar/pull/89
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.115...v1.0.116
+
+## [1.0.115] - 2026-09-23
+
+## What's Changed
+* Replace live dead reckoning with confirmed-position interpolation by @Boym323 in https://github.com/Boym323/AirRadar/pull/86
+* Update radar UI invariant for confirmed-position motion by @Boym323 in https://github.com/Boym323/AirRadar/pull/87
+* Fix stale confirmed-position marker snaps by @Boym323 in https://github.com/Boym323/AirRadar/pull/88
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.114...v1.0.115
+
+## [1.0.114] - 2026-09-23
+
+## What's Changed
+* Enable subpixel positioning for moving map markers by @Boym323 in https://github.com/Boym323/AirRadar/pull/85
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.113...v1.0.114
+
+## [1.0.113] - 2026-09-22
+
+## What's Changed
+* Stabilize live aircraft motion by @Boym323 in https://github.com/Boym323/AirRadar/pull/84
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.112...v1.0.113
+
+## [1.0.112] - 2026-09-22
+
+## What's Changed
+* Polish responsive radar layout and drawer geometry by @Boym323 in https://github.com/Boym323/AirRadar/pull/83
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.111...v1.0.112
+
+## [1.0.111] - 2026-09-22
+
+## What's Changed
+* Fix stale aircraft correction after motion polish by @Boym323 in https://github.com/Boym323/AirRadar/pull/82
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.110...v1.0.111
+
+## [1.0.110] - 2026-09-22
+
+## What's Changed
+* Polish aircraft motion and radar map visuals by @Boym323 in https://github.com/Boym323/AirRadar/pull/81
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.109...v1.0.110
+
+## [1.0.109] - 2026-09-22
+
+## What's Changed
+* Remove GitHub release test lint warnings by @Boym323 in https://github.com/Boym323/AirRadar/pull/80
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.108...v1.0.109
+
+## [1.0.108] - 2026-09-22
+
+## What's Changed
+* Fix post-merge AirRadar audit findings by @Boym323 in https://github.com/Boym323/AirRadar/pull/77
+* Fix production release publishing after successful deploy by @Boym323 in https://github.com/Boym323/AirRadar/pull/78
+* Fix deep audit correctness, privacy and runtime findings by @Boym323 in https://github.com/Boym323/AirRadar/pull/79
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.107...v1.0.108
+
+## [1.0.107] - 2026-09-22
+
+## What's Changed
+* Fix runtime regressions from AirRadar audit by @Boym323 in https://github.com/Boym323/AirRadar/pull/76
+
+
+**Full Changelog**: https://github.com/Boym323/AirRadar/compare/v1.0.106...v1.0.107
+
 ## [1.0.106] - 2026-09-20
 
 Changes since v1.0.105:
