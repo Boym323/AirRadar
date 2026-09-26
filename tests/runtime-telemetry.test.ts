@@ -28,6 +28,10 @@ function sample(at: number, overrides: Partial<RuntimeTelemetrySample> = {}): Ru
     activeSseClients: 2,
     aircraftCount: 50,
     listenerCount: 3,
+    databaseState: "ok",
+    databaseLatencyMs: 4,
+    localProviderState: "online",
+    networkProviderState: "online",
     ...overrides,
   };
 }
