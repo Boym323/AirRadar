@@ -439,6 +439,10 @@ async function measureScenario(browser, scenario, serverPid) {
       browser: await browserFootprint(page),
       serverRssBytes: readProcessRssBytes(serverPid),
     } : null;
+    const footprint = soakAfter ?? {
+      browser: await browserFootprint(page),
+      serverRssBytes: readProcessRssBytes(serverPid),
+    };
 
     const raw = await page.evaluate(() => {
       const snapshot = window.__airradarPerformanceDiagnostics?.snapshot();
@@ -459,28 +463,33 @@ async function measureScenario(browser, scenario, serverPid) {
       animation: {
         ...raw.snapshot.animation,
         averageMs: rounded(raw.snapshot.animation.averageMs),
+        p95Ms: rounded(raw.snapshot.animation.p95Ms),
         maxMs: rounded(raw.snapshot.animation.maxMs),
+        frameIntervalP95Ms: rounded(raw.snapshot.animation.frameIntervalP95Ms),
         markerWritesPerSecond: rounded(raw.snapshot.animation.markerWrites / durationSeconds),
       },
       labelCollision: {
         ...raw.snapshot.labelCollision,
         averageMs: rounded(raw.snapshot.labelCollision.averageMs),
+        p95Ms: rounded(raw.snapshot.labelCollision.p95Ms),
         maxMs: rounded(raw.snapshot.labelCollision.maxMs),
       },
       trafficList: raw.snapshot.trafficList,
       longTasks: {
         ...raw.snapshot.longTasks,
         totalMs: rounded(raw.snapshot.longTasks.totalMs),
+        p95Ms: rounded(raw.snapshot.longTasks.p95Ms),
         maxMs: rounded(raw.snapshot.longTasks.maxMs),
       },
       dom: raw.dom,
+      footprint,
     };
     const soakViolations = soakMode ? evaluateSoakFootprint(soakBefore, soakAfter) : [];
     const violations = [...evaluateRadarPerformanceBaseline(result, scenario), ...soakViolations];
     console.log(
       `[radar-perf] aircraft=${scenario.aircraft} markers=${result.dom.aircraftMarkers} rows=${result.dom.mountedTrafficRows} `
-      + `animation=${result.animation.averageMs}ms/${result.animation.maxMs}ms writes=${result.animation.markerWritesPerSecond}/s `
-      + `collision=${result.labelCollision.averageMs}ms/${result.labelCollision.maxMs}ms longTasks=${result.longTasks.count} `
+      + `animation=${result.animation.averageMs}ms p95=${result.animation.p95Ms}ms max=${result.animation.maxMs}ms frameP95=${result.animation.frameIntervalP95Ms}ms writes=${result.animation.markerWritesPerSecond}/s `
+      + `collision=${result.labelCollision.averageMs}ms p95=${result.labelCollision.p95Ms}ms max=${result.labelCollision.maxMs}ms longTasks=${result.longTasks.count} `
       + `status=${violations.length ? "FAIL" : "PASS"}`,
     );
     for (const violation of violations) console.error(`[radar-perf]   budget: ${violation}`);
@@ -513,14 +522,14 @@ function markdownReport(report) {
     "",
     "Timing metrics are observational only. CI pass/fail is based on deterministic structural/instrumentation budgets so hosted-runner load does not create flaky failures.",
     "",
-    "| Aircraft | Markers | Mounted rows | Animation avg/max | Writes/s | Collision avg/max | Long tasks | Status |",
-    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | :---: |",
+    "| Aircraft | Markers | Mounted rows | Animation avg/p95/max | Frame p95 | Writes/s | Collision avg/p95/max | Long tasks | Heap | DOM nodes | Status |",
+    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :---: |",
   ];
   for (const result of report.scenarios) {
     lines.push(
-      `| ${result.aircraft} | ${result.dom.aircraftMarkers} | ${result.dom.mountedTrafficRows} | ${result.animation.averageMs} / ${result.animation.maxMs} ms | ${result.animation.markerWritesPerSecond} | ${result.labelCollision.averageMs} / ${result.labelCollision.maxMs} ms | ${result.longTasks.count} | ${result.violations.length ? "FAIL" : "PASS"} |`,
+      `| ${result.aircraft} | ${result.dom.aircraftMarkers} | ${result.dom.mountedTrafficRows} | ${result.animation.averageMs} / ${result.animation.p95Ms} / ${result.animation.maxMs} ms | ${result.animation.frameIntervalP95Ms} ms | ${result.animation.markerWritesPerSecond} | ${result.labelCollision.averageMs} / ${result.labelCollision.p95Ms} / ${result.labelCollision.maxMs} ms | ${result.longTasks.count} | ${result.footprint?.browser?.jsHeapUsedBytes == null ? "n/a" : `${rounded(result.footprint.browser.jsHeapUsedBytes / 1024 / 1024)} MiB`} | ${result.footprint?.browser?.nodes ?? "n/a"} | ${result.violations.length ? "FAIL" : "PASS"} |`,
     );
-    for (const violation of result.violations) lines.push(`|  |  |  |  |  |  |  | \`${violation}\` |`);
+    for (const violation of result.violations) lines.push(`|  |  |  |  |  |  |  |  |  |  | \`${violation}\` |`);
   }
   lines.push(
     "",
@@ -616,6 +625,7 @@ async function main() {
         warmupMs,
         measureMs,
         deltaIntervalMs,
+        changedAircraftPerDelta: "all",
         soakMode,
       },
       sseReconnects,
