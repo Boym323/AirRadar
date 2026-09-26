@@ -30,7 +30,7 @@ import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity"
 import type { SectorFlow } from "@/components/atc-sector-traffic-panels";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
-import type { MetarMapObservation, SigmetSnapshot } from "@/lib/weather/types";
+import type { MetarMapObservation } from "@/lib/weather/types";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
@@ -53,6 +53,7 @@ import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
+import { EMPTY_SIGMET_DATA, useRadarWeatherContext, type WindResponse } from "@/components/radar/use-radar-weather-context";
 import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
@@ -91,7 +92,6 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
   transmitters: [],
   metadata: { status: "unavailable", source: null, sourceReference: null, effectiveDate: null, lastVerifiedAt: null, sectorCount: 0, transmitterCount: 0 },
 };
-const EMPTY_SIGMET_DATA: SigmetSnapshot = { type: "FeatureCollection", features: [], fetchedAt: new Date(0).toISOString(), stale: false };
 const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled", fetchedAt: new Date(0).toISOString(), targets: [] };
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: [] };
@@ -104,8 +104,6 @@ const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, n
   [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.south],
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.south],
 ];
-interface WeatherRadarCatalogResponse { available: boolean; frames: Array<{ id: string; observedAt: string; imageUrl: string; latest: boolean; stale: boolean }>; latestFrameId: string | null; bounds: typeof WEATHER_RADAR_BOUNDS; }
-interface WindResponse { model: string; modelRun: string | null; validAt: string; availableValidTimes: string[]; levelHpa: WindLevelHpa; points: Array<{ lat: number; lon: number; speedKt: number | null; directionDeg: number | null }>; stale: boolean; }
 interface SectorTrafficView { sectorId: string; name: string; at: string; vertical: { lower: string | null; upper: string | null }; traffic: { aircraftCount: number; entering1m: number; entering5m: number; entering15m: number; leaving1m: number; leaving5m: number; leaving15m: number; climbing: number; descending: number; level: number; averageAltitude: number | null; medianAltitude: number | null; averageGroundSpeed: number | null }; trafficLevel: "NONE" | "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH"; frequencies: Array<{ channel: string }>; source: { airspace: string; traffic: string }; }
 const WIND_PRESSURE_LEVELS: WindLevelHpa[] = [850, 700, 500, 300, 200];
 interface AtsRoutesResponse { available: boolean; source?: { name: string; reference: string; effectiveDate: string; aipAmendment: string | null; airacAmendment: string | null }; counts?: { routes: number; points: number; segments: number; cdrSegments: number; discontinuities: number }; segments?: FeatureCollection; labels?: FeatureCollection; points?: FeatureCollection; }
@@ -376,20 +374,35 @@ export function AirRadarApp() {
   const [showSigmet, setShowSigmet] = useState(false);
   const [showWeatherRadar, setShowWeatherRadar] = useState(false);
   const [radarOpacity, setRadarOpacity] = useState(0.65);
-  const [radarCatalog, setRadarCatalog] = useState<WeatherRadarCatalogResponse | null>(null);
-  const [radarFrameId, setRadarFrameId] = useState<string | null>(null);
-  const [radarLatestMode, setRadarLatestMode] = useState(true);
-  const [radarPlaying, setRadarPlaying] = useState(false);
-  const [radarStatus, setRadarStatus] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
   const [showMetar, setShowMetar] = useState(false);
-  const [metarObservations, setMetarObservations] = useState<MetarMapObservation[]>([]);
-  const [metarStatus, setMetarStatus] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
   const [showWind, setShowWind] = useState(false);
   const [windLevel, setWindLevel] = useState<WindLevelHpa>(300);
-  const [windValidAt, setWindValidAt] = useState<string | null>(null);
-  const [windData, setWindData] = useState<WindResponse | null>(null);
-  const [windStatus, setWindStatus] = useState<"idle" | "loading" | "ready" | "stale" | "unavailable">("idle");
   const [showAupUup, setShowAupUup] = useState(false);
+  const {
+    radarCatalog,
+    radarFrameId,
+    setRadarFrameId,
+    radarLatestMode,
+    setRadarLatestMode,
+    radarPlaying,
+    setRadarPlaying,
+    radarStatus,
+    metarObservations,
+    metarStatus,
+    windValidAt,
+    setWindValidAt,
+    windData,
+    windStatus,
+    sigmetEnabled,
+    sigmetData,
+  } = useRadarWeatherContext({
+    showSigmet,
+    showWeatherRadar,
+    showMetar,
+    showWind,
+    windLevel,
+    onSigmetUnavailable: () => setShowSigmet(false),
+  });
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
   const [showSids, setShowSids] = useState(false);
   const [showStars, setShowStars] = useState(false);
@@ -501,10 +514,7 @@ export function AirRadarApp() {
   });
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const focusSearchOnTrafficOpenRef = useRef(false);
-  const sigmetGenerationRef = useRef(0);
-  const radarGenerationRef = useRef(0);
   const radarFrameGenerationRef = useRef(0);
-  const windGenerationRef = useRef(0);
   const networkEnabled = Boolean(snapshot.sources?.adsbLol.enabled);
   const activeCoverage: CoverageMode = preferencesResolved ? coverage : "local";
   const scheduleAircraftMapSync = useCallback(() => {
@@ -688,104 +698,6 @@ export function AirRadarApp() {
   }, [showSigmet]);
 
   useEffect(() => {
-    const generation = ++radarGenerationRef.current;
-    if (!showWeatherRadar) { setRadarPlaying(false); return; }
-    let active = true;
-    const load = async (): Promise<void> => {
-      setRadarStatus((current) => current === "ready" || current === "stale" ? current : "loading");
-      try {
-        const response = await fetch("/api/weather/radar/frames", { cache: "no-store" });
-        if (!response.ok) throw new Error("radar catalog unavailable");
-        const catalog = await response.json() as WeatherRadarCatalogResponse;
-        if (!active || generation !== radarGenerationRef.current) return;
-        setRadarCatalog(catalog);
-        setRadarStatus(catalog.available && catalog.frames.length ? (catalog.frames.some((frame) => frame.stale) ? "stale" : "ready") : "unavailable");
-        setRadarFrameId((current) => radarLatestMode ? catalog.latestFrameId : current && catalog.frames.some((frame) => frame.id === current) ? current : catalog.latestFrameId);
-      } catch {
-        if (active && generation === radarGenerationRef.current) setRadarStatus("unavailable");
-      }
-    };
-    let timer: number | null = null;
-    const schedule = () => { if (active) timer = window.setTimeout(() => { void load().finally(schedule); }, 60_000); };
-    void load().finally(schedule);
-    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
-  }, [radarLatestMode, showWeatherRadar]);
-
-  useEffect(() => {
-    if (!showWeatherRadar || !radarPlaying || !radarCatalog?.frames.length) return;
-    let active = true;
-    let timer: number | null = null;
-    const advance = () => {
-      if (!active) return;
-      setRadarFrameId((current) => {
-        const index = radarCatalog.frames.findIndex((frame) => frame.id === current);
-        return radarCatalog.frames[(index < 0 ? 0 : (index + 1) % radarCatalog.frames.length)].id;
-      });
-      timer = window.setTimeout(advance, 650);
-    };
-    timer = window.setTimeout(advance, 650);
-    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
-  }, [radarCatalog, radarPlaying, showWeatherRadar]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    const source = map.getSource("weather-radar-image") as ImageSource | undefined;
-    const frame = radarCatalog?.frames.find((candidate) => candidate.id === radarFrameId);
-    if (!source) return;
-    source.updateImage({ url: frame?.imageUrl ?? EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
-    if (map.getLayer("weather-radar-layer")) map.setLayoutProperty("weather-radar-layer", "visibility", showWeatherRadar && Boolean(frame) ? "visible" : "none");
-    if (map.getLayer("weather-radar-layer")) map.setPaintProperty("weather-radar-layer", "raster-opacity", radarOpacity);
-    const generation = ++radarFrameGenerationRef.current;
-    if (frame) {
-      const frameIndex = radarCatalog?.frames.findIndex((candidate) => candidate.id === frame.id) ?? -1;
-      for (const neighbour of [radarCatalog?.frames[frameIndex - 1], radarCatalog?.frames[frameIndex + 1]]) {
-        if (!neighbour) continue;
-        const image = new window.Image();
-        image.onload = () => { if (generation !== radarFrameGenerationRef.current) image.src = ""; };
-        image.src = neighbour.imageUrl;
-      }
-    }
-  }, [mapReady, radarCatalog, radarFrameId, radarOpacity, showWeatherRadar]);
-
-  useEffect(() => {
-    if (!showMetar) return;
-    let active = true;
-    let controller: AbortController | null = null;
-    const load = async (): Promise<void> => {
-      controller?.abort();
-      controller = new AbortController();
-      setMetarStatus("loading");
-      try {
-        const response = await fetch("/api/weather/metar-map", { cache: "no-store", signal: controller.signal });
-        if (!response.ok) throw new Error("METAR map unavailable");
-        const data = await response.json() as { observations?: MetarMapObservation[]; stale?: boolean };
-        if (!active || !Array.isArray(data.observations)) return;
-        setMetarObservations(data.observations);
-        setMetarStatus(data.stale || data.observations.some((item) => item.stale) ? "stale" : "ready");
-      } catch { if (active && !controller.signal.aborted) setMetarStatus("unavailable"); }
-    };
-    let timer: number | null = null;
-    const schedule = () => { if (active) timer = window.setTimeout(() => { void load().finally(schedule); }, 5 * 60_000); };
-    void load().finally(schedule);
-    return () => { active = false; controller?.abort(); if (timer !== null) window.clearTimeout(timer); };
-  }, [showMetar]);
-
-  useEffect(() => {
-    if (!showWind) return;
-    const generation = ++windGenerationRef.current;
-    const controller = new AbortController();
-    setWindStatus("loading");
-    const params = new URLSearchParams({ level: String(windLevel) });
-    if (windValidAt) params.set("valid", windValidAt);
-    fetch(`/api/weather/wind?${params.toString()}`, { cache: "no-store", signal: controller.signal })
-      .then(async (response) => { if (!response.ok) throw new Error("wind unavailable"); return await response.json() as WindResponse; })
-      .then((data) => { if (generation !== windGenerationRef.current || controller.signal.aborted) return; setWindData(data); setWindValidAt(data.validAt); setWindStatus(data.stale ? "stale" : "ready"); })
-      .catch(() => { if (!controller.signal.aborted && generation === windGenerationRef.current) setWindStatus("unavailable"); });
-    return () => controller.abort();
-  }, [showWind, windLevel, windValidAt]);
-
-  useEffect(() => {
     try { window.localStorage.setItem("airradar-ogn-layer", String(showOgn)); } catch { /* optional */ }
   }, [showOgn]);
 
@@ -795,43 +707,6 @@ export function AirRadarApp() {
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-layer", String(showWind)); } catch { /* optional */ } }, [showWind]);
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-level", String(windLevel)); } catch { /* optional */ } }, [windLevel]);
   useEffect(() => { try { window.localStorage.setItem("airradar-aup-uup-layer", String(showAupUup)); } catch { /* optional */ } }, [showAupUup]);
-
-  useEffect(() => {
-    const generation = ++sigmetGenerationRef.current;
-    if (!showSigmet) {
-      setSigmetData(EMPTY_SIGMET_DATA);
-      return;
-    }
-    const controller = new AbortController();
-    let active = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const load = async (): Promise<void> => {
-      try {
-        const response = await fetch("/api/weather/sigmet", { cache: "no-store", signal: controller.signal });
-        if (!response.ok) throw new Error("SIGMET request failed");
-        const data = await response.json() as Partial<SigmetSnapshot> & { enabled?: boolean; available?: boolean };
-        if (!active || generation !== sigmetGenerationRef.current || controller.signal.aborted) return;
-        if (data.enabled === false || data.available === false) {
-          setSigmetEnabled(false);
-          setShowSigmet(false);
-          setSigmetData(EMPTY_SIGMET_DATA);
-        } else if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
-          setSigmetEnabled(true);
-          setSigmetData(data as SigmetSnapshot);
-        }
-      } catch {
-        // A transient client/API failure must not erase the last good layer.
-      } finally {
-        if (active && generation === sigmetGenerationRef.current && !controller.signal.aborted) timer = setTimeout(() => { void load(); }, 5 * 60_000);
-      }
-    };
-    void load();
-    return () => {
-      active = false;
-      controller.abort();
-      if (timer) clearTimeout(timer);
-    };
-  }, [showSigmet]);
 
   const normalizedWatchlist = useMemo<AircraftMatchRule[]>(() => watchlist.flatMap((rule) => {
     const value = rule.value.trim().toUpperCase();
