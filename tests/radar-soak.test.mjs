@@ -29,8 +29,8 @@ describe("radar production soak", () => {
     expect(baselineSource).toContain('WATCHLIST_ADMIN_TOKEN: soakMode ? soakAdminToken : ""');
   });
 
-  it("runs 250 and 500 aircraft as a scheduled workflow instead of every PR", () => {
-    expect(JSON.parse(packageSource).scripts["benchmark:radar:soak"]).toContain("RADAR_PERF_SCENARIOS=250,500");
+  it("runs 500, 1000, and 1600 aircraft as a scheduled workflow instead of every PR", () => {
+    expect(JSON.parse(packageSource).scripts["benchmark:radar:soak"]).toContain("RADAR_PERF_SCENARIOS=500,1000,1600");
     expect(workflowSource).toContain('cron: "17 2 * * *"');
     expect(workflowSource).toContain("npm run benchmark:radar:soak");
     expect(workflowSource).toContain("timeout-minutes: 20");
