@@ -942,7 +942,7 @@ export interface HistoryRetentionResult {
 /**
  * Deletes expired position rows in bounded batches. Prisma ORM 8's singular
  * `.delete()` removes only one matching record, so retention must explicitly
- * select a bounded id set and use `.deleteCount()` for each batch.
+ * select a bounded id set and use `.deleteAndCount()` for each batch.
  */
 export async function deleteExpiredFlightPositions(
   database: NonNullable<ReturnType<typeof getPrisma>>,
