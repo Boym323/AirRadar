@@ -139,6 +139,17 @@ describe("release candidate versioning", () => {
     }
   });
 
+  it("uses the release resolver for automated production metadata", () => {
+    const release = readFileSync(new URL("../deploy/release.sh", import.meta.url), "utf8");
+    const automatedStart = release.indexOf("  if (( AUTOMATED == 1 ));", release.indexOf("prepare_release_version()"));
+    const automatedEnd = release.indexOf("\n  fi", automatedStart);
+    const automatedBlock = release.slice(automatedStart, automatedEnd);
+    expect(automatedBlock).toContain('resolve-release-version --channel stable');
+    expect(automatedBlock).toContain('export AIRRADAR_VERSION="${RELEASE_VERSION}"');
+    expect(automatedBlock).toContain('RELEASE_TAG="v${RELEASE_VERSION}"');
+    expect(automatedBlock).not.toContain("package.json");
+  });
+
   it("keeps RC dry-run before all release mutations", () => {
     const release = readFileSync(new URL("../deploy/release.sh", import.meta.url), "utf8");
     expect(release).toContain("--channel MODE");
