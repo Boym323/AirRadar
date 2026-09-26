@@ -564,6 +564,46 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         const buttonsReady = [...document.querySelectorAll("button")].every((button) => Boolean(button.textContent?.trim() || button.getAttribute("aria-label")));
         return mapReady && imagesReady && buttonsReady;
       });
+      // Ordinary aircraft now render on the bulk WebGL path. Verify that path
+      // first, then promote one aircraft through the normal selection flow so
+      // the existing HTML special-marker anchoring contract is still covered.
+      await page.waitForFunction(() => {
+        const map = window.__airradarMapForDiagnostics;
+        const runtime = window.__airradarWebglAircraftForDiagnostics;
+        return Boolean(
+          map
+          && runtime
+          && runtime.size > 0
+          && map.getLayer("aircraft-webgl")
+          && map.getLayer("aircraft-webgl-hit")
+          && map.getLayer("aircraft-webgl-label")
+          && map.getSource("aircraft-webgl-interaction")
+          && document.querySelector(".aircraft-row")
+        );
+      });
+      const webglPresentation = await page.evaluate(() => {
+        const map = window.__airradarMapForDiagnostics;
+        const runtime = window.__airradarWebglAircraftForDiagnostics;
+        return {
+          aircraft: runtime?.size ?? 0,
+          customLayer: Boolean(map?.getLayer("aircraft-webgl")),
+          hitLayer: Boolean(map?.getLayer("aircraft-webgl-hit")),
+          labelLayer: Boolean(map?.getLayer("aircraft-webgl-label")),
+          interactionSource: Boolean(map?.getSource("aircraft-webgl-interaction")),
+        };
+      });
+      if (webglPresentation.aircraft < 1
+        || !webglPresentation.customLayer
+        || !webglPresentation.hitLayer
+        || !webglPresentation.labelLayer
+        || !webglPresentation.interactionSource) {
+        throw new Error(`WebGL aircraft presentation contract failed at ${viewport.width}px: ${JSON.stringify(webglPresentation)}`);
+      }
+      await page.evaluate(() => {
+        const firstAircraft = document.querySelector(".aircraft-row");
+        if (!(firstAircraft instanceof HTMLButtonElement)) throw new Error("aircraft traffic fixture unavailable");
+        firstAircraft.click();
+      });
       await page.waitForFunction(() => {
         const marker = document.querySelector(".aircraft-marker");
         const rotator = marker?.querySelector(".aircraft-plane-rotator");
