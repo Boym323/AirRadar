@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -9,9 +9,17 @@ import { RADAR_PERFORMANCE_SCENARIOS, evaluateRadarPerformanceBaseline } from ".
 const host = "127.0.0.1";
 const port = Number(process.env.RADAR_PERF_PORT || 3299);
 const baseUrl = `http://${host}:${port}`;
-const warmupMs = Number(process.env.RADAR_PERF_WARMUP_MS || 900);
-const measureMs = Number(process.env.RADAR_PERF_MEASURE_MS || 1800);
+const soakMode = process.env.RADAR_PERF_SOAK === "1";
+const warmupMs = Number(process.env.RADAR_PERF_WARMUP_MS || (soakMode ? 2_000 : 900));
+const measureMs = Number(process.env.RADAR_PERF_MEASURE_MS || (soakMode ? 90_000 : 1800));
 const deltaIntervalMs = Number(process.env.RADAR_PERF_DELTA_MS || 180);
+const soakSseClients = Number(process.env.RADAR_PERF_SOAK_SSE_CLIENTS || 20);
+const soakSseRounds = Number(process.env.RADAR_PERF_SOAK_SSE_ROUNDS || 4);
+const soakAdminToken = process.env.RADAR_PERF_SOAK_ADMIN_TOKEN || "radar-soak-admin";
+const soakHeapGrowthLimitBytes = Number(process.env.RADAR_PERF_SOAK_MAX_HEAP_GROWTH_MB || 96) * 1024 * 1024;
+const soakServerRssGrowthLimitBytes = Number(process.env.RADAR_PERF_SOAK_MAX_RSS_GROWTH_MB || 192) * 1024 * 1024;
+const soakNodeGrowthLimit = Number(process.env.RADAR_PERF_SOAK_MAX_NODE_GROWTH || 500);
+const soakListenerGrowthLimit = Number(process.env.RADAR_PERF_SOAK_MAX_LISTENER_GROWTH || 250);
 const requestedCounts = (process.env.RADAR_PERF_SCENARIOS || "")
   .split(",")
   .map((value) => Number(value.trim()))
@@ -254,7 +262,144 @@ function rounded(value) {
   return typeof value === "number" && Number.isFinite(value) ? Math.round(value * 100) / 100 : value;
 }
 
-async function measureScenario(browser, scenario) {
+function readProcessRssBytes(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  try {
+    const status = readFileSync(`/proc/${pid}/status`, "utf8");
+    const match = status.match(/^VmRSS:\s+(\d+)\s+kB$/m);
+    return match ? Number(match[1]) * 1024 : null;
+  } catch {
+    return null;
+  }
+}
+
+async function browserFootprint(page) {
+  const session = await page.context().newCDPSession(page);
+  try {
+    await session.send("HeapProfiler.enable");
+    await session.send("HeapProfiler.collectGarbage");
+    await wait(100);
+    await session.send("Performance.enable");
+    const result = await session.send("Performance.getMetrics");
+    const metrics = new Map(result.metrics.map((metric) => [metric.name, metric.value]));
+    const value = (name) => {
+      const metric = metrics.get(name);
+      return typeof metric === "number" && Number.isFinite(metric) ? metric : null;
+    };
+    return {
+      jsHeapUsedBytes: value("JSHeapUsedSize"),
+      nodes: value("Nodes"),
+      documents: value("Documents"),
+      jsEventListeners: value("JSEventListeners"),
+    };
+  } finally {
+    await session.detach();
+  }
+}
+
+function numericGrowth(before, after) {
+  return typeof before === "number" && typeof after === "number" ? after - before : null;
+}
+
+function evaluateSoakFootprint(before, after) {
+  if (!before || !after) return ["soak footprint missing"];
+  const violations = [];
+  const heapGrowth = numericGrowth(before.browser.jsHeapUsedBytes, after.browser.jsHeapUsedBytes);
+  const nodeGrowth = numericGrowth(before.browser.nodes, after.browser.nodes);
+  const listenerGrowth = numericGrowth(before.browser.jsEventListeners, after.browser.jsEventListeners);
+  const rssGrowth = numericGrowth(before.serverRssBytes, after.serverRssBytes);
+
+  if (heapGrowth !== null && heapGrowth > soakHeapGrowthLimitBytes) {
+    violations.push(`browser heap grew by ${Math.round(heapGrowth / 1024 / 1024)} MiB (limit ${Math.round(soakHeapGrowthLimitBytes / 1024 / 1024)} MiB)`);
+  }
+  if (nodeGrowth !== null && nodeGrowth > soakNodeGrowthLimit) {
+    violations.push(`DOM node count grew by ${nodeGrowth} (limit ${soakNodeGrowthLimit})`);
+  }
+  if (listenerGrowth !== null && listenerGrowth > soakListenerGrowthLimit) {
+    violations.push(`JS event listener count grew by ${listenerGrowth} (limit ${soakListenerGrowthLimit})`);
+  }
+  if (rssGrowth !== null && rssGrowth > soakServerRssGrowthLimitBytes) {
+    violations.push(`server RSS grew by ${Math.round(rssGrowth / 1024 / 1024)} MiB (limit ${Math.round(soakServerRssGrowthLimitBytes / 1024 / 1024)} MiB)`);
+  }
+  return violations;
+}
+
+async function createAdminSessionCookie() {
+  const response = await fetch(`${baseUrl}/api/watchlist/session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: soakAdminToken }),
+  });
+  if (!response.ok) throw new Error(`Soak admin login failed with HTTP ${response.status}`);
+  const setCookie = response.headers.get("set-cookie");
+  const cookie = setCookie?.split(";", 1)[0];
+  if (!cookie) throw new Error("Soak admin login did not return a session cookie");
+  return cookie;
+}
+
+async function readAdminSystemStatus(cookie) {
+  const response = await fetch(`${baseUrl}/api/system/status`, {
+    headers: { cookie },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`System status failed with HTTP ${response.status}`);
+  const payload = await response.json();
+  if (payload.detailLevel !== "admin") throw new Error("Soak diagnostics did not receive admin detail level");
+  return payload;
+}
+
+async function waitForSseState(cookie, predicate, timeoutMs = 5_000) {
+  const deadline = Date.now() + timeoutMs;
+  let latest = null;
+  while (Date.now() < deadline) {
+    latest = await readAdminSystemStatus(cookie);
+    if (predicate(latest.runtime.activeSseClients)) return latest;
+    await wait(100);
+  }
+  throw new Error(`SSE state did not converge; last active client count=${latest?.runtime?.activeSseClients ?? "unknown"}`);
+}
+
+async function exerciseSseReconnects() {
+  const cookie = await createAdminSessionCookie();
+  const violations = [];
+  let peakClients = 0;
+
+  for (let round = 0; round < soakSseRounds; round += 1) {
+    const controllers = Array.from({ length: soakSseClients }, () => new AbortController());
+    const responses = await Promise.all(controllers.map((controller) =>
+      fetch(`${baseUrl}/api/stream?v=2&coverage=local`, { signal: controller.signal })
+    ));
+    if (responses.some((response) => !response.ok)) {
+      violations.push(`SSE round ${round + 1} returned a non-2xx response`);
+    }
+
+    const active = await waitForSseState(cookie, (count) => count >= Math.min(soakSseClients, 1));
+    peakClients = Math.max(peakClients, active.runtime.activeSseClients);
+
+    for (const response of responses) await response.body?.cancel().catch(() => undefined);
+    for (const controller of controllers) controller.abort();
+
+    try {
+      await waitForSseState(cookie, (count) => count === 0);
+    } catch (error) {
+      violations.push(`SSE round ${round + 1} did not clean up: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  const finalStatus = await readAdminSystemStatus(cookie);
+  if (finalStatus.runtime.activeSseClients !== 0) {
+    violations.push(`SSE clients leaked after churn: ${finalStatus.runtime.activeSseClients} still active`);
+  }
+  return {
+    rounds: soakSseRounds,
+    clientsPerRound: soakSseClients,
+    peakClients,
+    finalActiveClients: finalStatus.runtime.activeSseClients,
+    violations,
+  };
+}
+
+async function measureScenario(browser, scenario, serverPid) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   try {
     await page.route("https://tile.openstreetmap.org/**", (route) => route.fulfill({
@@ -285,7 +430,15 @@ async function measureScenario(browser, scenario) {
       window.__airradarPerformanceDiagnostics?.reset();
       window.dispatchEvent(new Event("airradar:performance-diagnostics-ready"));
     });
+    const soakBefore = soakMode ? {
+      browser: await browserFootprint(page),
+      serverRssBytes: readProcessRssBytes(serverPid),
+    } : null;
     await wait(measureMs);
+    const soakAfter = soakMode ? {
+      browser: await browserFootprint(page),
+      serverRssBytes: readProcessRssBytes(serverPid),
+    } : null;
 
     const raw = await page.evaluate(() => {
       const snapshot = window.__airradarPerformanceDiagnostics?.snapshot();
@@ -322,7 +475,8 @@ async function measureScenario(browser, scenario) {
       },
       dom: raw.dom,
     };
-    const violations = evaluateRadarPerformanceBaseline(result, scenario);
+    const soakViolations = soakMode ? evaluateSoakFootprint(soakBefore, soakAfter) : [];
+    const violations = [...evaluateRadarPerformanceBaseline(result, scenario), ...soakViolations];
     console.log(
       `[radar-perf] aircraft=${scenario.aircraft} markers=${result.dom.aircraftMarkers} rows=${result.dom.mountedTrafficRows} `
       + `animation=${result.animation.averageMs}ms/${result.animation.maxMs}ms writes=${result.animation.markerWritesPerSecond}/s `
@@ -330,7 +484,22 @@ async function measureScenario(browser, scenario) {
       + `status=${violations.length ? "FAIL" : "PASS"}`,
     );
     for (const violation of violations) console.error(`[radar-perf]   budget: ${violation}`);
-    return { ...result, budget: scenario.budget, violations };
+    return {
+      ...result,
+      budget: scenario.budget,
+      soak: soakMode ? {
+        before: soakBefore,
+        after: soakAfter,
+        growth: {
+          jsHeapUsedBytes: numericGrowth(soakBefore?.browser.jsHeapUsedBytes, soakAfter?.browser.jsHeapUsedBytes),
+          nodes: numericGrowth(soakBefore?.browser.nodes, soakAfter?.browser.nodes),
+          documents: numericGrowth(soakBefore?.browser.documents, soakAfter?.browser.documents),
+          jsEventListeners: numericGrowth(soakBefore?.browser.jsEventListeners, soakAfter?.browser.jsEventListeners),
+          serverRssBytes: numericGrowth(soakBefore?.serverRssBytes, soakAfter?.serverRssBytes),
+        },
+      } : null,
+      violations,
+    };
   } finally {
     await page.close();
   }
@@ -362,6 +531,36 @@ function markdownReport(report) {
     "- Animation and collision diagnostics must record live work; active jobs may not exceed aircraft count.",
     "",
   );
+
+  if (report.environment.soakMode) {
+    lines.push(
+      "## Soak footprint",
+      "",
+      "| Aircraft | Heap growth | DOM nodes | Event listeners | Server RSS growth |",
+      "| ---: | ---: | ---: | ---: | ---: |",
+    );
+    for (const result of report.scenarios) {
+      const growth = result.soak?.growth;
+      const mib = (value) => value === null || value === undefined ? "n/a" : `${rounded(value / 1024 / 1024)} MiB`;
+      const count = (value) => value === null || value === undefined ? "n/a" : String(rounded(value));
+      lines.push(`| ${result.aircraft} | ${mib(growth?.jsHeapUsedBytes)} | ${count(growth?.nodes)} | ${count(growth?.jsEventListeners)} | ${mib(growth?.serverRssBytes)} |`);
+    }
+    if (report.sseReconnects) {
+      lines.push(
+        "",
+        "## SSE reconnect churn",
+        "",
+        `- Rounds: ${report.sseReconnects.rounds}`,
+        `- Clients per round: ${report.sseReconnects.clientsPerRound}`,
+        `- Peak active clients: ${report.sseReconnects.peakClients}`,
+        `- Final active clients: ${report.sseReconnects.finalActiveClients}`,
+        `- Status: ${report.sseReconnects.violations.length ? "FAIL" : "PASS"}`,
+        "",
+      );
+      for (const violation of report.sseReconnects.violations) lines.push(`- \`${violation}\``);
+      lines.push("");
+    }
+  }
   return lines.join("\n");
 }
 
@@ -382,6 +581,7 @@ async function main() {
       OGN_ENABLED: "false",
       FLIGHTAWARE_API_KEY: "",
       AIRRADAR_CHANNEL: "production",
+      WATCHLIST_ADMIN_TOKEN: soakMode ? soakAdminToken : "",
       AIRRADAR_RUNTIME_STATE_DIRECTORY: runtimeStateDirectory,
       WEATHER_RADAR_ARCHIVE_DIR: resolve(runtimeStateDirectory, "weather-radar"),
     },
@@ -401,9 +601,11 @@ async function main() {
   try {
     await waitForHealthyServer(child, exitPromise);
     browser = await chromium.launch({ headless: true });
+    const sseReconnects = soakMode ? await exerciseSseReconnects() : null;
     const results = [];
-    for (const scenario of scenarios) results.push(await measureScenario(browser, scenario));
+    for (const scenario of scenarios) results.push(await measureScenario(browser, scenario, child.pid));
     const failed = results.filter((result) => result.violations.length > 0);
+    if (sseReconnects?.violations.length) failed.push({ aircraft: 0, violations: sseReconnects.violations });
     const report = {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
@@ -414,17 +616,20 @@ async function main() {
         warmupMs,
         measureMs,
         deltaIntervalMs,
+        soakMode,
       },
+      sseReconnects,
       scenarios: results,
       passed: failed.length === 0,
     };
     mkdirSync("artifacts", { recursive: true });
-    writeFileSync("artifacts/radar-performance-baseline.json", JSON.stringify(report, null, 2) + "\n");
-    writeFileSync("artifacts/radar-performance-baseline.md", markdownReport(report) + "\n");
-    console.log("[radar-perf] report=artifacts/radar-performance-baseline.json");
-    console.log("[radar-perf] summary=artifacts/radar-performance-baseline.md");
+    const reportStem = soakMode ? "radar-performance-soak" : "radar-performance-baseline";
+    writeFileSync(`artifacts/${reportStem}.json`, JSON.stringify(report, null, 2) + "\n");
+    writeFileSync(`artifacts/${reportStem}.md`, markdownReport(report) + "\n");
+    console.log(`[radar-perf] report=artifacts/${reportStem}.json`);
+    console.log(`[radar-perf] summary=artifacts/${reportStem}.md`);
     if (failed.length) {
-      throw new Error(`Radar performance baseline failed in ${failed.length}/${results.length} scenarios`);
+      throw new Error(`Radar performance ${soakMode ? "soak" : "baseline"} failed with ${failed.length} failing check group(s)`);
     }
   } catch (error) {
     const detail = serverLogs.join("").slice(-4_000);

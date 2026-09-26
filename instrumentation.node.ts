@@ -1,6 +1,7 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { registerShutdownCoordinator } from "@/lib/server/shutdown";
 import { defaultMapContextArchiveService } from "@/lib/server/map-context";
+import { startRuntimeTelemetry } from "@/lib/server/runtime-telemetry";
 
 registerShutdownCoordinator();
 
@@ -10,5 +11,6 @@ registerShutdownCoordinator();
 // receives an already-warm snapshot. start() is idempotent, so existing
 // request/subscription readiness paths remain safe.
 getAircraftStateService().start();
+startRuntimeTelemetry();
 
 void defaultMapContextArchiveService.start();
