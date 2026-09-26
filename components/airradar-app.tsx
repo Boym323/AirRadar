@@ -1538,7 +1538,6 @@ export function AirRadarApp() {
         focusedAircraftRef.current = selectedHex;
       }
     }
-    const animationJobs = animationJobsRef.current;
     const fullMarkerUpdate = forceFull || pending?.full === true;
     const currentHexes = fullMarkerUpdate ? new Set(liveFilteredAircraft.map((aircraft) => aircraft.icaoHex)) : null;
     const aircraftToUpdate = fullMarkerUpdate
