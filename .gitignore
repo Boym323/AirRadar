@@ -25,3 +25,4 @@ npm-debug.log*
 data/flightaware-usage.json
 artifacts/radar-performance-baseline.json
 artifacts/radar-performance-baseline.md
+\nartifacts/radar-performance-soak.json\nartifacts/radar-performance-soak.md\n

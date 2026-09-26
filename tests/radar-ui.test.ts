@@ -14,6 +14,7 @@ import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
+const aircraftMotionRuntimeSource = readFileSync(new URL("../lib/radar/aircraft-motion-runtime.ts", import.meta.url), "utf8");
 const aircraftTrafficRowSource = readFileSync(new URL("../components/aircraft-traffic-row.tsx", import.meta.url), "utf8");
 const aircraftTrafficListSource = readFileSync(new URL("../components/aircraft-traffic-list.tsx", import.meta.url), "utf8");
 const radarTrafficBrowserSource = readFileSync(new URL("../components/radar/radar-traffic-browser.tsx", import.meta.url), "utf8");
@@ -140,17 +141,17 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toContain("background: currentColor");
     expect(globalCss).not.toMatch(/\.aircraft-plane \.aircraft-glyph-asset[^}]*filter:/);
     expect(appSource).toContain("aircraftMarkersRef.current.get(selectedHex)?.marker.getLngLat()");
-    expect(appSource).toContain("confirmedInterpolationDurationMs(");
-    expect(appSource).toContain("visualHeadingForConfirmedPosition");
-    expect(appSource).toContain("previous.visualHeading");
-    expect(appSource).toContain("visualHeading: visualHeadingForConfirmedPosition");
-    expect(appSource).toContain("correction && previousInterpolationActive ? previous.visualHeading : null");
-    expect(appSource).toContain("visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, nextHistory)");
-    expect(appSource).toContain("allowPrediction: false");
-    expect(appSource).not.toContain("predictedPosition(");
-    expect(appSource).toContain("motionRenderIntervalMs(animationJobs.size)");
-    expect(appSource).toContain("job === selectedAnimationJob || bulkFrameDue || renderFinalCorrection");
-    expect(appSource).toContain("if (!renderThisFrame)");
+    expect(aircraftMotionRuntimeSource).toContain("confirmedInterpolationDurationMs(");
+    expect(aircraftMotionRuntimeSource).toContain("visualHeadingForConfirmedPosition");
+    expect(aircraftMotionRuntimeSource).toContain("previous.visualHeading");
+    expect(aircraftMotionRuntimeSource).toContain("visualHeading: visualHeadingForConfirmedPosition");
+    expect(aircraftMotionRuntimeSource).toContain("correction && previousInterpolationActive ? previous.visualHeading : null");
+    expect(aircraftMotionRuntimeSource).toContain("visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, nextHistory)");
+    expect(aircraftMotionRuntimeSource).toContain("allowPrediction: false");
+    expect(aircraftMotionRuntimeSource).not.toContain("predictedPosition(");
+    expect(aircraftMotionRuntimeSource).toContain("motionRenderIntervalMs(this.jobs.size)");
+    expect(aircraftMotionRuntimeSource).toContain("job === selectedAnimationJob || bulkFrameDue || renderFinalCorrection");
+    expect(aircraftMotionRuntimeSource).toContain("if (!renderThisFrame)");
     expect(appSource).toContain('map.on("zoom", updateLiveZoomLabels)');
     expect(appSource).toContain('map.on("move", scheduleLabelCollision)');
   });
@@ -199,11 +200,11 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("startRadarPerformanceDiagnostics(window.location.search)");
     expect(appSource).toContain('window.dispatchEvent(new Event("airradar:performance-diagnostics-ready"))');
     expect(aircraftTrafficListSource).toContain('window.addEventListener("airradar:performance-diagnostics-ready"');
-    expect(appSource).toContain("performanceDiagnostics.recordAnimationFrame(");
+    expect(aircraftMotionRuntimeSource).toContain("diagnostics.recordAnimationFrame(");
     expect(appSource).toContain("performanceDiagnostics.recordLabelCollision(");
     expect(aircraftTrafficListSource).toContain("recordTrafficList(");
     expect(radarPerformanceSource).toContain('get("perfDiagnostics") !== "1"');
-    expect(appSource).toContain("const frameStartedAt = performanceDiagnostics ? performance.now() : 0");
+    expect(aircraftMotionRuntimeSource).toContain("const frameStartedAt = diagnostics ? performance.now() : 0");
     expect(radarPerformanceSource).toContain("__airradarPerformanceDiagnostics");
     expect(radarPerformanceSource).toContain('includes("longtask")');
   });
@@ -250,7 +251,7 @@ describe("radar UI polish helpers", () => {
 
   it("shows seen-by and position provenance as separate signals", () => {
     expect(`${appSource}\n${quickDetailSource}`).toContain("label={t.aircraft.seenBy}");
-    expect(appSource).toContain("aircraft.provenance?.positionOrigin");
+    expect(quickDetailSource).toContain("aircraft.provenance?.positionOrigin");
     expect(`${appSource}\n${quickDetailSource}`).toContain("aircraft.provenance?.positionSource");
     expect(appSource).not.toContain("`${aircraftDataSourceLabel(aircraft)} · ${aircraft.source}`");
   });
