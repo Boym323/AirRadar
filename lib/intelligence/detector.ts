@@ -7,6 +7,7 @@ import { resolveArrivalRunwayContext, resolveDepartureRunwayContext } from "@/li
 import type { RunwayContext } from "@/lib/route-intelligence/contracts";
 import type { FlightEventType, FlightIntelligenceEvent, FlightObservation, FlightPhase, HoldingStatus } from "@/lib/intelligence/types";
 import { confidenceLevel } from "@/lib/intelligence/types";
+import { detectGoAround } from "@/lib/intelligence/go-around";
 
 const MAX_HISTORY = 120;
 const MAX_EMITTED_KEYS = 200;
@@ -227,7 +228,12 @@ export class FlightIntelligenceDetector {
     const landingSignals = this.landingSignals(aircraft, distanceKm, state.phase);
     const descentSignals = this.descentSignals(state, aircraft);
     const climbSignals = this.climbSignals(state, aircraft);
-    const goAroundSignals = state.phase === "APPROACH" ? this.goAroundSignals(state, aircraft, priorObservation, distanceKm, priorDistanceKm) : null;
+    const goAroundDetection = state.phase === "APPROACH"
+      ? detectGoAround(state.history, airport ? { icao: airport.icaoCode, latitude: airport.latitude, longitude: airport.longitude } : undefined)
+      : null;
+    const goAroundSignals = goAroundDetection
+      ? [{ active: true, weight: 1, evidence: EVIDENCE.approachEstablished }, ...goAroundDetection.reasonCodes.map((reason) => ({ active: true, weight: 1, evidence: reason }))]
+      : null;
 
     const levelOff = this.levelOffSignals(state, aircraft);
     if (levelOff && !state.levelOffActive) {
@@ -243,7 +249,10 @@ export class FlightIntelligenceDetector {
 
     if (goAroundSignals) {
       const scored = scoreSignals(goAroundSignals);
-      append(this.event("GO_AROUND", aircraft, state, airport?.icaoCode ?? null, "GO_AROUND", scored, runwayFor("ARRIVAL")));
+      append(this.event("GO_AROUND", aircraft, state, airport?.icaoCode ?? null, "GO_AROUND", scored, runwayFor("ARRIVAL"), "", null, {
+        detectionType: goAroundDetection?.type ?? "GO_AROUND_DETECTED",
+        reasonCodes: goAroundDetection?.reasonCodes ?? scored.evidence,
+      }));
       state.phase = "GO_AROUND"; state.pendingPhase = undefined; state.approachCycle += 1; state.approachMinDistanceKm = distanceKm; state.approachEventPending = false;
     } else {
       if (state.phase === "APPROACH" && state.approachEventPending) {
