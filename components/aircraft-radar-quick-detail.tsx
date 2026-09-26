@@ -8,6 +8,7 @@ import type { AtcContextResult } from "@/lib/atc-context/types";
 import { buildAtcHandoffEstimate } from "@/lib/atc-context/handoff";
 import type { AircraftView, FlightRoute } from "@/lib/aircraft/types";
 import type { AircraftDetailMetadata, HistoryResponse } from "@/lib/server/history";
+import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
@@ -37,6 +38,8 @@ export interface AircraftRadarQuickDetailProps {
   databaseAircraft: AircraftDetailMetadata | null;
   historyTrail: QuickHistoryTrail | null;
   atcContext: AtcContextResult | null;
+  sigmetContext: AircraftSigmetContext[];
+  sigmetStale: boolean;
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -150,6 +153,28 @@ function AtcSection({ aircraft, context, sectorTraffic }: { aircraft: AircraftVi
     {handoff && <p className="aircraft-quick-disclaimer">{t.atc.handoffDisclaimer}</p>}
     <p className="aircraft-quick-disclaimer">{t.atc.contextDisclaimer}</p>
     {contextAirspace && <p className="aircraft-quick-disclaimer">Published sector: {contextAirspace.name}{traffic ? ` · Sector traffic: ${traffic.traffic.aircraftCount} aircraft · ${traffic.trafficLevel}` : " · Sector traffic: —"}. Aircraft is within the published sector volume. Traffic does not represent the official operational sector configuration.</p>}
+  </QuickSection>;
+}
+
+function SigmetSection({ context, stale }: { context: AircraftSigmetContext[]; stale: boolean }) {
+  if (!context.length) return null;
+  return <QuickSection id="aircraft-quick-sigmet-title" title={t.weather.sigmetAircraftTitle} className="aircraft-quick-sigmet">
+    <div className="aircraft-quick-detail-grid">
+      {context.map((item) => {
+        const hazard = item.hazard || item.phenomenon || t.weather.sigmetUnknownHazard;
+        const limits = item.lowerFt !== null || item.upperFt !== null
+          ? `${item.lowerFt === null ? t.common.emptyValue : formatAltitude(item.lowerFt)} – ${item.upperFt === null ? t.common.unlimited : formatAltitude(item.upperFt)}`
+          : t.weather.sigmetAltitudeUnknown;
+        return <div className="aircraft-quick-sigmet-item" key={item.id} data-testid="aircraft-sigmet-context">
+          <DetailValue label={t.weather.sigmetHazard} value={hazard} />
+          {item.firName && <DetailValue label={t.atc.contextFir} value={item.firName} />}
+          <DetailValue label={t.weather.sigmetAltitude} value={limits} />
+          <DetailValue label={t.weather.sigmetVerticalMatch} value={item.verticalMatch === "matched" ? t.weather.sigmetVerticalMatched : t.weather.sigmetVerticalUnknown} />
+          {item.validTo && <DetailValue label={t.weather.sigmetValidTo} value={formatTime(item.validTo)} />}
+        </div>;
+      })}
+    </div>
+    <p className="aircraft-quick-disclaimer">{stale ? t.weather.sigmetStaleWarning : t.weather.sigmetAircraftDisclaimer}</p>
   </QuickSection>;
 }
 
@@ -333,6 +358,8 @@ export function AircraftRadarQuickDetail({
   databaseAircraft,
   historyTrail,
   atcContext,
+  sigmetContext,
+  sigmetStale,
   watchlisted,
   onBack,
   onClose,
@@ -386,6 +413,7 @@ export function AircraftRadarQuickDetail({
         {!hasRouteData && <p className="aircraft-quick-empty">{t.aircraft.noRouteData}</p>}
       </QuickSection>
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
+      <SigmetSection context={sigmetContext} stale={sigmetStale} />
       {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
     </div>}
     {activeTab === "aircraft" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-aircraft" aria-labelledby="aircraft-tab-aircraft"><AircraftIdentitySection aircraft={aircraft} databaseAircraft={databaseAircraft} /></div>}
