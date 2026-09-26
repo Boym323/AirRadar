@@ -435,15 +435,9 @@ async function measureScenario(browser, scenario, serverPid) {
       serverRssBytes: readProcessRssBytes(serverPid),
     } : null;
     await wait(measureMs);
-    const soakAfter = soakMode ? {
-      browser: await browserFootprint(page),
-      serverRssBytes: readProcessRssBytes(serverPid),
-    } : null;
-    const footprint = soakAfter ?? {
-      browser: await browserFootprint(page),
-      serverRssBytes: readProcessRssBytes(serverPid),
-    };
 
+    // Freeze timing/long-task diagnostics before browserFootprint() forces GC.
+    // Footprint collection is intentionally outside the measured performance window.
     const raw = await page.evaluate(() => {
       const snapshot = window.__airradarPerformanceDiagnostics?.snapshot();
       if (!snapshot) throw new Error("Performance diagnostics unavailable");
@@ -456,6 +450,15 @@ async function measureScenario(browser, scenario, serverPid) {
         },
       };
     });
+
+    const soakAfter = soakMode ? {
+      browser: await browserFootprint(page),
+      serverRssBytes: readProcessRssBytes(serverPid),
+    } : null;
+    const footprint = soakAfter ?? {
+      browser: await browserFootprint(page),
+      serverRssBytes: readProcessRssBytes(serverPid),
+    };
     const durationSeconds = Math.max(raw.snapshot.sinceMs / 1000, 0.001);
     const result = {
       aircraft: scenario.aircraft,
