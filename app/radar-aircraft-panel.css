@@ -520,6 +520,49 @@
   margin: 0;
 }
 
+.aircraft-quick-wind-ahead {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.aircraft-quick-wind-ahead > strong {
+  font-size: 12px;
+}
+
+.aircraft-quick-wind-ahead > span,
+.aircraft-quick-wind-ahead > p,
+.aircraft-quick-wind-ahead-point small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.aircraft-quick-wind-ahead > p {
+  margin: 0;
+}
+
+.aircraft-quick-wind-ahead-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.aircraft-quick-wind-ahead-point {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.aircraft-quick-wind-ahead-point b,
+.aircraft-quick-wind-ahead-point span,
+.aircraft-quick-wind-ahead-point small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .aircraft-quick-atc-primary {
   display: grid;
   gap: 4px;
