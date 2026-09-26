@@ -191,6 +191,7 @@ export function replayFlightIntelligence(
         "FlightPosition.atcAssignment",
         "FlightPosition.flightPlan",
         "FlightPosition.runwayContext",
+        ...(detail.truncated ? ["HistoryFlightDetail.positionsTruncated"] : []),
       ],
       comparableEventTypes: [...REPLAY_COMPARABLE_EVENT_TYPES],
     },
