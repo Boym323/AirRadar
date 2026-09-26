@@ -18,7 +18,6 @@ import { haversineDistanceKm } from "@/lib/geo";
 
 export const AIRPORT_TRAFFIC_RECENT_LIMIT = 10;
 export const AIRPORT_TRAFFIC_TOP_LIMIT = 5;
-export const AIRPORT_TRAFFIC_QUERY_LIMIT = 500;
 export const AIRPORT_TRAFFIC_MOVEMENT_LIMIT = 10;
 export const AIRPORT_MOVEMENT_RADIUS_KM = 30;
 
@@ -297,21 +296,6 @@ function recentTraffic(
     });
 }
 
-interface BoundedQueryResult {
-  rows: unknown[];
-  truncated: boolean;
-}
-
-function boundedQuery(query: { limit?: (value: number) => { all(): unknown }; all(): unknown }, limit: number): Promise<BoundedQueryResult> {
-  // Fetch one sentinel row beyond the public processing cap so callers can
-  // distinguish a complete result from a bounded lower-bound sample.
-  const result = typeof query.limit === "function" ? query.limit(limit + 1).all() : query.all();
-  return Promise.resolve(result as PromiseLike<unknown[]>).then((value) => {
-    const rows = Array.isArray(value) ? value : [];
-    return { rows: rows.slice(0, limit), truncated: rows.length > limit };
-  });
-}
-
 /**
  * Flight has the receiver-relative minimum distance but no airport-relative
  * position aggregate. Only use it as evidence when the configured receiver
@@ -362,13 +346,16 @@ export async function getAirportTrafficSummary(
       .where((flight) => flight.startTime.lt(toInstant))
       .where((flight) => flight.destination.in(targetCodes))
       .include("aircraft", (aircraft) => aircraft.select("id", "icaoHex", "registration", "aircraftType"));
-    const [originResult, destinationResult] = await Promise.all([
-      boundedQuery(originQuery, AIRPORT_TRAFFIC_QUERY_LIMIT),
-      boundedQuery(destinationQuery, AIRPORT_TRAFFIC_QUERY_LIMIT),
+    const [originRows, destinationRows] = await Promise.all([
+      originQuery.all(),
+      destinationQuery.all(),
     ]);
-    summary.complete = !originResult.truncated && !destinationResult.truncated;
+    // The date range is the bound. Do not apply a row cap here: every field in
+    // this response (totals, heatmap, rankings and recent traffic) must be
+    // derived from the complete persisted Flight set for that range.
+    summary.complete = true;
     const flights = new Map<number, AirportTrafficFlightRow>();
-    for (const row of [...originResult.rows, ...destinationResult.rows]) {
+    for (const row of [...originRows, ...destinationRows]) {
       const flight = row as AirportTrafficFlightRow;
       flights.set(flight.id, flight);
     }
