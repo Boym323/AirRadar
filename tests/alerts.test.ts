@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import type { Aircraft, ProviderSnapshot, StateSnapshot } from "@/lib/aircraft/types";
+import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import { matchesAircraftRule } from "@/lib/aircraft/watchlist";
 import { parseAlertRules, type AlertRule } from "@/lib/server/alert-config";
 import { AlertEngine, type AlertEngineOptions } from "@/lib/server/alert-engine";
@@ -322,6 +323,59 @@ describe("server alerts", () => {
     now = 1001;
     engine.cleanupDedupCache();
     expect(internal.dedupCache.size).toBe(0);
+  });
+
+  it("notifies watchlisted aircraft for a significant Flight Intelligence event once per lifecycle", async () => {
+    const notifier = recordingNotifier();
+    const engine = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier });
+    const value = aircraft();
+    const event: FlightIntelligenceEvent = {
+      id: "evt-1", eventKey: "GO_AROUND:ABC123:1", lifecycleKey: "go-around:ABC123:flight-1",
+      type: "GO_AROUND", phase: "CLIMB", icaoHex: "ABC123", flightId: 1, callsign: "UAE139", registration: null,
+      occurredAt: "2026-09-07T12:00:00.000Z", detectedAt: "2026-09-07T12:00:01.000Z",
+      latitude: 50, longitude: 14, altitude: 3500, confidence: 0.88, confidenceLevel: "high",
+      airportIcao: "LKPR", runway: null, sectorId: null, evidence: ["test"],
+    };
+    engine.observeIntelligenceEvent(value, event);
+    engine.observeIntelligenceEvent(value, event);
+    await flushAlerts();
+    expect(notifier.calls).toHaveLength(1);
+    expect(notifier.calls[0]).toMatchObject({
+      type: "intelligence_go_around",
+      reason: "go_around",
+      priority: "high",
+      intelligence: { eventType: "GO_AROUND", confidenceLevel: "high", airportIcao: "LKPR" },
+    });
+  });
+
+  it("does not send Flight Intelligence push events for non-watchlisted aircraft", async () => {
+    const notifier = recordingNotifier();
+    const engine = createTestAlertEngine({ rules: [rule("other", "callsign", "BAW123")], notifier });
+    const event = {
+      id: "evt-2", eventKey: "HOLDING:ABC123:1", lifecycleKey: "holding:ABC123:flight-1",
+      type: "HOLDING", phase: "CRUISE", icaoHex: "ABC123", flightId: 1, callsign: "UAE139", registration: null,
+      occurredAt: "2026-09-07T12:00:00.000Z", detectedAt: "2026-09-07T12:00:01.000Z",
+      latitude: 50, longitude: 14, altitude: 35000, confidence: 0.75, confidenceLevel: "medium",
+      airportIcao: null, runway: null, sectorId: null, evidence: ["test"],
+    } satisfies FlightIntelligenceEvent;
+    engine.observeIntelligenceEvent(aircraft(), event);
+    await flushAlerts();
+    expect(notifier.calls).toEqual([]);
+  });
+
+  it("keeps airspace entry and exit out of push-alert intelligence", async () => {
+    const notifier = recordingNotifier();
+    const engine = createTestAlertEngine({ rules: [rule("uae", "callsignPattern", "UAE*")], notifier });
+    const event = {
+      id: "evt-3", eventKey: "AIRSPACE_ENTRY:ABC123:1", lifecycleKey: "airspace:ABC123:LKAA",
+      type: "AIRSPACE_ENTRY", phase: "CRUISE", icaoHex: "ABC123", flightId: 1, callsign: "UAE139", registration: null,
+      occurredAt: "2026-09-07T12:00:00.000Z", detectedAt: "2026-09-07T12:00:01.000Z",
+      latitude: 50, longitude: 14, altitude: 35000, confidence: 0.9, confidenceLevel: "high",
+      airportIcao: null, runway: null, sectorId: "LKAA", evidence: ["test"],
+    } satisfies FlightIntelligenceEvent;
+    engine.observeIntelligenceEvent(aircraft(), event);
+    await flushAlerts();
+    expect(notifier.calls).toEqual([]);
   });
 
   it("keeps secrets and rule values out of public alert status", () => {
