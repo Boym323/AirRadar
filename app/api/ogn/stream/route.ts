@@ -1,5 +1,6 @@
 import { getOgnStateService } from "@/lib/server/ogn-state";
 import { acquireSseClient } from "@/lib/server/sse-capacity";
+import { getRateLimitClientKey } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!initialSnapshot.enabled) {
     return Response.json(initialSnapshot, { headers: { "Cache-Control": "no-store" } });
   }
-  const releaseSseClient = acquireSseClient();
+  const releaseSseClient = acquireSseClient("v1", getRateLimitClientKey(request), "ogn");
   if (!releaseSseClient) {
     return new Response("SSE capacity reached", {
       status: 503,
