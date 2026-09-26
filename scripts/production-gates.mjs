@@ -575,9 +575,9 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           && runtime
           && runtime.size > 0
           && map.getLayer("aircraft-webgl")
-          && map.getLayer("aircraft-webgl-hit")
           && map.getLayer("aircraft-webgl-label")
-          && map.getSource("aircraft-webgl-interaction")
+          && map.getSource("aircraft-webgl-labels")
+          && typeof runtime.pickAircraftAtPoint === "function"
           && document.querySelector(".aircraft-row")
         );
       });
