@@ -42,7 +42,7 @@ describe("/api/intelligence/stream", () => {
     const reader = response.body!.getReader();
 
     expect(response.status).toBe(200);
-    expect(mocks.acquireSseClient).toHaveBeenCalledWith("v1");
+    expect(mocks.acquireSseClient).toHaveBeenCalledWith("v1", "anonymous", "intelligence");
     expect(mocks.subscribe).toHaveBeenCalledOnce();
 
     await reader.cancel();
