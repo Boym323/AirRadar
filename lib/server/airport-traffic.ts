@@ -18,6 +18,7 @@ import { haversineDistanceKm } from "@/lib/geo";
 
 export const AIRPORT_TRAFFIC_RECENT_LIMIT = 10;
 export const AIRPORT_TRAFFIC_TOP_LIMIT = 5;
+export const AIRPORT_TRAFFIC_PAGE_SIZE = 500;
 export const AIRPORT_TRAFFIC_MOVEMENT_LIMIT = 10;
 export const AIRPORT_MOVEMENT_RADIUS_KM = 30;
 
@@ -296,6 +297,23 @@ function recentTraffic(
     });
 }
 
+interface PagedFlightQuery {
+  orderBy(callback: (flight: { id: { asc(): unknown } }) => unknown): PagedFlightQuery;
+  offset(value: number): PagedFlightQuery;
+  limit(value: number): { all(): Promise<AirportTrafficFlightRow[]> | AirportTrafficFlightRow[] };
+}
+
+async function readAllFlightPages(query: PagedFlightQuery, pageSize = AIRPORT_TRAFFIC_PAGE_SIZE): Promise<AirportTrafficFlightRow[]> {
+  const rows: AirportTrafficFlightRow[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await Promise.resolve(
+      query.orderBy((flight) => flight.id.asc()).offset(offset).limit(pageSize).all(),
+    );
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
+}
+
 /**
  * Flight has the receiver-relative minimum distance but no airport-relative
  * position aggregate. Only use it as evidence when the configured receiver
@@ -347,8 +365,8 @@ export async function getAirportTrafficSummary(
       .where((flight) => flight.destination.in(targetCodes))
       .include("aircraft", (aircraft) => aircraft.select("id", "icaoHex", "registration", "aircraftType"));
     const [originRows, destinationRows] = await Promise.all([
-      originQuery.all(),
-      destinationQuery.all(),
+      readAllFlightPages(originQuery as unknown as PagedFlightQuery),
+      readAllFlightPages(destinationQuery as unknown as PagedFlightQuery),
     ]);
     // The date range is the bound. Do not apply a row cap here: every field in
     // this response (totals, heatmap, rankings and recent traffic) must be
