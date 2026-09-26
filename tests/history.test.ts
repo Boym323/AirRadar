@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import { getPrisma } from "@/lib/server/db";
-import { closeStaleFlights, getAircraftHistory, recordAircraftSnapshot, staleFlightEndTime } from "@/lib/server/history";
+import { closeStaleFlights, deleteExpiredFlightPositions, getAircraftHistory, recordAircraftSnapshot, staleFlightEndTime } from "@/lib/server/history";
 
 vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn() }));
 
@@ -10,7 +10,96 @@ afterEach(() => {
   vi.mocked(getPrisma).mockReset();
 });
 
+function emptyFlightPositionStore() {
+  const all = vi.fn().mockResolvedValue([]);
+  return {
+    create: vi.fn().mockResolvedValue({ id: 99 }),
+    where: vi.fn().mockReturnValue({
+      orderBy: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          limit: vi.fn().mockReturnValue({ all }),
+        }),
+      }),
+    }),
+  };
+}
+
+function retentionDatabase(rows: Array<{ id: number; recordedAt: Date }>) {
+  let stored = [...rows];
+  const query = (selected: Array<{ id: number; recordedAt: Date }>) => ({
+    where(predicate: (fields: Record<string, { lt?: (value: unknown) => boolean; in?: (values: unknown[]) => boolean; asc?: () => unknown }>) => boolean) {
+      const filtered = selected.filter((row) => {
+        const fields = new Proxy({}, {
+          get: (_target, property: string) => ({
+            lt: (value: unknown) => row[property as keyof typeof row] instanceof Date
+              && (row[property as keyof typeof row] as Date).getTime() < Number((value as { epochMilliseconds?: number }).epochMilliseconds ?? value),
+            in: (values: unknown[]) => values.includes(row[property as keyof typeof row]),
+            asc: () => undefined,
+          }),
+        }) as Record<string, { lt: (value: unknown) => boolean; in: (values: unknown[]) => boolean; asc: () => unknown }>;
+        return predicate(fields);
+      });
+      return query(filtered);
+    },
+    orderBy() {
+      return query([...selected].sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime() || a.id - b.id));
+    },
+    select() {
+      return query(selected);
+    },
+    limit(value: number) {
+      return query(selected.slice(0, value));
+    },
+    async all() {
+      return selected.map(({ id, recordedAt }) => ({ id, recordedAt }));
+    },
+    async deleteCount() {
+      const ids = new Set(selected.map((row) => row.id));
+      const before = stored.length;
+      stored = stored.filter((row) => !ids.has(row.id));
+      return before - stored.length;
+    },
+  });
+  return {
+    database: { orm: { public: { FlightPosition: query(stored) } } },
+    remaining: () => [...stored],
+  };
+}
+
 describe("historical flight maintenance", () => {
+  it("deletes expired FlightPosition rows in bounded batches and reports backlog", async () => {
+    const cutoff = new Date("2026-09-01T00:00:00Z");
+    const oldRows = Array.from({ length: 12 }, (_, index) => ({
+      id: index + 1,
+      recordedAt: new Date(`2026-08-${String(index + 1).padStart(2, "0")}T00:00:00Z`),
+    }));
+    const currentRows = [
+      { id: 100, recordedAt: new Date("2026-09-01T00:00:00Z") },
+      { id: 101, recordedAt: new Date("2026-09-02T00:00:00Z") },
+    ];
+    const store = retentionDatabase([...oldRows, ...currentRows]);
+
+    const first = await deleteExpiredFlightPositions(store.database as never, cutoff, { batchSize: 5, maxBatches: 2 });
+    expect(first).toEqual({ deletedRows: 10, batches: 2, backlogRemaining: true });
+    expect(store.remaining().map((row) => row.id)).toEqual([11, 12, 100, 101]);
+
+    const second = await deleteExpiredFlightPositions(store.database as never, cutoff, { batchSize: 5, maxBatches: 2 });
+    expect(second).toEqual({ deletedRows: 2, batches: 1, backlogRemaining: false });
+    expect(store.remaining().map((row) => row.id)).toEqual([100, 101]);
+  });
+
+  it("never deletes a current row at the retention cutoff", async () => {
+    const cutoff = new Date("2026-09-01T00:00:00Z");
+    const store = retentionDatabase([
+      { id: 1, recordedAt: new Date("2026-08-31T23:59:59Z") },
+      { id: 2, recordedAt: cutoff },
+    ]);
+
+    await expect(deleteExpiredFlightPositions(store.database as never, cutoff, { batchSize: 10, maxBatches: 1 }))
+      .resolves.toEqual({ deletedRows: 1, batches: 1, backlogRemaining: false });
+    expect(store.remaining().map((row) => row.id)).toEqual([2]);
+  });
+
   it("deduplicates aircraft by ICAO hex and retries a concurrent insert conflict", async () => {
     const recordedAt = new Date("2026-01-01T12:00:00Z");
     const aircraft = normalizeAircraft(
@@ -38,10 +127,7 @@ describe("historical flight maintenance", () => {
         public: {
           Aircraft: { upsert },
           Flight: { where: flightWhere, create: flightCreate },
-          FlightPosition: {
-            create: vi.fn().mockResolvedValue({ id: 99 }),
-            where: vi.fn().mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) }),
-          },
+          FlightPosition: emptyFlightPositionStore(),
         },
       },
       transaction: async (callback: (transaction: unknown) => Promise<unknown>) => {
@@ -95,10 +181,7 @@ describe("historical flight maintenance", () => {
         public: {
           Aircraft: { upsert },
           Flight: { where: flightWhere, create: vi.fn().mockResolvedValue({ id: 8 }) },
-          FlightPosition: {
-            create: vi.fn().mockResolvedValue({ id: 99 }),
-            where: vi.fn().mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) }),
-          },
+          FlightPosition: emptyFlightPositionStore(),
         },
       },
       transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(database),
@@ -191,10 +274,7 @@ describe("historical flight maintenance", () => {
         public: {
           Aircraft: { upsert: vi.fn().mockResolvedValue({ id: 42 }) },
           Flight: { where: flightWhere, create: flightCreate },
-          FlightPosition: {
-            create: vi.fn().mockResolvedValue({ id: 99 }),
-            where: vi.fn().mockReturnValue({ delete: vi.fn().mockResolvedValue(undefined) }),
-          },
+          FlightPosition: emptyFlightPositionStore(),
         },
       },
       transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(database),
