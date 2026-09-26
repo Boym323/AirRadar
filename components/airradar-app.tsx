@@ -1868,7 +1868,7 @@ export function AirRadarApp() {
 
   useEffect(() => {
     setSelectedRouteWeather(null);
-    if (!contextAircraftHex || !contextHasPosition) return;
+    if (!contextAircraftHex || !contextHasPosition || selectedAtcContext?.status !== "available") return;
     let active = true;
     let timer: number | null = null;
     const refresh = () => {
@@ -1886,7 +1886,7 @@ export function AirRadarApp() {
     };
     schedule();
     return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
-  }, [contextAircraftHex, contextHasPosition]);
+  }, [contextAircraftHex, contextHasPosition, selectedAtcContext?.status]);
 
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
 
