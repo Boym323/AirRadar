@@ -413,7 +413,8 @@ async function measureScenario(browser, scenario, serverPid) {
     await page.waitForFunction((count) => {
       const diagnostics = window.__airradarPerformanceDiagnostics;
       const markers = window.__airradarAircraftMarkersForDiagnostics;
-      return Boolean(diagnostics && markers && markers.size === count);
+      const webgl = window.__airradarWebglAircraftForDiagnostics;
+      return Boolean(diagnostics && markers && webgl && markers.size === 0 && webgl.size === count);
     }, scenario.aircraft, { timeout: 30_000 });
 
     const trafficTrigger = page.locator('[data-testid="traffic-trigger"]');
@@ -443,6 +444,9 @@ async function measureScenario(browser, scenario, serverPid) {
       if (!snapshot) throw new Error("Performance diagnostics unavailable");
       return {
         snapshot,
+        webgl: {
+          aircraft: window.__airradarWebglAircraftForDiagnostics?.size ?? -1,
+        },
         dom: {
           aircraftMarkers: document.querySelectorAll(".aircraft-marker").length,
           markerHandles: window.__airradarAircraftMarkersForDiagnostics?.size ?? -1,
@@ -484,13 +488,14 @@ async function measureScenario(browser, scenario, serverPid) {
         p95Ms: rounded(raw.snapshot.longTasks.p95Ms),
         maxMs: rounded(raw.snapshot.longTasks.maxMs),
       },
+      webgl: raw.webgl,
       dom: raw.dom,
       footprint,
     };
     const soakViolations = soakMode ? evaluateSoakFootprint(soakBefore, soakAfter) : [];
     const violations = [...evaluateRadarPerformanceBaseline(result, scenario), ...soakViolations];
     console.log(
-      `[radar-perf] aircraft=${scenario.aircraft} markers=${result.dom.aircraftMarkers} rows=${result.dom.mountedTrafficRows} `
+      `[radar-perf] aircraft=${scenario.aircraft} htmlMarkers=${result.dom.aircraftMarkers} webgl=${result.webgl.aircraft} rows=${result.dom.mountedTrafficRows} `
       + `animation=${result.animation.averageMs}ms p95=${result.animation.p95Ms}ms max=${result.animation.maxMs}ms frameP95=${result.animation.frameIntervalP95Ms}ms writes=${result.animation.markerWritesPerSecond}/s `
       + `collision=${result.labelCollision.averageMs}ms p95=${result.labelCollision.p95Ms}ms max=${result.labelCollision.maxMs}ms longTasks=${result.longTasks.count} `
       + `status=${violations.length ? "FAIL" : "PASS"}`,
@@ -525,19 +530,19 @@ function markdownReport(report) {
     "",
     "Timing metrics are observational only. CI pass/fail is based on deterministic structural/instrumentation budgets so hosted-runner load does not create flaky failures.",
     "",
-    "| Aircraft | Markers | Mounted rows | Animation avg/p95/max | Frame p95 | Writes/s | Collision avg/p95/max | Long tasks | Heap | DOM nodes | Status |",
-    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :---: |",
+    "| Aircraft | HTML markers | WebGL aircraft | Mounted rows | Animation avg/p95/max | Frame p95 | Writes/s | HTML collision avg/p95/max | Long tasks | Heap | DOM nodes | Status |",
+    "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :---: |",
   ];
   for (const result of report.scenarios) {
     lines.push(
-      `| ${result.aircraft} | ${result.dom.aircraftMarkers} | ${result.dom.mountedTrafficRows} | ${result.animation.averageMs} / ${result.animation.p95Ms} / ${result.animation.maxMs} ms | ${result.animation.frameIntervalP95Ms} ms | ${result.animation.markerWritesPerSecond} | ${result.labelCollision.averageMs} / ${result.labelCollision.p95Ms} / ${result.labelCollision.maxMs} ms | ${result.longTasks.count} | ${result.footprint?.browser?.jsHeapUsedBytes == null ? "n/a" : `${rounded(result.footprint.browser.jsHeapUsedBytes / 1024 / 1024)} MiB`} | ${result.footprint?.browser?.nodes ?? "n/a"} | ${result.violations.length ? "FAIL" : "PASS"} |`,
+      `| ${result.aircraft} | ${result.dom.aircraftMarkers} | ${result.webgl.aircraft} | ${result.dom.mountedTrafficRows} | ${result.animation.averageMs} / ${result.animation.p95Ms} / ${result.animation.maxMs} ms | ${result.animation.frameIntervalP95Ms} ms | ${result.animation.markerWritesPerSecond} | ${result.labelCollision.averageMs} / ${result.labelCollision.p95Ms} / ${result.labelCollision.maxMs} ms | ${result.longTasks.count} | ${result.footprint?.browser?.jsHeapUsedBytes == null ? "n/a" : `${rounded(result.footprint.browser.jsHeapUsedBytes / 1024 / 1024)} MiB`} | ${result.footprint?.browser?.nodes ?? "n/a"} | ${result.violations.length ? "FAIL" : "PASS"} |`,
     );
-    for (const violation of result.violations) lines.push(`|  |  |  |  |  |  |  |  |  |  | \`${violation}\` |`);
+    for (const violation of result.violations) lines.push(`|  |  |  |  |  |  |  |  |  |  |  | \`${violation}\` |`);
   }
   lines.push(
     "",
     "Deterministic budgets:",
-    "- DOM marker and MapLibre handle counts must equal the scenario aircraft count.",
+    "- Bulk synthetic aircraft must render through WebGL with zero HTML aircraft markers/handles.",
     "- Traffic-list total rows must equal the scenario count and virtualization must stay enabled.",
     "- Mounted traffic rows must stay at or below the checked-in structural budget.",
     "- Animation and collision diagnostics must record live work; active jobs may not exceed aircraft count.",
