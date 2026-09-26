@@ -5,8 +5,8 @@ import { getRateLimitClientKey } from "@/lib/server/rate-limit";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function frame(payload: unknown): Uint8Array {
-  return new TextEncoder().encode(`event: intelligence\ndata: ${JSON.stringify(payload)}\n\n`);
+function frame(eventName: "intelligence" | "intelligence-snapshot", payload: unknown): Uint8Array {
+  return new TextEncoder().encode(`event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`);
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -44,9 +44,9 @@ export async function GET(request: Request): Promise<Response> {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       controllerRef = controller;
-      unsubscribe = service.subscribe((event) => {
+      const send = (eventName: "intelligence" | "intelligence-snapshot", payload: unknown) => {
         if (closed) return;
-        const chunk = frame(event);
+        const chunk = frame(eventName, payload);
         if ((controller.desiredSize ?? 0) > 0) {
           try {
             controller.enqueue(chunk);
@@ -55,10 +55,15 @@ export async function GET(request: Request): Promise<Response> {
           }
         } else {
           // Intelligence is a live signal, not an audit log. Keep only the
-          // newest event for a slow client; durable history remains in DB.
+          // newest frame for a slow client; durable history remains in DB.
           pending = chunk;
         }
-      });
+      };
+      unsubscribe = service.subscribe((event) => send("intelligence", event));
+      // Subscribe first, then capture the current in-memory window. An event
+      // emitted during connection setup is therefore present either in this
+      // snapshot or in the live listener (possibly both; clients deduplicate).
+      send("intelligence-snapshot", service.getRecent({ limit: 12 }));
       heartbeat = setInterval(() => {
         if (closed || (controller.desiredSize ?? 0) <= 0) return;
         try {
