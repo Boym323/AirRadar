@@ -2,6 +2,25 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.160] - 2026-09-27
+
+Changes since v1.0.159.
+
+### Added
+
+- Implement merging logic for local aircraft and add unit tests (f4c07a42)
+- Enhance aircraft telemetry merging with observation times and improve fallback logic (4135ba43)
+- Add altitude decoding logic and corresponding tests (016d36d0)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: implement merging logic for local aircraft and add unit tests (f4c07a42)
+- feat: enhance aircraft telemetry merging with observation times and improve fallback logic (4135ba43)
+- feat: add altitude decoding logic and corresponding tests (016d36d0)
+
+</details>
+
 ## [1.0.159] - 2026-09-27
 
 Changes since v1.0.158.
