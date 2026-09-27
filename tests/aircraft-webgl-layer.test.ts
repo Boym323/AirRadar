@@ -110,12 +110,19 @@ describe("WebGL aircraft layer", () => {
   });
 
   it("uses the same semantic silhouette size profile as HTML markers", () => {
-    expect(aircraftWebglPointSize(aircraft({ aircraftType: "C172", aircraftDescription: "Cessna 172" }))).toBe(18);
-    expect(aircraftWebglPointSize(aircraft({ aircraftType: "A320" }))).toBe(20);
-    expect(aircraftWebglPointSize(aircraft({ aircraftType: "A333" }))).toBe(22);
-    expect(aircraftWebglPointSize(aircraft({ aircraftType: "A388" }))).toBe(24);
-    expect(aircraftWebglPointSize(aircraft({ aircraftType: "GND", category: "C0" }))).toBe(14);
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "C172", aircraftDescription: "Cessna 172" }))).toBe(17);
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "A320" }))).toBe(18);
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "A333" }))).toBe(20);
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "A388" }))).toBe(22);
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "GND", category: "C0" }))).toBe(13);
     expect(webglSource).toContain("aircraftIconVisualSize(aircraft)");
+  });
+
+  it("applies the same continuous zoom scale in WebGL and HTML marker paths", () => {
+    expect(webglSource).toContain("uniform float u_zoom_scale");
+    expect(webglSource).toContain("aircraftIconZoomScale(this.map.getZoom())");
+    expect(webglSource).toContain("a_size * u_zoom_scale * hoverScale * u_pixel_ratio");
+    expect(appSource).toContain("setAircraftMarkerZoom(handle, zoom)");
   });
 
   it("keeps source-aware colors for bulk aircraft", () => {

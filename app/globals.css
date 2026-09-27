@@ -687,8 +687,8 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .aircraft-marker.source-overlap .aircraft-plane { outline: 1px solid rgba(55,214,192,.72); outline-offset: 3px; border-radius: 50%; }
 .aircraft-plane-rotator { width: 34px; height: 34px; display: grid; place-items: center; transform-origin: center; will-change: transform; }
 .aircraft-plane { width: 32px; height: 32px; display: grid; place-items: center; color: var(--aircraft-color, var(--mint)); background: transparent; border: 0; box-shadow: none; line-height: 1; transition: color .18s, filter .18s, transform .18s; }
-.aircraft-marker:hover .aircraft-plane, .aircraft-marker:focus-visible .aircraft-plane { transform: scale(1.1); }
-.aircraft-marker.selected .aircraft-plane { color: var(--amber); filter: drop-shadow(0 0 8px rgba(243,185,95,.84)); transform: scale(1.16); }
+.aircraft-marker:hover .aircraft-plane, .aircraft-marker:focus-visible .aircraft-plane { transform: scale(1.07); }
+.aircraft-marker.selected .aircraft-plane { color: var(--amber); filter: drop-shadow(0 0 8px rgba(243,185,95,.84)); transform: scale(1.1); }
 .aircraft-marker.watchlisted .aircraft-plane { filter: drop-shadow(0 0 6px rgba(243,185,95,.82)); }
 .aircraft-marker.selected .aircraft-marker-visual::before { content: ""; position: absolute; inset: -3px; border: 2px solid var(--amber); border-radius: 50%; box-shadow: 0 0 0 4px rgba(243,185,95,.13), 0 0 16px rgba(243,185,95,.48); pointer-events: none; }
 .aircraft-marker.selected .aircraft-marker-visual::after { display: none; }

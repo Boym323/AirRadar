@@ -3,7 +3,7 @@ import type { AircraftView } from "@/lib/aircraft/types";
 import { classifyAircraftIcon, type AircraftPresentationKind } from "@/lib/aircraft/icon-classification";
 import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
-import { aircraftIconVisualSize } from "@/lib/aircraft/icon-size";
+import { aircraftIconSizeAtZoom, aircraftIconVisualSize } from "@/lib/aircraft/icon-size";
 import { resolveAircraftVisualHeading } from "@/lib/aircraft/visual-heading";
 import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
 import { aircraftMapLabel } from "@/lib/aircraft/map-labels";
@@ -34,6 +34,7 @@ export interface AircraftMarkerHandle {
   labelHeight: number | null;
   geographicHeading: number | null;
   assetOffset: number;
+  baseIconSize: number;
 }
 
 export interface AircraftMarkerUpdateOptions {
@@ -146,6 +147,7 @@ export function createAircraftMarkerHandle(
     labelHeight: null,
     geographicHeading: null,
     assetOffset: 0,
+    baseIconSize: aircraftIconVisualSize(aircraft),
   };
   const select = () => onSelect(aircraft.icaoHex);
   root.addEventListener("click", select);
@@ -189,8 +191,8 @@ export function updateAircraftMarkerHandle(
   if (handle.root.style.visibility !== visibility) handle.root.style.visibility = visibility;
 
   const markerKind = aircraftMarkerKind(aircraft);
-  const iconSize = `${aircraftIconVisualSize(aircraft)}px`;
-  if (handle.plane.style.getPropertyValue("--aircraft-icon-size") !== iconSize) handle.plane.style.setProperty("--aircraft-icon-size", iconSize);
+  handle.baseIconSize = aircraftIconVisualSize(aircraft);
+  setAircraftMarkerZoom(handle, options.zoom);
   const iconAsset = aircraftIconAsset(aircraft);
   const iconKey = `${markerKind}|${iconAsset}`;
   if (handle.plane.dataset.iconKey !== iconKey) {
@@ -239,6 +241,13 @@ export function setAircraftMarkerInteractionState(handle: AircraftMarkerHandle, 
   handle.labelHeight = null;
   handle.label.dataset.contentEmpty = nextLabelText ? "false" : "true";
   return true;
+}
+
+export function setAircraftMarkerZoom(handle: AircraftMarkerHandle, zoom: number): void {
+  const iconSize = `${aircraftIconSizeAtZoom(handle.baseIconSize, zoom)}px`;
+  if (handle.plane.style.getPropertyValue("--aircraft-icon-size") !== iconSize) {
+    handle.plane.style.setProperty("--aircraft-icon-size", iconSize);
+  }
 }
 
 export function setAircraftMarkerHeading(handle: AircraftMarkerHandle, heading: number | null, mapBearing: number): void {
