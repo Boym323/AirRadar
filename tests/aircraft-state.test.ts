@@ -67,8 +67,10 @@ describe("aircraft state service", () => {
   });
 
   it("publishes the correct aircraft icon identity in the first live snapshot", async () => {
+    vi.useFakeTimers();
     const receiver = { lat: 50, lon: 14, name: "Test" };
     const observedAt = new Date("2026-09-27T12:00:00.000Z");
+    vi.setSystemTime(observedAt);
     const aircraft = normalizeAircraft(
       { hex: "ABC123", flight: "TEST123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 },
       receiver,
