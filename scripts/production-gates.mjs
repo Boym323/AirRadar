@@ -905,7 +905,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         await sidebar.locator(".aircraft-row").first().click();
         const quickDetail = sidebar.getByTestId("aircraft-quick-detail");
         await quickDetail.waitFor({ state: "visible" });
-        await quickDetail.getByRole("tab", { name: "Let", exact: true }).click();
+        await quickDetail.getByRole("tab", { name: "Situace", exact: true }).click();
         await quickDetail.locator(".aircraft-quick-atc").waitFor({ state: "visible" });
         await quickDetail.getByTestId("route-weather-match").waitFor({ state: "visible" });
         await quickDetail.locator(".route-weather-summary").first().waitFor({ state: "visible" });
@@ -917,15 +917,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           atcPrimary: Boolean(element.querySelector(".aircraft-quick-atc-primary")),
           dataDisclosure: Boolean(element.querySelector('[role="tab"]#aircraft-tab-data')),
         }));
-        if (quickContract.tabs.length !== 6
-          || quickContract.activePanel !== "aircraft-tabpanel-flight"
+        if (quickContract.tabs.length !== 4
+          || quickContract.activePanel !== "aircraft-tabpanel-situation"
           || quickContract.liveMetricGrids !== 0
           || quickContract.technicalOpen
           || !quickContract.atcPrimary
           || !quickContract.dataDisclosure) {
           throw new Error(`Aircraft quick-detail contract failed at ${viewport.width}px: ${JSON.stringify(quickContract)}`);
         }
-        await quickDetail.getByRole("tab", { name: "Přehled" }).click();
+        await quickDetail.getByRole("tab", { name: "Let", exact: true }).click();
         const fullDetailHref = await quickDetail.locator("a[href^='/aircraft/']").getAttribute("href");
         if (!/^\/aircraft\/[0-9A-Fa-f~]+$/.test(fullDetailHref ?? "")) {
           throw new Error(`Aircraft quick-detail full link missing at ${viewport.width}px`);

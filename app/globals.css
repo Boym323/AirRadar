@@ -3085,6 +3085,19 @@ button, input, select, textarea { color-scheme: dark; }
   color: var(--selected);
 }
 
+/* Radar acceptance: the selected aircraft is one amber composition across
+ * map, traffic list and contextual drawer. Live status remains mint. */
+.sidebar.drawer-aircraft .detail-heading,
+.sidebar.drawer-ogn .detail-heading {
+  border-left-color: var(--selected);
+}
+
+.sidebar.drawer-aircraft .detail-eyebrow,
+.sidebar.drawer-ogn .detail-eyebrow,
+.sidebar.drawer-aircraft .aircraft-quick-eyebrow {
+  color: var(--selected);
+}
+
 /* Secondary pages expose one primary metric and keep supporting data quiet. */
 .statistics-overview .statistics-stat-card:first-child {
   border-color: var(--border-accent);
