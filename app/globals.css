@@ -2077,7 +2077,7 @@ button, input, select, textarea { color-scheme: dark; }
 .mobile-bottom-nav { display: none; }
 
 /* UX V3: the live map owns the radar workspace; browsing is contextual. */
-:root { --radar-drawer-width: clamp(360px, 28vw, 420px); }
+:root { --radar-drawer-width: clamp(400px, 28vw, 460px); }
 .radar-content { position: relative; display: block; overflow: clip; }
 .radar-shell { overflow-x: clip; }
 .map-panel { height: 100%; z-index: 0; isolation: isolate; }

@@ -643,7 +643,7 @@ export const en = {
     trackingPositions: (value: string) => `${value} positions`,
     trackingDurationMinutes: (value: string) => `${value} min`,
     trackingDurationHours: (hours: string, minutes: string) => `${hours} h ${minutes} min`,
-    detailSections: { overview: "Overview", flight: "Flight", aircraft: "Aircraft", track: "Track", telemetry: "Telemetry", data: "Data" },
+    detailSections: { overview: "Overview", flight: "Flight", situation: "Situation", aircraft: "Aircraft", track: "Track", telemetry: "Telemetry", data: "Data" },
     positionAge: "Position age",
     positionOrigin: "Position origin",
     lastLocalObservation: "Last LOCAL observation",

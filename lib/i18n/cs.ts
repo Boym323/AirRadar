@@ -641,7 +641,7 @@ export const cs = {
     trackingPositions: (value: string) => `${value} pozic`,
     trackingDurationMinutes: (value: string) => `${value} min`,
     trackingDurationHours: (hours: string, minutes: string) => `${hours} h ${minutes} min`,
-    detailSections: { overview: "Přehled", flight: "Let", aircraft: "Letadlo", track: "Trať", telemetry: "Telemetrie", data: "Data" },
+    detailSections: { overview: "Přehled", flight: "Let", situation: "Situace", aircraft: "Letadlo", track: "Trať", telemetry: "Telemetrie", data: "Data" },
     positionAge: "Stáří pozice",
     positionOrigin: "Původ pozice",
     lastLocalObservation: "Poslední LOCAL pozorování",

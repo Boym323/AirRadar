@@ -14,12 +14,11 @@ describe("aircraft radar quick detail", () => {
       "aircraft-quick-header",
       "<RouteSection",
       "<DetailTabs",
-      "<AircraftOverview",
       "aircraft-tabpanel-flight",
+      "<AircraftOverview",
+      "aircraft-tabpanel-situation",
       "aircraft-tabpanel-aircraft",
-      "aircraft-tabpanel-track",
-      "<TelemetrySection",
-      "<DataSection",
+      "aircraft-tabpanel-data",
     ].map((marker) => renderSource.indexOf(marker));
 
     expect(order.every((index) => index >= 0)).toBe(true);
@@ -29,6 +28,11 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).not.toContain("routeIntelligence");
     expect(componentSource).not.toContain("useEffect");
     expect(componentSource).not.toContain("fetch(");
+    expect(componentSource).toContain('useState<DetailTab>("flight")');
+    expect(componentSource).toContain('{ id: "situation", label: t.aircraft.detailSections.situation }');
+    expect(componentSource).not.toContain('{ id: "overview"');
+    expect(componentSource).not.toContain('{ id: "track"');
+    expect(componentSource).not.toContain('{ id: "telemetry"');
   });
 
   it("renders one live metric grid, progressive ATC frequencies, technical disclosure and accessible actions", () => {
