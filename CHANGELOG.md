@@ -2,6 +2,32 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.159] - 2026-09-27
+
+Changes since v1.0.158.
+
+### Added
+
+- Add ADS-B telemetry support and update normalization logic (5af67c09)
+
+### Changed
+
+- Merge remote-tracking branch 'origin/main' (37809ce0)
+
+### Maintenance
+
+- Sync generated repository metadata (fbce3f2e)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (fbce3f2e)
+- Merge pull request #167 from Boym323/automation/repository-metadata (6ef0187e)
+- feat: add ADS-B telemetry support and update normalization logic (5af67c09)
+- Merge remote-tracking branch 'origin/main' (37809ce0)
+
+</details>
+
 ## [1.0.158] - 2026-09-27
 
 Changes since v1.0.157.
