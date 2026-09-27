@@ -9,6 +9,7 @@ import type { AtcContextResult } from "@/lib/atc-context/types";
 import { aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
 import { formatAge, formatAltitude, formatDistance, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
 import { FlightRouteWeather } from "@/components/airport-weather";
+import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import {
   AircraftAltitudeChart,
   AircraftHistorySummaryCard,
@@ -359,6 +360,8 @@ export function AircraftDetailV3({
         </section>
       </div>
     </section>
+
+    {liveAircraft && (liveAircraft.adsbTelemetry || liveAircraft.targetState || liveAircraft.operationalStatus) && <AircraftAdsbTelemetry aircraft={liveAircraft} />}
 
     <div className={styles.operationalGrid}>
       <div className={styles.primaryColumn}>

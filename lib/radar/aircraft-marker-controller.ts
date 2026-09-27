@@ -3,6 +3,7 @@ import type { AircraftView } from "@/lib/aircraft/types";
 import { classifyAircraftIcon, type AircraftPresentationKind } from "@/lib/aircraft/icon-classification";
 import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
+import { aircraftIconVisualSize } from "@/lib/aircraft/icon-size";
 import { resolveAircraftVisualHeading } from "@/lib/aircraft/visual-heading";
 import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
 import { aircraftMapLabel } from "@/lib/aircraft/map-labels";
@@ -188,6 +189,8 @@ export function updateAircraftMarkerHandle(
   if (handle.root.style.visibility !== visibility) handle.root.style.visibility = visibility;
 
   const markerKind = aircraftMarkerKind(aircraft);
+  const iconSize = `${aircraftIconVisualSize(aircraft)}px`;
+  if (handle.plane.style.getPropertyValue("--aircraft-icon-size") !== iconSize) handle.plane.style.setProperty("--aircraft-icon-size", iconSize);
   const iconAsset = aircraftIconAsset(aircraft);
   const iconKey = `${markerKind}|${iconAsset}`;
   if (handle.plane.dataset.iconKey !== iconKey) {

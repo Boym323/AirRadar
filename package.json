@@ -71,7 +71,8 @@
     "metrics:code:backfill": "node scripts/code-metrics.mjs --backfill",
     "features:generate": "node scripts/features-registry.mjs generate",
     "features:check": "node scripts/features-registry.mjs check",
-    "visual:check": "node scripts/visual-system-audit.mjs"
+    "visual:check": "node scripts/visual-system-audit.mjs",
+    "icons:audit": "node scripts/aircraft-icon-audit.mjs"
   },
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.9",

@@ -83,6 +83,8 @@ export interface AircraftAdsbTelemetry {
   windSpeedKt: number | null;
   outsideAirTemperatureC: number | null;
   totalAirTemperatureC: number | null;
+  /** Static pressure decoded from Mode-S Comm-B BDS 4,4 when available. */
+  staticPressureHpa?: number | null;
   navQnhHpa: number | null;
   selectedAltitudeMcpFt: number | null;
   selectedAltitudeFmsFt: number | null;

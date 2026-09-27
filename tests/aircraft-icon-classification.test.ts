@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
+import { aircraftPresentationKindForType, classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
+import { aircraftIconSizeForPresentation } from "@/lib/aircraft/icon-size";
 
 const base = { aircraftType: null, aircraftDescription: null, enrichment: undefined, category: null, onGround: false };
 
@@ -26,6 +27,33 @@ describe("canonical aircraft icon classification", () => {
     expect(classifyAircraftIcon({ ...base, category: "B1", onGround: true }).kind).toBe("glider");
     expect(classifyAircraftIcon({ ...base, category: "B6", onGround: true }).kind).toBe("drone");
   });
+  it.each([
+    ["BCS3", "a220"],
+    ["A320", "a320"],
+    ["A333", "a330"],
+    ["A359", "a350"],
+    ["A388", "a380"],
+    ["B712", "b717"],
+    ["B722", "b727"],
+    ["B738", "b737"],
+    ["B748", "b747"],
+    ["B752", "b757"],
+    ["B763", "b767"],
+    ["B77W", "b777"],
+    ["B789", "b787"],
+  ] as const)("classifies %s into presentation kind %s", (type, expected) => {
+    expect(aircraftPresentationKindForType(type)).toBe(expected);
+  });
+
+  it("scales silhouette size by aircraft visual mass without changing hit targets", () => {
+    expect(aircraftIconSizeForPresentation("ground")).toBe(14);
+    expect(aircraftIconSizeForPresentation("general-aviation")).toBe(18);
+    expect(aircraftIconSizeForPresentation("a320")).toBe(20);
+    expect(aircraftIconSizeForPresentation("a330")).toBe(22);
+    expect(aircraftIconSizeForPresentation("a380")).toBe(24);
+    expect(aircraftIconSizeForPresentation("a380")).toBeGreaterThan(aircraftIconSizeForPresentation("a320"));
+  });
+
   it("does not infer ground vehicle from onGround alone", () => {
     const result = classifyAircraftIcon({ ...base, onGround: true });
     expect(result.kind).toBe("airplane");
