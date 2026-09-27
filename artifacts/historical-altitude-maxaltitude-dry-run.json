@@ -1,0 +1,1695 @@
+{
+  "generatedAt": "2026-09-27T10:57:46.404Z",
+  "rows": [
+    {
+      "flightId": 117301,
+      "icao": "408041",
+      "callsign": "WUK7005",
+      "currentMaxAltitude": 80375,
+      "recalculatedMaxAltitude": 80375,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117339,
+      "icao": "4BC842",
+      "callsign": "PGT54XN",
+      "currentMaxAltitude": 68400,
+      "recalculatedMaxAltitude": 68400,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117340,
+      "icao": "489227",
+      "callsign": "ENT6XP",
+      "currentMaxAltitude": 101100,
+      "recalculatedMaxAltitude": 101100,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117346,
+      "icao": "507C55",
+      "callsign": "UZB236",
+      "currentMaxAltitude": 99875,
+      "recalculatedMaxAltitude": 99875,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117356,
+      "icao": "48AD0D",
+      "callsign": "LOT591",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117365,
+      "icao": "4BA9D4",
+      "callsign": "THY2XR",
+      "currentMaxAltitude": 102600,
+      "recalculatedMaxAltitude": 102600,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117368,
+      "icao": "4A0441",
+      "callsign": "KRP635",
+      "currentMaxAltitude": 118700,
+      "recalculatedMaxAltitude": 118700,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117369,
+      "icao": "4CAD0F",
+      "callsign": "RYR4HH",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117376,
+      "icao": "4BB1E3",
+      "callsign": "THY6BZ",
+      "currentMaxAltitude": 118700,
+      "recalculatedMaxAltitude": 118700,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117377,
+      "icao": "48C2AF",
+      "callsign": "RYR4CH",
+      "currentMaxAltitude": 118700,
+      "recalculatedMaxAltitude": 118700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117384,
+      "icao": "48C238",
+      "callsign": "RYR511",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 5,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117388,
+      "icao": "3C70CA",
+      "callsign": "GEC8410",
+      "currentMaxAltitude": 93800,
+      "recalculatedMaxAltitude": 93800,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117391,
+      "icao": "48C22B",
+      "callsign": "RYS5096",
+      "currentMaxAltitude": 88375,
+      "recalculatedMaxAltitude": 88375,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117394,
+      "icao": "4D201F",
+      "callsign": "WZZ1EB",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117399,
+      "icao": "5004E3",
+      "callsign": "MEA199",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117400,
+      "icao": "471FAD",
+      "callsign": "WZZ67",
+      "currentMaxAltitude": 99875,
+      "recalculatedMaxAltitude": 99875,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117402,
+      "icao": "4D216F",
+      "callsign": "ULC91",
+      "currentMaxAltitude": 98375,
+      "recalculatedMaxAltitude": 98375,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117407,
+      "icao": "76CCE7",
+      "callsign": "SIA23",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 5,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117412,
+      "icao": "471DC1",
+      "callsign": "WZZ6813",
+      "currentMaxAltitude": 85800,
+      "recalculatedMaxAltitude": 85800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117416,
+      "icao": "4BB15A",
+      "callsign": "THY6474",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117417,
+      "icao": "4080E4",
+      "callsign": "BAW706",
+      "currentMaxAltitude": 117800,
+      "recalculatedMaxAltitude": 117800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117419,
+      "icao": "4BC8C5",
+      "callsign": "PGT583Y",
+      "currentMaxAltitude": 102900,
+      "recalculatedMaxAltitude": 102900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117422,
+      "icao": "896749",
+      "callsign": "ABY774",
+      "currentMaxAltitude": 110900,
+      "recalculatedMaxAltitude": 110900,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117424,
+      "icao": "4080E0",
+      "callsign": "BAW7WN",
+      "currentMaxAltitude": 87500,
+      "recalculatedMaxAltitude": 87500,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117427,
+      "icao": "3C6758",
+      "callsign": "DLH686",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117429,
+      "icao": "501C2F",
+      "callsign": "CFG5KR",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117430,
+      "icao": "06A2B4",
+      "callsign": "QTR21X",
+      "currentMaxAltitude": 118900,
+      "recalculatedMaxAltitude": 118900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117432,
+      "icao": "4CADF7",
+      "callsign": "RYR6BZ",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 7,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117433,
+      "icao": "4BCE05",
+      "callsign": "SXS3XF",
+      "currentMaxAltitude": 79700,
+      "recalculatedMaxAltitude": 79700,
+      "difference": 0,
+      "badPositionCount": 7,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117434,
+      "icao": "896596",
+      "callsign": "ETD8NY",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117435,
+      "icao": "501C4B",
+      "callsign": "CTN4409",
+      "currentMaxAltitude": 79700,
+      "recalculatedMaxAltitude": 79700,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117437,
+      "icao": "4C01ED",
+      "callsign": "ASL131",
+      "currentMaxAltitude": 66300,
+      "recalculatedMaxAltitude": 66300,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117438,
+      "icao": "4BCDAB",
+      "callsign": "SXS6PL",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117439,
+      "icao": "3C48F1",
+      "callsign": "EWG43Q",
+      "currentMaxAltitude": 118700,
+      "recalculatedMaxAltitude": 118700,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117440,
+      "icao": "AC6346",
+      "callsign": "TWY65",
+      "currentMaxAltitude": 91800,
+      "recalculatedMaxAltitude": 91800,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117441,
+      "icao": "4BCDA9",
+      "callsign": "SXS8HN",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117442,
+      "icao": "471D70",
+      "callsign": "WZZ976",
+      "currentMaxAltitude": 101100,
+      "recalculatedMaxAltitude": 101100,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117443,
+      "icao": "490D84",
+      "callsign": "NJE283D",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117453,
+      "icao": "8963F7",
+      "callsign": "UAE1",
+      "currentMaxAltitude": 101900,
+      "recalculatedMaxAltitude": 101900,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117454,
+      "icao": "4BC84B",
+      "callsign": "PGT6BT",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117457,
+      "icao": "4BCE15",
+      "callsign": "SXS1322",
+      "currentMaxAltitude": 94375,
+      "recalculatedMaxAltitude": 94375,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117458,
+      "icao": "3C6522",
+      "callsign": "LHX6UW",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 7,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117459,
+      "icao": "8964A2",
+      "callsign": "UAE93Q",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117460,
+      "icao": "3C66E1",
+      "callsign": "DLH1UL",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117461,
+      "icao": "AB2AE1",
+      "callsign": "CMB532",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117464,
+      "icao": "4BB86B",
+      "callsign": "PGT26DZ",
+      "currentMaxAltitude": 72825,
+      "recalculatedMaxAltitude": 72825,
+      "difference": 0,
+      "badPositionCount": 12,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117465,
+      "icao": "740828",
+      "callsign": "RJA264",
+      "currentMaxAltitude": 82600,
+      "recalculatedMaxAltitude": 82600,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117467,
+      "icao": "48E8F9",
+      "callsign": "JDI24W",
+      "currentMaxAltitude": 102600,
+      "recalculatedMaxAltitude": 102600,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117468,
+      "icao": "4AC9EE",
+      "callsign": "SAS7742",
+      "currentMaxAltitude": 114800,
+      "recalculatedMaxAltitude": 114800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117469,
+      "icao": "408183",
+      "callsign": "EZY83BM",
+      "currentMaxAltitude": 94675,
+      "recalculatedMaxAltitude": 94675,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117470,
+      "icao": "4400F8",
+      "callsign": "AUA27Y",
+      "currentMaxAltitude": 79400,
+      "recalculatedMaxAltitude": 79400,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117471,
+      "icao": "4D21B1",
+      "callsign": "FHM4762",
+      "currentMaxAltitude": 80675,
+      "recalculatedMaxAltitude": 80675,
+      "difference": 0,
+      "badPositionCount": 5,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117475,
+      "icao": "471F5D",
+      "callsign": "WMT474",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117478,
+      "icao": "48AE03",
+      "callsign": "LOT72",
+      "currentMaxAltitude": 85800,
+      "recalculatedMaxAltitude": 85800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117480,
+      "icao": "86DD4C",
+      "callsign": "JAL42",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117481,
+      "icao": "48C2B7",
+      "callsign": "RYR5XD",
+      "currentMaxAltitude": 99500,
+      "recalculatedMaxAltitude": 99500,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117483,
+      "icao": "AA69EE",
+      "callsign": "N770KF",
+      "currentMaxAltitude": 82675,
+      "recalculatedMaxAltitude": 82675,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117484,
+      "icao": "471F62",
+      "callsign": "WZZ93QH",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117485,
+      "icao": "502CE7",
+      "callsign": "BTI9KV",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117486,
+      "icao": "4CAD92",
+      "callsign": "SAS7996",
+      "currentMaxAltitude": 118700,
+      "recalculatedMaxAltitude": 118700,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117493,
+      "icao": "48AF01",
+      "callsign": "LOT2KT",
+      "currentMaxAltitude": 74700,
+      "recalculatedMaxAltitude": 74700,
+      "difference": 0,
+      "badPositionCount": 8,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117495,
+      "icao": "4BAA87",
+      "callsign": "THY4RG",
+      "currentMaxAltitude": 71025,
+      "recalculatedMaxAltitude": 71025,
+      "difference": 0,
+      "badPositionCount": 8,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117496,
+      "icao": "4CAC8E",
+      "callsign": "SAS7754",
+      "currentMaxAltitude": 80775,
+      "recalculatedMaxAltitude": 80775,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117497,
+      "icao": "06A11F",
+      "callsign": "QTR16A",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117498,
+      "icao": "89631B",
+      "callsign": "UAE74W",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117499,
+      "icao": "471D6B",
+      "callsign": "WZZ53",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117500,
+      "icao": "4BA954",
+      "callsign": "THY6",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117501,
+      "icao": "48C127",
+      "callsign": "RYR45BN",
+      "currentMaxAltitude": 86200,
+      "recalculatedMaxAltitude": 86200,
+      "difference": 0,
+      "badPositionCount": 9,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117503,
+      "icao": "4BB873",
+      "callsign": "PGT81G",
+      "currentMaxAltitude": 72825,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 25,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_WOULD_CHANGE"
+    },
+    {
+      "flightId": 117504,
+      "icao": "4BCE43",
+      "callsign": "SXS6WA",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 11,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117505,
+      "icao": "471F68",
+      "callsign": "WMT2FK",
+      "currentMaxAltitude": 71025,
+      "recalculatedMaxAltitude": 71025,
+      "difference": 0,
+      "badPositionCount": 5,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117506,
+      "icao": "76CEF0",
+      "callsign": "SIA323",
+      "currentMaxAltitude": 126700,
+      "recalculatedMaxAltitude": 126700,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117507,
+      "icao": "489223",
+      "callsign": "ENT7559",
+      "currentMaxAltitude": 110700,
+      "recalculatedMaxAltitude": 110700,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117508,
+      "icao": "48AD08",
+      "callsign": "LOT1KJ",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117509,
+      "icao": "4CA6A9",
+      "callsign": "RYR6ZU",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117511,
+      "icao": "4067F3",
+      "callsign": "TOM6BY",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117512,
+      "icao": "3C4591",
+      "callsign": "BOX529",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117513,
+      "icao": "4BB286",
+      "callsign": "THY5AW",
+      "currentMaxAltitude": 110700,
+      "recalculatedMaxAltitude": 110700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117514,
+      "icao": "738056",
+      "callsign": "ELY238",
+      "currentMaxAltitude": 79700,
+      "recalculatedMaxAltitude": 79700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117515,
+      "icao": "4892C0",
+      "callsign": "ENT7088",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117516,
+      "icao": "3C658D",
+      "callsign": "DLH8VK",
+      "currentMaxAltitude": 71025,
+      "recalculatedMaxAltitude": 71025,
+      "difference": 0,
+      "badPositionCount": 7,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117517,
+      "icao": "06A0BB",
+      "callsign": "QTR8K",
+      "currentMaxAltitude": 87600,
+      "recalculatedMaxAltitude": 87600,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117518,
+      "icao": "4B8E04",
+      "callsign": "PGT21PC",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117520,
+      "icao": "4BB863",
+      "callsign": "PGT357X",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117521,
+      "icao": "45A9A8",
+      "callsign": "OYJMH",
+      "currentMaxAltitude": 82600,
+      "recalculatedMaxAltitude": 82600,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117524,
+      "icao": "48418B",
+      "callsign": "KLM64A",
+      "currentMaxAltitude": 93175,
+      "recalculatedMaxAltitude": 93175,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117527,
+      "icao": "49D38C",
+      "callsign": "TVS2QZ",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117530,
+      "icao": "471F8E",
+      "callsign": "WZZ292",
+      "currentMaxAltitude": 110700,
+      "recalculatedMaxAltitude": 110700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117531,
+      "icao": "4D2383",
+      "callsign": "RYR8CN",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 7,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117532,
+      "icao": "4BD152",
+      "callsign": "CAI7PC",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 10,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117534,
+      "icao": "48C2A1",
+      "callsign": "RYR4VA",
+      "currentMaxAltitude": 85800,
+      "recalculatedMaxAltitude": 85800,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117535,
+      "icao": "3C6743",
+      "callsign": "DLH1454",
+      "currentMaxAltitude": 63700,
+      "recalculatedMaxAltitude": 63700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117538,
+      "icao": "896354",
+      "callsign": "ETD3XA",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 8,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117542,
+      "icao": "471E60",
+      "callsign": "WMT9ZR",
+      "currentMaxAltitude": 102900,
+      "recalculatedMaxAltitude": 102900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117543,
+      "icao": "4BB4F0",
+      "callsign": "MGH876",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117545,
+      "icao": "86D5B6",
+      "callsign": "ANA222",
+      "currentMaxAltitude": 94700,
+      "recalculatedMaxAltitude": 94700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117549,
+      "icao": "502CCF",
+      "callsign": "BTI9RG",
+      "currentMaxAltitude": 102900,
+      "recalculatedMaxAltitude": 102900,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117550,
+      "icao": "48E9F4",
+      "callsign": "RYR6FL",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 5,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117551,
+      "icao": "3C64F0",
+      "callsign": "DLH758",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 10,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117552,
+      "icao": "8964A7",
+      "callsign": "UAE5WR",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117554,
+      "icao": "3CF8BE",
+      "callsign": "PTN19K",
+      "currentMaxAltitude": 93975,
+      "recalculatedMaxAltitude": 93975,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117555,
+      "icao": "06A11E",
+      "callsign": "QTR35P",
+      "currentMaxAltitude": 94800,
+      "recalculatedMaxAltitude": 94800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117556,
+      "icao": "471F55",
+      "callsign": "WMT4UH",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117558,
+      "icao": "48C22F",
+      "callsign": "RYR7AK",
+      "currentMaxAltitude": 114900,
+      "recalculatedMaxAltitude": 114900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117559,
+      "icao": "4BAAD2",
+      "callsign": "THY60S",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117561,
+      "icao": "8966A9",
+      "callsign": "ETD44",
+      "currentMaxAltitude": 110700,
+      "recalculatedMaxAltitude": 110700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117567,
+      "icao": "406D78",
+      "callsign": "BAW136",
+      "currentMaxAltitude": 87600,
+      "recalculatedMaxAltitude": 87600,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117569,
+      "icao": "4CAD97",
+      "callsign": "SAS7654",
+      "currentMaxAltitude": 118700,
+      "recalculatedMaxAltitude": 118700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117571,
+      "icao": "4867EB",
+      "callsign": "TRA7N",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117573,
+      "icao": "501C38",
+      "callsign": "CTN4487",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 9,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117574,
+      "icao": "49D04D",
+      "callsign": "TVP7707",
+      "currentMaxAltitude": 92700,
+      "recalculatedMaxAltitude": 92700,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117575,
+      "icao": "3C4B45",
+      "callsign": "EWG1CZ",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117577,
+      "icao": "06A2E9",
+      "callsign": "QTR64P",
+      "currentMaxAltitude": 95700,
+      "recalculatedMaxAltitude": 95700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117578,
+      "icao": "C02EC1",
+      "callsign": "ACA943",
+      "currentMaxAltitude": 93800,
+      "recalculatedMaxAltitude": 93800,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117579,
+      "icao": "471EFE",
+      "callsign": "WZZ61TX",
+      "currentMaxAltitude": 118800,
+      "recalculatedMaxAltitude": 118800,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117581,
+      "icao": "49D00D",
+      "callsign": "TVP7707",
+      "currentMaxAltitude": 102900,
+      "recalculatedMaxAltitude": 102900,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117582,
+      "icao": "503CFE",
+      "callsign": "CAI17QT",
+      "currentMaxAltitude": 71025,
+      "recalculatedMaxAltitude": 71025,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117585,
+      "icao": "4BAB2F",
+      "callsign": "THY6RP",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117590,
+      "icao": "89649D",
+      "callsign": "ETD81C",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117594,
+      "icao": "400A25",
+      "callsign": "BAW863Z",
+      "currentMaxAltitude": 91600,
+      "recalculatedMaxAltitude": 91600,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117595,
+      "icao": "4D24B6",
+      "callsign": "HYS408",
+      "currentMaxAltitude": 94800,
+      "recalculatedMaxAltitude": 94800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117596,
+      "icao": "48C2AE",
+      "callsign": "RYR76DR",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117597,
+      "icao": "3C66AC",
+      "callsign": "DLH6NJ",
+      "currentMaxAltitude": 102800,
+      "recalculatedMaxAltitude": 102800,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117598,
+      "icao": "4D2146",
+      "callsign": "WMT8585",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117599,
+      "icao": "AB7ECE",
+      "callsign": "TWY303",
+      "currentMaxAltitude": 101900,
+      "recalculatedMaxAltitude": 101900,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117600,
+      "icao": "4BD183",
+      "callsign": "CAI5A",
+      "currentMaxAltitude": 67600,
+      "recalculatedMaxAltitude": 67600,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117602,
+      "icao": "4D2303",
+      "callsign": "RYR1PY",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 5,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117605,
+      "icao": "4BB853",
+      "callsign": "PGT63SA",
+      "currentMaxAltitude": 80775,
+      "recalculatedMaxAltitude": 80775,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117606,
+      "icao": "471FAA",
+      "callsign": "WZZ341",
+      "currentMaxAltitude": 110700,
+      "recalculatedMaxAltitude": 110700,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117607,
+      "icao": "48C2B3",
+      "callsign": "RYR7PD",
+      "currentMaxAltitude": 98700,
+      "recalculatedMaxAltitude": 98700,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117609,
+      "icao": "485343",
+      "callsign": "KLM865",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117610,
+      "icao": "49D0E0",
+      "callsign": "ABP751",
+      "currentMaxAltitude": 93900,
+      "recalculatedMaxAltitude": 93900,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117611,
+      "icao": "4BCD82",
+      "callsign": "SXS5BV",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117612,
+      "icao": "4D200E",
+      "callsign": "WMT886",
+      "currentMaxAltitude": 98300,
+      "recalculatedMaxAltitude": 98300,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117620,
+      "icao": "3C66A7",
+      "callsign": "DLH7YW",
+      "currentMaxAltitude": 98675,
+      "recalculatedMaxAltitude": 98675,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117621,
+      "icao": "471F00",
+      "callsign": "WMT481",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117623,
+      "icao": "4CAD3A",
+      "callsign": "RYR46QC",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 5,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117625,
+      "icao": "46B838",
+      "callsign": "AEE2WD",
+      "currentMaxAltitude": 98200,
+      "recalculatedMaxAltitude": 98200,
+      "difference": 0,
+      "badPositionCount": 6,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117626,
+      "icao": "493293",
+      "callsign": "NJE5MY",
+      "currentMaxAltitude": 87600,
+      "recalculatedMaxAltitude": 87600,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117631,
+      "icao": "896169",
+      "callsign": "UAE2VL",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117636,
+      "icao": "706074",
+      "callsign": "KAC171",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117638,
+      "icao": "4C31E1",
+      "callsign": "MPC003",
+      "currentMaxAltitude": 102900,
+      "recalculatedMaxAltitude": 102900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117640,
+      "icao": "452138",
+      "callsign": "AMQ776",
+      "currentMaxAltitude": 118900,
+      "recalculatedMaxAltitude": 118900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117642,
+      "icao": "407CD1",
+      "callsign": "BAW7",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 5,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117644,
+      "icao": "4891AB",
+      "callsign": "ENT4181",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 35000,
+      "difference": 36000,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_WOULD_CHANGE"
+    },
+    {
+      "flightId": 117645,
+      "icao": "48AF0B",
+      "callsign": "LOT6648",
+      "currentMaxAltitude": 76400,
+      "recalculatedMaxAltitude": 76400,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117646,
+      "icao": "4BCDEB",
+      "callsign": "SXS2YJ",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117647,
+      "icao": "4BCDAA",
+      "callsign": "SXS4RN",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117650,
+      "icao": "4BB28A",
+      "callsign": "THY7WF",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 2,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117657,
+      "icao": "4D252A",
+      "callsign": "WZZ3BU",
+      "currentMaxAltitude": 71025,
+      "recalculatedMaxAltitude": 71025,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117658,
+      "icao": "3C6427",
+      "callsign": "CFG4DP",
+      "currentMaxAltitude": 80675,
+      "recalculatedMaxAltitude": 80675,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117659,
+      "icao": "76CD41",
+      "callsign": "SIA305",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117661,
+      "icao": "39C422",
+      "callsign": "AFR284",
+      "currentMaxAltitude": 71000,
+      "recalculatedMaxAltitude": 71000,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117662,
+      "icao": "4BB567",
+      "callsign": "CAI7MF",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117663,
+      "icao": "458665",
+      "callsign": "CAT318",
+      "currentMaxAltitude": 76400,
+      "recalculatedMaxAltitude": 76400,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117664,
+      "icao": "4BC89A",
+      "callsign": "PGT64N",
+      "currentMaxAltitude": 71025,
+      "recalculatedMaxAltitude": 71025,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117674,
+      "icao": "4CAE61",
+      "callsign": "RYR4163",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117675,
+      "icao": "8963EA",
+      "callsign": "UAE69R",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 4,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117676,
+      "icao": "48C12E",
+      "callsign": "RYR4155",
+      "currentMaxAltitude": 118700,
+      "recalculatedMaxAltitude": 118700,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117680,
+      "icao": "4BC84C",
+      "callsign": "PGT9GP",
+      "currentMaxAltitude": 85900,
+      "recalculatedMaxAltitude": 85900,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117681,
+      "icao": "45C86B",
+      "callsign": "FLI7121",
+      "currentMaxAltitude": 76425,
+      "recalculatedMaxAltitude": 76425,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117682,
+      "icao": "4BCE46",
+      "callsign": "SXS9RW",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117683,
+      "icao": "4ACB5A",
+      "callsign": "SAS7396",
+      "currentMaxAltitude": 76400,
+      "recalculatedMaxAltitude": 76400,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117685,
+      "icao": "4BA94A",
+      "callsign": "THY8",
+      "currentMaxAltitude": 74600,
+      "recalculatedMaxAltitude": 74600,
+      "difference": 0,
+      "badPositionCount": 3,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117686,
+      "icao": "86E7BC",
+      "callsign": "ANA218",
+      "currentMaxAltitude": 73175,
+      "recalculatedMaxAltitude": 73175,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117688,
+      "icao": "4CADE0",
+      "callsign": "RYR4QV",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117693,
+      "icao": "471FA3",
+      "callsign": "WZZ909",
+      "currentMaxAltitude": 71375,
+      "recalculatedMaxAltitude": 35975,
+      "difference": 35400,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_WOULD_CHANGE"
+    },
+    {
+      "flightId": 117704,
+      "icao": "486648",
+      "callsign": "CND3W",
+      "currentMaxAltitude": 72800,
+      "recalculatedMaxAltitude": 72800,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    },
+    {
+      "flightId": 117708,
+      "icao": "47875A",
+      "callsign": "NOZ1561",
+      "currentMaxAltitude": 68400,
+      "recalculatedMaxAltitude": 68400,
+      "difference": 0,
+      "badPositionCount": 1,
+      "status": "MAX_ALTITUDE_UNCHANGED"
+    }
+  ]
+}

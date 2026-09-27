@@ -1,0 +1,47 @@
+{
+  "generatedAt": "2026-09-27T10:57:46.405Z",
+  "dependencies": [
+    {
+      "model": "FlightPosition",
+      "affectedRecordCount": 491,
+      "rebuildable": "yes",
+      "recommendedAction": "future explicit-ID SET altitude = NULL only"
+    },
+    {
+      "model": "FlightPosition.verticalRate/groundSpeed/track/lat/lon/recordedAt",
+      "affectedRecordCount": 0,
+      "rebuildable": "not applicable",
+      "recommendedAction": "leave unchanged; no direct dependency on altitude repair"
+    },
+    {
+      "model": "Flight.maxAltitude",
+      "affectedRecordCount": 3,
+      "rebuildable": "yes",
+      "recommendedAction": "recalculate from remaining valid FlightPosition after approved repair"
+    },
+    {
+      "model": "FlightEvent",
+      "affectedRecordCount": 0,
+      "rebuildable": "manual review",
+      "recommendedAction": "do not delete automatically; inspect event evidence"
+    },
+    {
+      "model": "ReceiverDailyStats",
+      "affectedRecordCount": 0,
+      "rebuildable": "not applicable",
+      "recommendedAction": "no altitude field is persisted here"
+    },
+    {
+      "model": "ReceiverDailyCoverageAltitude",
+      "affectedRecordCount": 0,
+      "rebuildable": "yes",
+      "recommendedAction": "4 broad altitude bands; 30k+ bug values remain in the same band"
+    },
+    {
+      "model": "ATC sector assignment",
+      "affectedRecordCount": 0,
+      "rebuildable": "dynamic",
+      "recommendedAction": "historical sector traffic is recomputed from FlightPosition; no assignment table exists"
+    }
+  ]
+}

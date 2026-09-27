@@ -1,0 +1,2994 @@
+{
+  "generatedAt": "2026-09-27T10:57:46.404Z",
+  "badPositions": 491,
+  "incidents": [
+    {
+      "incidentId": "ALT-117301-4444277",
+      "flightId": 117301,
+      "firstBadPosition": 4444277,
+      "lastBadPosition": 4444609,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:44:42.246Z",
+      "lastBadRecordedAt": "2026-09-27T09:46:08.640Z"
+    },
+    {
+      "incidentId": "ALT-117339-4443691",
+      "flightId": 117339,
+      "firstBadPosition": 4443691,
+      "lastBadPosition": 4443841,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:41:48.352Z",
+      "lastBadRecordedAt": "2026-09-27T09:42:30.545Z"
+    },
+    {
+      "incidentId": "ALT-117340-4443672",
+      "flightId": 117340,
+      "firstBadPosition": 4443672,
+      "lastBadPosition": 4443672,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:41:40.543Z",
+      "lastBadRecordedAt": "2026-09-27T09:41:40.543Z"
+    },
+    {
+      "incidentId": "ALT-117346-4444147",
+      "flightId": 117346,
+      "firstBadPosition": 4444147,
+      "lastBadPosition": 4444147,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:43:46.291Z",
+      "lastBadRecordedAt": "2026-09-27T09:43:46.291Z"
+    },
+    {
+      "incidentId": "ALT-117356-4443707",
+      "flightId": 117356,
+      "firstBadPosition": 4443707,
+      "lastBadPosition": 4443707,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:41:45.596Z",
+      "lastBadRecordedAt": "2026-09-27T09:41:45.596Z"
+    },
+    {
+      "incidentId": "ALT-117365-4444004",
+      "flightId": 117365,
+      "firstBadPosition": 4444004,
+      "lastBadPosition": 4444312,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:43:15.655Z",
+      "lastBadRecordedAt": "2026-09-27T09:44:42.299Z"
+    },
+    {
+      "incidentId": "ALT-117368-4443713",
+      "flightId": 117368,
+      "firstBadPosition": 4443713,
+      "lastBadPosition": 4443713,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:41:43.959Z",
+      "lastBadRecordedAt": "2026-09-27T09:41:43.959Z"
+    },
+    {
+      "incidentId": "ALT-117368-4444896",
+      "flightId": 117368,
+      "firstBadPosition": 4444896,
+      "lastBadPosition": 4444896,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:47:14.423Z",
+      "lastBadRecordedAt": "2026-09-27T09:47:14.423Z"
+    },
+    {
+      "incidentId": "ALT-117369-4444314",
+      "flightId": 117369,
+      "firstBadPosition": 4444314,
+      "lastBadPosition": 4444475,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:44:41.261Z",
+      "lastBadRecordedAt": "2026-09-27T09:45:24.379Z"
+    },
+    {
+      "incidentId": "ALT-117369-4445147",
+      "flightId": 117369,
+      "firstBadPosition": 4445147,
+      "lastBadPosition": 4445400,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:48:08.083Z",
+      "lastBadRecordedAt": "2026-09-27T09:49:21.922Z"
+    },
+    {
+      "incidentId": "ALT-117376-4443683",
+      "flightId": 117376,
+      "firstBadPosition": 4443683,
+      "lastBadPosition": 4443978,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:41:46.672Z",
+      "lastBadRecordedAt": "2026-09-27T09:43:14.696Z"
+    },
+    {
+      "incidentId": "ALT-117376-4446813",
+      "flightId": 117376,
+      "firstBadPosition": 4446813,
+      "lastBadPosition": 4446813,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:55:35.014Z",
+      "lastBadRecordedAt": "2026-09-27T09:55:35.014Z"
+    },
+    {
+      "incidentId": "ALT-117377-4443787",
+      "flightId": 117377,
+      "firstBadPosition": 4443787,
+      "lastBadPosition": 4443787,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:42:09.874Z",
+      "lastBadRecordedAt": "2026-09-27T09:42:09.874Z"
+    },
+    {
+      "incidentId": "ALT-117384-4444002",
+      "flightId": 117384,
+      "firstBadPosition": 4444002,
+      "lastBadPosition": 4444002,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:43:15.819Z",
+      "lastBadRecordedAt": "2026-09-27T09:43:15.819Z"
+    },
+    {
+      "incidentId": "ALT-117384-4444641",
+      "flightId": 117384,
+      "firstBadPosition": 4444641,
+      "lastBadPosition": 4444807,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:46:08.285Z",
+      "lastBadRecordedAt": "2026-09-27T09:46:52.608Z"
+    },
+    {
+      "incidentId": "ALT-117384-4445654",
+      "flightId": 117384,
+      "firstBadPosition": 4445654,
+      "lastBadPosition": 4445918,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:50:31.035Z",
+      "lastBadRecordedAt": "2026-09-27T09:51:32.284Z"
+    },
+    {
+      "incidentId": "ALT-117388-4444295",
+      "flightId": 117388,
+      "firstBadPosition": 4444295,
+      "lastBadPosition": 4444295,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:44:41.591Z",
+      "lastBadRecordedAt": "2026-09-27T09:44:41.591Z"
+    },
+    {
+      "incidentId": "ALT-117388-4446422",
+      "flightId": 117388,
+      "firstBadPosition": 4446422,
+      "lastBadPosition": 4446422,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:53:45.842Z",
+      "lastBadRecordedAt": "2026-09-27T09:53:45.842Z"
+    },
+    {
+      "incidentId": "ALT-117391-4444970",
+      "flightId": 117391,
+      "firstBadPosition": 4444970,
+      "lastBadPosition": 4444970,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:47:36.926Z",
+      "lastBadRecordedAt": "2026-09-27T09:47:36.926Z"
+    },
+    {
+      "incidentId": "ALT-117394-4444452",
+      "flightId": 117394,
+      "firstBadPosition": 4444452,
+      "lastBadPosition": 4444452,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:45:25.526Z",
+      "lastBadRecordedAt": "2026-09-27T09:45:25.526Z"
+    },
+    {
+      "incidentId": "ALT-117399-4447257",
+      "flightId": 117399,
+      "firstBadPosition": 4447257,
+      "lastBadPosition": 4447257,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:23.528Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:23.528Z"
+    },
+    {
+      "incidentId": "ALT-117400-4444540",
+      "flightId": 117400,
+      "firstBadPosition": 4444540,
+      "lastBadPosition": 4444540,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:45:47.040Z",
+      "lastBadRecordedAt": "2026-09-27T09:45:47.040Z"
+    },
+    {
+      "incidentId": "ALT-117400-4445895",
+      "flightId": 117400,
+      "firstBadPosition": 4445895,
+      "lastBadPosition": 4446157,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:51:35.993Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:41.039Z"
+    },
+    {
+      "incidentId": "ALT-117402-4444615",
+      "flightId": 117402,
+      "firstBadPosition": 4444615,
+      "lastBadPosition": 4444615,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:46:08.613Z",
+      "lastBadRecordedAt": "2026-09-27T09:46:08.613Z"
+    },
+    {
+      "incidentId": "ALT-117407-4443743",
+      "flightId": 117407,
+      "firstBadPosition": 4443743,
+      "lastBadPosition": 4443743,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:41:53.626Z",
+      "lastBadRecordedAt": "2026-09-27T09:41:53.626Z"
+    },
+    {
+      "incidentId": "ALT-117407-4445307",
+      "flightId": 117407,
+      "firstBadPosition": 4445307,
+      "lastBadPosition": 4445643,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:49:03.053Z",
+      "lastBadRecordedAt": "2026-09-27T09:50:30.349Z"
+    },
+    {
+      "incidentId": "ALT-117407-4446170",
+      "flightId": 117407,
+      "firstBadPosition": 4446170,
+      "lastBadPosition": 4446170,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:52:42.050Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:42.050Z"
+    },
+    {
+      "incidentId": "ALT-117412-4445566",
+      "flightId": 117412,
+      "firstBadPosition": 4445566,
+      "lastBadPosition": 4445566,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:50:09.191Z",
+      "lastBadRecordedAt": "2026-09-27T09:50:09.191Z"
+    },
+    {
+      "incidentId": "ALT-117416-4443668",
+      "flightId": 117416,
+      "firstBadPosition": 4443668,
+      "lastBadPosition": 4443967,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:41:47.806Z",
+      "lastBadRecordedAt": "2026-09-27T09:43:14.614Z"
+    },
+    {
+      "incidentId": "ALT-117416-4445640",
+      "flightId": 117416,
+      "firstBadPosition": 4445640,
+      "lastBadPosition": 4445640,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:50:29.643Z",
+      "lastBadRecordedAt": "2026-09-27T09:50:29.643Z"
+    },
+    {
+      "incidentId": "ALT-117416-4447002",
+      "flightId": 117416,
+      "firstBadPosition": 4447002,
+      "lastBadPosition": 4447002,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:56:18.431Z",
+      "lastBadRecordedAt": "2026-09-27T09:56:18.431Z"
+    },
+    {
+      "incidentId": "ALT-117417-4444171",
+      "flightId": 117417,
+      "firstBadPosition": 4444171,
+      "lastBadPosition": 4444171,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:44:01.532Z",
+      "lastBadRecordedAt": "2026-09-27T09:44:01.532Z"
+    },
+    {
+      "incidentId": "ALT-117419-4446543",
+      "flightId": 117419,
+      "firstBadPosition": 4446543,
+      "lastBadPosition": 4446543,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:54:23.248Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:23.248Z"
+    },
+    {
+      "incidentId": "ALT-117422-4444255",
+      "flightId": 117422,
+      "firstBadPosition": 4444255,
+      "lastBadPosition": 4444255,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:44:20.399Z",
+      "lastBadRecordedAt": "2026-09-27T09:44:20.399Z"
+    },
+    {
+      "incidentId": "ALT-117422-4444830",
+      "flightId": 117422,
+      "firstBadPosition": 4444830,
+      "lastBadPosition": 4445082,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:46:58.041Z",
+      "lastBadRecordedAt": "2026-09-27T09:47:58.363Z"
+    },
+    {
+      "incidentId": "ALT-117424-4445032",
+      "flightId": 117424,
+      "firstBadPosition": 4445032,
+      "lastBadPosition": 4445032,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:47:53.668Z",
+      "lastBadRecordedAt": "2026-09-27T09:47:53.668Z"
+    },
+    {
+      "incidentId": "ALT-117424-4445799",
+      "flightId": 117424,
+      "firstBadPosition": 4445799,
+      "lastBadPosition": 4445799,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:51:13.558Z",
+      "lastBadRecordedAt": "2026-09-27T09:51:13.558Z"
+    },
+    {
+      "incidentId": "ALT-117427-4443890",
+      "flightId": 117427,
+      "firstBadPosition": 4443890,
+      "lastBadPosition": 4443890,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:42:53.588Z",
+      "lastBadRecordedAt": "2026-09-27T09:42:53.588Z"
+    },
+    {
+      "incidentId": "ALT-117427-4444447",
+      "flightId": 117427,
+      "firstBadPosition": 4444447,
+      "lastBadPosition": 4444447,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:45:25.198Z",
+      "lastBadRecordedAt": "2026-09-27T09:45:25.198Z"
+    },
+    {
+      "incidentId": "ALT-117429-4445123",
+      "flightId": 117429,
+      "firstBadPosition": 4445123,
+      "lastBadPosition": 4445123,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:48:19.140Z",
+      "lastBadRecordedAt": "2026-09-27T09:48:19.140Z"
+    },
+    {
+      "incidentId": "ALT-117430-4444319",
+      "flightId": 117430,
+      "firstBadPosition": 4444319,
+      "lastBadPosition": 4444319,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:44:41.078Z",
+      "lastBadRecordedAt": "2026-09-27T09:44:41.078Z"
+    },
+    {
+      "incidentId": "ALT-117432-4444416",
+      "flightId": 117432,
+      "firstBadPosition": 4444416,
+      "lastBadPosition": 4444582,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:45:09.416Z",
+      "lastBadRecordedAt": "2026-09-27T09:45:53.982Z"
+    },
+    {
+      "incidentId": "ALT-117432-4445843",
+      "flightId": 117432,
+      "firstBadPosition": 4445843,
+      "lastBadPosition": 4445843,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:51:20.122Z",
+      "lastBadRecordedAt": "2026-09-27T09:51:20.122Z"
+    },
+    {
+      "incidentId": "ALT-117432-4446764",
+      "flightId": 117432,
+      "firstBadPosition": 4446764,
+      "lastBadPosition": 4447552,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T09:55:22.177Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:34.693Z"
+    },
+    {
+      "incidentId": "ALT-117433-4444024",
+      "flightId": 117433,
+      "firstBadPosition": 4444024,
+      "lastBadPosition": 4444024,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:43:21.362Z",
+      "lastBadRecordedAt": "2026-09-27T09:43:21.362Z"
+    },
+    {
+      "incidentId": "ALT-117433-4445415",
+      "flightId": 117433,
+      "firstBadPosition": 4445415,
+      "lastBadPosition": 4446765,
+      "badPositionCount": 6,
+      "firstBadRecordedAt": "2026-09-27T09:49:30.411Z",
+      "lastBadRecordedAt": "2026-09-27T09:55:21.903Z"
+    },
+    {
+      "incidentId": "ALT-117434-4444995",
+      "flightId": 117434,
+      "firstBadPosition": 4444995,
+      "lastBadPosition": 4444995,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:47:41.624Z",
+      "lastBadRecordedAt": "2026-09-27T09:47:41.624Z"
+    },
+    {
+      "incidentId": "ALT-117434-4445930",
+      "flightId": 117434,
+      "firstBadPosition": 4445930,
+      "lastBadPosition": 4445930,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:51:41.176Z",
+      "lastBadRecordedAt": "2026-09-27T09:51:41.176Z"
+    },
+    {
+      "incidentId": "ALT-117435-4444246",
+      "flightId": 117435,
+      "firstBadPosition": 4444246,
+      "lastBadPosition": 4444409,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:44:23.376Z",
+      "lastBadRecordedAt": "2026-09-27T09:45:06.006Z"
+    },
+    {
+      "incidentId": "ALT-117435-4445155",
+      "flightId": 117435,
+      "firstBadPosition": 4445155,
+      "lastBadPosition": 4445155,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:48:23.293Z",
+      "lastBadRecordedAt": "2026-09-27T09:48:23.293Z"
+    },
+    {
+      "incidentId": "ALT-117437-4444107",
+      "flightId": 117437,
+      "firstBadPosition": 4444107,
+      "lastBadPosition": 4444107,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:43:41.523Z",
+      "lastBadRecordedAt": "2026-09-27T09:43:41.523Z"
+    },
+    {
+      "incidentId": "ALT-117438-4444290",
+      "flightId": 117438,
+      "firstBadPosition": 4444290,
+      "lastBadPosition": 4444290,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:44:41.078Z",
+      "lastBadRecordedAt": "2026-09-27T09:44:41.078Z"
+    },
+    {
+      "incidentId": "ALT-117438-4447450",
+      "flightId": 117438,
+      "firstBadPosition": 4447450,
+      "lastBadPosition": 4447796,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:58:09.236Z",
+      "lastBadRecordedAt": "2026-09-27T09:59:17.621Z"
+    },
+    {
+      "incidentId": "ALT-117439-4443750",
+      "flightId": 117439,
+      "firstBadPosition": 4443750,
+      "lastBadPosition": 4444129,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:42:08.744Z",
+      "lastBadRecordedAt": "2026-09-27T09:43:58.823Z"
+    },
+    {
+      "incidentId": "ALT-117439-4444872",
+      "flightId": 117439,
+      "firstBadPosition": 4444872,
+      "lastBadPosition": 4444872,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:47:13.767Z",
+      "lastBadRecordedAt": "2026-09-27T09:47:13.767Z"
+    },
+    {
+      "incidentId": "ALT-117440-4446401",
+      "flightId": 117440,
+      "firstBadPosition": 4446401,
+      "lastBadPosition": 4446565,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:53:45.542Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:25.496Z"
+    },
+    {
+      "incidentId": "ALT-117441-4444546",
+      "flightId": 117441,
+      "firstBadPosition": 4444546,
+      "lastBadPosition": 4444794,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:45:47.918Z",
+      "lastBadRecordedAt": "2026-09-27T09:46:52.771Z"
+    },
+    {
+      "incidentId": "ALT-117441-4446084",
+      "flightId": 117441,
+      "firstBadPosition": 4446084,
+      "lastBadPosition": 4446084,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:52:20.259Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:20.259Z"
+    },
+    {
+      "incidentId": "ALT-117441-4446665",
+      "flightId": 117441,
+      "firstBadPosition": 4446665,
+      "lastBadPosition": 4446917,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:54:33.238Z",
+      "lastBadRecordedAt": "2026-09-27T09:55:56.313Z"
+    },
+    {
+      "incidentId": "ALT-117441-4447451",
+      "flightId": 117441,
+      "firstBadPosition": 4447451,
+      "lastBadPosition": 4447451,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:58:00.560Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:00.560Z"
+    },
+    {
+      "incidentId": "ALT-117442-4446914",
+      "flightId": 117442,
+      "firstBadPosition": 4446914,
+      "lastBadPosition": 4446914,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:55:56.094Z",
+      "lastBadRecordedAt": "2026-09-27T09:55:56.094Z"
+    },
+    {
+      "incidentId": "ALT-117442-4447788",
+      "flightId": 117442,
+      "firstBadPosition": 4447788,
+      "lastBadPosition": 4447788,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:59:35.729Z",
+      "lastBadRecordedAt": "2026-09-27T09:59:35.729Z"
+    },
+    {
+      "incidentId": "ALT-117443-4443846",
+      "flightId": 117443,
+      "firstBadPosition": 4443846,
+      "lastBadPosition": 4443846,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:42:31.991Z",
+      "lastBadRecordedAt": "2026-09-27T09:42:31.991Z"
+    },
+    {
+      "incidentId": "ALT-117443-4444883",
+      "flightId": 117443,
+      "firstBadPosition": 4444883,
+      "lastBadPosition": 4444883,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:47:15.082Z",
+      "lastBadRecordedAt": "2026-09-27T09:47:15.082Z"
+    },
+    {
+      "incidentId": "ALT-117443-4446161",
+      "flightId": 117443,
+      "firstBadPosition": 4446161,
+      "lastBadPosition": 4446492,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:52:41.914Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:08.068Z"
+    },
+    {
+      "incidentId": "ALT-117443-4447263",
+      "flightId": 117443,
+      "firstBadPosition": 4447263,
+      "lastBadPosition": 4447263,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:23.412Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:23.412Z"
+    },
+    {
+      "incidentId": "ALT-117443-4448037",
+      "flightId": 117443,
+      "firstBadPosition": 4448037,
+      "lastBadPosition": 4448037,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:00:41.100Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:41.100Z"
+    },
+    {
+      "incidentId": "ALT-117453-4445112",
+      "flightId": 117453,
+      "firstBadPosition": 4445112,
+      "lastBadPosition": 4445112,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:48:09.441Z",
+      "lastBadRecordedAt": "2026-09-27T09:48:09.441Z"
+    },
+    {
+      "incidentId": "ALT-117453-4445618",
+      "flightId": 117453,
+      "firstBadPosition": 4445618,
+      "lastBadPosition": 4445618,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:50:23.303Z",
+      "lastBadRecordedAt": "2026-09-27T09:50:23.303Z"
+    },
+    {
+      "incidentId": "ALT-117453-4447943",
+      "flightId": 117453,
+      "firstBadPosition": 4447943,
+      "lastBadPosition": 4447943,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:00:16.678Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:16.678Z"
+    },
+    {
+      "incidentId": "ALT-117454-4444758",
+      "flightId": 117454,
+      "firstBadPosition": 4444758,
+      "lastBadPosition": 4445176,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:46:36.042Z",
+      "lastBadRecordedAt": "2026-09-27T09:48:31.432Z"
+    },
+    {
+      "incidentId": "ALT-117457-4444421",
+      "flightId": 117457,
+      "firstBadPosition": 4444421,
+      "lastBadPosition": 4444421,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:44:57.650Z",
+      "lastBadRecordedAt": "2026-09-27T09:44:57.650Z"
+    },
+    {
+      "incidentId": "ALT-117458-4444860",
+      "flightId": 117458,
+      "firstBadPosition": 4444860,
+      "lastBadPosition": 4445372,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:47:07.170Z",
+      "lastBadRecordedAt": "2026-09-27T09:49:25.550Z"
+    },
+    {
+      "incidentId": "ALT-117458-4446072",
+      "flightId": 117458,
+      "firstBadPosition": 4446072,
+      "lastBadPosition": 4446072,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:52:16.521Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:16.521Z"
+    },
+    {
+      "incidentId": "ALT-117458-4446909",
+      "flightId": 117458,
+      "firstBadPosition": 4446909,
+      "lastBadPosition": 4446909,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:55:54.098Z",
+      "lastBadRecordedAt": "2026-09-27T09:55:54.098Z"
+    },
+    {
+      "incidentId": "ALT-117458-4447443",
+      "flightId": 117458,
+      "firstBadPosition": 4447443,
+      "lastBadPosition": 4447614,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:58:06.590Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:46.001Z"
+    },
+    {
+      "incidentId": "ALT-117459-4444239",
+      "flightId": 117459,
+      "firstBadPosition": 4444239,
+      "lastBadPosition": 4444239,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:44:05.191Z",
+      "lastBadRecordedAt": "2026-09-27T09:44:05.191Z"
+    },
+    {
+      "incidentId": "ALT-117460-4444494",
+      "flightId": 117460,
+      "firstBadPosition": 4444494,
+      "lastBadPosition": 4444494,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:45:28.309Z",
+      "lastBadRecordedAt": "2026-09-27T09:45:28.309Z"
+    },
+    {
+      "incidentId": "ALT-117460-4445157",
+      "flightId": 117460,
+      "firstBadPosition": 4445157,
+      "lastBadPosition": 4445157,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:48:21.886Z",
+      "lastBadRecordedAt": "2026-09-27T09:48:21.886Z"
+    },
+    {
+      "incidentId": "ALT-117461-4444751",
+      "flightId": 117461,
+      "firstBadPosition": 4444751,
+      "lastBadPosition": 4444751,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:46:40.155Z",
+      "lastBadRecordedAt": "2026-09-27T09:46:40.155Z"
+    },
+    {
+      "incidentId": "ALT-117461-4445255",
+      "flightId": 117461,
+      "firstBadPosition": 4445255,
+      "lastBadPosition": 4445255,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:48:51.311Z",
+      "lastBadRecordedAt": "2026-09-27T09:48:51.311Z"
+    },
+    {
+      "incidentId": "ALT-117461-4446362",
+      "flightId": 117461,
+      "firstBadPosition": 4446362,
+      "lastBadPosition": 4447034,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:53:36.207Z",
+      "lastBadRecordedAt": "2026-09-27T09:56:30.719Z"
+    },
+    {
+      "incidentId": "ALT-117461-4447998",
+      "flightId": 117461,
+      "firstBadPosition": 4447998,
+      "lastBadPosition": 4447998,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:00:32.791Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:32.791Z"
+    },
+    {
+      "incidentId": "ALT-117464-4446466",
+      "flightId": 117464,
+      "firstBadPosition": 4446466,
+      "lastBadPosition": 4447417,
+      "badPositionCount": 5,
+      "firstBadRecordedAt": "2026-09-27T09:54:00.611Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:03.442Z"
+    },
+    {
+      "incidentId": "ALT-117464-4448186",
+      "flightId": 117464,
+      "firstBadPosition": 4448186,
+      "lastBadPosition": 4448357,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:01:19.095Z",
+      "lastBadRecordedAt": "2026-09-27T10:01:44.830Z"
+    },
+    {
+      "incidentId": "ALT-117464-4449280",
+      "flightId": 117464,
+      "firstBadPosition": 4449280,
+      "lastBadPosition": 4449280,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:06:03.723Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:03.723Z"
+    },
+    {
+      "incidentId": "ALT-117464-4449792",
+      "flightId": 117464,
+      "firstBadPosition": 4449792,
+      "lastBadPosition": 4450471,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T10:08:10.756Z",
+      "lastBadRecordedAt": "2026-09-27T10:11:08.745Z"
+    },
+    {
+      "incidentId": "ALT-117464-4451483",
+      "flightId": 117464,
+      "firstBadPosition": 4451483,
+      "lastBadPosition": 4451483,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:15:31.077Z",
+      "lastBadRecordedAt": "2026-09-27T10:15:31.077Z"
+    },
+    {
+      "incidentId": "ALT-117465-4444992",
+      "flightId": 117465,
+      "firstBadPosition": 4444992,
+      "lastBadPosition": 4445330,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:47:41.406Z",
+      "lastBadRecordedAt": "2026-09-27T09:49:06.681Z"
+    },
+    {
+      "incidentId": "ALT-117465-4446514",
+      "flightId": 117465,
+      "firstBadPosition": 4446514,
+      "lastBadPosition": 4446514,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:54:16.586Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:16.586Z"
+    },
+    {
+      "incidentId": "ALT-117467-4446382",
+      "flightId": 117467,
+      "firstBadPosition": 4446382,
+      "lastBadPosition": 4446382,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:53:36.209Z",
+      "lastBadRecordedAt": "2026-09-27T09:53:36.209Z"
+    },
+    {
+      "incidentId": "ALT-117468-4446804",
+      "flightId": 117468,
+      "firstBadPosition": 4446804,
+      "lastBadPosition": 4446804,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:55:28.432Z",
+      "lastBadRecordedAt": "2026-09-27T09:55:28.432Z"
+    },
+    {
+      "incidentId": "ALT-117469-4444596",
+      "flightId": 117469,
+      "firstBadPosition": 4444596,
+      "lastBadPosition": 4444596,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:45:46.240Z",
+      "lastBadRecordedAt": "2026-09-27T09:45:46.240Z"
+    },
+    {
+      "incidentId": "ALT-117469-4446134",
+      "flightId": 117469,
+      "firstBadPosition": 4446134,
+      "lastBadPosition": 4446134,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:52:31.285Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:31.285Z"
+    },
+    {
+      "incidentId": "ALT-117469-4447222",
+      "flightId": 117469,
+      "firstBadPosition": 4447222,
+      "lastBadPosition": 4447222,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:17.766Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:17.766Z"
+    },
+    {
+      "incidentId": "ALT-117470-4446557",
+      "flightId": 117470,
+      "firstBadPosition": 4446557,
+      "lastBadPosition": 4446557,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:54:26.689Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:26.689Z"
+    },
+    {
+      "incidentId": "ALT-117471-4444437",
+      "flightId": 117471,
+      "firstBadPosition": 4444437,
+      "lastBadPosition": 4444437,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:45:02.938Z",
+      "lastBadRecordedAt": "2026-09-27T09:45:02.938Z"
+    },
+    {
+      "incidentId": "ALT-117471-4445795",
+      "flightId": 117471,
+      "firstBadPosition": 4445795,
+      "lastBadPosition": 4446394,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:51:11.010Z",
+      "lastBadRecordedAt": "2026-09-27T09:53:39.349Z"
+    },
+    {
+      "incidentId": "ALT-117471-4447944",
+      "flightId": 117471,
+      "firstBadPosition": 4447944,
+      "lastBadPosition": 4447944,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:00:17.363Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:17.363Z"
+    },
+    {
+      "incidentId": "ALT-117475-4445751",
+      "flightId": 117475,
+      "firstBadPosition": 4445751,
+      "lastBadPosition": 4446014,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:50:55.581Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:01.284Z"
+    },
+    {
+      "incidentId": "ALT-117478-4446365",
+      "flightId": 117478,
+      "firstBadPosition": 4446365,
+      "lastBadPosition": 4446365,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:53:36.803Z",
+      "lastBadRecordedAt": "2026-09-27T09:53:36.803Z"
+    },
+    {
+      "incidentId": "ALT-117480-4446359",
+      "flightId": 117480,
+      "firstBadPosition": 4446359,
+      "lastBadPosition": 4446943,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:53:36.209Z",
+      "lastBadRecordedAt": "2026-09-27T09:56:05.625Z"
+    },
+    {
+      "incidentId": "ALT-117480-4447734",
+      "flightId": 117480,
+      "firstBadPosition": 4447734,
+      "lastBadPosition": 4448079,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:59:26.466Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:54.287Z"
+    },
+    {
+      "incidentId": "ALT-117480-4449103",
+      "flightId": 117480,
+      "firstBadPosition": 4449103,
+      "lastBadPosition": 4449103,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:05:16.758Z",
+      "lastBadRecordedAt": "2026-09-27T10:05:16.758Z"
+    },
+    {
+      "incidentId": "ALT-117481-4447250",
+      "flightId": 117481,
+      "firstBadPosition": 4447250,
+      "lastBadPosition": 4447602,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:57:21.319Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:40.400Z"
+    },
+    {
+      "incidentId": "ALT-117481-4448374",
+      "flightId": 117481,
+      "firstBadPosition": 4448374,
+      "lastBadPosition": 4448802,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T10:02:06.702Z",
+      "lastBadRecordedAt": "2026-09-27T10:03:54.968Z"
+    },
+    {
+      "incidentId": "ALT-117483-4446775",
+      "flightId": 117483,
+      "firstBadPosition": 4446775,
+      "lastBadPosition": 4446775,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:55:25.290Z",
+      "lastBadRecordedAt": "2026-09-27T09:55:25.290Z"
+    },
+    {
+      "incidentId": "ALT-117484-4445861",
+      "flightId": 117484,
+      "firstBadPosition": 4445861,
+      "lastBadPosition": 4446121,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:51:26.932Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:31.594Z"
+    },
+    {
+      "incidentId": "ALT-117484-4446619",
+      "flightId": 117484,
+      "firstBadPosition": 4446619,
+      "lastBadPosition": 4446619,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:54:45.491Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:45.491Z"
+    },
+    {
+      "incidentId": "ALT-117484-4447228",
+      "flightId": 117484,
+      "firstBadPosition": 4447228,
+      "lastBadPosition": 4447228,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:17.309Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:17.309Z"
+    },
+    {
+      "incidentId": "ALT-117485-4446143",
+      "flightId": 117485,
+      "firstBadPosition": 4446143,
+      "lastBadPosition": 4446464,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:52:34.466Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:01.567Z"
+    },
+    {
+      "incidentId": "ALT-117485-4447236",
+      "flightId": 117485,
+      "firstBadPosition": 4447236,
+      "lastBadPosition": 4447236,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:17.358Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:17.358Z"
+    },
+    {
+      "incidentId": "ALT-117485-4447930",
+      "flightId": 117485,
+      "firstBadPosition": 4447930,
+      "lastBadPosition": 4448190,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:00:13.898Z",
+      "lastBadRecordedAt": "2026-09-27T10:01:19.544Z"
+    },
+    {
+      "incidentId": "ALT-117485-4449194",
+      "flightId": 117485,
+      "firstBadPosition": 4449194,
+      "lastBadPosition": 4449194,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:05:40.192Z",
+      "lastBadRecordedAt": "2026-09-27T10:05:40.192Z"
+    },
+    {
+      "incidentId": "ALT-117486-4445600",
+      "flightId": 117486,
+      "firstBadPosition": 4445600,
+      "lastBadPosition": 4445600,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:50:21.423Z",
+      "lastBadRecordedAt": "2026-09-27T09:50:21.423Z"
+    },
+    {
+      "incidentId": "ALT-117486-4446384",
+      "flightId": 117486,
+      "firstBadPosition": 4446384,
+      "lastBadPosition": 4446384,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:53:40.240Z",
+      "lastBadRecordedAt": "2026-09-27T09:53:40.240Z"
+    },
+    {
+      "incidentId": "ALT-117486-4449199",
+      "flightId": 117486,
+      "firstBadPosition": 4449199,
+      "lastBadPosition": 4449199,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:05:40.192Z",
+      "lastBadRecordedAt": "2026-09-27T10:05:40.192Z"
+    },
+    {
+      "incidentId": "ALT-117493-4447783",
+      "flightId": 117493,
+      "firstBadPosition": 4447783,
+      "lastBadPosition": 4448041,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:59:26.928Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:42.053Z"
+    },
+    {
+      "incidentId": "ALT-117493-4449139",
+      "flightId": 117493,
+      "firstBadPosition": 4449139,
+      "lastBadPosition": 4449139,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:05:26.206Z",
+      "lastBadRecordedAt": "2026-09-27T10:05:26.206Z"
+    },
+    {
+      "incidentId": "ALT-117493-4450987",
+      "flightId": 117493,
+      "firstBadPosition": 4450987,
+      "lastBadPosition": 4451969,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:13:29.087Z",
+      "lastBadRecordedAt": "2026-09-27T10:17:29.564Z"
+    },
+    {
+      "incidentId": "ALT-117493-4453652",
+      "flightId": 117493,
+      "firstBadPosition": 4453652,
+      "lastBadPosition": 4453652,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:24:47.944Z",
+      "lastBadRecordedAt": "2026-09-27T10:24:47.944Z"
+    },
+    {
+      "incidentId": "ALT-117495-4445439",
+      "flightId": 117495,
+      "firstBadPosition": 4445439,
+      "lastBadPosition": 4446137,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:49:38.414Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:34.360Z"
+    },
+    {
+      "incidentId": "ALT-117495-4446698",
+      "flightId": 117495,
+      "firstBadPosition": 4446698,
+      "lastBadPosition": 4446698,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:55:05.964Z",
+      "lastBadRecordedAt": "2026-09-27T09:55:05.964Z"
+    },
+    {
+      "incidentId": "ALT-117495-4447224",
+      "flightId": 117495,
+      "firstBadPosition": 4447224,
+      "lastBadPosition": 4447224,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:18.097Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:18.097Z"
+    },
+    {
+      "incidentId": "ALT-117495-4448262",
+      "flightId": 117495,
+      "firstBadPosition": 4448262,
+      "lastBadPosition": 4448430,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:01:41.936Z",
+      "lastBadRecordedAt": "2026-09-27T10:02:24.173Z"
+    },
+    {
+      "incidentId": "ALT-117495-4449108",
+      "flightId": 117495,
+      "firstBadPosition": 4449108,
+      "lastBadPosition": 4449108,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:05:20.387Z",
+      "lastBadRecordedAt": "2026-09-27T10:05:20.387Z"
+    },
+    {
+      "incidentId": "ALT-117496-4446348",
+      "flightId": 117496,
+      "firstBadPosition": 4446348,
+      "lastBadPosition": 4446348,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:53:27.727Z",
+      "lastBadRecordedAt": "2026-09-27T09:53:27.727Z"
+    },
+    {
+      "incidentId": "ALT-117496-4447375",
+      "flightId": 117496,
+      "firstBadPosition": 4447375,
+      "lastBadPosition": 4447375,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:50.647Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:50.647Z"
+    },
+    {
+      "incidentId": "ALT-117496-4448229",
+      "flightId": 117496,
+      "firstBadPosition": 4448229,
+      "lastBadPosition": 4448229,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:01:24.903Z",
+      "lastBadRecordedAt": "2026-09-27T10:01:24.903Z"
+    },
+    {
+      "incidentId": "ALT-117496-4450350",
+      "flightId": 117496,
+      "firstBadPosition": 4450350,
+      "lastBadPosition": 4450350,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:10:33.681Z",
+      "lastBadRecordedAt": "2026-09-27T10:10:33.681Z"
+    },
+    {
+      "incidentId": "ALT-117497-4445855",
+      "flightId": 117497,
+      "firstBadPosition": 4445855,
+      "lastBadPosition": 4446200,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:51:24.201Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:49.824Z"
+    },
+    {
+      "incidentId": "ALT-117497-4447304",
+      "flightId": 117497,
+      "firstBadPosition": 4447304,
+      "lastBadPosition": 4447304,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:36.417Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:36.417Z"
+    },
+    {
+      "incidentId": "ALT-117498-4446952",
+      "flightId": 117498,
+      "firstBadPosition": 4446952,
+      "lastBadPosition": 4447130,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:56:05.570Z",
+      "lastBadRecordedAt": "2026-09-27T09:56:56.494Z"
+    },
+    {
+      "incidentId": "ALT-117498-4448174",
+      "flightId": 117498,
+      "firstBadPosition": 4448174,
+      "lastBadPosition": 4448174,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:01:19.516Z",
+      "lastBadRecordedAt": "2026-09-27T10:01:19.516Z"
+    },
+    {
+      "incidentId": "ALT-117499-4446027",
+      "flightId": 117499,
+      "firstBadPosition": 4446027,
+      "lastBadPosition": 4446027,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:52:06.962Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:06.962Z"
+    },
+    {
+      "incidentId": "ALT-117499-4447563",
+      "flightId": 117499,
+      "firstBadPosition": 4447563,
+      "lastBadPosition": 4447563,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:58:40.291Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:40.291Z"
+    },
+    {
+      "incidentId": "ALT-117499-4449094",
+      "flightId": 117499,
+      "firstBadPosition": 4449094,
+      "lastBadPosition": 4449347,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:05:17.195Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:14.986Z"
+    },
+    {
+      "incidentId": "ALT-117500-4445947",
+      "flightId": 117500,
+      "firstBadPosition": 4445947,
+      "lastBadPosition": 4445947,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:51:48.965Z",
+      "lastBadRecordedAt": "2026-09-27T09:51:48.965Z"
+    },
+    {
+      "incidentId": "ALT-117500-4446784",
+      "flightId": 117500,
+      "firstBadPosition": 4446784,
+      "lastBadPosition": 4447404,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:55:16.360Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:03.440Z"
+    },
+    {
+      "incidentId": "ALT-117500-4449028",
+      "flightId": 117500,
+      "firstBadPosition": 4449028,
+      "lastBadPosition": 4449028,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:04:56.948Z",
+      "lastBadRecordedAt": "2026-09-27T10:04:56.948Z"
+    },
+    {
+      "incidentId": "ALT-117500-4449536",
+      "flightId": 117500,
+      "firstBadPosition": 4449536,
+      "lastBadPosition": 4449536,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:07:08.688Z",
+      "lastBadRecordedAt": "2026-09-27T10:07:08.688Z"
+    },
+    {
+      "incidentId": "ALT-117501-4446468",
+      "flightId": 117501,
+      "firstBadPosition": 4446468,
+      "lastBadPosition": 4446468,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:54:01.953Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:01.953Z"
+    },
+    {
+      "incidentId": "ALT-117501-4447150",
+      "flightId": 117501,
+      "firstBadPosition": 4447150,
+      "lastBadPosition": 4447421,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:56:56.633Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:03.435Z"
+    },
+    {
+      "incidentId": "ALT-117501-4448021",
+      "flightId": 117501,
+      "firstBadPosition": 4448021,
+      "lastBadPosition": 4448187,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:00:36.021Z",
+      "lastBadRecordedAt": "2026-09-27T10:01:20.064Z"
+    },
+    {
+      "incidentId": "ALT-117501-4449281",
+      "flightId": 117501,
+      "firstBadPosition": 4449281,
+      "lastBadPosition": 4449281,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:06:03.586Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:03.586Z"
+    },
+    {
+      "incidentId": "ALT-117501-4449790",
+      "flightId": 117501,
+      "firstBadPosition": 4449790,
+      "lastBadPosition": 4450059,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:08:12.724Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:20.004Z"
+    },
+    {
+      "incidentId": "ALT-117501-4450629",
+      "flightId": 117501,
+      "firstBadPosition": 4450629,
+      "lastBadPosition": 4450629,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:11:52.625Z",
+      "lastBadRecordedAt": "2026-09-27T10:11:52.625Z"
+    },
+    {
+      "incidentId": "ALT-117503-4446074",
+      "flightId": 117503,
+      "firstBadPosition": 4446074,
+      "lastBadPosition": 4446074,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:52:19.271Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:19.271Z"
+    },
+    {
+      "incidentId": "ALT-117503-4447170",
+      "flightId": 117503,
+      "firstBadPosition": 4447170,
+      "lastBadPosition": 4447170,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:01.737Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:01.737Z"
+    },
+    {
+      "incidentId": "ALT-117504-4445840",
+      "flightId": 117504,
+      "firstBadPosition": 4445840,
+      "lastBadPosition": 4446193,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:51:20.123Z",
+      "lastBadRecordedAt": "2026-09-27T09:52:46.910Z"
+    },
+    {
+      "incidentId": "ALT-117504-4446684",
+      "flightId": 117504,
+      "firstBadPosition": 4446684,
+      "lastBadPosition": 4446684,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:54:57.568Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:57.568Z"
+    },
+    {
+      "incidentId": "ALT-117504-4447297",
+      "flightId": 117504,
+      "firstBadPosition": 4447297,
+      "lastBadPosition": 4447727,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:57:34.045Z",
+      "lastBadRecordedAt": "2026-09-27T09:59:24.579Z"
+    },
+    {
+      "incidentId": "ALT-117504-4448498",
+      "flightId": 117504,
+      "firstBadPosition": 4448498,
+      "lastBadPosition": 4449858,
+      "badPositionCount": 6,
+      "firstBadRecordedAt": "2026-09-27T10:02:41.438Z",
+      "lastBadRecordedAt": "2026-09-27T10:08:29.161Z"
+    },
+    {
+      "incidentId": "ALT-117505-4447413",
+      "flightId": 117505,
+      "firstBadPosition": 4447413,
+      "lastBadPosition": 4447413,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:58:03.433Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:03.433Z"
+    },
+    {
+      "incidentId": "ALT-117505-4447932",
+      "flightId": 117505,
+      "firstBadPosition": 4447932,
+      "lastBadPosition": 4447932,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:00:14.445Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:14.445Z"
+    },
+    {
+      "incidentId": "ALT-117505-4448707",
+      "flightId": 117505,
+      "firstBadPosition": 4448707,
+      "lastBadPosition": 4449542,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T10:03:26.562Z",
+      "lastBadRecordedAt": "2026-09-27T10:07:08.166Z"
+    },
+    {
+      "incidentId": "ALT-117506-4447269",
+      "flightId": 117506,
+      "firstBadPosition": 4447269,
+      "lastBadPosition": 4447269,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:24.542Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:24.542Z"
+    },
+    {
+      "incidentId": "ALT-117506-4449400",
+      "flightId": 117506,
+      "firstBadPosition": 4449400,
+      "lastBadPosition": 4449400,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:06:27.347Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:27.347Z"
+    },
+    {
+      "incidentId": "ALT-117507-4448244",
+      "flightId": 117507,
+      "firstBadPosition": 4448244,
+      "lastBadPosition": 4448244,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:01:34.917Z",
+      "lastBadRecordedAt": "2026-09-27T10:01:34.917Z"
+    },
+    {
+      "incidentId": "ALT-117507-4449950",
+      "flightId": 117507,
+      "firstBadPosition": 4449950,
+      "lastBadPosition": 4449950,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:08:51.259Z",
+      "lastBadRecordedAt": "2026-09-27T10:08:51.259Z"
+    },
+    {
+      "incidentId": "ALT-117508-4448318",
+      "flightId": 117508,
+      "firstBadPosition": 4448318,
+      "lastBadPosition": 4448318,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:01:54.715Z",
+      "lastBadRecordedAt": "2026-09-27T10:01:54.715Z"
+    },
+    {
+      "incidentId": "ALT-117508-4449423",
+      "flightId": 117508,
+      "firstBadPosition": 4449423,
+      "lastBadPosition": 4449423,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:06:39.930Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:39.930Z"
+    },
+    {
+      "incidentId": "ALT-117508-4452084",
+      "flightId": 117508,
+      "firstBadPosition": 4452084,
+      "lastBadPosition": 4452084,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:17:58.041Z",
+      "lastBadRecordedAt": "2026-09-27T10:17:58.041Z"
+    },
+    {
+      "incidentId": "ALT-117508-4452911",
+      "flightId": 117508,
+      "firstBadPosition": 4452911,
+      "lastBadPosition": 4452911,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:21:35.878Z",
+      "lastBadRecordedAt": "2026-09-27T10:21:35.878Z"
+    },
+    {
+      "incidentId": "ALT-117509-4447234",
+      "flightId": 117509,
+      "firstBadPosition": 4447234,
+      "lastBadPosition": 4447234,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:57:18.808Z",
+      "lastBadRecordedAt": "2026-09-27T09:57:18.808Z"
+    },
+    {
+      "incidentId": "ALT-117509-4448445",
+      "flightId": 117509,
+      "firstBadPosition": 4448445,
+      "lastBadPosition": 4448445,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:02:24.999Z",
+      "lastBadRecordedAt": "2026-09-27T10:02:24.999Z"
+    },
+    {
+      "incidentId": "ALT-117511-4447402",
+      "flightId": 117511,
+      "firstBadPosition": 4447402,
+      "lastBadPosition": 4447402,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:58:03.431Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:03.431Z"
+    },
+    {
+      "incidentId": "ALT-117512-4446718",
+      "flightId": 117512,
+      "firstBadPosition": 4446718,
+      "lastBadPosition": 4446886,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:55:06.885Z",
+      "lastBadRecordedAt": "2026-09-27T09:55:49.709Z"
+    },
+    {
+      "incidentId": "ALT-117512-4449119",
+      "flightId": 117512,
+      "firstBadPosition": 4449119,
+      "lastBadPosition": 4449119,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:05:20.005Z",
+      "lastBadRecordedAt": "2026-09-27T10:05:20.005Z"
+    },
+    {
+      "incidentId": "ALT-117513-4446593",
+      "flightId": 117513,
+      "firstBadPosition": 4446593,
+      "lastBadPosition": 4446593,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:54:19.169Z",
+      "lastBadRecordedAt": "2026-09-27T09:54:19.169Z"
+    },
+    {
+      "incidentId": "ALT-117514-4449210",
+      "flightId": 117514,
+      "firstBadPosition": 4449210,
+      "lastBadPosition": 4449210,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:05:44.417Z",
+      "lastBadRecordedAt": "2026-09-27T10:05:44.417Z"
+    },
+    {
+      "incidentId": "ALT-117515-4447287",
+      "flightId": 117515,
+      "firstBadPosition": 4447287,
+      "lastBadPosition": 4447463,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T09:57:26.791Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:10.114Z"
+    },
+    {
+      "incidentId": "ALT-117515-4447976",
+      "flightId": 117515,
+      "firstBadPosition": 4447976,
+      "lastBadPosition": 4448146,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:00:20.944Z",
+      "lastBadRecordedAt": "2026-09-27T10:01:06.833Z"
+    },
+    {
+      "incidentId": "ALT-117516-4447562",
+      "flightId": 117516,
+      "firstBadPosition": 4447562,
+      "lastBadPosition": 4447562,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:58:40.237Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:40.237Z"
+    },
+    {
+      "incidentId": "ALT-117516-4448332",
+      "flightId": 117516,
+      "firstBadPosition": 4448332,
+      "lastBadPosition": 4448332,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:02:00.335Z",
+      "lastBadRecordedAt": "2026-09-27T10:02:00.335Z"
+    },
+    {
+      "incidentId": "ALT-117516-4448935",
+      "flightId": 117516,
+      "firstBadPosition": 4448935,
+      "lastBadPosition": 4448935,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:04:33.583Z",
+      "lastBadRecordedAt": "2026-09-27T10:04:33.583Z"
+    },
+    {
+      "incidentId": "ALT-117516-4449780",
+      "flightId": 117516,
+      "firstBadPosition": 4449780,
+      "lastBadPosition": 4450136,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T10:08:09.689Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:38.138Z"
+    },
+    {
+      "incidentId": "ALT-117516-4450620",
+      "flightId": 117516,
+      "firstBadPosition": 4450620,
+      "lastBadPosition": 4450620,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:11:45.904Z",
+      "lastBadRecordedAt": "2026-09-27T10:11:45.904Z"
+    },
+    {
+      "incidentId": "ALT-117517-4447735",
+      "flightId": 117517,
+      "firstBadPosition": 4447735,
+      "lastBadPosition": 4447735,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:59:19.985Z",
+      "lastBadRecordedAt": "2026-09-27T09:59:19.985Z"
+    },
+    {
+      "incidentId": "ALT-117517-4448595",
+      "flightId": 117517,
+      "firstBadPosition": 4448595,
+      "lastBadPosition": 4448595,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:03:03.252Z",
+      "lastBadRecordedAt": "2026-09-27T10:03:03.252Z"
+    },
+    {
+      "incidentId": "ALT-117518-4447484",
+      "flightId": 117518,
+      "firstBadPosition": 4447484,
+      "lastBadPosition": 4447484,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:58:17.492Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:17.492Z"
+    },
+    {
+      "incidentId": "ALT-117518-4448423",
+      "flightId": 117518,
+      "firstBadPosition": 4448423,
+      "lastBadPosition": 4448423,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:02:22.461Z",
+      "lastBadRecordedAt": "2026-09-27T10:02:22.461Z"
+    },
+    {
+      "incidentId": "ALT-117520-4448660",
+      "flightId": 117520,
+      "firstBadPosition": 4448660,
+      "lastBadPosition": 4449330,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:03:12.075Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:14.987Z"
+    },
+    {
+      "incidentId": "ALT-117520-4450592",
+      "flightId": 117520,
+      "firstBadPosition": 4450592,
+      "lastBadPosition": 4450754,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:11:42.152Z",
+      "lastBadRecordedAt": "2026-09-27T10:12:27.113Z"
+    },
+    {
+      "incidentId": "ALT-117521-4448039",
+      "flightId": 117521,
+      "firstBadPosition": 4448039,
+      "lastBadPosition": 4448039,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:00:41.833Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:41.833Z"
+    },
+    {
+      "incidentId": "ALT-117521-4449390",
+      "flightId": 117521,
+      "firstBadPosition": 4449390,
+      "lastBadPosition": 4449390,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:06:31.933Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:31.933Z"
+    },
+    {
+      "incidentId": "ALT-117524-4448839",
+      "flightId": 117524,
+      "firstBadPosition": 4448839,
+      "lastBadPosition": 4448839,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:04:08.629Z",
+      "lastBadRecordedAt": "2026-09-27T10:04:08.629Z"
+    },
+    {
+      "incidentId": "ALT-117524-4449421",
+      "flightId": 117524,
+      "firstBadPosition": 4449421,
+      "lastBadPosition": 4449421,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:06:40.426Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:40.426Z"
+    },
+    {
+      "incidentId": "ALT-117524-4450679",
+      "flightId": 117524,
+      "firstBadPosition": 4450679,
+      "lastBadPosition": 4451007,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:12:07.590Z",
+      "lastBadRecordedAt": "2026-09-27T10:13:36.851Z"
+    },
+    {
+      "incidentId": "ALT-117527-4447441",
+      "flightId": 117527,
+      "firstBadPosition": 4447441,
+      "lastBadPosition": 4447441,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:58:09.252Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:09.252Z"
+    },
+    {
+      "incidentId": "ALT-117530-4450421",
+      "flightId": 117530,
+      "firstBadPosition": 4450421,
+      "lastBadPosition": 4450421,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:10:49.488Z",
+      "lastBadRecordedAt": "2026-09-27T10:10:49.488Z"
+    },
+    {
+      "incidentId": "ALT-117531-4450812",
+      "flightId": 117531,
+      "firstBadPosition": 4450812,
+      "lastBadPosition": 4450812,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:12:41.778Z",
+      "lastBadRecordedAt": "2026-09-27T10:12:41.778Z"
+    },
+    {
+      "incidentId": "ALT-117531-4451963",
+      "flightId": 117531,
+      "firstBadPosition": 4451963,
+      "lastBadPosition": 4452724,
+      "badPositionCount": 5,
+      "firstBadRecordedAt": "2026-09-27T10:17:30.132Z",
+      "lastBadRecordedAt": "2026-09-27T10:20:45.633Z"
+    },
+    {
+      "incidentId": "ALT-117531-4453192",
+      "flightId": 117531,
+      "firstBadPosition": 4453192,
+      "lastBadPosition": 4453192,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:22:54.947Z",
+      "lastBadRecordedAt": "2026-09-27T10:22:54.947Z"
+    },
+    {
+      "incidentId": "ALT-117532-4447790",
+      "flightId": 117532,
+      "firstBadPosition": 4447790,
+      "lastBadPosition": 4448557,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T09:59:37.222Z",
+      "lastBadRecordedAt": "2026-09-27T10:02:53.255Z"
+    },
+    {
+      "incidentId": "ALT-117532-4449561",
+      "flightId": 117532,
+      "firstBadPosition": 4449561,
+      "lastBadPosition": 4449561,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:07:15.130Z",
+      "lastBadRecordedAt": "2026-09-27T10:07:15.130Z"
+    },
+    {
+      "incidentId": "ALT-117532-4450980",
+      "flightId": 117532,
+      "firstBadPosition": 4450980,
+      "lastBadPosition": 4451602,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:13:29.089Z",
+      "lastBadRecordedAt": "2026-09-27T10:15:59.887Z"
+    },
+    {
+      "incidentId": "ALT-117532-4452548",
+      "flightId": 117532,
+      "firstBadPosition": 4452548,
+      "lastBadPosition": 4452959,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:19:54.925Z",
+      "lastBadRecordedAt": "2026-09-27T10:21:44.783Z"
+    },
+    {
+      "incidentId": "ALT-117534-4447972",
+      "flightId": 117534,
+      "firstBadPosition": 4447972,
+      "lastBadPosition": 4448394,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:00:23.948Z",
+      "lastBadRecordedAt": "2026-09-27T10:02:13.089Z"
+    },
+    {
+      "incidentId": "ALT-117535-4447433",
+      "flightId": 117535,
+      "firstBadPosition": 4447433,
+      "lastBadPosition": 4447433,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:58:06.379Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:06.379Z"
+    },
+    {
+      "incidentId": "ALT-117538-4448094",
+      "flightId": 117538,
+      "firstBadPosition": 4448094,
+      "lastBadPosition": 4448094,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:00:57.887Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:57.887Z"
+    },
+    {
+      "incidentId": "ALT-117538-4448614",
+      "flightId": 117538,
+      "firstBadPosition": 4448614,
+      "lastBadPosition": 4448614,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:03:09.372Z",
+      "lastBadRecordedAt": "2026-09-27T10:03:09.372Z"
+    },
+    {
+      "incidentId": "ALT-117538-4449285",
+      "flightId": 117538,
+      "firstBadPosition": 4449285,
+      "lastBadPosition": 4449285,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:06:03.453Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:03.453Z"
+    },
+    {
+      "incidentId": "ALT-117538-4450066",
+      "flightId": 117538,
+      "firstBadPosition": 4450066,
+      "lastBadPosition": 4450066,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:09:19.297Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:19.297Z"
+    },
+    {
+      "incidentId": "ALT-117538-4450556",
+      "flightId": 117538,
+      "firstBadPosition": 4450556,
+      "lastBadPosition": 4451224,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T10:11:29.825Z",
+      "lastBadRecordedAt": "2026-09-27T10:14:25.308Z"
+    },
+    {
+      "incidentId": "ALT-117538-4452021",
+      "flightId": 117538,
+      "firstBadPosition": 4452021,
+      "lastBadPosition": 4452021,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:17:41.399Z",
+      "lastBadRecordedAt": "2026-09-27T10:17:41.399Z"
+    },
+    {
+      "incidentId": "ALT-117542-4451456",
+      "flightId": 117542,
+      "firstBadPosition": 4451456,
+      "lastBadPosition": 4451456,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:15:25.892Z",
+      "lastBadRecordedAt": "2026-09-27T10:15:25.892Z"
+    },
+    {
+      "incidentId": "ALT-117543-4447631",
+      "flightId": 117543,
+      "firstBadPosition": 4447631,
+      "lastBadPosition": 4447631,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T09:58:55.047Z",
+      "lastBadRecordedAt": "2026-09-27T09:58:55.047Z"
+    },
+    {
+      "incidentId": "ALT-117543-4448145",
+      "flightId": 117543,
+      "firstBadPosition": 4448145,
+      "lastBadPosition": 4448145,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:01:06.900Z",
+      "lastBadRecordedAt": "2026-09-27T10:01:06.900Z"
+    },
+    {
+      "incidentId": "ALT-117543-4448742",
+      "flightId": 117543,
+      "firstBadPosition": 4448742,
+      "lastBadPosition": 4449153,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:03:39.297Z",
+      "lastBadRecordedAt": "2026-09-27T10:05:26.803Z"
+    },
+    {
+      "incidentId": "ALT-117545-4447978",
+      "flightId": 117545,
+      "firstBadPosition": 4447978,
+      "lastBadPosition": 4447978,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:00:25.571Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:25.571Z"
+    },
+    {
+      "incidentId": "ALT-117549-4451147",
+      "flightId": 117549,
+      "firstBadPosition": 4451147,
+      "lastBadPosition": 4451147,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:14:07.685Z",
+      "lastBadRecordedAt": "2026-09-27T10:14:07.685Z"
+    },
+    {
+      "incidentId": "ALT-117549-4451855",
+      "flightId": 117549,
+      "firstBadPosition": 4451855,
+      "lastBadPosition": 4451855,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:17:01.285Z",
+      "lastBadRecordedAt": "2026-09-27T10:17:01.285Z"
+    },
+    {
+      "incidentId": "ALT-117550-4447904",
+      "flightId": 117550,
+      "firstBadPosition": 4447904,
+      "lastBadPosition": 4448841,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T09:59:52.651Z",
+      "lastBadRecordedAt": "2026-09-27T10:04:08.408Z"
+    },
+    {
+      "incidentId": "ALT-117550-4451101",
+      "flightId": 117550,
+      "firstBadPosition": 4451101,
+      "lastBadPosition": 4451101,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:13:57.744Z",
+      "lastBadRecordedAt": "2026-09-27T10:13:57.744Z"
+    },
+    {
+      "incidentId": "ALT-117551-4447990",
+      "flightId": 117551,
+      "firstBadPosition": 4447990,
+      "lastBadPosition": 4447990,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:00:31.746Z",
+      "lastBadRecordedAt": "2026-09-27T10:00:31.746Z"
+    },
+    {
+      "incidentId": "ALT-117551-4448591",
+      "flightId": 117551,
+      "firstBadPosition": 4448591,
+      "lastBadPosition": 4449348,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:03:06.288Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:22.348Z"
+    },
+    {
+      "incidentId": "ALT-117551-4450947",
+      "flightId": 117551,
+      "firstBadPosition": 4450947,
+      "lastBadPosition": 4451832,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:13:17.029Z",
+      "lastBadRecordedAt": "2026-09-27T10:16:55.976Z"
+    },
+    {
+      "incidentId": "ALT-117551-4452432",
+      "flightId": 117551,
+      "firstBadPosition": 4452432,
+      "lastBadPosition": 4452432,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:19:28.563Z",
+      "lastBadRecordedAt": "2026-09-27T10:19:28.563Z"
+    },
+    {
+      "incidentId": "ALT-117552-4450340",
+      "flightId": 117552,
+      "firstBadPosition": 4450340,
+      "lastBadPosition": 4450340,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:10:30.516Z",
+      "lastBadRecordedAt": "2026-09-27T10:10:30.516Z"
+    },
+    {
+      "incidentId": "ALT-117552-4450817",
+      "flightId": 117552,
+      "firstBadPosition": 4450817,
+      "lastBadPosition": 4450817,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:12:42.132Z",
+      "lastBadRecordedAt": "2026-09-27T10:12:42.132Z"
+    },
+    {
+      "incidentId": "ALT-117554-4451912",
+      "flightId": 117554,
+      "firstBadPosition": 4451912,
+      "lastBadPosition": 4451912,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:17:17.763Z",
+      "lastBadRecordedAt": "2026-09-27T10:17:17.763Z"
+    },
+    {
+      "incidentId": "ALT-117555-4451701",
+      "flightId": 117555,
+      "firstBadPosition": 4451701,
+      "lastBadPosition": 4451701,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:16:24.356Z",
+      "lastBadRecordedAt": "2026-09-27T10:16:24.356Z"
+    },
+    {
+      "incidentId": "ALT-117556-4448354",
+      "flightId": 117556,
+      "firstBadPosition": 4448354,
+      "lastBadPosition": 4448526,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:02:01.077Z",
+      "lastBadRecordedAt": "2026-09-27T10:02:46.218Z"
+    },
+    {
+      "incidentId": "ALT-117556-4449530",
+      "flightId": 117556,
+      "firstBadPosition": 4449530,
+      "lastBadPosition": 4449703,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:07:04.076Z",
+      "lastBadRecordedAt": "2026-09-27T10:07:51.860Z"
+    },
+    {
+      "incidentId": "ALT-117556-4450230",
+      "flightId": 117556,
+      "firstBadPosition": 4450230,
+      "lastBadPosition": 4450230,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:09:55.764Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:55.764Z"
+    },
+    {
+      "incidentId": "ALT-117556-4451213",
+      "flightId": 117556,
+      "firstBadPosition": 4451213,
+      "lastBadPosition": 4451213,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:14:07.548Z",
+      "lastBadRecordedAt": "2026-09-27T10:14:07.548Z"
+    },
+    {
+      "incidentId": "ALT-117558-4450497",
+      "flightId": 117558,
+      "firstBadPosition": 4450497,
+      "lastBadPosition": 4450497,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:11:14.311Z",
+      "lastBadRecordedAt": "2026-09-27T10:11:14.311Z"
+    },
+    {
+      "incidentId": "ALT-117559-4448544",
+      "flightId": 117559,
+      "firstBadPosition": 4448544,
+      "lastBadPosition": 4448544,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:02:49.793Z",
+      "lastBadRecordedAt": "2026-09-27T10:02:49.793Z"
+    },
+    {
+      "incidentId": "ALT-117559-4449812",
+      "flightId": 117559,
+      "firstBadPosition": 4449812,
+      "lastBadPosition": 4449987,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:08:15.853Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:00.920Z"
+    },
+    {
+      "incidentId": "ALT-117559-4451585",
+      "flightId": 117559,
+      "firstBadPosition": 4451585,
+      "lastBadPosition": 4451585,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:15:57.290Z",
+      "lastBadRecordedAt": "2026-09-27T10:15:57.290Z"
+    },
+    {
+      "incidentId": "ALT-117559-4452114",
+      "flightId": 117559,
+      "firstBadPosition": 4452114,
+      "lastBadPosition": 4452114,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:18:06.450Z",
+      "lastBadRecordedAt": "2026-09-27T10:18:06.450Z"
+    },
+    {
+      "incidentId": "ALT-117559-4452863",
+      "flightId": 117559,
+      "firstBadPosition": 4452863,
+      "lastBadPosition": 4452863,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:21:22.088Z",
+      "lastBadRecordedAt": "2026-09-27T10:21:22.088Z"
+    },
+    {
+      "incidentId": "ALT-117561-4450814",
+      "flightId": 117561,
+      "firstBadPosition": 4450814,
+      "lastBadPosition": 4450814,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:12:42.682Z",
+      "lastBadRecordedAt": "2026-09-27T10:12:42.682Z"
+    },
+    {
+      "incidentId": "ALT-117567-4450539",
+      "flightId": 117567,
+      "firstBadPosition": 4450539,
+      "lastBadPosition": 4450539,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:11:27.394Z",
+      "lastBadRecordedAt": "2026-09-27T10:11:27.394Z"
+    },
+    {
+      "incidentId": "ALT-117567-4451470",
+      "flightId": 117567,
+      "firstBadPosition": 4451470,
+      "lastBadPosition": 4451470,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:15:28.154Z",
+      "lastBadRecordedAt": "2026-09-27T10:15:28.154Z"
+    },
+    {
+      "incidentId": "ALT-117569-4451885",
+      "flightId": 117569,
+      "firstBadPosition": 4451885,
+      "lastBadPosition": 4451885,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:16:54.929Z",
+      "lastBadRecordedAt": "2026-09-27T10:16:54.929Z"
+    },
+    {
+      "incidentId": "ALT-117571-4451378",
+      "flightId": 117571,
+      "firstBadPosition": 4451378,
+      "lastBadPosition": 4451378,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:15:06.009Z",
+      "lastBadRecordedAt": "2026-09-27T10:15:06.009Z"
+    },
+    {
+      "incidentId": "ALT-117573-4449306",
+      "flightId": 117573,
+      "firstBadPosition": 4449306,
+      "lastBadPosition": 4449732,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T10:06:10.062Z",
+      "lastBadRecordedAt": "2026-09-27T10:07:58.769Z"
+    },
+    {
+      "incidentId": "ALT-117573-4450981",
+      "flightId": 117573,
+      "firstBadPosition": 4450981,
+      "lastBadPosition": 4450981,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:13:29.424Z",
+      "lastBadRecordedAt": "2026-09-27T10:13:29.424Z"
+    },
+    {
+      "incidentId": "ALT-117573-4451605",
+      "flightId": 117573,
+      "firstBadPosition": 4451605,
+      "lastBadPosition": 4451605,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:16:01.612Z",
+      "lastBadRecordedAt": "2026-09-27T10:16:01.612Z"
+    },
+    {
+      "incidentId": "ALT-117573-4452304",
+      "flightId": 117573,
+      "firstBadPosition": 4452304,
+      "lastBadPosition": 4452963,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:18:54.485Z",
+      "lastBadRecordedAt": "2026-09-27T10:21:32.514Z"
+    },
+    {
+      "incidentId": "ALT-117574-4452973",
+      "flightId": 117574,
+      "firstBadPosition": 4452973,
+      "lastBadPosition": 4452973,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:21:51.080Z",
+      "lastBadRecordedAt": "2026-09-27T10:21:51.080Z"
+    },
+    {
+      "incidentId": "ALT-117574-4453503",
+      "flightId": 117574,
+      "firstBadPosition": 4453503,
+      "lastBadPosition": 4453503,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:24:21.950Z",
+      "lastBadRecordedAt": "2026-09-27T10:24:21.950Z"
+    },
+    {
+      "incidentId": "ALT-117575-4449093",
+      "flightId": 117575,
+      "firstBadPosition": 4449093,
+      "lastBadPosition": 4449093,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:05:15.382Z",
+      "lastBadRecordedAt": "2026-09-27T10:05:15.382Z"
+    },
+    {
+      "incidentId": "ALT-117577-4450638",
+      "flightId": 117577,
+      "firstBadPosition": 4450638,
+      "lastBadPosition": 4450638,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:11:55.601Z",
+      "lastBadRecordedAt": "2026-09-27T10:11:55.601Z"
+    },
+    {
+      "incidentId": "ALT-117578-4450424",
+      "flightId": 117578,
+      "firstBadPosition": 4450424,
+      "lastBadPosition": 4450424,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:10:55.267Z",
+      "lastBadRecordedAt": "2026-09-27T10:10:55.267Z"
+    },
+    {
+      "incidentId": "ALT-117578-4450983",
+      "flightId": 117578,
+      "firstBadPosition": 4450983,
+      "lastBadPosition": 4450983,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:13:30.110Z",
+      "lastBadRecordedAt": "2026-09-27T10:13:30.110Z"
+    },
+    {
+      "incidentId": "ALT-117579-4449582",
+      "flightId": 117579,
+      "firstBadPosition": 4449582,
+      "lastBadPosition": 4450021,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:07:13.583Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:07.282Z"
+    },
+    {
+      "incidentId": "ALT-117581-4449634",
+      "flightId": 117581,
+      "firstBadPosition": 4449634,
+      "lastBadPosition": 4450323,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:07:26.244Z",
+      "lastBadRecordedAt": "2026-09-27T10:10:28.003Z"
+    },
+    {
+      "incidentId": "ALT-117582-4450807",
+      "flightId": 117582,
+      "firstBadPosition": 4450807,
+      "lastBadPosition": 4451594,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:12:39.565Z",
+      "lastBadRecordedAt": "2026-09-27T10:15:55.568Z"
+    },
+    {
+      "incidentId": "ALT-117582-4452208",
+      "flightId": 117582,
+      "firstBadPosition": 4452208,
+      "lastBadPosition": 4452373,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:18:28.412Z",
+      "lastBadRecordedAt": "2026-09-27T10:19:12.047Z"
+    },
+    {
+      "incidentId": "ALT-117585-4449469",
+      "flightId": 117585,
+      "firstBadPosition": 4449469,
+      "lastBadPosition": 4449469,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:06:49.172Z",
+      "lastBadRecordedAt": "2026-09-27T10:06:49.172Z"
+    },
+    {
+      "incidentId": "ALT-117585-4450161",
+      "flightId": 117585,
+      "firstBadPosition": 4450161,
+      "lastBadPosition": 4450161,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:09:44.882Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:44.882Z"
+    },
+    {
+      "incidentId": "ALT-117590-4450019",
+      "flightId": 117590,
+      "firstBadPosition": 4450019,
+      "lastBadPosition": 4450019,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:09:07.309Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:07.309Z"
+    },
+    {
+      "incidentId": "ALT-117594-4452736",
+      "flightId": 117594,
+      "firstBadPosition": 4452736,
+      "lastBadPosition": 4453053,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T10:20:43.196Z",
+      "lastBadRecordedAt": "2026-09-27T10:22:15.310Z"
+    },
+    {
+      "incidentId": "ALT-117594-4454022",
+      "flightId": 117594,
+      "firstBadPosition": 4454022,
+      "lastBadPosition": 4454022,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:26:55.057Z",
+      "lastBadRecordedAt": "2026-09-27T10:26:55.057Z"
+    },
+    {
+      "incidentId": "ALT-117595-4451121",
+      "flightId": 117595,
+      "firstBadPosition": 4451121,
+      "lastBadPosition": 4451121,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:14:02.028Z",
+      "lastBadRecordedAt": "2026-09-27T10:14:02.028Z"
+    },
+    {
+      "incidentId": "ALT-117596-4450357",
+      "flightId": 117596,
+      "firstBadPosition": 4450357,
+      "lastBadPosition": 4450514,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:10:37.831Z",
+      "lastBadRecordedAt": "2026-09-27T10:11:21.522Z"
+    },
+    {
+      "incidentId": "ALT-117596-4451805",
+      "flightId": 117596,
+      "firstBadPosition": 4451805,
+      "lastBadPosition": 4451805,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:16:49.505Z",
+      "lastBadRecordedAt": "2026-09-27T10:16:49.505Z"
+    },
+    {
+      "incidentId": "ALT-117596-4452406",
+      "flightId": 117596,
+      "firstBadPosition": 4452406,
+      "lastBadPosition": 4452406,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:19:21.329Z",
+      "lastBadRecordedAt": "2026-09-27T10:19:21.329Z"
+    },
+    {
+      "incidentId": "ALT-117597-4450115",
+      "flightId": 117597,
+      "firstBadPosition": 4450115,
+      "lastBadPosition": 4450115,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:09:32.483Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:32.483Z"
+    },
+    {
+      "incidentId": "ALT-117597-4450680",
+      "flightId": 117597,
+      "firstBadPosition": 4450680,
+      "lastBadPosition": 4450843,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:12:08.244Z",
+      "lastBadRecordedAt": "2026-09-27T10:12:52.049Z"
+    },
+    {
+      "incidentId": "ALT-117598-4450618",
+      "flightId": 117598,
+      "firstBadPosition": 4450618,
+      "lastBadPosition": 4451205,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T10:11:49.676Z",
+      "lastBadRecordedAt": "2026-09-27T10:14:16.856Z"
+    },
+    {
+      "incidentId": "ALT-117599-4450307",
+      "flightId": 117599,
+      "firstBadPosition": 4450307,
+      "lastBadPosition": 4450307,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:10:11.972Z",
+      "lastBadRecordedAt": "2026-09-27T10:10:11.972Z"
+    },
+    {
+      "incidentId": "ALT-117599-4452935",
+      "flightId": 117599,
+      "firstBadPosition": 4452935,
+      "lastBadPosition": 4452935,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:21:41.937Z",
+      "lastBadRecordedAt": "2026-09-27T10:21:41.937Z"
+    },
+    {
+      "incidentId": "ALT-117600-4454330",
+      "flightId": 117600,
+      "firstBadPosition": 4454330,
+      "lastBadPosition": 4454330,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:28:36.533Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:36.533Z"
+    },
+    {
+      "incidentId": "ALT-117602-4450034",
+      "flightId": 117602,
+      "firstBadPosition": 4450034,
+      "lastBadPosition": 4450034,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:09:12.118Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:12.118Z"
+    },
+    {
+      "incidentId": "ALT-117602-4452410",
+      "flightId": 117602,
+      "firstBadPosition": 4452410,
+      "lastBadPosition": 4452410,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:19:24.462Z",
+      "lastBadRecordedAt": "2026-09-27T10:19:24.462Z"
+    },
+    {
+      "incidentId": "ALT-117602-4452907",
+      "flightId": 117602,
+      "firstBadPosition": 4452907,
+      "lastBadPosition": 4452907,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:21:36.035Z",
+      "lastBadRecordedAt": "2026-09-27T10:21:36.035Z"
+    },
+    {
+      "incidentId": "ALT-117602-4453884",
+      "flightId": 117602,
+      "firstBadPosition": 4453884,
+      "lastBadPosition": 4454165,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:26:18.086Z",
+      "lastBadRecordedAt": "2026-09-27T10:27:43.479Z"
+    },
+    {
+      "incidentId": "ALT-117605-4452013",
+      "flightId": 117605,
+      "firstBadPosition": 4452013,
+      "lastBadPosition": 4452271,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:17:29.969Z",
+      "lastBadRecordedAt": "2026-09-27T10:18:46.428Z"
+    },
+    {
+      "incidentId": "ALT-117605-4453460",
+      "flightId": 117605,
+      "firstBadPosition": 4453460,
+      "lastBadPosition": 4453460,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:24:12.423Z",
+      "lastBadRecordedAt": "2026-09-27T10:24:12.423Z"
+    },
+    {
+      "incidentId": "ALT-117606-4450042",
+      "flightId": 117606,
+      "firstBadPosition": 4450042,
+      "lastBadPosition": 4450042,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:09:16.430Z",
+      "lastBadRecordedAt": "2026-09-27T10:09:16.430Z"
+    },
+    {
+      "incidentId": "ALT-117606-4451005",
+      "flightId": 117606,
+      "firstBadPosition": 4451005,
+      "lastBadPosition": 4451005,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:13:33.961Z",
+      "lastBadRecordedAt": "2026-09-27T10:13:33.961Z"
+    },
+    {
+      "incidentId": "ALT-117606-4451628",
+      "flightId": 117606,
+      "firstBadPosition": 4451628,
+      "lastBadPosition": 4451987,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:16:05.514Z",
+      "lastBadRecordedAt": "2026-09-27T10:17:29.100Z"
+    },
+    {
+      "incidentId": "ALT-117607-4453241",
+      "flightId": 117607,
+      "firstBadPosition": 4453241,
+      "lastBadPosition": 4453241,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:23:07.979Z",
+      "lastBadRecordedAt": "2026-09-27T10:23:07.979Z"
+    },
+    {
+      "incidentId": "ALT-117607-4454327",
+      "flightId": 117607,
+      "firstBadPosition": 4454327,
+      "lastBadPosition": 4454327,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:28:36.533Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:36.533Z"
+    },
+    {
+      "incidentId": "ALT-117609-4453230",
+      "flightId": 117609,
+      "firstBadPosition": 4453230,
+      "lastBadPosition": 4453230,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:23:03.168Z",
+      "lastBadRecordedAt": "2026-09-27T10:23:03.168Z"
+    },
+    {
+      "incidentId": "ALT-117610-4453311",
+      "flightId": 117610,
+      "firstBadPosition": 4453311,
+      "lastBadPosition": 4453311,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:23:30.201Z",
+      "lastBadRecordedAt": "2026-09-27T10:23:30.201Z"
+    },
+    {
+      "incidentId": "ALT-117610-4453909",
+      "flightId": 117610,
+      "firstBadPosition": 4453909,
+      "lastBadPosition": 4453909,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:26:24.455Z",
+      "lastBadRecordedAt": "2026-09-27T10:26:24.455Z"
+    },
+    {
+      "incidentId": "ALT-117611-4450376",
+      "flightId": 117611,
+      "firstBadPosition": 4450376,
+      "lastBadPosition": 4450536,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:10:43.717Z",
+      "lastBadRecordedAt": "2026-09-27T10:11:26.953Z"
+    },
+    {
+      "incidentId": "ALT-117611-4451027",
+      "flightId": 117611,
+      "firstBadPosition": 4451027,
+      "lastBadPosition": 4451027,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:13:39.231Z",
+      "lastBadRecordedAt": "2026-09-27T10:13:39.231Z"
+    },
+    {
+      "incidentId": "ALT-117611-4451918",
+      "flightId": 117611,
+      "firstBadPosition": 4451918,
+      "lastBadPosition": 4451918,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:17:14.845Z",
+      "lastBadRecordedAt": "2026-09-27T10:17:14.845Z"
+    },
+    {
+      "incidentId": "ALT-117611-4453001",
+      "flightId": 117611,
+      "firstBadPosition": 4453001,
+      "lastBadPosition": 4453153,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:22:00.747Z",
+      "lastBadRecordedAt": "2026-09-27T10:22:39.520Z"
+    },
+    {
+      "incidentId": "ALT-117612-4451179",
+      "flightId": 117612,
+      "firstBadPosition": 4451179,
+      "lastBadPosition": 4451179,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:14:10.087Z",
+      "lastBadRecordedAt": "2026-09-27T10:14:10.087Z"
+    },
+    {
+      "incidentId": "ALT-117620-4450851",
+      "flightId": 117620,
+      "firstBadPosition": 4450851,
+      "lastBadPosition": 4450851,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:12:54.853Z",
+      "lastBadRecordedAt": "2026-09-27T10:12:54.853Z"
+    },
+    {
+      "incidentId": "ALT-117621-4452104",
+      "flightId": 117621,
+      "firstBadPosition": 4452104,
+      "lastBadPosition": 4452104,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:18:03.324Z",
+      "lastBadRecordedAt": "2026-09-27T10:18:03.324Z"
+    },
+    {
+      "incidentId": "ALT-117623-4450985",
+      "flightId": 117623,
+      "firstBadPosition": 4450985,
+      "lastBadPosition": 4451788,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:13:30.544Z",
+      "lastBadRecordedAt": "2026-09-27T10:16:46.770Z"
+    },
+    {
+      "incidentId": "ALT-117623-4453494",
+      "flightId": 117623,
+      "firstBadPosition": 4453494,
+      "lastBadPosition": 4453494,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:24:22.796Z",
+      "lastBadRecordedAt": "2026-09-27T10:24:22.796Z"
+    },
+    {
+      "incidentId": "ALT-117625-4451999",
+      "flightId": 117625,
+      "firstBadPosition": 4451999,
+      "lastBadPosition": 4451999,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:17:36.741Z",
+      "lastBadRecordedAt": "2026-09-27T10:17:36.741Z"
+    },
+    {
+      "incidentId": "ALT-117625-4453379",
+      "flightId": 117625,
+      "firstBadPosition": 4453379,
+      "lastBadPosition": 4453379,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:23:48.908Z",
+      "lastBadRecordedAt": "2026-09-27T10:23:48.908Z"
+    },
+    {
+      "incidentId": "ALT-117625-4453900",
+      "flightId": 117625,
+      "firstBadPosition": 4453900,
+      "lastBadPosition": 4454320,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:26:20.442Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:23.589Z"
+    },
+    {
+      "incidentId": "ALT-117626-4452258",
+      "flightId": 117626,
+      "firstBadPosition": 4452258,
+      "lastBadPosition": 4452258,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:18:43.375Z",
+      "lastBadRecordedAt": "2026-09-27T10:18:43.375Z"
+    },
+    {
+      "incidentId": "ALT-117631-4451243",
+      "flightId": 117631,
+      "firstBadPosition": 4451243,
+      "lastBadPosition": 4451512,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:14:35.045Z",
+      "lastBadRecordedAt": "2026-09-27T10:15:38.706Z"
+    },
+    {
+      "incidentId": "ALT-117636-4452287",
+      "flightId": 117636,
+      "firstBadPosition": 4452287,
+      "lastBadPosition": 4452287,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:18:49.542Z",
+      "lastBadRecordedAt": "2026-09-27T10:18:49.542Z"
+    },
+    {
+      "incidentId": "ALT-117638-4453778",
+      "flightId": 117638,
+      "firstBadPosition": 4453778,
+      "lastBadPosition": 4453778,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:25:39.153Z",
+      "lastBadRecordedAt": "2026-09-27T10:25:39.153Z"
+    },
+    {
+      "incidentId": "ALT-117640-4453574",
+      "flightId": 117640,
+      "firstBadPosition": 4453574,
+      "lastBadPosition": 4453574,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:24:44.916Z",
+      "lastBadRecordedAt": "2026-09-27T10:24:44.916Z"
+    },
+    {
+      "incidentId": "ALT-117642-4451911",
+      "flightId": 117642,
+      "firstBadPosition": 4451911,
+      "lastBadPosition": 4452176,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:17:17.683Z",
+      "lastBadRecordedAt": "2026-09-27T10:18:22.062Z"
+    },
+    {
+      "incidentId": "ALT-117642-4452761",
+      "flightId": 117642,
+      "firstBadPosition": 4452761,
+      "lastBadPosition": 4452761,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:20:55.619Z",
+      "lastBadRecordedAt": "2026-09-27T10:20:55.619Z"
+    },
+    {
+      "incidentId": "ALT-117642-4453450",
+      "flightId": 117642,
+      "firstBadPosition": 4453450,
+      "lastBadPosition": 4453450,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:24:10.644Z",
+      "lastBadRecordedAt": "2026-09-27T10:24:10.644Z"
+    },
+    {
+      "incidentId": "ALT-117642-4453902",
+      "flightId": 117642,
+      "firstBadPosition": 4453902,
+      "lastBadPosition": 4453902,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:26:21.141Z",
+      "lastBadRecordedAt": "2026-09-27T10:26:21.141Z"
+    },
+    {
+      "incidentId": "ALT-117644-4451419",
+      "flightId": 117644,
+      "firstBadPosition": 4451419,
+      "lastBadPosition": 4451419,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:15:08.634Z",
+      "lastBadRecordedAt": "2026-09-27T10:15:08.634Z"
+    },
+    {
+      "incidentId": "ALT-117645-4453123",
+      "flightId": 117645,
+      "firstBadPosition": 4453123,
+      "lastBadPosition": 4453123,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:22:30.528Z",
+      "lastBadRecordedAt": "2026-09-27T10:22:30.528Z"
+    },
+    {
+      "incidentId": "ALT-117645-4454364",
+      "flightId": 117645,
+      "firstBadPosition": 4454364,
+      "lastBadPosition": 4454364,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:28:45.758Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:45.758Z"
+    },
+    {
+      "incidentId": "ALT-117646-4452155",
+      "flightId": 117646,
+      "firstBadPosition": 4452155,
+      "lastBadPosition": 4452155,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:18:15.905Z",
+      "lastBadRecordedAt": "2026-09-27T10:18:15.905Z"
+    },
+    {
+      "incidentId": "ALT-117646-4452823",
+      "flightId": 117646,
+      "firstBadPosition": 4452823,
+      "lastBadPosition": 4453056,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:21:03.571Z",
+      "lastBadRecordedAt": "2026-09-27T10:22:16.230Z"
+    },
+    {
+      "incidentId": "ALT-117647-4452615",
+      "flightId": 117647,
+      "firstBadPosition": 4452615,
+      "lastBadPosition": 4452615,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:20:17.606Z",
+      "lastBadRecordedAt": "2026-09-27T10:20:17.606Z"
+    },
+    {
+      "incidentId": "ALT-117650-4452210",
+      "flightId": 117650,
+      "firstBadPosition": 4452210,
+      "lastBadPosition": 4452210,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:18:28.297Z",
+      "lastBadRecordedAt": "2026-09-27T10:18:28.297Z"
+    },
+    {
+      "incidentId": "ALT-117650-4452952",
+      "flightId": 117650,
+      "firstBadPosition": 4452952,
+      "lastBadPosition": 4452952,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:21:44.790Z",
+      "lastBadRecordedAt": "2026-09-27T10:21:44.790Z"
+    },
+    {
+      "incidentId": "ALT-117657-4452414",
+      "flightId": 117657,
+      "firstBadPosition": 4452414,
+      "lastBadPosition": 4452414,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:19:21.332Z",
+      "lastBadRecordedAt": "2026-09-27T10:19:21.332Z"
+    },
+    {
+      "incidentId": "ALT-117658-4452412",
+      "flightId": 117658,
+      "firstBadPosition": 4452412,
+      "lastBadPosition": 4452412,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:19:24.457Z",
+      "lastBadRecordedAt": "2026-09-27T10:19:24.457Z"
+    },
+    {
+      "incidentId": "ALT-117659-4452417",
+      "flightId": 117659,
+      "firstBadPosition": 4452417,
+      "lastBadPosition": 4452417,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:19:25.013Z",
+      "lastBadRecordedAt": "2026-09-27T10:19:25.013Z"
+    },
+    {
+      "incidentId": "ALT-117661-4453787",
+      "flightId": 117661,
+      "firstBadPosition": 4453787,
+      "lastBadPosition": 4453787,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:25:29.941Z",
+      "lastBadRecordedAt": "2026-09-27T10:25:29.941Z"
+    },
+    {
+      "incidentId": "ALT-117662-4452231",
+      "flightId": 117662,
+      "firstBadPosition": 4452231,
+      "lastBadPosition": 4452231,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:18:33.845Z",
+      "lastBadRecordedAt": "2026-09-27T10:18:33.845Z"
+    },
+    {
+      "incidentId": "ALT-117663-4452352",
+      "flightId": 117663,
+      "firstBadPosition": 4452352,
+      "lastBadPosition": 4452352,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:19:09.807Z",
+      "lastBadRecordedAt": "2026-09-27T10:19:09.807Z"
+    },
+    {
+      "incidentId": "ALT-117664-4454215",
+      "flightId": 117664,
+      "firstBadPosition": 4454215,
+      "lastBadPosition": 4454215,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:27:55.322Z",
+      "lastBadRecordedAt": "2026-09-27T10:27:55.322Z"
+    },
+    {
+      "incidentId": "ALT-117674-4453690",
+      "flightId": 117674,
+      "firstBadPosition": 4453690,
+      "lastBadPosition": 4454333,
+      "badPositionCount": 4,
+      "firstBadRecordedAt": "2026-09-27T10:25:19.048Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:36.315Z"
+    },
+    {
+      "incidentId": "ALT-117675-4453033",
+      "flightId": 117675,
+      "firstBadPosition": 4453033,
+      "lastBadPosition": 4453033,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:22:10.113Z",
+      "lastBadRecordedAt": "2026-09-27T10:22:10.113Z"
+    },
+    {
+      "incidentId": "ALT-117675-4453708",
+      "flightId": 117675,
+      "firstBadPosition": 4453708,
+      "lastBadPosition": 4454139,
+      "badPositionCount": 3,
+      "firstBadRecordedAt": "2026-09-27T10:25:23.504Z",
+      "lastBadRecordedAt": "2026-09-27T10:27:33.634Z"
+    },
+    {
+      "incidentId": "ALT-117676-4453050",
+      "flightId": 117676,
+      "firstBadPosition": 4453050,
+      "lastBadPosition": 4453050,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:22:07.218Z",
+      "lastBadRecordedAt": "2026-09-27T10:22:07.218Z"
+    },
+    {
+      "incidentId": "ALT-117680-4453560",
+      "flightId": 117680,
+      "firstBadPosition": 4453560,
+      "lastBadPosition": 4453560,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:24:41.730Z",
+      "lastBadRecordedAt": "2026-09-27T10:24:41.730Z"
+    },
+    {
+      "incidentId": "ALT-117681-4454122",
+      "flightId": 117681,
+      "firstBadPosition": 4454122,
+      "lastBadPosition": 4454122,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:27:27.312Z",
+      "lastBadRecordedAt": "2026-09-27T10:27:27.312Z"
+    },
+    {
+      "incidentId": "ALT-117682-4453620",
+      "flightId": 117682,
+      "firstBadPosition": 4453620,
+      "lastBadPosition": 4453620,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:24:57.640Z",
+      "lastBadRecordedAt": "2026-09-27T10:24:57.640Z"
+    },
+    {
+      "incidentId": "ALT-117683-4453783",
+      "flightId": 117683,
+      "firstBadPosition": 4453783,
+      "lastBadPosition": 4453783,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:25:46.256Z",
+      "lastBadRecordedAt": "2026-09-27T10:25:46.256Z"
+    },
+    {
+      "incidentId": "ALT-117685-4453237",
+      "flightId": 117685,
+      "firstBadPosition": 4453237,
+      "lastBadPosition": 4453237,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:23:08.137Z",
+      "lastBadRecordedAt": "2026-09-27T10:23:08.137Z"
+    },
+    {
+      "incidentId": "ALT-117685-4454187",
+      "flightId": 117685,
+      "firstBadPosition": 4454187,
+      "lastBadPosition": 4454328,
+      "badPositionCount": 2,
+      "firstBadRecordedAt": "2026-09-27T10:27:52.704Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:36.406Z"
+    },
+    {
+      "incidentId": "ALT-117686-4454265",
+      "flightId": 117686,
+      "firstBadPosition": 4454265,
+      "lastBadPosition": 4454265,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:28:16.682Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:16.682Z"
+    },
+    {
+      "incidentId": "ALT-117688-4454349",
+      "flightId": 117688,
+      "firstBadPosition": 4454349,
+      "lastBadPosition": 4454349,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:28:42.208Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:42.208Z"
+    },
+    {
+      "incidentId": "ALT-117693-4454366",
+      "flightId": 117693,
+      "firstBadPosition": 4454366,
+      "lastBadPosition": 4454366,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:28:32.380Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:32.380Z"
+    },
+    {
+      "incidentId": "ALT-117704-4453927",
+      "flightId": 117704,
+      "firstBadPosition": 4453927,
+      "lastBadPosition": 4453927,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:26:24.613Z",
+      "lastBadRecordedAt": "2026-09-27T10:26:24.613Z"
+    },
+    {
+      "incidentId": "ALT-117708-4454311",
+      "flightId": 117708,
+      "firstBadPosition": 4454311,
+      "lastBadPosition": 4454311,
+      "badPositionCount": 1,
+      "firstBadRecordedAt": "2026-09-27T10:28:29.073Z",
+      "lastBadRecordedAt": "2026-09-27T10:28:29.073Z"
+    }
+  ]
+}
