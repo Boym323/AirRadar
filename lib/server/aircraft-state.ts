@@ -460,14 +460,23 @@ export class AircraftStateService {
     try {
       let localSnapshot: ProviderSnapshot | null = null;
       try {
-      localSnapshot = await this.provider.getSnapshot();
-      if (!this.running) return;
-      localSnapshot = { ...localSnapshot, aircraft: await this.hydrateInitialIconMetadata(localSnapshot.aircraft) };
-      if (!this.running) return;
-      this.applySnapshot(localSnapshot);
-      this.lastSourceUpdate = localSnapshot.fetchedAt;
-      this.lastError = null;
-      this.consecutiveFailures = 0;
+        localSnapshot = await this.provider.getSnapshot();
+        if (!this.running) return;
+        this.applySnapshot(localSnapshot);
+        this.lastSourceUpdate = localSnapshot.fetchedAt;
+        this.lastError = null;
+        this.consecutiveFailures = 0;
+
+        // Publish the live receiver snapshot before optional catalog work. A
+        // slow metadata provider must not stop the readsb polling loop.
+        void this.hydrateInitialIconMetadata(localSnapshot.aircraft)
+          .then((aircraft) => {
+            if (!this.running) return;
+            this.applyInitialMetadata(aircraft);
+          })
+          .catch((error) => {
+            logger.debug({ error }, "AirRadar local metadata hydration skipped");
+          });
       } catch (error) {
         this.lastError = error instanceof Error ? error.message : "Unknown aircraft provider error";
         this.messagesPerSecond = null;
@@ -525,7 +534,25 @@ export class AircraftStateService {
             metadata,
           },
         };
-      }) as T;
+    }) as T;
+  }
+
+  private applyInitialMetadata(aircraft: ProviderSnapshot["aircraft"]): void {
+    let changed = false;
+    for (const item of aircraft) {
+      const metadata = item.enrichment?.metadata;
+      const current = this.localAircraft.get(item.icaoHex);
+      if (!metadata || !current || current.lastSeen !== item.lastSeen) continue;
+      this.localAircraft.set(item.icaoHex, {
+        ...current,
+        enrichment: { ...(current.enrichment ?? {}), metadata },
+      });
+      changed = true;
+    }
+    if (changed) {
+      this.invalidateSnapshotCache();
+      this.notify();
+    }
   }
 
   private async refreshNetwork(): Promise<void> {
