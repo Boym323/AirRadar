@@ -37,6 +37,7 @@ const datasetSource = readFileSync(new URL("../components/use-dataset-query.ts",
 const atcSource = readFileSync(new URL("../components/relevant-atc-panel.tsx", import.meta.url), "utf8");
 const aircraftDetailSource = readFileSync(new URL("../components/aircraft-detail-v2.tsx", import.meta.url), "utf8");
 const globalCss = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+const productionGateSource = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
 const atcTrafficSource = readFileSync(new URL("../components/atc-sector-traffic-panels.tsx", import.meta.url), "utf8");
 const englishSource = readFileSync(new URL("../lib/i18n/en.ts", import.meta.url), "utf8");
 const czechSource = readFileSync(new URL("../lib/i18n/cs.ts", import.meta.url), "utf8");
@@ -129,6 +130,14 @@ describe("radar UI polish helpers", () => {
     expect(aircraftRule).not.toMatch(/\btransform\s*:/);
     expect(receiverRule).not.toMatch(/\bposition\s*:/);
     expect(receiverRule).not.toMatch(/\btransform\s*:/);
+  });
+
+  it("initializes radar overlays from style.load rather than raster tile load", () => {
+    expect(appSource).toContain('map.once("style.load", () => {');
+    expect(appSource).not.toContain('map.on("load", () => {');
+    expect(appSource).toContain("__airradarMapStyleLoadedForDiagnostics");
+    expect(productionGateSource).toContain("__airradarMapStyleLoadedForDiagnostics === true");
+    expect(productionGateSource).toContain("areTilesLoaded");
   });
 
   it("keeps aircraft visual effects off the MapLibre root", () => {

@@ -398,13 +398,27 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               filter: map?.getLayer(id) ? map.getFilter(id) : null,
               visibility: map?.getLayer(id) ? map.getLayoutProperty(id, "visibility") : null,
             });
+            const containerRect = map?.getContainer()?.getBoundingClientRect?.() ?? null;
+            const sourceLoaded = (sourceId) => {
+              try { return map ? map.isSourceLoaded(sourceId) : null; } catch { return null; }
+            };
             return {
               url: window.location.href,
               query: Object.fromEntries(new URLSearchParams(window.location.search)),
               navigation: performance.getEntriesByType("navigation").map((entry) => ({ type: entry.type, redirectCount: entry.redirectCount })),
               map: {
                 exists: Boolean(map),
+                // `isStyleLoaded()` also waits for source tile managers. Keep
+                // it alongside the style event so a diagnostic can tell a
+                // style lifecycle issue from remote raster-tile latency.
+                styleEventLoaded: Boolean(window.__airradarMapStyleLoadedForDiagnostics),
+                styleLoadCount: window.__airradarMapStyleLoadCountForDiagnostics ?? 0,
                 styleLoaded: Boolean(map?.isStyleLoaded()),
+                mapLoaded: Boolean(map?.loaded()),
+                tilesLoaded: Boolean(map?.areTilesLoaded()),
+                container: containerRect ? { width: containerRect.width, height: containerRect.height } : null,
+                resizeCount: window.__airradarMapResizeCountForDiagnostics ?? 0,
+                sources: { osm: sourceLoaded("osm") },
                 layers: Object.fromEntries(layerIds.map((id) => [id, layer(id)])),
                 fixtureData: {
                   atc: sourceFeature("atc-sectors", "id", "fixture-sector"),
@@ -671,6 +685,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         const runtime = window.__airradarWebglAircraftForDiagnostics;
         return Boolean(
           map
+          && window.__airradarMapStyleLoadedForDiagnostics === true
           && runtime
           && runtime.size > 0
           && map.getLayer("aircraft-webgl")

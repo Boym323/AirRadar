@@ -97,6 +97,9 @@ import {
 declare global {
   interface Window {
     __airradarMapForDiagnostics?: maplibregl.Map;
+    __airradarMapStyleLoadedForDiagnostics?: boolean;
+    __airradarMapStyleLoadCountForDiagnostics?: number;
+    __airradarMapResizeCountForDiagnostics?: number;
     __airradarAircraftMarkersForDiagnostics?: Map<string, AircraftMarkerHandle>;
     __airradarWebglAircraftForDiagnostics?: AircraftWebglRuntime;
   }
@@ -526,6 +529,9 @@ export function AirRadarApp() {
       const layout = readRadarLayout();
       const bottom = layout ? radarBottomControlOffset(layout) : 10;
       content.style.setProperty("--radar-map-control-bottom", `${bottom}px`);
+      if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
+        window.__airradarMapResizeCountForDiagnostics = (window.__airradarMapResizeCountForDiagnostics ?? 0) + 1;
+      }
       mapRef.current?.resize();
     };
 
@@ -918,8 +924,12 @@ export function AirRadarApp() {
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     mapRef.current = map;
-    if (new URLSearchParams(window.location.search).get("mapDiagnostics") === "1") {
+    const mapDiagnostics = new URLSearchParams(window.location.search).get("mapDiagnostics") === "1";
+    if (mapDiagnostics) {
       window.__airradarMapForDiagnostics = map;
+      window.__airradarMapStyleLoadedForDiagnostics = false;
+      window.__airradarMapStyleLoadCountForDiagnostics = 0;
+      window.__airradarMapResizeCountForDiagnostics = 0;
     }
     const aircraftMarkers = aircraftMarkersRef.current;
     const ognMarkers = ognMarkersRef.current;
@@ -969,7 +979,16 @@ export function AirRadarApp() {
       window.__airradarWebglAircraftForDiagnostics = aircraftWebglRuntime;
     }
 
-    map.on("load", () => {
+    // MapLibre's `load` event waits for the whole map to be loaded, including
+    // remote raster tile managers. The radar overlays only require the style
+    // graph to exist, so initialize them on the style lifecycle event instead.
+    // This keeps OSM tile availability from preventing the aircraft runtime
+    // from becoming usable on a narrow/mobile viewport.
+    map.once("style.load", () => {
+      if (mapDiagnostics) {
+        window.__airradarMapStyleLoadedForDiagnostics = true;
+        window.__airradarMapStyleLoadCountForDiagnostics = (window.__airradarMapStyleLoadCountForDiagnostics ?? 0) + 1;
+      }
       map.addSource("weather-radar-image", { type: "image", url: EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
       map.addLayer({ id: "weather-radar-layer", type: "raster", source: "weather-radar-image", layout: { visibility: "none" }, paint: { "raster-opacity": 0.42, "raster-fade-duration": 0 } });
       map.addSource("range-rings", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -1313,6 +1332,9 @@ export function AirRadarApp() {
       performanceDiagnostics?.stop();
       map.remove();
       if (window.__airradarMapForDiagnostics === map) delete window.__airradarMapForDiagnostics;
+      if (window.__airradarMapStyleLoadedForDiagnostics !== undefined) delete window.__airradarMapStyleLoadedForDiagnostics;
+      if (window.__airradarMapStyleLoadCountForDiagnostics !== undefined) delete window.__airradarMapStyleLoadCountForDiagnostics;
+      if (window.__airradarMapResizeCountForDiagnostics !== undefined) delete window.__airradarMapResizeCountForDiagnostics;
       if (window.__airradarAircraftMarkersForDiagnostics === aircraftMarkers) delete window.__airradarAircraftMarkersForDiagnostics;
       if (window.__airradarWebglAircraftForDiagnostics === aircraftWebglRuntime) delete window.__airradarWebglAircraftForDiagnostics;
       mapRef.current = null;
