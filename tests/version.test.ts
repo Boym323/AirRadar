@@ -181,7 +181,7 @@ describe("automatic changelog generation", () => {
       "- feat: add changelog (abc1234)",
       "",
       "</details>",
-    ].join("\\n"));
+    ].join("\n"));
   });
 
   it("does not duplicate an existing release section", () => {
