@@ -339,6 +339,7 @@ function TechnicalDetails({ aircraft }: { aircraft: AircraftView }) {
       <DetailValue label={t.aircraft.distance} value={formatDistance(aircraft.distanceKm)} />
       <DetailValue label={t.aircraft.bearing} value={aircraft.bearing === null ? null : formatTrack(aircraft.bearing)} />
       <DetailValue label={t.aircraft.rssi} value={aircraft.rssi === null ? null : `${formatNumber(aircraft.rssi, 1)} dBFS`} />
+      <DetailValue label={t.aircraft.beastSignal} value={aircraft.beastSignal === null || aircraft.beastSignal === undefined ? null : formatNumber(aircraft.beastSignal)} />
       <DetailValue
         label={t.aircraft.seenPosition}
         value={aircraft.seenSeconds === null && aircraft.seenPosSeconds === null

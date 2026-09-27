@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { shortestAngleDelta } from "@/lib/aircraft/motion";
-import { resolveAircraftVisualHeading } from "@/lib/aircraft/visual-heading";
+import { aircraftReportedTrueHeading, resolveAircraftVisualHeading } from "@/lib/aircraft/visual-heading";
 import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
 
 describe("aircraft visual heading", () => {
@@ -11,6 +11,31 @@ describe("aircraft visual heading", () => {
     [270, 270],
   ])("keeps geographic track %d at map bearing zero", (track, expected) => {
     expect(resolveAircraftVisualHeading({ track, mapBearing: 0 })).toBe(expected);
+  });
+
+  it("uses only fresh field-provenanced true heading for Beast nose orientation", () => {
+    const observedAt = Date.parse("2026-09-27T12:00:00.000Z");
+    const aircraft = {
+      adsbTelemetry: { trueHeadingDeg: 271, magneticHeadingDeg: 260 },
+      provenance: {
+        fields: {
+          trueHeadingDeg: {
+            origin: "local",
+            protocol: "beast-mode-s",
+            bds: "BDS5,0",
+            observedAt: new Date(observedAt).toISOString(),
+            confidence: "high",
+          },
+        },
+      },
+    } as unknown as Parameters<typeof aircraftReportedTrueHeading>[0];
+
+    expect(aircraftReportedTrueHeading(aircraft, observedAt + 1_000)).toBe(271);
+    expect(aircraftReportedTrueHeading(aircraft, observedAt + 30_001)).toBeNull();
+    expect(aircraftReportedTrueHeading({
+      adsbTelemetry: { trueHeadingDeg: null, magneticHeadingDeg: 260 },
+      provenance: aircraft.provenance,
+    } as unknown as Parameters<typeof aircraftReportedTrueHeading>[0], observedAt + 1_000)).toBeNull();
   });
 
   it("compensates screen rotation for map bearing", () => {

@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 const componentSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const quickCss = readFileSync(new URL("../app/radar-aircraft-panel.css", import.meta.url), "utf8");
+const telemetrySource = readFileSync(new URL("../components/aircraft-adsb-telemetry.tsx", import.meta.url), "utf8");
+const detailSource = readFileSync(new URL("../components/aircraft-detail-v3.tsx", import.meta.url), "utf8");
 
 describe("aircraft radar quick detail", () => {
   it("owns the live drawer structure and keeps the intended section order explicit", () => {
@@ -68,6 +70,16 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).toContain('data-testid="technical-details"');
     expect(componentSource).toContain("aria-pressed={watchlisted}");
     expect(componentSource).toContain("fullDetailHref");
+  });
+
+  it("surfaces receiver-local Beast data in aircraft visualizations", () => {
+    expect(componentSource).toContain("t.aircraft.beastSignal");
+    expect(detailSource).toContain("t.aircraft.beastSignal");
+    expect(telemetrySource).toContain("operational?.capabilityClass");
+    expect(telemetrySource).toContain("operational?.operationalMode");
+    expect(telemetrySource).toContain("operational.nicSupplementA");
+    expect(telemetrySource).toContain("operational.silSupplement");
+    expect(telemetrySource).toContain("!compact");
   });
 
   it("does not use DOM adjacency to identify quick sections", () => {

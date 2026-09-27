@@ -39,6 +39,18 @@ describe("aircraft source merge", () => {
     expect(merged.find((item) => item.icaoHex === "DEF456")).toMatchObject({ origin: "adsblol", rssi: null, messages: null });
   });
 
+  it("keeps raw Beast signal local-only through extended source merge", () => {
+    const local = make("ABC123", "local");
+    local.beastSignal = 173;
+    const network = make("ABC123", "adsblol");
+    network.beastSignal = 255;
+    const merged = mergeAircraftObservations(local, network, receiver, options);
+    expect(merged?.beastSignal).toBe(173);
+
+    const networkOnly = mergeAircraftObservations(undefined, network, receiver, options);
+    expect(networkOnly?.beastSignal ?? null).toBeNull();
+  });
+
   it("deduplicates by normalized ICAO and prefers a fresh local position", () => {
     const local = make("ABC123", "local", { flight: "LOCAL123", lon: 14.11, seen: 2, seen_pos: 2 });
     const network = make("abc123", "adsblol", { flight: "NETWORK123", lon: 14.12, seen: 4, seen_pos: 4 });

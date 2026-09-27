@@ -11,6 +11,12 @@ function angle(value: number | null | undefined, digits = 0): string | null {
   return value === null || value === undefined ? null : `${formatNumber(value, digits)}°`;
 }
 
+function hexWord(value: number | null | undefined): string | null {
+  return value === null || value === undefined
+    ? null
+    : `0x${Math.trunc(value).toString(16).toUpperCase().padStart(4, "0")}`;
+}
+
 function TelemetryValue({ label, value: text }: { label: string; value: string | null | undefined }) {
   if (!text) return null;
   return <div className="aircraft-adsb-telemetry-value"><span>{label}</span><strong>{text}</strong></div>;
@@ -125,6 +131,11 @@ export function AircraftAdsbTelemetry({ aircraft, compact = false }: { aircraft:
           <TelemetryValue label="SDA" value={telemetry?.sda === null || telemetry?.sda === undefined ? null : String(telemetry.sda)} />
           <TelemetryValue label={t.aircraft.containmentRadius} value={value(telemetry?.containmentRadiusM, " m")} />
           <TelemetryValue label={t.aircraft.headingReference} value={operational?.headingReference ?? null} />
+          {!compact && <TelemetryValue label={t.aircraft.adsbOperationalSubtype} value={operational ? String(operational.subtype) : null} />}
+          {!compact && <TelemetryValue label={t.aircraft.capabilityClass} value={hexWord(operational?.capabilityClass)} />}
+          {!compact && <TelemetryValue label={t.aircraft.operationalMode} value={hexWord(operational?.operationalMode)} />}
+          {!compact && <TelemetryValue label={t.aircraft.nicSupplementA} value={operational ? String(operational.nicSupplementA) : null} />}
+          {!compact && <TelemetryValue label={t.aircraft.silSupplement} value={operational?.silSupplement === null || operational?.silSupplement === undefined ? null : String(operational.silSupplement)} />}
         </div>
       </section>
     </div>

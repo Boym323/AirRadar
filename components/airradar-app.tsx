@@ -85,6 +85,7 @@ import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-co
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
+import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
 import {
   AIRCRAFT_WEBGL_LABEL_LAYER_ID,
   AIRCRAFT_WEBGL_LABEL_SOURCE_ID,
@@ -1594,10 +1595,11 @@ export function AirRadarApp() {
       // values as render-owned when they cross the animation helper boundary.
       aircraftMotionRuntimeRef.current?.upsert({ ...aircraft }, handle);
       const selectedState = aircraft.icaoHex === selectedHex;
+      const reportedTrueHeading = aircraftReportedTrueHeading(aircraft);
       const renderedHeading = aircraftMotionRuntimeRef.current?.renderedHeading(
         aircraft.icaoHex,
-        aircraft.track,
-      ) ?? aircraft.track;
+        reportedTrueHeading ?? aircraft.track,
+      ) ?? reportedTrueHeading ?? aircraft.track;
       const labelChanged = updateAircraftMarkerHandle(handle, { ...aircraft }, {
         selected: selectedState,
         watchlisted: isLiveAircraftWatchlisted(aircraft),

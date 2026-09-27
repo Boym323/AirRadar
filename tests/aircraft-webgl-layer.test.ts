@@ -63,6 +63,12 @@ describe("WebGL aircraft layer", () => {
     expect(appSource).toContain("liveBulkAircraft");
   });
 
+  it("uses fresh Beast true heading on both HTML and WebGL marker paths", () => {
+    expect(webglSource).toContain("aircraftReportedTrueHeading(aircraft)");
+    expect(appSource).toContain("aircraftReportedTrueHeading(aircraft)");
+    expect(appSource).toContain("reportedTrueHeading ?? aircraft.track");
+  });
+
   it("preserves confirmed-position interpolation in the GPU runtime", () => {
     expect(webglSource).toContain("confirmedInterpolationDurationMs(");
     expect(webglSource).toContain("correctionFor(");

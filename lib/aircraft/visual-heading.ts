@@ -1,4 +1,5 @@
 import { normalizeHeading } from "@/lib/aircraft/motion";
+import type { AircraftView } from "@/lib/aircraft/types";
 
 export interface VisualHeadingInput {
   /** The heading produced by the motion model for this rendered frame. */
@@ -29,4 +30,26 @@ export function resolveAircraftVisualHeading(input: VisualHeadingInput): number 
       - (input.mapBearing ?? 0)
       + (input.assetOffset ?? 0),
   );
+}
+
+
+export const REPORTED_TRUE_HEADING_FRESHNESS_MS = 30_000;
+
+/**
+ * Uses a field-level timestamp so an old Comm-B heading cannot keep rotating a
+ * live marker merely because unrelated Beast frames are still arriving.
+ * Magnetic heading is intentionally not used on the true-north map without a
+ * declination correction.
+ */
+export function aircraftReportedTrueHeading(
+  aircraft: Pick<AircraftView, "adsbTelemetry" | "provenance">,
+  now = Date.now(),
+): number | null {
+  const heading = normalizeHeading(aircraft.adsbTelemetry?.trueHeadingDeg);
+  if (heading === null) return null;
+  const provenance = aircraft.provenance?.fields?.trueHeadingDeg;
+  if (!provenance?.observedAt) return null;
+  const observedAt = Date.parse(provenance.observedAt);
+  if (!Number.isFinite(observedAt) || Math.max(0, now - observedAt) > REPORTED_TRUE_HEADING_FRESHNESS_MS) return null;
+  return heading;
 }
