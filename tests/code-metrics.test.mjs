@@ -72,6 +72,27 @@ describe("code metrics", () => {
     expect(upsertDailySnapshot([first], later)).toEqual([later]);
   });
 
+  it("does not rewrite the current day when counts did not change", () => {
+    const first = {
+      day: "2026-09-27",
+      timestamp: "2026-09-27T07:00:00.000Z",
+      commit: "aaa",
+      production: { files: 10, loc: 1000 },
+      tests: { files: 4, loc: 300 },
+      totalLoc: 1300,
+    };
+    const unchangedLater = {
+      day: "2026-09-27",
+      timestamp: "2026-09-27T09:00:00.000Z",
+      commit: "bbb",
+      production: { files: 10, loc: 1000 },
+      tests: { files: 4, loc: 300 },
+      totalLoc: 1300,
+    };
+
+    expect(upsertDailySnapshot([first], unchangedLater)).toEqual([first]);
+  });
+
   it("does not add a new day when counts did not change", () => {
     const first = {
       day: "2026-09-26",
