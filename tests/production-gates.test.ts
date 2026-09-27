@@ -111,6 +111,15 @@ describe("production release metadata gate", () => {
     expect(source).toContain("if (fullSmoke && viewport.width >= 821) {");
   });
 
+  it("tracks the current four-tab aircraft quick-detail smoke contract", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain('quickContract.tabs.length !== 4');
+    expect(source).toContain('getByRole("tab", { name: "Situace", exact: true })');
+    expect(source).toContain('"aircraft-tabpanel-situation"');
+    expect(source).toContain('getByRole("tab", { name: "Let", exact: true })');
+    expect(source).not.toContain('getByRole("tab", { name: "Přehled" })');
+  });
+
   it("waits for the closed drawer visibility transition before responsive assertions", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('getComputedStyle(sidebar).visibility === "hidden"');
