@@ -53,6 +53,7 @@ Relevant production gates are:
 
 ```bash
 npm run prisma:generate
+npm run features:check
 npm run lint
 npm run typecheck
 npm test
@@ -60,7 +61,11 @@ npm run build
 npm run test:production
 ```
 
-`typecheck` emits the Prisma contract and Next typegen. `build` writes ignored
+`features:check` validates `docs/features.registry.json` against every current
+Next.js page and API route and verifies the generated registry section in
+`docs/FEATURES.md`. When adding/removing/renaming a route, update the registry
+and run `npm run features:generate` before validation. `typecheck` emits the
+Prisma contract and Next typegen. `build` writes ignored
 build metadata, emits the Prisma contract, and runs `next build`. A previous
 full-gate pass is stale after source, test, package, build, migration, or
 deployment changes. Report exactly which commands ran; never imply a skipped
