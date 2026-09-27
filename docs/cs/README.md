@@ -1,13 +1,21 @@
 # AirRadar – dokumentace česky
 
-Tato složka obsahuje českou lokalizaci dokumentace projektu. Anglické soubory
-v nadřazené složce `docs/` jsou technickým zdrojem pravdy; při změně kontraktu
-se musí aktualizovat také příslušná česká stránka.
+Tato složka obsahuje českou lokalizaci autoritativní dokumentace projektu.
+Anglické soubory v nadřazené složce `docs/` zůstávají technickým zdrojem
+pravdy; při změně kontraktu se musí ve stejném commitu aktualizovat také
+odpovídající česká stránka.
 
-Rozsah a základní strukturu překladu kontroluje `npm run docs:check`. Při
-změně anglického dokumentu aktualizujte ve stejném commitu jeho český protějšek
-a spusťte tuto kontrolu; ta ověřuje i nadpisy, bloky kódu, tabulky a číslované
-seznamy.
+Lokalizační kontrakt pokrývá osm autoritativních dokumentů uvedených níže a
+šest praktických stránek v `docs/wiki/cs/`. Specializované návrhové,
+výzkumné, auditní a historické dokumenty mimo tuto sadu zůstávají anglicky,
+dokud nejsou výslovně zařazeny mezi autoritativní dokumentaci.
+
+Rozsah a paritu překladu kontroluje `npm run docs:check`. Kontrola ověřuje
+existenci českého protějšku, shodnou Markdown strukturu (nadpisy, bloky kódu,
+tabulky a číslované seznamy), přiměřený rozsah překladu, stejné cíle Markdown
+odkazů, známé chybové markery po neúspěšném překladu a paritu české/anglické
+wiki. Při změně anglického dokumentu spusťte tuto kontrolu před dokončením
+změny.
 
 ## Přehled
 
