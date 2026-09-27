@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatDateTime, formatDistance, formatNumber, getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
 import type { OperationalState, SystemStatus, SystemStatusApiResponse, SystemStatusResponse } from "@/lib/server/system-status";
+import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
 
 function formatUptime(seconds: number, dictionary: LocaleDictionary): string {
   const total = Math.max(0, Math.floor(seconds));
@@ -36,8 +37,18 @@ function formatSigmetDataset(dataset: SystemStatusResponse["weather"]["sigmet"][
   return `${freshness} · ${formatNumber(dataset.featureCount, 0, dictionary.locale)} ${dictionary.system.sigmetFeatures} · ${formatDateTime(dataset.lastSuccessAt, dictionary)}`;
 }
 
+function statusBadgeVariant(status: SystemStatus | OperationalState | "demo"): StatusBadgeVariant {
+  const value = String(status).toLowerCase();
+  if (["offline", "error", "failed", "unavailable"].some((token) => value.includes(token))) return "danger";
+  if (["degraded", "stale"].some((token) => value.includes(token))) return "stale";
+  if (["loading", "on_demand"].some((token) => value.includes(token))) return "warning";
+  if (["ok", "online", "operational", "ready", "current", "fresh"].some((token) => value.includes(token))) return "success";
+  if (value === "demo") return "demo";
+  return "neutral";
+}
+
 function StatusBadge({ status, dictionary }: { status: SystemStatus | OperationalState | "demo"; dictionary: LocaleDictionary }) {
-  return <span className={`system-status-badge ${status}`} data-status={status}>{formatStatus(status, dictionary)}</span>;
+  return <UiStatusBadge variant={statusBadgeVariant(status)} className={`system-status-badge ${status}`} data-status={status}>{formatStatus(status, dictionary)}</UiStatusBadge>;
 }
 
 function Diagnostic({ diagnostic, dictionary }: { diagnostic: SystemStatusResponse["weather"]["diagnostic"]; dictionary: LocaleDictionary }) {
@@ -59,10 +70,10 @@ function Card({
   dictionary: LocaleDictionary;
   children: React.ReactNode;
 }) {
-  return <section className="system-card" aria-label={title}>
+  return <UiCard className="system-card" aria-label={title}>
     <div className="system-card-header"><h2>{title}</h2><StatusBadge status={status} dictionary={dictionary} /></div>
     <dl className="system-fields">{children}</dl>
-  </section>;
+  </UiCard>;
 }
 
 function LinkNav({ dictionary, locale, onLocaleChange }: { dictionary: LocaleDictionary; locale: LocaleKey; onLocaleChange: () => void }) {
@@ -116,7 +127,7 @@ export function SystemStatusPage() {
         {data && <StatusBadge status={data.status} dictionary={dictionary} />}
         {data && <span>{dictionary.system.checkedAt}: {formatDateTime(data.checkedAt, dictionary)}</span>}
       </div>
-      <button type="button" className="primary-button" onClick={() => void load()} disabled={loading}>{loading ? dictionary.system.refreshing : dictionary.system.refresh}</button>
+      <Button variant="primary" className="primary-button" onClick={() => void load()} disabled={loading}>{loading ? dictionary.system.refreshing : dictionary.system.refresh}</Button>
     </div>
 
     {loading && !data && <p className="system-message">{dictionary.system.loading}</p>}
