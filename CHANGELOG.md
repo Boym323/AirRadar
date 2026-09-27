@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.153] - 2026-09-27
+
+Changes since v1.0.152.
+
+### Added
+
+- Implement OGN target deduplication logic and add corresponding tests (b6bc862a)
+
+### Fixed
+
+- Correct altitude decoding for DF17 Q-bit to prevent incorrect values (b2866ed7)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: correct altitude decoding for DF17 Q-bit to prevent incorrect values (b2866ed7)
+- feat: implement OGN target deduplication logic and add corresponding tests (b6bc862a)
+
+</details>
+
 ## [1.0.150] - 2026-09-27
 
 Changes since v1.0.149.
