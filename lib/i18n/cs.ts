@@ -1171,6 +1171,8 @@ export const cs = {
     backToLive: "← Zpět na živý radar",
     play: "Spustit historický playback",
     pause: "Pozastavit historický playback",
+    playing: "PŘEHRÁVÁ SE",
+    paused: "POZASTAVENO",
     playbackSpeed: "Rychlost playbacku",
     selectedTime: "Vybraný čas",
     timeline: "Historická časová osa",

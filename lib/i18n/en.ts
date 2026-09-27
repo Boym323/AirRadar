@@ -1173,6 +1173,8 @@ export const en = {
     backToLive: "← Back to live radar",
     play: "Play historical playback",
     pause: "Pause historical playback",
+    playing: "PLAYING",
+    paused: "PAUSED",
     playbackSpeed: "Playback speed",
     selectedTime: "Selected time",
     timeline: "Historical timeline",

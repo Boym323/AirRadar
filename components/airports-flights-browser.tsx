@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type { HistoryFlightRange, HistoryFlightSummary } from "@/lib/server/history";
-import { formatAltitude, formatDateTime, formatDistance, t } from "@/lib/i18n";
-import { EmptyState, Panel, StatusBadge } from "@/components/ui-primitives";
+import { formatAltitude, formatDateTime, t } from "@/lib/i18n";
+import { EmptyState, Panel } from "@/components/ui-primitives";
 
 function BrowserHeader({ title, description, search, onSearch, placeholder, count, children }: {
   title: string; description: string; search: string; onSearch: (value: string) => void;
@@ -90,7 +90,7 @@ export function FlightsPage() {
     </BrowserHeader>
     <Panel className="browse-panel">
       <div className="browse-list-heading flight-browse-heading"><span>{t.browse.flightIdentity}</span><span>{t.browse.flightTelemetry}</span><span>{t.browse.flightTiming}</span></div>
-      {loading ? <BrowserState kind="loading" title={t.common.loading} /> : error ? <BrowserState kind="error" title={t.browse.unavailable} description={t.browse.tryAgain} /> : flights.length === 0 ? <BrowserState kind="empty" title={search ? t.browse.noResults : t.browse.noFlights} description={search ? t.browse.clearSearch : undefined} /> : <div className="browse-list">{flights.map((flight) => <Link className="browse-row flight-browse-row" href={`/flights/${encodeURIComponent(String(flight.id))}`} key={flight.id}><span className="browse-secondary"><strong className="browse-mono">{flight.callsign || t.history.unknownCallsign}</strong><small>{flight.origin || "—"} → {flight.destination || "—"}</small></span><span className="browse-secondary"><strong>{flight.aircraftType || t.aircraft.unknownAircraftType} <span className="browse-muted">· {flight.registration || t.common.emptyValue}</span></strong><small>{formatAltitude(flight.maxAltitude)} · {flight.icaoHex}</small></span><span className="browse-secondary browse-time"><strong>{formatDateTime(flight.startTime)}</strong><small>{formatDateTime(flight.endTime ?? flight.lastSeenAt)}</small></span></Link>)}</div>}
+      {loading ? <BrowserState kind="loading" title={t.common.loading} /> : error ? <BrowserState kind="error" title={t.browse.unavailable} description={t.browse.tryAgain} /> : flights.length === 0 ? <BrowserState kind="empty" title={search ? t.browse.noResults : t.browse.noFlights} description={search ? t.browse.clearSearch : undefined} /> : <div className="browse-list">{flights.map((flight) => <Link className="browse-row flight-browse-row" href={`/flights/${encodeURIComponent(String(flight.id))}`} key={flight.id}><span className="browse-secondary"><strong className="browse-mono">{flight.callsign || t.history.unknownCallsign}</strong><small>{flight.origin || t.common.emptyValue} → {flight.destination || t.common.emptyValue}</small></span><span className="browse-secondary"><strong>{flight.aircraftType || t.aircraft.unknownAircraftType} <span className="browse-muted">· {flight.registration || t.common.emptyValue}</span></strong><small>{formatAltitude(flight.maxAltitude)} · {flight.icaoHex}</small></span><span className="browse-secondary browse-time"><strong>{formatDateTime(flight.startTime)}</strong><small>{formatDateTime(flight.endTime ?? flight.lastSeenAt)}</small></span></Link>)}</div>}
     </Panel>
   </main>;
 }
