@@ -2,6 +2,35 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.169] - 2026-09-27
+
+Changes since v1.0.168.
+
+### Added
+
+- Use Beast telemetry across aircraft visualizations (4f3b4e8b)
+- Export plausible transition functions and filter trail points for improved history processing (b5608804)
+
+### Changed
+
+- Merge remote-tracking branch 'origin/main' (66f84416)
+
+### Maintenance
+
+- Sync generated repository metadata (c365fb2b)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (c365fb2b)
+- Merge pull request #180 from Boym323/automation/repository-metadata (a121a7de)
+- feat: use Beast telemetry across aircraft visualizations (4f3b4e8b)
+- feat: export plausible transition functions and filter trail points for improved history processing (b5608804)
+- Merge remote-tracking branch 'origin/main' (66f84416)
+- Merge pull request #179 from Boym323/fix/beast-visualization-coverage (071b176b)
+
+</details>
+
 ## [1.0.168] - 2026-09-27
 
 Changes since v1.0.167.
