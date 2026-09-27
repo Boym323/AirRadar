@@ -2,6 +2,61 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.181] - 2026-09-27
+
+Changes since v1.0.179.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Added
+
+- Add Czech localization for project documentation and update related files (de47b90)
+- Update Czech documentation and add localization checks (2221b6d)
+- Update aircraft radar quick detail component and localization for situation tab (5253e69)
+- Improve changelog feature attribution (2594a3c)
+- Enhance aircraft detail styling and improve responsiveness in radar panel (1847f2d)
+
+### Fixed
+
+- Enforce tagged release history (0138469)
+- Align browser gate with quick-detail tabs (616d699)
+
+### Documentation
+
+- Update changelog for v1.0.180 (ca445e2)
+- Complete Czech documentation localization (#196) (786dd95)
+- Reconcile release and feature history (adbc14c)
+
+### Maintenance
+
+- Sync generated repository metadata (dcf89f1)
+- Validate changelog attribution signals (17226ac)
+- Cover tag and feature synchronization (886c038)
+- Cover quick-detail tab contract (b27e549)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (dcf89f1)
+- Merge pull request #195 from Boym323/automation/repository-metadata (6979721)
+- feat: add Czech localization for project documentation and update related files (de47b90)
+- Merge remote-tracking branch 'origin/main' (455918a)
+- feat(docs): update Czech documentation and add localization checks (2221b6d)
+- feat: update aircraft radar quick detail component and localization for situation tab (5253e69)
+- docs: update changelog for v1.0.180 (ca445e2)
+- docs: complete Czech documentation localization (#196) (786dd95)
+- fix(changelog): enforce tagged release history (0138469)
+- feat(features): improve changelog feature attribution (2594a3c)
+- test(features): validate changelog attribution signals (17226ac)
+- test(changelog): cover tag and feature synchronization (886c038)
+- docs(changelog): reconcile release and feature history (adbc14c)
+- fix(test): align browser gate with quick-detail tabs (616d699)
+- test(browser): cover quick-detail tab contract (b27e549)
+- Merge pull request #197 from Boym323/fix/changelog-feature-sync-v2 (6c946ba)
+- feat: enhance aircraft detail styling and improve responsiveness in radar panel (1847f2d)
+- Merge remote-tracking branch 'origin/main' (14a17d9)
+
+</details>
 ## [1.0.179] - 2026-09-27
 
 Changes since v1.0.178.
