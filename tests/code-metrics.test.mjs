@@ -3,6 +3,8 @@ import {
   classifyPath,
   countNonEmptyLines,
   renderSvg,
+  scanCodebase,
+  scanCommit,
   selectDailyCommits,
   upsertDailySnapshot,
 } from "../scripts/code-metrics.mjs";
@@ -89,6 +91,10 @@ describe("code metrics", () => {
     };
 
     expect(upsertDailySnapshot([first], unchanged)).toEqual([first]);
+  });
+
+  it("scans a Git commit with the same metric as the working tree", async () => {
+    expect(scanCommit("HEAD")).toEqual(await scanCodebase());
   });
 
   it("renders both chart series", () => {
