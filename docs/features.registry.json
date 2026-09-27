@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "trackedSince": "2026-09-27",
+  "description": "Canonical feature registry for AirRadar. introducedVersion is null when the feature predates registry adoption and has not yet been historically attributed.",
+  "features": [
+    {
+      "id": "live-radar",
+      "name": "Live Radar",
+      "category": "radar",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots and SSE streaming.",
+      "pages": [
+        "/"
+      ],
+      "apis": [
+        "/api/aircraft",
+        "/api/aircraft/:hex",
+        "/api/search",
+        "/api/stream"
+      ]
+    },
+    {
+      "id": "aircraft-flight-detail",
+      "name": "Aircraft & Flight Detail",
+      "category": "history",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Aircraft identity, context, photos, route weather, captured flights and sampled history.",
+      "pages": [
+        "/aircraft/:hex",
+        "/flights/:id",
+        "/history"
+      ],
+      "apis": [
+        "/api/aircraft/:hex/context",
+        "/api/aircraft/:hex/photo",
+        "/api/aircraft/:hex/route-weather",
+        "/api/history/:hex",
+        "/api/history/flights",
+        "/api/history/flights/:id"
+      ]
+    },
+    {
+      "id": "airport-intelligence",
+      "name": "Airport Intelligence",
+      "category": "airports",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Airport catalog, runway context, observed traffic and inferred movement intelligence.",
+      "pages": [
+        "/airports/:icao"
+      ],
+      "apis": [
+        "/api/airports",
+        "/api/airports/:icao",
+        "/api/airports/:icao/movements",
+        "/api/airports/:icao/traffic"
+      ]
+    },
+    {
+      "id": "time-machine",
+      "name": "Time Machine",
+      "category": "history",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded historical all-aircraft playback and historical context windows.",
+      "pages": [
+        "/time-machine"
+      ],
+      "apis": [
+        "/api/time-machine/range",
+        "/api/time-machine/window"
+      ]
+    },
+    {
+      "id": "map-context-weather",
+      "name": "Map Context & Weather",
+      "category": "weather",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Current and historical radar, METAR, wind, SIGMET and AUP/UUP map context.",
+      "pages": [],
+      "apis": [
+        "/api/map-context/at",
+        "/api/map-context/aup",
+        "/api/map-context/metar",
+        "/api/map-context/radar",
+        "/api/map-context/radar/frame/:id",
+        "/api/map-context/range",
+        "/api/map-context/wind",
+        "/api/weather/airport",
+        "/api/weather/airport/:icao",
+        "/api/weather/metar-map",
+        "/api/weather/radar/frame/:id",
+        "/api/weather/radar/frames",
+        "/api/weather/sigmet",
+        "/api/weather/wind"
+      ]
+    },
+    {
+      "id": "statistics-recaps",
+      "name": "Statistics & Recaps",
+      "category": "analytics",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Receiver statistics, traffic intelligence, reception records and daily/weekly recaps.",
+      "pages": [
+        "/statistics",
+        "/recap/daily",
+        "/recap/weekly"
+      ],
+      "apis": [
+        "/api/logbook/summary",
+        "/api/recap",
+        "/api/reception-records",
+        "/api/statistics",
+        "/api/statistics/coverage-intelligence",
+        "/api/statistics/traffic"
+      ]
+    },
+    {
+      "id": "watchlist-alerts",
+      "name": "Watchlist, Alerts & Fleet",
+      "category": "alerts",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Server watchlists, alert history, rule mutations and fleet views.",
+      "pages": [
+        "/watchlist",
+        "/alerts",
+        "/fleet"
+      ],
+      "apis": [
+        "/api/alerts",
+        "/api/watchlist",
+        "/api/watchlist/:id",
+        "/api/watchlist/session"
+      ]
+    },
+    {
+      "id": "flight-intelligence",
+      "name": "Flight Intelligence",
+      "category": "intelligence",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Lifecycle and transition intelligence event timeline and streaming.",
+      "pages": [
+        "/intelligence"
+      ],
+      "apis": [
+        "/api/intelligence/events",
+        "/api/intelligence/stream"
+      ]
+    },
+    {
+      "id": "atc-ats-intelligence",
+      "name": "ATC & ATS Intelligence",
+      "category": "atc",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity.",
+      "pages": [],
+      "apis": [
+        "/api/airspace/activity",
+        "/api/atc/sectors",
+        "/api/atc/sectors/:id/history",
+        "/api/atc/sectors/:id/traffic",
+        "/api/atc/sectors/history",
+        "/api/atc/sectors/traffic",
+        "/api/atc/sectors/transitions",
+        "/api/atc/validation",
+        "/api/ats/routes",
+        "/api/procedures"
+      ]
+    },
+    {
+      "id": "receiver-coverage",
+      "name": "Receiver Coverage",
+      "category": "receiver",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Receiver coverage analysis and dedicated coverage detail.",
+      "pages": [
+        "/receiver/coverage"
+      ],
+      "apis": [
+        "/api/receiver/coverage"
+      ]
+    },
+    {
+      "id": "ogn-flarm",
+      "name": "OGN / FLARM",
+      "category": "traffic",
+      "status": "optional",
+      "introducedVersion": null,
+      "summary": "Privacy-aware optional OGN/FLARM state and independent SSE stream.",
+      "pages": [],
+      "apis": [
+        "/api/ogn/state",
+        "/api/ogn/stream"
+      ]
+    },
+    {
+      "id": "system-observability",
+      "name": "System Observability",
+      "category": "operations",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Sanitized health, runtime history, provider status and build identity.",
+      "pages": [
+        "/system"
+      ],
+      "apis": [
+        "/api/health",
+        "/api/system/runtime-history",
+        "/api/system/status",
+        "/api/version"
+      ]
+    },
+    {
+      "id": "flightaware-admin",
+      "name": "FlightAware Usage Administration",
+      "category": "operations",
+      "status": "internal",
+      "introducedVersion": null,
+      "summary": "Administrative usage diagnostics for the optional FlightAware integration.",
+      "pages": [],
+      "apis": [
+        "/api/admin/flightaware/usage"
+      ]
+    }
+  ]
+}
