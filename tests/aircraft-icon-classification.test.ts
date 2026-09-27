@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { aircraftIconNeedsInitialMetadata, aircraftPresentationKindForType, classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
-import { aircraftIconSizeForPresentation } from "@/lib/aircraft/icon-size";
+import { aircraftIconSizeAtZoom, aircraftIconSizeForPresentation, aircraftIconZoomScale } from "@/lib/aircraft/icon-size";
 
 const base = { aircraftType: null, aircraftDescription: null, enrichment: undefined, category: null, onGround: false };
 
@@ -46,22 +46,33 @@ describe("canonical aircraft icon classification", () => {
   });
 
   it("scales silhouette size by aircraft visual mass without changing hit targets", () => {
-    expect(aircraftIconSizeForPresentation("ground")).toBe(14);
-    expect(aircraftIconSizeForPresentation("general-aviation")).toBe(18);
-    expect(aircraftIconSizeForPresentation("a320")).toBe(20);
-    expect(aircraftIconSizeForPresentation("a330")).toBe(22);
-    expect(aircraftIconSizeForPresentation("a380")).toBe(24);
+    expect(aircraftIconSizeForPresentation("ground")).toBe(13);
+    expect(aircraftIconSizeForPresentation("general-aviation")).toBe(17);
+    expect(aircraftIconSizeForPresentation("a320")).toBe(18);
+    expect(aircraftIconSizeForPresentation("a330")).toBe(20);
+    expect(aircraftIconSizeForPresentation("a380")).toBe(22);
     expect(aircraftIconSizeForPresentation("a380")).toBeGreaterThan(aircraftIconSizeForPresentation("a320"));
   });
 
   it.each([
-    ["a220", 20], ["a320", 20], ["a330", 22], ["a350", 22], ["a380", 24],
-    ["b717", 19], ["b727", 20], ["b737", 20], ["b747", 22], ["b757", 20],
-    ["b767", 22], ["b777", 22], ["b787", 22], ["regional", 19], ["turboprop", 19],
-    ["business-jet", 19], ["general-aviation", 18], ["helicopter", 18], ["glider", 21],
-    ["drone", 16], ["ground", 14],
+    ["a220", 18], ["a320", 18], ["a330", 20], ["a350", 20], ["a380", 22],
+    ["b717", 18], ["b727", 18], ["b737", 18], ["b747", 20], ["b757", 18],
+    ["b767", 20], ["b777", 20], ["b787", 20], ["regional", 18], ["turboprop", 18],
+    ["business-jet", 18], ["general-aviation", 17], ["helicopter", 17], ["glider", 19],
+    ["drone", 15], ["ground", 13],
   ] as const)("keeps HTML and WebGL visual size parity for %s", (kind, expected) => {
     expect(aircraftIconSizeForPresentation(kind)).toBe(expected);
+  });
+
+  it("uses a restrained continuous zoom scale without changing the hit target", () => {
+    expect(aircraftIconZoomScale(5)).toBe(0.9);
+    expect(aircraftIconZoomScale(6)).toBe(0.9);
+    expect(aircraftIconZoomScale(7.5)).toBeCloseTo(0.95, 5);
+    expect(aircraftIconZoomScale(9)).toBe(1);
+    expect(aircraftIconZoomScale(12)).toBe(1);
+    expect(aircraftIconSizeAtZoom(18, 6)).toBe(16.2);
+    expect(aircraftIconSizeAtZoom(18, 7.5)).toBe(17.1);
+    expect(aircraftIconSizeAtZoom(18, 9)).toBe(18);
   });
 
   it("keeps a live observed type ahead of later enrichment metadata", () => {
