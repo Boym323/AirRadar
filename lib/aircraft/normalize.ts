@@ -1,5 +1,5 @@
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
-import type { Aircraft, AircraftSource, ReceiverPosition } from "@/lib/aircraft/types";
+import type { Aircraft, AircraftAdsbTelemetry, AircraftSource, ReceiverPosition } from "@/lib/aircraft/types";
 import { normalizeAircraftIdentifier } from "@/lib/aircraft/identity";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 
@@ -30,6 +30,29 @@ export interface RawReadsbAircraft {
   dbFlags?: unknown;
   on_ground?: unknown;
   emergency?: unknown;
+  ias?: unknown;
+  tas?: unknown;
+  mach?: unknown;
+  wd?: unknown;
+  ws?: unknown;
+  oat?: unknown;
+  tat?: unknown;
+  nav_qnh?: unknown;
+  nav_altitude_mcp?: unknown;
+  nav_altitude_fms?: unknown;
+  nav_heading?: unknown;
+  nav_modes?: unknown;
+  nic?: unknown;
+  rc?: unknown;
+  nac_p?: unknown;
+  nac_v?: unknown;
+  sil?: unknown;
+  sil_type?: unknown;
+  gva?: unknown;
+  sda?: unknown;
+  version?: unknown;
+  alert?: unknown;
+  spi?: unknown;
 }
 
 export interface RawReadsbAircraftResponse {
@@ -53,6 +76,44 @@ function text(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
+}
+
+function textArray(value: unknown, maximum = 8): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => text(item))
+    .filter((item): item is string => item !== null)
+    .slice(0, maximum);
+}
+
+function adsbTelemetry(raw: RawReadsbAircraft): AircraftAdsbTelemetry | null {
+  const value: AircraftAdsbTelemetry = {
+    iasKt: numeric(raw.ias),
+    tasKt: numeric(raw.tas),
+    mach: numeric(raw.mach),
+    windDirectionDeg: numeric(raw.wd),
+    windSpeedKt: numeric(raw.ws),
+    outsideAirTemperatureC: numeric(raw.oat),
+    totalAirTemperatureC: numeric(raw.tat),
+    navQnhHpa: numeric(raw.nav_qnh),
+    selectedAltitudeMcpFt: numeric(raw.nav_altitude_mcp),
+    selectedAltitudeFmsFt: numeric(raw.nav_altitude_fms),
+    selectedHeadingDeg: numeric(raw.nav_heading),
+    navModes: textArray(raw.nav_modes),
+    nic: numeric(raw.nic),
+    containmentRadiusM: numeric(raw.rc),
+    nacP: numeric(raw.nac_p),
+    nacV: numeric(raw.nac_v),
+    sil: numeric(raw.sil),
+    silType: text(raw.sil_type),
+    gva: numeric(raw.gva),
+    sda: numeric(raw.sda),
+    adsbVersion: numeric(raw.version),
+    alert: numeric(raw.alert),
+    spi: numeric(raw.spi),
+    dbFlags: numeric(raw.dbFlags),
+  };
+  return Object.values(value).some((item) => Array.isArray(item) ? item.length > 0 : item !== null) ? value : null;
 }
 
 function coordinate(value: unknown, minimum: number, maximum: number): number | null {
@@ -147,6 +208,7 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
     distanceKm,
     bearing,
     trail: [],
+    adsbTelemetry: adsbTelemetry(raw),
   };
   const observedAt = positionObservedAt(normalized);
   normalized.trail = lat !== null && lon !== null && observedAt !== null

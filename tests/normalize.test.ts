@@ -41,4 +41,22 @@ describe("readsb normalization", () => {
       verticalRate: -512, baroRate: -512, geomRate: -256,
     });
   });
+
+  it("preserves typed readsb ADS-B telemetry", () => {
+    const result = normalizeAircraftResponse({ aircraft: [{
+      hex: "abc123", ias: 250, tas: 440, mach: 0.78, wd: 310, ws: 27,
+      oat: -37, tat: -10, nav_qnh: 1013.6, nav_altitude_mcp: 20000,
+      nav_altitude_fms: 21000, nav_heading: 90, nav_modes: ["autopilot", "vnav"],
+      nic: 8, rc: 186, nac_p: 8, nac_v: 2, sil: 3, sil_type: "perhour",
+      gva: 1, sda: 2, version: 2, alert: 0, spi: 0, dbFlags: 1,
+    }] }, { lat: 50, lon: 14, name: "Test" });
+    expect(result[0].adsbTelemetry).toEqual({
+      iasKt: 250, tasKt: 440, mach: 0.78, windDirectionDeg: 310, windSpeedKt: 27,
+      outsideAirTemperatureC: -37, totalAirTemperatureC: -10, navQnhHpa: 1013.6,
+      selectedAltitudeMcpFt: 20000, selectedAltitudeFmsFt: 21000, selectedHeadingDeg: 90,
+      navModes: ["autopilot", "vnav"], nic: 8, containmentRadiusM: 186, nacP: 8,
+      nacV: 2, sil: 3, silType: "perhour", gva: 1, sda: 2, adsbVersion: 2,
+      alert: 0, spi: 0, dbFlags: 1,
+    });
+  });
 });

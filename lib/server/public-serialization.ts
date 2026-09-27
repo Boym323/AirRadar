@@ -93,7 +93,8 @@ function publicAircraft(
   const { icaoHex, callsign, registration, aircraftType, aircraftDescription, lat, lon,
     altitude, baroAltitude, geomAltitude, groundSpeed, track, verticalRate, baroRate,
     geomRate, squawk, category, emergency, rssi, messages, seenSeconds, seenPosSeconds,
-    lastSeen, source, origin, provenance, sourceType, onGround, trail, enrichment, targetState, operationalStatus } = item;
+    lastSeen, source, origin, provenance, sourceType, onGround, trail, enrichment, targetState, operationalStatus,
+    adsbTelemetry } = item;
   const route = enrichment?.route;
   const metadata = enrichment?.metadata;
   const hasPublicGeometry = mode !== "hidden"
@@ -122,6 +123,7 @@ function publicAircraft(
     distanceKm, bearing, ...(trail === undefined ? {} : { trail }),
     ...(targetState === undefined ? {} : { targetState }),
     ...(operationalStatus === undefined ? {} : { operationalStatus }),
+    ...(adsbTelemetry === undefined ? {} : { adsbTelemetry }),
     ...((metadata || route) ? { enrichment: {
       ...(metadata ? { metadata: publicLiveMetadata(metadata) } : {}),
       ...(route ? { route: { callsign: route.callsign, airline: route.airline, airlineIcao: route.airlineIcao,

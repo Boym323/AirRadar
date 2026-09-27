@@ -46,6 +46,34 @@ export interface AircraftOperationalStatus {
   silSupplement: number | null;
 }
 
+/** Additional typed telemetry exposed by readsb's aircraft.json feed. */
+export interface AircraftAdsbTelemetry {
+  iasKt: number | null;
+  tasKt: number | null;
+  mach: number | null;
+  windDirectionDeg: number | null;
+  windSpeedKt: number | null;
+  outsideAirTemperatureC: number | null;
+  totalAirTemperatureC: number | null;
+  navQnhHpa: number | null;
+  selectedAltitudeMcpFt: number | null;
+  selectedAltitudeFmsFt: number | null;
+  selectedHeadingDeg: number | null;
+  navModes: string[];
+  nic: number | null;
+  containmentRadiusM: number | null;
+  nacP: number | null;
+  nacV: number | null;
+  sil: number | null;
+  silType: string | null;
+  gva: number | null;
+  sda: number | null;
+  adsbVersion: number | null;
+  alert: number | null;
+  spi: number | null;
+  dbFlags: number | null;
+}
+
 export interface ReceiverPosition {
   lat: number;
   lon: number;
@@ -155,6 +183,7 @@ export interface Aircraft {
   atc?: AtcAssignment | null;
   targetState?: AircraftTargetState | null;
   operationalStatus?: AircraftOperationalStatus | null;
+  adsbTelemetry?: AircraftAdsbTelemetry | null;
 }
 
 /** The wire representation intentionally omits the in-memory trail by default. */
