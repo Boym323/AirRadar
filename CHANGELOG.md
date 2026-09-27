@@ -2,6 +2,68 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.167] - 2026-09-27
+
+Changes since v1.0.164.
+
+**Features touched:** Live Radar.
+
+### Added
+
+- Add extreme altitude audit artifacts and root cause analysis (a41387b)
+- Model initial aircraft metadata provider (f4319bd)
+- Add fast initial aircraft metadata lookup (fbf5b26)
+- Add altitude provenance and forensic diagnostics (730489a)
+
+### Changed
+
+- Merge remote-tracking branch 'origin/main' (aad3db4)
+- Merge remote-tracking branch 'origin/main' (410fb8e)
+
+### Fixed
+
+- Keep live aircraft type stable for first icon render (0d65d3c)
+- Use local metadata for initial aircraft icons (816439f)
+- Hydrate icon metadata before first live snapshot (8ef2b83)
+- Update generatedAt timestamps and currentCommit in JSON artifacts (530a871)
+
+### Documentation
+
+- Update changelog for v1.0.165 (6291c47)
+- Update changelog for v1.0.166 (412a538)
+
+### Maintenance
+
+- Sync generated repository metadata (7c3f14c)
+- Prevent enrichment-driven icon replacement (37b76c0)
+- Require correct icon identity on first snapshot (aa1c852)
+- Inspect first snapshot containing the aircraft (c2f03a3)
+- Keep first-render fixture within stale window (bee8d87)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (7c3f14c)
+- Merge pull request #176 from Boym323/automation/repository-metadata (f61341d)
+- feat: add extreme altitude audit artifacts and root cause analysis (a41387b)
+- Merge remote-tracking branch 'origin/main' (aad3db4)
+- fix(ui): keep live aircraft type stable for first icon render (0d65d3c)
+- feat(server): model initial aircraft metadata provider (f4319bd)
+- feat(server): add fast initial aircraft metadata lookup (fbf5b26)
+- fix(server): use local metadata for initial aircraft icons (816439f)
+- fix(radar): hydrate icon metadata before first live snapshot (8ef2b83)
+- test(ui): prevent enrichment-driven icon replacement (37b76c0)
+- test(radar): require correct icon identity on first snapshot (aa1c852)
+- test(radar): inspect first snapshot containing the aircraft (c2f03a3)
+- test(radar): keep first-render fixture within stale window (bee8d87)
+- Merge pull request #177 from Boym323/fix/aircraft-icons-first-render (8d6ec04)
+- docs: update changelog for v1.0.165 (6291c47)
+- feat: add altitude provenance and forensic diagnostics (730489a)
+- docs: update changelog for v1.0.166 (412a538)
+- fix: update generatedAt timestamps and currentCommit in JSON artifacts (530a871)
+- Merge remote-tracking branch 'origin/main' (410fb8e)
+
+</details>
 ## [1.0.166] - 2026-09-27
 
 Changes since v1.0.165.
