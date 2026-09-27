@@ -17,6 +17,7 @@ import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
+import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
 import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
@@ -88,6 +89,12 @@ export function aircraftWebglColor(aircraft: AircraftView, mode: AircraftColorMo
 
 export function aircraftWebglIconAsset(aircraft: AircraftView): string {
   return classifyAircraftIcon(aircraft).asset ?? TAR1090_UNKNOWN_ICON_ASSET;
+}
+
+/** Screen-space heading shared conceptually with the HTML marker rotator. */
+export function aircraftWebglScreenHeading(heading: number | null, mapBearing: number, assetOffset = 0): number | null {
+  const normalized = normalizeHeading(heading);
+  return normalized === null ? null : normalizeHeading(normalized - mapBearing + assetOffset);
 }
 
 function pointSizeFor(aircraft: AircraftView): number {
@@ -215,6 +222,7 @@ export class AircraftWebglRuntime {
   private lastDataRenderAt = Number.NEGATIVE_INFINITY;
   private lastBearing = Number.NaN;
   private renderedCount = 0;
+  private vertexData = new Float32Array(0);
 
   constructor(private readonly options: AircraftWebglRuntimeOptions) {
     this.layer = {
@@ -602,7 +610,9 @@ export class AircraftWebglRuntime {
     if (this.dirty || dataFrameDue || bearingChanged) {
       const diagnostics = this.options.getPerformanceDiagnostics();
       const startedAt = diagnostics ? performance.now() : 0;
-      const data = new Float32Array(this.jobs.size * FLOATS_PER_VERTEX);
+      const requiredFloats = this.jobs.size * FLOATS_PER_VERTEX;
+      if (this.vertexData.length < requiredFloats) this.vertexData = new Float32Array(requiredFloats);
+      const data = this.vertexData;
       let offset = 0;
       let vertexIndex = 0;
       this.renderIndexByHex.clear();
@@ -628,11 +638,10 @@ export class AircraftWebglRuntime {
         this.updateSpatialCell(icaoHex, job, mercator.x, mercator.y);
         this.renderIndexByHex.set(icaoHex, vertexIndex);
         vertexIndex += 1;
-        const heading = normalizeHeading(motion.heading) ?? 0;
-        const screenHeading = (heading - bearing) * Math.PI / 180;
+        const screenHeading = aircraftWebglScreenHeading(motion.heading, bearing, aircraftIconRotationOffset(job.iconAsset));
         data[offset++] = mercator.x;
         data[offset++] = mercator.y;
-        data[offset++] = screenHeading;
+        data[offset++] = (screenHeading ?? 0) * Math.PI / 180;
         data[offset++] = job.color[0];
         data[offset++] = job.color[1];
         data[offset++] = job.color[2];
@@ -709,6 +718,7 @@ export class AircraftWebglRuntime {
     this.maxIconAtlasLayers = 0;
     this.map = null;
     this.renderedCount = 0;
+    this.vertexData = new Float32Array(0);
   }
 }
 
