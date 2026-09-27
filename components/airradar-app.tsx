@@ -77,6 +77,7 @@ import {
 import {
   createAircraftMarkerHandle,
   setAircraftMarkerHeading,
+  setAircraftMarkerZoom,
   updateAircraftMarkerHandle,
   type AircraftMarkerHandle,
 } from "@/lib/radar/aircraft-marker-controller";
@@ -1254,6 +1255,7 @@ export function AirRadarApp() {
       let liveLabelLevel = aircraftMapLabelLevel(map.getZoom());
       const updateLiveZoomLabels = () => {
         const zoom = map.getZoom();
+        for (const handle of aircraftMarkers.values()) setAircraftMarkerZoom(handle, zoom);
         const nextLevel = aircraftMapLabelLevel(zoom);
         if (nextLevel !== liveLabelLevel) {
           liveLabelLevel = nextLevel;

@@ -19,7 +19,7 @@ import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
 import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
-import { aircraftIconVisualSize } from "@/lib/aircraft/icon-size";
+import { aircraftIconVisualSize, aircraftIconZoomScale } from "@/lib/aircraft/icon-size";
 import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
@@ -126,14 +126,15 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
     layout(location = 4) in float a_icon_layer;
     uniform mat4 u_matrix;
     uniform float u_pixel_ratio;
+    uniform float u_zoom_scale;
     uniform int u_hovered_index;
     out float v_angle;
     out vec4 v_color;
     flat out float v_icon_layer;
     void main() {
       gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0);
-      float hoverScale = gl_VertexID == u_hovered_index ? 1.3 : 1.0;
-      gl_PointSize = a_size * hoverScale * u_pixel_ratio;
+      float hoverScale = gl_VertexID == u_hovered_index ? 1.12 : 1.0;
+      gl_PointSize = a_size * u_zoom_scale * hoverScale * u_pixel_ratio;
       v_angle = a_angle;
       v_color = a_color;
       v_icon_layer = a_icon_layer;
@@ -201,6 +202,7 @@ export class AircraftWebglRuntime {
   private vao: WebGLVertexArrayObject | null = null;
   private matrixLocation: WebGLUniformLocation | null = null;
   private pixelRatioLocation: WebGLUniformLocation | null = null;
+  private zoomScaleLocation: WebGLUniformLocation | null = null;
   private hoveredIndexLocation: WebGLUniformLocation | null = null;
   private iconAtlasLocation: WebGLUniformLocation | null = null;
   private gl: WebGL2RenderingContext | null = null;
@@ -586,6 +588,7 @@ export class AircraftWebglRuntime {
 
     this.matrixLocation = gl.getUniformLocation(this.program, "u_matrix");
     this.pixelRatioLocation = gl.getUniformLocation(this.program, "u_pixel_ratio");
+    this.zoomScaleLocation = gl.getUniformLocation(this.program, "u_zoom_scale");
     this.hoveredIndexLocation = gl.getUniformLocation(this.program, "u_hovered_index");
     this.iconAtlasLocation = gl.getUniformLocation(this.program, "u_icon_atlas");
     for (const job of this.jobs.values()) {
@@ -676,6 +679,7 @@ export class AircraftWebglRuntime {
     gl.bindVertexArray(this.vao);
     if (this.matrixLocation !== null) gl.uniformMatrix4fv(this.matrixLocation, false, input.defaultProjectionData.mainMatrix);
     if (this.pixelRatioLocation !== null) gl.uniform1f(this.pixelRatioLocation, Math.max(1, window.devicePixelRatio || 1));
+    if (this.zoomScaleLocation !== null) gl.uniform1f(this.zoomScaleLocation, aircraftIconZoomScale(this.map.getZoom()));
     if (this.hoveredIndexLocation !== null) {
       const hoveredIndex = this.hoveredHex ? this.renderIndexByHex.get(this.hoveredHex) ?? -1 : -1;
       gl.uniform1i(this.hoveredIndexLocation, hoveredIndex);
@@ -704,6 +708,7 @@ export class AircraftWebglRuntime {
     this.program = null;
     this.matrixLocation = null;
     this.pixelRatioLocation = null;
+    this.zoomScaleLocation = null;
     this.hoveredIndexLocation = null;
     this.iconAtlasLocation = null;
     this.gl = null;
