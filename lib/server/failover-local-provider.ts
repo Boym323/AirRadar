@@ -35,10 +35,19 @@ function mergeTelemetry(beast: AircraftAdsbTelemetry | null | undefined, json: A
   };
 }
 
+function preferredValue<T>(beastValue: T | null | undefined, jsonValue: T | null | undefined, beastAt: number | null | undefined, jsonAt: number | null | undefined): T | null {
+  if (beastValue === null || beastValue === undefined) return jsonValue ?? null;
+  if (jsonValue === null || jsonValue === undefined) return beastValue;
+  if (beastAt !== undefined && beastAt !== null && jsonAt !== undefined && jsonAt !== null) return beastAt >= jsonAt ? beastValue : jsonValue;
+  return beastValue;
+}
+
 /** Merge two observations from the same local receiver without letting null
  * fields in a fresh Beast frame erase readsb's aggregated values. */
 export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
   const position = beast.lat !== null && beast.lon !== null ? beast : json;
+  const beastTimes = beast.observationTimes;
+  const jsonTime = Date.parse(json.lastSeen);
   return {
     ...json,
     ...beast,
@@ -48,12 +57,12 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
     aircraftDescription: beast.aircraftDescription ?? json.aircraftDescription,
     lat: position.lat,
     lon: position.lon,
-    altitude: beast.altitude ?? json.altitude,
-    baroAltitude: beast.baroAltitude ?? json.baroAltitude,
-    geomAltitude: beast.geomAltitude ?? json.geomAltitude,
-    groundSpeed: beast.groundSpeed ?? json.groundSpeed,
-    track: beast.track ?? json.track,
-    verticalRate: beast.verticalRate ?? json.verticalRate,
+    altitude: preferredValue(beast.altitude, json.altitude, beastTimes?.altitude, jsonTime),
+    baroAltitude: preferredValue(beast.baroAltitude, json.baroAltitude, beastTimes?.baroAltitude, jsonTime),
+    geomAltitude: preferredValue(beast.geomAltitude, json.geomAltitude, beastTimes?.geomAltitude, jsonTime),
+    groundSpeed: preferredValue(beast.groundSpeed, json.groundSpeed, beastTimes?.groundSpeed, jsonTime),
+    track: preferredValue(beast.track, json.track, beastTimes?.track, jsonTime),
+    verticalRate: preferredValue(beast.verticalRate, json.verticalRate, beastTimes?.verticalRate, jsonTime),
     baroRate: beast.baroRate ?? json.baroRate,
     geomRate: beast.geomRate ?? json.geomRate,
     squawk: beast.squawk ?? json.squawk,
@@ -79,6 +88,7 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
       positionOrigin: position.lat !== null && position.lon !== null ? "local" : null,
       positionSource: position.source,
     },
+    observationTimes: beast.observationTimes ?? json.observationTimes,
   };
 }
 
@@ -101,6 +111,9 @@ export class FailoverLocalProvider implements AircraftProvider {
   private active: "beast" | "json" = "json";
   private fallbackSince: number | null = null;
   private recoveryFrames = 0;
+  private jsonCache: { snapshot: ProviderSnapshot; fetchedAt: number } | null = null;
+  private readonly jsonCacheMs = 1_000;
+  private readonly jsonStaleGraceMs = 5_000;
   constructor(private readonly beast: BeastLocalProvider, private readonly json: AircraftProvider, private readonly jsonEnabled: boolean) {}
   async getSnapshot(): Promise<ProviderSnapshot> {
     const beastSnapshot = await this.beast.getSnapshot(); const diagnostics = this.beast.getDiagnostics();
@@ -109,17 +122,30 @@ export class FailoverLocalProvider implements AircraftProvider {
     if (!healthy) { this.recoveryFrames = 0; if (this.active === "beast" || this.fallbackSince === null) this.fallbackSince ??= Date.now(); this.active = this.jsonEnabled ? "json" : "beast"; }
     if (this.active === "beast") {
       if (!this.jsonEnabled) return beastSnapshot;
-      try {
-        const jsonSnapshot = await this.json.getSnapshot();
+      const jsonSnapshot = await this.supplementaryJsonSnapshot();
+      if (jsonSnapshot) {
         return mergeLocalSnapshots(beastSnapshot, jsonSnapshot);
-      } catch {
-        // Beast remains the live source when the supplementary JSON endpoint
-        // is temporarily unavailable.
-        return beastSnapshot;
       }
+      // Beast remains the live source when the supplementary JSON endpoint
+      // is temporarily unavailable.
+      return beastSnapshot;
     }
-    if (this.jsonEnabled) { const snapshot = await this.json.getSnapshot(); return { ...snapshot, provider: "readsb-json-fallback" }; }
+    if (this.jsonEnabled) {
+      const snapshot = await this.supplementaryJsonSnapshot();
+      if (snapshot) return { ...snapshot, provider: "readsb-json-fallback" };
+    }
     return beastSnapshot;
+  }
+  private async supplementaryJsonSnapshot(): Promise<ProviderSnapshot | null> {
+    const now = Date.now();
+    if (this.jsonCache && now - this.jsonCache.fetchedAt < this.jsonCacheMs) return this.jsonCache.snapshot;
+    try {
+      const snapshot = await this.json.getSnapshot();
+      this.jsonCache = { snapshot, fetchedAt: Date.now() };
+      return snapshot;
+    } catch {
+      return this.jsonCache && now - this.jsonCache.fetchedAt <= this.jsonStaleGraceMs ? this.jsonCache.snapshot : null;
+    }
   }
   getDiagnostics(): BeastDiagnostics & { activeSource: "beast" | "json-fallback"; fallbackSince: string | null } { return { ...this.beast.getDiagnostics(), activeSource: this.active === "beast" ? "beast" : "json-fallback", fallbackSince: this.fallbackSince === null ? null : new Date(this.fallbackSince).toISOString() }; }
   abort(): void { this.beast.abort?.(); this.json.abort?.(); }

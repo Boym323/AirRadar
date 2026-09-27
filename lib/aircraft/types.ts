@@ -46,6 +46,16 @@ export interface AircraftOperationalStatus {
   silSupplement: number | null;
 }
 
+/** Internal arrival times for values decoded from independent message types. */
+export interface AircraftObservationTimes {
+  altitude: number | null;
+  baroAltitude: number | null;
+  geomAltitude: number | null;
+  groundSpeed: number | null;
+  track: number | null;
+  verticalRate: number | null;
+}
+
 /** Additional typed telemetry exposed by readsb's aircraft.json feed. */
 export interface AircraftAdsbTelemetry {
   iasKt: number | null;
@@ -184,10 +194,11 @@ export interface Aircraft {
   targetState?: AircraftTargetState | null;
   operationalStatus?: AircraftOperationalStatus | null;
   adsbTelemetry?: AircraftAdsbTelemetry | null;
+  observationTimes?: AircraftObservationTimes;
 }
 
 /** The wire representation intentionally omits the in-memory trail by default. */
-export type AircraftView = Omit<Aircraft, "trail"> & { trail?: TrailPoint[] };
+export type AircraftView = Omit<Aircraft, "trail" | "observationTimes"> & { trail?: TrailPoint[] };
 
 /** Public aircraft are assembled explicitly by the serializer; this alias
  * keeps existing UI consumers compatible with the shared wire shape. */
