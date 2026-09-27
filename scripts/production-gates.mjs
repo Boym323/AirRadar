@@ -901,30 +901,39 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }
         await page.locator("details.map-layers").evaluate((element) => { element.open = false; });
 
-        // Open one aircraft and validate the user-visible quick-detail contract.
+        // Open one aircraft and validate the current four-tab quick-detail contract.
         await sidebar.locator(".aircraft-row").first().click();
         const quickDetail = sidebar.getByTestId("aircraft-quick-detail");
         await quickDetail.waitFor({ state: "visible" });
-        await quickDetail.getByRole("tab", { name: "Situace", exact: true }).click();
-        await quickDetail.locator(".aircraft-quick-atc").waitFor({ state: "visible" });
-        await quickDetail.getByTestId("route-weather-match").waitFor({ state: "visible" });
-        await quickDetail.locator(".route-weather-summary").first().waitFor({ state: "visible" });
         const quickContract = await quickDetail.evaluate((element) => ({
           tabs: [...element.querySelectorAll('[role="tab"]')].map((tab) => ({ id: tab.id, selected: tab.getAttribute("aria-selected") })),
           activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
           liveMetricGrids: element.querySelectorAll(".aircraft-quick-metrics").length,
           technicalOpen: element.querySelector(".aircraft-quick-advanced")?.hasAttribute("open") ?? false,
-          atcPrimary: Boolean(element.querySelector(".aircraft-quick-atc-primary")),
           dataDisclosure: Boolean(element.querySelector('[role="tab"]#aircraft-tab-data')),
         }));
         if (quickContract.tabs.length !== 4
-          || quickContract.activePanel !== "aircraft-tabpanel-situation"
-          || quickContract.liveMetricGrids !== 0
+          || quickContract.activePanel !== "aircraft-tabpanel-flight"
+          || quickContract.liveMetricGrids !== 1
           || quickContract.technicalOpen
-          || !quickContract.atcPrimary
           || !quickContract.dataDisclosure) {
           throw new Error(`Aircraft quick-detail contract failed at ${viewport.width}px: ${JSON.stringify(quickContract)}`);
         }
+        await quickDetail.getByRole("tab", { name: "Situace", exact: true }).click();
+        await quickDetail.locator(".aircraft-quick-atc").waitFor({ state: "visible" });
+        await quickDetail.getByTestId("route-weather-match").waitFor({ state: "visible" });
+        await quickDetail.locator(".route-weather-summary").first().waitFor({ state: "visible" });
+        const situationContract = await quickDetail.evaluate((element) => ({
+          activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
+          atcPrimary: Boolean(element.querySelector(".aircraft-quick-atc-primary")),
+          situationSummary: Boolean(element.querySelector('[data-testid="flight-situation-summary"]')),
+        }));
+        if (situationContract.activePanel !== "aircraft-tabpanel-situation"
+          || !situationContract.atcPrimary
+          || !situationContract.situationSummary) {
+          throw new Error(`Aircraft situation contract failed at ${viewport.width}px: ${JSON.stringify(situationContract)}`);
+        }
+
         await quickDetail.getByRole("tab", { name: "Let", exact: true }).click();
         const fullDetailHref = await quickDetail.locator("a[href^='/aircraft/']").getAttribute("href");
         if (!/^\/aircraft\/[0-9A-Fa-f~]+$/.test(fullDetailHref ?? "")) {

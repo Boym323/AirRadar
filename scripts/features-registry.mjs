@@ -67,6 +67,7 @@ export function validateRegistry(registry, discovered) {
   }
 
   const ids = new Set();
+  const changelogScopeOwners = new Map();
   const coveredPages = new Set();
   const coveredApis = new Set();
 
@@ -84,6 +85,37 @@ export function validateRegistry(registry, discovered) {
     if (!VALID_STATUSES.has(feature.status)) {
       errors.push(`${feature.id}: invalid status ${String(feature.status)}`);
     }
+
+    if (feature.changelogScopes !== undefined) {
+      if (!Array.isArray(feature.changelogScopes)) {
+        errors.push(`${feature.id}: changelogScopes must be an array`);
+      } else {
+        for (const scope of feature.changelogScopes) {
+          if (typeof scope !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(scope)) {
+            errors.push(`${feature.id}: invalid changelog scope ${String(scope)}`);
+            continue;
+          }
+          const owner = changelogScopeOwners.get(scope);
+          if (owner && owner !== feature.id) {
+            errors.push(`duplicate changelog scope ${scope}: ${owner}, ${feature.id}`);
+          } else {
+            changelogScopeOwners.set(scope, feature.id);
+          }
+        }
+      }
+    }
+
+    if (feature.changelogKeywords !== undefined) {
+      if (
+        !Array.isArray(feature.changelogKeywords)
+        || feature.changelogKeywords.some((keyword) =>
+          typeof keyword !== "string" || keyword.trim().length < 3
+        )
+      ) {
+        errors.push(`${feature.id}: changelogKeywords must contain non-empty strings`);
+      }
+    }
+
     if (!Array.isArray(feature.pages) || !Array.isArray(feature.apis)) {
       errors.push(`${feature.id}: pages and apis must be arrays`);
       continue;
