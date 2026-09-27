@@ -256,6 +256,9 @@ export function upsertDailySnapshot(snapshots, snapshot) {
   const existingIndex = snapshots.findIndex((item) => snapshotDay(item) === day);
 
   if (existingIndex >= 0) {
+    const existing = snapshots[existingIndex];
+    if (sameCounts(existing, normalized)) return snapshots;
+
     const next = snapshots.slice();
     next[existingIndex] = normalized;
     return next.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
