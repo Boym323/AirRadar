@@ -25,6 +25,13 @@ type Position = {
 type Classified = { current: Position; previous: Neighbor; next: Neighbor; result: NonNullable<ReturnType<typeof classify>> };
 
 type Neighbor = Position | null;
+type EventField = { in(values: number[]): unknown; asc(): unknown };
+type FlightEventQuery = {
+  select(...fields: string[]): FlightEventQuery;
+  where(predicate: (event: { flightId: EventField }) => unknown): FlightEventQuery;
+  orderBy(predicate: (event: { occurredAt: EventField }) => unknown): FlightEventQuery;
+  all(): Promise<Array<Record<string, unknown>>>;
+};
 
 const AFFECTED_FROM = "2026-09-27T11:38:12+02:00";
 const AFFECTED_UNTIL = "2026-09-27T12:28:52+02:00";
@@ -316,11 +323,12 @@ const maxAltitudeDryRun = highConfidenceFlightIds.map((flightId) => {
   return { flightId, icao: sample.flight.aircraft.icaoHex, callsign: sample.flight.callsign, currentMaxAltitude, recalculatedMaxAltitude, difference: currentMaxAltitude === null || recalculatedMaxAltitude === null ? null : currentMaxAltitude - recalculatedMaxAltitude, badPositionCount: highConfidence.filter((item) => item.current.flightId === flightId).length, status: recalculatedMaxAltitude === null ? "NO_VALID_ALTITUDE_REMAINS" : recalculatedMaxAltitude !== currentMaxAltitude ? "MAX_ALTITUDE_WOULD_CHANGE" : "MAX_ALTITUDE_UNCHANGED" };
 });
 
-const eventRows = flightIds.length ? await (db.orm.public.FlightEvent as any)
+const eventTable = (db.orm.public as unknown as { FlightEvent: FlightEventQuery }).FlightEvent;
+const eventRows = flightIds.length ? await eventTable
   .select("id", "flightId", "type", "icaoHex", "occurredAt", "altitude", "confidence", "sectorId", "evidenceJson", "metadataJson")
-  .where((event: any) => event.flightId.in(flightIds))
-  .orderBy((event: any) => event.occurredAt.asc())
-  .all() as Array<Record<string, unknown>> : [];
+  .where((event) => event.flightId.in(flightIds))
+  .orderBy((event) => event.occurredAt.asc())
+  .all() : [];
 const eventExport = eventRows.map((event) => {
   const occurred = Date.parse(String(event.occurredAt));
   const likely = occurred >= affectedFrom && occurred < affectedUntil;
@@ -328,7 +336,7 @@ const eventExport = eventRows.map((event) => {
   return { ...event, relation: likely ? "LIKELY_AFFECTED" : possibleRelation ? "POSSIBLY_AFFECTED" : "UNRELATED" };
 });
 
-const context = highConfidence.map(({ current, previous, next, result }) => {
+const context = highConfidence.map(({ current, result }) => {
   const rows = rowsByFlight.get(current.flightId) ?? [];
   const index = rows.findIndex((row) => row.id === current.id);
   return { incidentCandidate: current.id, flightId: current.flightId, icao: current.flight.aircraft.icaoHex, classification: result.classification, reason: result.reason, positions: rows.slice(Math.max(0, index - 5), index + 6).map(positionJson) };
