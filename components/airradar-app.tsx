@@ -38,6 +38,7 @@ import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
+import { canonicalAircraftGlyphPath, type CanonicalAircraftGlyphKind } from "@/lib/aircraft/glyph-paths";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
@@ -348,13 +349,14 @@ function ognTargetLabel(target: OgnTargetView): string {
 }
 
 function ognGlyphPath(aircraftType: OgnTargetView["aircraftType"]): string {
-  return aircraftType === "glider" || aircraftType === "paraglider" || aircraftType === "hang_glider"
-    ? "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z"
+  const kind: CanonicalAircraftGlyphKind = aircraftType === "glider" || aircraftType === "paraglider" || aircraftType === "hang_glider"
+    ? "glider"
     : aircraftType === "helicopter"
-      ? "M5 9h22M16 9v5m-7 0h14l3 5H6l3-5Zm7 5v8m-5 0h10"
-      : aircraftType === "balloon" || aircraftType === "airship"
-        ? "M16 3c5 0 8 4 8 9 0 5-3 8-8 8s-8-3-8-8c0-5 3-9 8-9Zm0 17v6m-4 0h8"
-        : "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z";
+      ? "helicopter"
+      : aircraftType === "uav"
+        ? "drone"
+        : "airplane";
+  return canonicalAircraftGlyphPath(kind);
 }
 
 function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {

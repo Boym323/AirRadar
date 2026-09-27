@@ -10,6 +10,7 @@ import { formatAltitude } from "@/lib/i18n";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { aircraftMarkerClassNames } from "@/lib/radar-ui";
 import { aircraftLabelPriorityForState, type AircraftLabelPriority } from "@/lib/radar/aircraft-label-collision";
+import { CANONICAL_AIRCRAFT_GLYPH_PATHS } from "@/lib/aircraft/glyph-paths";
 
 export type AircraftMarkerKind = AircraftPresentationKind;
 export type AircraftMarkerInput = Pick<AircraftView, "aircraftType" | "aircraftDescription" | "enrichment" | "category" | "onGround">;
@@ -46,7 +47,7 @@ export interface AircraftMarkerUpdateOptions {
 }
 
 const AIRCRAFT_GLYPH_PATHS: Record<AircraftMarkerKind, string> = {
-  airplane: "m16 2 4 12 8 5-1 2-9-2-2 10-2-10-9 2-1-2 8-5 4-12Z",
+  ...CANONICAL_AIRCRAFT_GLYPH_PATHS,
   a220: "m16 2 3 12 8 5-1 2-9-2-1 11h-2l-1-11-9 2-1-2 8-5 3-12Z",
   a320: "m16 2 3 12 9 5-1 2-10-2-1 11-2 0-1-11-10 2-1-2 9-5 3-12ZM10 15a1 1 0 1 0 2 0m8 0a1 1 0 1 0 2 0",
   a330: "m16 2 4 11 9 5-1 3-10-2-1 11h-2l-1-11-10 2-1-3 9-5 4-11ZM10 15a1 1 0 1 0 2 0m8 0a1 1 0 1 0 2 0",
@@ -64,10 +65,6 @@ const AIRCRAFT_GLYPH_PATHS: Record<AircraftMarkerKind, string> = {
   turboprop: "m16 4 2 11 8 4-1 2-9-2-1 9h-1l-1-9-9 2-1-2 8-4 2-11ZM8 13H4m4 3H4m20-3h4m-4 3h4",
   "business-jet": "m16 2 2 13 8 5-1 2-9-3-1 9h-1l-1-9-9 3-1-2 8-5 2-13Z",
   "general-aviation": "m16 3 1 13 9 4-1 2-10-2-1 8h-1l-1-8-10 2-1-2 9-4 1-13Z",
-  helicopter: "M16 8v15M9 12h14M6 8h20M16 5v3M12 23h8l3 4H9l3-4Z",
-  glider: "m16 3 3 12 10 5-1 2-10-2-2 9-2-9-10 2-1-2 10-5 3-12Z",
-  drone: "M16 8v16M8 16h16M10 10h4v4h-4zM18 10h4v4h-4zM10 18h4v4h-4zM18 18h4v4h-4z",
-  ground: "M10 11h12l3 8v5H7v-5l3-8Zm1 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z",
 };
 
 export function aircraftIconAsset(aircraft: AircraftMarkerInput): string {
