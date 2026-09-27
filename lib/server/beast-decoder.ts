@@ -64,7 +64,12 @@ function cprN(lat: number, odd: boolean): number {
 }
 const cprDlat = (odd: boolean) => 360 / (odd ? 59 : 60);
 function altitudeFromGillham(value: number): number | null {
-  const q = (value >> 4) & 1; const n = ((value & 0x0f) << 4) | ((value >> 5) & 0x0f); return q ? n * 25 - 1000 : null;
+  const q = (value >> 4) & 1;
+  // With Q=1, remove the Q bit and concatenate the remaining altitude
+  // bits. The upper part is not limited to four bits: doing so turns the
+  // 37,000 ft code (0xbf0) into n=15, i.e. -625 ft.
+  const n = ((value >> 5) << 4) | (value & 0x0f);
+  return q ? n * 25 - 1000 : null;
 }
 function callsignField(bytes: Buffer): string | null {
   let value = 0n;
@@ -97,7 +102,7 @@ export class BeastDecoder {
     a.source = a.source ?? "ADS-B"; a.origin = this.origin; a.sourceType = `df${df}`; a.trail ??= [];
     if (typeCode >= 1 && typeCode <= 4) a.callsign = callsignField(me.subarray(1, 7));
     if (typeCode >= 9 && typeCode <= 18 || typeCode >= 20 && typeCode <= 22) {
-      a.baroAltitude = altitudeFromGillham(((me[1] & 7) << 8) | me[2]); a.altitude = a.baroAltitude;
+      a.baroAltitude = altitudeFromGillham(((me[1] & 0x1f) << 8) | me[2]); a.altitude = a.baroAltitude;
       const odd = Boolean(me[2] & 4); const cprLat = ((me[2] & 3) << 15) | (me[3] << 7) | (me[4] >> 1); const cprLon = ((me[4] & 1) << 16) | (me[5] << 8) | me[6];
       const slot: Cpr = { odd, lat: cprLat / 131072, lon: cprLon / 131072, receivedAt };
       if (odd) track.cprOdd = slot; else track.cprEven = slot;

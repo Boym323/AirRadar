@@ -12,6 +12,15 @@ describe("BeastDecoder", () => {
     const aircraft = new BeastDecoder(receiver).decode(frame("8d4840d6202cc371c32ce0576098"), Date.parse("2026-01-01T00:00:00Z"));
     expect(aircraft).toMatchObject({ icaoHex: "4840D6", callsign: "KLM1023", source: "ADS-B" });
   });
+  it("decodes the full DF17 Q-bit altitude without turning 37,000 ft into -625 ft", () => {
+    // Type code 11, altitude code 0xbf0 = 37,000 ft. The previous decoder
+    // masked away the upper altitude bits and returned -625 ft.
+    const aircraft = new BeastDecoder(receiver).decode(
+      frame("8d4bb87a580bf000000000000000"),
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    expect(aircraft).toMatchObject({ icaoHex: "4BB87A", altitude: 37000, baroAltitude: 37000, sourceType: "df17" });
+  });
   it("merges multiple messages into one bounded aircraft state", () => {
     const decoder = new BeastDecoder(receiver, 1, 30_000);
     decoder.decode(frame("8d4840d6202cc371c32ce0576098"));
