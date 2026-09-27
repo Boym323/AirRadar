@@ -2,6 +2,27 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.157] - 2026-09-27
+
+Changes since v1.0.156.
+
+### Added
+
+- Enhance decoding logic for TC19 and TC28 frames, add tests for ground speed and emergency status (19f40ec3)
+
+### Maintenance
+
+- Sync generated repository metadata (777f9e9f)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (777f9e9f)
+- Merge pull request #166 from Boym323/automation/repository-metadata (c50bd65c)
+- feat(beast-decoder): enhance decoding logic for TC19 and TC28 frames, add tests for ground speed and emergency status (19f40ec3)
+
+</details>
+
 ## [1.0.156] - 2026-09-27
 
 Changes since v1.0.155.
