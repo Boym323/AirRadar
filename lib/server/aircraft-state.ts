@@ -462,7 +462,7 @@ export class AircraftStateService {
       try {
       localSnapshot = await this.provider.getSnapshot();
       if (!this.running) return;
-      localSnapshot = await this.hydrateInitialIconMetadata(localSnapshot);
+      localSnapshot = { ...localSnapshot, aircraft: await this.hydrateInitialIconMetadata(localSnapshot.aircraft) };
       if (!this.running) return;
       this.applySnapshot(localSnapshot);
       this.lastSourceUpdate = localSnapshot.fetchedAt;
@@ -497,14 +497,14 @@ export class AircraftStateService {
     }
   }
 
-  private async hydrateInitialIconMetadata(snapshot: ProviderSnapshot): Promise<ProviderSnapshot> {
-    if (!this.enrichment.hasInitialMetadataProvider) return snapshot;
+  private async hydrateInitialIconMetadata<T extends ProviderSnapshot["aircraft"]>(aircraft: T): Promise<T> {
+    if (!this.enrichment.hasInitialMetadataProvider) return aircraft;
 
-    const candidates = snapshot.aircraft.filter((item) => {
+    const candidates = aircraft.filter((item) => {
       if (this.localAircraft.get(item.icaoHex)?.enrichment?.metadata) return false;
       return aircraftIconNeedsInitialMetadata(item);
     });
-    if (candidates.length === 0) return snapshot;
+    if (candidates.length === 0) return aircraft;
 
     const results = await Promise.all(candidates.map(async (item) => ({
       icaoHex: item.icaoHex,
@@ -513,11 +513,9 @@ export class AircraftStateService {
     const metadataByHex = new Map(results
       .filter((result) => result.metadata !== null)
       .map((result) => [result.icaoHex, result.metadata!]));
-    if (metadataByHex.size === 0) return snapshot;
+    if (metadataByHex.size === 0) return aircraft;
 
-    return {
-      ...snapshot,
-      aircraft: snapshot.aircraft.map((item) => {
+    return aircraft.map((item) => {
         const metadata = metadataByHex.get(item.icaoHex);
         if (!metadata) return item;
         return {
@@ -527,8 +525,7 @@ export class AircraftStateService {
             metadata,
           },
         };
-      }),
-    };
+      }) as T;
   }
 
   private async refreshNetwork(): Promise<void> {
@@ -539,7 +536,10 @@ export class AircraftStateService {
       // stop() may have happened while the provider request was pending. The
       // result is deliberately discarded so shutdown cannot publish a state.
       if (!this.running) return;
-      this.applyNetworkSnapshot(networkSnapshot);
+      // Network-only aircraft must receive the same initial metadata lookup as
+      // local aircraft, otherwise they briefly render the generic icon.
+      const aircraft = await this.hydrateInitialIconMetadata(networkSnapshot.aircraft);
+      this.applyNetworkSnapshot({ ...networkSnapshot, aircraft });
       this.notify();
     } catch {
       // The optional provider owns its bounded stale state and diagnostics.
