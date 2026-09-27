@@ -2,6 +2,54 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.171] - 2026-09-27
+
+Changes since v1.0.168.
+
+**Features touched:** Live Radar.
+
+### Added
+
+- Use Beast telemetry across aircraft visualizations (4f3b4e8)
+- Export plausible transition functions and filter trail points for improved history processing (b560880)
+
+### Changed
+
+- Merge remote-tracking branch 'origin/main' (66f8441)
+
+### Fixed
+
+- Avoid generic icons while WebGL assets load (276ccde)
+- Refine responsive visual system controls (7b6c2c9)
+
+### Documentation
+
+- Update changelog for v1.0.169 (57aceff)
+- Update changelog for v1.0.170 (3ebb175)
+
+### Maintenance
+
+- Sync generated repository metadata (c365fb2)
+- Sync generated repository metadata (3e55904)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (c365fb2)
+- Merge pull request #180 from Boym323/automation/repository-metadata (a121a7d)
+- feat: use Beast telemetry across aircraft visualizations (4f3b4e8)
+- feat: export plausible transition functions and filter trail points for improved history processing (b560880)
+- Merge remote-tracking branch 'origin/main' (66f8441)
+- Merge pull request #179 from Boym323/fix/beast-visualization-coverage (071b176)
+- docs: update changelog for v1.0.169 (57aceff)
+- chore(metadata): sync generated repository metadata (3e55904)
+- Merge pull request #181 from Boym323/automation/repository-metadata (47f5c4f)
+- fix(radar): avoid generic icons while WebGL assets load (276ccde)
+- docs: update changelog for v1.0.170 (3ebb175)
+- fix(ui): refine responsive visual system controls (7b6c2c9)
+- Merge pull request #182 from Boym323/audit/visual-system-v2-20260927 (cc75628)
+
+</details>
 ## [1.0.170] - 2026-09-27
 
 Changes since v1.0.169.
