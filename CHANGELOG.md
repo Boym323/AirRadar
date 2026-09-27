@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.168] - 2026-09-27
+
+Changes since v1.0.167.
+
+### Fixed
+
+- Improve initial metadata hydration for aircraft snapshots (c00569f)
+
+### Maintenance
+
+- Sync generated repository metadata (b40851f)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (b40851f)
+- Merge pull request #178 from Boym323/automation/repository-metadata (467e2f8)
+- fix: improve initial metadata hydration for aircraft snapshots (c00569f)
+
+</details>
 ## [1.0.167] - 2026-09-27
 
 Changes since v1.0.164.
