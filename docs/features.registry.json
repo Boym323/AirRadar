@@ -50,7 +50,8 @@
       "pages": [
         "/aircraft/:hex",
         "/flights/:id",
-        "/history"
+        "/history",
+        "/flights"
       ],
       "apis": [
         "/api/aircraft/:hex/context",
@@ -85,6 +86,7 @@
       "introducedVersion": null,
       "summary": "Airport catalog, runway context, observed traffic and inferred movement intelligence.",
       "pages": [
+        "/airports",
         "/airports/:icao"
       ],
       "apis": [
