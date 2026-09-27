@@ -22,7 +22,22 @@
       "changelogScopes": [
         "radar",
         "sse",
-        "search"
+        "search",
+        "aircraft-state",
+        "beast",
+        "beast-decoder",
+        "animation",
+        "trail",
+        "radar-perf"
+      ],
+      "changelogKeywords": [
+        "live radar",
+        "aircraft marker",
+        "aircraft label",
+        "aircraft telemetry",
+        "aircraft snapshot",
+        "radar map",
+        "radar navigation"
       ]
     },
     {
@@ -49,7 +64,17 @@
         "aircraft",
         "flight",
         "history",
-        "route"
+        "route",
+        "flights",
+        "enrichment",
+        "adsbdb",
+        "route-intelligence"
+      ],
+      "changelogKeywords": [
+        "aircraft detail",
+        "flight detail",
+        "flight history",
+        "route weather"
       ]
     },
     {
@@ -71,6 +96,11 @@
       "changelogScopes": [
         "airport",
         "airports"
+      ],
+      "changelogKeywords": [
+        "airport intelligence",
+        "airport traffic",
+        "airport movement"
       ]
     },
     {
@@ -89,6 +119,9 @@
       ],
       "changelogScopes": [
         "time-machine"
+      ],
+      "changelogKeywords": [
+        "time machine"
       ]
     },
     {
@@ -118,6 +151,13 @@
       "changelogScopes": [
         "weather",
         "map-context"
+      ],
+      "changelogKeywords": [
+        "map context",
+        "metar",
+        "sigmet",
+        "weather radar",
+        "wind layer"
       ]
     },
     {
@@ -143,7 +183,14 @@
       "changelogScopes": [
         "statistics",
         "recap",
-        "logbook"
+        "logbook",
+        "analytics"
+      ],
+      "changelogKeywords": [
+        "statistics",
+        "daily recap",
+        "weekly recap",
+        "reception records"
       ]
     },
     {
@@ -168,6 +215,11 @@
         "alerts",
         "watchlist",
         "fleet"
+      ],
+      "changelogKeywords": [
+        "watchlist",
+        "alert history",
+        "fleet"
       ]
     },
     {
@@ -186,6 +238,12 @@
       ],
       "changelogScopes": [
         "intelligence"
+      ],
+      "changelogKeywords": [
+        "flight intelligence",
+        "go-around",
+        "holding detection",
+        "transition intelligence"
       ]
     },
     {
@@ -213,6 +271,12 @@
         "ats",
         "airspace",
         "procedures"
+      ],
+      "changelogKeywords": [
+        "atc sector",
+        "ats route",
+        "airspace activity",
+        "procedure"
       ]
     },
     {
@@ -231,6 +295,10 @@
       "changelogScopes": [
         "receiver",
         "coverage"
+      ],
+      "changelogKeywords": [
+        "receiver coverage",
+        "coverage analysis"
       ]
     },
     {
@@ -246,6 +314,10 @@
         "/api/ogn/stream"
       ],
       "changelogScopes": [
+        "ogn",
+        "flarm"
+      ],
+      "changelogKeywords": [
         "ogn",
         "flarm"
       ]
@@ -271,8 +343,14 @@
       "changelogScopes": [
         "system",
         "health",
-        "release",
-        "version"
+        "version",
+        "runtime"
+      ],
+      "changelogKeywords": [
+        "system status",
+        "runtime history",
+        "health endpoint",
+        "build identity"
       ]
     },
     {
@@ -288,6 +366,9 @@
       ],
       "changelogScopes": [
         "flightaware"
+      ],
+      "changelogKeywords": [
+        "flightaware usage"
       ]
     }
   ]
