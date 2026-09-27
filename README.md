@@ -34,11 +34,13 @@ project grows.
 
 The history is stored in
 [`docs/metrics/code-history.json`](docs/metrics/code-history.json). After a
-code-changing push to `main`, the codebase metrics workflow refreshes the
-snapshot on `automation/codebase-metrics` and opens or updates a normal PR,
-so branch protection and CI remain in the loop. Run `npm run metrics:code`
-for the current snapshot or `npm run metrics:code:backfill` to rebuild the
-daily timeline from Git history.
+successful `main` CI run, the unified Repository Metadata workflow refreshes
+both the changelog and codebase metrics on `automation/repository-metadata`,
+opens a single audit PR, and merges that generated metadata automatically.
+Metadata-only merges are excluded from production deployment. Run
+`npm run metrics:code` for the current snapshot or
+`npm run metrics:code:backfill` to rebuild the daily timeline from Git
+history.
 
 ## Quick start — demo mode
 
