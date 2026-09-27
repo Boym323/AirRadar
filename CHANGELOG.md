@@ -2,6 +2,36 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.180] - 2026-09-27
+
+Changes since v1.0.179.
+
+### Added
+
+- Add Czech localization for project documentation and update related files (de47b905)
+- Update Czech documentation and add localization checks (2221b6d7)
+- Update aircraft radar quick detail component and localization for situation tab (5253e697)
+
+### Changed
+
+- Merge remote-tracking branch 'origin/main' (455918a3)
+
+### Maintenance
+
+- Sync generated repository metadata (dcf89f19)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (dcf89f19)
+- Merge pull request #195 from Boym323/automation/repository-metadata (6979721b)
+- feat: add Czech localization for project documentation and update related files (de47b905)
+- Merge remote-tracking branch 'origin/main' (455918a3)
+- feat(docs): update Czech documentation and add localization checks (2221b6d7)
+- feat: update aircraft radar quick detail component and localization for situation tab (5253e697)
+
+</details>
+
 ## [1.0.179] - 2026-09-27
 
 Changes since v1.0.178.
