@@ -2,6 +2,18 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.165] - 2026-09-27
+
+Changes since v1.0.164.
+
+### Added
+
+- Add typed altitude provenance, centralized merge/freshness policy, temporal
+  jump diagnostics, bounded Beast forensic tracing, protected admin altitude
+  diagnostics, and persistent anomaly events.
+- Persist nullable altitude provenance on new `FlightPosition` rows without
+  backfilling historical data.
+
 ## [1.0.164] - 2026-09-27
 
 Changes since v1.0.163.
