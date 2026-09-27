@@ -25,7 +25,11 @@ describe("OGN/ADS-B visual deduplication", () => {
   });
 
   it("keeps a nearby aircraft when altitude does not match", () => {
-    expect(isOgnDuplicateOfAircraft({ ...target, altitudeFt: 2_000 }, aircraft)).toBe(false);
+    expect(isOgnDuplicateOfAircraft({ ...target, latitude: 49.806, altitudeFt: 2_000 }, aircraft)).toBe(false);
+  });
+
+  it("deduplicates an exact position match even when OGN has no altitude", () => {
+    expect(isOgnDuplicateOfAircraft({ ...target, altitudeFt: null }, aircraft)).toBe(true);
   });
 
   it("uses a published ICAO identity when available", () => {
