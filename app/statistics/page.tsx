@@ -19,6 +19,7 @@ import {
 } from "@/lib/statistics-coverage";
 import { formatDateTime, formatDistance, formatNumber, formatTrack, t } from "@/lib/i18n";
 import { statisticsCsv } from "@/lib/statistics-csv";
+import { Button, Card, MetricCard, SegmentedControl } from "@/components/ui-primitives";
 
 type StatisticsPageData = ReceiverStatisticsResponse | ReceiverStatisticsRangeResponse;
 type SelectedRange = "today" | "7d" | "30d";
@@ -165,7 +166,7 @@ function CoverageAnalysis({
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
-  return <div className="statistics-stat-card"><div className="statistics-stat-value">{value}</div><div className="statistics-stat-label">{label}</div></div>;
+  return <MetricCard className="statistics-stat-card" value={value} label={label} />;
 }
 
 function PeriodComparison({ comparison }: { comparison: ReceiverStatisticsComparison }) {
@@ -175,7 +176,7 @@ function PeriodComparison({ comparison }: { comparison: ReceiverStatisticsCompar
     ? t.common.emptyValue
     : distance ? formatDistance(value) : formatNumber(value);
 
-  return <section className="statistics-card statistics-period-comparison" aria-labelledby="statistics-period-comparison-title">
+  return <Card className="statistics-card statistics-period-comparison" aria-labelledby="statistics-period-comparison-title">
     <div className="statistics-card-header">
       <div className="coverage-card-heading">
         <h2 id="statistics-period-comparison-title">{t.statistics.periodComparison}</h2>
@@ -193,15 +194,15 @@ function PeriodComparison({ comparison }: { comparison: ReceiverStatisticsCompar
         </tbody>
       </table>
     </div>
-  </section>;
+  </Card>;
 }
 
 function Ranking({ title, items }: { title: string; items: Array<{ name: string; count: number }> }) {
   return (
-    <section className="statistics-card">
+    <Card className="statistics-card">
       <h2>{title}</h2>
       {items.length ? <ol className="statistics-ranking">{items.map((item) => <li key={item.name}><span>{item.name}</span><strong>{formatNumber(item.count)}</strong></li>)}</ol> : <p className="statistics-empty">{t.statistics.insufficientData}</p>}
-    </section>
+    </Card>
   );
 }
 
@@ -245,7 +246,7 @@ function ReceptionRecordsCard() {
     return () => { active = false; };
   }, []);
 
-  return <section className="statistics-card reception-records-card" aria-labelledby="reception-records-title">
+  return <Card className="statistics-card reception-records-card" aria-labelledby="reception-records-title">
     <div className="statistics-card-header">
       <div>
         <h2 id="reception-records-title">{t.statistics.receptionRecords}</h2>
@@ -261,7 +262,7 @@ function ReceptionRecordsCard() {
       {data.source === "unavailable" && <p className="statistics-empty reception-records-note">{t.statistics.receptionRecordsUnavailable}</p>}
       <p className="statistics-empty reception-records-note">{t.statistics.receptionRecordsLegacyNote}</p>
     </>}
-  </section>;
+  </Card>;
 }
 
 function chartSegments(points: ReceiverStatisticsTrendPoint[], metric: TrendMetric, width: number, height: number, padding: number, maximum: number): string[] {
@@ -364,7 +365,7 @@ function RangeSelector({
   ariaLabel?: string;
 }) {
   return (
-    <div className={className} role="tablist" aria-label={ariaLabel}>
+    <SegmentedControl className={className} role="tablist" aria-label={ariaLabel}>
       {(["today", "7d", "30d"] as const).map((range) => (
         <button
           key={range}
@@ -377,7 +378,7 @@ function RangeSelector({
           {range === "today" ? t.statistics.rangeToday : range === "7d" ? t.statistics.rangeSevenDays : t.statistics.rangeThirtyDays}
         </button>
       ))}
-    </div>
+    </SegmentedControl>
   );
 }
 
@@ -474,7 +475,7 @@ export default function StatisticsPage() {
       </header>
 
       {error && <div className="statistics-error">{t.statistics.requestFailed}</div>}
-      {!data && !error && <div className="statistics-card statistics-loading">{t.common.loading}</div>}
+      {!data && !error && <Card className="statistics-card statistics-loading">{t.common.loading}</Card>}
       {data && summary && <>
         <div className="statistics-date-row">
           <div className="statistics-date">
@@ -482,7 +483,7 @@ export default function StatisticsPage() {
               ? <>{t.statistics.periodLabel(rangeData.period.days)} · {rangeData.period.from} → {rangeData.period.to} · {data.timezone}</>
               : <>{t.statistics.today} · {data.date} · {data.timezone}</>}
           </div>
-          <button type="button" className="primary-button statistics-export-button" onClick={exportCsv} disabled={!data}>{t.statistics.exportCsv}</button>
+          <Button variant="primary" size="compact" className="primary-button statistics-export-button" onClick={exportCsv} disabled={!data}>{t.statistics.exportCsv}</Button>
         </div>
         <section className="statistics-overview">
           <SummaryCard label={t.statistics.currentAircraft} value={formatNumber(data.live.aircraftCount)} />
@@ -497,7 +498,7 @@ export default function StatisticsPage() {
         {rangeData && <PeriodComparison comparison={rangeData.comparison} />}
         {rangeData && <RangeCharts data={rangeData} />}
 
-        <section className="statistics-card coverage-card">
+        <Card className="statistics-card coverage-card">
           <div className="statistics-card-header coverage-card-header">
             <div className="coverage-card-heading">
               <h2>{t.statistics.coverage}</h2>
@@ -516,7 +517,7 @@ export default function StatisticsPage() {
             todaySummary={rangeData?.todayCoverageSummary ?? data.coverageSummary}
             range={range}
           />
-        </section>
+        </Card>
 
         {!rangeData && <div className="statistics-ranking-grid">
           <Ranking title={t.statistics.aircraftTypes} items={data.topAircraftTypes} />

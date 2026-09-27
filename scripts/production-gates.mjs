@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -211,6 +211,41 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
   const browser = await chromium.launch({ headless: true });
   try {
     const configuredViewport = process.env.PRODUCTION_GATE_BROWSER_VIEWPORT;
+    const captureVisualSmoke = configuredViewport ? async () => {} : async () => {
+      const visualSmokeDirectory = resolve("artifacts/visual-smoke");
+      mkdirSync(visualSmokeDirectory, { recursive: true });
+      const visualTargets = [
+        { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
+        { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
+        { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
+        { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
+        { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
+        { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
+      ];
+
+      for (const target of visualTargets) {
+        const visualPage = await browser.newPage({ viewport: target.viewport });
+        try {
+          const response = await visualPage.goto(`${baseUrl}${target.path}`, { waitUntil: "domcontentloaded" });
+          if (!response?.ok()) throw new Error(`Visual smoke ${target.path} returned HTTP ${response?.status()}`);
+          await visualPage.locator(target.selector).waitFor({ state: "visible", timeout: 15_000 });
+          await visualPage.evaluate(async () => {
+            if ("fonts" in document) await document.fonts.ready;
+          });
+          await visualPage.addStyleTag({
+            content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}",
+          });
+          await visualPage.screenshot({
+            path: resolve(visualSmokeDirectory, `${target.name}.png`),
+            fullPage: target.fullPage,
+            animations: "disabled",
+          });
+          console.log(`[production-gates] visual smoke captured ${target.name}`);
+        } finally {
+          await visualPage.close();
+        }
+      }
+    };
     const responsiveSweepPromise = configuredViewport ? Promise.resolve() : (async () => {
       const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
       try {
@@ -278,6 +313,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await routeSmoke.close();
     await responsiveSweepPromise;
+    await captureVisualSmoke();
     const browserViewports = [
       { width: 320, height: 844 },
       { width: 375, height: 812 },

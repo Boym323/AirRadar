@@ -39,6 +39,8 @@ jobs:
       - run: npm run prisma:generate
       - name: Verify feature registry
         run: npm run features:check
+      - name: Verify visual system budget
+        run: npm run visual:check
       - name: Run lint, typecheck, and Vitest in parallel
         shell: bash
         run: |
@@ -77,6 +79,15 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Production core and browser gates
         run: npm run test:production:all
+      - name: Upload visual system artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-system-${{ github.sha }}
+          path: |
+            artifacts/visual-system-audit.json
+            artifacts/visual-smoke/*.png
+          if-no-files-found: ignore
       - name: Radar production performance baseline
         shell: bash
         run: |

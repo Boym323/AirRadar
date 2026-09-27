@@ -16,6 +16,7 @@ writing or changing documentation.
 - [Data sources](docs/DATA-SOURCES.md) — provenance, security, and licensing
 - [Features](docs/FEATURES.md) — current routes/API and production status
 - [Feature registry](docs/features.registry.json) — canonical feature ownership for pages/APIs and changelog scopes
+- [Visual system](docs/VISUAL-SYSTEM.md) — UI tokens, primitives, style budget, and visual-smoke artifacts
 
 ## Non-negotiable rules
 
@@ -43,6 +44,9 @@ writing or changing documentation.
 - Every new, removed, or renamed Next.js page/API route must update
   `docs/features.registry.json` and regenerate `docs/FEATURES.md` with
   `npm run features:generate`; CI requires `npm run features:check` to pass.
+- Visual changes must reuse `components/ui-primitives.tsx` and semantic tokens
+  where practical, must not increase the visual debt budget, and must pass
+  `npm run visual:check` plus the production desktop/mobile browser gate.
 
 `README.md` is the human-facing entry point. The documents above are the
 compact agent context; update `AGENTS.md` only when a durable rule or source

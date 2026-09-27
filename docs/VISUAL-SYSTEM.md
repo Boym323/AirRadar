@@ -1,0 +1,115 @@
+# AirRadar Visual System V2
+
+AirRadar uses a dark aviation-operations visual language optimized for map-first
+workflows, dense operational data and long-running desktop use. The goal of
+Visual System V2 is consistency, not a visual rebrand.
+
+## Principles
+
+1. **Map first.** Controls should support the air picture instead of competing
+   with it. Floating controls use glass surfaces, restrained borders and compact
+   typography.
+2. **Semantic color.** Mint/accent means live or actionable, amber/selected
+   means focus or historical selection, red/danger means operational attention,
+   violet is ATC/airspace context and blue is weather.
+3. **Information hierarchy before decoration.** Use typography, spacing and
+   grouping before adding another border, shadow or color.
+4. **Shared primitives first.** New cards, buttons, metric tiles, segmented
+   controls, empty states and status badges should use
+   `components/ui-primitives.tsx`.
+5. **Tokenize before adding values.** New reusable colors, radii, typography
+   sizes, spacing and motion belong in the `:root` token set in
+   `app/globals.css`.
+6. **Responsive by construction.** Feature pages must remain usable at the
+   existing production-gate breakpoint sweep and the 320 px minimum viewport.
+
+## Canonical foundation
+
+The canonical foundation lives in `app/globals.css`:
+
+- surfaces: `--background`, `--surface-*`
+- borders: `--border-*`
+- text: `--text-primary`, `--text-secondary`, `--text-muted`
+- semantic color: `--accent`, `--selected`, `--success`, `--warning`,
+  `--danger`, `--atc`, `--weather`
+- spacing: `--space-1` through `--space-6`
+- radii: `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-xl`,
+  `--radius-pill`
+- typography: `--font-size-2xs` through `--font-size-2xl`
+- motion: `--motion-fast`, `--motion-medium`
+
+MapLibre paint colors that cannot consume CSS custom properties belong in
+`lib/map-theme.ts`. Do not introduce feature-local map palettes when a
+semantic map color already exists there.
+
+## Shared primitives
+
+`components/ui-primitives.tsx` contains the reusable presentation layer:
+
+- `Card` and `Panel`
+- `SectionHeader`
+- `MetricCard`
+- `Button`
+- `SegmentedControl`
+- `EmptyState`
+- `StatusBadge`
+- map controls and icon buttons
+
+Legacy feature class names may remain during migration, but the shared primitive
+should own the common surface, radius, interaction and typography behavior.
+
+## Visual debt budget
+
+Run:
+
+```bash
+npm run visual:check
+```
+
+The audit measures ad-hoc values outside the canonical `:root` token block.
+The budget is intentionally monotonic: cleanup may lower the limits, but new
+feature work must not increase them without an explicit design-system decision.
+
+The current Phase 1 budget is:
+
+| Metric | Maximum |
+| --- | ---: |
+| hardcoded color occurrences outside `:root` | 393 |
+| unique hardcoded colors outside `:root` | 263 |
+| literal border radii outside `:root` | 155 |
+| literal font sizes outside `:root` | 538 |
+
+The report is written to `artifacts/visual-system-audit.json` and uploaded by
+CI.
+
+## Browser visual evidence
+
+The production browser gate captures screenshots for representative desktop and
+mobile surfaces into `artifacts/visual-smoke/`:
+
+- live radar
+- Statistics
+- Time Machine
+- System
+- mobile radar
+- mobile Statistics
+
+These screenshots are CI artifacts rather than checked-in pixel baselines.
+Dynamic aircraft, weather and operational data make strict pixel matching noisy,
+while the existing browser gate already hard-fails on responsive horizontal
+overflow and runtime/browser errors. The screenshots provide a stable review
+surface for visual changes without creating false failures from live data.
+
+## Migration policy
+
+When touching an existing feature:
+
+1. reuse a shared primitive where possible;
+2. replace feature-local reusable colors/radii/font sizes with semantic tokens;
+3. keep aviation-domain colors only when they encode actual domain semantics;
+4. run `npm run visual:check`;
+5. verify the relevant desktop/mobile visual-smoke artifact when the change is
+   visually meaningful.
+
+The migration is incremental. Feature behavior and data contracts must not be
+changed merely to complete a visual cleanup.
