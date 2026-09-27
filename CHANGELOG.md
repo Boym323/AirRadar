@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.163] - 2026-09-27
+
+Changes since v1.0.162.
+
+### Added
+
+- Implement historical altitude repair script and rollback SQL (dc7457a)
+
+### Maintenance
+
+- Sync generated repository metadata (4504d0e)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (4504d0e)
+- Merge pull request #173 from Boym323/automation/repository-metadata (48a9164)
+- feat: implement historical altitude repair script and rollback SQL (dc7457a)
+
+</details>
 ## [1.0.162] - 2026-09-27
 
 Changes since v1.0.161.
