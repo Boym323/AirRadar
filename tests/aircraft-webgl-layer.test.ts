@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { aircraftWebglColor, aircraftWebglIconAsset } from "@/lib/radar/aircraft-webgl-layer";
+import { aircraftWebglColor, aircraftWebglIconAsset, aircraftWebglScreenHeading } from "@/lib/radar/aircraft-webgl-layer";
+import { resolveAircraftVisualHeading } from "@/lib/aircraft/visual-heading";
+import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
 import type { AircraftView } from "@/lib/aircraft/types";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
@@ -113,5 +115,19 @@ describe("WebGL aircraft layer", () => {
         positionSource: "ADS-B",
       },
     }), "default")[3]).toBeLessThan(0.9);
+  });
+
+  it.each([[0, 0], [90, 30], [180, 270], [359, 12]] as const)("keeps WebGL and HTML screen heading parity for track=%s bearing=%s", (track, mapBearing) => {
+    const asset = aircraftWebglIconAsset(aircraft());
+    const offset = aircraftIconRotationOffset(asset);
+    expect(aircraftWebglScreenHeading(track, mapBearing, offset)).toBe(
+      resolveAircraftVisualHeading({ motionHeading: track, mapBearing, assetOffset: offset }),
+    );
+  });
+
+  it("reuses the WebGL vertex buffer instead of allocating a typed array per render", () => {
+    expect(webglSource).toContain("private vertexData = new Float32Array(0)");
+    expect(webglSource).toContain("if (this.vertexData.length < requiredFloats) this.vertexData = new Float32Array(requiredFloats)");
+    expect(webglSource).not.toContain("const data = new Float32Array(this.jobs.size * FLOATS_PER_VERTEX)");
   });
 });
