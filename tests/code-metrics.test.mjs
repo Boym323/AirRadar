@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   classifyPath,
@@ -112,6 +113,22 @@ describe("code metrics", () => {
     };
 
     expect(upsertDailySnapshot([first], unchanged)).toEqual([first]);
+  });
+
+  it("prevents changelog and metrics automation from creating a release loop", () => {
+    const metricsWorkflow = readFileSync(
+      new URL("../.github/workflows/codebase-metrics.yml", import.meta.url),
+      "utf8",
+    );
+    const ciWorkflow = readFileSync(
+      new URL("../.github/workflows/ci.yml", import.meta.url),
+      "utf8",
+    );
+
+    expect(metricsWorkflow).toContain('- "CHANGELOG.md"');
+    expect(ciWorkflow).toContain(
+      "CHANGELOG.md|docs/metrics/code-history.json|docs/metrics/code-growth.svg",
+    );
   });
 
   it("scans a Git commit with the same metric as the working tree", async () => {
