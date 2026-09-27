@@ -131,6 +131,21 @@ function telemetryProvenance(
   return Object.keys(fields).length > 0 ? fields : undefined;
 }
 
+function altitudeProvenance(
+  altitude: number | null,
+  baroAltitude: number | null,
+  geomAltitude: number | null,
+  origin: "local" | "adsblol",
+  observedAt: string,
+): NonNullable<Aircraft["provenance"]>["fields"] {
+  const fields: NonNullable<Aircraft["provenance"]>["fields"] = {};
+  const protocol = origin === "adsblol" ? "sbs" : "readsb-json";
+  if (altitude !== null) fields.altitude = { origin, protocol, observedAt, confidence: "high" };
+  if (baroAltitude !== null) fields.baroAltitude = { origin, protocol, observedAt, confidence: "high" };
+  if (geomAltitude !== null) fields.geomAltitude = { origin, protocol, observedAt, confidence: "high" };
+  return fields;
+}
+
 function coordinate(value: unknown, minimum: number, maximum: number): number | null {
   const parsed = numeric(value);
   return parsed !== null && parsed >= minimum && parsed <= maximum ? parsed : null;
@@ -218,7 +233,7 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
       lastNetworkSeen: null,
       positionOrigin: lat !== null && lon !== null && seenPosSeconds !== null ? "local" : null,
       positionSource: sourceFor(raw),
-      fields: telemetryProvenance(normalizedTelemetry, "local", lastSeen),
+      fields: { ...altitudeProvenance(altitude, baroAltitude, geomAltitude, "local", lastSeen), ...telemetryProvenance(normalizedTelemetry, "local", lastSeen) },
     },
     sourceType: text(raw.type),
     onGround: isOnGround(raw),
@@ -251,7 +266,7 @@ export function normalizeNetworkAircraft(
       lastNetworkSeen: normalized.lastSeen,
       positionOrigin: normalized.provenance?.positionOrigin === "local" ? "adsblol" : null,
       positionSource: normalized.source,
-      fields: telemetryProvenance(normalized.adsbTelemetry ?? null, "adsblol", normalized.lastSeen),
+    fields: { ...altitudeProvenance(normalized.altitude, normalized.baroAltitude, normalized.geomAltitude, "adsblol", normalized.lastSeen), ...telemetryProvenance(normalized.adsbTelemetry ?? null, "adsblol", normalized.lastSeen) },
     },
   };
 }

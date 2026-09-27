@@ -1,0 +1,410 @@
+[
+  {
+    "id": "table.altitudeAnomaly",
+    "label": "Create table \"altitudeAnomaly\"",
+    "summary": "Creates table \"altitudeAnomaly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "altitudeAnomaly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"altitudeAnomaly\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"altitudeAnomaly\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"altitudeAnomaly\"",
+        "sql": "CREATE TABLE \"public\".\"altitudeAnomaly\" (\n  \"anomalyType\" text NOT NULL,\n  \"candidatesJson\" text NOT NULL,\n  \"decisionReason\" text NOT NULL,\n  \"detectedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"flightId\" int4,\n  \"icaoHex\" text NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"observedAt\" timestamptz NOT NULL,\n  \"selectedAltitude\" int4,\n  \"selectedSource\" text,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"altitudeAnomaly\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"altitudeAnomaly\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.flightPosition.altitudeDecisionReason",
+    "label": "Add column \"altitudeDecisionReason\" to \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "altitudeDecisionReason",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"altitudeDecisionReason\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeDecisionReason"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"altitudeDecisionReason\"",
+        "sql": "ALTER TABLE \"public\".\"flightPosition\" ADD COLUMN \"altitudeDecisionReason\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"altitudeDecisionReason\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeDecisionReason"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.flightPosition.altitudeObservedAt",
+    "label": "Add column \"altitudeObservedAt\" to \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "altitudeObservedAt",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"altitudeObservedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeObservedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"altitudeObservedAt\"",
+        "sql": "ALTER TABLE \"public\".\"flightPosition\" ADD COLUMN \"altitudeObservedAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"altitudeObservedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeObservedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.flightPosition.altitudeProtocol",
+    "label": "Add column \"altitudeProtocol\" to \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "altitudeProtocol",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"altitudeProtocol\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeProtocol"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"altitudeProtocol\"",
+        "sql": "ALTER TABLE \"public\".\"flightPosition\" ADD COLUMN \"altitudeProtocol\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"altitudeProtocol\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeProtocol"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.flightPosition.altitudeProvider",
+    "label": "Add column \"altitudeProvider\" to \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "altitudeProvider",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"altitudeProvider\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeProvider"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"altitudeProvider\"",
+        "sql": "ALTER TABLE \"public\".\"flightPosition\" ADD COLUMN \"altitudeProvider\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"altitudeProvider\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeProvider"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.flightPosition.altitudeSource",
+    "label": "Add column \"altitudeSource\" to \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "altitudeSource",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"altitudeSource\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeSource"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"altitudeSource\"",
+        "sql": "ALTER TABLE \"public\".\"flightPosition\" ADD COLUMN \"altitudeSource\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"altitudeSource\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeSource"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.flightPosition.altitudeType",
+    "label": "Add column \"altitudeType\" to \"flightPosition\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "altitudeType",
+        "table": "flightPosition"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"altitudeType\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeType"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"altitudeType\"",
+        "sql": "ALTER TABLE \"public\".\"flightPosition\" ADD COLUMN \"altitudeType\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"altitudeType\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flightPosition",
+          "altitudeType"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.altitudeAnomaly.altitudeAnomaly_flightId_observedAt_idx_5328fee5",
+    "label": "Create index \"altitudeAnomaly_flightId_observedAt_idx_5328fee5\" on \"altitudeAnomaly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "altitudeAnomaly_flightId_observedAt_idx_5328fee5",
+        "table": "altitudeAnomaly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"altitudeAnomaly_flightId_observedAt_idx_5328fee5\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"altitudeAnomaly_flightId_observedAt_idx_5328fee5\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"altitudeAnomaly_flightId_observedAt_idx_5328fee5\"",
+        "sql": "CREATE INDEX \"altitudeAnomaly_flightId_observedAt_idx_5328fee5\" ON \"public\".\"altitudeAnomaly\" (\"flightId\", \"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"altitudeAnomaly_flightId_observedAt_idx_5328fee5\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"altitudeAnomaly_flightId_observedAt_idx_5328fee5\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.altitudeAnomaly.altitudeAnomaly_icaoHex_observedAt_idx_66be2097",
+    "label": "Create index \"altitudeAnomaly_icaoHex_observedAt_idx_66be2097\" on \"altitudeAnomaly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "altitudeAnomaly_icaoHex_observedAt_idx_66be2097",
+        "table": "altitudeAnomaly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"altitudeAnomaly_icaoHex_observedAt_idx_66be2097\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"altitudeAnomaly_icaoHex_observedAt_idx_66be2097\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"altitudeAnomaly_icaoHex_observedAt_idx_66be2097\"",
+        "sql": "CREATE INDEX \"altitudeAnomaly_icaoHex_observedAt_idx_66be2097\" ON \"public\".\"altitudeAnomaly\" (\"icaoHex\", \"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"altitudeAnomaly_icaoHex_observedAt_idx_66be2097\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"altitudeAnomaly_icaoHex_observedAt_idx_66be2097\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.altitudeAnomaly.altitudeAnomaly_observedAt_idx_980e226e",
+    "label": "Create index \"altitudeAnomaly_observedAt_idx_980e226e\" on \"altitudeAnomaly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "altitudeAnomaly_observedAt_idx_980e226e",
+        "table": "altitudeAnomaly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"altitudeAnomaly_observedAt_idx_980e226e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"altitudeAnomaly_observedAt_idx_980e226e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"altitudeAnomaly_observedAt_idx_980e226e\"",
+        "sql": "CREATE INDEX \"altitudeAnomaly_observedAt_idx_980e226e\" ON \"public\".\"altitudeAnomaly\" (\"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"altitudeAnomaly_observedAt_idx_980e226e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"altitudeAnomaly_observedAt_idx_980e226e\""
+        ]
+      }
+    ]
+  }
+]

@@ -32,6 +32,7 @@ import { computeAtcContext, inputFromAircraft, loadAtcContextDataset } from "@/l
 import { ReceiverCoverageAnalytics, type CoverageResponse } from "@/lib/server/receiver-coverage-analytics";
 import { appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
+import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -383,6 +384,7 @@ export class AircraftStateService {
     network: ReturnType<NetworkAircraftProvider["getDiagnostics"]>;
     local: ReturnType<NonNullable<AircraftProvider["getDiagnostics"]>> | null;
     coverageAnalytics: ReturnType<ReceiverCoverageAnalytics["getDiagnostics"]>;
+    altitudeDiagnostics: ReturnType<typeof getAltitudeDiagnostics>;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -399,6 +401,7 @@ export class AircraftStateService {
       network: this.networkProvider.getDiagnostics(),
       local: "getDiagnostics" in this.provider && typeof this.provider.getDiagnostics === "function" ? this.provider.getDiagnostics() : null,
       coverageAnalytics: this.receiverCoverage.getDiagnostics(),
+      altitudeDiagnostics: getAltitudeDiagnostics(),
     };
   }
 

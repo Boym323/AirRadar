@@ -207,6 +207,14 @@ describe("BeastDecoder", () => {
     expect(ordinaryAltitude.observationTimes?.signal).toBe(ordinaryAt);
   });
 
+  it("keeps the last altitude message DF/TC when a later frame is unrelated", () => {
+    const decoder = new BeastDecoder(receiver);
+    const altitude = decoder.decode(df17Frame(0x4bb87a, "58bf0000000000"), 1_000)!;
+    expect(altitude.altitudeObservation).toMatchObject({ source: "LOCAL_BEAST", df: 17, typeCode: 11, valueFt: 37_000 });
+    const identity = decoder.decode(df17Frame(0x4bb87a, "20800000000000"), 2_000)!;
+    expect(identity.altitudeObservation).toMatchObject({ df: 17, typeCode: 11, valueFt: 37_000 });
+  });
+
   it("retains the receiver-local Beast signal and uses usable receiver time deltas", () => {
     const decoder = new BeastDecoder(receiver);
     const payload = Buffer.from("8d4bb87a580bf000000000f15f2e", "hex");

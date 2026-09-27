@@ -2,9 +2,10 @@ import type { Aircraft, AircraftOperationalStatus, AircraftTargetState, Receiver
 import type { BeastFrame } from "./beast-parser";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import { decodeCommB } from "./bds-decoder";
+import { altitudeObservationFor, recordBeastAltitudeDecode, selectAltitudeObservation } from "@/lib/aircraft/altitude-provenance";
 
 interface Cpr { odd: boolean; lat: number; lon: number; receivedAt: number; }
-interface Track { aircraft: Partial<Aircraft> & { icaoHex: string }; cprEven?: Cpr; cprOdd?: Cpr; lastMessageAt: number; lastPositionAt: number | null; altitudeAt: number | null; baroAltitudeAt: number | null; geomAltitudeAt: number | null; groundSpeedAt: number | null; trackAt: number | null; verticalRateAt: number | null; extendedTelemetryAt: number | null; }
+interface Track { aircraft: Partial<Aircraft> & { icaoHex: string }; cprEven?: Cpr; cprOdd?: Cpr; lastMessageAt: number; lastPositionAt: number | null; altitudeAt: number | null; baroAltitudeAt: number | null; geomAltitudeAt: number | null; altitudeDf: number | null; altitudeTypeCode: number | null; altitudeSubtype: number | null; groundSpeedAt: number | null; trackAt: number | null; verticalRateAt: number | null; extendedTelemetryAt: number | null; }
 
 const CHARSET = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ#####_###############0123456789######";
 const MOD = (value: number, modulus: number) => ((value % modulus) + modulus) % modulus;
@@ -241,7 +242,7 @@ export class BeastDecoder {
     const observedAt = this.observationTime(frame, receivedAt);
     const typeCode = me ? me[0] >> 3 : null;
     let track = this.tracks.get(icaoHex);
-    if (!track) { const created: Track = { lastMessageAt: observedAt, lastPositionAt: null, altitudeAt: null, baroAltitudeAt: null, geomAltitudeAt: null, groundSpeedAt: null, trackAt: null, verticalRateAt: null, extendedTelemetryAt: null, aircraft: { icaoHex } }; this.tracks.set(icaoHex, created); track = created; }
+    if (!track) { const created: Track = { lastMessageAt: observedAt, lastPositionAt: null, altitudeAt: null, baroAltitudeAt: null, geomAltitudeAt: null, altitudeDf: null, altitudeTypeCode: null, altitudeSubtype: null, groundSpeedAt: null, trackAt: null, verticalRateAt: null, extendedTelemetryAt: null, aircraft: { icaoHex } }; this.tracks.set(icaoHex, created); track = created; }
     track.lastMessageAt = observedAt;
     const a = track.aircraft;
     a.icaoHex = icaoHex;
@@ -273,11 +274,11 @@ export class BeastDecoder {
       if (typeCode >= 9 && typeCode <= 18) {
         a.baroAltitude = decodedAltitude;
         a.altitude = a.baroAltitude;
-        if (decodedAltitude !== null) { track.baroAltitudeAt = observedAt; track.altitudeAt = observedAt; }
+        if (decodedAltitude !== null) { track.baroAltitudeAt = observedAt; track.altitudeAt = observedAt; track.altitudeDf = df; track.altitudeTypeCode = typeCode; track.altitudeSubtype = null; }
       } else {
         a.geomAltitude = decodedAltitude;
         a.altitude = a.geomAltitude;
-        if (decodedAltitude !== null) { track.geomAltitudeAt = observedAt; track.altitudeAt = observedAt; }
+        if (decodedAltitude !== null) { track.geomAltitudeAt = observedAt; track.altitudeAt = observedAt; track.altitudeDf = df; track.altitudeTypeCode = typeCode; track.altitudeSubtype = null; }
       }
       const odd = Boolean(me[2] & 4); const cprLat = ((me[2] & 3) << 15) | (me[3] << 7) | (me[4] >> 1); const cprLon = ((me[4] & 1) << 16) | (me[5] << 8) | me[6];
       const slot: Cpr = { odd, lat: cprLat / 131072, lon: cprLon / 131072, receivedAt: observedAt };
@@ -408,6 +409,9 @@ export class BeastDecoder {
         a.altitude = altitude;
         track.baroAltitudeAt = observedAt;
         track.altitudeAt = observedAt;
+        track.altitudeDf = df;
+        track.altitudeTypeCode = null;
+        track.altitudeSubtype = null;
       }
       a.onGround = (p[0]! & 0x07) === 1;
     } else if (df === 5 || df === 21) {
@@ -464,6 +468,21 @@ export class BeastDecoder {
     }
     const lat = a.lat ?? null; const lon = a.lon ?? null; a.distanceKm = lat !== null && lon !== null ? haversineDistanceKm(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.bearing = lat !== null && lon !== null ? initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.seenSeconds = Math.max(0, (Date.now() - observedAt) / 1000); a.seenPosSeconds = track.lastPositionAt === null ? null : Math.max(0, (Date.now() - track.lastPositionAt) / 1000); a.onGround ??= false; a.category ??= null; a.registration ??= null; a.aircraftType ??= null; a.aircraftDescription ??= null; a.rssi ??= null; a.beastSignal = frame.signal; a.messages = (a.messages ?? 0) + 1; a.baroRate ??= null; a.geomRate ??= null; a.provenance = { ...(a.provenance ?? {}), seenLocal: this.origin === "local", seenNetwork: this.origin === "adsblol", lastLocalSeen: this.origin === "local" ? a.lastSeen! : null, lastNetworkSeen: this.origin === "adsblol" ? a.lastSeen! : null, positionOrigin: lat !== null ? this.origin : null, positionSource: lat !== null ? a.source! : "UNKNOWN" };
     a.observationTimes = { altitude: track.altitudeAt, baroAltitude: track.baroAltitudeAt, geomAltitude: track.geomAltitudeAt, groundSpeed: track.groundSpeedAt, track: track.trackAt, verticalRate: track.verticalRateAt, position: track.lastPositionAt, extendedTelemetry: track.extendedTelemetryAt, signal: observedAt };
+    if (track.altitudeAt !== null && a.altitude !== null && a.altitude !== undefined) {
+      const altitudeObservedAt = new Date(track.altitudeAt).toISOString();
+      const fields = a.provenance.fields ?? {};
+      fields.altitude = { origin: this.origin, protocol: "beast-mode-s", df: track.altitudeDf ?? undefined, tc: track.altitudeTypeCode ?? undefined, subtype: track.altitudeSubtype ?? undefined, observedAt: altitudeObservedAt, confidence: "high" };
+      if (a.baroAltitude !== null && a.baroAltitude !== undefined) fields.baroAltitude = { origin: this.origin, protocol: "beast-mode-s", df: track.altitudeDf ?? undefined, tc: track.altitudeTypeCode ?? undefined, subtype: track.altitudeSubtype ?? undefined, observedAt: new Date(track.baroAltitudeAt ?? track.altitudeAt).toISOString(), confidence: "high" };
+      if (a.geomAltitude !== null && a.geomAltitude !== undefined) fields.geomAltitude = { origin: this.origin, protocol: "beast-mode-s", df: track.altitudeDf ?? undefined, tc: track.altitudeTypeCode ?? undefined, subtype: track.altitudeSubtype ?? undefined, observedAt: new Date(track.geomAltitudeAt ?? track.altitudeAt).toISOString(), confidence: "high" };
+      a.provenance = { ...a.provenance, fields };
+      const altitudeObservation = altitudeObservationFor(a as Aircraft, "altitude", receivedAt);
+      if (altitudeObservation) {
+        const altitudeDecision = selectAltitudeObservation(icaoHex, [altitudeObservation], receivedAt);
+        a.altitudeObservation = altitudeObservation;
+        a.altitudeDecision = altitudeDecision;
+        recordBeastAltitudeDecode(icaoHex, altitudeObservation, altitudeDecision);
+      }
+    }
     this.expire(observedAt); return a as Aircraft;
   }
   snapshot(now = Date.now()): Aircraft[] { this.expire(now); return [...this.tracks.values()].map((track) => ({ ...track.aircraft, trail: track.aircraft.trail ?? [] } as Aircraft)); }

@@ -264,7 +264,8 @@
         "/api/health",
         "/api/system/runtime-history",
         "/api/system/status",
-        "/api/version"
+        "/api/version",
+        "/api/admin/altitude/:hex"
       ],
       "changelogScopes": [
         "system",

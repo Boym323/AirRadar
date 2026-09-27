@@ -111,6 +111,10 @@ independent lanes:
 - `history.ts` turns snapshots into `Aircraft`, `Flight`, and
   `FlightPosition` records at the configured sampling interval. It is not a
   per-ADS-B-message log.
+- `altitude-provenance.ts` owns field-level altitude observations, source
+  priority, freshness, disagreement/temporal guards, bounded diagnostics, and
+  the in-memory Beast forensic ring buffer. See
+  [ALTITUDE-PROVENANCE.md](ALTITUDE-PROVENANCE.md).
 - `AlertEngine` evaluates server rules on snapshot transitions and sends
   bounded, asynchronous notifications. It also records detected events and
   notification outcomes separately in a safe append-only JSONL ledger. Durable

@@ -33,8 +33,8 @@ describe("production release metadata gate", () => {
 
   it("validates the complete checked-in migration chain", () => {
     const result = assertMigrationSource(process.cwd());
-    expect(result.directories).toHaveLength(12);
-    expect(result.directories.at(-1)).toBe("20260919T1908_receiver_coverage_hourly");
+    expect(result.directories).toHaveLength(13);
+    expect(result.directories.at(-1)).toBe("20260927T1207_altitude_provenance_forensics");
     expect(result.finalContractHash).toMatch(/^[a-f0-9]{64}$/);
   });
   it("keeps breakpoint edges in the no-reload sweep while reloading only representative devices", () => {

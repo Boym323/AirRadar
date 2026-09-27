@@ -403,3 +403,14 @@ notifications, or live polling.
 full-span sampled positions, persisted FlightEvents, and route context. One
 playback timestamp drives map, timeline, profile, event selection, and Map
 Context V2. No detector, alert, or notification write path runs during playback.
+## Altitude provenance flow
+
+Beast, local `aircraft.json`, and optional network observations are normalized
+into typed field-level altitude observations. The centralized altitude policy
+uses source priority, observation freshness, confidence, disagreement, and a
+temporal vertical-rate guard to produce one `AltitudeDecision`. The selected
+value and decision metadata travel together into sampled `FlightPosition`
+rows; only significant conflicts create bounded `AltitudeAnomaly` rows. The
+full decision is available to protected admin diagnostics, while global SSE
+payloads remain unchanged. Historical positions are intentionally left with
+NULL provenance.

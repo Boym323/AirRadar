@@ -27,6 +27,7 @@ import {
   windDiagnostic,
 } from "@/lib/server/system-status-diagnostics";
 import { buildReceiverQuality } from "@/lib/server/receiver-quality";
+import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 export {
   toAdminSystemStatus,
   toPublicSystemStatus,
@@ -854,7 +855,10 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       radarArchive: await defaultWeatherRadarArchive.diagnostics(),
     },
     adsbLol: service.getNetworkDiagnostics?.(),
-    localAdsb: serviceDiagnostics?.local && typeof serviceDiagnostics.local === "object" ? serviceDiagnostics.local as Record<string, unknown> : undefined,
+    localAdsb: serviceDiagnostics?.local && typeof serviceDiagnostics.local === "object" ? {
+      ...(serviceDiagnostics.local as Record<string, unknown>),
+      altitudeDiagnostics: getAltitudeDiagnostics(),
+    } : { altitudeDiagnostics: getAltitudeDiagnostics() },
     adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
     ogn: ognService.getDiagnostics(),
     runtime: {

@@ -1,5 +1,6 @@
 import type { AtcAssignment, AtcFrequencySummary } from "@/lib/atc/types";
 import type { Airport } from "@/lib/airports/types";
+import type { AltitudeDecision, AltitudeObservation } from "@/lib/aircraft/altitude-provenance";
 
 export type AircraftSource = "ADS-B" | "MLAT" | "TIS-B" | "Mode-S" | "UNKNOWN";
 export type AircraftDataOrigin = "local" | "adsblol" | "adsbhub";
@@ -221,6 +222,9 @@ export interface Aircraft {
   operationalStatus?: AircraftOperationalStatus | null;
   adsbTelemetry?: AircraftAdsbTelemetry | null;
   observationTimes?: AircraftObservationTimes;
+  /** Internal field-level altitude provenance; never serialized on the public SSE boundary. */
+  altitudeObservation?: AltitudeObservation | null;
+  altitudeDecision?: AltitudeDecision | null;
 }
 
 /** The wire representation intentionally omits the in-memory trail by default. */

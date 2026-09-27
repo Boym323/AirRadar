@@ -1,6 +1,7 @@
 import type { AircraftProvider } from "@/lib/server/provider";
 import type { Aircraft, AircraftAdsbTelemetry, ProviderSnapshot } from "@/lib/aircraft/types";
 import type { BeastLocalProvider, BeastDiagnostics } from "@/lib/server/beast-local-provider";
+import { altitudeObservationFor, selectAltitudeObservation } from "@/lib/aircraft/altitude-provenance";
 
 const TELEMETRY_FRESHNESS_MS = 30_000;
 
@@ -87,6 +88,11 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
   const beastExtendedAt = beastTimes?.extendedTelemetry;
   const beastTargetStateFresh = fieldFresh(beast, "targetState", beastExtendedAt, jsonTime);
   const beastOperationalStatusFresh = fieldFresh(beast, "operationalStatus", beastExtendedAt, jsonTime);
+  const altitudeDecision = selectAltitudeObservation(beast.icaoHex, [
+    altitudeObservationFor(beast, "altitude", jsonTime),
+    altitudeObservationFor(json, "altitude", jsonTime),
+  ], jsonTime);
+  const selectedAltitude = altitudeDecision.selected?.valueFt ?? null;
   return {
     ...json,
     ...beast,
@@ -96,8 +102,8 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
     aircraftDescription: beast.aircraftDescription ?? json.aircraftDescription,
     lat: position.lat,
     lon: position.lon,
-    altitude: preferredAltitude(beast.altitude, json.altitude, beastTimes?.altitude, jsonTime),
-    baroAltitude: preferredAltitude(beast.baroAltitude, json.baroAltitude, beastTimes?.baroAltitude, jsonTime),
+    altitude: selectedAltitude,
+    baroAltitude: selectedAltitude,
     geomAltitude: preferredAltitude(beast.geomAltitude, json.geomAltitude, beastTimes?.geomAltitude, jsonTime),
     groundSpeed: preferredValue(beast.groundSpeed, json.groundSpeed, beastTimes?.groundSpeed, jsonTime),
     track: preferredValue(beast.track, json.track, beastTimes?.track, jsonTime),
@@ -129,6 +135,8 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
       fields: mergeFieldProvenance(beast, json, beastExtendedAt, jsonTime),
     },
     observationTimes: beast.observationTimes ?? json.observationTimes,
+    altitudeObservation: altitudeDecision.selected,
+    altitudeDecision,
   };
 }
 

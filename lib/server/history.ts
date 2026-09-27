@@ -12,6 +12,7 @@ import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport
 import { getPrisma } from "@/lib/server/db";
 import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/server/logbook";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
+import { shouldPersistAltitudeAnomaly } from "@/lib/aircraft/altitude-provenance";
 
 export interface HistoryResponse {
   source: "postgres" | "memory";
@@ -973,6 +974,13 @@ export async function pruneHistoryRetention(
         break;
       }
     }
+    // Forensic altitude events are intentionally sparse and retained for a
+    // shorter bounded window than flight history. This runs only in the
+    // existing periodic maintenance lane, never on the decoder hot path.
+    const anomalyTable = (schema as unknown as { AltitudeAnomaly?: { where: (predicate: (event: { observedAt: { lt: (value: unknown) => unknown } }) => unknown) => { deleteAndCount(): Promise<number> } } }).AltitudeAnomaly;
+    if (anomalyTable) {
+      await anomalyTable.where((event) => event.observedAt.lt(cutoffInstant)).deleteAndCount();
+    }
 
     historyRetentionDiagnostics = {
       lastRunAt: now.toISOString(),
@@ -1178,10 +1186,30 @@ export async function recordAircraftSnapshot(
         lat: latitude,
         lon: longitude,
         ...(altitude === undefined ? {} : { altitude }),
+        ...(altitude !== undefined && altitude !== null && item.altitudeObservation ? {
+          altitudeSource: item.altitudeObservation.source,
+          altitudeProvider: item.altitudeObservation.provider,
+          altitudeProtocol: item.altitudeObservation.protocol,
+          altitudeType: item.altitudeObservation.altitudeType,
+          altitudeObservedAt: timestampAsInstant(new Date(item.altitudeObservation.observedAt)),
+          altitudeDecisionReason: item.altitudeDecision?.reason ?? null,
+        } : {}),
         ...(groundSpeed === undefined ? {} : { groundSpeed }),
         ...(track === undefined ? {} : { track }),
         ...(verticalRate === undefined ? {} : { verticalRate }),
       });
+      if (item.altitudeDecision?.anomaly && shouldPersistAltitudeAnomaly(item.icaoHex, item.altitudeDecision.anomaly, recordedAt.getTime())) {
+        await schema.AltitudeAnomaly.create({
+          icaoHex: item.icaoHex,
+          flightId: flight.id,
+          observedAt: timestampAsInstant(new Date(item.altitudeObservation?.observedAt ?? recordedAt)),
+          selectedAltitude: item.altitudeObservation?.valueFt ?? null,
+          selectedSource: item.altitudeObservation?.source ?? null,
+          decisionReason: item.altitudeDecision.reason,
+          anomalyType: item.altitudeDecision.anomaly,
+          candidatesJson: JSON.stringify(item.altitudeDecision.candidates.slice(0, 8)),
+        });
+      }
       return firstDurableFlight;
       }));
       result.succeeded.push(item.icaoHex);

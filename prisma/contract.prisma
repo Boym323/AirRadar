@@ -316,6 +316,12 @@ model FlightPosition {
   lat          Float
   lon          Float
   altitude     Int?
+  altitudeSource String?
+  altitudeProvider String?
+  altitudeProtocol String?
+  altitudeType String?
+  altitudeObservedAt DateTime?
+  altitudeDecisionReason String?
   groundSpeed  Float?
   track        Float?
   verticalRate Int?
@@ -323,4 +329,21 @@ model FlightPosition {
 
   @@index([flightId, recordedAt])
   @@index([recordedAt])
+}
+
+model AltitudeAnomaly {
+  id                 Int      @id @default(autoincrement())
+  icaoHex            String
+  flightId           Int?
+  observedAt         DateTime
+  detectedAt         DateTime @default(now())
+  selectedAltitude   Int?
+  selectedSource     String?
+  decisionReason     String
+  anomalyType        String
+  candidatesJson     String
+
+  @@index([observedAt])
+  @@index([icaoHex, observedAt])
+  @@index([flightId, observedAt])
 }

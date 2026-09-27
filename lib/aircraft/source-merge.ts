@@ -7,6 +7,7 @@ import type {
   TrailPoint,
 } from "@/lib/aircraft/types";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
+import { selectAircraftAltitude } from "@/lib/aircraft/altitude-provenance";
 
 const POSITION_TIE_MS = 1_000;
 const EMERGENCY_TIE_MS = 1_000;
@@ -221,6 +222,7 @@ export function mergeAircraftObservations(
   // observation must never re-enter through this fallback after its stale
   // position was rejected by selectPositionObservation().
   const base = selectedLocal ?? selectedNetwork!;
+  const altitudeDecision = selectAircraftAltitude(base.icaoHex, selectedLocal, selectedNetwork, now);
   const selectedPosition = preferredUnavailable ? undefined : selectPositionObservation(selectedLocal, selectedNetwork, options, now);
   const fallbackPosition = !preferredUnavailable && selectedLocal && hasUsablePosition(selectedLocal) ? selectedLocal : undefined;
   const kinematics = selectedPosition ?? base;
@@ -238,8 +240,8 @@ export function mergeAircraftObservations(
     aircraftDescription: nonEmpty(selectedLocal?.aircraftDescription, selectedNetwork?.aircraftDescription),
     lat,
     lon,
-    altitude: kinematics.altitude,
-    baroAltitude: kinematics.baroAltitude,
+    altitude: altitudeDecision.selected?.valueFt ?? null,
+    baroAltitude: altitudeDecision.selected?.altitudeType === "BAROMETRIC" ? altitudeDecision.selected.valueFt : kinematics.baroAltitude,
     geomAltitude: kinematics.geomAltitude,
     groundSpeed: kinematics.groundSpeed,
     track: kinematics.track,
@@ -267,6 +269,8 @@ export function mergeAircraftObservations(
     sourceType: kinematics.sourceType,
     onGround: kinematics.onGround,
     trail: selectedTrail(position),
+    altitudeObservation: altitudeDecision.selected,
+    altitudeDecision,
   };
   if (selectedLocal?.enrichment) merged.enrichment = selectedLocal.enrichment;
   else if (selectedNetwork?.enrichment) merged.enrichment = selectedNetwork.enrichment;
