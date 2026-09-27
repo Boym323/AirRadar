@@ -15,6 +15,7 @@ then only the linked document relevant to the task; do not assume the whole
 - [`docs/RELEASE.md`](docs/RELEASE.md) — authoritative production release procedure
 - [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md) — source provenance, security, and licensing
 - [`docs/FEATURES.md`](docs/FEATURES.md) — routes/API and production status
+- [`docs/features.registry.json`](docs/features.registry.json) — machine-checked feature ownership and changelog scopes
 
 ## Codebase growth
 
