@@ -77,6 +77,14 @@ function intelligenceAlertEvent(type: FlightEventType): { type: AlertHistoryEven
   return null;
 }
 
+function eventIsFresh(event: FlightIntelligenceEvent, aircraft: Aircraft, now: number): boolean {
+  const occurredAt = Date.parse(event.occurredAt);
+  const observedAt = Date.parse(aircraft.lastSeen);
+  if (!Number.isFinite(occurredAt)) return false;
+  const timestampFresh = Number.isFinite(observedAt) ? Math.abs(observedAt - occurredAt) <= 120_000 : now - occurredAt <= 120_000;
+  return timestampFresh && (aircraft.seenPosSeconds === null || aircraft.seenPosSeconds <= 120);
+}
+
 function watchlistEvent(
   prior: Aircraft | undefined,
   aircraft: Aircraft,
@@ -237,6 +245,8 @@ export class AlertEngine {
    */
   observeIntelligenceEvent(aircraft: Aircraft, event: FlightIntelligenceEvent): void {
     if (!INTELLIGENCE_ALERT_EVENTS.has(event.type)) return;
+    if (!eventIsFresh(event, aircraft, this.now())) return;
+    if (event.type === "HOLDING" && event.metadata?.holdingStatus !== "HOLDING_CONFIRMED") return;
     const matchedRules = this.rules.filter((rule) => matchesAircraftRule(aircraft, rule));
     if (!matchedRules.length) return;
     const mapped = intelligenceAlertEvent(event.type);
@@ -262,6 +272,37 @@ export class AlertEngine {
     this.rememberPermanentEvent(key);
     for (const rule of matchedRules) this.ruleLastTriggered.set(rule.id, this.now());
     this.persistState();
+  }
+
+  /** Emits only meaningful receiver health transitions; repeated degraded polls are suppressed. */
+  observeReceiverQuality(aircraft: Aircraft, previous: "GOOD" | "DEGRADED" | "OFFLINE", current: "GOOD" | "DEGRADED" | "OFFLINE"): void {
+    if (current === "GOOD") {
+      for (const key of this.permanentEvents.keys()) if (key.startsWith(`receiver:${aircraft.icaoHex}:`)) this.permanentEvents.delete(key);
+      return;
+    }
+    if (previous === current) return;
+    const key = `receiver:${aircraft.icaoHex}:${previous}:${current}`;
+    if (this.permanentEvents.has(key)) return;
+    const accepted = this.enqueue({
+      aircraft,
+      matchedRules: [],
+      emergency: false,
+      priority: "normal",
+      type: current === "OFFLINE" ? "data_stale" : "receiver_degraded",
+      reason: current === "OFFLINE" ? "data_stale" : "receiver_degraded",
+      eventId: key,
+      metadata: { previousState: previous, currentState: current },
+    });
+    if (accepted) { this.rememberPermanentEvent(key); this.persistState(); }
+  }
+
+  /** Emits once when a weather relation crosses into a relevant proximity state. */
+  observeWeatherProximity(aircraft: Aircraft, relation: "clear" | "nearby" | "approaching" | "inside", previousRelation: "clear" | "nearby" | "approaching" | "inside" | null, metadata: Record<string, string | number | boolean | null> = {}): void {
+    if (relation === previousRelation || relation === "clear" || aircraft.seenPosSeconds !== null && aircraft.seenPosSeconds > 120) return;
+    const key = `weather:${aircraft.icaoHex}:${String(metadata.sigmetId ?? "unknown")}:${relation}`;
+    if (this.permanentEvents.has(key)) return;
+    const accepted = this.enqueue({ aircraft, matchedRules: [], emergency: false, priority: relation === "inside" ? "high" : "normal", type: "weather_proximity", reason: "weather_proximity", eventId: key, metadata: { ...metadata, relation } });
+    if (accepted) { this.rememberPermanentEvent(key); this.persistState(); }
   }
 
   /** Called only after durable history confirms that a first Flight exists. */
@@ -366,6 +407,7 @@ export class AlertEngine {
       squawk: alert.squawk ?? null,
       record: alert.record,
       intelligence: alert.intelligence ?? null,
+      metadata: alert.metadata,
     }).catch(() => undefined);
 
     const normalPending = this.pending.reduce(

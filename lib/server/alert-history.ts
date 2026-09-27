@@ -19,7 +19,10 @@ export type AlertHistoryEventType =
   | "intelligence_go_around"
   | "intelligence_holding"
   | "intelligence_diversion"
-  | "intelligence_top_of_descent";
+  | "intelligence_top_of_descent"
+  | "data_stale"
+  | "receiver_degraded"
+  | "weather_proximity";
 export type AlertNotificationStatus = "pending" | "attempted" | "delivered" | "failed" | "disabled";
 export type AlertHistoryReason =
   | "watchlisted"
@@ -37,7 +40,10 @@ export type AlertHistoryReason =
   | "go_around"
   | "holding"
   | "diversion"
-  | "top_of_descent";
+  | "top_of_descent"
+  | "data_stale"
+  | "receiver_degraded"
+  | "weather_proximity";
 export type AlertHistoryFilter = "all" | "watchlist" | "emergency" | "records" | "intelligence";
 export type ReceptionRecordScope = "daily" | "lifetime";
 
@@ -73,6 +79,7 @@ export interface AlertHistoryEntry {
     airportIcao: string | null;
     sectorId: string | null;
   } | null;
+  metadata?: Record<string, string | number | boolean | null>;
 }
 
 export interface AlertHistoryDetection {
@@ -87,6 +94,7 @@ export interface AlertHistoryDetection {
   squawk?: string | null;
   record?: AlertHistoryRecordValue;
   intelligence?: AlertHistoryEntry["intelligence"];
+  metadata?: AlertHistoryEntry["metadata"];
 }
 
 export interface AlertHistoryPage {
@@ -173,6 +181,7 @@ function entryFromDetection(detection: AlertHistoryDetection): AlertHistoryEntry
     notificationStatus: "pending",
     notificationAttemptedAt: null,
     intelligence: detection.intelligence ?? null,
+    metadata: detection.metadata ?? {},
   };
 }
 
