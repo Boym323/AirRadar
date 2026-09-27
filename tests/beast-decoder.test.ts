@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BeastDecoder } from "@/lib/server/beast-decoder";
+import { BeastDecoder, decodeAltitudeCode } from "@/lib/server/beast-decoder";
 import type { BeastFrame } from "@/lib/server/beast-parser";
 
 const receiver = { lat: 50, lon: 14, name: "test" };
@@ -20,6 +20,10 @@ describe("BeastDecoder", () => {
       Date.parse("2026-01-01T00:00:00Z"),
     );
     expect(aircraft).toMatchObject({ icaoHex: "4BB87A", altitude: 37000, baroAltitude: 37000, sourceType: "df17" });
+  });
+  it("decodes valid Gillham/Q=0 altitude codes", () => {
+    expect(decodeAltitudeCode(0x06a2)).toBe(10000);
+    expect(decodeAltitudeCode(0x0bf0)).toBe(37000);
   });
   it("merges multiple messages into one bounded aircraft state", () => {
     const decoder = new BeastDecoder(receiver, 1, 30_000);

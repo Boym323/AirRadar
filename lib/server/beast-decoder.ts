@@ -63,13 +63,54 @@ function cprN(lat: number, odd: boolean): number {
   return 1;
 }
 const cprDlat = (odd: boolean) => 360 / (odd ? 59 : 60);
-function altitudeFromGillham(value: number): number | null {
+function decodeId13Field(value: number): number {
+  let encoded = 0;
+  if (value & 0x1000) encoded |= 0x0010;
+  if (value & 0x0800) encoded |= 0x1000;
+  if (value & 0x0400) encoded |= 0x0020;
+  if (value & 0x0200) encoded |= 0x2000;
+  if (value & 0x0100) encoded |= 0x0040;
+  if (value & 0x0080) encoded |= 0x4000;
+  if (value & 0x0020) encoded |= 0x0100;
+  if (value & 0x0010) encoded |= 0x0001;
+  if (value & 0x0008) encoded |= 0x0200;
+  if (value & 0x0004) encoded |= 0x0002;
+  if (value & 0x0002) encoded |= 0x0400;
+  if (value & 0x0001) encoded |= 0x0004;
+  return encoded;
+}
+
+function modeAToModeC(value: number): number | null {
+  if ((value & 0xffff8889) !== 0 || (value & 0x000000f0) === 0) return null;
+  let fiveHundreds = 0;
+  let oneHundreds = 0;
+  if (value & 0x0010) oneHundreds ^= 0x007;
+  if (value & 0x0020) oneHundreds ^= 0x003;
+  if (value & 0x0040) oneHundreds ^= 0x001;
+  if ((oneHundreds & 5) === 5) oneHundreds ^= 2;
+  if (oneHundreds > 5) return null;
+  if (value & 0x0002) fiveHundreds ^= 0x0ff;
+  if (value & 0x0004) fiveHundreds ^= 0x07f;
+  if (value & 0x1000) fiveHundreds ^= 0x03f;
+  if (value & 0x2000) fiveHundreds ^= 0x01f;
+  if (value & 0x4000) fiveHundreds ^= 0x00f;
+  if (value & 0x0100) fiveHundreds ^= 0x007;
+  if (value & 0x0200) fiveHundreds ^= 0x003;
+  if (value & 0x0400) fiveHundreds ^= 0x001;
+  if (fiveHundreds & 1) oneHundreds = 6 - oneHundreds;
+  const altitude = fiveHundreds * 5 + oneHundreds - 13;
+  return altitude >= -12 ? altitude * 100 : null;
+}
+
+export function decodeAltitudeCode(value: number): number | null {
+  if (!Number.isInteger(value) || value < 0 || value > 0x1fff || value === 0) return null;
   const q = (value >> 4) & 1;
   // With Q=1, remove the Q bit and concatenate the remaining altitude
   // bits. The upper part is not limited to four bits: doing so turns the
   // 37,000 ft code (0xbf0) into n=15, i.e. -625 ft.
   const n = ((value >> 5) << 4) | (value & 0x0f);
-  return q ? n * 25 - 1000 : null;
+  if (q) return n * 25 - 1000;
+  return modeAToModeC(decodeId13Field(value));
 }
 function modeSValue(bytes: Buffer): bigint {
   let value = 0n;
@@ -180,7 +221,7 @@ export class BeastDecoder {
       a.track = trackStatus === 1 ? trackRaw * 360 / 128 : null;
       track.lastPositionAt = receivedAt;
     } else if (typeCode >= 9 && typeCode <= 18 || typeCode >= 20 && typeCode <= 22) {
-      const decodedAltitude = altitudeFromGillham(((me[1] & 0x1f) << 8) | me[2]);
+      const decodedAltitude = decodeAltitudeCode(((me[1] & 0x1f) << 8) | me[2]);
       if (typeCode >= 9 && typeCode <= 18) {
         a.baroAltitude = decodedAltitude;
         a.altitude = a.baroAltitude;
