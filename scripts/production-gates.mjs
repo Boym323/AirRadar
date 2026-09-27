@@ -300,7 +300,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     const unavailable = [];
     const configureRouteSmokePage = (page) => {
       page.on("pageerror", (error) => routeErrors.push(`page: ${error.message}`));
-      page.on("console", (message) => { if (message.type() === "error" && !message.text().includes("tile.openstreetmap.org") && !message.text().includes("503 (Service Unavailable)") && !message.text().includes("InvalidStateError: The source image could not be decoded")) routeErrors.push(`console.error: ${message.text()}`); if (message.type() === "warning") routeWarnings.push(message.text()); });
+      page.on("console", (message) => {
+        if (message.type() === "error" && !message.text().includes("tile.openstreetmap.org") && !message.text().includes("503 (Service Unavailable)") && !message.text().includes("InvalidStateError: The source image could not be decoded")) {
+          const location = message.location();
+          const source = location.url ? ` @ ${location.url}:${location.lineNumber}:${location.columnNumber}` : "";
+          routeErrors.push(`console.error: ${message.text()}${source}`);
+        }
+        if (message.type() === "warning") routeWarnings.push(message.text());
+      });
       page.on("response", (response) => { if (response.status() >= 500 && !response.url().includes("tile.openstreetmap.org")) { if (response.status() === 503 && (/\/api\/(history|time-machine)\//.test(response.url()))) unavailable.push(`${response.status()}: ${response.url()}`); else routeErrors.push(`http ${response.status()}: ${response.url()}`); } });
       return page;
     };
