@@ -1,0 +1,10 @@
+{
+  "readOnly": true,
+  "provider": "adsb.lol",
+  "observed": "Repeated timeout/http_error followed by recovery; no provider restart reason or payload-level altitude was persisted.",
+  "correlation": "Not established. Provider failures/recoveries occur throughout the interval and are not joined to FlightPosition rows.",
+  "service_restarts": ["10:59:38.782+02:00", "11:16:22.084+02:00", "11:21:40.239+02:00", "11:27:47.498+02:00", "11:41:25.021+02:00", "12:28:51.807+02:00", "13:06:57.095+02:00", "13:10:56.295+02:00"],
+  "local_readsb": "No historical aircraft.json/Beast payload archive or provider metadata was found.",
+  "altitude_source_disagreement": "Unavailable; FlightPosition has no source/provenance columns.",
+  "conclusion": "adsb.lol is a plausible contributing pipeline hypothesis, not a demonstrated root cause."
+}

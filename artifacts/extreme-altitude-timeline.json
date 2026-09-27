@@ -1,0 +1,29 @@
+{
+  "readOnly": true,
+  "timezone": "Europe/Prague",
+  "window": { "from": "2026-09-27T10:30:00+02:00", "to": "2026-09-27T13:15:00+02:00" },
+  "events": [
+    { "at": "2026-09-27T10:59:38.782+02:00", "kind": "service_stop", "pid": 59806 },
+    { "at": "2026-09-27T10:59:39.313+02:00", "kind": "service_start", "pid": 60974, "provider": "adsb.lol" },
+    { "at": "2026-09-27T11:16:22.084+02:00", "kind": "service_stop", "pid": 60974 },
+    { "at": "2026-09-27T11:16:22.656+02:00", "kind": "service_start", "pid": 65372, "provider": "adsb.lol" },
+    { "at": "2026-09-27T11:19:18.808+02:00", "kind": "exception", "pid": 65372, "detail": "missing bundled pino and pg modules" },
+    { "at": "2026-09-27T11:21:40.239+02:00", "kind": "service_stop", "pid": 65372 },
+    { "at": "2026-09-27T11:21:40.913+02:00", "kind": "service_start", "pid": 67979, "provider": "adsb.lol" },
+    { "at": "2026-09-27T11:27:47.498+02:00", "kind": "service_stop", "pid": 67979 },
+    { "at": "2026-09-27T11:27:48.771+02:00", "kind": "service_start", "pid": 70850, "provider": "adsb.lol" },
+    { "at": "2026-09-27T11:41:25.021+02:00", "kind": "service_stop", "pid": 70850, "detail": "known AC12 affected-window boundary" },
+    { "at": "2026-09-27T11:41:25.516+02:00", "kind": "service_start", "pid": 79298, "provider": "adsb.lol" },
+    { "at": "2026-09-27T12:28:51.807+02:00", "kind": "service_stop", "pid": 79298, "detail": "known AC12 affected-window end" },
+    { "at": "2026-09-27T12:28:52.321+02:00", "kind": "service_start", "pid": 89967, "provider": "adsb.lol" },
+    { "at": "2026-09-27T13:06:57.095+02:00", "kind": "service_stop", "pid": 89967 },
+    { "at": "2026-09-27T13:06:57.874+02:00", "kind": "service_start", "pid": 100737, "provider": "adsb.lol" },
+    { "at": "2026-09-27T13:10:56.295+02:00", "kind": "service_stop", "pid": 100737 },
+    { "at": "2026-09-27T13:10:57.254+02:00", "kind": "service_start", "pid": 101918, "provider": "adsb.lol" }
+  ],
+  "limitations": [
+    "Journald records provider HTTP timeout/http_error/recovery, but no durable local Beast/readsb or provider altitude payloads.",
+    "The running commit is not emitted by the service log; commit attribution is inferred only from repository history and restart timing.",
+    "No duplicate AirRadar writer was evidenced; every observed service transition cleanly drained history before the next start."
+  ]
+}

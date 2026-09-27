@@ -1,0 +1,2 @@
+availability,scope,note
+PARTIAL,current retained DB,"Current SELECT confirms 193 >100k points, but the requested historical 31 Flights / 37 points review cannot be reconstructed as a stable set after the repaired rows were nulled; raw/provider provenance is absent. See extreme-altitude-top100.csv for the existing retained export and historical-altitude-high-confidence-context.json for the 491-row repair context."

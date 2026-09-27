@@ -1,0 +1,4 @@
+phase,from_cest,to_cest,flights_gt80k,points_gt80k,flights_gt100k,points_gt100k,highly_suspicious,possible,unknown,classification_note
+PRE_AC12,11:05:00,11:41:25,75,268,10,12,,,"not independently phase-classifiable","Current retained rows; profile classes are not row-level provenance"
+KNOWN_AC12_WINDOW,11:41:25,12:28:52,147,811,66,154,,,"not independently phase-classifiable","491 repaired high-confidence rows have altitude NULL; remaining rows cannot all be called AC12"
+POST_AC12_PRE_FIX,12:28:52,12:47:00,0,0,0,0,0,0,0,"No retained >80k points in current DB; prior 10:47Z claim is not reproducible from current rows"
