@@ -157,4 +157,13 @@ describe("BeastDecoder", () => {
     expect(second.beastSignal).toBe(88);
     expect(secondSeen - firstSeen).toBe(4);
   });
+
+  it("counts missing timestamps and rejects non-wrap discontinuities", () => {
+    const decoder = new BeastDecoder(receiver);
+    const payload = Buffer.from("8d4bb87a580bf000000000f15f2e", "hex");
+    decoder.decode({ ...frame(""), timestamp: Buffer.alloc(6), payload }, 1_000);
+    decoder.decode({ ...frame(""), timestamp: Buffer.from("000000100000", "hex"), payload }, 2_000);
+    decoder.decode({ ...frame(""), timestamp: Buffer.from("0000000fffff", "hex"), payload }, 3_000);
+    expect(decoder.getDiagnostics()).toMatchObject({ timestampFallbacks: 1, timestampDiscontinuities: 1 });
+  });
 });

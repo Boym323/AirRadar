@@ -187,8 +187,9 @@ export class BeastDecoder {
   private readonly tracks = new Map<string, Track>();
   private readonly bdsCounters = { commBDecoded: 0, commBAmbiguous: 0, commBRejected: 0, bds40: 0, bds44: 0, bds50: 0, bds60: 0 };
   private lastBeastTimestamp: bigint | null = null;
-  private timestampEpoch = 0n;
   private lastObservationAt: number | null = null;
+  private timestampFallbacks = 0;
+  private timestampDiscontinuities = 0;
   readonly maxAircraft: number;
   private readonly origin: "local" | "adsblol";
   constructor(private readonly receiver: ReceiverPosition, maxAircraft = 3000, private readonly expiryMs = 30_000, options: { origin?: "local" | "adsblol" } = {}) { this.maxAircraft = Math.max(1, Math.min(50_000, Math.trunc(maxAircraft))); this.origin = options.origin ?? "local"; }
@@ -411,19 +412,33 @@ export class BeastDecoder {
     this.expire(observedAt); return a as Aircraft;
   }
   snapshot(now = Date.now()): Aircraft[] { this.expire(now); return [...this.tracks.values()].map((track) => ({ ...track.aircraft, trail: track.aircraft.trail ?? [] } as Aircraft)); }
-  getDiagnostics(): typeof this.bdsCounters { return { ...this.bdsCounters }; }
+  getDiagnostics(): typeof this.bdsCounters & { timestampFallbacks: number; timestampDiscontinuities: number } {
+    return { ...this.bdsCounters, timestampFallbacks: this.timestampFallbacks, timestampDiscontinuities: this.timestampDiscontinuities };
+  }
   private expire(now: number): void { for (const [hex, track] of this.tracks) if (now - track.lastMessageAt > this.expiryMs) this.tracks.delete(hex); while (this.tracks.size > this.maxAircraft) { let oldestHex: string | null = null; let oldestAt = Number.POSITIVE_INFINITY; for (const [hex, track] of this.tracks) if (track.lastMessageAt < oldestAt) { oldestAt = track.lastMessageAt; oldestHex = hex; } if (!oldestHex) break; this.tracks.delete(oldestHex); } }
   private observationTime(frame: BeastFrame, receivedAt: number): number {
-    if (frame.timestamp.length !== 6 || frame.timestamp.every((value) => value === 0)) return receivedAt;
+    if (frame.timestamp.length !== 6 || frame.timestamp.every((value) => value === 0)) {
+      this.timestampFallbacks += 1;
+      return receivedAt;
+    }
     let ticks = 0n; for (const byte of frame.timestamp) ticks = (ticks << 8n) | BigInt(byte);
     if (this.lastBeastTimestamp === null) { this.lastBeastTimestamp = ticks; this.lastObservationAt = receivedAt; return receivedAt; }
     const deltaTicks = ticks >= this.lastBeastTimestamp
       ? ticks - this.lastBeastTimestamp
       : (this.lastBeastTimestamp - ticks > 0x800000000000n ? ticks + 0x1000000000000n - this.lastBeastTimestamp : -1n);
-    if (deltaTicks < 0n || deltaTicks > 0x100000000000n) { this.lastBeastTimestamp = ticks; this.lastObservationAt = receivedAt; return receivedAt; }
+    if (deltaTicks < 0n || deltaTicks > 0x100000000000n) {
+      this.timestampDiscontinuities += 1;
+      this.lastBeastTimestamp = ticks;
+      this.lastObservationAt = receivedAt;
+      return receivedAt;
+    }
     const candidate = (this.lastObservationAt ?? receivedAt) + Number(deltaTicks) / 12_000;
     this.lastBeastTimestamp = ticks;
-    if (!Number.isFinite(candidate) || Math.abs(candidate - receivedAt) > 86_400_000) { this.lastObservationAt = receivedAt; return receivedAt; }
+    if (!Number.isFinite(candidate) || Math.abs(candidate - receivedAt) > 86_400_000) {
+      this.timestampDiscontinuities += 1;
+      this.lastObservationAt = receivedAt;
+      return receivedAt;
+    }
     this.lastObservationAt = candidate; return candidate;
   }
 }

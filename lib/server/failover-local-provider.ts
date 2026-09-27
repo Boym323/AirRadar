@@ -2,10 +2,14 @@ import type { AircraftProvider } from "@/lib/server/provider";
 import type { Aircraft, AircraftAdsbTelemetry, ProviderSnapshot } from "@/lib/aircraft/types";
 import type { BeastLocalProvider, BeastDiagnostics } from "@/lib/server/beast-local-provider";
 
-function mergeTelemetry(beast: AircraftAdsbTelemetry | null | undefined, json: AircraftAdsbTelemetry | null | undefined): AircraftAdsbTelemetry | null {
+const TELEMETRY_FRESHNESS_MS = 30_000;
+
+function mergeTelemetry(beast: AircraftAdsbTelemetry | null | undefined, json: AircraftAdsbTelemetry | null | undefined, beastAt: number | null | undefined, jsonAt: number): AircraftAdsbTelemetry | null {
   if (!beast && !json) return null;
-  const primary = beast ?? json!;
-  const fallback = beast ? json : null;
+  const beastFresh = Boolean(beast && beastAt !== null && beastAt !== undefined && jsonAt - beastAt <= TELEMETRY_FRESHNESS_MS);
+  const primary = beastFresh ? beast! : json ?? null;
+  const fallback = beastFresh ? json : null;
+  if (!primary) return null;
   return {
     ...primary,
     iasKt: primary.iasKt ?? fallback?.iasKt ?? null,
@@ -46,6 +50,12 @@ function preferredValue<T>(beastValue: T | null | undefined, jsonValue: T | null
   return beastValue;
 }
 
+function preferredAltitude(beastValue: number | null | undefined, jsonValue: number | null | undefined, beastAt: number | null | undefined, jsonAt: number): number | null {
+  if (beastValue !== null && beastValue !== undefined && jsonValue !== null && jsonValue !== undefined
+    && Math.abs(beastValue - jsonValue) > 12_000) return jsonValue;
+  return preferredValue(beastValue, jsonValue, beastAt, jsonAt);
+}
+
 /** Merge two observations from the same local receiver without letting null
  * fields in a fresh Beast frame erase readsb's aggregated values. */
 export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
@@ -61,9 +71,9 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
     aircraftDescription: beast.aircraftDescription ?? json.aircraftDescription,
     lat: position.lat,
     lon: position.lon,
-    altitude: preferredValue(beast.altitude, json.altitude, beastTimes?.altitude, jsonTime),
-    baroAltitude: preferredValue(beast.baroAltitude, json.baroAltitude, beastTimes?.baroAltitude, jsonTime),
-    geomAltitude: preferredValue(beast.geomAltitude, json.geomAltitude, beastTimes?.geomAltitude, jsonTime),
+    altitude: preferredAltitude(beast.altitude, json.altitude, beastTimes?.altitude, jsonTime),
+    baroAltitude: preferredAltitude(beast.baroAltitude, json.baroAltitude, beastTimes?.baroAltitude, jsonTime),
+    geomAltitude: preferredAltitude(beast.geomAltitude, json.geomAltitude, beastTimes?.geomAltitude, jsonTime),
     groundSpeed: preferredValue(beast.groundSpeed, json.groundSpeed, beastTimes?.groundSpeed, jsonTime),
     track: preferredValue(beast.track, json.track, beastTimes?.track, jsonTime),
     verticalRate: preferredValue(beast.verticalRate, json.verticalRate, beastTimes?.verticalRate, jsonTime),
@@ -83,7 +93,7 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
     onGround: beast.onGround || json.onGround,
     targetState: beast.targetState ?? json.targetState ?? null,
     operationalStatus: beast.operationalStatus ?? json.operationalStatus ?? null,
-    adsbTelemetry: mergeTelemetry(beast.adsbTelemetry, json.adsbTelemetry),
+    adsbTelemetry: mergeTelemetry(beast.adsbTelemetry, json.adsbTelemetry, beastTimes?.extendedTelemetry, jsonTime),
     provenance: {
       seenLocal: true,
       seenNetwork: false,
@@ -91,9 +101,26 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
       lastNetworkSeen: null,
       positionOrigin: position.lat !== null && position.lon !== null ? "local" : null,
       positionSource: position.source,
+      fields: mergeFieldProvenance(beast, json, beastTimes?.extendedTelemetry, jsonTime),
     },
     observationTimes: beast.observationTimes ?? json.observationTimes,
   };
+}
+
+function mergeFieldProvenance(beast: Aircraft, json: Aircraft, beastAt: number | null | undefined, jsonAt: number): NonNullable<Aircraft["provenance"]>["fields"] {
+  const result = { ...(json.provenance?.fields ?? {}) };
+  const beastFresh = beastAt !== null && beastAt !== undefined && jsonAt - beastAt <= TELEMETRY_FRESHNESS_MS;
+  for (const [field, value] of Object.entries(beast.provenance?.fields ?? {})) {
+    if (beastFresh || !result[field]) result[field] = value;
+  }
+  for (const field of Object.keys(beast.adsbTelemetry ?? {})) {
+    if (beastFresh && beast.adsbTelemetry?.[field as keyof AircraftAdsbTelemetry] != null) {
+      result[field] ??= { origin: "local", protocol: "beast-mode-s", observedAt: new Date(beastAt!).toISOString(), confidence: "high" };
+    } else if (!result[field] && json.adsbTelemetry?.[field as keyof AircraftAdsbTelemetry] != null) {
+      result[field] = { origin: "local", protocol: "readsb-json", observedAt: json.lastSeen, confidence: "high" };
+    }
+  }
+  return result;
 }
 
 function mergeLocalSnapshots(beast: ProviderSnapshot, json: ProviderSnapshot): ProviderSnapshot {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mergeLocalAircraft } from "@/lib/server/failover-local-provider";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
+import type { Aircraft } from "@/lib/aircraft/types";
 
 const receiver = { lat: 50, lon: 14, name: "Test" };
 
@@ -43,5 +44,21 @@ describe("local Beast/readsb JSON merge", () => {
         navQnhHpa: 1013.6,
       },
     });
+  });
+
+  it("prefers fresh JSON telemetry over stale Beast telemetry", () => {
+    const json = normalizeAircraft({
+      hex: "3c0936", flight: "SDR78JA", lat: 49.14, lon: 17.55, ias: 280, mach: 0.8, seen: 0,
+    }, receiver, new Date("2026-09-27T12:00:30Z"))!;
+    const beast = { ...json, lastSeen: "2026-09-27T11:59:00.000Z", adsbTelemetry: { ...json.adsbTelemetry!, iasKt: 200, mach: null }, observationTimes: { ...json.observationTimes, extendedTelemetry: Date.parse("2026-09-27T11:59:00.000Z") } } as Aircraft;
+    const merged = mergeLocalAircraft(beast, json);
+    expect(merged.adsbTelemetry?.iasKt).toBe(280);
+    expect(merged.provenance?.fields?.iasKt?.protocol).toBe("readsb-json");
+  });
+
+  it("does not let an implausible Beast altitude replace a nearby JSON altitude", () => {
+    const json = normalizeAircraft({ hex: "3c0936", lat: 49.14, lon: 17.55, alt_baro: 41000, seen: 0 }, receiver, new Date("2026-09-27T12:00:30Z"))!;
+    const beast = { ...json, altitude: 82600, baroAltitude: 82600, geomAltitude: null, sourceType: "df4", observationTimes: { ...json.observationTimes, altitude: Date.parse("2026-09-27T12:00:30Z") } } as Aircraft;
+    expect(mergeLocalAircraft(beast, json).altitude).toBe(41000);
   });
 });
