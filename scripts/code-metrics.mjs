@@ -110,7 +110,7 @@ function emptyTotals() {
   };
 }
 
-async function scanCodebase() {
+export async function scanCodebase() {
   const totals = emptyTotals();
 
   for (const filePath of trackedFiles()) {
@@ -191,7 +191,7 @@ function dailyMainCommits(ref = "HEAD") {
   return selectDailyCommits(logOutput);
 }
 
-function scanCommit(commit) {
+export function scanCommit(commit) {
   const paths = {
     production: [],
     tests: [],
