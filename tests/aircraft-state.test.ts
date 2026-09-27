@@ -112,10 +112,13 @@ describe("aircraft state service", () => {
     await service.waitForReady();
 
     expect(getMetadata).toHaveBeenCalledTimes(1);
-    expect(published.length).toBeGreaterThan(0);
-    const firstAircraft = published[0]?.aircraft[0];
-    expect(firstAircraft?.enrichment?.metadata?.icaoTypeCode).toBe("A320");
-    expect(firstAircraft && classifyAircraftIcon(firstAircraft).asset).toBe("/aircraft-icons-tar1090/A320.svg");
+    const publishedAircraft = published
+      .map((snapshot) => snapshot.aircraft.find((item) => item.icaoHex === "ABC123"))
+      .filter((item): item is Aircraft => item !== undefined);
+    expect(publishedAircraft.length).toBeGreaterThan(0);
+    expect(publishedAircraft[0]?.enrichment?.metadata?.icaoTypeCode).toBe("A320");
+    expect(publishedAircraft.map((item) => classifyAircraftIcon(item).asset))
+      .toEqual(publishedAircraft.map(() => "/aircraft-icons-tar1090/A320.svg"));
   });
 
   it("shares one cached snapshot construction across many listeners", async () => {
