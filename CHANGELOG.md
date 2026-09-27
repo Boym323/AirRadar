@@ -2,6 +2,39 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.162] - 2026-09-27
+
+Changes since v1.0.161.
+
+### Added
+
+- Enhance altitude decoding with ADS-B barometric and GNSS altitude functions (6bc7201e)
+- Add historical altitude audit script and corresponding npm script (456ea571)
+
+### Changed
+
+- Merge remote-tracking branch 'origin/main' (a17d6351)
+- Add SQL script for historical altitude repair and rollback data (777e447d)
+
+### Maintenance
+
+- Sync generated repository metadata (45c9e527)
+- Sync generated repository metadata (6ca7a6b8)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (45c9e527)
+- Merge pull request #170 from Boym323/automation/repository-metadata (ff9cb946)
+- feat: enhance altitude decoding with ADS-B barometric and GNSS altitude functions (6bc7201e)
+- Merge remote-tracking branch 'origin/main' (a17d6351)
+- chore(metadata): sync generated repository metadata (6ca7a6b8)
+- Merge pull request #171 from Boym323/automation/repository-metadata (884e62c8)
+- feat(audit): add historical altitude audit script and corresponding npm script (456ea571)
+- Add SQL script for historical altitude repair and rollback data (777e447d)
+
+</details>
+
 ## [1.0.161] - 2026-09-27
 
 Changes since v1.0.160.
