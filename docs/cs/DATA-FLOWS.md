@@ -1,188 +1,415 @@
-Datové toky
+# Datové toky
 
-## Live ingest do prohlížeče
+## Živý ingest do prohlížeče
 
-Vzorkování pokrytí přijímače pravidelně vyhodnocuje aktivní snímek sítě
-proti lokální mapě pomocí stejné čerstvé polohy, poloměru, normalizovaného-ICAO
-sémantika způsobilosti jako poměr živého zachycení. „DOSTUPNÉ“ počty jsou způsobilé
-síťová pozorování a „ZACHYCENÉ“ počty čerstvých místních shod stejného snímku.
-Výpadky přeskočí vzorek. Agregáty jsou splachovány deltami hodinových kbelíků; syrové
-síťová pozorování nejsou trvalá.
+Vzorkování pokrytí přijímače periodicky vyhodnocuje aktivní síťový snapshot
+proti lokální mapě se stejnou sémantikou čerstvé pozice, radiusu a
+normalizovaného ICAO jako živý capture ratio. `AVAILABLE` počítá způsobilá
+síťová pozorování a `CAPTURED` čerstvé lokální shody ve stejném snapshotu.
+Při výpadku se vzorek přeskočí. Agregace se flushují jako delty hodinových
+bucketů; surová síťová pozorování se nepersistují.
 
-## Kontext mapy V1/V2
+## Map Context V1/V2
 
-Mapový kontext je samostatná volitelná cesta pro čtení. Požadavky na katalog/rámec radaru,
-dávkové aktivity METAR, ICON-EU Wind a AUP/UUP jsou nezávisle ukládány do mezipaměti a
-serializováno do ohraničených mapových DTO. Jejich stav prohlížeče je izolován od
-`/api/stream`; selhání poskytovatele opustí živá letadla a další vrstvy mapy
-použitelné. Radar používá pozorované snímky, vítr používá platné časy modelu, METAR používá
-nejnovějších pozorování a AUP/UUP používá intervaly platnosti.
+Map Context je samostatná volitelná read cesta. Požadavky na katalog/snímky
+radaru, dávkový METAR, vítr ICON-EU a aktivitu AUP/UUP se cacheují nezávisle a
+serializují do omezených mapových DTO. Jejich browser stav je izolovaný od
+`/api/stream`; selhání providera ponechá živá letadla i ostatní mapové vrstvy
+použitelné. Radar používá pozorované snímky, vítr časy platnosti modelu, METAR
+nejnovější pozorování a AUP/UUP intervaly platnosti.
 
-V2 publikuje jeden globální mapový čas od Time Machine do kontextu
-resolver. Jednoprocesová archivní služba vzorkuje radar, METAR, vítr a
-AUP/UUP do vázaných trvalých souborů. Manifest zůstává malý; užitečné zatížení vrstvy
-používat nezávislá rozhraní API a nezávisle selhávat.
+V2 publikuje jeden okamžik Global Map Time z Time Machine do context resolveru.
+Jednoprocesová archivní služba vzorkuje radar, METAR, vítr a AUP/UUP do
+omezených persistentních souborů. Manifesty zůstávají malé; payloady vrstev
+používají nezávislá API a selhávají nezávisle.
 
-1. `LocalReadsbProvider` fetches `<READSB_BASE_URL>/data/aircraft.json` na
-   interval hlasování a obnovuje `/data/receiver.json` méně často. Chybějící
-   `READSB_BASE_URL` používá `MockReadsbProvider` pro demo režim.
-2. `normalizeAircraftResponse()` ověřuje šestimístné letadlo
-   identifikátor (včetně ne-ICAO formuláře readsb), převádí pole, uchovává
-   barometrické a geometrické hodnoty, odvozuje nadmořskou výšku/vertikální rychlost a
-   vypočítává vzdálenost a ložisko.
+1. `LocalReadsbProvider` načítá `<READSB_BASE_URL>/data/aircraft.json` v
+   polling intervalu a méně často obnovuje `/data/receiver.json`. Chybějící
+   `READSB_BASE_URL` použije `MockReadsbProvider` pro demo režim.
+2. `normalizeAircraftResponse()` validuje šestimístný hex identifikátor
+   letadla (včetně readsb non-ICAO formy s `~`), převádí pole, zachovává
+   barometrické a geometrické hodnoty, odvozuje výšku/vertikální rychlost a
+   počítá vzdálenost a bearing.
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Volitelná lokální Beast větev přijímá krátké i dlouhé Mode-S framy a po
+zpracování parity dispatchuje DF0/4/5/11/16/17/18/20/21. Comm-B MB payloady
+DF20/21 procházejí omezenou inferenční vrstvou BDS pro BDS 4,0, 4,4, 5,0 a
+6,0; nejednoznační kandidáti se jako telemetrie odmítají. Timestampy Beast
+přijímače se používají jako monotónní observation clock, jsou-li platné
+(včetně 48bit wrapu), s bezpečným fallbackem na receive time po
+restartu/diskontinuitě. Surový Beast signal byte se zachovává jako lokální
+`beastSignal` přijímače a nikdy se nepovažuje za síťové RSSI. Čerstvá lokální
+pole vyhrávají nad `aircraft.json` po jednotlivých polích; JSON doplňuje jen
+chybějící, neplatné nebo starší hodnoty.
+3. `AircraftStateService.applySnapshot()` ignoruje pozorování starší než stale
+   threshold, aktualizuje RAM mapu podle ICAO identity, přidá změněnou pozici
+   do omezené stopy a odstraní letadla nepřítomná v aktuálním snapshotu.
+   Neúspěšný poll odstraní pouze záznamy, které už zestárly.
+4. Je-li zapnuto, služba nejprve konzumuje ADSBHub SBS/30003:
+   `data.adsbhub.org:5002` → AirRadar. Nezávislý feeder příspěvek je
+   `192.168.1.50:30002` → `data.adsbhub.org:5001`; AirRadar jej nespravuje.
+   Konzument používá freshness podle času přijetí, omezené tracky, slučování
+   MSG s ohledem na jednotlivá pole a publikuje pouze letadla s pozicí uvnitř
+   nakonfigurovaného radiusu. Jeho origin je `adsbhub`, nikdy `local` ani
+   MLAT. Zapnutý ADSBHub, odchozí ADSB.lol raw (`out.adsb.lol:1365` BEAST
+   plus `:1366` SBS/MLAT) a geografický HTTP provider běží souběžně. Jejich
+   snapshoty se deduplikují podle ICAO do jedné omezené síťové mapy se
+   zachováním provenience zdroje. Tato selhání nikdy neoznačí lokální přijímač
+   jako offline.
+5. Služba notifikuje listenery snapshotem. `GET /api/aircraft` čeká na první
+   refresh a vrací bezpečné veřejné DTO. `GET /api/stream` zůstává ve výchozím
+   stavu V1 full-snapshot SSE feedem; `?v=2` volí jeden úplný veřejný snapshot
+   následovaný sekvenčně řízenými deltami changed/removed. V2 baseline je pro
+   každé spojení samostatná, omezená SSE kapacitou a při odpojení se zahodí.
+   `coverage=extended` explicitně slučuje lokální a síťové RAM mapy;
+   `coverage=local` zůstává výchozí. Viz [SSE Delta V2](SSE-DELTA-V2.md).
+   Extended snapshoty také nesou kompaktní source countery a nepersistentní
+   LOCAL capture ratio. Jeho jmenovatelem je čerstvý NETWORK provoz s pozicí
+   uvnitř `RECEIVER_COMPARISON_RADIUS_NM`, nikoli celý network radius.
+6. Metadata/trasy/flight plany, ATC assignmenty, statistiky a alerty běží ze
+   stejného snapshot flow, ale asynchronně a izolovaně od refreshe lokálního
+   providera. Výsledek enrichmentu se aplikuje pouze tehdy, pokud stále patří
+   ke stejnému lokálnímu pozorování letadla. Network-only pozorování se
+   nepersistují, neobohacují, nepřiřazuje se jim ATC ani se nevyhodnocují alerty.
 
-## Výstrahy a historie výstrah
+## Alerty a historie alertů
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Serverové přechody watchlistu, emergency, nového letadla a příjmového rekordu
+vyhodnocuje sdílený `AlertEngine`. Detekovaná událost se nejprve zapíše jako
+bezpečná metadata do append-only ledgeru runtime stavu
+(`/var/lib/airradar/alert-events.jsonl` v produkci). Doručení notifieru je
+samostatná asynchronní větev a připisuje stavové řádky `attempted`,
+`delivered`, `failed` nebo `disabled`; surové provider payloady,
+přihlašovací údaje ani delivery errors se nepersistují. `GET /api/alerts`
+složí stavové řádky do omezeného stránkovaného DTO.
 
-NOVÝ přechod je vydán pouze `recordAircraftSnapshot()` po
-úspěšná transakce vytvoří první trvanlivou instanci „Let“ letadla.
-Restartování v paměti nebo řádek „Letadlo“ bez letu nemůže vytvořit NOVÝ
-upozornění. Přechody mezi příjmem a záznamem jsou vyhodnocovány až po denním
-statistický agregát je připraven a porovnává aktuální denní maximum s
-naložené denní/celoživotní základní linie. Stabilní ID událostí zabraňují stejnému záznamu
-jsou emitovány dvakrát v jednom procesu.
+Přechod NEW emituje pouze `recordAircraftSnapshot()` poté, co úspěšná
+transakce vytvoří první trvalou instanci `Flight` daného letadla. Restart v
+paměti ani řádek `Aircraft` bez Flight nemůže vytvořit NEW alert. Přechody
+příjmových rekordů se vyhodnocují až po připravení denní statistické agregace a
+porovnávají aktuální denní maximum s načtenými denními/celoživotními baseline.
+Stabilní event ID brání dvojímu emitování stejného rekordu v jednom procesu.
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Stránka živého radaru vytváří jeden `EventSource`, udržuje omezenou
+client-side živou stopu, animuje MapLibre DOM markery a po přerušení sítě se
+znovu připojuje standardním chováním browser `EventSource`. Interpolace
+potvrzené pozice vlastní na každém animation jobu presentation-only vizuální
+heading: sleduje vykreslený pohyb markeru A → B, pokud je posun alespoň 25 m,
+a poté fallbackuje na heading potvrzené pozice, reportovaný track a last known
+track. Reportovaný ADS-B track zůstává zdrojem pro predikci a datovou
+sémantiku. Původní chyba headingu vznikla použitím tohoto reportovaného tracku
+během interpolace i tehdy, když se marker viditelně korigoval po jiné dráze
+potvrzené pozice. Stránka statistik má vlastní page-scoped stream pro živé
+countery.
 
-## OGN / FLARM živý tok
+## Živý tok OGN / FLARM
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Když `OGN_ENABLED=true`, `OgnProvider` se připojí k oficiálnímu OGN APRS-IS
+endpointu s kanonickou latitude/longitude přijímače a nakonfigurovaným radiusem.
+Server-side filtr APRS-IS požaduje `r/.../.../... -u/OGADSB`, ale lokální
+classifier přesto zahazuje každý paket `OGADSB`. Omezený 512bajtový line
+reader zpracovává CRLF framing, komentáře, TNC2 obálky a reconnecty; provider
+odesílá jen periodický komentář `#keepalive` a žádnou telemetrii letadel.
+Prohlížeč ani Prisma do této cesty nevstupují.
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Přijaté pozice letadel procházejí validací timestampu podle nejbližšího UTC dne,
+tolerancí budoucnosti, limitem stáří 120 sekund, klasifikací TOCALL podle
+zdroje a identitním klíčem `addressType + address`. Novější pozorování
+nahrazují kanonickou pozici; stejné timestampy mohou přidat provenienci
+přijímače; starší pozorování target nikdy nevrátí zpět. OGN DDB resolver používá
+omezenou RAM cache přesných rozlišení `device_type:device_id`.
+Při startu procesu `OgnDdb` nejprve načte validovanou lokální last-known-good
+cache verze 1 z `OGN_DDB_CACHE_FILE`, pokud je persistence zapnutá; jde pouze
+o lokální operaci bez síťového requestu. Úspěšné cílené dávky
+`FOUND`/`MISSING` označí omezený RAM snapshot jako dirty a později jej
+persistují jediným debounced atomickým writerem. Původní `resolvedAt` se
+zachovává, takže existující pravidla positive refresh/max-stale a negative TTL
+platí i přes restarty. Persistentní soubor neobsahuje APRS pakety ani pozice a
+nemůže unresolved zařízení zpřístupnit.
+`OgnDdb.start()` nestahuje celou tabulku: přijatý paket zařadí identitu zařízení
+do fronty a resolver debounceuje unikátní ID do omezených cílených requestů
+`?j=1&t=1&device_id=...`. Povoluje pouze jednu in-flight dávku, vynucuje
+minimální interval requestů a po `429` aplikuje globální bránu
+`Retry-After`. Oficiální základní reprezentace `?j=1` je fallback pro
+stejnou dávku při povolených rich-representation/server failures; network/schema
+failure znovu zařadí požadované identity jako unresolved. Platná cílená prázdná
+odpověď vytvoří krátce žijící negative/missing resolution. DDB odpovědi se
+indexují jen podle přesného device type a ID, takže záznam se stejným ID pod
+jiným typem se nepoužije. Starý full-table loader zůstává pouze jako explicitní
+compatibility/debug cesta `refresh()`.
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Není-li oficiální resolution dostupné, resolver může konzultovat explicitně
+zapnutý lokální SQLite snapshot SoftRF `ogn.db`. Povinný sidecar
+`ogn.db.meta.json` poskytuje důvěryhodný UTC timestamp `generatedAt` a
+lowercase SHA-256 hash přesné databáze; mtime slouží pouze k detekci náhrady.
+AirRadar jednou validuje read-only schéma `devices`, stáří metadat, počet
+řádků a typy privacy flags a poté v paměti drží jen řádky `type + id` s
+`track=1` a `ident=1`. Datová sada SoftRF je whitelist pod live OGN DDB a
+oficiální persistentní cache; neposkytuje metadata, nikdy se nedotazuje pro
+každý APRS paket a expiruje po nakonfigurovaném TTL. Špatný refresh ponechá
+předchozí platný snapshot v paměti nedotčený.
 
-Rychlost APRS „CSE/SPD“ je již v uzlech a je uložena přímo v
-`groundSpeedKt`, bez ohledu na zdroj TOCALL. Soukromí je uzavřeno selháním podle
-zařízení, zatímco jeho rozlišení není vyřešeno, s paketem bez sledování a DDB
-sledované/identifikované volby použité před veřejnou serializací. Existující
-položky mezipaměti platné pro ochranu soukromí zůstávají viditelné prostřednictvím maximálního zastaralého okna
-i když jiné zařízení nebo předcházející DDB není k dispozici.
+Rychlost APRS `CSE/SPD` je už v uzlech a ukládá se přímo do `groundSpeedKt`
+bez ohledu na zdrojový TOCALL. Privacy je fail-closed pro každé zařízení,
+dokud jeho resolution zůstává unresolved; packet no-tracking a DDB
+tracked/identified volby se aplikují před veřejnou serializací. Existující
+privacy-valid cache záznamy zůstávají viditelné během svého maximálního stale
+okna, i když jiné zařízení nebo upstream DDB nejsou dostupné.
 
-`/api/ogn/state` vrací aktuální omezený snímek a `/api/ogn/stream`
-poskytuje počáteční snímek plus propojené aktualizace a tlukot srdce. OGN nemá žádné
-vliv na `/api/stream`, místní filtry letadel, místní historii, statistiky,
-výstrah nebo stavu hlavního přijímače. Zastaralé cíle jsou označeny po 15 sekundách
-a odstraněn po 60 sekundách; cílová mapa je omezena na 5 000 záznamů.
+`/api/ogn/state` vrací aktuální omezený snapshot a `/api/ogn/stream`
+doručuje initial snapshot plus slučované aktualizace a heartbeat. OGN nemá
+žádný vliv na `/api/stream`, lokální filtry letadel, lokální historii,
+statistiky, alerty ani hlavní stav přijímače. Stale targety se označí po
+15 sekundách a odstraní po 60 sekundách; mapa targetů je omezená na
+5 000 položek.
 
 ## Letecké počasí
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+`AviationWeatherProvider` načte omezenou validovanou cache v procesu a potom
+obsluhuje on-demand požadavky METAR, TAF, International SIGMET a AirSIGMET.
+Úspěšné normalizované hodnoty aktualizují paměť a naplánují jeden debounced
+zápis snapshotu do
+`/var/lib/airradar/weather/weather-cache-v1.json`; selhání nikdy nezapisují
+chyby providera. Verzovaný soubor se zapisuje přes dočasný soubor, `fsync` a
+atomický rename. Chybějící, příliš velký, malformed, s chybnou verzí nebo
+částečně neplatný soubor se ignoruje po jednotlivých záznamech a nemůže zabránit
+startu.
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Při startu procesu se platné persistentní záznamy stanou stale-capable fallbacky
+a po vypršení product TTL se stále pokusí o live request. Persistentní fallback
+je omezen product-specific maximálním stářím (2 hodiny pro METAR, 24 hodin pro
+TAF a SIGMET), odděleně od běžného in-memory stale-if-error okna. Prázdné
+úspěšné METAR/TAF odpovědi se zachovávají jako negative entries a prázdná
+SIGMET datová sada vyčistí předchozí dataset. SIGMET odpovědi vždy znovu
+kontrolují `validFrom` a `validTo` každého feature; stale dataset proto může
+správně vrátit nula aktivních features poté, co všechna advisory expirují.
 
-Odpovědi počasí odhalují `cacheSource` (`live`, `memory-cache` nebo
-`persistent-cache`), `fetchedAt`, 'snapshotAgeMs` a `stale`. Trvalý
-záznam je explicitně označen jako zastaralý, dokud se živé obnovení nezdaří. Vývoj a
-testovací procesy nepovolí zapisovač `/var/lib`, pokud není vytrvalost
-explicitně nakonfigurováno.
+Weather odpovědi zveřejňují `cacheSource` (`live`, `memory-cache` nebo
+`persistent-cache`), `fetchedAt`, `snapshotAgeMs` a `stale`.
+Persistentní záznam je explicitně označen stale, dokud neuspěje live refresh.
+Vývojové a testovací procesy nezapínají writer do `/var/lib`, pokud není
+persistence explicitně nakonfigurována.
 
-## Vytrvalost historie
+## Persistence historie
 
-Airport Intelligence čte blízké letadlo ze stávajícího místního letadla
-SSE na klientovi a filtry umístěné, nedávná pozorování ADS-B v rámci
-Poloměr 30 km. SSE nespustí žádný dotaz na počasí, letiště nebo historii
-aktualizace. Řádky pohybu na letišti opakovaně používají omezené dotazy na trasu „Let“;
-vyžadují důkazy o blízkosti přijímače a zůstávají výslovně dodržovány, nikoli
-oficiální pohyby na letišti. OGN není zahrnuto v žádném letištním prvku.
+Airport Intelligence čte okolní letadla z existujícího lokálního aircraft SSE
+na klientovi a filtruje nedávná ADS-B pozorování s pozicí v radiusu 30 km.
+Aktualizace SSE nespouští žádný dotaz na počasí, letiště ani historii. Řádky
+pozorovaných airport movements znovu používají omezené `Flight` route
+dotazy; vyžadují důkaz blízkosti přijímače a zůstávají explicitně pozorované,
+nikoli oficiální pohyby letiště. OGN není zahrnuto v žádné z těchto funkcí.
 
-Každá úspěšná obnova poskytovatele nahrazuje čekající snímek historie. A
-jeden historik vypouští vodu, která spojila frontu. Pro každé letadlo s
-platná pozice, `persistHistory()` zapíše pouze pokud je jeho poslední vzorek starší
-než `HISTORY_SAMPLE_INTERVAL_MS` (minimum vynucené konfigurací). Zápisy běží s
-ohraničená souběžnost a každé selhání letadla je izolováno.
+Každý úspěšný refresh providera nahrazuje čekající history snapshot. Jediný
+history writer vypouští tuto slučovanou frontu. Pro každé letadlo s platnou
+pozicí `persistHistory()` zapisuje pouze tehdy, když je poslední vzorek starší
+než `HISTORY_SAMPLE_INTERVAL_MS` (minimum vynucuje konfigurace). Zápisy běží
+s omezenou concurrency a selhání každého letadla je izolované.
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Transakce upsertuje řádek `Aircraft` podle ICAO hexu, najde aktuální otevřený
+`Flight`, aktualizuje nebo vytvoří instanci letu a vloží jeden
+`FlightPosition`. Pokud jsou přítomna obě pozorování callsignu a liší se,
+vytvoří se nová instance; continuity gap uzavře starou instanci v jejím
+last-seen čase. Chybějící PostgreSQL vrací memory-backed úspěšný výsledek pro
+bookkeeping vzorkování, zatímco `GET /api/history/:hex` fallbackuje na
+aktuální omezenou RAM stopu, pokud databáze nemá použitelný výsledek.
 
-Údržba pravidelně uzavírá zastaralé otevřené lety a odstraňuje řádky polohy
-starší než `HISTORY_RETENTION_DAYS`. Databázi nikdy neresetuje. Seznam letů
-a podrobné koncové body dotazují PostgreSQL s omezenými limity; detaily letu
-zkrácení pozic a zpráv.
+Maintenance periodicky uzavírá stale otevřené lety a maže position řádky starší
+než `HISTORY_RETENTION_DAYS`. Databázi nikdy neresetuje. Endpointy seznamu a
+detailu letu dotazují PostgreSQL s omezenými limity; detail letu omezuje počet
+pozic a hlásí truncation.
 
-## Shrnutí provozu na letišti
+## Souhrn provozu letiště
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+`GET /api/airports/:icao/traffic` vyřeší kanonické letiště a poté čte pouze
+persistované instance `Flight`, jejichž `startTime` leží ve vybraném
+7denním nebo 30denním kalendářním okně v `APP_TIMEZONE` (výchozí je 30 dní).
+Dva omezené route predikáty pokrývají origin a destination; řádky se deduplikují
+podle `Flight.id`, takže let nemůže navýšit total, když obě pole odkazují na
+stejné letiště. Odpověď agreguje departures, arrivals, unikátní letadla podle
+ICAO identity, aktivní lokální dny, first/last capture, top callsigny a omezené
+seznamy routes/aircraft/recent flights.
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Metadata route letišť se načítají dávkovými ICAO/IATA dotazy s bundled
+katalogem jako fallbackem. Chybějící route metadata se vynechají z route
+rankingu, neodvozují se z `FlightPosition`; souhrn nikdy nečte
+`FlightPosition` ani nevolá externího providera. Recent odkazy používají
+kanonické ICAO letiště, ICAO hex letadla a existující detail flight history.
+Jde o provoz pozorovaný přijímačem, nikoli kompletní počet provozu letiště.
+Oba route predikáty používají dotaz omezený 500řádkovým sentinelem; pokud je
+kterýkoli zkrácen, zachová se `complete: false`, ale totaly, active days,
+heatmap a všechny rankingy se stále počítají z deduplikované zkrácené sady
+řádků. Jde o známé performance/data-quality omezení pro vytížená letiště,
+které má v budoucím batchi řešit database-side agregace.
 
-Podrobné statistické údaje o životnosti letadla přečtou pouze řádky „Let“ letadla prostřednictvím
-stávající index „(aircraftId, startTime)“. Počítají zadržený let
-instancí, místních aktivních dnů, volacích značek, vyřešených počátků/destinací a
-trasy. Záměrně neskenují „FlightPosition“; vzorkované pozice
-zůstávají ve vlastnictví omezeného koncového bodu přehrávání za let.
+Celoživotní statistiky detailu letadla čtou pouze `Flight` řádky daného
+letadla přes existující index `(aircraftId, startTime)`. Počítají zachované
+instance Flight, lokální aktivní dny, callsigny, vyřešené origins/destinations
+a routes. Záměrně neskenují `FlightPosition`; vzorkované pozice zůstávají ve
+vlastnictví omezeného per-flight playback endpointu.
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+NEW label detailu letadla vychází z toho, že lokální den první persistované
+instance Flight v `APP_TIMEZONE` odpovídá aktuálnímu dni. Přítomnost v RAM se
+nepoužívá, takže restart procesu nemůže vytvořit falešné první pozorování.
+RARE label se zobrazuje pro nenové letadlo s jednou až třemi zachovanými
+instancemi Flight. RETURNING se zobrazuje, když nejnovější persistovaný Flight
+začíná alespoň 30 celých dnů po posledním pozorování předchozího Flight. Tyto
+thresholdy jsou explicitní V1 pravidla a tooltip detailu vysvětluje uložené
+důkazy za každým labelem; žádná provider inference se nepoužívá.
 
 ## Statistiky a pokrytí
 
-`ReceiverStatistics.observe()` běží po každém použitém snímku. Počítá se
-jedinečné identity ICAO pro místní den vybrané pomocí `APP_TIMEZONE`, stopy
-maximální souběžná letadla, maximální vzdálenost a poruchy typu/letecké společnosti.
-Platné polohy vytvářejí maximální hodnotu vzdálenosti v jednom z 36 pevných 10 stupňů
-azimutové lžíce. Neplatné pozice „(0, 0)“ a neplatné souřadnice přijímače
-jsou vyloučeny z krytí.
+`ReceiverStatistics.observe()` běží po každém aplikovaném snapshotu. Počítá
+unikátní ICAO identity pro lokální den vybraný `APP_TIMEZONE`, sleduje
+maximum současných letadel, maximální vzdálenost a rozdělení typů/aerolinek.
+Platné pozice produkují maximální vzdálenost v jednom z 36 pevných
+10stupňových azimutových bucketů. Neplatné pozice `(0, 0)` a neplatné
+souřadnice přijímače jsou z coverage vyloučeny.
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Pouze dirty řádky se flushují do PostgreSQL na throttlu a znovu při shutdownu.
+Startup načítá agregaci aktuálního lokálního dne. Range odpovědi pro `7d` a
+`30d` čtou tři tabulky denních statistik, slučují aktuální RAM den, vytvářejí
+denní trendy, period summary, coverage summary obsazených bucketů a porovnání
+s bezprostředně předchozím stejně dlouhým lokálním obdobím. Comparison fields
+zůstávají unavailable, když daná agregace chybí; statistiky nikdy nepublikují
+přesné souřadnice přijímače.
 
-Pozorování maximální vzdálenosti si také zachovává normalizovaný šestihran ICAO, ložisko,
-časové razítko a registrace, pokud je k dispozici. `/api/reception-records` read up
-na deset trvalých denních řádků s platným ložiskem V1 a sloučí aktuální RAM
-den. Vrací nejlepší denní záznamy a maximální životnost bez skenování
-`FlightPosition`; starší denní řádky, které předcházely poli ložiska, jsou vyloučeny
-ze seznamu kompletních záznamů a vyvolán v uživatelském rozhraní.
+Pozorování maximální vzdálenosti si také zachovává normalizovaný ICAO hex,
+bearing, timestamp a registraci, je-li dostupná. `/api/reception-records`
+čte až deset persistovaných denních řádků s platným V1 bearingem a slučuje
+aktuální RAM den. Vrací nejlepší denní rekordy a celoživotní maximum bez
+skenování `FlightPosition`; legacy denní řádky před zavedením bearingu jsou
+vyloučeny z kompletního seznamu rekordů a UI na to upozorňuje.
 
-## Rozšířené krytí
+## Rozšířené pokrytí
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Volitelný HTTP provider ADSB.lol je pouze zdroj živého zobrazení. S
+`ADSBLOL_BASE_URL=https://re-api.adsb.lol` používá feeder-authorized readsb
+endpoint `?circle={lat},{lon},{radius}`; varianta veřejného API používá
+`/v2/lat/{lat}/lon/{lon}/dist/{radius}`. Obě používají omezený radius/poll
+interval, request timeout, maximální počet letadel, stale threshold a
+exponenciální retry omezené konfigurací. Odpověď 429 respektuje
+`Retry-After`, je-li přítomno. Merger deduplikuje podle normalizovaného ICAO
+hexu a považuje pozorování za kandidáta pozice jen tehdy, když jsou obě
+souřadnice platné a `seen_pos` čerstvé. Existence letadla je oddělená od
+použitelnosti pozice: extended výsledek je úplné sjednocení lokálních/síťových
+identit, takže lokální letadla bez čerstvé pozice zůstávají zachována. State
+service každému ICAO přiřadí source affinity a drží letadlo na tomto zdroji,
+dokud některé z pozorování zůstává v RAM; dočasný výpadek zdroje proto nemůže
+přepnout marker local ↔ network. V rámci zvoleného zdroje se preferuje čerstvá
+pozice a v případě potřeby se zachová její poslední známá použitelná pozice;
+jinak souřadnice zůstávají null. Zobrazená network-only letadla jsou označena
+proveniencí zdroje; nevstupují do historie, lokálních denních statistik,
+alertů, enrichmentu metadat, ATC resolution ani health lokálního přijímače.
+Veřejný UI/API výstup obsahuje atribuci ADSB.lol a ODbL 1.0.
 
-## Průtok ATC
+## ATC tok
 
-`GET /api/atc/sectors` vrací dataset aktivního sektoru/vysílače. V ukázce
-režim, nebo když `ATC_SAMPLE_ENABLED=true`, použije explicitně označený vzorek
-konstanty. S nakonfigurovaným skutečným přijímačem a zakázaným vzorkem se čte
-importované pouze řádky PostgreSQL; prázdné/nedostupné tabulky produkují prázdné
-vrstvy.
+`GET /api/atc/sectors` vrací aktivní datovou sadu sektorů/vysílačů. V demo
+režimu nebo při `ATC_SAMPLE_ENABLED=true` používá explicitně označené sample
+konstanty. S nakonfigurovaným reálným přijímačem a vypnutým sample čte pouze
+importované PostgreSQL řádky; prázdné/nedostupné tabulky vytvoří prázdnou vrstvu.
 
-Pro každé letadlo s polohou státní služba omezuje opakované vyhledávání
-a zeptá se AtcSectorService na nejlepší polygon, nadmořskou výšku a
-časová shoda platnosti. Sektorová metadata a frekvence jsou zkopírovány do
-pravděpodobné přiřazení. Souhrny relevantních frekvencí agregují již vyřešené
-přiřazení podle frekvence/služby/volací značky a zahrnují počty spolehlivosti. Ne
-dráha hlásí aktuální naladěnou frekvenci letadla.
+Pro každé letadlo s pozicí state service throttluje opakované lookup keys a
+žádá `AtcSectorService` o nejlepší shodu point-in-polygon, výšky a času
+platnosti. Metadata sektoru a frekvence se kopírují do probable assignmentu.
+Souhrny relevantních frekvencí agregují už vyřešené assignmenty podle
+frequency/service/callsign a zahrnují confidence counts. Žádná cesta netvrdí
+skutečně naladěnou frekvenci letadla.
 
-## Pomocné průtoky
+## Pomocné toky
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+- Metadata `ADSBDB` jsou klíčována aircraft hexem. Route data ADSBDB jsou
+  klíčována aircraft hexem, normalizovaným callsignem a UTC datem, takže reuse
+  callsignu nemůže tiše sdílet trasu napříč letadly nebo dny. RAM cache
+  zachovává existující 24hodinové TTL metadat a 6hodinové TTL tras; pozitivní
+  hodnoty ADSBDB se navíc hydratují z volitelného omezeného snapshotu verze 1
+  `/var/lib/airradar/adsbdb/adsbdb-cache-v1.json`. Metadata mají 7denní
+  persistentní stale limit a trasy 24 hodin. Persistentní hodnoty se použijí
+  pouze po chybě providera; platný provider miss nikdy neoživí stale data.
+  Negativní výsledky zůstávají jen v RAM. Data flight planu FlightAware jsou
+  klíčována callsignem a časem pozorování. Vše je server-side enrichment s
+  cache/concurrency limity.
+- Airport objekty z ADSBDB route procházejí `AirportResolver`: PostgreSQL
+  exact ICAO, poté IATA, pak platné souřadnice providera a nakonec malý bundled
+  katalog. Tím se řeší metadata zobrazení; route code providera zůstává
+  identitou trasy, pokud není dostupné kanonické ICAO z katalogu.
+- Aviation Weather je nezávislý volitelný tok. `GET
+  /api/weather/airport/:icao` a omezená forma `?icao=ICAO1,ICAO2` rozliší
+  kanonická ICAO letiště před načtením METAR/TAF z AviationWeather.gov.
+  `GET /api/weather/sigmet` kombinuje worldwide International SIGMET feed s
+  CONUS domestic feedem, validuje Polygon/MultiPolygon GeoJSON, filtruje
+  aktuálně platné záznamy a vrací bezpečnou normalizovanou FeatureCollection.
+  International a AirSIGMET mají oddělené omezené cache záznamy a slučují se
+  až při odpovědi, takže jeden feed se může obnovit nebo selhat bez zahazování
+  čerstvých/stale dat druhého. Diagnostika datové sady zveřejňuje stav
+  fresh/stale/unavailable. Oddělená product TTL, negative entries, in-flight
+  coalescing, omezené RAM cache, stale-if-error, timeout a `Retry-After`
+  backoff chrání upstream. Počasí se nikdy nepersistuje ani nezahrnuje do
+  aircraft SSE.
+- `GET /api/aircraft/:hex/photo` validuje identitu letadla, hledá metadata
+  Planespotters podle hexu a pouze při prázdném výsledku podle registrace.
+  Prohlížeč načítá povolený HTTPS thumbnail přímo; image bytes neprocházejí
+  server cache.
+- `/api/airports` poskytuje PostgreSQL katalog letišť, pokud není prázdný,
+  jinak bundled fallback šesti letišť. `GET /api/search` prohledává živá
+  letadla v RAM a katalog letišť s omezeným vstupem/výsledky.
+- Serverová pravidla alertů se čtou z runtime state adresáře
+  (`/var/lib/airradar/alerts.json` v produkci); watchlist API tento soubor
+  atomicky aktualizuje a reloaduje sdílený `AlertEngine`. Lokální vývoj
+  používá `data/alerts.json` a produkční loader smí tracked soubor číst pouze
+  jako jednorázový legacy fallback před migrací. Tyto dva soubory se nikdy
+  nepoužívají jako souběžně zapisovatelné stores.
+  Odděleně je browser watchlist mapy localStorage filtr, nikoli serverové
+  notifikační pravidlo.
+- `/fleet` odvozuje identity ze stejného serverového watchlistu, ponechává jen
+  pravidla `icaoHex` a deduplikuje podle normalizovaného ICAO hexu. Callsign,
+  registrace, pattern, typ a airline pravidla jsou filtry pozorování, nikoli
+  identity Fleet. Jeden snapshot přijímače poskytuje live/offline stav, zatímco
+  jeden sdílený 30denní dotaz `Flight` poskytuje 7/30denní počty a route
+  rankingy; nevytváří se žádný druhý live poller.
 
-Shrnutí lodního deníku na domovské stránce je samostatné, s rozsahem stránek „ZÍSKAT
-/api/logbook/summary` fetch. Používá aktuální stavový snímek služby pro
-živé a sledované seznamy počítají, pak dávkují dnešní přetrvávající identity letu a
-jejich celoživotní letové řádky pro klasifikaci NOVÝCH/VZÁCNÝCH/VRACEJÍCÍCH SE letadel. Není
-volá pro každou událost SSE a zobrazuje nulové trvanlivé štítky, když je PostgreSQL
-není k dispozici, spíše než aby považoval restart procesu za nové pozorování.
+Souhrn logbooku na domovské stránce je samostatný page-scoped fetch
+`GET /api/logbook/summary`. Používá aktuální snapshot state service pro live
+a watchlist počty a poté dávkuje dnešní persistované Flight identity a jejich
+celoživotní Flight řádky pro klasifikaci NEW/RARE/RETURNING. Nevolá se pro
+každou SSE událost a při nedostupném PostgreSQL zobrazuje nula trvalých labelů
+místo toho, aby restart procesu považoval za nové pozorování.
 
-## Rekapitulace přijímače
+## Přehledy přijímače
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+`GET /api/recap?range=daily|weekly` je page-scoped čtení v lokálním čase
+Europe/Prague. Čte vybraný rozsah dat z `ReceiverDailyStats` a
+`ReceiverDailyAircraft`, počítá Flight counts/routes/types v databázi a pro
+labely načítá nanejvýš first/latest celoživotní řádky pro každé letadlo.
+Týdenní porovnání čte předchozích sedm agregačních oken bez lifetime
+enrichmentu. Chybějící agregační řádky zůstávají v odpovědi chybějící místo
+převodu na nuly. Recapy neskenují `FlightPosition`, neprovádějí provider
+requesty, nevytvářejí další EventSource ani nepřidávají další polling loop.
 
 ## Historický tok Time Machine
 
-`GET /api/time-machine/range` načte aktuální první/poslední
-Hodnoty `FlightPosition.recordedAt`. `GET /api/time-machine/window` validuje
-maximálně pětiminutové UTC okno, přečte maximálně 40 000 pozic a 500 letů
-identit, pak se připojí k trvalým metadatům a značkám „FlightEvent“ pouze pro čtení.
-Prohlížeč udržuje jedno ohraničené okno a rekonstruuje vybraný okamžik
-lokálně. Historická čtení nikdy nevyvolávají detekci zpravodajských informací, výstrahy,
-oznámení nebo živé hlasování.
+`GET /api/time-machine/range` čte skutečné první/poslední hodnoty
+`FlightPosition.recordedAt`. `GET /api/time-machine/window` validuje
+maximálně pětiminutové UTC okno, načte nejvýše 40 000 pozic a 500 flight
+identit a poté připojí persistentní metadata a read-only markery
+`FlightEvent`. Prohlížeč drží jedno omezené okno a lokálně rekonstruuje
+vybraný okamžik. Historická čtení nikdy nevolají intelligence detekci, alerty,
+notifikace ani live polling.
 # Flight Story
 
-`/flights/[id]` čte ohraničený letový příběh obsahující identitu letu,
-vzorkovaných pozic v plném rozsahu, přetrvávajících FlightEvents a kontextu trasy. Jeden
-časová značka přehrávání pohony mapa, časová osa, profil, výběr události a mapa
-Kontext V2. Během přehrávání neprobíhá žádná cesta pro zápis detektoru, výstrahy nebo oznámení.
-## Tok provenience nadmořské výšky
+`/flights/[id]` čte omezený Flight Story obsahující identitu Flight,
+vzorkované pozice v celém rozsahu, persistované FlightEvents a route context.
+Jeden playback timestamp řídí mapu, timeline, profil, výběr události a Map
+Context V2. Během playbacku neběží žádná write cesta detectoru, alertu ani
+notifikace.
+## Tok provenience výšky
 
-QUERY LENGTH LIMIT EXCEEDED. MAX ALLOWED QUERY : 500 CHARS
+Beast, lokální `aircraft.json` a volitelná síťová pozorování se normalizují
+do typovaných field-level pozorování výšky. Centralizovaná altitude policy
+používá prioritu zdroje, freshness pozorování, confidence, disagreement a
+temporal vertical-rate guard pro vytvoření jednoho `AltitudeDecision`.
+Vybraná hodnota a metadata rozhodnutí putují společně do vzorkovaných řádků
+`FlightPosition`; pouze významné konflikty vytvářejí omezené řádky
+`AltitudeAnomaly`. Úplné rozhodnutí je dostupné chráněné admin diagnostice,
+zatímco globální SSE payloady zůstávají beze změny. Historické pozice jsou
+záměrně ponechány s NULL proveniencí.
