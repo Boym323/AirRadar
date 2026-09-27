@@ -2,6 +2,95 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.150] - 2026-09-27
+
+Changes since v1.0.149.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Validate feature registry against routes (534a6f6)
+- Generate categorized release notes (40a9146)
+
+### Documentation
+
+- Add canonical feature registry (a1b5b5c)
+- Generate feature registry inventory (f51d7dd)
+- Map changelog scopes to features (a87fa68)
+- Require feature registry updates (e34ce39)
+- Document feature registry gate (3d1338a)
+- Describe categorized changelog (4c240b9)
+- Link canonical feature registry (9651ce6)
+
+### Maintenance
+
+- Enforce registry ownership (4d84742)
+- Cover categorized release notes (d403f4e)
+- Add feature registry commands (6a2594e)
+- Enforce feature registry coverage (5f1e1d2)
+- Update release entry expectation (9af912f)
+- Join expected entry with newlines (0d3c887)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs(features): add canonical feature registry (a1b5b5c)
+- feat(docs): validate feature registry against routes (534a6f6)
+- docs(features): generate feature registry inventory (f51d7dd)
+- docs(features): map changelog scopes to features (a87fa68)
+- feat(changelog): generate categorized release notes (40a9146)
+- test(features): enforce registry ownership (4d84742)
+- test(changelog): cover categorized release notes (d403f4e)
+- chore(docs): add feature registry commands (6a2594e)
+- ci(docs): enforce feature registry coverage (5f1e1d2)
+- docs(agents): require feature registry updates (e34ce39)
+- docs(dev): document feature registry gate (3d1338a)
+- docs(release): describe categorized changelog (4c240b9)
+- docs(readme): link canonical feature registry (9651ce6)
+- test(changelog): update release entry expectation (9af912f)
+- test(changelog): join expected entry with newlines (0d3c887)
+- Merge pull request #159 from Boym323/feat/feature-registry-changelog-v2 (6097edd)
+
+</details>
+
+## [1.0.149] - 2026-09-27
+
+Changes since v1.0.147.
+
+### Added
+
+- Add intelligence aircraft detail summary (c16b0f6)
+
+### Performance
+
+- Polish radar rendering path (8b5d26e)
+
+### Documentation
+
+- Sync release changelog (d3292ec)
+- Update changelog for v1.0.148 (a39c977)
+- Record rendering stream progress (23cc0a5)
+
+### Maintenance
+
+- Update codebase growth (7621c28)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add intelligence aircraft detail summary (c16b0f6)
+- Merge pull request #151 from Boym323/feat/aircraft-detail-v2 (a19d62f)
+- chore(metrics): update codebase growth (7621c28)
+- Merge pull request #156 from Boym323/automation/codebase-metrics (adcdf68)
+- docs: sync release changelog (d3292ec)
+- Merge pull request #150 from Boym323/automation/changelog-sync (43df266)
+- docs: update changelog for v1.0.148 (a39c977)
+- perf: polish radar rendering path (8b5d26e)
+- docs: record rendering stream progress (23cc0a5)
+- Merge pull request #158 from Boym323/perf/rendering-polish-v2 (c128242)
+
+</details>
 ## [1.0.148] - 2026-09-27
 
 Changes since v1.0.147:
