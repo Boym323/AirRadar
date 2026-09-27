@@ -7,6 +7,25 @@ function frame(hex: string): BeastFrame {
   return { type: 0x33, timestamp: Buffer.alloc(6), signal: 200, payload: Buffer.from(hex, "hex") };
 }
 
+const CRC_POLYNOMIAL = 0xfff409;
+function crc(payload: Buffer): number {
+  let value = 0n;
+  for (const byte of payload) value = (value << 8n) | BigInt(byte);
+  for (let bit = payload.length * 8 - 1; bit >= 24; bit -= 1) {
+    if ((value >> BigInt(bit)) & 1n) value ^= BigInt(CRC_POLYNOMIAL) << BigInt(bit - 24);
+  }
+  return Number(value & 0xffffffn);
+}
+
+function apFrame(df: number, icao: number, body: [number, number]): Buffer {
+  const payload = Buffer.from([df << 3, 0, body[0], body[1], 0, 0, 0]);
+  const parity = crc(payload) ^ icao;
+  payload[4] = parity >>> 16;
+  payload[5] = parity >>> 8;
+  payload[6] = parity;
+  return payload;
+}
+
 describe("BeastDecoder", () => {
   it("decodes ICAO and callsign from a deterministic DF17 identification frame", () => {
     const aircraft = new BeastDecoder(receiver).decode(frame("8d4840d6202cc371c32ce0576098"), Date.parse("2026-01-01T00:00:00Z"));
@@ -24,6 +43,17 @@ describe("BeastDecoder", () => {
   it("decodes valid Gillham/Q=0 altitude codes", () => {
     expect(decodeAltitudeCode(0x06a2)).toBe(10000);
     expect(decodeAltitudeCode(0x0bf0)).toBe(37000);
+  });
+  it("decodes short DF11 identity and DF4 altitude replies", () => {
+    const decoder = new BeastDecoder(receiver);
+    const allCall = decoder.decode(frame("5d4bb87a000000"));
+    expect(allCall).toMatchObject({ icaoHex: "4BB87A", sourceType: "df11" });
+    const altitudeReply = decoder.decode({ ...frame("00000000000000"), payload: apFrame(4, 0x4bb87a, [0x0b, 0xf0]) });
+    expect(altitudeReply).toMatchObject({ icaoHex: "4BB87A", altitude: 37000, baroAltitude: 37000, sourceType: "df4" });
+  });
+  it("rejects AP replies whose ICAO is not already tracked", () => {
+    const payload = apFrame(4, 0x123456, [0x0b, 0xf0]);
+    expect(new BeastDecoder(receiver).decode({ ...frame("00000000000000"), payload })).toBeNull();
   });
   it("merges multiple messages into one bounded aircraft state", () => {
     const decoder = new BeastDecoder(receiver, 1, 30_000);
