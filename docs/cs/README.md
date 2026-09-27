@@ -4,6 +4,11 @@ Tato složka obsahuje českou lokalizaci dokumentace projektu. Anglické soubory
 v nadřazené složce `docs/` jsou technickým zdrojem pravdy; při změně kontraktu
 se musí aktualizovat také příslušná česká stránka.
 
+Rozsah a základní strukturu překladu kontroluje `npm run docs:check`. Při
+změně anglického dokumentu aktualizujte ve stejném commitu jeho český protějšek
+a spusťte tuto kontrolu; ta ověřuje i nadpisy, bloky kódu, tabulky a číslované
+seznamy.
+
 ## Přehled
 
 - [Architektura](ARCHITECTURE.md)
