@@ -16,6 +16,11 @@ const CATEGORY_ORDER = [
   "Maintenance",
 ];
 
+// From the modern tag-driven release era onward, a stable changelog heading
+// represents a published release and must therefore have a matching Git tag.
+// Older pre-tag history is intentionally preserved.
+const TAG_AUTHORITATIVE_FROM = "1.0.148";
+
 function git(args) {
   return execFileSync("git", ["-c", `safe.directory=${APP_DIR}`, ...args], {
     cwd: APP_DIR,
@@ -90,10 +95,12 @@ export function parseConventionalSubject(subject) {
   };
 }
 
+export function isMergeCommitSubject(subject) {
+  return /^Merge\b/i.test(String(subject).trim());
+}
+
 export function categorizeCommit(subject) {
-  if (/^Merge pull request\b/i.test(subject) || /^Merge branch\b/i.test(subject)) {
-    return null;
-  }
+  if (isMergeCommitSubject(subject)) return null;
 
   const { type } = parseConventionalSubject(subject);
   switch (type) {
@@ -134,11 +141,17 @@ export function featureNamesForCommits(commits, registry = loadFeatureRegistry()
   const names = new Set();
 
   for (const commit of commits) {
+    if (isMergeCommitSubject(commit.subject)) continue;
+
     const { scope } = parseConventionalSubject(commit.subject);
-    if (!scope) continue;
+    const normalizedSubject = String(commit.subject).toLowerCase();
 
     for (const feature of registry.features ?? []) {
-      if ((feature.changelogScopes ?? []).includes(scope)) names.add(feature.name);
+      const scopeMatch = Boolean(scope) && (feature.changelogScopes ?? []).includes(scope);
+      const keywordMatch = (feature.changelogKeywords ?? []).some((keyword) =>
+        normalizedSubject.includes(String(keyword).toLowerCase()),
+      );
+      if (scopeMatch || keywordMatch) names.add(feature.name);
     }
   }
 
@@ -255,12 +268,79 @@ export function missingChangelogVersions({ existing = "", tags = releaseTags() }
     .filter((version) => !existing.includes(`## [${version}]`));
 }
 
+function stableVersionParts(version) {
+  const match = String(version).match(/^(\d+)\.(\d+)\.(\d+)$/);
+  return match ? match.slice(1).map(Number) : null;
+}
+
+function compareStableVersions(left, right) {
+  const a = stableVersionParts(left);
+  const b = stableVersionParts(right);
+  if (!a || !b) return 0;
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) return a[index] < b[index] ? -1 : 1;
+  }
+  return 0;
+}
+
+function changelogEntries(existing = "") {
+  const matches = [...existing.matchAll(/^## \[([^\]]+)\].*$/gm)];
+  if (!matches.length) return { intro: existing.trimEnd(), entries: [] };
+  return {
+    intro: existing.slice(0, matches[0].index).trimEnd(),
+    entries: matches.map((match, index) => ({
+      version: match[1],
+      text: existing.slice(match.index, matches[index + 1]?.index ?? existing.length).trim(),
+    })),
+  };
+}
+
+function joinChangelogEntries({ intro, entries }) {
+  const body = entries.map((entry) => entry.text).join("\n\n");
+  return body ? `${intro}\n\n${body}\n` : `${intro}\n`;
+}
+
+export function unexpectedChangelogVersions({
+  existing = "",
+  tags = releaseTags(),
+  authoritativeFrom = TAG_AUTHORITATIVE_FROM,
+} = {}) {
+  const tagged = new Set(tags.map(tagVersion));
+  return changelogEntries(existing).entries
+    .map((entry) => entry.version)
+    .filter((version) =>
+      stableVersionParts(version)
+      && compareStableVersions(version, authoritativeFrom) >= 0
+      && !tagged.has(version),
+    );
+}
+
+export function pruneUnexpectedChangelogVersions({
+  existing = "",
+  tags = releaseTags(),
+  authoritativeFrom = TAG_AUTHORITATIVE_FROM,
+} = {}) {
+  const unexpected = new Set(unexpectedChangelogVersions({
+    existing,
+    tags,
+    authoritativeFrom,
+  }));
+  if (!unexpected.size) return existing;
+
+  const parsed = changelogEntries(existing);
+  return joinChangelogEntries({
+    intro: parsed.intro,
+    entries: parsed.entries.filter((entry) => !unexpected.has(entry.version)),
+  });
+}
+
 export function backfillChangelog({
   existing = "",
   tags = releaseTags(),
   releases = {},
   registry = loadFeatureRegistry(),
 }) {
+  existing = pruneUnexpectedChangelogVersions({ existing, tags });
   const missingEntries = [];
   for (let index = 0; index < tags.length; index += 1) {
     const tag = tags[index];
@@ -296,8 +376,12 @@ function main() {
   if (command === "check") {
     const existing = readFileSync(CHANGELOG_PATH, "utf8");
     const missing = missingChangelogVersions({ existing });
+    const unexpected = unexpectedChangelogVersions({ existing });
     if (missing.length) {
       throw new Error(`CHANGELOG.md is missing release tags: ${missing.join(", ")}`);
+    }
+    if (unexpected.length) {
+      throw new Error(`CHANGELOG.md contains untagged release versions: ${unexpected.join(", ")}`);
     }
     process.stdout.write("[AirRadar changelog] synchronized\n");
     return;
