@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { t } from "@/lib/i18n";
 import { MAX_GLOBAL_SEARCH_QUERY_LENGTH, MIN_GLOBAL_SEARCH_QUERY_LENGTH, type AircraftSearchResult, type AirportSearchResult, type AtsPointSearchResult, type GlobalSearchResponse, type SearchHref } from "@/lib/search/types";
+import { UiIcon } from "@/components/ui-primitives";
 
 const SEARCH_DEBOUNCE_MS = 220;
 
@@ -17,13 +18,13 @@ function itemKey(item: SearchItem): string {
 }
 
 function aircraftPrimaryLabel(item: AircraftSearchResult): string {
-  return item.registration || item.callsign || item.icaoHex;
+  return item.callsign || item.registration || item.icaoHex;
 }
 
 function aircraftSecondaryLabel(item: AircraftSearchResult): string {
   return [
     item.aircraftType,
-    item.callsign && item.callsign !== aircraftPrimaryLabel(item) ? item.callsign : null,
+    item.registration && item.registration !== aircraftPrimaryLabel(item) ? item.registration : null,
     item.icaoHex,
   ].filter(Boolean).join(" · ");
 }
@@ -38,6 +39,10 @@ function airportSecondaryLabel(item: AirportSearchResult): string {
 
 function atsPointSecondaryLabel(item: AtsPointSearchResult): string {
   return [item.countryCode, item.pointKind === "NAVAID" ? "NAVAID" : "FIX", item.routeDesignators.join(", ")].join(" · ");
+}
+
+function itemIcon(item: SearchItem): "aircraft" | "airport" | "waypoint" {
+  return item.kind === "aircraft" ? "aircraft" : item.kind === "airport" ? "airport" : "waypoint";
 }
 
 export function GlobalSearch() {
@@ -159,7 +164,7 @@ export function GlobalSearch() {
 
   return (
     <div className="global-search" ref={rootRef}>
-      <span className="global-search-icon" aria-hidden="true">⌕</span>
+      <span className="global-search-icon" aria-hidden="true"><UiIcon name="search" /></span>
       <input
         ref={inputRef}
         className="global-search-input"
@@ -194,6 +199,7 @@ export function GlobalSearch() {
               onMouseEnter={() => setActiveIndex(index)}
               onClick={(event) => { event.preventDefault(); selectItem(item); }}
             >
+              <span className="global-search-item-icon" aria-hidden="true"><UiIcon name={itemIcon(item)} /></span>
               <span className="global-search-item-primary">{aircraftPrimaryLabel(item)}</span>
               <span className="global-search-item-secondary">{aircraftSecondaryLabel(item)}</span>
             </Link>;
@@ -213,6 +219,7 @@ export function GlobalSearch() {
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => setOpen(false)}
             >
+              <span className="global-search-item-icon" aria-hidden="true"><UiIcon name={itemIcon(item)} /></span>
               <span className="global-search-item-primary">{airportPrimaryLabel(item)}</span>
               <span className="global-search-item-secondary">{airportSecondaryLabel(item)}</span>
             </Link>;
@@ -223,6 +230,7 @@ export function GlobalSearch() {
           {results.atsPoints.map((item) => {
             const index = items.findIndex((candidate) => itemKey(candidate) === itemKey(item));
             return <Link id={itemKey(item)} key={itemKey(item)} className={`global-search-item ${index === activeIndex ? "active" : ""}`} href={item.href as SearchHref} role="option" aria-selected={index === activeIndex} onMouseEnter={() => setActiveIndex(index)} onClick={(event) => { event.preventDefault(); selectItem(item); }}>
+              <span className="global-search-item-icon" aria-hidden="true"><UiIcon name={itemIcon(item)} /></span>
               <span className="global-search-item-primary">{item.name}</span>
               <span className="global-search-item-secondary">{atsPointSecondaryLabel(item)}</span>
             </Link>;

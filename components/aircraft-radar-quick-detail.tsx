@@ -483,6 +483,46 @@ function AircraftOverview({ aircraft, registration, operator, headerType, source
     </section>;
 }
 
+function FlightStateSection({ aircraft }: { aircraft: AircraftView }) {
+  const telemetry = aircraft.adsbTelemetry;
+  const target = aircraft.targetState;
+  const selectedAltitude = target?.selectedAltitudeFt
+    ?? telemetry?.selectedAltitudeMcpFt
+    ?? telemetry?.selectedAltitudeFmsFt
+    ?? null;
+  const selectedHeading = target?.selectedHeadingDeg ?? telemetry?.selectedHeadingDeg ?? null;
+  const modes = [
+    target?.autopilot ? t.aircraft.autopilot : null,
+    target?.vnavMode ? t.aircraft.vnav : null,
+    target?.lnavMode ? t.aircraft.lnav : null,
+    target?.altitudeHoldMode ? t.aircraft.altitudeHold : null,
+    target?.approachMode ? t.aircraft.approachMode : null,
+    target?.tcasOperational ? t.aircraft.tcas : null,
+  ].filter((mode): mode is string => Boolean(mode));
+  const hasState = Boolean(
+    telemetry?.iasKt !== null && telemetry?.iasKt !== undefined
+      || telemetry?.mach !== null && telemetry?.mach !== undefined
+      || selectedAltitude !== null
+      || selectedHeading !== null
+      || telemetry?.trueHeadingDeg !== null && telemetry?.trueHeadingDeg !== undefined
+      || telemetry?.magneticHeadingDeg !== null && telemetry?.magneticHeadingDeg !== undefined
+      || modes.length,
+  );
+  if (!hasState) return null;
+
+  return <QuickSection id="aircraft-quick-flight-state-title" title={t.aircraft.navigationStateTitle} className="aircraft-quick-flight-state">
+    <div className="aircraft-quick-detail-grid">
+      <DetailValue label={t.aircraft.indicatedAirspeed} value={telemetry?.iasKt === null || telemetry?.iasKt === undefined ? null : `${formatNumber(telemetry.iasKt, 0)} kt`} />
+      <DetailValue label={t.aircraft.mach} value={telemetry?.mach === null || telemetry?.mach === undefined ? null : `M ${formatNumber(telemetry.mach, 3)}`} />
+      <DetailValue label={t.aircraft.selectedAltitude} value={selectedAltitude === null ? null : formatAltitude(selectedAltitude)} />
+      <DetailValue label={t.aircraft.selectedHeading} value={selectedHeading === null ? null : formatTrack(selectedHeading)} />
+      <DetailValue label={t.aircraft.trueHeading} value={telemetry?.trueHeadingDeg === null || telemetry?.trueHeadingDeg === undefined ? null : formatTrack(telemetry.trueHeadingDeg)} />
+      <DetailValue label={t.aircraft.magneticHeading} value={telemetry?.magneticHeadingDeg === null || telemetry?.magneticHeadingDeg === undefined ? null : formatTrack(telemetry.magneticHeadingDeg)} />
+    </div>
+    {modes.length > 0 && <div className="aircraft-quick-mode-list" aria-label={t.aircraft.navModes}>{modes.map((mode) => <span key={mode}>{mode}</span>)}</div>}
+  </QuickSection>;
+}
+
 function TelemetrySection({ aircraft }: { aircraft: AircraftView }) {
   const position = aircraft.lat === null || aircraft.lon === null ? null : `${formatCoordinate(aircraft.lat)}, ${formatCoordinate(aircraft.lon)}`;
   return <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-telemetry" aria-labelledby="aircraft-tab-telemetry">
@@ -619,10 +659,11 @@ export function AircraftRadarQuickDetail({
     <div className="aircraft-quick-source-header"><span className="source-badge source-badge-prominent">{aircraftPositionSourceLabel(aircraft)}</span>{sourceAge && <span>{t.aircraft.positionAge}: {sourceAge}</span>}{phase && <strong>{phase}</strong>}</div>
     <DetailTabs activeTab={activeTab} onChange={setActiveTab} />
     {activeTab === "overview" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-overview" aria-labelledby="aircraft-tab-overview">
+      <AircraftOverview aircraft={aircraft} registration={registration} operator={operator} headerType={headerType} sourceAge={sourceAge} phase={phase} emergency={emergency} emergencySquawk={emergencySquawk} onCenter={onCenter} historyHref={historyHref} fullDetailHref={fullDetailHref} />
+      <FlightStateSection aircraft={aircraft} />
       <SituationSummarySection summary={situation} />
       <IntelligenceSection events={intelligenceEvents} />
       <DataQualitySection aircraft={aircraft} />
-      <AircraftOverview aircraft={aircraft} registration={registration} operator={operator} headerType={headerType} sourceAge={sourceAge} phase={phase} emergency={emergency} emergencySquawk={emergencySquawk} onCenter={onCenter} historyHref={historyHref} fullDetailHref={fullDetailHref} />
     </div>}
     {activeTab === "flight" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-flight" aria-labelledby="aircraft-tab-flight">
       <QuickSection id="aircraft-quick-flight-title" title={t.aircraft.detailSections.flight} className="aircraft-quick-flight">
