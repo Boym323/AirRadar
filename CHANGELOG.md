@@ -2,6 +2,32 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.175] - 2026-09-27
+
+Changes since v1.0.174.
+
+### Added
+
+- Enhance aircraft telemetry display and navigation sections (97840df2)
+
+### Fixed
+
+- Improve metadata hydration and snapshot handling (555047d2)
+
+### Maintenance
+
+- Sync generated repository metadata (2c0eed34)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (2c0eed34)
+- Merge pull request #188 from Boym323/automation/repository-metadata (c9f8acce)
+- feat: enhance aircraft telemetry display and navigation sections (97840df2)
+- fix(aircraft-state): improve metadata hydration and snapshot handling (555047d2)
+
+</details>
+
 ## [1.0.174] - 2026-09-27
 
 Changes since v1.0.173.
