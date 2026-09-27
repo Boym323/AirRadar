@@ -1,0 +1,681 @@
+{
+  "generatedAt": "2026-09-27T11:27:52.657Z",
+  "rows": [
+    {
+      "id": 117301,
+      "originalMaxAltitude": 80375
+    },
+    {
+      "id": 117339,
+      "originalMaxAltitude": 68400
+    },
+    {
+      "id": 117340,
+      "originalMaxAltitude": 101100
+    },
+    {
+      "id": 117346,
+      "originalMaxAltitude": 99875
+    },
+    {
+      "id": 117356,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117365,
+      "originalMaxAltitude": 102600
+    },
+    {
+      "id": 117368,
+      "originalMaxAltitude": 118700
+    },
+    {
+      "id": 117369,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117376,
+      "originalMaxAltitude": 118700
+    },
+    {
+      "id": 117377,
+      "originalMaxAltitude": 118700
+    },
+    {
+      "id": 117384,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117388,
+      "originalMaxAltitude": 93800
+    },
+    {
+      "id": 117391,
+      "originalMaxAltitude": 88375
+    },
+    {
+      "id": 117394,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117399,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117400,
+      "originalMaxAltitude": 99875
+    },
+    {
+      "id": 117402,
+      "originalMaxAltitude": 98375
+    },
+    {
+      "id": 117407,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117412,
+      "originalMaxAltitude": 85800
+    },
+    {
+      "id": 117416,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117417,
+      "originalMaxAltitude": 117800
+    },
+    {
+      "id": 117419,
+      "originalMaxAltitude": 102900
+    },
+    {
+      "id": 117422,
+      "originalMaxAltitude": 110900
+    },
+    {
+      "id": 117424,
+      "originalMaxAltitude": 87500
+    },
+    {
+      "id": 117427,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117429,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117430,
+      "originalMaxAltitude": 118900
+    },
+    {
+      "id": 117432,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117433,
+      "originalMaxAltitude": 79700
+    },
+    {
+      "id": 117434,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117435,
+      "originalMaxAltitude": 79700
+    },
+    {
+      "id": 117437,
+      "originalMaxAltitude": 66300
+    },
+    {
+      "id": 117438,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117439,
+      "originalMaxAltitude": 118700
+    },
+    {
+      "id": 117440,
+      "originalMaxAltitude": 91800
+    },
+    {
+      "id": 117441,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117442,
+      "originalMaxAltitude": 101100
+    },
+    {
+      "id": 117443,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117453,
+      "originalMaxAltitude": 101900
+    },
+    {
+      "id": 117454,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117457,
+      "originalMaxAltitude": 94375
+    },
+    {
+      "id": 117458,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117459,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117460,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117461,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117464,
+      "originalMaxAltitude": 72825
+    },
+    {
+      "id": 117465,
+      "originalMaxAltitude": 82600
+    },
+    {
+      "id": 117467,
+      "originalMaxAltitude": 102600
+    },
+    {
+      "id": 117468,
+      "originalMaxAltitude": 114800
+    },
+    {
+      "id": 117469,
+      "originalMaxAltitude": 94675
+    },
+    {
+      "id": 117470,
+      "originalMaxAltitude": 79400
+    },
+    {
+      "id": 117471,
+      "originalMaxAltitude": 80675
+    },
+    {
+      "id": 117475,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117478,
+      "originalMaxAltitude": 85800
+    },
+    {
+      "id": 117480,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117481,
+      "originalMaxAltitude": 99500
+    },
+    {
+      "id": 117483,
+      "originalMaxAltitude": 82675
+    },
+    {
+      "id": 117484,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117485,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117486,
+      "originalMaxAltitude": 118700
+    },
+    {
+      "id": 117493,
+      "originalMaxAltitude": 74700
+    },
+    {
+      "id": 117495,
+      "originalMaxAltitude": 71025
+    },
+    {
+      "id": 117496,
+      "originalMaxAltitude": 80775
+    },
+    {
+      "id": 117497,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117498,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117499,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117500,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117501,
+      "originalMaxAltitude": 86200
+    },
+    {
+      "id": 117503,
+      "originalMaxAltitude": 72825
+    },
+    {
+      "id": 117504,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117505,
+      "originalMaxAltitude": 71025
+    },
+    {
+      "id": 117506,
+      "originalMaxAltitude": 126700
+    },
+    {
+      "id": 117507,
+      "originalMaxAltitude": 110700
+    },
+    {
+      "id": 117508,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117509,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117511,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117512,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117513,
+      "originalMaxAltitude": 110700
+    },
+    {
+      "id": 117514,
+      "originalMaxAltitude": 79700
+    },
+    {
+      "id": 117515,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117516,
+      "originalMaxAltitude": 71025
+    },
+    {
+      "id": 117517,
+      "originalMaxAltitude": 87600
+    },
+    {
+      "id": 117518,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117520,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117521,
+      "originalMaxAltitude": 82600
+    },
+    {
+      "id": 117524,
+      "originalMaxAltitude": 93175
+    },
+    {
+      "id": 117527,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117530,
+      "originalMaxAltitude": 110700
+    },
+    {
+      "id": 117531,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117532,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117534,
+      "originalMaxAltitude": 85800
+    },
+    {
+      "id": 117535,
+      "originalMaxAltitude": 63700
+    },
+    {
+      "id": 117538,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117542,
+      "originalMaxAltitude": 102900
+    },
+    {
+      "id": 117543,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117545,
+      "originalMaxAltitude": 94700
+    },
+    {
+      "id": 117549,
+      "originalMaxAltitude": 102900
+    },
+    {
+      "id": 117550,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117551,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117552,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117554,
+      "originalMaxAltitude": 93975
+    },
+    {
+      "id": 117555,
+      "originalMaxAltitude": 94800
+    },
+    {
+      "id": 117556,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117558,
+      "originalMaxAltitude": 114900
+    },
+    {
+      "id": 117559,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117561,
+      "originalMaxAltitude": 110700
+    },
+    {
+      "id": 117567,
+      "originalMaxAltitude": 87600
+    },
+    {
+      "id": 117569,
+      "originalMaxAltitude": 118700
+    },
+    {
+      "id": 117571,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117573,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117574,
+      "originalMaxAltitude": 92700
+    },
+    {
+      "id": 117575,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117577,
+      "originalMaxAltitude": 95700
+    },
+    {
+      "id": 117578,
+      "originalMaxAltitude": 93800
+    },
+    {
+      "id": 117579,
+      "originalMaxAltitude": 118800
+    },
+    {
+      "id": 117581,
+      "originalMaxAltitude": 102900
+    },
+    {
+      "id": 117582,
+      "originalMaxAltitude": 71025
+    },
+    {
+      "id": 117585,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117590,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117594,
+      "originalMaxAltitude": 91600
+    },
+    {
+      "id": 117595,
+      "originalMaxAltitude": 94800
+    },
+    {
+      "id": 117596,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117597,
+      "originalMaxAltitude": 102800
+    },
+    {
+      "id": 117598,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117599,
+      "originalMaxAltitude": 101900
+    },
+    {
+      "id": 117600,
+      "originalMaxAltitude": 67600
+    },
+    {
+      "id": 117602,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117605,
+      "originalMaxAltitude": 80775
+    },
+    {
+      "id": 117606,
+      "originalMaxAltitude": 110700
+    },
+    {
+      "id": 117607,
+      "originalMaxAltitude": 98700
+    },
+    {
+      "id": 117609,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117610,
+      "originalMaxAltitude": 93900
+    },
+    {
+      "id": 117611,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117612,
+      "originalMaxAltitude": 98300
+    },
+    {
+      "id": 117620,
+      "originalMaxAltitude": 98675
+    },
+    {
+      "id": 117621,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117623,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117625,
+      "originalMaxAltitude": 98200
+    },
+    {
+      "id": 117626,
+      "originalMaxAltitude": 87600
+    },
+    {
+      "id": 117631,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117636,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117638,
+      "originalMaxAltitude": 102900
+    },
+    {
+      "id": 117640,
+      "originalMaxAltitude": 118900
+    },
+    {
+      "id": 117642,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117644,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117645,
+      "originalMaxAltitude": 76400
+    },
+    {
+      "id": 117646,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117647,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117650,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117657,
+      "originalMaxAltitude": 71025
+    },
+    {
+      "id": 117658,
+      "originalMaxAltitude": 80675
+    },
+    {
+      "id": 117659,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117661,
+      "originalMaxAltitude": 71000
+    },
+    {
+      "id": 117662,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117663,
+      "originalMaxAltitude": 76400
+    },
+    {
+      "id": 117664,
+      "originalMaxAltitude": 71025
+    },
+    {
+      "id": 117674,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117675,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117676,
+      "originalMaxAltitude": 118700
+    },
+    {
+      "id": 117680,
+      "originalMaxAltitude": 85900
+    },
+    {
+      "id": 117681,
+      "originalMaxAltitude": 76425
+    },
+    {
+      "id": 117682,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117683,
+      "originalMaxAltitude": 76400
+    },
+    {
+      "id": 117685,
+      "originalMaxAltitude": 74600
+    },
+    {
+      "id": 117686,
+      "originalMaxAltitude": 73175
+    },
+    {
+      "id": 117688,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117693,
+      "originalMaxAltitude": 71375
+    },
+    {
+      "id": 117704,
+      "originalMaxAltitude": 72800
+    },
+    {
+      "id": 117708,
+      "originalMaxAltitude": 68400
+    }
+  ]
+}

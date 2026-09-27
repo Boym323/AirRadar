@@ -65,6 +65,7 @@
     "intelligence:quality": "JITI_TSCONFIG_PATHS=true jiti scripts/flight-intelligence-quality.ts",
     "audit:flightaware-routes": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-flightaware-routes.ts",
     "audit:historical-altitude": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-historical-altitude.ts",
+    "repair:historical-altitude": "JITI_TSCONFIG_PATHS=true jiti scripts/repair-historical-altitude.ts",
     "changelog:check": "node scripts/changelog.mjs check",
     "metrics:code": "node scripts/code-metrics.mjs",
     "metrics:code:backfill": "node scripts/code-metrics.mjs --backfill",
