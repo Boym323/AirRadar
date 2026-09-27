@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.158] - 2026-09-27
+
+Changes since v1.0.157.
+
+### Added
+
+- Add decoding for TC29 target state and TC31 operational status; update types and serialization (49703079)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(beast-decoder): add decoding for TC29 target state and TC31 operational status; update types and serialization (49703079)
+
+</details>
+
 ## [1.0.157] - 2026-09-27
 
 Changes since v1.0.156.
