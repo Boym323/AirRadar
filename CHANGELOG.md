@@ -2,6 +2,86 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.155] - 2026-09-27
+
+Changes since v1.0.152.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Implement OGN target deduplication logic and add corresponding tests (b6bc862)
+- Enhance OGN deduplication logic to handle exact position matches without altitude (382b2b1)
+
+### Fixed
+
+- Ignore unchanged same-day snapshots (2d666b9)
+- Correct altitude decoding for DF17 Q-bit to prevent incorrect values (b2866ed)
+
+### Documentation
+
+- Update changelog for v1.0.153 (7108b0e)
+- Update changelog for v1.0.154 (a5c62e2)
+- Describe unified metadata automation (e603634)
+- Document unified metadata workflow (3c6dfa7)
+
+### Maintenance
+
+- Ignore changelog-only pushes (08c65c3)
+- Skip metrics-only deployment (d79a4ed)
+- Prevent unchanged same-day churn (754cdce)
+- Guard changelog metrics loop (7b8c121)
+- Move metadata sync out of release workflow (e22afb3)
+- Unify generated repository metadata (08624a9)
+- Remove standalone metrics workflow (f00b957)
+- Remove standalone changelog workflow (0e10623)
+- Cover unified metadata workflow (91f1796)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(metrics): ignore unchanged same-day snapshots (2d666b9)
+- ci(metrics): ignore changelog-only pushes (08c65c3)
+- ci(release): skip metrics-only deployment (d79a4ed)
+- test(metrics): prevent unchanged same-day churn (754cdce)
+- test(ci): guard changelog metrics loop (7b8c121)
+- fix: correct altitude decoding for DF17 Q-bit to prevent incorrect values (b2866ed)
+- feat: implement OGN target deduplication logic and add corresponding tests (b6bc862)
+- docs: update changelog for v1.0.153 (7108b0e)
+- feat: enhance OGN deduplication logic to handle exact position matches without altitude (382b2b1)
+- Merge pull request #161 from Boym323/fix/automation-docs-metrics-loop (759f64d)
+- docs: update changelog for v1.0.154 (a5c62e2)
+- ci: move metadata sync out of release workflow (e22afb3)
+- ci: unify generated repository metadata (08624a9)
+- ci: remove standalone metrics workflow (f00b957)
+- ci: remove standalone changelog workflow (0e10623)
+- docs: describe unified metadata automation (e603634)
+- docs(release): document unified metadata workflow (3c6dfa7)
+- test(ci): cover unified metadata workflow (91f1796)
+- Merge pull request #163 from Boym323/fix/automation-metadata-pr-lifecycle (4606c04)
+
+</details>
+
+## [1.0.152] - 2026-09-27
+
+Changes since v1.0.150.
+
+### Added
+
+- Add canonical aircraft glyph paths and update related components (a4e8d7a)
+
+### Documentation
+
+- Sync changelog through v1.0.150 (0cb37c4)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: sync changelog through v1.0.150 (0cb37c4)
+- Merge pull request #160 from Boym323/automation/changelog-sync (35724bf)
+- feat: add canonical aircraft glyph paths and update related components (a4e8d7a)
+
+</details>
 ## [1.0.154] - 2026-09-27
 
 Changes since v1.0.153.
