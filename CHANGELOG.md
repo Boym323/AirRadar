@@ -2,6 +2,34 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.164] - 2026-09-27
+
+Changes since v1.0.163.
+
+### Added
+
+- Finalize ADS-B telemetry and aircraft icon sizing (2b8fe7f)
+
+### Changed
+
+- Add script for auditing extreme altitudes in flight data (f53fe7b)
+- Merge remote-tracking branch 'origin/main' (857f906)
+
+### Maintenance
+
+- Sync generated repository metadata (9a887b5)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (9a887b5)
+- Merge pull request #174 from Boym323/automation/repository-metadata (8555701)
+- feat: finalize ADS-B telemetry and aircraft icon sizing (2b8fe7f)
+- Add script for auditing extreme altitudes in flight data (f53fe7b)
+- Merge pull request #175 from Boym323/feat/visual-system-v2-adsb-telemetry-icons (6a9656b)
+- Merge remote-tracking branch 'origin/main' (857f906)
+
+</details>
 ## [1.0.163] - 2026-09-27
 
 Changes since v1.0.162.
