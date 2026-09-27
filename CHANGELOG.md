@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.152] - 2026-09-27
+
+Changes since v1.0.150.
+
+### Added
+
+- Add canonical aircraft glyph paths and update related components (a4e8d7a)
+
+### Documentation
+
+- Sync changelog through v1.0.150 (0cb37c4)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: sync changelog through v1.0.150 (0cb37c4)
+- Merge pull request #160 from Boym323/automation/changelog-sync (35724bf)
+- feat: add canonical aircraft glyph paths and update related components (a4e8d7a)
+
+</details>
 ## [1.0.150] - 2026-09-27
 
 Changes since v1.0.149.
