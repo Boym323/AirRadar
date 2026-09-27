@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   classifyPath,
@@ -72,6 +73,27 @@ describe("code metrics", () => {
     expect(upsertDailySnapshot([first], later)).toEqual([later]);
   });
 
+  it("does not rewrite the current day when counts did not change", () => {
+    const first = {
+      day: "2026-09-27",
+      timestamp: "2026-09-27T07:00:00.000Z",
+      commit: "aaa",
+      production: { files: 10, loc: 1000 },
+      tests: { files: 4, loc: 300 },
+      totalLoc: 1300,
+    };
+    const unchangedLater = {
+      day: "2026-09-27",
+      timestamp: "2026-09-27T09:00:00.000Z",
+      commit: "bbb",
+      production: { files: 10, loc: 1000 },
+      tests: { files: 4, loc: 300 },
+      totalLoc: 1300,
+    };
+
+    expect(upsertDailySnapshot([first], unchangedLater)).toEqual([first]);
+  });
+
   it("does not add a new day when counts did not change", () => {
     const first = {
       day: "2026-09-26",
@@ -91,6 +113,22 @@ describe("code metrics", () => {
     };
 
     expect(upsertDailySnapshot([first], unchanged)).toEqual([first]);
+  });
+
+  it("prevents changelog and metrics automation from creating a release loop", () => {
+    const metricsWorkflow = readFileSync(
+      new URL("../.github/workflows/codebase-metrics.yml", import.meta.url),
+      "utf8",
+    );
+    const ciWorkflow = readFileSync(
+      new URL("../.github/workflows/ci.yml", import.meta.url),
+      "utf8",
+    );
+
+    expect(metricsWorkflow).toContain('- "CHANGELOG.md"');
+    expect(ciWorkflow).toContain(
+      "CHANGELOG.md|docs/metrics/code-history.json|docs/metrics/code-growth.svg",
+    );
   });
 
   it("scans a Git commit with the same metric as the working tree", async () => {

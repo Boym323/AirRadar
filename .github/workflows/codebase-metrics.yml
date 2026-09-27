@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths-ignore:
+      - "CHANGELOG.md"
       - "docs/metrics/code-history.json"
       - "docs/metrics/code-growth.svg"
   workflow_dispatch:
