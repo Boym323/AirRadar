@@ -1,8 +1,7 @@
 # Intelligence roadmap parallel progress
 
-Baseline: `main` at `3a1f3b61` (origin/main, 2026-09-27). The four backend
-streams are verified merged into main: PRs #147, #148, #145, and #146 are
-closed with `merged=true` on GitHub.
+Baseline: `main` at `a39c977e` (origin/main, 2026-09-27). Backend streams A–D
+and UI streams E–G are verified merged into main on GitHub.
 
 | Stream | Branch | Worktree | PR | Dependencies | Conflict risk | Status |
 |---|---|---|---|---|---|---|
@@ -19,17 +18,17 @@ closed with `merged=true` on GitHub.
 | F — Alerting V2 | `lib/server/alert-engine.ts`, `lib/server/alert-history.ts`, `lib/server/alert-notifier.ts`, alert tests | alert history/notifier payload, intelligence events | merged A–D; existing alert queue/state | low: isolated server domain; avoid UI changes |
 | G — Time Machine V2 | `components/time-machine.tsx`, `lib/server/time-machine.ts`, `lib/time-machine/` | persisted `FlightEvent`, historical track, global map time | merged A–D; existing playback/context APIs | medium: event envelope and map-time synchronization |
 
-All three wave branches were created from the identical `origin/main` commit
-`3a1f3b61`. No breaking change to the intelligence event envelope, timestamp
+The wave branches were created from the then-current identical `origin/main`
+commit. No breaking change to the intelligence event envelope, timestamp
 semantics, or shared directory layout is planned.
 
 ## UI wave progress
 
 | Stream | Branch | PR | Local tests | GitHub CI | Conflict | Status |
 |---|---|---|---|---|---|---|
-| E — Aircraft Detail V2 | `feat/aircraft-detail-v2` | [#151](https://github.com/Boym323/AirRadar/pull/151) | typecheck, full Vitest 176/176 (1196), ESLint | pending | medium | implementation complete; review pending |
-| F — Alerting V2 | `feat/alerting-v2` | [#152](https://github.com/Boym323/AirRadar/pull/152) | typecheck, full Vitest 176/176 (1198), ESLint | pending | low | implementation complete; review pending |
-| G — Time Machine V2 | `feat/time-machine-v2` | [#153](https://github.com/Boym323/AirRadar/pull/153) | typecheck, full Vitest 177/177 (1197), ESLint | pending | medium | implementation complete; review pending |
+| E — Aircraft Detail V2 | `feat/aircraft-detail-v2` | [#151](https://github.com/Boym323/AirRadar/pull/151) | merged; capability verified | merged | medium | merged into main |
+| F — Alerting V2 | `feat/alerting-v2` | [#152](https://github.com/Boym323/AirRadar/pull/152) | merged; capability verified | merged | low | merged into main |
+| G — Time Machine V2 | `feat/time-machine-v2` | [#153](https://github.com/Boym323/AirRadar/pull/153) | merged; capability verified | merged | medium | merged into main |
+| H — Rendering / Performance Polish V2 | `perf/rendering-polish-v2` | [#158](https://github.com/Boym323/AirRadar/pull/158) | typecheck, 177/177 files (1204), production/browser gates, radar perf 100/500/1000 | pending | medium: WebGL and marker parity boundary | implementation complete; review pending |
 
-The later rendering/performance stream H remains intentionally unstarted.
 Route Intelligence remains out of scope.
