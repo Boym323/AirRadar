@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.179] - 2026-09-27
+
+Changes since v1.0.178.
+
+### Added
+
+- Add bilingual documentation for AirRadar in English and Czech (7f625b6)
+
+### Maintenance
+
+- Sync generated repository metadata (dc73549)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (dc73549)
+- Merge pull request #194 from Boym323/automation/repository-metadata (66a25c1)
+- feat: add bilingual documentation for AirRadar in English and Czech (7f625b6)
+
+</details>
 ## [1.0.178] - 2026-09-27
 
 Changes since v1.0.177.
