@@ -76,13 +76,13 @@ function matches(source, pattern) {
 
 export function analyzeVisualSystem(css) {
   const { root, outside } = rootBlock(css);
-  const hardcodedHex = matches(outside, /#[0-9a-fA-F]{3,8}\\b/g);
-  const hardcodedRgb = matches(outside, /rgba?\\([^)]*\\)/g);
+  const hardcodedHex = matches(outside, /#[0-9a-fA-F]{3,8}\b/g);
+  const hardcodedRgb = matches(outside, /rgba?\([^)]*\)/g);
   const hardcodedColors = [...hardcodedHex, ...hardcodedRgb];
-  const literalRadii = matches(outside, /border-radius:\\s*([^;]+)/g)
+  const literalRadii = matches(outside, /border-radius:\s*([^;]+)/g)
     .map((value) => value.trim())
     .filter((value) => !value.includes("var(") && value !== "50%");
-  const literalFontSizes = matches(outside, /font-size:\\s*([^;]+)/g)
+  const literalFontSizes = matches(outside, /font-size:\s*([^;]+)/g)
     .map((value) => value.trim())
     .filter((value) => !value.includes("var(") && !value.includes("clamp("));
 
@@ -110,7 +110,7 @@ export function assertVisualSystemBudget(report, budget = BUDGET) {
     }
   }
   if (failures.length) {
-    throw new Error("Visual system audit failed:\\n- " + failures.join("\\n- "));
+    throw new Error("Visual system audit failed:\n- " + failures.join("\n- "));
   }
 }
 
@@ -122,7 +122,7 @@ function main() {
   mkdirSync(resolve(ROOT, "artifacts"), { recursive: true });
   writeFileSync(
     REPORT_PATH,
-    JSON.stringify({ budget: BUDGET, report }, null, 2) + "\\n",
+    JSON.stringify({ budget: BUDGET, report }, null, 2) + "\n",
     "utf8",
   );
 
@@ -130,7 +130,7 @@ function main() {
     "[AirRadar visual] colors=" + report.hardcodedColorsOutsideRoot + "/" + BUDGET.hardcodedColorsOutsideRoot +
       " unique=" + report.uniqueHardcodedColorsOutsideRoot + "/" + BUDGET.uniqueHardcodedColorsOutsideRoot +
       " radii=" + report.literalRadiiOutsideRoot + "/" + BUDGET.literalRadiiOutsideRoot +
-      " fontSizes=" + report.literalFontSizesOutsideRoot + "/" + BUDGET.literalFontSizesOutsideRoot + "\\n",
+      " fontSizes=" + report.literalFontSizesOutsideRoot + "/" + BUDGET.literalFontSizesOutsideRoot + "\n",
   );
 }
 
@@ -139,7 +139,7 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.
     main();
   } catch (error) {
     process.stderr.write(
-      "[AirRadar visual] " + (error instanceof Error ? error.message : String(error)) + "\\n",
+      "[AirRadar visual] " + (error instanceof Error ? error.message : String(error)) + "\n",
     );
     process.exitCode = 1;
   }
