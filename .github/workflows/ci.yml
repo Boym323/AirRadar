@@ -37,6 +37,8 @@ jobs:
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
       - run: npm run prisma:generate
+      - name: Verify feature registry
+        run: npm run features:check
       - name: Run lint, typecheck, and Vitest in parallel
         shell: bash
         run: |
