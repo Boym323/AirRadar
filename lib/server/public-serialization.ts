@@ -92,7 +92,7 @@ function publicAircraft(
 ): PublicAircraft {
   const { icaoHex, callsign, registration, aircraftType, aircraftDescription, lat, lon,
     altitude, baroAltitude, geomAltitude, groundSpeed, track, verticalRate, baroRate,
-    geomRate, squawk, category, emergency, rssi, messages, seenSeconds, seenPosSeconds,
+    geomRate, squawk, category, emergency, rssi, beastSignal, messages, seenSeconds, seenPosSeconds,
     lastSeen, source, origin, provenance, sourceType, onGround, trail, enrichment, targetState, operationalStatus,
     adsbTelemetry } = item;
   const route = enrichment?.route;
@@ -117,7 +117,7 @@ function publicAircraft(
   return {
     icaoHex, callsign, registration, aircraftType, aircraftDescription, lat, lon,
     altitude, baroAltitude, geomAltitude, groundSpeed, track, verticalRate, baroRate,
-    geomRate, squawk, category, emergency, rssi, messages, seenSeconds, seenPosSeconds,
+    geomRate, squawk, category, emergency, rssi, ...(beastSignal === undefined ? {} : { beastSignal }), messages, seenSeconds, seenPosSeconds,
     lastSeen, source, ...(origin === undefined ? {} : { origin }),
     ...(provenance === undefined ? {} : { provenance }), sourceType, onGround,
     distanceKm, bearing, ...(trail === undefined ? {} : { trail }),

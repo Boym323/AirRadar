@@ -10,7 +10,7 @@ function snapshot(): StateSnapshot {
       icaoHex: "ABC123", callsign: "TEST123", registration: null, aircraftType: null, aircraftDescription: null,
       lat: 50.123456, lon: 14.654321, altitude: 30000, baroAltitude: 30000, geomAltitude: null,
       groundSpeed: 400, track: 90, verticalRate: 0, baroRate: 0, geomRate: null, squawk: null,
-      category: null, emergency: null, rssi: null, messages: null, seenSeconds: 0, seenPosSeconds: 0,
+      category: null, emergency: null, rssi: null, beastSignal: 173, messages: null, seenSeconds: 0, seenPosSeconds: 0,
       lastSeen: "2026-09-06T12:00:00.000Z", source: "ADS-B", sourceType: "adsb_icao", onGround: false,
       distanceKm: 15.25, bearing: 123.4, trail: [],
       enrichment: {
@@ -58,6 +58,27 @@ function snapshot(): StateSnapshot {
 }
 
 describe("public snapshot serialization", () => {
+  it("publishes safe Beast visualization data but keeps altitude forensics private", () => {
+    const internal = snapshot();
+    internal.aircraft[0]!.altitudeObservation = {
+      valueFt: 30_000, source: "LOCAL_BEAST", provider: null, protocol: "MODE_S", altitudeType: "BAROMETRIC",
+      df: 17, typeCode: 11, subtype: null, bds: null, observedAt: internal.aircraft[0]!.lastSeen,
+      receivedAt: internal.aircraft[0]!.lastSeen, confidence: "high", freshnessAgeMs: 0,
+    };
+    internal.aircraft[0]!.altitudeDecision = {
+      selected: internal.aircraft[0]!.altitudeObservation!,
+      candidates: [internal.aircraft[0]!.altitudeObservation!],
+      reason: "LOCAL_BEAST_FRESH_PRIORITY",
+      rejected: [],
+      anomaly: null,
+    };
+
+    const value = toPublicLiveStateSnapshot(internal, "hidden");
+    expect(value.aircraft[0]?.beastSignal).toBe(173);
+    expect(value.aircraft[0]).not.toHaveProperty("altitudeObservation");
+    expect(value.aircraft[0]).not.toHaveProperty("altitudeDecision");
+  });
+
   it("publishes exact coordinates only in exact mode", () => {
     expect(toPublicStateSnapshot(snapshot(), "exact").receiver).toEqual({ lat: 50.123456, lon: 14.654321, name: "Test receiver" });
   });

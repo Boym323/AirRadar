@@ -14,6 +14,7 @@ import {
   type MotionSource,
 } from "@/lib/aircraft/motion";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
+import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
 import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
@@ -321,6 +322,7 @@ export class AircraftWebglRuntime {
     const iconAsset = aircraftWebglIconAsset(aircraft);
     const iconLayer = this.iconLayers.get(iconAsset) ?? -1;
     this.requestIconAsset(iconAsset);
+    const reportedTrueHeading = aircraftReportedTrueHeading(aircraft);
     const previous = this.jobs.get(aircraft.icaoHex);
 
     if (!previous) {
@@ -333,7 +335,7 @@ export class AircraftWebglRuntime {
         correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
         sourceReceivedAt: now,
         history,
-        visualHeading: visualHeadingForConfirmedPosition(target, source, history),
+        visualHeading: reportedTrueHeading ?? visualHeadingForConfirmedPosition(target, source, history),
         renderedLon: aircraft.lon,
         renderedLat: aircraft.lat,
         color,
@@ -352,6 +354,7 @@ export class AircraftWebglRuntime {
     previous.iconAsset = iconAsset;
     previous.iconLayer = iconLayer;
     if (!motionObservationAdvances(previous.source, source)) {
+      if (reportedTrueHeading !== null) previous.visualHeading = reportedTrueHeading;
       this.dirty = true;
       this.map?.triggerRepaint();
       return;
@@ -366,7 +369,7 @@ export class AircraftWebglRuntime {
       previous.correctionDurationMs = 0;
       previous.correctionLon = 0;
       previous.correctionLat = 0;
-      previous.visualHeading = visualHeadingForConfirmedPosition(target, source, nextHistory);
+      previous.visualHeading = reportedTrueHeading ?? visualHeadingForConfirmedPosition(target, source, nextHistory);
       previous.renderedLon = aircraft.lon;
       previous.renderedLat = aircraft.lat;
       this.dirty = true;
@@ -390,9 +393,9 @@ export class AircraftWebglRuntime {
     );
     const previousInterpolationActive = (previous.correctionLon !== 0 || previous.correctionLat !== 0)
       && now - previous.correctionStartedAt < previous.correctionDurationMs;
-    const visualHeading = correction
+    const visualHeading = reportedTrueHeading ?? (correction
       ? visualHeadingForConfirmedPosition({ lon: previous.renderedLon, lat: previous.renderedLat }, source, nextHistory)
-      : visualHeadingForConfirmedPosition(target, source, nextHistory);
+      : visualHeadingForConfirmedPosition(target, source, nextHistory));
 
     previous.history = nextHistory;
     previous.source = source;

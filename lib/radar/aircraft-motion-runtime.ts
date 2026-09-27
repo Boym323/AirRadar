@@ -11,6 +11,7 @@ import {
   type MotionHistory,
 } from "@/lib/aircraft/motion";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
+import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
 import type { AircraftView, TrailPoint } from "@/lib/aircraft/types";
 import { setAircraftMarkerHeading, type AircraftMarkerHandle } from "@/lib/radar/aircraft-marker-controller";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
@@ -108,6 +109,7 @@ export class AircraftMotionRuntime {
       positionSource: aircraft.provenance?.positionSource ?? null,
       allowPrediction: false,
     };
+    const reportedTrueHeading = aircraftReportedTrueHeading(aircraft);
     const previous = this.jobs.get(aircraft.icaoHex);
     const createHistory = () => updateMotionHistory(createMotionHistory(), source);
 
@@ -129,14 +131,20 @@ export class AircraftMotionRuntime {
         correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
         sourceReceivedAt: now,
         history,
-        visualHeading: visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, history),
+        visualHeading: reportedTrueHeading ?? visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, history),
       });
       return;
     }
 
     if (previous) {
       const current = marker.getLngLat();
-      if (!motionObservationAdvances(previous.source, source)) return;
+      if (!motionObservationAdvances(previous.source, source)) {
+        if (reportedTrueHeading !== null) {
+          previous.visualHeading = reportedTrueHeading;
+          setAircraftMarkerHeading(handle, reportedTrueHeading, this.options.map.getBearing());
+        }
+        return;
+      }
 
       const nextHistory = updateMotionHistory(previous.history, source);
       const interpolationDurationMs = confirmedInterpolationDurationMs(
@@ -155,9 +163,9 @@ export class AircraftMotionRuntime {
       );
       const previousInterpolationActive = (previous.correctionLon !== 0 || previous.correctionLat !== 0)
         && now - previous.correctionStartedAt < previous.correctionDurationMs;
-      const visualHeading = correction
+      const visualHeading = reportedTrueHeading ?? (correction
         ? visualHeadingForConfirmedPosition({ lon: current.lng, lat: current.lat }, source, nextHistory)
-        : visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, nextHistory);
+        : visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, nextHistory));
 
       previous.history = nextHistory;
       previous.source = source;
@@ -194,7 +202,7 @@ export class AircraftMotionRuntime {
       correctionDurationMs: MIN_AIRCRAFT_ANIMATION_MS,
       sourceReceivedAt: now,
       history,
-      visualHeading: visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, history),
+      visualHeading: reportedTrueHeading ?? visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, history),
     });
   }
 

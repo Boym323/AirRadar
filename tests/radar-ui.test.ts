@@ -145,7 +145,8 @@ describe("radar UI polish helpers", () => {
     expect(aircraftMotionRuntimeSource).toContain("confirmedInterpolationDurationMs(");
     expect(aircraftMotionRuntimeSource).toContain("visualHeadingForConfirmedPosition");
     expect(aircraftMotionRuntimeSource).toContain("previous.visualHeading");
-    expect(aircraftMotionRuntimeSource).toContain("visualHeading: visualHeadingForConfirmedPosition");
+    expect(aircraftMotionRuntimeSource).toContain("aircraftReportedTrueHeading(aircraft)");
+    expect(aircraftMotionRuntimeSource).toContain("visualHeading: reportedTrueHeading ?? visualHeadingForConfirmedPosition");
     expect(aircraftMotionRuntimeSource).toContain("correction && previousInterpolationActive ? previous.visualHeading : null");
     expect(aircraftMotionRuntimeSource).toContain("visualHeadingForConfirmedPosition({ lon: target[0], lat: target[1] }, source, nextHistory)");
     expect(aircraftMotionRuntimeSource).toContain("allowPrediction: false");

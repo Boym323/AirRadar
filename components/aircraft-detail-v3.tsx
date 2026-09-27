@@ -453,6 +453,7 @@ export function AircraftDetailV3({
             <DetailValue label={t.aircraft.squawk}>{valueOrEmpty(liveAircraft.squawk)}</DetailValue>
             <DetailValue label={t.aircraft.emergency}>{valueOrEmpty(liveAircraft.emergency)}</DetailValue>
             <DetailValue label={t.aircraft.source}>{valueOrEmpty(liveAircraft.sourceType ?? liveAircraft.source)}</DetailValue>
+            {liveAircraft.beastSignal !== null && liveAircraft.beastSignal !== undefined && <DetailValue label={t.aircraft.beastSignal}>{formatNumber(liveAircraft.beastSignal)}</DetailValue>}
           </div>}
           <div className="watchlist-actions"><Link className="primary-button" href={watchlistHref}>{t.watchlist.followAircraft}</Link></div>
         </section>

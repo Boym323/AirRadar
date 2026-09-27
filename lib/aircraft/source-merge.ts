@@ -251,9 +251,10 @@ export function mergeAircraftObservations(
     squawk: selectedSquawk(selectedLocal, selectedNetwork, options, now, emergencyObservation),
     category: nonEmpty(selectedLocal?.category, selectedNetwork?.category),
     emergency: selectedEmergency(selectedLocal, selectedNetwork, options, now),
-    // RSSI and message counts are receiver-local measurements. Network-only
-    // aircraft deliberately expose neither value.
+    // RSSI, raw Beast signal and message counts are receiver-local
+    // measurements. Network-only aircraft deliberately expose none of them.
     rssi: selectedLocal ? selectedLocal.rssi : null,
+    beastSignal: selectedLocal ? selectedLocal.beastSignal ?? null : null,
     messages: selectedLocal ? selectedLocal.messages : null,
     seenSeconds: kinematics.seenSeconds,
     seenPosSeconds: kinematics.seenPosSeconds,
