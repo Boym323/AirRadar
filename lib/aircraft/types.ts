@@ -15,6 +15,37 @@ export interface AircraftProvenance {
   networkSources?: Array<"adsbhub" | "adsblol">;
 }
 
+export interface AircraftTargetState {
+  subtype: number;
+  selectedAltitudeFt: number | null;
+  selectedAltitudeSource: "MCP/FCU" | "FMS" | "N/A";
+  baroPressureHpa: number | null;
+  selectedHeadingDeg: number | null;
+  nacp: number;
+  nicBaro: number;
+  sil: number;
+  modeStatus: boolean;
+  autopilot: boolean | null;
+  vnavMode: boolean | null;
+  altitudeHoldMode: boolean | null;
+  approachMode: boolean | null;
+  lnavMode: boolean | null;
+  tcasOperational: boolean;
+}
+
+export interface AircraftOperationalStatus {
+  subtype: number;
+  capabilityClass: number;
+  operationalMode: number;
+  adsbVersion: number;
+  nicSupplementA: number;
+  nacp: number;
+  sil: number;
+  headingReference: "true" | "magnetic";
+  nicBaro: number | null;
+  silSupplement: number | null;
+}
+
 export interface ReceiverPosition {
   lat: number;
   lon: number;
@@ -122,6 +153,8 @@ export interface Aircraft {
   trail: TrailPoint[];
   enrichment?: AircraftEnrichment;
   atc?: AtcAssignment | null;
+  targetState?: AircraftTargetState | null;
+  operationalStatus?: AircraftOperationalStatus | null;
 }
 
 /** The wire representation intentionally omits the in-memory trail by default. */

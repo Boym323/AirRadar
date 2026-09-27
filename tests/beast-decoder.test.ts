@@ -75,4 +75,40 @@ describe("BeastDecoder", () => {
     expect(aircraft?.lat).toBeCloseTo(43.6264, 2);
     expect(aircraft?.lon).toBeCloseTo(1.3747, 2);
   });
+  it("decodes TC29 target state and status", () => {
+    const aircraft = new BeastDecoder(receiver).decode(
+      frame("8d4bb87aeaa72865017fdc130ae3"),
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    expect(aircraft?.targetState).toMatchObject({
+      selectedAltitudeFt: 20000,
+      selectedAltitudeSource: "FMS",
+      baroPressureHpa: 1013.6,
+      selectedHeadingDeg: 90,
+      autopilot: true,
+      vnavMode: true,
+      altitudeHoldMode: true,
+      approachMode: true,
+      lnavMode: true,
+      tcasOperational: true,
+    });
+  });
+  it("decodes TC31 aircraft operational status", () => {
+    const aircraft = new BeastDecoder(receiver).decode(
+      frame("8d4bb87af9123456785936ffca33"),
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    expect(aircraft?.operationalStatus).toEqual({
+      subtype: 1,
+      capabilityClass: 0x1234,
+      operationalMode: 0x5678,
+      adsbVersion: 2,
+      nicSupplementA: 1,
+      nacp: 9,
+      sil: 3,
+      headingReference: "magnetic",
+      nicBaro: null,
+      silSupplement: 1,
+    });
+  });
 });

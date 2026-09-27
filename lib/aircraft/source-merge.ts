@@ -257,6 +257,8 @@ export function mergeAircraftObservations(
     seenPosSeconds: kinematics.seenPosSeconds,
     lastSeen: kinematics.lastSeen,
     source: kinematics.source,
+    targetState: selectedLocal?.targetState ?? selectedNetwork?.targetState ?? null,
+    operationalStatus: selectedLocal?.operationalStatus ?? selectedNetwork?.operationalStatus ?? null,
     distanceKm,
     bearing,
     origin: originOf(kinematics),

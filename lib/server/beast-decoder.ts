@@ -1,4 +1,4 @@
-import type { Aircraft, ReceiverPosition } from "@/lib/aircraft/types";
+import type { Aircraft, AircraftOperationalStatus, AircraftTargetState, ReceiverPosition } from "@/lib/aircraft/types";
 import type { BeastFrame } from "./beast-parser";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 
@@ -246,6 +246,45 @@ export class BeastDecoder {
         a.emergency = EMERGENCY_STATES[modeSBits(status, 8, 3)] ?? null;
         a.squawk = squawkFromIdentity(modeSBits(status, 11, 13));
       }
+    } else if (typeCode === 29) {
+      const state = modeSValue(me);
+      const modeStatus = modeSBits(state, 46, 1) === 1;
+      const selectedAltitudeRaw = modeSBits(state, 9, 11);
+      const targetState: AircraftTargetState = {
+        subtype: modeSBits(state, 5, 2),
+        selectedAltitudeFt: selectedAltitudeRaw === 0 ? null : (selectedAltitudeRaw - 1) * 32,
+        selectedAltitudeSource: selectedAltitudeRaw === 0 ? "N/A" : modeSBits(state, 8, 1) === 1 ? "FMS" : "MCP/FCU",
+        baroPressureHpa: modeSBits(state, 20, 9) === 0 ? null : 800 + (modeSBits(state, 20, 9) - 1) * 0.8,
+        selectedHeadingDeg: modeSBits(state, 29, 1) === 0 ? null : modeSBits(state, 30, 9) * 360 / 512,
+        nacp: modeSBits(state, 39, 4),
+        nicBaro: modeSBits(state, 43, 1),
+        sil: modeSBits(state, 44, 2),
+        modeStatus,
+        autopilot: modeStatus ? modeSBits(state, 47, 1) === 1 : null,
+        vnavMode: modeStatus ? modeSBits(state, 48, 1) === 1 : null,
+        altitudeHoldMode: modeStatus ? modeSBits(state, 49, 1) === 1 : null,
+        approachMode: modeStatus ? modeSBits(state, 51, 1) === 1 : null,
+        lnavMode: modeStatus ? modeSBits(state, 53, 1) === 1 : null,
+        tcasOperational: modeSBits(state, 52, 1) === 1,
+      };
+      a.targetState = targetState;
+    } else if (typeCode === 31) {
+      const status = modeSValue(me);
+      const version = modeSBits(status, 40, 3);
+      const subtype = modeSBits(status, 5, 3);
+      const operationalStatus: AircraftOperationalStatus = {
+        subtype,
+        capabilityClass: modeSBits(status, 8, 16),
+        operationalMode: modeSBits(status, 24, 16),
+        adsbVersion: version,
+        nicSupplementA: modeSBits(status, 43, 1),
+        nacp: modeSBits(status, 44, 4),
+        sil: modeSBits(status, 50, 2),
+        headingReference: modeSBits(status, 53, 1) === 1 ? "magnetic" : "true",
+        nicBaro: subtype === 0 && version >= 1 ? modeSBits(status, 52, 1) : null,
+        silSupplement: version === 2 ? modeSBits(status, 54, 1) : null,
+      };
+      a.operationalStatus = operationalStatus;
     }
     const lat = a.lat ?? null; const lon = a.lon ?? null; a.distanceKm = lat !== null && lon !== null ? haversineDistanceKm(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.bearing = lat !== null && lon !== null ? initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.seenSeconds = Math.max(0, (Date.now() - receivedAt) / 1000); a.seenPosSeconds = track.lastPositionAt === null ? null : Math.max(0, (Date.now() - track.lastPositionAt) / 1000); a.onGround ??= false; a.category ??= null; a.registration ??= null; a.aircraftType ??= null; a.aircraftDescription ??= null; a.rssi ??= null; a.messages = (a.messages ?? 0) + 1; a.baroRate ??= null; a.geomRate ??= null; a.provenance = { seenLocal: this.origin === "local", seenNetwork: this.origin === "adsblol", lastLocalSeen: this.origin === "local" ? a.lastSeen! : null, lastNetworkSeen: this.origin === "adsblol" ? a.lastSeen! : null, positionOrigin: lat !== null ? this.origin : null, positionSource: lat !== null ? a.source! : "UNKNOWN" };
     this.expire(receivedAt); return a as Aircraft;
