@@ -337,7 +337,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (routeErrors.length) throw new Error(`Secondary route smoke failed: ${routeErrors.join(" | ")}`);
     if (unavailable.length) console.log(`[production-gates] expected unavailable API responses observed=${unavailable.length}`);
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
-    await routeSmoke.locator('a[href="/history"]').first().click();
+    await routeSmoke.locator('a[href="/history"]:visible').first().click();
     await routeSmoke.waitForURL("**/history");
     await routeSmoke.locator("h1").first().waitFor({ state: "visible" });
     await routeSmoke.setViewportSize({ width: 390, height: 844 });
