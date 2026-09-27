@@ -2,6 +2,31 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.161] - 2026-09-27
+
+Changes since v1.0.160.
+
+### Added
+
+- Enhance BeastDecoder to handle short DF11 identity and DF4 altitude replies, and reject untracked AP replies (664c080e)
+- Enhance Beast Mode-S decoding with local BDS inference and metadata retention (9c2b20f3)
+- Enhance BeastDecoder and FailoverLocalProvider with timestamp handling and telemetry merging improvements (01da4b10)
+
+### Maintenance
+
+- Sync generated repository metadata (4a3634ac)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: enhance BeastDecoder to handle short DF11 identity and DF4 altitude replies, and reject untracked AP replies (664c080e)
+- chore(metadata): sync generated repository metadata (4a3634ac)
+- Merge pull request #169 from Boym323/automation/repository-metadata (0f8d9abb)
+- feat: enhance Beast Mode-S decoding with local BDS inference and metadata retention (9c2b20f3)
+- feat: enhance BeastDecoder and FailoverLocalProvider with timestamp handling and telemetry merging improvements (01da4b10)
+
+</details>
+
 ## [1.0.160] - 2026-09-27
 
 Changes since v1.0.159.
