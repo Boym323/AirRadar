@@ -2,6 +2,46 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.147] - 2026-09-27
+
+Changes since v1.0.146:
+
+- feat: add transition-aware intelligence alerts (7f80b0d)
+- feat: bound time machine event timeline (ff394ce)
+- docs: track UI intelligence wave progress (8e4f123)
+- docs: record UI wave pull requests (544d37a)
+- docs: record full UI wave test results (09b21d0)
+- feat(metrics): backfill daily LOC from Git history (abe1dbe)
+- ci(metrics): bootstrap historical LOC once (83b58d0)
+- chore(metrics): add history backfill command (47a4b35)
+- test(metrics): cover historical daily backfill (38ae1d3)
+- docs(metrics): explain historical backfill (8114a6a)
+- test(metrics): expose Git scanners (c22b097)
+- test(metrics): verify Git history scanner (8e7189d)
+- Merge pull request #152 from Boym323/feat/alerting-v2 (2e17aa0)
+- chore(metrics): update codebase growth (e97f84b)
+- Merge pull request #155 from Boym323/automation/codebase-metrics (4e01ee8)
+- Merge pull request #154 from Boym323/feat/code-metrics-history-backfill (c266f22)
+- feat(metrics): update code growth metrics and descriptions in SVG and JSON (30a33ee)
+- Merge pull request #153 from Boym323/feat/time-machine-v2 (4c0c94a)
+
+## [1.0.146] - 2026-09-27
+
+Changes since v1.0.145:
+
+- docs: sync changelog through v1.0.145 (2970e44)
+- feat(intelligence): add go-around episode detector (cac54d5)
+- feat(atc): add geometry-based sector boundary prediction (5b5d635)
+- feat(weather): add unified freshness and aircraft context (ef33ceb)
+- feat(receiver): expose normalized quality telemetry (8cdfd7c)
+- docs: record parallel intelligence roadmap progress (64866b1)
+- Merge pull request #147 from Boym323/feat/flight-intelligence-v2-stage2 (3a7a50c)
+- Merge pull request #148 from Boym323/feat/atc-intelligence-v2 (73622d8)
+- Merge pull request #145 from Boym323/feat/weather-intelligence (58a9aa2)
+- Merge pull request #146 from Boym323/feat/receiver-quality-dashboard (790d85c)
+- Merge pull request #144 from Boym323/automation/changelog-sync (ccf34d1)
+- chore(metrics): update codebase growth (9942ab9)
+- Merge pull request #149 from Boym323/automation/codebase-metrics (3a1f3b6)
 ## [1.0.145] - 2026-09-26
 
 Changes since v1.0.144:
