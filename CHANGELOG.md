@@ -2,6 +2,33 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.177] - 2026-09-27
+
+Changes since v1.0.176.
+
+### Added
+
+- Implement radar navigation and topbar enhancements (5e468ea)
+- Enhance map diagnostics with additional metrics and style load handling (153aeda)
+
+### Fixed
+
+- Ensure history link is only clicked when visible in browser smoke test (8c23ad5)
+
+### Maintenance
+
+- Sync generated repository metadata (bafed09)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (bafed09)
+- Merge pull request #191 from Boym323/automation/repository-metadata (cf76187)
+- feat: implement radar navigation and topbar enhancements (5e468ea)
+- fix: ensure history link is only clicked when visible in browser smoke test (8c23ad5)
+- feat: enhance map diagnostics with additional metrics and style load handling (153aeda)
+
+</details>
 ## [1.0.176] - 2026-09-27
 
 Changes since v1.0.173.
