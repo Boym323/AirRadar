@@ -1,14 +1,15 @@
-# AirRadar Visual System V2
+# AirRadar Visual System V3
 
 AirRadar uses a dark aviation-operations visual language optimized for map-first
 workflows, dense operational data and long-running desktop use. The goal of
-Visual System V2 is consistency, not a visual rebrand.
+Visual System V3 is consistency, operational readability and a map-first
+aviation surface, not a visual rebrand.
 
 ## Principles
 
-1. **Map first.** Controls should support the air picture instead of competing
-   with it. Floating controls use glass surfaces, restrained borders and compact
-   typography.
+1. **Map first.** The map is the primary operational surface. Controls should
+   support the air picture instead of competing with it. Floating controls use
+   compact shared surfaces, restrained borders and compact typography.
 2. **Semantic color.** Mint/accent means live or actionable, amber/selected
    means focus or historical selection, red/danger means operational attention,
    violet is ATC/airspace context and blue is weather.
@@ -42,6 +43,18 @@ MapLibre paint colors that cannot consume CSS custom properties belong in
 `lib/map-theme.ts`. Do not introduce feature-local map palettes when a
 semantic map color already exists there.
 
+The live radar uses the open, no-key OpenFreeMap dark vector style as its base,
+with a subtle AirRadar blue tint restoring the near-black operations backdrop.
+Attribution for OpenStreetMap data and OpenFreeMap is retained in the map
+controls; no paid map dependency is introduced. The map theme owns
+the cartographic base, labels, airport tiers, routes, range rings, ATC,
+weather and operational selection semantics. Airport overlays use the existing
+catalog tiers: significant airports remain visible at overview zoom, smaller
+fields enter at local zoom, and heliports require both their layer toggle and
+a closer zoom. Labels use ICAO/IATA context rather than long names. Receiver
+rings fade at continental zoom and expose compact distance labels at local
+zoom.
+
 ## Shared primitives
 
 `components/ui-primitives.tsx` contains the reusable presentation layer:
@@ -57,6 +70,15 @@ semantic map color already exists there.
 
 Legacy feature class names may remain during migration, but the shared primitive
 should own the common surface, radius, interaction and typography behavior.
+
+## Map controls and contextual evidence
+
+Map controls use the shared `MapControl` and `MapControlGroup` primitives.
+Navigation, traffic and layer controls share the same surface, border, focus
+and touch sizing tokens. Legends are contextual: range, route, ATC, weather
+and aircraft color legends only appear when their corresponding mode is active,
+and are hidden on small screens when they would compete with the map or bottom
+navigation.
 
 ## Visual debt budget
 

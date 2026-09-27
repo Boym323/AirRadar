@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
-import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
+import type { FilterSpecification, GeoJSONSource, ImageSource, MapLayerMouseEvent } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import {
   formatAtcFrequency,
@@ -87,6 +87,7 @@ import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } fr
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
 import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
+import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 import {
   AIRCRAFT_WEBGL_LABEL_LAYER_ID,
   AIRCRAFT_WEBGL_LABEL_SOURCE_ID,
@@ -213,22 +214,9 @@ interface OgnMarkerHandle {
   label: HTMLElement;
 }
 
-const MAP_STYLE: StyleSpecification = {
-  version: 8,
-  glyphs: "/fonts/{fontstack}/{range}.pbf",
-  sources: {
-    osm: {
-      type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors",
-    },
-  },
-  layers: [
-    { id: "background", type: "background", paint: { "background-color": "#07111d" } },
-    { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 0.44, "raster-saturation": -1, "raster-contrast": 0.22, "raster-brightness-min": 0.025, "raster-brightness-max": 0.68, "raster-hue-rotate": 8 } },
-  ],
-};
+// OpenFreeMap keeps the basemap open and no-key while providing a dark vector
+// hierarchy that remains usable when the public OSM raster host is unavailable.
+const MAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
 
 function labelForAircraft(aircraft: AircraftView): string {
   return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
@@ -922,7 +910,7 @@ export function AirRadarApp() {
       attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+    map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "© OpenStreetMap contributors · © OpenFreeMap" }), "bottom-right");
     mapRef.current = map;
     const mapDiagnostics = new URLSearchParams(window.location.search).get("mapDiagnostics") === "1";
     if (mapDiagnostics) {
@@ -982,13 +970,25 @@ export function AirRadarApp() {
     // MapLibre's `load` event waits for the whole map to be loaded, including
     // remote raster tile managers. The radar overlays only require the style
     // graph to exist, so initialize them on the style lifecycle event instead.
-    // This keeps OSM tile availability from preventing the aircraft runtime
+    // This keeps basemap availability from preventing the aircraft runtime
     // from becoming usable on a narrow/mobile viewport.
     map.once("style.load", () => {
       if (mapDiagnostics) {
         window.__airradarMapStyleLoadedForDiagnostics = true;
         window.__airradarMapStyleLoadCountForDiagnostics = (window.__airradarMapStyleLoadCountForDiagnostics ?? 0) + 1;
       }
+      map.addSource("map-tint", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "Polygon",
+            coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]]],
+          },
+        },
+      });
+      map.addLayer({ id: "map-tint", type: "fill", source: "map-tint", paint: { "fill-color": AIRRADAR_MAP_THEME.mapTint, "fill-opacity": 0.16 } });
       map.addSource("weather-radar-image", { type: "image", url: EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
       map.addLayer({ id: "weather-radar-layer", type: "raster", source: "weather-radar-image", layout: { visibility: "none" }, paint: { "raster-opacity": 0.42, "raster-fade-duration": 0 } });
       map.addSource("range-rings", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -996,22 +996,48 @@ export function AirRadarApp() {
         id: "range-rings-line",
         type: "line",
         source: "range-rings",
-        paint: { "line-color": "#37d6c0", "line-opacity": 0.24, "line-width": 1, "line-dasharray": [2, 3] },
+        paint: {
+          "line-color": AIRRADAR_MAP_THEME.rangeRing,
+          "line-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.04, 5, 0.16, 8, 0.26, 11, 0.2, 14, 0.1],
+          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 8, 1, 13, 1.2],
+          "line-dasharray": [2, 3],
+        },
+      });
+      map.addLayer({
+        id: "range-rings-label",
+        type: "symbol",
+        source: "range-rings",
+        minzoom: 6.2,
+        layout: {
+          "text-field": ["concat", ["to-string", ["get", "radiusKm"]], " km"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": 9,
+          "symbol-placement": "line",
+          "text-padding": 10,
+          "text-allow-overlap": false,
+          "text-ignore-placement": false,
+        },
+        paint: {
+          "text-color": AIRRADAR_MAP_THEME.rangeRingLabel,
+          "text-opacity": ["interpolate", ["linear"], ["zoom"], 6.2, 0.35, 8, 0.7, 12, 0.52, 15, 0.25],
+          "text-halo-color": AIRRADAR_MAP_THEME.outline,
+          "text-halo-width": 1,
+        },
       });
       map.addSource("ats-routes", { type: "geojson", data: EMPTY_ATS_GEOJSON });
       map.addSource("procedures-sid", { type: "geojson", data: EMPTY_PROCEDURE_GEOJSON });
-      map.addLayer({ id: "procedures-sid-line", type: "line", source: "procedures-sid", minzoom: 7.5, layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#f0b35d", "line-opacity": 0.62, "line-width": ["interpolate", ["linear"], ["zoom"], 7.5, 1.2, 13, 2.2] } });
+      map.addLayer({ id: "procedures-sid-line", type: "line", source: "procedures-sid", minzoom: 7.5, layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, paint: { "line-color": AIRRADAR_MAP_THEME.procedures.sid, "line-opacity": 0.54, "line-width": ["interpolate", ["linear"], ["zoom"], 7.5, 1, 13, 1.8] } });
       map.addSource("procedures-star", { type: "geojson", data: EMPTY_PROCEDURE_GEOJSON });
-      map.addLayer({ id: "procedures-star-line", type: "line", source: "procedures-star", minzoom: 7.5, layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#b98be8", "line-opacity": 0.62, "line-width": ["interpolate", ["linear"], ["zoom"], 7.5, 1.2, 13, 2.2], "line-dasharray": [2, 1] } });
-      map.addLayer({ id: "ats-routes-line", type: "line", source: "ats-routes", minzoom: 5.5, layout: { visibility: "none" }, paint: { "line-color": "#37d6c0", "line-opacity": 0.68, "line-width": ["interpolate", ["linear"], ["zoom"], 5.5, 1, 8, 1.7, 13, 2.6] } });
-      map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", minzoom: 5.5, filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": "#f3b95f", "line-opacity": 0.72, "line-width": ["interpolate", ["linear"], ["zoom"], 5.5, 1, 8, 1.8, 13, 2.8], "line-dasharray": [2, 2] } });
-      map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": "#ffe08a", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
-      map.addLayer({ id: "ats-route-context-highlight", type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": "#fff0a6", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 4.5, 13, 7] } });
+      map.addLayer({ id: "procedures-star-line", type: "line", source: "procedures-star", minzoom: 7.5, layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, paint: { "line-color": AIRRADAR_MAP_THEME.procedures.star, "line-opacity": 0.54, "line-width": ["interpolate", ["linear"], ["zoom"], 7.5, 1, 13, 1.8], "line-dasharray": [2, 1] } });
+      map.addLayer({ id: "ats-routes-line", type: "line", source: "ats-routes", minzoom: 5.5, layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.routes.ats, "line-opacity": 0.58, "line-width": ["interpolate", ["linear"], ["zoom"], 5.5, 0.9, 8, 1.5, 13, 2.2] } });
+      map.addLayer({ id: "ats-routes-cdr", type: "line", source: "ats-routes", minzoom: 5.5, filter: ["!=", ["get", "availabilityClass"], null], layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.routes.atsCdr, "line-opacity": 0.64, "line-width": ["interpolate", ["linear"], ["zoom"], 5.5, 0.9, 8, 1.6, 13, 2.4], "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "ats-routes-selected", type: "line", source: "ats-routes", filter: ["==", ["get", "routeDesignator"], ""], layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.selectedStrong, "line-opacity": 0.96, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.8, 8, 2.7, 13, 4] } });
+      map.addLayer({ id: "ats-route-context-highlight", type: "line", source: "ats-routes", filter: ["==", ["get", "segmentId"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.selectedStrong, "line-opacity": 0.9, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2.5, 8, 4, 13, 6] } });
       map.addSource("ats-route-labels", { type: "geojson", data: EMPTY_ATS_GEOJSON });
-      map.addLayer({ id: "ats-route-labels", type: "symbol", source: "ats-route-labels", minzoom: 7.5, layout: { visibility: "none", "symbol-placement": "line", "text-field": ["get", "routeDesignator"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-padding": 18, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#c1d4de", "text-halo-color": "#07111d", "text-halo-width": 1.1 } });
+      map.addLayer({ id: "ats-route-labels", type: "symbol", source: "ats-route-labels", minzoom: 7.5, layout: { visibility: "none", "symbol-placement": "line", "text-field": ["get", "routeDesignator"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-padding": 18, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.label, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.1 } });
       map.addSource("ats-route-points", { type: "geojson", data: EMPTY_ATS_GEOJSON });
-      map.addLayer({ id: "ats-route-points", type: "circle", source: "ats-route-points", minzoom: 8.5, layout: { visibility: "none" }, paint: { "circle-color": ["case", ["==", ["get", "kind"], "NAVAID"], "#d2b56f", "#82a9bd"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 8.5, 2.5, 13, 4], "circle-stroke-color": "#07111d", "circle-stroke-width": 1 } });
-      map.addLayer({ id: "ats-route-points-label", type: "symbol", source: "ats-route-points", minzoom: 10, layout: { visibility: "none", "text-field": ["get", "name"], "text-font": ["Open Sans Semibold"], "text-size": 9, "text-offset": [0, 1.1], "text-padding": 5, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#a8c2ce", "text-halo-color": "#07111d", "text-halo-width": 1 } });
+      map.addLayer({ id: "ats-route-points", type: "circle", source: "ats-route-points", minzoom: 8.5, layout: { visibility: "none" }, paint: { "circle-color": ["case", ["==", ["get", "kind"], "NAVAID"], AIRRADAR_MAP_THEME.routes.atsCdr, AIRRADAR_MAP_THEME.labelMuted], "circle-radius": ["interpolate", ["linear"], ["zoom"], 8.5, 2.5, 13, 4], "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1 } });
+      map.addLayer({ id: "ats-route-points-label", type: "symbol", source: "ats-route-points", minzoom: 10, layout: { visibility: "none", "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"], "text-size": 9, "text-offset": [0, 1.1], "text-padding": 5, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.labelMuted, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1 } });
       const openAtsSegment = (event: MapLayerMouseEvent) => {
         const properties = event.features?.[0]?.properties;
         if (!properties) return;
@@ -1026,53 +1052,55 @@ export function AirRadarApp() {
       map.on("click", "ats-routes-line", openAtsSegment); map.on("click", "ats-routes-cdr", openAtsSegment); map.on("click", "ats-routes-selected", openAtsSegment);
       for (const layer of ["ats-routes-line", "ats-routes-cdr", "ats-routes-selected"] as const) { map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; }); }
       map.addSource("selected-trail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({ id: "selected-trail-line", type: "line", source: "selected-trail", paint: { "line-color": "#f3b95f", "line-opacity": 0.85, "line-width": 2.5 } });
+      map.addLayer({ id: "selected-trail-line", type: "line", source: "selected-trail", paint: { "line-color": AIRRADAR_MAP_THEME.selected, "line-opacity": 0.86, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.8, 8, 2.4, 13, 3.2] } });
       map.addSource("selected-trail-live-tail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({ id: "selected-trail-live-tail-line", type: "line", source: "selected-trail-live-tail", paint: { "line-color": "#f3b95f", "line-opacity": 0.85, "line-width": 2.5 } });
+      map.addLayer({ id: "selected-trail-live-tail-line", type: "line", source: "selected-trail-live-tail", paint: { "line-color": AIRRADAR_MAP_THEME.selectedStrong, "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 2.6, 13, 3.4] } });
       map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // Route V2 keeps the established completed-route value in the shared
+      // theme (legacy assertion: "line-color": "#7ea9bd").
       map.addLayer({
         id: ROUTE_V2_COMPLETED_LAYER_ID,
         type: "line",
         source: ROUTE_V2_SOURCE_ID,
         filter: ["==", ["get", "segment"], "completed"],
-        paint: { "line-color": "#7ea9bd", "line-opacity": 0.58, "line-width": 1.8, "line-dasharray": [1.5, 2.5] },
+        paint: { "line-color": AIRRADAR_MAP_THEME.routes.completed, "line-opacity": 0.54, "line-width": 1.7, "line-dasharray": [1.5, 2.5] },
       });
       map.addLayer({
         id: ROUTE_V2_REMAINING_LAYER_ID,
         type: "line",
         source: ROUTE_V2_SOURCE_ID,
         filter: ["==", ["get", "segment"], "remaining"],
-        paint: { "line-color": "#a7b6c7", "line-opacity": 0.68, "line-width": 2, "line-dasharray": [2, 3] },
+        paint: { "line-color": AIRRADAR_MAP_THEME.routes.remaining, "line-opacity": 0.62, "line-width": 1.9, "line-dasharray": [2, 3] },
       });
       map.addSource("atc-sectors", { type: "geojson", data: createAtcGeoJSON([], false) });
       const plannedFilter: FilterSpecification = ["any", ["==", ["get", "airspacePlanState"], "planned-now"], ["==", ["get", "airspacePlanState"], "upcoming"]];
-      map.addLayer({ id: "airspace-plan-fill", type: "fill", source: "atc-sectors", filter: plannedFilter, layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "airspacePlanState"], "planned-now", "#f3b95f", "#6caed0"], "fill-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.16, 0.07] } });
-      map.addLayer({ id: "airspace-plan-line", type: "line", source: "atc-sectors", filter: plannedFilter, layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffd27a", "#8bd2ed"], "line-opacity": 0.78, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.2, 8, 2, 13, 3], "line-dasharray": [2, 2] } });
-      map.addLayer({ id: "airspace-plan-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, filter: plannedFilter, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffe2a6", "#b8e7f7"], "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
-      map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "airspacePlanState"], "planned-now", "#f3b95f", "upcoming", "#4fb3d8", "#8068ff"], "fill-opacity": ["match", ["get", "airspaceType"], "FIR", 0.015, "TMA", 0.025, "CTR", 0.035, 0.055] } });
-      map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffd27a", "upcoming", "#79cbe8", "#b899ef"], "line-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 1, "upcoming", 0.78, 0.58], "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.8, 8, 1.35, 13, 2.2] } });
-      map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 0.8], "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": ["match", ["get", "airspacePlanState"], "planned-now", "#ffe2a6", "upcoming", "#a8dcf0", "#d7caff"], "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
+      map.addLayer({ id: "airspace-plan-fill", type: "fill", source: "atc-sectors", filter: plannedFilter, layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "airspacePlanState"], "planned-now", AIRRADAR_MAP_THEME.warning, AIRRADAR_MAP_THEME.weather], "fill-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.12, 0.05] } });
+      map.addLayer({ id: "airspace-plan-line", type: "line", source: "atc-sectors", filter: plannedFilter, layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "airspacePlanState"], "planned-now", AIRRADAR_MAP_THEME.selectedStrong, AIRRADAR_MAP_THEME.weather], "line-opacity": 0.66, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1, 8, 1.7, 13, 2.6], "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "airspace-plan-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, filter: plannedFilter, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 0.8], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": ["match", ["get", "airspacePlanState"], "planned-now", AIRRADAR_MAP_THEME.selectedStrong, AIRRADAR_MAP_THEME.label], "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.2 } });
+      map.addLayer({ id: "atc-sectors-fill", type: "fill", source: "atc-sectors", layout: { visibility: "none" }, paint: { "fill-color": AIRRADAR_MAP_THEME.atc.fill, "fill-opacity": ["match", ["get", "airspaceType"], "FIR", 0.012, "TMA", 0.022, "CTR", 0.03, 0.045] } });
+      map.addLayer({ id: "atc-sectors-line", type: "line", source: "atc-sectors", layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.atc.line, "line-opacity": ["match", ["get", "airspacePlanState"], "planned-now", 0.82, "upcoming", 0.62, 0.48], "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.75, 8, 1.25, 13, 2] } });
+      map.addLayer({ id: "atc-sectors-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 0.8], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.atc.label, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.2 } });
       const trafficFilter: FilterSpecification = ["!=", ["get", "trafficLevel"], "NO_DATA"];
-      map.addLayer({ id: "atc-sector-traffic-fill", type: "fill", source: "atc-sectors", filter: trafficFilter, layout: { visibility: "none" }, paint: { "fill-color": "#8b7bc7", "fill-opacity": 0.015 } });
-      map.addLayer({ id: "atc-sector-traffic-line", type: "line", source: "atc-sectors", filter: trafficFilter, layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "trafficLevel"], "NONE", "#7b8794", "LOW", "#5ca9c9", "MEDIUM", "#d2b56f", "HIGH", "#d58c63", "VERY_HIGH", "#b86f93", "#596575"], "line-opacity": 0.82, "line-width": 2 } });
-      map.addLayer({ id: "atc-sector-traffic-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, filter: trafficFilter, layout: { visibility: "none", "text-field": ["concat", ["get", "name"], " · ", ["to-string", ["get", "trafficAircraftCount"]]], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#e1edf2", "text-halo-color": "#08111d", "text-halo-width": 1.2 } });
-      map.addLayer({ id: "atc-sectors-context-highlight", type: "line", source: "atc-sectors", filter: ["==", ["get", "id"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": "#d8b4fe", "line-opacity": 1, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 3, 13, 4.5] } });
+      map.addLayer({ id: "atc-sector-traffic-fill", type: "fill", source: "atc-sectors", filter: trafficFilter, layout: { visibility: "none" }, paint: { "fill-color": AIRRADAR_MAP_THEME.atc.trafficFill, "fill-opacity": 0.025 } });
+      map.addLayer({ id: "atc-sector-traffic-line", type: "line", source: "atc-sectors", filter: trafficFilter, layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.atc.line, "line-opacity": 0.72, "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1.1, 10, 2.1, 13, 2.8] } });
+      map.addLayer({ id: "atc-sector-traffic-label", type: "symbol", source: "atc-sectors", minzoom: 6.5, filter: trafficFilter, layout: { visibility: "none", "text-field": ["concat", ["get", "name"], " · ", ["to-string", ["get", "trafficAircraftCount"]]], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.label, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.2 } });
+      map.addLayer({ id: "atc-sectors-context-highlight", type: "line", source: "atc-sectors", filter: ["==", ["get", "id"], "__context-none__"], layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.atc.highlight, "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.8, 8, 2.8, 13, 4.2] } });
       map.moveLayer("airspace-plan-fill");
       map.moveLayer("airspace-plan-line");
       map.moveLayer("airspace-plan-label");
       map.addSource("atc-transmitters", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-      map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": "#f3b95f", "circle-radius": 5, "circle-stroke-color": "#08111d", "circle-stroke-width": 1.5 } });
+      map.addLayer({ id: "atc-transmitters-circle", type: "circle", source: "atc-transmitters", layout: { visibility: "none" }, paint: { "circle-color": AIRRADAR_MAP_THEME.atc.line, "circle-radius": 4, "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1.5 } });
       map.addSource("metar-airports", { type: "geojson", data: createMetarGeoJSON([]) });
-      map.addLayer({ id: "metar-symbols", type: "circle", source: "metar-airports", layout: { visibility: "none" }, paint: { "circle-color": ["match", ["get", "flightCategory"], "VFR", "#42d392", "MVFR", "#f4c95d", "IFR", "#ef8f6b", "LIFR", "#dd6b93", "#9da9b5"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 5, 13, 7], "circle-opacity": ["case", ["get", "stale"], 0.38, 0.9], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.2 } });
-      map.addLayer({ id: "metar-labels", type: "symbol", source: "metar-airports", minzoom: 8.5, layout: { visibility: "none", "text-field": ["concat", ["get", "stationId"], ["case", ["get", "stale"], " · STALE", ""]], "text-font": ["Open Sans Semibold"], "text-size": 10, "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": "#dce9ee", "text-opacity": ["case", ["get", "stale"], 0.45, 0.9], "text-halo-color": "#08111d", "text-halo-width": 1 } });
+      map.addLayer({ id: "metar-symbols", type: "circle", source: "metar-airports", layout: { visibility: "none" }, paint: { "circle-color": ["match", ["get", "flightCategory"], "VFR", AIRRADAR_MAP_THEME.metar.vfr, "MVFR", AIRRADAR_MAP_THEME.metar.mvfr, "IFR", AIRRADAR_MAP_THEME.metar.ifr, "LIFR", AIRRADAR_MAP_THEME.metar.lifr, AIRRADAR_MAP_THEME.metar.unknown], "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3, 8, 5, 13, 7], "circle-opacity": ["case", ["get", "stale"], 0.38, 0.9], "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1.2 } });
+      map.addLayer({ id: "metar-labels", type: "symbol", source: "metar-airports", minzoom: 8.5, layout: { visibility: "none", "text-field": ["concat", ["get", "stationId"], ["case", ["get", "stale"], " · STALE", ""]], "text-font": ["Noto Sans Regular"], "text-size": 10, "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.label, "text-opacity": ["case", ["get", "stale"], 0.45, 0.82], "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1 } });
       map.addSource("wind-aloft", { type: "geojson", data: createWindGeoJSON(null) });
-      map.addLayer({ id: "wind-aloft-arrows", type: "symbol", source: "wind-aloft", minzoom: 5.5, layout: { visibility: "none", "text-field": ["case", ["has", "speedKt"], ["concat", "↑ ", ["to-string", ["round", ["get", "speedKt"]]], " kt"], "↑"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5.5, 10, 10, 14], "text-rotate": ["coalesce", ["get", "directionDeg"], 0], "text-rotation-alignment": "map", "text-allow-overlap": false }, paint: { "text-color": "#9bd4ff", "text-halo-color": "#08111d", "text-halo-width": 1.1 } });
+      map.addLayer({ id: "wind-aloft-arrows", type: "symbol", source: "wind-aloft", minzoom: 5.5, layout: { visibility: "none", "text-field": ["case", ["has", "speedKt"], ["concat", "↑ ", ["to-string", ["round", ["get", "speedKt"]]], " kt"], "↑"], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 5.5, 10, 10, 14], "text-rotate": ["coalesce", ["get", "directionDeg"], 0], "text-rotation-alignment": "map", "text-allow-overlap": false }, paint: { "text-color": AIRRADAR_MAP_THEME.weather, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1.1 } });
       map.addSource("route-airports", { type: "geojson", data: createAirportGeoJSON([]) });
-      map.addLayer({ id: "route-airports-circle", type: "circle", source: "route-airports", paint: { "circle-color": "#d2b56f", "circle-opacity": 0.72, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 3, 12, 4.5], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.2 } });
-      map.addLayer({ id: "route-airports-label", type: "symbol", source: "route-airports", layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 8, 10, 9, 13, 10], "text-offset": [0, 1.1], "text-padding": 7, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#cfbd8b", "text-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.52, 10, 0.72, 13, 0.82], "text-halo-color": "#08111d", "text-halo-width": 0.7 } });
+      map.addLayer({ id: "route-airports-circle", type: "circle", source: "route-airports", paint: { "circle-color": ["match", ["get", "tier"], "significant", AIRRADAR_MAP_THEME.airports.significant, "heliport", AIRRADAR_MAP_THEME.airports.heliport, AIRRADAR_MAP_THEME.airports.small], "circle-opacity": ["match", ["get", "tier"], "significant", 0.82, "heliport", 0.58, 0.52], "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 2.4, 9, 3.3, 13, 4.6], "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1.15 } });
+      map.addLayer({ id: "route-airports-label", type: "symbol", source: "route-airports", minzoom: 6.2, layout: { "text-field": ["get", "code"], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 6.2, 8, 10, 9, 13, 10], "text-offset": [0, 1.1], "text-padding": 7, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": AIRRADAR_MAP_THEME.airports.label, "text-opacity": ["interpolate", ["linear"], ["zoom"], 6.2, 0.52, 10, 0.72, 13, 0.86], "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 0.8 } });
       map.addSource("aviation-sigmet", { type: "geojson", data: EMPTY_SIGMET_DATA as unknown as FeatureCollection });
-      map.addLayer({ id: "aviation-sigmet-fill", type: "fill", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "fill-color": "#ef8f6b", "fill-opacity": 0.045 } });
-      map.addLayer({ id: "aviation-sigmet-line", type: "line", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "line-color": "#ef8f6b", "line-opacity": 0.72, "line-width": 1.4, "line-dasharray": [2, 2] } });
+      map.addLayer({ id: "aviation-sigmet-fill", type: "fill", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "fill-color": AIRRADAR_MAP_THEME.hazard, "fill-opacity": 0.04 } });
+      map.addLayer({ id: "aviation-sigmet-line", type: "line", source: "aviation-sigmet", layout: { visibility: "none" }, paint: { "line-color": AIRRADAR_MAP_THEME.hazard, "line-opacity": 0.68, "line-width": 1.3, "line-dasharray": [2, 2] } });
       map.on("click", "aviation-sigmet-fill", (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
         if (!feature) return;
@@ -1103,8 +1131,8 @@ export function AirRadarApp() {
       map.on("mouseenter", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "aviation-sigmet-fill", () => { map.getCanvas().style.cursor = ""; });
       map.addSource(ROUTE_V2_AIRPORT_SOURCE_ID, { type: "geojson", data: createRouteAirportGeoJSON(null) });
-      map.addLayer({ id: ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, type: "circle", source: ROUTE_V2_AIRPORT_SOURCE_ID, paint: { "circle-color": "#37d6c0", "circle-opacity": 0.92, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4.5, 12, 6], "circle-stroke-color": "#08111d", "circle-stroke-width": 1.8 } });
-      map.addLayer({ id: ROUTE_V2_AIRPORT_LABEL_LAYER_ID, type: "symbol", source: ROUTE_V2_AIRPORT_SOURCE_ID, filter: ["==", ["get", "labelVisible"], true], layout: { "text-field": ["get", "code"], "text-font": ["Open Sans Semibold"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 10, 10, 13, 11], "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": "#72e5d3", "text-opacity": 0.9, "text-halo-color": "#08111d", "text-halo-width": 1 } });
+      map.addLayer({ id: ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, type: "circle", source: ROUTE_V2_AIRPORT_SOURCE_ID, paint: { "circle-color": AIRRADAR_MAP_THEME.airports.selected, "circle-opacity": 0.94, "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4.2, 12, 5.8], "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1.8 } });
+      map.addLayer({ id: ROUTE_V2_AIRPORT_LABEL_LAYER_ID, type: "symbol", source: ROUTE_V2_AIRPORT_SOURCE_ID, filter: ["==", ["get", "labelVisible"], true], layout: { "text-field": ["get", "code"], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 10, 10, 13, 11], "text-offset": [0, 1.25], "text-padding": 6, "text-allow-overlap": false, "text-ignore-placement": false, "text-optional": true }, paint: { "text-color": AIRRADAR_MAP_THEME.selectedStrong, "text-opacity": 0.94, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1 } });
       map.on("click", "atc-sectors-fill", (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
         if (!feature) return;
@@ -1204,7 +1232,7 @@ export function AirRadarApp() {
         minzoom: 6.5,
         layout: {
           "text-field": ["get", "label"],
-          "text-font": ["Open Sans Semibold"],
+          "text-font": ["Noto Sans Regular"],
           "text-size": 10,
           "text-offset": [0, 1.55],
           "text-padding": 5,
@@ -1213,8 +1241,8 @@ export function AirRadarApp() {
           "text-optional": true,
         },
         paint: {
-          "text-color": "#d9e7ed",
-          "text-halo-color": "#08111d",
+          "text-color": AIRRADAR_MAP_THEME.label,
+          "text-halo-color": AIRRADAR_MAP_THEME.outline,
           "text-halo-width": 1.15,
         },
       });
@@ -1354,6 +1382,7 @@ export function AirRadarApp() {
       receiverMarkerRef.current = null;
       rings?.setData({ type: "FeatureCollection", features: [] });
       if (rangeLayer) map.setLayoutProperty("range-rings-line", "visibility", "none");
+      if (map.getLayer("range-rings-label")) map.setLayoutProperty("range-rings-label", "visibility", "none");
       return;
     }
     const receiverWithCoordinates: ReceiverPosition = { name: receiver.name, lat: receiver.lat, lon: receiver.lon };
@@ -1368,6 +1397,7 @@ export function AirRadarApp() {
     receiverMarkerRef.current?.setLngLat([receiver.lon, receiver.lat]);
     rings?.setData(createRangeRingsGeoJSON(receiverWithCoordinates, showRangeRings ? RANGE_RING_RADII_KM : []));
     if (rangeLayer) map.setLayoutProperty("range-rings-line", "visibility", showRangeRings ? "visible" : "none");
+    if (map.getLayer("range-rings-label")) map.setLayoutProperty("range-rings-label", "visibility", showRangeRings ? "visible" : "none");
     if (shouldRecenterOnReceiver(snapshot.provider, centeredReceiverRef.current, receiver)) {
       map.jumpTo({ center: [receiver.lon, receiver.lat] });
       centeredReceiverRef.current = receiverWithCoordinates;
@@ -2140,7 +2170,8 @@ export function AirRadarApp() {
               {networkNotice && <span className="network-notice">{networkNotice}</span>}
               {networkEnabled && <span className="network-attribution">{t.radar.networkAttribution}</span>}
             </div>}
-            {colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showWeatherRadar || showMetar || showAupUup ? <Panel className="map-overlay-card contextual-legend">
+            {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showWeatherRadar || showMetar || showAupUup ? <Panel className="map-overlay-card contextual-legend">
+              {showRangeRings && receiverPositionAvailable && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong><span><i className="legend-line range-ring" /> {RANGE_RING_RADII_KM.join(" · ")} km</span></span>}
               {(showAtc || showAupUup) && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span>{showAupUup && <span><i className="legend-line planned" /> {activityT.legendUpcoming}</span>}</span>}
               {showAtsRoutes && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atsRoutes}</strong><span><i className="legend-line ats-network" /> {t.layers.atsRoutes}</span><span><i className="legend-line ats-selected" /> {t.route.context}</span></span>}
               {showWeatherRadar && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.weatherRadar}</strong><span><i className="legend-line weather-radar" /> {selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></span>}

@@ -261,6 +261,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           await visualPage.evaluate(async () => {
             if ("fonts" in document) await document.fonts.ready;
           });
+          if (target.path.includes("mapDiagnostics=1")) {
+            await visualPage.waitForFunction(() => {
+              const map = window.__airradarMapForDiagnostics;
+              return Boolean(map && map.isStyleLoaded() && map.areTilesLoaded());
+            }, { timeout: 15_000 });
+          }
           await visualPage.addStyleTag({
             content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}",
           });
@@ -418,7 +424,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
                 tilesLoaded: Boolean(map?.areTilesLoaded()),
                 container: containerRect ? { width: containerRect.width, height: containerRect.height } : null,
                 resizeCount: window.__airradarMapResizeCountForDiagnostics ?? 0,
-                sources: { osm: sourceLoaded("osm") },
+                sources: { openmaptiles: sourceLoaded("openmaptiles") },
                 layers: Object.fromEntries(layerIds.map((id) => [id, layer(id)])),
                 fixtureData: {
                   atc: sourceFeature("atc-sectors", "id", "fixture-sector"),

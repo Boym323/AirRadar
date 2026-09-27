@@ -48,7 +48,7 @@ export function buildFlightSituationSummary(input: {
 }): FlightSituationSummary {
   const currentSigmet = input.sigmetStale ? null : input.sigmets.find((item) => item.relation === "current") ?? null;
   const projectedSigmet = input.sigmetStale ? null : input.sigmets.find((item) => item.relation === "projected") ?? null;
-  const routeSigmet = input.routeWeather?.stale ? null : input.routeWeather?.matches[0] ?? null;
+  const routeSigmet = input.routeWeather?.stale ? null : input.routeWeather?.matches?.[0] ?? null;
 
   let weatherState: SituationWeatherState = "unknown";
   let weatherHazard: string | null = null;

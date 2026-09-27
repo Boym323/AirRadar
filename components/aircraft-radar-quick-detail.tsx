@@ -106,7 +106,7 @@ function durationLabel(start: string | null | undefined, end: string | null | un
 }
 
 function trackingSummary(aircraft: AircraftView, historyTrail: QuickHistoryTrail | null): string[] {
-  const firstSeen = historyTrail?.flight?.startedAt ?? historyTrail?.points[0]?.recordedAt ?? null;
+  const firstSeen = historyTrail?.flight?.startedAt ?? historyTrail?.points?.[0]?.recordedAt ?? null;
   const lastSeen = historyTrail?.flight?.lastSeenAt ?? aircraft.lastSeen;
   const positions = historyTrail?.points.length ?? aircraft.trail?.length ?? 0;
   return [

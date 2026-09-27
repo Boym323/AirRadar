@@ -153,7 +153,7 @@ export function RadarMapLayerMenu({
   onColorModeChange,
 }: RadarMapLayerMenuProps) {
   return <details className="map-layers">
-    <MapControl as="summary"><UiIcon name="layers" />{t.layers.title}</MapControl>
+    <MapControl as="summary" aria-label={t.layers.title} title={t.layers.title}><UiIcon name="layers" /><span className="map-control-label">{t.layers.title}</span></MapControl>
     <div className="map-layers-menu" role="group" aria-label={t.layers.title}>
       <div className="map-layer-group">
         <span className="map-layer-group-title">{t.layers.groups.traffic}</span>
