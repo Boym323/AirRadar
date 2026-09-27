@@ -18,12 +18,30 @@ function trailPointKey(point: TrailPosition): string {
 // cross-map segments in the selected trail.
 const MAX_TRAIL_SPEED_KM_PER_SECOND = 0.45;
 
-function isPlausibleTransition(previous: TrailPosition, next: TrailPosition): boolean {
+export function isPlausibleTransition(previous: TrailPosition, next: TrailPosition): boolean {
   const previousAt = recordedAtMs(previous);
   const nextAt = recordedAtMs(next);
   const elapsedSeconds = (nextAt - previousAt) / 1000;
   if (!Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0) return false;
   return haversineDistanceKm(previous.lat, previous.lon, next.lat, next.lon) / elapsedSeconds <= MAX_TRAIL_SPEED_KM_PER_SECOND;
+}
+
+/**
+ * Preserve the original point shape while removing impossible transitions.
+ * Historical consumers need this because FlightPosition contains additional
+ * fields (for example verticalRate) that the live TrailPoint shape omits.
+ */
+export function filterPlausibleTrailPoints<T extends TrailPosition>(points: readonly T[]): T[] {
+  const valid = points
+    .map((point, index) => ({ point, index, timestamp: recordedAtMs(point) }))
+    .filter((item) => Number.isFinite(item.timestamp))
+    .sort((a, b) => a.timestamp - b.timestamp || a.index - b.index);
+  const plausible: T[] = [];
+  for (const { point } of valid) {
+    const previous = plausible.at(-1);
+    if (!previous || isPlausibleTransition(previous, point)) plausible.push(point);
+  }
+  return plausible;
 }
 
 /**

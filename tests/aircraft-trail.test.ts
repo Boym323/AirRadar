@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrailPoint } from "@/lib/aircraft/types";
-import { appendBoundedLiveTrailPoint, BROWSER_LIVE_TRAIL_MAX_POINTS, boundTrailPoints, selectedTrail, trailPointFromAircraft, appendTrailPoint } from "@/lib/aircraft/trail";
+import { appendBoundedLiveTrailPoint, BROWSER_LIVE_TRAIL_MAX_POINTS, boundTrailPoints, filterPlausibleTrailPoints, selectedTrail, trailPointFromAircraft, appendTrailPoint } from "@/lib/aircraft/trail";
 
 const now = Date.parse("2026-09-08T12:20:00.000Z");
 
@@ -75,6 +75,19 @@ describe("selected aircraft live trail", () => {
 
     expect(boundTrailPoints(history, now).map((item) => item.lon)).toEqual([14, 14.02, 14.03]);
     expect(selectedTrail(new Map(), "ABC123", history, now).map((item) => item.lon)).toEqual([14, 14.02, 14.03]);
+  });
+
+  it("preserves historical fields while filtering impossible transitions", () => {
+    const history = [
+      { ...point(0, 14), verticalRate: 500 },
+      { ...point(1, 27), verticalRate: 600 },
+      { ...point(2, 14.02), verticalRate: 700 },
+    ];
+
+    expect(filterPlausibleTrailPoints(history)).toEqual([
+      history[0],
+      history[2],
+    ]);
   });
 
   it("lets history expand the past without moving the live endpoint", () => {

@@ -13,6 +13,7 @@ import { getPrisma } from "@/lib/server/db";
 import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/server/logbook";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { shouldPersistAltitudeAnomaly } from "@/lib/aircraft/altitude-provenance";
+import { filterPlausibleTrailPoints, isPlausibleTransition } from "@/lib/aircraft/trail";
 
 export interface HistoryResponse {
   source: "postgres" | "memory";
@@ -463,8 +464,9 @@ export async function getHistoryFlight(id: number): Promise<HistoryFlightDetail 
       }))
       .filter((event) => Number.isSafeInteger(event.id) && Number.isFinite(Date.parse(event.occurredAt)))
       .sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt) || a.id - b.id);
-    const positions = sampleFlightPositions(allPositions, events.map((event) => event.occurredAt));
-    const truncated = positions.length < allPositions.length;
+    const plausiblePositions = filterPlausibleTrailPoints(allPositions);
+    const positions = sampleFlightPositions(plausiblePositions, events.map((event) => event.occurredAt));
+    const truncated = positions.length < plausiblePositions.length;
     return {
       flight: flightSummaryFromRow(row),
       truncated,
@@ -1140,6 +1142,23 @@ export async function recordAircraftSnapshot(
       const continuityBroken = Boolean(
         flight && recordedAt.getTime() - timestampAsDate(flight.lastSeenAt).getTime() > getFlightContinuityGapMs(),
       );
+
+      // Reject physically impossible source jumps before updating the open
+      // Flight or inserting the bad FlightPosition. Coordinate range checks
+      // alone cannot catch a valid-looking CPR position hundreds of km away.
+      if (flight && !callsignChanged && !continuityBroken) {
+        const previousPosition = await schema.FlightPosition
+          .where({ flightId: flight.id })
+          .orderBy((position) => position.recordedAt.desc())
+          .first();
+        if (previousPosition && effectiveRecordedAt.getTime() > timestampAsDate(previousPosition.recordedAt).getTime()
+          && !isPlausibleTransition(
+            { recordedAt: timestampAsIso(previousPosition.recordedAt), lat: previousPosition.lat, lon: previousPosition.lon },
+            { recordedAt: effectiveRecordedAt.toISOString(), lat: latitude, lon: longitude },
+          )) {
+          return false;
+        }
+      }
 
       const firstDurableFlight = priorFlights !== null && priorFlights.length === 0 && !flight;
       if (!flight || callsignChanged || continuityBroken) {
