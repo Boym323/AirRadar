@@ -2,6 +2,78 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.176] - 2026-09-27
+
+Changes since v1.0.173.
+
+**Features touched:** Live Radar.
+
+### Added
+
+- Enhance aircraft telemetry display and navigation sections (97840df)
+
+### Changed
+
+- Merge remote-tracking branch 'origin/main' (1a299cb)
+- Merge remote-tracking branch 'origin/main' (cc07d43)
+
+### Fixed
+
+- Improve network snapshot handling and metadata hydration (bf3d090)
+- Improve metadata hydration and snapshot handling (555047d)
+- Rebalance aircraft icon optical sizes (d25c780)
+- Apply zoom-aware HTML aircraft sizing (c1e37d7)
+- Scale WebGL aircraft smoothly with zoom (8ca52a5)
+- Keep HTML aircraft sizing smooth during zoom (e8bdc22)
+- Restore last-known-good MapLibre runtime (639f6c3)
+- Restore last-known-good MapLibre runtime (78393c0)
+
+### Documentation
+
+- Update changelog for v1.0.174 (f8d3a94)
+- Update changelog for v1.0.175 (b432152)
+
+### Maintenance
+
+- Sync generated repository metadata (581c5c8)
+- Sync generated repository metadata (2c0eed3)
+- Sync generated repository metadata (912f893)
+- Update dependencies and improve PDF extraction (2eba330)
+- Reduce aircraft hover and selection scale (bcfcfe1)
+- Cover optical aircraft sizing and zoom scale (89d73e9)
+- Enforce zoom-aware HTML WebGL size parity (94a962f)
+- Improve browser gate console diagnostics (1ece07c)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (581c5c8)
+- Merge pull request #187 from Boym323/automation/repository-metadata (30e9e12)
+- fix(aircraft-state): improve network snapshot handling and metadata hydration (bf3d090)
+- docs: update changelog for v1.0.174 (f8d3a94)
+- chore(metadata): sync generated repository metadata (2c0eed3)
+- Merge pull request #188 from Boym323/automation/repository-metadata (c9f8acc)
+- feat: enhance aircraft telemetry display and navigation sections (97840df)
+- fix(aircraft-state): improve metadata hydration and snapshot handling (555047d)
+- docs: update changelog for v1.0.175 (b432152)
+- chore(metadata): sync generated repository metadata (912f893)
+- Merge pull request #189 from Boym323/automation/repository-metadata (c787f4e)
+- chore: update dependencies and improve PDF extraction (2eba330)
+- Merge remote-tracking branch 'origin/main' (1a299cb)
+- fix(radar): rebalance aircraft icon optical sizes (d25c780)
+- fix(radar): apply zoom-aware HTML aircraft sizing (c1e37d7)
+- fix(radar): scale WebGL aircraft smoothly with zoom (8ca52a5)
+- fix(radar): keep HTML aircraft sizing smooth during zoom (e8bdc22)
+- style(radar): reduce aircraft hover and selection scale (bcfcfe1)
+- test(radar): cover optical aircraft sizing and zoom scale (89d73e9)
+- test(radar): enforce zoom-aware HTML WebGL size parity (94a962f)
+- fix(radar): restore last-known-good MapLibre runtime (639f6c3)
+- fix(radar): restore last-known-good MapLibre runtime (78393c0)
+- Merge pull request #190 from Boym323/fix/aircraft-icon-optical-sizing (383f06c)
+- test: improve browser gate console diagnostics (1ece07c)
+- Merge remote-tracking branch 'origin/main' (cc07d43)
+
+</details>
 ## [1.0.175] - 2026-09-27
 
 Changes since v1.0.174.
