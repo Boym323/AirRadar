@@ -27,9 +27,9 @@ semantics, or shared directory layout is planned.
 
 | Stream | Branch | PR | Local tests | GitHub CI | Conflict | Status |
 |---|---|---|---|---|---|---|
-| E — Aircraft Detail V2 | `feat/aircraft-detail-v2` | [#151](https://github.com/Boym323/AirRadar/pull/151) | typecheck, targeted Vitest, ESLint | pending | medium | implementation complete; review pending |
-| F — Alerting V2 | `feat/alerting-v2` | [#152](https://github.com/Boym323/AirRadar/pull/152) | typecheck, targeted Vitest, ESLint | pending | low | implementation complete; review pending |
-| G — Time Machine V2 | `feat/time-machine-v2` | [#153](https://github.com/Boym323/AirRadar/pull/153) | typecheck, targeted Vitest, ESLint | pending | medium | implementation complete; review pending |
+| E — Aircraft Detail V2 | `feat/aircraft-detail-v2` | [#151](https://github.com/Boym323/AirRadar/pull/151) | typecheck, full Vitest 176/176 (1196), ESLint | pending | medium | implementation complete; review pending |
+| F — Alerting V2 | `feat/alerting-v2` | [#152](https://github.com/Boym323/AirRadar/pull/152) | typecheck, full Vitest 176/176 (1198), ESLint | pending | low | implementation complete; review pending |
+| G — Time Machine V2 | `feat/time-machine-v2` | [#153](https://github.com/Boym323/AirRadar/pull/153) | typecheck, full Vitest 177/177 (1197), ESLint | pending | medium | implementation complete; review pending |
 
 The later rendering/performance stream H remains intentionally unstarted.
 Route Intelligence remains out of scope.
