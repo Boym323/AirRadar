@@ -129,6 +129,11 @@ export function createEnrichmentService(options: { persistAdsbDb?: boolean } = {
   const adsbDb = isAdsbDbEnabled() ? new AdsbDbProvider(getAdsbDbBaseUrl()) : null;
   const tar1090Db = readsbBaseUrl ? new AircraftMetadataCatalog(readsbBaseUrl) : null;
 
+  // Visual identity must be available before the first live snapshot. Use
+  // only the local tar1090/PostgreSQL catalog here so initial rendering never
+  // waits on ADSBDB or another remote enrichment source.
+  if (tar1090Db) registry.initialAircraftMetadata = tar1090Db;
+
   if (adsbDb && tar1090Db) {
     const combined = new CombinedAdsbDbProvider(adsbDb, tar1090Db);
     registry.aircraftMetadata = combined;

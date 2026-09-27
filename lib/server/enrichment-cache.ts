@@ -221,6 +221,25 @@ export class EnrichmentService {
     return Boolean(this.providers.aircraftMetadata || this.providers.flightRoute);
   }
 
+  get hasInitialMetadataProvider(): boolean {
+    return Boolean(this.providers.initialAircraftMetadata);
+  }
+
+  /**
+   * Fast fail-soft metadata used only to establish the aircraft visual identity
+   * before the first live snapshot is published. Production wires this to the
+   * local tar1090/PostgreSQL catalog, never to a paid or remote route lookup.
+   */
+  async getInitialAircraftMetadata(icaoHex: string): Promise<AircraftMetadata | null> {
+    const provider = this.providers.initialAircraftMetadata;
+    if (!provider) return null;
+    try {
+      return await this.metadataLimiter(() => provider.getMetadata(icaoHex));
+    } catch {
+      return null;
+    }
+  }
+
   get hasFlightPlanProvider(): boolean {
     return Boolean(this.providers.flightPlan);
   }

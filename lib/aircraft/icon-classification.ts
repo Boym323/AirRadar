@@ -29,7 +29,7 @@ export function aircraftPresentationKindForType(type: string): AircraftPresentat
 type Input = Pick<AircraftView, "aircraftType" | "aircraftDescription" | "enrichment" | "category" | "onGround">;
 
 function candidates(a: Input): string[] {
-  const values = [a.enrichment?.metadata?.icaoTypeCode, a.aircraftType, a.enrichment?.metadata?.aircraftType, a.aircraftDescription];
+  const values = [a.aircraftType, a.enrichment?.metadata?.icaoTypeCode, a.enrichment?.metadata?.aircraftType, a.aircraftDescription, a.enrichment?.metadata?.aircraftDescription];
   return [...new Set(values.flatMap(value => {
     if (!value) return [];
     const normalized = value.trim().toUpperCase().replaceAll("-", "");
@@ -52,3 +52,9 @@ export function classifyAircraftIcon(a: Input): AircraftIconClassification {
   if (TAR1090_ICON_CODES.has(type)) return { kind: "airplane", presentationKind, asset: `/aircraft-icons-tar1090/${type}.svg`, reason: `tar1090 type ${type}` };
   return { kind: "airplane", presentationKind, asset: TAR1090_UNKNOWN_ICON_ASSET, reason: "unknown aircraft type" };
 }
+
+export function aircraftIconNeedsInitialMetadata(a: Input): boolean {
+  const classification = classifyAircraftIcon({ ...a, enrichment: undefined });
+  return classification.asset === TAR1090_UNKNOWN_ICON_ASSET;
+}
+
