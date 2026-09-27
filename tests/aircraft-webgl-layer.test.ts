@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { aircraftWebglColor, aircraftWebglIconAsset, aircraftWebglScreenHeading } from "@/lib/radar/aircraft-webgl-layer";
+import { aircraftWebglColor, aircraftWebglIconAsset, aircraftWebglPointSize, aircraftWebglScreenHeading } from "@/lib/radar/aircraft-webgl-layer";
 import { resolveAircraftVisualHeading } from "@/lib/aircraft/visual-heading";
 import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
 import type { AircraftView } from "@/lib/aircraft/types";
@@ -101,6 +101,15 @@ describe("WebGL aircraft layer", () => {
     expect(webglSource).toContain("vec2 uv = vec2(q.x + 0.5, 0.5 - q.y)");
     expect(webglSource).toContain("gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);");
     expect(webglSource).not.toContain("gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);");
+  });
+
+  it("uses the same semantic silhouette size profile as HTML markers", () => {
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "C172", aircraftDescription: "Cessna 172" }))).toBe(18);
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "A320" }))).toBe(20);
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "A333" }))).toBe(22);
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "A388" }))).toBe(24);
+    expect(aircraftWebglPointSize(aircraft({ aircraftType: "GND", category: "C0" }))).toBe(14);
+    expect(webglSource).toContain("aircraftIconVisualSize(aircraft)");
   });
 
   it("keeps source-aware colors for bulk aircraft", () => {

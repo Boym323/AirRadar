@@ -58,5 +58,11 @@ describe("readsb normalization", () => {
       nacV: 2, sil: 3, silType: "perhour", gva: 1, sda: 2, adsbVersion: 2,
       alert: 0, spi: 0, dbFlags: 1,
     });
+    expect(result[0].provenance?.fields?.iasKt).toMatchObject({
+      origin: "local",
+      protocol: "readsb-json",
+      confidence: "high",
+    });
+    expect(result[0].provenance?.fields?.navModes?.observedAt).toBe(result[0].lastSeen);
   });
 });

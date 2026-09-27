@@ -4,43 +4,65 @@ import type { BeastLocalProvider, BeastDiagnostics } from "@/lib/server/beast-lo
 
 const TELEMETRY_FRESHNESS_MS = 30_000;
 
-function mergeTelemetry(beast: AircraftAdsbTelemetry | null | undefined, json: AircraftAdsbTelemetry | null | undefined, beastAt: number | null | undefined, jsonAt: number): AircraftAdsbTelemetry | null {
-  if (!beast && !json) return null;
-  const beastFresh = Boolean(beast && beastAt !== null && beastAt !== undefined && jsonAt - beastAt <= TELEMETRY_FRESHNESS_MS);
-  const primary = beastFresh ? beast! : json ?? null;
-  const fallback = beastFresh ? json : null;
-  if (!primary) return null;
-  return {
-    ...primary,
-    iasKt: primary.iasKt ?? fallback?.iasKt ?? null,
-    tasKt: primary.tasKt ?? fallback?.tasKt ?? null,
-    mach: primary.mach ?? fallback?.mach ?? null,
-    windDirectionDeg: primary.windDirectionDeg ?? fallback?.windDirectionDeg ?? null,
-    windSpeedKt: primary.windSpeedKt ?? fallback?.windSpeedKt ?? null,
-    outsideAirTemperatureC: primary.outsideAirTemperatureC ?? fallback?.outsideAirTemperatureC ?? null,
-    totalAirTemperatureC: primary.totalAirTemperatureC ?? fallback?.totalAirTemperatureC ?? null,
-    navQnhHpa: primary.navQnhHpa ?? fallback?.navQnhHpa ?? null,
-    selectedAltitudeMcpFt: primary.selectedAltitudeMcpFt ?? fallback?.selectedAltitudeMcpFt ?? null,
-    selectedAltitudeFmsFt: primary.selectedAltitudeFmsFt ?? fallback?.selectedAltitudeFmsFt ?? null,
-    selectedHeadingDeg: primary.selectedHeadingDeg ?? fallback?.selectedHeadingDeg ?? null,
-    navModes: primary.navModes.length > 0 ? primary.navModes : fallback?.navModes ?? [],
-    nic: primary.nic ?? fallback?.nic ?? null,
-    containmentRadiusM: primary.containmentRadiusM ?? fallback?.containmentRadiusM ?? null,
-    nacP: primary.nacP ?? fallback?.nacP ?? null,
-    nacV: primary.nacV ?? fallback?.nacV ?? null,
-    sil: primary.sil ?? fallback?.sil ?? null,
-    silType: primary.silType ?? fallback?.silType ?? null,
-    gva: primary.gva ?? fallback?.gva ?? null,
-    sda: primary.sda ?? fallback?.sda ?? null,
-    adsbVersion: primary.adsbVersion ?? fallback?.adsbVersion ?? null,
-    alert: primary.alert ?? fallback?.alert ?? null,
-    spi: primary.spi ?? fallback?.spi ?? null,
-    dbFlags: primary.dbFlags ?? fallback?.dbFlags ?? null,
-    magneticHeadingDeg: primary.magneticHeadingDeg ?? fallback?.magneticHeadingDeg ?? null,
-    trueHeadingDeg: primary.trueHeadingDeg ?? fallback?.trueHeadingDeg ?? null,
-    rollDeg: primary.rollDeg ?? fallback?.rollDeg ?? null,
-    trackRateDegPerSec: primary.trackRateDegPerSec ?? fallback?.trackRateDegPerSec ?? null,
+function fieldObservedAt(beast: Aircraft, field: string, fallbackAt: number | null | undefined): number | null {
+  const timestamp = beast.provenance?.fields?.[field]?.observedAt;
+  if (timestamp) {
+    const parsed = Date.parse(timestamp);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallbackAt ?? null;
+}
+
+function fieldFresh(beast: Aircraft, field: string, fallbackAt: number | null | undefined, jsonAt: number): boolean {
+  const observedAt = fieldObservedAt(beast, field, fallbackAt);
+  return observedAt !== null && jsonAt - observedAt <= TELEMETRY_FRESHNESS_MS;
+}
+
+function mergeTelemetry(beast: Aircraft, json: Aircraft, beastAt: number | null | undefined, jsonAt: number): AircraftAdsbTelemetry | null {
+  const beastTelemetry = beast.adsbTelemetry;
+  const jsonTelemetry = json.adsbTelemetry;
+  if (!beastTelemetry && !jsonTelemetry) return null;
+
+  const scalar = <K extends keyof AircraftAdsbTelemetry>(field: K): AircraftAdsbTelemetry[K] => {
+    const beastValue = beastTelemetry?.[field];
+    if (beastValue !== null && beastValue !== undefined && fieldFresh(beast, String(field), beastAt, jsonAt)) return beastValue;
+    return (jsonTelemetry?.[field] ?? null) as AircraftAdsbTelemetry[K];
   };
+
+  const result: AircraftAdsbTelemetry = {
+    iasKt: scalar("iasKt") as number | null,
+    tasKt: scalar("tasKt") as number | null,
+    mach: scalar("mach") as number | null,
+    windDirectionDeg: scalar("windDirectionDeg") as number | null,
+    windSpeedKt: scalar("windSpeedKt") as number | null,
+    outsideAirTemperatureC: scalar("outsideAirTemperatureC") as number | null,
+    totalAirTemperatureC: scalar("totalAirTemperatureC") as number | null,
+    staticPressureHpa: scalar("staticPressureHpa") as number | null,
+    navQnhHpa: scalar("navQnhHpa") as number | null,
+    selectedAltitudeMcpFt: scalar("selectedAltitudeMcpFt") as number | null,
+    selectedAltitudeFmsFt: scalar("selectedAltitudeFmsFt") as number | null,
+    selectedHeadingDeg: scalar("selectedHeadingDeg") as number | null,
+    navModes: beastTelemetry?.navModes?.length && fieldFresh(beast, "navModes", beastAt, jsonAt)
+      ? beastTelemetry.navModes
+      : jsonTelemetry?.navModes ?? [],
+    nic: scalar("nic") as number | null,
+    containmentRadiusM: scalar("containmentRadiusM") as number | null,
+    nacP: scalar("nacP") as number | null,
+    nacV: scalar("nacV") as number | null,
+    sil: scalar("sil") as number | null,
+    silType: scalar("silType") as string | null,
+    gva: scalar("gva") as number | null,
+    sda: scalar("sda") as number | null,
+    adsbVersion: scalar("adsbVersion") as number | null,
+    alert: scalar("alert") as number | null,
+    spi: scalar("spi") as number | null,
+    dbFlags: scalar("dbFlags") as number | null,
+    magneticHeadingDeg: scalar("magneticHeadingDeg") as number | null,
+    trueHeadingDeg: scalar("trueHeadingDeg") as number | null,
+    rollDeg: scalar("rollDeg") as number | null,
+    trackRateDegPerSec: scalar("trackRateDegPerSec") as number | null,
+  };
+  return Object.values(result).some((item) => Array.isArray(item) ? item.length > 0 : item !== null && item !== undefined) ? result : null;
 }
 
 function preferredValue<T>(beastValue: T | null | undefined, jsonValue: T | null | undefined, beastAt: number | null | undefined, jsonAt: number | null | undefined): T | null {
@@ -62,6 +84,9 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
   const position = beast.lat !== null && beast.lon !== null ? beast : json;
   const beastTimes = beast.observationTimes;
   const jsonTime = Date.parse(json.lastSeen);
+  const beastExtendedAt = beastTimes?.extendedTelemetry;
+  const beastTargetStateFresh = fieldFresh(beast, "targetState", beastExtendedAt, jsonTime);
+  const beastOperationalStatusFresh = fieldFresh(beast, "operationalStatus", beastExtendedAt, jsonTime);
   return {
     ...json,
     ...beast,
@@ -91,9 +116,9 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
     source: beast.source === "UNKNOWN" ? json.source : beast.source,
     sourceType: beast.sourceType ?? json.sourceType,
     onGround: beast.onGround || json.onGround,
-    targetState: beast.targetState ?? json.targetState ?? null,
-    operationalStatus: beast.operationalStatus ?? json.operationalStatus ?? null,
-    adsbTelemetry: mergeTelemetry(beast.adsbTelemetry, json.adsbTelemetry, beastTimes?.extendedTelemetry, jsonTime),
+    targetState: beastTargetStateFresh ? beast.targetState ?? json.targetState ?? null : json.targetState ?? null,
+    operationalStatus: beastOperationalStatusFresh ? beast.operationalStatus ?? json.operationalStatus ?? null : json.operationalStatus ?? null,
+    adsbTelemetry: mergeTelemetry(beast, json, beastExtendedAt, jsonTime),
     provenance: {
       seenLocal: true,
       seenNetwork: false,
@@ -101,7 +126,7 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
       lastNetworkSeen: null,
       positionOrigin: position.lat !== null && position.lon !== null ? "local" : null,
       positionSource: position.source,
-      fields: mergeFieldProvenance(beast, json, beastTimes?.extendedTelemetry, jsonTime),
+      fields: mergeFieldProvenance(beast, json, beastExtendedAt, jsonTime),
     },
     observationTimes: beast.observationTimes ?? json.observationTimes,
   };
@@ -109,14 +134,17 @@ export function mergeLocalAircraft(beast: Aircraft, json: Aircraft): Aircraft {
 
 function mergeFieldProvenance(beast: Aircraft, json: Aircraft, beastAt: number | null | undefined, jsonAt: number): NonNullable<Aircraft["provenance"]>["fields"] {
   const result = { ...(json.provenance?.fields ?? {}) };
-  const beastFresh = beastAt !== null && beastAt !== undefined && jsonAt - beastAt <= TELEMETRY_FRESHNESS_MS;
   for (const [field, value] of Object.entries(beast.provenance?.fields ?? {})) {
-    if (beastFresh || !result[field]) result[field] = value;
+    if (fieldFresh(beast, field, beastAt, jsonAt)) result[field] = value;
   }
   for (const field of Object.keys(beast.adsbTelemetry ?? {})) {
-    if (beastFresh && beast.adsbTelemetry?.[field as keyof AircraftAdsbTelemetry] != null) {
-      result[field] ??= { origin: "local", protocol: "beast-mode-s", observedAt: new Date(beastAt!).toISOString(), confidence: "high" };
-    } else if (!result[field] && json.adsbTelemetry?.[field as keyof AircraftAdsbTelemetry] != null) {
+    const key = field as keyof AircraftAdsbTelemetry;
+    const beastValue = beast.adsbTelemetry?.[key];
+    const jsonValue = json.adsbTelemetry?.[key];
+    if (beastValue != null && (!Array.isArray(beastValue) || beastValue.length > 0) && fieldFresh(beast, field, beastAt, jsonAt)) {
+      const observedAt = fieldObservedAt(beast, field, beastAt);
+      if (observedAt !== null) result[field] ??= { origin: "local", protocol: "beast-mode-s", observedAt: new Date(observedAt).toISOString(), confidence: "high" };
+    } else if (!result[field] && jsonValue != null && (!Array.isArray(jsonValue) || jsonValue.length > 0)) {
       result[field] = { origin: "local", protocol: "readsb-json", observedAt: json.lastSeen, confidence: "high" };
     }
   }

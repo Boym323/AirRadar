@@ -41,6 +41,8 @@ jobs:
         run: npm run features:check
       - name: Verify visual system budget
         run: npm run visual:check
+      - name: Audit aircraft icon geometry
+        run: npm run icons:audit
       - name: Run lint, typecheck, and Vitest in parallel
         shell: bash
         run: |
@@ -86,6 +88,7 @@ jobs:
           name: visual-system-${{ github.sha }}
           path: |
             artifacts/visual-system-audit.json
+            artifacts/aircraft-icon-audit.json
             artifacts/visual-smoke/*.png
           if-no-files-found: ignore
       - name: Radar production performance baseline

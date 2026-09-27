@@ -5,6 +5,27 @@ export type CanonicalAircraftIconKind = "airplane" | "helicopter" | "glider" | "
 export type AircraftPresentationKind = CanonicalAircraftIconKind | "a220" | "a320" | "a330" | "a350" | "a380" | "b717" | "b727" | "b737" | "b747" | "b757" | "b767" | "b777" | "b787" | "regional" | "turboprop" | "business-jet" | "general-aviation";
 export type AircraftIconClassification = { kind: CanonicalAircraftIconKind; presentationKind: AircraftPresentationKind; asset: string | null; reason: string };
 
+export function aircraftPresentationKindForType(type: string): AircraftPresentationKind {
+  if (/^BCS[13]$/.test(type)) return "a220";
+  if (/^(A318|A319|A320|A321|A19N|A20N|A21N)$/.test(type)) return "a320";
+  if (/^(A332|A333|A337|A338|A339)$/.test(type)) return "a330";
+  if (/^(A359|A35K)$/.test(type)) return "a350";
+  if (type === "A388") return "a380";
+  if (type === "B712") return "b717";
+  if (/^B72[12]$/.test(type)) return "b727";
+  if (/^(B737|B738|B739|B37M|B38M|B39M|B3XM)$/.test(type)) return "b737";
+  if (/^B74/.test(type)) return "b747";
+  if (/^B75[23]$/.test(type)) return "b757";
+  if (/^B76[234]$/.test(type)) return "b767";
+  if (/^(B77[23LW]|B77[89])$/.test(type)) return "b777";
+  if (/^(B788|B789|B78X)$/.test(type)) return "b787";
+  if (/^(E1[3-9]|E2[0-9]|CRJ|RJ[0-9]|ARJ)/.test(type)) return "regional";
+  if (/^(AT4|AT7|DH8|DHC|SF3|F50|JS4)/.test(type)) return "turboprop";
+  if (/^(GLF|CL[0-9]|LJ[0-9]|E55|FA[0-9]|C5[0-9]|C68|C7[0-9]|PRM|H25|DA[0-9])/.test(type)) return "business-jet";
+  if (/^(C[0-4]|P28|P32|P46|PA[0-9]|PC1|TBM|BE[0-9]|SR2|M20|DA4)/.test(type)) return "general-aviation";
+  return "airplane";
+}
+
 type Input = Pick<AircraftView, "aircraftType" | "aircraftDescription" | "enrichment" | "category" | "onGround">;
 
 function candidates(a: Input): string[] {
@@ -27,7 +48,7 @@ export function classifyAircraftIcon(a: Input): AircraftIconClassification {
   if (category === "B6") return { kind: "drone", presentationKind: "drone", asset: TAR1090_CATEGORY_ICON_ASSETS.B6 ?? null, reason: "ADS-B category B6 (UAV)" };
   const helicopter = /^(A139|A149|A169|A189|AS|EC|H(1[0-9]|2[05]|4[67]|5[36]|60|64)|MI(8|17|24)|NH90|R(22|44|66)|S(61|76|92)|PUMA|V22|B412)/.test(type) || /\b(HELICOPTER|ROTORCRAFT|MI[- ]?8|MI[- ]?17)\b/i.test([a.aircraftDescription, a.enrichment?.metadata?.aircraftDescription, a.enrichment?.metadata?.aircraftType].filter(Boolean).join(" "));
   if (helicopter) return { kind: "helicopter", presentationKind: "helicopter", asset: TAR1090_ICON_CODES.has(type) ? `/aircraft-icons-tar1090/${type}.svg` : (TAR1090_CATEGORY_ICON_ASSETS.A7 ?? null), reason: `known rotorcraft type ${type || "from metadata description"}` };
-  const presentationKind: AircraftPresentationKind = /^(A318|A319|A320|A321|A19N|A20N|A21N)$/.test(type) ? "a320" : /^(B737|B738|B739|B37M|B38M|B39M|B3XM)$/.test(type) ? "b737" : /^(E1[3-9]|E2[0-9]|CRJ|RJ[0-9]|ARJ)/.test(type) ? "regional" : /^(AT4|AT7|DH8|DHC|SF3|F50|JS4)/.test(type) ? "turboprop" : /^(GLF|CL[0-9]|LJ[0-9]|E55|FA[0-9]|C5[0-9]|C68|C7[0-9]|PRM|H25|DA[0-9])/.test(type) ? "business-jet" : /^(C[0-4]|P28|P32|P46|PA[0-9]|PC1|TBM|BE[0-9]|SR2|M20|DA4)/.test(type) ? "general-aviation" : "airplane";
+  const presentationKind = aircraftPresentationKindForType(type);
   if (TAR1090_ICON_CODES.has(type)) return { kind: "airplane", presentationKind, asset: `/aircraft-icons-tar1090/${type}.svg`, reason: `tar1090 type ${type}` };
   return { kind: "airplane", presentationKind, asset: TAR1090_UNKNOWN_ICON_ASSET, reason: "unknown aircraft type" };
 }

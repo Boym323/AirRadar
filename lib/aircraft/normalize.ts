@@ -116,6 +116,21 @@ function adsbTelemetry(raw: RawReadsbAircraft): AircraftAdsbTelemetry | null {
   return Object.values(value).some((item) => Array.isArray(item) ? item.length > 0 : item !== null) ? value : null;
 }
 
+function telemetryProvenance(
+  telemetry: AircraftAdsbTelemetry | null,
+  origin: "local" | "adsblol",
+  observedAt: string,
+): NonNullable<Aircraft["provenance"]>["fields"] {
+  if (!telemetry) return undefined;
+  const fields: NonNullable<Aircraft["provenance"]>["fields"] = {};
+  for (const [field, value] of Object.entries(telemetry)) {
+    const present = Array.isArray(value) ? value.length > 0 : value !== null && value !== undefined;
+    if (!present) continue;
+    fields[field] = { origin, protocol: "readsb-json", observedAt, confidence: "high" };
+  }
+  return Object.keys(fields).length > 0 ? fields : undefined;
+}
+
 function coordinate(value: unknown, minimum: number, maximum: number): number | null {
   const parsed = numeric(value);
   return parsed !== null && parsed >= minimum && parsed <= maximum ? parsed : null;
@@ -169,6 +184,7 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
   const seenPosSeconds = seenPosSecondsValue !== null && seenPosSecondsValue >= 0 ? seenPosSecondsValue : null;
   const lastSeen = new Date(now.getTime() - (seenSeconds ?? 0) * 1000).toISOString();
 
+  const normalizedTelemetry = adsbTelemetry(raw);
   const normalized: Aircraft = {
     icaoHex,
     callsign: text(raw.flight) ?? text(raw.callsign),
@@ -202,13 +218,14 @@ export function normalizeAircraft(raw: RawReadsbAircraft, receiver: ReceiverPosi
       lastNetworkSeen: null,
       positionOrigin: lat !== null && lon !== null && seenPosSeconds !== null ? "local" : null,
       positionSource: sourceFor(raw),
+      fields: telemetryProvenance(normalizedTelemetry, "local", lastSeen),
     },
     sourceType: text(raw.type),
     onGround: isOnGround(raw),
     distanceKm,
     bearing,
     trail: [],
-    adsbTelemetry: adsbTelemetry(raw),
+    adsbTelemetry: normalizedTelemetry,
   };
   const observedAt = positionObservedAt(normalized);
   normalized.trail = lat !== null && lon !== null && observedAt !== null
@@ -234,6 +251,7 @@ export function normalizeNetworkAircraft(
       lastNetworkSeen: normalized.lastSeen,
       positionOrigin: normalized.provenance?.positionOrigin === "local" ? "adsblol" : null,
       positionSource: normalized.source,
+      fields: telemetryProvenance(normalized.adsbTelemetry ?? null, "adsblol", normalized.lastSeen),
     },
   };
 }

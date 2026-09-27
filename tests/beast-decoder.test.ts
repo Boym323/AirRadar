@@ -191,6 +191,22 @@ describe("BeastDecoder", () => {
     });
   });
 
+  it("does not refresh extended telemetry age on unrelated Beast frames", () => {
+    const decoder = new BeastDecoder(receiver);
+    const telemetryAt = Date.parse("2026-01-01T00:00:00Z");
+    const ordinaryAt = Date.parse("2026-01-01T00:01:00Z");
+
+    const targetState = decoder.decode(frame("8d4bb87aeaa72865017fdc130ae3"), telemetryAt)!;
+    expect(targetState.observationTimes?.extendedTelemetry).toBe(telemetryAt);
+
+    const ordinaryAltitude = decoder.decode(
+      df17Frame(0x4bb87a, "58bf0000000000"),
+      ordinaryAt,
+    )!;
+    expect(ordinaryAltitude.observationTimes?.extendedTelemetry).toBe(telemetryAt);
+    expect(ordinaryAltitude.observationTimes?.signal).toBe(ordinaryAt);
+  });
+
   it("retains the receiver-local Beast signal and uses usable receiver time deltas", () => {
     const decoder = new BeastDecoder(receiver);
     const payload = Buffer.from("8d4bb87a580bf000000000f15f2e", "hex");
