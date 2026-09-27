@@ -47,6 +47,9 @@ writing or changing documentation.
 - Visual changes must reuse `components/ui-primitives.tsx` and semantic tokens
   where practical, must not increase the visual debt budget, and must pass
   `npm run visual:check` plus the production desktop/mobile browser gate.
+- The authoritative documentation has a Czech localization in `docs/cs/`.
+  Documentation changes must update the corresponding Czech page when one
+  exists, and new authoritative documents must add both language links.
 
 `README.md` is the human-facing entry point. The documents above are the
 compact agent context; update `AGENTS.md` only when a durable rule or source

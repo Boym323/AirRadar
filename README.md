@@ -6,7 +6,8 @@ AirRadar is a personal dark-mode ADS-B radar for a local [`readsb`](https://gith
 
 The bilingual [project wiki](docs/wiki/README.md) provides a practical entry
 point in English and Czech. The technical source of truth remains in the
-versioned documents below.
+versioned documents below. A Czech localization is available in
+[`docs/cs/`](docs/cs/README.md).
 
 The compact agent entry point is [`AGENTS.md`](AGENTS.md). Read it first and
 then only the linked document relevant to the task; do not assume the whole
