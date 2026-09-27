@@ -18,6 +18,11 @@
         "/api/aircraft/:hex",
         "/api/search",
         "/api/stream"
+      ],
+      "changelogScopes": [
+        "radar",
+        "sse",
+        "search"
       ]
     },
     {
@@ -39,6 +44,12 @@
         "/api/history/:hex",
         "/api/history/flights",
         "/api/history/flights/:id"
+      ],
+      "changelogScopes": [
+        "aircraft",
+        "flight",
+        "history",
+        "route"
       ]
     },
     {
@@ -56,6 +67,10 @@
         "/api/airports/:icao",
         "/api/airports/:icao/movements",
         "/api/airports/:icao/traffic"
+      ],
+      "changelogScopes": [
+        "airport",
+        "airports"
       ]
     },
     {
@@ -71,6 +86,9 @@
       "apis": [
         "/api/time-machine/range",
         "/api/time-machine/window"
+      ],
+      "changelogScopes": [
+        "time-machine"
       ]
     },
     {
@@ -96,6 +114,10 @@
         "/api/weather/radar/frames",
         "/api/weather/sigmet",
         "/api/weather/wind"
+      ],
+      "changelogScopes": [
+        "weather",
+        "map-context"
       ]
     },
     {
@@ -117,6 +139,11 @@
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
         "/api/statistics/traffic"
+      ],
+      "changelogScopes": [
+        "statistics",
+        "recap",
+        "logbook"
       ]
     },
     {
@@ -136,6 +163,11 @@
         "/api/watchlist",
         "/api/watchlist/:id",
         "/api/watchlist/session"
+      ],
+      "changelogScopes": [
+        "alerts",
+        "watchlist",
+        "fleet"
       ]
     },
     {
@@ -151,6 +183,9 @@
       "apis": [
         "/api/intelligence/events",
         "/api/intelligence/stream"
+      ],
+      "changelogScopes": [
+        "intelligence"
       ]
     },
     {
@@ -172,6 +207,12 @@
         "/api/atc/validation",
         "/api/ats/routes",
         "/api/procedures"
+      ],
+      "changelogScopes": [
+        "atc",
+        "ats",
+        "airspace",
+        "procedures"
       ]
     },
     {
@@ -186,6 +227,10 @@
       ],
       "apis": [
         "/api/receiver/coverage"
+      ],
+      "changelogScopes": [
+        "receiver",
+        "coverage"
       ]
     },
     {
@@ -199,6 +244,10 @@
       "apis": [
         "/api/ogn/state",
         "/api/ogn/stream"
+      ],
+      "changelogScopes": [
+        "ogn",
+        "flarm"
       ]
     },
     {
@@ -216,6 +265,12 @@
         "/api/system/runtime-history",
         "/api/system/status",
         "/api/version"
+      ],
+      "changelogScopes": [
+        "system",
+        "health",
+        "release",
+        "version"
       ]
     },
     {
@@ -228,6 +283,9 @@
       "pages": [],
       "apis": [
         "/api/admin/flightaware/usage"
+      ],
+      "changelogScopes": [
+        "flightaware"
       ]
     }
   ]
