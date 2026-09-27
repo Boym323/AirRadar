@@ -1,0 +1,131 @@
+name: Repository Metadata
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: repository-metadata
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Fetch release tags
+        run: git fetch --force --tags origin
+
+      - name: Synchronize changelog
+        run: |
+          set -Eeuo pipefail
+          node scripts/changelog.mjs backfill
+          node scripts/changelog.mjs check
+
+      - name: Synchronize codebase metrics
+        run: node scripts/code-metrics.mjs --backfill-if-needed
+
+      - name: Validate generated metadata
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          node --check scripts/changelog.mjs
+          node --check scripts/code-metrics.mjs
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const history = JSON.parse(fs.readFileSync("docs/metrics/code-history.json", "utf8"));
+          if (history.schemaVersion !== 1 || !Array.isArray(history.snapshots)) {
+            throw new Error("Invalid code-history.json schema");
+          }
+          const latest = history.snapshots.at(-1);
+          if (!latest || !Number.isInteger(latest.production?.loc) || !Number.isInteger(latest.tests?.loc)) {
+            throw new Error("Code metrics are missing a valid latest snapshot");
+          }
+          const svg = fs.readFileSync("docs/metrics/code-growth.svg", "utf8");
+          if (!svg.includes("<svg") || !svg.includes("AirRadar codebase growth")) {
+            throw new Error("Generated code-growth.svg is invalid");
+          }
+          NODE
+
+      - name: Commit, open audit PR, and merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          files=(
+            CHANGELOG.md
+            docs/metrics/code-history.json
+            docs/metrics/code-growth.svg
+          )
+
+          if git diff --quiet -- "${files[@]}"; then
+            echo "Repository metadata is already synchronized."
+            exit 0
+          fi
+
+          branch="automation/repository-metadata"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${branch}"
+          git add -- "${files[@]}"
+          git commit -m "chore(metadata): sync generated repository metadata"
+          git push --force origin "${branch}"
+
+          pr_number="$(gh pr list             --repo "${GITHUB_REPOSITORY}"             --head "${branch}"             --base main             --state open             --json number             --jq '.[0].number // empty')"
+
+          if [[ -z "${pr_number}" ]]; then
+            gh pr create               --repo "${GITHUB_REPOSITORY}"               --base main               --head "${branch}"               --title "chore: sync repository metadata"               --body "Automated synchronization of generated AirRadar repository metadata after a successful main CI run. This PR contains only CHANGELOG.md and generated codebase metrics; metadata-only merges do not trigger production deployment."
+            pr_number="$(gh pr list               --repo "${GITHUB_REPOSITORY}"               --head "${branch}"               --base main               --state open               --json number               --jq '.[0].number // empty')"
+          fi
+
+          [[ -n "${pr_number}" ]] || {
+            echo "::error::Could not resolve repository metadata PR number."
+            exit 1
+          }
+
+          echo "Repository metadata PR #${pr_number} is ready."
+
+          for attempt in 1 2 3 4 5 6; do
+            if gh pr merge "${pr_number}"               --repo "${GITHUB_REPOSITORY}"               --merge; then
+              echo "Merged repository metadata PR #${pr_number}."
+              exit 0
+            fi
+
+            merge_state="$(gh pr view "${pr_number}"               --repo "${GITHUB_REPOSITORY}"               --json mergeStateStatus               --jq '.mergeStateStatus')"
+            echo "Merge attempt ${attempt}/6 did not complete; state=${merge_state}."
+
+            if [[ "${merge_state}" == "DIRTY" ]]; then
+              echo "::error::Repository metadata PR has merge conflicts."
+              exit 1
+            fi
+            sleep 5
+          done
+
+          echo "::error::Repository metadata PR #${pr_number} could not be merged automatically."
+          exit 1
