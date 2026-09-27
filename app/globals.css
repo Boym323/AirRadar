@@ -677,21 +677,23 @@ code, pre, kbd, .mono, [data-mono="true"] {
  * remain horizontal while the map or aircraft turns. */
 .aircraft-marker { width: 42px; height: 42px; display: grid; place-items: center; cursor: pointer; z-index: 2; }
 .aircraft-marker-visual { position: relative; width: 42px; height: 42px; display: grid; place-items: center; }
-.aircraft-marker.selected { z-index: 30; }
-.aircraft-marker.watchlisted { z-index: 8; outline: 1px solid rgba(243,185,95,.72); outline-offset: 3px; border-radius: 50%; }
-.aircraft-marker.emergency { z-index: 12; outline: 1px solid rgba(251,113,133,.9); outline-offset: 3px; border-radius: 50%; }
-.aircraft-marker.network-only { opacity: .82; }
-.aircraft-marker.network-only .aircraft-plane { outline: 1px dashed rgba(144,164,184,.72); outline-offset: 3px; border-radius: 50%; }
-.aircraft-marker.source-overlap .aircraft-plane { outline: 1px solid rgba(55,214,192,.72); outline-offset: 3px; border-radius: 50%; }
+.aircraft-marker.selected { z-index: 30; opacity: 1; }
+.aircraft-marker.watchlisted { z-index: 8; }
+.aircraft-marker.emergency { z-index: 12; }
+.aircraft-marker.network-only { opacity: .78; }
+.aircraft-marker.stale { opacity: .68; }
+.aircraft-marker.selected.stale, .aircraft-marker.selected.network-only, .aircraft-marker.emergency.stale { opacity: 1; }
+.aircraft-marker.watchlisted .aircraft-marker-visual::after { content: ""; position: absolute; inset: -4px; border: 1px dashed var(--selected); border-radius: 50%; pointer-events: none; }
+.aircraft-marker.network-only .aircraft-plane { outline: 1px dashed var(--border-strong); outline-offset: 3px; border-radius: 50%; }
+.aircraft-marker.source-overlap .aircraft-plane { outline: 1px solid var(--border-accent); outline-offset: 3px; border-radius: 50%; }
 .aircraft-plane-rotator { width: 34px; height: 34px; display: grid; place-items: center; transform-origin: center; will-change: transform; }
-.aircraft-plane { width: 32px; height: 32px; display: grid; place-items: center; color: var(--aircraft-color, var(--mint)); background: transparent; border: 0; box-shadow: none; line-height: 1; transition: color .18s, filter .18s, transform .18s; }
+.aircraft-plane { width: 32px; height: 32px; display: grid; place-items: center; color: var(--aircraft-color, var(--mint)); background: transparent; border: 0; box-shadow: none; line-height: 1; transition: color var(--motion-fast) ease, filter var(--motion-fast) ease, transform var(--motion-fast) ease; }
 .aircraft-marker:hover .aircraft-plane, .aircraft-marker:focus-visible .aircraft-plane { transform: scale(1.07); }
-.aircraft-marker.selected .aircraft-plane { color: var(--amber); filter: drop-shadow(0 0 8px rgba(243,185,95,.84)); transform: scale(1.1); }
-.aircraft-marker.watchlisted .aircraft-plane { filter: drop-shadow(0 0 6px rgba(243,185,95,.82)); }
-.aircraft-marker.selected .aircraft-marker-visual::before { content: ""; position: absolute; inset: -3px; border: 2px solid var(--amber); border-radius: 50%; box-shadow: 0 0 0 4px rgba(243,185,95,.13), 0 0 16px rgba(243,185,95,.48); pointer-events: none; }
-.aircraft-marker.selected .aircraft-marker-visual::after { display: none; }
+.aircraft-marker.selected .aircraft-plane { color: var(--selected); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--selected) 48%, transparent)); transform: scale(1.08); }
 .aircraft-marker.emergency .aircraft-marker-visual::before { content: ""; position: absolute; inset: 1px; border: 1px solid var(--danger); border-radius: 50%; animation: airradar-emergency-pulse 1.9s ease-out infinite; pointer-events: none; }
-.aircraft-marker.emergency .aircraft-plane { filter: drop-shadow(0 0 7px rgba(251,113,133,.74)); }
+.aircraft-marker.emergency .aircraft-plane { color: var(--danger); }
+.aircraft-marker.selected.emergency .aircraft-marker-visual::before { inset: -3px; border-color: var(--selected); animation: none; }
+.aircraft-marker.selected.emergency .aircraft-marker-visual::after { content: ""; position: absolute; inset: -6px; border: 1px solid var(--danger); border-radius: 50%; animation: airradar-emergency-pulse 1.9s ease-out infinite; pointer-events: none; }
 .aircraft-plane svg, .aircraft-row-icon svg { fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .aircraft-plane svg { width: var(--aircraft-icon-size, 20px); height: var(--aircraft-icon-size, 20px); }
 .aircraft-row-icon svg { width: 20px; height: 20px; }
@@ -712,21 +714,32 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .aircraft-plane .aircraft-glyph-asset { width: var(--aircraft-icon-size, 20px); height: var(--aircraft-icon-size, 20px); }
 .aircraft-row-icon .aircraft-glyph-asset { width: 21px; height: 21px; }
 .aircraft-glyph-helicopter, .aircraft-glyph-drone, .aircraft-glyph-turboprop { fill: none; }
-.aircraft-label { position: absolute; top: calc(50% + 25px); left: 50%; right: auto; bottom: auto; max-width: 140px; padding: 3px 5px; border: 1px solid rgba(190,214,232,.2); border-radius: 3px; background: rgba(8,17,29,.9); color: var(--text); font-family: var(--font-geist-mono), monospace; font-size: 10px; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; text-overflow: ellipsis; overflow: hidden; transform: translateX(-50%); }
+.aircraft-label { position: absolute; top: calc(50% + 25px); left: 50%; right: auto; bottom: auto; display: grid; gap: 1px; width: max-content; max-width: 150px; padding: 1px 2px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text); font-family: var(--font-geist-mono), monospace; font-size: var(--font-size-xs); line-height: var(--line-height-tight); font-variant-numeric: tabular-nums; pointer-events: none; text-shadow: 0 1px 2px var(--background), 0 -1px 2px var(--background), 1px 0 2px var(--background), -1px 0 2px var(--background); transform: translateX(-50%); }
+.aircraft-label-primary, .aircraft-label-secondary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aircraft-label-primary { color: inherit; font-weight: 650; }
+.aircraft-label-secondary { color: var(--text-secondary); font-size: var(--font-size-2xs); font-weight: 500; }
+.aircraft-label-secondary[hidden] { display: none; }
 .aircraft-label[data-content-empty="true"] { display: none; }
 .aircraft-label[data-collision-hidden="true"] { visibility: hidden; }
 .aircraft-label[data-placement="top"] { top: auto; bottom: calc(50% + 25px); transform: translateX(-50%); }
 .aircraft-label[data-placement="right"] { top: 50%; left: calc(50% + 25px); transform: translateY(-50%); }
 .aircraft-label[data-placement="left"] { top: 50%; left: auto; right: calc(50% + 25px); transform: translateY(-50%); }
 .aircraft-label[data-placement="bottom"] { top: calc(50% + 25px); left: 50%; transform: translateX(-50%); }
-.aircraft-marker.selected .aircraft-label { border-color: rgba(243,185,95,.72); background: rgba(8,17,29,.96); color: var(--warning); font-weight: 700; }
-.aircraft-marker.emergency .aircraft-label { border-color: rgba(251,113,133,.78); }
+.aircraft-marker.stale:not(.selected):not(.emergency):not(.watchlisted) .aircraft-label { opacity: .72; }
+.aircraft-marker.selected .aircraft-label { padding: 3px 5px; border: 1px solid var(--border-selected); background: var(--surface-overlay); color: var(--selected); font-weight: 700; text-shadow: none; }
+.aircraft-marker.emergency .aircraft-label { border: 1px solid var(--border-danger); color: var(--danger); }
+
+@media (max-width: 520px) {
+  .aircraft-label { max-width: 116px; font-size: var(--font-size-2xs); }
+  .aircraft-marker.selected .aircraft-label { max-width: 144px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar,
   .aircraft-plane-rotator,
   .aircraft-plane { transition: none; }
-  .aircraft-marker.emergency::before { animation: none; }
+  .aircraft-marker.emergency .aircraft-marker-visual::before,
+  .aircraft-marker.selected.emergency .aircraft-marker-visual::after { animation: none; }
 }
 
 .ogn-marker { width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; z-index: 3; }

@@ -10,7 +10,7 @@ import {
   airportVisibleAtZoom,
   DEFAULT_AIRPORT_LAYER_VISIBILITY,
 } from "@/lib/airport-visibility";
-import { aircraftMarkerClassNames } from "@/lib/radar-ui";
+import { aircraftLabelOpacity, aircraftMarkerClassNames, aircraftPositionIsStale, aircraftVisualOpacity } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
@@ -85,6 +85,17 @@ describe("radar UI polish helpers", () => {
       "watchlisted",
       "emergency",
     ]);
+  });
+
+  it("uses existing position age to quiet stale traffic without muting selection", () => {
+    const provenance = { seenLocal: true, seenNetwork: false, lastLocalSeen: null, lastNetworkSeen: null, positionOrigin: null, positionSource: "UNKNOWN" as const };
+    const fresh = { seenPosSeconds: 0, provenance };
+    const stale = { seenPosSeconds: 61, provenance };
+    expect(aircraftPositionIsStale(fresh)).toBe(false);
+    expect(aircraftPositionIsStale(stale)).toBe(true);
+    expect(aircraftVisualOpacity(stale)).toBeLessThan(aircraftVisualOpacity(fresh));
+    expect(aircraftLabelOpacity(stale)).toBeLessThan(aircraftLabelOpacity(fresh));
+    expect(aircraftMarkerClassNames({ selected: false, watchlisted: false, emergency: false, stale: true })).toContain("stale");
   });
 
   it("keeps all primary routes reachable from the mobile radar header", () => {

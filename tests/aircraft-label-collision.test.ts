@@ -11,6 +11,7 @@ describe("aircraft label collision policy", () => {
     expect(aircraftLabelPriorityRank("selected")).toBeLessThan(aircraftLabelPriorityRank("emergency"));
     expect(aircraftLabelPriorityRank("emergency")).toBeLessThan(aircraftLabelPriorityRank("watchlisted"));
     expect(aircraftLabelPriorityRank("watchlisted")).toBeLessThan(aircraftLabelPriorityRank("normal"));
+    expect(aircraftLabelPriorityRank("normal")).toBeLessThan(aircraftLabelPriorityRank("stale"));
     expect(aircraftLabelPlacements("selected")).toEqual(["right", "left", "top", "bottom"]);
     expect(aircraftLabelPlacements("normal")).toEqual(["bottom", "right", "left", "top"]);
   });
@@ -62,5 +63,14 @@ describe("aircraft label collision policy", () => {
   it("keeps rectangle intersection deterministic", () => {
     expect(screenRectsIntersect({ x: 0, y: 0, width: 10, height: 10 }, { x: 9, y: 9, width: 10, height: 10 })).toBe(true);
     expect(screenRectsIntersect({ x: 0, y: 0, width: 10, height: 10 }, { x: 10, y: 0, width: 10, height: 10 })).toBe(false);
+  });
+
+  it("lets fresh normal labels win over stale labels at the same position", () => {
+    const result = layoutAircraftLabels([
+      { id: "stale", point: { x: 100, y: 100 }, width: 40, height: 14, priority: "stale", placements: ["right"] },
+      { id: "fresh", point: { x: 100, y: 100 }, width: 40, height: 14, priority: "normal", placements: ["right"] },
+    ]);
+    expect(result.placements.has("fresh")).toBe(true);
+    expect(result.hidden.has("stale")).toBe(true);
   });
 });

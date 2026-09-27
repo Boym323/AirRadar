@@ -6,10 +6,9 @@ import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
 import { aircraftIconSizeAtZoom, aircraftIconVisualSize } from "@/lib/aircraft/icon-size";
 import { resolveAircraftVisualHeading } from "@/lib/aircraft/visual-heading";
 import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode";
-import { aircraftMapLabel } from "@/lib/aircraft/map-labels";
-import { formatAltitude } from "@/lib/i18n";
+import { aircraftMapLabelText } from "@/lib/aircraft/map-labels";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
-import { aircraftMarkerClassNames } from "@/lib/radar-ui";
+import { aircraftMarkerClassNames, aircraftPositionIsStale } from "@/lib/radar-ui";
 import { aircraftLabelPriorityForState, type AircraftLabelPriority } from "@/lib/radar/aircraft-label-collision";
 import { CANONICAL_AIRCRAFT_GLYPH_PATHS } from "@/lib/aircraft/glyph-paths";
 
@@ -22,6 +21,8 @@ export interface AircraftMarkerHandle {
   rotator: HTMLElement;
   plane: HTMLElement;
   label: HTMLElement;
+  labelPrimary: HTMLElement;
+  labelSecondary: HTMLElement;
   labelText: string | null;
   baseLabelText: string | null;
   identityLabel: string;
@@ -29,6 +30,7 @@ export interface AircraftMarkerHandle {
   selected: boolean;
   watchlisted: boolean;
   emergency: boolean;
+  stale: boolean;
   hovered: boolean;
   labelWidth: number | null;
   labelHeight: number | null;
@@ -122,6 +124,12 @@ export function createAircraftMarkerHandle(
   const label = document.createElement("div");
   label.className = "aircraft-label";
   label.setAttribute("aria-hidden", "true");
+  const labelPrimary = document.createElement("span");
+  labelPrimary.className = "aircraft-label-primary";
+  const labelSecondary = document.createElement("span");
+  labelSecondary.className = "aircraft-label-secondary";
+  labelSecondary.setAttribute("aria-hidden", "true");
+  label.append(labelPrimary, labelSecondary);
   label.dataset.placement = "bottom";
   label.dataset.collisionHidden = "false";
   root.append(visual);
@@ -135,6 +143,8 @@ export function createAircraftMarkerHandle(
     rotator,
     plane,
     label,
+    labelPrimary,
+    labelSecondary,
     labelText: null,
     baseLabelText: null,
     identityLabel: aircraftLabelFor(aircraft),
@@ -142,6 +152,7 @@ export function createAircraftMarkerHandle(
     selected: false,
     watchlisted: false,
     emergency: false,
+    stale: false,
     hovered: false,
     labelWidth: null,
     labelHeight: null,
@@ -170,6 +181,14 @@ export function createAircraftMarkerHandle(
   return handle;
 }
 
+function setAircraftLabelContent(handle: AircraftMarkerHandle, value: string | null): void {
+  const [primary = "", secondary = ""] = value?.split("\n", 2) ?? [];
+  handle.labelPrimary.textContent = primary;
+  handle.labelSecondary.textContent = secondary;
+  handle.labelSecondary.hidden = !secondary;
+  handle.label.dataset.contentEmpty = primary ? "false" : "true";
+}
+
 export function updateAircraftMarkerHandle(
   handle: AircraftMarkerHandle,
   aircraft: AircraftView,
@@ -180,8 +199,10 @@ export function updateAircraftMarkerHandle(
   handle.watchlisted = options.watchlisted;
   handle.emergency = options.emergency;
   handle.identityLabel = aircraftLabelFor(aircraft);
-  const priority = aircraftLabelPriorityForState({ ...options, hovered: handle.hovered });
-  const className = aircraftMarkerClassNames({ selected: options.selected, watchlisted: options.watchlisted, emergency: options.emergency, source }).join(" ");
+  const stale = aircraftPositionIsStale(aircraft);
+  handle.stale = stale;
+  const priority = aircraftLabelPriorityForState({ ...options, stale, hovered: handle.hovered });
+  const className = aircraftMarkerClassNames({ selected: options.selected, watchlisted: options.watchlisted, emergency: options.emergency, stale, source }).join(" ");
   setClassName(handle.root, className);
   const labelForAria = aircraftLabelFor(aircraft);
   if (handle.root.getAttribute("aria-label") !== labelForAria) handle.root.setAttribute("aria-label", labelForAria);
@@ -206,13 +227,15 @@ export function updateAircraftMarkerHandle(
   if (color) handle.plane.style.setProperty("--aircraft-color", color);
   else handle.plane.style.removeProperty("--aircraft-color");
 
-  const baseLabel = aircraftMapLabel(aircraft, options.zoom, formatAltitude(aircraft.altitude));
+  const baseLabel = aircraftMapLabelText(aircraft, options.zoom, {
+    suppressTelemetry: stale && !options.selected && !options.emergency && !options.watchlisted,
+  });
   handle.baseLabelText = baseLabel;
   const nextLabelText = baseLabel ?? (priority === "selected" || priority === "emergency" || priority === "watchlisted" || priority === "hovered" ? handle.identityLabel : null);
   const contentChanged = handle.labelText !== nextLabelText;
   if (contentChanged) {
     handle.labelText = nextLabelText;
-    handle.label.textContent = nextLabelText ?? "";
+    setAircraftLabelContent(handle, nextLabelText);
     handle.labelWidth = null;
     handle.labelHeight = null;
   }
@@ -230,16 +253,16 @@ export function setAircraftMarkerInteractionState(handle: AircraftMarkerHandle, 
     selected: handle.selected,
     emergency: handle.emergency,
     watchlisted: handle.watchlisted,
+    stale: handle.stale,
     hovered,
   });
   handle.label.dataset.priority = handle.labelPriority;
   const nextLabelText = handle.baseLabelText ?? (handle.labelPriority === "selected" || handle.labelPriority === "emergency" || handle.labelPriority === "watchlisted" || handle.labelPriority === "hovered" ? handle.identityLabel : null);
   if (handle.labelText === nextLabelText) return true;
   handle.labelText = nextLabelText;
-  handle.label.textContent = nextLabelText ?? "";
+  setAircraftLabelContent(handle, nextLabelText);
   handle.labelWidth = null;
   handle.labelHeight = null;
-  handle.label.dataset.contentEmpty = nextLabelText ? "false" : "true";
   return true;
 }
 

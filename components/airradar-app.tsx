@@ -11,7 +11,6 @@ import {
   formatAtcLimit,
   formatAtcNote,
   formatAtcService,
-  formatAltitude,
   formatDateTime,
   formatNumber,
   t,
@@ -21,7 +20,7 @@ import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
-import { aircraftMapLabel, aircraftMapLabelLevel } from "@/lib/aircraft/map-labels";
+import { aircraftMapLabelLevel, aircraftMapLabelText } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -88,6 +87,8 @@ import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
 import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
 import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
+import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
+import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import {
   AIRCRAFT_WEBGL_LABEL_LAYER_ID,
   AIRCRAFT_WEBGL_LABEL_SOURCE_ID,
@@ -193,7 +194,12 @@ function aircraftWebglLabelFeature(
     id: aircraft.icaoHex,
     properties: {
       icaoHex: aircraft.icaoHex,
-      label: aircraftMapLabel(aircraft, zoom, formatAltitude(aircraft.altitude)) ?? "",
+      label: aircraftMapLabelText(aircraft, zoom, {
+        suppressTelemetry: aircraftPositionIsStale(aircraft),
+      }) ?? "",
+      source: classifyAircraftSource(aircraft),
+      stale: aircraftPositionIsStale(aircraft),
+      labelOpacity: aircraftLabelOpacity(aircraft),
     },
     geometry: {
       type: "Point" as const,
@@ -1233,17 +1239,19 @@ export function AirRadarApp() {
         layout: {
           "text-field": ["get", "label"],
           "text-font": ["Noto Sans Regular"],
-          "text-size": 10,
-          "text-offset": [0, 1.55],
-          "text-padding": 5,
+          "text-size": ["interpolate", ["linear"], ["zoom"], 6.5, 9, 10.5, 10, 14, 11],
+          "text-line-height": 1.1,
+          "text-offset": [0, 1.4],
+          "text-padding": 4,
           "text-allow-overlap": false,
           "text-ignore-placement": false,
           "text-optional": true,
         },
         paint: {
-          "text-color": AIRRADAR_MAP_THEME.label,
+          "text-color": ["case", ["any", ["get", "stale"], ["==", ["get", "source"], "NETWORK_ONLY"]], AIRRADAR_MAP_THEME.labelMuted, AIRRADAR_MAP_THEME.label],
+          "text-opacity": ["get", "labelOpacity"],
           "text-halo-color": AIRRADAR_MAP_THEME.outline,
-          "text-halo-width": 1.15,
+          "text-halo-width": 1,
         },
       });
       const webglAircraftHex = (event: MapLayerMouseEvent): string | null => {

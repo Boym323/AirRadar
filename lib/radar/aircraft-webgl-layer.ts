@@ -22,6 +22,7 @@ import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
 import { aircraftIconVisualSize, aircraftIconZoomScale } from "@/lib/aircraft/icon-size";
 import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import type { AircraftView } from "@/lib/aircraft/types";
+import { aircraftVisualOpacity } from "@/lib/radar-ui";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 
 export const AIRCRAFT_WEBGL_LAYER_ID = "aircraft-webgl";
@@ -78,14 +79,15 @@ function parseCssColor(value: string | null): [number, number, number] | null {
 }
 
 export function aircraftWebglColor(aircraft: AircraftView, mode: AircraftColorMode): Rgba {
+  const opacity = aircraftVisualOpacity(aircraft);
   const mapped = parseCssColor(aircraftColor(aircraft, mode));
-  if (mapped) return [mapped[0], mapped[1], mapped[2], 0.96];
+  if (mapped) return [mapped[0], mapped[1], mapped[2], opacity];
 
   switch (classifyAircraftSource(aircraft)) {
-    case "NETWORK_ONLY": return [0.565, 0.643, 0.722, 0.82];
-    case "OVERLAP": return [0.216, 0.839, 0.753, 1];
-    case "LOCAL_ONLY": return [0.216, 0.839, 0.753, 0.96];
-    default: return [0.565, 0.643, 0.722, 0.9];
+    case "NETWORK_ONLY": return [0.565, 0.643, 0.722, opacity];
+    case "OVERLAP": return [0.216, 0.839, 0.753, opacity];
+    case "LOCAL_ONLY": return [0.216, 0.839, 0.753, opacity];
+    default: return [0.565, 0.643, 0.722, opacity];
   }
 }
 

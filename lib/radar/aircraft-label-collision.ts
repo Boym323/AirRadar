@@ -5,6 +5,7 @@ export type AircraftLabelPriority =
   | "watchlisted"
   | "hovered"
   | "normal"
+  | "stale"
   | "selectedRouteAirport"
   | "importantAirport"
   | "regularAirport";
@@ -48,9 +49,10 @@ const PRIORITY_ORDER: Record<AircraftLabelPriority, number> = {
   watchlisted: 2,
   hovered: 3,
   normal: 4,
-  selectedRouteAirport: 5,
-  importantAirport: 6,
-  regularAirport: 7,
+  stale: 5,
+  selectedRouteAirport: 6,
+  importantAirport: 7,
+  regularAirport: 8,
 };
 
 const DEFAULT_PLACEMENTS: Record<AircraftLabelPriority, readonly AircraftLabelPlacement[]> = {
@@ -59,6 +61,7 @@ const DEFAULT_PLACEMENTS: Record<AircraftLabelPriority, readonly AircraftLabelPl
   watchlisted: ["right", "left", "top", "bottom"],
   hovered: ["right", "left", "top", "bottom"],
   normal: ["bottom", "right", "left", "top"],
+  stale: ["bottom", "right", "left", "top"],
   selectedRouteAirport: ["bottom", "top", "right", "left"],
   importantAirport: ["bottom", "top", "right", "left"],
   regularAirport: ["bottom", "top", "right", "left"],
@@ -110,11 +113,12 @@ export function aircraftLabelPlacements(priority: AircraftLabelPriority): readon
   return DEFAULT_PLACEMENTS[priority];
 }
 
-export function aircraftLabelPriorityForState(state: { selected: boolean; emergency: boolean; watchlisted: boolean; hovered?: boolean }): AircraftLabelPriority {
+export function aircraftLabelPriorityForState(state: { selected: boolean; emergency: boolean; watchlisted: boolean; stale?: boolean; hovered?: boolean }): AircraftLabelPriority {
   if (state.selected) return "selected";
   if (state.emergency) return "emergency";
   if (state.watchlisted) return "watchlisted";
   if (state.hovered) return "hovered";
+  if (state.stale) return "stale";
   return "normal";
 }
 
