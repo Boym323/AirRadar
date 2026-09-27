@@ -1,6 +1,7 @@
 import type { Aircraft, AircraftOperationalStatus, AircraftTargetState, ReceiverPosition } from "@/lib/aircraft/types";
 import type { BeastFrame } from "./beast-parser";
 import { haversineDistanceKm, initialBearing } from "@/lib/geo";
+import { decodeCommB } from "./bds-decoder";
 
 interface Cpr { odd: boolean; lat: number; lon: number; receivedAt: number; }
 interface Track { aircraft: Partial<Aircraft> & { icaoHex: string }; cprEven?: Cpr; cprOdd?: Cpr; lastMessageAt: number; lastPositionAt: number | null; altitudeAt: number | null; baroAltitudeAt: number | null; geomAltitudeAt: number | null; groundSpeedAt: number | null; trackAt: number | null; verticalRateAt: number | null; }
@@ -184,6 +185,10 @@ function callsignField(bytes: Buffer): string | null {
 
 export class BeastDecoder {
   private readonly tracks = new Map<string, Track>();
+  private readonly bdsCounters = { commBDecoded: 0, commBAmbiguous: 0, commBRejected: 0, bds40: 0, bds44: 0, bds50: 0, bds60: 0 };
+  private lastBeastTimestamp: bigint | null = null;
+  private timestampEpoch = 0n;
+  private lastObservationAt: number | null = null;
   readonly maxAircraft: number;
   private readonly origin: "local" | "adsblol";
   constructor(private readonly receiver: ReceiverPosition, maxAircraft = 3000, private readonly expiryMs = 30_000, options: { origin?: "local" | "adsblol" } = {}) { this.maxAircraft = Math.max(1, Math.min(50_000, Math.trunc(maxAircraft))); this.origin = options.origin ?? "local"; }
@@ -193,29 +198,33 @@ export class BeastDecoder {
     if (p.length !== 7 && p.length !== 14) return null;
     const df = p[0] >> 3;
     const longFrame = p.length === 14;
-    if (longFrame && df !== 17 && df !== 18) return null;
-    if (!longFrame && ![4, 5, 11, 20, 21].includes(df)) return null;
-    if (longFrame && modeSCrc(p) !== 0) return null;
+    if (longFrame && ![16, 17, 18, 20, 21].includes(df)) return null;
+    if (!longFrame && ![0, 4, 5, 11].includes(df)) return null;
+    const parity = modeSCrc(p);
+    if (longFrame && (df === 17 || df === 18) && parity !== 0) return null;
     let icaoHex: string;
-    if (longFrame || df === 11) {
+    if (longFrame && (df === 17 || df === 18)) {
+      icaoHex = p.subarray(1, 4).toString("hex").toUpperCase();
+    } else if (df === 11) {
       icaoHex = p.subarray(1, 4).toString("hex").toUpperCase();
     } else {
       // DF4/5/20/21 use address parity (AP), so the CRC remainder is the
       // ICAO address. Only attach the message to an already-known track;
       // otherwise an arbitrary AP value could create a false aircraft.
-      icaoHex = modeSCrc(p).toString(16).padStart(6, "0").toUpperCase();
+      icaoHex = parity.toString(16).padStart(6, "0").toUpperCase();
       if (!this.tracks.has(icaoHex)) return null;
     }
-    const me = longFrame ? p.subarray(4, 11) : null;
+    const me = longFrame && (df === 17 || df === 18) ? p.subarray(4, 11) : null;
+    const observedAt = this.observationTime(frame, receivedAt);
     const typeCode = me ? me[0] >> 3 : null;
     let track = this.tracks.get(icaoHex);
-    if (!track) { const created: Track = { lastMessageAt: receivedAt, lastPositionAt: null, altitudeAt: null, baroAltitudeAt: null, geomAltitudeAt: null, groundSpeedAt: null, trackAt: null, verticalRateAt: null, aircraft: { icaoHex } }; this.tracks.set(icaoHex, created); track = created; }
-    track.lastMessageAt = receivedAt;
+    if (!track) { const created: Track = { lastMessageAt: observedAt, lastPositionAt: null, altitudeAt: null, baroAltitudeAt: null, geomAltitudeAt: null, groundSpeedAt: null, trackAt: null, verticalRateAt: null, aircraft: { icaoHex } }; this.tracks.set(icaoHex, created); track = created; }
+    track.lastMessageAt = observedAt;
     const a = track.aircraft;
     a.icaoHex = icaoHex;
-    a.lastSeen = new Date(receivedAt).toISOString();
+    a.lastSeen = new Date(observedAt).toISOString();
     a.source = a.source ?? "ADS-B"; a.origin = this.origin; a.sourceType = `df${df}`; a.trail ??= [];
-    if (me && typeCode !== null && typeCode >= 1 && typeCode <= 4) a.callsign = callsignField(me.subarray(1, 7));
+    if (me && typeCode !== null && typeCode >= 1 && typeCode <= 4) { a.callsign = callsignField(me.subarray(1, 7)); a.category = `A${typeCode}`; }
     if (me && typeCode !== null && typeCode >= 5 && typeCode <= 8) {
       const velocity = modeSValue(me);
       const movement = modeSBits(velocity, 5, 7);
@@ -230,27 +239,27 @@ export class BeastDecoder {
       a.onGround = true;
       a.groundSpeed = surfaceMovementSpeed(movement);
       a.track = trackStatus === 1 ? trackRaw * 360 / 128 : null;
-      track.lastPositionAt = receivedAt;
+      track.lastPositionAt = observedAt;
     } else if (me && typeCode !== null && (typeCode >= 9 && typeCode <= 18 || typeCode >= 20 && typeCode <= 22)) {
       const decodedAltitude = decodeAltitudeCode(((me[1] & 0x1f) << 8) | me[2]);
       if (typeCode >= 9 && typeCode <= 18) {
         a.baroAltitude = decodedAltitude;
         a.altitude = a.baroAltitude;
-        if (decodedAltitude !== null) { track.baroAltitudeAt = receivedAt; track.altitudeAt = receivedAt; }
+        if (decodedAltitude !== null) { track.baroAltitudeAt = observedAt; track.altitudeAt = observedAt; }
       } else {
         a.geomAltitude = decodedAltitude;
         a.altitude = a.geomAltitude;
-        if (decodedAltitude !== null) { track.geomAltitudeAt = receivedAt; track.altitudeAt = receivedAt; }
+        if (decodedAltitude !== null) { track.geomAltitudeAt = observedAt; track.altitudeAt = observedAt; }
       }
       const odd = Boolean(me[2] & 4); const cprLat = ((me[2] & 3) << 15) | (me[3] << 7) | (me[4] >> 1); const cprLon = ((me[4] & 1) << 16) | (me[5] << 8) | me[6];
-      const slot: Cpr = { odd, lat: cprLat / 131072, lon: cprLon / 131072, receivedAt };
+      const slot: Cpr = { odd, lat: cprLat / 131072, lon: cprLon / 131072, receivedAt: observedAt };
       if (odd) track.cprOdd = slot; else track.cprEven = slot;
       const even = track.cprEven; const oddFrame = track.cprOdd;
       if (even && oddFrame && Math.abs(even.receivedAt - oddFrame.receivedAt) <= 10_000) {
         const j = Math.floor(59 * even.lat - 60 * oddFrame.lat + 0.5); const latEven = cprDlat(false) * (MOD(j, 60) + even.lat); const latOdd = cprDlat(true) * (MOD(j, 59) + oddFrame.lat);
         const normalizedEven = latEven >= 270 ? latEven - 360 : latEven; const normalizedOdd = latOdd >= 270 ? latOdd - 360 : latOdd; const useOdd = oddFrame.receivedAt > even.receivedAt; const lat = useOdd ? normalizedOdd : normalizedEven; const ni = cprN(lat, useOdd); const m = Math.floor(even.lon * (ni - 1) - oddFrame.lon * ni + 0.5); const longitude = useOdd ? (360 / Math.max(1, ni)) * (MOD(m, Math.max(1, ni)) + oddFrame.lon) : (360 / Math.max(1, ni)) * (MOD(m, Math.max(1, ni)) + even.lon);
         const normalizedLongitude = MOD(longitude + 180, 360) - 180;
-        if (lat >= -90 && lat <= 90 && Number.isFinite(normalizedLongitude)) { a.lat = lat; a.lon = normalizedLongitude; track.lastPositionAt = receivedAt; }
+        if (lat >= -90 && lat <= 90 && Number.isFinite(normalizedLongitude)) { a.lat = lat; a.lon = normalizedLongitude; track.lastPositionAt = observedAt; }
       }
     } else if (me && typeCode === 19) {
       const velocity = modeSValue(me);
@@ -262,7 +271,7 @@ export class BeastDecoder {
         ? null
         : (verticalRateSign ? -1 : 1) * (verticalRateMagnitude - 1) * 64;
       a.verticalRate = verticalRate;
-      if (verticalRate !== null) track.verticalRateAt = receivedAt;
+      if (verticalRate !== null) track.verticalRateAt = observedAt;
       a.baroRate = verticalRateSource === 1 ? verticalRate : null;
       a.geomRate = verticalRateSource === 0 ? verticalRate : null;
 
@@ -275,7 +284,7 @@ export class BeastDecoder {
           const north = (modeSBits(velocity, 24, 1) ? -1 : 1) * (nsMagnitude - 1) * scale;
           a.groundSpeed = Math.round(Math.sqrt(east * east + north * north));
           a.track = (Math.atan2(east, north) * 180 / Math.PI + 360) % 360;
-          track.groundSpeedAt = receivedAt; track.trackAt = receivedAt;
+          track.groundSpeedAt = observedAt; track.trackAt = observedAt;
         } else {
           a.groundSpeed = null;
           a.track = null;
@@ -284,10 +293,17 @@ export class BeastDecoder {
         // Subtypes 3/4 report IAS/TAS, not ground speed. The heading is still
         // useful as the best available track-like direction.
           a.track = modeSBits(velocity, 13, 1) === 1
-            ? modeSBits(velocity, 14, 10) / 1024 * 360
+            ? (modeSBits(velocity, 14, 1) ? -1 : 1) * modeSBits(velocity, 15, 10) * 90 / 512
             : null;
+          const airspeedStatus = modeSBits(velocity, 26, 1);
+          const airspeed = modeSBits(velocity, 27, 10);
+          if (airspeedStatus && airspeed > 0) {
+            const telemetry = a.adsbTelemetry ?? emptyTelemetry();
+            if (modeSBits(velocity, 25, 1) === 0) telemetry.iasKt = airspeed; else telemetry.tasKt = airspeed;
+            a.adsbTelemetry = telemetry;
+          }
           a.groundSpeed = null;
-          if (a.track !== null) track.trackAt = receivedAt;
+          if (a.track !== null) track.trackAt = observedAt;
       }
 
       const geoBaroSign = modeSBits(velocity, 48, 1);
@@ -342,25 +358,76 @@ export class BeastDecoder {
         silSupplement: version === 2 ? modeSBits(status, 54, 1) : null,
       };
       a.operationalStatus = operationalStatus;
-    } else if (!longFrame && (df === 4 || df === 20)) {
+    } else if (df === 0 || df === 4 || df === 16 || df === 20) {
       const altitude = decodeAltitudeCode(((p[2]! & 0x1f) << 8) | p[3]!);
       if (altitude !== null) {
         a.baroAltitude = altitude;
         a.altitude = altitude;
-        track.baroAltitudeAt = receivedAt;
-        track.altitudeAt = receivedAt;
+        track.baroAltitudeAt = observedAt;
+        track.altitudeAt = observedAt;
       }
       a.onGround = (p[0]! & 0x07) === 1;
-    } else if (!longFrame && (df === 5 || df === 21)) {
+    } else if (df === 5 || df === 21) {
       a.squawk = squawkFromIdentity(((p[2]! & 0x1f) << 8) | p[3]!);
       a.onGround = (p[0]! & 0x07) === 1;
-    } else if (!longFrame && df === 11) {
+    } else if (df === 11) {
       a.onGround = (p[0]! & 0x07) === 4;
     }
-    const lat = a.lat ?? null; const lon = a.lon ?? null; a.distanceKm = lat !== null && lon !== null ? haversineDistanceKm(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.bearing = lat !== null && lon !== null ? initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.seenSeconds = Math.max(0, (Date.now() - receivedAt) / 1000); a.seenPosSeconds = track.lastPositionAt === null ? null : Math.max(0, (Date.now() - track.lastPositionAt) / 1000); a.onGround ??= false; a.category ??= null; a.registration ??= null; a.aircraftType ??= null; a.aircraftDescription ??= null; a.rssi ??= null; a.messages = (a.messages ?? 0) + 1; a.baroRate ??= null; a.geomRate ??= null; a.provenance = { seenLocal: this.origin === "local", seenNetwork: this.origin === "adsblol", lastLocalSeen: this.origin === "local" ? a.lastSeen! : null, lastNetworkSeen: this.origin === "adsblol" ? a.lastSeen! : null, positionOrigin: lat !== null ? this.origin : null, positionSource: lat !== null ? a.source! : "UNKNOWN" };
-    a.observationTimes = { altitude: track.altitudeAt, baroAltitude: track.baroAltitudeAt, geomAltitude: track.geomAltitudeAt, groundSpeed: track.groundSpeedAt, track: track.trackAt, verticalRate: track.verticalRateAt };
-    this.expire(receivedAt); return a as Aircraft;
+    if (longFrame && (df === 20 || df === 21)) {
+      const commB = decodeCommB(p.subarray(4, 11));
+      if (!commB) this.bdsCounters.commBRejected += 1;
+      else if (commB.confidence === "ambiguous") this.bdsCounters.commBAmbiguous += 1;
+      else {
+        this.bdsCounters.commBDecoded += 1;
+        if (commB.register === "BDS4,0") this.bdsCounters.bds40 += 1;
+        if (commB.register === "BDS4,4") this.bdsCounters.bds44 += 1;
+        if (commB.register === "BDS5,0") this.bdsCounters.bds50 += 1;
+        if (commB.register === "BDS6,0") this.bdsCounters.bds60 += 1;
+        const telemetry = a.adsbTelemetry ?? emptyTelemetry();
+        const values = commB.values;
+        if (typeof values.iasKt === "number") telemetry.iasKt = values.iasKt;
+        if (typeof values.tasKt === "number") telemetry.tasKt = values.tasKt;
+        if (typeof values.mach === "number") telemetry.mach = values.mach;
+        if (typeof values.magneticHeadingDeg === "number") telemetry.magneticHeadingDeg = values.magneticHeadingDeg;
+        if (typeof values.trueHeadingDeg === "number") telemetry.trueHeadingDeg = values.trueHeadingDeg;
+        if (typeof values.rollDeg === "number") telemetry.rollDeg = values.rollDeg;
+        if (typeof values.trackRateDegPerSec === "number") telemetry.trackRateDegPerSec = values.trackRateDegPerSec;
+        if (typeof values.selectedAltitudeMcpFt === "number") telemetry.selectedAltitudeMcpFt = values.selectedAltitudeMcpFt;
+        if (typeof values.selectedAltitudeFmsFt === "number") telemetry.selectedAltitudeFmsFt = values.selectedAltitudeFmsFt;
+        if (typeof values.navQnhHpa === "number") telemetry.navQnhHpa = values.navQnhHpa;
+        if (typeof values.windDirectionDeg === "number") telemetry.windDirectionDeg = values.windDirectionDeg;
+        if (typeof values.windSpeedKt === "number") telemetry.windSpeedKt = values.windSpeedKt;
+        if (typeof values.outsideAirTemperatureC === "number") telemetry.outsideAirTemperatureC = values.outsideAirTemperatureC;
+        if (typeof values.baroVerticalRate === "number") { a.baroRate = values.baroVerticalRate; a.verticalRate = values.baroVerticalRate; }
+        if (typeof values.inertialVerticalRate === "number") { a.geomRate = values.inertialVerticalRate; if (a.verticalRate === null || a.verticalRate === undefined) a.verticalRate = values.inertialVerticalRate; }
+        a.adsbTelemetry = telemetry;
+        const fields = a.provenance?.fields ?? {};
+        for (const key of Object.keys(values)) fields[key] = { origin: this.origin, protocol: "beast-mode-s", df, bds: commB.register, observedAt: new Date(observedAt).toISOString(), confidence: commB.confidence };
+        a.provenance = { seenLocal: this.origin === "local", seenNetwork: this.origin === "adsblol", lastLocalSeen: this.origin === "local" ? a.lastSeen! : null, lastNetworkSeen: this.origin === "adsblol" ? a.lastSeen! : null, positionOrigin: a.lat !== undefined && a.lon !== undefined ? this.origin : null, positionSource: a.source ?? "UNKNOWN", fields };
+      }
+    }
+    const lat = a.lat ?? null; const lon = a.lon ?? null; a.distanceKm = lat !== null && lon !== null ? haversineDistanceKm(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.bearing = lat !== null && lon !== null ? initialBearing(this.receiver.lat, this.receiver.lon, lat, lon) : null; a.seenSeconds = Math.max(0, (Date.now() - observedAt) / 1000); a.seenPosSeconds = track.lastPositionAt === null ? null : Math.max(0, (Date.now() - track.lastPositionAt) / 1000); a.onGround ??= false; a.category ??= null; a.registration ??= null; a.aircraftType ??= null; a.aircraftDescription ??= null; a.rssi ??= null; a.beastSignal = frame.signal; a.messages = (a.messages ?? 0) + 1; a.baroRate ??= null; a.geomRate ??= null; a.provenance = { ...(a.provenance ?? {}), seenLocal: this.origin === "local", seenNetwork: this.origin === "adsblol", lastLocalSeen: this.origin === "local" ? a.lastSeen! : null, lastNetworkSeen: this.origin === "adsblol" ? a.lastSeen! : null, positionOrigin: lat !== null ? this.origin : null, positionSource: lat !== null ? a.source! : "UNKNOWN" };
+    a.observationTimes = { altitude: track.altitudeAt, baroAltitude: track.baroAltitudeAt, geomAltitude: track.geomAltitudeAt, groundSpeed: track.groundSpeedAt, track: track.trackAt, verticalRate: track.verticalRateAt, position: track.lastPositionAt, extendedTelemetry: observedAt, signal: observedAt };
+    this.expire(observedAt); return a as Aircraft;
   }
   snapshot(now = Date.now()): Aircraft[] { this.expire(now); return [...this.tracks.values()].map((track) => ({ ...track.aircraft, trail: track.aircraft.trail ?? [] } as Aircraft)); }
+  getDiagnostics(): typeof this.bdsCounters { return { ...this.bdsCounters }; }
   private expire(now: number): void { for (const [hex, track] of this.tracks) if (now - track.lastMessageAt > this.expiryMs) this.tracks.delete(hex); while (this.tracks.size > this.maxAircraft) { let oldestHex: string | null = null; let oldestAt = Number.POSITIVE_INFINITY; for (const [hex, track] of this.tracks) if (track.lastMessageAt < oldestAt) { oldestAt = track.lastMessageAt; oldestHex = hex; } if (!oldestHex) break; this.tracks.delete(oldestHex); } }
+  private observationTime(frame: BeastFrame, receivedAt: number): number {
+    if (frame.timestamp.length !== 6 || frame.timestamp.every((value) => value === 0)) return receivedAt;
+    let ticks = 0n; for (const byte of frame.timestamp) ticks = (ticks << 8n) | BigInt(byte);
+    if (this.lastBeastTimestamp === null) { this.lastBeastTimestamp = ticks; this.lastObservationAt = receivedAt; return receivedAt; }
+    const deltaTicks = ticks >= this.lastBeastTimestamp
+      ? ticks - this.lastBeastTimestamp
+      : (this.lastBeastTimestamp - ticks > 0x800000000000n ? ticks + 0x1000000000000n - this.lastBeastTimestamp : -1n);
+    if (deltaTicks < 0n || deltaTicks > 0x100000000000n) { this.lastBeastTimestamp = ticks; this.lastObservationAt = receivedAt; return receivedAt; }
+    const candidate = (this.lastObservationAt ?? receivedAt) + Number(deltaTicks) / 12_000;
+    this.lastBeastTimestamp = ticks;
+    if (!Number.isFinite(candidate) || Math.abs(candidate - receivedAt) > 86_400_000) { this.lastObservationAt = receivedAt; return receivedAt; }
+    this.lastObservationAt = candidate; return candidate;
+  }
+}
+
+function emptyTelemetry(): NonNullable<Aircraft["adsbTelemetry"]> {
+  return { iasKt: null, tasKt: null, mach: null, windDirectionDeg: null, windSpeedKt: null, outsideAirTemperatureC: null, totalAirTemperatureC: null, navQnhHpa: null, selectedAltitudeMcpFt: null, selectedAltitudeFmsFt: null, selectedHeadingDeg: null, navModes: [], nic: null, containmentRadiusM: null, nacP: null, nacV: null, sil: null, silType: null, gva: null, sda: null, adsbVersion: null, alert: null, spi: null, dbFlags: null, magneticHeadingDeg: null, trueHeadingDeg: null, rollDeg: null, trackRateDegPerSec: null };
 }

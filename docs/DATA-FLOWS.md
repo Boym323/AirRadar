@@ -30,6 +30,16 @@ use independent APIs and fail independently.
    identifier (including readsb's `~` non-ICAO form), converts fields, keeps
    barometric and geometric values, derives altitude/vertical rate, and
    calculates distance and bearing.
+
+The optional local Beast lane accepts short and long Mode-S frames and dispatches
+DF0/4/5/11/16/17/18/20/21 after parity handling. DF20/21 Comm-B MB payloads
+are passed through a bounded BDS inference layer for BDS 4,0, 4,4, 5,0 and 6,0;
+ambiguous candidates are rejected as telemetry. Beast receiver timestamps are
+used as a monotonic observation clock when valid (including 48-bit wrap), with
+receive time as the safe fallback after restart/discontinuity. The raw Beast
+signal byte is retained as receiver-local `beastSignal` and is never treated as
+network RSSI. Fresh local fields win over `aircraft.json` field-by-field; JSON
+only fills missing, invalid, or older values.
 3. `AircraftStateService.applySnapshot()` ignores observations older than the
    stale threshold, updates the RAM map by ICAO identity, appends a changed
    position to a bounded trail, and removes aircraft absent from the current

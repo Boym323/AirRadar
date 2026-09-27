@@ -32,6 +32,10 @@ function mergeTelemetry(beast: AircraftAdsbTelemetry | null | undefined, json: A
     alert: primary.alert ?? fallback?.alert ?? null,
     spi: primary.spi ?? fallback?.spi ?? null,
     dbFlags: primary.dbFlags ?? fallback?.dbFlags ?? null,
+    magneticHeadingDeg: primary.magneticHeadingDeg ?? fallback?.magneticHeadingDeg ?? null,
+    trueHeadingDeg: primary.trueHeadingDeg ?? fallback?.trueHeadingDeg ?? null,
+    rollDeg: primary.rollDeg ?? fallback?.rollDeg ?? null,
+    trackRateDegPerSec: primary.trackRateDegPerSec ?? fallback?.trackRateDegPerSec ?? null,
   };
 }
 

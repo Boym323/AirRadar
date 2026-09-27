@@ -6,6 +6,10 @@ All notable changes to AirRadar are documented here.
 
 Changes since v1.0.159.
 
+### Changed
+
+- Expand local Beast Mode-S decoding for DF0/16/20/21, add defensive Comm-B BDS 4,0/4,4/5,0/6,0 inference, retain TC emitter category and TC19 IAS/TAS, and use receiver-local signal/timestamp metadata.
+
 ### Added
 
 - Implement merging logic for local aircraft and add unit tests (f4c07a42)

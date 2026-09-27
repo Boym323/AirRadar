@@ -29,7 +29,7 @@ function apFrame(df: number, icao: number, body: [number, number]): Buffer {
 describe("BeastDecoder", () => {
   it("decodes ICAO and callsign from a deterministic DF17 identification frame", () => {
     const aircraft = new BeastDecoder(receiver).decode(frame("8d4840d6202cc371c32ce0576098"), Date.parse("2026-01-01T00:00:00Z"));
-    expect(aircraft).toMatchObject({ icaoHex: "4840D6", callsign: "KLM1023", source: "ADS-B" });
+    expect(aircraft).toMatchObject({ icaoHex: "4840D6", callsign: "KLM1023", category: "A4", source: "ADS-B" });
   });
   it("decodes the full DF17 Q-bit altitude without turning 37,000 ft into -625 ft", () => {
     // Type code 11, altitude code 0xbf0 = 37,000 ft. The previous decoder
@@ -144,5 +144,17 @@ describe("BeastDecoder", () => {
       nicBaro: null,
       silSupplement: 1,
     });
+  });
+
+  it("retains the receiver-local Beast signal and uses usable receiver time deltas", () => {
+    const decoder = new BeastDecoder(receiver);
+    const payload = Buffer.from("8d4bb87a580bf000000000f15f2e", "hex");
+    const first = decoder.decode({ ...frame(""), timestamp: Buffer.from("000000100000", "hex"), signal: 77, payload }, 1_000_000)!;
+    const firstSeen = Date.parse(first.lastSeen);
+    const second = decoder.decode({ ...frame(""), timestamp: Buffer.from("00000010bb80", "hex"), signal: 88, payload }, 2_000_000)!;
+    const secondSeen = Date.parse(second.lastSeen);
+    expect(firstSeen).toBe(1_000_000);
+    expect(second.beastSignal).toBe(88);
+    expect(secondSeen - firstSeen).toBe(4);
   });
 });

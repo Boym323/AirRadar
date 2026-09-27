@@ -13,6 +13,19 @@ export interface AircraftProvenance {
   positionSource: AircraftSource;
   /** Network providers that contributed the current observation. */
   networkSources?: Array<"adsbhub" | "adsblol">;
+  /** Compact field-level origin metadata; kept optional for old snapshots. */
+  fields?: Record<string, AircraftFieldProvenance>;
+}
+
+export interface AircraftFieldProvenance {
+  origin: AircraftDataOrigin;
+  protocol: "beast-mode-s" | "readsb-json" | "sbs" | "unknown";
+  df?: number;
+  tc?: number;
+  subtype?: number;
+  bds?: string;
+  observedAt: string;
+  confidence: "high" | "medium" | "ambiguous";
 }
 
 export interface AircraftTargetState {
@@ -54,6 +67,11 @@ export interface AircraftObservationTimes {
   groundSpeed: number | null;
   track: number | null;
   verticalRate: number | null;
+  position?: number | null;
+  heading?: number | null;
+  selectedAltitude?: number | null;
+  extendedTelemetry?: number | null;
+  signal?: number | null;
 }
 
 /** Additional typed telemetry exposed by readsb's aircraft.json feed. */
@@ -82,6 +100,10 @@ export interface AircraftAdsbTelemetry {
   alert: number | null;
   spi: number | null;
   dbFlags: number | null;
+  magneticHeadingDeg?: number | null;
+  trueHeadingDeg?: number | null;
+  rollDeg?: number | null;
+  trackRateDegPerSec?: number | null;
 }
 
 export interface ReceiverPosition {
@@ -176,6 +198,8 @@ export interface Aircraft {
   category: string | null;
   emergency: string | null;
   rssi: number | null;
+  /** Raw receiver-local Beast signal byte. Never a network RSSI substitute. */
+  beastSignal?: number | null;
   messages: number | null;
   seenSeconds: number | null;
   seenPosSeconds: number | null;
