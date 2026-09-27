@@ -6,7 +6,7 @@
   position: relative;
   padding: 22px 24px 24px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   background: linear-gradient(120deg, rgba(17,35,55,.9), rgba(8,17,29,.7));
 }
 
@@ -32,7 +32,7 @@
   min-height: 100%;
   align-content: center;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: rgba(10,25,40,.58);
 }
 
@@ -97,7 +97,7 @@
 .operationalGrid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(320px, .78fr);
-  gap: 16px;
+  gap: var(--space-4);
   align-items: start;
   margin-top: 16px;
 }
@@ -117,15 +117,15 @@
 }
 
 .flightSection {
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--border);
 }
 
 .flightSection h3 {
   margin: 0;
   color: var(--accent);
-  font-size: 11px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -214,7 +214,19 @@
 
 .trackingSection,
 .historySection {
-  margin-top: 22px;
+  margin-top: var(--space-6);
+}
+
+.heroMetrics strong {
+  font-family: var(--font-geist-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.heroMetrics span {
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 
 .trackingSection > h2,
