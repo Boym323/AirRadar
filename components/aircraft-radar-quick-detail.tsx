@@ -19,6 +19,7 @@ import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraf
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { StatusBadge } from "@/components/ui-primitives";
+import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import {
   formatAge,
   formatAltitude,
@@ -495,6 +496,7 @@ function TelemetrySection({ aircraft }: { aircraft: AircraftView }) {
         <DetailValue label={t.aircraft.rssi} value={aircraft.rssi === null ? null : `${formatNumber(aircraft.rssi, 1)} dBFS`} />
         <DetailValue label={t.aircraft.messages} value={formatNumber(aircraft.messages)} />
       </div>
+      <AircraftAdsbTelemetry aircraft={aircraft} compact />
     </QuickSection>
   </div>;
 }

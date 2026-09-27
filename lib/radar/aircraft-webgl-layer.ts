@@ -18,6 +18,7 @@ import { aircraftColor, type AircraftColorMode } from "@/lib/aircraft/color-mode
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
 import { aircraftIconRotationOffset } from "@/lib/aircraft/icon-orientation";
+import { aircraftIconVisualSize } from "@/lib/aircraft/icon-size";
 import { TAR1090_UNKNOWN_ICON_ASSET } from "@/lib/aircraft/tar1090-icon-map";
 import type { AircraftView } from "@/lib/aircraft/types";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
@@ -97,14 +98,8 @@ export function aircraftWebglScreenHeading(heading: number | null, mapBearing: n
   return normalized === null ? null : normalizeHeading(normalized - mapBearing + assetOffset);
 }
 
-function pointSizeFor(aircraft: AircraftView): number {
-  switch (classifyAircraftIcon(aircraft).kind) {
-    case "ground": return 12;
-    case "helicopter": return 16;
-    case "glider": return 17;
-    case "drone": return 15;
-    default: return 18;
-  }
+export function aircraftWebglPointSize(aircraft: AircraftView): number {
+  return aircraftIconVisualSize(aircraft);
 }
 
 function createShader(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
@@ -322,7 +317,7 @@ export class AircraftWebglRuntime {
       allowPrediction: false,
     };
     const color = aircraftWebglColor(aircraft, colorMode);
-    const pointSize = pointSizeFor(aircraft);
+    const pointSize = aircraftWebglPointSize(aircraft);
     const iconAsset = aircraftWebglIconAsset(aircraft);
     const iconLayer = this.iconLayers.get(iconAsset) ?? -1;
     this.requestIconAsset(iconAsset);
