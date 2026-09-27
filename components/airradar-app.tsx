@@ -38,6 +38,7 @@ import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
+import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { canonicalAircraftGlyphPath, type CanonicalAircraftGlyphKind } from "@/lib/aircraft/glyph-paths";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
@@ -1364,8 +1365,9 @@ export function AirRadarApp() {
     const visible = showOgn && ognEnabled === true;
     const ognMarkers = ognMarkersRef.current;
     const currentIds = new Set<string>();
+    const visibleTargets = ognSnapshot.targets.filter((target) => !snapshot.aircraft.some((aircraft) => isOgnDuplicateOfAircraft(target, aircraft)));
 
-    for (const target of ognSnapshot.targets) {
+    for (const target of visibleTargets) {
       if (!Number.isFinite(target.latitude) || !Number.isFinite(target.longitude)) continue;
       currentIds.add(target.id);
       let handle = ognMarkers.get(target.id);
@@ -1417,7 +1419,7 @@ export function AirRadarApp() {
       handle.marker.remove();
       ognMarkers.delete(id);
     }
-  }, [mapReady, ognEnabled, ognSnapshot.targets, selectOgn, selectedOgnId, showOgn]);
+  }, [mapReady, ognEnabled, ognSnapshot.targets, selectOgn, selectedOgnId, showOgn, snapshot.aircraft]);
 
   const mapFilteredAircraft = useMemo(
     () => filterAircraftForMap(snapshot.aircraft, mapFilters),
