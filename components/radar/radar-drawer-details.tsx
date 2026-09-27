@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import type { AircraftRadarQuickDetailProps } from "@/components/aircraft-radar-quick-detail";
 import type { RadarDrawerState } from "@/components/radar/use-radar-drawer-interactions";
 import type { AircraftView } from "@/lib/aircraft/types";
+import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
 import { formatAge, formatAltitude, formatCoordinate, formatDistance, formatNumber, formatSpeed, formatTrack, t } from "@/lib/i18n";
 import type { OgnTargetView } from "@/lib/ogn/types";
@@ -29,6 +30,7 @@ interface RadarDrawerDetailsProps {
   destinationWind: AircraftRadarQuickDetailProps["destinationWind"];
   windStatus: AircraftRadarQuickDetailProps["windStatus"];
   routeWeather: AircraftRadarQuickDetailProps["routeWeather"];
+  intelligenceEvents: FlightIntelligenceEvent[];
   sectorTraffic: AircraftRadarQuickDetailProps["sectorTraffic"];
   watchlisted: boolean;
   onBack: () => void;
@@ -54,6 +56,7 @@ export function RadarDrawerDetails({
   destinationWind,
   windStatus,
   routeWeather,
+  intelligenceEvents,
   sectorTraffic,
   watchlisted,
   onBack,
@@ -84,6 +87,7 @@ export function RadarDrawerDetails({
       destinationWind={destinationWind}
       windStatus={windStatus}
       routeWeather={routeWeather}
+      intelligenceEvents={intelligenceEvents}
       sectorTraffic={sectorTraffic}
       watchlisted={watchlisted}
       onBack={onBack}

@@ -463,6 +463,12 @@
   margin-top: 10px;
 }
 
+.aircraft-quick-event-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.aircraft-quick-event-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(153,181,207,.1); }
+.aircraft-quick-event-list time, .aircraft-quick-event-list small { color: var(--muted); font-size: 9px; }
+.aircraft-quick-event-list span { min-width: 0; color: var(--text); font-size: 10px; }
+.aircraft-quick-quality { opacity: .86; }
+
 .aircraft-quick-detail-value {
   min-width: 0;
 }

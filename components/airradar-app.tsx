@@ -30,6 +30,7 @@ import { buildAirspacePlanMapIndex, matchAirspacePlanForSector } from "@/lib/air
 import { airspaceActivityMapT as activityT } from "@/lib/i18n/airspace-activity";
 import { matchesAircraftRule, normalizeAircraftRuleType, type AircraftMatchRule } from "@/lib/aircraft/watchlist";
 import type { AircraftQuickDetailResponse, HistoryResponse } from "@/lib/server/history";
+import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import type { MetarMapObservation } from "@/lib/weather/types";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
@@ -376,6 +377,7 @@ export function AirRadarApp() {
   const [aircraftDetail, setAircraftDetail] = useState<AircraftQuickDetailResponse | null>(null);
   const [selectedAtcContext, setSelectedAtcContext] = useState<AtcContextResult | null>(null);
   const [selectedRouteWeather, setSelectedRouteWeather] = useState<RouteWeatherContext | null>(null);
+  const [selectedIntelligenceEvents, setSelectedIntelligenceEvents] = useState<FlightIntelligenceEvent[]>([]);
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"distance" | "altitude" | "callsign">("distance");
@@ -1846,6 +1848,17 @@ export function AirRadarApp() {
   const contextHasPosition = selectedAircraftSnapshot?.lat !== null && selectedAircraftSnapshot?.lon !== null;
 
   useEffect(() => {
+    setSelectedIntelligenceEvents([]);
+    if (!contextAircraftHex) return;
+    const controller = new AbortController();
+    void fetch(`/api/intelligence/events?aircraft=${encodeURIComponent(contextAircraftHex)}&limit=8`, { cache: "no-store", signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<{ events?: FlightIntelligenceEvent[] }> : null)
+      .then((value) => { if (value?.events) setSelectedIntelligenceEvents(value.events); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [contextAircraftHex]);
+
+  useEffect(() => {
     setSelectedAtcContext(null);
     if (!contextAircraftHex || !contextHasPosition) {
       return;
@@ -2177,6 +2190,7 @@ export function AirRadarApp() {
             destinationWind={selectedWind.destination}
             windStatus={selectedWind.status}
             routeWeather={selectedRouteWeather}
+            intelligenceEvents={selectedIntelligenceEvents}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
             onBack={backToTraffic}
