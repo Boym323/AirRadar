@@ -39,6 +39,8 @@ jobs:
       - run: npm run prisma:generate
       - name: Verify feature registry
         run: npm run features:check
+      - name: Verify visual system budget
+        run: npm run visual:check
       - name: Run lint, typecheck, and Vitest in parallel
         shell: bash
         run: |
