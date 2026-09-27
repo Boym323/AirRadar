@@ -445,7 +445,7 @@ function DataQualitySection({ aircraft }: { aircraft: AircraftView }) {
   </QuickSection>;
 }
 
-function AircraftOverview({ aircraft, registration, operator, headerType, sourceAge, phase, emergency, emergencySquawk, onCenter, historyHref, fullDetailHref }: {
+function AircraftOverview({ aircraft, registration, operator, headerType, sourceAge, phase, emergency, emergencySquawk, onCenter, historyHref, fullDetailHref, watchlisted, onToggleWatchlist }: {
   aircraft: AircraftView;
   registration: string | null;
   operator: string | null;
@@ -457,6 +457,8 @@ function AircraftOverview({ aircraft, registration, operator, headerType, source
   onCenter: () => void;
   historyHref: string;
   fullDetailHref: string;
+  watchlisted: boolean;
+  onToggleWatchlist: () => void;
 }) {
   return <section className="aircraft-quick-overview" aria-labelledby="aircraft-overview-title">
       <h2 id="aircraft-overview-title">{t.aircraft.detailSections.overview}</h2>
@@ -477,6 +479,7 @@ function AircraftOverview({ aircraft, registration, operator, headerType, source
       </div>
       <nav className="aircraft-quick-actions" aria-label={t.aircraft.quickActions}>
         <button type="button" className="aircraft-quick-action" onClick={onCenter} disabled={aircraft.lat === null || aircraft.lon === null}>{t.aircraft.centerOnAircraft}</button>
+        <button type="button" className={`aircraft-quick-action${watchlisted ? " active" : ""}`} aria-pressed={watchlisted} onClick={onToggleWatchlist}>{watchlisted ? t.watchlist.onWatchlist : t.watchlist.followAircraft}</button>
         <Link className="aircraft-quick-action" href={historyHref as `/history?hex=${string}`}>{t.aircraft.showFullTrail}</Link>
         <Link className="aircraft-quick-action primary" href={fullDetailHref as `/aircraft/${string}`}>{t.aircraft.fullDetail} <span aria-hidden="true">→</span></Link>
       </nav>
@@ -659,7 +662,7 @@ export function AircraftRadarQuickDetail({
     <div className="aircraft-quick-source-header"><span className="source-badge source-badge-prominent">{aircraftPositionSourceLabel(aircraft)}</span>{sourceAge && <span>{t.aircraft.positionAge}: {sourceAge}</span>}{phase && <strong>{phase}</strong>}</div>
     <DetailTabs activeTab={activeTab} onChange={setActiveTab} />
     {activeTab === "overview" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-overview" aria-labelledby="aircraft-tab-overview">
-      <AircraftOverview aircraft={aircraft} registration={registration} operator={operator} headerType={headerType} sourceAge={sourceAge} phase={phase} emergency={emergency} emergencySquawk={emergencySquawk} onCenter={onCenter} historyHref={historyHref} fullDetailHref={fullDetailHref} />
+      <AircraftOverview aircraft={aircraft} registration={registration} operator={operator} headerType={headerType} sourceAge={sourceAge} phase={phase} emergency={emergency} emergencySquawk={emergencySquawk} onCenter={onCenter} historyHref={historyHref} fullDetailHref={fullDetailHref} watchlisted={watchlisted} onToggleWatchlist={onToggleWatchlist} />
       <FlightStateSection aircraft={aircraft} />
       <SituationSummarySection summary={situation} />
       <IntelligenceSection events={intelligenceEvents} />

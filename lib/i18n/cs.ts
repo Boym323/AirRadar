@@ -601,6 +601,8 @@ export const cs = {
     airDataTitle: "Vzdušná data",
     navigationStateTitle: "Navigace / cílový stav",
     integrityTitle: "Integrita ADS-B",
+    advancedTelemetry: "Pokročilá telemetrie",
+    operationalStatusTitle: "Provozní stav",
     indicatedAirspeed: "IAS",
     trueAirspeed: "TAS",
     mach: "Mach",

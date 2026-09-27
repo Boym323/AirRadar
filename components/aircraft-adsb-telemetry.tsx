@@ -2,6 +2,7 @@
 
 import type { AircraftView } from "@/lib/aircraft/types";
 import { formatAge, formatAltitude, formatNumber, t } from "@/lib/i18n";
+import { useState } from "react";
 
 function value(value: number | null | undefined, suffix: string, digits = 0): string | null {
   return value === null || value === undefined ? null : `${formatNumber(value, digits)}${suffix}`;
@@ -26,6 +27,7 @@ export function AircraftAdsbTelemetry({ aircraft, compact = false }: { aircraft:
   const telemetry = aircraft.adsbTelemetry;
   const target = aircraft.targetState;
   const operational = aircraft.operationalStatus;
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   if (!telemetry && !target && !operational) return null;
 
   const telemetryFieldNames = new Set([
@@ -72,6 +74,29 @@ export function AircraftAdsbTelemetry({ aircraft, compact = false }: { aircraft:
   const nacp = operational?.nacp ?? target?.nacp ?? telemetry?.nacP ?? null;
   const sil = operational?.sil ?? target?.sil ?? telemetry?.sil ?? null;
   const nicBaro = operational?.nicBaro ?? target?.nicBaro ?? null;
+  const hasAirData = Boolean(
+    telemetry?.iasKt !== null && telemetry?.iasKt !== undefined
+      || telemetry?.tasKt !== null && telemetry?.tasKt !== undefined
+      || telemetry?.mach !== null && telemetry?.mach !== undefined
+      || telemetry?.magneticHeadingDeg !== null && telemetry?.magneticHeadingDeg !== undefined
+      || telemetry?.trueHeadingDeg !== null && telemetry?.trueHeadingDeg !== undefined
+      || telemetry?.rollDeg !== null && telemetry?.rollDeg !== undefined
+      || reportedWind || telemetry?.outsideAirTemperatureC !== null && telemetry?.outsideAirTemperatureC !== undefined
+      || telemetry?.totalAirTemperatureC !== null && telemetry?.totalAirTemperatureC !== undefined
+      || telemetry?.staticPressureHpa !== null && telemetry?.staticPressureHpa !== undefined,
+  );
+  const hasNavigationState = Boolean(
+    selectedAltitudeLabel || telemetry?.selectedAltitudeMcpFt !== null && telemetry?.selectedAltitudeMcpFt !== undefined
+      || telemetry?.selectedAltitudeFmsFt !== null && telemetry?.selectedAltitudeFmsFt !== undefined
+      || selectedHeading !== null || qnh !== null || navModes || target?.tcasOperational !== null && target?.tcasOperational !== undefined,
+  );
+  const hasIntegrity = Boolean(
+    adsbVersion !== null || nacp !== null || telemetry?.nacV !== null && telemetry?.nacV !== undefined
+      || telemetry?.nic !== null && telemetry?.nic !== undefined || nicBaro !== null || sil !== null
+      || telemetry?.gva !== null && telemetry?.gva !== undefined || telemetry?.sda !== null && telemetry?.sda !== undefined
+      || telemetry?.containmentRadiusM !== null && telemetry?.containmentRadiusM !== undefined,
+  );
+  const hasOperational = Boolean(operational);
 
   return <section className={`aircraft-adsb-telemetry ${compact ? "compact" : ""}`} aria-label={t.aircraft.adsbTelemetryTitle}>
     <header className="aircraft-adsb-telemetry-header">
@@ -86,7 +111,7 @@ export function AircraftAdsbTelemetry({ aircraft, compact = false }: { aircraft:
     </header>
 
     <div className="aircraft-adsb-telemetry-groups">
-      <section className="aircraft-adsb-telemetry-group">
+      {hasAirData && <section className="aircraft-adsb-telemetry-group">
         <h4>{t.aircraft.airDataTitle}</h4>
         <div className="aircraft-adsb-telemetry-grid">
           <TelemetryValue label={t.aircraft.indicatedAirspeed} value={value(telemetry?.iasKt, " kt")} />
@@ -101,9 +126,9 @@ export function AircraftAdsbTelemetry({ aircraft, compact = false }: { aircraft:
           <TelemetryValue label={t.aircraft.totalAirTemperature} value={value(telemetry?.totalAirTemperatureC, " °C", 1)} />
           <TelemetryValue label={t.aircraft.staticPressure} value={value(telemetry?.staticPressureHpa, " hPa", 0)} />
         </div>
-      </section>
+      </section>}
 
-      <section className="aircraft-adsb-telemetry-group">
+      {hasNavigationState && <section className="aircraft-adsb-telemetry-group">
         <h4>{t.aircraft.navigationStateTitle}</h4>
         <div className="aircraft-adsb-telemetry-grid">
           <TelemetryValue label={t.aircraft.selectedAltitude} value={selectedAltitudeLabel} />
@@ -116,9 +141,15 @@ export function AircraftAdsbTelemetry({ aircraft, compact = false }: { aircraft:
             ? <TelemetryValue label={t.aircraft.tcas} value={target.tcasOperational ? t.common.yes : t.common.no} />
             : null}
         </div>
-      </section>
+      </section>}
 
-      <section className="aircraft-adsb-telemetry-group">
+      {(hasIntegrity || hasOperational) && <section className={`aircraft-adsb-telemetry-group aircraft-adsb-telemetry-advanced ${advancedOpen ? "is-open" : ""}`}>
+        {!compact && <button type="button" className="aircraft-adsb-telemetry-disclosure" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen((value) => !value)}>
+          <span><span className="aircraft-adsb-telemetry-disclosure-kicker">{t.aircraft.advancedTelemetry}</span><strong>{t.aircraft.integrityTitle}</strong></span>
+          <span aria-hidden="true">{advancedOpen ? "−" : "+"}</span>
+        </button>}
+        {(compact || advancedOpen) && <>
+      {hasIntegrity && <section className="aircraft-adsb-telemetry-subgroup">
         <h4>{t.aircraft.integrityTitle}</h4>
         <div className="aircraft-adsb-telemetry-grid">
           <TelemetryValue label={t.aircraft.adsbVersion} value={adsbVersion === null ? null : String(adsbVersion)} />
@@ -130,14 +161,21 @@ export function AircraftAdsbTelemetry({ aircraft, compact = false }: { aircraft:
           <TelemetryValue label="GVA" value={telemetry?.gva === null || telemetry?.gva === undefined ? null : String(telemetry.gva)} />
           <TelemetryValue label="SDA" value={telemetry?.sda === null || telemetry?.sda === undefined ? null : String(telemetry.sda)} />
           <TelemetryValue label={t.aircraft.containmentRadius} value={value(telemetry?.containmentRadiusM, " m")} />
-          <TelemetryValue label={t.aircraft.headingReference} value={operational?.headingReference ?? null} />
-          {!compact && <TelemetryValue label={t.aircraft.adsbOperationalSubtype} value={operational ? String(operational.subtype) : null} />}
-          {!compact && <TelemetryValue label={t.aircraft.capabilityClass} value={hexWord(operational?.capabilityClass)} />}
-          {!compact && <TelemetryValue label={t.aircraft.operationalMode} value={hexWord(operational?.operationalMode)} />}
-          {!compact && <TelemetryValue label={t.aircraft.nicSupplementA} value={operational ? String(operational.nicSupplementA) : null} />}
-          {!compact && <TelemetryValue label={t.aircraft.silSupplement} value={operational?.silSupplement === null || operational?.silSupplement === undefined ? null : String(operational.silSupplement)} />}
         </div>
-      </section>
+      </section>}
+      {hasOperational && <section className="aircraft-adsb-telemetry-subgroup">
+        <h4>{t.aircraft.operationalStatusTitle}</h4>
+        <div className="aircraft-adsb-telemetry-grid">
+          <TelemetryValue label={t.aircraft.adsbOperationalSubtype} value={operational ? String(operational.subtype) : null} />
+          <TelemetryValue label={t.aircraft.capabilityClass} value={hexWord(operational?.capabilityClass)} />
+          <TelemetryValue label={t.aircraft.operationalMode} value={hexWord(operational?.operationalMode)} />
+          <TelemetryValue label={t.aircraft.headingReference} value={operational?.headingReference ?? null} />
+          <TelemetryValue label={t.aircraft.nicSupplementA} value={operational ? String(operational.nicSupplementA) : null} />
+          <TelemetryValue label={t.aircraft.silSupplement} value={operational?.silSupplement === null || operational?.silSupplement === undefined ? null : String(operational.silSupplement)} />
+        </div>
+      </section>}
+        </>}
+      </section>}
     </div>
   </section>;
 }

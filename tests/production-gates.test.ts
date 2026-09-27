@@ -40,14 +40,14 @@ describe("production release metadata gate", () => {
   it("keeps breakpoint edges in the no-reload sweep while reloading only representative devices", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("const sweepWidths = [430, 480, 700, 720, 820, 821, 899, 900, 901, 950, 951, 1024, 1100, 1101, 1400, 1401]");
-    for (const viewport of ["320x844", "375x812", "820x1180", "821x1000", "1100x900", "1920x1080"]) {
+    for (const viewport of [
+      "320x568", "320x844", "375x812", "390x844", "430x932", "768x1024", "820x1180",
+      "821x1000", "1024x768", "1024x1366", "1366x768", "1440x900", "1100x900", "1920x1080",
+    ]) {
       const [width, height] = viewport.split("x");
       expect(source).toContain(`{ width: ${width}, height: ${height} }`);
     }
-    expect(source).not.toContain("{ width: 430, height: 932 }");
-    expect(source).not.toContain("{ width: 768, height: 1024 }");
     expect(source).not.toContain("{ width: 900, height: 900 }");
-    expect(source).not.toContain("{ width: 1440, height: 900 }");
     expect(source).not.toContain("{ width: 1200, height: 900 }");
     expect(source).not.toContain("{ width: 902, height: 900 }");
     expect(source).not.toContain("{ width: 1150, height: 900 }");

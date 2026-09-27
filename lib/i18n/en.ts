@@ -603,6 +603,8 @@ export const en = {
     airDataTitle: "Air data",
     navigationStateTitle: "Navigation / target state",
     integrityTitle: "ADS-B integrity",
+    advancedTelemetry: "Advanced telemetry",
+    operationalStatusTitle: "Operational status",
     indicatedAirspeed: "IAS",
     trueAirspeed: "TAS",
     mach: "Mach",

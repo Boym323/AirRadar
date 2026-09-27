@@ -216,11 +216,20 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       mkdirSync(visualSmokeDirectory, { recursive: true });
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
+        { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
+        { name: "radar-tablet-landscape-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1024, height: 768 }, fullPage: false, selectAircraft: true },
+        { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
         { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
+        { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
+        { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
+        { name: "aircraft-detail-tablet", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 768, height: 1024 }, fullPage: false },
+        { name: "aircraft-detail-mobile", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 390, height: 844 }, fullPage: false },
+        { name: "aircraft-detail-telemetry-expanded", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandTelemetry: true },
+        { name: "aircraft-detail-receiver", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandReceiver: true },
       ];
 
       for (const target of visualTargets) {
@@ -229,6 +238,26 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           const response = await visualPage.goto(`${baseUrl}${target.path}`, { waitUntil: "domcontentloaded" });
           if (!response?.ok()) throw new Error(`Visual smoke ${target.path} returned HTTP ${response?.status()}`);
           await visualPage.locator(target.selector).waitFor({ state: "visible", timeout: 15_000 });
+          if (target.selectAircraft) {
+            const trafficTrigger = visualPage.locator('[data-testid="traffic-trigger"]');
+            if (await trafficTrigger.isVisible()) await trafficTrigger.click();
+            const sidebar = visualPage.locator('[data-testid="radar-sidebar"]');
+            const collapse = sidebar.locator(".mobile-collapse");
+            if (target.viewport.width <= 820 && await collapse.isVisible()) await collapse.click();
+            await sidebar.locator(".aircraft-row").first().waitFor({ state: "visible", timeout: 15_000 });
+            await sidebar.locator(".aircraft-row").first().click();
+            await visualPage.locator('[data-testid="aircraft-quick-detail"]').waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.expandTelemetry) {
+            const disclosure = visualPage.locator(".aircraft-adsb-telemetry-disclosure");
+            await disclosure.waitFor({ state: "visible", timeout: 15_000 });
+            await disclosure.click();
+          }
+          if (target.expandReceiver) {
+            const sources = visualPage.locator("#aircraft-receiver details");
+            await sources.waitFor({ state: "visible", timeout: 15_000 });
+            await sources.locator("summary").click();
+          }
           await visualPage.evaluate(async () => {
             if ("fonts" in document) await document.fonts.ready;
           });
@@ -315,10 +344,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await responsiveSweepPromise;
     await captureVisualSmoke();
     const browserViewports = [
+      { width: 320, height: 568 },
       { width: 320, height: 844 },
       { width: 375, height: 812 },
+      { width: 390, height: 844 },
+      { width: 430, height: 932 },
+      { width: 768, height: 1024 },
       { width: 820, height: 1180 },
       { width: 821, height: 1000 },
+      { width: 1024, height: 768 },
+      { width: 1024, height: 1366 },
+      { width: 1366, height: 768 },
+      { width: 1440, height: 900 },
       { width: 1100, height: 900 },
       { width: 1920, height: 1080 },
     ];

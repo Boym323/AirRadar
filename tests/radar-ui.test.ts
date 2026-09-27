@@ -27,6 +27,10 @@ const trafficVirtualizationSource = readFileSync(new URL("../lib/radar/traffic-v
 const radarPerformanceSource = readFileSync(new URL("../lib/radar/performance-diagnostics.ts", import.meta.url), "utf8");
 const liveSnapshotSchedulerSource = readFileSync(new URL("../lib/radar/live-snapshot-scheduler.ts", import.meta.url), "utf8");
 const quickDetailSource = readFileSync(new URL("../components/aircraft-radar-quick-detail.tsx", import.meta.url), "utf8");
+const aircraftDetailV3Source = readFileSync(new URL("../components/aircraft-detail-v3.tsx", import.meta.url), "utf8");
+const aircraftTelemetrySource = readFileSync(new URL("../components/aircraft-adsb-telemetry.tsx", import.meta.url), "utf8");
+const aircraftDetailV3Css = readFileSync(new URL("../components/aircraft-detail-v3.module.css", import.meta.url), "utf8");
+const radarAircraftPanelCss = readFileSync(new URL("../app/radar-aircraft-panel.css", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
 const datasetSource = readFileSync(new URL("../components/use-dataset-query.ts", import.meta.url), "utf8");
@@ -374,5 +378,27 @@ describe("radar UI polish helpers", () => {
     expect(globalCss).toContain("right: calc(var(--radar-drawer-width) + 64px)");
     expect(globalCss).toContain("@media (min-width: 821px)");
     expect(globalCss).toContain(".detail-panel .close-button { display: none; }");
+  });
+
+  it("keeps aircraft detail hierarchy, disclosures and quick/full actions aligned", () => {
+    expect(aircraftDetailV3Source).toContain('href="#aircraft-overview"');
+    expect(aircraftDetailV3Source).toContain('href="#aircraft-flight"');
+    expect(aircraftDetailV3Source).toContain('id="aircraft-telemetry"');
+    expect(aircraftDetailV3Source).toContain('id="aircraft-receiver"');
+    expect(aircraftDetailV3Source).toContain("t.aircraft.trueHeading");
+    expect(aircraftDetailV3Source).toContain("data-freshness={freshness}");
+    expect(aircraftTelemetrySource).toContain('aria-expanded={advancedOpen}');
+    expect(aircraftTelemetrySource).toContain("aircraft-adsb-telemetry-subgroup");
+    expect(quickDetailSource).toContain("onToggleWatchlist");
+    expect(quickDetailSource).toContain('aria-pressed={watchlisted}');
+  });
+
+  it("keeps touch-friendly tablet drawer geometry and disclosure focus targets", () => {
+    expect(globalCss).toContain("@media (min-width: 821px) and (max-width: 1100px)");
+    expect(globalCss).toContain("--radar-drawer-width: clamp(300px, 32vw, 360px)");
+    expect(aircraftDetailV3Css).toContain("min-height: 40px");
+    expect(radarAircraftPanelCss).toContain(".aircraft-quick-action.active");
+    expect(globalCss).toContain(".aircraft-adsb-telemetry-disclosure");
+    expect(globalCss).toContain("prefers-reduced-motion");
   });
 });

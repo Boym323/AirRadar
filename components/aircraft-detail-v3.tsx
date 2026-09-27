@@ -208,20 +208,30 @@ function AirspaceCard({ icaoHex, enabled }: { icaoHex: string; enabled: boolean 
 }
 
 function DataSources({
+  aircraft,
   metadataSource,
   routeSource,
   positionSource,
   photoAvailable,
 }: {
+  aircraft: AircraftView | null;
   metadataSource?: string | null;
   routeSource?: string | null;
   positionSource: string;
   photoAvailable: boolean;
 }) {
+  const telemetryFields = Object.values(aircraft?.provenance?.fields ?? {});
+  const protocols = [...new Set(telemetryFields.map((entry) => entry.protocol).filter(Boolean))];
+  const protocolLabel = protocols.map((entry) => entry === "beast-mode-s" ? "Beast Mode-S" : entry === "readsb-json" ? "readsb JSON" : entry).join(" · ");
+  const bds = [...new Set(telemetryFields.map((entry) => entry.bds).filter(Boolean))];
   const entries = [
     [t.aircraft.positionSourceLabel, positionSource],
     [t.aircraft.aircraftSource, metadataSource],
     [t.aircraft.routeSource, routeSource],
+    [t.aircraft.telemetryProtocols, protocolLabel || null],
+    [t.aircraft.provenance, bds.length ? `BDS ${bds.map((entry) => entry?.replace("BDS", "")).join(" / ")}` : null],
+    [t.aircraft.telemetryAge, aircraft?.seenSeconds === null || aircraft?.seenSeconds === undefined ? null : formatAge(aircraft.seenSeconds)],
+    [t.aircraft.beastSignal, aircraft?.beastSignal === null || aircraft?.beastSignal === undefined ? null : formatNumber(aircraft.beastSignal)],
     [t.aircraft.photoTitle, photoAvailable ? t.aircraft.photoSource : null],
   ].filter((entry): entry is [string, string] => Boolean(entry[1]));
 
@@ -263,6 +273,10 @@ export function AircraftDetailV3({
   const backLink = backHref === "/history" ? "/history" : "/";
   const watchlistHref = icaoHex === t.common.emptyValue ? "/watchlist" : aircraftWatchlistHref(icaoHex, registration);
   const sourceLabel = liveAircraft?.origin === "adsblol" ? t.aircraft.networkReceiver : t.aircraft.localReceiver;
+  const freshness = liveAircraft?.seenSeconds === null || liveAircraft?.seenSeconds === undefined
+    ? "stale"
+    : liveAircraft.seenSeconds <= 15 ? "fresh" : "stale";
+  const trueHeading = liveAircraft?.adsbTelemetry?.trueHeadingDeg ?? null;
 
   const [flightHistory, setFlightHistory] = useState<HistoryResponse | null>(null);
   const [flightHistoryLoading, setFlightHistoryLoading] = useState(false);
@@ -330,14 +344,22 @@ export function AircraftDetailV3({
         <span aria-hidden="true">→</span>
         <span>{route.destinationAirport?.iataCode || route.destinationAirport?.icaoCode || route.destination || t.common.emptyValue}</span>
       </div>}
-      <div className="aircraft-page-live-status"><span>{t.aircraft.statusAdsb}</span><span>{liveAircraft ? t.aircraft.updatedAgo(formatAge(liveAircraft.seenSeconds)) : t.aircraft.notCurrentlyInRange}</span></div>
+      <div className={`aircraft-page-live-status ${freshness}`} data-freshness={freshness}><span>{liveAircraft ? t.status.liveShort : t.status.offlineShort}</span><span>{liveAircraft ? t.aircraft.updatedAgo(formatAge(liveAircraft.seenSeconds)) : t.aircraft.notCurrentlyInRange}</span></div>
 
-      <div className={styles.heroBody}>
+      <nav className={styles.sectionNav} aria-label={t.history.aircraftDetail}>
+        <a href="#aircraft-overview">{t.aircraft.detailSections.overview}</a>
+        <a href="#aircraft-flight">{t.aircraft.detailSections.flight}</a>
+        <a href="#aircraft-telemetry">{t.aircraft.detailSections.telemetry}</a>
+        <a href="#aircraft-receiver">{t.aircraft.detailSections.data}</a>
+      </nav>
+
+      <div className={styles.heroBody} id="aircraft-overview">
         {liveAircraft && <section className={`aircraft-live-hero ${styles.heroMetrics}`} aria-label={t.aircraft.liveAdsb}>
           <div><strong>{formatAltitude(liveAircraft.altitude)}</strong><span>{t.aircraft.altitude}</span></div>
           <div><strong>{formatSpeed(liveAircraft.groundSpeed)}</strong><span>{t.aircraft.groundSpeed}</span></div>
-          <div><strong>{formatTrack(liveAircraft.track)}</strong><span>{t.aircraft.track}</span></div>
           <div><strong>{liveAircraft.verticalRate === null ? t.common.emptyValue : `${liveAircraft.verticalRate > 0 ? "+" : ""}${formatNumber(liveAircraft.verticalRate)} ft/min`}</strong><span>{t.aircraft.verticalRate}</span></div>
+          <div><strong>{formatTrack(liveAircraft.track)}</strong><span>{t.aircraft.track}</span></div>
+          {trueHeading !== null && <div><strong>{formatTrack(trueHeading)}</strong><span>{t.aircraft.trueHeading}</span></div>}
         </section>}
         <div className={styles.photoSlot}>
           <AircraftHeroPhoto icaoHex={icaoHex} registration={registration} onAvailabilityChange={handlePhotoAvailability} />
@@ -345,7 +367,7 @@ export function AircraftDetailV3({
       </div>
     </header>
 
-    <section className={styles.trackingSection} aria-labelledby="aircraft-live-tracking-v3-title">
+    <section className={styles.trackingSection} id="aircraft-track" aria-labelledby="aircraft-live-tracking-v3-title">
       <h2 id="aircraft-live-tracking-v3-title">{t.aircraft.liveTrackingTitle}</h2>
       <div className={styles.trackingGrid}>
         <AircraftAltitudeChart points={[...historyPoints, ...sessionPoints]} livePoint={livePoint} loading={flightHistoryLoading} />
@@ -361,11 +383,11 @@ export function AircraftDetailV3({
       </div>
     </section>
 
-    {liveAircraft && (liveAircraft.adsbTelemetry || liveAircraft.targetState || liveAircraft.operationalStatus) && <AircraftAdsbTelemetry aircraft={liveAircraft} />}
+    {liveAircraft && (liveAircraft.adsbTelemetry || liveAircraft.targetState || liveAircraft.operationalStatus) && <div id="aircraft-telemetry"><AircraftAdsbTelemetry aircraft={liveAircraft} /></div>}
 
     <div className={styles.operationalGrid}>
       <div className={styles.primaryColumn}>
-        {(hasRouteData || flightAware || hasFlightPlanDetails || hasAirportOperations) && <section className={`aircraft-card aircraft-route-card ${styles.currentFlightCard}`} aria-labelledby="aircraft-current-flight-title">
+        {(hasRouteData || flightAware || hasFlightPlanDetails || hasAirportOperations) && <section id="aircraft-flight" className={`aircraft-card aircraft-route-card ${styles.currentFlightCard}`} aria-labelledby="aircraft-current-flight-title">
           <h2 id="aircraft-current-flight-title">{t.aircraft.currentFlightTitle}</h2>
           {hasRouteData && route && <div className="aircraft-route-endpoints">
             <RouteEndpoint code={route.origin} airport={route.originAirport} />
@@ -474,12 +496,15 @@ export function AircraftDetailV3({
       </div>
     </section>
 
+    <div id="aircraft-receiver" className={styles.receiverSection}>
     <DataSources
+      aircraft={liveAircraft}
       metadataSource={metadata?.source}
       routeSource={route?.source ?? flightPlan?.source}
       positionSource={sourceLabel}
       photoAvailable={photoAvailable}
     />
+    </div>
   </main>;
 }
 

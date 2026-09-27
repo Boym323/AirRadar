@@ -397,7 +397,7 @@
 
 .aircraft-quick-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
   margin-top: 13px;
 }
@@ -421,7 +421,8 @@
 }
 
 .aircraft-quick-action:hover:not(:disabled),
-.aircraft-quick-action.primary {
+.aircraft-quick-action.primary,
+.aircraft-quick-action.active {
   border-color: rgba(67, 216, 194, .58);
   background: rgba(67, 216, 194, .1);
   color: var(--accent-primary);
