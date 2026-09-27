@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MockReadsbProvider } from "@/lib/server/mock-readsb-provider";
 import { AircraftStateService } from "@/lib/server/aircraft-state";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
-import type { Aircraft, AircraftEnrichment, ProviderSnapshot } from "@/lib/aircraft/types";
+import type { Aircraft, AircraftEnrichment, ProviderSnapshot, StateSnapshot } from "@/lib/aircraft/types";
 import { EnrichmentService } from "@/lib/server/enrichment-cache";
 import { AtcSectorService, EmptyAtcSectorProvider } from "@/lib/server/atc-sector-service";
 import { AlertEngine } from "@/lib/server/alert-engine";
@@ -11,6 +11,7 @@ import type { AircraftProvider, NetworkAircraftProvider } from "@/lib/server/pro
 import type { AtcSector, AtcSectorMatch } from "@/lib/atc/types";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 import { logger } from "@/lib/server/logger";
+import { classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
 
 vi.mock("@/lib/server/history", () => ({
   recordAircraftSnapshot: vi.fn().mockImplementation((aircraft: Aircraft[]) => Promise.resolve({
@@ -63,6 +64,58 @@ describe("aircraft state service", () => {
     expect(compact.aircraft[0].trail).toBeUndefined();
     expect(full.aircraft[0].trail).toHaveLength(1);
     expect(service.getAircraft(full.aircraft[0].icaoHex)?.trail).toHaveLength(1);
+  });
+
+  it("publishes the correct aircraft icon identity in the first live snapshot", async () => {
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const observedAt = new Date("2026-09-27T12:00:00.000Z");
+    const aircraft = normalizeAircraft(
+      { hex: "ABC123", flight: "TEST123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 },
+      receiver,
+      observedAt,
+    );
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+
+    const provider: AircraftProvider = {
+      name: "first-render-test",
+      getSnapshot: async () => ({
+        aircraft: [aircraft],
+        receiver,
+        fetchedAt: observedAt.toISOString(),
+        provider: "first-render-test",
+      }),
+    };
+    const getMetadata = vi.fn(async () => ({
+      registration: "OK-ABC",
+      registrationCountry: "Czechia",
+      registrationCountryCode: "CZ",
+      aircraftType: "A320",
+      icaoTypeCode: "A320",
+      aircraftDescription: "Airbus A320",
+      operator: "Test Air",
+      manufacturer: "Airbus",
+      source: "tar1090-db",
+      retrievedAt: observedAt.toISOString(),
+    }));
+    const enrichment = new EnrichmentService({
+      initialAircraftMetadata: { name: "local-metadata", getMetadata },
+    });
+    const service = new AircraftStateService(
+      provider,
+      enrichment,
+      new AtcSectorService(new EmptyAtcSectorProvider()),
+    );
+    services.push(service);
+
+    const published: StateSnapshot[] = [];
+    service.subscribe((snapshot) => published.push(snapshot));
+    await service.waitForReady();
+
+    expect(getMetadata).toHaveBeenCalledTimes(1);
+    expect(published.length).toBeGreaterThan(0);
+    const firstAircraft = published[0]?.aircraft[0];
+    expect(firstAircraft?.enrichment?.metadata?.icaoTypeCode).toBe("A320");
+    expect(firstAircraft && classifyAircraftIcon(firstAircraft).asset).toBe("/aircraft-icons-tar1090/A320.svg");
   });
 
   it("shares one cached snapshot construction across many listeners", async () => {
