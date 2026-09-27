@@ -2,6 +2,38 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.178] - 2026-09-27
+
+Changes since v1.0.177.
+
+### Added
+
+- Update RadarMapLayerMenu for accessibility and improve visual system documentation (8b5629f)
+- Enhance aircraft marker and label handling with stale state management and opacity adjustments (2f95379)
+- Implement system status streaming API and enhance diagnostics handling (3adcc1a)
+
+### Changed
+
+- Merge remote-tracking branch 'origin/main' (0d1e1e7)
+
+### Maintenance
+
+- Sync generated repository metadata (3300bee)
+- Sync generated repository metadata (4237ac8)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (3300bee)
+- Merge pull request #192 from Boym323/automation/repository-metadata (ba806ba)
+- feat: update RadarMapLayerMenu for accessibility and improve visual system documentation (8b5629f)
+- Merge remote-tracking branch 'origin/main' (0d1e1e7)
+- chore(metadata): sync generated repository metadata (4237ac8)
+- Merge pull request #193 from Boym323/automation/repository-metadata (40ab4c9)
+- feat: enhance aircraft marker and label handling with stale state management and opacity adjustments (2f95379)
+- feat: implement system status streaming API and enhance diagnostics handling (3adcc1a)
+
+</details>
 ## [1.0.177] - 2026-09-27
 
 Changes since v1.0.176.
