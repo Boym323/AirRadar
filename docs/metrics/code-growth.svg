@@ -7,7 +7,7 @@
   <text x="48" y="72" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" fill="#59636e">Daily Git history · non-empty physical source lines</text>
 
   <line x1="500" y1="47" x2="528" y2="47" stroke="#0969da" stroke-width="3" stroke-linecap="round"/>
-  <text x="536" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Production 65,441</text>
+  <text x="536" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Production 65,451</text>
   <line x1="700" y1="47" x2="728" y2="47" stroke="#8250df" stroke-width="3" stroke-linecap="round"/>
   <text x="736" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Tests 18,588</text>
 
@@ -27,15 +27,15 @@
   <line x1="72" y1="92" x2="72" y2="344" stroke="#8c959f" stroke-width="1"/>
   <line x1="72" y1="344" x2="928" y2="344" stroke="#8c959f" stroke-width="1"/>
 
-  <path d="M 72.0 325.2 L 110.6 319.2 L 155.0 295.8 L 193.6 284.6 L 237.9 264.5 L 277.2 254.5 L 316.3 243.7 L 401.2 242.4 L 437.3 237.9 L 479.6 237.9 L 528.3 233.7 L 557.0 224.5 L 609.5 215.7 L 644.3 210.8 L 721.3 208.3 L 770.1 203.6 L 898.1 191.5 L 928.0 179.1" fill="none" stroke="#0969da" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 72.0 341.0 L 110.6 337.9 L 155.0 330.4 L 193.6 326.7 L 237.9 320.8 L 277.2 317.4 L 316.3 315.2 L 401.2 314.9 L 437.3 314.7 L 479.6 314.7 L 528.3 313.8 L 557.0 312.0 L 609.5 310.2 L 644.3 308.6 L 721.3 307.0 L 770.1 305.4 L 898.1 300.4 L 928.0 297.2" fill="none" stroke="#8250df" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 72.0 325.2 L 110.5 319.2 L 155.0 295.8 L 193.6 284.6 L 237.8 264.5 L 277.1 254.5 L 316.1 243.7 L 401.0 242.4 L 437.1 237.9 L 479.4 237.9 L 528.1 233.7 L 556.8 224.5 L 609.3 215.7 L 644.0 210.8 L 721.0 208.3 L 769.7 203.6 L 897.8 191.5 L 928.0 179.1" fill="none" stroke="#0969da" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 72.0 341.0 L 110.5 337.9 L 155.0 330.4 L 193.6 326.7 L 237.8 320.8 L 277.1 317.4 L 316.1 315.2 L 401.0 314.9 L 437.1 314.7 L 479.4 314.7 L 528.1 313.8 L 556.8 312.0 L 609.3 310.2 L 644.0 308.6 L 721.0 307.0 L 769.7 305.4 L 897.8 300.4 L 928.0 297.2" fill="none" stroke="#8250df" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="928.0" cy="179.1" r="4.5" fill="#0969da"/>
   <circle cx="928.0" cy="297.2" r="4.5" fill="#8250df"/>
 
   <text x="72.0" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-06</text>
   <text x="193.6" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-09</text>
-  <text x="401.2" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-14</text>
-  <text x="528.3" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-17</text>
-  <text x="721.3" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-22</text>
+  <text x="401.0" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-14</text>
+  <text x="528.1" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-17</text>
+  <text x="721.0" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-22</text>
   <text x="928.0" y="376" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">2026-09-27</text>
 </svg>
