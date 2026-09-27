@@ -32,8 +32,17 @@ jobs:
         with:
           node-version: 22
 
+      - name: Fetch full history for initial backfill
+        shell: bash
+        run: |
+          if node -e 'const h=require("./docs/metrics/code-history.json"); process.exit(h.gitBackfill?.version === 1 && h.gitBackfill?.strategy === "daily-last-first-parent" ? 0 : 1)'; then
+            echo "Historical LOC backfill already present."
+          else
+            git fetch --unshallow origin main
+          fi
+
       - name: Update code metrics
-        run: node scripts/code-metrics.mjs
+        run: node scripts/code-metrics.mjs --backfill-if-needed
 
       - name: Open or refresh metrics PR
         env:
