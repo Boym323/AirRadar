@@ -53,7 +53,7 @@ import {
   ROUTE_V2_REMAINING_LAYER_ID,
   ROUTE_V2_SOURCE_ID,
 } from "@/lib/route-visualization";
-import { AirRadarTopbar, MobileBottomNav } from "@/components/airradar-shell";
+import { AirRadarTopbar, MobileBottomNav, RadarNavRail, UtcClock } from "@/components/airradar-shell";
 import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
@@ -1991,10 +1991,15 @@ export function AirRadarApp() {
 
   return (
     <main className="radar-shell">
-      <AirRadarTopbar heading meta={
+      <AirRadarTopbar heading radarPage meta={
         <>
+          <div className="topbar-ops-meta">
+            <StatusBadge className="topbar-live-status" variant={receiverStatusVariant} title={receiverStatusLabel} aria-label={receiverStatusLabel}>{receiverStatusShort}</StatusBadge>
+            <span className="topbar-metric"><strong>{formatNumber(snapshot.sourceStats?.local ?? snapshot.stats.currentAircraft)}</strong><span>LOCAL</span></span>
+            <span className="topbar-metric topbar-metric-network"><strong>{formatNumber(snapshot.sourceStats?.network ?? 0)}</strong><span>NETWORK</span></span>
+            <UtcClock />
+          </div>
           <span className="topbar-receiver"><span className="topbar-receiver-label">{t.status.receiverLabel}</span><span className="topbar-receiver-name">{snapshot.receiver.name}</span></span>
-          <StatusBadge variant={receiverStatusVariant} title={receiverStatusLabel} aria-label={receiverStatusLabel}>{receiverStatusShort}</StatusBadge>
           <details className="topbar-secondary-status">
             <summary>{t.status.secondaryStatus}</summary>
             <div>
@@ -2005,7 +2010,9 @@ export function AirRadarApp() {
         </>
       } />
 
-      <section ref={radarContentRef} className="radar-content">
+      <div className="radar-workspace">
+        <RadarNavRail />
+        <section ref={radarContentRef} className="radar-content">
         <div className="map-panel">
           <div ref={mapContainerRef} className="map-container" />
           <div className="map-overlay">
@@ -2212,7 +2219,8 @@ export function AirRadarApp() {
             }}
           />
         </aside>
-      </section>
+        </section>
+      </div>
 
       <MobileBottomNav />
     </main>

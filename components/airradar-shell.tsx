@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GlobalSearch } from "@/components/global-search";
+import { UiIcon } from "@/components/ui-primitives";
 import { t } from "@/lib/i18n";
 
 function LogoMark() {
@@ -12,7 +13,7 @@ function LogoMark() {
     <svg className="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
       <circle cx="20" cy="20" r="14" stroke="currentColor" strokeWidth="1.5" opacity=".32" />
       <circle cx="20" cy="20" r="8" stroke="currentColor" strokeWidth="1.2" opacity=".5" />
-      <path d="M20 20 33 7" stroke="#f3b95f" strokeWidth="2" strokeLinecap="round" />
+      <path className="brand-mark-sweep" d="M20 20 33 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <circle cx="20" cy="20" r="2.6" fill="currentColor" />
     </svg>
   );
@@ -44,7 +45,50 @@ function isMorePath(pathname: string): boolean {
     || ["/aircraft", "/airports", "/flights"].some((prefix) => pathname.startsWith(prefix));
 }
 
-export function AirRadarTopbar({ heading = false, meta }: { heading?: boolean; meta?: ReactNode }) {
+export function UtcClock() {
+  const [utc, setUtc] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const update = () => setUtc(new Date());
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return <time className="topbar-utc" dateTime={utc?.toISOString()} aria-label="UTC"><span>UTC</span>{utc ? utc.toISOString().slice(11, 19) : "--:--:--"}</time>;
+}
+
+const radarRailNavigation = [
+  { href: "/", label: t.radar.liveAirPicture, icon: "radar", active: true },
+  { href: "/history", label: t.airportTraffic.flights, icon: "flight", active: false },
+  { href: "/#airports", label: t.layers.airports, icon: "airport", active: false },
+  { href: "/statistics", label: t.statistics.title, icon: "statistics", active: false },
+  { href: "/time-machine", label: t.timeMachine.title, icon: "time", active: false },
+  { href: "/#atc", label: t.layers.atc, icon: "atc", active: false },
+  { href: "/system", label: t.system.title, icon: "system", active: false },
+] as const;
+
+export function RadarNavRail() {
+  const pathname = usePathname();
+
+  return (
+    <aside className="radar-nav-rail" aria-label={t.statistics.navigation}>
+      <nav className="radar-rail-nav">
+        {radarRailNavigation.map(({ href, label, icon, active }) => {
+          const isActive = active ? pathname === "/" : pathMatches(pathname, href);
+          return (
+            <Link key={`${label}-${href}`} className={`radar-rail-link ${isActive ? "active" : ""}`} href={href} aria-current={isActive ? "page" : undefined}>
+              <span className="radar-rail-icon" aria-hidden="true"><UiIcon name={icon} /></span>
+              <span className="radar-rail-label">{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}
+
+export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { heading?: boolean; meta?: ReactNode; radarPage?: boolean }) {
   const pathname = usePathname();
 
   useEffect(() => {
@@ -71,7 +115,7 @@ export function AirRadarTopbar({ heading = false, meta }: { heading?: boolean; m
   }, []);
 
   return (
-    <header className="topbar">
+    <header className={`topbar ${radarPage ? "topbar-radar" : ""}`}>
       <Link className="brand brand-link" href="/" aria-label="AirRadar">
         <LogoMark />
         <span>
@@ -80,19 +124,31 @@ export function AirRadarTopbar({ heading = false, meta }: { heading?: boolean; m
         </span>
       </Link>
       <GlobalSearch />
-      <nav className="topbar-nav" aria-label={t.statistics.navigation}>
-        {primaryNavigation.map(({ href, label }) => {
-          const active = pathMatches(pathname, href);
-          return <Link key={href} className={`topbar-nav-primary ${active ? "active" : ""}`} href={href} aria-current={active ? "page" : undefined}>{label}</Link>;
-        })}
-        <details className="topbar-nav-more">
-          <summary className={isMorePath(pathname) ? "active" : undefined}>{t.common.more}</summary>
+      {!radarPage ? <>
+        <nav className="topbar-nav" aria-label={t.statistics.navigation}>
+          {primaryNavigation.map(({ href, label }) => {
+            const active = pathMatches(pathname, href);
+            return <Link key={href} className={`topbar-nav-primary ${active ? "active" : ""}`} href={href} aria-current={active ? "page" : undefined}>{label}</Link>;
+          })}
+          <details className="topbar-nav-more">
+            <summary className={isMorePath(pathname) ? "active" : undefined}>{t.common.more}</summary>
+            <div>
+              {moreNavigation.map(({ href, label }) => <Link key={href} href={href}>{label}</Link>)}
+            </div>
+          </details>
+        </nav>
+        {meta ? <div className="topbar-meta">{meta}</div> : null}
+      </> : <div className="topbar-radar-actions">
+        {meta ? <div className="topbar-meta">{meta}</div> : null}
+        <details className="topbar-menu">
+          <summary aria-label={t.common.more}><span aria-hidden="true">•••</span></summary>
           <div>
-            {moreNavigation.map(({ href, label }) => <Link key={href} href={href}>{label}</Link>)}
+            <Link href="/system">{t.system.title}</Link>
+            <Link href="/watchlist">{t.watchlist.title}</Link>
+            <Link href="/history">{t.history.title}</Link>
           </div>
         </details>
-      </nav>
-      {meta ? <div className="topbar-meta">{meta}</div> : null}
+      </div>}
     </header>
   );
 }
