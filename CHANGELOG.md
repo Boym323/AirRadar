@@ -2,6 +2,23 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.173] - 2026-09-27
+
+Changes since v1.0.172.
+
+### Maintenance
+
+- Sync generated repository metadata (e3caf22)
+- Refine aviation operations hierarchy (#186) (a137392)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (e3caf22)
+- Merge pull request #185 from Boym323/automation/repository-metadata (961bccb)
+- style(ui): refine aviation operations hierarchy (#186) (a137392)
+
+</details>
 ## [1.0.172] - 2026-09-27
 
 Changes since v1.0.171.
