@@ -32,6 +32,7 @@ import { computeAtcContext, inputFromAircraft, loadAtcContextDataset } from "@/l
 import { ReceiverCoverageAnalytics, type CoverageResponse } from "@/lib/server/receiver-coverage-analytics";
 import { appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
+import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classification";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -458,6 +459,8 @@ export class AircraftStateService {
       try {
       localSnapshot = await this.provider.getSnapshot();
       if (!this.running) return;
+      localSnapshot = await this.hydrateInitialIconMetadata(localSnapshot);
+      if (!this.running) return;
       this.applySnapshot(localSnapshot);
       this.lastSourceUpdate = localSnapshot.fetchedAt;
       this.lastError = null;
@@ -489,6 +492,40 @@ export class AircraftStateService {
         this.timer = setTimeout(() => void this.refresh(), delay);
       }
     }
+  }
+
+  private async hydrateInitialIconMetadata(snapshot: ProviderSnapshot): Promise<ProviderSnapshot> {
+    if (!this.enrichment.hasInitialMetadataProvider) return snapshot;
+
+    const candidates = snapshot.aircraft.filter((item) => {
+      if (this.localAircraft.get(item.icaoHex)?.enrichment?.metadata) return false;
+      return aircraftIconNeedsInitialMetadata(item);
+    });
+    if (candidates.length === 0) return snapshot;
+
+    const results = await Promise.all(candidates.map(async (item) => ({
+      icaoHex: item.icaoHex,
+      metadata: await this.enrichment.getInitialAircraftMetadata(item.icaoHex),
+    })));
+    const metadataByHex = new Map(results
+      .filter((result) => result.metadata !== null)
+      .map((result) => [result.icaoHex, result.metadata!]));
+    if (metadataByHex.size === 0) return snapshot;
+
+    return {
+      ...snapshot,
+      aircraft: snapshot.aircraft.map((item) => {
+        const metadata = metadataByHex.get(item.icaoHex);
+        if (!metadata) return item;
+        return {
+          ...item,
+          enrichment: {
+            ...(item.enrichment ?? {}),
+            metadata,
+          },
+        };
+      }),
+    };
   }
 
   private async refreshNetwork(): Promise<void> {

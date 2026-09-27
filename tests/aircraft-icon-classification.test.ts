@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aircraftPresentationKindForType, classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
+import { aircraftIconNeedsInitialMetadata, aircraftPresentationKindForType, classifyAircraftIcon } from "@/lib/aircraft/icon-classification";
 import { aircraftIconSizeForPresentation } from "@/lib/aircraft/icon-size";
 
 const base = { aircraftType: null, aircraftDescription: null, enrichment: undefined, category: null, onGround: false };
@@ -52,6 +52,32 @@ describe("canonical aircraft icon classification", () => {
     expect(aircraftIconSizeForPresentation("a330")).toBe(22);
     expect(aircraftIconSizeForPresentation("a380")).toBe(24);
     expect(aircraftIconSizeForPresentation("a380")).toBeGreaterThan(aircraftIconSizeForPresentation("a320"));
+  });
+
+  it("keeps a live observed type ahead of later enrichment metadata", () => {
+    const result = classifyAircraftIcon({
+      ...base,
+      aircraftType: "B738",
+      enrichment: {
+        metadata: {
+          registration: null,
+          registrationCountry: null,
+          registrationCountryCode: null,
+          aircraftType: "A320",
+          icaoTypeCode: "A320",
+          aircraftDescription: "Airbus A320",
+        },
+      },
+    });
+    expect(result.asset).toBe("/aircraft-icons-tar1090/B738.svg");
+    expect(result.presentationKind).toBe("b737");
+  });
+
+  it("requests initial metadata only when the first icon identity is unresolved", () => {
+    expect(aircraftIconNeedsInitialMetadata(base)).toBe(true);
+    expect(aircraftIconNeedsInitialMetadata({ ...base, aircraftType: "A320" })).toBe(false);
+    expect(aircraftIconNeedsInitialMetadata({ ...base, category: "A7" })).toBe(false);
+    expect(aircraftIconNeedsInitialMetadata({ ...base, category: "C1" })).toBe(false);
   });
 
   it("does not infer ground vehicle from onGround alone", () => {

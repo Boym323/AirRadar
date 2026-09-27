@@ -76,6 +76,8 @@ export interface AtcActivityProvider {
 }
 
 export interface ProviderRegistry {
+  /** Fast local metadata used before the first live snapshot is published. */
+  initialAircraftMetadata?: AircraftMetadataProvider;
   aircraftMetadata?: AircraftMetadataProvider;
   flightRoute?: FlightRouteProvider;
   flightPlan?: FlightPlanProvider;
