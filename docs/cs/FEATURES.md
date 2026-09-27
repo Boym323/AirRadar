@@ -3,7 +3,7 @@
 <!-- feature-registry:start -->
 ## Registr funkcí
 
-Tato tabulka je generována z [`features.registry.json`](features.registry.json).
+Tato tabulka je generována z [`features.registry.json`](../features.registry.json).
 CI ověřuje, že každou stránku Next.js a API routu vlastní alespoň jedna
 registrovaná funkce a že registr neobsahuje zastaralé routy. „Pre-registry“
 znamená, že funkce existovala už před zavedením registru a její původní vydání
