@@ -2,6 +2,24 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.172] - 2026-09-27
+
+Changes since v1.0.171.
+
+### Maintenance
+
+- Sync generated repository metadata (fac7581)
+- Enhance UI components with improved spacing and typography (465c578)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (fac7581)
+- Merge pull request #183 from Boym323/automation/repository-metadata (283b3d3)
+- style(ui): enhance UI components with improved spacing and typography (465c578)
+- Merge pull request #184 from Boym323/polish/ui-ux-v3 (d2a3081)
+
+</details>
 ## [1.0.171] - 2026-09-27
 
 Changes since v1.0.168.
