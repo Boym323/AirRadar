@@ -211,7 +211,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
   const browser = await chromium.launch({ headless: true });
   try {
     const configuredViewport = process.env.PRODUCTION_GATE_BROWSER_VIEWPORT;
-    const visualSmokePromise = configuredViewport ? Promise.resolve() : (async () => {
+    const captureVisualSmoke = configuredViewport ? async () => {} : async () => {
       const visualSmokeDirectory = resolve("artifacts/visual-smoke");
       mkdirSync(visualSmokeDirectory, { recursive: true });
       const visualTargets = [
@@ -245,7 +245,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           await visualPage.close();
         }
       }
-    })();
+    };
     const responsiveSweepPromise = configuredViewport ? Promise.resolve() : (async () => {
       const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
       try {
@@ -312,7 +312,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await routeSmoke.close();
-    await Promise.all([responsiveSweepPromise, visualSmokePromise]);
+    await responsiveSweepPromise;
+    await captureVisualSmoke();
     const browserViewports = [
       { width: 320, height: 844 },
       { width: 375, height: 812 },
