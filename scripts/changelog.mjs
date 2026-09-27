@@ -5,6 +5,16 @@ import { fileURLToPath } from "node:url";
 
 const APP_DIR = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const CHANGELOG_PATH = join(APP_DIR, "CHANGELOG.md");
+const FEATURE_REGISTRY_PATH = join(APP_DIR, "docs/features.registry.json");
+
+const CATEGORY_ORDER = [
+  "Added",
+  "Changed",
+  "Fixed",
+  "Performance",
+  "Documentation",
+  "Maintenance",
+];
 
 function git(args) {
   return execFileSync("git", ["-c", `safe.directory=${APP_DIR}`, ...args], {
@@ -53,18 +63,160 @@ function commitsBetween(previousTag, tag) {
   }) : [];
 }
 
-export function createChangelogEntry({ version, date, previousTag, commits }) {
-  const changes = commits.length
-    ? commits.map(({ hash, subject }) => `- ${subject} (${hash})`).join("\n")
-    : "- No user-facing changes.";
-  const comparison = previousTag ? `\n\nChanges since ${previousTag}:` : "";
-  return `## [${version}] - ${date}${comparison}\n\n${changes}`;
+function loadFeatureRegistry() {
+  try {
+    return JSON.parse(readFileSync(FEATURE_REGISTRY_PATH, "utf8"));
+  } catch {
+    return { features: [] };
+  }
 }
 
-export function updateChangelog({ version, date, existing = "", previousTag = latestReleaseTag(), commits = commitsSince(previousTag) }) {
+export function parseConventionalSubject(subject) {
+  const match = subject.match(/^([a-z]+)(?:\(([^)]+)\))?(!)?:\s*(.+)$/i);
+  if (!match) {
+    return {
+      type: null,
+      scope: null,
+      breaking: false,
+      summary: subject.trim(),
+    };
+  }
+
+  return {
+    type: match[1].toLowerCase(),
+    scope: match[2]?.toLowerCase() ?? null,
+    breaking: Boolean(match[3]),
+    summary: match[4].trim(),
+  };
+}
+
+export function categorizeCommit(subject) {
+  if (/^Merge pull request\b/i.test(subject) || /^Merge branch\b/i.test(subject)) {
+    return null;
+  }
+
+  const { type } = parseConventionalSubject(subject);
+  switch (type) {
+    case "feat":
+      return "Added";
+    case "fix":
+      return "Fixed";
+    case "perf":
+      return "Performance";
+    case "docs":
+      return "Documentation";
+    case "refactor":
+    case "change":
+    case "update":
+    case "enhance":
+    case "improve":
+      return "Changed";
+    case "test":
+    case "ci":
+    case "chore":
+    case "build":
+    case "style":
+    case "revert":
+      return "Maintenance";
+    default:
+      return "Changed";
+  }
+}
+
+export function formatSummarySubject(subject) {
+  const parsed = parseConventionalSubject(subject);
+  const summary = parsed.summary.replace(/[.!]+$/, "");
+  if (!summary) return subject;
+  return summary.charAt(0).toUpperCase() + summary.slice(1);
+}
+
+export function featureNamesForCommits(commits, registry = loadFeatureRegistry()) {
+  const names = new Set();
+
+  for (const commit of commits) {
+    const { scope } = parseConventionalSubject(commit.subject);
+    if (!scope) continue;
+
+    for (const feature of registry.features ?? []) {
+      if ((feature.changelogScopes ?? []).includes(scope)) names.add(feature.name);
+    }
+  }
+
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
+
+export function groupChangelogCommits(commits) {
+  const groups = new Map(CATEGORY_ORDER.map((category) => [category, []]));
+
+  for (const commit of commits) {
+    const category = categorizeCommit(commit.subject);
+    if (!category) continue;
+    groups.get(category)?.push(commit);
+  }
+
+  return groups;
+}
+
+function renderCategorizedChanges(commits) {
+  if (!commits.length) return "No user-facing changes.";
+
+  const groups = groupChangelogCommits(commits);
+  const sections = [];
+
+  for (const category of CATEGORY_ORDER) {
+    const categoryCommits = groups.get(category) ?? [];
+    if (!categoryCommits.length) continue;
+
+    sections.push(
+      `### ${category}\n\n${categoryCommits
+        .map(({ hash, subject }) => `- ${formatSummarySubject(subject)} (${hash})`)
+        .join("\n")}`,
+    );
+  }
+
+  return sections.length ? sections.join("\n\n") : "No user-facing changes.";
+}
+
+function renderTechnicalCommits(commits) {
+  if (!commits.length) return "";
+  return `<details>
+<summary>Technical commits</summary>
+
+${commits.map(({ hash, subject }) => `- ${subject} (${hash})`).join("\n")}
+
+</details>`;
+}
+
+export function createChangelogEntry({
+  version,
+  date,
+  previousTag,
+  commits,
+  registry = loadFeatureRegistry(),
+}) {
+  const comparison = previousTag ? `\n\nChanges since ${previousTag}.` : "";
+  const features = featureNamesForCommits(commits, registry);
+  const featureLine = features.length
+    ? `\n\n**Features touched:** ${features.join(", ")}.`
+    : "";
+  const categorized = renderCategorizedChanges(commits);
+  const technical = renderTechnicalCommits(commits);
+  const technicalBlock = technical ? `\n\n${technical}` : "";
+
+  return `## [${version}] - ${date}${comparison}${featureLine}\n\n${categorized}${technicalBlock}`;
+}
+
+export function updateChangelog({
+  version,
+  date,
+  existing = "",
+  previousTag = latestReleaseTag(),
+  commits = commitsSince(previousTag),
+  registry = loadFeatureRegistry(),
+}) {
   const heading = `## [${version}]`;
   if (existing.includes(heading)) return existing;
-  const entry = createChangelogEntry({ version, date, previousTag, commits });
+  const entry = createChangelogEntry({ version, date, existing, previousTag, commits, registry });
   const prefix = existing.trim() || "# Changelog\n\nAll notable changes to AirRadar are documented here.\n";
   const firstEntry = prefix.search(/\n\n## \[/);
   if (firstEntry < 0) return `${prefix.trimEnd()}\n\n${entry}\n`;
@@ -103,7 +255,12 @@ export function missingChangelogVersions({ existing = "", tags = releaseTags() }
     .filter((version) => !existing.includes(`## [${version}]`));
 }
 
-export function backfillChangelog({ existing = "", tags = releaseTags(), releases = {} }) {
+export function backfillChangelog({
+  existing = "",
+  tags = releaseTags(),
+  releases = {},
+  registry = loadFeatureRegistry(),
+}) {
   const missingEntries = [];
   for (let index = 0; index < tags.length; index += 1) {
     const tag = tags[index];
@@ -116,6 +273,7 @@ export function backfillChangelog({ existing = "", tags = releaseTags(), release
       date: release?.date ?? tagDate(tag),
       previousTag,
       commits: release?.commits ?? commitsBetween(previousTag, tag),
+      registry,
     }));
   }
   if (!missingEntries.length) return existing;

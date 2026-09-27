@@ -166,7 +166,22 @@ describe("automatic changelog generation", () => {
       date: "2026-09-09",
       previousTag: "v0.1.9",
       commits: [{ hash: "abc1234", subject: "feat: add changelog" }],
-    })).toBe("## [0.1.10] - 2026-09-09\n\nChanges since v0.1.9:\n\n- feat: add changelog (abc1234)");
+    })).toBe([
+      "## [0.1.10] - 2026-09-09",
+      "",
+      "Changes since v0.1.9.",
+      "",
+      "### Added",
+      "",
+      "- Add changelog (abc1234)",
+      "",
+      "<details>",
+      "<summary>Technical commits</summary>",
+      "",
+      "- feat: add changelog (abc1234)",
+      "",
+      "</details>",
+    ].join("\n"));
   });
 
   it("does not duplicate an existing release section", () => {

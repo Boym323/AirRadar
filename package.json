@@ -66,7 +66,9 @@
     "audit:flightaware-routes": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-flightaware-routes.ts",
     "changelog:check": "node scripts/changelog.mjs check",
     "metrics:code": "node scripts/code-metrics.mjs",
-    "metrics:code:backfill": "node scripts/code-metrics.mjs --backfill"
+    "metrics:code:backfill": "node scripts/code-metrics.mjs --backfill",
+    "features:generate": "node scripts/features-registry.mjs generate",
+    "features:check": "node scripts/features-registry.mjs check"
   },
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.9",
