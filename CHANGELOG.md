@@ -2,36 +2,6 @@
 
 All notable changes to AirRadar are documented here.
 
-## [1.0.180] - 2026-09-27
-
-Changes since v1.0.179.
-
-### Added
-
-- Add Czech localization for project documentation and update related files (de47b905)
-- Update Czech documentation and add localization checks (2221b6d7)
-- Update aircraft radar quick detail component and localization for situation tab (5253e697)
-
-### Changed
-
-- Merge remote-tracking branch 'origin/main' (455918a3)
-
-### Maintenance
-
-- Sync generated repository metadata (dcf89f19)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (dcf89f19)
-- Merge pull request #195 from Boym323/automation/repository-metadata (6979721b)
-- feat: add Czech localization for project documentation and update related files (de47b905)
-- Merge remote-tracking branch 'origin/main' (455918a3)
-- feat(docs): update Czech documentation and add localization checks (2221b6d7)
-- feat: update aircraft radar quick detail component and localization for situation tab (5253e697)
-
-</details>
-
 ## [1.0.179] - 2026-09-27
 
 Changes since v1.0.178.
@@ -52,19 +22,18 @@ Changes since v1.0.178.
 - feat: add bilingual documentation for AirRadar in English and Czech (7f625b6)
 
 </details>
+
 ## [1.0.178] - 2026-09-27
 
 Changes since v1.0.177.
+
+**Features touched:** Live Radar, System Observability.
 
 ### Added
 
 - Update RadarMapLayerMenu for accessibility and improve visual system documentation (8b5629f)
 - Enhance aircraft marker and label handling with stale state management and opacity adjustments (2f95379)
 - Implement system status streaming API and enhance diagnostics handling (3adcc1a)
-
-### Changed
-
-- Merge remote-tracking branch 'origin/main' (0d1e1e7)
 
 ### Maintenance
 
@@ -84,9 +53,12 @@ Changes since v1.0.177.
 - feat: implement system status streaming API and enhance diagnostics handling (3adcc1a)
 
 </details>
+
 ## [1.0.177] - 2026-09-27
 
 Changes since v1.0.176.
+
+**Features touched:** Live Radar.
 
 ### Added
 
@@ -111,6 +83,7 @@ Changes since v1.0.176.
 - feat: enhance map diagnostics with additional metrics and style load handling (153aeda)
 
 </details>
+
 ## [1.0.176] - 2026-09-27
 
 Changes since v1.0.173.
@@ -120,11 +93,6 @@ Changes since v1.0.173.
 ### Added
 
 - Enhance aircraft telemetry display and navigation sections (97840df)
-
-### Changed
-
-- Merge remote-tracking branch 'origin/main' (1a299cb)
-- Merge remote-tracking branch 'origin/main' (cc07d43)
 
 ### Fixed
 
@@ -183,52 +151,6 @@ Changes since v1.0.173.
 - Merge remote-tracking branch 'origin/main' (cc07d43)
 
 </details>
-## [1.0.175] - 2026-09-27
-
-Changes since v1.0.174.
-
-### Added
-
-- Enhance aircraft telemetry display and navigation sections (97840df2)
-
-### Fixed
-
-- Improve metadata hydration and snapshot handling (555047d2)
-
-### Maintenance
-
-- Sync generated repository metadata (2c0eed34)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (2c0eed34)
-- Merge pull request #188 from Boym323/automation/repository-metadata (c9f8acce)
-- feat: enhance aircraft telemetry display and navigation sections (97840df2)
-- fix(aircraft-state): improve metadata hydration and snapshot handling (555047d2)
-
-</details>
-
-## [1.0.174] - 2026-09-27
-
-Changes since v1.0.173.
-
-### Fixed
-
-- Improve network snapshot handling and metadata hydration (bf3d0904)
-
-### Maintenance
-
-- Sync generated repository metadata (581c5c8e)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (581c5c8e)
-- Merge pull request #187 from Boym323/automation/repository-metadata (30e9e12e)
-- fix(aircraft-state): improve network snapshot handling and metadata hydration (bf3d0904)
-
-</details>
 
 ## [1.0.173] - 2026-09-27
 
@@ -247,6 +169,7 @@ Changes since v1.0.172.
 - style(ui): refine aviation operations hierarchy (#186) (a137392)
 
 </details>
+
 ## [1.0.172] - 2026-09-27
 
 Changes since v1.0.171.
@@ -265,6 +188,7 @@ Changes since v1.0.171.
 - Merge pull request #184 from Boym323/polish/ui-ux-v3 (d2a3081)
 
 </details>
+
 ## [1.0.171] - 2026-09-27
 
 Changes since v1.0.168.
@@ -275,10 +199,6 @@ Changes since v1.0.168.
 
 - Use Beast telemetry across aircraft visualizations (4f3b4e8)
 - Export plausible transition functions and filter trail points for improved history processing (b560880)
-
-### Changed
-
-- Merge remote-tracking branch 'origin/main' (66f8441)
 
 ### Fixed
 
@@ -313,55 +233,12 @@ Changes since v1.0.168.
 - Merge pull request #182 from Boym323/audit/visual-system-v2-20260927 (cc75628)
 
 </details>
-## [1.0.170] - 2026-09-27
-
-Changes since v1.0.169.
-
-**Features touched:** Live Radar.
-
-### Fixed
-
-- Avoid generic icons while WebGL assets load (276ccdea)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix(radar): avoid generic icons while WebGL assets load (276ccdea)
-
-</details>
-
-## [1.0.169] - 2026-09-27
-
-Changes since v1.0.168.
-
-### Added
-
-- Use Beast telemetry across aircraft visualizations (4f3b4e8b)
-- Export plausible transition functions and filter trail points for improved history processing (b5608804)
-
-### Changed
-
-- Merge remote-tracking branch 'origin/main' (66f84416)
-
-### Maintenance
-
-- Sync generated repository metadata (c365fb2b)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (c365fb2b)
-- Merge pull request #180 from Boym323/automation/repository-metadata (a121a7de)
-- feat: use Beast telemetry across aircraft visualizations (4f3b4e8b)
-- feat: export plausible transition functions and filter trail points for improved history processing (b5608804)
-- Merge remote-tracking branch 'origin/main' (66f84416)
-- Merge pull request #179 from Boym323/fix/beast-visualization-coverage (071b176b)
-
-</details>
 
 ## [1.0.168] - 2026-09-27
 
 Changes since v1.0.167.
+
+**Features touched:** Live Radar.
 
 ### Fixed
 
@@ -379,6 +256,7 @@ Changes since v1.0.167.
 - fix: improve initial metadata hydration for aircraft snapshots (c00569f)
 
 </details>
+
 ## [1.0.167] - 2026-09-27
 
 Changes since v1.0.164.
@@ -391,11 +269,6 @@ Changes since v1.0.164.
 - Model initial aircraft metadata provider (f4319bd)
 - Add fast initial aircraft metadata lookup (fbf5b26)
 - Add altitude provenance and forensic diagnostics (730489a)
-
-### Changed
-
-- Merge remote-tracking branch 'origin/main' (aad3db4)
-- Merge remote-tracking branch 'origin/main' (410fb8e)
 
 ### Fixed
 
@@ -441,32 +314,6 @@ Changes since v1.0.164.
 - Merge remote-tracking branch 'origin/main' (410fb8e)
 
 </details>
-## [1.0.166] - 2026-09-27
-
-Changes since v1.0.165.
-
-### Added
-
-- Add altitude provenance and forensic diagnostics (730489a2)
-
-<details>
-<summary>Technical commits</summary>
-
-- feat: add altitude provenance and forensic diagnostics (730489a2)
-
-</details>
-
-## [1.0.165] - 2026-09-27
-
-Changes since v1.0.164.
-
-### Added
-
-- Add typed altitude provenance, centralized merge/freshness policy, temporal
-  jump diagnostics, bounded Beast forensic tracing, protected admin altitude
-  diagnostics, and persistent anomaly events.
-- Persist nullable altitude provenance on new `FlightPosition` rows without
-  backfilling historical data.
 
 ## [1.0.164] - 2026-09-27
 
@@ -479,7 +326,6 @@ Changes since v1.0.163.
 ### Changed
 
 - Add script for auditing extreme altitudes in flight data (f53fe7b)
-- Merge remote-tracking branch 'origin/main' (857f906)
 
 ### Maintenance
 
@@ -496,6 +342,7 @@ Changes since v1.0.163.
 - Merge remote-tracking branch 'origin/main' (857f906)
 
 </details>
+
 ## [1.0.163] - 2026-09-27
 
 Changes since v1.0.162.
@@ -516,152 +363,97 @@ Changes since v1.0.162.
 - feat: implement historical altitude repair script and rollback SQL (dc7457a)
 
 </details>
+
 ## [1.0.162] - 2026-09-27
-
-Changes since v1.0.161.
-
-### Added
-
-- Enhance altitude decoding with ADS-B barometric and GNSS altitude functions (6bc7201e)
-- Add historical altitude audit script and corresponding npm script (456ea571)
-
-### Changed
-
-- Merge remote-tracking branch 'origin/main' (a17d6351)
-- Add SQL script for historical altitude repair and rollback data (777e447d)
-
-### Maintenance
-
-- Sync generated repository metadata (45c9e527)
-- Sync generated repository metadata (6ca7a6b8)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (45c9e527)
-- Merge pull request #170 from Boym323/automation/repository-metadata (ff9cb946)
-- feat: enhance altitude decoding with ADS-B barometric and GNSS altitude functions (6bc7201e)
-- Merge remote-tracking branch 'origin/main' (a17d6351)
-- chore(metadata): sync generated repository metadata (6ca7a6b8)
-- Merge pull request #171 from Boym323/automation/repository-metadata (884e62c8)
-- feat(audit): add historical altitude audit script and corresponding npm script (456ea571)
-- Add SQL script for historical altitude repair and rollback data (777e447d)
-
-</details>
-
-## [1.0.161] - 2026-09-27
-
-Changes since v1.0.160.
-
-### Added
-
-- Enhance BeastDecoder to handle short DF11 identity and DF4 altitude replies, and reject untracked AP replies (664c080e)
-- Enhance Beast Mode-S decoding with local BDS inference and metadata retention (9c2b20f3)
-- Enhance BeastDecoder and FailoverLocalProvider with timestamp handling and telemetry merging improvements (01da4b10)
-
-### Maintenance
-
-- Sync generated repository metadata (4a3634ac)
-
-<details>
-<summary>Technical commits</summary>
-
-- feat: enhance BeastDecoder to handle short DF11 identity and DF4 altitude replies, and reject untracked AP replies (664c080e)
-- chore(metadata): sync generated repository metadata (4a3634ac)
-- Merge pull request #169 from Boym323/automation/repository-metadata (0f8d9abb)
-- feat: enhance Beast Mode-S decoding with local BDS inference and metadata retention (9c2b20f3)
-- feat: enhance BeastDecoder and FailoverLocalProvider with timestamp handling and telemetry merging improvements (01da4b10)
-
-</details>
-
-## [1.0.160] - 2026-09-27
-
-Changes since v1.0.159.
-
-### Changed
-
-- Expand local Beast Mode-S decoding for DF0/16/20/21, add defensive Comm-B BDS 4,0/4,4/5,0/6,0 inference, retain TC emitter category and TC19 IAS/TAS, and use receiver-local signal/timestamp metadata.
-
-### Added
-
-- Implement merging logic for local aircraft and add unit tests (f4c07a42)
-- Enhance aircraft telemetry merging with observation times and improve fallback logic (4135ba43)
-- Add altitude decoding logic and corresponding tests (016d36d0)
-
-<details>
-<summary>Technical commits</summary>
-
-- feat: implement merging logic for local aircraft and add unit tests (f4c07a42)
-- feat: enhance aircraft telemetry merging with observation times and improve fallback logic (4135ba43)
-- feat: add altitude decoding logic and corresponding tests (016d36d0)
-
-</details>
-
-## [1.0.159] - 2026-09-27
-
-Changes since v1.0.158.
-
-### Added
-
-- Add ADS-B telemetry support and update normalization logic (5af67c09)
-
-### Changed
-
-- Merge remote-tracking branch 'origin/main' (37809ce0)
-
-### Maintenance
-
-- Sync generated repository metadata (fbce3f2e)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (fbce3f2e)
-- Merge pull request #167 from Boym323/automation/repository-metadata (6ef0187e)
-- feat: add ADS-B telemetry support and update normalization logic (5af67c09)
-- Merge remote-tracking branch 'origin/main' (37809ce0)
-
-</details>
-
-## [1.0.158] - 2026-09-27
-
-Changes since v1.0.157.
-
-### Added
-
-- Add decoding for TC29 target state and TC31 operational status; update types and serialization (49703079)
-
-<details>
-<summary>Technical commits</summary>
-
-- feat(beast-decoder): add decoding for TC29 target state and TC31 operational status; update types and serialization (49703079)
-
-</details>
-
-## [1.0.157] - 2026-09-27
 
 Changes since v1.0.156.
 
+**Features touched:** Live Radar.
+
 ### Added
 
-- Enhance decoding logic for TC19 and TC28 frames, add tests for ground speed and emergency status (19f40ec3)
+- Enhance decoding logic for TC19 and TC28 frames, add tests for ground speed and emergency status (19f40ec)
+- Add decoding for TC29 target state and TC31 operational status; update types and serialization (4970307)
+- Add ADS-B telemetry support and update normalization logic (5af67c0)
+- Implement merging logic for local aircraft and add unit tests (f4c07a4)
+- Enhance aircraft telemetry merging with observation times and improve fallback logic (4135ba4)
+- Add altitude decoding logic and corresponding tests (016d36d)
+- Enhance BeastDecoder to handle short DF11 identity and DF4 altitude replies, and reject untracked AP replies (664c080)
+- Enhance Beast Mode-S decoding with local BDS inference and metadata retention (9c2b20f)
+- Enhance BeastDecoder and FailoverLocalProvider with timestamp handling and telemetry merging improvements (01da4b1)
+- Enhance altitude decoding with ADS-B barometric and GNSS altitude functions (6bc7201)
+- Add historical altitude audit script and corresponding npm script (456ea57)
+
+### Changed
+
+- Add SQL script for historical altitude repair and rollback data (777e447)
+
+### Fixed
+
+- Type historical event query (284bd83)
+
+### Documentation
+
+- Update changelog for v1.0.157 (f7060d1)
+- Update changelog for v1.0.158 (0b0e3a0)
+- Update changelog for v1.0.159 (6ae30c9)
+- Update changelog for v1.0.160 (9b082be)
+- Update changelog for v1.0.161 (af12d9f)
+- Update changelog for v1.0.162 (649f707)
 
 ### Maintenance
 
-- Sync generated repository metadata (777f9e9f)
+- Sync generated repository metadata (777f9e9)
+- Sync generated repository metadata (fbce3f2)
+- Sync generated repository metadata (b728da7)
+- Sync generated repository metadata (4a3634a)
+- Sync generated repository metadata (45c9e52)
+- Sync generated repository metadata (6ca7a6b)
 
 <details>
 <summary>Technical commits</summary>
 
-- chore(metadata): sync generated repository metadata (777f9e9f)
-- Merge pull request #166 from Boym323/automation/repository-metadata (c50bd65c)
-- feat(beast-decoder): enhance decoding logic for TC19 and TC28 frames, add tests for ground speed and emergency status (19f40ec3)
+- chore(metadata): sync generated repository metadata (777f9e9)
+- Merge pull request #166 from Boym323/automation/repository-metadata (c50bd65)
+- feat(beast-decoder): enhance decoding logic for TC19 and TC28 frames, add tests for ground speed and emergency status (19f40ec)
+- docs: update changelog for v1.0.157 (f7060d1)
+- feat(beast-decoder): add decoding for TC29 target state and TC31 operational status; update types and serialization (4970307)
+- docs: update changelog for v1.0.158 (0b0e3a0)
+- chore(metadata): sync generated repository metadata (fbce3f2)
+- Merge pull request #167 from Boym323/automation/repository-metadata (6ef0187)
+- feat: add ADS-B telemetry support and update normalization logic (5af67c0)
+- Merge remote-tracking branch 'origin/main' (37809ce)
+- docs: update changelog for v1.0.159 (6ae30c9)
+- chore(metadata): sync generated repository metadata (b728da7)
+- Merge pull request #168 from Boym323/automation/repository-metadata (994a9df)
+- feat: implement merging logic for local aircraft and add unit tests (f4c07a4)
+- feat: enhance aircraft telemetry merging with observation times and improve fallback logic (4135ba4)
+- feat: add altitude decoding logic and corresponding tests (016d36d)
+- docs: update changelog for v1.0.160 (9b082be)
+- feat: enhance BeastDecoder to handle short DF11 identity and DF4 altitude replies, and reject untracked AP replies (664c080)
+- chore(metadata): sync generated repository metadata (4a3634a)
+- Merge pull request #169 from Boym323/automation/repository-metadata (0f8d9ab)
+- feat: enhance Beast Mode-S decoding with local BDS inference and metadata retention (9c2b20f)
+- feat: enhance BeastDecoder and FailoverLocalProvider with timestamp handling and telemetry merging improvements (01da4b1)
+- docs: update changelog for v1.0.161 (af12d9f)
+- chore(metadata): sync generated repository metadata (45c9e52)
+- Merge pull request #170 from Boym323/automation/repository-metadata (ff9cb94)
+- feat: enhance altitude decoding with ADS-B barometric and GNSS altitude functions (6bc7201)
+- Merge remote-tracking branch 'origin/main' (a17d635)
+- chore(metadata): sync generated repository metadata (6ca7a6b)
+- Merge pull request #171 from Boym323/automation/repository-metadata (884e62c)
+- feat(audit): add historical altitude audit script and corresponding npm script (456ea57)
+- Add SQL script for historical altitude repair and rollback data (777e447)
+- docs: update changelog for v1.0.162 (649f707)
+- fix(audit): type historical event query (284bd83)
 
 </details>
 
 ## [1.0.156] - 2026-09-27
 
 Changes since v1.0.155.
+
+**Features touched:** Statistics & Recaps, System Observability, Time Machine.
 
 ### Added
 
@@ -727,11 +519,12 @@ Changes since v1.0.155.
 - Merge pull request #165 from Boym323/feat/visual-system-v2-phase1 (9f68ff7)
 
 </details>
+
 ## [1.0.155] - 2026-09-27
 
 Changes since v1.0.152.
 
-**Features touched:** System Observability.
+**Features touched:** OGN / FLARM.
 
 ### Added
 
@@ -807,65 +600,10 @@ Changes since v1.0.150.
 - feat: add canonical aircraft glyph paths and update related components (a4e8d7a)
 
 </details>
-## [1.0.154] - 2026-09-27
-
-Changes since v1.0.153.
-
-**Features touched:** System Observability.
-
-### Added
-
-- Enhance OGN deduplication logic to handle exact position matches without altitude (382b2b11)
-
-### Fixed
-
-- Ignore unchanged same-day snapshots (2d666b97)
-
-### Maintenance
-
-- Ignore changelog-only pushes (08c65c32)
-- Skip metrics-only deployment (d79a4ed1)
-- Prevent unchanged same-day churn (754cdce5)
-- Guard changelog metrics loop (7b8c1211)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix(metrics): ignore unchanged same-day snapshots (2d666b97)
-- ci(metrics): ignore changelog-only pushes (08c65c32)
-- ci(release): skip metrics-only deployment (d79a4ed1)
-- test(metrics): prevent unchanged same-day churn (754cdce5)
-- test(ci): guard changelog metrics loop (7b8c1211)
-- feat: enhance OGN deduplication logic to handle exact position matches without altitude (382b2b11)
-- Merge pull request #161 from Boym323/fix/automation-docs-metrics-loop (759f64d1)
-
-</details>
-
-## [1.0.153] - 2026-09-27
-
-Changes since v1.0.152.
-
-### Added
-
-- Implement OGN target deduplication logic and add corresponding tests (b6bc862a)
-
-### Fixed
-
-- Correct altitude decoding for DF17 Q-bit to prevent incorrect values (b2866ed7)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: correct altitude decoding for DF17 Q-bit to prevent incorrect values (b2866ed7)
-- feat: implement OGN target deduplication logic and add corresponding tests (b6bc862a)
-
-</details>
 
 ## [1.0.150] - 2026-09-27
 
 Changes since v1.0.149.
-
-**Features touched:** System Observability.
 
 ### Added
 
@@ -917,6 +655,8 @@ Changes since v1.0.149.
 
 Changes since v1.0.147.
 
+**Features touched:** Aircraft & Flight Detail.
+
 ### Added
 
 - Add intelligence aircraft detail summary (c16b0f6)
@@ -950,16 +690,6 @@ Changes since v1.0.147.
 - Merge pull request #158 from Boym323/perf/rendering-polish-v2 (c128242)
 
 </details>
-## [1.0.148] - 2026-09-27
-
-Changes since v1.0.147:
-
-- feat: add intelligence aircraft detail summary (c16b0f68)
-- Merge pull request #151 from Boym323/feat/aircraft-detail-v2 (a19d62f0)
-- chore(metrics): update codebase growth (7621c288)
-- Merge pull request #156 from Boym323/automation/codebase-metrics (adcdf684)
-- docs: sync release changelog (d3292ec6)
-- Merge pull request #150 from Boym323/automation/changelog-sync (43df2669)
 
 ## [1.0.147] - 2026-09-27
 
@@ -1001,6 +731,7 @@ Changes since v1.0.145:
 - Merge pull request #144 from Boym323/automation/changelog-sync (ccf34d1)
 - chore(metrics): update codebase growth (9942ab9)
 - Merge pull request #149 from Boym323/automation/codebase-metrics (3a1f3b6)
+
 ## [1.0.145] - 2026-09-26
 
 Changes since v1.0.144:
@@ -1310,6 +1041,7 @@ Changes since v1.0.126:
 - ci: tolerate changelog PR permission in changelog-sync.yml (4d008c6)
 - Merge pull request #118 from Boym323/automation/changelog-sync (653c6d2)
 - Merge pull request #119 from Boym323/fix/changelog-sync-pr-permission (04cab03)
+
 ## [1.0.126] - 2026-09-26
 
 Changes since v1.0.125:
@@ -1893,6 +1625,7 @@ Changes since v1.0.38:
 - Merge pull request #53 from Boym323/fix/release-notes-production-version (ccb092d)
 - fix: remove fragile release workflow heredoc (4ae4049)
 - Merge pull request #54 from Boym323/fix/release-workflow-heredoc (f71fdd0)
+
 ## [1.0.124] - 2026-09-26
 
 ## What's Changed
@@ -2403,7 +2136,6 @@ Changes since v1.0.33:
 Changes since v1.0.32:
 
 - feat(animation): implement aircraft animation job management and optimize rendering (9cb1e8d8)
-
 
 ## [1.0.32] - 2026-09-12
 
