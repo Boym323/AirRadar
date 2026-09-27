@@ -156,15 +156,15 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
       float maskAlpha = 1.0;
       if (v_icon_layer >= 0.0) {
         vec2 uv = vec2(q.x + 0.5, 0.5 - q.y);
-        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) discard;
+      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) discard;
         maskAlpha = texture(u_icon_atlas, vec3(uv, v_icon_layer)).a;
         if (maskAlpha < 0.08) discard;
       } else {
-        bool fuselage = abs(q.x) < 0.065 && q.y > -0.38 && q.y < 0.38;
-        bool nose = q.y >= 0.18 && q.y <= 0.44 && abs(q.x) < (0.44 - q.y) * 0.42 + 0.025;
-        bool wings = abs(q.y + 0.02) < 0.065 && abs(q.x) < 0.42;
-        bool tail = q.y > -0.34 && q.y < -0.20 && abs(q.x) < 0.19;
-        if (!(fuselage || nose || wings || tail)) discard;
+        // The correct SVG is requested asynchronously. Do not paint the
+        // built-in generic airplane while its atlas layer is still loading;
+        // that creates a misleading first frame and then visibly changes
+        // into the real aircraft icon.
+        discard;
       }
 
       float alpha = v_color.a * maskAlpha;
