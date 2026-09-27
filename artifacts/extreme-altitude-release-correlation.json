@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-09-27T11:41:44.746Z",
+  "currentCommit": "dc7457a05fd322067259c29e7a00d46e943e517b",
+  "historicalDecoderChanges": [
+    {
+      "commit": "b2866ed7",
+      "date": "2026-09-27T10:00:19+02:00",
+      "change": "DF17 Q-bit altitude fix"
+    },
+    {
+      "commit": "016d36d0",
+      "date": "2026-09-27T11:38:12+02:00",
+      "change": "AC12/AC13 and altitude decoder changes"
+    },
+    {
+      "commit": "6bc7201e",
+      "date": "2026-09-27T12:36:11+02:00",
+      "change": "DF17/18 AC12 and GNSS/barometric altitude decoder changes"
+    }
+  ],
+  "interpretation": "Historical FlightPosition has no release/provider provenance; correlation is temporal hypothesis only."
+}
