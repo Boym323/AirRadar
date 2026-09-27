@@ -71,11 +71,16 @@ changelog commit or release tag, and keeps the production checkout
 fast-forwardable from `origin/main`. During the privileged repository update,
 the release script synchronizes remote release tags into the production
 checkout so post-deploy version resolution sees prior automated releases. After
-production health checks pass, the workflow creates
-a GitHub Release with generated release notes, targeting the exact tested
-commit. Release publishing is idempotent: an already-existing GitHub Release
-for the resolved tag is treated as success, including rerun/race cases.
-Versioned stable/RC releases continue to use the normal command above.
+production health checks pass, the workflow creates a GitHub Release with
+generated release notes, targeting the exact tested commit. Once the complete
+main CI workflow succeeds, `.github/workflows/repository-metadata.yml`
+backfills `CHANGELOG.md` from published tags, refreshes generated codebase
+metrics, opens one audit PR from `automation/repository-metadata`, and merges
+that metadata PR automatically. Metadata-only merges are explicitly excluded
+from production deployment. Release publishing is idempotent: an
+already-existing GitHub Release for the resolved tag is treated as success,
+including rerun/race cases. Versioned stable/RC releases continue to use the
+normal command above.
 
 ## Exact release order
 
@@ -104,8 +109,9 @@ Versioned stable/RC releases continue to use the normal command above.
    block, and list registered features touched through conventional-commit
    scopes from `docs/features.registry.json`. If changed, the release commits
    it automatically before continuing. Automated releases skip this repository
-   mutation; the post-deploy changelog sync backfills the tagged release while
-   the GitHub Release continues to use GitHub-generated notes.
+   mutation; the post-CI Repository Metadata workflow backfills the tagged
+   release together with generated codebase metrics while the GitHub Release
+   continues to use GitHub-generated notes.
 5. It runs `npm ci` with the local cache and without npm audit/fund network
    checks, emits the Prisma contract, then runs lint, typecheck, and the full
    Vitest suite in parallel. The release test invocation uses Vitest
