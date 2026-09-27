@@ -58,8 +58,8 @@ export function RelevantAtcPanel({ summaries, onOpen, expanded = true }: Relevan
                 onClick={() => select(summary)}
               >
                 <span className="atc-frequency-main">
-                  <strong>{formatAtcFrequency(summary.frequencyMhz)}</strong>
                   <span>{summary.callsign ?? t.atc.defaultService}</span>
+                  <strong>{formatAtcFrequency(summary.frequencyMhz)} <small>MHz</small></strong>
                 </span>
                 <span className="atc-frequency-meta">
                   <span>{aircraftCount(summary.aircraftCount)}</span>
@@ -76,8 +76,8 @@ export function RelevantAtcPanel({ summaries, onOpen, expanded = true }: Relevan
         {selected && <div className="atc-frequency-detail">
           <div className="atc-detail-heading">
             <div>
-              <strong>{formatAtcFrequency(selected.frequencyMhz)}</strong>
               <span>{selected.callsign ?? t.atc.defaultService}</span>
+              <strong>{formatAtcFrequency(selected.frequencyMhz)} <small>MHz</small></strong>
             </div>
             <span className="atc-detail-label">{t.atc.relevantDetails}</span>
           </div>
