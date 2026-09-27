@@ -2,6 +2,23 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.170] - 2026-09-27
+
+Changes since v1.0.169.
+
+**Features touched:** Live Radar.
+
+### Fixed
+
+- Avoid generic icons while WebGL assets load (276ccdea)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(radar): avoid generic icons while WebGL assets load (276ccdea)
+
+</details>
+
 ## [1.0.169] - 2026-09-27
 
 Changes since v1.0.168.
