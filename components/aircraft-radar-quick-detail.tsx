@@ -13,6 +13,7 @@ import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-
 import type { AircraftDestinationWindContext, AircraftWindAheadProfile, AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
+import type { FlightIntelligenceEvent, FlightPhase } from "@/lib/intelligence/types";
 import type { RadarLayerDataStatus } from "@/components/radar/use-radar-weather-context";
 import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraft-detail-v2";
 import { FlightRouteWeather } from "@/components/airport-weather";
@@ -51,6 +52,7 @@ export interface AircraftRadarQuickDetailProps {
   destinationWind: AircraftDestinationWindContext | null;
   windStatus: RadarLayerDataStatus;
   routeWeather: RouteWeatherContext | null;
+  intelligenceEvents?: FlightIntelligenceEvent[];
   watchlisted: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -364,21 +366,12 @@ function TechnicalDetails({ aircraft }: { aircraft: AircraftView }) {
 
 type DetailTab = "overview" | "flight" | "aircraft" | "track" | "telemetry" | "data";
 
-function flightPhase(aircraft: AircraftView): string | null {
-  if (aircraft.onGround) return t.aircraft.phaseOnGround;
-  if (aircraft.verticalRate === null) return null;
-  if (aircraft.verticalRate > 100) return t.aircraft.phaseAscending;
-  if (aircraft.verticalRate < -100) return t.aircraft.phaseDescending;
-  return t.aircraft.phaseLevel;
-}
-
 function verticalRateLabel(value: number | null): string {
   if (value === null) return t.common.emptyValue;
   return `${value > 0 ? "↑" : value < 0 ? "↓" : "→"} ${formatNumber(Math.abs(value))} ft/min`;
 }
 
 function SituationSummarySection({ summary }: { summary: FlightSituationSummary }) {
-  const phase = t.intelligence.situationPhases[summary.phase];
   const atc = summary.currentSector
     ? [summary.currentSector, summary.currentUnit].filter(Boolean).join(" · ")
     : t.common.emptyValue;
@@ -412,13 +405,41 @@ function SituationSummarySection({ summary }: { summary: FlightSituationSummary 
 
   return <QuickSection id="aircraft-situation-summary-title" title={t.intelligence.situationTitle} className="aircraft-quick-situation">
     <div className="aircraft-quick-detail-grid" data-testid="flight-situation-summary">
-      <DetailValue label={t.intelligence.situationPhase} value={phase} />
       <DetailValue label={t.intelligence.situationAtc} value={next ? `${atc} · ${next}` : atc} />
       <DetailValue label={t.intelligence.situationWeather} value={weather} />
       <DetailValue label={t.intelligence.situationWind} value={windTrend ? `${wind} ${windTrend}` : wind} />
     </div>
     {summary.routeDeviationNearSigmet && <p className="aircraft-quick-situation-signal">{t.intelligence.situationDeviation}</p>}
     <p className="aircraft-quick-disclaimer">{t.intelligence.situationDisclaimer}</p>
+  </QuickSection>;
+}
+
+function phaseLabel(phase: FlightPhase | null): string | null {
+  return phase ? t.intelligence.phaseLabels[phase] : null;
+}
+
+function IntelligenceSection({ events }: { events: FlightIntelligenceEvent[] }) {
+  const meaningful = events.filter((event) => !["HOLDING_CANDIDATE", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"].includes(event.type)).slice(0, 4);
+  if (!meaningful.length) return null;
+  return <QuickSection id="aircraft-quick-intelligence-title" title={t.intelligence.aircraftSectionTitle} className="aircraft-quick-intelligence">
+    <ul className="aircraft-quick-event-list">
+      {meaningful.map((event) => <li key={event.eventKey}>
+        <time dateTime={event.occurredAt}>{formatTime(event.occurredAt)}</time>
+        <span>{t.intelligence.types[event.type]}</span>
+        <small>{t.intelligence.confidence[event.confidenceLevel]}</small>
+      </li>)}
+    </ul>
+  </QuickSection>;
+}
+
+function DataQualitySection({ aircraft }: { aircraft: AircraftView }) {
+  const stale = aircraft.seenPosSeconds === null || aircraft.seenPosSeconds > 60;
+  return <QuickSection id="aircraft-quick-quality-title" title={t.intelligence.dataQualityTitle} className="aircraft-quick-quality">
+    <div className="aircraft-quick-detail-grid">
+      <DetailValue label={t.intelligence.positionAge} value={aircraft.seenPosSeconds === null ? t.common.emptyValue : formatAge(aircraft.seenPosSeconds)} />
+      <DetailValue label={t.intelligence.dataSource} value={aircraft.sourceType ?? aircraft.source} />
+      <DetailValue label={t.intelligence.freshness} value={stale ? t.intelligence.stale : t.intelligence.fresh} />
+    </div>
   </QuickSection>;
 }
 
@@ -536,6 +557,7 @@ export function AircraftRadarQuickDetail({
   destinationWind,
   windStatus,
   routeWeather,
+  intelligenceEvents = [],
   watchlisted,
   onBack,
   onClose,
@@ -556,7 +578,8 @@ export function AircraftRadarQuickDetail({
   const emergency = aircraft.emergency && aircraft.emergency.toLowerCase() !== "none" ? aircraft.emergency : null;
   const emergencySquawk = aircraft.squawk && ["7500", "7600", "7700"].includes(aircraft.squawk) ? aircraft.squawk : null;
   const sourceAge = aircraft.seenPosSeconds === null ? null : formatAge(aircraft.seenPosSeconds);
-  const phase = flightPhase(aircraft);
+  const latestEvent = intelligenceEvents[0] ?? null;
+  const phase = phaseLabel(latestEvent?.phase ?? null);
   const situation = buildFlightSituationSummary({
     aircraft,
     atc: atcContext,
@@ -594,6 +617,8 @@ export function AircraftRadarQuickDetail({
     <DetailTabs activeTab={activeTab} onChange={setActiveTab} />
     {activeTab === "overview" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-overview" aria-labelledby="aircraft-tab-overview">
       <SituationSummarySection summary={situation} />
+      <IntelligenceSection events={intelligenceEvents} />
+      <DataQualitySection aircraft={aircraft} />
       <AircraftOverview aircraft={aircraft} registration={registration} operator={operator} headerType={headerType} sourceAge={sourceAge} phase={phase} emergency={emergency} emergencySquawk={emergencySquawk} onCenter={onCenter} historyHref={historyHref} fullDetailHref={fullDetailHref} />
     </div>}
     {activeTab === "flight" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-flight" aria-labelledby="aircraft-tab-flight">
