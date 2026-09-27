@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.166] - 2026-09-27
+
+Changes since v1.0.165.
+
+### Added
+
+- Add altitude provenance and forensic diagnostics (730489a2)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add altitude provenance and forensic diagnostics (730489a2)
+
+</details>
+
 ## [1.0.165] - 2026-09-27
 
 Changes since v1.0.164.
