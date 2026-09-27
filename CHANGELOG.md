@@ -2,6 +2,40 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.154] - 2026-09-27
+
+Changes since v1.0.153.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Enhance OGN deduplication logic to handle exact position matches without altitude (382b2b11)
+
+### Fixed
+
+- Ignore unchanged same-day snapshots (2d666b97)
+
+### Maintenance
+
+- Ignore changelog-only pushes (08c65c32)
+- Skip metrics-only deployment (d79a4ed1)
+- Prevent unchanged same-day churn (754cdce5)
+- Guard changelog metrics loop (7b8c1211)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(metrics): ignore unchanged same-day snapshots (2d666b97)
+- ci(metrics): ignore changelog-only pushes (08c65c32)
+- ci(release): skip metrics-only deployment (d79a4ed1)
+- test(metrics): prevent unchanged same-day churn (754cdce5)
+- test(ci): guard changelog metrics loop (7b8c1211)
+- feat: enhance OGN deduplication logic to handle exact position matches without altitude (382b2b11)
+- Merge pull request #161 from Boym323/fix/automation-docs-metrics-loop (759f64d1)
+
+</details>
+
 ## [1.0.153] - 2026-09-27
 
 Changes since v1.0.152.
