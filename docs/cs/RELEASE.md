@@ -194,7 +194,7 @@ Produkční proxy cílí na LAN listener nakonfigurovaný v systemd unitě.
 AirRadar používá SSE, nikoli WebSocket. Proxy musí zachovat HTTP/1.1, vypnout
 buffering/cache pro `/api/stream`, ponechat dlouhý read timeout a zachovat
 `X-Accel-Buffering: no`; kompletní konfigurace Nginx Proxy Manageru je v
-[`deploy/README.md`](../deploy/README.md).
+[`deploy/README.md`](../../deploy/README.md).
 
 Health kontroly release skriptu vyžadují, aby `/api/health` vracelo HTTP 2xx,
 top-level `status=ok` a `application.status=ok`. Health odpovědi jsou
