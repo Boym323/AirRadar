@@ -23,6 +23,13 @@ All three wave branches were created from the identical `origin/main` commit
 `3a1f3b61`. No breaking change to the intelligence event envelope, timestamp
 semantics, or shared directory layout is planned.
 
-The later UI streams E–H were not started because the requested integration
-barrier requires backend stream merges first. Route Intelligence remains out of
-scope.
+## UI wave progress
+
+| Stream | Branch | PR | Local tests | GitHub CI | Conflict | Status |
+|---|---|---|---|---|---|---|
+| E — Aircraft Detail V2 | `feat/aircraft-detail-v2` | [#151](https://github.com/Boym323/AirRadar/pull/151) | typecheck, targeted Vitest, ESLint | pending | medium | implementation complete; review pending |
+| F — Alerting V2 | `feat/alerting-v2` | [#152](https://github.com/Boym323/AirRadar/pull/152) | typecheck, targeted Vitest, ESLint | pending | low | implementation complete; review pending |
+| G — Time Machine V2 | `feat/time-machine-v2` | [#153](https://github.com/Boym323/AirRadar/pull/153) | typecheck, targeted Vitest, ESLint | pending | medium | implementation complete; review pending |
+
+The later rendering/performance stream H remains intentionally unstarted.
+Route Intelligence remains out of scope.
