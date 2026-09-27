@@ -536,11 +536,22 @@ export class AircraftStateService {
       // stop() may have happened while the provider request was pending. The
       // result is deliberately discarded so shutdown cannot publish a state.
       if (!this.running) return;
-      // Network-only aircraft must receive the same initial metadata lookup as
-      // local aircraft, otherwise they briefly render the generic icon.
-      const aircraft = await this.hydrateInitialIconMetadata(networkSnapshot.aircraft);
-      this.applyNetworkSnapshot({ ...networkSnapshot, aircraft });
+      // Publish the live network observation before optional metadata work.
+      // A catalog/provider failure must never hide an otherwise valid network
+      // snapshot from the extended radar.
+      this.applyNetworkSnapshot(networkSnapshot);
       this.notify();
+
+      // Network-only aircraft should still receive the same initial metadata
+      // lookup as local aircraft, but enrichment is deliberately best-effort.
+      try {
+        const aircraft = await this.hydrateInitialIconMetadata(networkSnapshot.aircraft);
+        if (!this.running) return;
+        this.applyNetworkSnapshot({ ...networkSnapshot, aircraft });
+        this.notify();
+      } catch (error) {
+        logger.debug({ error }, "AirRadar network metadata hydration skipped");
+      }
     } catch {
       // The optional provider owns its bounded stale state and diagnostics.
       // A network failure must never change local receiver health.
