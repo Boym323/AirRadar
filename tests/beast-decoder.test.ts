@@ -16,7 +16,7 @@ describe("BeastDecoder", () => {
     // Type code 11, altitude code 0xbf0 = 37,000 ft. The previous decoder
     // masked away the upper altitude bits and returned -625 ft.
     const aircraft = new BeastDecoder(receiver).decode(
-      frame("8d4bb87a580bf000000000000000"),
+      frame("8d4bb87a580bf000000000f15f2e"),
       Date.parse("2026-01-01T00:00:00Z"),
     );
     expect(aircraft).toMatchObject({ icaoHex: "4BB87A", altitude: 37000, baroAltitude: 37000, sourceType: "df17" });
@@ -36,5 +36,43 @@ describe("BeastDecoder", () => {
     expect(aircraft?.lat).toBeCloseTo(52.2658, 3);
     expect(aircraft?.lon).toBeCloseTo(3.9389, 3);
     expect(aircraft?.distanceKm).toBeGreaterThan(700);
+  });
+  it("decodes a TC19 ground-speed frame without an impossible vertical rate", () => {
+    const aircraft = new BeastDecoder(receiver).decode(
+      frame("8d485020994409940838175b284f"),
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    expect(aircraft).toMatchObject({ groundSpeed: 159, verticalRate: -832, baroRate: null, geomRate: -832 });
+    expect(aircraft?.track).toBeCloseTo(182.9, 1);
+  });
+  it("keeps GNSS altitude separate from barometric altitude", () => {
+    // TC20, Q-bit altitude code 0xbf0 = 37,000 ft GNSS altitude.
+    const aircraft = new BeastDecoder(receiver).decode(
+      frame("8d4bb87aa00bf00000000085b843"),
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    expect(aircraft).toMatchObject({ altitude: 37000, geomAltitude: 37000 });
+    expect(aircraft?.baroAltitude).toBeUndefined();
+  });
+  it("rejects a corrupted extended-squitter frame before decoding it", () => {
+    const corrupted = "8d485020994409940838175b284e";
+    expect(new BeastDecoder(receiver).decode(frame(corrupted))).toBeNull();
+  });
+  it("decodes TC28 emergency status and squawk", () => {
+    // TC28 subtype 1, emergency state 0, identity code 0x0808 = squawk 1200.
+    const aircraft = new BeastDecoder(receiver).decode(
+      frame("8d4bb87ae1080800000000a893de"),
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    expect(aircraft).toMatchObject({ squawk: "1200", emergency: null });
+  });
+  it("decodes surface traffic as on-ground with local CPR", () => {
+    const aircraft = new BeastDecoder({ lat: 43.6264, lon: 1.3747, name: "LFBO" }).decode(
+      frame("903a23ff426a4e65f7487a775d17"),
+      Date.parse("2026-01-01T00:00:00Z"),
+    );
+    expect(aircraft).toMatchObject({ onGround: true });
+    expect(aircraft?.lat).toBeCloseTo(43.6264, 2);
+    expect(aircraft?.lon).toBeCloseTo(1.3747, 2);
   });
 });
