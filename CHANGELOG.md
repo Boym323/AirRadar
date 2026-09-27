@@ -2,6 +2,17 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.148] - 2026-09-27
+
+Changes since v1.0.147:
+
+- feat: add intelligence aircraft detail summary (c16b0f68)
+- Merge pull request #151 from Boym323/feat/aircraft-detail-v2 (a19d62f0)
+- chore(metrics): update codebase growth (7621c288)
+- Merge pull request #156 from Boym323/automation/codebase-metrics (adcdf684)
+- docs: sync release changelog (d3292ec6)
+- Merge pull request #150 from Boym323/automation/changelog-sync (43df2669)
+
 ## [1.0.147] - 2026-09-27
 
 Changes since v1.0.146:
