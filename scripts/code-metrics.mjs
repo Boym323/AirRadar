@@ -7,6 +7,8 @@ import path from "node:path";
 const ROOT = process.cwd();
 const HISTORY_PATH = path.join(ROOT, "docs/metrics/code-history.json");
 const SVG_PATH = path.join(ROOT, "docs/metrics/code-growth.svg");
+const BACKFILL_VERSION = 1;
+const BACKFILL_STRATEGY = "daily-last-first-parent";
 
 const INCLUDED_EXTENSIONS = new Set([
   ".ts",
@@ -77,25 +79,39 @@ function git(...args) {
   return execFileSync("git", args, {
     cwd: ROOT,
     encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "inherit"],
   }).trim();
 }
 
-function trackedFiles() {
-  const output = execFileSync("git", ["ls-files", "-z"], {
+function gitOutput(args) {
+  return execFileSync("git", args, {
     cwd: ROOT,
     encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "inherit"],
   });
-
-  return output.split("\0").filter(Boolean);
 }
 
-async function scanCodebase() {
-  const totals = {
+function trackedFiles() {
+  return gitOutput(["ls-files", "-z"]).split("\0").filter(Boolean);
+}
+
+function trackedFilesAt(commit) {
+  return gitOutput(["ls-tree", "-r", "-z", "--name-only", commit])
+    .split("\0")
+    .filter(Boolean);
+}
+
+function emptyTotals() {
+  return {
     production: { files: 0, loc: 0 },
     tests: { files: 0, loc: 0 },
   };
+}
+
+export async function scanCodebase() {
+  const totals = emptyTotals();
 
   for (const filePath of trackedFiles()) {
     const category = classifyPath(filePath);
@@ -107,6 +123,95 @@ async function scanCodebase() {
   }
 
   return totals;
+}
+
+function gitGrepNonEmptyLineCount(commit, files) {
+  if (files.length === 0) return 0;
+
+  let total = 0;
+  const chunkSize = 150;
+
+  for (let index = 0; index < files.length; index += chunkSize) {
+    const chunk = files.slice(index, index + chunkSize);
+    let output = "";
+
+    try {
+      output = gitOutput([
+        "grep",
+        "-I",
+        "-c",
+        "-e",
+        "[^[:space:]]",
+        commit,
+        "--",
+        ...chunk,
+      ]);
+    } catch (error) {
+      if (error?.status !== 1) throw error;
+      output = error?.stdout?.toString?.() ?? "";
+    }
+
+    for (const line of output.split(/\r?\n/)) {
+      const match = line.match(/:(\d+)$/);
+      if (match) total += Number(match[1]);
+    }
+  }
+
+  return total;
+}
+
+export function selectDailyCommits(logOutput) {
+  const commitsByDay = new Map();
+
+  for (const line of logOutput.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const tabIndex = line.indexOf("\t");
+    if (tabIndex === -1) continue;
+
+    const commit = line.slice(0, tabIndex);
+    const timestamp = line.slice(tabIndex + 1);
+    const day = timestamp.slice(0, 10);
+
+    if (!commit || !/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    commitsByDay.set(day, { day, commit, timestamp });
+  }
+
+  return [...commitsByDay.values()];
+}
+
+function dailyMainCommits(ref = "HEAD") {
+  const logOutput = gitOutput([
+    "log",
+    "--first-parent",
+    "--reverse",
+    "--format=%H%x09%cI",
+    ref,
+  ]);
+
+  return selectDailyCommits(logOutput);
+}
+
+export function scanCommit(commit) {
+  const paths = {
+    production: [],
+    tests: [],
+  };
+
+  for (const filePath of trackedFilesAt(commit)) {
+    const category = classifyPath(filePath);
+    if (category) paths[category].push(filePath);
+  }
+
+  return {
+    production: {
+      files: paths.production.length,
+      loc: gitGrepNonEmptyLineCount(commit, paths.production),
+    },
+    tests: {
+      files: paths.tests.length,
+      loc: gitGrepNonEmptyLineCount(commit, paths.tests),
+    },
+  };
 }
 
 async function loadHistory() {
@@ -138,6 +243,66 @@ function sameCounts(snapshot, totals) {
     snapshot?.production?.files === totals.production.files &&
     snapshot?.tests?.loc === totals.tests.loc &&
     snapshot?.tests?.files === totals.tests.files
+  );
+}
+
+function snapshotDay(snapshot) {
+  return snapshot?.day ?? snapshot?.timestamp?.slice(0, 10) ?? "";
+}
+
+export function upsertDailySnapshot(snapshots, snapshot) {
+  const day = snapshotDay(snapshot);
+  const normalized = { ...snapshot, day };
+  const existingIndex = snapshots.findIndex((item) => snapshotDay(item) === day);
+
+  if (existingIndex >= 0) {
+    const next = snapshots.slice();
+    next[existingIndex] = normalized;
+    return next.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  }
+
+  const latest = snapshots.at(-1);
+  if (sameCounts(latest, normalized)) return snapshots;
+
+  return [...snapshots, normalized].sort((a, b) =>
+    a.timestamp.localeCompare(b.timestamp),
+  );
+}
+
+function snapshotFromTotals({ commit, timestamp, day }, totals) {
+  return {
+    day: day ?? timestamp.slice(0, 10),
+    timestamp,
+    commit: commit.slice(0, 12),
+    production: totals.production,
+    tests: totals.tests,
+    totalLoc: totals.production.loc + totals.tests.loc,
+  };
+}
+
+function buildHistoricalSnapshots(ref = "HEAD") {
+  const snapshots = [];
+
+  for (const entry of dailyMainCommits(ref)) {
+    const totals = scanCommit(entry.commit);
+    const snapshot = snapshotFromTotals(entry, totals);
+
+    if (!sameCounts(snapshots.at(-1), totals)) {
+      snapshots.push(snapshot);
+    }
+
+    console.log(
+      `Backfill ${entry.day}: production=${totals.production.loc}, tests=${totals.tests.loc}`,
+    );
+  }
+
+  return snapshots;
+}
+
+function needsBackfill(history) {
+  return (
+    history?.gitBackfill?.version !== BACKFILL_VERSION ||
+    history?.gitBackfill?.strategy !== BACKFILL_STRATEGY
   );
 }
 
@@ -212,11 +377,14 @@ export function renderSvg(history) {
   const testValues = snapshots.map((snapshot) => snapshot.tests.loc);
   const maximum = niceMax(Math.max(...productionValues, ...testValues));
   const latest = snapshots.at(-1);
+  const times = snapshots.map((snapshot) => Date.parse(snapshot.timestamp));
+  const minTime = Math.min(...times);
+  const maxTime = Math.max(...times);
   const xFor = (index) =>
     margin.left +
-    (snapshots.length === 1
+    (maxTime === minTime
       ? plotWidth / 2
-      : (index / (snapshots.length - 1)) * plotWidth);
+      : ((times[index] - minTime) / (maxTime - minTime)) * plotWidth);
   const yFor = (value) => margin.top + plotHeight - (value / maximum) * plotHeight;
   const productionPath = pointPath(productionValues, xFor, yFor);
   const testPath = pointPath(testValues, xFor, yFor);
@@ -232,10 +400,7 @@ export function renderSvg(history) {
   const xLabels = labelIndexes(snapshots.length)
     .map((index) => {
       const snapshot = snapshots[index];
-      const date = new Date(snapshot.timestamp);
-      const label = Number.isNaN(date.valueOf())
-        ? snapshot.timestamp.slice(0, 10)
-        : date.toISOString().slice(0, 10);
+      const label = snapshotDay(snapshot);
       return `<text x="${xFor(index).toFixed(1)}" y="${height - 24}" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#6e7781">${escapeXml(label)}</text>`;
     })
     .join("\n  ");
@@ -247,10 +412,10 @@ export function renderSvg(history) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="title desc">
   <title id="title">AirRadar codebase growth</title>
-  <desc id="desc">Line chart of non-empty physical source lines split between production code and tests.</desc>
+  <desc id="desc">Daily line chart of non-empty physical source lines split between production code and tests, reconstructed from Git history.</desc>
   <rect width="100%" height="100%" rx="12" fill="#ffffff"/>
   <text x="48" y="48" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="24" font-weight="700" fill="#1f2328">AirRadar codebase growth</text>
-  <text x="48" y="72" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" fill="#59636e">Non-empty physical source lines · snapshots only when code counts change</text>
+  <text x="48" y="72" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" fill="#59636e">Daily Git history · non-empty physical source lines</text>
 
   <line x1="500" y1="47" x2="528" y2="47" stroke="#0969da" stroke-width="3" stroke-linecap="round"/>
   <text x="536" y="51" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#1f2328">Production ${escapeXml(formatNumber(latest.production.loc))}</text>
@@ -273,32 +438,46 @@ export function renderSvg(history) {
 }
 
 async function main() {
-  const totals = await scanCodebase();
+  const args = new Set(process.argv.slice(2));
   const history = await loadHistory();
-  const commit = (process.env.GITHUB_SHA || git("rev-parse", "HEAD")).slice(0, 12);
-  const timestamp = process.env.METRICS_TIMESTAMP || new Date().toISOString();
-  const latest = history.snapshots.at(-1);
+  const forceBackfill = args.has("--backfill");
+  const backfillIfNeeded = args.has("--backfill-if-needed");
 
-  if (!sameCounts(latest, totals)) {
-    history.snapshots.push({
-      timestamp,
-      commit,
-      production: totals.production,
-      tests: totals.tests,
-      totalLoc: totals.production.loc + totals.tests.loc,
-    });
+  if (forceBackfill || (backfillIfNeeded && needsBackfill(history))) {
+    history.snapshots = buildHistoricalSnapshots("HEAD");
+    history.gitBackfill = {
+      version: BACKFILL_VERSION,
+      strategy: BACKFILL_STRATEGY,
+      throughCommit: git("rev-parse", "HEAD").slice(0, 12),
+      generatedAt: new Date().toISOString(),
+    };
+  } else {
+    const totals = await scanCodebase();
+    const commit = (process.env.GITHUB_SHA || git("rev-parse", "HEAD")).slice(0, 12);
+    const timestamp = process.env.METRICS_TIMESTAMP || new Date().toISOString();
+    const snapshot = snapshotFromTotals(
+      { commit, timestamp, day: timestamp.slice(0, 10) },
+      totals,
+    );
+
+    history.snapshots = upsertDailySnapshot(history.snapshots, snapshot);
+
+    console.log(
+      `Code metrics: production=${totals.production.loc} LOC (${totals.production.files} files), ` +
+        `tests=${totals.tests.loc} LOC (${totals.tests.files} files)`,
+    );
   }
-
-  history.snapshots = history.snapshots.slice(-400);
 
   await mkdir(path.dirname(HISTORY_PATH), { recursive: true });
   await writeFile(HISTORY_PATH, `${JSON.stringify(history, null, 2)}\n`, "utf8");
   await writeFile(SVG_PATH, renderSvg(history), "utf8");
 
-  console.log(
-    `Code metrics: production=${totals.production.loc} LOC (${totals.production.files} files), ` +
-      `tests=${totals.tests.loc} LOC (${totals.tests.files} files)`,
-  );
+  const latest = history.snapshots.at(-1);
+  if (latest) {
+    console.log(
+      `Latest chart point ${snapshotDay(latest)}: production=${latest.production.loc}, tests=${latest.tests.loc}`,
+    );
+  }
 }
 
 const isMainModule =

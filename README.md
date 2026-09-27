@@ -21,8 +21,13 @@ then only the linked document relevant to the task; do not assume the whole
 The chart tracks non-empty physical source lines and separates production code
 from test code. Production excludes documentation, migrations, generated output,
 and public/vendor assets; test code includes `tests/**`, `*.test.*`,
-`*.spec.*`, `__tests__`, and test-runner configuration. Snapshots are added
-only when the measured code counts change.
+`*.spec.*`, `__tests__`, and test-runner configuration.
+
+The timeline is reconstructed from the repository's first available commit
+using the last first-parent `main` commit of each day. After the initial
+backfill, the workflow keeps at most one point per day and replaces that day's
+point with the newest measured state, so the graph stays readable as the
+project grows.
 
 ![AirRadar codebase growth](docs/metrics/code-growth.svg)
 
@@ -31,7 +36,8 @@ The history is stored in
 code-changing push to `main`, the codebase metrics workflow refreshes the
 snapshot on `automation/codebase-metrics` and opens or updates a normal PR,
 so branch protection and CI remain in the loop. Run `npm run metrics:code`
-to refresh it locally.
+for the current snapshot or `npm run metrics:code:backfill` to rebuild the
+daily timeline from Git history.
 
 ## Quick start — demo mode
 
