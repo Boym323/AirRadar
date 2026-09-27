@@ -54,6 +54,16 @@ describe("canonical aircraft icon classification", () => {
     expect(aircraftIconSizeForPresentation("a380")).toBeGreaterThan(aircraftIconSizeForPresentation("a320"));
   });
 
+  it.each([
+    ["a220", 20], ["a320", 20], ["a330", 22], ["a350", 22], ["a380", 24],
+    ["b717", 19], ["b727", 20], ["b737", 20], ["b747", 22], ["b757", 20],
+    ["b767", 22], ["b777", 22], ["b787", 22], ["regional", 19], ["turboprop", 19],
+    ["business-jet", 19], ["general-aviation", 18], ["helicopter", 18], ["glider", 21],
+    ["drone", 16], ["ground", 14],
+  ] as const)("keeps HTML and WebGL visual size parity for %s", (kind, expected) => {
+    expect(aircraftIconSizeForPresentation(kind)).toBe(expected);
+  });
+
   it("keeps a live observed type ahead of later enrichment metadata", () => {
     const result = classifyAircraftIcon({
       ...base,
