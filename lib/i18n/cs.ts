@@ -1184,6 +1184,8 @@ export const cs = {
     loading: "Načítám stav systému…",
     requestFailed: "Stav systému se nepodařilo načíst.",
     checkedAt: "Kontrolováno",
+    realtime: "Realtime",
+    reconnecting: "Připojuji…",
     diagnosticStatus: "Stav",
     statusLabels: { ok: "OK", degraded: "DEGRADED", offline: "OFFLINE", disabled: "DISABLED", on_demand: "NA VYŽÁDÁNÍ", loading: "NAČÍTÁNÍ", demo: "DEMO" },
     application: "Aplikace",

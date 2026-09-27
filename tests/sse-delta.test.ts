@@ -203,7 +203,7 @@ describe("SSE Delta V2", () => {
 
   it("tracks V1/V2 capacity separately while enforcing the shared cap", () => {
     const releases: Array<() => void> = [];
-    const channels = ["aircraft", "intelligence", "ogn"] as const;
+    const channels = ["aircraft", "intelligence", "ogn", "system"] as const;
     for (let index = 0; index < MAX_SSE_CLIENTS - 1; index += 1) {
       const release = acquireSseClient(
         index % 2 ? "v1" : "v2",

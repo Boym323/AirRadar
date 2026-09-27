@@ -295,7 +295,7 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(systemSource).not.toContain("fetch(");
     expect(systemSource).not.toContain("fetchOfficialCzEaip");
     expect(systemSource).not.toContain("atc-sync");
-    expect(pageSource).not.toContain("EventSource");
+    expect(pageSource).toContain('new EventSource("/api/system/stream")');
     expect(pageSource).not.toContain("setInterval(");
   });
 

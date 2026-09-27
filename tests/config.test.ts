@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getAviationWeatherBaseUrl, getAviationWeatherRequestTimeoutMs, getAviationWeatherUserAgent, getPublicReceiverPositionMode, getReceiverPosition, getSourceAffinityFailoverGraceMs, isAviationWeatherEnabled } from "@/lib/server/config";
+import { dayKey, DEFAULT_APP_TIMEZONE, getAppTimezone, getAviationWeatherBaseUrl, getAviationWeatherCacheFile, getAviationWeatherRequestTimeoutMs, getAviationWeatherUserAgent, getPublicReceiverPositionMode, getReceiverPosition, getSourceAffinityFailoverGraceMs, isAviationWeatherEnabled } from "@/lib/server/config";
 import { getAtcData } from "@/lib/server/providers";
 import { getAlertConfigPath } from "@/lib/server/alert-config";
 import { getRuntimeStateDirectory, getRuntimeStatePath } from "@/lib/server/runtime-state";
@@ -18,6 +18,13 @@ describe("numeric environment configuration", () => {
     expect(getAviationWeatherBaseUrl()).toBe("https://aviationweather.gov");
     expect(getAviationWeatherRequestTimeoutMs()).toBe(500);
     expect(getAviationWeatherUserAgent()).toBe("AirRadar test");
+  });
+
+  it("resolves an explicit writable Aviation Weather cache path", () => {
+    vi.stubEnv("AVIATION_WEATHER_CACHE_DIR", "/tmp/airradar-weather");
+    expect(getAviationWeatherCacheFile()).toBe("/tmp/airradar-weather/weather-cache-v1.json");
+    vi.stubEnv("AVIATION_WEATHER_CACHE_FILE", "/tmp/airradar-weather/custom.json");
+    expect(getAviationWeatherCacheFile()).toBe("/tmp/airradar-weather/custom.json");
   });
 
   it.each(["", "   ", "not-a-number"])('uses the coordinate fallback for %j', (value) => {

@@ -600,6 +600,7 @@ async function main() {
       AIRRADAR_CHANNEL: "production",
       WATCHLIST_ADMIN_TOKEN: soakMode ? soakAdminToken : "",
       AIRRADAR_RUNTIME_STATE_DIRECTORY: runtimeStateDirectory,
+      AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json"),
       WEATHER_RADAR_ARCHIVE_DIR: resolve(runtimeStateDirectory, "weather-radar"),
     },
     stdio: ["ignore", "pipe", "pipe"],

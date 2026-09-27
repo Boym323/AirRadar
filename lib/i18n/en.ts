@@ -1186,6 +1186,8 @@ export const en = {
     loading: "Loading system status…",
     requestFailed: "System status could not be loaded.",
     checkedAt: "Checked",
+    realtime: "Realtime",
+    reconnecting: "Reconnecting…",
     diagnosticStatus: "Status",
     statusLabels: { ok: "OK", degraded: "DEGRADED", offline: "OFFLINE", disabled: "DISABLED", on_demand: "ON DEMAND", loading: "LOADING", demo: "DEMO" },
     application: "Application",

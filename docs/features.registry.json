@@ -264,6 +264,7 @@
         "/api/health",
         "/api/system/runtime-history",
         "/api/system/status",
+        "/api/system/stream",
         "/api/version",
         "/api/admin/altitude/:hex"
       ],

@@ -10,7 +10,7 @@ import {
 
 describe("SSE capacity", () => {
   it("bounds active clients globally and makes release idempotent", () => {
-    const channels: SseChannel[] = ["aircraft", "intelligence", "ogn"];
+    const channels: SseChannel[] = ["aircraft", "intelligence", "ogn", "system"];
     const releases = Array.from({ length: MAX_SSE_CLIENTS }, (_, index) =>
       acquireSseClient(index % 2 === 0 ? "v1" : "v2", `client-${index}`, channels[index % channels.length]!));
     expect(releases.every(Boolean)).toBe(true);

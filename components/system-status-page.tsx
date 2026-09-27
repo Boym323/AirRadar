@@ -93,22 +93,52 @@ export function SystemStatusPage() {
   const [data, setData] = useState<SystemStatusApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [streamConnected, setStreamConnected] = useState(false);
+
+  const applyStatus = useCallback((next: SystemStatusApiResponse) => {
+    setData((current) => {
+      if (!current) return next;
+      const currentAt = Date.parse(current.checkedAt);
+      const nextAt = Date.parse(next.checkedAt);
+      return !Number.isFinite(currentAt) || !Number.isFinite(nextAt) || nextAt >= currentAt ? next : current;
+    });
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/system/status", { cache: "no-store" });
       if (!response.ok) throw new Error("system status request failed");
-      setData(await response.json() as SystemStatusApiResponse);
+      applyStatus(await response.json() as SystemStatusApiResponse);
       setError(false);
     } catch {
       setError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyStatus]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const source = new EventSource("/api/system/stream");
+    const handleSnapshot = (event: Event) => {
+      try {
+        applyStatus(JSON.parse((event as MessageEvent<string>).data) as SystemStatusApiResponse);
+        setError(false);
+      } catch {
+        // Ignore malformed diagnostic frames; EventSource stays connected.
+      }
+    };
+    source.addEventListener("snapshot", handleSnapshot);
+    source.onopen = () => setStreamConnected(true);
+    source.onerror = () => setStreamConnected(false);
+    return () => {
+      source.removeEventListener("snapshot", handleSnapshot);
+      source.close();
+      setStreamConnected(false);
+    };
+  }, [applyStatus]);
 
   const detailed = data?.detailLevel === "admin";
 
@@ -126,6 +156,9 @@ export function SystemStatusPage() {
       <div className="system-toolbar-status">
         {data && <StatusBadge status={data.status} dictionary={dictionary} />}
         {data && <span>{dictionary.system.checkedAt}: {formatDateTime(data.checkedAt, dictionary)}</span>}
+        <span className={`system-live-indicator ${streamConnected ? "connected" : "reconnecting"}`} aria-live="polite">
+          <span aria-hidden="true">●</span> {streamConnected ? dictionary.system.realtime : dictionary.system.reconnecting}
+        </span>
       </div>
       <Button variant="primary" className="primary-button" onClick={() => void load()} disabled={loading}>{loading ? dictionary.system.refreshing : dictionary.system.refresh}</Button>
     </div>

@@ -87,6 +87,7 @@ describe("radar production performance budgets", () => {
   it("disables inherited live network providers in the benchmark server", () => {
     expect(baselineSource).toContain('ADSBLOL_ENABLED: "false"');
     expect(baselineSource).toContain('ADSBHUB_ENABLED: "false"');
+    expect(baselineSource).toContain('AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json")');
   });
 
   it("models ordinary synthetic aircraft as non-emergency", () => {

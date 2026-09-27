@@ -8,7 +8,7 @@ export const MAX_SSE_CLIENTS_PER_CLIENT = 6;
 let activeClients = 0;
 let activeV1Clients = 0;
 let activeV2Clients = 0;
-const activeChannelClients: Record<SseChannel, number> = { aircraft: 0, intelligence: 0, ogn: 0 };
+const activeChannelClients: Record<SseChannel, number> = { aircraft: 0, intelligence: 0, ogn: 0, system: 0 };
 const activeClientCounts = new Map<string, number>();
 let lastV2SnapshotBytes: number | null = null;
 let lastV2DeltaBytes: number | null = null;
@@ -19,7 +19,7 @@ let recentDeltaBytes = 0;
 const MAX_RECENT_DELTA_SAMPLES = 32;
 
 export type SseProtocol = "v1" | "v2";
-export type SseChannel = "aircraft" | "intelligence" | "ogn";
+export type SseChannel = "aircraft" | "intelligence" | "ogn" | "system";
 
 function normalizedClientKey(value: string): string {
   const trimmed = value.trim();

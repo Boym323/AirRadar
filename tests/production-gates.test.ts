@@ -53,6 +53,17 @@ describe("production release metadata gate", () => {
     expect(source).not.toContain("{ width: 1150, height: 900 }");
   });
 
+  it("keeps production-gate weather persistence inside its temporary state", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain('AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json")');
+  });
+
+  it("keeps visual smoke readiness independent of remote map tiles", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("return Boolean(map);");
+    expect(source).toContain("}, undefined, { timeout: 15_000 });");
+  });
+
   it("keeps mobile navigation geometry assertions out of the Node global scope", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("navLayout.items.some((item) => item.y < 0 || item.right > viewport.width + 1)");

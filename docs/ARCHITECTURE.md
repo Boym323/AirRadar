@@ -262,7 +262,10 @@ held degraded by lifetime failure counters.
 `/api/system/status` exposes sanitized process RSS/heap/external/ArrayBuffer
 metrics, kernel RSS splits, the active SSE count and limit, metadata cache
 counts, the byte-bounded tar1090 fallback cache, and the cgroup memory values
-for the current process cgroup when the host exposes them.
+for the current process cgroup when the host exposes them. `/api/system/stream`
+publishes the same projected diagnostics over a shared, coalesced SSE refresh
+every five seconds so the `/system` page reflects runtime changes without a
+manual reload.
 
 Recap pages are page-scoped reads. They merge the existing daily receiver
 aggregates with database-side `Flight` aggregates and bounded first/latest

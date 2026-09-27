@@ -14,8 +14,9 @@ These are behavior and safety contracts for changes to the current system.
 - Radar and wind diagnostics distinguish lifetime failures from consecutive
   failures; a successful refresh clears consecutive failures and restores
   `ok` when the dataset is fresh.
-- Reading `/api/system/status` is read-only and must not warm optional caches
-  or trigger weather, radar, wind, or enrichment requests.
+- Reading `/api/system/status` or `/api/system/stream` is read-only and must
+  not warm optional caches or trigger weather, radar, wind, or enrichment
+  requests.
 
 ## Time Machine
 
