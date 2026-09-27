@@ -103,15 +103,37 @@ function modeAToModeC(value: number): number | null {
   return altitude >= -12 ? altitude * 100 : null;
 }
 
+/** Decode the 13-bit AC field used by DF0/4/16/20 surveillance replies. */
 export function decodeAltitudeCode(value: number): number | null {
   if (!Number.isInteger(value) || value < 0 || value > 0x1fff || value === 0) return null;
+  const m = (value >> 6) & 1;
+  if (m) {
+    // M=1 selects metric altitude.  The M bit is not part of the 12-bit
+    // metric value; convert the transmitted metres to the public feet unit.
+    const metres = ((value >> 7) << 6) | (value & 0x3f);
+    return metres === 0 ? null : Math.round(metres * 3.28084);
+  }
   const q = (value >> 4) & 1;
-  // With Q=1, remove the Q bit and concatenate the remaining altitude
-  // bits. The upper part is not limited to four bits: doing so turns the
-  // 37,000 ft code (0xbf0) into n=15, i.e. -625 ft.
-  const n = ((value >> 5) << 4) | (value & 0x0f);
+  // With Q=1, remove M and Q and concatenate the remaining altitude bits.
+  const n = ((value >> 7) << 5) | (((value >> 5) & 1) << 4) | (value & 0x0f);
   if (q) return n * 25 - 1000;
   return modeAToModeC(decodeId13Field(value));
+}
+
+/** Decode the 12-bit ADS-B airborne-position barometric altitude field. */
+export function decodeAdsbBarometricAltitude(value: number): number | null {
+  if (!Number.isInteger(value) || value < 0 || value > 0x0fff || value === 0) return null;
+  // ADS-B has no AC13 M bit here. Q=0 is the legacy Gillham representation,
+  // but without the AC13 layout it cannot be decoded safely from this field.
+  if (((value >> 4) & 1) === 0) return null;
+  const n = ((value >> 5) << 4) | (value & 0x0f);
+  return n * 25 - 1000;
+}
+
+/** Decode the 12-bit ADS-B GNSS height field (metres) to feet. */
+export function decodeAdsbGnssAltitude(value: number): number | null {
+  if (!Number.isInteger(value) || value <= 0 || value > 0x0fff) return null;
+  return Math.round(value * 3.28084);
 }
 function modeSValue(bytes: Buffer): bigint {
   let value = 0n;
@@ -242,7 +264,12 @@ export class BeastDecoder {
       a.track = trackStatus === 1 ? trackRaw * 360 / 128 : null;
       track.lastPositionAt = observedAt;
     } else if (me && typeCode !== null && (typeCode >= 9 && typeCode <= 18 || typeCode >= 20 && typeCode <= 22)) {
-      const decodedAltitude = decodeAltitudeCode(((me[1] & 0x1f) << 8) | me[2]);
+      // ME bits 9..20 are a 12-bit altitude field. The following T/F/CPR
+      // bits in me[2] must not be included in it.
+      const adsbAltitudeCode = (me[1]! << 4) | (me[2]! >> 4);
+      const decodedAltitude = typeCode >= 9 && typeCode <= 18
+        ? decodeAdsbBarometricAltitude(adsbAltitudeCode)
+        : decodeAdsbGnssAltitude(adsbAltitudeCode);
       if (typeCode >= 9 && typeCode <= 18) {
         a.baroAltitude = decodedAltitude;
         a.altitude = a.baroAltitude;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BeastDecoder, decodeAltitudeCode } from "@/lib/server/beast-decoder";
+import { BeastDecoder, decodeAdsbBarometricAltitude, decodeAdsbGnssAltitude, decodeAltitudeCode } from "@/lib/server/beast-decoder";
 import type { BeastFrame } from "@/lib/server/beast-parser";
 
 const receiver = { lat: 50, lon: 14, name: "test" };
@@ -17,6 +17,22 @@ function crc(payload: Buffer): number {
   return Number(value & 0xffffffn);
 }
 
+function df17Frame(icao: number, meHex: string): BeastFrame {
+  const payload = Buffer.alloc(14);
+  payload[0] = 0x8d;
+  payload[1] = icao >>> 16;
+  payload[2] = icao >>> 8;
+  payload[3] = icao;
+  Buffer.from(meHex, "hex").copy(payload, 4);
+  const crcPayload = Buffer.from(payload);
+  crcPayload.fill(0, 11);
+  const parity = crc(crcPayload);
+  payload[11] = parity >>> 16;
+  payload[12] = parity >>> 8;
+  payload[13] = parity;
+  return { type: 0x33, timestamp: Buffer.alloc(6), signal: 200, payload };
+}
+
 function apFrame(df: number, icao: number, body: [number, number]): Buffer {
   const payload = Buffer.from([df << 3, 0, body[0], body[1], 0, 0, 0]);
   const parity = crc(payload) ^ icao;
@@ -31,25 +47,54 @@ describe("BeastDecoder", () => {
     const aircraft = new BeastDecoder(receiver).decode(frame("8d4840d6202cc371c32ce0576098"), Date.parse("2026-01-01T00:00:00Z"));
     expect(aircraft).toMatchObject({ icaoHex: "4840D6", callsign: "KLM1023", category: "A4", source: "ADS-B" });
   });
-  it("decodes the full DF17 Q-bit altitude without turning 37,000 ft into -625 ft", () => {
-    // Type code 11, altitude code 0xbf0 = 37,000 ft. The previous decoder
-    // masked away the upper altitude bits and returned -625 ft.
+  it("decodes the 12-bit DF17 Q-bit altitude without using the DF4/20 AC13 layout", () => {
+    // TC11: ME altitude bits are 0xbf0 = 37,000 ft. The field is 12 bits;
+    // the following T/F/CPR bits are not part of the altitude.
     const aircraft = new BeastDecoder(receiver).decode(
-      frame("8d4bb87a580bf000000000f15f2e"),
+      df17Frame(0x4bb87a, "58bf0000000000"),
       Date.parse("2026-01-01T00:00:00Z"),
     );
     expect(aircraft).toMatchObject({ icaoHex: "4BB87A", altitude: 37000, baroAltitude: 37000, sourceType: "df17" });
   });
-  it("decodes valid Gillham/Q=0 altitude codes", () => {
+  it("decodes independent AC13 Gillham/Q=0 and Q=1 altitude codes", () => {
+    // Layout and Gillham rules cross-checked against:
+    // https://mode-s.org/1090MHz/content/mode-s/3-surveillance.html
     expect(decodeAltitudeCode(0x06a2)).toBe(10000);
-    expect(decodeAltitudeCode(0x0bf0)).toBe(37000);
+    expect(decodeAltitudeCode(0x6b8)).toBe(10000);
+  });
+  it.each([
+    [0, 0x058],
+    [10_000, 0x378],
+    [30_000, 0x9b8],
+    [40_000, 0xcd8],
+    [41_000, 0xd30],
+    [45_000, 0xe70],
+  ] as const)("decodes independent ADS-B AC12 vector %s ft", (altitude, code) => {
+    expect(decodeAdsbBarometricAltitude(code)).toBe(altitude);
+  });
+  it("regresses the production bug pattern instead of decoding 41000/40000 as ~2x", () => {
+    expect(decodeAdsbBarometricAltitude(0xd30)).toBe(41_000);
+    expect(decodeAdsbBarometricAltitude(0xcd8)).toBe(40_000);
+    expect(decodeAdsbBarometricAltitude(0xd30)).not.toBe(82_600);
+    expect(decodeAdsbBarometricAltitude(0xcd8)).not.toBe(80_800);
+  });
+  it.each([
+    [41_000, "58d30000000000"],
+    [40_000, "58cd8000000000"],
+  ] as const)("carries the corrected AC12 altitude %s ft through the Beast aircraft state", (altitude, me) => {
+    const aircraft = new BeastDecoder(receiver).decode(df17Frame(0x4bb87a, me));
+    expect(aircraft).toMatchObject({ altitude, baroAltitude: altitude, sourceType: "df17" });
+  });
+  it("keeps ADS-B GNSS altitude in its own metres-to-feet decoder", () => {
+    expect(decodeAdsbGnssAltitude(0x0bf)).toBe(627);
+    expect(decodeAdsbBarometricAltitude(0x0bf)).toBe(1_375);
   });
   it("decodes short DF11 identity and DF4 altitude replies", () => {
     const decoder = new BeastDecoder(receiver);
     const allCall = decoder.decode(frame("5d4bb87a000000"));
     expect(allCall).toMatchObject({ icaoHex: "4BB87A", sourceType: "df11" });
-    const altitudeReply = decoder.decode({ ...frame("00000000000000"), payload: apFrame(4, 0x4bb87a, [0x0b, 0xf0]) });
-    expect(altitudeReply).toMatchObject({ icaoHex: "4BB87A", altitude: 37000, baroAltitude: 37000, sourceType: "df4" });
+    const altitudeReply = decoder.decode({ ...frame("00000000000000"), payload: apFrame(4, 0x4bb87a, [0x06, 0xb8]) });
+    expect(altitudeReply).toMatchObject({ icaoHex: "4BB87A", altitude: 10000, baroAltitude: 10000, sourceType: "df4" });
   });
   it("rejects AP replies whose ICAO is not already tracked", () => {
     const payload = apFrame(4, 0x123456, [0x0b, 0xf0]);
@@ -80,12 +125,12 @@ describe("BeastDecoder", () => {
     expect(aircraft?.track).toBeCloseTo(182.9, 1);
   });
   it("keeps GNSS altitude separate from barometric altitude", () => {
-    // TC20, Q-bit altitude code 0xbf0 = 37,000 ft GNSS altitude.
+    // TC20, GNSS height is a 12-bit metre value, not AC13 feet.
     const aircraft = new BeastDecoder(receiver).decode(
-      frame("8d4bb87aa00bf00000000085b843"),
+      df17Frame(0x4bb87a, "a00bf000000000"),
       Date.parse("2026-01-01T00:00:00Z"),
     );
-    expect(aircraft).toMatchObject({ altitude: 37000, geomAltitude: 37000 });
+    expect(aircraft).toMatchObject({ altitude: 627, geomAltitude: 627 });
     expect(aircraft?.baroAltitude).toBeUndefined();
   });
   it("rejects a corrupted extended-squitter frame before decoding it", () => {
