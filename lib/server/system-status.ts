@@ -26,6 +26,7 @@ import {
   weatherStatus,
   windDiagnostic,
 } from "@/lib/server/system-status-diagnostics";
+import { buildReceiverQuality } from "@/lib/server/receiver-quality";
 export {
   toAdminSystemStatus,
   toPublicSystemStatus,
@@ -523,6 +524,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
   const now = input.now ?? new Date();
   const application = applicationRuntime(now, input.runtime);
   const lastSnapshot = safeTimestamp(input.snapshot.lastReadsbUpdate ?? input.snapshot.lastSourceUpdate);
+  const latestPositionAt = input.snapshot.aircraft.map((item) => item.lastSeen).filter((value) => Number.isFinite(Date.parse(value))).sort().at(-1) ?? null;
   const provider = safeLabel(input.snapshot.provider, "unknown");
   const isDemo = input.snapshot.provider === "mock";
   const sourceStatus = isDemo ? "demo" : input.snapshot.readsbOnline ? "live" : "offline";
@@ -582,6 +584,14 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
           : null,
         lastSnapshot,
         snapshotAgeSeconds: ageSeconds(lastSnapshot, now),
+        quality: buildReceiverQuality({
+          aircraft: input.snapshot.aircraft,
+          online: input.snapshot.readsbOnline,
+          latestMessageAt: lastSnapshot,
+          latestPositionAt,
+          messagesPerSecond: input.snapshot.stats.messagesPerSecond,
+          now,
+        }),
       },
     },
     ...(input.localAdsb ? { localAdsb: input.localAdsb } : {}),
