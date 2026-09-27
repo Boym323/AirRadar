@@ -2,6 +2,74 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.156] - 2026-09-27
+
+Changes since v1.0.155.
+
+### Added
+
+- Centralize map visual palette (3ee0c3f)
+- Expand visual system primitives (3c983c6)
+- Establish visual system v2 foundation (97988eb)
+
+### Changed
+
+- Use shared map palette in time machine (7e2302e)
+- Migrate system status to shared primitives (5f89361)
+- Migrate statistics to visual primitives (6d1d89a)
+
+### Fixed
+
+- Correct visual audit regex escaping (6786787)
+
+### Documentation
+
+- Document visual system v2 (f3b1f06)
+- Link visual system guide (833beee)
+- Enforce visual system rules (6dab95f)
+
+### Maintenance
+
+- Sync generated repository metadata (1dfe927)
+- Unify core surfaces and controls (f9a928c)
+- Add visual system style budget (09263c3)
+- Add visual system audit command (b962690)
+- Enforce visual system contract (e70e4d1)
+- Enforce visual system budget (5badfb2)
+- Capture visual smoke screenshots (d3e6808)
+- Upload visual smoke artifacts (784006a)
+- Ignore visual audit artifacts (1eb2492)
+- Serialize visual screenshot capture (36acfed)
+- Keep visual capture outside gate viewport set (efa9729)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (1dfe927)
+- Merge pull request #164 from Boym323/automation/repository-metadata (3082c91)
+- feat(ui): centralize map visual palette (3ee0c3f)
+- refactor(ui): use shared map palette in time machine (7e2302e)
+- feat(ui): expand visual system primitives (3c983c6)
+- feat(ui): establish visual system v2 foundation (97988eb)
+- refactor(ui): migrate system status to shared primitives (5f89361)
+- refactor(ui): migrate statistics to visual primitives (6d1d89a)
+- style(ui): unify core surfaces and controls (f9a928c)
+- ci(ui): add visual system style budget (09263c3)
+- chore(ui): add visual system audit command (b962690)
+- test(ui): enforce visual system contract (e70e4d1)
+- ci(ui): enforce visual system budget (5badfb2)
+- test(ui): capture visual smoke screenshots (d3e6808)
+- ci(ui): upload visual smoke artifacts (784006a)
+- fix(ui): correct visual audit regex escaping (6786787)
+- chore(ui): ignore visual audit artifacts (1eb2492)
+- docs(ui): document visual system v2 (f3b1f06)
+- docs(ui): link visual system guide (833beee)
+- docs(agents): enforce visual system rules (6dab95f)
+- test(ui): serialize visual screenshot capture (36acfed)
+- test(ui): keep visual capture outside gate viewport set (efa9729)
+- Merge pull request #165 from Boym323/feat/visual-system-v2-phase1 (9f68ff7)
+
+</details>
 ## [1.0.155] - 2026-09-27
 
 Changes since v1.0.152.
