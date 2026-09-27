@@ -215,10 +215,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       const visualSmokeDirectory = resolve("artifacts/visual-smoke");
       mkdirSync(visualSmokeDirectory, { recursive: true });
       const visualTargets = [
-        { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1440, height: 900 }, fullPage: false },
-        { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1440, height: 900 }, fullPage: true },
-        { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1440, height: 900 }, fullPage: true },
-        { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1440, height: 900 }, fullPage: true },
+        { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
+        { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
+        { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
+        { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
       ];
