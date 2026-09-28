@@ -61,14 +61,22 @@ export function UtcClock() {
 const radarRailNavigation = [
   { href: "/", label: t.radar.liveAirPicture, icon: "radar", active: true },
   { href: "/history", label: t.airportTraffic.flights, icon: "flight", active: false },
-  { href: "/#airports", label: t.layers.airports, icon: "airport", active: false },
   { href: "/statistics", label: t.statistics.title, icon: "statistics", active: false },
   { href: "/time-machine", label: t.timeMachine.title, icon: "time", active: false },
-  { href: "/#atc", label: t.layers.atc, icon: "atc", active: false },
   { href: "/system", label: t.system.title, icon: "system", active: false },
 ] as const;
 
-export function RadarNavRail() {
+export function RadarNavRail({
+  showAtc,
+  onShowAtcChange,
+  showAirports,
+  onShowAirportsChange,
+}: {
+  showAtc: boolean;
+  onShowAtcChange: (show: boolean) => void;
+  showAirports: boolean;
+  onShowAirportsChange: (show: boolean) => void;
+}) {
   const pathname = usePathname();
 
   return (
@@ -76,12 +84,11 @@ export function RadarNavRail() {
       <nav className="radar-rail-nav">
         {radarRailNavigation.map(({ href, label, icon, active }) => {
           const isActive = active ? pathname === "/" : pathMatches(pathname, href);
-          return (
-            <Link key={`${label}-${href}`} className={`radar-rail-link ${isActive ? "active" : ""}`} href={href} aria-current={isActive ? "page" : undefined}>
+          const link = <Link key={`${label}-${href}`} className={`radar-rail-link ${isActive ? "active" : ""}`} href={href} aria-current={isActive ? "page" : undefined}>
               <span className="radar-rail-icon" aria-hidden="true"><UiIcon name={icon} /></span>
               <span className="radar-rail-label">{label}</span>
-            </Link>
-          );
+            </Link>;
+          return href === "/history" ? <>{link}<button type="button" className={`radar-rail-link ${showAirports ? "active" : ""}`} aria-pressed={showAirports} onClick={() => onShowAirportsChange(!showAirports)}><span className="radar-rail-icon" aria-hidden="true"><UiIcon name="airport" /></span><span className="radar-rail-label">{t.layers.airports}</span></button></> : href === "/time-machine" ? <>{link}<button type="button" className={`radar-rail-link ${showAtc ? "active" : ""}`} aria-pressed={showAtc} onClick={() => onShowAtcChange(!showAtc)}><span className="radar-rail-icon" aria-hidden="true"><UiIcon name="atc" /></span><span className="radar-rail-label">{t.layers.atc}</span></button></> : link;
         })}
       </nav>
     </aside>

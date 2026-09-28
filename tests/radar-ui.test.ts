@@ -67,6 +67,18 @@ describe("radar UI polish helpers", () => {
     expect(airportVisibilityTier({ iataCode: null, name: "Scheduled Strip", type: "small_airport", scheduledService: true })).toBe("significant");
   });
 
+  it("wires radar rail layer actions to the real layer state", () => {
+    expect(shellSource).toContain("onShowAtcChange");
+    expect(shellSource).toContain("onShowAirportsChange");
+    expect(shellSource).toContain('aria-pressed={showAtc}');
+    expect(shellSource).toContain('aria-pressed={showAirports}');
+    expect(shellSource).toContain('onClick={() => onShowAtcChange(!showAtc)}');
+    expect(shellSource).toContain('onClick={() => onShowAirportsChange(!showAirports)}');
+    expect(shellSource).not.toContain('href: "/#atc"');
+    expect(shellSource).not.toContain('href: "/#airports"');
+    expect(appSource).toContain('<RadarNavRail showAtc={showAtc} onShowAtcChange={setShowAtc} showAirports={showAirports} onShowAirportsChange={setShowAirports} />');
+  });
+
   it("bounds the airport map source to the receiver's 250 NM operating area", () => {
     const nearby = { icaoCode: "NEAR", iataCode: null, name: "Nearby", city: null, country: null, latitude: 50.1, longitude: 14.3 };
     const far = { icaoCode: "FAR", iataCode: null, name: "Far", city: null, country: null, latitude: 55, longitude: 14.3 };

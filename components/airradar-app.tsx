@@ -2185,7 +2185,7 @@ export function AirRadarApp() {
       } />
 
       <div className="radar-workspace">
-        <RadarNavRail />
+        <RadarNavRail showAtc={showAtc} onShowAtcChange={setShowAtc} showAirports={showAirports} onShowAirportsChange={setShowAirports} />
         <section ref={radarContentRef} className="radar-content">
         <div className="map-panel">
           <div ref={mapContainerRef} className="map-container" />
