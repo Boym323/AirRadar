@@ -34,7 +34,7 @@ import { appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classification";
-import { persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
+import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -223,6 +223,9 @@ export class AircraftStateService {
     await this.awaitUntil(this.initialRefresh, deadline);
     await this.awaitUntil(networkStop, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
+    // Weather coalescing is intentionally lossy on crashes, but a normal
+    // restart gets a bounded best-effort flush of representative samples.
+    await this.awaitUntil(flushAircraftWeatherPersistence(deadline), deadline);
     await this.awaitUntil(this.receiverCoverage.stop(), deadline);
     if (options.closeStatistics !== false) await this.awaitUntil(this.statistics.close(), deadline);
     if (options.closeProvider !== false) await this.awaitUntil(this.closeProviders(), deadline);

@@ -30,10 +30,20 @@ is 20 seconds. Range checks are deliberately broad; temporal temperature
 jumps and implausible wind reversals are rejected. Quality is `HIGH`, `GOOD`,
 `LOW`, or `REJECTED`; rejected rows are not normal weather data.
 
-The weather lane is sparse: it samples at most once per aircraft per 20 seconds
-unless a meaningful movement, altitude, or weather change occurs. A unique
-aircraft/time/source key prevents duplicate rows. Retention follows the
-configured database retention policy. Weather cleanup runs as a periodic,
+The weather lane uses a bounded per-aircraft in-memory coalescer before
+PostgreSQL. `READSB_JSON` uses a 60-second bucket, 1,000 ft altitude-bin
+transitions, meaningful weather-change thresholds, and a 120-second heartbeat;
+the persisted row remains a real representative observation, not a synthetic
+average. `BDS_4_4` is deliberately less aggressive: valid unique frames are
+kept and only near-identical repeats inside a short duplicate window are
+suppressed. A unique aircraft/time/source key remains a second-line database
+safety net rather than the sampling mechanism.
+
+Accumulator state is limited to the latest observation and latest confirmed
+persisted summary. Entries expire after 10 minutes of inactivity and the map
+is capped at 10,000 aircraft. A normal shutdown makes a bounded best-effort
+flush of pending representatives; SIGKILL, OOM, and host failure may lose the
+current coalescing window by design. Weather cleanup runs as a periodic,
 table-level operation in the history retention lane (currently
 `HISTORY_RETENTION_DAYS=30`), never as a per-observation delete.
 
@@ -51,8 +61,9 @@ direction; 350° and 10° therefore average near 0°, not 180°.
 
 The admin-only endpoint `/api/admin/weather/diagnostics` exposes bounded
 counters for candidates, accepted/ambiguous/rejected BDS 4,4 frames, source
-counts, persistence, QC, deduplication, field availability, and recent anomaly
-reasons. No unbounded raw-frame logging is added.
+counts, persistence reasons, coalescing/exact deduplication, accumulator
+entries/evictions/high-water mark, QC, field availability, write failures,
+and recent anomaly reasons. No unbounded raw-frame logging is added.
 
 ## Production availability baseline
 

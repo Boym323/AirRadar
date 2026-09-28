@@ -2,11 +2,16 @@ import { describe, expect, it, beforeEach } from "vitest";
 import type { Aircraft } from "@/lib/aircraft/types";
 import {
   aggregateAircraftWeatherProfile,
+  AIRCRAFT_WEATHER_PERSISTENCE_POLICY,
+  circularWindDirectionDelta,
+  decideWeatherPersistence,
+  evictAircraftWeatherAccumulators,
   getAircraftWeatherDiagnostics,
   observationFromAircraft,
   observationFromStoredWeatherRow,
   resetAircraftWeatherDiagnostics,
   shouldPersistWeatherObservation,
+  weatherObservationFingerprint,
   type AircraftWeatherObservation,
 } from "@/lib/server/aircraft-weather";
 
@@ -92,5 +97,44 @@ describe("aircraft weather observations", () => {
       row({ aircraftHex: "B", windDirectionDeg: 0 }),
     ], { lat: 50, lon: 14, radiusKm: 30, from: new Date(at.getTime() - 1_000), to: new Date(at.getTime() + 2_000), binSizeFt: 2_000, now: at });
     expect(profile.bins[0]?.windDirectionDeg).toBeCloseTo(45, 5);
+  });
+
+  it("normalizes circular wind changes across north", () => {
+    expect(circularWindDirectionDelta(359, 4)).toBe(5);
+    expect(circularWindDirectionDelta(355, 5)).toBe(10);
+  });
+
+  it("coalesces stable READSB weather but preserves heartbeat, altitude, and weather triggers", () => {
+    const previous = row({ source: "READSB_JSON", quality: "GOOD" });
+    const accumulator = {
+      lastSeenAt: at.getTime(),
+      lastPersisted: previous,
+      lastPersistedAt: at.getTime(),
+      lastPersistedFingerprint: weatherObservationFingerprint(previous),
+    };
+    expect(decideWeatherPersistence({ ...previous, observedAt: new Date(at.getTime() + 30_000) }, accumulator)).toBeNull();
+    expect(decideWeatherPersistence({ ...previous, observedAt: new Date(at.getTime() + AIRCRAFT_WEATHER_PERSISTENCE_POLICY.readsb.heartbeatMs) }, accumulator)).toBe("HEARTBEAT");
+    expect(decideWeatherPersistence({ ...previous, altitudeFt: 11_000, observedAt: new Date(at.getTime() + 5_000) }, accumulator)).toBe("ALTITUDE_BIN_CHANGE");
+    expect(decideWeatherPersistence({ ...previous, staticAirTemperatureC: -42, observedAt: new Date(at.getTime() + 5_000) }, accumulator)).toBe("WEATHER_CHANGE");
+  });
+
+  it("keeps unique BDS 4,4 observations outside the exact duplicate window", () => {
+    const previous = row({ source: "BDS_4_4", quality: "HIGH" });
+    const accumulator = {
+      lastSeenAt: at.getTime(),
+      lastPersisted: previous,
+      lastPersistedAt: at.getTime(),
+      lastPersistedFingerprint: weatherObservationFingerprint(previous),
+    };
+    expect(decideWeatherPersistence({ ...previous, observedAt: new Date(at.getTime() + 1_000) }, accumulator)).toBeNull();
+    expect(decideWeatherPersistence({ ...previous, windSpeedKt: 45, observedAt: new Date(at.getTime() + 1_000) }, accumulator)).toBe("BDS44_UNIQUE");
+    expect(decideWeatherPersistence({ ...previous, observedAt: new Date(at.getTime() + 20_000) }, accumulator)).toBe("BDS44_UNIQUE");
+  });
+
+  it("evicts inactive accumulator entries and exposes bounded diagnostics", () => {
+    observationFromAircraft(aircraft(), at);
+    expect(getAircraftWeatherDiagnostics().weatherAccumulatorEntries).toBe(1);
+    expect(evictAircraftWeatherAccumulators(at.getTime() + AIRCRAFT_WEATHER_PERSISTENCE_POLICY.accumulator.ttlMs + 1)).toBe(1);
+    expect(getAircraftWeatherDiagnostics().weatherAccumulatorEntries).toBe(0);
   });
 });

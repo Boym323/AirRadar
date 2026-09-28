@@ -32,6 +32,39 @@ export const AIRCRAFT_WEATHER_LIMITS = {
   maxAltitudeFt: 60_000,
 } as const;
 
+export const AIRCRAFT_WEATHER_PERSISTENCE_POLICY = {
+  readsb: {
+    bucketMs: 60_000,
+    heartbeatMs: 120_000,
+    altitudeBinFt: 1_000,
+    satDeltaC: 1,
+    tatDeltaC: 1,
+    windSpeedDeltaKt: 5,
+    windDirectionDeltaDeg: 15,
+    staticPressureDeltaHpa: 2,
+    humidityDeltaPct: 5,
+    spatialDeltaKm: 20,
+  },
+  bds44: {
+    duplicateWindowMs: 15_000,
+  },
+  accumulator: {
+    ttlMs: 10 * 60_000,
+    maxEntries: 10_000,
+    shutdownFlushMaxEntries: 500,
+  },
+} as const;
+
+export type WeatherPersistenceReason =
+  | "FIRST_OBSERVATION"
+  | "BDS44_UNIQUE"
+  | "ALTITUDE_BIN_CHANGE"
+  | "WEATHER_CHANGE"
+  | "SOURCE_CHANGE"
+  | "QUALITY_CHANGE"
+  | "HEARTBEAT"
+  | "SPATIAL_CHANGE";
+
 export interface AircraftWeatherObservation {
   id?: number;
   aircraftHex: string;
@@ -68,6 +101,20 @@ export interface AircraftWeatherDiagnostics {
   weatherReadsbAccepted: number;
   weatherPersisted: number;
   weatherDeduplicated: number;
+  weatherPersistedFirst: number;
+  weatherPersistedBds44: number;
+  weatherPersistedAltitudeBinChange: number;
+  weatherPersistedWeatherChange: number;
+  weatherPersistedSourceChange: number;
+  weatherPersistedQualityChange: number;
+  weatherPersistedHeartbeat: number;
+  weatherPersistedSpatialChange: number;
+  weatherCoalesced: number;
+  weatherExactDeduplicated: number;
+  weatherPersistenceFailures: number;
+  weatherAccumulatorEntries: number;
+  weatherAccumulatorEvicted: number;
+  weatherAccumulatorMaxObserved: number;
   weatherQcRejected: number;
   withWind: number;
   withTemperature: number;
@@ -81,23 +128,40 @@ const emptyDiagnostics = (): AircraftWeatherDiagnostics => ({
   weatherCandidates: 0, weatherAccepted: 0, weatherRejected: 0,
   weatherBds44Accepted: 0, weatherBds44Ambiguous: 0, weatherReadsbAccepted: 0,
   weatherPersisted: 0, weatherDeduplicated: 0, weatherQcRejected: 0,
+  weatherPersistedFirst: 0, weatherPersistedBds44: 0, weatherPersistedAltitudeBinChange: 0,
+  weatherPersistedWeatherChange: 0, weatherPersistedSourceChange: 0, weatherPersistedQualityChange: 0,
+  weatherPersistedHeartbeat: 0, weatherPersistedSpatialChange: 0, weatherCoalesced: 0,
+  weatherExactDeduplicated: 0, weatherPersistenceFailures: 0,
+  weatherAccumulatorEntries: 0, weatherAccumulatorEvicted: 0, weatherAccumulatorMaxObserved: 0,
   withWind: 0, withTemperature: 0, withPressure: 0, withHumidity: 0, withTurbulence: 0,
   lastAnomalies: [],
 });
 
 const globalForWeather = globalThis as unknown as {
   aircraftWeatherDiagnostics?: AircraftWeatherDiagnostics;
+  aircraftWeatherAccumulators?: Map<string, WeatherAircraftAccumulator>;
+  aircraftWeatherMemoryRows?: AircraftWeatherObservation[];
 };
 const diagnostics = globalForWeather.aircraftWeatherDiagnostics ??= emptyDiagnostics();
-const sampler = new Map<string, AircraftWeatherObservation>();
-const memoryRows: AircraftWeatherObservation[] = [];
+
+export interface WeatherAircraftAccumulator {
+  lastSeenAt: number;
+  lastObservation?: AircraftWeatherObservation;
+  lastPersisted?: AircraftWeatherObservation;
+  lastPersistedAt?: number;
+  lastPersistedFingerprint?: string;
+  currentBucket?: number;
+}
+
+const accumulators = globalForWeather.aircraftWeatherAccumulators ??= new Map<string, WeatherAircraftAccumulator>();
+const memoryRows = globalForWeather.aircraftWeatherMemoryRows ??= [];
 
 function finite(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 function dateOf(value: Date | Temporal.Instant): Date { return value instanceof Date ? value : new Date(value.epochMilliseconds); }
 function normaliseDirection(value: number | null): number | null { return value === null ? null : ((value % 360) + 360) % 360; }
-function angularDistance(a: number, b: number): number { const delta = Math.abs(a - b) % 360; return delta > 180 ? 360 - delta : delta; }
+export function circularWindDirectionDelta(a: number, b: number): number { const delta = Math.abs(a - b) % 360; return delta > 180 ? 360 - delta : delta; }
 function fieldAt(aircraft: Aircraft, name: string, fallback: number): number {
   const raw = aircraft.provenance?.fields?.[name]?.observedAt;
   const value = raw ? Date.parse(raw) : Number.NaN;
@@ -179,7 +243,7 @@ export function observationFromAircraft(
     bdsConfidence: source === "BDS_4_4" ? "HIGH" : null,
     provenance,
   };
-  const checked = qualityControl(observation, sampler.get(aircraft.icaoHex));
+  const checked = qualityControl(observation, accumulators.get(aircraft.icaoHex)?.lastObservation);
   observation.quality = checked.quality;
   if (checked.quality === "REJECTED") {
     diagnostics.weatherRejected += 1;
@@ -193,6 +257,7 @@ export function observationFromAircraft(
   diagnostics.withPressure += observation.staticPressureHpa !== null ? 1 : 0;
   diagnostics.withHumidity += observation.humidityPct !== null ? 1 : 0;
   diagnostics.withTurbulence += observation.turbulenceLevel !== null ? 1 : 0;
+  rememberObservation(observation, receivedMs);
   return observation;
 }
 
@@ -211,7 +276,7 @@ function qualityControl(observation: AircraftWeatherObservation, previous: Aircr
   const elapsed = observation.observedAt.getTime() - previous.observedAt.getTime();
   if (elapsed > 0 && elapsed <= 15_000 && observation.staticAirTemperatureC !== null && previous.staticAirTemperatureC !== null && Math.abs(observation.staticAirTemperatureC - previous.staticAirTemperatureC) > 50) return { quality: "REJECTED", reason: "TEMPERATURE_JUMP" };
   if (elapsed > 0 && elapsed <= 15_000 && observation.windDirectionDeg !== null && observation.windSpeedKt !== null && previous.windDirectionDeg !== null && previous.windSpeedKt !== null) {
-    const directionDelta = angularDistance(observation.windDirectionDeg, previous.windDirectionDeg);
+    const directionDelta = circularWindDirectionDelta(observation.windDirectionDeg, previous.windDirectionDeg);
     if (directionDelta > 150 && Math.abs(observation.windSpeedKt - previous.windSpeedKt) > 200) return { quality: "REJECTED", reason: "WIND_SPIKE" };
   }
   return { quality: "GOOD" };
@@ -222,7 +287,12 @@ function recordAnomaly(aircraftHex: string, at: number, reason: string): void {
   if (diagnostics.lastAnomalies.length > 20) diagnostics.lastAnomalies.splice(0, diagnostics.lastAnomalies.length - 20);
 }
 
-export function shouldPersistWeatherObservation(observation: AircraftWeatherObservation, previous = sampler.get(observation.aircraftHex)): boolean {
+/**
+ * Backward-compatible low-level sampler predicate. The live persistence lane
+ * uses decideWeatherPersistence below, which has source-specific policy and
+ * bounded RAM state.
+ */
+export function shouldPersistWeatherObservation(observation: AircraftWeatherObservation, previous = accumulators.get(observation.aircraftHex)?.lastPersisted): boolean {
   if (observation.quality === "REJECTED") return false;
   if (!previous) return true;
   const elapsed = observation.observedAt.getTime() - previous.observedAt.getTime();
@@ -230,47 +300,216 @@ export function shouldPersistWeatherObservation(observation: AircraftWeatherObse
   const climbed = Math.abs(previous.altitudeFt - observation.altitudeFt) >= AIRCRAFT_WEATHER_LIMITS.altitudeChangeFt;
   const weatherChanged = (previous.staticAirTemperatureC !== null && observation.staticAirTemperatureC !== null && Math.abs(previous.staticAirTemperatureC - observation.staticAirTemperatureC) >= AIRCRAFT_WEATHER_LIMITS.temperatureChangeC)
     || (previous.windSpeedKt !== null && observation.windSpeedKt !== null && Math.abs(previous.windSpeedKt - observation.windSpeedKt) >= AIRCRAFT_WEATHER_LIMITS.windSpeedChangeKt)
-    || (previous.windDirectionDeg !== null && observation.windDirectionDeg !== null && angularDistance(previous.windDirectionDeg, observation.windDirectionDeg) >= AIRCRAFT_WEATHER_LIMITS.windDirectionChangeDeg);
+    || (previous.windDirectionDeg !== null && observation.windDirectionDeg !== null && circularWindDirectionDelta(previous.windDirectionDeg, observation.windDirectionDeg) >= AIRCRAFT_WEATHER_LIMITS.windDirectionChangeDeg);
   if (elapsed < AIRCRAFT_WEATHER_LIMITS.sampleIntervalMs) return moved || climbed || weatherChanged;
   return elapsed >= AIRCRAFT_WEATHER_LIMITS.sampleIntervalMs || moved || climbed || weatherChanged;
 }
 
 function dedupKey(observation: AircraftWeatherObservation): string { return `${observation.aircraftHex}:${Math.floor(observation.observedAt.getTime() / 1_000)}:${observation.source}`; }
 
-export async function persistAircraftWeatherObservations(aircraft: Aircraft[], receivedAt: Date, provider = "local"): Promise<void> {
+export function weatherObservationFingerprint(observation: AircraftWeatherObservation): string {
+  return JSON.stringify([
+    observation.aircraftHex, observation.lat, observation.lon, observation.altitudeFt,
+    observation.altitudeType, observation.windDirectionDeg, observation.windSpeedKt,
+    observation.staticAirTemperatureC, observation.totalAirTemperatureC,
+    observation.staticPressureHpa, observation.humidityPct, observation.turbulenceLevel,
+    observation.source, observation.provider,
+  ]);
+}
+
+function altitudeBin(observation: AircraftWeatherObservation, binFt = AIRCRAFT_WEATHER_PERSISTENCE_POLICY.readsb.altitudeBinFt): number {
+  return Math.floor(observation.altitudeFt / binFt);
+}
+
+function fieldChanged(previous: number | null, current: number | null, threshold: number, circular = false): boolean {
+  if (previous === null || current === null) return previous !== current;
+  return (circular ? circularWindDirectionDelta(previous, current) : Math.abs(previous - current)) >= threshold;
+}
+
+function meaningfulWeatherChange(previous: AircraftWeatherObservation, current: AircraftWeatherObservation): boolean {
+  const policy = AIRCRAFT_WEATHER_PERSISTENCE_POLICY.readsb;
+  return fieldChanged(previous.staticAirTemperatureC, current.staticAirTemperatureC, policy.satDeltaC)
+    || fieldChanged(previous.totalAirTemperatureC, current.totalAirTemperatureC, policy.tatDeltaC)
+    || fieldChanged(previous.windSpeedKt, current.windSpeedKt, policy.windSpeedDeltaKt)
+    || fieldChanged(previous.windDirectionDeg, current.windDirectionDeg, policy.windDirectionDeltaDeg, true)
+    || fieldChanged(previous.staticPressureHpa, current.staticPressureHpa, policy.staticPressureDeltaHpa)
+    || fieldChanged(previous.humidityPct, current.humidityPct, policy.humidityDeltaPct)
+    || fieldChanged(previous.turbulenceLevel, current.turbulenceLevel, 1);
+}
+
+function rememberObservation(observation: AircraftWeatherObservation, seenAt: number): void {
+  evictAircraftWeatherAccumulators(seenAt);
+  let accumulator = accumulators.get(observation.aircraftHex);
+  if (!accumulator) {
+    if (accumulators.size >= AIRCRAFT_WEATHER_PERSISTENCE_POLICY.accumulator.maxEntries) {
+      let oldestKey: string | undefined;
+      let oldestAt = Number.POSITIVE_INFINITY;
+      for (const [key, candidate] of accumulators) {
+        if (candidate.lastSeenAt < oldestAt) { oldestAt = candidate.lastSeenAt; oldestKey = key; }
+      }
+      if (oldestKey) { accumulators.delete(oldestKey); diagnostics.weatherAccumulatorEvicted += 1; }
+    }
+    accumulator = { lastSeenAt: seenAt };
+    accumulators.set(observation.aircraftHex, accumulator);
+  }
+  accumulator.lastSeenAt = Math.max(accumulator.lastSeenAt, seenAt, observation.observedAt.getTime());
+  accumulator.lastObservation = observation;
+  diagnostics.weatherAccumulatorEntries = accumulators.size;
+  diagnostics.weatherAccumulatorMaxObserved = Math.max(diagnostics.weatherAccumulatorMaxObserved, accumulators.size);
+}
+
+export function evictAircraftWeatherAccumulators(now = Date.now()): number {
+  let evicted = 0;
+  const cutoff = now - AIRCRAFT_WEATHER_PERSISTENCE_POLICY.accumulator.ttlMs;
+  for (const [key, accumulator] of accumulators) {
+    if (accumulator.lastSeenAt < cutoff) { accumulators.delete(key); evicted += 1; }
+  }
+  diagnostics.weatherAccumulatorEvicted += evicted;
+  diagnostics.weatherAccumulatorEntries = accumulators.size;
+  return evicted;
+}
+
+export function decideWeatherPersistence(observation: AircraftWeatherObservation, accumulator = accumulators.get(observation.aircraftHex)): WeatherPersistenceReason | null {
+  if (observation.quality === "REJECTED") return null;
+  const previous = accumulator?.lastPersisted;
+  if (!previous) return "FIRST_OBSERVATION";
+  const policy = AIRCRAFT_WEATHER_PERSISTENCE_POLICY.readsb;
+  const elapsed = observation.observedAt.getTime() - (accumulator.lastPersistedAt ?? previous.observedAt.getTime());
+  const fingerprint = weatherObservationFingerprint(observation);
+  if (observation.source === "BDS_4_4"
+    && accumulator.lastPersistedFingerprint === fingerprint
+    && Math.abs(elapsed) <= AIRCRAFT_WEATHER_PERSISTENCE_POLICY.bds44.duplicateWindowMs) return null;
+  if (observation.source === "BDS_4_4") return "BDS44_UNIQUE";
+  if (previous.source !== observation.source || previous.provider !== observation.provider) return "SOURCE_CHANGE";
+  if (previous.quality !== observation.quality) return "QUALITY_CHANGE";
+  if (altitudeBin(previous) !== altitudeBin(observation)) return "ALTITUDE_BIN_CHANGE";
+  if (meaningfulWeatherChange(previous, observation)) return "WEATHER_CHANGE";
+  if (elapsed >= policy.heartbeatMs) return "HEARTBEAT";
+  return null;
+}
+
+function incrementPersistenceReason(reason: WeatherPersistenceReason): void {
+  const fieldByReason: Record<WeatherPersistenceReason, Exclude<keyof AircraftWeatherDiagnostics, "lastAnomalies">> = {
+    FIRST_OBSERVATION: "weatherPersistedFirst",
+    BDS44_UNIQUE: "weatherPersistedBds44",
+    ALTITUDE_BIN_CHANGE: "weatherPersistedAltitudeBinChange",
+    WEATHER_CHANGE: "weatherPersistedWeatherChange",
+    SOURCE_CHANGE: "weatherPersistedSourceChange",
+    QUALITY_CHANGE: "weatherPersistedQualityChange",
+    HEARTBEAT: "weatherPersistedHeartbeat",
+    SPATIAL_CHANGE: "weatherPersistedSpatialChange",
+  };
+  const numericDiagnostics = diagnostics as unknown as Record<Exclude<keyof AircraftWeatherDiagnostics, "lastAnomalies">, number>;
+  numericDiagnostics[fieldByReason[reason]] += 1;
+}
+
+function isUniqueConflict(error: unknown): boolean {
+  const message = String(error).toLowerCase();
+  return message.includes("unique") || message.includes("23505");
+}
+
+function markPersisted(observation: AircraftWeatherObservation, reason: WeatherPersistenceReason): void {
+  const accumulator = accumulators.get(observation.aircraftHex) ?? { lastSeenAt: observation.observedAt.getTime() };
+  accumulator.lastPersisted = observation;
+  accumulator.lastPersistedAt = observation.observedAt.getTime();
+  accumulator.lastPersistedFingerprint = weatherObservationFingerprint(observation);
+  accumulator.currentBucket = Math.floor(observation.observedAt.getTime() / AIRCRAFT_WEATHER_PERSISTENCE_POLICY.readsb.bucketMs);
+  accumulators.set(observation.aircraftHex, accumulator);
+  diagnostics.weatherPersisted += 1;
+  incrementPersistenceReason(reason);
+}
+
+function rememberMemoryRow(observation: AircraftWeatherObservation): void {
+  memoryRows.push(observation);
+  while (memoryRows.length > AIRCRAFT_WEATHER_LIMITS.maxRows) memoryRows.shift();
+}
+
+async function writeWeatherObservation(database: NonNullable<ReturnType<typeof getPrisma>>, observation: AircraftWeatherObservation): Promise<void> {
+  await database.orm.public.AircraftWeatherObservation.create({
+    dedupKey: observation.dedupKey!,
+    aircraftHex: observation.aircraftHex,
+    flightId: observation.flightId,
+    callsign: observation.callsign,
+    observedAt: Temporal.Instant.fromEpochMilliseconds(observation.observedAt.getTime()),
+    receivedAt: observation.receivedAt ? Temporal.Instant.fromEpochMilliseconds(observation.receivedAt.getTime()) : null,
+    lat: observation.lat, lon: observation.lon, altitudeFt: observation.altitudeFt, altitudeType: observation.altitudeType,
+    windDirectionDeg: observation.windDirectionDeg, windSpeedKt: observation.windSpeedKt,
+    staticAirTempC: observation.staticAirTemperatureC, totalAirTempC: observation.totalAirTemperatureC,
+    staticPressureHpa: observation.staticPressureHpa, humidityPct: observation.humidityPct, turbulenceLevel: observation.turbulenceLevel,
+    source: observation.source, provider: observation.provider, quality: observation.quality,
+    weatherSourceQuality: observation.weatherSourceQuality, bdsConfidence: observation.bdsConfidence,
+    provenanceJson: JSON.stringify(observation.provenance),
+  });
+}
+
+async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provider: string): Promise<void> {
   const database = getPrisma();
   for (const item of aircraft) {
     const observation = observationFromAircraft(item, receivedAt, { provider });
-    if (!observation || !shouldPersistWeatherObservation(observation)) continue;
+    if (!observation) continue;
+    const accumulator = accumulators.get(observation.aircraftHex);
+    const reason = decideWeatherPersistence(observation, accumulator);
+    if (!reason) {
+      const fingerprint = weatherObservationFingerprint(observation);
+      if (observation.source === "BDS_4_4" && accumulator?.lastPersistedFingerprint === fingerprint) {
+        diagnostics.weatherExactDeduplicated += 1;
+        diagnostics.weatherDeduplicated += 1;
+      } else {
+        diagnostics.weatherCoalesced += 1;
+      }
+      continue;
+    }
     observation.dedupKey = dedupKey(observation);
-    if (memoryRows.some((row) => row.dedupKey === observation.dedupKey)) { diagnostics.weatherDeduplicated += 1; continue; }
-    sampler.set(observation.aircraftHex, observation);
-    memoryRows.push(observation);
-    while (memoryRows.length > AIRCRAFT_WEATHER_LIMITS.maxRows) memoryRows.shift();
-    if (!database) { diagnostics.weatherPersisted += 1; continue; }
+    if (!database) { rememberMemoryRow(observation); markPersisted(observation, reason); continue; }
     try {
-      await database.orm.public.AircraftWeatherObservation.create({
-        dedupKey: observation.dedupKey,
-        aircraftHex: observation.aircraftHex,
-        flightId: observation.flightId,
-        callsign: observation.callsign,
-        observedAt: Temporal.Instant.fromEpochMilliseconds(observation.observedAt.getTime()),
-        receivedAt: observation.receivedAt ? Temporal.Instant.fromEpochMilliseconds(observation.receivedAt.getTime()) : null,
-        lat: observation.lat, lon: observation.lon, altitudeFt: observation.altitudeFt, altitudeType: observation.altitudeType,
-        windDirectionDeg: observation.windDirectionDeg, windSpeedKt: observation.windSpeedKt,
-        staticAirTempC: observation.staticAirTemperatureC, totalAirTempC: observation.totalAirTemperatureC,
-        staticPressureHpa: observation.staticPressureHpa, humidityPct: observation.humidityPct, turbulenceLevel: observation.turbulenceLevel,
-        source: observation.source, provider: observation.provider, quality: observation.quality,
-        weatherSourceQuality: observation.weatherSourceQuality, bdsConfidence: observation.bdsConfidence,
-        provenanceJson: JSON.stringify(observation.provenance),
-      });
-      diagnostics.weatherPersisted += 1;
+      await writeWeatherObservation(database, observation);
+      rememberMemoryRow(observation);
+      markPersisted(observation, reason);
     } catch (error) {
-      // A unique conflict is an expected duplicate; all other errors are
-      // best-effort because weather must never slow the Beast hot path.
-      if (String(error).toLowerCase().includes("unique") || String(error).includes("23505")) diagnostics.weatherDeduplicated += 1;
+      // PostgreSQL remains a second-line exact-duplicate safety net. Any
+      // other failure leaves lastPersisted untouched so the next sample can retry.
+      if (isUniqueConflict(error)) {
+        diagnostics.weatherExactDeduplicated += 1;
+        diagnostics.weatherDeduplicated += 1;
+        markPersisted(observation, reason);
+      } else diagnostics.weatherPersistenceFailures += 1;
     }
   }
+}
+
+let weatherWriteTail: Promise<void> = Promise.resolve();
+function enqueueWeatherWork<T>(work: () => Promise<T>): Promise<T> {
+  const operation = weatherWriteTail.then(work, work);
+  weatherWriteTail = operation.then(() => undefined, () => undefined);
+  return operation;
+}
+
+export function persistAircraftWeatherObservations(aircraft: Aircraft[], receivedAt: Date, provider = "local"): Promise<void> {
+  return enqueueWeatherWork(() => persistWeatherBatch(aircraft, receivedAt, provider));
+}
+
+export function flushAircraftWeatherPersistence(deadline = Date.now() + 1_500): Promise<number> {
+  return enqueueWeatherWork(async () => {
+    const database = getPrisma();
+    if (!database) return 0;
+    let flushed = 0;
+    for (const accumulator of accumulators.values()) {
+      if (Date.now() >= deadline || flushed >= AIRCRAFT_WEATHER_PERSISTENCE_POLICY.accumulator.shutdownFlushMaxEntries) break;
+      const observation = accumulator.lastObservation;
+      if (!observation || (accumulator.lastPersisted && weatherObservationFingerprint(observation) === accumulator.lastPersistedFingerprint)) continue;
+      observation.dedupKey = dedupKey(observation);
+      try {
+        await writeWeatherObservation(database, observation);
+        rememberMemoryRow(observation);
+        markPersisted(observation, "HEARTBEAT");
+        flushed += 1;
+      } catch (error) {
+        if (isUniqueConflict(error)) markPersisted(observation, "HEARTBEAT");
+        else diagnostics.weatherPersistenceFailures += 1;
+      }
+    }
+    return flushed;
+  });
 }
 
 let lastWeatherRetentionAt = 0;
@@ -293,7 +532,7 @@ export async function pruneAircraftWeatherRetention(database: NonNullable<Return
 }
 
 export function getAircraftWeatherDiagnostics(): AircraftWeatherDiagnostics { return { ...diagnostics, lastAnomalies: diagnostics.lastAnomalies.slice() }; }
-export function resetAircraftWeatherDiagnostics(): void { Object.assign(diagnostics, emptyDiagnostics()); sampler.clear(); memoryRows.length = 0; }
+export function resetAircraftWeatherDiagnostics(): void { Object.assign(diagnostics, emptyDiagnostics()); accumulators.clear(); memoryRows.length = 0; weatherWriteTail = Promise.resolve(); }
 
 export interface WeatherQuery { from: Date; to: Date; lat?: number; lon?: number; radiusKm?: number; minAltitude?: number; maxAltitude?: number; source?: AircraftWeatherSource; limit?: number; offset?: number; }
 export interface WeatherRow extends Omit<AircraftWeatherObservation, "observedAt" | "receivedAt" | "provenance" | "staticAirTemperatureC" | "totalAirTemperatureC"> {
