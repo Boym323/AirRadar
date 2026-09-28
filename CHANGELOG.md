@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.194] - 2026-09-28
+
+Changes since v1.0.193.
+
+### Fixed
+
+- Use configured receiver for aircraft weather (d1e6e3b3)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: use configured receiver for aircraft weather (d1e6e3b3)
+
+</details>
+
 ## [1.0.193] - 2026-09-28
 
 Changes since v1.0.192.
