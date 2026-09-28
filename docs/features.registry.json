@@ -162,7 +162,15 @@
         "metar",
         "sigmet",
         "weather radar",
-        "wind layer"
+        "wind layer",
+        "aircraft weather",
+        "aircraft-weather",
+        "weather observations",
+        "weather profile",
+        "bds 4,4",
+        "bds4,4",
+        "bds44",
+        "aircraft observed weather"
       ]
     },
     {

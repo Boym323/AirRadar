@@ -1,0 +1,47 @@
+{
+  "generatedAt": "2026-09-28T10:27:57.945Z",
+  "bounded": {
+    "maxRows": 20000,
+    "windowDays": 7,
+    "truncated": false
+  },
+  "persisted": {
+    "source": "unavailable",
+    "rows": null,
+    "from": null,
+    "to": null,
+    "contributingAircraft": null
+  },
+  "timeWindows": {
+    "1h": {
+      "rows": null,
+      "aircraft": null
+    },
+    "24h": {
+      "rows": null,
+      "aircraft": null
+    },
+    "7d": {
+      "rows": null,
+      "aircraft": null
+    }
+  },
+  "sourceCoverage": null,
+  "fieldCoverage": null,
+  "altitudeBands": null,
+  "quality": null,
+  "bds44": null,
+  "runtimeDiagnostics": {
+    "scope": "process-local audit process",
+    "bds44": {
+      "candidates": 0,
+      "accepted": 0,
+      "ambiguous": 0,
+      "rejected": 0
+    }
+  },
+  "runtimeDiagnosticsScope": "process-local audit process",
+  "likelyDataGaps": [
+    "Production database was unavailable; persisted metrics could not be read."
+  ]
+}

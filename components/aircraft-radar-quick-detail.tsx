@@ -20,6 +20,7 @@ import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { StatusBadge } from "@/components/ui-primitives";
 import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
+import { AircraftObservedWeather } from "@/components/aircraft-observed-weather";
 import {
   formatAge,
   formatAltitude,
@@ -66,6 +67,7 @@ function DetailValue({ label, value, children }: { label: string; value?: string
   if (!children && (!value || value === t.common.emptyValue)) return null;
   return <div className="aircraft-quick-detail-value"><span className="detail-item-label">{label}</span><strong className="detail-item-value">{children ?? value}</strong></div>;
 }
+
 
 function QuickSection({ id, title, children, className = "" }: { id: string; title: string; children: ReactNode; className?: string }) {
   return <section className={`aircraft-quick-section ${className}`} aria-labelledby={id}>
@@ -667,6 +669,7 @@ export function AircraftRadarQuickDetail({
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
       <SigmetSection context={sigmetContext} deviation={sigmetDeviation} stale={sigmetStale} />
       <RouteWeatherSection context={routeWeather} />
+      <AircraftObservedWeather aircraftHex={aircraft.icaoHex} />
       <WindSection context={windContext} ahead={windAhead} destination={destinationWind} status={windStatus} />
       {route && <FlightRouteWeather compact originAirport={route.originAirport} destinationAirport={route.destinationAirport} />}
       <IntelligenceSection events={intelligenceEvents} />

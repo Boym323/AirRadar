@@ -41,6 +41,38 @@ a claim that AirRadar receives or operates official AMDAR data.
 
 ## Sources and provenance
 
+## V1.1 integration
+
+The latest accepted aircraft observation is a secondary enrichment in the
+radar aircraft drawer's **Situation** tab. It is fetched lazily with the
+bounded aircraftHex=<hex>&limit=1 observations query, is cancellable when
+the selected aircraft changes, and never blocks the primary aircraft detail.
+Only fields returned by the observation are shown. Aircraft-observed wind is
+labelled separately from ICON-EU model wind; the two products are not compared
+in V1.1.
+
+System status exposes a traffic-dependent Aircraft Weather summary. NO DATA
+means that no accepted aircraft weather is currently available and does not
+degrade AirRadar. Persistence failures are DEGRADED. The summary contains
+bounded runtime counters only; it does not expose raw frames or payloads.
+
+npm run audit:aircraft-weather writes
+artifacts/aircraft-weather-quality.json. The audit reads at most 20,000
+accepted persisted rows from the last seven days and reports source/aircraft
+coverage, field availability, altitude and quality distributions, time
+windows, BDS counters and likely gaps. Its sample is bounded and is not a
+global availability estimate.
+If the production database is unavailable, persisted analysis fields are
+reported as `null` with an explanation; process-local runtime diagnostics are
+reported separately and must not be read as persisted counts.
+
+The live Radar and Time Machine use the same OpenFreeMap dark vector base style
+and AirRadar tint. Time Machine overlays initialize on style.load, so
+historical aircraft, trail, METAR, wind, radar and AUP/UUP layers do not depend
+on remote basemap tile completion. Historical Aircraft Weather playback remains
+out of scope; a future historical layer can use the same context-layer
+initialization boundary without coupling to the live panel.
+
 Every weather field keeps its own provenance. `BDS_4_4` means that the field
 was decoded from an unambiguous passive Comm-B BDS 4,4 inference with a valid
 FOM/source. Values from `aircraft.json` remain `READSB_JSON`; they are not

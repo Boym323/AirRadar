@@ -88,6 +88,7 @@ import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
 import { aircraftReportedTrueHeading } from "@/lib/aircraft/visual-heading";
 import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
+import { AIRRADAR_BASE_MAP_STYLE_URL, AIRRADAR_MAP_ATTRIBUTION } from "@/lib/map-style";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import {
@@ -224,7 +225,6 @@ interface OgnMarkerHandle {
 
 // OpenFreeMap keeps the basemap open and no-key while providing a dark vector
 // hierarchy that remains usable when the public OSM raster host is unavailable.
-const MAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
 
 function labelForAircraft(aircraft: AircraftView): string {
   return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
@@ -937,14 +937,14 @@ export function AirRadarApp() {
       : receiverRef.current as ReceiverPosition;
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: MAP_STYLE,
+      style: AIRRADAR_BASE_MAP_STYLE_URL,
       center: [startingReceiver.lon, startingReceiver.lat],
       zoom: 7.4,
       minZoom: 3,
       attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
-    map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "© OpenStreetMap contributors · © OpenFreeMap" }), "bottom-right");
+    map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: AIRRADAR_MAP_ATTRIBUTION }), "bottom-right");
     mapRef.current = map;
     const mapDiagnostics = new URLSearchParams(window.location.search).get("mapDiagnostics") === "1";
     if (mapDiagnostics) {

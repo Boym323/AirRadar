@@ -28,6 +28,7 @@ import {
 } from "@/lib/server/system-status-diagnostics";
 import { buildReceiverQuality } from "@/lib/server/receiver-quality";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
+import { getAircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
 export {
   toAdminSystemStatus,
   toPublicSystemStatus,
@@ -43,6 +44,7 @@ import type {
   SystemStatusBuildInput,
   SystemStatusResponse,
   SystemStatusServiceLike,
+  AircraftWeatherStatus,
 } from "@/lib/server/system-status-contract";
 export type {
   DiagnosticReasonCode,
@@ -53,6 +55,7 @@ export type {
   SystemStatusBuildInput,
   SystemStatusResponse,
   SystemStatusServiceLike,
+  AircraftWeatherStatus,
 } from "@/lib/server/system-status-contract";
 
 interface DatabaseProbe {
@@ -145,6 +148,35 @@ function persistenceStatus(
   if (databaseStatus === "offline") return "offline";
   if (databaseStatus === "disabled") return "disabled";
   return failureCount || configuredStatus === "degraded" ? "degraded" : "ok";
+}
+
+function aircraftWeatherStatus(input: SystemStatusBuildInput["aircraftWeather"]): SystemStatusResponse["aircraftWeather"] {
+  const accepted = nonNegativeInteger(input?.accepted ?? 0, 100_000_000);
+  const persistenceFailures = nonNegativeInteger(input?.persistenceFailures ?? 0, 1_000_000);
+  const status: AircraftWeatherStatus = persistenceFailures > 0 ? "degraded" : accepted > 0 ? "ok" : "no_data";
+  return {
+    status,
+    accepted,
+    persisted: nonNegativeInteger(input?.persisted ?? 0, 100_000_000),
+    rejected: nonNegativeInteger(input?.rejected ?? 0, 100_000_000),
+    persistenceFailures,
+    accumulatorEntries: nonNegativeInteger(input?.accumulatorEntries ?? 0, 10_000),
+    accumulatorEvictions: nonNegativeInteger(input?.accumulatorEvicted ?? 0, 100_000_000),
+    accumulatorHighWaterMark: nonNegativeInteger(input?.accumulatorMaxObserved ?? 0, 10_000),
+    sources: {
+      READSB_JSON: nonNegativeInteger(input?.weatherReadsbAccepted ?? 0, 100_000_000),
+      BDS_4_4: nonNegativeInteger(input?.weatherBds44Accepted ?? 0, 100_000_000),
+    },
+    fields: {
+      wind: nonNegativeInteger(input?.withWind ?? 0, 100_000_000),
+      temperature: nonNegativeInteger(input?.withTemperature ?? 0, 100_000_000),
+      pressure: nonNegativeInteger(input?.withPressure ?? 0, 100_000_000),
+      humidity: nonNegativeInteger(input?.withHumidity ?? 0, 100_000_000),
+      turbulence: nonNegativeInteger(input?.withTurbulence ?? 0, 100_000_000),
+    },
+    lastAcceptedAt: safeTimestamp(input?.lastAcceptedAt),
+    lastPersistedAt: safeTimestamp(input?.lastPersistedAt),
+  };
 }
 
 function atcStatus(
@@ -536,6 +568,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
   const weatherEnabled = input.weather?.enabled ?? input.weather?.entries !== undefined;
   const weatherState = weatherStatus(input.weather);
   const weatherDiagnosticState = weatherDiagnostic(input.weather);
+  const aircraftWeather = aircraftWeatherStatus(input.aircraftWeather);
   const adsbDb = adsbDbResponse(input.adsbdb);
   const airportRowCount = input.airportData.rowCount === null ? null : nonNegativeInteger(input.airportData.rowCount, AIRPORT_STATUS_QUERY_LIMIT);
   const fallbackRowCount = input.airportData.fallbackRowCount === null ? null : nonNegativeInteger(input.airportData.fallbackRowCount, AIRPORT_STATUS_QUERY_LIMIT);
@@ -690,6 +723,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       retryAfterMs: input.weather?.retryAfterMs === undefined || input.weather.retryAfterMs === null ? null : nonNegativeInteger(input.weather.retryAfterMs, 86_400_000),
       lastProviderError: null,
     },
+    aircraftWeather,
     alerts: {
       status: alertsStatus,
       enabled: input.alerts.enabled,
@@ -848,6 +882,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     },
     atsData: ats ? { available: true, routeCount: ats.counts.routes, pointCount: ats.counts.points, segmentCount: ats.counts.segments, effectiveDate: ats.source.effectiveDate } : { available: false, routeCount: 0, pointCount: 0, segmentCount: 0, effectiveDate: null },
     weather,
+    aircraftWeather: getAircraftWeatherDiagnostics(),
     mapContext: {
       radar: defaultWeatherRadarProvider.getDiagnostics(),
       wind: defaultWindAloftProvider.diagnostics(),

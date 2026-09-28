@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatDateTime, formatDistance, formatNumber, getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
-import type { OperationalState, SystemStatus, SystemStatusApiResponse, SystemStatusResponse } from "@/lib/server/system-status";
+import type { AircraftWeatherStatus, OperationalState, SystemStatus, SystemStatusApiResponse, SystemStatusResponse } from "@/lib/server/system-status";
 import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
 
 function formatUptime(seconds: number, dictionary: LocaleDictionary): string {
@@ -28,7 +28,7 @@ function formatBytes(value: number | null, dictionary: LocaleDictionary): string
   return `${formatNumber(value / (1024 * 1024), 1, dictionary.locale)} MiB`;
 }
 
-function formatStatus(status: SystemStatus | OperationalState | "demo", dictionary: LocaleDictionary): string {
+function formatStatus(status: SystemStatus | AircraftWeatherStatus | OperationalState | "demo", dictionary: LocaleDictionary): string {
   return dictionary.system.statusLabels[status];
 }
 
@@ -37,7 +37,7 @@ function formatSigmetDataset(dataset: SystemStatusResponse["weather"]["sigmet"][
   return `${freshness} · ${formatNumber(dataset.featureCount, 0, dictionary.locale)} ${dictionary.system.sigmetFeatures} · ${formatDateTime(dataset.lastSuccessAt, dictionary)}`;
 }
 
-function statusBadgeVariant(status: SystemStatus | OperationalState | "demo"): StatusBadgeVariant {
+function statusBadgeVariant(status: SystemStatus | AircraftWeatherStatus | OperationalState | "demo"): StatusBadgeVariant {
   const value = String(status).toLowerCase();
   if (["offline", "error", "failed", "unavailable"].some((token) => value.includes(token))) return "danger";
   if (["degraded", "stale"].some((token) => value.includes(token))) return "stale";
@@ -47,7 +47,7 @@ function statusBadgeVariant(status: SystemStatus | OperationalState | "demo"): S
   return "neutral";
 }
 
-function StatusBadge({ status, dictionary }: { status: SystemStatus | OperationalState | "demo"; dictionary: LocaleDictionary }) {
+function StatusBadge({ status, dictionary }: { status: SystemStatus | AircraftWeatherStatus | OperationalState | "demo"; dictionary: LocaleDictionary }) {
   return <UiStatusBadge variant={statusBadgeVariant(status)} className={`system-status-badge ${status}`} data-status={status}>{formatStatus(status, dictionary)}</UiStatusBadge>;
 }
 
@@ -93,7 +93,7 @@ function Card({
   children,
 }: {
   title: string;
-  status: SystemStatus | OperationalState | "demo";
+  status: SystemStatus | AircraftWeatherStatus | OperationalState | "demo";
   dictionary: LocaleDictionary;
   children: React.ReactNode;
 }) {
@@ -346,6 +346,18 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.sigmetInternational} value={formatSigmetDataset(data.weather.sigmet.international, dictionary)} />
         <Field label={dictionary.system.sigmetAirsigmet} value={formatSigmetDataset(data.weather.sigmet.airsigmet, dictionary)} />
         {data.weather.retryAfterMs !== null && <Field label={dictionary.system.retryAfter} value={`${formatNumber(data.weather.retryAfterMs / 1000, 0, dictionary.locale)} ${dictionary.system.seconds}`} />}
+      </Card>
+
+      <Card title={dictionary.system.aircraftWeather} status={data.aircraftWeather.status} dictionary={dictionary}>
+        <Field label={dictionary.system.aircraftWeatherAccepted} value={formatNumber(data.aircraftWeather.accepted, 0, dictionary.locale)} />
+        <Field label={dictionary.system.aircraftWeatherPersisted} value={formatNumber(data.aircraftWeather.persisted, 0, dictionary.locale)} />
+        <Field label={dictionary.system.aircraftWeatherRejected} value={formatNumber(data.aircraftWeather.rejected, 0, dictionary.locale)} />
+        <Field label={dictionary.system.aircraftWeatherPersistenceFailures} value={formatNumber(data.aircraftWeather.persistenceFailures, 0, dictionary.locale)} />
+        <Field label={dictionary.system.aircraftWeatherAccumulator} value={`${formatNumber(data.aircraftWeather.accumulatorEntries, 0, dictionary.locale)} / ${formatNumber(data.aircraftWeather.accumulatorHighWaterMark, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.aircraftWeatherSources} value={`READSB_JSON ${formatNumber(data.aircraftWeather.sources.READSB_JSON, 0, dictionary.locale)} · BDS_4_4 ${formatNumber(data.aircraftWeather.sources.BDS_4_4, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.aircraftWeatherFields} value={`${dictionary.system.aircraftWeatherWind} ${formatNumber(data.aircraftWeather.fields.wind, 0, dictionary.locale)} · ${dictionary.system.aircraftWeatherSat} ${formatNumber(data.aircraftWeather.fields.temperature, 0, dictionary.locale)} · ${dictionary.system.aircraftWeatherPressure} ${formatNumber(data.aircraftWeather.fields.pressure, 0, dictionary.locale)} · ${dictionary.system.aircraftWeatherHumidity} ${formatNumber(data.aircraftWeather.fields.humidity, 0, dictionary.locale)} · ${dictionary.system.aircraftWeatherTurbulence} ${formatNumber(data.aircraftWeather.fields.turbulence, 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.aircraftWeatherLastAccepted} value={formatDateTime(data.aircraftWeather.lastAcceptedAt, dictionary)} />
+        <Field label={dictionary.system.aircraftWeatherLastPersisted} value={formatDateTime(data.aircraftWeather.lastPersistedAt, dictionary)} />
       </Card>
 
       <Card title={dictionary.system.mapContext} status={data.mapLayers.radar.diagnostic.operationalState} dictionary={dictionary}>

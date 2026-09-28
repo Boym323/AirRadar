@@ -89,6 +89,8 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(value.atc).toMatchObject({ status: "ok", configured: true, freshness: "current", sectorCount: 42 });
     expect(value.weather).toMatchObject({ enabled: true, cache: { status: "warm", entries: 2 } });
     expect(value.weather.diagnostic).toMatchObject({ operationalState: "on_demand", reasonCode: "NOT_INITIALIZED" });
+    expect(value.aircraftWeather.status).toBe("no_data");
+    expect(value.status).toBe("ok");
     expect(value.mapLayers.radar.diagnostic).toMatchObject({ operationalState: "on_demand", reasonCode: "NOT_INITIALIZED" });
     expect(value.mapLayers.wind.diagnostic).toMatchObject({ operationalState: "on_demand", reasonCode: "NOT_INITIALIZED" });
     expect(value.alerts).toMatchObject({ status: "ok", enabled: true, ruleCount: 2 });
@@ -157,6 +159,15 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(value.status).toBe("ok");
     expect(value.weather).toMatchObject({ status: "degraded", requests: 6, failures: 2, activeSigmets: 7, sigmetStale: true, retryAfterMs: 30_000 });
     expect(value.weather.diagnostic).toMatchObject({ operationalState: "degraded", reasonCode: "RATE_LIMITED" });
+  });
+
+  it("keeps aircraft-weather no-data traffic-dependent and surfaces persistence degradation", () => {
+    const noData = build({ aircraftWeather: { accepted: 0, persisted: 0, rejected: 4 } });
+    expect(noData.aircraftWeather.status).toBe("no_data");
+    expect(noData.status).toBe("ok");
+    const degraded = build({ aircraftWeather: { accepted: 12, persisted: 10, persistenceFailures: 2 } });
+    expect(degraded.aircraftWeather.status).toBe("degraded");
+    expect(degraded.status).toBe("ok");
   });
 
   it("uses safe reason codes for real offline and degraded states", () => {

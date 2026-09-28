@@ -21,6 +21,19 @@ const CATEGORY_ORDER = [
 // Older pre-tag history is intentionally preserved.
 const TAG_AUTHORITATIVE_FROM = "1.0.148";
 
+// These exact stable tags had their individual headings removed by
+// docs(changelog): reconcile release and feature history (adbc14cb). Their
+// history remains in the consolidated entries already present in CHANGELOG.md.
+// This list is intentionally finite: any later missing tag remains a failure.
+export const GRANDFATHERED_MISSING_RELEASES = Object.freeze([
+  "1.0.197", "1.0.196", "1.0.195", "1.0.194", "1.0.193", "1.0.192",
+  "1.0.191", "1.0.190", "1.0.189", "1.0.188", "1.0.187", "1.0.186",
+  "1.0.185", "1.0.184", "1.0.183", "1.0.182", "1.0.180", "1.0.175",
+  "1.0.174", "1.0.170", "1.0.169", "1.0.166", "1.0.165", "1.0.161",
+  "1.0.160", "1.0.159", "1.0.158", "1.0.157", "1.0.154", "1.0.153",
+  "1.0.151", "1.0.148",
+]);
+
 function git(args) {
   return execFileSync("git", ["-c", `safe.directory=${APP_DIR}`, ...args], {
     cwd: APP_DIR,
@@ -262,9 +275,20 @@ export function normalizeChangelog(existing = "") {
   return `${intro.trimEnd()}\n\n${entries.join("\n\n")}\n`;
 }
 
-export function missingChangelogVersions({ existing = "", tags = releaseTags() } = {}) {
+export function missingChangelogVersions({
+  existing = "",
+  tags = releaseTags(),
+  authoritativeFrom = null,
+  grandfatheredVersions = [],
+} = {}) {
+  const grandfathered = new Set(grandfatheredVersions);
   return tags
     .map(tagVersion)
+    .filter((version) =>
+      authoritativeFrom === null
+      || (stableVersionParts(version) && compareStableVersions(version, authoritativeFrom) >= 0),
+    )
+    .filter((version) => !grandfathered.has(version))
     .filter((version) => !existing.includes(`## [${version}]`));
 }
 
@@ -339,12 +363,20 @@ export function backfillChangelog({
   tags = releaseTags(),
   releases = {},
   registry = loadFeatureRegistry(),
+  authoritativeFrom = null,
+  grandfatheredVersions = [],
 }) {
+  const grandfathered = new Set(grandfatheredVersions);
   existing = pruneUnexpectedChangelogVersions({ existing, tags });
   const missingEntries = [];
   for (let index = 0; index < tags.length; index += 1) {
     const tag = tags[index];
     const version = tagVersion(tag);
+    if (
+      authoritativeFrom !== null
+      && (!stableVersionParts(version) || compareStableVersions(version, authoritativeFrom) < 0)
+    ) continue;
+    if (grandfathered.has(version)) continue;
     if (existing.includes(`## [${version}]`)) continue;
     const previousTag = tags[index + 1] ?? null;
     const release = releases[tag];
@@ -368,14 +400,22 @@ function main() {
   const [command, version, date] = process.argv.slice(2);
   if (command === "backfill") {
     const existing = readFileSync(CHANGELOG_PATH, "utf8");
-    const updated = backfillChangelog({ existing });
+    const updated = backfillChangelog({
+      existing,
+      authoritativeFrom: TAG_AUTHORITATIVE_FROM,
+      grandfatheredVersions: GRANDFATHERED_MISSING_RELEASES,
+    });
     if (updated !== existing) writeFileSync(CHANGELOG_PATH, updated, "utf8");
     process.stdout.write(`[AirRadar changelog] ${updated === existing ? "unchanged" : "backfilled"}\n`);
     return;
   }
   if (command === "check") {
     const existing = readFileSync(CHANGELOG_PATH, "utf8");
-    const missing = missingChangelogVersions({ existing });
+    const missing = missingChangelogVersions({
+      existing,
+      authoritativeFrom: TAG_AUTHORITATIVE_FROM,
+      grandfatheredVersions: GRANDFATHERED_MISSING_RELEASES,
+    });
     const unexpected = unexpectedChangelogVersions({ existing });
     if (missing.length) {
       throw new Error(`CHANGELOG.md is missing release tags: ${missing.join(", ")}`);

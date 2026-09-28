@@ -5,6 +5,8 @@ import {
   createChangelogEntry,
   featureNamesForCommits,
   formatSummarySubject,
+  GRANDFATHERED_MISSING_RELEASES,
+  missingChangelogVersions,
   parseConventionalSubject,
   pruneUnexpectedChangelogVersions,
   unexpectedChangelogVersions,
@@ -81,6 +83,20 @@ describe("changelog v2", () => {
     ).toEqual(["Flight Intelligence"]);
   });
 
+  it("attributes all aircraft-weather spellings to the weather feature", () => {
+    const weatherRegistry = {
+      features: [{
+        name: "Map Context & Weather",
+        changelogKeywords: ["aircraft weather", "aircraft-weather", "weather observations", "weather profile", "bds 4,4", "bds4,4", "bds44", "aircraft observed weather"],
+      }],
+    };
+    expect(featureNamesForCommits([
+      { hash: "aaa", subject: "feat(weather): add aircraft-weather drawer" },
+      { hash: "bbb", subject: "fix: preserve BDS44 attribution" },
+      { hash: "ccc", subject: "docs: explain aircraft observed weather" },
+    ], weatherRegistry)).toEqual(["Map Context & Weather"]);
+  });
+
   it("prunes untagged modern release headings while preserving pre-authoritative history", () => {
     const existing = [
       "# Changelog",
@@ -147,6 +163,40 @@ describe("changelog v2", () => {
     expect(updated).not.toContain("## [1.0.151]");
     expect(updated).toContain("## [1.0.152]");
     expect(updated).toContain("**Features touched:** Flight Intelligence.");
+  });
+
+  it("does not treat pre-authoritative tags as missing release headings", () => {
+    expect(missingChangelogVersions({
+      existing: "## [1.0.148]\n",
+      tags: ["v1.0.149", "v1.0.48"],
+      authoritativeFrom: "1.0.148",
+    })).toEqual(["1.0.149"]);
+  });
+
+  it("grandfathers only the documented reconciliation tags", () => {
+    expect(GRANDFATHERED_MISSING_RELEASES).toContain("1.0.197");
+    expect(missingChangelogVersions({
+      existing: "",
+      tags: ["v1.0.197", "v1.0.199"],
+      authoritativeFrom: "1.0.148",
+      grandfatheredVersions: GRANDFATHERED_MISSING_RELEASES,
+    })).toEqual(["1.0.199"]);
+  });
+
+  it("keeps new tagged release mismatches strict", () => {
+    expect(missingChangelogVersions({
+      existing: "## [1.0.198]\n",
+      tags: ["v1.0.198", "v1.0.199"],
+      authoritativeFrom: "1.0.148",
+    })).toEqual(["1.0.199"]);
+  });
+
+  it("accepts a valid authoritative tag and release heading pair", () => {
+    expect(missingChangelogVersions({
+      existing: "## [1.0.199]\n",
+      tags: ["v1.0.199"],
+      authoritativeFrom: "1.0.148",
+    })).toEqual([]);
   });
 
   it("renders readable sections and retains the complete technical audit trail", () => {
