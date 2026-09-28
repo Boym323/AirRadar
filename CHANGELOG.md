@@ -2,6 +2,35 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.202] - 2026-09-28
+
+Changes since v1.0.201.
+
+**Features touched:** Airport Intelligence, Navigation Integrity.
+
+### Added
+
+- Add shadow confidence calibration (ea097f8)
+- Add airport operations v2 layer (9d93917)
+
+### Changed
+
+- Implement code changes to enhance functionality and improve performance (5daedb6)
+
+### Maintenance
+
+- Sync generated repository metadata (3144681)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (3144681)
+- Merge pull request #205 from Boym323/automation/repository-metadata (78afcd2)
+- feat(navigation): add shadow confidence calibration (ea097f8)
+- Implement code changes to enhance functionality and improve performance (5daedb6)
+- feat(airport): add airport operations v2 layer (9d93917)
+
+</details>
 ## [1.0.201] - 2026-09-28
 
 Changes since v1.0.200.
