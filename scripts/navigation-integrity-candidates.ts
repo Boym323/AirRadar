@@ -3,7 +3,8 @@ import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity
 
 const service = getNavigationIntegrityService();
 const generatedAt = new Date();
-const candidates = (await service.getHistory(new Date(generatedAt.getTime() - 24 * 60 * 60_000), generatedAt)).slice(0, 100).map((candidate) => ({
+const rawCandidates = await service.getHistory(new Date(generatedAt.getTime() - 24 * 60 * 60_000), generatedAt);
+const candidates = rawCandidates.map((candidate) => ({
   id: candidate.id, start: candidate.startedAt, end: candidate.endedAt ?? candidate.lastObservedAt,
   duration: candidate.evidence.structured?.temporal.durationSeconds ?? candidate.evidence.durationSeconds,
   cells: candidate.cellKeys, altitudeBands: candidate.altitudeBands,
@@ -16,6 +17,8 @@ const candidates = (await service.getHistory(new Date(generatedAt.getTime() - 24
   auditCategories: candidate.evidence.structured?.auditCategories ?? ["UNKNOWN"],
   likelyExplanation: candidate.evidence.structured?.likelyExplanation ?? "Persisted candidate predates structured V1.1 evidence.",
 }));
+const histogram = (values: string[]): Record<string, number> => values.reduce<Record<string, number>>((result, value) => { result[value] = (result[value] ?? 0) + 1; return result; }, {});
+const ruleHistogram = candidates.flatMap((candidate) => candidate.rules).filter((rule) => rule.passed).map((rule) => rule.id);
 await mkdir("artifacts", { recursive: true });
-await writeFile("artifacts/navigation-integrity-candidates.json", JSON.stringify({ generatedAt: generatedAt.toISOString(), window: "24h", candidates, interpretation: "Candidates are heuristic correlated navigation anomalies; no entry confirms GNSS interference or jamming." }, null, 2) + "\n", "utf8");
+await writeFile("artifacts/navigation-integrity-candidates.json", JSON.stringify({ generatedAt: generatedAt.toISOString(), window: "24h", candidates, summary: { count: candidates.length, confidence: histogram(candidates.map((candidate) => candidate.confidence)), severity: histogram(candidates.map((candidate) => candidate.severity)), auditCategories: histogram(candidates.flatMap((candidate) => candidate.auditCategories)), passedRules: histogram(ruleHistogram) }, interpretation: "Candidates are heuristic correlated navigation anomalies; no entry confirms GNSS interference or jamming." }, null, 2) + "\n", "utf8");
 console.log(`Wrote artifacts/navigation-integrity-candidates.json (${candidates.length} candidates)`);

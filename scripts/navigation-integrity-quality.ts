@@ -1,5 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
+import { buildBaseline } from "@/lib/navigation-integrity/baseline";
+import { detectNavigationIntegrityAnomalies, summariseCells } from "@/lib/navigation-integrity/detector";
+import type { NavigationIntegrityObservation } from "@/lib/navigation-integrity/types";
 import { getPrisma, isDatabaseConfigured } from "@/lib/server/db";
 
 const OUT = "artifacts/navigation-integrity-quality.json";
@@ -18,6 +21,33 @@ type QualityRow = {
   latCell: number;
   lonCell: number;
 };
+
+function asObservation(row: QualityRow): NavigationIntegrityObservation {
+  const observedAt = new Date(observedMs(row.observedAt)).toISOString();
+  return {
+    aircraftHex: row.aircraftHex,
+    flightId: null,
+    observedAt,
+    receivedAt: observedAt,
+    lat: row.latCell * 0.2 + 0.1,
+    lon: row.lonCell * 0.2 + 0.1,
+    altitudeFt: null,
+    altitudeBand: row.altitudeBand,
+    nic: row.nic,
+    nacP: row.nacP,
+    nacV: row.nacV,
+    sil: row.sil,
+    sda: row.sda,
+    gva: row.gva,
+    adsbVersion: null,
+    positionSource: "ADS-B",
+    source: row.source === "NETWORK" ? "NETWORK" : "LOCAL",
+    provider: null,
+    quality: "HIGH",
+    confidence: "HIGH",
+    provenance: { origin: "local", positionObservedAt: observedAt, fields: {} },
+  };
+}
 
 function observedMs(value: QualityRow["observedAt"]): number {
   if (typeof value === "object" && value !== null && "epochMilliseconds" in value) return value.epochMilliseconds;
@@ -45,23 +75,27 @@ const { rows, database } = await readRows();
 const current = getNavigationIntegrityService().getCurrent("15m");
 const diagnostics = getNavigationIntegrityService().getDiagnostics();
 const candidates = current.activeAnomalies;
+const productionObservations = rows.map(asObservation);
+const productionBaselines = buildBaseline(productionObservations);
+const productionCells = summariseCells(productionObservations, productionBaselines);
+const offlineCandidates = detectNavigationIntegrityAnomalies(productionObservations, new Date(), productionBaselines);
 const histogram = (values: string[]): Record<string, number> => values.reduce<Record<string, number>>((result, value) => { result[value] = (result[value] ?? 0) + 1; return result; }, {});
-const baselineCellGroups = new Map<string, Set<string>>();
-for (const row of rows) { const key = `${row.latCell}:${row.lonCell}:${row.altitudeBand}`; const aircraft = baselineCellGroups.get(key) ?? new Set<string>(); aircraft.add(row.aircraftHex); baselineCellGroups.set(key, aircraft); }
-const readyCellKeys = new Set([...baselineCellGroups].filter(([, aircraft]) => aircraft.size >= 3).map(([key]) => key));
+const readyCellKeys = new Set([...productionBaselines].filter(([, baseline]) => baseline.aircraftCount >= 3).map(([key]) => key));
 const trafficWeightedReadiness = rows.length ? rows.filter((row) => readyCellKeys.has(`${row.latCell}:${row.lonCell}:${row.altitudeBand}`)).length / rows.length : null;
 const report = {
   generatedAt: new Date().toISOString(),
   dataTimeSpan: rows.length ? { from: new Date(Math.min(...rows.map((row) => observedMs(row.observedAt)))).toISOString(), to: new Date(Math.max(...rows.map((row) => observedMs(row.observedAt)))).toISOString() } : null,
   database,
+  observationCount: rows.length,
   uniqueAircraft: rows.length ? new Set(rows.map((row) => row.aircraftHex)).size : null,
   availability: rows.length ? Object.fromEntries(["nic", "nacP", "nacV", "sil", "sda", "gva"].map((field) => [field, { count: countAvailable(rows, field as keyof QualityRow), rate: countAvailable(rows, field as keyof QualityRow) / rows.length }])) : null,
   bySource: rows.length ? groupCounts(rows, (row) => row.source) : null,
   byAltitudeBand: rows.length ? groupCounts(rows, (row) => String(row.altitudeBand)) : null,
   aircraft: rows.length ? groupCounts(rows, (row) => row.aircraftHex) : null,
   spatialCells: rows.length ? new Set(rows.map((row) => `${row.latCell}:${row.lonCell}:${row.altitudeBand}`)).size : null,
-  baseline: { cellsTotal: current.cells.length, cellsWithSufficientBaseline: diagnostics.baselineCellsReady, cellsInsufficient: Math.max(0, current.cells.length - diagnostics.baselineCellsReady), rawCellReadiness: current.cells.length ? diagnostics.baselineCellsReady / current.cells.length : null, trafficWeightedReadiness },
-  baselineMaturity: diagnostics.baselineMaturity,
+  baseline: { cellsTotal: productionBaselines.size, cellsWithSufficientBaseline: readyCellKeys.size, cellsInsufficient: Math.max(0, productionBaselines.size - readyCellKeys.size), rawCellReadiness: productionBaselines.size ? readyCellKeys.size / productionBaselines.size : null, trafficWeightedReadiness },
+  baselineMaturity: histogram([...productionBaselines.values()].map((item) => item.maturity)),
+  productionAnalysis: { cells: productionCells.length, offlineCandidateCount: offlineCandidates.length, note: "Offline candidates are descriptive replay output; live active candidates come from the process-local detector state." },
   currentAnomalyCandidates: diagnostics.anomalyCandidates,
   activeAnomalies: current.summary.activeAnomalies,
   candidateAuditClassification: histogram(candidates.flatMap((candidate) => candidate.evidence.structured?.auditCategories ?? ["UNKNOWN"])),
