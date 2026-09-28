@@ -1277,6 +1277,9 @@ export const cs = {
     contextReady: "Kontext načten",
     contextPartial: "Pro tento čas není dostupný celý kontext",
     contextUnavailable: "Pro vybraný čas není dostupný",
+    integrity: "Integrita navigace",
+    integrityCandidate: (count: string, time: string) => `${count} kandidát${count === "1" ? "" : "i"} · začátek ${time}`,
+    integrityNone: "V tomto intervalu nejsou kandidáti integrity navigace.",
   },
   system: {
     title: "Systém",

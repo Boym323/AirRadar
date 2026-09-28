@@ -1279,6 +1279,9 @@ export const en = {
     contextReady: "Context resolved",
     contextPartial: "Some context is unavailable for this time",
     contextUnavailable: "Unavailable for selected time",
+    integrity: "Navigation integrity",
+    integrityCandidate: (count: string, time: string) => `${count} candidate${count === "1" ? "" : "s"} · started ${time}`,
+    integrityNone: "No navigation-integrity candidates in this interval.",
   },
   system: {
     title: "System",
