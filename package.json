@@ -70,6 +70,7 @@
     "audit:navigation-integrity-candidates": "JITI_TSCONFIG_PATHS=true jiti scripts/navigation-integrity-candidates.ts",
     "audit:navigation-integrity-shadow": "JITI_TSCONFIG_PATHS=true jiti scripts/navigation-integrity-shadow.ts",
     "audit:extreme-altitudes": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-extreme-altitudes.ts",
+    "audit:airport-operations": "JITI_TSCONFIG_PATHS=true jiti scripts/airport-operations-quality.ts",
     "repair:historical-altitude": "JITI_TSCONFIG_PATHS=true jiti scripts/repair-historical-altitude.ts",
     "changelog:check": "node scripts/changelog.mjs check",
     "metrics:code": "node scripts/code-metrics.mjs",

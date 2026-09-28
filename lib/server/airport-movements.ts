@@ -8,7 +8,7 @@ import type { RunwayContext } from "@/lib/route-intelligence/contracts";
 import { getPrisma } from "@/lib/server/db";
 import { getAppTimezone } from "@/lib/server/config";
 
-export type AirportMovementKind = "APPROACH" | "LANDING" | "TAKEOFF" | "DEPARTURE" | "OVERFLIGHT";
+export type AirportMovementKind = "APPROACH" | "LANDING" | "TAKEOFF" | "DEPARTURE" | "GO_AROUND" | "HOLDING" | "OVERFLIGHT";
 export type MovementConfidence = "high" | "medium" | "low";
 export type AirportMovementPeriod = "today" | "24h" | "7d";
 
@@ -66,6 +66,8 @@ export interface AirportMovementsResponse {
     takeoffs: number;
     departures: number;
     overflights: number;
+    goArounds: number;
+    holding: number;
     runwayRelevantMovements: number;
     probableRunwayMovements: number;
     unknownRunwayMovements: number;
@@ -201,11 +203,27 @@ export function analyzeAirportMovement(
   const departure = !takeoff && firstDistance <= AIRPORT_RADIUS_KM && climbing && lastDistance - firstDistance >= 2;
   const overflight = minDistance <= AIRPORT_RADIUS_KM && firstDistance - minDistance >= 1.5 && lastDistance - minDistance >= 1.5
     && (lastAltitude === null || lastAltitude >= 3_000) && !descending && !climbing;
+  const minimumAltitude = altitudeValues.length ? Math.min(...altitudeValues) : null;
+  const goAround = positions.length >= 5 && firstDistance > THRESHOLD_RADIUS_KM && descending && minDistance <= THRESHOLD_RADIUS_KM && minimumAltitude !== null && lastAltitude !== null
+    && lastAltitude - minimumAltitude >= 500 && lastDistance > minDistance + 2
+    && positions.some((position) => finite(position.verticalRate) && position.verticalRate > 200);
+  const radialSpread = Math.max(...distances) - Math.min(...distances);
+  const holding = positions.length >= 6 && minDistance <= AIRPORT_RADIUS_KM && radialSpread <= 7
+    && altitudeValues.length >= 3 && Math.abs((altitudeValues.at(-1) ?? 0) - (altitudeValues[0] ?? 0)) <= 1_500
+    && positions.filter((position) => finite(position.track)).length >= 4;
 
   let movement: AirportMovementKind;
   let evidence: string[];
   let confidence: MovementConfidence;
-  if (landing) {
+  if (goAround) {
+    movement = "GO_AROUND";
+    evidence = ["approach reached the airport vicinity", "aircraft climbed after the closest approach", "track moved away before touchdown was observed"];
+    confidence = "medium";
+  } else if (holding) {
+    movement = "HOLDING";
+    evidence = ["repeated observations remained near the airport", "altitude stayed within a bounded band", "track changed while distance remained bounded"];
+    confidence = "medium";
+  } else if (landing) {
     movement = "LANDING";
     evidence = ["approach distance decreased", "sustained descent", "low altitude near airport", "speed reduced or remained low"];
     confidence = "high";
@@ -228,7 +246,7 @@ export function analyzeAirportMovement(
   } else {
     return null;
   }
-  const runwayContext = movement === "OVERFLIGHT"
+  const runwayContext = movement === "OVERFLIGHT" || movement === "HOLDING"
     ? resolveArrivalRunwayContext({ positions, airport, runways: [] })
     : movement === "TAKEOFF" || movement === "DEPARTURE"
       ? resolveDepartureRunwayContext({ positions, airport, runways, flightPlan: flight.flightPlan, inferredConfidence: confidence === "high" ? "MEDIUM" : "LOW" })
@@ -272,6 +290,8 @@ function emptySummary() {
     takeoffs: 0,
     departures: 0,
     overflights: 0,
+    goArounds: 0,
+    holding: 0,
     runwayRelevantMovements: 0,
     probableRunwayMovements: 0,
     unknownRunwayMovements: 0,
@@ -288,8 +308,10 @@ export function summarizeAirportMovements(movements: readonly AirportMovement[])
     if (movement.movement === "TAKEOFF") summary.takeoffs += 1;
     if (movement.movement === "DEPARTURE") summary.departures += 1;
     if (movement.movement === "OVERFLIGHT") summary.overflights += 1;
-    if (movement.movement !== "OVERFLIGHT") summary.runwayRelevantMovements += 1;
-    if (movement.movement !== "OVERFLIGHT" && movement.runway) {
+    if (movement.movement === "GO_AROUND") summary.goArounds += 1;
+    if (movement.movement === "HOLDING") summary.holding += 1;
+    if (movement.movement !== "OVERFLIGHT" && movement.movement !== "HOLDING") summary.runwayRelevantMovements += 1;
+    if (movement.movement !== "OVERFLIGHT" && movement.movement !== "HOLDING" && movement.runway) {
       summary.probableRunwayMovements += 1;
       runways.set(movement.runway.designator, (runways.get(movement.runway.designator) ?? 0) + 1);
     }

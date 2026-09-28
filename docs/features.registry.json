@@ -84,7 +84,7 @@
       "category": "airports",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Airport catalog, runway context, observed traffic and inferred movement intelligence.",
+      "summary": "Airport catalog, runway context, observed traffic, and inferred Airport Operations intelligence.",
       "pages": [
         "/airports",
         "/airports/:icao"
@@ -93,6 +93,7 @@
         "/api/airports",
         "/api/airports/:icao",
         "/api/airports/:icao/movements",
+        "/api/airports/:icao/operations",
         "/api/airports/:icao/traffic"
       ],
       "changelogScopes": [
@@ -103,6 +104,7 @@
         "airport intelligence",
         "airport traffic",
         "airport movement"
+        ,"airport operations"
       ]
     },
     {

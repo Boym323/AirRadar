@@ -10,6 +10,8 @@ function movementLabel(movement: AirportMovement["movement"]): string {
     LANDING: t.airport.movementLanding,
     TAKEOFF: t.airport.movementTakeoff,
     DEPARTURE: t.airport.movementDeparture,
+    GO_AROUND: t.airport.movementGoAround,
+    HOLDING: t.airport.movementHolding,
     OVERFLIGHT: t.airport.movementOverflight,
   }[movement];
 }
@@ -67,6 +69,8 @@ export function AirportMovements({ airport }: { airport: { icaoCode: string } })
         <div><strong>{data.summary.takeoffs}</strong><span>{t.airport.movementTakeoffs}</span></div>
         <div><strong>{data.summary.departures}</strong><span>{t.airport.movementDepartures}</span></div>
         <div><strong>{data.summary.overflights}</strong><span>{t.airport.movementOverflights}</span></div>
+        <div><strong>{data.summary.goArounds}</strong><span>{t.airport.movementGoArounds}</span></div>
+        <div><strong>{data.summary.holding}</strong><span>{t.airport.movementHoldingCount}</span></div>
       </div>
       <div className="airport-movement-grid">
         <div>

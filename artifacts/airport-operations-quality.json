@@ -1,0 +1,49 @@
+{
+  "generatedAt": "2026-09-28T15:41:32.850Z",
+  "source": "deterministic synthetic scenarios",
+  "airportsObserved": 1,
+  "movementCandidates": 3,
+  "movements": 3,
+  "movementCounts": {
+    "LANDING": 1,
+    "TAKEOFF": 1,
+    "OVERFLIGHT": 1
+  },
+  "confidence": {
+    "high": 3,
+    "medium": 0,
+    "low": 0
+  },
+  "runwayInferenceCoverage": 0.6666666666666666,
+  "runwayConfidence": {
+    "high": 2,
+    "medium": 0,
+    "low": 0
+  },
+  "unknownAmbiguousRate": 0,
+  "goArounds": 0,
+  "holding": 0,
+  "dataSourceCoverage": {
+    "position": 3,
+    "runway": 3,
+    "route": 0,
+    "metar": 0
+  },
+  "scenarios": [
+    {
+      "name": "straight-final",
+      "movement": "LANDING",
+      "confidence": "high"
+    },
+    {
+      "name": "departure",
+      "movement": "TAKEOFF",
+      "confidence": "high"
+    },
+    {
+      "name": "overflight",
+      "movement": "OVERFLIGHT",
+      "confidence": "high"
+    }
+  ]
+}
