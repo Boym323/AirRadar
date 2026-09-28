@@ -2,6 +2,27 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.184] - 2026-09-28
+
+Changes since v1.0.183.
+
+### Added
+
+- Add aircraft weather observations backend (6cac3c36)
+
+### Maintenance
+
+- Sync generated repository metadata (26c488e3)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (26c488e3)
+- Merge pull request #200 from Boym323/automation/repository-metadata (5c1c0c09)
+- feat: add aircraft weather observations backend (6cac3c36)
+
+</details>
+
 ## [Unreleased]
 
 ### Added
