@@ -2,6 +2,34 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.200] - 2026-09-28
+
+Changes since v1.0.199.
+
+**Features touched:** Map Context & Weather, Navigation Integrity, Time Machine.
+
+### Added
+
+- Add navigation integrity situational awareness (3c4d6b3)
+- Surface historical navigation integrity (17ce056)
+- Update aircraft weather quality metrics and improve data integrity (dd8fbf2)
+- Enhance candidate evaluation with maturity metrics and structured evidence (8b5730e)
+
+### Maintenance
+
+- Sync generated repository metadata (8321325)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (8321325)
+- Merge pull request #203 from Boym323/automation/repository-metadata (9a4f4fe)
+- feat(navigation): add navigation integrity situational awareness (3c4d6b3)
+- feat(time-machine): surface historical navigation integrity (17ce056)
+- feat(aircraft-weather): update aircraft weather quality metrics and improve data integrity (dd8fbf2)
+- feat(navigation-integrity): enhance candidate evaluation with maturity metrics and structured evidence (8b5730e)
+
+</details>
 ## [1.0.199] - 2026-09-28
 
 Changes since v1.0.198.
