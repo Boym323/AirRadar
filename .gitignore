@@ -1,5 +1,7 @@
 node_modules/
 node_modules.stale*/
+.npm/
+.config/prisma/
 .next/
 out/
 coverage/
