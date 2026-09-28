@@ -2,6 +2,28 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.201] - 2026-09-28
+
+Changes since v1.0.200.
+
+**Features touched:** Navigation Integrity.
+
+### Fixed
+
+- Make production forensic audits persistent-data aware (1e76bd4)
+
+### Maintenance
+
+- Sync generated repository metadata (0014882)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (0014882)
+- Merge pull request #204 from Boym323/automation/repository-metadata (33f09e1)
+- fix(navigation-integrity): make production forensic audits persistent-data aware (1e76bd4)
+
+</details>
 ## [1.0.200] - 2026-09-28
 
 Changes since v1.0.199.
