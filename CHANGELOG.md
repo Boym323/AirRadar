@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.189] - 2026-09-28
+
+Changes since v1.0.188.
+
+### Documentation
+
+- Record aircraft weather production baseline (719182d3)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: record aircraft weather production baseline (719182d3)
+
+</details>
+
 ## [1.0.188] - 2026-09-28
 
 Changes since v1.0.187.
