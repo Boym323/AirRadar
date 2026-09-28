@@ -34,6 +34,12 @@ export interface NavigationIntegrityEvidence {
   likelyExplanation: string;
 }
 
+export interface NavigationIntegrityShadowResult {
+  currentConfidence: NavigationIntegrityConfidence;
+  shadowConfidence: NavigationIntegrityConfidence;
+  reasonCodes: string[];
+}
+
 export interface NavigationIntegrityFieldProvenance {
   origin: AircraftDataOrigin;
   provider: string | null;

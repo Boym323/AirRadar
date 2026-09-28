@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-09-28T15:20:11.596Z",
+  "window": "24h",
+  "productionSample": {
+    "observationCount": null,
+    "uniqueAircraft": null,
+    "spatialCells": null,
+    "candidateCount": 0,
+    "baselineReadiness": "See artifacts/navigation-integrity-quality.json; replay is read-only",
+    "trafficWeightedReadiness": "See artifacts/navigation-integrity-quality.json; replay is read-only"
+  },
+  "currentConfidence": {
+    "LOW": 0,
+    "MEDIUM": 0,
+    "HIGH": 0
+  },
+  "shadowConfidence": {
+    "LOW": 0,
+    "MEDIUM": 0,
+    "HIGH": 0
+  },
+  "transitions": {},
+  "reasonHistogram": {},
+  "keyCases": {
+    "aircraftCountOnly": 0,
+    "weakEvidence": 0,
+    "baselineImmature": 0,
+    "changedConfidence": 0
+  },
+  "aircraftCountOnlyCases": [],
+  "changedCandidates": [],
+  "representativeUnchanged": [],
+  "allCandidates": [],
+  "decision": "WAIT FOR MORE DATA",
+  "notes": [
+    "Shadow evaluation is read-only and does not alter candidate qualification, live confidence, UI, alerts, or persistence.",
+    "No confirmed GNSS interference is inferred.",
+    "A production decision requires this replay together with the deterministic synthetic control suite and full validation."
+  ]
+}
