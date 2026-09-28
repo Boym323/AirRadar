@@ -8,8 +8,10 @@ export async function GET(request: Request): Promise<Response> {
   const rateLimit = checkPublicRateLimit("weather", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const url = new URL(request.url);
-  const lat = Number(url.searchParams.get("lat"));
-  const lon = Number(url.searchParams.get("lon"));
+  const latValue = url.searchParams.get("lat");
+  const lonValue = url.searchParams.get("lon");
+  const lat = latValue === null || latValue.trim() === "" ? Number.NaN : Number(latValue);
+  const lon = lonValue === null || lonValue.trim() === "" ? Number.NaN : Number(lonValue);
   const radiusKm = Number(url.searchParams.get("radiusKm") ?? 50);
   const windowMinutes = Number(url.searchParams.get("windowMinutes") ?? 30);
   const binSizeFt = Number(url.searchParams.get("binSizeFt") ?? AIRCRAFT_WEATHER_LIMITS.defaultBinSizeFt);
