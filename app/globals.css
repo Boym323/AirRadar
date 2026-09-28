@@ -43,6 +43,7 @@
   --font-size-lg: 16px;
   --font-size-xl: 20px;
   --font-size-2xl: 28px;
+  --font-size-section: 13px;
   --font-size-hero: 18px;
   --font-size-metric: 16px;
   --line-height-tight: 1.2;
@@ -3956,9 +3957,9 @@ button, input, select, textarea { color-scheme: dark; }
 .aircraft-weather-overview div { min-width: 0; padding: 9px 7px; border-left: 2px solid var(--weather); background: var(--surface-2); }
 .aircraft-weather-overview strong, .aircraft-weather-overview span { display: block; overflow-wrap: anywhere; }
 .aircraft-weather-overview strong { font-size: var(--font-size-base); font-variant-numeric: tabular-nums; }
-.aircraft-weather-overview span { margin-top: 3px; color: var(--text-muted); font-size: 9px; }
+.aircraft-weather-overview span { margin-top: 3px; color: var(--text-muted); font-size: var(--font-size-2xs); }
 .aircraft-weather-section-heading { align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; }
-.aircraft-weather-section-heading h3 { font-size: 13px; }
+.aircraft-weather-section-heading h3 { font-size: var(--font-size-section); }
 .aircraft-weather-section-heading > span { margin: 0; }
 .aircraft-weather-note { margin: -5px 0 0; }
 .aircraft-weather-profile { display: grid; gap: 5px; }
@@ -3966,11 +3967,11 @@ button, input, select, textarea { color-scheme: dark; }
 .aircraft-weather-bin.confidence-high { border-left-color: var(--accent); }.aircraft-weather-bin.confidence-medium { border-left-color: var(--selected); }.aircraft-weather-bin.confidence-low { opacity: .78; }.aircraft-weather-bin.confidence-insufficient { opacity: .55; }
 .aircraft-weather-bin-altitude, .aircraft-weather-bin-value { font-variant-numeric: tabular-nums; font-weight: 700; }
 .aircraft-weather-bin-value i { display: inline-block; margin-left: 4px; color: var(--weather); font-style: normal; }
-.aircraft-weather-bin-meta { color: var(--text-muted); font-size: 10px; }
+.aircraft-weather-bin-meta { color: var(--text-muted); font-size: var(--font-size-xs); }
 .aircraft-weather-observation-list { display: grid; gap: 4px; max-height: 230px; overflow: auto; }
 .aircraft-weather-observation { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: transparent; color: var(--text-primary); text-align: left; cursor: pointer; }
 .aircraft-weather-observation:hover, .aircraft-weather-observation:focus-visible { border-color: var(--weather); background: var(--surface-2); }
-.aircraft-weather-observation span { display: grid; gap: 3px; min-width: 0; }.aircraft-weather-observation span:last-child { text-align: right; }.aircraft-weather-observation small { color: var(--text-muted); font-size: 10px; }
+.aircraft-weather-observation span { display: grid; gap: 3px; min-width: 0; }.aircraft-weather-observation span:last-child { text-align: right; }.aircraft-weather-observation small { color: var(--text-muted); font-size: var(--font-size-xs); }
 .aircraft-weather-empty, .aircraft-weather-status, .aircraft-weather-model-unavailable { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text-muted); font-size: var(--font-size-sm); line-height: 1.45; }.aircraft-weather-empty strong, .aircraft-weather-model-unavailable strong { color: var(--text-primary); }.aircraft-weather-error { color: var(--danger, #ef8f6b); }
 .aircraft-quick-observed-weather { border-left: 2px solid var(--weather); }.aircraft-quick-observed-weather .aircraft-quick-disclaimer { margin-top: 8px; }
 .aircraft-weather-detail { display: grid; gap: 8px; padding: 10px; border: 1px solid color-mix(in srgb, var(--weather) 35%, var(--border)); border-radius: var(--radius-lg); background: var(--surface-2); }.aircraft-weather-detail-fields { display: grid; grid-template-columns: minmax(100px, .8fr) minmax(0, 1.2fr); gap: 6px 12px; margin: 0; font-size: var(--font-size-sm); }.aircraft-weather-detail-fields span { color: var(--text-muted); }.aircraft-weather-detail-fields strong { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }

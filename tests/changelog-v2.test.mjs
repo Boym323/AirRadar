@@ -5,6 +5,8 @@ import {
   createChangelogEntry,
   featureNamesForCommits,
   formatSummarySubject,
+  GRANDFATHERED_MISSING_RELEASES,
+  missingChangelogVersions,
   parseConventionalSubject,
   pruneUnexpectedChangelogVersions,
   unexpectedChangelogVersions,
@@ -161,6 +163,40 @@ describe("changelog v2", () => {
     expect(updated).not.toContain("## [1.0.151]");
     expect(updated).toContain("## [1.0.152]");
     expect(updated).toContain("**Features touched:** Flight Intelligence.");
+  });
+
+  it("does not treat pre-authoritative tags as missing release headings", () => {
+    expect(missingChangelogVersions({
+      existing: "## [1.0.148]\n",
+      tags: ["v1.0.149", "v1.0.48"],
+      authoritativeFrom: "1.0.148",
+    })).toEqual(["1.0.149"]);
+  });
+
+  it("grandfathers only the documented reconciliation tags", () => {
+    expect(GRANDFATHERED_MISSING_RELEASES).toContain("1.0.197");
+    expect(missingChangelogVersions({
+      existing: "",
+      tags: ["v1.0.197", "v1.0.199"],
+      authoritativeFrom: "1.0.148",
+      grandfatheredVersions: GRANDFATHERED_MISSING_RELEASES,
+    })).toEqual(["1.0.199"]);
+  });
+
+  it("keeps new tagged release mismatches strict", () => {
+    expect(missingChangelogVersions({
+      existing: "## [1.0.198]\n",
+      tags: ["v1.0.198", "v1.0.199"],
+      authoritativeFrom: "1.0.148",
+    })).toEqual(["1.0.199"]);
+  });
+
+  it("accepts a valid authoritative tag and release heading pair", () => {
+    expect(missingChangelogVersions({
+      existing: "## [1.0.199]\n",
+      tags: ["v1.0.199"],
+      authoritativeFrom: "1.0.148",
+    })).toEqual([]);
   });
 
   it("renders readable sections and retains the complete technical audit trail", () => {

@@ -14,13 +14,14 @@ const QUALITY_WINDOW_MS = 7 * 24 * 60 * 60_000;
 export interface AircraftWeatherQualityReport {
   generatedAt: string;
   bounded: { maxRows: number; windowDays: number; truncated: boolean };
-  persisted: { source: "postgres" | "unavailable" | "provided"; rows: number; from: string | null; to: string | null; contributingAircraft: number };
-  timeWindows: Record<"1h" | "24h" | "7d", { rows: number; aircraft: number }>;
-  sourceCoverage: Record<string, { observations: number; aircraft: number }>;
-  fieldCoverage: { wind: number; sat: number; tat: number; staticPressure: number; humidity: number; turbulence: number };
-  altitudeBands: Record<string, number>;
-  quality: Record<string, number>;
-  bds44: { candidates: number; accepted: number; ambiguous: number; rejected: number };
+  persisted: { source: "postgres" | "unavailable" | "provided"; rows: number | null; from: string | null; to: string | null; contributingAircraft: number | null };
+  timeWindows: Record<"1h" | "24h" | "7d", { rows: number | null; aircraft: number | null }>;
+  sourceCoverage: Record<string, { observations: number; aircraft: number }> | null;
+  fieldCoverage: { wind: number; sat: number; tat: number; staticPressure: number; humidity: number; turbulence: number } | null;
+  altitudeBands: Record<string, number> | null;
+  quality: Record<string, number> | null;
+  bds44: { candidates: number; accepted: number; ambiguous: number; rejected: number } | null;
+  runtimeDiagnostics: { scope: "process-local audit process"; bds44: { candidates: number; accepted: number; ambiguous: number; rejected: number } };
   runtimeDiagnosticsScope: "process-local audit process";
   likelyDataGaps: string[];
 }
@@ -93,20 +94,25 @@ export function buildAircraftWeatherQualityReport(rows: AircraftWeatherObservati
   if (source === "unavailable") gaps.push("Production database was unavailable; persisted metrics could not be read.");
   else if (!rows.length) gaps.push("No persisted accepted observations in the bounded seven-day sample.");
   else if (nowMs - Date.parse(last!) > 60 * 60_000) gaps.push("No accepted observation in the last hour.");
-  if (!sourceCoverage.BDS_4_4) gaps.push("No persisted BDS_4_4 observations in the sample.");
-  if (!fieldCoverage.humidity) gaps.push("Humidity was unavailable in the sample.");
-  if (!fieldCoverage.turbulence) gaps.push("Turbulence was unavailable in the sample.");
+  if (source !== "unavailable" && !sourceCoverage.BDS_4_4) gaps.push("No persisted BDS_4_4 observations in the sample.");
+  if (source !== "unavailable" && !fieldCoverage.humidity) gaps.push("Humidity was unavailable in the sample.");
+  if (source !== "unavailable" && !fieldCoverage.turbulence) gaps.push("Turbulence was unavailable in the sample.");
   const diagnostics = getAircraftWeatherDiagnostics();
+  const runtimeBds44 = { candidates: diagnostics.weatherBds44Accepted + diagnostics.weatherBds44Ambiguous, accepted: diagnostics.weatherBds44Accepted, ambiguous: diagnostics.weatherBds44Ambiguous, rejected: diagnostics.weatherRejected };
+  const databaseUnavailable = source === "unavailable";
   return {
     generatedAt: now.toISOString(),
     bounded: { maxRows: QUALITY_SAMPLE_LIMIT, windowDays: 7, truncated },
-    persisted: { source, rows: rows.length, from: first, to: last, contributingAircraft: new Set(rows.map((row) => row.aircraftHex)).size },
-    timeWindows: { "1h": windowMetric(rows, nowMs - 60 * 60_000, nowMs), "24h": windowMetric(rows, nowMs - 24 * 60 * 60_000, nowMs), "7d": windowMetric(rows, nowMs - QUALITY_WINDOW_MS, nowMs) },
-    sourceCoverage,
-    fieldCoverage,
-    altitudeBands,
-    quality,
-    bds44: { candidates: diagnostics.weatherBds44Accepted + diagnostics.weatherBds44Ambiguous, accepted: diagnostics.weatherBds44Accepted, ambiguous: diagnostics.weatherBds44Ambiguous, rejected: diagnostics.weatherRejected },
+    persisted: { source, rows: databaseUnavailable ? null : rows.length, from: databaseUnavailable ? null : first, to: databaseUnavailable ? null : last, contributingAircraft: databaseUnavailable ? null : new Set(rows.map((row) => row.aircraftHex)).size },
+    timeWindows: databaseUnavailable
+      ? { "1h": { rows: null, aircraft: null }, "24h": { rows: null, aircraft: null }, "7d": { rows: null, aircraft: null } }
+      : { "1h": windowMetric(rows, nowMs - 60 * 60_000, nowMs), "24h": windowMetric(rows, nowMs - 24 * 60 * 60_000, nowMs), "7d": windowMetric(rows, nowMs - QUALITY_WINDOW_MS, nowMs) },
+    sourceCoverage: databaseUnavailable ? null : sourceCoverage,
+    fieldCoverage: databaseUnavailable ? null : fieldCoverage,
+    altitudeBands: databaseUnavailable ? null : altitudeBands,
+    quality: databaseUnavailable ? null : quality,
+    bds44: databaseUnavailable ? null : runtimeBds44,
+    runtimeDiagnostics: { scope: "process-local audit process", bds44: runtimeBds44 },
     runtimeDiagnosticsScope: "process-local audit process",
     likelyDataGaps: gaps,
   };

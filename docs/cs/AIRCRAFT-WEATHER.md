@@ -48,6 +48,9 @@ artifacts/aircraft-weather-quality.json. Audit čte nejvýše 20 000 přijatých
 uložených řádků z posledních sedmi dnů a uvádí pokrytí zdrojů/letadel,
 dostupnost polí, výškové a kvalitativní rozložení, časová okna, BDS čítače a
 pravděpodobné mezery. Jde o omezený vzorek, nikoli odhad globální dostupnosti.
+Pokud produkční databáze není dostupná, jsou pole perzistentní analýzy uvedena
+jako `null` s vysvětlením; runtime diagnostika aktuálního procesu je uvedena
+odděleně a nesmí se interpretovat jako uložené počty.
 
 Live Radar a Time Machine používají stejný tmavý vektorový podklad OpenFreeMap
 a odstín AirRadar. Overlaye Time Machine se inicializují na style.load, takže

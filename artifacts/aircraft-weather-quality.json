@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-28T10:10:40.494Z",
+  "generatedAt": "2026-09-28T10:27:57.945Z",
   "bounded": {
     "maxRows": 20000,
     "windowDays": 7,
@@ -7,47 +7,41 @@
   },
   "persisted": {
     "source": "unavailable",
-    "rows": 0,
+    "rows": null,
     "from": null,
     "to": null,
-    "contributingAircraft": 0
+    "contributingAircraft": null
   },
   "timeWindows": {
     "1h": {
-      "rows": 0,
-      "aircraft": 0
+      "rows": null,
+      "aircraft": null
     },
     "24h": {
-      "rows": 0,
-      "aircraft": 0
+      "rows": null,
+      "aircraft": null
     },
     "7d": {
-      "rows": 0,
-      "aircraft": 0
+      "rows": null,
+      "aircraft": null
     }
   },
-  "sourceCoverage": {},
-  "fieldCoverage": {
-    "wind": 0,
-    "sat": 0,
-    "tat": 0,
-    "staticPressure": 0,
-    "humidity": 0,
-    "turbulence": 0
-  },
-  "altitudeBands": {},
-  "quality": {},
-  "bds44": {
-    "candidates": 0,
-    "accepted": 0,
-    "ambiguous": 0,
-    "rejected": 0
+  "sourceCoverage": null,
+  "fieldCoverage": null,
+  "altitudeBands": null,
+  "quality": null,
+  "bds44": null,
+  "runtimeDiagnostics": {
+    "scope": "process-local audit process",
+    "bds44": {
+      "candidates": 0,
+      "accepted": 0,
+      "ambiguous": 0,
+      "rejected": 0
+    }
   },
   "runtimeDiagnosticsScope": "process-local audit process",
   "likelyDataGaps": [
-    "Production database was unavailable; persisted metrics could not be read.",
-    "No persisted BDS_4_4 observations in the sample.",
-    "Humidity was unavailable in the sample.",
-    "Turbulence was unavailable in the sample."
+    "Production database was unavailable; persisted metrics could not be read."
   ]
 }

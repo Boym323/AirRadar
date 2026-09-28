@@ -153,9 +153,20 @@ describe("aircraft weather observations", () => {
     ], new Date("2026-09-28T09:01:00.000Z"));
     expect(report.bounded.maxRows).toBe(20_000);
     expect(report.persisted.contributingAircraft).toBe(2);
-    expect(report.sourceCoverage.BDS_4_4).toMatchObject({ observations: 1, aircraft: 1 });
-    expect(report.fieldCoverage.sat).toBe(1);
-    expect(report.altitudeBands.FL300_FL400).toBe(1);
+    expect(report.sourceCoverage!.BDS_4_4).toMatchObject({ observations: 1, aircraft: 1 });
+    expect(report.fieldCoverage!.sat).toBe(1);
+    expect(report.altitudeBands!.FL300_FL400).toBe(1);
     expect(report.quality).toEqual({ HIGH: 1, GOOD: 1 });
+  });
+
+  it("keeps unavailable database analysis separate from runtime diagnostics", () => {
+    const report = buildAircraftWeatherQualityReport([], at, false, "unavailable");
+    expect(report.persisted).toMatchObject({ source: "unavailable", rows: null, from: null, to: null, contributingAircraft: null });
+    expect(report.timeWindows["7d"]).toEqual({ rows: null, aircraft: null });
+    expect(report.sourceCoverage).toBeNull();
+    expect(report.fieldCoverage).toBeNull();
+    expect(report.bds44).toBeNull();
+    expect(report.runtimeDiagnostics.scope).toBe("process-local audit process");
+    expect(report.likelyDataGaps).toEqual(["Production database was unavailable; persisted metrics could not be read."]);
   });
 });

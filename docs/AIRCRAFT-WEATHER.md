@@ -62,6 +62,9 @@ accepted persisted rows from the last seven days and reports source/aircraft
 coverage, field availability, altitude and quality distributions, time
 windows, BDS counters and likely gaps. Its sample is bounded and is not a
 global availability estimate.
+If the production database is unavailable, persisted analysis fields are
+reported as `null` with an explanation; process-local runtime diagnostics are
+reported separately and must not be read as persisted counts.
 
 The live Radar and Time Machine use the same OpenFreeMap dark vector base style
 and AirRadar tint. Time Machine overlays initialize on style.load, so
