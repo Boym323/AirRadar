@@ -2,6 +2,23 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.193] - 2026-09-28
+
+Changes since v1.0.192.
+
+**Features touched:** Map Context & Weather.
+
+### Added
+
+- Add aircraft weather radar UI (f4d37583)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add aircraft weather radar UI (f4d37583)
+
+</details>
+
 ## [1.0.192] - 2026-09-28
 
 Changes since v1.0.191.
