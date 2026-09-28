@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.188] - 2026-09-28
+
+Changes since v1.0.187.
+
+### Fixed
+
+- Share weather diagnostics across bundles (2487d14f)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: share weather diagnostics across bundles (2487d14f)
+
+</details>
+
 ## [1.0.187] - 2026-09-28
 
 Changes since v1.0.186.
