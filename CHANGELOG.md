@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.196] - 2026-09-28
+
+Changes since v1.0.195.
+
+### Fixed
+
+- Keep aircraft weather panel interactive (c1705613)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: keep aircraft weather panel interactive (c1705613)
+
+</details>
+
 ## [1.0.195] - 2026-09-28
 
 Changes since v1.0.194.
