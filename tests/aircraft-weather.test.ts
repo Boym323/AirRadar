@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import type { Aircraft } from "@/lib/aircraft/types";
 import {
   aggregateAircraftWeatherProfile,
+  getAircraftWeatherDiagnostics,
   observationFromAircraft,
   resetAircraftWeatherDiagnostics,
   shouldPersistWeatherObservation,
@@ -39,6 +40,13 @@ describe("aircraft weather observations", () => {
     const result = observationFromAircraft(aircraft(), at);
     expect(result).toMatchObject({ source: "READSB_JSON", staticAirTemperatureC: -40, totalAirTemperatureC: -30 });
     expect(result?.staticPressureHpa).toBeNull();
+  });
+
+  it("keeps diagnostics on the process-global state shared by route bundles", () => {
+    observationFromAircraft(aircraft(), at);
+    const globalState = (globalThis as unknown as { aircraftWeatherDiagnostics?: ReturnType<typeof getAircraftWeatherDiagnostics> }).aircraftWeatherDiagnostics;
+    expect(globalState?.weatherCandidates).toBe(1);
+    expect(getAircraftWeatherDiagnostics().weatherCandidates).toBe(1);
   });
 
   it("rejects a stale location/weather pairing", () => {

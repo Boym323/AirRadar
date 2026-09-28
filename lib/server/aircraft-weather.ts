@@ -85,7 +85,10 @@ const emptyDiagnostics = (): AircraftWeatherDiagnostics => ({
   lastAnomalies: [],
 });
 
-const diagnostics = emptyDiagnostics();
+const globalForWeather = globalThis as unknown as {
+  aircraftWeatherDiagnostics?: AircraftWeatherDiagnostics;
+};
+const diagnostics = globalForWeather.aircraftWeatherDiagnostics ??= emptyDiagnostics();
 const sampler = new Map<string, AircraftWeatherObservation>();
 const memoryRows: AircraftWeatherObservation[] = [];
 
