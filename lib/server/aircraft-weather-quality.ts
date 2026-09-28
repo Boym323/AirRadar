@@ -21,6 +21,7 @@ export interface AircraftWeatherQualityReport {
   altitudeBands: Record<string, number>;
   quality: Record<string, number>;
   bds44: { candidates: number; accepted: number; ambiguous: number; rejected: number };
+  runtimeDiagnosticsScope: "process-local audit process";
   likelyDataGaps: string[];
 }
 
@@ -106,6 +107,7 @@ export function buildAircraftWeatherQualityReport(rows: AircraftWeatherObservati
     altitudeBands,
     quality,
     bds44: { candidates: diagnostics.weatherBds44Accepted + diagnostics.weatherBds44Ambiguous, accepted: diagnostics.weatherBds44Accepted, ambiguous: diagnostics.weatherBds44Ambiguous, rejected: diagnostics.weatherRejected },
+    runtimeDiagnosticsScope: "process-local audit process",
     likelyDataGaps: gaps,
   };
 }
