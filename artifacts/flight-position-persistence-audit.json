@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-28T17:57:54.702Z",
+  "safety": "Replay-only synthetic dataset. No database reads, writes, migrations, deployment, or production shadow data.",
+  "scenarios": [
+    {
+      "name": "stable-cruise",
+      "strategies": {
+        "A-current": {
+          "inputPoints": 31,
+          "persistedPoints": 31,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 20000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "B-longer-fixed": {
+          "inputPoints": 31,
+          "persistedPoints": 11,
+          "reductionPercent": 64.52,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 60000,
+          "eventParity": true
+        },
+        "C-adaptive": {
+          "inputPoints": 31,
+          "persistedPoints": 11,
+          "reductionPercent": 64.52,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 60000,
+          "eventParity": true
+        },
+        "D-adaptive-heartbeat": {
+          "inputPoints": 31,
+          "persistedPoints": 7,
+          "reductionPercent": 77.42,
+          "maxTemporalGapMs": 100000,
+          "medianTemporalGapMs": 100000,
+          "eventParity": true
+        }
+      }
+    },
+    {
+      "name": "continuous-climb",
+      "strategies": {
+        "A-current": {
+          "inputPoints": 31,
+          "persistedPoints": 31,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 20000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "B-longer-fixed": {
+          "inputPoints": 31,
+          "persistedPoints": 11,
+          "reductionPercent": 64.52,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 60000,
+          "eventParity": true
+        },
+        "C-adaptive": {
+          "inputPoints": 31,
+          "persistedPoints": 31,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 20000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "D-adaptive-heartbeat": {
+          "inputPoints": 31,
+          "persistedPoints": 31,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 20000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        }
+      }
+    },
+    {
+      "name": "approach-landing",
+      "strategies": {
+        "A-current": {
+          "inputPoints": 31,
+          "persistedPoints": 31,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 20000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "B-longer-fixed": {
+          "inputPoints": 31,
+          "persistedPoints": 11,
+          "reductionPercent": 64.52,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 60000,
+          "eventParity": true
+        },
+        "C-adaptive": {
+          "inputPoints": 31,
+          "persistedPoints": 21,
+          "reductionPercent": 32.26,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "D-adaptive-heartbeat": {
+          "inputPoints": 31,
+          "persistedPoints": 21,
+          "reductionPercent": 32.26,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        }
+      }
+    },
+    {
+      "name": "go-around",
+      "strategies": {
+        "A-current": {
+          "inputPoints": 31,
+          "persistedPoints": 31,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 20000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "B-longer-fixed": {
+          "inputPoints": 31,
+          "persistedPoints": 11,
+          "reductionPercent": 64.52,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 60000,
+          "eventParity": true
+        },
+        "C-adaptive": {
+          "inputPoints": 31,
+          "persistedPoints": 21,
+          "reductionPercent": 32.26,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "D-adaptive-heartbeat": {
+          "inputPoints": 31,
+          "persistedPoints": 21,
+          "reductionPercent": 32.26,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        }
+      }
+    },
+    {
+      "name": "holding",
+      "strategies": {
+        "A-current": {
+          "inputPoints": 31,
+          "persistedPoints": 31,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 20000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "B-longer-fixed": {
+          "inputPoints": 31,
+          "persistedPoints": 11,
+          "reductionPercent": 64.52,
+          "maxTemporalGapMs": 60000,
+          "medianTemporalGapMs": 60000,
+          "eventParity": true
+        },
+        "C-adaptive": {
+          "inputPoints": 31,
+          "persistedPoints": 31,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 20000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "D-adaptive-heartbeat": {
+          "inputPoints": 31,
+          "persistedPoints": 31,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 20000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        }
+      }
+    },
+    {
+      "name": "ads-b-interruption",
+      "strategies": {
+        "A-current": {
+          "inputPoints": 4,
+          "persistedPoints": 4,
+          "reductionPercent": 0,
+          "maxTemporalGapMs": 150000,
+          "medianTemporalGapMs": 20000,
+          "eventParity": true
+        },
+        "B-longer-fixed": {
+          "inputPoints": 4,
+          "persistedPoints": 2,
+          "reductionPercent": 50,
+          "maxTemporalGapMs": 190000,
+          "medianTemporalGapMs": 190000,
+          "eventParity": true
+        },
+        "C-adaptive": {
+          "inputPoints": 4,
+          "persistedPoints": 2,
+          "reductionPercent": 50,
+          "maxTemporalGapMs": 190000,
+          "medianTemporalGapMs": 190000,
+          "eventParity": true
+        },
+        "D-adaptive-heartbeat": {
+          "inputPoints": 4,
+          "persistedPoints": 2,
+          "reductionPercent": 50,
+          "maxTemporalGapMs": 190000,
+          "medianTemporalGapMs": 190000,
+          "eventParity": true
+        }
+      }
+    }
+  ]
+}

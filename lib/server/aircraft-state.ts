@@ -36,6 +36,7 @@ import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classification";
 import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
+import { flightPositionPersistenceShadow } from "@/lib/server/flight-position-persistence-shadow";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -392,6 +393,7 @@ export class AircraftStateService {
     local: ReturnType<NonNullable<AircraftProvider["getDiagnostics"]>> | null;
     coverageAnalytics: ReturnType<ReceiverCoverageAnalytics["getDiagnostics"]>;
     altitudeDiagnostics: ReturnType<typeof getAltitudeDiagnostics>;
+    flightPositionPersistenceShadow: ReturnType<typeof flightPositionPersistenceShadow.diagnostics>;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -409,6 +411,7 @@ export class AircraftStateService {
       local: "getDiagnostics" in this.provider && typeof this.provider.getDiagnostics === "function" ? this.provider.getDiagnostics() : null,
       coverageAnalytics: this.receiverCoverage.getDiagnostics(),
       altitudeDiagnostics: getAltitudeDiagnostics(),
+      flightPositionPersistenceShadow: flightPositionPersistenceShadow.diagnostics(),
     };
   }
 
@@ -724,6 +727,25 @@ export class AircraftStateService {
     }
 
     const now = Date.now();
+    const activeHexes = snapshot.aircraft.map((item) => item.icaoHex);
+    for (const item of snapshot.aircraft) {
+      if (item.lat === null || item.lon === null) continue;
+      const previous = this.lastHistorySample.get(item.icaoHex);
+      const currentPersist = previous === undefined || sampledAt - previous >= getHistorySampleIntervalMs();
+      flightPositionPersistenceShadow.observe({
+        aircraftHex: item.icaoHex,
+        currentPersist,
+        candidate: {
+          recordedAtMs: sampledAt, lat: item.lat, lon: item.lon, altitudeFt: item.altitude,
+          trackDeg: item.track, groundSpeedKt: item.groundSpeed, verticalRateFpm: item.verticalRate,
+          onGround: item.onGround, source: item.provenance?.positionSource ?? item.source,
+          airportProximity: Boolean(item.targetState?.approachMode) || (item.distanceKm !== null && item.distanceKm <= 15),
+          phase: item.onGround ? "airport" : item.targetState?.approachMode ? "approach" : item.verticalRate !== null && item.verticalRate >= 250 ? "climb" : item.verticalRate !== null && item.verticalRate <= -250 ? "descent" : item.groundSpeed !== null && item.groundSpeed > 120 ? "cruise" : "unknown",
+        },
+        nowMs: now,
+      });
+    }
+    flightPositionPersistenceShadow.cleanup(activeHexes, now);
     const due = snapshot.aircraft
       .map((item) => historyAircraftForSnapshot(item, this.aircraft.get(item.icaoHex)))
       .filter((item) => item.lat !== null && item.lon !== null)

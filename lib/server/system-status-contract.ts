@@ -11,6 +11,7 @@ import type { RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import type { WeatherRadarDiagnostics } from "@/lib/server/weather-radar/types";
 import type { ReceiverQuality } from "@/lib/server/receiver-quality";
 import type { NavigationIntegrityDiagnostics } from "@/lib/navigation-integrity/types";
+import type { FlightPositionPersistenceShadowDiagnostics } from "@/lib/server/flight-position-persistence-shadow";
 import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 
@@ -302,6 +303,7 @@ export interface SystemStatusResponse {
     lastAcceptedAt: string | null;
     lastPersistedAt: string | null;
   };
+  flightPositionPersistenceShadow: FlightPositionPersistenceShadowDiagnostics;
   navigationIntegrity: {
     status: NavigationIntegrityStatus;
     observationsCreated: number;
@@ -403,6 +405,7 @@ export interface SystemStatusBuildInput {
     lastAcceptedAt?: string | null;
     lastPersistedAt?: string | null;
   };
+  flightPositionPersistenceShadow?: FlightPositionPersistenceShadowDiagnostics;
   navigationIntegrity?: NavigationIntegrityDiagnostics & { activeAnomalies?: number };
   mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
   adsbLol?: NetworkProviderDiagnostics;

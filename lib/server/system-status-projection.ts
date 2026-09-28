@@ -13,6 +13,7 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
       nextVersion: null,
     },
     localAdsb: undefined,
+    flightPositionPersistenceShadow: undefined,
     database: {
       ...status.database,
       history: {

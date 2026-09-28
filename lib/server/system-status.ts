@@ -744,6 +744,9 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       lastProviderError: null,
     },
     aircraftWeather,
+    flightPositionPersistenceShadow: input.flightPositionPersistenceShadow ?? {
+      enabled: false, startedAt: now.toISOString(), positionsSeen: 0, currentPersist: 0, currentSkip: 0, shadowPersist: 0, shadowSkip: 0, bothPersist: 0, bothSkip: 0, currentPersistShadowSkip: 0, currentSkipShadowPersist: 0, shadowFailures: 0, stateEntries: 0, maximumObservedEntries: 0, currentPersistRate: null, shadowPersistRate: null, estimatedWriteReductionPct: null, decisionMatrix: { currentPersistShadowPersist: 0, currentPersistShadowSkip: 0, currentSkipShadowPersist: 0, currentSkipShadowSkip: 0 }, reasonHistogram: {}, contextHistogram: {}, windowedRates: [],
+    },
     navigationIntegrity,
     alerts: {
       status: alertsStatus,
@@ -904,6 +907,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     atsData: ats ? { available: true, routeCount: ats.counts.routes, pointCount: ats.counts.points, segmentCount: ats.counts.segments, effectiveDate: ats.source.effectiveDate } : { available: false, routeCount: 0, pointCount: 0, segmentCount: 0, effectiveDate: null },
     weather,
     aircraftWeather: getAircraftWeatherDiagnostics(),
+    flightPositionPersistenceShadow: serviceDiagnostics?.flightPositionPersistenceShadow,
     navigationIntegrity: { ...getNavigationIntegrityService().getDiagnostics(), activeAnomalies: getNavigationIntegrityService().getCurrent().summary.activeAnomalies },
     mapContext: {
       radar: defaultWeatherRadarProvider.getDiagnostics(),
