@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.195] - 2026-09-28
+
+Changes since v1.0.194.
+
+### Fixed
+
+- Preserve nearby weather observations in queries (1c238d82)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: preserve nearby weather observations in queries (1c238d82)
+
+</details>
+
 ## [1.0.194] - 2026-09-28
 
 Changes since v1.0.193.
