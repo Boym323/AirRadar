@@ -2,224 +2,115 @@
 
 All notable changes to AirRadar are documented here.
 
-## [1.0.197] - 2026-09-28
+## [1.0.198] - 2026-09-28
 
-Changes since v1.0.196.
+Changes since v1.0.181.
 
-### Fixed
-
-- Raise weather panel above map controls (513d4beb)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: raise weather panel above map controls (513d4beb)
-
-</details>
-
-## [1.0.196] - 2026-09-28
-
-Changes since v1.0.195.
-
-### Fixed
-
-- Keep aircraft weather panel interactive (c1705613)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: keep aircraft weather panel interactive (c1705613)
-
-</details>
-
-## [1.0.195] - 2026-09-28
-
-Changes since v1.0.194.
-
-### Fixed
-
-- Preserve nearby weather observations in queries (1c238d82)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: preserve nearby weather observations in queries (1c238d82)
-
-</details>
-
-## [1.0.194] - 2026-09-28
-
-Changes since v1.0.193.
-
-### Fixed
-
-- Use configured receiver for aircraft weather (d1e6e3b3)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: use configured receiver for aircraft weather (d1e6e3b3)
-
-</details>
-
-## [1.0.193] - 2026-09-28
-
-Changes since v1.0.192.
-
-**Features touched:** Map Context & Weather.
+**Features touched:** Map Context & Weather, Time Machine.
 
 ### Added
 
-- Add aircraft weather radar UI (f4d37583)
-
-<details>
-<summary>Technical commits</summary>
-
-- feat: add aircraft weather radar UI (f4d37583)
-
-</details>
-
-## [1.0.192] - 2026-09-28
-
-Changes since v1.0.191.
-
-### Documentation
-
-- Register aircraft weather routes (70422780)
-
-<details>
-<summary>Technical commits</summary>
-
-- docs: register aircraft weather routes (70422780)
-
-</details>
-
-## [1.0.191] - 2026-09-28
-
-Changes since v1.0.190.
+- Add system health summary and improve time machine controls (c784c2c)
+- Implement airports and flights browsing functionality with responsive design (498d5a9)
+- Add aircraft weather observations backend (6cac3c3)
+- Add aircraft weather radar UI (f4d3758)
 
 ### Fixed
 
-- Ignore provisional weather quality transition (5d388404)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: ignore provisional weather quality transition (5d388404)
-
-</details>
-
-## [1.0.190] - 2026-09-28
-
-Changes since v1.0.189.
+- Require aircraft weather profile coordinates (14f9bff)
+- Query persisted aircraft weather rows (953981a)
+- Type aircraft weather query selector (be94d27)
+- Preserve temperatures in weather API reads (f4204c5)
+- Share weather diagnostics across bundles (2487d14)
+- Ignore provisional weather quality transition (5d38840)
+- Use configured receiver for aircraft weather (d1e6e3b)
+- Preserve nearby weather observations in queries (1c238d8)
+- Keep aircraft weather panel interactive (c170561)
+- Raise weather panel above map controls (513d4be)
+- Keep weather panel styles within visual budget (8b010bd)
 
 ### Performance
 
-- Coalesce aircraft weather persistence (1a71180b)
-
-<details>
-<summary>Technical commits</summary>
-
-- perf: coalesce aircraft weather persistence (1a71180b)
-
-</details>
-
-## [1.0.189] - 2026-09-28
-
-Changes since v1.0.188.
+- Coalesce aircraft weather persistence (1a71180)
 
 ### Documentation
 
-- Record aircraft weather production baseline (719182d3)
-
-<details>
-<summary>Technical commits</summary>
-
-- docs: record aircraft weather production baseline (719182d3)
-
-</details>
-
-## [1.0.188] - 2026-09-28
-
-Changes since v1.0.187.
-
-### Fixed
-
-- Share weather diagnostics across bundles (2487d14f)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: share weather diagnostics across bundles (2487d14f)
-
-</details>
-
-## [1.0.187] - 2026-09-28
-
-Changes since v1.0.186.
-
-### Fixed
-
-- Preserve temperatures in weather API reads (f4204c56)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: preserve temperatures in weather API reads (f4204c56)
-
-</details>
-
-## [1.0.186] - 2026-09-28
-
-Changes since v1.0.185.
-
-### Fixed
-
-- Query persisted aircraft weather rows (953981ad)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: query persisted aircraft weather rows (953981ad)
-
-</details>
-
-## [1.0.185] - 2026-09-28
-
-Changes since v1.0.184.
-
-### Fixed
-
-- Require aircraft weather profile coordinates (14f9bff4)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix: require aircraft weather profile coordinates (14f9bff4)
-
-</details>
-
-## [1.0.184] - 2026-09-28
-
-Changes since v1.0.183.
-
-### Added
-
-- Add aircraft weather observations backend (6cac3c36)
+- Update changelog for v1.0.182 (cbb3be5)
+- Update changelog for v1.0.183 (cbdc918)
+- Update changelog for v1.0.184 (625bc5b)
+- Update changelog for v1.0.185 (55e4775)
+- Update changelog for v1.0.186 (7a09631)
+- Update changelog for v1.0.187 (ec0a67d)
+- Update changelog for v1.0.188 (986d37f)
+- Record aircraft weather production baseline (719182d)
+- Update changelog for v1.0.189 (3ac00d3)
+- Update changelog for v1.0.190 (61bc0e3)
+- Update changelog for v1.0.191 (6dceadc)
+- Register aircraft weather routes (7042278)
+- Update changelog for v1.0.192 (abc98d0)
+- Update changelog for v1.0.193 (140757b)
+- Update changelog for v1.0.194 (cc4a49d)
+- Update changelog for v1.0.195 (060b1f7)
+- Update changelog for v1.0.196 (a8e2779)
+- Update changelog for v1.0.197 (da609ec)
 
 ### Maintenance
 
-- Sync generated repository metadata (26c488e3)
+- Sync generated repository metadata (afe06b8)
+- Reconcile V3 integration labels (900ca31)
+- Sync generated repository metadata (c5eaeb7)
+- Sync generated repository metadata (26c488e)
 
 <details>
 <summary>Technical commits</summary>
 
-- chore(metadata): sync generated repository metadata (26c488e3)
-- Merge pull request #200 from Boym323/automation/repository-metadata (5c1c0c09)
-- feat: add aircraft weather observations backend (6cac3c36)
+- chore(metadata): sync generated repository metadata (afe06b8)
+- Merge pull request #198 from Boym323/automation/repository-metadata (d602387)
+- feat: add system health summary and improve time machine controls (c784c2c)
+- feat: implement airports and flights browsing functionality with responsive design (498d5a9)
+- Merge remote-tracking branch 'origin/feat/v3-time-machine' into chore/v3-visual-integration (08c8c0f)
+- Merge remote-tracking branch 'origin/feat/v3-airports-flights' into chore/v3-visual-integration (2aecd78)
+- chore: reconcile V3 integration labels (900ca31)
+- docs: update changelog for v1.0.182 (cbb3be5)
+- chore(metadata): sync generated repository metadata (c5eaeb7)
+- Merge pull request #199 from Boym323/automation/repository-metadata (cab4563)
+- Merge remote-tracking branch 'origin/main' into chore/v3-visual-integration (51d7351)
+- Merge V3 final integration (b2ca3bf)
+- docs: update changelog for v1.0.183 (cbdc918)
+- chore(metadata): sync generated repository metadata (26c488e)
+- Merge pull request #200 from Boym323/automation/repository-metadata (5c1c0c0)
+- feat: add aircraft weather observations backend (6cac3c3)
+- docs: update changelog for v1.0.184 (625bc5b)
+- fix: require aircraft weather profile coordinates (14f9bff)
+- docs: update changelog for v1.0.185 (55e4775)
+- fix: query persisted aircraft weather rows (953981a)
+- docs: update changelog for v1.0.186 (7a09631)
+- fix: type aircraft weather query selector (be94d27)
+- fix: preserve temperatures in weather API reads (f4204c5)
+- docs: update changelog for v1.0.187 (ec0a67d)
+- fix: share weather diagnostics across bundles (2487d14)
+- docs: update changelog for v1.0.188 (986d37f)
+- docs: record aircraft weather production baseline (719182d)
+- docs: update changelog for v1.0.189 (3ac00d3)
+- perf: coalesce aircraft weather persistence (1a71180)
+- docs: update changelog for v1.0.190 (61bc0e3)
+- fix: ignore provisional weather quality transition (5d38840)
+- docs: update changelog for v1.0.191 (6dceadc)
+- docs: register aircraft weather routes (7042278)
+- docs: update changelog for v1.0.192 (abc98d0)
+- feat: add aircraft weather radar UI (f4d3758)
+- docs: update changelog for v1.0.193 (140757b)
+- fix: use configured receiver for aircraft weather (d1e6e3b)
+- docs: update changelog for v1.0.194 (cc4a49d)
+- fix: preserve nearby weather observations in queries (1c238d8)
+- docs: update changelog for v1.0.195 (060b1f7)
+- fix: keep aircraft weather panel interactive (c170561)
+- docs: update changelog for v1.0.196 (a8e2779)
+- fix: raise weather panel above map controls (513d4be)
+- docs: update changelog for v1.0.197 (da609ec)
+- fix: keep weather panel styles within visual budget (8b010bd)
 
 </details>
-
 ## [Unreleased]
 
 ### Added
