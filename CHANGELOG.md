@@ -2,6 +2,28 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.199] - 2026-09-28
+
+Changes since v1.0.198.
+
+**Features touched:** Map Context & Weather.
+
+### Changed
+
+- Feat/aircraft weather v1 1 (#202) (ba9a5a6)
+
+### Maintenance
+
+- Sync generated repository metadata (a58179a)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (a58179a)
+- Merge pull request #201 from Boym323/automation/repository-metadata (007e5e6)
+- Feat/aircraft weather v1 1 (#202) (ba9a5a6)
+
+</details>
 ## [1.0.198] - 2026-09-28
 
 Changes since v1.0.181.
