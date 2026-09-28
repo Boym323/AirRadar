@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.191] - 2026-09-28
+
+Changes since v1.0.190.
+
+### Fixed
+
+- Ignore provisional weather quality transition (5d388404)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: ignore provisional weather quality transition (5d388404)
+
+</details>
+
 ## [1.0.190] - 2026-09-28
 
 Changes since v1.0.189.
