@@ -57,6 +57,7 @@ Changes since v1.0.179.
 - Merge remote-tracking branch 'origin/main' (14a17d9)
 
 </details>
+
 ## [1.0.179] - 2026-09-27
 
 Changes since v1.0.178.
