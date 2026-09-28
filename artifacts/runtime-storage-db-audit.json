@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "audit": {
+    "startedAt": "2026-09-28T17:35:00Z",
+    "completedAt": "2026-09-28T17:40:00Z",
+    "mode": "read-only production observation",
+    "limitations": [
+      "The requested workspace path /var/www/airradar-v3 was absent; the live checkout is /var/www/airradar.",
+      "Production and checkout differ: production dcb018d7 / 1.0.205, checkout bfad3bb0.",
+      "pg_stat_statements is unavailable and was not enabled.",
+      "Public system diagnostics redact process fields; process and cgroup values were sampled from the host and service unit.",
+      "No optimization was implemented, so before/after deltas are not applicable."
+    ]
+  },
+  "identity": {
+    "checkoutHead": "bfad3bb035f008a850ed1d3e69678ef0c8e583ce",
+    "originMain": "bfad3bb035f008a850ed1d3e69678ef0c8e583ce",
+    "productionCommit": "dcb018d7",
+    "productionVersion": "1.0.205",
+    "servicePid": 425204,
+    "serviceStartedAt": "2026-09-28T17:27:48.453Z",
+    "restartCount": 0,
+    "nodeVersion": "v22.23.3",
+    "postgresVersion": "PostgreSQL 17.10",
+    "database": "airradar"
+  },
+  "machine": {
+    "cpuModel": "AMD Ryzen 3 PRO 5350GE with Radeon Graphics",
+    "logicalCpusOnline": 4,
+    "hostCpuEntries": 8,
+    "loadAverage": [0.73, 1.43, 2.26],
+    "memoryBytes": 10737418240,
+    "swapBytes": 0,
+    "cgroupCpuQuota": "max 100000",
+    "cgroupMemoryMax": null,
+    "cgroupMemoryCurrentBytes": 8574795776,
+    "filesystem": {"type": "zfs", "sizeBytes": 21474836480, "availableBytes": 12884901888, "usedPercent": 43, "mountOptions": "rw,noatime,xattr,posixacl,casesensitive"}
+  },
+  "process": {
+    "uptimeSecondsAtBaseline": 500,
+    "rssBytes": 1156136000,
+    "serviceMemoryCurrentBytes": 1385189376,
+    "serviceMemoryPeakBytes": 1528565760,
+    "threads": 15,
+    "cpuPercentOfOneCore30s": 35.5,
+    "cpuUserTicks30s": 1021,
+    "cpuSystemTicks30s": 22,
+    "io30s": {
+      "readBytes": 902144,
+      "writeBytes": 43590269,
+      "readBytesPerMinute": 1804288,
+      "writeBytesPerMinute": 87180538,
+      "projectedWriteGiBPerDay": 125.5
+    }
+  },
+  "runtimeObservation": {
+    "aircraftLocal": 49,
+    "aircraftNetwork": 943,
+    "activeSseClients": 0,
+    "memorySoak": {
+      "status": "insufficient extended samples",
+      "availableEvidence": "RSS was ~1.16 GB at 8m39s and service memory peak was 1.43 GB; no leak conclusion is justified.",
+      "samples": []
+    },
+    "caches": {
+      "adsbdbMetadataEntries": 2074,
+      "adsbdbRouteEntries": 1528,
+      "ognDdbEntries": 140,
+      "ognSoftRfRecords": 36052,
+      "persistentStateBytes": 42000000,
+      "boundedness": "application diagnostics expose bounded cache policies; full private diagnostics were redacted publicly"
+    }
+  },
+  "database": {
+    "sizeBytes": 1477547699,
+    "sizePretty": "1409 MB",
+    "connections": {"total": 11, "active": 1, "idle": 10, "oldestTransactionMs": 2.374},
+    "cacheCounters": {"blksRead": 8623837, "blksHit": 818329080, "hitRatioPercent": 98.96},
+    "temp": {"files": 12, "bytes": 619296680},
+    "deadlocks": 0,
+    "conflicts": 0,
+    "tables": [
+      {"name": "flightPosition", "estimatedRows": 4575338, "liveRows": 4692945, "deadRows": 434, "tableBytes": 456671232, "indexBytes": 417701888, "totalBytes": 874373120, "inserts": 4698490, "updates": 491, "deletes": 0, "idxScans": 281220},
+      {"name": "aircraftMetadataCache", "estimatedRows": 617002, "liveRows": 617002, "deadRows": 0, "tableBytes": 342048768, "indexBytes": 43712512, "totalBytes": 385761280, "inserts": 617144, "updates": 616377, "deletes": 8637455, "idxScans": 1381348},
+      {"name": "aircraftWeatherObservation", "estimatedRows": 56409, "liveRows": 56885, "deadRows": 178, "tableBytes": 52576256, "indexBytes": 13811712, "totalBytes": 66387968, "inserts": 57054, "updates": 0, "deletes": 0, "idxScans": 213},
+      {"name": "flight", "estimatedRows": 112521, "liveRows": 112685, "deadRows": 10758, "tableBytes": 18776064, "indexBytes": 36904960, "totalBytes": 55681024, "inserts": 124168, "updates": 4710902, "deletes": 0, "idxScans": 55464872},
+      {"name": "navigationIntegrityObservation", "estimatedRows": 14421, "liveRows": 14451, "deadRows": 90, "tableBytes": 17022976, "indexBytes": 3620864, "totalBytes": 20643840, "inserts": 16941, "updates": 0, "deletes": 0, "idxScans": 0},
+      {"name": "receiverCoverageHourly", "estimatedRows": 63155, "liveRows": 63457, "deadRows": 11756, "tableBytes": 12763136, "indexBytes": 7577600, "totalBytes": 20340736, "inserts": 63457, "updates": 1103669, "deletes": 0, "idxScans": 3374413},
+      {"name": "receiverDailyStats", "estimatedRows": 21, "liveRows": 21, "deadRows": 33, "tableBytes": 49152, "indexBytes": 32768, "totalBytes": 81920, "inserts": 21, "updates": 78398, "deletes": 0, "idxScans": 83379},
+      {"name": "navigationIntegrityAnomaly", "estimatedRows": 983, "liveRows": 1003, "deadRows": 233, "tableBytes": 1908736, "indexBytes": 425984, "totalBytes": 2334720, "inserts": 1003, "updates": 2998, "deletes": 0, "idxScans": 4012}
+    ],
+    "largestIndexes": [
+      {"name": "flightPosition_flightId_recordedAt_idx_750175c0", "table": "flightPosition", "bytes": 201703424, "scans": 272698},
+      {"name": "flightPosition_pkey", "table": "flightPosition", "bytes": 105570304, "scans": 145},
+      {"name": "flightPosition_recordedAt_idx_fd5b4732", "table": "flightPosition", "bytes": 64724992, "scans": 6231},
+      {"name": "flightPosition_flightId_idx_7ef5148f", "table": "flightPosition", "bytes": 45703168, "scans": 2146}
+    ]
+  },
+  "rates": {
+    "intervalSeconds": 30,
+    "database": {"transactionsPerMinute": 274, "insertsPerMinute": 220, "updatesPerMinute": 270, "deletesPerMinute": 0},
+    "wal": {"walBytesDelta": 26904449, "walBytesPerHour": 322853388, "walGiBPerDay": 7.75, "walRecordsDelta": 1543, "walFpiDelta": 399},
+    "baselineCounters": {"xactCommit": 5750853, "xactRollback": 84013, "tupInserted": 5818963, "tupUpdated": 11496635, "tupDeleted": 8703314, "walBytes": 31829807778},
+    "endCounters": {"xactCommit": 5750988, "xactRollback": 84015, "tupInserted": 5819073, "tupUpdated": 11496770, "tupDeleted": 8703314, "walBytes": 31832498227}
+  },
+  "persistence": {
+    "historySampleIntervalMs": 20000,
+    "historyRetentionDays": 30,
+    "retentionBatchSize": 10000,
+    "retentionMaxBatches": 20,
+    "retentionSchedule": "6h after successful completion; 5m retry after incomplete run",
+    "aircraftWeather": {"accepted": 0, "persisted": 0, "sourceReadsbJson": 681, "coalescingObserved": true},
+    "navigationIntegrity": {"observationsCreated": 624, "persisted": 315, "rejectedInvalidOrStale": 15639},
+    "flightPosition": {"observedRateNotExposed": true, "samplePolicy": "per-aircraft minimum 20s", "currentRows": 4692945}
+  },
+  "queryPerformance": {
+    "pgStatStatements": "unavailable",
+    "planAudit": "not run because no slow/high-frequency query text was available from pg_stat_statements",
+    "obviousSignals": ["98.96% aggregate buffer hit ratio", "12 temp files / 591 MiB temp bytes", "flightPosition composite index is heavily used", "several weather/navigation indexes have zero scans but must not be removed during audit"]
+  },
+  "growthForecast": {
+    "method": "linear extrapolation from 30s production interval; not a retention-adjusted forecast",
+    "walGiB": {"24h": 7.75, "7d": 54.25, "30d": 232.5, "90d": 697.5, "1y": 2828.75},
+    "flightPositionRows": {"24h": 316800, "7d": 2217600, "30d": 9504000, "90d": 28512000, "1y": 115632000}
+  },
+  "optimization": {
+    "implemented": [],
+    "priorityFindings": [
+      {"priority": "P1", "finding": "flight row updates are ~270/min and cumulative updates exceed inserts by 38x", "action": "profile exact update payloads and test unchanged-field suppression before changing semantics"},
+      {"priority": "P1", "finding": "process write_bytes projects to ~125.5 GB/day", "action": "correlate per-file writes and cache persistence before treating this as SSD write volume"},
+      {"priority": "P2", "finding": "WAL projects to ~7.75 GiB/day", "action": "measure retention and update sources over a longer interval; do not tune PostgreSQL blindly"},
+      {"priority": "P2", "finding": "aircraftMetadataCache has 8.63M deletes and 617k live rows", "action": "audit metadata cleanup churn and autovacuum behavior"}
+    ],
+    "beforeAfter": null,
+    "productionDatabaseChangeRequired": false,
+    "deployed": false
+  },
+  "releaseReadiness": {
+    "testsRun": [],
+    "migrationRequired": false,
+    "finalSha": "bfad3bb035f008a850ed1d3e69678ef0c8e583ce",
+    "status": "audit complete; optimization deferred pending longer soak and write-source attribution"
+  }
+}
