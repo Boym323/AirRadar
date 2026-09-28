@@ -193,7 +193,9 @@ export async function getFleetSnapshot(
       const rowFlights = flightsByAircraft.get(row.id) ?? [];
       const airports = new Map<string, number>();
       const routes = new Map<string, FleetRouteCount>();
-      let lastObserved = latestDate(asDate(row.updatedAt), live?.lastSeen ? new Date(live.lastSeen) : null);
+      // Aircraft.updatedAt is metadata freshness, not observation freshness.
+      // Use live lastSeen and persisted Flight lastSeenAt for operational recency.
+      let lastObserved = live?.lastSeen ? new Date(live.lastSeen) : null;
       let observations7d = 0;
 
       for (const flight of rowFlights) {

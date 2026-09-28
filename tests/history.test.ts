@@ -64,6 +64,88 @@ describe("historical flight maintenance", () => {
     expect(transactionAttempts).toBe(2);
   });
 
+  it("keeps existing Flight and FlightPosition timestamp inputs temporal", async () => {
+    const recordedAt = new Date("2026-01-01T12:00:10Z");
+    const previousSeenAt = Temporal.Instant.fromEpochMilliseconds(new Date("2026-01-01T12:00:00Z").getTime());
+    const aircraft = normalizeAircraft(
+      { hex: "ABC123", flight: "TEST123", lat: 50, lon: 14, seen: 0, seen_pos: 0 },
+      { lat: 50, lon: 14, name: "Test" },
+      recordedAt,
+    );
+    if (!aircraft) throw new Error("test aircraft could not be normalized");
+
+    const flightUpdate = vi.fn().mockResolvedValue(undefined);
+    const positionCreate = vi.fn().mockResolvedValue({ id: 99 });
+    const openFlight = {
+      id: 8,
+      callsign: "TEST123",
+      registration: "OK-ABC",
+      aircraftType: "A320",
+      airline: null,
+      origin: null,
+      destination: null,
+      maxAltitude: 10_000,
+      minDistanceKm: 100,
+      lastSeenAt: previousSeenAt,
+      endTime: null,
+    };
+    const flightWhere = vi.fn((filter: Record<string, unknown>) => {
+      if ("aircraftId" in filter) {
+        return {
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(openFlight) }),
+          }),
+        };
+      }
+      if ("id" in filter) return { update: flightUpdate };
+      return { where: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }) };
+    });
+    const database = {
+      orm: {
+        public: {
+          Aircraft: {
+            where: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue({
+              id: 42,
+              registration: null,
+              registrationCountry: null,
+              registrationCountryCode: null,
+              aircraftType: null,
+              manufacturer: null,
+              model: null,
+              operator: null,
+            }), update: vi.fn().mockResolvedValue(undefined) }),
+          },
+          Flight: { where: flightWhere, create: vi.fn() },
+          FlightPosition: {
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockReturnValue({
+                first: vi.fn().mockResolvedValue(null),
+                limit: vi.fn().mockReturnValue({
+                  select: vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue([]) }),
+                  all: vi.fn().mockResolvedValue([]),
+                }),
+              }),
+            }),
+            create: positionCreate,
+          },
+        },
+      },
+      transaction: async (callback: (transaction: unknown) => Promise<unknown>) => callback(database),
+    };
+    vi.mocked(getPrisma).mockReturnValue(database as never);
+
+    const result = await recordAircraftSnapshot([aircraft], recordedAt);
+
+    expect(result.failed).toEqual([]);
+    expect(flightUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      lastSeenAt: expect.objectContaining({ epochMilliseconds: recordedAt.getTime() }),
+    }));
+    expect((flightUpdate.mock.calls[0]?.[0] as { lastSeenAt: Temporal.Instant }).lastSeenAt).toBeInstanceOf(Temporal.Instant);
+    expect(positionCreate).toHaveBeenCalledWith(expect.objectContaining({
+      recordedAt: expect.objectContaining({ epochMilliseconds: recordedAt.getTime() }),
+    }));
+  });
+
   it("reports partial batch failures without rejecting successful aircraft", async () => {
     const recordedAt = new Date("2026-01-01T12:00:00Z");
     const makeAircraft = (hex: string) => normalizeAircraft(

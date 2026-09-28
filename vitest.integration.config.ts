@@ -12,6 +12,7 @@ const integrationSuites = [
   "tests/atc-sector-history-streaming.test.ts",
   "tests/global-search.test.ts",
   "tests/history-v2.test.ts",
+  "tests/history-orm-temporal.integration.test.ts",
   "tests/history.test.ts",
   "tests/nearby-airports.test.ts",
   "tests/ogn-softrf.test.ts",

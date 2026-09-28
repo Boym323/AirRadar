@@ -15,7 +15,7 @@ import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { shouldPersistAltitudeAnomaly } from "@/lib/aircraft/altitude-provenance";
 import { filterPlausibleTrailPoints, isPlausibleTransition } from "@/lib/aircraft/trail";
 import { pruneAircraftWeatherRetention } from "@/lib/server/aircraft-weather";
-import { aircraftDurableValues, changedAircraftValues, planFlightUpdate } from "@/lib/server/flight-update-policy";
+import { aircraftDurableValues, changedAircraftValues } from "@/lib/server/aircraft-update-policy";
 
 export interface HistoryResponse {
   source: "postgres" | "memory";
@@ -63,7 +63,7 @@ export interface HistoryRetentionDiagnostics {
 export interface HistoryPersistenceStatus {
   lastSuccessfulWriteAt: string | null;
   failureCount: number;
-  writes?: ReturnType<typeof getFlightPersistenceDiagnostics>;
+  writes?: ReturnType<typeof getAircraftPersistenceDiagnostics>;
   retention?: HistoryRetentionDiagnostics;
 }
 
@@ -245,15 +245,12 @@ let lastRetentionRunAt = 0;
 let lastFlightMaintenanceRunAt = 0;
 let lastSuccessfulHistoryWriteAt: string | null = null;
 let historyPersistenceFailureCount = 0;
-const flightPersistenceDiagnostics = {
-  attempts: 0, executed: 0, skippedUnchanged: 0, freshnessOnly: 0,
-  callsignChanges: 0, identityChanges: 0, routeChanges: 0,
-  altitudeAggregateChanges: 0, distanceAggregateChanges: 0,
-  aircraftAttempts: 0, aircraftExecuted: 0, aircraftSkippedUnchanged: 0,
+const aircraftPersistenceDiagnostics = {
+  attempts: 0, executed: 0, skippedUnchanged: 0,
 };
 
-export function getFlightPersistenceDiagnostics() {
-  return { ...flightPersistenceDiagnostics };
+export function getAircraftPersistenceDiagnostics() {
+  return { ...aircraftPersistenceDiagnostics };
 }
 let historyRetentionDiagnostics: HistoryRetentionDiagnostics = {
   lastRunAt: null,
@@ -270,7 +267,7 @@ export function getHistoryPersistenceStatus(): HistoryPersistenceStatus {
   return {
     lastSuccessfulWriteAt: lastSuccessfulHistoryWriteAt,
     failureCount: historyPersistenceFailureCount,
-    writes: getFlightPersistenceDiagnostics(),
+    writes: getAircraftPersistenceDiagnostics(),
     retention: { ...historyRetentionDiagnostics },
   };
 }
@@ -1110,7 +1107,7 @@ export async function recordAircraftSnapshot(
       const wasNewAircraft = await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const metadata = item.enrichment?.metadata;
-      flightPersistenceDiagnostics.aircraftAttempts += 1;
+      aircraftPersistenceDiagnostics.attempts += 1;
       const nextAircraft = aircraftDurableValues(item);
       type AircraftPersistenceRow = typeof nextAircraft & { id: number };
       let dbAircraft: AircraftPersistenceRow | null = null;
@@ -1129,18 +1126,18 @@ export async function recordAircraftSnapshot(
           create: { icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant },
         });
         usedAircraftUpsert = true;
-        flightPersistenceDiagnostics.aircraftExecuted += 1;
+        aircraftPersistenceDiagnostics.executed += 1;
       }
       if (!dbAircraft) {
         dbAircraft = await schema.Aircraft.create({ icaoHex: item.icaoHex, ...nextAircraft, updatedAt: recordedAtInstant });
-        flightPersistenceDiagnostics.aircraftExecuted += 1;
+        aircraftPersistenceDiagnostics.executed += 1;
       } else if (!usedAircraftUpsert) {
         const aircraftChanges = changedAircraftValues(dbAircraft, nextAircraft);
         if (Object.keys(aircraftChanges).length > 0) {
           dbAircraft = await schema.Aircraft.where({ id: dbAircraft.id }).update({ ...aircraftChanges, updatedAt: recordedAtInstant });
-          flightPersistenceDiagnostics.aircraftExecuted += 1;
+          aircraftPersistenceDiagnostics.executed += 1;
         } else {
-          flightPersistenceDiagnostics.aircraftSkippedUnchanged += 1;
+          aircraftPersistenceDiagnostics.skippedUnchanged += 1;
         }
       }
       if (!dbAircraft) throw new Error("Aircraft persistence returned no row");
@@ -1206,32 +1203,19 @@ export async function recordAircraftSnapshot(
           lastSeenAt: recordedAtInstant,
         });
       } else {
-        flightPersistenceDiagnostics.attempts += 1;
-        const plan = planFlightUpdate({ ...flight, lastSeenAt: timestampAsDate(flight.lastSeenAt) }, {
-          callsign: item.callsign,
-          registration: item.registration ?? item.enrichment?.metadata?.registration ?? null,
-          aircraftType: item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType ?? null,
-          airline: item.enrichment?.route?.airline ?? null,
-          origin: item.enrichment?.route?.origin ?? null,
-          destination: item.enrichment?.route?.destination ?? null,
-          altitude: altitude ?? null,
-          distanceKm: item.distanceKm ?? null,
-          lastSeenAt: effectiveRecordedAt,
+        await schema.Flight.where({ id: flight.id }).update({
+          callsign: flight.callsign ?? item.callsign,
+          registration: flight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
+          aircraftType: flight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
+          airline: flight.airline ?? item.enrichment?.route?.airline,
+          origin: flight.origin ?? item.enrichment?.route?.origin,
+          destination: flight.destination ?? item.enrichment?.route?.destination,
+          maxAltitude: Math.max(flight.maxAltitude ?? 0, altitude ?? 0) || null,
+          minDistanceKm: Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
+            ? null
+            : Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY),
+          lastSeenAt: recordedAtInstant,
         });
-        if (Object.keys(plan.data).length > 0) {
-          await schema.Flight.where({ id: flight.id }).update(plan.data);
-          flightPersistenceDiagnostics.executed += 1;
-          if (plan.reasons.length === 1 && plan.reasons[0] === "freshness") flightPersistenceDiagnostics.freshnessOnly += 1;
-          for (const reason of plan.reasons) {
-            if (reason === "callsign") flightPersistenceDiagnostics.callsignChanges += 1;
-            if (reason === "identity") flightPersistenceDiagnostics.identityChanges += 1;
-            if (reason === "route") flightPersistenceDiagnostics.routeChanges += 1;
-            if (reason === "altitude-aggregate") flightPersistenceDiagnostics.altitudeAggregateChanges += 1;
-            if (reason === "distance-aggregate") flightPersistenceDiagnostics.distanceAggregateChanges += 1;
-          }
-        } else {
-          flightPersistenceDiagnostics.skippedUnchanged += 1;
-        }
       }
 
       await schema.FlightPosition.create({
