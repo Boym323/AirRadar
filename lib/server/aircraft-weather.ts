@@ -539,6 +539,14 @@ export function getAircraftWeatherDiagnostics(): AircraftWeatherDiagnostics { re
 export function resetAircraftWeatherDiagnostics(): void { Object.assign(diagnostics, emptyDiagnostics()); accumulators.clear(); memoryRows.length = 0; weatherWriteTail = Promise.resolve(); }
 
 export interface WeatherQuery { from: Date; to: Date; lat?: number; lon?: number; radiusKm?: number; minAltitude?: number; maxAltitude?: number; source?: AircraftWeatherSource; limit?: number; offset?: number; }
+export function weatherQueryFetchLimit(query: WeatherQuery, limit: number, offset: number): number {
+  // The current ORM path applies the radius predicate after rows are read.
+  // Fetch the bounded weather maximum first for spatial queries so nearby
+  // observations are not hidden behind unrelated rows from the same window.
+  return query.lat !== undefined && query.lon !== undefined
+    ? AIRCRAFT_WEATHER_LIMITS.maxRows
+    : Math.min(AIRCRAFT_WEATHER_LIMITS.maxRows, offset + limit + 1);
+}
 export interface WeatherRow extends Omit<AircraftWeatherObservation, "observedAt" | "receivedAt" | "provenance" | "staticAirTemperatureC" | "totalAirTemperatureC"> {
   staticAirTempC: number | null;
   totalAirTempC: number | null;
@@ -578,7 +586,7 @@ export async function queryAircraftWeatherObservations(query: WeatherQuery): Pro
     if (query.minAltitude !== undefined) filtered = filtered.where((row) => row.altitudeFt.gte(query.minAltitude));
     if (query.maxAltitude !== undefined) filtered = filtered.where((row) => row.altitudeFt.lte(query.maxAltitude));
     if (query.source !== undefined) filtered = (filtered as unknown as { where(value: Record<string, unknown>): Collection<WeatherRow> }).where({ source: query.source });
-    const rows = await filtered.orderBy((row: Record<string, Field>) => row.observedAt.desc()).limit(Math.min(AIRCRAFT_WEATHER_LIMITS.maxRows, offset + limit + 1)).all();
+    const rows = await filtered.orderBy((row: Record<string, Field>) => row.observedAt.desc()).limit(weatherQueryFetchLimit(query, limit, offset)).all();
     const observations = rows.map(observationFromStoredWeatherRow).filter(inArea).slice(offset, offset + limit);
     return { observations, totalApproximate: observations.length + (rows.length > offset + limit ? 1 : 0), source: "postgres" };
   } catch {

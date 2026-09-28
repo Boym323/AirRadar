@@ -13,6 +13,7 @@ import {
   shouldPersistWeatherObservation,
   weatherObservationFingerprint,
   type AircraftWeatherObservation,
+  weatherQueryFetchLimit,
 } from "@/lib/server/aircraft-weather";
 
 const at = new Date("2026-09-28T09:00:00.000Z");
@@ -102,6 +103,11 @@ describe("aircraft weather observations", () => {
   it("normalizes circular wind changes across north", () => {
     expect(circularWindDirectionDelta(359, 4)).toBe(5);
     expect(circularWindDirectionDelta(355, 5)).toBe(10);
+  });
+
+  it("fetches a bounded spatial candidate set before applying radius filtering", () => {
+    expect(weatherQueryFetchLimit({ from: at, to: new Date(at.getTime() + 60_000), lat: 49, lon: 17, radiusKm: 80 }, 5, 0)).toBe(20_000);
+    expect(weatherQueryFetchLimit({ from: at, to: new Date(at.getTime() + 60_000) }, 5, 0)).toBe(6);
   });
 
   it("coalesces stable READSB weather but preserves heartbeat, altitude, and weather triggers", () => {
