@@ -10,11 +10,13 @@ import type { ReceiverStatisticsPersistenceStatus } from "@/lib/server/statistic
 import type { RuntimeDiagnostics } from "@/lib/server/runtime-diagnostics";
 import type { WeatherRadarDiagnostics } from "@/lib/server/weather-radar/types";
 import type { ReceiverQuality } from "@/lib/server/receiver-quality";
+import type { NavigationIntegrityDiagnostics } from "@/lib/navigation-integrity/types";
 import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 
 export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
 export type AircraftWeatherStatus = "ok" | "no_data" | "degraded" | "unavailable";
+export type NavigationIntegrityStatus = "ok" | "no_data" | "degraded";
 export type OperationalState = "ok" | "degraded" | "offline" | "disabled" | "on_demand" | "loading";
 export type DiagnosticReasonCode =
   | "NOT_INITIALIZED" | "CONFIG_DISABLED" | "FIRST_LOAD_PENDING" | "UPSTREAM_UNAVAILABLE"
@@ -300,6 +302,19 @@ export interface SystemStatusResponse {
     lastAcceptedAt: string | null;
     lastPersistedAt: string | null;
   };
+  navigationIntegrity: {
+    status: NavigationIntegrityStatus;
+    observationsCreated: number;
+    persisted: number;
+    rejectedInvalidOrStale: number;
+    aircraftContributors: number;
+    cellsPopulated: number;
+    baselineCellsReady: number;
+    anomalyCandidates: number;
+    activeAnomalies: number;
+    lastObservationAt: string | null;
+    lastPersistedAt: string | null;
+  };
   alerts: {
     status: SystemStatus;
     enabled: boolean;
@@ -388,6 +403,7 @@ export interface SystemStatusBuildInput {
     lastAcceptedAt?: string | null;
     lastPersistedAt?: string | null;
   };
+  navigationIntegrity?: NavigationIntegrityDiagnostics & { activeAnomalies?: number };
   mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
   adsbLol?: NetworkProviderDiagnostics;
   localAdsb?: Record<string, unknown>;

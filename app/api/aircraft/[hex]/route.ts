@@ -4,6 +4,7 @@ import { enrichAircraftDetailView } from "@/lib/server/aircraft-detail-enrichmen
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { normalizeIcaoHex } from "@/lib/server/validation";
 import { parseCoverage } from "@/lib/server/coverage";
+import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,8 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
 
     if (mode === "quick") {
       const quickDetail = await getAircraftQuickDetail(icaoHex, liveAircraft);
-      return Response.json(quickDetail, { headers: noStoreHeaders() });
+      const navigationIntegrity = getNavigationIntegrityService().getAircraft(icaoHex);
+      return Response.json({ ...quickDetail, ...(navigationIntegrity.latest || navigationIntegrity.regionalContext.anomaly ? { navigationIntegrity } : {}) }, { headers: noStoreHeaders() });
     }
 
     const [detail, enrichedAircraft] = await Promise.all([
@@ -49,7 +51,8 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
     ]);
     const liveEnrichment = enrichedAircraft?.enrichment;
 
-    return Response.json({ ...detail, ...(liveEnrichment ? { liveEnrichment } : {}) }, { headers: noStoreHeaders() });
+    const navigationIntegrity = getNavigationIntegrityService().getAircraft(icaoHex);
+    return Response.json({ ...detail, ...(liveEnrichment ? { liveEnrichment } : {}), ...(navigationIntegrity.latest || navigationIntegrity.regionalContext.anomaly ? { navigationIntegrity } : {}) }, { headers: noStoreHeaders() });
   } catch (error) {
     if (error instanceof HistoryDatabaseUnavailableError) {
       return Response.json({ error: "Aircraft history is temporarily unavailable" }, { status: 503, headers: noStoreHeaders() });

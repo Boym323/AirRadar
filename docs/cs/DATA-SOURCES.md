@@ -69,3 +69,12 @@ semantics a privacy treatment.
 Pokrytí přijímače je odvozené porovnání proti aktivnímu síťovému referenčnímu
 provideru. Hodinové agregace zachovávají názvy providerů a zveřejňují období se
 smíšenými providery; nezachovávají surová pozorování ADSBHub ani ADSB.lol.
+
+## Telemetrie integrity navigace
+
+Integrita navigace používá existující ADS-B telemetrii z lokální větve
+Beast/readsb a nakonfigurovaného síťového providera. Nepřidává GNSS přijímač a
+netvrdí, že jde o oficiální monitoring rušení. Pole integrity se přijímají jen
+s čerstvou proveniencí jednotlivých polí; chybějící nebo stará pole zůstávají
+chybějící a nemění se na odvozené quality score. Viz
+[NAVIGATION-INTEGRITY.md](NAVIGATION-INTEGRITY.md).

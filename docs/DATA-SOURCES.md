@@ -58,3 +58,11 @@ OGN implementation references: the [OGN APRS protocol TOCALL catalog](https://gi
 Receiver coverage is a derived comparison against the active network
 reference provider. Hourly aggregates retain provider names and expose mixed
 provider periods; they do not retain raw ADS-BHub or ADSB.lol observations.
+
+## Navigation Integrity telemetry
+
+Navigation Integrity uses existing ADS-B telemetry from the local Beast/readsb
+lane and the configured network provider. It does not add a GNSS receiver or
+claim official interference monitoring. Integrity fields are accepted only with
+fresh field-level provenance; missing or stale fields remain missing and do not
+become inferred quality scores. See [NAVIGATION-INTEGRITY.md](NAVIGATION-INTEGRITY.md).

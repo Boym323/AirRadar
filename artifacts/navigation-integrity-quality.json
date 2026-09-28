@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-09-28T11:09:00.609Z",
+  "dataTimeSpan": null,
+  "database": "disabled",
+  "uniqueAircraft": null,
+  "availability": null,
+  "bySource": null,
+  "byAltitudeBand": null,
+  "aircraft": null,
+  "spatialCells": null,
+  "baseline": {
+    "cellsTotal": 0,
+    "cellsWithSufficientBaseline": 0,
+    "cellsInsufficient": 0
+  },
+  "currentAnomalyCandidates": 0,
+  "activeAnomalies": 0,
+  "rejectionReasons": {},
+  "diagnostics": {
+    "observationsCreated": 0,
+    "persisted": 0,
+    "deduplicated": 0,
+    "rejectedInvalidOrStale": 0,
+    "aircraftContributors": 0,
+    "cellsPopulated": 0,
+    "baselineCellsReady": 0,
+    "anomalyCandidates": 0,
+    "anomaliesOpened": 0,
+    "anomaliesClosed": 0,
+    "confidence": {
+      "LOW": 0,
+      "MEDIUM": 0,
+      "HIGH": 0
+    },
+    "rejectionReasons": {},
+    "lastObservationAt": null,
+    "lastPersistedAt": null
+  },
+  "interpretation": "Detector output is a heuristic navigation-integrity anomaly candidate, not proof of GNSS interference or jamming."
+}

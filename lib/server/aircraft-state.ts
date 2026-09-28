@@ -35,6 +35,7 @@ import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classification";
 import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
+import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -152,6 +153,7 @@ export class AircraftStateService {
   private readonly intelligence = getFlightIntelligenceService();
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
+  private readonly navigationIntegrity = getNavigationIntegrityService();
   private readonly atcResolutionKeys = new Map<string, string>();
   private readonly atcShadowPredictionKeys = new Map<string, string>();
   private readonly atcShadowPredictionInFlight = new Set<string>();
@@ -629,6 +631,7 @@ export class AircraftStateService {
       const events = this.intelligence.observe(previousAircraft.get(current.icaoHex), current, Date.parse(snapshot.fetchedAt));
       for (const event of events) this.alerts.observeIntelligenceEvent(current, event);
     }
+    this.navigationIntegrity.observe([...this.localAircraft.values()], new Date(snapshot.fetchedAt));
     this.invalidateSnapshotCache();
   }
 
@@ -645,6 +648,7 @@ export class AircraftStateService {
     for (const hex of this.networkAircraft.keys()) {
       if (!currentHexes.has(hex)) this.networkAircraft.delete(hex);
     }
+    this.navigationIntegrity.observe([...this.networkAircraft.values()], new Date(snapshot.fetchedAt ?? new Date().toISOString()));
     this.reconcileSourcePreferences();
     this.invalidateSnapshotCache();
   }

@@ -336,6 +336,36 @@
       ]
     },
     {
+      "id": "navigation-integrity",
+      "name": "Navigation Integrity",
+      "category": "navigation / safety / intelligence",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay.",
+      "pages": [],
+      "apis": [
+        "/api/navigation-integrity/current",
+        "/api/navigation-integrity/aircraft/:hex",
+        "/api/navigation-integrity/history",
+        "/api/admin/navigation-integrity/diagnostics"
+      ],
+      "changelogScopes": [
+        "navigation",
+        "navigation-integrity"
+      ],
+      "changelogKeywords": [
+        "navigation integrity",
+        "gnss",
+        "gps interference",
+        "nic",
+        "nacp",
+        "nacv",
+        "sil",
+        "gva",
+        "sda"
+      ]
+    },
+    {
       "id": "system-observability",
       "name": "System Observability",
       "category": "operations",

@@ -78,6 +78,8 @@ interface RadarMapLayerMenuProps {
   windStatus: "idle" | "loading" | "ready" | "stale" | "unavailable";
   showAircraftWeather: boolean;
   onShowAircraftWeatherChange: (value: boolean) => void;
+  showNavigationIntegrity: boolean;
+  onShowNavigationIntegrityChange: (value: boolean) => void;
   showAupUup: boolean;
   onShowAupUupChange: (value: boolean) => void;
   airspaceDataset: DatasetState<unknown>;
@@ -147,6 +149,8 @@ export function RadarMapLayerMenu({
   windStatus,
   showAircraftWeather,
   onShowAircraftWeatherChange,
+  showNavigationIntegrity,
+  onShowNavigationIntegrityChange,
   showAupUup,
   onShowAupUupChange,
   airspaceDataset,
@@ -193,6 +197,7 @@ export function RadarMapLayerMenu({
         <label data-testid="map-layer-metar"><input type="checkbox" checked={showMetar} onChange={(event) => onShowMetarChange(event.target.checked)} /> {t.layers.metar}</label>
         <label data-testid="map-layer-wind"><input type="checkbox" checked={showWind} onChange={(event) => onShowWindChange(event.target.checked)} /> {t.layers.windAloft}</label>
         <label data-testid="map-layer-aircraft-weather"><input type="checkbox" checked={showAircraftWeather} onChange={(event) => onShowAircraftWeatherChange(event.target.checked)} /> Aircraft Weather</label>
+        <label data-testid="map-layer-navigation-integrity"><input type="checkbox" checked={showNavigationIntegrity} onChange={(event) => onShowNavigationIntegrityChange(event.target.checked)} /> {t.layers.navigationIntegrity}</label>
         {showWind && <div className="map-layer-sublevel wind-controls">
           <label className="map-layer-mode"><span>{t.layers.pressureLevel}</span><select value={windLevel} aria-label={t.layers.pressureLevel} onChange={(event) => { onWindLevelChange(Number(event.target.value) as WindLevelHpa); onWindValidAtChange(null); }}>{windPressureLevels.map((level) => <option key={level} value={level}>{level} hPa</option>)}</select></label>
           {windData && <label className="map-layer-mode"><span>{t.layers.valid}</span><select value={windValidAt ?? windData.validAt} aria-label={t.layers.valid} onChange={(event) => onWindValidAtChange(event.target.value)}>{windData.availableValidTimes.map((valid) => <option key={valid} value={valid}>{formatDateTime(valid, t)}</option>)}</select></label>}

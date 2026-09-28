@@ -305,3 +305,11 @@ provenience, nikoli dominantní pole `origin`: overlap je
 `seenLocal=true` a `seenNetwork=true`. Stejný helper řídí klasifikaci,
 countery a client-side filtry. Live LOCAL capture ratio používá
 `RECEIVER_COMPARISON_RADIUS_NM` (výchozí 175 NM) a neukládá se.
+
+## Integrita navigace
+
+Integrita navigace je omezená read-only odvozená větev napájená existujícími
+lokálními a síťovými ADS-B snapshoty. Zachovává provenienci jednotlivých polí,
+používá deterministické buňky 0,2° a výšková pásma a odděluje regionální stav
+anomálie od health přijímače/databáze. V1 kontrakt, retence, omezení a API jsou
+v [NAVIGATION-INTEGRITY.md](NAVIGATION-INTEGRITY.md).

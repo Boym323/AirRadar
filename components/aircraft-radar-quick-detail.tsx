@@ -12,6 +12,7 @@ import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-contex
 import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import type { AircraftDestinationWindContext, AircraftWindAheadProfile, AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
+import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
 import type { FlightIntelligenceEvent, FlightPhase } from "@/lib/intelligence/types";
 import type { RadarLayerDataStatus } from "@/components/radar/use-radar-weather-context";
@@ -431,6 +432,36 @@ function SituationSummarySection({ summary }: { summary: FlightSituationSummary 
   </QuickSection>;
 }
 
+function NavigationIntegritySection({ aircraft }: { aircraft: AircraftView }) {
+  const context = useNavigationIntegrityContext(aircraft.icaoHex);
+  const latest = context?.latest;
+  const classification = context?.classification;
+  const anomaly = context?.regionalContext.anomaly;
+  if (!latest && !anomaly) return null;
+  const stateKey = classification?.state.toLowerCase() as keyof typeof t.navigationIntegrity.states | undefined;
+  const confidenceKey = classification && classification.state !== "NORMAL" && classification.state !== "UNKNOWN"
+    ? latest?.confidence.toLowerCase() as keyof typeof t.navigationIntegrity.confidence | undefined
+    : null;
+
+  return <QuickSection id="aircraft-quick-navigation-integrity-title" title={t.navigationIntegrity.title} className="aircraft-quick-navigation-integrity">
+    <div className="aircraft-quick-detail-grid" data-testid="navigation-integrity-situation">
+      <DetailValue label={t.navigationIntegrity.title} value={stateKey ? t.navigationIntegrity.states[stateKey] : t.navigationIntegrity.noCurrentData} />
+      <DetailValue label={t.navigationIntegrity.source} value={latest?.source} />
+      <DetailValue label={t.navigationIntegrity.confidenceLabel} value={confidenceKey ? t.navigationIntegrity.confidence[confidenceKey] : null} />
+      <DetailValue label={t.navigationIntegrity.fields.nic} value={latest?.nic === null || latest?.nic === undefined ? null : String(latest.nic)} />
+      <DetailValue label={t.navigationIntegrity.fields.nacP} value={latest?.nacP === null || latest?.nacP === undefined ? null : String(latest.nacP)} />
+      <DetailValue label={t.navigationIntegrity.fields.nacV} value={latest?.nacV === null || latest?.nacV === undefined ? null : String(latest.nacV)} />
+      <DetailValue label={t.navigationIntegrity.fields.sil} value={latest?.sil === null || latest?.sil === undefined ? null : String(latest.sil)} />
+      <DetailValue label={t.navigationIntegrity.fields.sda} value={latest?.sda === null || latest?.sda === undefined ? null : String(latest.sda)} />
+      <DetailValue label={t.navigationIntegrity.fields.gva} value={latest?.gva === null || latest?.gva === undefined ? null : String(latest.gva)} />
+      <DetailValue label={t.navigationIntegrity.fields.adsbVersion} value={latest?.adsbVersion === null || latest?.adsbVersion === undefined ? null : String(latest.adsbVersion)} />
+      {anomaly && <DetailValue label={t.navigationIntegrity.regionalContext} value={`${t.navigationIntegrity.affectedAircraft}: ${formatNumber(context?.regionalContext.affectedAircraft ?? anomaly.affectedAircraftCount)}`} />}
+    </div>
+    {anomaly && <p className="aircraft-quick-situation-signal">{t.navigationIntegrity.possibleInterference}</p>}
+    <p className="aircraft-quick-disclaimer">{t.navigationIntegrity.aircraftDisclaimer}</p>
+  </QuickSection>;
+}
+
 function phaseLabel(phase: FlightPhase | null): string | null {
   return phase ? t.intelligence.phaseLabels[phase] : null;
 }
@@ -666,6 +697,7 @@ export function AircraftRadarQuickDetail({
     </div>}
     {activeTab === "situation" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-situation" aria-labelledby="aircraft-tab-situation">
       <SituationSummarySection summary={situation} />
+      <NavigationIntegritySection aircraft={aircraft} />
       <AtcSection aircraft={aircraft} context={atcContext} sectorTraffic={sectorTraffic} />
       <SigmetSection context={sigmetContext} deviation={sigmetDeviation} stale={sigmetStale} />
       <RouteWeatherSection context={routeWeather} />

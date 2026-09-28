@@ -397,6 +397,15 @@ identities, then joins persistent metadata and read-only `FlightEvent` markers.
 The browser keeps one bounded window and reconstructs the selected instant
 locally. Historical reads never invoke intelligence detection, alerts,
 notifications, or live polling.
+## Navigation Integrity flow
+
+The aircraft state service submits each local and network snapshot to the
+Navigation Integrity lane. Fresh, positioned observations with usable
+field-level provenance are deduplicated, retained in a bounded process store,
+and evaluated on a slower cadence into cell summaries and hysteretic anomaly
+candidates. Optional database writes are asynchronous and best effort; the
+read APIs expose bounded current, aircraft, history and diagnostic views.
+
 # Flight Story
 
 `/flights/[id]` reads a bounded Flight Story containing Flight identity,

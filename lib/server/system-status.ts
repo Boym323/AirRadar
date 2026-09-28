@@ -29,6 +29,7 @@ import {
 import { buildReceiverQuality } from "@/lib/server/receiver-quality";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { getAircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
+import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 export {
   toAdminSystemStatus,
   toPublicSystemStatus,
@@ -175,6 +176,24 @@ function aircraftWeatherStatus(input: SystemStatusBuildInput["aircraftWeather"])
       turbulence: nonNegativeInteger(input?.withTurbulence ?? 0, 100_000_000),
     },
     lastAcceptedAt: safeTimestamp(input?.lastAcceptedAt),
+    lastPersistedAt: safeTimestamp(input?.lastPersistedAt),
+  };
+}
+
+function navigationIntegrityStatus(input: SystemStatusBuildInput["navigationIntegrity"]): SystemStatusResponse["navigationIntegrity"] {
+  const observations = nonNegativeInteger(input?.observationsCreated ?? 0, 100_000_000);
+  const rejected = nonNegativeInteger(input?.rejectedInvalidOrStale ?? 0, 100_000_000);
+  return {
+    status: rejected > observations && observations > 0 ? "degraded" : observations > 0 ? "ok" : "no_data",
+    observationsCreated: observations,
+    persisted: nonNegativeInteger(input?.persisted ?? 0, 100_000_000),
+    rejectedInvalidOrStale: rejected,
+    aircraftContributors: nonNegativeInteger(input?.aircraftContributors ?? 0, 100_000),
+    cellsPopulated: nonNegativeInteger(input?.cellsPopulated ?? 0, 100_000),
+    baselineCellsReady: nonNegativeInteger(input?.baselineCellsReady ?? 0, 100_000),
+    anomalyCandidates: nonNegativeInteger(input?.anomalyCandidates ?? 0, 100_000_000),
+    activeAnomalies: nonNegativeInteger(input?.activeAnomalies ?? 0, 100_000),
+    lastObservationAt: safeTimestamp(input?.lastObservationAt),
     lastPersistedAt: safeTimestamp(input?.lastPersistedAt),
   };
 }
@@ -569,6 +588,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
   const weatherState = weatherStatus(input.weather);
   const weatherDiagnosticState = weatherDiagnostic(input.weather);
   const aircraftWeather = aircraftWeatherStatus(input.aircraftWeather);
+  const navigationIntegrity = navigationIntegrityStatus(input.navigationIntegrity);
   const adsbDb = adsbDbResponse(input.adsbdb);
   const airportRowCount = input.airportData.rowCount === null ? null : nonNegativeInteger(input.airportData.rowCount, AIRPORT_STATUS_QUERY_LIMIT);
   const fallbackRowCount = input.airportData.fallbackRowCount === null ? null : nonNegativeInteger(input.airportData.fallbackRowCount, AIRPORT_STATUS_QUERY_LIMIT);
@@ -724,6 +744,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       lastProviderError: null,
     },
     aircraftWeather,
+    navigationIntegrity,
     alerts: {
       status: alertsStatus,
       enabled: input.alerts.enabled,
@@ -883,6 +904,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     atsData: ats ? { available: true, routeCount: ats.counts.routes, pointCount: ats.counts.points, segmentCount: ats.counts.segments, effectiveDate: ats.source.effectiveDate } : { available: false, routeCount: 0, pointCount: 0, segmentCount: 0, effectiveDate: null },
     weather,
     aircraftWeather: getAircraftWeatherDiagnostics(),
+    navigationIntegrity: { ...getNavigationIntegrityService().getDiagnostics(), activeAnomalies: getNavigationIntegrityService().getCurrent().summary.activeAnomalies },
     mapContext: {
       radar: defaultWeatherRadarProvider.getDiagnostics(),
       wind: defaultWindAloftProvider.diagnostics(),

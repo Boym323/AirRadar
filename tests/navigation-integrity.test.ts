@@ -1,0 +1,45 @@
+import { describe, expect, it } from "vitest";
+import { cellKey, altitudeBand, connectedCellGroups } from "@/lib/navigation-integrity/grid";
+import { classifyNavigationIntegrity } from "@/lib/navigation-integrity/classification";
+import { detectNavigationIntegrityAnomalies } from "@/lib/navigation-integrity/detector";
+import type { NavigationIntegrityObservation } from "@/lib/navigation-integrity/types";
+
+function observation(hex: string, lat: number, lon: number, nic = 8, nacP = 8): NavigationIntegrityObservation {
+  const at = "2026-09-28T10:00:00.000Z";
+  return {
+    aircraftHex: hex, flightId: null, observedAt: at, receivedAt: at, lat, lon, altitudeFt: 30_000, altitudeBand: altitudeBand(30_000),
+    nic, nacP, nacV: 3, sil: 3, sda: 3, gva: 3, adsbVersion: 2, positionSource: "ADS-B", source: "LOCAL", provider: "readsb", quality: "HIGH", confidence: "HIGH",
+    provenance: { origin: "local", positionObservedAt: at, fields: {} },
+  };
+}
+
+describe("navigation integrity", () => {
+  it("keeps original fields distinct and classifies one degraded aircraft conservatively", () => {
+    const item = observation("ABC001", 49.2, 16.6, 4, 8);
+    expect(item.nic).not.toBe(item.nacP);
+    expect(classifyNavigationIntegrity(item).state).toBe("REDUCED");
+    expect(detectNavigationIntegrityAnomalies([item])).toHaveLength(0);
+  });
+
+  it("requires independent aircraft contributors for a regional candidate", () => {
+    const items = ["ABC001", "ABC002", "ABC003"].map((hex, index) => observation(hex, 49.2 + index * 0.01, 16.6, 3, 4));
+    const anomalies = detectNavigationIntegrityAnomalies(items);
+    expect(anomalies).toHaveLength(1);
+    expect(anomalies[0]?.affectedAircraftCount).toBe(3);
+    expect(anomalies[0]?.confidence).toBe("LOW");
+  });
+
+  it("groups adjacent cells without merging altitude bands", () => {
+    const left = cellKey(49.2, 16.6, 3);
+    const right = cellKey(49.2, 16.81, 3);
+    const high = cellKey(49.2, 16.81, 4);
+    expect(connectedCellGroups([left, right, high])).toEqual([[left, right], [high]]);
+  });
+
+  it("supports a coherent adjacent-cell candidate but not dispersed aircraft", () => {
+    const adjacent = Array.from({ length: 8 }, (_, index) => observation(`ADJ${index}`, 49.2, 16.6 + (index % 2) * 0.21, 3, 4));
+    expect(detectNavigationIntegrityAnomalies(adjacent)[0]?.affectedAircraftCount).toBe(8);
+    const dispersed = Array.from({ length: 8 }, (_, index) => observation(`DIS${index}`, 49.2 + index * 0.6, 16.6, 3, 4));
+    expect(detectNavigationIntegrityAnomalies(dispersed)).toHaveLength(0);
+  });
+});

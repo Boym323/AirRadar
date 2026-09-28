@@ -66,6 +66,7 @@
     "audit:flightaware-routes": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-flightaware-routes.ts",
     "audit:historical-altitude": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-historical-altitude.ts",
     "audit:aircraft-weather": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-aircraft-weather.ts",
+    "audit:navigation-integrity": "JITI_TSCONFIG_PATHS=true jiti scripts/navigation-integrity-quality.ts",
     "audit:extreme-altitudes": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-extreme-altitudes.ts",
     "repair:historical-altitude": "JITI_TSCONFIG_PATHS=true jiti scripts/repair-historical-altitude.ts",
     "changelog:check": "node scripts/changelog.mjs check",

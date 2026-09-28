@@ -119,6 +119,19 @@ const EMPTY_ATC_DATA: AtcDataResponse = {
 const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled", fetchedAt: new Date(0).toISOString(), targets: [] };
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: [] };
+const EMPTY_NAVIGATION_INTEGRITY_GEOJSON = { type: "FeatureCollection" as const, features: [] };
+
+function createNavigationIntegrityGeoJSON(cells: Array<{ latCell: number; lonCell: number; state: string; affectedAircraftCount: number }>): FeatureCollection {
+  const size = 0.2;
+  return {
+    type: "FeatureCollection",
+    features: cells.filter((cell) => cell.state !== "NORMAL").map((cell) => {
+      const lat = cell.latCell * size;
+      const lon = cell.lonCell * size;
+      return { type: "Feature", properties: { state: cell.state, affectedAircraftCount: cell.affectedAircraftCount }, geometry: { type: "Polygon", coordinates: [[[lon, lat], [lon + size, lat], [lon + size, lat + size], [lon, lat + size], [lon, lat]]] } };
+    }),
+  };
+}
 const EMPTY_RADAR_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const AtcVerticalTraffic = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.AtcVerticalTraffic));
 const SectorFlowsPanel = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.SectorFlowsPanel));
@@ -424,6 +437,8 @@ export function AirRadarApp() {
   const [showMetar, setShowMetar] = useState(false);
   const [showWind, setShowWind] = useState(false);
   const [showAircraftWeather, setShowAircraftWeather] = useState(false);
+  const [showNavigationIntegrity, setShowNavigationIntegrity] = useState(false);
+  const [navigationIntegrityCells, setNavigationIntegrityCells] = useState<Array<{ latCell: number; lonCell: number; state: string; affectedAircraftCount: number }>>([]);
   const [aircraftWeatherMapObservations, setAircraftWeatherMapObservations] = useState<AircraftWeatherMapObservation[]>([]);
   const [aircraftWeatherMapField, setAircraftWeatherMapField] = useState<"temperature" | "wind">("temperature");
   const [focusedAircraftWeatherObservation, setFocusedAircraftWeatherObservation] = useState<string | null>(null);
@@ -743,6 +758,16 @@ export function AirRadarApp() {
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-layer", String(showWind)); } catch { /* optional */ } }, [showWind]);
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-level", String(windLevel)); } catch { /* optional */ } }, [windLevel]);
   useEffect(() => { try { window.localStorage.setItem("airradar-aup-uup-layer", String(showAupUup)); } catch { /* optional */ } }, [showAupUup]);
+  useEffect(() => {
+    if (!showNavigationIntegrity) { setNavigationIntegrityCells([]); return; }
+    let cancelled = false;
+    const load = () => { void fetch("/api/navigation-integrity/current?window=15m", { cache: "no-store" }).then((response) => response.ok ? response.json() as Promise<{ cells?: Array<{ latCell: number; lonCell: number; state: string; affectedAircraftCount: number }> }> : null).then((value) => { if (!cancelled) setNavigationIntegrityCells(value?.cells ?? []); }).catch(() => undefined); };
+    load();
+    let timer: number | undefined;
+    const schedule = () => { timer = window.setTimeout(() => { load(); if (!cancelled) schedule(); }, 30_000); };
+    schedule();
+    return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [showNavigationIntegrity]);
 
   const normalizedWatchlist = useMemo<AircraftMatchRule[]>(() => watchlist.flatMap((rule) => {
     const value = rule.value.trim().toUpperCase();
@@ -1025,6 +1050,9 @@ export function AirRadarApp() {
       map.addLayer({ id: "map-tint", type: "fill", source: "map-tint", paint: { "fill-color": AIRRADAR_MAP_THEME.mapTint, "fill-opacity": 0.16 } });
       map.addSource("weather-radar-image", { type: "image", url: EMPTY_RADAR_PNG, coordinates: WEATHER_RADAR_COORDINATES });
       map.addLayer({ id: "weather-radar-layer", type: "raster", source: "weather-radar-image", layout: { visibility: "none" }, paint: { "raster-opacity": 0.42, "raster-fade-duration": 0 } });
+      map.addSource("navigation-integrity", { type: "geojson", data: EMPTY_NAVIGATION_INTEGRITY_GEOJSON });
+      map.addLayer({ id: "navigation-integrity-fill", type: "fill", source: "navigation-integrity", layout: { visibility: "none" }, paint: { "fill-color": ["match", ["get", "state"], "SEVERE", AIRRADAR_MAP_THEME.hazard, "DEGRADED", AIRRADAR_MAP_THEME.warning, AIRRADAR_MAP_THEME.warning], "fill-opacity": 0.14 } });
+      map.addLayer({ id: "navigation-integrity-line", type: "line", source: "navigation-integrity", layout: { visibility: "none" }, paint: { "line-color": ["match", ["get", "state"], "SEVERE", AIRRADAR_MAP_THEME.hazard, AIRRADAR_MAP_THEME.warning], "line-opacity": 0.55, "line-width": 1.1, "line-dasharray": [2, 2] } });
       map.addSource("range-rings", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
         id: "range-rings-line",
@@ -1932,6 +1960,13 @@ export function AirRadarApp() {
     };
   }, [aircraftWeatherMapField, aircraftWeatherMapObservations, mapReady, showAircraftWeather]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    (map.getSource("navigation-integrity") as GeoJSONSource | undefined)?.setData(createNavigationIntegrityGeoJSON(navigationIntegrityCells));
+    for (const layer of ["navigation-integrity-fill", "navigation-integrity-line"]) if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", showNavigationIntegrity ? "visible" : "none");
+  }, [mapReady, navigationIntegrityCells, showNavigationIntegrity]);
+
   const airportLayerVisibility = useMemo<AirportLayerVisibility>(() => ({
     showAirports,
     showSignificant: showSignificantAirports,
@@ -2221,6 +2256,8 @@ export function AirRadarApp() {
                 windStatus={windStatus}
                 showAircraftWeather={showAircraftWeather}
                 onShowAircraftWeatherChange={setShowAircraftWeather}
+                showNavigationIntegrity={showNavigationIntegrity}
+                onShowNavigationIntegrityChange={setShowNavigationIntegrity}
                 showAupUup={showAupUup}
                 onShowAupUupChange={setShowAupUup}
                 airspaceDataset={airspaceDataset}
@@ -2247,12 +2284,13 @@ export function AirRadarApp() {
               {networkNotice && <span className="network-notice">{networkNotice}</span>}
               {networkEnabled && <span className="network-attribution">{t.radar.networkAttribution}</span>}
             </div>}
-            {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showWeatherRadar || showMetar || showAupUup ? <Panel className="map-overlay-card contextual-legend">
+            {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showWeatherRadar || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
               {showRangeRings && receiverPositionAvailable && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong><span><i className="legend-line range-ring" /> {RANGE_RING_RADII_KM.join(" · ")} km</span></span>}
               {(showAtc || showAupUup) && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span>{showAupUup && <span><i className="legend-line planned" /> {activityT.legendUpcoming}</span>}</span>}
               {showAtsRoutes && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atsRoutes}</strong><span><i className="legend-line ats-network" /> {t.layers.atsRoutes}</span><span><i className="legend-line ats-selected" /> {t.route.context}</span></span>}
               {showWeatherRadar && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.weatherRadar}</strong><span><i className="legend-line weather-radar" /> {selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></span>}
               {showMetar && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.metar}</strong><span><i className="metar-dot vfr" /> {t.layers.vfr}</span><span><i className="metar-dot mvfr" /> {t.layers.mvfr}</span><span><i className="metar-dot ifr" /> {t.layers.ifr}</span></span>}
+              {showNavigationIntegrity && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.navigationIntegrity}</strong><span><i className="legend-line planned" /> {t.layers.navigationIntegrityReduced}</span><small>{t.layers.navigationIntegrityDisclaimer}</small></span>}
               {colorMode !== "default" && <span className="color-mode-legend"><strong>{t.layers.colorModes[colorMode]}</strong><span><i className="color-legend-swatch low" /> {t.layers.colorLegendLow}</span><span><i className="color-legend-swatch high" /> {t.layers.colorLegendHigh}</span><span><i className="color-legend-swatch fallback" /> {t.layers.colorLegendFallback}</span></span>}
               {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <span className="layer-legend"><span><i className="legend-line actual" /> {t.route.actualTrail}</span><span><i className="legend-line completed" /> {t.route.originToCurrent}</span><span><i className="legend-line remaining" /> {t.route.currentToDestination}</span><small>{t.route.contextDisclaimer}</small></span>}
             </Panel> : null}

@@ -395,6 +395,15 @@ identit a poté připojí persistentní metadata a read-only markery
 `FlightEvent`. Prohlížeč drží jedno omezené okno a lokálně rekonstruuje
 vybraný okamžik. Historická čtení nikdy nevolají intelligence detekci, alerty,
 notifikace ani live polling.
+## Tok integrity navigace
+
+Aircraft state service předává každý lokální a síťový snapshot do větve
+integrity navigace. Čerstvá, polohovaná pozorování s použitelnou proveniencí
+jednotlivých polí se deduplikují, drží v omezeném process store a v pomalejší
+periodě se vyhodnocují do souhrnů buněk a kandidátů anomálií s hysterezí.
+Volitelné zápisy do databáze jsou asynchronní a best-effort; read API vystavují
+omezené current, aircraft, history a diagnostic pohledy.
+
 # Flight Story
 
 `/flights/[id]` čte omezený Flight Story obsahující identitu Flight,

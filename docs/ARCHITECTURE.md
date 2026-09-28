@@ -304,3 +304,12 @@ Source awareness is centralized in `lib/aircraft/source-awareness.ts`.
 field: overlap is `seenLocal=true` and `seenNetwork=true`. The same helper
 drives classification, counters, and client-side filters. Live LOCAL capture
 ratio uses `RECEIVER_COMPARISON_RADIUS_NM` (default 175 NM) and is not stored.
+
+## Navigation Integrity
+
+Navigation Integrity is a bounded, read-only derived lane fed by the existing
+local and network ADS-B state snapshots. It preserves field-level provenance,
+uses deterministic 0.2° cells and altitude bands, and keeps regional anomaly
+state separate from receiver/database health. Its V1 contract, retention,
+limitations and API surface are documented in
+[NAVIGATION-INTEGRITY.md](NAVIGATION-INTEGRITY.md).

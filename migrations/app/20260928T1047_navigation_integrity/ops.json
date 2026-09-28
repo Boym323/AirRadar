@@ -1,0 +1,395 @@
+[
+  {
+    "id": "table.navigationIntegrityAnomaly",
+    "label": "Create table \"navigationIntegrityAnomaly\"",
+    "summary": "Creates table \"navigationIntegrityAnomaly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "navigationIntegrityAnomaly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"navigationIntegrityAnomaly\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navigationIntegrityAnomaly\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"navigationIntegrityAnomaly\"",
+        "sql": "CREATE TABLE \"public\".\"navigationIntegrityAnomaly\" (\n  \"affectedAircraftCount\" int4 NOT NULL,\n  \"altitudeBandsJson\" text NOT NULL,\n  \"baselineAircraftCount\" int4 NOT NULL,\n  \"baselineMedianNacP\" float8,\n  \"baselineMedianNacV\" float8,\n  \"baselineMedianNic\" float8,\n  \"cellKeysJson\" text NOT NULL,\n  \"confidence\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"endedAt\" timestamptz,\n  \"evidenceJson\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"lastObservedAt\" timestamptz NOT NULL,\n  \"medianNacP\" float8,\n  \"medianNacV\" float8,\n  \"medianNic\" float8,\n  \"sampleCount\" int4 NOT NULL,\n  \"severity\" text NOT NULL,\n  \"startedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"navigationIntegrityAnomaly\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navigationIntegrityAnomaly\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.navigationIntegrityObservation",
+    "label": "Create table \"navigationIntegrityObservation\"",
+    "summary": "Creates table \"navigationIntegrityObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "navigationIntegrityObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"navigationIntegrityObservation\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navigationIntegrityObservation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"navigationIntegrityObservation\"",
+        "sql": "CREATE TABLE \"public\".\"navigationIntegrityObservation\" (\n  \"adsbVersion\" int4,\n  \"aircraftHex\" text NOT NULL,\n  \"altitudeBand\" int4 NOT NULL,\n  \"altitudeFt\" int4,\n  \"confidence\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"dedupKey\" text NOT NULL,\n  \"flightId\" text,\n  \"gva\" int4,\n  \"id\" SERIAL NOT NULL,\n  \"lat\" float8 NOT NULL,\n  \"latCell\" int4 NOT NULL,\n  \"lon\" float8 NOT NULL,\n  \"lonCell\" int4 NOT NULL,\n  \"nacP\" int4,\n  \"nacV\" int4,\n  \"nic\" int4,\n  \"observedAt\" timestamptz NOT NULL,\n  \"positionSource\" text NOT NULL,\n  \"provenanceJson\" text NOT NULL,\n  \"provider\" text,\n  \"quality\" text NOT NULL,\n  \"receivedAt\" timestamptz,\n  \"sda\" int4,\n  \"sil\" int4,\n  \"source\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"navigationIntegrityObservation\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"navigationIntegrityObservation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.navigationIntegrityObservation.navigationIntegrityObservation_dedupKey_key",
+    "label": "Add unique constraint on \"navigationIntegrityObservation\" (dedupKey)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "navigationIntegrityObservation_dedupKey_key",
+        "table": "navigationIntegrityObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"navigationIntegrityObservation_dedupKey_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "navigationIntegrityObservation_dedupKey_key",
+          "public",
+          "\"public\".\"navigationIntegrityObservation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"navigationIntegrityObservation_dedupKey_key\"",
+        "sql": "ALTER TABLE \"public\".\"navigationIntegrityObservation\" ADD CONSTRAINT \"navigationIntegrityObservation_dedupKey_key\" UNIQUE (\"dedupKey\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"navigationIntegrityObservation_dedupKey_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "navigationIntegrityObservation_dedupKey_key",
+          "public",
+          "\"public\".\"navigationIntegrityObservation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navigationIntegrityAnomaly.ni_anomaly_ended_idx",
+    "label": "Create index \"ni_anomaly_ended_idx\" on \"navigationIntegrityAnomaly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ni_anomaly_ended_idx",
+        "table": "navigationIntegrityAnomaly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ni_anomaly_ended_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_anomaly_ended_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ni_anomaly_ended_idx\"",
+        "sql": "CREATE INDEX \"ni_anomaly_ended_idx\" ON \"public\".\"navigationIntegrityAnomaly\" (\"endedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ni_anomaly_ended_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_anomaly_ended_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navigationIntegrityAnomaly.ni_anomaly_last_idx",
+    "label": "Create index \"ni_anomaly_last_idx\" on \"navigationIntegrityAnomaly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ni_anomaly_last_idx",
+        "table": "navigationIntegrityAnomaly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ni_anomaly_last_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_anomaly_last_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ni_anomaly_last_idx\"",
+        "sql": "CREATE INDEX \"ni_anomaly_last_idx\" ON \"public\".\"navigationIntegrityAnomaly\" (\"lastObservedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ni_anomaly_last_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_anomaly_last_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navigationIntegrityAnomaly.ni_anomaly_started_idx",
+    "label": "Create index \"ni_anomaly_started_idx\" on \"navigationIntegrityAnomaly\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ni_anomaly_started_idx",
+        "table": "navigationIntegrityAnomaly"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ni_anomaly_started_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_anomaly_started_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ni_anomaly_started_idx\"",
+        "sql": "CREATE INDEX \"ni_anomaly_started_idx\" ON \"public\".\"navigationIntegrityAnomaly\" (\"startedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ni_anomaly_started_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_anomaly_started_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navigationIntegrityObservation.ni_obs_aircraft_observed_idx",
+    "label": "Create index \"ni_obs_aircraft_observed_idx\" on \"navigationIntegrityObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ni_obs_aircraft_observed_idx",
+        "table": "navigationIntegrityObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ni_obs_aircraft_observed_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_obs_aircraft_observed_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ni_obs_aircraft_observed_idx\"",
+        "sql": "CREATE INDEX \"ni_obs_aircraft_observed_idx\" ON \"public\".\"navigationIntegrityObservation\" (\"aircraftHex\", \"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ni_obs_aircraft_observed_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_obs_aircraft_observed_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navigationIntegrityObservation.ni_obs_altitude_observed_idx",
+    "label": "Create index \"ni_obs_altitude_observed_idx\" on \"navigationIntegrityObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ni_obs_altitude_observed_idx",
+        "table": "navigationIntegrityObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ni_obs_altitude_observed_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_obs_altitude_observed_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ni_obs_altitude_observed_idx\"",
+        "sql": "CREATE INDEX \"ni_obs_altitude_observed_idx\" ON \"public\".\"navigationIntegrityObservation\" (\"altitudeBand\", \"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ni_obs_altitude_observed_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_obs_altitude_observed_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navigationIntegrityObservation.ni_obs_cell_observed_idx",
+    "label": "Create index \"ni_obs_cell_observed_idx\" on \"navigationIntegrityObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ni_obs_cell_observed_idx",
+        "table": "navigationIntegrityObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ni_obs_cell_observed_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_obs_cell_observed_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ni_obs_cell_observed_idx\"",
+        "sql": "CREATE INDEX \"ni_obs_cell_observed_idx\" ON \"public\".\"navigationIntegrityObservation\" (\"latCell\", \"lonCell\", \"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ni_obs_cell_observed_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_obs_cell_observed_idx\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.navigationIntegrityObservation.ni_obs_observed_idx",
+    "label": "Create index \"ni_obs_observed_idx\" on \"navigationIntegrityObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ni_obs_observed_idx",
+        "table": "navigationIntegrityObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ni_obs_observed_idx\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_obs_observed_idx\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ni_obs_observed_idx\"",
+        "sql": "CREATE INDEX \"ni_obs_observed_idx\" ON \"public\".\"navigationIntegrityObservation\" (\"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ni_obs_observed_idx\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ni_obs_observed_idx\""
+        ]
+      }
+    ]
+  }
+]

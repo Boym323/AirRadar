@@ -348,6 +348,15 @@ která jej vytvořila.
 - Produkční buildy drží `/var/lib/airradar/build.lock`. Start wrapper čeká na
   tento lock a před importem Next vyžaduje `.next/BUILD_ID`. Změna
   build/start locku musí zachovat tento kontrakt prevence race condition.
+
+## Invarianty integrity navigace
+
+- Integrita navigace nikdy nevymýšlí chybějící hodnoty NIC, NACp, NACv, SIL,
+  SDA, GVA ani verze ADS-B a chybějící pole nepovažuje za normální kvalitu.
+- Do odvozené větve vstupují jen čerstvá, polohovaná pozorování s platnou
+  proveniencí jednotlivých polí; confidence je oddělena od severity.
+- Větev je omezená a best-effort: nesmí blokovat aircraft state, SSE, historii
+  ani statistiky a nikdy nemění živou pravdu o letadle.
 # Invarianty pokrytí přijímače
 
 - `AVAILABLE` je čerstvé, polohované, validní-ICAO síťové pozorování uvnitř

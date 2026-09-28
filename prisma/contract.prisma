@@ -366,6 +366,68 @@ model AircraftWeatherObservation {
   @@index([altitudeFt, observedAt])
 }
 
+/// Sparse ADS-B navigation integrity observations. Original fields remain
+/// separate; provenanceJson preserves the field-level freshness contract.
+model NavigationIntegrityObservation {
+  id             Int      @id @default(autoincrement())
+  dedupKey       String   @unique
+  aircraftHex    String
+  flightId       String?
+  observedAt     DateTime
+  receivedAt     DateTime?
+  lat            Float
+  lon            Float
+  latCell        Int
+  lonCell        Int
+  altitudeFt     Int?
+  altitudeBand   Int
+  nic            Int?
+  nacP           Int?
+  nacV           Int?
+  sil            Int?
+  sda            Int?
+  gva            Int?
+  adsbVersion    Int?
+  positionSource String
+  source         String
+  provider       String?
+  quality        String
+  confidence     String
+  provenanceJson String
+  createdAt      DateTime @default(now())
+
+  @@index([observedAt], map: "ni_obs_observed_idx")
+  @@index([aircraftHex, observedAt], map: "ni_obs_aircraft_observed_idx")
+  @@index([latCell, lonCell, observedAt], map: "ni_obs_cell_observed_idx")
+  @@index([altitudeBand, observedAt], map: "ni_obs_altitude_observed_idx")
+}
+
+model NavigationIntegrityAnomaly {
+  id                    String   @id
+  startedAt             DateTime
+  lastObservedAt        DateTime
+  endedAt               DateTime?
+  cellKeysJson          String
+  altitudeBandsJson     String
+  affectedAircraftCount Int
+  sampleCount           Int
+  baselineAircraftCount Int
+  medianNic             Float?
+  medianNacP            Float?
+  medianNacV            Float?
+  baselineMedianNic     Float?
+  baselineMedianNacP    Float?
+  baselineMedianNacV    Float?
+  confidence            String
+  severity              String
+  evidenceJson          String
+  createdAt             DateTime @default(now())
+
+  @@index([startedAt], map: "ni_anomaly_started_idx")
+  @@index([lastObservedAt], map: "ni_anomaly_last_idx")
+  @@index([endedAt], map: "ni_anomaly_ended_idx")
+}
+
 model AltitudeAnomaly {
   id                 Int      @id @default(autoincrement())
   icaoHex            String

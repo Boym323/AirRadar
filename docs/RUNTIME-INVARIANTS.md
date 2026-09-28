@@ -329,6 +329,15 @@ component that created it.
 - Production builds hold `/var/lib/airradar/build.lock`. The start wrapper
   waits for that lock and requires `.next/BUILD_ID` before importing Next. A
   build/start lock change must preserve this race-prevention contract.
+
+## Navigation Integrity invariants
+
+- Navigation Integrity never invents missing NIC, NACp, NACv, SIL, SDA, GVA or
+  ADS-B version values and never treats a missing field as normal quality.
+- Only fresh, positioned observations with valid field-level provenance enter
+  the derived lane; anomaly confidence is separate from severity.
+- The lane is bounded and best-effort: it cannot block aircraft state, SSE,
+  history or statistics, and it never mutates live aircraft truth.
 # Receiver coverage invariants
 
 - `AVAILABLE` is a fresh, positioned, valid-ICAO network observation inside
