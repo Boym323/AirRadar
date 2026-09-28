@@ -1,36 +1,70 @@
 {
-  "generatedAt": "2026-09-28T10:27:57.945Z",
+  "generatedAt": "2026-09-28T13:29:20.759Z",
   "bounded": {
     "maxRows": 20000,
     "windowDays": 7,
-    "truncated": false
+    "truncated": true
   },
   "persisted": {
-    "source": "unavailable",
-    "rows": null,
-    "from": null,
-    "to": null,
-    "contributingAircraft": null
+    "source": "postgres",
+    "rows": 20000,
+    "from": "2026-09-28T09:52:16.257Z",
+    "to": "2026-09-28T13:29:18.157Z",
+    "contributingAircraft": 968
   },
   "timeWindows": {
     "1h": {
-      "rows": null,
-      "aircraft": null
+      "rows": 5382,
+      "aircraft": 333
     },
     "24h": {
-      "rows": null,
-      "aircraft": null
+      "rows": 20000,
+      "aircraft": 968
     },
     "7d": {
-      "rows": null,
-      "aircraft": null
+      "rows": 20000,
+      "aircraft": 968
     }
   },
-  "sourceCoverage": null,
-  "fieldCoverage": null,
-  "altitudeBands": null,
-  "quality": null,
-  "bds44": null,
+  "sourceCoverage": {
+    "READSB_JSON": {
+      "observations": 19979,
+      "aircraft": 968
+    },
+    "BDS_4_4": {
+      "observations": 10,
+      "aircraft": 8
+    },
+    "UNKNOWN": {
+      "observations": 11,
+      "aircraft": 4
+    }
+  },
+  "fieldCoverage": {
+    "wind": 18803,
+    "sat": 19909,
+    "tat": 19898,
+    "staticPressure": 1,
+    "humidity": 1,
+    "turbulence": 1
+  },
+  "altitudeBands": {
+    "FL200_FL300": 2525,
+    "below_FL100": 512,
+    "FL300_FL400": 14939,
+    "FL100_FL200": 1069,
+    "above_FL400": 955
+  },
+  "quality": {
+    "GOOD": 18860,
+    "HIGH": 1140
+  },
+  "bds44": {
+    "candidates": 0,
+    "accepted": 0,
+    "ambiguous": 0,
+    "rejected": 0
+  },
   "runtimeDiagnostics": {
     "scope": "process-local audit process",
     "bds44": {
@@ -41,7 +75,5 @@
     }
   },
   "runtimeDiagnosticsScope": "process-local audit process",
-  "likelyDataGaps": [
-    "Production database was unavailable; persisted metrics could not be read."
-  ]
+  "likelyDataGaps": []
 }
