@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-09-28T10:08:30.376Z",
+  "bounded": {
+    "maxRows": 20000,
+    "windowDays": 7,
+    "truncated": false
+  },
+  "persisted": {
+    "source": "unavailable",
+    "rows": 0,
+    "from": null,
+    "to": null,
+    "contributingAircraft": 0
+  },
+  "timeWindows": {
+    "1h": {
+      "rows": 0,
+      "aircraft": 0
+    },
+    "24h": {
+      "rows": 0,
+      "aircraft": 0
+    },
+    "7d": {
+      "rows": 0,
+      "aircraft": 0
+    }
+  },
+  "sourceCoverage": {},
+  "fieldCoverage": {
+    "wind": 0,
+    "sat": 0,
+    "tat": 0,
+    "staticPressure": 0,
+    "humidity": 0,
+    "turbulence": 0
+  },
+  "altitudeBands": {},
+  "quality": {},
+  "bds44": {
+    "candidates": 0,
+    "accepted": 0,
+    "ambiguous": 0,
+    "rejected": 0
+  },
+  "likelyDataGaps": [
+    "Production database was unavailable; persisted metrics could not be read.",
+    "No persisted BDS_4_4 observations in the sample.",
+    "Humidity was unavailable in the sample.",
+    "Turbulence was unavailable in the sample."
+  ]
+}

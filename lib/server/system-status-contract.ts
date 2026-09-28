@@ -14,6 +14,7 @@ import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { defaultMapContextArchive, defaultWeatherRadarArchive } from "@/lib/server/map-context";
 
 export type SystemStatus = "ok" | "degraded" | "offline" | "disabled";
+export type AircraftWeatherStatus = "ok" | "no_data" | "degraded" | "unavailable";
 export type OperationalState = "ok" | "degraded" | "offline" | "disabled" | "on_demand" | "loading";
 export type DiagnosticReasonCode =
   | "NOT_INITIALIZED" | "CONFIG_DISABLED" | "FIRST_LOAD_PENDING" | "UPSTREAM_UNAVAILABLE"
@@ -285,6 +286,20 @@ export interface SystemStatusResponse {
     retryAfterMs: number | null;
     lastProviderError: null;
   };
+  aircraftWeather: {
+    status: AircraftWeatherStatus;
+    accepted: number;
+    persisted: number;
+    rejected: number;
+    persistenceFailures: number;
+    accumulatorEntries: number;
+    accumulatorEvictions: number;
+    accumulatorHighWaterMark: number;
+    sources: { READSB_JSON: number; BDS_4_4: number };
+    fields: { wind: number; temperature: number; pressure: number; humidity: number; turbulence: number };
+    lastAcceptedAt: string | null;
+    lastPersistedAt: string | null;
+  };
   alerts: {
     status: SystemStatus;
     enabled: boolean;
@@ -355,6 +370,24 @@ export interface SystemStatusBuildInput {
     effectiveDate: string | null;
   };
   weather?: Partial<AviationWeatherDiagnostics> & { entries?: number; airports?: number };
+  aircraftWeather?: {
+    accepted?: number;
+    persisted?: number;
+    rejected?: number;
+    persistenceFailures?: number;
+    accumulatorEntries?: number;
+    accumulatorEvicted?: number;
+    accumulatorMaxObserved?: number;
+    weatherReadsbAccepted?: number;
+    weatherBds44Accepted?: number;
+    withWind?: number;
+    withTemperature?: number;
+    withPressure?: number;
+    withHumidity?: number;
+    withTurbulence?: number;
+    lastAcceptedAt?: string | null;
+    lastPersistedAt?: string | null;
+  };
   mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
   adsbLol?: NetworkProviderDiagnostics;
   localAdsb?: Record<string, unknown>;

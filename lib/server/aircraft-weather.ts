@@ -121,6 +121,8 @@ export interface AircraftWeatherDiagnostics {
   withPressure: number;
   withHumidity: number;
   withTurbulence: number;
+  lastAcceptedAt: string | null;
+  lastPersistedAt: string | null;
   lastAnomalies: Array<{ aircraftHex: string; observedAt: string; reason: string }>;
 }
 
@@ -134,6 +136,7 @@ const emptyDiagnostics = (): AircraftWeatherDiagnostics => ({
   weatherExactDeduplicated: 0, weatherPersistenceFailures: 0,
   weatherAccumulatorEntries: 0, weatherAccumulatorEvicted: 0, weatherAccumulatorMaxObserved: 0,
   withWind: 0, withTemperature: 0, withPressure: 0, withHumidity: 0, withTurbulence: 0,
+  lastAcceptedAt: null, lastPersistedAt: null,
   lastAnomalies: [],
 });
 
@@ -252,6 +255,7 @@ export function observationFromAircraft(
     return null;
   }
   diagnostics.weatherAccepted += 1;
+  diagnostics.lastAcceptedAt = observation.observedAt.toISOString();
   diagnostics.withWind += observation.windDirectionDeg !== null && observation.windSpeedKt !== null ? 1 : 0;
   diagnostics.withTemperature += observation.staticAirTemperatureC !== null || observation.totalAirTemperatureC !== null ? 1 : 0;
   diagnostics.withPressure += observation.staticPressureHpa !== null ? 1 : 0;
@@ -420,6 +424,7 @@ function markPersisted(observation: AircraftWeatherObservation, reason: WeatherP
   accumulator.currentBucket = Math.floor(observation.observedAt.getTime() / AIRCRAFT_WEATHER_PERSISTENCE_POLICY.readsb.bucketMs);
   accumulators.set(observation.aircraftHex, accumulator);
   diagnostics.weatherPersisted += 1;
+  diagnostics.lastPersistedAt = observation.observedAt.toISOString();
   incrementPersistenceReason(reason);
 }
 
@@ -538,7 +543,7 @@ export async function pruneAircraftWeatherRetention(database: NonNullable<Return
 export function getAircraftWeatherDiagnostics(): AircraftWeatherDiagnostics { return { ...diagnostics, lastAnomalies: diagnostics.lastAnomalies.slice() }; }
 export function resetAircraftWeatherDiagnostics(): void { Object.assign(diagnostics, emptyDiagnostics()); accumulators.clear(); memoryRows.length = 0; weatherWriteTail = Promise.resolve(); }
 
-export interface WeatherQuery { from: Date; to: Date; lat?: number; lon?: number; radiusKm?: number; minAltitude?: number; maxAltitude?: number; source?: AircraftWeatherSource; limit?: number; offset?: number; }
+export interface WeatherQuery { from: Date; to: Date; aircraftHex?: string; lat?: number; lon?: number; radiusKm?: number; minAltitude?: number; maxAltitude?: number; source?: AircraftWeatherSource; limit?: number; offset?: number; }
 export function weatherQueryFetchLimit(query: WeatherQuery, limit: number, offset: number): number {
   // The current ORM path applies the radius predicate after rows are read.
   // Fetch the bounded weather maximum first for spatial queries so nearby
@@ -573,7 +578,7 @@ export async function queryAircraftWeatherObservations(query: WeatherQuery): Pro
   const limit = Math.min(AIRCRAFT_WEATHER_LIMITS.maxRows, Math.max(1, Math.trunc(query.limit ?? 500)));
   const offset = Math.max(0, Math.trunc(query.offset ?? 0));
   const inArea = (row: AircraftWeatherObservation): boolean => query.lat === undefined || query.lon === undefined || haversineDistanceKm(query.lat, query.lon, row.lat, row.lon) <= (query.radiusKm ?? 50);
-  const inQuery = (row: AircraftWeatherObservation): boolean => row.observedAt >= query.from && row.observedAt < query.to && (query.minAltitude === undefined || row.altitudeFt >= query.minAltitude) && (query.maxAltitude === undefined || row.altitudeFt <= query.maxAltitude) && (query.source === undefined || row.source === query.source) && inArea(row);
+  const inQuery = (row: AircraftWeatherObservation): boolean => row.observedAt >= query.from && row.observedAt < query.to && (query.aircraftHex === undefined || row.aircraftHex === query.aircraftHex) && (query.minAltitude === undefined || row.altitudeFt >= query.minAltitude) && (query.maxAltitude === undefined || row.altitudeFt <= query.maxAltitude) && (query.source === undefined || row.source === query.source) && row.quality !== "REJECTED" && inArea(row);
   const memoryResult = (): { observations: AircraftWeatherObservation[]; totalApproximate: number; source: "memory" } => {
     const matches = memoryRows.filter(inQuery).sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime());
     return { observations: matches.slice(offset, offset + limit), totalApproximate: matches.length, source: "memory" };
@@ -583,6 +588,7 @@ export async function queryAircraftWeatherObservations(query: WeatherQuery): Pro
   try {
     const table = database.orm.public.AircraftWeatherObservation as unknown as Collection<WeatherRow>;
     let filtered = table.where((row) => row.observedAt.gte(Temporal.Instant.fromEpochMilliseconds(query.from.getTime()))).where((row) => row.observedAt.lt(Temporal.Instant.fromEpochMilliseconds(query.to.getTime())));
+    if (query.aircraftHex !== undefined) filtered = (filtered as unknown as { where(value: Record<string, unknown>): Collection<WeatherRow> }).where({ aircraftHex: query.aircraftHex });
     if (query.minAltitude !== undefined) filtered = filtered.where((row) => row.altitudeFt.gte(query.minAltitude));
     if (query.maxAltitude !== undefined) filtered = filtered.where((row) => row.altitudeFt.lte(query.maxAltitude));
     if (query.source !== undefined) filtered = (filtered as unknown as { where(value: Record<string, unknown>): Collection<WeatherRow> }).where({ source: query.source });

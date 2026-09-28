@@ -15,6 +15,7 @@ import {
   type AircraftWeatherObservation,
   weatherQueryFetchLimit,
 } from "@/lib/server/aircraft-weather";
+import { buildAircraftWeatherQualityReport } from "@/lib/server/aircraft-weather-quality";
 
 const at = new Date("2026-09-28T09:00:00.000Z");
 function aircraft(overrides: Partial<Aircraft> = {}): Aircraft {
@@ -143,5 +144,18 @@ describe("aircraft weather observations", () => {
     expect(getAircraftWeatherDiagnostics().weatherAccumulatorEntries).toBe(1);
     expect(evictAircraftWeatherAccumulators(at.getTime() + AIRCRAFT_WEATHER_PERSISTENCE_POLICY.accumulator.ttlMs + 1)).toBe(1);
     expect(getAircraftWeatherDiagnostics().weatherAccumulatorEntries).toBe(0);
+  });
+
+  it("builds bounded quality coverage without exposing rejected rows", () => {
+    const report = buildAircraftWeatherQualityReport([
+      row({ source: "READSB_JSON", quality: "HIGH", humidityPct: 20 }),
+      row({ aircraftHex: "DEF456", source: "BDS_4_4", quality: "GOOD", staticAirTemperatureC: null, totalAirTemperatureC: null, staticPressureHpa: null, humidityPct: null, turbulenceLevel: null, altitudeFt: 35_000 }),
+    ], new Date("2026-09-28T09:01:00.000Z"));
+    expect(report.bounded.maxRows).toBe(20_000);
+    expect(report.persisted.contributingAircraft).toBe(2);
+    expect(report.sourceCoverage.BDS_4_4).toMatchObject({ observations: 1, aircraft: 1 });
+    expect(report.fieldCoverage.sat).toBe(1);
+    expect(report.altitudeBands.FL300_FL400).toBe(1);
+    expect(report.quality).toEqual({ HIGH: 1, GOOD: 1 });
   });
 });
