@@ -2,6 +2,37 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.183] - 2026-09-28
+
+Changes since v1.0.182.
+
+**Features touched:** Time Machine.
+
+### Added
+
+- Add system health summary and improve time machine controls (c784c2c4)
+- Implement airports and flights browsing functionality with responsive design (498d5a9a)
+
+### Maintenance
+
+- Reconcile V3 integration labels (900ca315)
+- Sync generated repository metadata (c5eaeb7c)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add system health summary and improve time machine controls (c784c2c4)
+- feat: implement airports and flights browsing functionality with responsive design (498d5a9a)
+- Merge remote-tracking branch 'origin/feat/v3-time-machine' into chore/v3-visual-integration (08c8c0fe)
+- Merge remote-tracking branch 'origin/feat/v3-airports-flights' into chore/v3-visual-integration (2aecd788)
+- chore: reconcile V3 integration labels (900ca315)
+- chore(metadata): sync generated repository metadata (c5eaeb7c)
+- Merge pull request #199 from Boym323/automation/repository-metadata (cab45633)
+- Merge remote-tracking branch 'origin/main' into chore/v3-visual-integration (51d73519)
+- Merge V3 final integration (b2ca3bff)
+
+</details>
+
 ## [1.0.181] - 2026-09-27
 
 Changes since v1.0.179.
