@@ -316,7 +316,7 @@ export async function queryAircraftWeatherObservations(query: WeatherQuery): Pro
     if (query.minAltitude !== undefined) filtered = filtered.where((row) => row.altitudeFt.gte(query.minAltitude));
     if (query.maxAltitude !== undefined) filtered = filtered.where((row) => row.altitudeFt.lte(query.maxAltitude));
     if (query.source !== undefined) filtered = (filtered as unknown as { where(value: Record<string, unknown>): Collection<WeatherRow> }).where({ source: query.source });
-    const rows = await filtered.orderBy((row) => row.observedAt.desc()).limit(Math.min(AIRCRAFT_WEATHER_LIMITS.maxRows, offset + limit + 1)).all();
+    const rows = await filtered.orderBy((row: Record<string, Field>) => row.observedAt.desc()).limit(Math.min(AIRCRAFT_WEATHER_LIMITS.maxRows, offset + limit + 1)).all();
     const observations = rows.map(rowToObservation).filter(inArea).slice(offset, offset + limit);
     return { observations, totalApproximate: observations.length + (rows.length > offset + limit ? 1 : 0), source: "postgres" };
   } catch {
