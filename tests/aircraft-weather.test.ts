@@ -4,6 +4,7 @@ import {
   aggregateAircraftWeatherProfile,
   getAircraftWeatherDiagnostics,
   observationFromAircraft,
+  observationFromStoredWeatherRow,
   resetAircraftWeatherDiagnostics,
   shouldPersistWeatherObservation,
   type AircraftWeatherObservation,
@@ -47,6 +48,17 @@ describe("aircraft weather observations", () => {
     const globalState = (globalThis as unknown as { aircraftWeatherDiagnostics?: ReturnType<typeof getAircraftWeatherDiagnostics> }).aircraftWeatherDiagnostics;
     expect(globalState?.weatherCandidates).toBe(1);
     expect(getAircraftWeatherDiagnostics().weatherCandidates).toBe(1);
+  });
+
+  it("maps persisted SAT/TAT columns back to the public observation names", () => {
+    const { staticAirTemperatureC, totalAirTemperatureC, ...base } = row();
+    const result = observationFromStoredWeatherRow({
+      ...base,
+      staticAirTempC: staticAirTemperatureC,
+      totalAirTempC: totalAirTemperatureC,
+      provenanceJson: JSON.stringify({}),
+    });
+    expect(result).toMatchObject({ staticAirTemperatureC: -40, totalAirTemperatureC: -30 });
   });
 
   it("rejects a stale location/weather pairing", () => {

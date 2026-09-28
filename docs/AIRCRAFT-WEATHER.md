@@ -33,9 +33,9 @@ jumps and implausible wind reversals are rejected. Quality is `HIGH`, `GOOD`,
 The weather lane is sparse: it samples at most once per aircraft per 20 seconds
 unless a meaningful movement, altitude, or weather change occurs. A unique
 aircraft/time/source key prevents duplicate rows. Retention follows the
-configured database retention policy; cleanup should be implemented as a
-scheduled table-level cleanup when production storage requires it, not as a
-per-observation delete.
+configured database retention policy. Weather cleanup runs as a periodic,
+table-level operation in the history retention lane (currently
+`HISTORY_RETENTION_DAYS=30`), never as a per-observation delete.
 
 ## Profiles and API
 
@@ -53,6 +53,19 @@ The admin-only endpoint `/api/admin/weather/diagnostics` exposes bounded
 counters for candidates, accepted/ambiguous/rejected BDS 4,4 frames, source
 counts, persistence, QC, deduplication, field availability, and recent anomaly
 reasons. No unbounded raw-frame logging is added.
+
+## Production availability baseline
+
+The first production observation window after release on 2026-09-28 showed
+`READSB_JSON` as the only persisted weather source: 2,749 rows from 134
+aircraft were present in PostgreSQL at 08:00 UTC, with wind in 2,606 rows and
+static/total air temperature in 2,740 rows. Static pressure, humidity, and
+turbulence were not present in that window. No `BDS_4_4` observation was
+accepted or persisted. The live decoder saw 7 BDS 4,4 candidates, 1 ambiguous
+Comm-B frame, and 2,860 rejected frames in the corresponding short diagnostic
+snapshot. These are receiver-traffic observations, not availability guarantees;
+the source remains explicitly provenance-labelled and can change with aircraft
+mix and receiver conditions.
 
 ## Limitations
 

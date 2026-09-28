@@ -296,7 +296,7 @@ export function getAircraftWeatherDiagnostics(): AircraftWeatherDiagnostics { re
 export function resetAircraftWeatherDiagnostics(): void { Object.assign(diagnostics, emptyDiagnostics()); sampler.clear(); memoryRows.length = 0; }
 
 export interface WeatherQuery { from: Date; to: Date; lat?: number; lon?: number; radiusKm?: number; minAltitude?: number; maxAltitude?: number; source?: AircraftWeatherSource; limit?: number; offset?: number; }
-interface WeatherRow extends Omit<AircraftWeatherObservation, "observedAt" | "receivedAt" | "provenance" | "staticAirTemperatureC" | "totalAirTemperatureC"> {
+export interface WeatherRow extends Omit<AircraftWeatherObservation, "observedAt" | "receivedAt" | "provenance" | "staticAirTemperatureC" | "totalAirTemperatureC"> {
   staticAirTempC: number | null;
   totalAirTempC: number | null;
   observedAt: Date | Temporal.Instant;
@@ -306,7 +306,7 @@ interface WeatherRow extends Omit<AircraftWeatherObservation, "observedAt" | "re
 type Field = { gte(value: unknown): unknown; gt(value: unknown): unknown; lt(value: unknown): unknown; lte(value: unknown): unknown; asc(): unknown; desc(): unknown };
 type Collection<T> = { where(predicate: (row: Record<string, Field>) => unknown): Collection<T>; orderBy(value: unknown): Collection<T>; limit(value: number): Collection<T>; offset?(value: number): Collection<T>; all(): Promise<T[]> };
 function rowDate(value: Date | Temporal.Instant): Date { return dateOf(value); }
-function rowToObservation(row: WeatherRow): AircraftWeatherObservation {
+export function observationFromStoredWeatherRow(row: WeatherRow): AircraftWeatherObservation {
   const { staticAirTempC, totalAirTempC, provenanceJson, ...fields } = row;
   return {
     ...fields,
@@ -336,7 +336,7 @@ export async function queryAircraftWeatherObservations(query: WeatherQuery): Pro
     if (query.maxAltitude !== undefined) filtered = filtered.where((row) => row.altitudeFt.lte(query.maxAltitude));
     if (query.source !== undefined) filtered = (filtered as unknown as { where(value: Record<string, unknown>): Collection<WeatherRow> }).where({ source: query.source });
     const rows = await filtered.orderBy((row: Record<string, Field>) => row.observedAt.desc()).limit(Math.min(AIRCRAFT_WEATHER_LIMITS.maxRows, offset + limit + 1)).all();
-    const observations = rows.map(rowToObservation).filter(inArea).slice(offset, offset + limit);
+    const observations = rows.map(observationFromStoredWeatherRow).filter(inArea).slice(offset, offset + limit);
     return { observations, totalApproximate: observations.length + (rows.length > offset + limit ? 1 : 0), source: "postgres" };
   } catch {
     // Backward-compatible during the short window before the additive
