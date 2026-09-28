@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.197] - 2026-09-28
+
+Changes since v1.0.196.
+
+### Fixed
+
+- Raise weather panel above map controls (513d4beb)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: raise weather panel above map controls (513d4beb)
+
+</details>
+
 ## [1.0.196] - 2026-09-28
 
 Changes since v1.0.195.
