@@ -58,6 +58,26 @@ requires two qualifying evaluations to open and three normal evaluations to
 close an active candidate. A candidate is a heuristic correlated navigation
 anomaly; it must not be described as “GPS jamming detected”.
 
+### V1.1 calibration and explainability
+
+Every candidate carries machine-readable evidence: passed/failed rules, current
+and baseline medians, low-integrity share, deltas, independent aircraft counts,
+nearby normal aircraft, source overlap, spatial/temporal evidence, and an audit
+classification. The existing confidence formula is unchanged: `HIGH` requires
+at least 8 affected aircraft, 3 local aircraft, 300 seconds, and a ready
+baseline; `MEDIUM` requires at least 5 affected aircraft, or at least 3 local
+aircraft sustained for 120 seconds; otherwise it is `LOW`. Thus MEDIUM can
+currently be reached without a mature baseline, which is reported as
+`BASELINE_IMMATURE` rather than treated as confirmation.
+
+Baseline maturity uses independent aircraft, sample count, and 15-minute
+time-bucket coverage: `PARTIAL` starts at 3 aircraft and 6 samples, `READY`
+requires 5 aircraft, 20 samples, and 3 buckets, and `STRONG` requires 8
+aircraft, 20 samples, and 6 buckets. Message count alone cannot make a
+baseline strong. The current rolling-window baseline is also the comparison
+population, so unchanged medians are expected and are explicitly exposed in
+the rule breakdown.
+
 False-positive protection includes stale-pair rejection, independent-aircraft
 counting, source awareness, ground exclusion, invalid-coordinate rejection,
 bounded cell adjacency, and LOCAL-versus-NETWORK evidence. Network observations
@@ -76,6 +96,8 @@ AirRadar receiver directly observed them.
   events, never an unbounded raw ADS-B sample stream.
 - `GET /api/admin/navigation-integrity/diagnostics` returns protected counters,
   rejection reasons, baseline readiness, and bounded memory indicators.
+- `GET /api/admin/navigation-integrity/candidates?window=15m&limit=20` returns
+  a bounded protected snapshot of active candidates and structured evidence.
 
 ## UI and limitations
 

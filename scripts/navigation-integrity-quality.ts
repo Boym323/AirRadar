@@ -44,6 +44,12 @@ async function readRows(): Promise<{ rows: QualityRow[]; database: "available" |
 const { rows, database } = await readRows();
 const current = getNavigationIntegrityService().getCurrent("15m");
 const diagnostics = getNavigationIntegrityService().getDiagnostics();
+const candidates = current.activeAnomalies;
+const histogram = (values: string[]): Record<string, number> => values.reduce<Record<string, number>>((result, value) => { result[value] = (result[value] ?? 0) + 1; return result; }, {});
+const baselineCellGroups = new Map<string, Set<string>>();
+for (const row of rows) { const key = `${row.latCell}:${row.lonCell}:${row.altitudeBand}`; const aircraft = baselineCellGroups.get(key) ?? new Set<string>(); aircraft.add(row.aircraftHex); baselineCellGroups.set(key, aircraft); }
+const readyCellKeys = new Set([...baselineCellGroups].filter(([, aircraft]) => aircraft.size >= 3).map(([key]) => key));
+const trafficWeightedReadiness = rows.length ? rows.filter((row) => readyCellKeys.has(`${row.latCell}:${row.lonCell}:${row.altitudeBand}`)).length / rows.length : null;
 const report = {
   generatedAt: new Date().toISOString(),
   dataTimeSpan: rows.length ? { from: new Date(Math.min(...rows.map((row) => observedMs(row.observedAt)))).toISOString(), to: new Date(Math.max(...rows.map((row) => observedMs(row.observedAt)))).toISOString() } : null,
@@ -54,9 +60,15 @@ const report = {
   byAltitudeBand: rows.length ? groupCounts(rows, (row) => String(row.altitudeBand)) : null,
   aircraft: rows.length ? groupCounts(rows, (row) => row.aircraftHex) : null,
   spatialCells: rows.length ? new Set(rows.map((row) => `${row.latCell}:${row.lonCell}:${row.altitudeBand}`)).size : null,
-  baseline: { cellsTotal: current.cells.length, cellsWithSufficientBaseline: diagnostics.baselineCellsReady, cellsInsufficient: Math.max(0, current.cells.length - diagnostics.baselineCellsReady) },
+  baseline: { cellsTotal: current.cells.length, cellsWithSufficientBaseline: diagnostics.baselineCellsReady, cellsInsufficient: Math.max(0, current.cells.length - diagnostics.baselineCellsReady), rawCellReadiness: current.cells.length ? diagnostics.baselineCellsReady / current.cells.length : null, trafficWeightedReadiness },
+  baselineMaturity: diagnostics.baselineMaturity,
   currentAnomalyCandidates: diagnostics.anomalyCandidates,
   activeAnomalies: current.summary.activeAnomalies,
+  candidateAuditClassification: histogram(candidates.flatMap((candidate) => candidate.evidence.structured?.auditCategories ?? ["UNKNOWN"])),
+  confidenceHistogram: histogram(candidates.map((candidate) => candidate.confidence)),
+  severityHistogram: histogram(candidates.map((candidate) => candidate.severity)),
+  candidateDurationSeconds: candidates.map((candidate) => candidate.evidence.durationSeconds),
+  candidateReasonHistogram: histogram(candidates.flatMap((candidate) => candidate.evidence.reasons)),
   rejectionReasons: diagnostics.rejectionReasons,
   diagnostics,
   interpretation: "Detector output is a heuristic navigation-integrity anomaly candidate, not proof of GNSS interference or jamming.",

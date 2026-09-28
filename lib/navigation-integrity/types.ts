@@ -3,6 +3,36 @@ import type { AircraftDataOrigin, AircraftSource } from "@/lib/aircraft/types";
 export type NavigationIntegrityState = "NORMAL" | "REDUCED" | "DEGRADED" | "SEVERE" | "UNKNOWN";
 export type NavigationIntegrityConfidence = "LOW" | "MEDIUM" | "HIGH";
 export type NavigationIntegritySource = "LOCAL" | "NETWORK";
+export type NavigationIntegrityBaselineMaturity = "UNAVAILABLE" | "IMMATURE" | "PARTIAL" | "READY" | "STRONG";
+export type NavigationIntegrityAuditCategory = "LIKELY_VALID_SIGNAL" | "WEAK_EVIDENCE" | "BASELINE_IMMATURE" | "AIRCRAFT_SPECIFIC" | "SOURCE_ARTIFACT" | "CELL_EDGE_EFFECT" | "ALTITUDE_TRANSITION" | "STALE_DATA" | "UNKNOWN";
+
+export interface NavigationIntegrityEvidenceRule {
+  id: string;
+  passed: boolean;
+  strength: "NONE" | "WEAK" | "MODERATE" | "STRONG";
+  observed: number | string | boolean | null;
+  threshold: number | string | boolean | null;
+  explanation: string;
+}
+
+export interface NavigationIntegrityEvidence {
+  candidateId: string;
+  generatedAt: string;
+  cellIds: string[];
+  altitudeBands: number[];
+  affectedAircraftCount: number;
+  independentAircraftCount: number;
+  nearbyNormalAircraftCount: number;
+  current: { nicMedian: number | null; nacpMedian: number | null; nacvMedian: number | null; lowIntegrityShare: number | null };
+  baseline: { nicMedian: number | null; nacpMedian: number | null; nacvMedian: number | null; lowIntegrityShare: number | null; sampleCount: number; aircraftCount: number; maturity: NavigationIntegrityBaselineMaturity; firstObservedAt: string | null; lastObservedAt: string | null; timeBucketCount: number };
+  delta: { nic: number | null; nacp: number | null; nacv: number | null; lowIntegrityShare: number | null };
+  spatial: { affectedCells: number; coherentCells: number; adjacencyScore: number };
+  temporal: { durationSeconds: number; consecutiveQualifyingEvaluations: number; hysteresisState: "CANDIDATE" | "ACTIVE" };
+  source: { localAircraft: number; networkAircraft: number; overlapAircraft: number };
+  rules: NavigationIntegrityEvidenceRule[];
+  auditCategories: NavigationIntegrityAuditCategory[];
+  likelyExplanation: string;
+}
 
 export interface NavigationIntegrityFieldProvenance {
   origin: AircraftDataOrigin;
@@ -91,6 +121,7 @@ export interface NavigationIntegrityAnomaly {
     durationSeconds: number;
     affectedShare: number | null;
     reasons: string[];
+    structured: NavigationIntegrityEvidence;
   };
 }
 
@@ -109,6 +140,7 @@ export interface NavigationIntegrityDiagnostics {
   rejectionReasons: Record<string, number>;
   lastObservationAt: string | null;
   lastPersistedAt: string | null;
+  baselineMaturity: Record<NavigationIntegrityBaselineMaturity, number>;
 }
 
 export interface NavigationIntegrityCurrentResponse {

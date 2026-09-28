@@ -38,6 +38,19 @@ pěti výškových pásem: 0–10 000 ft, 10 000–20 000 ft, 20 000–30 000 ft
 30 000–40 000 ft a 40 000 ft nebo více. Sousední zasažené buňky tvoří jeden
 omezený region pouze ve stejném výškovém pásmu. Surová výška v pozorování zůstává.
 
+### Kalibrace V1.1 a vysvětlitelnost
+
+Každý kandidát nyní nese strojově čitelné důkazy: pravidla, aktuální a baseline
+mediány, podíl nízké integrity, rozdíly, nezávislá letadla, okolní normální
+letadla, zdroje, prostorovou a časovou koherenci a auditní kategorie. Stávající
+vzorec confidence se nemění: MEDIUM může vzniknout bez zralé baseline, což se
+výslovně označí jako `BASELINE_IMMATURE` a nepovažuje se za potvrzení příčiny.
+
+Zralost baseline používá počet nezávislých letadel, počet vzorků a pokrytí
+15minutových časových bucketů. `PARTIAL` začíná na 3 letadlech a 6 vzorcích,
+`READY` vyžaduje 5 letadel, 20 vzorků a 3 buckety a `STRONG` 8 letadel, 20
+vzorků a 6 bucketů. Samotný počet zpráv tedy nemůže baseline označit za silnou.
+
 ## Klasifikace a detektor
 
 Stav letadla je `NORMAL`, `REDUCED`, `DEGRADED`, `SEVERE` nebo `UNKNOWN`.
@@ -71,6 +84,8 @@ přímo zachytil receiver AirRadaru.
   události, nikdy neomezený proud surových ADS-B vzorků.
 - `GET /api/admin/navigation-integrity/diagnostics` vrací chráněné čítače,
   důvody odmítnutí, připravenost baseline a omezené paměťové indikátory.
+- `GET /api/admin/navigation-integrity/candidates?window=15m&limit=20` vrací
+  omezený chráněný přehled aktivních kandidátů a jejich strukturovaných důkazů.
 
 ## UI a omezení
 

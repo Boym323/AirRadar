@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cellKey, altitudeBand, connectedCellGroups } from "@/lib/navigation-integrity/grid";
+import { buildBaseline } from "@/lib/navigation-integrity/baseline";
 import { classifyNavigationIntegrity } from "@/lib/navigation-integrity/classification";
 import { detectNavigationIntegrityAnomalies } from "@/lib/navigation-integrity/detector";
 import type { NavigationIntegrityObservation } from "@/lib/navigation-integrity/types";
@@ -41,5 +42,29 @@ describe("navigation integrity", () => {
     expect(detectNavigationIntegrityAnomalies(adjacent)[0]?.affectedAircraftCount).toBe(8);
     const dispersed = Array.from({ length: 8 }, (_, index) => observation(`DIS${index}`, 49.2 + index * 0.6, 16.6, 3, 4));
     expect(detectNavigationIntegrityAnomalies(dispersed)).toHaveLength(0);
+  });
+
+  it("marks same-window baselines immature and exposes unchanged medians", () => {
+    const items = Array.from({ length: 3 }, (_, index) => observation(`BASE${index}`, 49.2, 16.6, 3, 4));
+    const baseline = [...buildBaseline(items).values()][0]!;
+    expect(baseline.aircraftCount).toBe(3);
+    expect(baseline.maturity).toBe("IMMATURE");
+    const candidate = detectNavigationIntegrityAnomalies(items)[0]!;
+    expect(candidate.evidence.structured.baseline.maturity).toBe("IMMATURE");
+    expect(candidate.evidence.structured.delta.nic).toBe(0);
+    expect(candidate.evidence.structured.rules.find((rule) => rule.id === "NACP_BASELINE_DROP")?.passed).toBe(false);
+    expect(candidate.evidence.structured.auditCategories).toContain("BASELINE_IMMATURE");
+  });
+
+  it("requires independent aircraft and time coverage for a strong baseline", () => {
+    const items = Array.from({ length: 24 }, (_, index) => {
+      const item = observation(`MATURE${index % 8}`, 49.2, 16.6, 8, 8);
+      const at = new Date(Date.parse(item.observedAt) + Math.floor(index / 4) * 15 * 60_000).toISOString();
+      return { ...item, observedAt: at, receivedAt: at };
+    });
+    const baseline = [...buildBaseline(items).values()][0]!;
+    expect(baseline.aircraftCount).toBe(8);
+    expect(baseline.timeBucketCount).toBe(6);
+    expect(baseline.maturity).toBe("STRONG");
   });
 });

@@ -31,7 +31,7 @@ const store: IntegrityStore = globalStore.__airRadarNavigationIntegrity ??= {
   observations: [], lastPersisted: new Map(), active: new Map(), candidateHits: new Map(), normalHits: new Map(), lastEvaluationAt: 0, writeTail: Promise.resolve(),
   diagnostics: {
     observationsCreated: 0, persisted: 0, deduplicated: 0, rejectedInvalidOrStale: 0, aircraftContributors: 0, cellsPopulated: 0, baselineCellsReady: 0,
-    anomalyCandidates: 0, anomaliesOpened: 0, anomaliesClosed: 0, confidence: { LOW: 0, MEDIUM: 0, HIGH: 0 }, rejectionReasons: {}, lastObservationAt: null, lastPersistedAt: null,
+    anomalyCandidates: 0, anomaliesOpened: 0, anomaliesClosed: 0, confidence: { LOW: 0, MEDIUM: 0, HIGH: 0 }, rejectionReasons: {}, lastObservationAt: null, lastPersistedAt: null, baselineMaturity: { UNAVAILABLE: 0, IMMATURE: 0, PARTIAL: 0, READY: 0, STRONG: 0 },
   }, lastCollectionAt: 0,
 };
 
@@ -146,6 +146,8 @@ function evaluate(now: Date): void {
   const cells = summariseCells(recent, baselines);
   store.diagnostics.cellsPopulated = cells.length;
   store.diagnostics.baselineCellsReady = [...baselines.values()].filter((item) => item.aircraftCount >= 3).length;
+  store.diagnostics.baselineMaturity = { UNAVAILABLE: 0, IMMATURE: 0, PARTIAL: 0, READY: 0, STRONG: 0 };
+  for (const item of baselines.values()) store.diagnostics.baselineMaturity[item.maturity] += 1;
   const candidates = detectNavigationIntegrityAnomalies(recent, now, baselines);
   store.diagnostics.anomalyCandidates += candidates.length;
   const candidateKeys = new Set<string>();
@@ -265,7 +267,7 @@ export class NavigationIntegrityService {
     }
   }
 
-  getDiagnostics(): NavigationIntegrityDiagnostics { return { ...store.diagnostics, confidence: { ...store.diagnostics.confidence }, rejectionReasons: { ...store.diagnostics.rejectionReasons } }; }
+  getDiagnostics(): NavigationIntegrityDiagnostics { return { ...store.diagnostics, confidence: { ...store.diagnostics.confidence }, rejectionReasons: { ...store.diagnostics.rejectionReasons }, baselineMaturity: { ...store.diagnostics.baselineMaturity } }; }
 }
 
 const globalService = globalThis as typeof globalThis & { __airRadarNavigationIntegrityService?: NavigationIntegrityService };
