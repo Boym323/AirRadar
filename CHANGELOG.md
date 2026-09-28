@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.190] - 2026-09-28
+
+Changes since v1.0.189.
+
+### Performance
+
+- Coalesce aircraft weather persistence (1a71180b)
+
+<details>
+<summary>Technical commits</summary>
+
+- perf: coalesce aircraft weather persistence (1a71180b)
+
+</details>
+
 ## [1.0.189] - 2026-09-28
 
 Changes since v1.0.188.
