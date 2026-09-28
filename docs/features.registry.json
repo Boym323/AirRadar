@@ -132,7 +132,7 @@
       "category": "weather",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Current and historical radar, METAR, wind, SIGMET and AUP/UUP map context.",
+      "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context and aircraft-observed weather.",
       "pages": [],
       "apis": [
         "/api/map-context/at",
@@ -148,7 +148,10 @@
         "/api/weather/radar/frame/:id",
         "/api/weather/radar/frames",
         "/api/weather/sigmet",
-        "/api/weather/wind"
+        "/api/weather/wind",
+        "/api/weather/aircraft/observations",
+        "/api/weather/aircraft/profile",
+        "/api/admin/weather/diagnostics"
       ],
       "changelogScopes": [
         "weather",
