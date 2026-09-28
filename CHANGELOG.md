@@ -2,6 +2,25 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.203] - 2026-09-28
+
+Changes since v1.0.202.
+
+**Features touched:** Airport Intelligence.
+
+### Maintenance
+
+- Sync generated repository metadata (e5908d1)
+- Finalize Visual System V3 airport operations polish (b5adb80)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (e5908d1)
+- Merge pull request #206 from Boym323/automation/repository-metadata (62aba45)
+- style(ui): finalize Visual System V3 airport operations polish (b5adb80)
+
+</details>
 ## [1.0.202] - 2026-09-28
 
 Changes since v1.0.201.
