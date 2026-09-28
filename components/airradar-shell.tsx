@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { GlobalSearch } from "@/components/global-search";
@@ -90,6 +90,7 @@ export function RadarNavRail() {
 
 export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { heading?: boolean; meta?: ReactNode; radarPage?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     function closeOpenUi(event: KeyboardEvent): void {
@@ -107,12 +108,21 @@ export function AirRadarTopbar({ heading = false, meta, radarPage = false }: { h
       if (popupCloseButton) {
         popupCloseButton.click();
         event.preventDefault();
+        return;
+      }
+
+      // Escape acts as a consistent "close page" shortcut when no local
+      // popup or disclosure is open. Keep the live radar as the fallback.
+      if (pathname !== "/") {
+        event.preventDefault();
+        if (window.history.length > 1) router.back();
+        else router.push("/");
       }
     }
 
     document.addEventListener("keydown", closeOpenUi);
     return () => document.removeEventListener("keydown", closeOpenUi);
-  }, []);
+  }, [pathname, router]);
 
   return (
     <header className={`topbar ${radarPage ? "topbar-radar" : ""}`}>

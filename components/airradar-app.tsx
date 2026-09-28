@@ -841,6 +841,18 @@ export function AirRadarApp() {
     setMobileCompact(true);
   }, []);
 
+  useEffect(() => {
+    function closeRadarUi(event: KeyboardEvent): void {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (!trafficOpen && selectedHex === null && selectedOgnId === null && !filtersOpen) return;
+      event.preventDefault();
+      closeRadarDrawer();
+    }
+
+    document.addEventListener("keydown", closeRadarUi);
+    return () => document.removeEventListener("keydown", closeRadarUi);
+  }, [closeRadarDrawer, filtersOpen, selectedHex, selectedOgnId, trafficOpen]);
+
   const openTrafficDrawer = useCallback((shortcut?: "search" | "filters") => {
     const actionGeneration = ++drawerActionGenerationRef.current;
     setSelectedHex(null);
