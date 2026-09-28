@@ -293,11 +293,27 @@ export function getAircraftWeatherDiagnostics(): AircraftWeatherDiagnostics { re
 export function resetAircraftWeatherDiagnostics(): void { Object.assign(diagnostics, emptyDiagnostics()); sampler.clear(); memoryRows.length = 0; }
 
 export interface WeatherQuery { from: Date; to: Date; lat?: number; lon?: number; radiusKm?: number; minAltitude?: number; maxAltitude?: number; source?: AircraftWeatherSource; limit?: number; offset?: number; }
-interface WeatherRow extends Omit<AircraftWeatherObservation, "observedAt" | "receivedAt" | "provenance"> { id: number; observedAt: Date | Temporal.Instant; receivedAt: Date | Temporal.Instant | null; provenanceJson: string; }
+interface WeatherRow extends Omit<AircraftWeatherObservation, "observedAt" | "receivedAt" | "provenance" | "staticAirTemperatureC" | "totalAirTemperatureC"> {
+  staticAirTempC: number | null;
+  totalAirTempC: number | null;
+  observedAt: Date | Temporal.Instant;
+  receivedAt: Date | Temporal.Instant | null;
+  provenanceJson: string;
+}
 type Field = { gte(value: unknown): unknown; gt(value: unknown): unknown; lt(value: unknown): unknown; lte(value: unknown): unknown; asc(): unknown; desc(): unknown };
 type Collection<T> = { where(predicate: (row: Record<string, Field>) => unknown): Collection<T>; orderBy(value: unknown): Collection<T>; limit(value: number): Collection<T>; offset?(value: number): Collection<T>; all(): Promise<T[]> };
 function rowDate(value: Date | Temporal.Instant): Date { return dateOf(value); }
-function rowToObservation(row: WeatherRow): AircraftWeatherObservation { return { ...row, observedAt: rowDate(row.observedAt), receivedAt: row.receivedAt ? rowDate(row.receivedAt) : null, provenance: JSON.parse(row.provenanceJson || "{}") as Record<string, AircraftFieldProvenance> }; }
+function rowToObservation(row: WeatherRow): AircraftWeatherObservation {
+  const { staticAirTempC, totalAirTempC, provenanceJson, ...fields } = row;
+  return {
+    ...fields,
+    observedAt: rowDate(row.observedAt),
+    receivedAt: row.receivedAt ? rowDate(row.receivedAt) : null,
+    staticAirTemperatureC: staticAirTempC,
+    totalAirTemperatureC: totalAirTempC,
+    provenance: JSON.parse(provenanceJson || "{}") as Record<string, AircraftFieldProvenance>,
+  };
+}
 
 export async function queryAircraftWeatherObservations(query: WeatherQuery): Promise<{ observations: AircraftWeatherObservation[]; totalApproximate: number; source: "postgres" | "memory" }> {
   const limit = Math.min(AIRCRAFT_WEATHER_LIMITS.maxRows, Math.max(1, Math.trunc(query.limit ?? 500)));
