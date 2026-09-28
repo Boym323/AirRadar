@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.187] - 2026-09-28
+
+Changes since v1.0.186.
+
+### Fixed
+
+- Preserve temperatures in weather API reads (f4204c56)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: preserve temperatures in weather API reads (f4204c56)
+
+</details>
+
 ## [1.0.186] - 2026-09-28
 
 Changes since v1.0.185.
