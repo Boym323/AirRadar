@@ -116,6 +116,7 @@ describe("aircraft weather observations", () => {
     expect(decideWeatherPersistence({ ...previous, observedAt: new Date(at.getTime() + AIRCRAFT_WEATHER_PERSISTENCE_POLICY.readsb.heartbeatMs) }, accumulator)).toBe("HEARTBEAT");
     expect(decideWeatherPersistence({ ...previous, altitudeFt: 11_000, observedAt: new Date(at.getTime() + 5_000) }, accumulator)).toBe("ALTITUDE_BIN_CHANGE");
     expect(decideWeatherPersistence({ ...previous, staticAirTemperatureC: -42, observedAt: new Date(at.getTime() + 5_000) }, accumulator)).toBe("WEATHER_CHANGE");
+    expect(decideWeatherPersistence({ ...previous, quality: "HIGH", observedAt: new Date(at.getTime() + 5_000) }, accumulator)).toBe("QUALITY_CHANGE");
   });
 
   it("keeps unique BDS 4,4 observations outside the exact duplicate window", () => {

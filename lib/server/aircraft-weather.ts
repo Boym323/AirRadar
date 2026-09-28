@@ -381,7 +381,11 @@ export function decideWeatherPersistence(observation: AircraftWeatherObservation
     && Math.abs(elapsed) <= AIRCRAFT_WEATHER_PERSISTENCE_POLICY.bds44.duplicateWindowMs) return null;
   if (observation.source === "BDS_4_4") return "BDS44_UNIQUE";
   if (previous.source !== observation.source || previous.provider !== observation.provider) return "SOURCE_CHANGE";
-  if (previous.quality !== observation.quality) return "QUALITY_CHANGE";
+  // The first accepted sample is provisionally HIGH because QC has no
+  // predecessor. The next stable sample is normally GOOD; that bookkeeping
+  // transition is not a meaningful quality change and must not create a
+  // second row immediately after every restart.
+  if (previous.quality !== observation.quality && !(previous.quality === "HIGH" && observation.quality === "GOOD")) return "QUALITY_CHANGE";
   if (altitudeBin(previous) !== altitudeBin(observation)) return "ALTITUDE_BIN_CHANGE";
   if (meaningfulWeatherChange(previous, observation)) return "WEATHER_CHANGE";
   if (elapsed >= policy.heartbeatMs) return "HEARTBEAT";
