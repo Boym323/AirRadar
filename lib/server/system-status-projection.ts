@@ -1,11 +1,12 @@
 import type { SystemStatusResponse } from "@/lib/server/system-status-contract";
 
 export type SystemStatusDetailLevel = "public" | "admin";
-export type SystemStatusApiResponse = SystemStatusResponse & { detailLevel: SystemStatusDetailLevel };
+export type SystemStatusApiResponse = Omit<SystemStatusResponse, "flightPositionPersistenceShadow"> & { detailLevel: SystemStatusDetailLevel };
 
 export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatusApiResponse {
+  const { flightPositionPersistenceShadow: _flightPositionPersistenceShadow, ...publicStatus } = status;
   return {
-    ...status,
+    ...publicStatus,
     detailLevel: "public",
     application: {
       ...status.application,
@@ -13,7 +14,6 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
       nextVersion: null,
     },
     localAdsb: undefined,
-    flightPositionPersistenceShadow: undefined,
     database: {
       ...status.database,
       history: {
