@@ -72,6 +72,7 @@
     "audit:extreme-altitudes": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-extreme-altitudes.ts",
     "audit:airport-operations": "JITI_TSCONFIG_PATHS=true jiti scripts/airport-operations-quality.ts",
     "audit:flight-position-persistence": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-flight-position-persistence.ts",
+    "audit:db-write-amplification": "node scripts/audit-db-write-amplification.mjs",
     "repair:historical-altitude": "JITI_TSCONFIG_PATHS=true jiti scripts/repair-historical-altitude.ts",
     "changelog:check": "node scripts/changelog.mjs check",
     "metrics:code": "node scripts/code-metrics.mjs",
