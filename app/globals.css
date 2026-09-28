@@ -3941,7 +3941,8 @@ button, input, select, textarea { color-scheme: dark; }
 /* Aircraft Weather V1 — the panel is deliberately scoped to the radar map so
    it follows the existing drawer/overlay language and never creates a second
    application shell. */
-.aircraft-weather-panel { position: absolute; z-index: 12; top: 12px; right: 12px; display: grid; gap: 12px; width: min(560px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; padding: 16px; border: 1px solid color-mix(in srgb, var(--weather) 42%, var(--border)); border-radius: 12px; background: color-mix(in srgb, var(--surface-1) 94%, #06121e); box-shadow: 0 18px 55px rgba(0,0,0,.42); color: var(--text-primary); }
+.map-overlay:has(.aircraft-weather-panel) { z-index: var(--z-modal); }
+.aircraft-weather-panel { position: absolute; z-index: 1; pointer-events: auto; top: 12px; right: 12px; display: grid; gap: 12px; width: min(560px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; padding: 16px; border: 1px solid color-mix(in srgb, var(--weather) 42%, var(--border)); border-radius: 12px; background: color-mix(in srgb, var(--surface-1) 94%, #06121e); box-shadow: 0 18px 55px rgba(0,0,0,.42); color: var(--text-primary); }
 .aircraft-weather-header, .aircraft-weather-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .aircraft-weather-header h2, .aircraft-weather-section-heading h3 { margin: 2px 0 0; color: var(--text-primary); }
 .aircraft-weather-header h2 { font-size: 19px; letter-spacing: -.03em; }
