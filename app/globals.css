@@ -1330,6 +1330,50 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .system-fields { padding-left: 15px; padding-right: 15px; gap: 12px; }
 }
 
+/* V3 system overview: health is the first scan, diagnostics remain below. */
+.system-health-summary {
+  grid-column: 1 / -1;
+  padding: var(--space-5);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-panel);
+  background: linear-gradient(135deg, var(--surface-operations), var(--surface-card));
+}
+.system-health-summary-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.system-kicker { color: var(--accent-primary); font-family: var(--font-geist-mono), monospace; font-size: var(--font-size-2xs); font-weight: 750; letter-spacing: .12em; }
+.system-health-summary h2 { margin: var(--space-1) 0 0; color: var(--text-primary); font-size: var(--font-size-xl); letter-spacing: -.035em; }
+.system-health-state { margin: var(--space-2) 0 0; color: var(--text-secondary); font-family: var(--font-geist-mono), monospace; font-size: var(--font-size-sm); text-transform: uppercase; }
+.system-health-services { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-5); }
+.system-health-service { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px var(--space-2); min-width: 0; padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-card); }
+.system-health-service > span:not(.system-health-dot) { min-width: 0; overflow-wrap: anywhere; color: var(--text-secondary); font-size: var(--font-size-xs); }
+.system-health-service strong { grid-column: 2; color: var(--text-primary); font-family: var(--font-geist-mono), monospace; font-size: var(--font-size-2xs); letter-spacing: .05em; }
+.system-health-dot { width: 7px; height: 7px; margin-top: 4px; border-radius: 50%; background: var(--text-muted); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-muted) 14%, transparent); }
+.system-health-dot.success { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 14%, transparent); }
+.system-health-dot.stale, .system-health-dot.warning { background: var(--warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 14%, transparent); }
+.system-health-dot.danger { background: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 14%, transparent); }
+.system-page .system-card { content-visibility: auto; contain-intrinsic-size: 160px; }
+.system-page .system-field dd { line-height: 1.35; }
+
+@media (max-width: 820px) {
+  .system-health-summary { padding: var(--space-4); }
+  .system-health-services { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .system-health-service:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 430px) {
+  .system-health-summary-heading { align-items: stretch; flex-direction: column; gap: var(--space-3); }
+  .system-health-summary-heading .system-status-badge { align-self: flex-start; }
+  .system-health-services { grid-template-columns: 1fr; }
+  .system-health-service:last-child { grid-column: auto; }
+}
+
+/* ATC V3: identity is read before frequency; violet remains local to ATC. */
+.atc-frequency-main { gap: 3px; }
+.atc-frequency-main span { order: 1; color: var(--text-secondary); font-size: var(--font-size-2xs); font-weight: 650; letter-spacing: .03em; text-transform: uppercase; }
+.atc-frequency-main strong { order: 2; color: var(--atc); font-size: var(--font-size-lg); line-height: 1.1; }
+.atc-frequency-main strong small, .atc-detail-heading strong small { color: var(--text-muted); font-family: inherit; font-size: var(--font-size-2xs); font-weight: 500; letter-spacing: .04em; }
+.atc-frequency-entry { min-height: 58px; border-color: color-mix(in srgb, var(--atc) 22%, var(--border-subtle)); background: var(--surface-card); }
+.atc-frequency-entry:hover, .atc-frequency-entry.selected { border-color: color-mix(in srgb, var(--atc) 70%, transparent); background: color-mix(in srgb, var(--atc) 10%, var(--surface-card)); }
+.atc-detail-heading strong { display: block; margin-top: 4px; color: var(--atc); font-size: var(--font-size-xl); }
+
 /* --------------------------------------------------------------------------
    AirRadar visual system
    -------------------------------------------------------------------------- */
@@ -2726,7 +2770,7 @@ button, input, select, textarea { color-scheme: dark; }
   line-height: 1.4;
 }
 
-.ui-button {
+  .ui-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3107,6 +3151,46 @@ button, input, select, textarea { color-scheme: dark; }
   color: var(--accent);
   font-size: var(--font-size-2xl);
 }
+
+/* Statistics V3: keep the first viewport as one operational summary rather
+ * than five competing cards. Supporting rankings use the same quiet bar
+ * language as the radar's compact data surfaces. */
+.statistics-date-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.statistics-page-range { margin: 0; }
+.statistics-overview { gap: 0; margin-top: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.statistics-overview .statistics-stat-card { min-height: 74px; padding: var(--space-3) var(--space-4); border: 0; border-right: 1px solid var(--border); border-radius: 0; background: transparent; }
+.statistics-overview .statistics-stat-card:last-child { border-right: 0; }
+.statistics-overview .statistics-stat-card:first-child { border-color: var(--border); border-left: 2px solid var(--accent); background: var(--surface-accent-soft); }
+.statistics-overview .statistics-stat-card:first-child .statistics-stat-value { font-size: var(--font-size-xl); }
+.statistics-card h2 { font-size: var(--font-size-lg); }
+.statistics-card-header { padding-top: var(--space-4); }
+.statistics-ranking li { display: block; padding: var(--space-2) 0; }
+.statistics-ranking-label { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.statistics-ranking-label span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.statistics-ranking-label strong { flex: 0 0 auto; }
+.statistics-ranking-track { display: block; height: 3px; margin-top: 6px; overflow: hidden; border-radius: var(--radius-pill); background: var(--surface-overlay); }
+.statistics-ranking-track > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); opacity: .72; }
+.statistics-ranking li:first-child .statistics-ranking-track > span { opacity: 1; }
+.trend-grid line { stroke-dasharray: 2 5; }
+.trend-card .statistics-card-header span { max-width: 22ch; }
+.statistics-empty-banner { border-radius: var(--radius-md); }
+
+@media (max-width: 900px) {
+  .statistics-overview .statistics-stat-card:nth-child(3) { border-right: 0; }
+  .statistics-overview .statistics-stat-card:nth-child(n + 3) { border-top: 1px solid var(--border); }
+}
+
+@media (max-width: 640px) {
+  .statistics-date-actions { width: 100%; justify-content: flex-start; }
+  .statistics-page-range { flex: 1 1 100%; width: 100%; }
+  .statistics-page-range button { flex: 1; min-height: 44px; }
+  .statistics-date-actions .statistics-export-button { width: 100%; min-height: 44px; }
+  .statistics-overview { margin-top: var(--space-2); }
+  .statistics-overview .statistics-stat-card { min-height: 70px; padding: var(--space-3); border-right: 1px solid var(--border); }
+  .statistics-overview .statistics-stat-card:nth-child(even) { border-right: 0; }
+  .statistics-overview .statistics-stat-card:nth-child(n + 3) { border-top: 1px solid var(--border); }
+  .statistics-overview .statistics-stat-card:first-child { border-left-width: 2px; }
+}
 .time-machine-context {
   border-color: var(--border-selected);
   background: var(--surface-selected-soft);
@@ -3120,6 +3204,74 @@ button, input, select, textarea { color-scheme: dark; }
 .time-machine-picker input {
   min-height: var(--control-height);
   border-radius: var(--radius-md);
+}
+
+/* Time Machine V3: one map-first historical control surface. */
+.time-machine-page { padding-top: 24px; }
+.time-machine-kicker { color: var(--weather); }
+.time-machine-card { background: var(--surface-operations); }
+.time-machine-context { min-height: 52px; align-items: center; background: var(--surface-glass); border-color: var(--border-default); }
+.time-machine-mode { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.time-machine-mode strong { color: var(--text-primary); }
+.time-machine-mode-dot { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--weather); box-shadow: 0 0 0 4px color-mix(in srgb, var(--weather) 13%, transparent); }
+.time-machine-mode-note { color: var(--weather); font-size: var(--font-size-xs); font-weight: 800; letter-spacing: var(--letter-spacing-kicker); }
+.time-machine-map-wrap { position: relative; }
+.time-machine-map-status { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-secondary); background: color-mix(in srgb, var(--background) 48%, transparent); pointer-events: none; }
+.time-machine-controls { padding: 18px 20px 20px; background: var(--surface-card-strong); }
+.time-machine-control-head { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto; align-items: center; gap: 20px; }
+.time-machine-transport { display: flex; gap: 7px; }
+.time-machine-transport button { min-width: var(--control-height); min-height: var(--control-height); }
+.time-machine-current { display: grid; gap: 3px; min-width: 0; }
+.time-machine-current span, .time-machine-speed > span { color: var(--text-muted); font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: var(--letter-spacing-kicker); }
+.time-machine-current strong { overflow: hidden; color: var(--text-primary); font-size: var(--font-size-lg); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.time-machine-speed { display: flex; align-items: center; gap: 9px; }
+.time-machine-speed > div { display: flex; padding: 3px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-interactive); }
+.time-machine-speed button { min-width: 38px; min-height: 30px; padding: 0 8px; border: 0; border-radius: var(--radius-sm); color: var(--text-secondary); background: transparent; cursor: pointer; font-weight: 700; }
+.time-machine-speed button:hover, .time-machine-speed button:focus-visible { color: var(--text-primary); background: var(--surface-hover); }
+.time-machine-speed button.active { color: var(--text-primary); background: color-mix(in srgb, var(--weather) 18%, var(--surface-interactive)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--weather) 44%, transparent); }
+.time-machine-timeline { margin-top: 20px; padding: 0 8px; }
+.time-machine-track { position: absolute; top: 17px; right: 8px; left: 8px; height: 5px; overflow: hidden; border-radius: var(--radius-pill); background: var(--surface-hover); pointer-events: none; }
+.time-machine-track-progress { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--weather); opacity: .82; }
+.time-machine-slider { position: relative; z-index: 1; height: 36px; margin: 0; accent-color: var(--weather); }
+.time-machine-slider:focus-visible { outline: none; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--weather) 70%, transparent)); }
+.time-machine-event-markers { inset: 0 8px; }
+.time-machine-event-markers button { top: 10px; width: 28px; height: 28px; color: var(--selected); font-size: 12px; }
+.time-machine-range { margin-top: 3px; padding: 0 2px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.time-machine-picker { margin-top: 15px; }
+.time-machine-picker input { background: var(--surface-interactive); }
+.time-machine-context-panel { margin-top: 16px; border-color: color-mix(in srgb, var(--weather) 28%, transparent); }
+.time-machine-context-panel strong { letter-spacing: var(--letter-spacing-kicker); }
+.time-machine-alert { border-color: var(--border-danger); color: var(--danger); background: var(--surface-danger-soft); }
+.time-machine-lower { margin-top: 16px; }
+.time-machine-aircraft-panel, .time-machine-events { background: var(--surface-card); }
+.time-machine-selected a { color: var(--accent); }
+.time-machine-events button:hover, .time-machine-events button:focus-visible { background: var(--surface-accent-soft); }
+
+@media (max-width: 820px) {
+  .time-machine-control-head { grid-template-columns: 1fr auto; gap: 14px; }
+  .time-machine-current { order: -1; grid-column: 1 / -1; }
+  .time-machine-speed { justify-content: flex-end; }
+}
+
+@media (max-width: 520px) {
+  .time-machine-page { padding: 16px 10px 28px; }
+  .time-machine-header h1 { font-size: var(--font-size-2xl); }
+  .time-machine-header p { max-width: 34ch; }
+  .time-machine-map { min-height: 52svh; height: 52svh; }
+  .time-machine-context { align-items: flex-start; flex-direction: column; gap: 8px; padding: 12px 14px; }
+  .time-machine-control-head { display: flex; flex-wrap: wrap; }
+  .time-machine-current { flex: 1 1 100%; }
+  .time-machine-current strong { font-size: var(--font-size-base); }
+  .time-machine-transport { flex: 1; }
+  .time-machine-transport button { min-height: var(--control-height-touch); }
+  .time-machine-speed { flex: 1 1 100%; justify-content: space-between; }
+  .time-machine-speed > div { flex: 1; }
+  .time-machine-speed button { flex: 1; min-height: 34px; }
+  .time-machine-controls { padding: 15px 13px 16px; }
+  .time-machine-timeline { margin-top: 15px; padding: 0 4px; }
+  .time-machine-track { right: 4px; left: 4px; }
+  .time-machine-picker { gap: 9px; }
+  .time-machine-picker input { width: 100%; }
 }
 .system-toolbar-status {
   min-height: var(--control-height);
@@ -3733,4 +3885,55 @@ button, input, select, textarea { color-scheme: dark; }
   .map-control-label {
     display: none;
   }
+}
+
+/* Airports and Flights V3 browser surfaces. Kept page-scoped so the shared shell stays stable. */
+.browse-page { min-height: 100svh; width: min(100%, var(--page-width-wide)); margin: 0 auto; padding: 30px 24px 48px; }
+.browse-page-header { display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: end; margin-bottom: 20px; }
+.browse-page-header h1 { margin: 5px 0 0; color: var(--text-primary); font-size: clamp(28px, 4vw, 42px); letter-spacing: -.05em; }
+.browse-page-header p { margin: 8px 0 0; color: var(--text-muted); font-size: var(--font-size-sm); }
+.browse-header-meta { display: flex; align-items: center; gap: 16px; color: var(--text-secondary); font-size: var(--font-size-xs); }
+.browse-controls { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+.browse-search { flex: 1; min-width: 0; }
+.browse-search input { width: 100%; min-height: 42px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text-primary); font: inherit; }
+.browse-search input:focus-visible, .browse-segmented button:focus-visible, .browse-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.browse-segmented { display: flex; padding: 3px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); }
+.browse-segmented button { min-height: 34px; padding: 0 12px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); font: inherit; cursor: pointer; }
+.browse-segmented button.active { background: var(--selected); color: var(--text-primary); }
+.browse-panel { overflow: hidden; }
+.browse-list-heading, .browse-row { display: grid; grid-template-columns: minmax(190px, .8fr) minmax(0, 1.6fr) 24px; gap: 18px; align-items: center; }
+.browse-list-heading { padding: 11px 18px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: var(--font-size-2xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.browse-list-heading span:nth-child(2) { grid-column: 2; }
+.browse-row { min-height: 68px; padding: 12px 18px; border-bottom: 1px solid var(--border-subtle); color: inherit; text-decoration: none; transition: background var(--motion-fast) ease; }
+.browse-row:last-child { border-bottom: 0; }
+.browse-row:hover { background: var(--surface-3); }
+.browse-primary-code, .browse-secondary { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.browse-primary-code { flex-direction: row; align-items: baseline; gap: 10px; }
+.browse-primary-code strong, .browse-mono { color: var(--text-primary); font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.browse-primary-code small, .browse-secondary small { overflow: hidden; color: var(--text-muted); font-size: var(--font-size-xs); text-overflow: ellipsis; white-space: nowrap; }
+.browse-secondary strong { overflow: hidden; color: var(--text-primary); font-size: var(--font-size-sm); text-overflow: ellipsis; white-space: nowrap; }
+.browse-row-arrow { color: var(--accent); font-size: 18px; }
+.browse-muted { color: var(--text-muted); font-weight: 400; }
+.flight-browse-heading, .flight-browse-row { grid-template-columns: minmax(190px, 1.1fr) minmax(190px, 1fr) minmax(145px, .65fr); }
+.flight-browse-heading span:nth-child(2), .flight-browse-heading span:nth-child(3) { grid-column: auto; }
+.browse-time { font-variant-numeric: tabular-nums; }
+.browse-state { margin: 22px; min-height: 150px; }
+
+@media (max-width: 680px) {
+  .browse-page { padding: 20px 12px 36px; }
+  .browse-page-header { display: block; }
+  .browse-header-meta { justify-content: space-between; margin-top: 12px; }
+  .browse-controls { display: grid; grid-template-columns: 1fr; }
+  .browse-segmented { justify-content: stretch; }
+  .browse-segmented button { flex: 1; }
+  .browse-list-heading { display: none; }
+  .browse-row, .flight-browse-row { grid-template-columns: minmax(0, 1fr) 18px; gap: 12px; min-height: 74px; padding: 13px 14px; }
+  .browse-row .browse-secondary { grid-column: 1; }
+  .airport-browse-row .browse-primary-code { grid-row: 1; }
+  .airport-browse-row .browse-secondary { grid-row: 2; }
+  .flight-browse-row .browse-secondary:nth-child(2), .flight-browse-row .browse-secondary:nth-child(3) { grid-column: 1; }
+  .flight-browse-row .browse-secondary:nth-child(2) { grid-row: 2; }
+  .flight-browse-row .browse-secondary:nth-child(3) { grid-row: 3; }
+  .flight-browse-row .browse-row-arrow { grid-column: 2; grid-row: 1 / span 3; }
+  .browse-row-arrow { grid-column: 2; grid-row: 1 / span 2; }
 }

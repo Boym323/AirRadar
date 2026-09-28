@@ -198,10 +198,14 @@ function PeriodComparison({ comparison }: { comparison: ReceiverStatisticsCompar
 }
 
 function Ranking({ title, items }: { title: string; items: Array<{ name: string; count: number }> }) {
+  const maximum = Math.max(...items.map((item) => item.count), 1);
   return (
     <Card className="statistics-card">
       <h2>{title}</h2>
-      {items.length ? <ol className="statistics-ranking">{items.map((item) => <li key={item.name}><span>{item.name}</span><strong>{formatNumber(item.count)}</strong></li>)}</ol> : <p className="statistics-empty">{t.statistics.insufficientData}</p>}
+      {items.length ? <ol className="statistics-ranking">{items.map((item) => <li key={item.name}>
+        <div className="statistics-ranking-label"><span title={item.name}>{item.name}</span><strong>{formatNumber(item.count)}</strong></div>
+        <span className="statistics-ranking-track" aria-hidden="true"><span style={{ width: `${Math.max(6, (item.count / maximum) * 100)}%` }} /></span>
+      </li>)}</ol> : <p className="statistics-empty">{t.statistics.insufficientData}</p>}
     </Card>
   );
 }
@@ -483,7 +487,10 @@ export default function StatisticsPage() {
               ? <>{t.statistics.periodLabel(rangeData.period.days)} · {rangeData.period.from} → {rangeData.period.to} · {data.timezone}</>
               : <>{t.statistics.today} · {data.date} · {data.timezone}</>}
           </div>
-          <Button variant="primary" size="compact" className="primary-button statistics-export-button" onClick={exportCsv} disabled={!data}>{t.statistics.exportCsv}</Button>
+          <div className="statistics-date-actions">
+            <RangeSelector value={range} onChange={setRange} className="statistics-range-tabs statistics-page-range" />
+            <Button variant="primary" size="compact" className="primary-button statistics-export-button" onClick={exportCsv} disabled={!data}>{t.statistics.exportCsv}</Button>
+          </div>
         </div>
         <section className="statistics-overview">
           <SummaryCard label={t.statistics.currentAircraft} value={formatNumber(data.live.aircraftCount)} />
@@ -504,12 +511,6 @@ export default function StatisticsPage() {
               <h2>{t.statistics.coverage}</h2>
               <span>{rangeData ? t.statistics.periodCoverageDescription : t.statistics.coverageDescription}</span>
             </div>
-            <RangeSelector
-              value={range}
-              onChange={setRange}
-              className="statistics-range-tabs coverage-range-tabs"
-              ariaLabel={t.statistics.coverageRangeSelector}
-            />
           </div>
           <CoverageChart buckets={data.coverage} />
           <CoverageAnalysis

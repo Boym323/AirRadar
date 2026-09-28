@@ -59,6 +59,33 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return <div className="system-field"><dt>{label}</dt><dd>{value}</dd></div>;
 }
 
+function HealthSummary({ data, dictionary, streamConnected }: { data: SystemStatusApiResponse; dictionary: LocaleDictionary; streamConnected: boolean }) {
+  const services = [
+    { label: dictionary.system.receiver, status: data.receiver.status },
+    { label: dictionary.system.database, status: data.database.status },
+    { label: dictionary.system.sse, status: streamConnected ? "ok" : "degraded" as SystemStatus },
+    { label: dictionary.system.weather, status: data.weather.status },
+    { label: dictionary.system.windAloft, status: data.mapLayers.wind.diagnostic.operationalState },
+  ] as const;
+  return <section className="system-health-summary" aria-labelledby="system-health-heading">
+    <div className="system-health-summary-heading">
+      <div>
+        <span className="system-kicker">{dictionary.system.systemKicker}</span>
+        <h2 id="system-health-heading">{dictionary.system.healthSummary}</h2>
+      </div>
+      <StatusBadge status={data.status} dictionary={dictionary} />
+    </div>
+    <p className="system-health-state">{formatStatus(data.status, dictionary)}</p>
+    <div className="system-health-services">
+      {services.map((service) => <div className="system-health-service" key={service.label}>
+        <span className={`system-health-dot ${statusBadgeVariant(service.status)}`} aria-hidden="true" />
+        <span>{service.label}</span>
+        <strong>{formatStatus(service.status, dictionary)}</strong>
+      </div>)}
+    </div>
+  </section>;
+}
+
 function Card({
   title,
   status,
@@ -167,6 +194,7 @@ export function SystemStatusPage() {
     {error && <p className="statistics-error" role="alert">{dictionary.system.requestFailed}</p>}
 
     {data && <div className="system-grid">
+      <HealthSummary data={data} dictionary={dictionary} streamConnected={streamConnected} />
       <Card title={dictionary.system.application} status={data.application.status} dictionary={dictionary}>
         <Field label={dictionary.system.applicationName} value={data.application.name} />
         <Field label={dictionary.system.version} value={data.application.version ?? dictionary.system.notAvailable} />
