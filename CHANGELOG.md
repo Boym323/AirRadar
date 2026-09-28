@@ -2,6 +2,23 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.205] - 2026-09-28
+
+Changes since v1.0.204.
+
+### Maintenance
+
+- Sync generated repository metadata (9d0a5e8)
+- Ignore local runtime state (dcb018d)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (9d0a5e8)
+- Merge pull request #208 from Boym323/automation/repository-metadata (6879440)
+- chore(repo): ignore local runtime state (dcb018d)
+
+</details>
 ## [1.0.204] - 2026-09-28
 
 Changes since v1.0.203.
