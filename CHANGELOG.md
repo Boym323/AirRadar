@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.185] - 2026-09-28
+
+Changes since v1.0.184.
+
+### Fixed
+
+- Require aircraft weather profile coordinates (14f9bff4)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: require aircraft weather profile coordinates (14f9bff4)
+
+</details>
+
 ## [1.0.184] - 2026-09-28
 
 Changes since v1.0.183.
