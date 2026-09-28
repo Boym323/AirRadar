@@ -2,6 +2,21 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.186] - 2026-09-28
+
+Changes since v1.0.185.
+
+### Fixed
+
+- Query persisted aircraft weather rows (953981ad)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: query persisted aircraft weather rows (953981ad)
+
+</details>
+
 ## [1.0.185] - 2026-09-28
 
 Changes since v1.0.184.
