@@ -29,6 +29,33 @@ tvrzení, že AirRadar oficiální AMDAR data přijímá nebo provozuje.
 
 ## Zdroje a provenience
 
+## Integrace V1.1
+
+Poslední přijaté pozorování počasí z letadla je sekundární obohacení v záložce
+Situace v draweru letadla na radaru. Načítá se lazy pomocí bounded dotazu
+aircraftHex=<hex>&limit=1, při změně vybraného letadla lze požadavek zrušit a
+primární detail na něj nečeká. Zobrazují se pouze skutečně vrácená pole.
+Pozorovaný vítr je výslovně oddělený od modelového větru ICON-EU; v1.1 je
+neporovnáváme.
+
+System status zobrazuje traffic-dependent souhrn Aircraft Weather. NO DATA
+znamená, že momentálně nejsou dostupná přijatá pozorování, a nesnižuje stav
+AirRadaru. Chyby persistence znamenají DEGRADED. Souhrn obsahuje pouze bounded
+runtime čítače, nikoli raw rámce nebo payloady.
+
+npm run audit:aircraft-weather zapisuje
+artifacts/aircraft-weather-quality.json. Audit čte nejvýše 20 000 přijatých
+uložených řádků z posledních sedmi dnů a uvádí pokrytí zdrojů/letadel,
+dostupnost polí, výškové a kvalitativní rozložení, časová okna, BDS čítače a
+pravděpodobné mezery. Jde o omezený vzorek, nikoli odhad globální dostupnosti.
+
+Live Radar a Time Machine používají stejný tmavý vektorový podklad OpenFreeMap
+a odstín AirRadar. Overlaye Time Machine se inicializují na style.load, takže
+historická letadla, stopa, METAR, vítr, radar a AUP/UUP nezávisí na dokončení
+vzdálených dlaždic podkladu. Historické přehrávání Aircraft Weather zůstává
+mimo rozsah; budoucí vrstva může využít stejnou hranici pro inicializaci
+kontextových vrstev bez vazby na live panel.
+
 Každé meteorologické pole má vlastní provenienci. `BDS_4_4` znamená pole
 dekódované z jednoznačné pasivní inference Comm-B BDS 4,4 s platným FOM/zdrojem.
 Hodnoty z `aircraft.json` zůstávají `READSB_JSON`; nepřejmenovávají se na BDS

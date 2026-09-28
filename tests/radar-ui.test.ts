@@ -13,6 +13,7 @@ import {
 import { aircraftLabelOpacity, aircraftMarkerClassNames, aircraftPositionIsStale, aircraftVisualOpacity } from "@/lib/radar-ui";
 
 const appSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
+const timeMachineSource = readFileSync(new URL("../components/time-machine.tsx", import.meta.url), "utf8");
 const markerControllerSource = readFileSync(new URL("../lib/radar/aircraft-marker-controller.ts", import.meta.url), "utf8");
 const aircraftMotionRuntimeSource = readFileSync(new URL("../lib/radar/aircraft-motion-runtime.ts", import.meta.url), "utf8");
 const aircraftTrafficRowSource = readFileSync(new URL("../components/aircraft-traffic-row.tsx", import.meta.url), "utf8");
@@ -149,6 +150,13 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("__airradarMapStyleLoadedForDiagnostics");
     expect(productionGateSource).toContain("__airradarMapStyleLoadedForDiagnostics === true");
     expect(productionGateSource).toContain("areTilesLoaded");
+  });
+
+  it("shares the canonical vector basemap and style lifecycle with Time Machine", () => {
+    expect(timeMachineSource).toContain("AIRRADAR_BASE_MAP_STYLE_URL");
+    expect(timeMachineSource).toContain('map.once("style.load", () => {');
+    expect(timeMachineSource).not.toContain("tile.openstreetmap.org");
+    expect(timeMachineSource).toContain("time-machine-aircraft");
   });
 
   it("keeps aircraft visual effects off the MapLibre root", () => {
