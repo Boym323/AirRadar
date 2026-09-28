@@ -2,6 +2,33 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.204] - 2026-09-28
+
+Changes since v1.0.203.
+
+### Added
+
+- Add initial Prisma configuration and update notifier file (d1ac84c)
+- Implement keyboard shortcuts for closing UI elements in AirRadar components (263ccd6)
+
+### Fixed
+
+- Wire radar rail layer toggles (016491f)
+
+### Maintenance
+
+- Sync generated repository metadata (dba857a)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (dba857a)
+- Merge pull request #207 from Boym323/automation/repository-metadata (8e668e5)
+- feat(config): add initial Prisma configuration and update notifier file (d1ac84c)
+- feat(ui): implement keyboard shortcuts for closing UI elements in AirRadar components (263ccd6)
+- fix: wire radar rail layer toggles (016491f)
+
+</details>
 ## [1.0.203] - 2026-09-28
 
 Changes since v1.0.202.
