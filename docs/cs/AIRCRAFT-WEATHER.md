@@ -1,5 +1,28 @@
 # Pozorování počasí z letadel V1
 
+## Aircraft Weather UI V1
+
+Radar nyní obsahuje lazy-load panel **Aircraft Weather** ve skupině Weather.
+Používá nakonfigurovanou polohu receiveru a nabízí okna 15/30/60 minut,
+poloměry 40/80/120/200 km, filtr výšky, profily SAT a větru, live seznam,
+společný detail pozorování a reprezentativní mapovou vrstvu latest-per-aircraft.
+Na desktopu se panel chová jako mapový overlay, na mobilu jako bottom sheet.
+API, profil ani MapLibre source se neinicializují, dokud uživatel panel neotevře.
+
+Profil vykresluje pouze skutečné API bins. `sampleCount` se v UI nazývá
+**observations**, nikoli raw measurements; současně se zobrazuje `aircraftCount`.
+SAT je hlavní environmentální teplota, TAT je pouze v detailu. Static pressure
+není označován jako QNH. Provenance má uživatelské popisky pro readsb a BDS 4,4.
+Směr větru je meteorologický směr odkud vítr vane; šipka proudění je otočena
+o 180° a konvence je uvedena přímo v panelu.
+
+### Observed vs ICON-EU
+
+Porovnání zůstává korektně unavailable: současná ICON-EU integrace poskytuje
+tlakové hladiny a valid times modelu, ale neumí ověřené spárování stejného času,
+prostoru a výšky aircraft observation s modelem. UI proto nepoužívá zakázanou
+aproximaci surface/flight-level ani libovolně nejbližší hladiny.
+
 AirRadar ukládá řídký, kvalitativně kontrolovaný proud počasí pozorovaného
 letadly. Jde o datový produkt AirRadaru, nikoli o oficiální AMDAR feed ani o
 tvrzení, že AirRadar oficiální AMDAR data přijímá nebo provozuje.

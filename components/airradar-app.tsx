@@ -36,6 +36,7 @@ import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
+import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
 import { canonicalAircraftGlyphPath, type CanonicalAircraftGlyphKind } from "@/lib/aircraft/glyph-paths";
@@ -120,6 +121,7 @@ const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: 
 const EMPTY_RADAR_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const AtcVerticalTraffic = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.AtcVerticalTraffic));
 const SectorFlowsPanel = dynamic(() => import("@/components/atc-sector-traffic-panels").then((module) => module.SectorFlowsPanel));
+const AircraftWeatherPanel = dynamic(() => import("@/components/aircraft-weather-panel").then((module) => module.AircraftWeatherPanel), { ssr: false });
 const WEATHER_RADAR_COORDINATES: [[number, number], [number, number], [number, number], [number, number]] = [
   [WEATHER_RADAR_BOUNDS.west, WEATHER_RADAR_BOUNDS.north],
   [WEATHER_RADAR_BOUNDS.east, WEATHER_RADAR_BOUNDS.north],
@@ -343,6 +345,28 @@ function createWindGeoJSON(data: WindResponse | null) {
   };
 }
 
+function createAircraftWeatherGeoJSON(observations: AircraftWeatherMapObservation[], field: "temperature" | "wind") {
+  return {
+    type: "FeatureCollection" as const,
+    features: observations.flatMap((observation) => Number.isFinite(observation.lat) && Number.isFinite(observation.lon) ? [{
+      type: "Feature" as const,
+      properties: {
+        key: `${observation.aircraftHex}|${observation.observedAt}`,
+        aircraftHex: observation.aircraftHex,
+        callsign: observation.callsign,
+        altitudeFt: observation.altitudeFt,
+        observedAt: observation.observedAt,
+        field,
+        temperatureC: observation.staticAirTemperatureC,
+        windDirectionDeg: observation.windDirectionDeg,
+        windSpeedKt: observation.windSpeedKt,
+        source: observation.source,
+      },
+      geometry: { type: "Point" as const, coordinates: [observation.lon, observation.lat] as [number, number] },
+    }] : []),
+  };
+}
+
 function ognTargetLabel(target: OgnTargetView): string {
   if (target.identityVisible) return target.registration || target.competitionNumber || target.model || target.senderCallsign || target.aircraftType.toUpperCase();
   return target.aircraftType.toUpperCase();
@@ -399,6 +423,10 @@ export function AirRadarApp() {
   const [radarOpacity, setRadarOpacity] = useState(0.65);
   const [showMetar, setShowMetar] = useState(false);
   const [showWind, setShowWind] = useState(false);
+  const [showAircraftWeather, setShowAircraftWeather] = useState(false);
+  const [aircraftWeatherMapObservations, setAircraftWeatherMapObservations] = useState<AircraftWeatherMapObservation[]>([]);
+  const [aircraftWeatherMapField, setAircraftWeatherMapField] = useState<"temperature" | "wind">("temperature");
+  const [focusedAircraftWeatherObservation, setFocusedAircraftWeatherObservation] = useState<string | null>(null);
   const [windLevel, setWindLevel] = useState<WindLevelHpa>(300);
   const [showAupUup, setShowAupUup] = useState(false);
   const {
@@ -1872,6 +1900,38 @@ export function AirRadarApp() {
     if (map.getLayer("wind-aloft-arrows")) map.setLayoutProperty("wind-aloft-arrows", "visibility", showWind && Boolean(windData) ? "visible" : "none");
   }, [mapReady, showWind, windData]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const sourceId = "aircraft-weather-observations";
+    const layerId = "aircraft-weather-observation-points";
+    if (showAircraftWeather && !map.getSource(sourceId)) {
+      map.addSource(sourceId, { type: "geojson", data: createAircraftWeatherGeoJSON([], aircraftWeatherMapField) });
+      map.addLayer({ id: layerId, type: "circle", source: sourceId, paint: {
+        "circle-color": aircraftWeatherMapField === "temperature" ? AIRRADAR_MAP_THEME.weather : AIRRADAR_MAP_THEME.accent,
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 3.5, 8, 5.5, 13, 7],
+        "circle-opacity": 0.9,
+        "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
+        "circle-stroke-width": 1.4,
+      } });
+    }
+    const source = map.getSource(sourceId) as GeoJSONSource | undefined;
+    source?.setData(showAircraftWeather ? createAircraftWeatherGeoJSON(aircraftWeatherMapObservations, aircraftWeatherMapField) : createAircraftWeatherGeoJSON([], aircraftWeatherMapField));
+    if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", showAircraftWeather ? "visible" : "none");
+    if (!showAircraftWeather || !map.getLayer(layerId)) return;
+    const onWeatherClick = (event: MapLayerMouseEvent) => {
+      const properties = event.features?.[0]?.properties;
+      if (!properties) return;
+      setFocusedAircraftWeatherObservation(String(properties.key ?? ""));
+    };
+    map.on("click", layerId, onWeatherClick);
+    map.on("mouseenter", layerId, () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", layerId, () => { map.getCanvas().style.cursor = ""; });
+    return () => {
+      map.off("click", layerId, onWeatherClick);
+    };
+  }, [aircraftWeatherMapField, aircraftWeatherMapObservations, mapReady, showAircraftWeather]);
+
   const airportLayerVisibility = useMemo<AirportLayerVisibility>(() => ({
     showAirports,
     showSignificant: showSignificantAirports,
@@ -2043,6 +2103,13 @@ export function AirRadarApp() {
       ? t.radar.networkUnavailable
       : null;
   const selectedRadarFrame = radarCatalog?.frames.find((frame) => frame.id === radarFrameId) ?? null;
+  const aircraftWeatherCenter = snapshot.receiver.lat !== null && snapshot.receiver.lon !== null
+    ? { lat: snapshot.receiver.lat, lon: snapshot.receiver.lon, name: snapshot.receiver.name }
+    : null;
+  const handleAircraftWeatherMapData = useCallback((observations: AircraftWeatherMapObservation[], field: "temperature" | "wind") => {
+    setAircraftWeatherMapObservations(observations);
+    setAircraftWeatherMapField(field);
+  }, []);
 
   function chooseCoverage(nextCoverage: CoverageMode): void {
     if (!networkEnabled && nextCoverage === "extended") return;
@@ -2152,6 +2219,8 @@ export function AirRadarApp() {
                 onWindValidAtChange={setWindValidAt}
                 windData={windData}
                 windStatus={windStatus}
+                showAircraftWeather={showAircraftWeather}
+                onShowAircraftWeatherChange={setShowAircraftWeather}
                 showAupUup={showAupUup}
                 onShowAupUupChange={setShowAupUup}
                 airspaceDataset={airspaceDataset}
@@ -2187,6 +2256,12 @@ export function AirRadarApp() {
               {colorMode !== "default" && <span className="color-mode-legend"><strong>{t.layers.colorModes[colorMode]}</strong><span><i className="color-legend-swatch low" /> {t.layers.colorLegendLow}</span><span><i className="color-legend-swatch high" /> {t.layers.colorLegendHigh}</span><span><i className="color-legend-swatch fallback" /> {t.layers.colorLegendFallback}</span></span>}
               {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <span className="layer-legend"><span><i className="legend-line actual" /> {t.route.actualTrail}</span><span><i className="legend-line completed" /> {t.route.originToCurrent}</span><span><i className="legend-line remaining" /> {t.route.currentToDestination}</span><small>{t.route.contextDisclaimer}</small></span>}
             </Panel> : null}
+            {showAircraftWeather && <AircraftWeatherPanel
+              center={aircraftWeatherCenter}
+              onClose={() => { setShowAircraftWeather(false); setFocusedAircraftWeatherObservation(null); setAircraftWeatherMapObservations([]); }}
+              onMapDataChange={handleAircraftWeatherMapData}
+              focusedObservationKey={focusedAircraftWeatherObservation}
+            />}
           </div>
         </div>
 

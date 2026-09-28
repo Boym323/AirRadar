@@ -1,5 +1,40 @@
 # Aircraft Weather Observations V1
 
+## Aircraft Weather UI V1
+
+The radar map exposes a lazy-loaded **Aircraft Weather** panel from the Weather
+layer group. It uses the configured receiver position as its default area and
+offers 15/30/60 minute windows, 40/80/120/200 km radii, altitude filtering,
+SAT temperature and wind vertical profile modes, a compact live observation
+list, a shared observation detail view, and a representative latest-per-aircraft
+map layer. The panel is responsive as a desktop map overlay and a mobile
+bottom sheet. Weather requests, profile rendering, and the weather map source
+are not initialized until the panel is opened. Refresh keeps the panel and
+filters in place.
+
+The profile uses actual returned bins only. `sampleCount` is displayed as
+**observations** and never as raw measurements; `aircraftCount` is shown beside
+it because the backend aggregates per aircraft before profile weighting.
+Confidence and freshness are shown as text as well as styling. SAT is the
+primary environmental temperature; TAT is shown only in observation detail.
+Static pressure is labelled “Static pressure”, never QNH. Sources are labelled
+as “Aircraft / local readsb” or “Mode-S BDS 4,4 weather”.
+
+Wind direction follows the meteorological convention (where the wind comes
+from). The map/profile airflow arrow is rotated by 180° to show destination;
+the panel states this convention directly. Humidity and turbulence appear only
+when the API returns them. Rejected observations are not exposed.
+
+### Observed vs ICON-EU
+
+The UI deliberately shows an unavailable state for observed-vs-model comparison.
+The existing ICON-EU integration exposes pressure-level forecast grid values and
+valid times, but does not provide the validated same-time, same-position,
+aircraft-altitude/model-level matching needed for a physical comparison. The
+UI does not compare a flight-level observation with a surface or arbitrarily
+nearest model value. Aircraft observations remain fully usable without this
+optional enhancement.
+
 AirRadar stores a sparse, quality-controlled stream of aircraft-observed
 weather. This is an AirRadar data product, not an official AMDAR feed and not
 a claim that AirRadar receives or operates official AMDAR data.
