@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "measurementPeriod": {
+    "start": "2026-09-28T18:25:11.640Z",
+    "end": "2026-09-28T18:55:30.857Z",
+    "durationSeconds": 1819.544,
+    "traffic": "real production traffic"
+  },
+  "production": {
+    "targetSha": "e5c8ae95fafd1a04623d67fcbfafe730fe159681",
+    "sha": "d27e85e9ff24e49aa10a022ca7820f0f6dfbd4f7",
+    "version": "1.0.206",
+    "channel": "production",
+    "shadowEnabled": true,
+    "releaseTimestamp": "2026-09-28T18:21:51Z",
+    "serviceRestartTimestamp": "2026-09-28T18:23:46Z"
+  },
+  "sample": {
+    "aircraftObservedMax": 54,
+    "aircraftAtEnd": 43,
+    "positionsSeen": 30229,
+    "stateEntries": 173,
+    "maximumObservedEntries": 173
+  },
+  "decisionMatrix": {
+    "currentPersistShadowPersist": { "count": 1817, "percent": 6.01 },
+    "currentPersistShadowSkip": { "count": 6702, "percent": 22.17 },
+    "currentSkipShadowPersist": { "count": 7308, "percent": 24.18 },
+    "currentSkipShadowSkip": { "count": 14402, "percent": 47.64 }
+  },
+  "rates": {
+    "currentPersist": { "count": 8519, "percent": 28.18 },
+    "currentSkip": { "count": 21710, "percent": 71.82 },
+    "shadowPersist": { "count": 9125, "percent": 30.19 },
+    "shadowSkip": { "count": 21104, "percent": 69.81 },
+    "shadowPersistOverCurrentPersist": 1.071135,
+    "estimatedReductionPct": 0,
+    "observedWriteChangePct": 7.11
+  },
+  "reasonHistogram": {
+    "first-observation": 173,
+    "movement-below-threshold": 13750,
+    "stable-cruise": 14633,
+    "airport-fidelity": 75,
+    "source-transition": 75,
+    "vertical-state-change": 607,
+    "altitude-change": 675,
+    "heading-change": 87,
+    "observation-gap": 125,
+    "heartbeat-not-due": 25,
+    "air-ground-transition": 4
+  },
+  "contextHistogram": {
+    "unknown": 2034,
+    "stable": 20747,
+    "descending": 2879,
+    "climbing": 4493,
+    "airport-proximity": 76
+  },
+  "resources": {
+    "cpuPctOneCoreBeforeReference": 35.5,
+    "cpuPctOneCoreAfterAverage": 30.98,
+    "rssBytesBeforeReference": 1160000000,
+    "rssBytesAfterPeak": 1538801664,
+    "rssBytesAfterEnd": 1251368960,
+    "heapUsedBytesAfterEnd": 486555752,
+    "heapTotalBytesAfterEnd": 752017408,
+    "privateDirtyBytesAfterEnd": 1196711936,
+    "cgroupMemoryBytesAfterEnd": 1231429632,
+    "shadowStateEntries": 173
+  },
+  "database": {
+    "measurementIntervalMinutesApprox": 29.5,
+    "flightPositionInsertsPerMinute": 104.1,
+    "flightUpdatesPerMinute": 104.9,
+    "totalInsertsPerMinute": 179.7,
+    "totalUpdatesPerMinute": 321.2,
+    "walBytesPerMinute": 1436454,
+    "walMbPerMinute": 1.44,
+    "baseline": {
+      "flightPositionInserts": 4704035,
+      "flightUpdates": 4716445,
+      "totalInserts": 5828780,
+      "totalUpdates": 11512861,
+      "walLsn": "7/E365C050"
+    },
+    "end": {
+      "flightPositionInserts": 4707106,
+      "flightUpdates": 4719539,
+      "totalInserts": 5834082,
+      "totalUpdates": 11522335,
+      "walLsn": "7/E5EC5938"
+    }
+  },
+  "shadowFailures": 0,
+  "quality": {
+    "boundedState": true,
+    "eventParity": true,
+    "replayAudit": "PASS",
+    "airportApproachManeuverSignalsObserved": true,
+    "contextCrossTabNotExposedByDiagnostics": true
+  },
+  "safety": {
+    "livePersistenceChanged": false,
+    "schemaChanged": false,
+    "migrationApplied": 0,
+    "manualDbChange": false,
+    "shadowDbWrites": false,
+    "adaptivePersistenceActivated": false
+  }
+}
