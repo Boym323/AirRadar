@@ -6,6 +6,43 @@ import type {
 
 type PrimitiveProps = { children: ReactNode; className?: string };
 
+export function PageHeader({
+  title,
+  kicker,
+  description,
+  backLink,
+  actions,
+  className = "",
+  ...props
+}: {
+  title: ReactNode;
+  kicker?: ReactNode;
+  description?: ReactNode;
+  backLink?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+} & HTMLAttributes<HTMLElement>) {
+  return (
+    <header className={`ui-page-header ${className}`.trim()} {...props}>
+      <div className="ui-page-header-main">
+        {backLink ? <div className="ui-page-header-back">{backLink}</div> : null}
+        {kicker ? <div className="ui-kicker">{kicker}</div> : null}
+        <h1>{title}</h1>
+        {description ? <p>{description}</p> : null}
+      </div>
+      {actions ? <div className="ui-page-header-actions">{actions}</div> : null}
+    </header>
+  );
+}
+
+export function MetricStrip({ children, className = "", ...props }: PrimitiveProps & HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={`ui-metric-strip ${className}`.trim()} {...props}>
+      {children}
+    </div>
+  );
+}
+
 export function Panel({
   children,
   className = "",
@@ -231,6 +268,21 @@ export type StatusBadgeVariant =
   | "danger"
   | "stale"
   | "demo";
+
+export type ContextBadgeVariant = "observed" | "inferred" | "likely" | "possible";
+
+export function ContextBadge({
+  variant = "observed",
+  children,
+  className = "",
+  ...props
+}: PrimitiveProps & { variant?: ContextBadgeVariant } & HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span className={`context-badge context-badge-${variant} ${className}`.trim()} {...props}>
+      {children}
+    </span>
+  );
+}
 
 export function StatusBadge({
   variant = "neutral",

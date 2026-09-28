@@ -7,6 +7,8 @@ import { AirportTrafficSummary } from "@/components/airport-traffic-summary";
 import { AirportMovements } from "@/components/airport-movements";
 import { AirportWeatherPanel } from "@/components/airport-weather";
 import { AirportNearbyAircraft } from "@/components/airport-nearby-aircraft";
+import { AirportOperationalSummary } from "@/components/airport-operational-summary";
+import { PageHeader } from "@/components/ui-primitives";
 import { formatCoordinate, t } from "@/lib/i18n";
 import { formatDistance, formatTrack } from "@/lib/i18n";
 import type { NearbyAirport } from "@/lib/server/nearby-airports";
@@ -56,20 +58,41 @@ function AirportInfrastructureSections({ infrastructure }: { infrastructure: Air
 }
 
 export function AirportDetail({ airport, infrastructure = { runways: [], frequencies: [], navaids: [] }, nearbyAirports = [] }: { airport: Airport; infrastructure?: AirportInfrastructure; nearbyAirports?: NearbyAirport[] }) {
-  const airportCodes = airport.iataCode ? `${airport.iataCode} · ${airport.icaoCode}` : airport.icaoCode;
   const location = [airport.city, airport.country].filter(Boolean).join(" · ");
 
   return <main className="airport-page">
-    <header className="airport-page-header">
-      <Link className="back-link" href="/">{t.airport.backToRadar}</Link>
-      <div className="airport-kicker">{airportCodes}</div>
-      <h1>{airport.name}</h1>
-      {location && <p>{location}</p>}
-    </header>
+    <PageHeader
+      className="airport-page-header"
+      backLink={<Link className="back-link" href="/">{t.airport.backToRadar}</Link>}
+      kicker={airport.iataCode ? `${airport.iataCode} · ${airport.icaoCode}` : airport.icaoCode}
+      title={airport.name}
+      description={location}
+    />
+
+    <AirportOperationalSummary airport={airport} />
 
     <div className="airport-layout">
       <div className="airport-overview">
-        <section className="airport-card" aria-labelledby="airport-information-title">
+        <section className="airport-card airport-map-card" aria-labelledby="airport-map-title">
+          <h2 id="airport-map-title">{t.airport.map}</h2>
+          <AirportMap airport={airport} infrastructure={infrastructure} />
+        </section>
+
+        <section className="airport-card airport-weather-card" aria-labelledby="airport-weather-title">
+          <h2 id="airport-weather-title">{t.weather.title}</h2>
+          {/* Existing contract: <AirportWeatherPanel airport={airport} />; runway wind remains additive. */}
+          <AirportWeatherPanel airport={airport} runways={infrastructure.runways} />
+        </section>
+      </div>
+
+      <div className="airport-content">
+        <AirportMovements airport={airport} />
+
+        <AirportTrafficSummary airport={airport} />
+
+        <AirportNearbyAircraft airport={airport} />
+
+        <section className="airport-card airport-reference-card" aria-labelledby="airport-information-title">
           <h2 id="airport-information-title">{t.airport.information}</h2>
           <dl className="airport-info-grid">
             <div><dt>{t.airport.icao}</dt><dd>{airport.icaoCode}</dd></div>
@@ -84,27 +107,9 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
           </dl>
         </section>
 
-        <section className="airport-card airport-map-card" aria-labelledby="airport-map-title">
-          <h2 id="airport-map-title">{t.airport.map}</h2>
-          <AirportMap airport={airport} infrastructure={infrastructure} />
-        </section>
-      </div>
-
-      <div className="airport-content">
-
-        <section className="airport-card" aria-labelledby="airport-weather-title">
-          <h2 id="airport-weather-title">{t.weather.title}</h2>
-          {/* Existing contract: <AirportWeatherPanel airport={airport} />; runway wind is additive. */}
-          <AirportWeatherPanel airport={airport} runways={infrastructure.runways} />
-        </section>
-
-        <AirportInfrastructureSections infrastructure={infrastructure} />
-
-        <AirportNearbyAircraft airport={airport} />
-
-        <AirportTrafficSummary airport={airport} />
-
-        <AirportMovements airport={airport} />
+        <div className="airport-reference-grid">
+          <AirportInfrastructureSections infrastructure={infrastructure} />
+        </div>
 
         <section className="airport-card airport-nearby-card" aria-labelledby="airport-nearby-title">
           <h2 id="airport-nearby-title">{t.airport.nearbyTitle}</h2>
