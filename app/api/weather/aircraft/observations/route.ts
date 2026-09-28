@@ -1,4 +1,5 @@
 import { AIRCRAFT_WEATHER_LIMITS, queryAircraftWeatherObservations, type AircraftWeatherSource } from "@/lib/server/aircraft-weather";
+import { getReceiverPosition } from "@/lib/server/config";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +19,10 @@ export async function GET(request: Request): Promise<Response> {
   const now = new Date();
   const to = new Date(url.searchParams.get("to") ?? now.toISOString());
   const from = new Date(url.searchParams.get("from") ?? new Date(now.getTime() - AIRCRAFT_WEATHER_LIMITS.defaultWindowMs).toISOString());
-  const lat = number(url.searchParams.get("lat"));
-  const lon = number(url.searchParams.get("lon"));
+  const receiverCenter = url.searchParams.get("center") === "receiver";
+  const configuredReceiver = receiverCenter ? getReceiverPosition() : null;
+  const lat = number(url.searchParams.get("lat")) ?? configuredReceiver?.lat;
+  const lon = number(url.searchParams.get("lon")) ?? configuredReceiver?.lon;
   const radiusKm = number(url.searchParams.get("radiusKm")) ?? 50;
   const minAltitude = number(url.searchParams.get("minAltitude"));
   const maxAltitude = number(url.searchParams.get("maxAltitude"));
@@ -34,7 +37,7 @@ export async function GET(request: Request): Promise<Response> {
     || (source !== null && !["BDS_4_4", "READSB_JSON", "DERIVED", "UNKNOWN"].includes(source))) return noStore({ error: "Invalid aircraft weather query" }, 400);
   try {
     const result = await queryAircraftWeatherObservations({ from, to, lat, lon, radiusKm, minAltitude, maxAltitude, source: source ?? undefined, limit, offset });
-    return noStore({ generatedAt: now.toISOString(), query: { from: iso(from), to: iso(to), lat: lat ?? null, lon: lon ?? null, radiusKm, minAltitude: minAltitude ?? null, maxAltitude: maxAltitude ?? null, source: source ?? null, limit, offset }, source: result.source, totalApproximate: result.totalApproximate, observations: result.observations.map((row) => ({ ...row, observedAt: row.observedAt.toISOString(), receivedAt: row.receivedAt?.toISOString() ?? null })) });
+    return noStore({ generatedAt: now.toISOString(), query: { from: iso(from), to: iso(to), lat: receiverCenter ? null : lat ?? null, lon: receiverCenter ? null : lon ?? null, radiusKm, minAltitude: minAltitude ?? null, maxAltitude: maxAltitude ?? null, source: source ?? null, limit, offset }, source: result.source, totalApproximate: result.totalApproximate, observations: result.observations.map((row) => ({ ...row, observedAt: row.observedAt.toISOString(), receivedAt: row.receivedAt?.toISOString() ?? null })) });
   } catch {
     return noStore({ error: "Aircraft weather observations temporarily unavailable" }, 503);
   }

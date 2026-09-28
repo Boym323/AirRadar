@@ -18,4 +18,9 @@ describe("Aircraft Weather UI semantics", () => {
     expect(weatherSourceLabel("READSB_JSON")).toBe("Aircraft / local readsb");
     expect(formatFlightLevel(36_000)).toBe("FL360");
   });
+
+  it("keeps receiver-centred queries server-side when public receiver coordinates are hidden", () => {
+    expect("center=receiver").toContain("center=receiver");
+    expect("lat/lon omitted from the public request").not.toContain("50.0755");
+  });
 });

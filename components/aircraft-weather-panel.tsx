@@ -93,8 +93,8 @@ export function AircraftWeatherPanel({ center, onClose, onMapDataChange, focused
   }, [altitudeFilter, center?.lat, center?.lon, radiusKm, windowMinutes]);
 
   const loadObservations = useCallback(async (signal: AbortSignal) => {
-    if (!center) return;
-    const params = new URLSearchParams({ lat: String(query.lat), lon: String(query.lon), radiusKm: String(query.radiusKm), from: new Date(Date.now() - windowMinutes * 60_000).toISOString(), to: new Date().toISOString(), limit: "500" });
+    const params = new URLSearchParams({ radiusKm: String(query.radiusKm), from: new Date(Date.now() - windowMinutes * 60_000).toISOString(), to: new Date().toISOString(), limit: "500" });
+    if (center) { params.set("lat", String(query.lat)); params.set("lon", String(query.lon)); } else params.set("center", "receiver");
     if (query.min !== undefined) params.set("minAltitude", String(query.min));
     if (query.max !== undefined) params.set("maxAltitude", String(query.max));
     const response = await fetch(`/api/weather/aircraft/observations?${params}`, { cache: "no-store", signal });
@@ -106,8 +106,8 @@ export function AircraftWeatherPanel({ center, onClose, onMapDataChange, focused
   }, [center, query, windowMinutes]);
 
   const loadProfile = useCallback(async (signal: AbortSignal) => {
-    if (!center) return;
-    const params = new URLSearchParams({ lat: String(center.lat), lon: String(center.lon), radiusKm: String(radiusKm), windowMinutes: String(windowMinutes), binSizeFt: "2000" });
+    const params = new URLSearchParams({ radiusKm: String(radiusKm), windowMinutes: String(windowMinutes), binSizeFt: "2000" });
+    if (center) { params.set("lat", String(center.lat)); params.set("lon", String(center.lon)); } else params.set("center", "receiver");
     const response = await fetch(`/api/weather/aircraft/profile?${params}`, { cache: "no-store", signal });
     if (!response.ok) throw new Error("Aircraft profile unavailable");
     setProfile(await response.json() as ProfileResponse);
@@ -155,7 +155,7 @@ export function AircraftWeatherPanel({ center, onClose, onMapDataChange, focused
 
   return <section className="aircraft-weather-panel" aria-label="Aircraft Weather">
     <header className="aircraft-weather-header">
-      <div><span className="aircraft-weather-kicker">WEATHER</span><h2>Aircraft Weather</h2><p>{center ? `${center.name} · ${radiusKm} km` : "Receiver position unavailable"}</p></div>
+      <div><span className="aircraft-weather-kicker">WEATHER</span><h2>Aircraft Weather</h2><p>{center ? `${center.name} · ${radiusKm} km` : `Configured receiver area · ${radiusKm} km`}</p></div>
       <button type="button" className="aircraft-weather-close" onClick={onClose} aria-label="Close Aircraft Weather">×</button>
     </header>
     <div className="aircraft-weather-controls" role="group" aria-label="Aircraft Weather filters">

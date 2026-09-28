@@ -1,4 +1,5 @@
 import { AIRCRAFT_WEATHER_LIMITS, getAircraftWeatherProfile } from "@/lib/server/aircraft-weather";
+import { getReceiverPosition } from "@/lib/server/config";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -8,17 +9,20 @@ export async function GET(request: Request): Promise<Response> {
   const rateLimit = checkPublicRateLimit("weather", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
   const url = new URL(request.url);
+  const receiverCenter = url.searchParams.get("center") === "receiver";
+  const configuredReceiver = receiverCenter ? getReceiverPosition() : null;
   const latValue = url.searchParams.get("lat");
   const lonValue = url.searchParams.get("lon");
-  const lat = latValue === null || latValue.trim() === "" ? Number.NaN : Number(latValue);
-  const lon = lonValue === null || lonValue.trim() === "" ? Number.NaN : Number(lonValue);
+  const lat = latValue === null || latValue.trim() === "" ? configuredReceiver?.lat ?? Number.NaN : Number(latValue);
+  const lon = lonValue === null || lonValue.trim() === "" ? configuredReceiver?.lon ?? Number.NaN : Number(lonValue);
   const radiusKm = Number(url.searchParams.get("radiusKm") ?? 50);
   const windowMinutes = Number(url.searchParams.get("windowMinutes") ?? 30);
   const binSizeFt = Number(url.searchParams.get("binSizeFt") ?? AIRCRAFT_WEATHER_LIMITS.defaultBinSizeFt);
   const now = new Date();
   if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lon) || lon < -180 || lon > 180 || !Number.isFinite(radiusKm) || radiusKm <= 0 || radiusKm > AIRCRAFT_WEATHER_LIMITS.maxRadiusKm || !Number.isFinite(windowMinutes) || windowMinutes <= 0 || windowMinutes > 90 || !Number.isFinite(binSizeFt) || binSizeFt < 500 || binSizeFt > 10_000) return noStore({ error: "Invalid aircraft weather profile query" }, 400);
   try {
-    return noStore(await getAircraftWeatherProfile({ lat, lon, radiusKm, from: new Date(now.getTime() - windowMinutes * 60_000), to: now, binSizeFt }));
+    const profile = await getAircraftWeatherProfile({ lat, lon, radiusKm, from: new Date(now.getTime() - windowMinutes * 60_000), to: now, binSizeFt });
+    return noStore(receiverCenter ? { ...profile, area: { ...profile.area, lat: null, lon: null } } : profile);
   } catch {
     return noStore({ error: "Aircraft weather profile temporarily unavailable" }, 503);
   }
