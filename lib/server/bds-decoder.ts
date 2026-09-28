@@ -1,10 +1,15 @@
 export type BdsConfidence = "high" | "medium" | "ambiguous";
+export type WeatherSourceQuality = "INVALID" | "INS" | "GNSS" | "DME_DME" | "VOR_DME" | "UNKNOWN";
 
 export interface BdsDecoded {
   register: "BDS4,0" | "BDS4,4" | "BDS5,0" | "BDS6,0";
   confidence: BdsConfidence;
   score: number;
-  values: Record<string, number | boolean>;
+  values: Record<string, number | boolean | null>;
+  /** BDS 4,4 FOM/source, retained separately from inference confidence. */
+  weatherSourceQuality?: WeatherSourceQuality;
+  /** Register inference confidence. A medium decode is not an implicit BDS 4,4 fact. */
+  inferenceConfidence?: BdsConfidence;
 }
 
 const bit = (value: bigint, index: number, length = 1) => Number((value >> BigInt(56 - index - length)) & ((1n << BigInt(length)) - 1n));
@@ -53,12 +58,47 @@ function decode60(mb: bigint): BdsDecoded | null {
 }
 
 function decode44(mb: bigint): BdsDecoded | null {
-  const fom = bit(mb, 0, 4); const windStatus = bit(mb, 4); if (mb === 0n || fom > 4 || windStatus === 0) return null;
-  const windSpeed = bit(mb, 5, 9); const temp = signed(bit(mb, 24, 10), bit(mb, 23)) * 0.25; if (windSpeed > 250 || temp < -80 || temp > 60) return null;
-  if (!statusValueValid(mb, bit(mb, 34), 35, 11) || !statusValueValid(mb, bit(mb, 46), 47, 2) || !statusValueValid(mb, bit(mb, 49), 50, 6)) return null;
-  const values: Record<string, number | boolean> = { windSpeedKt: windSpeed, windDirectionDeg: bit(mb, 14, 9) * 180 / 256, outsideAirTemperatureC: temp };
-  if (bit(mb, 34)) values.staticPressureHpa = bit(mb, 35, 11);
-  return { register: "BDS4,4", confidence: "medium", score: 3, values };
+  const fom = bit(mb, 0, 4);
+  if (mb === 0n || fom === 0 || fom > 4) return null;
+
+  // Status=0 means unavailable. The payload must still be zero; accepting a
+  // non-zero unavailable payload is a common source of false BDS 4,4 hits.
+  const windStatus = bit(mb, 4);
+  const pressureStatus = bit(mb, 34);
+  const turbulenceStatus = bit(mb, 46);
+  const humidityStatus = bit(mb, 49);
+  if (!statusValueValid(mb, windStatus, 5, 18)
+    || !statusValueValid(mb, pressureStatus, 35, 11)
+    || !statusValueValid(mb, turbulenceStatus, 47, 2)
+    || !statusValueValid(mb, humidityStatus, 50, 6)) return null;
+
+  const temp = signed(bit(mb, 24, 10), bit(mb, 23)) * 0.25;
+  // Decoder-level physical envelope is intentionally wider than the QC
+  // envelope, while still rejecting impossible signed encodings.
+  if (temp < -128 || temp > 127.75) return null;
+  const values: Record<string, number | boolean | null> = {
+    windSpeedKt: null,
+    windDirectionDeg: null,
+    outsideAirTemperatureC: temp,
+    staticPressureHpa: null,
+    turbulenceLevel: null,
+    humidityPct: null,
+  };
+  if (windStatus) {
+    const windSpeed = bit(mb, 5, 9);
+    if (windSpeed > 511) return null;
+    values.windSpeedKt = windSpeed;
+    values.windDirectionDeg = bit(mb, 14, 9) * 180 / 256;
+  }
+  if (pressureStatus) values.staticPressureHpa = bit(mb, 35, 11);
+  if (turbulenceStatus) values.turbulenceLevel = bit(mb, 47, 2);
+  if (humidityStatus) {
+    const humidityPct = bit(mb, 50, 6) * 100 / 64;
+    if (humidityPct > 100) return null;
+    values.humidityPct = humidityPct;
+  }
+  const weatherSourceQuality: WeatherSourceQuality = ({ 1: "INS", 2: "GNSS", 3: "DME_DME", 4: "VOR_DME" } as Record<number, WeatherSourceQuality>)[fom] ?? "UNKNOWN";
+  return { register: "BDS4,4", confidence: "medium", score: 3, values, weatherSourceQuality, inferenceConfidence: "medium" };
 }
 
 export function decodeCommB(mbBytes: Buffer): BdsDecoded | null {
@@ -68,5 +108,6 @@ export function decodeCommB(mbBytes: Buffer): BdsDecoded | null {
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => b.score - a.score);
   if (candidates.length > 1 && candidates[0]!.score - candidates[1]!.score <= 1) return { ...candidates[0]!, confidence: "ambiguous", values: {} };
-  return candidates[0]!;
+  const winner = candidates[0]!;
+  return winner.register === "BDS4,4" ? { ...winner, inferenceConfidence: "high" } : winner;
 }

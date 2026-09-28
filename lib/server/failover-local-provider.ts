@@ -39,6 +39,8 @@ function mergeTelemetry(beast: Aircraft, json: Aircraft, beastAt: number | null 
     outsideAirTemperatureC: scalar("outsideAirTemperatureC") as number | null,
     totalAirTemperatureC: scalar("totalAirTemperatureC") as number | null,
     staticPressureHpa: scalar("staticPressureHpa") as number | null,
+    humidityPct: scalar("humidityPct") as number | null,
+    turbulenceLevel: scalar("turbulenceLevel") as number | null,
     navQnhHpa: scalar("navQnhHpa") as number | null,
     selectedAltitudeMcpFt: scalar("selectedAltitudeMcpFt") as number | null,
     selectedAltitudeFmsFt: scalar("selectedAltitudeFmsFt") as number | null,

@@ -1,0 +1,239 @@
+[
+  {
+    "id": "table.aircraftWeatherObservation",
+    "label": "Create table \"aircraftWeatherObservation\"",
+    "summary": "Creates table \"aircraftWeatherObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "aircraftWeatherObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"aircraftWeatherObservation\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"aircraftWeatherObservation\"",
+        "sql": "CREATE TABLE \"public\".\"aircraftWeatherObservation\" (\n  \"aircraftHex\" text NOT NULL,\n  \"altitudeFt\" int4 NOT NULL,\n  \"altitudeType\" text NOT NULL,\n  \"bdsConfidence\" text,\n  \"callsign\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"dedupKey\" text NOT NULL,\n  \"flightId\" int4,\n  \"humidityPct\" float8,\n  \"id\" SERIAL NOT NULL,\n  \"lat\" float8 NOT NULL,\n  \"lon\" float8 NOT NULL,\n  \"observedAt\" timestamptz NOT NULL,\n  \"provenanceJson\" text NOT NULL,\n  \"provider\" text,\n  \"quality\" text NOT NULL,\n  \"receivedAt\" timestamptz,\n  \"source\" text NOT NULL,\n  \"staticAirTempC\" float8,\n  \"staticPressureHpa\" float8,\n  \"totalAirTempC\" float8,\n  \"turbulenceLevel\" int4,\n  \"weatherSourceQuality\" text,\n  \"windDirectionDeg\" float8,\n  \"windSpeedKt\" float8,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"aircraftWeatherObservation\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.aircraftWeatherObservation.aircraftWeatherObservation_dedupKey_key",
+    "label": "Add unique constraint on \"aircraftWeatherObservation\" (dedupKey)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "aircraftWeatherObservation_dedupKey_key",
+        "table": "aircraftWeatherObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"aircraftWeatherObservation_dedupKey_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "aircraftWeatherObservation_dedupKey_key",
+          "public",
+          "\"public\".\"aircraftWeatherObservation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"aircraftWeatherObservation_dedupKey_key\"",
+        "sql": "ALTER TABLE \"public\".\"aircraftWeatherObservation\" ADD CONSTRAINT \"aircraftWeatherObservation_dedupKey_key\" UNIQUE (\"dedupKey\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"aircraftWeatherObservation_dedupKey_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "aircraftWeatherObservation_dedupKey_key",
+          "public",
+          "\"public\".\"aircraftWeatherObservation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.aircraftWeatherObservation.aircraftWeatherObservation_aircraftHex_observedAt_idx_8b992898",
+    "label": "Create index \"aircraftWeatherObservation_aircraftHex_observedAt_idx_8b992898\" on \"aircraftWeatherObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "aircraftWeatherObservation_aircraftHex_observedAt_idx_8b992898",
+        "table": "aircraftWeatherObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"aircraftWeatherObservation_aircraftHex_observedAt_idx_8b992898\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation_aircraftHex_observedAt_idx_8b992898\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"aircraftWeatherObservation_aircraftHex_observedAt_idx_8b992898\"",
+        "sql": "CREATE INDEX \"aircraftWeatherObservation_aircraftHex_observedAt_idx_8b992898\" ON \"public\".\"aircraftWeatherObservation\" (\"aircraftHex\", \"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"aircraftWeatherObservation_aircraftHex_observedAt_idx_8b992898\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation_aircraftHex_observedAt_idx_8b992898\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.aircraftWeatherObservation.aircraftWeatherObservation_altitudeFt_observedAt_idx_9a18aab5",
+    "label": "Create index \"aircraftWeatherObservation_altitudeFt_observedAt_idx_9a18aab5\" on \"aircraftWeatherObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "aircraftWeatherObservation_altitudeFt_observedAt_idx_9a18aab5",
+        "table": "aircraftWeatherObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"aircraftWeatherObservation_altitudeFt_observedAt_idx_9a18aab5\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation_altitudeFt_observedAt_idx_9a18aab5\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"aircraftWeatherObservation_altitudeFt_observedAt_idx_9a18aab5\"",
+        "sql": "CREATE INDEX \"aircraftWeatherObservation_altitudeFt_observedAt_idx_9a18aab5\" ON \"public\".\"aircraftWeatherObservation\" (\"altitudeFt\", \"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"aircraftWeatherObservation_altitudeFt_observedAt_idx_9a18aab5\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation_altitudeFt_observedAt_idx_9a18aab5\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.aircraftWeatherObservation.aircraftWeatherObservation_lat_lon_observedAt_idx_dac48bf5",
+    "label": "Create index \"aircraftWeatherObservation_lat_lon_observedAt_idx_dac48bf5\" on \"aircraftWeatherObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "aircraftWeatherObservation_lat_lon_observedAt_idx_dac48bf5",
+        "table": "aircraftWeatherObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"aircraftWeatherObservation_lat_lon_observedAt_idx_dac48bf5\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation_lat_lon_observedAt_idx_dac48bf5\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"aircraftWeatherObservation_lat_lon_observedAt_idx_dac48bf5\"",
+        "sql": "CREATE INDEX \"aircraftWeatherObservation_lat_lon_observedAt_idx_dac48bf5\" ON \"public\".\"aircraftWeatherObservation\" (\"lat\", \"lon\", \"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"aircraftWeatherObservation_lat_lon_observedAt_idx_dac48bf5\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation_lat_lon_observedAt_idx_dac48bf5\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.aircraftWeatherObservation.aircraftWeatherObservation_observedAt_idx_980e226e",
+    "label": "Create index \"aircraftWeatherObservation_observedAt_idx_980e226e\" on \"aircraftWeatherObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "aircraftWeatherObservation_observedAt_idx_980e226e",
+        "table": "aircraftWeatherObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"aircraftWeatherObservation_observedAt_idx_980e226e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation_observedAt_idx_980e226e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"aircraftWeatherObservation_observedAt_idx_980e226e\"",
+        "sql": "CREATE INDEX \"aircraftWeatherObservation_observedAt_idx_980e226e\" ON \"public\".\"aircraftWeatherObservation\" (\"observedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"aircraftWeatherObservation_observedAt_idx_980e226e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"aircraftWeatherObservation_observedAt_idx_980e226e\""
+        ]
+      }
+    ]
+  }
+]

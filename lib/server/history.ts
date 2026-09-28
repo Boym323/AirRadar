@@ -14,6 +14,7 @@ import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/serve
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { shouldPersistAltitudeAnomaly } from "@/lib/aircraft/altitude-provenance";
 import { filterPlausibleTrailPoints, isPlausibleTransition } from "@/lib/aircraft/trail";
+import { pruneAircraftWeatherRetention } from "@/lib/server/aircraft-weather";
 
 export interface HistoryResponse {
   source: "postgres" | "memory";
@@ -1027,6 +1028,7 @@ async function pruneHistoryIfDue(database: NonNullable<ReturnType<typeof getPris
   lastRetentionRunAt = now;
   try {
     await pruneHistoryRetention(database, new Date(now));
+    await pruneAircraftWeatherRetention(database, new Date(now));
   } catch (error) {
     // Avoid retrying on every snapshot after a database failure. The failed
     // diagnostics keep completed=false, so the next retry is scheduled in 5m.

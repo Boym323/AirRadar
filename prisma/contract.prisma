@@ -331,6 +331,41 @@ model FlightPosition {
   @@index([recordedAt])
 }
 
+/// Sparse aircraft-observed weather samples. This is intentionally separate
+/// from FlightPosition so ordinary ADS-B position history stays compact.
+model AircraftWeatherObservation {
+  id                   Int      @id @default(autoincrement())
+  dedupKey             String   @unique
+  aircraftHex          String
+  flightId             Int?
+  callsign             String?
+  observedAt           DateTime
+  receivedAt           DateTime?
+  lat                  Float
+  lon                  Float
+  altitudeFt           Int
+  altitudeType         String
+  windDirectionDeg     Float?
+  windSpeedKt          Float?
+  staticAirTempC       Float?
+  totalAirTempC        Float?
+  staticPressureHpa    Float?
+  humidityPct          Float?
+  turbulenceLevel      Int?
+  source               String
+  provider             String?
+  quality              String
+  weatherSourceQuality String?
+  bdsConfidence        String?
+  provenanceJson       String
+  createdAt            DateTime @default(now())
+
+  @@index([observedAt])
+  @@index([aircraftHex, observedAt])
+  @@index([lat, lon, observedAt])
+  @@index([altitudeFt, observedAt])
+}
+
 model AltitudeAnomaly {
   id                 Int      @id @default(autoincrement())
   icaoHex            String

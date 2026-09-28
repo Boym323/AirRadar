@@ -27,6 +27,10 @@ export interface AircraftFieldProvenance {
   bds?: string;
   observedAt: string;
   confidence: "high" | "medium" | "ambiguous";
+  /** BDS 4,4 FOM/source, when this field came from the meteorological report. */
+  weatherSourceQuality?: "INVALID" | "INS" | "GNSS" | "DME_DME" | "VOR_DME" | "UNKNOWN";
+  /** Kept distinct from field confidence: passive Comm-B register inference is probabilistic. */
+  bdsInferenceConfidence?: "high" | "medium" | "ambiguous";
 }
 
 export interface AircraftTargetState {
@@ -86,6 +90,9 @@ export interface AircraftAdsbTelemetry {
   totalAirTemperatureC: number | null;
   /** Static pressure decoded from Mode-S Comm-B BDS 4,4 when available. */
   staticPressureHpa?: number | null;
+  /** Optional BDS 4,4 fields; absent in legacy/readsb snapshots. */
+  humidityPct?: number | null;
+  turbulenceLevel?: number | null;
   navQnhHpa: number | null;
   selectedAltitudeMcpFt: number | null;
   selectedAltitudeFmsFt: number | null;

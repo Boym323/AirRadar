@@ -34,6 +34,7 @@ import { appendTrailPoint, trailPointFromAircraft } from "@/lib/aircraft/trail";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classification";
+import { persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -724,6 +725,11 @@ export class AircraftStateService {
         return previous === undefined || sampledAt - previous >= getHistorySampleIntervalMs();
       });
     if (due.length) {
+      // Weather is a separate sparse lane. It is intentionally fire-and-forget
+      // so a database hiccup cannot add latency to the live Beast/SSE loop.
+      void persistAircraftWeatherObservations(due, new Date(sampledAt), snapshot.provider).catch((error) => {
+        logger.debug({ error }, "AirRadar aircraft weather persistence skipped");
+      });
       try {
         const result = await recordAircraftSnapshot(due, new Date(sampledAt));
         for (const icaoHex of result.succeeded) this.lastHistorySample.set(icaoHex, sampledAt);

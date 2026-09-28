@@ -2,6 +2,14 @@
 
 All notable changes to AirRadar are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Add Aircraft Weather Observations V1 with conservative BDS 4,4 provenance,
+  sparse QC persistence, vertical profile aggregation, read-only API routes,
+  and bounded admin diagnostics.
+
 ## [1.0.181] - 2026-09-27
 
 Changes since v1.0.179.

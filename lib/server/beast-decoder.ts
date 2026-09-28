@@ -446,6 +446,8 @@ export class BeastDecoder {
         if (typeof values.windSpeedKt === "number") telemetry.windSpeedKt = values.windSpeedKt;
         if (typeof values.outsideAirTemperatureC === "number") telemetry.outsideAirTemperatureC = values.outsideAirTemperatureC;
         if (typeof values.staticPressureHpa === "number") telemetry.staticPressureHpa = values.staticPressureHpa;
+        if (typeof values.humidityPct === "number") telemetry.humidityPct = values.humidityPct;
+        if (typeof values.turbulenceLevel === "number") telemetry.turbulenceLevel = values.turbulenceLevel;
         if (typeof values.groundSpeedKt === "number" && (track.groundSpeedAt === null || observedAt - track.groundSpeedAt > 5_000)) {
           a.groundSpeed = values.groundSpeedKt;
           track.groundSpeedAt = observedAt;
@@ -461,7 +463,16 @@ export class BeastDecoder {
         a.adsbTelemetry = telemetry;
         track.extendedTelemetryAt = observedAt;
         const fields = a.provenance?.fields ?? {};
-        for (const key of Object.keys(values)) fields[key] = { origin: this.origin, protocol: "beast-mode-s", df, bds: commB.register, observedAt: new Date(observedAt).toISOString(), confidence: commB.confidence };
+        for (const key of Object.keys(values).filter((key) => values[key] !== null)) fields[key] = {
+          origin: this.origin,
+          protocol: "beast-mode-s",
+          df,
+          bds: commB.register,
+          observedAt: new Date(observedAt).toISOString(),
+          confidence: commB.confidence,
+          ...(commB.register === "BDS4,4" && commB.weatherSourceQuality ? { weatherSourceQuality: commB.weatherSourceQuality } : {}),
+          ...(commB.register === "BDS4,4" && commB.inferenceConfidence ? { bdsInferenceConfidence: commB.inferenceConfidence } : {}),
+        };
         if (bdsModes.length > 0) fields.navModes = { origin: this.origin, protocol: "beast-mode-s", df, bds: commB.register, observedAt: new Date(observedAt).toISOString(), confidence: commB.confidence };
         a.provenance = provenanceWithFields(a, this.origin, fields);
       }

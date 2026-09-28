@@ -37,4 +37,23 @@ describe("Comm-B BDS decoder", () => {
   it("rejects status/value violations instead of manufacturing telemetry", () => {
     expect(decodeCommB(Buffer.from("00000000000000", "hex"))).toBeNull();
   });
+
+  it("decodes optional turbulence and humidity and returns unavailable fields as absent", () => {
+    const field = (value: bigint, start: number, length: number, raw: number): bigint => value | (BigInt(raw) << BigInt(56 - start - length));
+    let mb = 0n;
+    mb = field(mb, 0, 4, 2);      // GNSS FOM
+    mb = field(mb, 4, 1, 1);      // wind valid
+    mb = field(mb, 5, 9, 80);
+    mb = field(mb, 14, 9, 0);
+    mb = field(mb, 24, 10, 120);   // +30 C
+    mb = field(mb, 46, 1, 1);      // turbulence valid
+    mb = field(mb, 47, 2, 2);      // moderate
+    mb = field(mb, 49, 1, 1);      // humidity valid
+    mb = field(mb, 50, 6, 32);     // 50%
+    const result = decodeCommB(Buffer.from(mb.toString(16).padStart(14, "0"), "hex"));
+    expect(result?.weatherSourceQuality).toBe("GNSS");
+    expect(result?.inferenceConfidence).toBe("high");
+    expect(result?.values).toMatchObject({ turbulenceLevel: 2, humidityPct: 50, outsideAirTemperatureC: 30 });
+    expect(result?.values.staticPressureHpa).toBeNull();
+  });
 });
