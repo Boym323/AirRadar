@@ -11,6 +11,7 @@ import { airportFromCode } from "@/lib/server/airport-catalog";
 import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport-resolver";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
+import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/server/logbook";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { shouldPersistAltitudeAnomaly } from "@/lib/aircraft/altitude-provenance";
@@ -379,11 +380,11 @@ async function queryFlightSummaries(
   if (from) query = query.where((flight) => flight.startTime.gte(Temporal.Instant.fromEpochMilliseconds(from.getTime())));
   if (to) query = query.where((flight) => flight.startTime.lt(Temporal.Instant.fromEpochMilliseconds(to.getTime())));
   if (extra) query = extra(query);
-  const rows = await query
+  const rows = await trackDbOperation("history.list.query", async () => await query
     .orderBy([(flight) => flight.startTime.desc(), (flight) => flight.id.desc()])
     .include("aircraft", (aircraft) => aircraft.select("icaoHex", "registration", "aircraftType"))
     .limit(limit)
-    .all();
+    .all());
   return rows.map(flightSummaryFromRow);
 }
 
@@ -404,7 +405,7 @@ export async function listHistoryFlights(options: {
   try {
     const schema = database.orm.public;
     if (exactHex) {
-      const aircraft = await schema.Aircraft.where({ icaoHex: exactHex }).first();
+      const aircraft = await trackDbOperation("history.list.query", () => schema.Aircraft.where({ icaoHex: exactHex }).first());
       if (!aircraft) return { flights: [], range, limit };
       const flights = await queryFlightSummaries(schema, null, null, limit, (query) => query.where({ aircraftId: aircraft.id }));
       return { flights: orderFlightSummaries(flights).slice(0, limit), range, limit };
@@ -436,15 +437,15 @@ export async function getHistoryFlight(id: number): Promise<HistoryFlightDetail 
   if (!database) throw new HistoryDatabaseUnavailableError();
   try {
     const schema = database.orm.public;
-    const row = await schema.Flight
+    const row = await trackDbOperation("history.flight-detail.query", () => schema.Flight
       .where({ id })
       .include("aircraft", (aircraft) => aircraft.select("icaoHex", "registration", "aircraftType"))
-      .first();
+      .first());
     if (!row) return null;
-    const positionRows = await schema.FlightPosition
+    const positionRows = await trackDbOperation("history.flight-detail.query", async () => await schema.FlightPosition
       .where({ flightId: id })
       .orderBy((position) => position.recordedAt.asc())
-      .all();
+      .all());
     const allPositions = positionRows.map((position) => ({
       recordedAt: timestampAsIso(position.recordedAt),
       lat: position.lat,
@@ -456,7 +457,7 @@ export async function getHistoryFlight(id: number): Promise<HistoryFlightDetail 
     }));
     const eventCollection = (schema as unknown as { FlightEvent?: { where: (filter: { flightId: number }) => { orderBy: (sort: (event: { occurredAt: { asc: () => unknown } }) => unknown) => { all: () => Promise<Array<Record<string, unknown>>> } } } }).FlightEvent;
     const eventRows = eventCollection
-      ? await eventCollection.where({ flightId: id }).orderBy((event) => event.occurredAt.asc()).all()
+      ? await trackDbOperation("history.flight-detail.query", () => eventCollection.where({ flightId: id }).orderBy((event) => event.occurredAt.asc()).all())
       : [];
     const events: FlightStoryEvent[] = eventRows
       .map((event) => ({
@@ -586,8 +587,8 @@ async function resolveHistoryAirports(
 
   try {
     const [icaoRows, iataRows] = await Promise.all([
-      airportTable.where((airport) => airport.icao.in(normalizedCodes)).all(),
-      airportTable.where((airport) => airport.iata.in(normalizedCodes)).all(),
+      trackDbOperation("history.aircraft-detail.query", async () => await airportTable.where((airport) => airport.icao.in(normalizedCodes)).all()),
+      trackDbOperation("history.aircraft-detail.query", async () => await airportTable.where((airport) => airport.iata.in(normalizedCodes)).all()),
     ]);
     for (const row of [...icaoRows, ...iataRows]) {
       const airport = historyAirportFromRow(row);
@@ -643,11 +644,11 @@ async function getAircraftHistorySummary(
   const { from, to } = aircraftHistoryRangeBounds(range, now);
   const fromInstant = Temporal.Instant.fromEpochMilliseconds(from.getTime());
   const toInstant = Temporal.Instant.fromEpochMilliseconds(to.getTime());
-  const flights = await schema.Flight
+  const flights = await trackDbOperation("history.aircraft-detail.query", async () => await schema.Flight
     .where({ aircraftId })
     .where((flight) => flight.startTime.gte(fromInstant))
     .where((flight) => flight.startTime.lt(toInstant))
-    .all();
+    .all());
 
   summary.flightCount = flights.length;
   if (flights.length === 0) return summary;
@@ -716,11 +717,11 @@ async function getAircraftLifetimeStats(
   now: Date,
 ): Promise<AircraftLifetimeStats> {
   const stats = emptyAircraftLifetimeStats();
-  const flights = await schema.Flight
+  const flights = await trackDbOperation("history.aircraft-detail.query", async () => await schema.Flight
     .where({ aircraftId })
     .orderBy((flight) => flight.startTime.asc())
     .select("id", "startTime", "lastSeenAt", "callsign", "origin", "destination")
-    .all();
+    .all());
   const orderedFlights = [...flights].sort((a, b) => {
     const startDifference = timestampAsDate(a.startTime).getTime() - timestampAsDate(b.startTime).getTime();
     return startDifference || Number(a.id ?? 0) - Number(b.id ?? 0);
@@ -834,9 +835,9 @@ export async function getAircraftQuickDetail(
   const database = getPrisma();
   if (database) {
     try {
-      const aircraft = await database.orm.public.Aircraft
+      const aircraft = await trackDbOperation("history.aircraft-quick.query", async () => await database.orm.public.Aircraft
         .where({ icaoHex: icaoHex.toUpperCase() })
-        .first() as AircraftDetailRow | null;
+        .first() as AircraftDetailRow | null);
       if (aircraft) metadata = aircraftDetailMetadataFromRow(aircraft);
     } catch {
       // Quick identity is best-effort; never hide the live radar drawer.
@@ -866,15 +867,15 @@ export async function getAircraftDetail(
   try {
     const schema = database.orm.public;
     const historyRange = normalizeAircraftHistoryRange(options.historyRange);
-    const aircraft = await schema.Aircraft.where({ icaoHex: icaoHex.toUpperCase() }).first();
+    const aircraft = await trackDbOperation("history.aircraft-detail.query", async () => await schema.Aircraft.where({ icaoHex: icaoHex.toUpperCase() }).first());
     if (!aircraft) return { aircraft: null, recentFlights: [], historySummary: emptyAircraftHistorySummary(historyRange), lifetimeStats: emptyAircraftLifetimeStats(), logbook: emptyAircraftLogbook() };
 
-    const flights = await schema.Flight
+    const flights = await trackDbOperation("history.aircraft-detail.query", async () => await schema.Flight
       .where({ aircraftId: aircraft.id })
       .orderBy([(flight) => flight.startTime.desc(), (flight) => flight.id.desc()])
       .include("aircraft", (relatedAircraft) => relatedAircraft.select("icaoHex", "registration", "aircraftType"))
       .limit(AIRCRAFT_RECENT_FLIGHT_LIMIT)
-      .all();
+      .all());
     const historySummary = options.includeHistorySummary === false
       ? emptyAircraftHistorySummary(historyRange)
       : await getAircraftHistorySummary(schema, aircraft.id, historyRange, options.now ?? new Date());

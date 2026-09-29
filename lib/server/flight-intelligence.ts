@@ -2,6 +2,7 @@ import type { Aircraft } from "@/lib/aircraft/types";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { getFlightContinuityGapMs } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { FlightIntelligenceDetector } from "@/lib/intelligence/detector";
 import { confidenceLevel, type FlightIntelligenceEvent, type FlightEventType, type FlightPhase } from "@/lib/intelligence/types";
 import type { RunwayContext } from "@/lib/route-intelligence/contracts";
@@ -117,10 +118,10 @@ export class FlightIntelligenceService {
 
     this.airportIndexLoading = (async () => {
       try {
-        const rows = await table.all();
+        const rows = await trackDbOperation("flight-intelligence.airport-index.query", async () => await table.all());
         const runwayTable = (database!.orm.public as unknown as { AirportRunway?: AirportRunwayTable }).AirportRunway;
         const runwayResult = runwayTable && typeof runwayTable.all === "function"
-          ? await Promise.allSettled([runwayTable.all()])
+          ? await Promise.allSettled([trackDbOperation("flight-intelligence.airport-index.query", async () => await runwayTable.all())])
           : [];
         const runways = runwayResult[0]?.status === "fulfilled" ? runwayResult[0].value.slice(0, 200_000) : [];
         const runwaysByAirportId = new Map<number, AirportRunway[]>();
@@ -218,13 +219,13 @@ export class FlightIntelligenceService {
       if (query.since && Number.isFinite(Date.parse(query.since))) where.occurredAt = { gte: new Date(query.since) };
 
       const table = (database.orm.public as unknown as { FlightEvent: FlightEventTable }).FlightEvent;
-      const rows = await table
+      const rows = await trackDbOperation("flight-intelligence.event.query", async () => await table
         .where(where)
         .orderBy({ occurredAt: "desc" })
         .include("aircraft", (aircraft) => aircraft.select("registration"))
         .include("flight", (flight) => flight.select("callsign", "registration"))
         .limit(limit)
-        .all();
+        .all());
 
       const merged = new Map<string, FlightIntelligenceEvent>();
       for (const event of memory) merged.set(event.eventKey, event);
@@ -253,11 +254,11 @@ export class FlightIntelligenceService {
       const occurredAt = Date.parse(event.occurredAt);
       let linkedFlight: FlightRow | undefined;
       for (let attempt = 0; attempt < 3 && !linkedFlight; attempt += 1) {
-        const flights = await schema.Flight
+        const flights = await trackDbOperation("flight-intelligence.flight-link.query", async () => await schema.Flight
           .where({ aircraft: { icaoHex: event.icaoHex } })
           .orderBy({ lastSeenAt: "desc" })
           .limit(8)
-          .all();
+          .all());
         const hasTemporalRows = flights.some((flight) => flight.startTime !== undefined || flight.lastSeenAt !== undefined || flight.endTime !== undefined);
         linkedFlight = flights.find((flight) => {
           const start = typeof flight.startTime === "undefined" ? NaN : Date.parse(String(flight.startTime));
@@ -270,7 +271,7 @@ export class FlightIntelligenceService {
         if (!linkedFlight && attempt < 2) await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
       }
       event.flightId = linkedFlight?.id ?? null;
-      await schema.FlightEvent.create({
+      await trackDbOperation("flight-intelligence.event.create", async () => await schema.FlightEvent.create({
         data: {
           eventKey: event.eventKey,
           type: event.type,
@@ -296,7 +297,7 @@ export class FlightIntelligenceService {
             ...(event.metadata ?? {}),
           }),
         },
-      });
+      }));
     } catch {
       // Intelligence persistence is best effort.
     }

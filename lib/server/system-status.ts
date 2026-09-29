@@ -29,6 +29,8 @@ import {
 import { buildReceiverQuality } from "@/lib/server/receiver-quality";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { getAircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
+import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
+import { recordSystemStatusRequest } from "@/lib/server/system-status-request-diagnostics";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 export {
   toAdminSystemStatus,
@@ -882,13 +884,13 @@ async function inspectDatabase(): Promise<DatabaseProbe> {
   if (!database) return { status: "offline", connected: false, airportRowCount: null, airportRowCountIsLowerBound: false };
 
   try {
-    await database.orm.public.Aircraft.select("id").limit(1).all();
+    await trackDbOperation("system-status.db-health.query", async () => await database.orm.public.Aircraft.select("id").limit(1).all());
   } catch {
     return { status: "offline", connected: false, airportRowCount: null, airportRowCountIsLowerBound: false };
   }
 
   try {
-    const airports = await database.orm.public.Airport.select("id").limit(AIRPORT_STATUS_QUERY_LIMIT + 1).all();
+    const airports = await trackDbOperation("system-status.airport-count.query", async () => await database.orm.public.Airport.select("id").limit(AIRPORT_STATUS_QUERY_LIMIT + 1).all());
     const lowerBound = airports.length > AIRPORT_STATUS_QUERY_LIMIT;
     return {
       status: "ok",
@@ -908,6 +910,7 @@ const unavailableAtcData: AtcDataResponse = {
 };
 
 export async function readSystemStatus(service: SystemStatusServiceLike = getAircraftStateService()): Promise<SystemStatusResponse> {
+  recordSystemStatusRequest();
   await service.waitForReady();
   const ognService = getOgnStateService();
   await ognService.waitForReady();

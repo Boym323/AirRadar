@@ -8,6 +8,16 @@ export const DB_OPERATION_LANES = [
   "aircraft-metadata.cache.lookup",
   "receiver.reception-record.query",
   "atc.dataset.load",
+  "system-status.db-health.query",
+  "system-status.airport-count.query",
+  "flight-intelligence.airport-index.query",
+  "flight-intelligence.event.query",
+  "flight-intelligence.flight-link.query",
+  "flight-intelligence.event.create",
+  "history.list.query",
+  "history.flight-detail.query",
+  "history.aircraft-quick.query",
+  "history.aircraft-detail.query",
 ] as const;
 
 export type DbOperationLane = (typeof DB_OPERATION_LANES)[number];
@@ -76,6 +86,16 @@ const metadata: Record<DbOperationLane, { kind: DbOperationKind; operation: DbOp
   "aircraft-metadata.cache.lookup": { kind: "READ", operation: "SELECT" },
   "receiver.reception-record.query": { kind: "READ", operation: "SELECT" },
   "atc.dataset.load": { kind: "READ", operation: "SELECT" },
+  "system-status.db-health.query": { kind: "READ", operation: "SELECT" },
+  "system-status.airport-count.query": { kind: "READ", operation: "SELECT" },
+  "flight-intelligence.airport-index.query": { kind: "READ", operation: "SELECT" },
+  "flight-intelligence.event.query": { kind: "READ", operation: "SELECT" },
+  "flight-intelligence.flight-link.query": { kind: "READ", operation: "SELECT" },
+  "flight-intelligence.event.create": { kind: "WRITE", operation: "INSERT" },
+  "history.list.query": { kind: "READ", operation: "SELECT" },
+  "history.flight-detail.query": { kind: "READ", operation: "SELECT" },
+  "history.aircraft-quick.query": { kind: "READ", operation: "SELECT" },
+  "history.aircraft-detail.query": { kind: "READ", operation: "SELECT" },
 };
 
 export async function trackDbOperation<T>(lane: DbOperationLane, operation: () => Promise<T>, workUnits = 1): Promise<T> {

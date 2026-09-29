@@ -1,63 +1,74 @@
-# PostgreSQL autocommit operation attribution V1
+# PostgreSQL autocommit operation attribution
 
 ## Result
 
-**AUTOCOMMIT ATTRIBUTION BLOCKED.** The committed registry was measured in
-production, but it explains only 92.70% of PostgreSQL commits, below the
-required 95% gate. No optimization was selected or implemented.
+**ATTRIBUTION BLOCKED — instrumentation is implemented but not yet production-measured.**
 
-## Stable production window
+The previous stable window explained 92.70% of PostgreSQL transactions. This
+report corrects the source classification and records the follow-up lanes. A
+release and fresh 5–10 minute canary were not run, so no new production rate
+or 95% claim is made.
 
-- Start: `2026-09-29 18:54:14 CEST`
-- End: `2026-09-29 19:25:01 CEST`
-- Duration: 30m47s, uninterrupted
-- Version/SHA: `1.0.219 / 06f8f7ba`
-- MainPID/process: `53003`
-- Transaction store: `dbtx-mumwww8a-zfs56zn`
-- Autocommit store: `dbop-mumwww8b-mys50qou`
-- Restart during window: NO
+## Git and production identity
 
-## Measured lanes
+- `HEAD`: `a3345d04bf3cba4f1788853f0ff0c3c58e8d08eb`
+- `origin/main`: `a3345d04bf3cba4f1788853f0ff0c3c58e8d08eb`
+- Current public production: version `1.0.220`, SHA `740ddd03`
+- Previous measured window: version `1.0.219`, SHA `06f8f7ba`, 30m47s
 
-| Lane | Kind/op | Attempts | Success | Failures | Success/min | Avg ms | Max ms |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| navigation.observation.create | WRITE/INSERT | 2,280 | 2,167 | 113 | 70.39 | 24.2 | 2,910 |
-| navigation.anomaly.upsert | WRITE/UPSERT | 1,255 | 1,255 | 0 | 40.77 | 8.4 | 1,135 |
-| weather.observation.create | WRITE/INSERT | 1,381 | 1,381 | 0 | 44.85 | 228.2 | 3,207 |
-| aircraft-metadata.cache.lookup | READ/SELECT | 641 | 641 | 0 | 20.82 | 11.9 | 3,190 |
-| atc.dataset.load | READ/SELECT | 286 | 286 | 0 | 9.29 | 48.3 | 3,068 |
-| receiver.reception-record.query | READ/SELECT | 0 | 0 | 0 | 0 | — | — |
+## Source classification correction
 
-`navigation.history.query` and `weather.observation.query` were legitimately
-zero during this natural-traffic window.
+FlightPosition persistence is already covered by `history.snapshot` and is not
+an uninstrumented autocommit source. The same explicit transaction owns
+Flight updates, Aircraft persistence, and ReceiverCoverage writes. No child ORM
+counters were added.
 
-## Table cross-check
+## Existing measured lanes
 
-- Navigation observations: 2,280 table inserts; the 113 failed attempts
-  correspond to PostgreSQL rollbacks.
-- Weather observations: 1,379 table inserts vs 1,381 successes; two writes
-  were in flight at the final snapshot, so the agreement is plausible.
-- Navigation anomalies: 1,255 diagnostic upserts vs 1,255 insert+update table
-  changes.
+| Lane | Kind/op | Success/min | Avg ms | Max ms |
+| --- | --- | ---: | ---: | ---: |
+| navigation.observation.create | WRITE/INSERT | 70.39 | 24.2 | 2,910 |
+| navigation.anomaly.upsert | WRITE/UPSERT | 40.77 | 8.4 | 1,135 |
+| weather.observation.create | WRITE/INSERT | 44.85 | 228.2 | 3,207 |
+| aircraft-metadata.cache.lookup | READ/SELECT | 20.82 | 11.9 | 3,190 |
+| atc.dataset.load | READ/SELECT | 9.29 | 48.3 | 3,068 |
 
-## Reconciliation
+## Newly instrumented, pending production measurement
+
+- `system-status.db-health.query` — Aircraft `SELECT id LIMIT 1`
+- `system-status.airport-count.query` — Airport bounded count probe
+- `flight-intelligence.airport-index.query` — Airport and AirportRunway reads
+- `flight-intelligence.event.query` — FlightEvent read
+- `flight-intelligence.flight-link.query` — Flight lookup before event persistence
+- `flight-intelligence.event.create` — FlightEvent insert
+- `history.list.query`, `history.flight-detail.query`,
+  `history.aircraft-quick.query`, `history.aircraft-detail.query` — concrete
+  History/API ORM reads
+
+`readSystemStatus()` now increments a process-local in-memory request counter;
+it creates no extra database query. Metadata sync remains startup/maintenance
+classification and is not instrumented.
+
+## Previous reconciliation
 
 | Class | Rate/min |
 | --- | ---: |
 | Explicit transactions | 117.20 |
 | Autocommit writes | 156.01 |
 | Instrumented autocommit reads | 30.11 |
-| Bounded observer minimum | 1.04 |
-| PostgreSQL total transactions | 332.02 |
+| Observer minimum | 1.04 |
 | Explained | 304.36 (92.70%) |
 | Unexplained | 27.66 (7.30%) |
 
-`pg_stat_statements` is unavailable. Source audit found uninstrumented
-production ORM paths, including FlightPosition persistence and route/status/
-catalog reads. These must be classified and instrumented before a valid 95%
-attribution claim. The current result is blocked, not a candidate selection.
+## Decision
+
+**ATTRIBUTION BLOCKED.** The implementation must be deployed and measured
+before selecting exactly one optimization candidate. No optimization is
+implemented or selected.
 
 ## Safety
 
-No schema or migration changes, persistence changes, cadence changes,
-optimization, deployment, or restart occurred during measurement.
+Schema changed: NO. Migration: NO. Persistence semantics changed: NO.
+Optimization deployed: NO.
+
+AIRRADAR FINAL DB ATTRIBUTION BLOCKED

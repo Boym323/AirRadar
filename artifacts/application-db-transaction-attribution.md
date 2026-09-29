@@ -2,53 +2,73 @@
 
 ## Result
 
-**AUTOCOMMIT ATTRIBUTION BLOCKED** — 92.70% explained; required gate is 95%.
+**ATTRIBUTION BLOCKED — follow-up instrumentation is ready; production
+measurement is still required.**
 
-The stable production window ran from `2026-09-29 18:54:14 CEST` to
-`2026-09-29 19:25:01 CEST` (30m47s) on version `1.0.219 / 06f8f7ba`, MainPID
-`53003`. The process, transaction store, and autocommit store remained stable;
-there was no restart.
+The previous 30m47s window measured 332.02 PostgreSQL transactions/min and
+explained 304.36/min (92.70%). The final 7.3% cannot be claimed closed until
+the new diagnostics run in production.
 
-## PostgreSQL totals
+## Correction
 
-- Commits: 10,108 (328.34/min)
-- Rollbacks: 113 (3.67/min)
-- Total transactions: 10,221 (332.02/min)
-- Deadlocks: 0; lock waits: 0; long transactions: 0
-- `pg_stat_statements`: unavailable
+FlightPosition double-count risk fixed: **YES**. FlightPosition persistence is
+already covered by `history.snapshot`. Flight updates, Aircraft persistence,
+and ReceiverCoverage writes are also `EXPLICIT_TX_CHILD`; they were not given
+autocommit counters.
 
-## Explicit transactions
+## Production
 
-| Lane | Commits | Rate/min |
-| --- | ---: | ---: |
-| history.snapshot | 3,478 | 112.98 |
-| receiver.daily-stats | 53 | 1.72 |
-| receiver.coverage | 16 | 0.52 |
-| receiver.advanced-stats | 61 | 1.98 |
-| All explicit lanes | 3,608 | 117.20 |
+- Current public version/SHA: `1.0.220 / 740ddd03`
+- Previous measured version/SHA: `1.0.219 / 06f8f7ba`
+- Previous measurement duration: 30m47s, uninterrupted
+- Current release/deployment: NO
+- Stable PID/store identity for a new window: NOT ESTABLISHED
 
-## Autocommit operations
+## PostgreSQL — previous measured window
 
-Instrumented successes totaled 5,730 (186.13/min): navigation observations
-2,167, navigation anomaly upserts 1,255, weather observations 1,381, metadata
-reads 641, and ATC dataset reads 286. Navigation observation failures were 113;
-all other measured lanes had zero failures.
+- Transactions/min: 332.02
+- Commits/min: 328.34
+- Rollbacks/min: 3.67
+- Deadlocks: 0
+- Lock waits: 0
+- Long transactions: 0
 
-Table deltas were plausible: navigation observation inserts 2,280, weather
-observation inserts 1,379, and navigation anomaly insert+update changes 1,255.
+## Explicit transactions — previous measured window
 
-## Reconciliation and decision
+- Rate/min: 117.20
+- Share: 35.69%
+- Primary lane: `history.snapshot` at 112.98/min
 
-Explicit transactions contributed 117.20/min, instrumented autocommit writes
-156.01/min, instrumented reads 30.11/min, and the bounded measurement observer
-at least 1.04/min. Together these explain 304.36/min, or 92.70% of the fresh
-PostgreSQL total. The remaining 27.66/min is untracked application activity.
+## Existing autocommit — previous measured window
 
-The source audit identifies likely missing classes including FlightPosition
-persistence and several route/status/catalog ORM reads. No optimization may be
-selected until those paths are classified and attribution reaches 95%.
+- Writes/min: 156.01
+- Reads/min: 30.11
+- Observer minimum: 1.04/min
 
-## Safety
+## Newly attributed lanes
+
+Implemented but not production-measured: System Status database health and
+airport probes; Flight Intelligence airport index, event lookup, flight-link
+lookup, and event insert; History list, flight detail, aircraft quick detail,
+and aircraft detail reads. `readSystemStatus()` has an in-memory request
+counter with no counting query.
+
+## Reconciliation and gate
+
+- Previous explained/min: 304.36
+- Previous explained: 92.70%
+- Previous unexplained/min: 27.66
+- 95% gate: **NOT YET MEASURED after instrumentation**
+
+## Next step
+
+**INVESTIGATE REMAINING ATTRIBUTION** — deploy diagnostics only, run the
+required canary and long measurement, then choose exactly one optimization or
+KEEP CURRENT DATABASE MODEL using measured cost and health evidence.
+
+## Database safety
 
 Schema changed: NO. Migration: NO. Persistence semantics changed: NO.
-Optimization deployed: NO. Deployment or restart during measurement: NO.
+Optimization deployed: NO.
+
+AIRRADAR FINAL DB ATTRIBUTION BLOCKED
