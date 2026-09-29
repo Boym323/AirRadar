@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.212] - 2026-09-29
+
+Changes since v1.0.211.
+
+### Added
+
+- Implement configurable checkpoint intervals and modes (55a205f)
+
+### Maintenance
+
+- Sync generated repository metadata (1cd927d)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (1cd927d)
+- Merge pull request #214 from Boym323/automation/repository-metadata (3a71850)
+- feat(persistence): implement configurable checkpoint intervals and modes (55a205f)
+
+</details>
 ## [1.0.211] - 2026-09-29
 
 Changes since v1.0.210.
