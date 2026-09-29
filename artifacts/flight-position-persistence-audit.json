@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-28T17:57:54.702Z",
+  "generatedAt": "2026-09-29T13:41:11.166Z",
   "safety": "Replay-only synthetic dataset. No database reads, writes, migrations, deployment, or production shadow data.",
   "scenarios": [
     {

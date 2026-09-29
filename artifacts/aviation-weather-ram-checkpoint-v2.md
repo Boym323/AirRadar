@@ -2,60 +2,73 @@
 
 ## Result
 
-BLOCKED for production canary/deployment. The implementation is present and
-focused validation is green; no release was performed because the repository
-instructions require an explicit release request.
+PASS. Production release and a 76.38-minute canary completed on 2026-09-29.
 
-## Baseline
+## Git and deployment
 
-- Production SHA: `6798494adabcb4ab93af5c78988c1cf5ca89ca90`
-- `origin/main`: same SHA at measurement time
-- Cache path: `/var/lib/airradar/weather/weather-cache-v1.json`
-- Observed file: 115,269 bytes, mode `0600`
-- Observed mtime: `2026-09-29 12:32:06 +0200`
-- Historical weather attribution supplied in the request: ~13.04 MB/min
-- A 10-second live sample showed no weather-cache mtime or `write_bytes`
-  increase; total process `wchar` increased by 666,252 bytes and `syscw` by
-  3,610, which cannot be attributed to this file alone.
+- Start/candidate/origin SHA: `e09a9ab0f7a52729322829799c46a975cddd886f`
+- Production version: `1.0.215`
+- Deployment/restart: `2026-09-29 15:40:49 CEST`
+- Build: passed in an isolated release directory; release duration 146 seconds
+- Prisma: schema unchanged; migrations applied: 0
+- Final service: active; public/local health, database, receiver, and SSE passed
 
-## Design
+## Validation gates
 
-- RAM is authoritative during runtime.
-- Weather mutations increment a generation and mark the persistence dirty.
-- The current bounded state is materialized only at checkpoint time.
-- Default checkpoint: 1,800,000 ms from the first dirty mutation.
-- `AVIATION_WEATHER_CACHE_CHECKPOINT_MS=0` provides shutdown/manual-flush-only
-  behavior.
-- Atomic temporary-file write, `fsync`, mode `0600`, and rename are preserved.
-- Mutations during a write remain dirty for a later checkpoint.
-- Failed writes retain dirty state and retry with bounded backoff.
-- Canonical shutdown flushes weather persistence with the existing coordinator.
+Full suite passed with 1,376 tests and 3 skips. Lint passed with the existing
+7 warnings; typecheck, production core/browser gates, SSE, statistics,
+airport-operations audit, DB verification, FlightPosition replay, and 59
+focused weather tests passed. Radar benchmark passed at 50, 100, 250, and 500
+aircraft. The optional `intelligence:replay` command was not run successfully
+because its local history database was unavailable; this did not affect the
+required FlightPosition replay audit.
 
-## Semantics
+## Checkpoint canary
 
-Live METAR/TAF/SIGMET TTLs, request cadence, stale-if-error behavior, fetchedAt
-timestamps, and persisted product max ages are unchanged. A hard crash can lose
-up to one checkpoint interval of recovery-only weather data.
+- Configuration: 1,800,000 ms, `periodic`; shutdown-only remained disabled.
+- First dirty mutation: `15:43:58.767 CEST`.
+- First checkpoint: `16:13:58.769 CEST`; one attempt, one success, zero failures.
+- Second dirty mutation: `16:15:09.095 CEST`.
+- Second checkpoint: `16:45:09.097 CEST`; one attempt, one success, zero failures.
+- Final generations: mutation 8, persisted 8; pending mutations 0.
+- Periodic checkpoints: 2; graceful production flush was not naturally observed.
 
-## Validation
+The cache file did not rewrite during either dirty interval. Each checkpoint
+performed one atomic replacement. The first replacement changed the file from
+115,269 to 127,901 bytes; the second produced 124,570 bytes. Both snapshots
+were mode `0600` and valid JSON.
 
-- `tests/aviation-weather-persistence.test.ts`: 7 tests passed
-- `tests/shutdown.test.ts`: 5 tests passed
-- Added fake-timer coverage for 30-minute coalescing and shutdown-only mode.
-- `npm run typecheck`: passed
-- Production build, browser gates, full suite, and canary: not run.
+## Weather correctness and composition
 
-## Deployment
+The final snapshot is version 1 with 20 entries: 1 METAR, 17 TAF, and 2
+SIGMET entries. METAR, TAF, and SIGMET endpoints returned HTTP 200. Provider
+failures and persistence failures remained zero. Live TTL/freshness behavior
+continued independently of disk checkpoint age.
 
-- Database schema changed: no
-- Migration: 0
-- Production deployment: not performed
-- Candidate SHA: working-tree changes, not committed
+## Physical writes
 
-## Next step
+The representative PID 32049 `/proc/PID/io` interval was 76.38 minutes,
+15:44:17–17:00:40 CEST. Two complete weather snapshots totaled 252,471
+bytes, or approximately 0.0033 MB/min and 1.57 snapshot writes/hour. Against
+the historical weather reference of ~13.04 MB/min, this is a measured 99.97%
+reduction.
 
-After explicit release authorization, run the authoritative release procedure,
-observe at least two natural checkpoints, and repeat file-attribution and live
-weather correctness measurements before marking the canary passed.
+The same interval measured total Node `write_bytes` at 13.76 MB/min,
+`wchar` at 16.34 MB/min, and `syscw` at 10,550/min. The 13.53 MB/min total
+reference is traffic-sensitive; this sample shows no overall reduction claim,
+because remaining writers dominate after weather persistence is coalesced.
+ADSBDB remained hourly: one checkpoint, one write, no return of the historical
+write storm. Its measured file size was 4,773,311 bytes at the checkpoint.
 
-AIRRADAR AVIATION WEATHER RAM-FIRST PERSISTENCE V2 BLOCKED
+## CPU and memory
+
+Node CPU averaged approximately 48.5% of one core and peaked at 56.1%.
+RSS fluctuated between approximately 930 MB and 1,525 MB without a monotonic
+growth pattern. Normal GC fluctuation was observed.
+
+## Decision
+
+KEEP 30-MIN WEATHER CHECKPOINT. The two observed checkpoints/hour make weather
+writes negligible; shutdown-only mode should not be enabled automatically.
+
+AIRRADAR AVIATION WEATHER RAM-FIRST PERSISTENCE V2 PASS

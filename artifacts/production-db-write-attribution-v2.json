@@ -1,0 +1,1020 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-29T14:24:44.287Z",
+  "measurement": {
+    "startedAt": "2026-09-29T13:54:43.778Z",
+    "endedAt": "2026-09-29T14:24:44.286Z",
+    "durationMinutes": 30.008466666666667
+  },
+  "baseline": {
+    "transactionsPerMin": 522.0859890653082,
+    "updatesPerMin": 339.20426901741064,
+    "insertsPerMin": 425.3799483256947,
+    "deletesPerMin": 2.3326750006109385
+  },
+  "perTable": [
+    {
+      "table": "flight",
+      "updatesPerMin": 174.68403361717915,
+      "insertsPerMin": 4.73199785838219,
+      "deletesPerMin": 0,
+      "hotRatio": 0.027851964898893553,
+      "liveRows": 116935,
+      "deadRows": 16320,
+      "size": "55 MB",
+      "sizeBytes": 57679872
+    },
+    {
+      "table": "receiverCoverageHourly",
+      "updatesPerMin": 105.40358609903427,
+      "insertsPerMin": 9.897206788306411,
+      "deletesPerMin": 0,
+      "hotRatio": 0.3945621245652861,
+      "liveRows": 69597,
+      "deadRows": 2737,
+      "size": "21 MB",
+      "sizeBytes": 21749760
+    },
+    {
+      "table": "navigationIntegrityAnomaly",
+      "updatesPerMin": 34.99012500916408,
+      "insertsPerMin": 10.79695285997063,
+      "deletesPerMin": 0,
+      "hotRatio": 0.32476190476190475,
+      "liveRows": 7144,
+      "deadRows": 402,
+      "size": "17 MB",
+      "sizeBytes": 18063360
+    },
+    {
+      "table": "aircraft",
+      "updatesPerMin": 12.763064646199851,
+      "insertsPerMin": 0.06664785716031253,
+      "deletesPerMin": 0,
+      "hotRatio": 1,
+      "liveRows": 9535,
+      "deadRows": 912,
+      "size": "5672 kB",
+      "sizeBytes": 5808128
+    },
+    {
+      "table": "receiverDailyStats",
+      "updatesPerMin": 3.8988996438782832,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": 1,
+      "liveRows": 22,
+      "deadRows": 34,
+      "size": "80 kB",
+      "sizeBytes": 81920
+    },
+    {
+      "table": "receiverDailyAircraft",
+      "updatesPerMin": 3.1990971436950018,
+      "insertsPerMin": 2.132731429130001,
+      "deletesPerMin": 0,
+      "hotRatio": 1,
+      "liveRows": 60213,
+      "deadRows": 3070,
+      "size": "8672 kB",
+      "sizeBytes": 8880128
+    },
+    {
+      "table": "receiverDailyCoverage",
+      "updatesPerMin": 1.0996896431451568,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": 1,
+      "liveRows": 792,
+      "deadRows": 103,
+      "size": "168 kB",
+      "sizeBytes": 172032
+    },
+    {
+      "table": "receiverDailyCoverageAltitude",
+      "updatesPerMin": 0.23326750006109387,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": 1,
+      "liveRows": 2020,
+      "deadRows": 119,
+      "size": "368 kB",
+      "sizeBytes": 376832
+    },
+    {
+      "table": "aircraftMetadataCache",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 617002,
+      "deadRows": 0,
+      "size": "368 MB",
+      "sizeBytes": 385761280
+    },
+    {
+      "table": "airport",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 5887,
+      "deadRows": 0,
+      "size": "3800 kB",
+      "sizeBytes": 3891200
+    },
+    {
+      "table": "atcSector",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 114,
+      "deadRows": 0,
+      "size": "15 MB",
+      "sizeBytes": 15564800
+    },
+    {
+      "table": "flightPosition",
+      "updatesPerMin": 0,
+      "insertsPerMin": 173.65099183119432,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 4843449,
+      "deadRows": 438,
+      "size": "873 MB",
+      "sizeBytes": 915783680
+    },
+    {
+      "table": "aircraftMetadataSync",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 1,
+      "deadRows": 22,
+      "size": "32 kB",
+      "sizeBytes": 32768
+    },
+    {
+      "table": "aircraftWeatherObservation",
+      "updatesPerMin": 0,
+      "insertsPerMin": 78.44452787768785,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 127268,
+      "deadRows": 178,
+      "size": "142 MB",
+      "sizeBytes": 148373504
+    },
+    {
+      "table": "airportFrequency",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 16559,
+      "deadRows": 0,
+      "size": "2432 kB",
+      "sizeBytes": 2490368
+    },
+    {
+      "table": "airportRunway",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 8068,
+      "deadRows": 0,
+      "size": "1576 kB",
+      "sizeBytes": 1613824
+    },
+    {
+      "table": "altitudeAnomaly",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0.6664785716031253,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 1328,
+      "deadRows": 0,
+      "size": "1560 kB",
+      "sizeBytes": 1597440
+    },
+    {
+      "table": "atcTransmitter",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 0,
+      "deadRows": 0,
+      "size": "16 kB",
+      "sizeBytes": 16384
+    },
+    {
+      "table": "flightEvent",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 0,
+      "deadRows": 0,
+      "size": "80 kB",
+      "sizeBytes": 81920
+    },
+    {
+      "table": "navaid",
+      "updatesPerMin": 0,
+      "insertsPerMin": 0,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 11008,
+      "deadRows": 0,
+      "size": "2912 kB",
+      "sizeBytes": 2981888
+    },
+    {
+      "table": "navigationIntegrityObservation",
+      "updatesPerMin": 0,
+      "insertsPerMin": 141.1934853941221,
+      "deletesPerMin": 0,
+      "hotRatio": null,
+      "liveRows": 95782,
+      "deadRows": 727,
+      "size": "128 MB",
+      "sizeBytes": 134168576
+    }
+  ],
+  "queryAttribution": [],
+  "pgStatStatementsAvailable": false,
+  "wal": {
+    "before": [
+      {
+        "wal_records": "113700206",
+        "wal_fpi": "3930177",
+        "wal_bytes": "34517479122",
+        "wal_buffers_full": "467350",
+        "wal_write": "5915551",
+        "wal_sync": "5442236",
+        "wal_write_time": 0,
+        "wal_sync_time": 0,
+        "stats_reset": "2026-09-06T20:03:35.203Z"
+      }
+    ],
+    "after": [
+      {
+        "wal_records": "113862001",
+        "wal_fpi": "3945596",
+        "wal_bytes": "34633895368",
+        "wal_buffers_full": "467350",
+        "wal_write": "5928923",
+        "wal_sync": "5455574",
+        "wal_write_time": 0,
+        "wal_sync_time": 0,
+        "stats_reset": "2026-09-06T20:03:35.203Z"
+      }
+    ],
+    "delta": {
+      "wal_records": 161795,
+      "wal_fpi": 15419,
+      "wal_bytes": 116416246,
+      "wal_buffers_full": 0,
+      "wal_write": 13372,
+      "wal_sync": 13338
+    }
+  },
+  "service": {
+    "before": {
+      "MemoryCurrent": 1511849984,
+      "CPUUsageNSec": 409806391000
+    },
+    "after": {
+      "MemoryCurrent": 1526378496,
+      "CPUUsageNSec": 1197889762000
+    },
+    "cpuPercentOneCore": 43.770056617354655
+  },
+  "traffic": {
+    "before": {
+      "status": "ok",
+      "application": {
+        "status": "ok",
+        "name": "AirRadar"
+      },
+      "database": {
+        "status": "ok"
+      },
+      "source": {
+        "status": "ok",
+        "provider": "local-beast+json-failover",
+        "lastUpdate": "2026-09-29T13:54:41.163Z",
+        "error": null
+      },
+      "readsb": {
+        "status": "ok",
+        "provider": "local-beast+json-failover",
+        "lastUpdate": "2026-09-29T13:54:41.163Z",
+        "error": null
+      },
+      "aircraftCount": 86,
+      "lastReadsbUpdate": "2026-09-29T13:54:41.163Z",
+      "atc": {
+        "status": "configured",
+        "source": "multiple sources",
+        "sourceReference": null,
+        "effectiveDate": null,
+        "lastVerifiedAt": "2026-09-29T02:40:40.56Z",
+        "sectorCount": 114,
+        "transmitterCount": 0
+      },
+      "alerts": {
+        "status": "disabled",
+        "enabled": false,
+        "notifier": "noop",
+        "ruleCount": 0
+      },
+      "checkedAt": "2026-09-29T13:54:43.772Z"
+    },
+    "after": {
+      "status": "ok",
+      "application": {
+        "status": "ok",
+        "name": "AirRadar"
+      },
+      "database": {
+        "status": "ok"
+      },
+      "source": {
+        "status": "ok",
+        "provider": "local-beast+json-failover",
+        "lastUpdate": "2026-09-29T14:24:42.969Z",
+        "error": null
+      },
+      "readsb": {
+        "status": "ok",
+        "provider": "local-beast+json-failover",
+        "lastUpdate": "2026-09-29T14:24:42.969Z",
+        "error": null
+      },
+      "aircraftCount": 70,
+      "lastReadsbUpdate": "2026-09-29T14:24:42.969Z",
+      "atc": {
+        "status": "configured",
+        "source": "multiple sources",
+        "sourceReference": null,
+        "effectiveDate": null,
+        "lastVerifiedAt": "2026-09-29T02:40:40.56Z",
+        "sectorCount": 114,
+        "transmitterCount": 0
+      },
+      "alerts": {
+        "status": "disabled",
+        "enabled": false,
+        "notifier": "noop",
+        "ruleCount": 0
+      },
+      "checkedAt": "2026-09-29T14:24:44.284Z"
+    }
+  },
+  "classification": {
+    "immediate": [
+      "flight",
+      "flightPosition",
+      "flightEvent"
+    ],
+    "coalescible": [
+      "flight"
+    ],
+    "skipIfUnchanged": [
+      "aircraft"
+    ],
+    "periodicAggregate": [
+      "receiverDailyStats",
+      "receiverDailyAircraft",
+      "receiverDailyCoverage",
+      "receiverDailyCoverageAltitude",
+      "receiverCoverageHourly"
+    ],
+    "leaveAsIs": [
+      "navigationIntegrityObservation",
+      "navigationIntegrityAnomaly",
+      "aircraftWeatherObservation"
+    ]
+  },
+  "snapshots": {
+    "started": {
+      "label": "start",
+      "capturedAt": "2026-09-29T13:54:43.778Z",
+      "tables": [
+        {
+          "table_name": "flight",
+          "n_tup_ins": "128280",
+          "n_tup_upd": "4856139",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "130524",
+          "n_live_tup": "116793",
+          "n_dead_tup": "11235",
+          "size_bytes": "57597952",
+          "size": "55 MB"
+        },
+        {
+          "table_name": "aircraft",
+          "n_tup_ins": "66435",
+          "n_tup_upd": "4758321",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "4754970",
+          "n_live_tup": "9533",
+          "n_dead_tup": "895",
+          "size_bytes": "5808128",
+          "size": "5672 kB"
+        },
+        {
+          "table_name": "receiverCoverageHourly",
+          "n_tup_ins": "69583",
+          "n_tup_upd": "1203985",
+          "n_tup_del": "276",
+          "n_tup_hot_upd": "974778",
+          "n_live_tup": "69300",
+          "n_dead_tup": "712",
+          "size_bytes": "21692416",
+          "size": "21 MB"
+        },
+        {
+          "table_name": "aircraftMetadataCache",
+          "n_tup_ins": "617144",
+          "n_tup_upd": "616377",
+          "n_tup_del": "9254402",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "617002",
+          "n_dead_tup": "0",
+          "size_bytes": "385761280",
+          "size": "368 MB"
+        },
+        {
+          "table_name": "receiverDailyAircraft",
+          "n_tup_ins": "60149",
+          "n_tup_upd": "84500",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "80520",
+          "n_live_tup": "60149",
+          "n_dead_tup": "3087",
+          "size_bytes": "8880128",
+          "size": "8672 kB"
+        },
+        {
+          "table_name": "receiverDailyStats",
+          "n_tup_ins": "22",
+          "n_tup_upd": "83011",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "82808",
+          "n_live_tup": "22",
+          "n_dead_tup": "44",
+          "size_bytes": "81920",
+          "size": "80 kB"
+        },
+        {
+          "table_name": "receiverDailyCoverage",
+          "n_tup_ins": "792",
+          "n_tup_upd": "32947",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "32807",
+          "n_live_tup": "792",
+          "n_dead_tup": "185",
+          "size_bytes": "172032",
+          "size": "168 kB"
+        },
+        {
+          "table_name": "navigationIntegrityAnomaly",
+          "n_tup_ins": "6820",
+          "n_tup_upd": "22242",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "8015",
+          "n_live_tup": "6820",
+          "n_dead_tup": "1113",
+          "size_bytes": "17391616",
+          "size": "17 MB"
+        },
+        {
+          "table_name": "receiverDailyCoverageAltitude",
+          "n_tup_ins": "2020",
+          "n_tup_upd": "12474",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "12416",
+          "n_live_tup": "2020",
+          "n_dead_tup": "113",
+          "size_bytes": "376832",
+          "size": "368 kB"
+        },
+        {
+          "table_name": "airport",
+          "n_tup_ins": "5888",
+          "n_tup_upd": "5885",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "5887",
+          "n_dead_tup": "0",
+          "size_bytes": "3891200",
+          "size": "3800 kB"
+        },
+        {
+          "table_name": "atcSector",
+          "n_tup_ins": "99",
+          "n_tup_upd": "1803",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "941",
+          "n_live_tup": "114",
+          "n_dead_tup": "0",
+          "size_bytes": "15564800",
+          "size": "15 MB"
+        },
+        {
+          "table_name": "flightPosition",
+          "n_tup_ins": "4843787",
+          "n_tup_upd": "491",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "71",
+          "n_live_tup": "4838238",
+          "n_dead_tup": "438",
+          "size_bytes": "914440192",
+          "size": "872 MB"
+        },
+        {
+          "table_name": "aircraftMetadataSync",
+          "n_tup_ins": "1",
+          "n_tup_upd": "22",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "22",
+          "n_live_tup": "1",
+          "n_dead_tup": "22",
+          "size_bytes": "32768",
+          "size": "32 kB"
+        },
+        {
+          "table_name": "aircraftWeatherObservation",
+          "n_tup_ins": "125079",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "124914",
+          "n_dead_tup": "178",
+          "size_bytes": "145530880",
+          "size": "139 MB"
+        },
+        {
+          "table_name": "airportFrequency",
+          "n_tup_ins": "16559",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "16559",
+          "n_dead_tup": "0",
+          "size_bytes": "2490368",
+          "size": "2432 kB"
+        },
+        {
+          "table_name": "airportRunway",
+          "n_tup_ins": "8068",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "8068",
+          "n_dead_tup": "0",
+          "size_bytes": "1613824",
+          "size": "1576 kB"
+        },
+        {
+          "table_name": "altitudeAnomaly",
+          "n_tup_ins": "1308",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "1308",
+          "n_dead_tup": "0",
+          "size_bytes": "1597440",
+          "size": "1560 kB"
+        },
+        {
+          "table_name": "atcTransmitter",
+          "n_tup_ins": "0",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "0",
+          "n_dead_tup": "0",
+          "size_bytes": "16384",
+          "size": "16 kB"
+        },
+        {
+          "table_name": "flightEvent",
+          "n_tup_ins": "0",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "0",
+          "n_dead_tup": "0",
+          "size_bytes": "81920",
+          "size": "80 kB"
+        },
+        {
+          "table_name": "navaid",
+          "n_tup_ins": "11008",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "11008",
+          "n_dead_tup": "0",
+          "size_bytes": "2981888",
+          "size": "2912 kB"
+        },
+        {
+          "table_name": "navigationIntegrityObservation",
+          "n_tup_ins": "99369",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "91695",
+          "n_dead_tup": "577",
+          "size_bytes": "128475136",
+          "size": "123 MB"
+        }
+      ],
+      "database": [
+        {
+          "datname": "airradar",
+          "xact_commit": "6151160",
+          "xact_rollback": "90623",
+          "tup_inserted": "6140494",
+          "tup_updated": "11807552",
+          "tup_deleted": "9326386",
+          "stats_reset": null
+        }
+      ],
+      "wal": [
+        {
+          "wal_records": "113700206",
+          "wal_fpi": "3930177",
+          "wal_bytes": "34517479122",
+          "wal_buffers_full": "467350",
+          "wal_write": "5915551",
+          "wal_sync": "5442236",
+          "wal_write_time": 0,
+          "wal_sync_time": 0,
+          "stats_reset": "2026-09-06T20:03:35.203Z"
+        }
+      ],
+      "statements": [],
+      "pgStatStatementsAvailable": false,
+      "service": {
+        "MemoryCurrent": 1511849984,
+        "CPUUsageNSec": 409806391000
+      },
+      "traffic": {
+        "status": "ok",
+        "application": {
+          "status": "ok",
+          "name": "AirRadar"
+        },
+        "database": {
+          "status": "ok"
+        },
+        "source": {
+          "status": "ok",
+          "provider": "local-beast+json-failover",
+          "lastUpdate": "2026-09-29T13:54:41.163Z",
+          "error": null
+        },
+        "readsb": {
+          "status": "ok",
+          "provider": "local-beast+json-failover",
+          "lastUpdate": "2026-09-29T13:54:41.163Z",
+          "error": null
+        },
+        "aircraftCount": 86,
+        "lastReadsbUpdate": "2026-09-29T13:54:41.163Z",
+        "atc": {
+          "status": "configured",
+          "source": "multiple sources",
+          "sourceReference": null,
+          "effectiveDate": null,
+          "lastVerifiedAt": "2026-09-29T02:40:40.56Z",
+          "sectorCount": 114,
+          "transmitterCount": 0
+        },
+        "alerts": {
+          "status": "disabled",
+          "enabled": false,
+          "notifier": "noop",
+          "ruleCount": 0
+        },
+        "checkedAt": "2026-09-29T13:54:43.772Z"
+      }
+    },
+    "ended": {
+      "label": "end",
+      "capturedAt": "2026-09-29T14:24:44.286Z",
+      "tables": [
+        {
+          "table_name": "flight",
+          "n_tup_ins": "128422",
+          "n_tup_upd": "4861381",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "130670",
+          "n_live_tup": "116935",
+          "n_dead_tup": "16320",
+          "size_bytes": "57679872",
+          "size": "55 MB"
+        },
+        {
+          "table_name": "aircraft",
+          "n_tup_ins": "66437",
+          "n_tup_upd": "4758704",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "4755353",
+          "n_live_tup": "9535",
+          "n_dead_tup": "912",
+          "size_bytes": "5808128",
+          "size": "5672 kB"
+        },
+        {
+          "table_name": "receiverCoverageHourly",
+          "n_tup_ins": "69880",
+          "n_tup_upd": "1207148",
+          "n_tup_del": "276",
+          "n_tup_hot_upd": "976026",
+          "n_live_tup": "69597",
+          "n_dead_tup": "2737",
+          "size_bytes": "21749760",
+          "size": "21 MB"
+        },
+        {
+          "table_name": "aircraftMetadataCache",
+          "n_tup_ins": "617144",
+          "n_tup_upd": "616377",
+          "n_tup_del": "9254402",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "617002",
+          "n_dead_tup": "0",
+          "size_bytes": "385761280",
+          "size": "368 MB"
+        },
+        {
+          "table_name": "receiverDailyAircraft",
+          "n_tup_ins": "60213",
+          "n_tup_upd": "84596",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "80616",
+          "n_live_tup": "60213",
+          "n_dead_tup": "3070",
+          "size_bytes": "8880128",
+          "size": "8672 kB"
+        },
+        {
+          "table_name": "receiverDailyStats",
+          "n_tup_ins": "22",
+          "n_tup_upd": "83128",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "82925",
+          "n_live_tup": "22",
+          "n_dead_tup": "34",
+          "size_bytes": "81920",
+          "size": "80 kB"
+        },
+        {
+          "table_name": "receiverDailyCoverage",
+          "n_tup_ins": "792",
+          "n_tup_upd": "32980",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "32840",
+          "n_live_tup": "792",
+          "n_dead_tup": "103",
+          "size_bytes": "172032",
+          "size": "168 kB"
+        },
+        {
+          "table_name": "navigationIntegrityAnomaly",
+          "n_tup_ins": "7144",
+          "n_tup_upd": "23292",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "8356",
+          "n_live_tup": "7144",
+          "n_dead_tup": "402",
+          "size_bytes": "18063360",
+          "size": "17 MB"
+        },
+        {
+          "table_name": "receiverDailyCoverageAltitude",
+          "n_tup_ins": "2020",
+          "n_tup_upd": "12481",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "12423",
+          "n_live_tup": "2020",
+          "n_dead_tup": "119",
+          "size_bytes": "376832",
+          "size": "368 kB"
+        },
+        {
+          "table_name": "airport",
+          "n_tup_ins": "5888",
+          "n_tup_upd": "5885",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "5887",
+          "n_dead_tup": "0",
+          "size_bytes": "3891200",
+          "size": "3800 kB"
+        },
+        {
+          "table_name": "atcSector",
+          "n_tup_ins": "99",
+          "n_tup_upd": "1803",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "941",
+          "n_live_tup": "114",
+          "n_dead_tup": "0",
+          "size_bytes": "15564800",
+          "size": "15 MB"
+        },
+        {
+          "table_name": "flightPosition",
+          "n_tup_ins": "4848998",
+          "n_tup_upd": "491",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "71",
+          "n_live_tup": "4843449",
+          "n_dead_tup": "438",
+          "size_bytes": "915783680",
+          "size": "873 MB"
+        },
+        {
+          "table_name": "aircraftMetadataSync",
+          "n_tup_ins": "1",
+          "n_tup_upd": "22",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "22",
+          "n_live_tup": "1",
+          "n_dead_tup": "22",
+          "size_bytes": "32768",
+          "size": "32 kB"
+        },
+        {
+          "table_name": "aircraftWeatherObservation",
+          "n_tup_ins": "127433",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "127268",
+          "n_dead_tup": "178",
+          "size_bytes": "148373504",
+          "size": "142 MB"
+        },
+        {
+          "table_name": "airportFrequency",
+          "n_tup_ins": "16559",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "16559",
+          "n_dead_tup": "0",
+          "size_bytes": "2490368",
+          "size": "2432 kB"
+        },
+        {
+          "table_name": "airportRunway",
+          "n_tup_ins": "8068",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "8068",
+          "n_dead_tup": "0",
+          "size_bytes": "1613824",
+          "size": "1576 kB"
+        },
+        {
+          "table_name": "altitudeAnomaly",
+          "n_tup_ins": "1328",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "1328",
+          "n_dead_tup": "0",
+          "size_bytes": "1597440",
+          "size": "1560 kB"
+        },
+        {
+          "table_name": "atcTransmitter",
+          "n_tup_ins": "0",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "0",
+          "n_dead_tup": "0",
+          "size_bytes": "16384",
+          "size": "16 kB"
+        },
+        {
+          "table_name": "flightEvent",
+          "n_tup_ins": "0",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "0",
+          "n_dead_tup": "0",
+          "size_bytes": "81920",
+          "size": "80 kB"
+        },
+        {
+          "table_name": "navaid",
+          "n_tup_ins": "11008",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "11008",
+          "n_dead_tup": "0",
+          "size_bytes": "2981888",
+          "size": "2912 kB"
+        },
+        {
+          "table_name": "navigationIntegrityObservation",
+          "n_tup_ins": "103606",
+          "n_tup_upd": "0",
+          "n_tup_del": "0",
+          "n_tup_hot_upd": "0",
+          "n_live_tup": "95782",
+          "n_dead_tup": "727",
+          "size_bytes": "134168576",
+          "size": "128 MB"
+        }
+      ],
+      "database": [
+        {
+          "datname": "airradar",
+          "xact_commit": "6166676",
+          "xact_rollback": "90774",
+          "tup_inserted": "6153259",
+          "tup_updated": "11817731",
+          "tup_deleted": "9326456",
+          "stats_reset": null
+        }
+      ],
+      "wal": [
+        {
+          "wal_records": "113862001",
+          "wal_fpi": "3945596",
+          "wal_bytes": "34633895368",
+          "wal_buffers_full": "467350",
+          "wal_write": "5928923",
+          "wal_sync": "5455574",
+          "wal_write_time": 0,
+          "wal_sync_time": 0,
+          "stats_reset": "2026-09-06T20:03:35.203Z"
+        }
+      ],
+      "statements": [],
+      "pgStatStatementsAvailable": false,
+      "service": {
+        "MemoryCurrent": 1526378496,
+        "CPUUsageNSec": 1197889762000
+      },
+      "traffic": {
+        "status": "ok",
+        "application": {
+          "status": "ok",
+          "name": "AirRadar"
+        },
+        "database": {
+          "status": "ok"
+        },
+        "source": {
+          "status": "ok",
+          "provider": "local-beast+json-failover",
+          "lastUpdate": "2026-09-29T14:24:42.969Z",
+          "error": null
+        },
+        "readsb": {
+          "status": "ok",
+          "provider": "local-beast+json-failover",
+          "lastUpdate": "2026-09-29T14:24:42.969Z",
+          "error": null
+        },
+        "aircraftCount": 70,
+        "lastReadsbUpdate": "2026-09-29T14:24:42.969Z",
+        "atc": {
+          "status": "configured",
+          "source": "multiple sources",
+          "sourceReference": null,
+          "effectiveDate": null,
+          "lastVerifiedAt": "2026-09-29T02:40:40.56Z",
+          "sectorCount": 114,
+          "transmitterCount": 0
+        },
+        "alerts": {
+          "status": "disabled",
+          "enabled": false,
+          "notifier": "noop",
+          "ruleCount": 0
+        },
+        "checkedAt": "2026-09-29T14:24:44.284Z"
+      }
+    }
+  }
+}

@@ -1,39 +1,20 @@
 {
-  "result": "BLOCKED",
-  "reason": "Implementation validated locally; production release and canary were not authorized.",
-  "startSha": "6798494adabcb4ab93af5c78988c1cf5ca89ca90",
-  "originMain": "6798494adabcb4ab93af5c78988c1cf5ca89ca90",
-  "cacheFile": "/var/lib/airradar/weather/weather-cache-v1.json",
-  "baseline": {
-    "fileSizeBytes": 115269,
-    "mode": "0600",
-    "historicalWeatherMbPerMinute": 13.04,
-    "tenSecondSample": {
-      "cacheMtimeChanged": false,
-      "processWriteBytesDelta": 0,
-      "processWcharDelta": 666252,
-      "processSyscwDelta": 3610,
-      "attribution": "not attributable to the weather cache alone"
-    }
-  },
-  "design": {
-    "defaultCheckpointIntervalMs": 1800000,
-    "shutdownOnlySupported": true,
-    "ramAuthoritative": true,
-    "atomicWritePreserved": true,
-    "databaseMigration": false
-  },
-  "tests": {
-    "focusedPersistence": "pass",
-    "shutdown": "pass",
-    "typecheck": "pass",
-    "fullSuite": "not-run",
-    "productionBuild": "not-run",
-    "browserGate": "not-run",
-    "canary": "not-run"
-  },
-  "deployment": {
-    "performed": false,
-    "candidateSha": "working-tree"
-  }
+  "result": "PASS",
+  "startSha": "e09a9ab0f7a52729322829799c46a975cddd886f",
+  "candidateSha": "e09a9ab0f7a52729322829799c46a975cddd886f",
+  "originMain": "e09a9ab0f7a52729322829799c46a975cddd886f",
+  "workingTreeAtRelease": "clean",
+  "version": "1.0.215",
+  "deployment": { "previousVersion": "1.0.215", "previousSha": "e09a9ab0", "newVersion": "1.0.215", "newSha": "e09a9ab0", "time": "2026-09-29T15:40:49+02:00", "migrationsApplied": 0, "schemaChanged": false },
+  "build": { "result": "pass", "releaseDurationSeconds": 146, "isolatedProductionBuild": true, "peakMemory": "not available" },
+  "gates": { "fullSuite": "1376 passed, 3 skipped", "lint": "pass, 7 existing warnings", "typecheck": "pass", "productionCore": "pass", "browserResponsive": "pass", "sse": "pass", "radarBenchmark": "pass: 50, 100, 250, 500 aircraft", "statistics": "pass", "flightPositionReplay": "pass", "airportOperations": "pass", "dbVerification": "pass", "weatherTests": "59 passed", "intelligenceReplay": "not run: local history database unavailable" },
+  "cacheFile": { "path": "/var/lib/airradar/weather/weather-cache-v1.json", "finalSizeBytes": 124570, "mode": "0600", "version": 1, "entries": 20, "products": { "metar": 1, "taf": 17, "sigmet": 2 } },
+  "config": { "checkpointIntervalMs": 1800000, "checkpointMode": "periodic", "shutdownOnlyEnabled": false },
+  "canary": { "startedAt": "2026-09-29T15:43:58+02:00", "endedAt": "2026-09-29T17:00:40+02:00", "durationMinutes": 76.38, "firstDirtyAt": "2026-09-29T15:43:58.767+02:00", "firstCheckpoint": "2026-09-29T16:13:58.769+02:00", "secondDirtyAt": "2026-09-29T16:15:09.095+02:00", "secondCheckpoint": "2026-09-29T16:45:09.097+02:00", "attempts": 2, "successes": 2, "failures": 0, "periodicCheckpoints": 2, "gracefulCheckpoints": 0, "mutationGeneration": 8, "persistedGeneration": 8, "behavior": "dirty state was coalesced; each checkpoint replaced the file once; no write storm" },
+  "writes": { "weatherSnapshotWrites": 2, "weatherSnapshotWritesPerHour": 1.57, "weatherPhysicalMbPerMinute": 0.0033, "historicalWeatherMbPerMinute": 13.04, "weatherReductionPercentVsHistorical": 99.97, "nodeWriteBytesPerMinute": 13.76, "nodeWcharPerMinute": 16.34, "nodeSyscwPerMinute": 10550, "measurement": "PID 32049 proc/io from 15:44:17 to 17:00:40; weather snapshots were 127901 and 124570 bytes", "totalNodeReferenceMbPerMinute": 13.53, "totalNodeReductionPercentVsReference": -1.7 },
+  "adsbDb": { "result": "pass", "checkpointMode": "hourly", "periodicCheckpoints": 1, "writes": 1, "writeStormReturned": false },
+  "correctness": { "metar": "pass", "taf": "pass", "sigmet": "pass", "runtimeFreshnessUnchanged": true, "providerFailures": 0, "cacheJson": "valid version 1, atomic replacement, 0600" },
+  "resources": { "cpuAveragePercentOneCore": 48.5, "cpuPeakPercentOneCore": 56.1, "rssRangeMb": "930-1525", "bounded": true },
+  "durability": { "periodicCheckpoint": "pass", "gracefulShutdownTests": "pass", "gracefulProductionFlush": "not naturally observed", "hardCrashSimulation": "test-only pass" },
+  "nextStep": "KEEP 30-MIN WEATHER CHECKPOINT"
 }
