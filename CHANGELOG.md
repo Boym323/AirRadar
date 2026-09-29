@@ -2,53 +2,6 @@
 
 All notable changes to AirRadar are documented here.
 
-## [1.0.206] - 2026-09-29
-
-Changes since v1.0.205.
-
-**Features touched:** Aircraft & Flight Detail, System Observability.
-
-### Added
-
-- Add FlightPosition persistence shadow evaluator (e5c8ae95)
-- Add flight position shadow production data (97fba13c)
-- Add flight update policy and audit script for database write amplification (a2faee0c)
-- Add db update coalescing production data for performance measurement (7449f620)
-
-### Fixed
-
-- Keep shadow diagnostics admin-only (d27e85e9)
-- Isolate safe Aircraft update suppression (4c743904)
-
-### Performance
-
-- Suppress redundant hourly coverage lookups (ae814ed4)
-- Suppress redundant hourly coverage lookups (07a9d697)
-
-### Maintenance
-
-- Sync generated repository metadata (2ac17ce8)
-- Add runtime storage and database performance audit documentation (27a2cbe3)
-- Remove obsolete Flight policy coverage (e6cea8cc)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (2ac17ce8)
-- Merge pull request #209 from Boym323/automation/repository-metadata (bfad3bb0)
-- chore(audit): add runtime storage and database performance audit documentation (27a2cbe3)
-- feat(history): add FlightPosition persistence shadow evaluator (e5c8ae95)
-- fix(system): keep shadow diagnostics admin-only (d27e85e9)
-- feat(artifacts): add flight position shadow production data (97fba13c)
-- feat: add flight update policy and audit script for database write amplification (a2faee0c)
-- fix(db): isolate safe Aircraft update suppression (4c743904)
-- test(db): remove obsolete Flight policy coverage (e6cea8cc)
-- feat(artifacts): add db update coalescing production data for performance measurement (7449f620)
-- perf(stats): suppress redundant hourly coverage lookups (ae814ed4)
-- perf(stats): suppress redundant hourly coverage lookups (07a9d697)
-
-</details>
-
 ## [1.0.205] - 2026-09-28
 
 Changes since v1.0.204.
@@ -66,6 +19,7 @@ Changes since v1.0.204.
 - chore(repo): ignore local runtime state (dcb018d)
 
 </details>
+
 ## [1.0.204] - 2026-09-28
 
 Changes since v1.0.203.
@@ -93,6 +47,7 @@ Changes since v1.0.203.
 - fix: wire radar rail layer toggles (016491f)
 
 </details>
+
 ## [1.0.203] - 2026-09-28
 
 Changes since v1.0.202.
@@ -112,6 +67,7 @@ Changes since v1.0.202.
 - style(ui): finalize Visual System V3 airport operations polish (b5adb80)
 
 </details>
+
 ## [1.0.202] - 2026-09-28
 
 Changes since v1.0.201.
@@ -141,6 +97,7 @@ Changes since v1.0.201.
 - feat(airport): add airport operations v2 layer (9d93917)
 
 </details>
+
 ## [1.0.201] - 2026-09-28
 
 Changes since v1.0.200.
@@ -163,6 +120,7 @@ Changes since v1.0.200.
 - fix(navigation-integrity): make production forensic audits persistent-data aware (1e76bd4)
 
 </details>
+
 ## [1.0.200] - 2026-09-28
 
 Changes since v1.0.199.
@@ -191,6 +149,7 @@ Changes since v1.0.199.
 - feat(navigation-integrity): enhance candidate evaluation with maturity metrics and structured evidence (8b5730e)
 
 </details>
+
 ## [1.0.199] - 2026-09-28
 
 Changes since v1.0.198.
@@ -213,6 +172,7 @@ Changes since v1.0.198.
 - Feat/aircraft weather v1 1 (#202) (ba9a5a6)
 
 </details>
+
 ## [1.0.198] - 2026-09-28
 
 Changes since v1.0.181.
@@ -322,6 +282,7 @@ Changes since v1.0.181.
 - fix: keep weather panel styles within visual budget (8b010bd)
 
 </details>
+
 ## [Unreleased]
 
 ### Added
