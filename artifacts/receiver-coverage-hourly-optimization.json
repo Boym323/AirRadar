@@ -1,6 +1,6 @@
 {
   "optimization": "receiver-coverage-hourly-write-optimization-v1",
-  "status": "implemented-awaiting-production-canary",
+  "status": "production-measured",
   "git": {
     "startSha": "7449f620257c98365a8a08ab28acb5da5a142ca1",
     "originMainAtStart": "7449f620257c98365a8a08ab28acb5da5a142ca1",
@@ -39,21 +39,115 @@
     "fullTestSuite": "PASS (1363 passed, 1 skipped)",
     "typecheckPrepared": "PASS",
     "diffCheck": "PASS",
-    "productionAfterMetrics": "not available in this workspace; collect during canary"
+    "productionAfterMetrics": "PASS: 30.643-minute natural-traffic production measurement recorded below"
   },
   "after": {
-    "receiverCoverageHourlyUpdatesPerMin": null,
-    "totalUpdatesPerMin": null,
-    "transactionsPerMin": null,
-    "walMbPerMin": null,
-    "cpu": null,
-    "rssGb": null,
-    "flushDiagnostics": null
+    "receiverCoverageHourlyUpdatesPerMin": 91.66817144460857,
+    "totalUpdatesPerMin": 284.2398623291352,
+    "transactionsPerMin": 349.9642116667791,
+    "walMbPerMin": 2.130848558882927,
+    "cpuOneCorePercent": 41.13419069416313,
+    "rssGb": { "start": 1.230635008, "end": 1.293799424, "peak": 1.500872704 },
+    "flushDiagnostics": {
+      "attemptsDelta": 15,
+      "successesDelta": 15,
+      "failuresDelta": 0,
+      "rowsConsideredDelta": 2828,
+      "rowsInsertedDelta": 19,
+      "rowsUpdatedDelta": 2809,
+      "rowsSkippedUnchangedDelta": 0,
+      "averageRowsPerFlush": 188.53333333333334,
+      "durationsMs": { "min": 129, "median": 155, "p95": 253, "max": 269 }
+    }
   },
   "parity": {
-    "statistics": "not measured against production",
-    "hourRollover": "covered by existing focused test",
-    "failureRetry": "implementation-preserved; dedicated production measurement pending"
+    "statistics": "PASS: live statistics and system status remained healthy; sampled hourly rows had non-negative additive counters and referenceProviders=adsbhub",
+    "hourRollover": "NOT OBSERVED: 30.643 minute window stayed within 2026-09-29 05:00 UTC; rollover remains covered by focused integration tests",
+    "failureRetry": "not injected in production; flushFailures remained 0; rollback/retry behavior remains covered by integration tests"
   },
-  "nextTarget": "measure ReceiverCoverageHourly mutation/query/transaction rate during a natural-traffic canary before considering flush cadence changes"
+  "productionMeasurement": {
+    "result": "V1 PRODUCTION PASS — KEEP CURRENT CADENCE",
+    "productionVersion": "1.0.207",
+    "productionSha": "df8c2965e1c1b3dcf4716cf48c4f21addc3252ae",
+    "measurementStartedAt": "2026-09-29T05:28:20.367Z",
+    "measurementEndedAt": "2026-09-29T05:58:58.955Z",
+    "durationMinutes": 30.643133333333335,
+    "traffic": {
+      "aircraftStart": 66,
+      "aircraftEnd": 60,
+      "provider": "adsbhub",
+      "serviceHealthyStart": true,
+      "serviceHealthyEnd": true,
+      "receiverHealthyStart": true,
+      "receiverHealthyEnd": true
+    },
+    "cache": {
+      "entriesStart": 281,
+      "entriesEnd": 300,
+      "entriesMax": 300,
+      "hoursStart": 1,
+      "hoursEnd": 1,
+      "hoursMax": 1,
+      "bounded": true,
+      "pendingBucketsEnd": 174,
+      "dirtyEntriesEnd": 174
+    },
+    "flush": {
+      "intervalSeconds": 120,
+      "attempts": 15,
+      "successes": 15,
+      "failures": 0,
+      "rowsConsidered": 2828,
+      "rowsInserted": 19,
+      "rowsUpdated": 2809,
+      "rowsSkippedUnchanged": 0,
+      "averageRowsPerFlush": 188.53333333333334,
+      "durationMs": { "min": 129, "median": 155, "p95": 253, "max": 269 },
+      "correctness": "PASS: no duplicate or lost-count symptoms observed; counters remained non-negative and additive"
+    },
+    "queryReduction": {
+      "coldLookups": null,
+      "warmLookups": null,
+      "selectsAvoidedPerFlush": null,
+      "selectsAvoidedPerHour": null,
+      "projectedSelectsAvoidedPerDay": null,
+      "assessment": "Exact SQL lookup counts unavailable: pg_stat_statements was not available for the relevant SELECTs and no invasive logging was enabled. The application path showed 2,809 warm cached row updates after the initial cache state, but this is not claimed as an exact SELECT count."
+    },
+    "database": {
+      "receiverCoverageHourly": { "updatesPerMin": 91.66817144460857, "insertsPerMin": 0.6200410314872065, "mutationsPerHour": 5537.29, "genuineAggregateWrites": true },
+      "total": { "updatesPerMin": 284.2398623291352, "transactionsPerMin": 349.9642116667791 },
+      "topTablesByUpdatesPerMin": [
+        { "table": "flight", "updatesPerMin": 159.35054509221206 },
+        { "table": "receiverCoverageHourly", "updatesPerMin": 91.66817144460857 },
+        { "table": "aircraft", "updatesPerMin": 11.617610905760289 },
+        { "table": "navigationIntegrityAnomaly", "updatesPerMin": 8.745841917819543 }
+      ],
+      "aircraftUpdatesPerMin": 11.617610905760289,
+      "flightUpdatesPerMin": 159.35054509221206
+    },
+    "WAL": { "mbPerMin": 2.130848558882927, "deltaBytes": 68467689 },
+    "CPU": { "nodeOneCorePercent": 41.13419069416313, "postgres": null },
+    "RAM": { "rssStartBytes": 1230635008, "rssEndBytes": 1293799424, "rssPeakBytes": 1500872704, "heapUsedStartBytes": 1080789128, "cacheEntriesEnd": 300, "cacheHoursEnd": 1 },
+    "consistency": {
+      "flushFailures": 0,
+      "doubleCount": false,
+      "lostCount": false,
+      "hourConsistency": "NOT OBSERVED",
+      "sampledRows": 8,
+      "sampledRowChecks": "PASS: availableCount and capturedCount non-negative; referenceProviders present; statistics API and system status healthy"
+    },
+    "v2Projections": {
+      "basis": { "currentFlushesPerHour": 29.37, "currentRowsPerFlush": 188.53, "coverageMutationsPerHour": 5537.29 },
+      "cadences": [
+        { "seconds": 120, "flushesPerHour": 30, "coverageRowMutationsPerHour": 5537.29, "relativeMutationReductionPercent": 0, "coverageTransactionsPerHour": 30, "maxUnflushedAnalyticsLossSeconds": 120 },
+        { "seconds": 180, "flushesPerHour": 20, "coverageRowMutationsPerHour": 5537.29, "relativeMutationReductionPercent": 0, "coverageTransactionsPerHour": 20, "maxUnflushedAnalyticsLossSeconds": 180 },
+        { "seconds": 240, "flushesPerHour": 15, "coverageRowMutationsPerHour": 5537.29, "relativeMutationReductionPercent": 0, "coverageTransactionsPerHour": 15, "maxUnflushedAnalyticsLossSeconds": 240 },
+        { "seconds": 300, "flushesPerHour": 12, "coverageRowMutationsPerHour": 5537.29, "relativeMutationReductionPercent": 0, "coverageTransactionsPerHour": 12, "maxUnflushedAnalyticsLossSeconds": 300 }
+      ],
+      "expectedWalTrend": "approximately unchanged because aggregate row mutations remain genuine and cadence changes primarily reduce transaction frequency",
+      "durabilityTradeoff": { "120": "up to 120 seconds of derived coverage analytics after process/host failure", "180": "up to 180 seconds", "240": "up to 240 seconds", "300": "up to 300 seconds" },
+      "recommendation": "KEEP 120 SECOND CADENCE: V1 is correct and bounded, but longer cadence is not expected to materially reduce coverage row writes or WAL; retain the shorter derived-analytics loss window."
+    }
+  },
+  "nextTarget": "keep 120 second cadence; revisit V2 only with a business decision accepting a longer derived-analytics crash-loss window or with direct query instrumentation available"
 }
