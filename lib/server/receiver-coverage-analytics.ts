@@ -24,6 +24,7 @@ export interface CoverageDiagnostics {
   lastFlushAt: string | null; lastFlushDurationMs: number | null; lastFlushRows: number; flushFailures: number;
   flushAttempts: number; flushSuccesses: number; rowsConsidered: number; rowsInserted: number; rowsUpdated: number;
   rowsSkippedUnchanged: number; dirtyEntries: number; maxDirtyEntries: number; averageRowsPerFlush: number;
+  persistedCacheEntries: number; persistedCacheHours: number; maxPersistedCacheEntries: number;
   lastError: string | null; skippedNoNetwork: number; skippedLocalUnhealthy: number;
 }
 type Counter = { available: number; captured: number };
@@ -72,7 +73,7 @@ export class ReceiverCoverageAnalytics {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private flushInFlight: Promise<void> | null = null;
-  private readonly persistedRows = new Map<string, { availableCount: number; capturedCount: number; referenceProviders: string }>();
+  private readonly persistedRows = new Map<number, Map<string, { availableCount: number; capturedCount: number; referenceProviders: string }>>();
   private running = false;
   private state: CoverageDiagnostics;
 
@@ -103,6 +104,9 @@ export class ReceiverCoverageAnalytics {
       dirtyEntries: 0,
       maxDirtyEntries: 0,
       averageRowsPerFlush: 0,
+      persistedCacheEntries: 0,
+      persistedCacheHours: 0,
+      maxPersistedCacheEntries: 0,
       lastError: null,
       skippedNoNetwork: 0,
       skippedLocalUnhealthy: 0,
@@ -213,12 +217,19 @@ export class ReceiverCoverageAnalytics {
       let inserted = 0;
       let updated = 0;
       let skipped = 0;
+      const stagedCacheUpdates = new Map<string, {
+        hourMs: number;
+        bucketKey: string;
+        value: { availableCount: number; capturedCount: number; referenceProviders: string };
+      }>();
       try {
         await database.transaction(async (transaction) => {
           const schema = transaction.orm.public;
           for (const row of rows) {
-            const rowKey = `${row.hour.epochMilliseconds}:${row.bucketKey}`;
-            let existing = this.persistedRows.get(rowKey);
+            const hourMs = row.hour.epochMilliseconds;
+            const rowKey = row.bucketKey;
+            const hourCache = this.persistedRows.get(hourMs);
+            let existing = hourCache?.get(rowKey);
             if (!existing) {
               const loaded = await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).first();
               if (loaded) {
@@ -227,7 +238,6 @@ export class ReceiverCoverageAnalytics {
                   capturedCount: loaded.capturedCount,
                   referenceProviders: loaded.referenceProviders,
                 };
-                this.persistedRows.set(rowKey, existing);
               }
             }
             if (existing) {
@@ -245,21 +255,40 @@ export class ReceiverCoverageAnalytics {
                 capturedCount: existing.capturedCount + row.capturedCount,
                 referenceProviders: nextProviders,
               });
-              existing.availableCount += row.availableCount;
-              existing.capturedCount += row.capturedCount;
-              existing.referenceProviders = nextProviders;
+              stagedCacheUpdates.set(`${hourMs}:${rowKey}`, {
+                hourMs,
+                bucketKey: rowKey,
+                value: {
+                  availableCount: existing.availableCount + row.availableCount,
+                  capturedCount: existing.capturedCount + row.capturedCount,
+                  referenceProviders: nextProviders,
+                },
+              });
               updated += 1;
             } else {
               await schema.ReceiverCoverageHourly.create(row);
-              this.persistedRows.set(rowKey, {
-                availableCount: row.availableCount,
-                capturedCount: row.capturedCount,
-                referenceProviders: row.referenceProviders,
+              stagedCacheUpdates.set(`${hourMs}:${rowKey}`, {
+                hourMs,
+                bucketKey: rowKey,
+                value: {
+                  availableCount: row.availableCount,
+                  capturedCount: row.capturedCount,
+                  referenceProviders: row.referenceProviders,
+                },
               });
               inserted += 1;
             }
           }
         });
+        for (const update of stagedCacheUpdates.values()) {
+          let hourCache = this.persistedRows.get(update.hourMs);
+          if (!hourCache) {
+            hourCache = new Map();
+            this.persistedRows.set(update.hourMs, hourCache);
+          }
+          hourCache.set(update.bucketKey, update.value);
+        }
+        this.prunePersistedRows();
         this.state.lastFlushAt = new Date().toISOString();
         this.state.lastFlushDurationMs = Date.now() - started;
         this.state.lastFlushRows = rows.length;
@@ -284,7 +313,7 @@ export class ReceiverCoverageAnalytics {
   }
 
   getDiagnostics(): CoverageDiagnostics {
-    return { ...this.state };
+    return { ...this.state, ...this.persistedCacheDiagnostics() };
   }
 
   getLive(): CoverageResponse {
@@ -350,6 +379,29 @@ export class ReceiverCoverageAnalytics {
     this.state.dirtyEntries = total;
     this.state.maxDirtyEntries = Math.max(this.state.maxDirtyEntries, total);
   }
+
+  private persistedCacheDiagnostics(): Pick<CoverageDiagnostics, "persistedCacheEntries" | "persistedCacheHours" | "maxPersistedCacheEntries"> {
+    const entries = [...this.persistedRows.values()].reduce((total, rows) => total + rows.size, 0);
+    return {
+      persistedCacheEntries: entries,
+      persistedCacheHours: this.persistedRows.size,
+      maxPersistedCacheEntries: this.state.maxPersistedCacheEntries,
+    };
+  }
+
+  private prunePersistedRows(): void {
+    const currentHour = normalizeHour(new Date()).getTime();
+    const retainedHours = new Set([currentHour, currentHour - 3_600_000]);
+    for (const source of [this.pending, this.flushing]) {
+      if (!source) continue;
+      for (const hourMs of source.keys()) retainedHours.add(hourMs);
+    }
+    for (const hourMs of this.persistedRows.keys()) {
+      if (!retainedHours.has(hourMs)) this.persistedRows.delete(hourMs);
+    }
+    const entries = [...this.persistedRows.values()].reduce((total, rows) => total + rows.size, 0);
+    this.state.maxPersistedCacheEntries = Math.max(this.state.maxPersistedCacheEntries, entries);
+  }
 }
 
 export function createReceiverCoverageAnalytics(): ReceiverCoverageAnalytics { return new ReceiverCoverageAnalytics(); }
@@ -374,5 +426,5 @@ export async function getHistoricalReceiverCoverage(period: Exclude<CoveragePeri
   }
   const overall = aggregate.get("overall") ?? { available: 0, captured: 0 };
   const make = (prefix: string) => [...aggregate.entries()].filter(([key]) => key.startsWith(prefix)).map(([key, value]) => toPublic(key, value));
-  return { period, from: from.toISOString(), to: now.toISOString(), comparisonRadiusNm: getReceiverComparisonRadiusNm(), summary: { ...overall, ratio: ratio(overall), samples: 0 }, azimuth: make("azimuth:"), range: make("range:"), altitude: make("altitude:"), polar: make("polar:"), metadata: { referenceProviders: [...providers].sort(), mixedProviders: providers.size > 1, insufficientThreshold: INSUFFICIENT_OBSERVATIONS, diagnostics: { enabled: true, sampleIntervalMs: 0, comparisonRadiusNm: getReceiverComparisonRadiusNm(), lastSampleAt: null, samplesProcessed: 0, availableObservations: overall.available, capturedObservations: overall.captured, pendingBuckets: 0, lastFlushAt: null, lastFlushDurationMs: null, lastFlushRows: 0, flushFailures: 0, flushAttempts: 0, flushSuccesses: 0, rowsConsidered: 0, rowsInserted: 0, rowsUpdated: 0, rowsSkippedUnchanged: 0, dirtyEntries: 0, maxDirtyEntries: 0, averageRowsPerFlush: 0, lastError: null, skippedNoNetwork: 0, skippedLocalUnhealthy: 0 } } };
+  return { period, from: from.toISOString(), to: now.toISOString(), comparisonRadiusNm: getReceiverComparisonRadiusNm(), summary: { ...overall, ratio: ratio(overall), samples: 0 }, azimuth: make("azimuth:"), range: make("range:"), altitude: make("altitude:"), polar: make("polar:"), metadata: { referenceProviders: [...providers].sort(), mixedProviders: providers.size > 1, insufficientThreshold: INSUFFICIENT_OBSERVATIONS, diagnostics: { enabled: true, sampleIntervalMs: 0, comparisonRadiusNm: getReceiverComparisonRadiusNm(), lastSampleAt: null, samplesProcessed: 0, availableObservations: overall.available, capturedObservations: overall.captured, pendingBuckets: 0, lastFlushAt: null, lastFlushDurationMs: null, lastFlushRows: 0, flushFailures: 0, flushAttempts: 0, flushSuccesses: 0, rowsConsidered: 0, rowsInserted: 0, rowsUpdated: 0, rowsSkippedUnchanged: 0, dirtyEntries: 0, maxDirtyEntries: 0, averageRowsPerFlush: 0, persistedCacheEntries: 0, persistedCacheHours: 0, maxPersistedCacheEntries: 0, lastError: null, skippedNoNetwork: 0, skippedLocalUnhealthy: 0 } } };
 }

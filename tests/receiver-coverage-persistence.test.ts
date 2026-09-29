@@ -104,4 +104,69 @@ describe("ReceiverCoverageAnalytics persistence", () => {
     predicate({ hour: { gte } });
     expect(gte).toHaveBeenCalledOnce();
   });
+
+  it("does not publish staged cache rows when a transaction rolls back, and retries exactly once", async () => {
+    const hour = Date.parse("2026-09-22T10:00:00.000Z");
+    const rows = new Map([
+      ["overall", { availableCount: 100, capturedCount: 80, referenceProviders: "adsbhub" }],
+      ["azimuth:0", { availableCount: 50, capturedCount: 40, referenceProviders: "adsbhub" }],
+    ]);
+    let updateCalls = 0;
+    const where = vi.fn((query: { bucketKey: string }) => ({
+      first: vi.fn().mockImplementation(async () => rows.get(query.bucketKey) ?? null),
+      update: vi.fn().mockImplementation(async (value: typeof rows extends Map<string, infer V> ? V : never) => {
+        updateCalls += 1;
+        if (updateCalls === 2) {
+          throw new Error("synthetic second-row failure");
+        }
+        rows.set(query.bucketKey, value);
+      }),
+    }));
+    const database = {
+      orm: { public: { ReceiverCoverageHourly: { where, create: vi.fn() } } },
+      transaction: async (callback: (transaction: unknown) => Promise<void>) => {
+        const snapshot = new Map(rows);
+        try { return await callback(database); } catch (error) { rows.clear(); for (const [key, value] of snapshot) rows.set(key, value); throw error; }
+      },
+    };
+    mocks.getPrisma.mockReturnValue(database);
+
+    const analytics = new ReceiverCoverageAnalytics({ enabled: true });
+    const internals = analytics as unknown as {
+      pending: Map<number, { buckets: Map<string, { available: number; captured: number }>; providers: Set<string> }>;
+      persistedRows: Map<number, Map<string, unknown>>;
+    };
+    internals.pending.set(hour, { buckets: new Map([
+      ["overall", { available: 10, captured: 8 }],
+      ["azimuth:0", { available: 10, captured: 8 }],
+    ]), providers: new Set(["adsbhub"]) });
+
+    await analytics.flush();
+    expect(rows.get("overall")).toEqual({ availableCount: 100, capturedCount: 80, referenceProviders: "adsbhub" });
+    expect(internals.persistedRows.size).toBe(0);
+    expect(analytics.getDiagnostics().flushFailures).toBe(1);
+
+    await analytics.flush();
+    expect(rows.get("overall")).toEqual({ availableCount: 110, capturedCount: 88, referenceProviders: "adsbhub" });
+    expect(analytics.getDiagnostics().flushSuccesses).toBe(1);
+  });
+
+  it("bounds durable cache retention to the current and previous hour", () => {
+    const analytics = new ReceiverCoverageAnalytics({ enabled: true });
+    const internals = analytics as unknown as {
+      persistedRows: Map<number, Map<string, unknown>>;
+      prunePersistedRows: () => void;
+    };
+    const currentHour = Date.parse("2026-09-22T10:00:00.000Z");
+    vi.setSystemTime(currentHour + 15 * 60_000);
+    for (let offset = 0; offset < 48; offset += 1) {
+      internals.persistedRows.set(currentHour - offset * 3_600_000, new Map([["overall", {}]]));
+    }
+
+    internals.prunePersistedRows();
+
+    expect([...internals.persistedRows.keys()].sort()).toEqual([currentHour - 3_600_000, currentHour]);
+    expect(analytics.getDiagnostics().persistedCacheHours).toBe(2);
+    expect(analytics.getDiagnostics().persistedCacheEntries).toBe(2);
+  });
 });
