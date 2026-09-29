@@ -1,12 +1,24 @@
 {
-  "schemaVersion": 3,
-  "status": "production-measurement-pending",
+  "schemaVersion": 4,
+  "status": "production-measurement-complete",
   "scope": "process-local",
   "git": {
-    "head": "a3345d04bf3cba4f1788853f0ff0c3c58e8d08eb",
-    "originMain": "a3345d04bf3cba4f1788853f0ff0c3c58e8d08eb",
-    "productionVersion": "1.0.220",
-    "productionSha": "740ddd03"
+    "head": "bbb2ca2fb0369e2709c58915c859198edd7f2dca",
+    "originMain": "bbb2ca2fb0369e2709c58915c859198edd7f2dca",
+    "productionVersion": "1.0.221",
+    "productionSha": "b19ba467"
+  },
+  "measurement": {
+    "startedAt": "2026-09-29T18:06:54.215Z",
+    "endedAt": "2026-09-29T18:36:54.560Z",
+    "durationMinutes": 30.00575,
+    "mainPid": 62111,
+    "restartDuringWindow": false,
+    "transactionStoreId": "dbtx-mumzavc6-ejle1qs4",
+    "autocommitStoreId": "dbop-mumzavc6-lc43ospm",
+    "systemStatusRequests": 21,
+    "systemStatusRequestsPerMinute": 0.699865859,
+    "systemStatusDbOperationsPerRequest": 2
   },
   "correction": {
     "flightPositionPersistence": "EXPLICIT_TX_CHILD",
@@ -15,29 +27,26 @@
     "receiverCoverageWrites": "EXPLICIT_TX_CHILD",
     "historySnapshotOwnsFlightPosition": true
   },
-  "previousProductionMeasurement": {
-    "version": "1.0.219",
-    "sha": "06f8f7ba",
-    "durationMinutes": 30.7847,
-    "transactionsPerMinute": 332.02,
-    "explainedPerMinute": 304.36,
-    "explainedPercent": 92.70,
-    "unexplainedPerMinute": 27.66,
-    "unexplainedPercent": 7.30
+  "postgres": {
+    "commits": 8350,
+    "rollbacks": 169,
+    "transactions": 8519,
+    "commitsPerMinute": 278.279996,
+    "rollbacksPerMinute": 5.632254,
+    "transactionsPerMinute": 283.91225
   },
   "lanes": [
-    {"sourceFile":"lib/server/system-status.ts","function":"inspectDatabase","ormOperation":"Aircraft.select(...).all","insideExplicitTransaction":false,"lane":"system-status.db-health.query","kind":"READ","operation":"SELECT","productionMeasurement":null},
-    {"sourceFile":"lib/server/system-status.ts","function":"inspectDatabase","ormOperation":"Airport.select(...).all","insideExplicitTransaction":false,"lane":"system-status.airport-count.query","kind":"READ","operation":"SELECT","productionMeasurement":null},
-    {"sourceFile":"lib/server/flight-intelligence.ts","function":"ensureAirportIndex","ormOperation":"Airport.all + AirportRunway.all","insideExplicitTransaction":false,"lane":"flight-intelligence.airport-index.query","kind":"READ","operation":"SELECT","productionMeasurement":null},
-    {"sourceFile":"lib/server/flight-intelligence.ts","function":"query","ormOperation":"FlightEvent.all","insideExplicitTransaction":false,"lane":"flight-intelligence.event.query","kind":"READ","operation":"SELECT","productionMeasurement":null},
-    {"sourceFile":"lib/server/flight-intelligence.ts","function":"persist","ormOperation":"Flight.all","insideExplicitTransaction":false,"lane":"flight-intelligence.flight-link.query","kind":"READ","operation":"SELECT","productionMeasurement":null},
-    {"sourceFile":"lib/server/flight-intelligence.ts","function":"persist","ormOperation":"FlightEvent.create","insideExplicitTransaction":false,"lane":"flight-intelligence.event.create","kind":"WRITE","operation":"INSERT","productionMeasurement":null},
-    {"sourceFile":"lib/server/history.ts","function":"listHistoryFlights","ormOperation":"Aircraft/Flight summary SELECTs","insideExplicitTransaction":false,"lane":"history.list.query","kind":"READ","operation":"SELECT","productionMeasurement":null},
-    {"sourceFile":"lib/server/history.ts","function":"getHistoryFlight","ormOperation":"Flight/FlightPosition/FlightEvent SELECTs","insideExplicitTransaction":false,"lane":"history.flight-detail.query","kind":"READ","operation":"SELECT","productionMeasurement":null},
-    {"sourceFile":"lib/server/history.ts","function":"getAircraftQuickDetail","ormOperation":"Aircraft.first","insideExplicitTransaction":false,"lane":"history.aircraft-quick.query","kind":"READ","operation":"SELECT","productionMeasurement":null},
-    {"sourceFile":"lib/server/history.ts","function":"getAircraftDetail","ormOperation":"Aircraft/Flight/Airport summary SELECTs","insideExplicitTransaction":false,"lane":"history.aircraft-detail.query","kind":"READ","operation":"SELECT","productionMeasurement":null}
+    {"lane":"navigation.observation.create","kind":"WRITE","operation":"INSERT","attempts":2230,"successes":2062,"failures":168,"operationsPerMinute":74.3190888,"successPerMinute":68.718,"failurePerMinute":5.5999,"averageDurationMs":16.9,"maxDurationMs":1009},
+    {"lane":"navigation.anomaly.upsert","kind":"WRITE","operation":"UPSERT","attempts":1118,"successes":1118,"failures":0,"operationsPerMinute":37.2595253,"successPerMinute":37.2595,"failurePerMinute":0,"averageDurationMs":5.4,"maxDurationMs":785},
+    {"lane":"weather.observation.create","kind":"WRITE","operation":"INSERT","attempts":1065,"successes":1065,"failures":0,"operationsPerMinute":35.4931971,"successPerMinute":35.4932,"failurePerMinute":0,"averageDurationMs":203.6,"maxDurationMs":1316},
+    {"lane":"aircraft-metadata.cache.lookup","kind":"READ","operation":"SELECT","attempts":484,"successes":484,"failures":0,"operationsPerMinute":16.1302417,"successPerMinute":16.1302,"failurePerMinute":0,"averageDurationMs":7.4,"maxDurationMs":1005},
+    {"lane":"atc.dataset.load","kind":"READ","operation":"SELECT","attempts":168,"successes":168,"failures":0,"operationsPerMinute":5.5989269,"successPerMinute":5.5989,"failurePerMinute":0,"averageDurationMs":46.7,"maxDurationMs":1018},
+    {"lane":"flight-intelligence.flight-link.query","kind":"READ","operation":"SELECT","attempts":271,"successes":0,"failures":271,"operationsPerMinute":9.0316023,"successPerMinute":0,"failurePerMinute":9.0316,"averageDurationMs":16.0,"maxDurationMs":104},
+    {"lane":"system-status.db-health.query","kind":"READ","operation":"SELECT","attempts":21,"successes":21,"failures":0,"operationsPerMinute":0.6998659,"successPerMinute":0.6999,"failurePerMinute":0,"averageDurationMs":2.0,"maxDurationMs":12},
+    {"lane":"system-status.airport-count.query","kind":"READ","operation":"SELECT","attempts":21,"successes":21,"failures":0,"operationsPerMinute":0.6998659,"successPerMinute":0.6999,"failurePerMinute":0,"averageDurationMs":64.7,"maxDurationMs":126}
   ],
-  "systemStatusRequestCounter": {"implemented": true, "databaseQueryAdded": false, "productionMeasurement": null},
-  "decision": {"result":"ATTRIBUTION BLOCKED","optimization":"NONE","reason":"New instrumentation has not been deployed or measured."},
+  "zeroTrafficLanes": ["navigation.history.query","weather.observation.query","receiver.reception-record.query","flight-intelligence.airport-index.query","flight-intelligence.event.query","flight-intelligence.event.create","history.list.query","history.flight-detail.query","history.aircraft-quick.query","history.aircraft-detail.query"],
+  "reconciliation": {"explicitTransactionsPerMinute":99.8475292,"autocommitOperationsPerMinute":179.2323138,"explainedPerMinute":279.079843,"explainedPercent":98.2979223,"unexplainedPerMinute":4.8324071,"unexplainedPercent":1.7020777},
+  "decision": {"result":"FINAL ATTRIBUTION PASS — CANDIDATE IDENTIFIED","optimization":"DESIGN WEATHER BATCH INSERT V1","reason":"Weather writes measured 35.49/min at 203.6 ms average; design work is justified, but no optimization was deployed."},
   "safety": {"schemaChanged":false,"migrations":0,"persistenceSemanticsChanged":false,"optimizationDeployed":false}
 }

@@ -1,18 +1,41 @@
 {
-  "result":"ATTRIBUTION BLOCKED",
-  "schemaVersion":4,
-  "timezone":"Europe/Prague",
-  "correction":{"flightPositionDoubleCountRiskFixed":true,"flightPosition":"EXPLICIT_TX_CHILD","parentLane":"history.snapshot"},
-  "production":{"currentVersion":"1.0.220","currentSha":"740ddd03","previousMeasuredVersion":"1.0.219","previousMeasuredSha":"06f8f7ba","measurementDurationMinutes":30.7847,"newMeasurementCompleted":false},
-  "postgresPrevious":{"transactionsPerMinute":332.02,"commitsPerMinute":328.34,"rollbacksPerMinute":3.67,"deadlocks":0,"lockWaits":0,"longTransactions":0},
-  "explicitPrevious":{"ratePerMinute":117.20,"sharePercent":35.69,"primaryLane":"history.snapshot"},
-  "existingAutocommitPrevious":{"writesPerMinute":156.01,"readsPerMinute":30.11,"observerPerMinute":1.04},
-  "newlyAttributed":{"systemStatusDbHealthReadPerMinute":null,"systemStatusAirportReadPerMinute":null,"flightIntelligenceOperationsPerMinute":null,"historyApiOperationsPerMinute":null,"otherPerMinute":null},
-  "systemStatusRequestCounter":{"implemented":true,"databaseQueryAdded":false,"requests":null},
-  "reconciliation":{"previousExplainedPerMinute":304.36,"previousExplainedPercent":92.70,"previousUnexplainedPerMinute":27.66,"previousUnexplainedPercent":7.30,"explainedPerMinute":null,"explainedPercent":null,"unexplainedPerMinute":null,"unexplainedPercent":null},
-  "attributionGate":{"targetPercent":95,"pass":false,"status":"NOT_MEASURED_AFTER_INSTRUMENTATION"},
-  "connectionHealth":{"deadlocks":0,"lockWaits":0,"longTransactions":0,"source":"previous_measured_window"},
-  "topDatabaseCost":{"lane":"navigation.observation.create","operationsPerMinute":70.39,"source":"previous_measured_window"},
-  "nextStep":"INVESTIGATE REMAINING ATTRIBUTION",
-  "safety":{"schemaChanged":false,"migrations":0,"persistenceSemanticsChanged":false,"optimizationDeployed":false}
+  "result": "FINAL ATTRIBUTION PASS — CANDIDATE IDENTIFIED",
+  "schemaVersion": 5,
+  "timezone": "Europe/Prague",
+  "production": {
+    "version": "1.0.221",
+    "sha": "b19ba467",
+    "mainPid": 62111,
+    "serviceStart": "2026-09-29T19:57:09+02:00",
+    "measurementStartedAt": "2026-09-29T18:06:54.215Z",
+    "measurementEndedAt": "2026-09-29T18:36:54.560Z",
+    "measurementDurationMinutes": 30.00575,
+    "restartDuringWindow": false
+  },
+  "diagnosticsIdentity": {
+    "processId": 62111,
+    "transactionStoreId": "dbtx-mumzavc6-ejle1qs4",
+    "autocommitStoreId": "dbop-mumzavc6-lc43ospm",
+    "storeIdsStable": true,
+    "processStable": true
+  },
+  "correction": {"flightPositionDoubleCountRiskFixed":true,"flightPosition":"EXPLICIT_TX_CHILD","parentLane":"history.snapshot","receiverCoverage":"EXPLICIT_TX_CHILD"},
+  "postgres": {"commits":8350,"rollbacks":169,"transactions":8519,"commitsPerMinute":278.279996,"rollbacksPerMinute":5.632254,"transactionsPerMinute":283.91225,"deadlocks":0,"lockWaits":0,"longTransactions":0},
+  "explicitTransactions": {
+    "totalPerMinute":99.8475292,
+    "sharePercent":35.169,
+    "lanes": [
+      {"lane":"history.snapshot","attempts":2866,"commits":2866,"failures":0,"perMinute":95.5150263,"averageDurationMs":429.0,"maxDurationMs":1350},
+      {"lane":"receiver.daily-stats","attempts":55,"commits":55,"failures":0,"perMinute":1.8329820,"averageDurationMs":391.6,"maxDurationMs":906},
+      {"lane":"receiver.coverage","attempts":16,"commits":16,"failures":0,"perMinute":0.5332311,"averageDurationMs":499.3,"maxDurationMs":1203},
+      {"lane":"receiver.advanced-stats","attempts":59,"commits":59,"failures":0,"perMinute":1.9662898,"averageDurationMs":506.7,"maxDurationMs":870}
+    ]
+  },
+  "autocommit": {"operationsPerMinute":179.2323138,"writesPerMinute":147.0718114,"readsPerMinute":32.1605024},
+  "systemStatusObserver": {"requests":21,"requestsPerMinute":0.6998659,"dbOperationsPerRequest":2,"dbOperationsPerMinute":1.3997317,"dbHealthQueries":21,"airportQueries":21},
+  "externalClients": {"productionClientsObserved":0,"measurementObserver":"bounded local ppstudio_app connection; excluded from production-client count"},
+  "databaseHealth": {"connections":11,"airRadarActive":1,"airRadarIdle":10,"lockWaits":0,"deadlocks":0,"longTransactions":0,"cpuPercentOneCore":30.153,"memoryBytesStart":712978432,"memoryBytesEnd":695230464},
+  "reconciliation": {"explainedPerMinute":279.079843,"explainedPercent":98.2979223,"unexplainedPerMinute":4.8324071,"unexplainedPercent":1.7020777,"attributionGateTargetPercent":95,"attributionGate":"PASS"},
+  "decision": {"exactlyOne":"DESIGN WEATHER BATCH INSERT V1","transactionsPerMinuteAffected":35.4931971,"latencyEvidence":"203.6 ms average, 1316 ms max, 0 failures","risk":"Preserve durable-observation semantics, retry behavior, and failure isolation","complexity":"medium"},
+  "safety": {"schemaChanged":false,"migration":false,"persistenceSemanticsChanged":false,"optimizationDeployed":false}
 }
