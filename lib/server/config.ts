@@ -283,6 +283,13 @@ export function getAdsbDbRouteMaxPersistedEntries(): number {
   return boundedInteger("ADSBDB_ROUTE_MAX_ENTRIES", 4_096, 1, 10_000);
 }
 
+/** 0 disables periodic checkpoints; positive values are bounded to 1 minute–24 hours. */
+export function getAdsbDbCacheCheckpointMs(): number {
+  const raw = process.env.ADSBDB_CACHE_CHECKPOINT_MS;
+  if (raw !== undefined && raw.trim() === "0") return 0;
+  return boundedMilliseconds("ADSBDB_CACHE_CHECKPOINT_MS", 60 * 60 * 1_000, 60_000, 24 * 60 * 60_000);
+}
+
 export function getAircraftMetadataUrl(): string {
   return process.env.AIRCRAFT_METADATA_URL?.trim() || DEFAULT_AIRCRAFT_METADATA_URL;
 }

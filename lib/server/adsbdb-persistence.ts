@@ -27,6 +27,21 @@ export interface AdsbDbPersistenceDiagnostics {
   lastSaveEntries: number;
   fileSizeBytes: number | null;
   writes: number;
+  checkpointIntervalMs: number;
+  checkpointMode: "hourly" | "periodic" | "shutdown-only";
+  firstDirtyAt: string | null;
+  dirtyAgeMs: number | null;
+  mutationGeneration: number;
+  persistedGeneration: number;
+  mutationsSinceCheckpoint: number;
+  checkpointAttempts: number;
+  checkpointSuccesses: number;
+  checkpointFailures: number;
+  periodicCheckpoints: number;
+  gracefulCheckpoints: number;
+  explicitCheckpoints: number;
+  lastCheckpointAt: string | null;
+  nextCheckpointAt: string | null;
 }
 
 export interface AdsbDbPersistenceOptions {
@@ -38,6 +53,7 @@ export interface AdsbDbPersistenceOptions {
   metadataMaxEntries: number;
   routeMaxEntries: number;
   maxBytes?: number;
+  checkpointIntervalMs?: number;
   now?: () => number;
 }
 
@@ -64,7 +80,9 @@ const DEFAULT_MAX_BYTES = 8 * 1024 * 1024;
 const MAX_ALLOWED_BYTES = 16 * 1024 * 1024;
 const MAX_ALLOWED_ENTRIES = 10_000;
 const FUTURE_SKEW_MS = 0;
-const DEFAULT_DEBOUNCE_MS = 3_000;
+const DEFAULT_CHECKPOINT_INTERVAL_MS = 60 * 60_000;
+const CHECKPOINT_RETRY_INITIAL_MS = 5 * 60_000;
+const CHECKPOINT_RETRY_MAX_MS = 60 * 60_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -172,11 +190,13 @@ export class AdsbDbPersistence {
   private readonly ttlMs: Record<AdsbDbCacheKind, number>;
   private readonly maxStaleMs: Record<AdsbDbCacheKind, number>;
   private readonly now: () => number;
+  private readonly checkpointIntervalMs: number;
   private readonly entries: Record<AdsbDbCacheKind, Map<string, RuntimeEntry<unknown>>> = {
     metadata: new Map(),
     route: new Map(),
   };
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private saveInFlight: Promise<void> | null = null;
   private flushPromise: Promise<void> | null = null;
   private dirty = false;
@@ -191,6 +211,18 @@ export class AdsbDbPersistence {
   private lastSaveEntries = 0;
   private fileSizeBytes: number | null = null;
   private persistenceWrites = 0;
+  private mutationGeneration = 0;
+  private persistedGeneration = 0;
+  private firstDirtyAt: number | null = null;
+  private checkpointAttempts = 0;
+  private checkpointSuccesses = 0;
+  private checkpointFailures = 0;
+  private periodicCheckpoints = 0;
+  private gracefulCheckpoints = 0;
+  private explicitCheckpoints = 0;
+  private lastCheckpointAt: number | null = null;
+  private nextCheckpointAt: number | null = null;
+  private retryStreak = 0;
 
   constructor(options: AdsbDbPersistenceOptions) {
     this.cacheFile = options.cacheFile;
@@ -202,6 +234,9 @@ export class AdsbDbPersistence {
     this.ttlMs = { metadata: Math.max(1, options.metadataTtlMs), route: Math.max(1, options.routeTtlMs) };
     this.maxStaleMs = { metadata: Math.max(1, options.metadataMaxStaleMs), route: Math.max(1, options.routeMaxStaleMs) };
     this.now = options.now ?? Date.now;
+    this.checkpointIntervalMs = options.checkpointIntervalMs === 0
+      ? 0
+      : Math.min(24 * 60 * 60_000, Math.max(60_000, Math.trunc(options.checkpointIntervalMs ?? DEFAULT_CHECKPOINT_INTERVAL_MS)));
     this.load();
   }
 
@@ -235,13 +270,18 @@ export class AdsbDbPersistence {
       this.entries[kind].delete(oldest);
     }
     this.dirty = true;
-    this.scheduleSave();
+    this.mutationGeneration += 1;
+    if (this.firstDirtyAt === null) this.firstDirtyAt = now;
+    this.scheduleCheckpoint();
   }
 
   delete(kind: AdsbDbCacheKind, key: string): void {
     if (this.entries[kind].delete(key)) {
       this.dirty = true;
-      this.scheduleSave();
+      this.mutationGeneration += 1;
+      const now = this.now();
+      if (this.firstDirtyAt === null) this.firstDirtyAt = now;
+      this.scheduleCheckpoint();
     }
   }
 
@@ -271,24 +311,60 @@ export class AdsbDbPersistence {
       lastSaveEntries: this.lastSaveEntries,
       fileSizeBytes: this.fileSizeBytes,
       writes: this.persistenceWrites,
+      checkpointIntervalMs: this.checkpointIntervalMs,
+      checkpointMode: this.checkpointIntervalMs === 0 ? "shutdown-only" : this.checkpointIntervalMs === DEFAULT_CHECKPOINT_INTERVAL_MS ? "hourly" : "periodic",
+      firstDirtyAt: this.firstDirtyAt === null ? null : new Date(this.firstDirtyAt).toISOString(),
+      dirtyAgeMs: this.firstDirtyAt === null ? null : Math.max(0, this.now() - this.firstDirtyAt),
+      mutationGeneration: this.mutationGeneration,
+      persistedGeneration: this.persistedGeneration,
+      mutationsSinceCheckpoint: Math.max(0, this.mutationGeneration - this.persistedGeneration),
+      checkpointAttempts: this.checkpointAttempts,
+      checkpointSuccesses: this.checkpointSuccesses,
+      checkpointFailures: this.checkpointFailures,
+      periodicCheckpoints: this.periodicCheckpoints,
+      gracefulCheckpoints: this.gracefulCheckpoints,
+      explicitCheckpoints: this.explicitCheckpoints,
+      lastCheckpointAt: this.lastCheckpointAt === null ? null : new Date(this.lastCheckpointAt).toISOString(),
+      nextCheckpointAt: this.nextCheckpointAt === null ? null : new Date(this.nextCheckpointAt).toISOString(),
     };
   }
 
-  async flush(): Promise<void> {
+  async flush(reason: "periodic" | "graceful" | "explicit" = "explicit"): Promise<void> {
     if (this.flushPromise) return this.flushPromise;
     const promise = (async () => {
       if (this.saveTimer) {
         clearTimeout(this.saveTimer);
         this.saveTimer = null;
       }
+      if (this.retryTimer) {
+        clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+      }
       if (this.saveInFlight) await this.saveInFlight;
       if (!this.dirty) return;
-      this.dirty = false;
+      this.checkpointAttempts += 1;
+      if (reason === "periodic") this.periodicCheckpoints += 1;
+      else if (reason === "graceful") this.gracefulCheckpoints += 1;
+      else this.explicitCheckpoints += 1;
+      const targetGeneration = this.mutationGeneration;
       const save = this.writeSnapshot();
       this.saveInFlight = save;
       await save;
       if (this.saveInFlight === save) this.saveInFlight = null;
-      if (this.dirty && !this.saveTimer) this.scheduleSave();
+      if (this.lastSaveError === null) {
+        this.persistedGeneration = targetGeneration;
+        this.checkpointSuccesses += 1;
+        this.retryStreak = 0;
+        this.lastCheckpointAt = this.now();
+        this.dirty = this.mutationGeneration > this.persistedGeneration;
+        if (!this.dirty) {
+          this.firstDirtyAt = null;
+          this.nextCheckpointAt = null;
+        } else this.scheduleCheckpoint();
+      } else {
+        this.checkpointFailures += 1;
+        this.scheduleRetry();
+      }
     })();
     this.flushPromise = promise.finally(() => { this.flushPromise = null; });
     return this.flushPromise;
@@ -376,12 +452,26 @@ export class AdsbDbPersistence {
     }
   }
 
-  private scheduleSave(): void {
-    if (this.saveTimer || this.saveInFlight) return;
+  private scheduleCheckpoint(): void {
+    if (!this.dirty || this.checkpointIntervalMs === 0 || this.saveTimer || this.saveInFlight || this.retryTimer) return;
+    const dueAt = (this.firstDirtyAt ?? this.now()) + this.checkpointIntervalMs;
+    const delay = Math.max(0, dueAt - this.now());
+    this.nextCheckpointAt = dueAt;
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
-      void this.flush();
-    }, DEFAULT_DEBOUNCE_MS);
+      this.nextCheckpointAt = null;
+      void this.flush("periodic");
+    }, delay);
+  }
+
+  private scheduleRetry(): void {
+    if (this.retryTimer || this.saveInFlight) return;
+    const delay = Math.min(CHECKPOINT_RETRY_MAX_MS, CHECKPOINT_RETRY_INITIAL_MS * 2 ** Math.min(this.retryStreak, 8));
+    this.retryStreak += 1;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.flush("periodic");
+    }, delay);
   }
 
   private async writeSnapshot(): Promise<void> {
@@ -442,5 +532,20 @@ export function disabledAdsbDbPersistence(cacheFile: string): AdsbDbPersistenceD
     lastSaveEntries: 0,
     fileSizeBytes: null,
     writes: 0,
+    checkpointIntervalMs: 0,
+    checkpointMode: "shutdown-only",
+    firstDirtyAt: null,
+    dirtyAgeMs: null,
+    mutationGeneration: 0,
+    persistedGeneration: 0,
+    mutationsSinceCheckpoint: 0,
+    checkpointAttempts: 0,
+    checkpointSuccesses: 0,
+    checkpointFailures: 0,
+    periodicCheckpoints: 0,
+    gracefulCheckpoints: 0,
+    explicitCheckpoints: 0,
+    lastCheckpointAt: null,
+    nextCheckpointAt: null,
   };
 }

@@ -1,4 +1,4 @@
-import { getAdsbDbBaseUrl, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getFlightAwareMaxCostUsdPerDay, getFlightAwareMaxCostUsdPerMonth, getReadsbBeastHost, getReadsbBeastPort, getReadsbBeastReconnectMaxMs, getReadsbBeastStaleMs, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbBeastEnabled, isReadsbJsonFailoverEnabled, shouldUseSampleAtcData } from "@/lib/server/config";
+import { getAdsbDbBaseUrl, getAdsbDbCacheCheckpointMs, getAdsbDbCacheFile, getAdsbDbMetadataMaxPersistedAgeMs, getAdsbDbMetadataMaxPersistedEntries, getAdsbDbRouteMaxPersistedAgeMs, getAdsbDbRouteMaxPersistedEntries, getFlightAwareApiKey, getFlightAwareMaxCostUsdPerDay, getFlightAwareMaxCostUsdPerMonth, getReadsbBeastHost, getReadsbBeastPort, getReadsbBeastReconnectMaxMs, getReadsbBeastStaleMs, getReceiverPosition, isAdsbDbEnabled, isAdsbDbPersistenceEnabled, isAdsbLolEnabled, isReadsbBeastEnabled, isReadsbJsonFailoverEnabled, shouldUseSampleAtcData } from "@/lib/server/config";
 import { createNetworkFailoverProvider } from "@/lib/server/network-failover-provider";
 import { LocalReadsbProvider } from "@/lib/server/local-readsb-provider";
 import { BeastLocalProvider } from "@/lib/server/beast-local-provider";
@@ -161,6 +161,7 @@ export function createEnrichmentService(options: { persistAdsbDb?: boolean } = {
       routeMaxStaleMs: getAdsbDbRouteMaxPersistedAgeMs(),
       metadataMaxEntries: getAdsbDbMetadataMaxPersistedEntries(),
       routeMaxEntries: getAdsbDbRouteMaxPersistedEntries(),
+      checkpointIntervalMs: getAdsbDbCacheCheckpointMs(),
     })
     : undefined;
   return new EnrichmentService(registry, undefined, persistence);

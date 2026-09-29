@@ -27,6 +27,80 @@ async function cacheFile(): Promise<string> {
 }
 
 describe("persistent ADSBDB cache", () => {
+  const options = (file: string, now: () => number, checkpointIntervalMs = 60 * 60_000) => ({
+    cacheFile: file, metadataTtlMs: 24 * 60 * 60_000, routeTtlMs: 6 * 60 * 60_000,
+    metadataMaxStaleMs: 7 * 24 * 60 * 60_000, routeMaxStaleMs: 24 * 60 * 60_000,
+    metadataMaxEntries: 2, routeMaxEntries: 2, checkpointIntervalMs, now,
+  });
+
+  it("waits for the first dirty deadline instead of debouncing mutations", async () => {
+    vi.useFakeTimers({ now: Date.parse("2026-09-12T12:00:00.000Z") });
+    try {
+      const file = await cacheFile();
+      const cache = new AdsbDbPersistence(options(file, Date.now));
+      for (let index = 0; index < 1_000; index += 1) cache.set("metadata", metadataCacheKey("abc123"), metadata());
+      expect(cache.getDiagnostics()).toMatchObject({ writes: 0, periodicCheckpoints: 0, dirty: true });
+      await vi.advanceTimersByTimeAsync(59 * 60_000);
+      expect(cache.getDiagnostics().writes).toBe(0);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await cache.flush("explicit");
+      expect(cache.getDiagnostics()).toMatchObject({ writes: 1, periodicCheckpoints: 1, dirty: false });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("supports shutdown-only mode and an explicit flush", async () => {
+    vi.useFakeTimers({ now: Date.parse("2026-09-12T12:00:00.000Z") });
+    try {
+      const file = await cacheFile();
+      const cache = new AdsbDbPersistence(options(file, Date.now, 0));
+      cache.set("metadata", metadataCacheKey("abc123"), metadata());
+      await vi.advanceTimersByTimeAsync(6 * 60 * 60_000);
+      expect(cache.getDiagnostics().writes).toBe(0);
+      await cache.flush("explicit");
+      expect(cache.getDiagnostics()).toMatchObject({ writes: 1, periodicCheckpoints: 0, explicitCheckpoints: 1, dirty: false });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("flushes through the enrichment service graceful-close path", async () => {
+    const file = await cacheFile();
+    const cache = new AdsbDbPersistence(options(file, Date.now, 0));
+    cache.set("metadata", metadataCacheKey("abc123"), metadata());
+    const service = new EnrichmentService({}, undefined, cache);
+    await service.close();
+    expect(cache.getDiagnostics()).toMatchObject({ writes: 1, gracefulCheckpoints: 1, explicitCheckpoints: 0, dirty: false });
+  });
+
+  it("keeps newer mutations dirty when they arrive during a checkpoint", async () => {
+    const file = await cacheFile();
+    const cache = new AdsbDbPersistence(options(file, Date.now));
+    cache.set("metadata", metadataCacheKey("abc123"), metadata());
+    const save = cache.flush("periodic");
+    cache.set("metadata", metadataCacheKey("def456"), metadata());
+    await save;
+    expect(cache.getDiagnostics()).toMatchObject({ writes: 1, persistedGeneration: 1, mutationGeneration: 2, dirty: true });
+    await cache.flush("explicit");
+    expect(cache.getDiagnostics()).toMatchObject({ writes: 2, persistedGeneration: 2, dirty: false });
+  });
+
+  it("retains the dirty generation and backs off after a failed checkpoint", async () => {
+    vi.useFakeTimers();
+    try {
+      const file = await cacheFile();
+      const cache = new AdsbDbPersistence({ ...options(file, Date.now), metadataMaxEntries: 10, maxBytes: 1_024 });
+      cache.set("metadata", metadataCacheKey("abc123"), metadata());
+      cache.set("metadata", metadataCacheKey("def456"), metadata());
+      cache.set("metadata", metadataCacheKey("fedcba"), metadata());
+      await cache.flush("periodic");
+      expect(cache.getDiagnostics()).toMatchObject({ dirty: true, mutationGeneration: 3, persistedGeneration: 0, checkpointFailures: 1, writes: 0 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("writes a bounded versioned snapshot and hydrates fresh entries", async () => {
     let now = Date.parse("2026-09-12T12:00:00.000Z");
     const file = await cacheFile();

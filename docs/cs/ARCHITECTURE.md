@@ -163,7 +163,13 @@ state soubor ještě neexistuje. Pozitivní metadata/trasy ADSBDB navíc použí
 volitelný omezený verzovaný snapshot
 `/var/lib/airradar/adsbdb/adsbdb-cache-v1.json`; je to last-known-good
 fallback providera, nikoli zdroj pravdy. Negativní záznamy a in-flight
-požadavky se nikdy nepersistují.
+požadavky se nikdy nepersistují. Metadata a route mapy zůstávají v omezené
+RAM; mutace pouze zvýší generation a označí cache jako dirty, bez serializace
+nebo zápisu. Výchozí checkpoint proběhne hodinu po první mutaci v dirty období
+a při chybě používá omezený backoff od pěti minut. `ADSBDB_CACHE_CHECKPOINT_MS=0`
+znamená pouze flush při ukončení nebo na explicitní žádost. Graceful shutdown
+zapíše aktuální RAM přes centrální shutdown coordinator; hard crash nebo
+SIGKILL může ztratit až jeden interval znovu načitatelného enrichmentu.
 
 ## Hranice prohlížeče a API
 

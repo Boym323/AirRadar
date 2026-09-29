@@ -91,6 +91,11 @@ bounded, validated, written atomically with mode `0600`, and contains only
 positive metadata/routes. Metadata remains fresh for 24 hours and may be used
 as a provider-error fallback for up to 7 days; routes remain fresh for 6 hours
 and may be used stale for up to 24 hours. Negative results stay in RAM only.
+RAM mutations are not written immediately: production checkpoints default to
+`ADSBDB_CACHE_CHECKPOINT_MS=3600000`, scheduled from the first mutation in a
+dirty period. `0` enables shutdown/manual-flush-only persistence. A graceful
+shutdown flushes the current RAM cache; a hard crash can lose up to one
+checkpoint interval of re-fetchable enrichment.
 Development and test processes do not write `/var/lib/airradar` unless
 `ADSBDB_PERSIST_CACHE=true` is explicitly configured.
 

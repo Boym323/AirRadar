@@ -329,6 +329,15 @@ skutečně naladěnou frekvenci letadla.
   Negativní výsledky zůstávají jen v RAM. Data flight planu FlightAware jsou
   klíčována callsignem a časem pozorování. Vše je server-side enrichment s
   cache/concurrency limity.
+- Persistence ADSBDB je pouze recovery cache. Autoritativní je RAM: `set` a
+  `delete` okamžitě mění omezené mapy a generation countery, zatímco jediný
+  checkpoint serializuje mapy v termínu odvozeném od první mutace (výchozí
+  interval 60 minut). Úspěšný atomic rename posune persisted generation;
+  mutace během zápisu zanechají cache jako dirty. Zachovány zůstávají fsync,
+  dočasný soubor, práva `0600`, validace i atomic rename. Běžný provoz tedy
+  používá aktuální RAM, graceful shutdown ji uloží a hard crash může vynechat
+  až hodinu nového enrichmentu bez dopadu na ADS-B ingest, historii nebo
+  `FlightPosition`.
 - Airport objekty z ADSBDB route procházejí `AirportResolver`: PostgreSQL
   exact ICAO, poté IATA, pak platné souřadnice providera a nakonec malý bundled
   katalog. Tím se řeší metadata zobrazení; route code providera zůstává

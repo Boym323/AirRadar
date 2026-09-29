@@ -162,8 +162,15 @@ the equivalent files under `data/`; the tracked `data/alerts.json` is only a
 legacy migration source when the production state file does not yet exist.
 Positive ADSBDB metadata/routes additionally use the optional bounded,
 versioned snapshot `/var/lib/airradar/adsbdb/adsbdb-cache-v1.json`; it is a
-last-known-good provider fallback, not a source of truth. Negative entries and
-in-flight requests are never persisted.
+last-known-good provider fallback, not a source of truth. The metadata and
+route maps remain resident in bounded RAM; mutations increment a generation
+and mark the cache dirty without serializing or writing. The default durable
+checkpoint is one hour after the first mutation in a dirty period, with
+bounded five-minute-plus retry backoff on failures. `ADSBDB_CACHE_CHECKPOINT_MS=0`
+is shutdown/manual-flush-only mode. Graceful shutdown flushes current RAM
+state through the canonical shutdown coordinator; a hard crash or SIGKILL may
+lose up to one checkpoint interval of re-fetchable ADSBDB enrichment. Negative
+entries and in-flight requests are never persisted.
 
 ## Browser and API boundary
 

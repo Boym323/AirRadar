@@ -362,7 +362,7 @@ export class EnrichmentService {
   }
 
   async close(): Promise<void> {
-    await this.adsbDbPersistence?.flush();
+    await this.adsbDbPersistence?.flush("graceful");
   }
 
   private async getAdsbDbCached<T extends AircraftEnrichment["metadata"] | AircraftEnrichment["route"]>(

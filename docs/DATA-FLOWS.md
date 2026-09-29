@@ -71,6 +71,17 @@ only fills missing, invalid, or older values.
    belongs to the same local aircraft observation. Network-only observations
    are not persisted, enriched, assigned ATC, or evaluated by alerts.
 
+ADSBDB metadata and route persistence is a recovery cache only. Runtime RAM is
+authoritative: `set`/`delete` mutate bounded maps and generation counters
+immediately, while a single checkpoint serializes the current maps at the
+first-dirty deadline (default 60 minutes). A successful atomic rename advances
+the persisted generation; mutations during a save remain dirty. The existing
+fsync, temporary file, mode `0600`, validation, and atomic rename safeguards
+remain in force. Normal operation therefore keeps current values in RAM,
+graceful shutdown persists them, and hard crash/power loss can omit up to one
+hour of newly fetched enrichment without affecting ADS-B ingest, history, or
+FlightPosition data.
+
 ## Alerts and alert history
 
 Server watchlist, emergency, new-aircraft, and reception-record transitions
