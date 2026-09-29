@@ -2,6 +2,22 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.213] - 2026-09-29
+
+Changes since v1.0.212.
+
+### Maintenance
+
+- Sync generated repository metadata (d211dbb3)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (d211dbb3)
+- Merge pull request #215 from Boym323/automation/repository-metadata (a354ad49)
+
+</details>
+
 ## [1.0.212] - 2026-09-29
 
 Changes since v1.0.211.
