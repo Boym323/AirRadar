@@ -10,7 +10,11 @@ describe("database transaction attribution", () => {
 
   it("records a successful transaction and its duration", async () => {
     await trackDbTransaction("history.snapshot", async () => 42, 1);
-    const lane = getDbTransactionDiagnostics().lanes["history.snapshot"];
+    const diagnostics = getDbTransactionDiagnostics();
+    const lane = diagnostics.lanes["history.snapshot"];
+    expect(diagnostics.scope).toBe("process-local");
+    expect(diagnostics.processId).toBe(process.pid);
+    expect(diagnostics.diagnosticsStoreId).toMatch(/^dbtx-/);
     expect(lane.attempts).toBe(1);
     expect(lane.commits).toBe(1);
     expect(lane.failures).toBe(0);
@@ -47,5 +51,23 @@ describe("database transaction attribution", () => {
     const now = Date.now();
     const snapshot = getDbTransactionDiagnostics(now + 61 * 60_000);
     expect(snapshot.lanes["receiver.advanced-stats"].windows["60m"].attempts).toBe(0);
+  });
+
+  it("keeps the store identity and start time across test resets", async () => {
+    const before = getDbTransactionDiagnostics();
+    await trackDbTransaction("history.snapshot", async () => undefined);
+    resetDbTransactionDiagnosticsForTests();
+    const after = getDbTransactionDiagnostics();
+    expect(after.diagnosticsStoreId).toBe(before.diagnosticsStoreId);
+    expect(after.startedAt).toBe(before.startedAt);
+    expect(after.lanes["history.snapshot"].attempts).toBe(0);
+  });
+
+  it("shares counters across independently evaluated module consumers", async () => {
+    const duplicateModule = await import("@/lib/server/db-transaction-diagnostics?duplicate-consumer");
+    await duplicateModule.trackDbTransaction("receiver.coverage", async () => undefined);
+    expect(getDbTransactionDiagnostics().lanes["receiver.coverage"].attempts).toBe(1);
+    expect(duplicateModule.getDbTransactionDiagnostics().diagnosticsStoreId)
+      .toBe(getDbTransactionDiagnostics().diagnosticsStoreId);
   });
 });

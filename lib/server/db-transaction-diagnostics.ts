@@ -17,18 +17,34 @@ export const DB_TRANSACTION_LANES = [
 export type DbTransactionLane = (typeof DB_TRANSACTION_LANES)[number];
 type Bucket = { startedAtMs: number; attempts: number; commits: number; failures: number; totalDurationMs: number; maxDurationMs: number; workUnits: number };
 type LaneState = { attempts: number; commits: number; failures: number; active: number; maxConcurrent: number; totalDurationMs: number; maxDurationMs: number; workUnits: number; buckets: Bucket[] };
+type DbTransactionDiagnosticsStore = {
+  startedAtMs: number;
+  lanes: Map<DbTransactionLane, LaneState>;
+  storeId: string;
+};
 
 const LANE_SET = new Set<string>(DB_TRANSACTION_LANES);
 const WINDOW_MS = 60 * 60_000;
 const BUCKET_MS = 60_000;
-const startedAtMs = Date.now();
-const lanes = new Map<DbTransactionLane, LaneState>();
+const globalForDbTransactionDiagnostics = globalThis as typeof globalThis & {
+  airRadarDbTransactionDiagnostics?: DbTransactionDiagnosticsStore;
+};
+
+function createStore(): DbTransactionDiagnosticsStore {
+  return {
+    startedAtMs: Date.now(),
+    lanes: new Map<DbTransactionLane, LaneState>(),
+    storeId: `dbtx-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
+  };
+}
+
+const store = globalForDbTransactionDiagnostics.airRadarDbTransactionDiagnostics ??= createStore();
 
 function state(lane: DbTransactionLane): LaneState {
-  let value = lanes.get(lane);
+  let value = store.lanes.get(lane);
   if (!value) {
     value = { attempts: 0, commits: 0, failures: 0, active: 0, maxConcurrent: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0, buckets: [] };
-    lanes.set(lane, value);
+    store.lanes.set(lane, value);
   }
   return value;
 }
@@ -50,6 +66,9 @@ function assertLane(lane: string): asserts lane is DbTransactionLane {
 }
 
 export interface DbTransactionDiagnosticsSnapshot {
+  scope: "process-local";
+  processId: number;
+  diagnosticsStoreId: string;
   startedAt: string;
   uptimeSeconds: number;
   lanes: Record<DbTransactionLane, {
@@ -118,9 +137,16 @@ export function getDbTransactionDiagnostics(now = Date.now()): DbTransactionDiag
       windows: { "5m": window(value, now, 5 * 60_000), "15m": window(value, now, 15 * 60_000), "60m": window(value, now, 60 * 60_000) },
     };
   }
-  return { startedAt: new Date(startedAtMs).toISOString(), uptimeSeconds: Math.max(0, (now - startedAtMs) / 1000), lanes: result };
+  return {
+    scope: "process-local",
+    processId: process.pid,
+    diagnosticsStoreId: store.storeId,
+    startedAt: new Date(store.startedAtMs).toISOString(),
+    uptimeSeconds: Math.max(0, (now - store.startedAtMs) / 1000),
+    lanes: result,
+  };
 }
 
 export function resetDbTransactionDiagnosticsForTests(): void {
-  lanes.clear();
+  store.lanes.clear();
 }
