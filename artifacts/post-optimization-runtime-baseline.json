@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-29T10:05:00.000Z",
+  "repository": {
+    "path": "/var/www/airradar",
+    "remote": "Boym323/AirRadar",
+    "localHead": "7a4a4c675ed08ad852ddbd229049634a973b68fc",
+    "originMain": "7a4a4c675ed08ad852ddbd229049634a973b68fc",
+    "status": "clean",
+    "node": "v22.23.3",
+    "npm": "10.9.9",
+    "prismaContract": "verified; storageHash a31a5aa55d41de3fca5295a33bb57a0a44e02ad993bfe4abe1acc353c2ad57e8",
+    "validation": {
+      "typecheck": "passed",
+      "lint": "passed with 7 warnings and 0 errors",
+      "featuresCheck": "passed",
+      "prismaVerify": "passed",
+      "isolatedProductionBuild": "passed"
+    },
+    "preservedLocalWork": {
+      "stashes": 3,
+      "unreachableCommitsPresent": true,
+      "destructiveGitAction": false
+    }
+  },
+  "workspaceRecovery": {
+    "canonicalPath": "/var/www/airradar",
+    "pathPresent": true,
+    "mount": "rpool/data/subvol-118-disk-0 (ZFS, rw)",
+    "virtualization": "LXC",
+    "rootCauseFinding": "The historical runner error is not reproducible and no persistent forensic record identifies a missing component. Current evidence rules out a missing mount, broken worktree, broken symlink, or absent checkout. The most consistent remaining explanation is a transient runner working-directory/path state (for example a stale cwd after an external directory interruption), but this is explicitly unproven.",
+    "serviceWorkingDirectory": "/var/www/airradar",
+    "serviceActive": true,
+    "productionRestartedByAudit": false
+  },
+  "production": {
+    "publicHost": "airradar.pomykal.cz",
+    "version": "1.0.208",
+    "runtimeSha": "8ac5b8d4",
+    "runtimeShaRelation": "ancestor of origin/main; main adds 96d4c279 and merge 7a4a4c67, metadata/changelog only",
+    "buildTime": "2026-09-29T08:27:27.000Z",
+    "servicePid": 88,
+    "health": {"local": "ok via 192.168.1.142:3000", "public": "ok", "database": "ok", "receiver": "ok", "sse": "HTTP 200 text/event-stream"}
+  },
+  "measurement": {
+    "startedAt": "2026-09-29T09:26:17.332Z",
+    "endedAt": "2026-09-29T09:56:17.647Z",
+    "durationMinutes": 30.00525,
+    "traffic": "Natural production traffic; local aircraft 67 at start and 91 at end; receiver and network providers online; no synthetic load; active SSE clients were 0 in runtime samples."
+  },
+  "cpu": {
+    "airRadarAveragePercentOfOneCore": 45.54,
+    "logicalCpus": 4,
+    "cpuQuota": "unlimited",
+    "cgroupThrottling": "none observed",
+    "hostLoadSpotCheck": "1.4-2.6 one-minute load during sampling",
+    "postgresql": "not separately exposed as a process in this container"
+  },
+  "memory": {
+    "telemetryStart": {"rssBytes": 1141325824, "heapUsedBytes": 556265160, "cgroupCurrentBytes": 1113534464},
+    "telemetryEnd": {"rssBytes": 981004288, "heapUsedBytes": 601091664, "cgroupCurrentBytes": 957292544},
+    "telemetryPeak": {"rssBytes": 1550766080, "heapUsedBytes": 1183431160, "cgroupCurrentBytes": 1528864768},
+    "currentAdminSnapshot": {"rssBytes": 1232973824, "rssAnonBytes": 1175568384, "rssFileBytes": 57614336, "privateDirtyBytes": 1175597056, "heapUsedBytes": 472191424, "heapTotalBytes": 777437184, "externalBytes": 5699206, "arrayBuffersBytes": 1783753},
+    "cgroupMaxBytes": null,
+    "trend": "GC-driven fluctuation; no monotonic growth during the 30-minute window"
+  },
+  "io": {
+    "nodeProcIoOneMinute": {"rcharBytesPerMinute": 76381011, "wcharBytesPerMinute": 77123267, "readBytesPerMinute": 121344, "writeBytesPerMinute": 74196188, "syscrPerMinute": 11323, "syscwPerMinute": 7496},
+    "nodeWriteProjection": "74.2 MB/min; 106.9 GiB/day",
+    "nodeWriteAttribution": "Filesystem writes are measured from /proc/88/io. Exact file attribution was not available without intrusive tracing; runtime-state inspection showed repeated atomic archive/cache rewrites, including map-context metar and provider caches.",
+    "deviceSpotCheck": {"readMBPer10s": 451.109, "writeMBPer10s": 28.371, "readIOPS": 324.8, "writeIOPS": 3.6, "vmstatWaitPercent": "2-5"}
+  },
+  "database": {
+    "sizeBytesAtFinalSnapshot": 1629296307,
+    "sizeApprox": "1.52 GiB",
+    "shortWindowGrowthProjection": "approximately 0.55 GB/day from quick size snapshots; treat as traffic-dependent",
+    "cacheHitRatio": 98.96,
+    "connections": {"active": 1, "idle": 10, "unknown": 6, "longTransactionsOver5m": 0},
+    "tableSizes": [
+      {"table":"flightPosition","tableBytes":475365376,"indexBytes":426999808,"totalBytes":902365184,"liveRows":4792682,"deadRows":438},
+      {"table":"aircraftMetadataCache","tableBytes":342048768,"indexBytes":43712512,"totalBytes":385761280,"liveRows":617002,"deadRows":0},
+      {"table":"aircraftWeatherObservation","tableBytes":94535680,"indexBytes":25526272,"totalBytes":120061952,"liveRows":103014,"deadRows":178},
+      {"table":"navigationIntegrityObservation","tableBytes":65265664,"indexBytes":13451264,"totalBytes":78716928,"liveRows":56454,"deadRows":95},
+      {"table":"flight","tableBytes":19251200,"indexBytes":37781504,"totalBytes":57032704,"liveRows":115580,"deadRows":13617},
+      {"table":"receiverCoverageHourly","tableBytes":13074432,"indexBytes":8085504,"totalBytes":21159936,"liveRows":68092,"deadRows":9963},
+      {"table":"navigationIntegrityAnomaly","tableBytes":9781248,"indexBytes":1638400,"totalBytes":11419648,"liveRows":4083,"deadRows":53},
+      {"table":"receiverDailyAircraft","tableBytes":5046272,"indexBytes":3784704,"totalBytes":8830976,"liveRows":59634,"deadRows":2829},
+      {"table":"aircraft","tableBytes":1236992,"indexBytes":4571136,"totalBytes":5808128,"liveRows":9497,"deadRows":832}
+    ]
+  },
+  "writeAttribution": {
+    "transactionsPerMinute": 564.47,
+    "insertsPerMinute": 463.22,
+    "updatesPerMinute": 376.07,
+    "deletesPerMinute": 5.07,
+    "tables": [
+      {"table":"flightPosition","insertPerMinute":190.27,"updatePerMinute":0,"deletePerMinute":0,"hotPercent":null,"size":"860 MiB"},
+      {"table":"flight","insertPerMinute":5.83,"updatePerMinute":189.83,"deletePerMinute":0,"hotPercent":2.41,"size":"54 MiB"},
+      {"table":"receiverCoverageHourly","insertPerMinute":0,"updatePerMinute":115.78,"deletePerMinute":0,"hotPercent":100,"size":"20 MiB"},
+      {"table":"navigationIntegrityObservation","insertPerMinute":155.84,"updatePerMinute":0,"deletePerMinute":0,"hotPercent":null,"size":"74 MiB"},
+      {"table":"navigationIntegrityAnomaly","insertPerMinute":12.66,"updatePerMinute":40.89,"deletePerMinute":0,"hotPercent":33.74,"size":"11 MiB"},
+      {"table":"aircraftWeatherObservation","insertPerMinute":87.22,"updatePerMinute":0,"deletePerMinute":0,"hotPercent":null,"size":"114 MiB"},
+      {"table":"aircraft","insertPerMinute":0.13,"updatePerMinute":14.13,"deletePerMinute":0,"hotPercent":100,"size":"5.7 MiB"},
+      {"table":"receiverDailyAircraft","insertPerMinute":2.90,"updatePerMinute":2.50,"deletePerMinute":0,"hotPercent":100,"size":"8.6 MiB"},
+      {"table":"receiverDailyStats","insertPerMinute":0,"updatePerMinute":3.87,"deletePerMinute":0,"hotPercent":100,"size":"80 KiB"}
+    ]
+  },
+  "flightPosition": {"insertPerMinute":190.27,"rows":4791467,"totalBytes":902029312,"growthProjection":"approximately 68 MiB/day in this interval","adaptivePolicy":"unchanged; shadow not adopted"},
+  "aircraft": {"updatePerMinute":14.13,"optimizationStillEffective":true,"diagnostics":"shadow/current runtime diagnostics available; no material regression to old ~135/min order"},
+  "flight": {"updatePerMinute":189.83,"semantics":"lastSeenAt remains immediate; unchanged"},
+  "receiverCoverage": {"updatePerMinute":115.78,"flushAttempts":18,"flushSuccesses":18,"flushFailures":0,"averageRowsPerFlush":230.78,"lastFlushDurationMs":167,"maxPersistedCacheEntries":409,"persistedCacheHours":1,"queryCostInstrumentation":"not available; no intrusive logging enabled"},
+  "dailyStatistics": {"materialWriteSource":false,"note":"ReceiverDaily* lanes were each below 3.9 updates/min in the interval."},
+  "navigationIntegrity": {"insertPerMinute":155.84,"updatePerMinute":0,"material":true,"semanticsChanged":false},
+  "aircraftWeather": {"insertPerMinute":87.22,"updatePerMinute":0,"material":true,"coalescingChanged":false},
+  "wal": {"walBytesDelta":94425074,"mbPerMinute":3.000,"mbPerHour":180.0,"gibPerDayProjection":4.12,"normalizedInterpretation":"traffic-dependent; measured alongside 190 FlightPosition inserts/min and 564 transactions/min"},
+  "sseAndCaches": {"activeClients":"0 in sampled runtime telemetry","sseV1Clients":0,"sseV2Clients":0,"aircraftCount":87,"trailPoints":"local 9790; network 47523","trailEstimatedBytes":5502048,"metadataHotCache":2521,"metadataFallbackCacheEntries":7,"providerCacheEntries":3701,"coverageCacheEntries":302,"coverageCacheHours":1,"flightPositionShadowEntries":295,"unboundedStructureObserved":false},
+  "deadTuplesAutovacuum": {"mainFindings":"Flight dead tuples 13617 and ReceiverCoverageHourly 9963 are persistent churn signals; navigation integrity and daily aggregates remain bounded. Autovacuum is active for navigation/weather/anomaly tables but older last-autovacuum timestamps exist for Flight and ReceiverCoverageHourly.","vacuumFullRun":false},
+  "bottleneckRanking": [
+    {"priority":"P1","item":"Node filesystem write amplification","evidence":"74.2 MB/min /proc write_bytes; 106.9 GiB/day projection","recommendation":"next stream: attribute and safely reduce repeated runtime archive/cache rewrites","risk":"medium; requires file-level attribution and canary"},
+    {"priority":"P1","item":"Transaction and row churn","evidence":"564.5 transactions/min; Flight 189.8 updates/min; FlightPosition 190.3 inserts/min","recommendation":"candidate after Node write attribution; preserve Flight semantics","risk":"high for Flight semantics"},
+    {"priority":"P2","item":"Navigation/weather persistence volume","evidence":"155.8 and 87.2 inserts/min respectively","recommendation":"observe; no change justified in this task","risk":"medium"},
+    {"priority":"P3","item":"Receiver Coverage Batch V2","evidence":"V1 flushes successful; ~167 ms last and prior p95 ~253 ms","recommendation":"keep V1","risk":"unnecessary complexity"},
+    {"priority":"P3","item":"Storage saturation/cache reads","evidence":"98.96% DB cache hit ratio; low vmstat wait; no CPU throttling","recommendation":"leave alone","risk":"none"}
+  ],
+  "nextOptimization": {"exactlyOne":"Node filesystem write attribution and reduction for repeated runtime archive/cache snapshots","estimatedPossibleSaving":"potentially tens of MB/min, but not responsibly quantified until file-level attribution confirms the source","semanticRisk":"medium","complexity":"medium","requiredCanary":"shadow counters plus one production canary window; no schema or cadence change until measured"},
+  "batchV2Decision":"KEEP RECEIVER COVERAGE CACHE V1",
+  "safety": {"schemaChanged":false,"migration":false,"manualDbChanges":false,"productionOptimizationCodeDeployed":false,"serviceRestarted":false}
+}
