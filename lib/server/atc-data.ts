@@ -2,6 +2,7 @@ import { normalizeAtcActivationStatus, type AtcDataResponse, type AtcDatasetMeta
 import { isSupportedAtcFrequencyMhz } from "@/lib/atc/frequency-policy";
 import type { AtcSectorProvider } from "@/lib/server/provider";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { isAtcValidityValid } from "@/lib/server/atc-validity";
 
 // DEMO DATA ONLY. These simplified polygons and frequencies are not current
@@ -203,8 +204,8 @@ export async function getStoredAtcData(): Promise<AtcDataResponse | null> {
   if (!database) return null;
   try {
     const [sectorRows, transmitterRows] = await Promise.all([
-      database.orm.public.AtcSector.limit(2000).all(),
-      database.orm.public.AtcTransmitter.limit(2000).all(),
+      trackDbOperation("atc.dataset.load", async () => await database.orm.public.AtcSector.limit(2000).all()),
+      trackDbOperation("atc.dataset.load", async () => await database.orm.public.AtcTransmitter.limit(2000).all()),
     ]);
     const sectors = sectorRows.map(storedSector).filter((sector): sector is AtcSector => sector !== null && isAtcValidityValid(sector.validFrom, sector.validTo));
     const transmitters = transmitterRows.map((transmitter) => ({

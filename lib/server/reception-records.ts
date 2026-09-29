@@ -2,6 +2,7 @@ import "temporal-polyfill/full/global";
 import type { ReceiverReceptionRecord, ReceiverReceptionRecordsResponse } from "@/lib/aircraft/types";
 import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 
 export const RECEPTION_RECORD_LIMIT = 10;
 
@@ -90,11 +91,11 @@ export async function getReceptionRecords(today: ReceiverDailyReceptionRecord | 
   const database = getPrisma();
   if (!database) return buildReceptionRecords([], today, "memory");
   try {
-    const rows = await database.orm.public.ReceiverDailyStats
+    const rows = await trackDbOperation("receiver.reception-record.query", async () => await database.orm.public.ReceiverDailyStats
       .where((row) => row.maxDistanceBearing.gte(0))
       .orderBy((row) => row.maxDistanceKm.desc())
       .limit(RECEPTION_RECORD_LIMIT)
-      .all();
+      .all());
     return buildReceptionRecords(rows, today, "postgres");
   } catch (error) {
     console.error("AirRadar reception records load failed", error);

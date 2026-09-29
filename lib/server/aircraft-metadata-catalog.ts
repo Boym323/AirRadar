@@ -7,6 +7,7 @@ import type { AircraftMetadata } from "@/lib/aircraft/types";
 import { getAircraftMetadataUrl } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
+import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { Tar1090DbProvider } from "@/lib/server/tar1090-db-provider";
 import type { AircraftMetadataProvider } from "@/lib/server/provider";
 import { LRUCache } from "lru-cache";
@@ -164,9 +165,9 @@ export class AircraftMetadataCatalog implements AircraftMetadataProvider {
     const database = getPrisma();
     if (database) {
       try {
-        const row = await database.orm.public.AircraftMetadataCache
+        const row = await trackDbOperation("aircraft-metadata.cache.lookup", () => database.orm.public.AircraftMetadataCache
           .where({ icaoHex: hex })
-          .first();
+          .first());
         const record = row ? {
           icaoHex: row.icaoHex.toUpperCase(),
           registration: row.registration,

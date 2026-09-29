@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "status": "instrumentation-ready",
+  "scope": "process-local",
+  "productionMeasurement": null,
+  "schemaChanged": false,
+  "migration": false,
+  "optimizationDeployed": false,
+  "lanes": [
+    {"sourceFile":"lib/server/navigation-integrity.ts","function":"persistObservation","ormOperation":"NavigationIntegrityObservation.create","insideExplicitTransaction":false,"lane":"navigation.observation.create","kind":"WRITE","operation":"INSERT"},
+    {"sourceFile":"lib/server/navigation-integrity.ts","function":"persistAnomaly","ormOperation":"NavigationIntegrityAnomaly.upsert","insideExplicitTransaction":false,"lane":"navigation.anomaly.upsert","kind":"WRITE","operation":"UPSERT"},
+    {"sourceFile":"lib/server/navigation-integrity.ts","function":"getHistory","ormOperation":"NavigationIntegrityAnomaly.all","insideExplicitTransaction":false,"lane":"navigation.history.query","kind":"READ","operation":"SELECT"},
+    {"sourceFile":"lib/server/aircraft-weather.ts","function":"writeWeatherObservation","ormOperation":"AircraftWeatherObservation.create","insideExplicitTransaction":false,"lane":"weather.observation.create","kind":"WRITE","operation":"INSERT"},
+    {"sourceFile":"lib/server/aircraft-weather.ts","function":"queryAircraftWeatherObservations","ormOperation":"AircraftWeatherObservation.all","insideExplicitTransaction":false,"lane":"weather.observation.query","kind":"READ","operation":"SELECT"},
+    {"sourceFile":"lib/server/aircraft-metadata-catalog.ts","function":"getMetadata","ormOperation":"AircraftMetadataCache.first","insideExplicitTransaction":false,"lane":"aircraft-metadata.cache.lookup","kind":"READ","operation":"SELECT"},
+    {"sourceFile":"lib/server/reception-records.ts","function":"loadReceptionRecords","ormOperation":"ReceiverDailyStats.all","insideExplicitTransaction":false,"lane":"receiver.reception-record.query","kind":"READ","operation":"SELECT"},
+    {"sourceFile":"lib/server/atc-data.ts","function":"getStoredAtcData","ormOperation":"AtcSector.all","insideExplicitTransaction":false,"lane":"atc.dataset.load","kind":"READ","operation":"SELECT"},
+    {"sourceFile":"lib/server/atc-data.ts","function":"getStoredAtcData","ormOperation":"AtcTransmitter.all","insideExplicitTransaction":false,"lane":"atc.dataset.load","kind":"READ","operation":"SELECT"}
+  ],
+  "excluded": "ORM calls inside explicit database.transaction wrappers remain owned by db-transaction-diagnostics; in-memory cache/fallback reads are not counted."
+}

@@ -2,6 +2,7 @@ import "temporal-polyfill/full/global";
 import type { Aircraft, AircraftFieldProvenance } from "@/lib/aircraft/types";
 import { haversineDistanceKm } from "@/lib/geo";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { getHistoryRetentionDays } from "@/lib/server/config";
 
 /**
@@ -434,7 +435,7 @@ function rememberMemoryRow(observation: AircraftWeatherObservation): void {
 }
 
 async function writeWeatherObservation(database: NonNullable<ReturnType<typeof getPrisma>>, observation: AircraftWeatherObservation): Promise<void> {
-  await database.orm.public.AircraftWeatherObservation.create({
+  await trackDbOperation("weather.observation.create", () => database.orm.public.AircraftWeatherObservation.create({
     dedupKey: observation.dedupKey!,
     aircraftHex: observation.aircraftHex,
     flightId: observation.flightId,
@@ -448,7 +449,7 @@ async function writeWeatherObservation(database: NonNullable<ReturnType<typeof g
     source: observation.source, provider: observation.provider, quality: observation.quality,
     weatherSourceQuality: observation.weatherSourceQuality, bdsConfidence: observation.bdsConfidence,
     provenanceJson: JSON.stringify(observation.provenance),
-  });
+  }));
 }
 
 async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provider: string): Promise<void> {
@@ -592,7 +593,7 @@ export async function queryAircraftWeatherObservations(query: WeatherQuery): Pro
     if (query.minAltitude !== undefined) filtered = filtered.where((row) => row.altitudeFt.gte(query.minAltitude));
     if (query.maxAltitude !== undefined) filtered = filtered.where((row) => row.altitudeFt.lte(query.maxAltitude));
     if (query.source !== undefined) filtered = (filtered as unknown as { where(value: Record<string, unknown>): Collection<WeatherRow> }).where({ source: query.source });
-    const rows = await filtered.orderBy((row: Record<string, Field>) => row.observedAt.desc()).limit(weatherQueryFetchLimit(query, limit, offset)).all();
+    const rows = await trackDbOperation("weather.observation.query", () => filtered.orderBy((row: Record<string, Field>) => row.observedAt.desc()).limit(weatherQueryFetchLimit(query, limit, offset)).all());
     const observations = rows.map(observationFromStoredWeatherRow).filter(inArea).slice(offset, offset + limit);
     return { observations, totalApproximate: observations.length + (rows.length > offset + limit ? 1 : 0), source: "postgres" };
   } catch {

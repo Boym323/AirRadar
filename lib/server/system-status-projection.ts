@@ -145,6 +145,7 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
       providerCacheEntries: null,
       providerCacheLimit: null,
       transactionAttribution: undefined,
+      autocommitOperationAttribution: undefined,
     },
   };
 }

@@ -7,6 +7,7 @@ import { detectNavigationIntegrityAnomalies, summariseCells, NAVIGATION_INTEGRIT
 import { observationFromAircraft } from "@/lib/navigation-integrity/observation";
 import type { NavigationIntegrityAnomaly, NavigationIntegrityCurrentResponse, NavigationIntegrityDiagnostics, NavigationIntegrityObservation } from "@/lib/navigation-integrity/types";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 
 const WINDOW_MS = 15 * 60_000;
 const RETENTION_MS = 2 * 60 * 60_000;
@@ -56,7 +57,7 @@ async function persistObservation(observation: NavigationIntegrityObservation): 
   if (!database) return;
   const key = dedupKey(observation);
   const schema = database.orm.public;
-  await schema.NavigationIntegrityObservation.create({
+  await trackDbOperation("navigation.observation.create", () => schema.NavigationIntegrityObservation.create({
     dedupKey: key,
     aircraftHex: observation.aircraftHex,
     flightId: observation.flightId,
@@ -75,14 +76,14 @@ async function persistObservation(observation: NavigationIntegrityObservation): 
     quality: observation.quality,
     confidence: observation.confidence,
     provenanceJson: JSON.stringify(observation.provenance),
-  });
+  }));
 }
 
 async function persistAnomaly(anomaly: NavigationIntegrityAnomaly): Promise<void> {
   const database = getPrisma();
   if (!database) return;
   const schema = database.orm.public;
-  await schema.NavigationIntegrityAnomaly.upsert({
+  await trackDbOperation("navigation.anomaly.upsert", () => schema.NavigationIntegrityAnomaly.upsert({
     conflictOn: { id: anomaly.id },
     create: {
       id: anomaly.id,
@@ -123,7 +124,7 @@ async function persistAnomaly(anomaly: NavigationIntegrityAnomaly): Promise<void
       severity: anomaly.severity,
       evidenceJson: JSON.stringify(anomaly.evidence),
     },
-  });
+  }));
 }
 
 function enqueue(work: () => Promise<void>): void {
@@ -236,11 +237,11 @@ export class NavigationIntegrityService {
     const database = getPrisma();
     if (!database) return local;
     try {
-      const rows = await database.orm.public.NavigationIntegrityAnomaly
+      const rows = await trackDbOperation("navigation.history.query", async () => await database.orm.public.NavigationIntegrityAnomaly
         .where((row) => row.startedAt.lt(instant(to.toISOString())))
         .orderBy((row) => row.startedAt.desc())
         .limit(200)
-        .all();
+        .all());
       const persisted = rows.map((row) => ({
         id: row.id,
         startedAt: String(row.startedAt),
