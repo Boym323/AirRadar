@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "result": "NO SAFE OPTIMIZATION JUSTIFIED",
+  "generatedAt": "2026-09-29T12:24:00+02:00",
+  "repository": {
+    "path": "/var/www/airradar",
+    "head": "2cbc6c14e9913c338112d0dc27d7b6645d963835",
+    "workingTree": "clean before audit artifacts",
+    "productionObserved": { "version": "1.0.209", "commit": "2cbc6c14" },
+    "userSuppliedBaseline": { "version": "1.0.208", "runtimeSha": "8ac5b8d4" }
+  },
+  "measurement": {
+    "invalidatedInterval": { "pid": 88, "reason": "PID exited during interval because an unrelated automated release restarted the service" },
+    "procIoInterval": { "pid": 5398, "startedAt": "2026-09-29T12:19:49+02:00", "endedAt": "2026-09-29T12:20:49+02:00", "seconds": 60.4,
+      "start": { "wchar": 153216289, "writeBytes": 112870599, "cancelledWriteBytes": 0, "syscw": 14896 },
+      "end": { "wchar": 326616920, "writeBytes": 190480028, "cancelledWriteBytes": 0, "syscw": 19538 },
+      "perMinute": { "wchar": 173400631, "writeBytes": 77609429, "cancelledWriteBytes": 0, "syscw": 4642 } },
+    "detailedAccountingInterval": { "pid": 5398, "startedAt": "2026-09-29T12:21:37.356+02:00", "endedAt": "2026-09-29T12:22:37.756+02:00", "seconds": 60.4,
+      "writeBytesPerMinute": 74359223, "method": "proc io plus one-second fd and runtime-file metadata sampling" }
+  },
+  "processTree": { "unit": "airradar.service", "mainPid": 5398, "parentPid": 1, "children": [], "user": "airradar", "workingDirectory": "/var/www/airradar", "cgroup": "/system.slice/airradar.service", "command": "/usr/bin/node /var/www/airradar/scripts/start-production.mjs start --hostname 192.168.1.142 --port 3000" },
+  "attribution": [
+    { "path": "/var/lib/airradar/adsbdb/adsbdb-cache-v1.json", "bytesPerMinute": 60882676, "writesPerMinute": 13, "averageWriteBytes": 4683283, "sharePercent": 81.876428, "mechanism": "full JSON to tmp, fsync, atomic rename", "classification": "G", "source": "lib/server/enrichment-cache.ts:402-406; lib/server/adsbdb-persistence.ts:220-238,387-419", "purpose": "persistent last-known-good ADSBDB metadata/routes cache" },
+    { "path": "/var/lib/airradar/map-context-metar-v1.json", "bytesPerMinute": 13044909, "writesPerMinute": 1, "averageWriteBytes": 13044909, "sharePercent": 17.543095, "mechanism": "full JSON archive to tmp, atomic rename", "classification": "G", "source": "lib/server/map-context.ts:267-273,76-85", "purpose": "historical METAR map-context archive" },
+    { "path": "/var/lib/airradar/runtime-telemetry-v1.json", "bytesPerMinute": 427978, "writesPerMinute": 1, "averageWriteBytes": 427978, "sharePercent": 0.575555, "mechanism": "full JSON to tmp, fsync, atomic rename", "classification": "A", "source": "lib/server/runtime-telemetry.ts:208-231,315-330", "purpose": "bounded runtime telemetry" },
+    { "path": "/var/lib/airradar/map-context-aup-v1.json", "bytesPerMinute": 3659, "writesPerMinute": 1, "averageWriteBytes": 3659, "sharePercent": 0.004921, "mechanism": "full JSON archive to tmp, atomic rename", "classification": "A", "source": "lib/server/map-context.ts:287-295,76-85", "purpose": "historical AUP/UUP map-context archive" }
+  ],
+  "accounting": { "procWriteBytesPerMinute": 74359223, "attributedBytesPerMinute": 74359222, "attributedPercent": 99.999999, "unexplainedBytesPerMinute": 1, "unexplainedPercent": 0.000001 },
+  "framework": { "nextCacheObservedWrite": false, "nextDirectoryChanged": false },
+  "logs": { "nodeStdoutStderr": "journald sockets", "directNodeFileLog": false, "journaldWritesAttributedToNode": false },
+  "deletedOpenFiles": false,
+  "optimization": { "implemented": false, "reason": "safe freshness/durability/coalescing window not established; delta reader absent; no identical-content suppression demonstrated", "databaseChanged": false, "deployed": false },
+  "validation": { "testsRun": [], "tracingToolsInstalled": false, "restartRecoveryTest": "NOT RUN", "failedWriteRetryTest": "NOT RUN", "atomicityTest": "source inspection only" },
+  "nextStep": "KEEP CURRENT FILESYSTEM BEHAVIOR"
+}
