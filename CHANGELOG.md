@@ -2,23 +2,6 @@
 
 All notable changes to AirRadar are documented here.
 
-## [1.0.208] - 2026-09-29
-
-Changes since v1.0.207.
-
-**Features touched:** Receiver Coverage.
-
-### Fixed
-
-- Update status to production-measured and enhance metrics in receiver coverage hourly optimization (9e1c5892)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix(optimization): update status to production-measured and enhance metrics in receiver coverage hourly optimization (9e1c5892)
-
-</details>
-
 ## [1.0.207] - 2026-09-29
 
 Changes since v1.0.206.
