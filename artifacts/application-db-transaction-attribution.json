@@ -1,70 +1,15 @@
 {
-  "result": "ATTRIBUTION BLOCKED",
-  "scope": "diagnostics-only",
-  "repository": "Boym323/AirRadar",
-  "observedAt": "2026-09-29",
-  "currentState": {
-    "head": "ded39f0b22789690aba702de312e61be52a7df73",
-    "originMain": "ded39f0b22789690aba702de312e61be52a7df73",
-    "workingTreeAtStart": "clean",
-    "priorAuditFromRequest": { "transactionsPerMinute": 502.71, "knownWriteLaneAttributionPercent": 82.4, "unexplainedPercent": 17.6 },
-    "priorAuditFiles": "not present at the named paths in this checkout"
-  },
-  "instrumentation": {
-    "startedAt": "process start; exposed in admin System Status",
-    "windows": ["5m", "15m", "60m"],
-    "bucketSizeSeconds": 60,
-    "retentionMinutes": 60,
-    "storage": "in-memory only",
-    "databaseOrSchemaChanges": false,
-    "lanes": {
-      "history.snapshot": "lib/server/history.ts recordAircraftSnapshot per-aircraft transaction",
-      "receiver.daily-stats": "lib/server/statistics.ts persistence save",
-      "receiver.coverage": "lib/server/receiver-coverage-analytics.ts hourly flush",
-      "receiver.advanced-stats": "lib/server/receiver-advanced-statistics.ts flush",
-      "aircraft-metadata.catalog": "lib/server/aircraft-metadata-catalog.ts catalog import",
-      "maintenance.airports-sync": "lib/airports/sync.ts writeAirportSyncPlan; tooling/maintenance",
-      "maintenance.atc-import": "lib/atc/import-db.ts writeAtcImport; tooling/maintenance"
-    },
-    "counters": ["attempts", "commits", "failures", "active", "maxConcurrent", "totalDurationMs", "maxDurationMs", "workUnits"]
-  },
-  "rawTransactionInventory": {
-    "runtimeCallsInstrumented": 7,
-    "testOnlyCalls": ["tests/history-orm-temporal.integration.test.ts", "tests/receiver-coverage-real.integration.test.ts"],
-    "postImplementationSearch": "all runtime .transaction( call sites are wrapped; maintenance/tooling lanes are explicitly labeled"
-  },
-  "autocommit": {
-    "writesPerMinute": null,
-    "readsPerMinute": null,
-    "status": "not measured; direct ORM autocommit reads/writes remain outside this explicit-transaction helper",
-    "importantSurfaces": ["history reads", "statistics/range reads", "aircraft detail", "system/health probes", "navigation integrity writes", "aircraft weather writes", "flight intelligence writes", "airport and map APIs"]
-  },
-  "productionMeasurement": {
-    "deployed": false,
-    "durationMinutes": 0,
-    "trafficContext": null,
-    "postgresTransactionsPerMinute": null,
-    "pgStatDatabaseStartEnd": null,
-    "pgStatActivity": null,
-    "externalClients": null,
-    "connectionPressure": null,
-    "reasonBlocked": "No production service/database access or deploy authorization is available in this checkout/session; the requested canary and measurement window cannot be performed safely."
-  },
-  "validation": {
-    "focusedDiagnosticsTests": "passed: 4",
-    "typecheck": "passed",
-    "lint": "passed with 7 pre-existing warnings",
-    "fullTestSuite": "passed: 191 files, 1369 tests; 2 files and 3 tests skipped",
-    "productionBuild": "not run; live checkout build is prohibited by repository instructions",
-    "productionGates": "not run",
-    "schemaChanged": false,
-    "migration": false,
-    "persistenceSemanticsChanged": false
-  },
-  "attribution": {
-    "explainedPercent": null,
-    "unexplainedPercent": null,
-    "requiredTargetPercent": 95,
-    "nextCandidate": null
-  }
+  "result":"ATTRIBUTION COMPLETED BELOW TARGET","schemaVersion":2,"timezone":"Europe/Prague",
+  "measurement":{"startedAt":"2026-09-29T15:55:59.324Z","endedAt":"2026-09-29T16:26:13.034Z","durationMinutes":30.2285,"uninterrupted":true,"mainPid":48621,"processId":48621,"diagnosticsStoreId":"dbtx-mumugx0c-gzmu25ul","processStartedAt":"2026-09-29T15:41:53.820Z"},
+  "production":{"version":"1.0.217","sha":"4b0205d0","schemaChanged":false,"migrations":0},
+  "postgres":{"commits":15178,"rollbacks":189,"transactions":15367,"commitsPerMinute":501.9,"rollbacksPerMinute":6.2,"transactionsPerMinute":508.2,"deadlocks":0,"pgStatStatementsAvailable":false},
+  "explicitLanes":{"history.snapshot":{"attempts":5547,"commits":5547,"failures":0,"perMinute":183.5},"receiver.daily-stats":{"attempts":58,"commits":58,"failures":0,"perMinute":1.9},"receiver.coverage":{"attempts":15,"commits":15,"failures":0,"perMinute":0.5},"receiver.advanced-stats":{"attempts":58,"commits":58,"failures":0,"perMinute":1.9},"aircraft-metadata.catalog":{"attempts":0,"commits":0,"failures":0,"perMinute":0},"maintenance.airports-sync":{"attempts":0,"commits":0,"failures":0,"perMinute":0},"maintenance.atc-import":{"attempts":0,"commits":0,"failures":0,"perMinute":0}},
+  "explicitTotals":{"attempts":5678,"commits":5678,"failures":0,"perMinute":187.8,"sharePercent":36.9},
+  "autocommitWrites":{"flightPositionInsertsPerMinute":172.6,"receiverCoverageHourlyInsertsPerMinute":9.9,"aircraftWeatherObservationInsertsPerMinute":84.5,"navigationIntegrityObservationInsertsPerMinute":139.9,"navigationIntegrityAnomalyInsertsPerMinute":11.8,"flightInsertsPerMinute":4.2,"measurement":"pg_stat_user_tables deltas"},
+  "autocommitReads":{"measured":false,"reason":"pg_stat_statements unavailable; pg_stat_database cannot split reads from writes"},
+  "externalClients":{"observed":0,"applicationConnections":11,"connectionStates":{"active":1,"idle":10}},
+  "locks":{"AccessShareLock":1,"ExclusiveLock":1,"deadlocks":0},
+  "reconciliation":{"explainedPercent":36.9,"unexplainedPercent":63.1,"targetPercent":95,"unexplainedClass":"autocommit reads and autocommit writes outside the explicit-lane registry"},
+  "decision":{"nextOptimization":null,"reason":"Attribution below 95%; do not guess or implement a candidate"},
+  "safety":{"applicationCodeChanged":false,"deploymentDuringMeasurement":false,"schemaChanged":false,"migrations":0}
 }

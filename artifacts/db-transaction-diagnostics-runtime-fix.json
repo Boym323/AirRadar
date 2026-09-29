@@ -1,89 +1,15 @@
 {
-  "result": "DIAGNOSTICS FIX BLOCKED",
-  "capturedAt": "2026-09-29T17:32:17+02:00",
-  "typecheckBlocker": {
-    "error": "tests/db-transaction-diagnostics.test.ts(67,42): error TS2307: Cannot find module '@/lib/server/db-transaction-diagnostics?duplicate-consumer' or its corresponding type declarations.",
-    "fix": "Use vi.resetModules() and re-import the normal module specifier; assert globalThis-backed store identity and counters.",
-    "runtimeImplementationChanged": false
+  "result": "DIAGNOSTICS CANARY PASS",
+  "capturedAt": "2026-09-29T16:26:13.044Z",
+  "timezone": "Europe/Prague",
+  "git": {"head":"4b0205d09e5ebb408eb89e75dc21a2acf9e4abc8","originMain":"4b0205d09e5ebb408eb89e75dc21a2acf9e4abc8","productionVersion":"1.0.217","productionSha":"4b0205d0","diagnosticsFixSha":"d45bf5bc","applicationCodeChanged":false,"schemaChanged":false,"migrations":0},
+  "restartRootCause": {
+    "classification":"AUTOMATED RELEASE",
+    "originalRestart":{"pidTerminated":45834,"stopRequestedAt":"2026-09-29T17:28:52.990+02:00","pidStarted":46826,"startRequestedAt":"2026-09-29T17:28:53.395+02:00","trigger":"GitHub Actions Deploy production","releaseCommand":"deploy/release.sh --branch main --automated --commit d45bf5bc435ba3e67b81afe8a78fd3e7faaae237","jobStartedAt":"2026-09-29T17:27:17.852+02:00","jobSucceededAt":"2026-09-29T17:29:04.806+02:00"},
+    "measurementWindowRestart":{"pidTerminated":46826,"stopRequestedAt":"2026-09-29T17:41:52.460+02:00","pidStarted":48621,"startRequestedAt":"2026-09-29T17:41:53.319+02:00","trigger":"GitHub Actions Deploy production","releaseCommand":"deploy/release.sh --branch main --automated --commit 4b0205d09e5ebb408eb89e75dc21a2acf9e4abc8","triggeringCommit":"docs: record diagnostics deployment canary","jobStartedAt":"2026-09-29T17:39:45.898+02:00","jobSucceededAt":"2026-09-29T17:42:07.226+02:00"},
+    "evidence":["systemd journal records explicit clean stop, SIGTERM shutdown, successful deactivation, and start","GitHub runner journal records the exact automated release command and successful job","NRestarts remained 0; Restart=on-failure was not the cause","WatchdogSec=0 and no watchdog evidence","kernel journal has no OOM, killed-process, panic, reboot, or watchdog evidence","cgroup memory.events oom/oom_kill/max are all zero","host boot ID and uptime are unchanged; only AirRadar restarted"]
   },
-  "git": {
-    "startSha": "8b5cb2c4c9fc63829718244a6fa21c72983cd041",
-    "fixSha": "d45bf5bc435ba3e67b81afe8a78fd3e7faaae237",
-    "finalSha": "92ee76961c530f8ae1f2759be0852a7f26a9396a",
-    "originMain": "92ee76961c530f8ae1f2759be0852a7f26a9396a",
-    "releaseTag": "v1.0.216",
-    "cleanTree": true,
-    "metadataOnlyOriginCommitsReconciled": true
-  },
-  "validation": {
-    "focusedTests": "6 passed",
-    "fullTests": "1378 passed, 3 skipped",
-    "typecheck": "pass",
-    "lint": "pass (7 pre-existing warnings)",
-    "featuresCheck": "pass",
-    "build": "pass via deploy/release.sh isolated build",
-    "productionGates": "pass",
-    "browserGate": "not run; no visual change"
-  },
-  "deployment": {
-    "previous": { "version": "1.0.215", "sha": "e09a9ab0" },
-    "current": { "version": "1.0.216", "sha": "d45bf5bc" },
-    "releaseCommand": "sudo ./deploy/release.sh",
-    "activated": true,
-    "migrations": 0,
-    "schemaChanged": false,
-    "manualDbChanges": false,
-    "persistenceSemanticsChanged": false
-  },
-  "identity": {
-    "scope": "process-local",
-    "preRestart": {
-      "mainPid": 45834,
-      "processId": 45834,
-      "diagnosticsStoreId": "dbtx-mumtthy5-ufin7cvf",
-      "startedAt": "2026-09-29T15:23:41.213Z"
-    },
-    "postRestart": {
-      "mainPid": 46826,
-      "processId": 46826,
-      "diagnosticsStoreId": "dbtx-mumu074l-l4t6patg",
-      "startedAt": "2026-09-29T15:28:53.781Z"
-    },
-    "stableAcrossCanary": false,
-    "restartEvidence": "systemd clean SIGTERM and restart; NRestarts=0"
-  },
-  "shortCanary": {
-    "run": true,
-    "durationMinutes": 5.6,
-    "blocked": true,
-    "reason": "Clean systemd restart changed processId and diagnosticsStoreId during the observation window.",
-    "preRestart": {
-      "durationSeconds": 167,
-      "history": { "startAttempts": 391, "endAttempts": 840, "attemptsPerMinute": 161.3, "commitsPerMinute": 161.3, "failuresPerMinute": 0, "workUnitsPerTransaction": 1, "maxConcurrent": 8, "avgDurationMs": 315 },
-      "receiverCoverage": { "startAttempts": 1, "endAttempts": 2, "attemptsPerMinute": 0.36, "commitsPerMinute": 0.36, "failuresPerMinute": 0, "workUnitsPerTransaction": 217, "maxConcurrent": 1, "avgDurationMs": 1283 }
-    },
-    "postRestart": {
-      "durationSeconds": 112,
-      "history": { "startAttempts": 171, "endAttempts": 478, "attemptsPerMinute": 164.5, "commitsPerMinute": 164.5, "failuresPerMinute": 0, "workUnitsPerTransaction": 1, "maxConcurrent": 8, "avgDurationMs": 289 },
-      "receiverCoverage": { "startAttempts": 0, "endAttempts": 1, "attemptsPerMinute": 0.54, "commitsPerMinute": 0.54, "failuresPerMinute": 0, "workUnitsPerTransaction": 184, "maxConcurrent": 1, "avgDurationMs": 555 }
-    },
-    "monotonicWithinIntervals": true,
-    "allZeroBugResolved": true
-  },
-  "health": {
-    "service": "pass",
-    "database": "pass",
-    "receiver": "pass",
-    "sse": "pass",
-    "radar": "pass",
-    "history": "pass",
-    "weather": "pass",
-    "navigation": "pass",
-    "coverage": "pass"
-  },
-  "rootCause": {
-    "classification": "MODULE INSTANCE DUPLICATION",
-    "confidence": "high for the original query-suffixed test mechanism; production restart was an independent clean systemd event"
-  },
-  "nextStep": "INVESTIGATE PROCESS / STORE IDENTITY; rerun an uninterrupted short canary before 30-60 minute attribution"
+  "canary":{"startedAt":"2026-09-29T15:45:01.196Z","endedAt":"2026-09-29T15:55:22.144Z","durationMinutes":10.35,"mainPid":48621,"processId":48621,"diagnosticsStoreId":"dbtx-mumugx0c-gzmu25ul","diagnosticsStartedAt":"2026-09-29T15:41:53.820Z","scope":"process-local","identityStable":true,"health":{"service":"ok","database":"ok","receiver":"ok","statistics":"ok"},"lanesAtEnd":{"history.snapshot":{"attempts":2591,"commits":2591,"failures":0,"maxConcurrent":8,"workUnits":2591},"receiver.coverage":{"attempts":6,"commits":6,"failures":0,"maxConcurrent":1,"workUnits":1349},"receiver.daily-stats":{"attempts":26,"commits":26,"failures":0,"maxConcurrent":1,"workUnits":234},"receiver.advanced-stats":{"attempts":27,"commits":27,"failures":0,"maxConcurrent":1,"workUnits":30},"aircraft-metadata.catalog":{"attempts":0,"commits":0,"failures":0},"maintenance.airports-sync":{"attempts":0,"commits":0,"failures":0},"maintenance.atc-import":{"attempts":0,"commits":0,"failures":0}},"databaseCrossCheck":{"flightPositionInserts":886,"receiverCoverageHourlyInserts":300,"postgresCommitDelta":5967,"postgresRollbackDelta":90,"deadlocks":0}},
+  "allZeroBug":{"resolved":true,"classification":"MODULE-LOCAL STATE ISOLATION / DUPLICATE MODULE INSTANCE","confidence":"high"},
+  "longAttribution":{"completed":true,"startedAt":"2026-09-29T15:55:59.324Z","endedAt":"2026-09-29T16:26:13.034Z","durationMinutes":30.2285,"sameProcess":true,"mainPid":48621,"diagnosticsStoreId":"dbtx-mumugx0c-gzmu25ul","postgres":{"commits":15178,"rollbacks":189,"transactions":15367,"transactionsPerMinute":508.2,"deadlocks":0},"explicitTransactions":{"attempts":5678,"commits":5678,"failures":0,"transactionsPerMinute":187.8,"shareOfPostgresTransactionsPercent":36.9},"autocommitWrites":{"measuredByTableDeltas":true,"flightPositionPerMinute":172.6,"receiverCoverageHourlyPerMinute":9.9,"aircraftWeatherObservationPerMinute":84.5,"navigationIntegrityObservationPerMinute":139.9,"navigationIntegrityAnomalyPerMinute":11.8,"flightRowInsertsPerMinute":4.2},"autocommitReads":{"measured":false,"reason":"pg_stat_statements unavailable; pg_stat_database does not separate read transactions"},"externalClients":{"observed":0,"applicationConnections":11,"externalConnections":0},"connectionAndLocks":{"active":1,"idle":10,"lockModes":{"AccessShareLock":1,"ExclusiveLock":1},"deadlocks":0},"explainedPercent":36.9,"unexplainedPercent":63.1,"unexplainedClass":"AUTOCOMMIT READS AND AUTOCOMMIT WRITES OUTSIDE THE EXPLICIT-LANE REGISTRY; SQL-level read/write split is unavailable because pg_stat_statements is not installed","nextOptimization":null}
 }
