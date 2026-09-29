@@ -2,6 +2,38 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.209] - 2026-09-29
+
+Changes since v1.0.207.
+
+**Features touched:** Receiver Coverage.
+
+### Changed
+
+- Add post-optimization runtime baseline artifacts (2cbc6c1)
+
+### Fixed
+
+- Update status to production-measured and enhance metrics in receiver coverage hourly optimization (9e1c589)
+
+### Documentation
+
+- Update changelog for v1.0.208 (8ac5b8d)
+
+### Maintenance
+
+- Sync generated repository metadata (96d4c27)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(optimization): update status to production-measured and enhance metrics in receiver coverage hourly optimization (9e1c589)
+- docs: update changelog for v1.0.208 (8ac5b8d)
+- chore(metadata): sync generated repository metadata (96d4c27)
+- Merge pull request #211 from Boym323/automation/repository-metadata (7a4a4c6)
+- Add post-optimization runtime baseline artifacts (2cbc6c1)
+
+</details>
 ## [1.0.207] - 2026-09-29
 
 Changes since v1.0.206.
