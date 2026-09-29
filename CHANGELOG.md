@@ -2,6 +2,27 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.224] - 2026-09-29
+
+Changes since v1.0.223.
+
+### Added
+
+- Enhance weather observation persistence with batch fallback mode and diagnostics (1aebb6fd)
+
+### Maintenance
+
+- Sync generated repository metadata (a993bb62)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (a993bb62)
+- Merge pull request #225 from Boym323/automation/repository-metadata (e67c1507)
+- feat: enhance weather observation persistence with batch fallback mode and diagnostics (1aebb6fd)
+
+</details>
+
 ## [1.0.223] - 2026-09-29
 
 Changes since v1.0.222.
