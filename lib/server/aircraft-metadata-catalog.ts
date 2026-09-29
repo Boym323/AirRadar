@@ -6,6 +6,7 @@ import { createGunzip } from "node:zlib";
 import type { AircraftMetadata } from "@/lib/aircraft/types";
 import { getAircraftMetadataUrl } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import { Tar1090DbProvider } from "@/lib/server/tar1090-db-provider";
 import type { AircraftMetadataProvider } from "@/lib/server/provider";
 import { LRUCache } from "lru-cache";
@@ -309,7 +310,7 @@ export class AircraftMetadataCatalog implements AircraftMetadataProvider {
     catalog: DownloadedCatalog,
   ): Promise<void> {
     let recordCount = 0;
-    await database.transaction(async (transaction) => {
+    await trackDbTransaction("aircraft-metadata.catalog", () => database.transaction(async (transaction) => {
       await transaction.execute(
         transaction.sql.public.aircraftMetadataCache
           .delete()
@@ -335,7 +336,7 @@ export class AircraftMetadataCatalog implements AircraftMetadataProvider {
         }
       }
       if (batch.length) await this.insertCatalogBatch(transaction, batch);
-    });
+    }), catalog.recordCount);
     if (recordCount === 0) throw new Error("Aircraft metadata catalog contained no valid records");
     catalog.recordCount = recordCount;
   }

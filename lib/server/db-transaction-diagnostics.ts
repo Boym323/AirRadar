@@ -1,0 +1,126 @@
+/**
+ * Bounded, process-local attribution for AirRadar-owned explicit DB
+ * transactions. This deliberately does not observe SQL or write diagnostics
+ * to PostgreSQL.
+ */
+
+export const DB_TRANSACTION_LANES = [
+  "history.snapshot",
+  "receiver.daily-stats",
+  "receiver.coverage",
+  "receiver.advanced-stats",
+  "aircraft-metadata.catalog",
+  "maintenance.airports-sync",
+  "maintenance.atc-import",
+] as const;
+
+export type DbTransactionLane = (typeof DB_TRANSACTION_LANES)[number];
+type Bucket = { startedAtMs: number; attempts: number; commits: number; failures: number; totalDurationMs: number; maxDurationMs: number; workUnits: number };
+type LaneState = { attempts: number; commits: number; failures: number; active: number; maxConcurrent: number; totalDurationMs: number; maxDurationMs: number; workUnits: number; buckets: Bucket[] };
+
+const LANE_SET = new Set<string>(DB_TRANSACTION_LANES);
+const WINDOW_MS = 60 * 60_000;
+const BUCKET_MS = 60_000;
+const startedAtMs = Date.now();
+const lanes = new Map<DbTransactionLane, LaneState>();
+
+function state(lane: DbTransactionLane): LaneState {
+  let value = lanes.get(lane);
+  if (!value) {
+    value = { attempts: 0, commits: 0, failures: 0, active: 0, maxConcurrent: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0, buckets: [] };
+    lanes.set(lane, value);
+  }
+  return value;
+}
+
+function bucketFor(value: LaneState, now: number): Bucket {
+  const started = Math.floor(now / BUCKET_MS) * BUCKET_MS;
+  let bucket = value.buckets[value.buckets.length - 1];
+  if (!bucket || bucket.startedAtMs !== started) {
+    bucket = { startedAtMs: started, attempts: 0, commits: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0 };
+    value.buckets.push(bucket);
+  }
+  const cutoff = now - WINDOW_MS;
+  while (value.buckets.length && value.buckets[0]!.startedAtMs < cutoff) value.buckets.shift();
+  return bucket;
+}
+
+function assertLane(lane: string): asserts lane is DbTransactionLane {
+  if (!LANE_SET.has(lane)) throw new Error(`Unknown DB transaction diagnostics lane: ${lane}`);
+}
+
+export interface DbTransactionDiagnosticsSnapshot {
+  startedAt: string;
+  uptimeSeconds: number;
+  lanes: Record<DbTransactionLane, {
+    attempts: number; commits: number; failures: number; active: number; maxConcurrent: number;
+    totalDurationMs: number; maxDurationMs: number; workUnits: number;
+    windows: Record<"5m" | "15m" | "60m", { attempts: number; commits: number; failures: number; totalDurationMs: number; maxDurationMs: number; workUnits: number }>;
+  }>;
+}
+
+function window(value: LaneState, now: number, durationMs: number) {
+  const cutoff = now - durationMs;
+  return value.buckets.filter((item) => item.startedAtMs >= cutoff).reduce((sum, item) => ({
+    attempts: sum.attempts + item.attempts,
+    commits: sum.commits + item.commits,
+    failures: sum.failures + item.failures,
+    totalDurationMs: sum.totalDurationMs + item.totalDurationMs,
+    maxDurationMs: Math.max(sum.maxDurationMs, item.maxDurationMs),
+    workUnits: sum.workUnits + item.workUnits,
+  }), { attempts: 0, commits: 0, failures: 0, totalDurationMs: 0, maxDurationMs: 0, workUnits: 0 });
+}
+
+export async function trackDbTransaction<T>(lane: DbTransactionLane, operation: () => Promise<T>, workUnits = 0): Promise<T> {
+  assertLane(lane);
+  const value = state(lane);
+  const started = Date.now();
+  let committed = false;
+  value.attempts += 1;
+  value.active += 1;
+  value.maxConcurrent = Math.max(value.maxConcurrent, value.active);
+  try {
+    const result = await operation();
+    committed = true;
+    value.commits += 1;
+    return result;
+  } catch (error) {
+    value.failures += 1;
+    throw error;
+  } finally {
+    try {
+      const duration = Math.max(0, Date.now() - started);
+      value.active = Math.max(0, value.active - 1);
+      value.totalDurationMs += duration;
+      value.maxDurationMs = Math.max(value.maxDurationMs, duration);
+      const bucket = bucketFor(value, Date.now());
+      bucket.attempts += 1;
+      if (committed) bucket.commits += 1;
+      else bucket.failures += 1;
+      bucket.totalDurationMs += duration;
+      bucket.maxDurationMs = Math.max(bucket.maxDurationMs, duration);
+      bucket.workUnits += Math.max(0, workUnits);
+    } catch {
+      // Diagnostics are best effort and must never change DB behavior.
+    }
+  }
+}
+
+// Kept separate so tests and a process-level restart never share state.
+export function getDbTransactionDiagnostics(now = Date.now()): DbTransactionDiagnosticsSnapshot {
+  const result = {} as DbTransactionDiagnosticsSnapshot["lanes"];
+  for (const lane of DB_TRANSACTION_LANES) {
+    const value = state(lane);
+    while (value.buckets.length && value.buckets[0]!.startedAtMs < now - WINDOW_MS) value.buckets.shift();
+    result[lane] = {
+      attempts: value.attempts, commits: value.commits, failures: value.failures, active: value.active,
+      maxConcurrent: value.maxConcurrent, totalDurationMs: value.totalDurationMs, maxDurationMs: value.maxDurationMs, workUnits: value.workUnits,
+      windows: { "5m": window(value, now, 5 * 60_000), "15m": window(value, now, 15 * 60_000), "60m": window(value, now, 60 * 60_000) },
+    };
+  }
+  return { startedAt: new Date(startedAtMs).toISOString(), uptimeSeconds: Math.max(0, (now - startedAtMs) / 1000), lanes: result };
+}
+
+export function resetDbTransactionDiagnosticsForTests(): void {
+  lanes.clear();
+}

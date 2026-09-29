@@ -144,6 +144,7 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
       metadataFallbackCacheBytesLimit: null,
       providerCacheEntries: null,
       providerCacheLimit: null,
+      transactionAttribution: undefined,
     },
   };
 }

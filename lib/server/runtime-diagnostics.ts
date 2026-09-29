@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { getSseDiagnostics, MAX_SSE_CLIENTS } from "@/lib/server/sse-capacity";
+import { getDbTransactionDiagnostics, type DbTransactionDiagnosticsSnapshot } from "@/lib/server/db-transaction-diagnostics";
 
 export interface RuntimeDiagnostics {
+  transactionAttribution?: DbTransactionDiagnosticsSnapshot;
   coverageAnalytics?: Record<string, unknown>;
   processRssBytes: number;
   processRssAnonBytes: number | null;
@@ -122,6 +124,7 @@ export function readRuntimeDiagnostics(extra: Partial<RuntimeDiagnostics> = {}):
   const memory = process.memoryUsage();
   const sse = getSseDiagnostics();
   return {
+    transactionAttribution: getDbTransactionDiagnostics(),
     processRssBytes: nonNegative(memory.rss),
     ...readProcMemory(),
     heapUsedBytes: nonNegative(memory.heapUsed),

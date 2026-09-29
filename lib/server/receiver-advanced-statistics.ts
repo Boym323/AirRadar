@@ -3,6 +3,7 @@ import type { Aircraft } from "@/lib/aircraft/types";
 import { COVERAGE_BUCKET_COUNT, COVERAGE_BUCKET_SIZE_DEGREES } from "@/lib/statistics-coverage";
 import { dayKey, getAppTimezone } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import { STATISTICS_FLUSH_INTERVAL_MS } from "@/lib/server/statistics";
 
 export const ALTITUDE_COVERAGE_BANDS = [
@@ -259,7 +260,7 @@ export class ReceiverAdvancedStatistics {
     const date = this.currentDate;
 
     try {
-      await database.transaction(async (transaction) => {
+      await trackDbTransaction("receiver.advanced-stats", () => database.transaction(async (transaction) => {
         const schema = transaction.orm.public;
         const updatedAt = Temporal.Instant.fromEpochMilliseconds(Date.now());
         if (aggregateDirty || altitudeRows.length) {
@@ -294,7 +295,7 @@ export class ReceiverAdvancedStatistics {
             },
           });
         }
-      });
+      }), altitudeRows.length + (aggregateDirty ? 1 : 0));
       if (date === this.currentDate) {
         if (aggregateDirty) this.aggregateDirty = false;
         for (const key of dirtyKeys) this.dirtyAltitude.delete(key);

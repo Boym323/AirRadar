@@ -2,6 +2,7 @@ import "temporal-polyfill/full/global";
 import type { Aircraft, ReceiverPosition, NetworkProviderDiagnostics } from "@/lib/aircraft/types";
 import { eligibleNetworkObservation, type CoverageEligibility } from "@/lib/aircraft/source-awareness";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import { getAircraftStaleAfterMs, getAdsbLolStaleAfterMs, getAppTimezone, getReceiverComparisonRadiusNm } from "@/lib/server/config";
 
 export const AZIMUTH_BUCKETS = 36;
@@ -223,7 +224,7 @@ export class ReceiverCoverageAnalytics {
         value: { availableCount: number; capturedCount: number; referenceProviders: string };
       }>();
       try {
-        await database.transaction(async (transaction) => {
+        await trackDbTransaction("receiver.coverage", () => database.transaction(async (transaction) => {
           const schema = transaction.orm.public;
           for (const row of rows) {
             const hourMs = row.hour.epochMilliseconds;
@@ -279,7 +280,7 @@ export class ReceiverCoverageAnalytics {
               inserted += 1;
             }
           }
-        });
+        }), rows.length);
         for (const update of stagedCacheUpdates.values()) {
           let hourCache = this.persistedRows.get(update.hourMs);
           if (!hourCache) {

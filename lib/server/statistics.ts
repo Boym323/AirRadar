@@ -4,6 +4,7 @@ import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import { COVERAGE_BUCKET_COUNT, COVERAGE_BUCKET_SIZE_DEGREES, summarizeCoverage } from "@/lib/statistics-coverage";
 import { dayKey, getAppTimezone } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import { getReceiverStatisticsRange } from "@/lib/server/statistics-range";
 import type { CurrentDayStatisticsSnapshot } from "@/lib/server/statistics-range";
 
@@ -157,7 +158,7 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
     const database = getPrisma();
     if (!database) return;
     const updatedAt = Temporal.Instant.fromEpochMilliseconds(Date.now());
-    await database.transaction(async (transaction) => {
+    await trackDbTransaction("receiver.daily-stats", () => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       await schema.ReceiverDailyStats.upsert({
         update: {
@@ -226,7 +227,7 @@ export class DatabaseReceiverStatisticsPersistence implements ReceiverStatistics
           });
         }
       }
-    });
+    }), snapshot.aircraft.length + snapshot.coverage.length + 1);
   }
 }
 

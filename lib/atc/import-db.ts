@@ -1,5 +1,6 @@
 import "temporal-polyfill/full/global";
 import postgres from "@prisma/orm-postgres/runtime";
+import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import contractJson from "../../generated/prisma8/contract.json" with { type: "json" };
 import type { Contract } from "../../generated/prisma8/contract";
 import {
@@ -96,7 +97,7 @@ export async function writeAtcImport(
   const obsoleteAt = Temporal.Instant.fromEpochMilliseconds(Date.parse(dataset.source.effectiveDate) - 1);
   const existingSectors = new Map(existing.sectors.map((row) => [row.id, row]));
   const existingTransmitters = new Map(existing.transmitters.map((row) => [row.id, row]));
-  await database.transaction(async (transaction) => {
+  await trackDbTransaction("maintenance.atc-import", () => database.transaction(async (transaction) => {
     const schema = transaction.orm.public;
     for (const sector of dataset.sectors) {
       await schema.AtcSector.upsert({
@@ -122,7 +123,7 @@ export async function writeAtcImport(
       if (!row || (row.validTo !== null && row.validTo !== undefined && Date.parse(String(row.validTo)) <= obsoleteAt.epochMilliseconds)) continue;
       await schema.AtcTransmitter.where({ id }).update({ validTo: obsoleteEnd(row, obsoleteAt), updatedAt: Temporal.Instant.fromEpochMilliseconds(Date.now()) });
     }
-  });
+  }), dataset.sectors.length + dataset.transmitters.length);
 }
 
 export async function runAtcImport(dataset: NormalizedAtcImport, options: { dryRun: boolean; database?: AtcDatabase | null }): Promise<AtcImportPlan> {

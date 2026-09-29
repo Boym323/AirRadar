@@ -1,5 +1,6 @@
 import "temporal-polyfill/full/global";
 import type { OurAirportsAirport, OurAirportsFrequency, OurAirportsNavaid, OurAirportsRunway } from "./ourairports";
+import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 
 export const AIRPORTS_SYNC_BATCH_SIZE = 1_000;
 export const AIRPORTS_SYNC_MIN_COUNTS = { airports: 100, runways: 100, frequencies: 100, navaids: 1_000 } as const;
@@ -48,7 +49,7 @@ async function insertBatches(transaction: AirportSyncTransaction, table: { inser
 /** Writes a complete validated plan in one transaction; child tables are pruned only after validation. */
 export async function writeAirportSyncPlan(database: unknown, plan: AirportSyncPlan, now: Temporal.Instant): Promise<void> {
   const databaseApi = database as AirportSyncDatabase;
-  await databaseApi.transaction(async (transaction) => {
+  await trackDbTransaction("maintenance.airports-sync", () => databaseApi.transaction(async (transaction) => {
     const airportIds = new Map<string, number>();
     for (const airport of plan.airports) {
       const values = { iata: airport.iataCode, name: airport.name, city: airport.city, country: airport.country, latitude: airport.latitude, longitude: airport.longitude, ourAirportsId: airport.ourAirportsId, ourAirportsIdent: airport.ourAirportsIdent, type: airport.type ?? null, elevationFt: airport.elevationFt ?? null, scheduledService: airport.scheduledService ?? null, region: airport.region ?? null, localCode: airport.localCode ?? null, updatedAt: now };
@@ -72,5 +73,5 @@ export async function writeAirportSyncPlan(database: unknown, plan: AirportSyncP
     await insertBatches(transaction, transaction.sql.public.airportRunway, runways);
     await insertBatches(transaction, transaction.sql.public.airportFrequency, frequencies);
     await insertBatches(transaction, transaction.sql.public.navaid, navaids);
-  });
+  }), plan.airports.length + plan.runways.length + plan.frequencies.length + plan.navaids.length);
 }

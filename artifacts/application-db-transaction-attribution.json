@@ -1,0 +1,70 @@
+{
+  "result": "ATTRIBUTION BLOCKED",
+  "scope": "diagnostics-only",
+  "repository": "Boym323/AirRadar",
+  "observedAt": "2026-09-29",
+  "currentState": {
+    "head": "ded39f0b22789690aba702de312e61be52a7df73",
+    "originMain": "ded39f0b22789690aba702de312e61be52a7df73",
+    "workingTreeAtStart": "clean",
+    "priorAuditFromRequest": { "transactionsPerMinute": 502.71, "knownWriteLaneAttributionPercent": 82.4, "unexplainedPercent": 17.6 },
+    "priorAuditFiles": "not present at the named paths in this checkout"
+  },
+  "instrumentation": {
+    "startedAt": "process start; exposed in admin System Status",
+    "windows": ["5m", "15m", "60m"],
+    "bucketSizeSeconds": 60,
+    "retentionMinutes": 60,
+    "storage": "in-memory only",
+    "databaseOrSchemaChanges": false,
+    "lanes": {
+      "history.snapshot": "lib/server/history.ts recordAircraftSnapshot per-aircraft transaction",
+      "receiver.daily-stats": "lib/server/statistics.ts persistence save",
+      "receiver.coverage": "lib/server/receiver-coverage-analytics.ts hourly flush",
+      "receiver.advanced-stats": "lib/server/receiver-advanced-statistics.ts flush",
+      "aircraft-metadata.catalog": "lib/server/aircraft-metadata-catalog.ts catalog import",
+      "maintenance.airports-sync": "lib/airports/sync.ts writeAirportSyncPlan; tooling/maintenance",
+      "maintenance.atc-import": "lib/atc/import-db.ts writeAtcImport; tooling/maintenance"
+    },
+    "counters": ["attempts", "commits", "failures", "active", "maxConcurrent", "totalDurationMs", "maxDurationMs", "workUnits"]
+  },
+  "rawTransactionInventory": {
+    "runtimeCallsInstrumented": 7,
+    "testOnlyCalls": ["tests/history-orm-temporal.integration.test.ts", "tests/receiver-coverage-real.integration.test.ts"],
+    "postImplementationSearch": "all runtime .transaction( call sites are wrapped; maintenance/tooling lanes are explicitly labeled"
+  },
+  "autocommit": {
+    "writesPerMinute": null,
+    "readsPerMinute": null,
+    "status": "not measured; direct ORM autocommit reads/writes remain outside this explicit-transaction helper",
+    "importantSurfaces": ["history reads", "statistics/range reads", "aircraft detail", "system/health probes", "navigation integrity writes", "aircraft weather writes", "flight intelligence writes", "airport and map APIs"]
+  },
+  "productionMeasurement": {
+    "deployed": false,
+    "durationMinutes": 0,
+    "trafficContext": null,
+    "postgresTransactionsPerMinute": null,
+    "pgStatDatabaseStartEnd": null,
+    "pgStatActivity": null,
+    "externalClients": null,
+    "connectionPressure": null,
+    "reasonBlocked": "No production service/database access or deploy authorization is available in this checkout/session; the requested canary and measurement window cannot be performed safely."
+  },
+  "validation": {
+    "focusedDiagnosticsTests": "passed: 4",
+    "typecheck": "passed",
+    "lint": "passed with 7 pre-existing warnings",
+    "fullTestSuite": "passed: 191 files, 1369 tests; 2 files and 3 tests skipped",
+    "productionBuild": "not run; live checkout build is prohibited by repository instructions",
+    "productionGates": "not run",
+    "schemaChanged": false,
+    "migration": false,
+    "persistenceSemanticsChanged": false
+  },
+  "attribution": {
+    "explainedPercent": null,
+    "unexplainedPercent": null,
+    "requiredTargetPercent": 95,
+    "nextCandidate": null
+  }
+}

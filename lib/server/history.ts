@@ -10,6 +10,7 @@ import {
 import { airportFromCode } from "@/lib/server/airport-catalog";
 import { normalizeAirportIata, normalizeAirportIcao } from "@/lib/server/airport-resolver";
 import { getPrisma } from "@/lib/server/db";
+import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
 import { classifyAircraftLogbook, type AircraftLogbookStatus } from "@/lib/server/logbook";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { shouldPersistAltitudeAnomaly } from "@/lib/aircraft/altitude-provenance";
@@ -1104,7 +1105,7 @@ export async function recordAircraftSnapshot(
       const observedAt = positionObservedAt(item);
       const effectiveRecordedAt = observedAt === null ? recordedAt : new Date(observedAt);
       const recordedAtInstant = Temporal.Instant.fromEpochMilliseconds(effectiveRecordedAt.getTime());
-      const wasNewAircraft = await retryAircraftUniqueViolation(() => database.transaction(async (transaction) => {
+      const wasNewAircraft = await retryAircraftUniqueViolation(() => trackDbTransaction("history.snapshot", () => database.transaction(async (transaction) => {
       const schema = transaction.orm.public;
       const metadata = item.enrichment?.metadata;
       aircraftPersistenceDiagnostics.attempts += 1;
@@ -1249,7 +1250,7 @@ export async function recordAircraftSnapshot(
         });
       }
       return firstDurableFlight;
-      }));
+      }), 1));
       result.succeeded.push(item.icaoHex);
       if (wasNewAircraft) result.newAircraft?.push(item.icaoHex);
     } catch {
