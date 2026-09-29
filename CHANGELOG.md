@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.210] - 2026-09-29
+
+Changes since v1.0.209.
+
+### Added
+
+- Add node filesystem write attribution artifacts (ded39f0)
+
+### Maintenance
+
+- Sync generated repository metadata (cbef6d8)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (cbef6d8)
+- Merge pull request #212 from Boym323/automation/repository-metadata (f25b237)
+- feat(artifacts): add node filesystem write attribution artifacts (ded39f0)
+
+</details>
 ## [1.0.209] - 2026-09-29
 
 Changes since v1.0.207.
