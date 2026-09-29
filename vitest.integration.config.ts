@@ -6,6 +6,7 @@ import { defineConfig } from "vitest/config";
 // default development scope.
 const integrationSuites = [
   "tests/aircraft-photos.test.ts",
+  "tests/aircraft-weather-batch-postgres.integration.test.ts",
   "tests/aircraft-radar-quick-detail.test.ts",
   "tests/airport-movements-query.test.ts",
   "tests/airport-traffic.test.ts",

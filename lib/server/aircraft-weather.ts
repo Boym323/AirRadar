@@ -463,7 +463,7 @@ export function classifyWeatherDbError(error: unknown): WeatherDbErrorClass {
   if (code === "23505" && constraint && WEATHER_DEDUP_CONSTRAINT_NAMES.has(constraint)) return "EXACT_DEDUP_CONFLICT";
   if (code === "23505") return "UNKNOWN";
   const message = String(error).toLowerCase();
-  if (/connection refused|server.*unavailable|connection terminated|network error|connect timeout|connection timeout|statement timeout|cancelled|canceled|econnrefused|econnreset|enotfound/.test(message)) return "INFRASTRUCTURE";
+  if (code === "57P01" || /connection refused|server.*unavailable|connection terminated|terminating connection|network error|connect timeout|connection timeout|statement timeout|cancelled|canceled|econnrefused|econnreset|enotfound|socket hang up/.test(message)) return "INFRASTRUCTURE";
   if (/invalid input|out of range|not-null|null value|foreign key|check constraint|invalid.*syntax|data exception/.test(message)) return "ROW_OR_DATA";
   return "UNKNOWN";
 }
