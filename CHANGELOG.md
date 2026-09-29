@@ -2,6 +2,27 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.215] - 2026-09-29
+
+Changes since v1.0.214.
+
+### Added
+
+- Add configurable checkpoint intervals and modes for weather data persistence (0d3b24b9)
+
+### Maintenance
+
+- Sync generated repository metadata (01f03a3a)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (01f03a3a)
+- Merge pull request #216 from Boym323/automation/repository-metadata (ddef4360)
+- feat(persistence): add configurable checkpoint intervals and modes for weather data persistence (0d3b24b9)
+
+</details>
+
 ## [1.0.214] - 2026-09-29
 
 Changes since v1.0.212.
