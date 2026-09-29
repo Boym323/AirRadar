@@ -24,6 +24,22 @@ export interface AviationWeatherPersistenceDiagnostics {
   lastSaveEntries: number;
   lastSaveError: string | null;
   writes: number;
+  checkpointIntervalMs: number;
+  checkpointMode: "periodic" | "shutdown-only";
+  mutationGeneration: number;
+  persistedGeneration: number;
+  pendingMutations: number;
+  firstDirtyAt: string | null;
+  dirtyAgeMs: number | null;
+  nextCheckpointAt: string | null;
+  checkpointAttempts: number;
+  checkpointSuccesses: number;
+  checkpointFailures: number;
+  periodicCheckpoints: number;
+  gracefulCheckpoints: number;
+  explicitCheckpoints: number;
+  coalescedMutations: number;
+  fileSizeBytes: number | null;
 }
 
 export interface ValidatedWeatherValue {
@@ -45,14 +61,18 @@ export interface AviationWeatherPersistenceOptions {
   maxBytes?: number;
   now?: () => number;
   validateValue: WeatherValueValidator;
+  checkpointIntervalMs?: number;
+  snapshotProvider?: () => PersistentWeatherEntry[];
 }
 
 export interface AviationWeatherCachePersistence {
   maxAgeMsFor(product: AviationWeatherProduct): number;
   load(): PersistentWeatherEntry[];
   schedule(entries: PersistentWeatherEntry[]): void;
+  markDirty(): void;
+  setSnapshotProvider(provider: () => PersistentWeatherEntry[]): void;
   getDiagnostics(): AviationWeatherPersistenceDiagnostics;
-  flush(): Promise<void>;
+  flush(reason?: "periodic" | "graceful" | "explicit"): Promise<void>;
 }
 
 const PERSISTENCE_VERSION = 1;
@@ -60,7 +80,9 @@ const DEFAULT_MAX_BYTES = 8 * 1024 * 1024;
 const MAX_ALLOWED_BYTES = 16 * 1024 * 1024;
 const MAX_ALLOWED_ENTRIES = 1_024;
 const FUTURE_SKEW_MS = 5 * 60_000;
-const DEFAULT_DEBOUNCE_MS = 3_000;
+const DEFAULT_CHECKPOINT_INTERVAL_MS = 30 * 60_000;
+const CHECKPOINT_RETRY_INITIAL_MS = 60_000;
+const CHECKPOINT_RETRY_MAX_MS = 30 * 60_000;
 
 interface PersistentWeatherFile {
   version: 1;
@@ -107,7 +129,10 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
   private readonly maxBytes: number;
   private readonly now: () => number;
   private readonly validateValue: WeatherValueValidator;
+  private readonly checkpointIntervalMs: number;
+  private snapshotProvider: (() => PersistentWeatherEntry[]) | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private saveInFlight: Promise<void> | null = null;
   private flushPromise: Promise<void> | null = null;
   private pendingEntries: PersistentWeatherEntry[] = [];
@@ -121,6 +146,18 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
   private lastSaveEntries = 0;
   private lastSaveError: string | null = null;
   private persistenceWrites = 0;
+  private mutationGeneration = 0;
+  private persistedGeneration = 0;
+  private firstDirtyAt: number | null = null;
+  private checkpointAttempts = 0;
+  private checkpointSuccesses = 0;
+  private checkpointFailures = 0;
+  private periodicCheckpoints = 0;
+  private gracefulCheckpoints = 0;
+  private explicitCheckpoints = 0;
+  private coalescedMutations = 0;
+  private fileSizeBytes: number | null = null;
+  private retryDelayMs = CHECKPOINT_RETRY_INITIAL_MS;
 
   constructor(options: AviationWeatherPersistenceOptions) {
     this.cacheFile = options.cacheFile;
@@ -136,6 +173,11 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
     this.maxBytes = Math.min(MAX_ALLOWED_BYTES, Math.max(1_024, Math.trunc(options.maxBytes ?? DEFAULT_MAX_BYTES)));
     this.now = options.now ?? Date.now;
     this.validateValue = options.validateValue;
+    const checkpointIntervalMs = options.checkpointIntervalMs ?? DEFAULT_CHECKPOINT_INTERVAL_MS;
+    this.checkpointIntervalMs = checkpointIntervalMs === 0
+      ? 0
+      : Math.min(24 * 60 * 60_000, Math.max(60_000, Math.trunc(checkpointIntervalMs)));
+    this.snapshotProvider = options.snapshotProvider ?? null;
   }
 
   maxAgeMsFor(product: AviationWeatherProduct): number {
@@ -232,12 +274,23 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
 
   schedule(entries: PersistentWeatherEntry[]): void {
     this.pendingEntries = entries.slice(0, this.maxEntries);
+    this.setSnapshotProvider(() => this.pendingEntries);
+    this.markDirty();
+  }
+
+  setSnapshotProvider(provider: () => PersistentWeatherEntry[]): void {
+    this.snapshotProvider = provider;
+  }
+
+  markDirty(): void {
+    this.mutationGeneration += 1;
+    if (this.dirty) {
+      this.coalescedMutations += 1;
+      return;
+    }
     this.dirty = true;
-    if (this.saveTimer || this.saveInFlight) return;
-    this.saveTimer = setTimeout(() => {
-      this.saveTimer = null;
-      void this.flush();
-    }, DEFAULT_DEBOUNCE_MS);
+    this.firstDirtyAt = this.now();
+    if (this.checkpointIntervalMs > 0) this.scheduleCheckpoint(this.checkpointIntervalMs);
   }
 
   getDiagnostics(): AviationWeatherPersistenceDiagnostics {
@@ -254,36 +307,65 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
       lastSaveEntries: this.lastSaveEntries,
       lastSaveError: this.lastSaveError,
       writes: this.persistenceWrites,
+      checkpointIntervalMs: this.checkpointIntervalMs,
+      checkpointMode: this.checkpointIntervalMs === 0 ? "shutdown-only" : "periodic",
+      mutationGeneration: this.mutationGeneration,
+      persistedGeneration: this.persistedGeneration,
+      pendingMutations: Math.max(0, this.mutationGeneration - this.persistedGeneration),
+      firstDirtyAt: this.firstDirtyAt === null ? null : new Date(this.firstDirtyAt).toISOString(),
+      dirtyAgeMs: this.firstDirtyAt === null ? null : Math.max(0, this.now() - this.firstDirtyAt),
+      nextCheckpointAt: this.saveTimer && this.firstDirtyAt !== null && this.checkpointIntervalMs > 0
+        ? new Date(this.firstDirtyAt + this.checkpointIntervalMs).toISOString() : null,
+      checkpointAttempts: this.checkpointAttempts,
+      checkpointSuccesses: this.checkpointSuccesses,
+      checkpointFailures: this.checkpointFailures,
+      periodicCheckpoints: this.periodicCheckpoints,
+      gracefulCheckpoints: this.gracefulCheckpoints,
+      explicitCheckpoints: this.explicitCheckpoints,
+      coalescedMutations: this.coalescedMutations,
+      fileSizeBytes: this.fileSizeBytes,
     };
   }
 
-  async flush(): Promise<void> {
+  async flush(reason: "periodic" | "graceful" | "explicit" = "explicit"): Promise<void> {
     if (this.flushPromise) return this.flushPromise;
     const promise = (async () => {
       if (this.saveTimer) {
         clearTimeout(this.saveTimer);
         this.saveTimer = null;
       }
+      if (this.retryTimer) {
+        clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+      }
       if (this.saveInFlight) await this.saveInFlight;
       if (!this.dirty) return;
-      const entries = this.pendingEntries;
+      const targetGeneration = this.mutationGeneration;
+      const entries = (this.snapshotProvider?.() ?? this.pendingEntries).slice(0, this.maxEntries);
       this.dirty = false;
-      const save = this.writeSnapshot(entries);
+      this.checkpointAttempts += 1;
+      const save = this.writeSnapshot(entries, targetGeneration, reason);
       this.saveInFlight = save;
       await save;
       if (this.saveInFlight === save) this.saveInFlight = null;
-      if (this.dirty && !this.saveTimer) {
-        this.saveTimer = setTimeout(() => {
-          this.saveTimer = null;
-          void this.flush();
-        }, DEFAULT_DEBOUNCE_MS);
+      if (this.dirty && !this.saveTimer && !this.retryTimer && this.checkpointIntervalMs > 0) {
+        const deadline = this.firstDirtyAt === null ? this.now() + this.checkpointIntervalMs : this.firstDirtyAt + this.checkpointIntervalMs;
+        this.scheduleCheckpoint(Math.max(0, deadline - this.now()));
       }
     })();
     this.flushPromise = promise.finally(() => { this.flushPromise = null; });
     return this.flushPromise;
   }
 
-  private async writeSnapshot(entries: PersistentWeatherEntry[]): Promise<void> {
+  private scheduleCheckpoint(delayMs: number): void {
+    if (this.saveTimer || this.saveInFlight || this.checkpointIntervalMs === 0) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      void this.flush("periodic");
+    }, Math.max(0, delayMs));
+  }
+
+  private async writeSnapshot(entries: PersistentWeatherEntry[], targetGeneration: number, reason: "periodic" | "graceful" | "explicit"): Promise<void> {
     const temporaryFile = `${this.cacheFile}.tmp`;
     try {
       const now = this.now();
@@ -302,11 +384,29 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
       await chmod(temporaryFile, 0o600);
       await rename(temporaryFile, this.cacheFile);
       this.persistenceWrites += 1;
+      this.checkpointSuccesses += 1;
+      if (reason === "periodic") this.periodicCheckpoints += 1;
+      if (reason === "graceful") this.gracefulCheckpoints += 1;
+      if (reason === "explicit") this.explicitCheckpoints += 1;
+      this.persistedGeneration = targetGeneration;
+      if (this.mutationGeneration === targetGeneration) this.firstDirtyAt = null;
+      this.retryDelayMs = CHECKPOINT_RETRY_INITIAL_MS;
+      try { this.fileSizeBytes = statSync(this.cacheFile).size; } catch { this.fileSizeBytes = null; }
       this.lastSaveAt = this.now();
       this.lastSaveEntries = retainedEntries.length;
       this.lastSaveError = null;
     } catch (error) {
       this.dirty = true;
+      this.checkpointFailures += 1;
+      if (this.firstDirtyAt === null) this.firstDirtyAt = this.now();
+      if (this.checkpointIntervalMs > 0 && !this.retryTimer) {
+        const delay = this.retryDelayMs;
+        this.retryDelayMs = Math.min(CHECKPOINT_RETRY_MAX_MS, this.retryDelayMs * 2);
+        this.retryTimer = setTimeout(() => {
+          this.retryTimer = null;
+          void this.flush("periodic");
+        }, delay);
+      }
       this.lastSaveError = error instanceof Error && error.message === "payload_too_large" ? "payload_too_large" : errorCode(error);
       try { await unlink(temporaryFile); } catch { /* best effort cleanup */ }
       console.warn(`[Aviation Weather] persistent cache save failed (${this.lastSaveError})`);

@@ -33,6 +33,7 @@ function weatherFile(): string {
 const files: string[] = [];
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   for (const file of files.splice(0)) rmSync(path.dirname(file), { recursive: true, force: true });
 });
@@ -133,5 +134,47 @@ describe("persistent aviation weather cache", () => {
     await atomic.flush();
     expect(JSON.parse(readFileSync(file, "utf8"))).toMatchObject({ version: 1, entries: [{ product: "metar", key: "LKPR", value: null }] });
     expect(() => readFileSync(`${file}.tmp`)).toThrow();
+  });
+
+  it("coalesces dirty weather updates until the first checkpoint deadline", async () => {
+    vi.useFakeTimers();
+    const file = weatherFile();
+    files.push(file);
+    let now = Date.parse("2026-09-09T12:00:00Z");
+    let entries: Array<{ product: "metar"; key: string; fetchedAt: string; value: null }> = [];
+    const persistence = new AviationWeatherPersistence({
+      cacheFile: file, maxAgeMs: 2 * 60 * 60_000, maxEntries: 10, now: () => now,
+      checkpointIntervalMs: 30 * 60_000, snapshotProvider: () => entries,
+      validateValue: () => ({ valid: true, value: null }),
+    });
+    entries = [{ product: "metar", key: "LKPR", fetchedAt: new Date(now).toISOString(), value: null }];
+    persistence.markDirty();
+    for (let minute = 1; minute < 30; minute += 1) {
+      now += 60_000;
+      persistence.markDirty();
+    }
+    expect(persistence.getDiagnostics().writes).toBe(0);
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    await vi.runAllTimersAsync();
+    await persistence.flush("explicit");
+    expect(persistence.getDiagnostics()).toMatchObject({ writes: 1, periodicCheckpoints: 1, dirty: false, persistedGeneration: 30 });
+  });
+
+  it("supports shutdown-only mode without periodic writes", async () => {
+    vi.useFakeTimers();
+    const file = weatherFile();
+    files.push(file);
+    const now = Date.parse("2026-09-09T12:00:00Z");
+    const persistence = new AviationWeatherPersistence({
+      cacheFile: file, maxAgeMs: 2 * 60 * 60_000, maxEntries: 10, now: () => now,
+      checkpointIntervalMs: 0,
+      snapshotProvider: () => [{ product: "metar", key: "LKPR", fetchedAt: new Date(now).toISOString(), value: null }],
+      validateValue: () => ({ valid: true, value: null }),
+    });
+    persistence.markDirty();
+    await vi.advanceTimersByTimeAsync(2 * 60 * 60_000);
+    expect(persistence.getDiagnostics().writes).toBe(0);
+    await persistence.flush("graceful");
+    expect(persistence.getDiagnostics()).toMatchObject({ writes: 1, gracefulCheckpoints: 1, checkpointMode: "shutdown-only" });
   });
 });

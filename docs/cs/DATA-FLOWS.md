@@ -167,11 +167,14 @@ statistiky, alerty ani hlavní stav přijímače. Stale targety se označí po
 
 `AviationWeatherProvider` načte omezenou validovanou cache v procesu a potom
 obsluhuje on-demand požadavky METAR, TAF, International SIGMET a AirSIGMET.
-Úspěšné normalizované hodnoty aktualizují paměť a naplánují jeden debounced
-zápis snapshotu do
-`/var/lib/airradar/weather/weather-cache-v1.json`; selhání nikdy nezapisují
-chyby providera. Verzovaný soubor se zapisuje přes dočasný soubor, `fsync` a
-atomický rename. Chybějící, příliš velký, malformed, s chybnou verzí nebo
+Úspěšné normalizované hodnoty aktualizují paměť a označí omezenou cache jako
+změněnou. Lazy recovery checkpoint zapisuje
+`/var/lib/airradar/weather/weather-cache-v1.json` standardně 30 minut po první
+změně (`AVIATION_WEATHER_CACHE_CHECKPOINT_MS`; `0` znamená pouze při ukončení).
+Úplný snapshot vzniká až při checkpointu a generace zachovávají změny vzniklé
+během asynchronního zápisu. Selhání nikdy nezapisují chyby providera ani
+nezastaví live počasí. Verzovaný soubor se zapisuje přes dočasný soubor, `fsync`
+a atomický rename. Chybějící, příliš velký, malformed, s chybnou verzí nebo
 částečně neplatný soubor se ignoruje po jednotlivých záznamech a nemůže zabránit
 startu.
 
@@ -189,6 +192,11 @@ Weather odpovědi zveřejňují `cacheSource` (`live`, `memory-cache` nebo
 Persistentní záznam je explicitně označen stale, dokud neuspěje live refresh.
 Vývojové a testovací procesy nezapínají writer do `/var/lib`, pokud není
 persistence explicitně nakonfigurována.
+
+RAM zůstává při běžném běhu autoritativní, takže checkpoint nemění TTL produktů,
+kadenci provideru ani stale-if-error. Kanonický shutdown coordinator zapíše
+aktuální stav. Hard crash může ztratit nejvýše jeden checkpoint interval nově
+získaných recovery dat, která se po restartu znovu načtou.
 
 ## Persistence historie
 

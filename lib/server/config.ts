@@ -611,6 +611,12 @@ export function getAviationWeatherSigmetMaxPersistedAgeMs(): number {
   return boundedMilliseconds("AVIATION_WEATHER_SIGMET_MAX_PERSISTED_AGE_MS", 24 * 60 * 60_000, 60 * 60_000, 7 * 24 * 60 * 60_000);
 }
 
+export function getAviationWeatherCacheCheckpointMs(): number {
+  const configured = envNumber("AVIATION_WEATHER_CACHE_CHECKPOINT_MS", 30 * 60_000);
+  if (configured === 0) return 0;
+  return Math.min(24 * 60 * 60_000, Math.max(60_000, Math.trunc(configured)));
+}
+
 export function getAviationWeatherUserAgent(): string {
   const configured = process.env.AVIATION_WEATHER_USER_AGENT?.trim();
   if (configured && configured.length <= 200 && !/[\r\n]/.test(configured)) return configured;

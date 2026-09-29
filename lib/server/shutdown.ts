@@ -3,6 +3,7 @@ import { getOgnStateService } from "@/lib/server/ogn-state";
 import { closePrisma } from "@/lib/server/db";
 import { defaultMapContextArchiveService } from "@/lib/server/map-context";
 import { stopRuntimeTelemetry } from "@/lib/server/runtime-telemetry";
+import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 
 export const SHUTDOWN_BUDGET_MS = 10_000;
 export type ShutdownState = "RUNNING" | "SHUTTING_DOWN" | "COMPLETE";
@@ -12,6 +13,7 @@ type Cleanup = {
   stopOgn?: () => Promise<void>;
   closeStatistics: () => Promise<void>;
   closeProvider: () => Promise<void>;
+  flushWeather?: () => Promise<void>;
   closeDatabase: () => Promise<void>;
   stopMapContext?: () => Promise<void>;
   stopTelemetry?: () => Promise<void>;
@@ -69,6 +71,10 @@ export function createShutdownCoordinator(cleanup: Cleanup, budgetMs = SHUTDOWN_
       await phase("statistics close", cleanup.closeStatistics, deadline);
       console.info("[shutdown] closing provider");
       await phase("provider close", cleanup.closeProvider, deadline);
+      if (cleanup.flushWeather) {
+        console.info("[shutdown] flushing aviation weather");
+        await phase("aviation weather flush", cleanup.flushWeather, deadline);
+      }
       console.info("[shutdown] closing database");
       await phase("database close", cleanup.closeDatabase, deadline);
       state = "COMPLETE";
@@ -99,6 +105,7 @@ export function getShutdownCoordinator() {
     stopTelemetry: stopRuntimeTelemetry,
     closeStatistics: () => getAircraftStateService().closeStatistics(),
     closeProvider: () => getAircraftStateService().closeProvider(),
+    flushWeather: () => defaultAviationWeatherProvider.flushPersistence("graceful"),
     closeDatabase: closePrisma,
   });
   return globalForShutdown.airRadarShutdown;

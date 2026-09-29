@@ -242,7 +242,8 @@ It reads only official Aviation Weather Center METAR, TAF, and SIGMET
 endpoints. The provider has its own bounded in-process hot cache, plus an
 optional versioned last-known-good file at
 `/var/lib/airradar/weather/weather-cache-v1.json`. The file is validated and
-size/entry bounded on load, written by one debounced atomic writer, and is
+size/entry bounded on load, written by one lazy 30-minute-from-first-dirty
+atomic checkpoint (or at graceful shutdown), and is
 best-effort: corruption or disk failure cannot stop the provider or application.
 The cache also has request timeout, negative entries, in-flight coalescing,
 stale-if-error policy, and rate-limit backoff. Persistent METAR entries are

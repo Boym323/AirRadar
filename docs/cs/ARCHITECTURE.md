@@ -241,8 +241,9 @@ pouze oficiální endpointy Aviation Weather Center pro METAR, TAF a SIGMET.
 Provider má vlastní omezenou hot cache v procesu plus volitelný verzovaný
 last-known-good soubor
 `/var/lib/airradar/weather/weather-cache-v1.json`. Soubor se při načtení
-validuje a omezuje velikostí/počtem záznamů, zapisuje jej jeden debounced
-atomický writer a je best-effort: poškození nebo disk failure nesmí zastavit
+validuje a omezuje velikostí/počtem záznamů, zapisuje jej jeden lazy atomický
+checkpoint 30 minut po první změně (nebo při graceful shutdown) a je best-effort:
+poškození nebo disk failure nesmí zastavit
 providera ani aplikaci. Cache má také request timeout, negativní záznamy,
 slučování in-flight požadavků, stale-if-error policy a rate-limit backoff.
 Persistované METAR záznamy se ve výchozím stavu drží nejvýše 2 hodiny; TAF a

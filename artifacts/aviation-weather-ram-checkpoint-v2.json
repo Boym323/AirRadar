@@ -1,0 +1,39 @@
+{
+  "result": "BLOCKED",
+  "reason": "Implementation validated locally; production release and canary were not authorized.",
+  "startSha": "6798494adabcb4ab93af5c78988c1cf5ca89ca90",
+  "originMain": "6798494adabcb4ab93af5c78988c1cf5ca89ca90",
+  "cacheFile": "/var/lib/airradar/weather/weather-cache-v1.json",
+  "baseline": {
+    "fileSizeBytes": 115269,
+    "mode": "0600",
+    "historicalWeatherMbPerMinute": 13.04,
+    "tenSecondSample": {
+      "cacheMtimeChanged": false,
+      "processWriteBytesDelta": 0,
+      "processWcharDelta": 666252,
+      "processSyscwDelta": 3610,
+      "attribution": "not attributable to the weather cache alone"
+    }
+  },
+  "design": {
+    "defaultCheckpointIntervalMs": 1800000,
+    "shutdownOnlySupported": true,
+    "ramAuthoritative": true,
+    "atomicWritePreserved": true,
+    "databaseMigration": false
+  },
+  "tests": {
+    "focusedPersistence": "pass",
+    "shutdown": "pass",
+    "typecheck": "pass",
+    "fullSuite": "not-run",
+    "productionBuild": "not-run",
+    "browserGate": "not-run",
+    "canary": "not-run"
+  },
+  "deployment": {
+    "performed": false,
+    "candidateSha": "working-tree"
+  }
+}

@@ -584,6 +584,22 @@ function weatherPersistenceStatus(value: Partial<AviationWeatherPersistenceDiagn
     lastSaveEntries: nonNegativeInteger(value?.lastSaveEntries ?? 0, 1_024),
     lastSaveError: value?.lastSaveError && /^[A-Z0-9_]+$/.test(value.lastSaveError) ? value.lastSaveError : null,
     writes: nonNegativeInteger(value?.writes ?? 0, 10_000_000),
+    checkpointIntervalMs: nonNegativeInteger(value?.checkpointIntervalMs ?? 0, 24 * 60 * 60_000),
+    checkpointMode: value?.checkpointMode === "periodic" || value?.checkpointMode === "shutdown-only" ? value.checkpointMode : "shutdown-only",
+    mutationGeneration: nonNegativeInteger(value?.mutationGeneration ?? 0, Number.MAX_SAFE_INTEGER),
+    persistedGeneration: nonNegativeInteger(value?.persistedGeneration ?? 0, Number.MAX_SAFE_INTEGER),
+    pendingMutations: nonNegativeInteger(value?.pendingMutations ?? 0, Number.MAX_SAFE_INTEGER),
+    firstDirtyAt: safeTimestamp(value?.firstDirtyAt),
+    dirtyAgeMs: value?.dirtyAgeMs === null || value?.dirtyAgeMs === undefined ? null : nonNegativeInteger(value.dirtyAgeMs, 366 * 24 * 60 * 60_000),
+    nextCheckpointAt: safeTimestamp(value?.nextCheckpointAt),
+    checkpointAttempts: nonNegativeInteger(value?.checkpointAttempts ?? 0, 10_000_000),
+    checkpointSuccesses: nonNegativeInteger(value?.checkpointSuccesses ?? 0, 10_000_000),
+    checkpointFailures: nonNegativeInteger(value?.checkpointFailures ?? 0, 10_000_000),
+    periodicCheckpoints: nonNegativeInteger(value?.periodicCheckpoints ?? 0, 10_000_000),
+    gracefulCheckpoints: nonNegativeInteger(value?.gracefulCheckpoints ?? 0, 10_000_000),
+    explicitCheckpoints: nonNegativeInteger(value?.explicitCheckpoints ?? 0, 10_000_000),
+    coalescedMutations: nonNegativeInteger(value?.coalescedMutations ?? 0, Number.MAX_SAFE_INTEGER),
+    fileSizeBytes: value?.fileSizeBytes === null || value?.fileSizeBytes === undefined ? null : nonNegativeInteger(value.fileSizeBytes, 16 * 1024 * 1024),
   };
 }
 

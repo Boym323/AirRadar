@@ -178,11 +178,15 @@ and removed after 60 seconds; the target map is capped at 5,000 entries.
 
 `AviationWeatherProvider` loads a bounded, validated in-process cache and then
 serves on-demand METAR, TAF, international SIGMET, and AirSIGMET requests.
-Successful normalized values update memory and schedule one debounced snapshot
-write to `/var/lib/airradar/weather/weather-cache-v1.json`; failures never
-write provider errors. The versioned file is written through a temporary file,
-`fsync`, and atomic rename. A missing, oversized, malformed, wrong-version, or
-partially invalid file is ignored entry-by-entry and cannot prevent startup.
+Successful normalized values update memory and mark the bounded cache dirty.
+A lazy recovery checkpoint writes `/var/lib/airradar/weather/weather-cache-v1.json`
+30 minutes after the first dirty mutation by default
+(`AVIATION_WEATHER_CACHE_CHECKPOINT_MS`; `0` is shutdown-only). The complete
+snapshot is materialized only at checkpoint time, and generation tracking
+preserves mutations during an asynchronous write. Failures never write provider
+errors or stop live weather. The versioned file is written through a temporary
+file, `fsync`, and atomic rename. A missing, oversized, malformed, wrong-version,
+or partially invalid file is ignored entry-by-entry and cannot prevent startup.
 
 At process startup, valid persistent entries become stale-capable fallbacks
 and a live request is still attempted when the product TTL has elapsed. A
@@ -199,6 +203,12 @@ Weather responses expose `cacheSource` (`live`, `memory-cache`, or
 entry is explicitly marked stale until a live refresh succeeds. Development and
 test processes do not enable the `/var/lib` writer unless persistence is
 explicitly configured.
+
+RAM remains authoritative during normal runtime, so checkpoint timing does not
+change product TTLs, provider cadence, or stale-if-error behavior. The canonical
+shutdown coordinator flushes the latest state. A hard crash may lose up to one
+checkpoint interval of newly acquired recovery data, which is fetched again
+after restart.
 
 ## History persistence
 

@@ -12,7 +12,7 @@ import type {
   WeatherCacheSource,
   MetarMapObservation,
 } from "@/lib/weather/types";
-import { getAviationWeatherBaseUrl, getAviationWeatherCacheFile, getAviationWeatherMetarMaxPersistedAgeMs, getAviationWeatherMetarTtlMs, getAviationWeatherRequestTimeoutMs, getAviationWeatherSigmetMaxPersistedAgeMs, getAviationWeatherSigmetTtlMs, getAviationWeatherStaleIfErrorMs, getAviationWeatherTafMaxPersistedAgeMs, getAviationWeatherTafTtlMs, getAviationWeatherUserAgent, isAviationWeatherPersistenceEnabled } from "@/lib/server/config";
+import { getAviationWeatherBaseUrl, getAviationWeatherCacheCheckpointMs, getAviationWeatherCacheFile, getAviationWeatherMetarMaxPersistedAgeMs, getAviationWeatherMetarTtlMs, getAviationWeatherRequestTimeoutMs, getAviationWeatherSigmetMaxPersistedAgeMs, getAviationWeatherSigmetTtlMs, getAviationWeatherStaleIfErrorMs, getAviationWeatherTafMaxPersistedAgeMs, getAviationWeatherTafTtlMs, getAviationWeatherUserAgent, isAviationWeatherPersistenceEnabled } from "@/lib/server/config";
 import { deriveFlightCategory } from "@/lib/weather/flight-category";
 import { parseStatuteMiles } from "@/lib/weather/visibility";
 import {
@@ -196,12 +196,14 @@ export class AviationWeatherCache {
   }
 
   clear(): void {
+    const changed = this.entries.size > 0 || this.persistedEntries.size > 0;
     this.entries.clear();
     this.airportOrder.clear();
     this.inFlight.clear();
     this.persistedEntries.clear();
     this.hits = 0;
     this.misses = 0;
+    if (changed) this.persistence?.markDirty();
   }
 
   private touchAirport(product: Product, keyPart: string, now: number): void {
@@ -227,6 +229,10 @@ export class AviationWeatherCache {
 
   private schedulePersistence(): void {
     if (!this.persistence) return;
+    this.persistence.markDirty();
+  }
+
+  snapshot(): PersistentWeatherEntry[] {
     const values = new Map<string, PersistentWeatherEntry>();
     for (const [key, entry] of this.persistedEntries) values.set(key, entry);
     for (const [key, entry] of this.entries) {
@@ -235,7 +241,7 @@ export class AviationWeatherCache {
       const product = key.slice(0, separator) as Product;
       values.set(key, { product, key: key.slice(separator + 1), fetchedAt: new Date(entry.fetchedAt).toISOString(), value: entry.value });
     }
-    this.persistence.schedule([...values.values()]);
+    return [...values.values()];
   }
 }
 
@@ -310,6 +316,7 @@ export interface AviationWeatherProviderOptions {
   persistCache?: boolean;
   cacheFile?: string;
   persistenceMaxAgeMs?: number | Partial<Record<AviationWeatherProduct, number>>;
+  checkpointIntervalMs?: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -785,6 +792,7 @@ export class AviationWeatherProvider {
         maxEntries: (options.maxAirports ?? AVIATION_WEATHER_TTLS.maxAirports) * 2 + 2,
         now: options.now ?? Date.now,
         validateValue: validatePersistedWeatherValue,
+        checkpointIntervalMs: options.checkpointIntervalMs ?? getAviationWeatherCacheCheckpointMs(),
       })
       : undefined;
     this.cache = options.cache ?? new AviationWeatherCache(
@@ -793,6 +801,7 @@ export class AviationWeatherProvider {
       options.now ?? Date.now,
       this.persistence,
     );
+    this.persistence?.setSnapshotProvider(() => this.cache.snapshot());
     this.timeoutMs = options.timeoutMs ?? getAviationWeatherRequestTimeoutMs();
     this.now = options.now ?? Date.now;
     this.baseUrl = options.baseUrl ?? getAviationWeatherBaseUrl();
@@ -843,6 +852,22 @@ export class AviationWeatherProvider {
         lastSaveEntries: 0,
         lastSaveError: null,
         writes: 0,
+        checkpointIntervalMs: 0,
+        checkpointMode: "shutdown-only",
+        mutationGeneration: 0,
+        persistedGeneration: 0,
+        pendingMutations: 0,
+        firstDirtyAt: null,
+        dirtyAgeMs: null,
+        nextCheckpointAt: null,
+        checkpointAttempts: 0,
+        checkpointSuccesses: 0,
+        checkpointFailures: 0,
+        periodicCheckpoints: 0,
+        gracefulCheckpoints: 0,
+        explicitCheckpoints: 0,
+        coalescedMutations: 0,
+        fileSizeBytes: null,
       },
     };
   }
@@ -981,6 +1006,22 @@ export class AviationWeatherProvider {
         lastSaveEntries: 0,
         lastSaveError: null,
         writes: 0,
+        checkpointIntervalMs: 0,
+        checkpointMode: "shutdown-only",
+        mutationGeneration: 0,
+        persistedGeneration: 0,
+        pendingMutations: 0,
+        firstDirtyAt: null,
+        dirtyAgeMs: null,
+        nextCheckpointAt: null,
+        checkpointAttempts: 0,
+        checkpointSuccesses: 0,
+        checkpointFailures: 0,
+        periodicCheckpoints: 0,
+        gracefulCheckpoints: 0,
+        explicitCheckpoints: 0,
+        coalescedMutations: 0,
+        fileSizeBytes: null,
       },
     };
   }
@@ -988,8 +1029,8 @@ export class AviationWeatherProvider {
   cacheSize(): number { return this.cache.size(); }
   cacheAirportCount(): number { return this.cache.airportCount(); }
 
-  async flushPersistence(): Promise<void> {
-    await this.persistence?.flush();
+  async flushPersistence(reason: "graceful" | "explicit" = "explicit"): Promise<void> {
+    await this.persistence?.flush(reason);
   }
 
   private async getProduct<T extends MetarObservation | TafForecast>(product: "metar" | "taf", icaoCode: string, ttlMs: number, parentSignal?: AbortSignal): Promise<ProductResult<T>> {
