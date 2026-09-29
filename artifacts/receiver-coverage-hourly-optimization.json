@@ -36,6 +36,7 @@
   },
   "validation": {
     "focusedCoveragePersistenceTests": "PASS (2 tests)",
+    "fullTestSuite": "PASS (1363 passed, 1 skipped)",
     "typecheckPrepared": "PASS",
     "diffCheck": "PASS",
     "productionAfterMetrics": "not available in this workspace; collect during canary"
