@@ -2,6 +2,32 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.216] - 2026-09-29
+
+Changes since v1.0.215.
+
+### Added
+
+- Enhance DB transaction diagnostics with process-local store and identity retention (1d90ba70)
+
+### Documentation
+
+- Record aviation weather persistence canary (2ab44ecc)
+
+### Maintenance
+
+- Sync generated repository metadata (f4a091e1)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (f4a091e1)
+- Merge pull request #217 from Boym323/automation/repository-metadata (649b708f)
+- docs: record aviation weather persistence canary (2ab44ecc)
+- feat(diagnostics): enhance DB transaction diagnostics with process-local store and identity retention (1d90ba70)
+
+</details>
+
 ## [1.0.214] - 2026-09-29
 
 Changes since v1.0.212.
