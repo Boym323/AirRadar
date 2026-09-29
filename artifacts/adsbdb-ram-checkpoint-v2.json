@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-29T15:01:10+02:00",
+  "result": "PASS",
+  "production": {
+    "version": "1.0.213",
+    "sha": "89ba0ff0fe01f4b1ae5ec833ba71ceb824b76a5c",
+    "tag": "v1.0.213",
+    "deployedAt": "2026-09-29T13:25:06+02:00",
+    "canaryDurationMinutes": 96
+  },
+  "buildAndRelease": {
+    "build": "PASS",
+    "releaseGates": "PASS",
+    "browserResponsive": "PASS",
+    "radarBenchmark": "PASS",
+    "sse": "PASS",
+    "statistics": "PASS",
+    "flightPositionReplay": "PASS",
+    "airportOperations": "PASS",
+    "databaseVerification": "PASS",
+    "migrations": 0,
+    "schemaChanged": false
+  },
+  "checkpoint": {
+    "mode": "hourly",
+    "intervalMs": 3600000,
+    "firstDirtyAt": "2026-09-29T13:25:07.623+02:00",
+    "checkpointAt": "2026-09-29T14:25:08.411+02:00",
+    "checkpointAttempts": 1,
+    "checkpointSuccesses": 1,
+    "checkpointFailures": 0,
+    "periodicCheckpoints": 1,
+    "gracefulCheckpoints": 0,
+    "explicitCheckpoints": 0,
+    "writes": 1,
+    "fileSizeBytes": 4732956,
+    "fileMode": "0600",
+    "schemaValid": true,
+    "atomicSnapshot": true
+  },
+  "generations": {
+    "atCheckpoint": {
+      "mutationGeneration": 72688,
+      "persistedGeneration": 72546,
+      "mutationsSinceCheckpoint": 142
+    },
+    "atCanaryEnd": {
+      "mutationGeneration": 120343,
+      "persistedGeneration": 72546,
+      "mutationsSinceCheckpoint": 47797
+    },
+    "behavior": "RAM mutations continued during/after the checkpoint; persisted generation remained the captured generation and dirty stayed true."
+  },
+  "filesystem": {
+    "adsbdbBeforeMbPerMin": 60.88,
+    "adsbdbAfterObservedMbPerMin": 0.0493,
+    "adsbdbSnapshotsBeforePerMin": 13,
+    "adsbdbSnapshotsObserved": 1,
+    "adsbdbSnapshotsObservedPerHour": 0.625,
+    "adsbdbScheduledSnapshotsPerHour": 1,
+    "adsbdbReductionVsOnePerHourPercent": 99.87,
+    "nodeBeforeMbPerMin": 74.2,
+    "nodeAfterPhysicalWriteBytesMbPerMin": 13.53,
+    "nodeReductionPercent": 81.79,
+    "measurement": "Node /proc/PID/io write_bytes delta from 13,578,228 to 1,312,142,518 over approximately 96 minutes."
+  },
+  "runtime": {
+    "cpuReferencePercent": 45.5,
+    "cpuObservedPercentRange": [45.6, 56.7],
+    "cpuStartupPeakPercent": 67.0,
+    "rssStartMb": 524,
+    "rssPeakObservedMb": 1374,
+    "rssEndMb": 941,
+    "metadataEntriesEnd": 2391,
+    "routeEntriesEnd": 1901,
+    "bounded": true,
+    "heapMetrics": "Public diagnostics redact process heap fields; RSS was measured from /proc."
+  },
+  "provider": {
+    "memoryHits": 172105,
+    "persistentHits": 2,
+    "liveHits": 820,
+    "staleFallback": 5,
+    "regression": false,
+    "transientFailures": "Several provider refresh failures recovered; checkpoint failures remained zero."
+  },
+  "durability": {
+    "periodicCheckpoint": "PASS",
+    "gracefulShutdownTests": "PASS",
+    "gracefulShutdownObservedInCanary": false,
+    "hardCrashSimulation": "PASS",
+    "atomicSnapshot": "PASS",
+    "productionGracefulShutdownPath": "NOT NATURALLY OBSERVED"
+  },
+  "attribution": {
+    "nextTopFilesystemWriter": "/var/lib/airradar/map-context-metar-v1.json (METAR archive)",
+    "mbPerMin": 13.04,
+    "sharePercentOfMeasuredNodeWrites": 96.38,
+    "basis": "Existing valid METAR attribution rate divided by the post-deploy Node write_bytes rate; METAR was not changed."
+  },
+  "rollback": {
+    "rolledBack": false,
+    "reason": null
+  },
+  "nextStep": "AUDIT METAR WRITE PERSISTENCE"
+}
