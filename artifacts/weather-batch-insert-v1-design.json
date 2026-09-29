@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "status": "WEATHER BATCH INSERT DESIGN PASS",
+  "decision": "IMPLEMENT WEATHER BATCH WITH BOUNDED FALLBACK V1",
+  "implementation": false,
+  "currentPath": {
+    "writer": "single-row AircraftWeatherObservation.create",
+    "serialization": "weatherWriteTail",
+    "ratePerMinute": 35.49,
+    "averageDurationMs": 203.6,
+    "maxDurationMs": 1316,
+    "measurementMinutes": 30.00575,
+    "transactionsPerMinute": 283.91,
+    "attributionPercent": 98.3,
+    "deadlocks": 0,
+    "lockWaits": 0
+  },
+  "schema": {
+    "model": "AircraftWeatherObservation",
+    "uniqueColumns": ["dedupKey"],
+    "liveConstraintName": "REQUIRES_REAL_PG_VERIFICATION",
+    "nullSemantics": "dedupKey is non-null",
+    "migrationRequired": false,
+    "rowFields": ["dedupKey", "aircraftHex", "flightId", "callsign", "observedAt", "receivedAt", "lat", "lon", "altitudeFt", "altitudeType", "windDirectionDeg", "windSpeedKt", "staticAirTempC", "totalAirTempC", "staticPressureHpa", "humidityPct", "turbulenceLevel", "source", "provider", "quality", "weatherSourceQuality", "bdsConfidence", "provenanceJson"]
+  },
+  "orm": {
+    "package": "@prisma/orm-postgres 8.0.0-rc.9",
+    "cli": "prisma 8.0.0-rc.13",
+    "multiRowApi": "database.sql.public.AircraftWeatherObservation.insert(rows).build() + database.execute(plan)",
+    "returning": true,
+    "insertOnConflict": false,
+    "explicitTransactionRequired": false,
+    "evidence": "Existing aircraft metadata catalog uses transaction.sql.<table>.insert(rows).build() and transaction.execute()."
+  },
+  "naturalBatchDistribution": {
+    "callsPerMinute": "NOT_RECORDED",
+    "rowsPerCallP50": "NOT_RECORDED",
+    "rowsPerCallP95": "NOT_RECORDED",
+    "maxRowsPerCall": "NOT_RECORDED",
+    "emptyPercent": "NOT_RECORDED",
+    "singleRowPercent": "NOT_RECORDED",
+    "multiRowPercent": "NOT_RECORDED",
+    "requiredImplementationDiagnostic": true,
+    "reason": "Existing attribution counts writes, not parent invocation sizes."
+  },
+  "recommendedDesign": {
+    "naturalBoundary": "one existing persistWeatherBatch invocation",
+    "hardCapRows": 16,
+    "stages": ["select observation/QC/persistence reason/dedupKey without durable-state mutation", "persist bounded multi-row batches", "commit memory row and accumulator only after durable result"],
+    "statement": "one autocommit multi-row INSERT",
+    "conflictStrategy": "batch insert without invented ON CONFLICT; exact 23505 falls back to bounded current single-row writes",
+    "fallbackMaxRowsPerFailedBatch": 8,
+    "outageGuard": "two consecutive infrastructure failures open a 30-second process-local write circuit; no N timeout fan-out",
+    "writeTail": "preserve",
+    "shutdown": "use same primitive within existing 1.5s/500-entry bounds"
+  },
+  "idealUpperBoundModel": [
+    {"cap": 8, "statementsPerMinute": 4.43625, "savedPerMinute": 31.05375, "reductionPercent": 87.5},
+    {"cap": 16, "statementsPerMinute": 2.218125, "savedPerMinute": 33.271875, "reductionPercent": 93.75},
+    {"cap": 32, "statementsPerMinute": 1.1090625, "savedPerMinute": 34.3809375, "reductionPercent": 96.875},
+    {"cap": 64, "statementsPerMinute": 0.55453125, "savedPerMinute": 34.93546875, "reductionPercent": 98.4375}
+  ],
+  "semantics": {
+    "lastPersisted": "changes only after insert success or confirmed exact duplicate",
+    "memoryRow": "same as lastPersisted",
+    "ordering": "original staged order; query ordering remains observedAt desc",
+    "sameAircraft": "caller snapshot map invariant, enforced by test"
+  },
+  "tests": ["unit selection and mapping", "real PostgreSQL multi-row insert", "exact dedup conflict", "mixed new/duplicate", "non-unique failure", "outage and circuit breaker", "Temporal.Instant", "shutdown", "cap and ordering"],
+  "final": "AIRRADAR WEATHER BATCH INSERT DESIGN PASS"
+}
