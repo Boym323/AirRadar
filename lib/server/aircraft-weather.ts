@@ -3,7 +3,7 @@ import type { Aircraft, AircraftFieldProvenance } from "@/lib/aircraft/types";
 import { haversineDistanceKm } from "@/lib/geo";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
-import { getHistoryRetentionDays } from "@/lib/server/config";
+import { getHistoryRetentionDays, isAircraftWeatherBatchInsertEnabled } from "@/lib/server/config";
 
 /**
  * Aircraft-observed weather is deliberately a separate, sparse data product.
@@ -125,6 +125,14 @@ export interface AircraftWeatherDiagnostics {
   lastAcceptedAt: string | null;
   lastPersistedAt: string | null;
   lastAnomalies: Array<{ aircraftHex: string; observedAt: string; reason: string }>;
+  batchAttempts: number; batchSuccesses: number; batchFailures: number;
+  batchInfrastructureFailures: number; batchDedupFailures: number; batchDataFailures: number;
+  candidateRows: number; insertedRows: number; fallbackRows: number; fallbackSuccesses: number; fallbackFailures: number;
+  maxBatchSize: number; totalBatchRows: number; capHitCount: number; circuitOpenCount: number; circuitSkippedRows: number;
+  currentCircuitState: "closed" | "open"; circuitOpenUntil: string | null;
+  naturalInvocationCount: number; naturalEmptyInvocations: number; naturalSingleRowInvocations: number;
+  naturalMultiRowInvocations: number; naturalCandidateRows: number; naturalSelectedRows: number;
+  naturalMaxSelectedRows: number; naturalBatchCapHits: number; naturalDistribution: Record<string, number>;
 }
 
 const emptyDiagnostics = (): AircraftWeatherDiagnostics => ({
@@ -139,6 +147,13 @@ const emptyDiagnostics = (): AircraftWeatherDiagnostics => ({
   withWind: 0, withTemperature: 0, withPressure: 0, withHumidity: 0, withTurbulence: 0,
   lastAcceptedAt: null, lastPersistedAt: null,
   lastAnomalies: [],
+  batchAttempts: 0, batchSuccesses: 0, batchFailures: 0, batchInfrastructureFailures: 0, batchDedupFailures: 0, batchDataFailures: 0,
+  candidateRows: 0, insertedRows: 0, fallbackRows: 0, fallbackSuccesses: 0, fallbackFailures: 0,
+  maxBatchSize: 0, totalBatchRows: 0, capHitCount: 0, circuitOpenCount: 0, circuitSkippedRows: 0,
+  currentCircuitState: "closed", circuitOpenUntil: null,
+  naturalInvocationCount: 0, naturalEmptyInvocations: 0, naturalSingleRowInvocations: 0, naturalMultiRowInvocations: 0,
+  naturalCandidateRows: 0, naturalSelectedRows: 0, naturalMaxSelectedRows: 0, naturalBatchCapHits: 0,
+  naturalDistribution: { "0": 0, "1": 0, "2-4": 0, "5-8": 0, "9-16": 0, ">16": 0 },
 });
 
 const globalForWeather = globalThis as unknown as {
@@ -412,9 +427,45 @@ function incrementPersistenceReason(reason: WeatherPersistenceReason): void {
   numericDiagnostics[fieldByReason[reason]] += 1;
 }
 
-function isUniqueConflict(error: unknown): boolean {
+export const MAX_WEATHER_BATCH_ROWS = 16;
+export const MAX_WEATHER_FALLBACK_ROWS = 8;
+const WEATHER_BREAKER_FAILURE_LIMIT = 2;
+const WEATHER_BREAKER_OPEN_MS = 30_000;
+// PostgreSQL's default constraint identity for this model. A deployed schema
+// must expose one of these exact identities; SQLSTATE alone is insufficient.
+const WEATHER_DEDUP_CONSTRAINT_NAMES = new Set([
+  "aircraftWeatherObservation_dedupKey_key",
+  "AircraftWeatherObservation_dedupKey_key",
+]);
+type WeatherDbErrorClass = "EXACT_DEDUP_CONFLICT" | "INFRASTRUCTURE" | "ROW_OR_DATA" | "UNKNOWN";
+type WeatherInsertRow = {
+  dedupKey: string; aircraftHex: string; flightId: number | null; callsign: string | null;
+  observedAt: Temporal.Instant; receivedAt: Temporal.Instant | null; lat: number; lon: number;
+  altitudeFt: number; altitudeType: string; windDirectionDeg: number | null; windSpeedKt: number | null;
+  staticAirTempC: number | null; totalAirTempC: number | null; staticPressureHpa: number | null;
+  humidityPct: number | null; turbulenceLevel: number | null; source: string; provider: string | null;
+  quality: string; weatherSourceQuality: string | null; bdsConfidence: string | null; provenanceJson: string;
+};
+let weatherInfrastructureFailures = 0;
+let weatherCircuitOpenUntil = 0;
+
+function errorProperty(error: unknown, keys: string[]): string | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const value = error as Record<string, unknown>;
+  for (const key of keys) if (typeof value[key] === "string") return value[key] as string;
+  return undefined;
+}
+
+export function classifyWeatherDbError(error: unknown): WeatherDbErrorClass {
+  const code = errorProperty(error, ["code", "sqlState", "sqlstate", "sqlSTATE"]);
+  const constraint = errorProperty(error, ["constraint", "constraintName", "constraint_name"])
+    ?? (error && typeof error === "object" ? errorProperty((error as Record<string, unknown>).meta ?? {}, ["constraint", "constraintName"]) : undefined);
+  if (code === "23505" && constraint && WEATHER_DEDUP_CONSTRAINT_NAMES.has(constraint)) return "EXACT_DEDUP_CONFLICT";
+  if (code === "23505") return "UNKNOWN";
   const message = String(error).toLowerCase();
-  return message.includes("unique") || message.includes("23505");
+  if (/connection refused|server.*unavailable|connection terminated|network error|connect timeout|connection timeout|statement timeout|cancelled|canceled|econnrefused|econnreset|enotfound/.test(message)) return "INFRASTRUCTURE";
+  if (/invalid input|out of range|not-null|null value|foreign key|check constraint|invalid.*syntax|data exception/.test(message)) return "ROW_OR_DATA";
+  return "UNKNOWN";
 }
 
 function markPersisted(observation: AircraftWeatherObservation, reason: WeatherPersistenceReason): void {
@@ -435,7 +486,11 @@ function rememberMemoryRow(observation: AircraftWeatherObservation): void {
 }
 
 async function writeWeatherObservation(database: NonNullable<ReturnType<typeof getPrisma>>, observation: AircraftWeatherObservation): Promise<void> {
-  await trackDbOperation("weather.observation.create", () => database.orm.public.AircraftWeatherObservation.create({
+  await trackDbOperation("weather.observation.fallback-create", () => database.orm.public.AircraftWeatherObservation.create(weatherObservationToInsertRow(observation)));
+}
+
+export function weatherObservationToInsertRow(observation: AircraftWeatherObservation): WeatherInsertRow {
+  return {
     dedupKey: observation.dedupKey!,
     aircraftHex: observation.aircraftHex,
     flightId: observation.flightId,
@@ -449,14 +504,86 @@ async function writeWeatherObservation(database: NonNullable<ReturnType<typeof g
     source: observation.source, provider: observation.provider, quality: observation.quality,
     weatherSourceQuality: observation.weatherSourceQuality, bdsConfidence: observation.bdsConfidence,
     provenanceJson: JSON.stringify(observation.provenance),
-  }));
+  };
+}
+
+function incrementNaturalDistribution(rows: number): void {
+  const bucket = rows === 0 ? "0" : rows === 1 ? "1" : rows <= 4 ? "2-4" : rows <= 8 ? "5-8" : rows <= 16 ? "9-16" : ">16";
+  diagnostics.naturalDistribution[bucket] += 1;
+}
+
+function recordNaturalInvocation(candidateRows: number, selectedRows: number): void {
+  diagnostics.naturalInvocationCount += 1;
+  diagnostics.naturalCandidateRows += candidateRows;
+  diagnostics.naturalSelectedRows += selectedRows;
+  diagnostics.naturalMaxSelectedRows = Math.max(diagnostics.naturalMaxSelectedRows, selectedRows);
+  incrementNaturalDistribution(selectedRows);
+  if (selectedRows === 0) diagnostics.naturalEmptyInvocations += 1;
+  else if (selectedRows === 1) diagnostics.naturalSingleRowInvocations += 1;
+  else diagnostics.naturalMultiRowInvocations += 1;
+  if (selectedRows > MAX_WEATHER_BATCH_ROWS) diagnostics.naturalBatchCapHits += 1;
+}
+
+function circuitIsOpen(): boolean {
+  if (weatherCircuitOpenUntil <= Date.now()) {
+    weatherCircuitOpenUntil = 0;
+    diagnostics.currentCircuitState = "closed";
+    diagnostics.circuitOpenUntil = null;
+    return false;
+  }
+  return true;
+}
+
+function noteWeatherDbSuccess(): void {
+  weatherInfrastructureFailures = 0;
+  weatherCircuitOpenUntil = 0;
+  diagnostics.currentCircuitState = "closed";
+  diagnostics.circuitOpenUntil = null;
+}
+
+function noteWeatherInfrastructureFailure(): void {
+  weatherInfrastructureFailures += 1;
+  if (weatherInfrastructureFailures >= WEATHER_BREAKER_FAILURE_LIMIT) {
+    weatherCircuitOpenUntil = Date.now() + WEATHER_BREAKER_OPEN_MS;
+    diagnostics.currentCircuitState = "open";
+    diagnostics.circuitOpenUntil = new Date(weatherCircuitOpenUntil).toISOString();
+    diagnostics.circuitOpenCount += 1;
+  }
+}
+
+async function writeWeatherObservationBatch(database: NonNullable<ReturnType<typeof getPrisma>>, rows: AircraftWeatherObservation[]): Promise<void> {
+  const table = (database.sql.public as unknown as { aircraftWeatherObservation: { insert(rows: WeatherInsertRow[]): { build(): unknown } } }).aircraftWeatherObservation;
+  const plan = table.insert(rows.map(weatherObservationToInsertRow)).build();
+  await trackDbOperation("weather.observation.batch-insert", async () => (await database.runtime()).execute(plan as never));
+}
+
+async function persistSingle(database: NonNullable<ReturnType<typeof getPrisma>>, observation: AircraftWeatherObservation, reason: WeatherPersistenceReason, countAsFallback = true): Promise<void> {
+  try {
+    await writeWeatherObservation(database, observation);
+    rememberMemoryRow(observation); markPersisted(observation, reason);
+    if (countAsFallback) diagnostics.fallbackSuccesses += 1;
+    noteWeatherDbSuccess();
+  } catch (error) {
+    const kind = classifyWeatherDbError(error);
+    if (kind === "EXACT_DEDUP_CONFLICT") {
+      diagnostics.weatherExactDeduplicated += 1; diagnostics.weatherDeduplicated += 1; markPersisted(observation, reason);
+      } else {
+      if (countAsFallback) diagnostics.fallbackFailures += 1;
+      diagnostics.weatherPersistenceFailures += 1;
+    }
+  }
 }
 
 async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provider: string): Promise<void> {
   const database = getPrisma();
+  const staged: Array<{ observation: AircraftWeatherObservation; reason: WeatherPersistenceReason }> = [];
+  const seenAircraft = new Set<string>();
+  let duplicateAircraft = false;
   for (const item of aircraft) {
     const observation = observationFromAircraft(item, receivedAt, { provider });
     if (!observation) continue;
+    if (seenAircraft.has(observation.aircraftHex)) duplicateAircraft = true;
+    seenAircraft.add(observation.aircraftHex);
     const accumulator = accumulators.get(observation.aircraftHex);
     const reason = decideWeatherPersistence(observation, accumulator);
     if (!reason) {
@@ -470,19 +597,51 @@ async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provi
       continue;
     }
     observation.dedupKey = dedupKey(observation);
-    if (!database) { rememberMemoryRow(observation); markPersisted(observation, reason); continue; }
+    staged.push({ observation, reason });
+  }
+  diagnostics.candidateRows += staged.length;
+  recordNaturalInvocation(aircraft.length, staged.length);
+  if (!staged.length) return;
+  if (!database || !isAircraftWeatherBatchInsertEnabled() || duplicateAircraft) {
+    for (const { observation, reason } of staged) {
+      if (!database) { rememberMemoryRow(observation); markPersisted(observation, reason); }
+      else await persistSingle(database, observation, reason);
+    }
+    return;
+  }
+  if (circuitIsOpen()) {
+    diagnostics.circuitSkippedRows += staged.length;
+    return;
+  }
+  diagnostics.maxBatchSize = Math.max(diagnostics.maxBatchSize, staged.length);
+  const chunks: Array<typeof staged> = [];
+  for (let offset = 0; offset < staged.length; offset += MAX_WEATHER_BATCH_ROWS) chunks.push(staged.slice(offset, offset + MAX_WEATHER_BATCH_ROWS));
+  if (staged.length > MAX_WEATHER_BATCH_ROWS) diagnostics.capHitCount += 1;
+  for (const chunk of chunks) {
+    if (circuitIsOpen()) {
+      diagnostics.circuitSkippedRows += chunks.slice(chunks.indexOf(chunk)).reduce((count, value) => count + value.length, 0);
+      break;
+    }
+    diagnostics.batchAttempts += 1; diagnostics.totalBatchRows += chunk.length;
     try {
-      await writeWeatherObservation(database, observation);
-      rememberMemoryRow(observation);
-      markPersisted(observation, reason);
+      await writeWeatherObservationBatch(database, chunk.map((entry) => entry.observation));
+      diagnostics.batchSuccesses += 1; diagnostics.insertedRows += chunk.length;
+      noteWeatherDbSuccess();
+      for (const { observation, reason } of chunk) { rememberMemoryRow(observation); markPersisted(observation, reason); }
     } catch (error) {
-      // PostgreSQL remains a second-line exact-duplicate safety net. Any
-      // other failure leaves lastPersisted untouched so the next sample can retry.
-      if (isUniqueConflict(error)) {
-        diagnostics.weatherExactDeduplicated += 1;
-        diagnostics.weatherDeduplicated += 1;
-        markPersisted(observation, reason);
-      } else diagnostics.weatherPersistenceFailures += 1;
+      diagnostics.batchFailures += 1;
+      const kind = classifyWeatherDbError(error);
+      if (kind === "INFRASTRUCTURE" || kind === "UNKNOWN") {
+        diagnostics.batchInfrastructureFailures += kind === "INFRASTRUCTURE" ? 1 : 0;
+        if (kind === "INFRASTRUCTURE") noteWeatherInfrastructureFailure();
+        else diagnostics.batchFailures += 0;
+        continue;
+      }
+      if (kind === "EXACT_DEDUP_CONFLICT") diagnostics.batchDedupFailures += 1;
+      else diagnostics.batchDataFailures += 1;
+      const fallback = chunk.slice(0, MAX_WEATHER_FALLBACK_ROWS);
+      diagnostics.fallbackRows += fallback.length;
+      for (const { observation, reason } of fallback) await persistSingle(database, observation, reason);
     }
   }
 }
@@ -502,20 +661,42 @@ export function flushAircraftWeatherPersistence(deadline = Date.now() + 1_500): 
   return enqueueWeatherWork(async () => {
     const database = getPrisma();
     if (!database) return 0;
-    let flushed = 0;
+    if (!isAircraftWeatherBatchInsertEnabled()) {
+      let flushed = 0;
+      for (const accumulator of accumulators.values()) {
+        if (Date.now() >= deadline || flushed >= AIRCRAFT_WEATHER_PERSISTENCE_POLICY.accumulator.shutdownFlushMaxEntries) break;
+        const observation = accumulator.lastObservation;
+        if (!observation || (accumulator.lastPersisted && weatherObservationFingerprint(observation) === accumulator.lastPersistedFingerprint)) continue;
+        observation.dedupKey = dedupKey(observation);
+        await persistSingle(database, observation, "HEARTBEAT", false); flushed += 1;
+      }
+      return flushed;
+    }
+    const pending: AircraftWeatherObservation[] = [];
     for (const accumulator of accumulators.values()) {
-      if (Date.now() >= deadline || flushed >= AIRCRAFT_WEATHER_PERSISTENCE_POLICY.accumulator.shutdownFlushMaxEntries) break;
+      if (pending.length >= AIRCRAFT_WEATHER_PERSISTENCE_POLICY.accumulator.shutdownFlushMaxEntries) break;
       const observation = accumulator.lastObservation;
       if (!observation || (accumulator.lastPersisted && weatherObservationFingerprint(observation) === accumulator.lastPersistedFingerprint)) continue;
-      observation.dedupKey = dedupKey(observation);
+      observation.dedupKey = dedupKey(observation); pending.push(observation);
+    }
+    if (!pending.length || !isAircraftWeatherBatchInsertEnabled() || circuitIsOpen()) return 0;
+    let flushed = 0;
+    for (let offset = 0; offset < pending.length; offset += MAX_WEATHER_BATCH_ROWS) {
+      if (Date.now() >= deadline || circuitIsOpen()) break;
+      const chunk = pending.slice(offset, offset + MAX_WEATHER_BATCH_ROWS);
       try {
-        await writeWeatherObservation(database, observation);
-        rememberMemoryRow(observation);
-        markPersisted(observation, "HEARTBEAT");
-        flushed += 1;
+        await writeWeatherObservationBatch(database, chunk);
+        for (const observation of chunk) { rememberMemoryRow(observation); markPersisted(observation, "HEARTBEAT"); }
+        flushed += chunk.length; noteWeatherDbSuccess();
       } catch (error) {
-        if (isUniqueConflict(error)) markPersisted(observation, "HEARTBEAT");
-        else diagnostics.weatherPersistenceFailures += 1;
+        const kind = classifyWeatherDbError(error);
+        if (kind === "INFRASTRUCTURE") { noteWeatherInfrastructureFailure(); break; }
+        if (kind === "EXACT_DEDUP_CONFLICT" || kind === "ROW_OR_DATA") {
+          for (const observation of chunk.slice(0, MAX_WEATHER_FALLBACK_ROWS)) {
+            if (Date.now() >= deadline || circuitIsOpen()) break;
+            await persistSingle(database, observation, "HEARTBEAT"); flushed += 1;
+          }
+        }
       }
     }
     return flushed;
@@ -542,7 +723,10 @@ export async function pruneAircraftWeatherRetention(database: NonNullable<Return
 }
 
 export function getAircraftWeatherDiagnostics(): AircraftWeatherDiagnostics { return { ...diagnostics, lastAnomalies: diagnostics.lastAnomalies.slice() }; }
-export function resetAircraftWeatherDiagnostics(): void { Object.assign(diagnostics, emptyDiagnostics()); accumulators.clear(); memoryRows.length = 0; weatherWriteTail = Promise.resolve(); }
+export function resetAircraftWeatherDiagnostics(): void {
+  Object.assign(diagnostics, emptyDiagnostics()); accumulators.clear(); memoryRows.length = 0; weatherWriteTail = Promise.resolve();
+  weatherInfrastructureFailures = 0; weatherCircuitOpenUntil = 0;
+}
 
 export interface WeatherQuery { from: Date; to: Date; aircraftHex?: string; lat?: number; lon?: number; radiusKm?: number; minAltitude?: number; maxAltitude?: number; source?: AircraftWeatherSource; limit?: number; offset?: number; }
 export function weatherQueryFetchLimit(query: WeatherQuery, limit: number, offset: number): number {

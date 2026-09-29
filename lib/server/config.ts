@@ -109,6 +109,11 @@ export function getHistorySampleIntervalMs(): number {
   return Math.max(15000, envNumber("HISTORY_SAMPLE_INTERVAL_MS", 20000));
 }
 
+/** Weather batch persistence is an opt-in transport optimization. */
+export function isAircraftWeatherBatchInsertEnabled(): boolean {
+  return process.env.AIRRADAR_WEATHER_BATCH_INSERT_ENABLED?.trim().toLowerCase() === "true";
+}
+
 export function getHistoryRetentionDays(): number {
   return Math.max(1, envNumber("HISTORY_RETENTION_DAYS", 30));
 }
