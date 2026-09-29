@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.217] - 2026-09-29
+
+Changes since v1.0.216.
+
+### Documentation
+
+- Record diagnostics deployment canary (4b0205d)
+
+### Maintenance
+
+- Sync generated repository metadata (53519a0)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (53519a0)
+- Merge pull request #218 from Boym323/automation/repository-metadata (92ee769)
+- docs: record diagnostics deployment canary (4b0205d)
+
+</details>
 ## [1.0.216] - 2026-09-29
 
 Changes since v1.0.215.
