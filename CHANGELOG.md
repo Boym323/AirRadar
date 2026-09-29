@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.219] - 2026-09-29
+
+Changes since v1.0.218.
+
+### Added
+
+- Implement db operation tracking and diagnostics (06f8f7b)
+
+### Maintenance
+
+- Sync generated repository metadata (b0e1860)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (b0e1860)
+- Merge pull request #220 from Boym323/automation/repository-metadata (b52213f)
+- feat(diagnostics): implement db operation tracking and diagnostics (06f8f7b)
+
+</details>
 ## [1.0.218] - 2026-09-29
 
 Changes since v1.0.217.
