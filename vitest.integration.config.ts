@@ -19,6 +19,7 @@ const integrationSuites = [
   "tests/production-gates.test.ts",
   "tests/recap.test.ts",
   "tests/receiver-advanced-statistics-db.test.ts",
+  "tests/receiver-coverage-real.integration.test.ts",
   "tests/statistics-range.test.ts",
   "tests/system-status.test.ts",
   "tests/update-ogn-softrf.test.ts",
