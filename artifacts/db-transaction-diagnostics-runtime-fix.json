@@ -1,0 +1,67 @@
+{
+  "result": "DIAGNOSTICS FIX BLOCKED",
+  "capturedAt": "2026-09-29T17:16:00+02:00",
+  "git": {
+    "head": "bbb8094244665e8d3aed1618a31b51b518f92025",
+    "originMain": "bbb8094244665e8d3aed1618a31b51b518f92025",
+    "diagnosticsFixSha": "1d90ba70e078cbacf500b18977c429b59e413b61",
+    "cleanTree": true,
+    "intentionalDifference": "The generated v1.0.216 changelog commit is now also origin/main; no remaining local difference."
+  },
+  "deployment": {
+    "previous": { "version": "1.0.215", "sha": "e09a9ab0" },
+    "candidate": { "version": "1.0.216", "sha": "bbb8094244665e8d3aed1618a31b51b518f92025" },
+    "releaseCommand": "./deploy/release.sh",
+    "releaseStarted": "2026-09-29T17:13:56+02:00",
+    "releaseStopped": "2026-09-29T17:15:32+02:00",
+    "activated": false,
+    "failure": "typecheck failed: tests/db-transaction-diagnostics.test.ts(67,42): Cannot find module '@/lib/server/db-transaction-diagnostics?duplicate-consumer'",
+    "lint": "pass (7 pre-existing warnings)",
+    "tests": "pass (1378 passed, 3 skipped)",
+    "schemaChanged": false,
+    "migrations": 0,
+    "manualDbChanges": false
+  },
+  "process": {
+    "mainPid": 32049,
+    "active": true,
+    "activeSince": "2026-09-29T15:40:49+02:00",
+    "processId": null,
+    "diagnosticsStoreId": null,
+    "scope": null
+  },
+  "shortCanary": {
+    "run": false,
+    "reason": "No candidate build was activated; production remained on 1.0.215.",
+    "durationMinutes": 0,
+    "historySnapshot": null,
+    "receiverCoverage": null,
+    "remainingLanes": null,
+    "counterRates": null,
+    "monotonic": null
+  },
+  "health": {
+    "service": "pass",
+    "localHealth": "pass before release; not restarted",
+    "publicHealth": "pass",
+    "database": "pass",
+    "receiver": "pass",
+    "sse": "pass: public /api/stream emitted snapshot",
+    "radar": "not browser-gated because release did not activate"
+  },
+  "resources": {
+    "cpuPercentAtCapture": 51.3,
+    "rssKbAtCapture": 1147448,
+    "heap": "not separately exposed by health endpoint"
+  },
+  "dbCrossCheck": {
+    "flightPositionInsertsPerMinute": null,
+    "receiverCoverageWrites": null,
+    "reason": "Canary was not started."
+  },
+  "rootCause": {
+    "classification": null,
+    "confidence": "not assessed; runtime fix was not deployed"
+  },
+  "nextStep": "Resolve the typecheck failure in the diagnostics regression test, rerun the complete release gates, then deploy and run the required 5-10 minute canary."
+}
