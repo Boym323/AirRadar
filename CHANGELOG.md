@@ -2,27 +2,6 @@
 
 All notable changes to AirRadar are documented here.
 
-## [1.0.224] - 2026-09-29
-
-Changes since v1.0.223.
-
-### Added
-
-- Enhance weather observation persistence with batch fallback mode and diagnostics (1aebb6fd)
-
-### Maintenance
-
-- Sync generated repository metadata (a993bb62)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (a993bb62)
-- Merge pull request #225 from Boym323/automation/repository-metadata (e67c1507)
-- feat: enhance weather observation persistence with batch fallback mode and diagnostics (1aebb6fd)
-
-</details>
-
 ## [1.0.223] - 2026-09-29
 
 Changes since v1.0.222.
@@ -47,6 +26,7 @@ Changes since v1.0.222.
 - feat: implement batch insert for aircraft weather observations and enhance diagnostics (d231a31)
 
 </details>
+
 ## [1.0.222] - 2026-09-29
 
 Changes since v1.0.221.
@@ -67,6 +47,7 @@ Changes since v1.0.221.
 - docs: record final database attribution measurement (7ce3e84)
 
 </details>
+
 ## [1.0.221] - 2026-09-29
 
 Changes since v1.0.220.
@@ -87,6 +68,7 @@ Changes since v1.0.220.
 - feat: update application DB transaction attribution and autocommit operation attribution (b19ba46)
 
 </details>
+
 ## [1.0.220] - 2026-09-29
 
 Changes since v1.0.219.
@@ -107,6 +89,7 @@ Changes since v1.0.219.
 - docs(db): record autocommit attribution measurement (740ddd0)
 
 </details>
+
 ## [1.0.219] - 2026-09-29
 
 Changes since v1.0.218.
@@ -127,6 +110,7 @@ Changes since v1.0.218.
 - feat(diagnostics): implement db operation tracking and diagnostics (06f8f7b)
 
 </details>
+
 ## [1.0.218] - 2026-09-29
 
 Changes since v1.0.217.
@@ -147,6 +131,7 @@ Changes since v1.0.217.
 - feat(diagnostics): update transaction attribution and canary results (dcba599)
 
 </details>
+
 ## [1.0.217] - 2026-09-29
 
 Changes since v1.0.216.
@@ -167,6 +152,7 @@ Changes since v1.0.216.
 - docs: record diagnostics deployment canary (4b0205d)
 
 </details>
+
 ## [1.0.216] - 2026-09-29
 
 Changes since v1.0.215.
