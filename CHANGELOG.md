@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.218] - 2026-09-29
+
+Changes since v1.0.217.
+
+### Added
+
+- Update transaction attribution and canary results (dcba599)
+
+### Maintenance
+
+- Sync generated repository metadata (4048f42)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (4048f42)
+- Merge pull request #219 from Boym323/automation/repository-metadata (ce87d5e)
+- feat(diagnostics): update transaction attribution and canary results (dcba599)
+
+</details>
 ## [1.0.217] - 2026-09-29
 
 Changes since v1.0.216.
