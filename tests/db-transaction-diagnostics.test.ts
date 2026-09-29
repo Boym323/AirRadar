@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getDbTransactionDiagnostics,
   resetDbTransactionDiagnosticsForTests,
@@ -64,10 +64,20 @@ describe("database transaction attribution", () => {
   });
 
   it("shares counters across independently evaluated module consumers", async () => {
-    const duplicateModule = await import("@/lib/server/db-transaction-diagnostics?duplicate-consumer");
+    await trackDbTransaction("receiver.coverage", async () => undefined);
+    const first = getDbTransactionDiagnostics();
+
+    vi.resetModules();
+
+    const duplicateModule = await import("@/lib/server/db-transaction-diagnostics");
+    const second = duplicateModule.getDbTransactionDiagnostics();
+
+    expect(second.lanes["receiver.coverage"].attempts)
+      .toBe(first.lanes["receiver.coverage"].attempts);
+    expect(second.diagnosticsStoreId).toBe(first.diagnosticsStoreId);
+
     await duplicateModule.trackDbTransaction("receiver.coverage", async () => undefined);
-    expect(getDbTransactionDiagnostics().lanes["receiver.coverage"].attempts).toBe(1);
-    expect(duplicateModule.getDbTransactionDiagnostics().diagnosticsStoreId)
-      .toBe(getDbTransactionDiagnostics().diagnosticsStoreId);
+
+    expect(getDbTransactionDiagnostics().lanes["receiver.coverage"].attempts).toBe(2);
   });
 });
