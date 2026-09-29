@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.222] - 2026-09-29
+
+Changes since v1.0.221.
+
+### Documentation
+
+- Record final database attribution measurement (7ce3e84)
+
+### Maintenance
+
+- Sync generated repository metadata (2663ff4)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (2663ff4)
+- Merge pull request #223 from Boym323/automation/repository-metadata (bbb2ca2)
+- docs: record final database attribution measurement (7ce3e84)
+
+</details>
 ## [1.0.221] - 2026-09-29
 
 Changes since v1.0.220.
