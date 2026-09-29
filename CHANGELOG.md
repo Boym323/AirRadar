@@ -2,6 +2,30 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.223] - 2026-09-29
+
+Changes since v1.0.222.
+
+**Features touched:** Map Context & Weather.
+
+### Added
+
+- Add weather batch insert design documentation and schema (9ceeb7b)
+- Implement batch insert for aircraft weather observations and enhance diagnostics (d231a31)
+
+### Maintenance
+
+- Sync generated repository metadata (f066890)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (f066890)
+- Merge pull request #224 from Boym323/automation/repository-metadata (85a5321)
+- feat: add weather batch insert design documentation and schema (9ceeb7b)
+- feat: implement batch insert for aircraft weather observations and enhance diagnostics (d231a31)
+
+</details>
 ## [1.0.222] - 2026-09-29
 
 Changes since v1.0.221.
