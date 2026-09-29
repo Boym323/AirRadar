@@ -2,6 +2,29 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.207] - 2026-09-29
+
+Changes since v1.0.206.
+
+### Fixed
+
+- Make hourly coverage cache transaction-safe (0adf3c74)
+
+### Maintenance
+
+- Sync generated repository metadata (cf315abf)
+- Add real hourly coverage postgres gate (88050722)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(stats): make hourly coverage cache transaction-safe (0adf3c74)
+- chore(metadata): sync generated repository metadata (cf315abf)
+- Merge pull request #210 from Boym323/automation/repository-metadata (89b15796)
+- test(stats): add real hourly coverage postgres gate (88050722)
+
+</details>
+
 ## [1.0.205] - 2026-09-28
 
 Changes since v1.0.204.
