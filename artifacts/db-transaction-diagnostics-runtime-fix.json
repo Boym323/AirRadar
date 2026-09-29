@@ -1,67 +1,89 @@
 {
   "result": "DIAGNOSTICS FIX BLOCKED",
-  "capturedAt": "2026-09-29T17:16:00+02:00",
+  "capturedAt": "2026-09-29T17:32:17+02:00",
+  "typecheckBlocker": {
+    "error": "tests/db-transaction-diagnostics.test.ts(67,42): error TS2307: Cannot find module '@/lib/server/db-transaction-diagnostics?duplicate-consumer' or its corresponding type declarations.",
+    "fix": "Use vi.resetModules() and re-import the normal module specifier; assert globalThis-backed store identity and counters.",
+    "runtimeImplementationChanged": false
+  },
   "git": {
-    "head": "bbb8094244665e8d3aed1618a31b51b518f92025",
-    "originMain": "bbb8094244665e8d3aed1618a31b51b518f92025",
-    "diagnosticsFixSha": "1d90ba70e078cbacf500b18977c429b59e413b61",
+    "startSha": "8b5cb2c4c9fc63829718244a6fa21c72983cd041",
+    "fixSha": "d45bf5bc435ba3e67b81afe8a78fd3e7faaae237",
+    "finalSha": "92ee76961c530f8ae1f2759be0852a7f26a9396a",
+    "originMain": "92ee76961c530f8ae1f2759be0852a7f26a9396a",
+    "releaseTag": "v1.0.216",
     "cleanTree": true,
-    "intentionalDifference": "The generated v1.0.216 changelog commit is now also origin/main; no remaining local difference."
+    "metadataOnlyOriginCommitsReconciled": true
+  },
+  "validation": {
+    "focusedTests": "6 passed",
+    "fullTests": "1378 passed, 3 skipped",
+    "typecheck": "pass",
+    "lint": "pass (7 pre-existing warnings)",
+    "featuresCheck": "pass",
+    "build": "pass via deploy/release.sh isolated build",
+    "productionGates": "pass",
+    "browserGate": "not run; no visual change"
   },
   "deployment": {
     "previous": { "version": "1.0.215", "sha": "e09a9ab0" },
-    "candidate": { "version": "1.0.216", "sha": "bbb8094244665e8d3aed1618a31b51b518f92025" },
-    "releaseCommand": "./deploy/release.sh",
-    "releaseStarted": "2026-09-29T17:13:56+02:00",
-    "releaseStopped": "2026-09-29T17:15:32+02:00",
-    "activated": false,
-    "failure": "typecheck failed: tests/db-transaction-diagnostics.test.ts(67,42): Cannot find module '@/lib/server/db-transaction-diagnostics?duplicate-consumer'",
-    "lint": "pass (7 pre-existing warnings)",
-    "tests": "pass (1378 passed, 3 skipped)",
-    "schemaChanged": false,
+    "current": { "version": "1.0.216", "sha": "d45bf5bc" },
+    "releaseCommand": "sudo ./deploy/release.sh",
+    "activated": true,
     "migrations": 0,
-    "manualDbChanges": false
+    "schemaChanged": false,
+    "manualDbChanges": false,
+    "persistenceSemanticsChanged": false
   },
-  "process": {
-    "mainPid": 32049,
-    "active": true,
-    "activeSince": "2026-09-29T15:40:49+02:00",
-    "processId": null,
-    "diagnosticsStoreId": null,
-    "scope": null
+  "identity": {
+    "scope": "process-local",
+    "preRestart": {
+      "mainPid": 45834,
+      "processId": 45834,
+      "diagnosticsStoreId": "dbtx-mumtthy5-ufin7cvf",
+      "startedAt": "2026-09-29T15:23:41.213Z"
+    },
+    "postRestart": {
+      "mainPid": 46826,
+      "processId": 46826,
+      "diagnosticsStoreId": "dbtx-mumu074l-l4t6patg",
+      "startedAt": "2026-09-29T15:28:53.781Z"
+    },
+    "stableAcrossCanary": false,
+    "restartEvidence": "systemd clean SIGTERM and restart; NRestarts=0"
   },
   "shortCanary": {
-    "run": false,
-    "reason": "No candidate build was activated; production remained on 1.0.215.",
-    "durationMinutes": 0,
-    "historySnapshot": null,
-    "receiverCoverage": null,
-    "remainingLanes": null,
-    "counterRates": null,
-    "monotonic": null
+    "run": true,
+    "durationMinutes": 5.6,
+    "blocked": true,
+    "reason": "Clean systemd restart changed processId and diagnosticsStoreId during the observation window.",
+    "preRestart": {
+      "durationSeconds": 167,
+      "history": { "startAttempts": 391, "endAttempts": 840, "attemptsPerMinute": 161.3, "commitsPerMinute": 161.3, "failuresPerMinute": 0, "workUnitsPerTransaction": 1, "maxConcurrent": 8, "avgDurationMs": 315 },
+      "receiverCoverage": { "startAttempts": 1, "endAttempts": 2, "attemptsPerMinute": 0.36, "commitsPerMinute": 0.36, "failuresPerMinute": 0, "workUnitsPerTransaction": 217, "maxConcurrent": 1, "avgDurationMs": 1283 }
+    },
+    "postRestart": {
+      "durationSeconds": 112,
+      "history": { "startAttempts": 171, "endAttempts": 478, "attemptsPerMinute": 164.5, "commitsPerMinute": 164.5, "failuresPerMinute": 0, "workUnitsPerTransaction": 1, "maxConcurrent": 8, "avgDurationMs": 289 },
+      "receiverCoverage": { "startAttempts": 0, "endAttempts": 1, "attemptsPerMinute": 0.54, "commitsPerMinute": 0.54, "failuresPerMinute": 0, "workUnitsPerTransaction": 184, "maxConcurrent": 1, "avgDurationMs": 555 }
+    },
+    "monotonicWithinIntervals": true,
+    "allZeroBugResolved": true
   },
   "health": {
     "service": "pass",
-    "localHealth": "pass before release; not restarted",
-    "publicHealth": "pass",
     "database": "pass",
     "receiver": "pass",
-    "sse": "pass: public /api/stream emitted snapshot",
-    "radar": "not browser-gated because release did not activate"
-  },
-  "resources": {
-    "cpuPercentAtCapture": 51.3,
-    "rssKbAtCapture": 1147448,
-    "heap": "not separately exposed by health endpoint"
-  },
-  "dbCrossCheck": {
-    "flightPositionInsertsPerMinute": null,
-    "receiverCoverageWrites": null,
-    "reason": "Canary was not started."
+    "sse": "pass",
+    "radar": "pass",
+    "history": "pass",
+    "weather": "pass",
+    "navigation": "pass",
+    "coverage": "pass"
   },
   "rootCause": {
-    "classification": null,
-    "confidence": "not assessed; runtime fix was not deployed"
+    "classification": "MODULE INSTANCE DUPLICATION",
+    "confidence": "high for the original query-suffixed test mechanism; production restart was an independent clean systemd event"
   },
-  "nextStep": "Resolve the typecheck failure in the diagnostics regression test, rerun the complete release gates, then deploy and run the required 5-10 minute canary."
+  "nextStep": "INVESTIGATE PROCESS / STORE IDENTITY; rerun an uninterrupted short canary before 30-60 minute attribution"
 }
