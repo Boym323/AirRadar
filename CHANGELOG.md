@@ -2,6 +2,53 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.206] - 2026-09-29
+
+Changes since v1.0.205.
+
+**Features touched:** Aircraft & Flight Detail, System Observability.
+
+### Added
+
+- Add FlightPosition persistence shadow evaluator (e5c8ae95)
+- Add flight position shadow production data (97fba13c)
+- Add flight update policy and audit script for database write amplification (a2faee0c)
+- Add db update coalescing production data for performance measurement (7449f620)
+
+### Fixed
+
+- Keep shadow diagnostics admin-only (d27e85e9)
+- Isolate safe Aircraft update suppression (4c743904)
+
+### Performance
+
+- Suppress redundant hourly coverage lookups (ae814ed4)
+- Suppress redundant hourly coverage lookups (07a9d697)
+
+### Maintenance
+
+- Sync generated repository metadata (2ac17ce8)
+- Add runtime storage and database performance audit documentation (27a2cbe3)
+- Remove obsolete Flight policy coverage (e6cea8cc)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (2ac17ce8)
+- Merge pull request #209 from Boym323/automation/repository-metadata (bfad3bb0)
+- chore(audit): add runtime storage and database performance audit documentation (27a2cbe3)
+- feat(history): add FlightPosition persistence shadow evaluator (e5c8ae95)
+- fix(system): keep shadow diagnostics admin-only (d27e85e9)
+- feat(artifacts): add flight position shadow production data (97fba13c)
+- feat: add flight update policy and audit script for database write amplification (a2faee0c)
+- fix(db): isolate safe Aircraft update suppression (4c743904)
+- test(db): remove obsolete Flight policy coverage (e6cea8cc)
+- feat(artifacts): add db update coalescing production data for performance measurement (7449f620)
+- perf(stats): suppress redundant hourly coverage lookups (ae814ed4)
+- perf(stats): suppress redundant hourly coverage lookups (07a9d697)
+
+</details>
+
 ## [1.0.205] - 2026-09-28
 
 Changes since v1.0.204.
