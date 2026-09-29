@@ -2,6 +2,26 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.221] - 2026-09-29
+
+Changes since v1.0.220.
+
+### Added
+
+- Update application DB transaction attribution and autocommit operation attribution (b19ba46)
+
+### Maintenance
+
+- Sync generated repository metadata (737a794)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (737a794)
+- Merge pull request #222 from Boym323/automation/repository-metadata (a3345d0)
+- feat: update application DB transaction attribution and autocommit operation attribution (b19ba46)
+
+</details>
 ## [1.0.220] - 2026-09-29
 
 Changes since v1.0.219.
