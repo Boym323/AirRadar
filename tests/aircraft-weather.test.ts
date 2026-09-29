@@ -1,5 +1,7 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { Aircraft } from "@/lib/aircraft/types";
+const mocks = vi.hoisted(() => ({ getPrisma: vi.fn() }));
+vi.mock("@/lib/server/db", () => ({ getPrisma: mocks.getPrisma }));
 import {
   aggregateAircraftWeatherProfile,
   AIRCRAFT_WEATHER_PERSISTENCE_POLICY,
@@ -9,12 +11,14 @@ import {
   getAircraftWeatherDiagnostics,
   observationFromAircraft,
   observationFromStoredWeatherRow,
+  persistAircraftWeatherObservations,
   resetAircraftWeatherDiagnostics,
   shouldPersistWeatherObservation,
   weatherObservationFingerprint,
   type AircraftWeatherObservation,
   weatherQueryFetchLimit,
 } from "@/lib/server/aircraft-weather";
+import { getDbOperationDiagnostics } from "@/lib/server/db-operation-diagnostics";
 import { buildAircraftWeatherQualityReport } from "@/lib/server/aircraft-weather-quality";
 
 const at = new Date("2026-09-28T09:00:00.000Z");
@@ -42,7 +46,47 @@ function row(overrides: Partial<AircraftWeatherObservation> = {}): AircraftWeath
 }
 
 describe("aircraft weather observations", () => {
-  beforeEach(() => resetAircraftWeatherDiagnostics());
+  beforeEach(() => { resetAircraftWeatherDiagnostics(); mocks.getPrisma.mockReset(); mocks.getPrisma.mockReturnValue(null); vi.stubEnv("AIRRADAR_WEATHER_BATCH_INSERT_ENABLED", "false"); });
+  afterEach(() => vi.unstubAllEnvs());
+
+  function database(create = vi.fn(async () => undefined), execute = vi.fn(async () => undefined)) {
+    return {
+      orm: { public: { AircraftWeatherObservation: { create } } },
+      sql: { public: { aircraftWeatherObservation: { insert: (rows: unknown[]) => ({ build: () => ({ rows }) }) } } },
+      runtime: async () => ({ execute }),
+    } as never;
+  }
+
+  it("keeps legacy single-row writes on the ordinary create lane", async () => {
+    const create = vi.fn(async () => undefined);
+    mocks.getPrisma.mockReturnValue(database(create));
+    await persistAircraftWeatherObservations([aircraft()], at);
+    expect(create).toHaveBeenCalledTimes(1);
+    const lane = getDbOperationDiagnostics().lanes["weather.observation.create"];
+    const fallback = getDbOperationDiagnostics().lanes["weather.observation.fallback-create"];
+    expect(lane.attempts).toBeGreaterThan(0);
+    expect(fallback.attempts).toBe(0);
+    expect(getAircraftWeatherDiagnostics()).toMatchObject({ fallbackRows: 0, fallbackSuccesses: 0, fallbackFailures: 0 });
+  });
+
+  it("processes duplicate aircraft sequentially so the second decision sees the first persistence", async () => {
+    const create = vi.fn(async () => undefined);
+    mocks.getPrisma.mockReturnValue(database(create));
+    const changed = aircraft({ adsbTelemetry: { ...aircraft().adsbTelemetry!, outsideAirTemperatureC: -42 } });
+    await persistAircraftWeatherObservations([aircraft(), changed], at);
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(getAircraftWeatherDiagnostics()).toMatchObject({ weatherPersistedFirst: 1, weatherPersistedWeatherChange: 1, fallbackRows: 0 });
+  });
+
+  it("records actual capped chunks separately from the natural selected-row maximum", async () => {
+    vi.stubEnv("AIRRADAR_WEATHER_BATCH_INSERT_ENABLED", "true");
+    const execute = vi.fn(async () => undefined);
+    mocks.getPrisma.mockReturnValue(database(undefined, execute));
+    const rows = Array.from({ length: 30 }, (_, index) => aircraft({ icaoHex: `ABC${String(index).padStart(3, "0")}` }));
+    await persistAircraftWeatherObservations(rows, at);
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(getAircraftWeatherDiagnostics()).toMatchObject({ naturalMaxSelectedRows: 30, maxBatchSize: 16, capHitCount: 1, totalBatchRows: 30 });
+  });
 
   it("keeps readsb telemetry as READSB_JSON and preserves static/total temperature", () => {
     const result = observationFromAircraft(aircraft(), at);

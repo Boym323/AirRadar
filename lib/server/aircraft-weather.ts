@@ -485,8 +485,14 @@ function rememberMemoryRow(observation: AircraftWeatherObservation): void {
   while (memoryRows.length > AIRCRAFT_WEATHER_LIMITS.maxRows) memoryRows.shift();
 }
 
-async function writeWeatherObservation(database: NonNullable<ReturnType<typeof getPrisma>>, observation: AircraftWeatherObservation): Promise<void> {
-  await trackDbOperation("weather.observation.fallback-create", () => database.orm.public.AircraftWeatherObservation.create(weatherObservationToInsertRow(observation)));
+type WeatherSingleWriteMode = "LEGACY_SINGLE" | "BATCH_FALLBACK";
+
+function weatherSingleWriteLane(mode: WeatherSingleWriteMode): "weather.observation.create" | "weather.observation.fallback-create" {
+  return mode === "BATCH_FALLBACK" ? "weather.observation.fallback-create" : "weather.observation.create";
+}
+
+async function writeWeatherObservation(database: NonNullable<ReturnType<typeof getPrisma>>, observation: AircraftWeatherObservation, mode: WeatherSingleWriteMode): Promise<void> {
+  await trackDbOperation(weatherSingleWriteLane(mode), () => database.orm.public.AircraftWeatherObservation.create(weatherObservationToInsertRow(observation)));
 }
 
 export function weatherObservationToInsertRow(observation: AircraftWeatherObservation): WeatherInsertRow {
@@ -557,33 +563,65 @@ async function writeWeatherObservationBatch(database: NonNullable<ReturnType<typ
   await trackDbOperation("weather.observation.batch-insert", async () => (await database.runtime()).execute(plan as never));
 }
 
-async function persistSingle(database: NonNullable<ReturnType<typeof getPrisma>>, observation: AircraftWeatherObservation, reason: WeatherPersistenceReason, countAsFallback = true): Promise<void> {
+async function persistSingle(database: NonNullable<ReturnType<typeof getPrisma>>, observation: AircraftWeatherObservation, reason: WeatherPersistenceReason, mode: WeatherSingleWriteMode = "LEGACY_SINGLE"): Promise<void> {
   try {
-    await writeWeatherObservation(database, observation);
+    await writeWeatherObservation(database, observation, mode);
     rememberMemoryRow(observation); markPersisted(observation, reason);
-    if (countAsFallback) diagnostics.fallbackSuccesses += 1;
+    if (mode === "BATCH_FALLBACK") diagnostics.fallbackSuccesses += 1;
     noteWeatherDbSuccess();
   } catch (error) {
     const kind = classifyWeatherDbError(error);
     if (kind === "EXACT_DEDUP_CONFLICT") {
       diagnostics.weatherExactDeduplicated += 1; diagnostics.weatherDeduplicated += 1; markPersisted(observation, reason);
       } else {
-      if (countAsFallback) diagnostics.fallbackFailures += 1;
+      if (mode === "BATCH_FALLBACK") diagnostics.fallbackFailures += 1;
       diagnostics.weatherPersistenceFailures += 1;
     }
   }
 }
 
-async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provider: string): Promise<void> {
-  const database = getPrisma();
-  const staged: Array<{ observation: AircraftWeatherObservation; reason: WeatherPersistenceReason }> = [];
-  const seenAircraft = new Set<string>();
-  let duplicateAircraft = false;
+async function persistWeatherSequentially(database: NonNullable<ReturnType<typeof getPrisma>> | null, aircraft: Aircraft[], receivedAt: Date, provider: string): Promise<number> {
+  let selectedRows = 0;
   for (const item of aircraft) {
     const observation = observationFromAircraft(item, receivedAt, { provider });
     if (!observation) continue;
-    if (seenAircraft.has(observation.aircraftHex)) duplicateAircraft = true;
-    seenAircraft.add(observation.aircraftHex);
+    const accumulator = accumulators.get(observation.aircraftHex);
+    const reason = decideWeatherPersistence(observation, accumulator);
+    if (!reason) {
+      const fingerprint = weatherObservationFingerprint(observation);
+      if (observation.source === "BDS_4_4" && accumulator?.lastPersistedFingerprint === fingerprint) {
+        diagnostics.weatherExactDeduplicated += 1;
+        diagnostics.weatherDeduplicated += 1;
+      } else {
+        diagnostics.weatherCoalesced += 1;
+      }
+      continue;
+    }
+    selectedRows += 1;
+    observation.dedupKey = dedupKey(observation);
+    if (!database) {
+      rememberMemoryRow(observation);
+      markPersisted(observation, reason);
+    } else {
+      await persistSingle(database, observation, reason);
+    }
+  }
+  return selectedRows;
+}
+
+async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provider: string): Promise<void> {
+  const database = getPrisma();
+  const duplicateAircraft = new Set(aircraft.map((item) => item.icaoHex)).size !== aircraft.length;
+  if (duplicateAircraft) {
+    const selectedRows = await persistWeatherSequentially(database, aircraft, receivedAt, provider);
+    diagnostics.candidateRows += selectedRows;
+    recordNaturalInvocation(aircraft.length, selectedRows);
+    return;
+  }
+  const staged: Array<{ observation: AircraftWeatherObservation; reason: WeatherPersistenceReason }> = [];
+  for (const item of aircraft) {
+    const observation = observationFromAircraft(item, receivedAt, { provider });
+    if (!observation) continue;
     const accumulator = accumulators.get(observation.aircraftHex);
     const reason = decideWeatherPersistence(observation, accumulator);
     if (!reason) {
@@ -602,7 +640,7 @@ async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provi
   diagnostics.candidateRows += staged.length;
   recordNaturalInvocation(aircraft.length, staged.length);
   if (!staged.length) return;
-  if (!database || !isAircraftWeatherBatchInsertEnabled() || duplicateAircraft) {
+  if (!database || !isAircraftWeatherBatchInsertEnabled()) {
     for (const { observation, reason } of staged) {
       if (!database) { rememberMemoryRow(observation); markPersisted(observation, reason); }
       else await persistSingle(database, observation, reason);
@@ -613,7 +651,6 @@ async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provi
     diagnostics.circuitSkippedRows += staged.length;
     return;
   }
-  diagnostics.maxBatchSize = Math.max(diagnostics.maxBatchSize, staged.length);
   const chunks: Array<typeof staged> = [];
   for (let offset = 0; offset < staged.length; offset += MAX_WEATHER_BATCH_ROWS) chunks.push(staged.slice(offset, offset + MAX_WEATHER_BATCH_ROWS));
   if (staged.length > MAX_WEATHER_BATCH_ROWS) diagnostics.capHitCount += 1;
@@ -622,6 +659,7 @@ async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provi
       diagnostics.circuitSkippedRows += chunks.slice(chunks.indexOf(chunk)).reduce((count, value) => count + value.length, 0);
       break;
     }
+    diagnostics.maxBatchSize = Math.max(diagnostics.maxBatchSize, chunk.length);
     diagnostics.batchAttempts += 1; diagnostics.totalBatchRows += chunk.length;
     try {
       await writeWeatherObservationBatch(database, chunk.map((entry) => entry.observation));
@@ -641,7 +679,7 @@ async function persistWeatherBatch(aircraft: Aircraft[], receivedAt: Date, provi
       else diagnostics.batchDataFailures += 1;
       const fallback = chunk.slice(0, MAX_WEATHER_FALLBACK_ROWS);
       diagnostics.fallbackRows += fallback.length;
-      for (const { observation, reason } of fallback) await persistSingle(database, observation, reason);
+      for (const { observation, reason } of fallback) await persistSingle(database, observation, reason, "BATCH_FALLBACK");
     }
   }
 }
@@ -668,7 +706,7 @@ export function flushAircraftWeatherPersistence(deadline = Date.now() + 1_500): 
         const observation = accumulator.lastObservation;
         if (!observation || (accumulator.lastPersisted && weatherObservationFingerprint(observation) === accumulator.lastPersistedFingerprint)) continue;
         observation.dedupKey = dedupKey(observation);
-        await persistSingle(database, observation, "HEARTBEAT", false); flushed += 1;
+        await persistSingle(database, observation, "HEARTBEAT"); flushed += 1;
       }
       return flushed;
     }
@@ -694,7 +732,7 @@ export function flushAircraftWeatherPersistence(deadline = Date.now() + 1_500): 
         if (kind === "EXACT_DEDUP_CONFLICT" || kind === "ROW_OR_DATA") {
           for (const observation of chunk.slice(0, MAX_WEATHER_FALLBACK_ROWS)) {
             if (Date.now() >= deadline || circuitIsOpen()) break;
-            await persistSingle(database, observation, "HEARTBEAT"); flushed += 1;
+            await persistSingle(database, observation, "HEARTBEAT", "BATCH_FALLBACK"); flushed += 1;
           }
         }
       }
