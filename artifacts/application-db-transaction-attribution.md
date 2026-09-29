@@ -2,52 +2,53 @@
 
 ## Result
 
-The long attribution completed uninterrupted for 30m14s on process `48621` and
-diagnostics store `dbtx-mumugx0c-gzmu25ul`.
+**AUTOCOMMIT ATTRIBUTION BLOCKED** — 92.70% explained; required gate is 95%.
 
-## Window
+The stable production window ran from `2026-09-29 18:54:14 CEST` to
+`2026-09-29 19:25:01 CEST` (30m47s) on version `1.0.219 / 06f8f7ba`, MainPID
+`53003`. The process, transaction store, and autocommit store remained stable;
+there was no restart.
 
-- Start: `2026-09-29 17:55:59 CEST`
-- End: `2026-09-29 18:26:13 CEST`
-- Version/SHA: `1.0.217 / 4b0205d0`
-- PostgreSQL: 15,178 commits (501.9/min), 189 rollbacks (6.2/min), 15,367
-  transactions (508.2/min)
-- Deadlocks: 0; external DB clients: 0; application connections: 11 (1 active,
-  10 idle)
+## PostgreSQL totals
+
+- Commits: 10,108 (328.34/min)
+- Rollbacks: 113 (3.67/min)
+- Total transactions: 10,221 (332.02/min)
+- Deadlocks: 0; lock waits: 0; long transactions: 0
 - `pg_stat_statements`: unavailable
 
-## Explicit transaction lanes
+## Explicit transactions
 
-| Lane | Attempts | Commits | Failures | Rate/min |
-|---|---:|---:|---:|---:|
-| history.snapshot | 5,547 | 5,547 | 0 | 183.5 |
-| receiver.daily-stats | 58 | 58 | 0 | 1.9 |
-| receiver.coverage | 15 | 15 | 0 | 0.5 |
-| receiver.advanced-stats | 58 | 58 | 0 | 1.9 |
-| all explicit lanes | 5,678 | 5,678 | 0 | 187.8 |
+| Lane | Commits | Rate/min |
+| --- | ---: | ---: |
+| history.snapshot | 3,478 | 112.98 |
+| receiver.daily-stats | 53 | 1.72 |
+| receiver.coverage | 16 | 0.52 |
+| receiver.advanced-stats | 61 | 1.98 |
+| All explicit lanes | 3,608 | 117.20 |
 
-The explicit registry explains 36.9% of PostgreSQL transactions. All
-instrumented attempts committed successfully.
+## Autocommit operations
 
-## Autocommit/write evidence
+Instrumented successes totaled 5,730 (186.13/min): navigation observations
+2,167, navigation anomaly upserts 1,255, weather observations 1,381, metadata
+reads 641, and ATC dataset reads 286. Navigation observation failures were 113;
+all other measured lanes had zero failures.
 
-`pg_stat_user_tables` deltas measured: `flightPosition` 172.6 inserts/min,
-`receiverCoverageHourly` 9.9 inserts/min, `aircraftWeatherObservation` 84.5
-inserts/min, `navigationIntegrityObservation` 139.9 inserts/min,
-`navigationIntegrityAnomaly` 11.8 inserts/min, and `flight` 4.2 inserts/min.
+Table deltas were plausible: navigation observation inserts 2,280, weather
+observation inserts 1,379, and navigation anomaly insert+update changes 1,255.
 
-Autocommit reads were not separately measurable because `pg_stat_statements` is
-unavailable and `pg_stat_database` does not classify read transactions.
+## Reconciliation and decision
 
-## Decision
+Explicit transactions contributed 117.20/min, instrumented autocommit writes
+156.01/min, instrumented reads 30.11/min, and the bounded measurement observer
+at least 1.04/min. Together these explain 304.36/min, or 92.70% of the fresh
+PostgreSQL total. The remaining 27.66/min is untracked application activity.
 
-- Explained: **36.9%**
-- Unexplained: **63.1%**
-- Target: **≥95%**
-- Exact unexplained class: autocommit reads and autocommit writes outside the
-  explicit-lane registry; no external clients were observed.
-- Next optimization: **none selected**. The target was not met, so no batching
-  or read-optimization candidate is justified by this run.
+The source audit identifies likely missing classes including FlightPosition
+persistence and several route/status/catalog ORM reads. No optimization may be
+selected until those paths are classified and attribution reaches 95%.
 
-No application code, schema, migration, persistence semantics, deployment, or
-restart occurred during the measurement.
+## Safety
+
+Schema changed: NO. Migration: NO. Persistence semantics changed: NO.
+Optimization deployed: NO. Deployment or restart during measurement: NO.

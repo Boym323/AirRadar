@@ -1,11 +1,19 @@
 {
-  "schemaVersion": 1,
-  "status": "instrumentation-ready",
+  "schemaVersion": 2,
+  "status": "production-measured-below-target",
   "scope": "process-local",
-  "productionMeasurement": null,
-  "schemaChanged": false,
-  "migration": false,
-  "optimizationDeployed": false,
+  "productionMeasurement": {
+    "startedAt": "2026-09-29T16:54:14.225Z",
+    "endedAt": "2026-09-29T17:25:01.308Z",
+    "durationMinutes": 30.7847,
+    "uninterrupted": true,
+    "mainPid": 53003,
+    "processId": 53003,
+    "diagnosticsStoreId": "dbop-mumwww8b-mys50qou",
+    "transactionDiagnosticsStoreId": "dbtx-mumwww8a-zfs56zn",
+    "processStartedAt": "2026-09-29T16:50:18.087Z",
+    "restartDuringWindow": false
+  },
   "lanes": [
     {"sourceFile":"lib/server/navigation-integrity.ts","function":"persistObservation","ormOperation":"NavigationIntegrityObservation.create","insideExplicitTransaction":false,"lane":"navigation.observation.create","kind":"WRITE","operation":"INSERT"},
     {"sourceFile":"lib/server/navigation-integrity.ts","function":"persistAnomaly","ormOperation":"NavigationIntegrityAnomaly.upsert","insideExplicitTransaction":false,"lane":"navigation.anomaly.upsert","kind":"WRITE","operation":"UPSERT"},
@@ -14,8 +22,20 @@
     {"sourceFile":"lib/server/aircraft-weather.ts","function":"queryAircraftWeatherObservations","ormOperation":"AircraftWeatherObservation.all","insideExplicitTransaction":false,"lane":"weather.observation.query","kind":"READ","operation":"SELECT"},
     {"sourceFile":"lib/server/aircraft-metadata-catalog.ts","function":"getMetadata","ormOperation":"AircraftMetadataCache.first","insideExplicitTransaction":false,"lane":"aircraft-metadata.cache.lookup","kind":"READ","operation":"SELECT"},
     {"sourceFile":"lib/server/reception-records.ts","function":"loadReceptionRecords","ormOperation":"ReceiverDailyStats.all","insideExplicitTransaction":false,"lane":"receiver.reception-record.query","kind":"READ","operation":"SELECT"},
-    {"sourceFile":"lib/server/atc-data.ts","function":"getStoredAtcData","ormOperation":"AtcSector.all","insideExplicitTransaction":false,"lane":"atc.dataset.load","kind":"READ","operation":"SELECT"},
-    {"sourceFile":"lib/server/atc-data.ts","function":"getStoredAtcData","ormOperation":"AtcTransmitter.all","insideExplicitTransaction":false,"lane":"atc.dataset.load","kind":"READ","operation":"SELECT"}
+    {"sourceFile":"lib/server/atc-data.ts","function":"getStoredAtcData","ormOperation":"AtcSector.all + AtcTransmitter.all","insideExplicitTransaction":false,"lane":"atc.dataset.load","kind":"READ","operation":"SELECT"}
   ],
-  "excluded": "ORM calls inside explicit database.transaction wrappers remain owned by db-transaction-diagnostics; in-memory cache/fallback reads are not counted."
+  "measuredLanes": {
+    "navigation.observation.create": {"attempts":2280,"successes":2167,"failures":113,"successPerMinute":70.39,"averageDurationMs":24.2,"maxDurationMs":2910},
+    "navigation.anomaly.upsert": {"attempts":1255,"successes":1255,"failures":0,"successPerMinute":40.77,"averageDurationMs":8.36,"maxDurationMs":1135},
+    "weather.observation.create": {"attempts":1381,"successes":1381,"failures":0,"successPerMinute":44.85,"averageDurationMs":228.2,"maxDurationMs":3207},
+    "aircraft-metadata.cache.lookup": {"attempts":641,"successes":641,"failures":0,"successPerMinute":20.82,"averageDurationMs":11.9,"maxDurationMs":3190},
+    "receiver.reception-record.query": {"attempts":0,"successes":0,"failures":0,"successPerMinute":0,"averageDurationMs":0,"maxDurationMs":0},
+    "atc.dataset.load": {"attempts":286,"successes":286,"failures":0,"successPerMinute":9.29,"averageDurationMs":48.3,"maxDurationMs":3068}
+  },
+  "tableCrossCheck": {
+    "navigationIntegrityObservation": {"diagnosticSuccesses":2167,"tableInsertDelta":2280,"note":"The 113 failed attempts correspond to PostgreSQL rollbacks; table delta matches attempts."},
+    "aircraftWeatherObservation": {"diagnosticSuccesses":1381,"tableInsertDelta":1379,"note":"Two writes were in flight at the final snapshot; agreement is plausible."},
+    "navigationIntegrityAnomaly": {"diagnosticSuccesses":1255,"tableInsertPlusUpdateDelta":1255}
+  },
+  "excluded": "ORM calls inside explicit database.transaction wrappers remain owned by db-transaction-diagnostics; maintenance and import transactions are excluded. Source audit found additional uninstrumented production ORM reads/writes, including FlightPosition persistence and route/status/catalog reads."
 }
