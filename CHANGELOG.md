@@ -2,27 +2,6 @@
 
 All notable changes to AirRadar are documented here.
 
-## [1.0.225] - 2026-09-29
-
-Changes since v1.0.224.
-
-### Added
-
-- Add integration tests and documentation for weather batch insert with PostgreSQL (dbea4b85)
-
-### Maintenance
-
-- Sync generated repository metadata (3fa85cc6)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (3fa85cc6)
-- Merge pull request #226 from Boym323/automation/repository-metadata (740e7233)
-- feat: add integration tests and documentation for weather batch insert with PostgreSQL (dbea4b85)
-
-</details>
-
 ## [1.0.223] - 2026-09-29
 
 Changes since v1.0.222.
