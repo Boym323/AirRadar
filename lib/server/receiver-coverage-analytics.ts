@@ -22,6 +22,8 @@ export interface CoverageDiagnostics {
   enabled: boolean; sampleIntervalMs: number; comparisonRadiusNm: number; lastSampleAt: string | null;
   samplesProcessed: number; availableObservations: number; capturedObservations: number; pendingBuckets: number;
   lastFlushAt: string | null; lastFlushDurationMs: number | null; lastFlushRows: number; flushFailures: number;
+  flushAttempts: number; flushSuccesses: number; rowsConsidered: number; rowsInserted: number; rowsUpdated: number;
+  rowsSkippedUnchanged: number; dirtyEntries: number; maxDirtyEntries: number; averageRowsPerFlush: number;
   lastError: string | null; skippedNoNetwork: number; skippedLocalUnhealthy: number;
 }
 type Counter = { available: number; captured: number };
@@ -70,6 +72,7 @@ export class ReceiverCoverageAnalytics {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private flushInFlight: Promise<void> | null = null;
+  private readonly persistedRows = new Map<string, { availableCount: number; capturedCount: number; referenceProviders: string }>();
   private running = false;
   private state: CoverageDiagnostics;
 
@@ -91,6 +94,15 @@ export class ReceiverCoverageAnalytics {
       lastFlushDurationMs: null,
       lastFlushRows: 0,
       flushFailures: 0,
+      flushAttempts: 0,
+      flushSuccesses: 0,
+      rowsConsidered: 0,
+      rowsInserted: 0,
+      rowsUpdated: 0,
+      rowsSkippedUnchanged: 0,
+      dirtyEntries: 0,
+      maxDirtyEntries: 0,
+      averageRowsPerFlush: 0,
       lastError: null,
       skippedNoNetwork: 0,
       skippedLocalUnhealthy: 0,
@@ -184,6 +196,8 @@ export class ReceiverCoverageAnalytics {
     this.flushing = batch;
     this.updatePendingBucketCount();
     const started = Date.now();
+    this.state.flushAttempts += 1;
+    this.state.rowsConsidered += [...batch.values()].reduce((count, value) => count + value.buckets.size, 0);
 
     this.flushInFlight = (async () => {
       const rows = [...batch.entries()].flatMap(([hourMs, pendingHour]) =>
@@ -196,29 +210,64 @@ export class ReceiverCoverageAnalytics {
           referenceProviders: [...pendingHour.providers].sort().join(","),
         })));
 
+      let inserted = 0;
+      let updated = 0;
+      let skipped = 0;
       try {
         await database.transaction(async (transaction) => {
           const schema = transaction.orm.public;
           for (const row of rows) {
-            const existing = await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).first();
+            const rowKey = `${row.hour.epochMilliseconds}:${row.bucketKey}`;
+            let existing = this.persistedRows.get(rowKey);
+            if (!existing) {
+              const loaded = await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).first();
+              if (loaded) {
+                existing = {
+                  availableCount: loaded.availableCount,
+                  capturedCount: loaded.capturedCount,
+                  referenceProviders: loaded.referenceProviders,
+                };
+                this.persistedRows.set(rowKey, existing);
+              }
+            }
             if (existing) {
               const providers = new Set([
                 ...existing.referenceProviders.split(",").map((item: string) => item.trim()).filter(Boolean),
                 ...row.referenceProviders.split(",").map((item: string) => item.trim()).filter(Boolean),
               ]);
+              const nextProviders = [...providers].sort().join(",");
+              if (row.availableCount === 0 && row.capturedCount === 0 && nextProviders === existing.referenceProviders) {
+                skipped += 1;
+                continue;
+              }
               await schema.ReceiverCoverageHourly.where({ hour: row.hour, bucketKey: row.bucketKey }).update({
                 availableCount: existing.availableCount + row.availableCount,
                 capturedCount: existing.capturedCount + row.capturedCount,
-                referenceProviders: [...providers].sort().join(","),
+                referenceProviders: nextProviders,
               });
+              existing.availableCount += row.availableCount;
+              existing.capturedCount += row.capturedCount;
+              existing.referenceProviders = nextProviders;
+              updated += 1;
             } else {
               await schema.ReceiverCoverageHourly.create(row);
+              this.persistedRows.set(rowKey, {
+                availableCount: row.availableCount,
+                capturedCount: row.capturedCount,
+                referenceProviders: row.referenceProviders,
+              });
+              inserted += 1;
             }
           }
         });
         this.state.lastFlushAt = new Date().toISOString();
         this.state.lastFlushDurationMs = Date.now() - started;
         this.state.lastFlushRows = rows.length;
+        this.state.flushSuccesses += 1;
+        this.state.rowsInserted += inserted;
+        this.state.rowsUpdated += updated;
+        this.state.rowsSkippedUnchanged += skipped;
+        this.state.averageRowsPerFlush = (this.state.rowsInserted + this.state.rowsUpdated + this.state.rowsSkippedUnchanged) / this.state.flushSuccesses;
         this.state.lastError = null;
       } catch (error) {
         this.mergePending(batch);
@@ -298,6 +347,8 @@ export class ReceiverCoverageAnalytics {
       for (const pendingHour of source.values()) total += pendingHour.buckets.size;
     }
     this.state.pendingBuckets = total;
+    this.state.dirtyEntries = total;
+    this.state.maxDirtyEntries = Math.max(this.state.maxDirtyEntries, total);
   }
 }
 
@@ -323,5 +374,5 @@ export async function getHistoricalReceiverCoverage(period: Exclude<CoveragePeri
   }
   const overall = aggregate.get("overall") ?? { available: 0, captured: 0 };
   const make = (prefix: string) => [...aggregate.entries()].filter(([key]) => key.startsWith(prefix)).map(([key, value]) => toPublic(key, value));
-  return { period, from: from.toISOString(), to: now.toISOString(), comparisonRadiusNm: getReceiverComparisonRadiusNm(), summary: { ...overall, ratio: ratio(overall), samples: 0 }, azimuth: make("azimuth:"), range: make("range:"), altitude: make("altitude:"), polar: make("polar:"), metadata: { referenceProviders: [...providers].sort(), mixedProviders: providers.size > 1, insufficientThreshold: INSUFFICIENT_OBSERVATIONS, diagnostics: { enabled: true, sampleIntervalMs: 0, comparisonRadiusNm: getReceiverComparisonRadiusNm(), lastSampleAt: null, samplesProcessed: 0, availableObservations: overall.available, capturedObservations: overall.captured, pendingBuckets: 0, lastFlushAt: null, lastFlushDurationMs: null, lastFlushRows: 0, flushFailures: 0, lastError: null, skippedNoNetwork: 0, skippedLocalUnhealthy: 0 } } };
+  return { period, from: from.toISOString(), to: now.toISOString(), comparisonRadiusNm: getReceiverComparisonRadiusNm(), summary: { ...overall, ratio: ratio(overall), samples: 0 }, azimuth: make("azimuth:"), range: make("range:"), altitude: make("altitude:"), polar: make("polar:"), metadata: { referenceProviders: [...providers].sort(), mixedProviders: providers.size > 1, insufficientThreshold: INSUFFICIENT_OBSERVATIONS, diagnostics: { enabled: true, sampleIntervalMs: 0, comparisonRadiusNm: getReceiverComparisonRadiusNm(), lastSampleAt: null, samplesProcessed: 0, availableObservations: overall.available, capturedObservations: overall.captured, pendingBuckets: 0, lastFlushAt: null, lastFlushDurationMs: null, lastFlushRows: 0, flushFailures: 0, flushAttempts: 0, flushSuccesses: 0, rowsConsidered: 0, rowsInserted: 0, rowsUpdated: 0, rowsSkippedUnchanged: 0, dirtyEntries: 0, maxDirtyEntries: 0, averageRowsPerFlush: 0, lastError: null, skippedNoNetwork: 0, skippedLocalUnhealthy: 0 } } };
 }

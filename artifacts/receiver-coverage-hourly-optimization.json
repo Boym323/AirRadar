@@ -1,0 +1,58 @@
+{
+  "optimization": "receiver-coverage-hourly-write-optimization-v1",
+  "status": "implemented-awaiting-production-canary",
+  "git": {
+    "startSha": "7449f620257c98365a8a08ab28acb5da5a142ca1",
+    "originMainAtStart": "7449f620257c98365a8a08ab28acb5da5a142ca1",
+    "workingTreeAtStart": "clean",
+    "schemaChange": false,
+    "migration": false,
+    "manualDatabaseModification": false
+  },
+  "before": {
+    "receiverCoverageHourlyUpdatesPerMin": 85.51718008820556,
+    "totalUpdatesPerMin": 230.06,
+    "transactionsPerMin": 272.1819211926636,
+    "walMbPerMin": 1.7600366153059976,
+    "source": "artifacts/db-update-coalescing-production.json"
+  },
+  "currentWriteModel": {
+    "sampleIntervalMs": 20000,
+    "flushIntervalMs": 120000,
+    "identity": ["hour", "bucketKey"],
+    "bucketDimensions": ["overall", "azimuth", "range", "altitude", "polar"],
+    "transaction": "one transaction per flush",
+    "rowBehavior": "insert new aggregate; add deltas to existing aggregate",
+    "updatedAt": "not included in updates; database default applies on insert only"
+  },
+  "rootCause": "Each non-empty sampled bucket is a meaningful cumulative counter delta, so the existing two-minute flush updates every dirty bucket. The avoidable overhead was a database SELECT for every already-known row on every flush.",
+  "implementation": {
+    "durableRowCache": "successful rows are cached per process; unknown keys are loaded from the database once, preserving restart recovery",
+    "dirtyOnlyFlush": "pending buckets are swapped before flush and only those keys are written",
+    "skipUnchanged": "zero-delta rows with no new provider are skipped",
+    "failureSafety": "failed batches are merged back into pending state and retried",
+    "overlapSafety": "observations arriving during a flush remain in the new pending map",
+    "diagnostics": ["flushAttempts", "flushSuccesses", "rowsConsidered", "rowsInserted", "rowsUpdated", "rowsSkippedUnchanged", "dirtyEntries", "maxDirtyEntries", "averageRowsPerFlush"]
+  },
+  "validation": {
+    "focusedCoveragePersistenceTests": "PASS (2 tests)",
+    "typecheckPrepared": "PASS",
+    "diffCheck": "PASS",
+    "productionAfterMetrics": "not available in this workspace; collect during canary"
+  },
+  "after": {
+    "receiverCoverageHourlyUpdatesPerMin": null,
+    "totalUpdatesPerMin": null,
+    "transactionsPerMin": null,
+    "walMbPerMin": null,
+    "cpu": null,
+    "rssGb": null,
+    "flushDiagnostics": null
+  },
+  "parity": {
+    "statistics": "not measured against production",
+    "hourRollover": "covered by existing focused test",
+    "failureRetry": "implementation-preserved; dedicated production measurement pending"
+  },
+  "nextTarget": "measure ReceiverCoverageHourly mutation/query/transaction rate during a natural-traffic canary before considering flush cadence changes"
+}
