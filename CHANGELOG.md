@@ -2,22 +2,28 @@
 
 All notable changes to AirRadar are documented here.
 
-## [1.0.213] - 2026-09-29
+## [1.0.214] - 2026-09-29
 
 Changes since v1.0.212.
 
+### Documentation
+
+- Update changelog for v1.0.213 (89ba0ff)
+- Record ADSBDB RAM checkpoint canary (6798494)
+
 ### Maintenance
 
-- Sync generated repository metadata (d211dbb3)
+- Sync generated repository metadata (d211dbb)
 
 <details>
 <summary>Technical commits</summary>
 
-- chore(metadata): sync generated repository metadata (d211dbb3)
-- Merge pull request #215 from Boym323/automation/repository-metadata (a354ad49)
+- chore(metadata): sync generated repository metadata (d211dbb)
+- Merge pull request #215 from Boym323/automation/repository-metadata (a354ad4)
+- docs: update changelog for v1.0.213 (89ba0ff)
+- docs: record ADSBDB RAM checkpoint canary (6798494)
 
 </details>
-
 ## [1.0.212] - 2026-09-29
 
 Changes since v1.0.211.
@@ -38,6 +44,7 @@ Changes since v1.0.211.
 - feat(persistence): implement configurable checkpoint intervals and modes (55a205f)
 
 </details>
+
 ## [1.0.211] - 2026-09-29
 
 Changes since v1.0.210.
@@ -55,6 +62,7 @@ Changes since v1.0.210.
 - chore(db): add transaction attribution diagnostics (6bc77f6)
 
 </details>
+
 ## [1.0.210] - 2026-09-29
 
 Changes since v1.0.209.
@@ -75,6 +83,7 @@ Changes since v1.0.209.
 - feat(artifacts): add node filesystem write attribution artifacts (ded39f0)
 
 </details>
+
 ## [1.0.209] - 2026-09-29
 
 Changes since v1.0.207.
@@ -107,6 +116,7 @@ Changes since v1.0.207.
 - Add post-optimization runtime baseline artifacts (2cbc6c1)
 
 </details>
+
 ## [1.0.207] - 2026-09-29
 
 Changes since v1.0.206.
