@@ -2,11 +2,12 @@
 
 ## Status
 
-**PARTIAL — Streams A and B implemented locally; production canary pending.**
+**PARTIAL — Streams A and B deployed and canaried; source-specific counters and clean tag bookkeeping remain incomplete.**
 
-Start SHA, local `main`, and `origin/main`: `21a9ee355b7b3c3217546b95393bfb5f8911a025`.
-No release, restart, production database change, or production filesystem change
-was performed in this task.
+Candidate source SHA: `377aa7a4bc754f0d134e225540ff1ecf4a4c2a5c`.
+Deployed build SHA: `2bd4b8ce15b192c1a93846b2914460ad97666560`.
+The canonical release restarted production successfully, but its final tag step
+reported that existing `v1.0.228` points to the pre-changelog commit.
 
 ## Baseline evidence
 
@@ -30,14 +31,18 @@ wind, and AUP archive buffers. The hard-crash loss window is at most one flush
 interval for pending archive data. Live freshness and PostgreSQL persistence
 are unchanged.
 
-## Validation
+## Production validation
 
 - Focused archive-buffer test: PASS.
 - Prepared typecheck: PASS.
 - Targeted ESLint: PASS.
 - `git diff --check`: PASS.
-- Production canary: NOT RUN.
-- Production build/release/browser gates: NOT RUN; release is not implicit.
+- Full production gates, including SSE and desktop/mobile browser checks: PASS.
+- Production build: PASS.
+- Prisma migration: PASS; 0 migrations applied.
+- Post-deploy canary: PASS, 909 seconds, PID 114502.
+- Physical `/proc/<PID>/io` write rate: 2.371 MB/min versus 38.607 MB/min reference.
+- Exact source-specific mutation/suppression/flush counters: unavailable through production diagnostics.
 
 ## Stream decisions
 
@@ -50,9 +55,8 @@ are unchanged.
 
 ## Next measurement
 
-Run a separate natural-traffic canary and compare wind/METAR logical and
-physical MB/min, replacement calls/min, archive freshness, queue counters,
-CPU/RSS, and live/database health. Do not treat the target HDD reduction as
-proven until that canary exists.
+Add a protected operational diagnostic for the wind and METAR archive counters,
+then repeat a source-split canary. Do not begin Streams C/D until that evidence
+is collected and the release tag bookkeeping is reconciled.
 
 AIRRADAR MAXIMUM I/O OPTIMIZATION PARTIAL

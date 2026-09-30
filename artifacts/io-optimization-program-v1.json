@@ -1,12 +1,12 @@
 {
   "result": "PARTIAL",
-  "startSha": "21a9ee355b7b3c3217546b95393bfb5f8911a025",
-  "finalSha": "working-tree",
-  "originMain": "21a9ee355b7b3c3217546b95393bfb5f8911a025",
-  "productionChanged": false,
+  "startSha": "377aa7a4bc754f0d134e225540ff1ecf4a4c2a5c",
+  "finalSha": "2bd4b8ce15b192c1a93846b2914460ad97666560",
+  "originMain": "377aa7a4bc754f0d134e225540ff1ecf4a4c2a5c",
+  "productionChanged": true,
   "streams": {
-    "windArchive": "IMPLEMENTED_LOCAL_CANARY_PENDING",
-    "historicalMetarArchive": "IMPLEMENTED_LOCAL_CANARY_PENDING",
+    "windArchive": "DEPLOYED_CANARIED_SOURCE_SPLIT_PENDING",
+    "historicalMetarArchive": "DEPLOYED_CANARIED_SOURCE_SPLIT_PENDING",
     "navigationIntegrity": "KEEP",
     "aircraftWeather": "KEEP_LEGACY_PATH",
     "receiverCoverageHourly": "KEEP",
@@ -32,7 +32,30 @@
     "focusedTest": "PASS",
     "typecheck": "PASS",
     "lint": "PASS",
+    "fullTests": "1385 passed, 10 skipped",
+    "productionGatesAll": "PASS",
+    "build": "PASS",
+    "prismaMigrations": 0,
+    "docsCheck": "PASS",
+    "featuresCheck": "PASS",
+    "visualCheck": "PASS",
     "diffCheck": "PASS",
-    "productionCanary": "NOT_RUN"
+    "productionCanary": "PASS",
+    "canaryDurationSeconds": 909,
+    "canaryPid": 114502,
+    "healthChecksPassed": 15,
+    "sourceSpecificCounters": "UNAVAILABLE",
+    "releaseTagBookkeeping": "PARTIAL"
+  },
+  "canary": {
+    "writeBytesPerMin": 2.371,
+    "wcharPerMin": 5.217,
+    "syscwPerMin": 10546,
+    "physicalReductionPercent": 93.86,
+    "rssStartKb": 975032,
+    "rssEndKb": 932388,
+    "ordering": "PASS",
+    "duplicates": 0,
+    "queueBounded": "PASS"
   }
 }

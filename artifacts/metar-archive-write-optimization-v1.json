@@ -1,0 +1,41 @@
+{
+  "result": "PARTIAL",
+  "deployed": true,
+  "deployment": {
+    "version": "1.0.228",
+    "sha": "2bd4b8ce15b192c1a93846b2914460ad97666560",
+    "originMainBeforeChangelog": "377aa7a4bc754f0d134e225540ff1ecf4a4c2a5c",
+    "migrationsApplied": 0,
+    "releaseBookkeeping": "tag-v1.0.228-pointed-to-pre-changelog-commit"
+  },
+  "candidate": {
+    "flushIntervalMs": 60000,
+    "flushEntryLimit": 64,
+    "unchangedSuppression": true,
+    "atomicReplacement": true,
+    "boundedRetention": true,
+    "shutdownFlush": true
+  },
+  "baseline": {
+    "nodePhysicalMbPerMin": 38.607,
+    "metarLogicalMbPerMin": 14.505,
+    "metarSharePercent": 35.24
+  },
+  "canary": {
+    "durationSeconds": 909,
+    "pid": 114502,
+    "writeBytesPerMin": 2.371,
+    "wcharPerMin": 5.217,
+    "syscwPerMin": 10546,
+    "physicalReductionPercent": 93.86,
+    "healthChecksPassed": 15,
+    "sourceSpecificCounters": "unavailable"
+  },
+  "integrity": {
+    "entries": 29017,
+    "uniqueKeys": 29017,
+    "duplicates": 0,
+    "ordered": true,
+    "retentionBounded": true
+  }
+}
