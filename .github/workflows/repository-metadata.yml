@@ -111,21 +111,4 @@ jobs:
 
           echo "Repository metadata PR #${pr_number} is ready."
 
-          for attempt in 1 2 3 4 5 6; do
-            if gh pr merge "${pr_number}"               --repo "${GITHUB_REPOSITORY}"               --merge; then
-              echo "Merged repository metadata PR #${pr_number}."
-              exit 0
-            fi
-
-            merge_state="$(gh pr view "${pr_number}"               --repo "${GITHUB_REPOSITORY}"               --json mergeStateStatus               --jq '.mergeStateStatus')"
-            echo "Merge attempt ${attempt}/6 did not complete; state=${merge_state}."
-
-            if [[ "${merge_state}" == "DIRTY" ]]; then
-              echo "::error::Repository metadata PR has merge conflicts."
-              exit 1
-            fi
-            sleep 5
-          done
-
-          echo "::error::Repository metadata PR #${pr_number} could not be merged automatically."
-          exit 1
+          echo "Repository metadata PR #${pr_number} is ready for review; automatic merge is disabled."
