@@ -9,7 +9,7 @@ import { isWindLevel, defaultWindAloftProvider, type WindAloftResponse, type Win
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { defaultWeatherRadarProvider, parseWeatherRadarFilename } from "@/lib/server/weather-radar/provider";
 import type { WeatherRadarFrame } from "@/lib/server/weather-radar/types";
-import { getMapContextPollIntervalMs, getMapContextRetentionDays, getWeatherRadarArchiveDir, getWeatherRadarArchiveMaxBytes, isAviationWeatherEnabled } from "@/lib/server/config";
+import { getMapContextArchiveFlushEntryLimit, getMapContextArchiveFlushIntervalMs, getMapContextPollIntervalMs, getMapContextRetentionDays, getWeatherRadarArchiveDir, getWeatherRadarArchiveMaxBytes, isAviationWeatherEnabled } from "@/lib/server/config";
 import { resolveIntervalContains, resolveNearestBefore, resolveNearestValid } from "@/lib/map-time/temporal";
 import { normalizeInstant, unavailableResolution, type MapContextSourceKind, type TemporalResolution } from "@/lib/map-time/types";
 
@@ -56,9 +56,14 @@ export interface MapContextManifest {
 
 interface PersistedFile<T> { version: 1; savedAt: string; entries: T[]; }
 
-class JsonArchive<T> {
+export class JsonArchive<T> {
   private entries: T[] | null = null;
   private writeQueue = Promise.resolve();
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private dirty = false;
+  private pendingEntries = 0;
+  private flushes = 0;
+  private failures = 0;
 
   constructor(private readonly file: string, private readonly maxEntries: number, private readonly isEntry: (value: unknown) => value is T) {}
 
@@ -75,14 +80,52 @@ class JsonArchive<T> {
 
   async replace(entries: T[]): Promise<void> {
     this.entries = entries.slice(-this.maxEntries);
-    const snapshot = { version: 1 as const, savedAt: new Date().toISOString(), entries: this.entries } satisfies PersistedFile<T>;
+    this.dirty = true;
+    this.pendingEntries += 1;
+    this.scheduleFlush();
+  }
+
+  private scheduleFlush(): void {
+    if (this.flushTimer) return;
+    if (this.pendingEntries >= getMapContextArchiveFlushEntryLimit()) {
+      void this.flush();
+      return;
+    }
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      void this.flush();
+    }, getMapContextArchiveFlushIntervalMs());
+    this.flushTimer.unref?.();
+  }
+
+  async flush(): Promise<void> {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    if (!this.dirty || !this.entries) return this.writeQueue;
+    const entries = this.entries;
+    this.dirty = false;
+    this.pendingEntries = 0;
+    const snapshot = { version: 1 as const, savedAt: new Date().toISOString(), entries } satisfies PersistedFile<T>;
     this.writeQueue = this.writeQueue.then(async () => {
       await mkdir(path.dirname(this.file), { recursive: true, mode: 0o750 });
       const temporary = `${this.file}.tmp`;
       await writeFile(temporary, JSON.stringify(snapshot), { mode: 0o600 });
       await rename(temporary, this.file);
-    }).catch((error) => console.warn(`[map-context] archive write failed (${path.basename(this.file)})`, error instanceof Error ? error.message : error));
-    await this.writeQueue;
+      this.flushes += 1;
+    }).catch((error) => {
+      this.failures += 1;
+      this.dirty = true;
+      this.pendingEntries = Math.max(1, this.pendingEntries);
+      console.warn(`[map-context] archive write failed (${path.basename(this.file)})`, error instanceof Error ? error.message : error);
+      this.scheduleFlush();
+    });
+    return this.writeQueue;
+  }
+
+  diagnosticsCounters(): { dirty: boolean; pendingEntries: number; flushes: number; failures: number } {
+    return { dirty: this.dirty, pendingEntries: this.pendingEntries, flushes: this.flushes, failures: this.failures };
   }
 
   async diagnostics(timestampField: (entry: T) => string | null): Promise<{ oldest: string | null; latest: string | null; entries: number; fileBytes: number | null }> {
@@ -97,6 +140,17 @@ class JsonArchive<T> {
 function archiveMetadataPath(name: string): string { return path.join(path.dirname(getWeatherRadarArchiveDir()), name); }
 function validString(value: unknown): value is string { return typeof value === "string" && value.length <= 100_000; }
 function validDateString(value: unknown): value is string { return validString(value) && Number.isFinite(Date.parse(value)); }
+function archiveSemanticJson(value: unknown): string {
+  return JSON.stringify(value, (key, nested) => key === "retrievedAt" || key === "archivedAt" ? undefined : nested);
+}
+function sameMetarObservation(left: HistoricalMetarObservation | undefined, right: HistoricalMetarObservation): boolean {
+  if (!left) return false;
+  return archiveSemanticJson(left) === archiveSemanticJson(right);
+}
+function sameWindSnapshot(left: HistoricalWindSnapshot | undefined, right: HistoricalWindSnapshot): boolean {
+  if (!left) return false;
+  return archiveSemanticJson(left) === archiveSemanticJson(right);
+}
 function isMetarEntry(value: unknown): value is HistoricalMetarObservation {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<HistoricalMetarObservation>;
@@ -263,10 +317,16 @@ export class MapContextArchive {
   async addMetar(observations: readonly MetarMapObservation[], retrievedAt = new Date().toISOString()): Promise<void> {
     this.metarWrite = this.metarWrite.then(async () => {
       const entries = await this.metar.read(); const byKey = new Map(entries.map((entry) => [`${entry.stationId}:${entry.observedAt}`, entry]));
+      let changed = false;
       for (const observation of observations) {
         const observedAt = observation.observedAt;
-        if (observedAt && Number.isFinite(Date.parse(observedAt))) byKey.set(`${observation.stationId}:${observedAt}`, { ...observation, observedAt, retrievedAt, source: "Aviation Weather Center" });
+        if (observedAt && Number.isFinite(Date.parse(observedAt))) {
+          const key = `${observation.stationId}:${observedAt}`;
+          const entry = { ...observation, observedAt, retrievedAt, source: "Aviation Weather Center" as const };
+          if (!sameMetarObservation(byKey.get(key), entry)) { byKey.set(key, entry); changed = true; }
+        }
       }
+      if (!changed) return;
       const cutoff = Date.now() - getMapContextMaxAgeMs();
       await this.metar.replace([...byKey.values()].filter((entry) => Date.parse(entry.observedAt) >= cutoff).sort((left, right) => left.observedAt.localeCompare(right.observedAt)));
     });
@@ -277,7 +337,9 @@ export class MapContextArchive {
     this.windWrite = this.windWrite.then(async () => {
       const entries = await this.wind.read(); const key = `${snapshot.modelRun}:${snapshot.validAt}:${snapshot.levelHpa}`;
       const byKey = new Map(entries.map((entry) => [`${entry.modelRun}:${entry.validAt}:${entry.levelHpa}`, entry]));
-      byKey.set(key, { ...snapshot, archivedAt });
+      const entry = { ...snapshot, archivedAt };
+      if (sameWindSnapshot(byKey.get(key), entry)) return;
+      byKey.set(key, entry);
       const cutoff = Date.now() - getMapContextMaxAgeMs();
       await this.wind.replace([...byKey.values()].filter((entry) => Date.parse(entry.validAt) >= cutoff - 24 * 60 * 60_000).sort((left, right) => left.validAt.localeCompare(right.validAt)));
     });
@@ -324,8 +386,21 @@ export class MapContextArchive {
     return { metar: { minAvailableAt: metar.oldest, maxAvailableAt: metar.latest }, wind: { minAvailableAt: wind.oldest, maxAvailableAt: wind.latest }, aup: { minAvailableAt: aup.oldest, maxAvailableAt: aup.latest } };
   }
 
-  async diagnostics(): Promise<{ metar: Awaited<ReturnType<JsonArchive<HistoricalMetarObservation>["diagnostics"]>>; wind: Awaited<ReturnType<JsonArchive<HistoricalWindSnapshot>["diagnostics"]>>; aup: Awaited<ReturnType<JsonArchive<HistoricalAupSnapshot>["diagnostics"]>> }> {
-    return { metar: await this.metar.diagnostics((entry) => entry.observedAt), wind: await this.wind.diagnostics((entry) => entry.validAt), aup: await this.aup.diagnostics((entry) => entry.validityStart) };
+  async diagnostics(): Promise<{ metar: Awaited<ReturnType<JsonArchive<HistoricalMetarObservation>["diagnostics"]>> & ReturnType<JsonArchive<HistoricalMetarObservation>["diagnosticsCounters"]>; wind: Awaited<ReturnType<JsonArchive<HistoricalWindSnapshot>["diagnostics"]>> & ReturnType<JsonArchive<HistoricalWindSnapshot>["diagnosticsCounters"]>; aup: Awaited<ReturnType<JsonArchive<HistoricalAupSnapshot>["diagnostics"]>> & ReturnType<JsonArchive<HistoricalAupSnapshot>["diagnosticsCounters"]> }> {
+    const [metar, wind, aup] = await Promise.all([
+      this.metar.diagnostics((entry) => entry.observedAt),
+      this.wind.diagnostics((entry) => entry.validAt),
+      this.aup.diagnostics((entry) => entry.validityStart),
+    ]);
+    return {
+      metar: { ...metar, ...this.metar.diagnosticsCounters() },
+      wind: { ...wind, ...this.wind.diagnosticsCounters() },
+      aup: { ...aup, ...this.aup.diagnosticsCounters() },
+    };
+  }
+
+  async flush(): Promise<void> {
+    await Promise.all([this.metar.flush(), this.wind.flush(), this.aup.flush()]);
   }
 }
 
@@ -358,7 +433,7 @@ export class MapContextArchiveService {
     void this.poll();
     this.timer = setInterval(() => { void this.poll(); }, getMapContextPollIntervalMs());
   }
-  async stop(): Promise<void> { if (this.timer) clearInterval(this.timer); this.timer = null; await this.pollInFlight; }
+  async stop(): Promise<void> { if (this.timer) clearInterval(this.timer); this.timer = null; await this.pollInFlight; await defaultMapContextArchive.flush(); }
   async poll(): Promise<void> {
     if (this.pollInFlight) return this.pollInFlight;
     this.pollInFlight = Promise.allSettled([this.pollMetar(), this.pollWind(), this.pollAup(), defaultWeatherRadarArchive.poll()]).then(() => undefined).finally(() => { this.pollInFlight = null; });

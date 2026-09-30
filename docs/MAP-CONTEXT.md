@@ -4,7 +4,10 @@ Map Context is optional enrichment rendered beside the live aircraft map. It
 never owns aircraft state and is not part of `/api/stream`, readsb polling,
 history, statistics, OGN, or flight intelligence. V2 adds Global Map Time and
 bounded historical archives; missing context is unavailable rather than a
-silent current-data fallback. See [MAP-TIME.md](MAP-TIME.md).
+silent current-data fallback. METAR and wind mutations are coalesced in RAM
+and flushed through bounded atomic JSON snapshots; the default flush window is
+60 seconds (or 64 mutations), and graceful shutdown flushes pending data. See
+[MAP-TIME.md](MAP-TIME.md).
 
 ## Weather radar
 

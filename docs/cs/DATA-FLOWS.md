@@ -20,7 +20,10 @@ nejnovější pozorování a AUP/UUP intervaly platnosti.
 
 V2 publikuje jeden okamžik Global Map Time z Time Machine do context resolveru.
 Jednoprocesová archivní služba vzorkuje radar, METAR, vítr a AUP/UUP do
-omezených persistentních souborů. Manifesty zůstávají malé; payloady vrstev
+omezených persistentních souborů. Změny rekonstruovatelných archivů METAR a
+větru se slučují v RAM a zapisují atomickou náhradou snapshotu podle omezeného
+časového/početního prahu; při ukončení se čekající buffery archivů vyprázdní.
+Manifesty zůstávají malé; payloady vrstev
 používají nezávislá API a selhávají nezávisle.
 
 1. `LocalReadsbProvider` načítá `<READSB_BASE_URL>/data/aircraft.json` v

@@ -1,0 +1,38 @@
+{
+  "result": "PARTIAL",
+  "startSha": "21a9ee355b7b3c3217546b95393bfb5f8911a025",
+  "finalSha": "working-tree",
+  "originMain": "21a9ee355b7b3c3217546b95393bfb5f8911a025",
+  "productionChanged": false,
+  "streams": {
+    "windArchive": "IMPLEMENTED_LOCAL_CANARY_PENDING",
+    "historicalMetarArchive": "IMPLEMENTED_LOCAL_CANARY_PENDING",
+    "navigationIntegrity": "KEEP",
+    "aircraftWeather": "KEEP_LEGACY_PATH",
+    "receiverCoverageHourly": "KEEP",
+    "flight": "KEEP_CURRENT",
+    "flightPosition": "CLOSED"
+  },
+  "baseline": {
+    "nodePhysicalMbPerMin": 38.607,
+    "windMbPerMin": 23.662,
+    "windShare": 57.49,
+    "metarMbPerMin": 14.505,
+    "metarShare": 35.24,
+    "nodeWriteSyscallsPerMin": 7760.7
+  },
+  "candidate": {
+    "flushIntervalMs": 60000,
+    "flushEntryLimit": 64,
+    "hardCrashLossWindowMs": 60000,
+    "formatChanged": false,
+    "schemaMigration": false
+  },
+  "validation": {
+    "focusedTest": "PASS",
+    "typecheck": "PASS",
+    "lint": "PASS",
+    "diffCheck": "PASS",
+    "productionCanary": "NOT_RUN"
+  }
+}

@@ -4,7 +4,9 @@ Map Context je volitelný enrichment vykreslovaný vedle živé mapy letadel.
 Nikdy nevlastní aircraft state a není součástí `/api/stream`, readsb pollingu,
 historie, statistik, OGN ani flight intelligence. V2 přidává Global Map Time a
 omezené historické archivy; chybějící kontext je unavailable místo tichého
-fallbacku na aktuální data. Viz [MAP-TIME.md](MAP-TIME.md).
+fallbacku na aktuální data. Změny METAR a větru se slučují v RAM a zapisují
+atomickými JSON snapshoty; výchozí flush je 60 sekund (nebo 64 změn) a řízené
+ukončení čekající data zapíše. Viz [MAP-TIME.md](MAP-TIME.md).
 
 ## Meteorologický radar
 

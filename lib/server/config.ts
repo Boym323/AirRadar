@@ -126,6 +126,15 @@ export function getMapContextPollIntervalMs(): number {
   return boundedMilliseconds("MAP_CONTEXT_POLL_INTERVAL_MS", 60_000, 30_000, 15 * 60_000);
 }
 
+/** Historical map archives are reconstructable cache data; keep their loss window bounded. */
+export function getMapContextArchiveFlushIntervalMs(): number {
+  return boundedMilliseconds("MAP_CONTEXT_ARCHIVE_FLUSH_INTERVAL_MS", 60_000, 1_000, 15 * 60_000);
+}
+
+export function getMapContextArchiveFlushEntryLimit(): number {
+  return boundedInteger("MAP_CONTEXT_ARCHIVE_FLUSH_ENTRY_LIMIT", 64, 1, 10_000);
+}
+
 export function getWeatherRadarArchiveDir(): string {
   const configured = process.env.WEATHER_RADAR_ARCHIVE_DIR?.trim();
   if (configured && configured.length <= 4_096 && configured.startsWith("/") && !/[\0\r\n]/.test(configured)) return configured;

@@ -20,7 +20,10 @@ latest observations, and AUP/UUP uses validity intervals.
 
 V2 publishes one Global Map Time instant from Time Machine to the context
 resolver. A single-process archive service samples radar, METAR, wind and
-AUP/UUP into bounded persistent files. Manifests stay small; layer payloads
+AUP/UUP into bounded persistent files. Reconstructable METAR and wind
+mutations are coalesced in RAM and flushed through atomic snapshot replacement
+at a bounded time/count threshold; shutdown drains pending archive buffers.
+Manifests stay small; layer payloads
 use independent APIs and fail independently.
 
 1. `LocalReadsbProvider` fetches `<READSB_BASE_URL>/data/aircraft.json` on
