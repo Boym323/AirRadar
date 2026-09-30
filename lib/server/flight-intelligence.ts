@@ -4,7 +4,7 @@ import { getFlightContinuityGapMs } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { FlightIntelligenceDetector } from "@/lib/intelligence/detector";
-import { confidenceLevel, type FlightIntelligenceEvent, type FlightEventType, type FlightPhase } from "@/lib/intelligence/types";
+import { confidenceLevel, FLIGHT_INTELLIGENCE_DETECTOR_VERSION, type FlightIntelligenceEvent, type FlightEventType, type FlightPhase } from "@/lib/intelligence/types";
 import type { RunwayContext } from "@/lib/route-intelligence/contracts";
 
 const MAX_EVENTS = 500;
@@ -294,6 +294,7 @@ export class FlightIntelligenceService {
             startedAt: event.startedAt ?? event.occurredAt,
             endedAt: event.endedAt ?? null,
             reasonCodes: event.reasonCodes ?? event.evidence,
+            detectorVersion: event.detectorVersion ?? FLIGHT_INTELLIGENCE_DETECTOR_VERSION,
             ...(event.metadata ?? {}),
           }),
         },
@@ -334,6 +335,7 @@ export class FlightIntelligenceService {
         ? metadata.reasonCodes.filter((item): item is string => typeof item === "string").slice(0, 8)
         : this.safeEvidence(row.evidenceJson),
       metadata,
+      detectorVersion: typeof metadata.detectorVersion === "string" ? metadata.detectorVersion : FLIGHT_INTELLIGENCE_DETECTOR_VERSION,
     };
   }
 

@@ -5,6 +5,8 @@ export type FlightEventType =
   | "APPROACH"
   | "LANDING"
   | "TAKEOFF"
+  | "INITIAL_CLIMB"
+  | "CRUISE_ENTER"
   | "GO_AROUND"
   | "HOLDING"
   | "HOLDING_CANDIDATE"
@@ -35,6 +37,7 @@ export type FlightPhase =
   | "LANDING";
 export type ConfidenceLevel = "low" | "medium" | "high";
 export type HoldingStatus = "HOLDING_CANDIDATE" | "HOLDING_CONFIRMED" | "HOLDING_ENDED";
+export const FLIGHT_INTELLIGENCE_DETECTOR_VERSION = "flight-intelligence-v1";
 
 export interface FlightObservation {
   aircraft: Aircraft;
@@ -69,6 +72,7 @@ export interface FlightIntelligenceEvent {
   endedAt?: string;
   reasonCodes?: string[];
   metadata?: Record<string, unknown>;
+  detectorVersion?: string;
 }
 
 export function confidenceLevel(value: number): ConfidenceLevel {

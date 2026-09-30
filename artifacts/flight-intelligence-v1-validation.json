@@ -1,0 +1,10 @@
+{
+  "focusedTests": { "files": 4, "passed": 36, "failed": 0 },
+  "typecheckPrepared": "passed",
+  "productionReplayCorpus": "not_run",
+  "realPostgresql": "not_run",
+  "browserGate": "not_run",
+  "fullSuite": "not_run",
+  "productionBuild": "not_run",
+  "deployment": "not_requested"
+}

@@ -2,6 +2,14 @@
 
 All notable changes to AirRadar are documented here.
 
+## Unreleased
+
+### Added
+
+- Extend Flight Intelligence with explicit initial-climb, cruise-entry, and
+  destination-independent top-of-descent timeline events, detector versioning,
+  and canonical Airport Operations parity for linked go-around/holding events.
+
 ## [1.0.228] - 2026-09-30
 
 Changes since v1.0.228.

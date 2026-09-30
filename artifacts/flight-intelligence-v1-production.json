@@ -1,0 +1,9 @@
+{
+  "result": "PARTIAL",
+  "deployed": false,
+  "migration": false,
+  "canary": "not_run",
+  "productionMeasurements": "not_available",
+  "releaseAuthorization": "not_requested",
+  "nextStep": "FLIGHT INTELLIGENCE V1 NEEDS LONGER SHADOW VALIDATION"
+}

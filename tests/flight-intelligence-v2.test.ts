@@ -36,6 +36,42 @@ describe("flight intelligence V2", () => {
     expect(detector.getPhase("ABC123")).toBe("TAKEOFF");
   });
 
+  it("emits explicit initial-climb and cruise-enter events", () => {
+    const detector = new FlightIntelligenceDetector([LKPR]);
+    const events = collectEvents(detector, [
+      { lat: 50, lon: 14, altitude: 0, onGround: true },
+      { lat: 50.01, lon: 14.01, altitude: 600, verticalRate: 800, onGround: false },
+      { lat: 50.03, lon: 14.04, altitude: 2_000, verticalRate: 900, onGround: false },
+      { lat: 50.08, lon: 14.1, altitude: 4_000, verticalRate: 700, onGround: false },
+      { lat: 50.15, lon: 14.2, altitude: 7_000, verticalRate: 0, onGround: false },
+      { lat: 50.20, lon: 14.3, altitude: 7_050, verticalRate: 0, onGround: false },
+      { lat: 50.25, lon: 14.4, altitude: 7_040, verticalRate: 0, onGround: false },
+      { lat: 50.30, lon: 14.5, altitude: 7_045, verticalRate: 0, onGround: false },
+    ]);
+    expect(events.map((event) => event.type)).toContain("INITIAL_CLIMB");
+    expect(events.map((event) => event.type)).toContain("CRUISE_ENTER");
+    expect(events.find((event) => event.type === "CRUISE_ENTER")?.detectorVersion).toBe("flight-intelligence-v1");
+  });
+
+  it("emits top of descent without inventing a destination", () => {
+    const detector = new FlightIntelligenceDetector([LKPR]);
+    const events = collectEvents(detector, [
+      { lat: 50, lon: 14, altitude: 0, onGround: true },
+      { lat: 50.01, lon: 14.01, altitude: 600, verticalRate: 800, onGround: false },
+      { lat: 50.03, lon: 14.04, altitude: 2_000, verticalRate: 900, onGround: false },
+      { lat: 50.08, lon: 14.1, altitude: 4_000, verticalRate: 700, onGround: false },
+      { lat: 50.15, lon: 14.2, altitude: 9_000, verticalRate: 0, onGround: false },
+      { lat: 50.20, lon: 14.3, altitude: 9_050, verticalRate: 0, onGround: false },
+      { lat: 50.25, lon: 14.4, altitude: 9_040, verticalRate: 0, onGround: false },
+      { lat: 50.28, lon: 14.45, altitude: 9_045, verticalRate: 0, onGround: false },
+      { lat: 50.25, lon: 14.4, altitude: 8_500, verticalRate: -500, onGround: false },
+      { lat: 50.30, lon: 14.5, altitude: 7_800, verticalRate: -600, onGround: false },
+    ]);
+    const tod = events.find((event) => event.type === "TOP_OF_DESCENT");
+    expect(tod).toBeDefined();
+    expect(tod?.airportIcao).toBe("LKPR");
+  });
+
   it("requires duration, bounded area, turn evolution, and stable altitude for holding", () => {
     const detector = new FlightIntelligenceDetector([LKPR]);
     const points = [[50.10, 14.30, 0], [50.12, 14.30, 45], [50.12, 14.34, 90], [50.10, 14.34, 135], [50.08, 14.30, 180], [50.08, 14.26, 225], [50.10, 14.26, 270], [50.12, 14.30, 315], [50.10, 14.30, 0]];

@@ -6,7 +6,7 @@ import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { resolveArrivalRunwayContext, resolveDepartureRunwayContext } from "@/lib/route-intelligence/runway-context";
 import type { RunwayContext } from "@/lib/route-intelligence/contracts";
 import type { FlightEventType, FlightIntelligenceEvent, FlightObservation, FlightPhase, HoldingStatus } from "@/lib/intelligence/types";
-import { confidenceLevel } from "@/lib/intelligence/types";
+import { confidenceLevel, FLIGHT_INTELLIGENCE_DETECTOR_VERSION } from "@/lib/intelligence/types";
 import { detectGoAround } from "@/lib/intelligence/go-around";
 
 const MAX_HISTORY = 120;
@@ -265,14 +265,24 @@ export class FlightIntelligenceDetector {
       if ((state.phase === "GROUND" || state.phase === "LANDED") && takeoffSignals.every((signal) => signal.active || signal.weight < 2)) {
       if (this.transition(state, "TAKEOFF")) append(this.event("TAKEOFF", aircraft, state, airport?.icaoCode ?? null, "TAKEOFF", scoreSignals(takeoffSignals), runwayFor("DEPARTURE")));
       } else if (state.phase === "TAKEOFF" && climbSignals.some((signal) => signal.active)) {
-      this.transition(state, "CLIMB");
+      if (this.transition(state, "CLIMB")) {
+        append(this.event("INITIAL_CLIMB", aircraft, state, airport?.icaoCode ?? null, "CLIMB", scoreSignals(climbSignals), runwayFor("DEPARTURE")));
+      }
       } else if (state.phase === "CLIMB" && this.cruiseSignals(state, aircraft).every((signal) => signal.active || signal.weight < 2)) {
-      this.transition(state, "CRUISE");
+      const cruiseSignals = this.cruiseSignals(state, aircraft);
+      if (this.transition(state, "CRUISE")) {
+        append(this.event("CRUISE_ENTER", aircraft, state, airport?.icaoCode ?? null, "CRUISE", scoreSignals(cruiseSignals), null));
+      }
       } else if ((state.phase === "CRUISE" || state.phase === "CLIMB") && descentSignals.filter((signal) => signal.active).length >= 2) {
+      const establishedCruise = state.phase === "CRUISE";
       if (this.transition(state, "DESCENT")) {
         const destination = this.plannedDestination(aircraft);
-        if (destination && this.reliableTopOfDescent(state, aircraft, destination)) {
-          append(this.event("TOP_OF_DESCENT", aircraft, state, destination.icaoCode, "DESCENT", scoreSignals([...descentSignals, { active: true, weight: 2, evidence: EVIDENCE.destinationAvailable }, { active: true, weight: 2, evidence: EVIDENCE.descentBeforeDestination }]), null));
+        const topOfDescent = establishedCruise && (destination ? this.reliableTopOfDescent(state, aircraft, destination) : true);
+        if (topOfDescent) {
+          const destinationEvidence = destination
+            ? [{ active: true, weight: 2, evidence: EVIDENCE.destinationAvailable }, { active: true, weight: 2, evidence: EVIDENCE.descentBeforeDestination }]
+            : [];
+          append(this.event("TOP_OF_DESCENT", aircraft, state, destination?.icaoCode ?? airport?.icaoCode ?? null, "DESCENT", scoreSignals([...descentSignals, ...destinationEvidence]), null));
         }
       }
       } else if (state.phase === "DESCENT" && approachSignals.filter((signal) => signal.active).length >= 3 && this.transition(state, "APPROACH")) {
@@ -529,6 +539,7 @@ export class FlightIntelligenceDetector {
       ...(endedAt !== undefined ? { endedAt: new Date(endedAt).toISOString() } : {}),
       reasonCodes: scored.evidence.slice(0, 8),
       ...(metadata ? { metadata } : {}),
+      detectorVersion: FLIGHT_INTELLIGENCE_DETECTOR_VERSION,
     };
   }
 

@@ -1,0 +1,10 @@
+{
+  "status": "implemented",
+  "detector": "lib/intelligence/detector.ts",
+  "service": "lib/server/flight-intelligence.ts",
+  "persistence": "existing FlightEvent model",
+  "migration": false,
+  "detectorVersion": "flight-intelligence-v1",
+  "airportOperations": "canonical linked GO_AROUND/HOLDING events with sampled fallback",
+  "compatibilityHoldingNames": ["HOLDING", "HOLDING_ENDED"]
+}

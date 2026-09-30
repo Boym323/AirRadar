@@ -6,6 +6,8 @@ import { FlightIntelligenceDetector } from "@/lib/intelligence/detector";
 import type { FlightEventType, FlightIntelligenceEvent } from "@/lib/intelligence/types";
 
 export const REPLAY_COMPARABLE_EVENT_TYPES = new Set<FlightEventType>([
+  "INITIAL_CLIMB",
+  "CRUISE_ENTER",
   "APPROACH",
   "GO_AROUND",
   "HOLDING",

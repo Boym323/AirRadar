@@ -109,7 +109,7 @@ interface QueryCollection<T> {
 }
 
 interface MovementDatabase {
-  orm: { public: { Flight: QueryCollection<CandidateFlightRow>; FlightPosition: QueryCollection<CandidatePositionRow> } };
+  orm: { public: { Flight: QueryCollection<CandidateFlightRow>; FlightPosition: QueryCollection<CandidatePositionRow>; FlightEvent?: QueryCollection<{ flightId: number | null; type: string; airportIcao: string | null; occurredAt: string | Date }> } };
 }
 
 const FLIGHT_LIMIT = 250;
@@ -373,6 +373,16 @@ export async function getAirportMovements(
     truncated ||= flights.length > FLIGHT_LIMIT;
     const candidateFlights = flights.slice(0, FLIGHT_LIMIT);
     const candidateFlightIdSet = new Set(candidateFlights.map((flight) => flight.id));
+    const eventRows = database.orm.public.FlightEvent && candidateFlightIdSet.size > 0
+      ? await database.orm.public.FlightEvent.where({ flightId: { in: [...candidateFlightIdSet] } }).orderBy({ occurredAt: "desc" }).limit(POSITION_QUERY_LIMIT).all()
+      : [];
+    const canonicalEventsByFlight = new Map<number, typeof eventRows>();
+    for (const event of eventRows) {
+      if (event.flightId === null) continue;
+      const current = canonicalEventsByFlight.get(event.flightId) ?? [];
+      current.push(event);
+      canonicalEventsByFlight.set(event.flightId, current);
+    }
     const positionsByFlight = new Map<number, MovementPosition[]>();
     for (const position of positions.slice(0, POSITION_QUERY_LIMIT)) {
       if (!candidateFlightIdSet.has(position.flightId)) continue;
@@ -388,13 +398,25 @@ export async function getAirportMovements(
         truncated = true;
         flightPositions.splice(0, flightPositions.length - POSITION_PER_FLIGHT_LIMIT);
       }
-      const movement = analyzeAirportMovement({
+      let movement = analyzeAirportMovement({
         id: flight.id,
         icaoHex: flight.aircraft.icaoHex,
         callsign: flight.callsign,
         registration: flight.registration ?? flight.aircraft.registration,
         positions: flightPositions,
       }, airport, infrastructure.runways);
+      const canonical = canonicalEventsByFlight.get(flight.id)?.find((event) =>
+        (event.type === "GO_AROUND" || event.type === "HOLDING")
+        && (event.airportIcao === null || event.airportIcao.toUpperCase() === airport.icaoCode.toUpperCase()),
+      );
+      if (movement && canonical) {
+        movement = {
+          ...movement,
+          movement: canonical.type as "GO_AROUND" | "HOLDING",
+          observedAt: isoTimestamp(canonical.occurredAt),
+          evidence: [...movement.evidence, "canonical Flight Intelligence event"],
+        };
+      }
       if (movement) movements.push(movement);
     }
     movements.sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt) || b.flightId - a.flightId);

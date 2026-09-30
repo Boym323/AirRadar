@@ -113,7 +113,7 @@ export interface HistoryFlightDetail {
   events: FlightStoryEvent[];
 }
 
-export type FlightStoryEventType = "TAKEOFF" | "APPROACH" | "LANDING" | "GO_AROUND" | "HOLDING" | "DIVERSION" | "TOP_OF_DESCENT" | "AIRSPACE_ENTRY" | "AIRSPACE_EXIT";
+export type FlightStoryEventType = "TAKEOFF" | "INITIAL_CLIMB" | "CRUISE_ENTER" | "APPROACH" | "LANDING" | "GO_AROUND" | "HOLDING" | "DIVERSION" | "TOP_OF_DESCENT" | "AIRSPACE_ENTRY" | "AIRSPACE_EXIT";
 
 export interface FlightStoryEvent {
   id: number;
