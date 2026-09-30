@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-30T05:30:00.000Z",
+  "repository": {
+    "path": "/var/www/airradar",
+    "remote": "Boym323/AirRadar",
+    "localHead": "2f646910a552cd74b973638f6d1a7250a680e734",
+    "originMain": "2f646910a552cd74b973638f6d1a7250a680e734",
+    "workingTree": "clean",
+    "productionRuntimeSha": "111a3c2cf76b506d10f73fad747bf50ebc5071f1",
+    "productionRuntimeIsAncestorOfMain": true,
+    "productionMainDifference": "metadata/changelog-only commits after the deployed runtime",
+    "applicationCodeChangedByAudit": false,
+    "configurationChangedByAudit": false,
+    "schemaChangedByAudit": false,
+    "deploymentOrRestartByAudit": false
+  },
+  "production": {
+    "version": "1.0.225",
+    "channel": "production",
+    "buildTime": "2026-09-29T19:34:34.000Z",
+    "servicePid": 84409,
+    "startedAt": "2026-09-29T20:40:04.428Z",
+    "uptimeAtFinalCheckSeconds": 31207.7,
+    "restartCount": 0,
+    "health": {
+      "application": "ok",
+      "database": "ok",
+      "receiver": "ok",
+      "readsb": "ok",
+      "sse": "HTTP 200 text/event-stream; heartbeat/header contract observed",
+      "systemStatus": "ok"
+    }
+  },
+  "measurement": {
+    "primaryStartedAt": "2026-09-30T04:48:58.865Z",
+    "primaryEndedAt": "2026-09-30T05:18:59.192Z",
+    "primaryDurationMinutes": 30.00545,
+    "ioStartedAt": "2026-09-30T04:57:30.023Z",
+    "ioEndedAt": "2026-09-30T05:27:49.852Z",
+    "ioDurationMinutes": 30.33048,
+    "traffic": {
+      "naturalTraffic": true,
+      "syntheticTraffic": false,
+      "localAircraftObserved": { "min": 51, "max": 71, "start": 62, "end": 56 },
+      "receiver": "online; readsb quality GOOD; fresh positions observed",
+      "networkProvider": "adsb.lol recovered after transient timeouts/HTTP errors",
+      "weather": "inactive/on-demand; zero AviationWeather requests during the window"
+    }
+  },
+  "cpu": {
+    "averagePercentOfOneLogicalCore": 47.81,
+    "ioWindowPercentOfOneLogicalCore": 48.96,
+    "logicalCpuCount": 4,
+    "cpuQuota": "unlimited",
+    "hostLoadObserved": "0.83–2.09 one-minute load; below 4 logical CPUs",
+    "cgroupThrottling": "not observed",
+    "constrained": false
+  },
+  "eventLoopAndGc": {
+    "eventLoopDelayP50Ms": null,
+    "eventLoopDelayP95Ms": null,
+    "eventLoopDelayP99Ms": null,
+    "status": "unavailable without adding instrumentation",
+    "observedStalls": "none inferred from health, CPU, or RSS behavior",
+    "gc": "not directly observable; RSS/heap proxy shows normal fluctuation, not monotonic growth"
+  },
+  "memory": {
+    "rssStartBytes": 927273984,
+    "rssEndBytes": 1187545088,
+    "rssPeakBytes": 1601290240,
+    "cgroupCurrentStartBytes": 894885888,
+    "cgroupCurrentEndBytes": 1166270464,
+    "cgroupCurrentPeakBytes": 1601290240,
+    "cgroupMax": "unlimited",
+    "heapMetrics": "not exposed by the public projection; direct process instrumentation was not added",
+    "trend": "GC-driven fluctuation followed by a stable plateau; no monotonic leak evidence"
+  },
+  "filesystem": {
+    "procIo": {
+      "readBytesPerMinute": 76182.63,
+      "writeBytesPerMinute": 37174203.11,
+      "rcharBytesPerMinute": 74111001.70,
+      "wcharBytesPerMinute": 39137171.77,
+      "readSyscallsPerMinute": 21599.95,
+      "writeSyscallsPerMinute": 17778.38,
+      "cancelledWriteBytesPerMinute": 0
+    },
+    "physicalWriteMBPerMinute": 37.17,
+    "logicalWriteMBPerMinute": 39.14,
+    "attribution": {
+      "exactFileAttribution": "unavailable without invasive tracing",
+      "boundedObservedCategories": [
+        "map-context METAR/wind archives",
+        "runtime telemetry",
+        "alert history/state",
+        "weather-radar archive frames",
+        "ADSBDB hourly checkpoint"
+      ],
+      "attributableShares": "not claimed; /proc/PID/io is process-level physical attribution"
+    },
+    "closure": "storage is not saturated; no further filesystem optimization is justified from this window"
+  },
+  "disk": {
+    "filesystem": "ZFS",
+    "rootUsage": "9.2 GiB / 20 GiB (46%)",
+    "iostat": "unavailable",
+    "pidstat": "unavailable",
+    "utilizationOrAwait": "unavailable",
+    "saturationEvidence": "none observed"
+  },
+  "database": {
+    "sizeBytes": 1894364851,
+    "sizeApprox": "1.76 GiB",
+    "cacheHitRatioPercent": 98.94,
+    "connections": { "active": 1, "idle": 10, "longTransactionsOver5m": 0 },
+    "transactionsPerMinute": 404.46,
+    "insertPerMinute": 333.94,
+    "updatePerMinute": 283.72,
+    "deletePerMinute": 0.53,
+    "walBytesPerMinute": 3822843.43,
+    "walMBPerHour": 229.37,
+    "walGiBPerDayProjection": 5.50,
+    "topTablesByTotalBytes": [
+      { "table": "flightPosition", "totalBytes": 939679744, "tableBytes": 499212288, "indexBytes": 440467456, "deadTuples": 438 },
+      { "table": "aircraftMetadataCache", "totalBytes": 385761280, "tableBytes": 341917696, "indexBytes": 43843584, "deadTuples": 0 },
+      { "table": "navigationIntegrityObservation", "totalBytes": 216104960, "tableBytes": 177790976, "indexBytes": 38313984, "deadTuples": 2027 },
+      { "table": "aircraftWeatherObservation", "totalBytes": 197984256, "tableBytes": 153903104, "indexBytes": 44081152, "deadTuples": 178 },
+      { "table": "flight", "totalBytes": 58900480, "tableBytes": 19718144, "indexBytes": 39182336, "deadTuples": 1412 },
+      { "table": "receiverCoverageHourly", "totalBytes": 22626304, "tableBytes": 13778944, "indexBytes": 8847360, "deadTuples": 12366 }
+    ],
+    "deadTuples": "No pathological churn observed; autovacuum/analyze activity present; VACUUM FULL not run",
+    "pgStatStatements": "unavailable; extension was not enabled for this audit"
+  },
+  "writeLanes": [
+    { "table": "flight", "insertPerMinute": 4.37, "updatePerMinute": 144.74, "deletePerMinute": 0, "hotPercent": 9.67, "size": "56 MB" },
+    { "table": "flightPosition", "insertPerMinute": 144.74, "updatePerMinute": 0, "deletePerMinute": 0, "hotPercent": null, "size": "896 MB" },
+    { "table": "navigationIntegrityObservation", "insertPerMinute": 91.35, "updatePerMinute": 0, "deletePerMinute": 0, "hotPercent": null, "size": "206 MB" },
+    { "table": "receiverCoverageHourly", "insertPerMinute": 9.70, "updatePerMinute": 88.82, "deletePerMinute": 0, "hotPercent": 81.13, "size": "22 MB" },
+    { "table": "aircraftWeatherObservation", "insertPerMinute": 72.45, "updatePerMinute": 0, "deletePerMinute": 0, "hotPercent": null, "size": "189 MB" },
+    { "table": "navigationIntegrityAnomaly", "insertPerMinute": 6.37, "updatePerMinute": 25.83, "deletePerMinute": 0, "hotPercent": 36.39, "size": "27 MB" },
+    { "table": "aircraft", "insertPerMinute": 0.03, "updatePerMinute": 13.66, "deletePerMinute": 0, "hotPercent": 100, "size": "5.7 MB" }
+  ],
+  "featureChecks": {
+    "aircraftUpdateSuppression": { "aircraftUpdatePerMinute": 13.66, "result": "PASS" },
+    "flight": { "updatePerMinute": 144.74, "lastSeenAtImmediate": true, "result": "report only; no change" },
+    "flightPosition": { "insertPerMinute": 144.74, "shadowSemanticChange": false, "result": "report only; no change" },
+    "navigationIntegrity": { "observationInsertPerMinute": 91.35, "anomalyUpdatesPerMinute": 25.83, "result": "acceptable; no semantic change" },
+    "aircraftWeatherObservation": { "insertPerMinute": 72.45, "result": "report only; no change" },
+    "receiverCoverageHourly": { "updatePerMinute": 88.82, "flushFailures": 0, "cadenceSeconds": 120, "result": "PASS" },
+    "adsbdb": { "checkpointIntervalMinutes": 60, "checkpointAttempts": 8, "checkpointSuccesses": 8, "checkpointFailures": 0, "cacheEntries": 84, "result": "PASS" },
+    "aviationWeather": { "checkpointIntervalMinutes": 30, "checkpointAttempts": 0, "checkpointSuccesses": 0, "checkpointFailures": 0, "metar": "inactive/no requests", "taf": "inactive/no requests", "sigmet": "inactive/no requests", "result": "no failure observed" }
+  },
+  "sse": {
+    "activeClientsObserved": 0,
+    "snapshotOrDeltaDiagnostics": "public projection does not expose admin counters",
+    "materialCpuContribution": "not indicated",
+    "boundedAndHeartbeatContract": true
+  },
+  "caches": {
+    "adsbdb": { "entries": 84, "metadataEntries": 2472, "routeEntries": 1987, "bounded": true },
+    "weather": { "entries": 0, "bounded": true },
+    "navigationIntegrity": { "cellsPopulated": 846, "aircraftContributors": 448, "bounded": true },
+    "trailsAndSnapshotCaches": "bounded by runtime implementation; public runtime counters unavailable",
+    "unboundedCacheObserved": false
+  },
+  "errors": {
+    "adsbLolTimeouts": 23,
+    "adsbLolHttpErrors": 6,
+    "adsbLolRecoveries": 28,
+    "adsbdbProviderUnavailable": 4,
+    "adsbdbRecoveries": 4,
+    "databasePersistenceSseOomRestartOrCheckpointFailures": 0,
+    "interpretation": "transient upstream provider events recovered without live-path or persistence failure"
+  },
+  "bottleneckRanking": [
+    { "priority": "DONE", "item": "Aircraft redundant updates", "evidence": "13.66 updates/min" },
+    { "priority": "DONE", "item": "ReceiverCoverage cache lookup churn", "evidence": "bounded cache; 0 flush failures; 120-second cadence" },
+    { "priority": "DONE", "item": "ADSBDB filesystem persistence storm", "evidence": "8/8 checkpoints; bounded cache; no write storm" },
+    { "priority": "DONE", "item": "Aviation Weather filesystem persistence storm", "evidence": "no failures; inactive/on-demand cache; no write storm" },
+    { "priority": "P2", "item": "Node process physical writes", "evidence": "37.17 MB/min, but no storage saturation or reliability symptom", "decision": "observe only; no safe optimization stream justified" },
+    { "priority": "P3", "item": "Flight/FlightPosition row churn", "evidence": "intentional semantics and current traffic-dependent rates", "decision": "do not change" }
+  ],
+  "optimizationValueTest": {
+    "nextOptimization": "none",
+    "reason": "Measured costs have no current P0/P1 symptom; further savings would carry semantic or validation risk without demonstrated operational benefit"
+  },
+  "closureDecision": "NO FURTHER OPTIMIZATION CURRENTLY JUSTIFIED",
+  "closedStreams": [
+    "Aircraft UPDATE optimization",
+    "ReceiverCoverage cache optimization",
+    "ADSBDB filesystem persistence",
+    "Aviation Weather filesystem persistence"
+  ],
+  "futureReauditTriggers": [
+    "CPU sustained above 70–80% of one core",
+    "RSS sustained materially closer to an imposed cgroup limit",
+    "database or WAL growth materially increases",
+    "disk utilization or await becomes meaningful",
+    "persistent application/provider/persistence error rate rises",
+    "traffic volume materially increases",
+    "new features alter the persistence profile"
+  ]
+}
