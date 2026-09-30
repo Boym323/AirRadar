@@ -1,0 +1,71 @@
+{
+  "result": "C",
+  "generatedAt": "2026-09-30T11:02:24+02:00",
+  "repository": {
+    "productionVersion": "1.0.226",
+    "productionCommit": "06e8aae5",
+    "runtimeSha": "67953ab8d39e522edbedc5e4e6b8b024b936c298",
+    "pid": 94888
+  },
+  "strace": {
+    "installedBefore": false,
+    "temporarilyInstalled": true,
+    "removedAfterward": true,
+    "version": "6.13+ds-1",
+    "installation": "apt-get install -y --no-install-recommends strace",
+    "removal": "apt-get remove -y strace",
+    "rawTraceDeleted": true,
+    "syscalls": ["open", "openat", "openat2", "close", "write", "writev", "pwrite64", "pwritev", "fsync", "fdatasync", "rename", "renameat", "renameat2", "unlink", "unlinkat", "ftruncate", "truncate", "dup", "dup2", "dup3", "fcntl"]
+  },
+  "window": {
+    "configuredSeconds": 300,
+    "observedSyscallSeconds": 299.322302,
+    "start": "2026-09-30T10:54:29.410212+02:00",
+    "end": "2026-09-30T10:59:28.732514+02:00",
+    "naturalTraffic": true,
+    "pidStable": true
+  },
+  "health": {
+    "before": "OK: application, database, source/receiver",
+    "during": "OK: application, database, source/receiver; MainPID unchanged",
+    "after": "OK: application, database, source/receiver; SSE snapshot delivered; MainPID unchanged"
+  },
+  "nodeIo": {
+    "baseline": {"wchar": 7930055054, "syscw": 2572865, "writeBytes": 7486908085},
+    "end": {"wchar": 8135596784, "syscw": 2611581, "writeBytes": 7679506968},
+    "deltas": {"wchar": 205541730, "syscw": 38716, "writeBytes": 192598883},
+    "rates": {"wcharMBPerMin": 41.2014, "syscwPerMin": 7760.7, "physicalWriteMBPerMin": 38.607}
+  },
+  "logicalAccounting": {
+    "successfulWriteFamilyBytes": 205332937,
+    "successfulWriteFamilyCalls": 28783,
+    "logicalMBPerMin": 41.1596,
+    "accountedAgainstWcharPercent": 99.8984,
+    "sizeBuckets": {"lt1KB": 25655, "1to4KB": 2090, "4to16KB": 667, "16to64KB": 1, "gt64KB": 370}
+  },
+  "physicalVsLogical": {
+    "logicalMBPerMin": 41.1596,
+    "physicalMBPerMin": 38.607,
+    "physicalAsPercentOfLogical": 93.7983,
+    "interpretation": "Physical write_bytes is lower than logical syscall returns, consistent with page-cache, overwrite, filesystem-block, and metadata accounting differences."
+  },
+  "attribution": [
+    {"path":"/var/lib/airradar/map-context-wind-v1.json.tmp","finalPath":"/var/lib/airradar/map-context-wind-v1.json","subsystem":"historical wind archive","type":"temporary regular file; atomic replace","bytes":118043675,"mbPerMin":23.6622,"sharePercent":57.4889,"calls":250,"callsPerMin":50.11,"averageBytesPerWrite":472174.7,"pattern":"ATOMIC REPLACE"},
+    {"path":"/var/lib/airradar/map-context-metar-v1.json.tmp","finalPath":"/var/lib/airradar/map-context-metar-v1.json","subsystem":"historical METAR archive","type":"temporary regular file; atomic replace","bytes":72359375,"mbPerMin":14.5046,"sharePercent":35.2400,"calls":140,"callsPerMin":28.07,"averageBytesPerWrite":516852.7,"pattern":"ATOMIC REPLACE"},
+    {"path":"/var/lib/airradar/runtime-telemetry-v1.json.tmp-94888","finalPath":"/var/lib/airradar/runtime-telemetry-v1.json","subsystem":"runtime telemetry","type":"temporary regular file; atomic replace","bytes":2138074,"mbPerMin":0.4286,"sharePercent":1.0413,"calls":5,"callsPerMin":1.00,"averageBytesPerWrite":427614.8,"pattern":"ATOMIC REPLACE"},
+    {"path":"/var/lib/airradar/ogn-ddb-cache-v1.json.tmp","finalPath":"/var/lib/airradar/ogn-ddb-cache-v1.json","subsystem":"OGN DDB cache","type":"temporary regular file; atomic replace","bytes":22804,"mbPerMin":0.0046,"sharePercent":0.0111,"calls":1,"callsPerMin":0.20,"averageBytesPerWrite":22804,"pattern":"ATOMIC REPLACE"},
+    {"path":"/var/lib/airradar/map-context-aup-v1.json.tmp","finalPath":"/var/lib/airradar/map-context-aup-v1.json","subsystem":"historical AUP/UUP archive","type":"temporary regular file; atomic replace","bytes":19930,"mbPerMin":0.0040,"sharePercent":0.0097,"calls":5,"callsPerMin":1.00,"averageBytesPerWrite":3986,"pattern":"ATOMIC REPLACE"},
+    {"path":"/var/lib/airradar/.alert-engine-state.json.94888.a2d81993-d5f5-4297-90f0-4d7582a8309b.tmp","finalPath":"/var/lib/airradar/alert-engine-state.json","subsystem":"alert state","type":"temporary regular file; atomic replace","bytes":11105,"mbPerMin":0.0022,"sharePercent":0.0054,"calls":1,"callsPerMin":0.20,"averageBytesPerWrite":11105,"pattern":"ATOMIC REPLACE"},
+    {"path":"/var/lib/airradar/weather-radar/2026/09/30/202609300855.png.tmp","finalPath":"/var/lib/airradar/weather-radar/2026/09/30/202609300855.png","subsystem":"weather radar archive","type":"temporary regular file; atomic replace","bytes":3436,"mbPerMin":0.0007,"sharePercent":0.0017,"calls":1,"callsPerMin":0.20,"averageBytesPerWrite":3436,"pattern":"ATOMIC REPLACE"},
+    {"path":"/var/lib/airradar/alert-events.jsonl","subsystem":"alert history","type":"persistent regular file","bytes":484,"mbPerMin":0.0001,"sharePercent":0.0002,"calls":2,"callsPerMin":0.40,"averageBytesPerWrite":242,"pattern":"APPEND"}
+  ],
+  "filesystemSummary": {"fileBytes":192598883,"fileShareOfLogicalPercent":93.798,"temporaryOrAtomicSourcesListed":true,"deletedButOpenFiles":"none for Node PID; one ENOENT cleanup unlink was observed","stdoutStderr":"journald payload during the window was 259 bytes (0.000052 MB/min); UNIX-stream writes were classified separately and excluded from filesystem totals"},
+  "subsystemCadence": {"historicalWindArchive":"five levels (850/700/500/300/200 hPa) per map-context poll, approximately once per minute; each snapshot is serialized through JsonArchive.replace and atomically renamed","historicalMetarArchive":"one airport batch (up to 256 stations) per map-context poll, approximately once per minute; serialized and atomically renamed","measurement":"archive writes were batch/timer based, not per individual METAR"},
+  "sourceMapping": [
+    {"subsystem":"historical wind and METAR archives","file":"lib/server/map-context.ts","functions":"JsonArchive.replace; MapContextArchive.addWind; MapContextArchive.addMetar; MapContextArchiveService.pollWind/pollMetar","writeApi":"node:fs/promises writeFile followed by rename","cadence":"map-context poll interval; wind loops five levels, METAR uses one batch"},
+    {"subsystem":"runtime telemetry","file":"lib/server/runtime-telemetry.ts","function":"RuntimeTelemetryStore.writeSnapshot","writeApi":"FileHandle.writeFile, sync, rename","cadence":"telemetry checkpoint"}
+  ],
+  "specialChecks": {"adsbdbWrites":0,"aviationWeatherCheckpointWrites":0,"databaseFilesTraced":false,"readsbTraced":false,"straceOverhead":"pilot health remained OK; CPU stayed about 53.3%; no material latency/event-loop symptom observed"},
+  "dominantWriterSemantics": {"wind":"historical model snapshots; reconstructable from provider; historical/cache data, not live-critical; seconds-to-minutes loss acceptable","metar":"historical AWC observations; reconstructable from provider within product limits; historical/cache data, not live-critical; minutes loss acceptable"},
+  "nextStep":"SEPARATE MULTIPLE WRITE STREAMS"
+}
