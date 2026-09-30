@@ -1,0 +1,182 @@
+{
+  "audit": "AIRRADAR NODE PHYSICAL WRITE ATTRIBUTION V2",
+  "result": "D",
+  "readOnly": true,
+  "productionVersion": "1.0.226",
+  "productionCommit": "06e8aae5",
+  "window": {
+    "startedAt": "2026-09-30T09:58:51+02:00",
+    "endedAt": "2026-09-30T10:09:31+02:00",
+    "durationSeconds": 639.79316195,
+    "durationMinutes": 10.66321937,
+    "pid": 94888,
+    "pidStable": true,
+    "serviceStart": "2026-09-30T07:38:13+02:00"
+  },
+  "nodeIo": {
+    "start": {
+      "read_bytes": 125991424,
+      "write_bytes": 5331432583,
+      "rchar": 7848014006,
+      "wchar": 5640432965,
+      "syscr": 2238706,
+      "syscw": 1741431,
+      "cancelled_write_bytes": 0
+    },
+    "end": {
+      "read_bytes": 126900736,
+      "write_bytes": 5752782283,
+      "rchar": 8438531148,
+      "wchar": 6088436780,
+      "syscr": 2432097,
+      "syscw": 1900501,
+      "cancelled_write_bytes": 0
+    },
+    "ratesPerMinute": {
+      "write_bytes": 39515360.2,
+      "wchar": 42020267.7,
+      "syscw": 14920.4,
+      "averageWriteBytesPerSyscall": 2649.8
+    }
+  },
+  "inventory": {
+    "regularNodeFds": [],
+    "pipesOrSockets": "stdout/stderr and all observed descriptors were pipes, sockets, or anonymous kernel descriptors; no regular file was held open at the sampled inventory",
+    "lsofInstalled": true,
+    "inotifywaitInstalled": false,
+    "straceInstalled": false,
+    "perfInstalled": false,
+    "bpftraceInstalled": false
+  },
+  "writers": [
+    {
+      "path": "/var/lib/airradar/map-context-metar-v1.json",
+      "subsystem": "Map Context historical METAR archive",
+      "bytesObserved": 158618238,
+      "mbPerMinuteObserved": 14.87,
+      "shareOfNodePhysicalPercent": 37.65,
+      "events": 11,
+      "pattern": "ATOMIC REPLACE",
+      "sizeStart": 14415631,
+      "sizeEnd": 14432467,
+      "inodeChanged": true,
+      "source": "lib/server/map-context.ts:76-84,260-273",
+      "writeApi": "fs.promises.writeFile temporary file, then rename"
+    },
+    {
+      "path": "/var/lib/airradar/map-context-wind-v1.json",
+      "subsystem": "Map Context historical wind archive",
+      "bytesObserved": 51543839,
+      "mbPerMinuteObserved": 4.83,
+      "shareOfNodePhysicalPercent": 12.23,
+      "events": 11,
+      "pattern": "ATOMIC REPLACE",
+      "sizeStart": 4685804,
+      "sizeEnd": 4685799,
+      "inodeChanged": true,
+      "source": "lib/server/map-context.ts:76-84,275-284",
+      "writeApi": "fs.promises.writeFile temporary file, then rename"
+    },
+    {
+      "path": "/var/lib/airradar/runtime-telemetry-v1.json",
+      "subsystem": "Runtime telemetry history",
+      "bytesObserved": 4704767,
+      "mbPerMinuteObserved": 0.44,
+      "shareOfNodePhysicalPercent": 1.12,
+      "events": 11,
+      "pattern": "ATOMIC REPLACE",
+      "sizeStart": 427715,
+      "sizeEnd": 427698,
+      "inodeChanged": true,
+      "source": "lib/server/runtime-telemetry.ts:194-220,309-330",
+      "writeApi": "FileHandle.writeFile, sync, close, rename"
+    },
+    {
+      "path": "/var/lib/airradar/ogn-ddb-cache-v1.json",
+      "subsystem": "OGN DDB last-known-good cache",
+      "bytesObserved": 223116,
+      "mbPerMinuteObserved": 0.021,
+      "shareOfNodePhysicalPercent": 0.05,
+      "events": 10,
+      "pattern": "ATOMIC REPLACE",
+      "sizeStart": 21830,
+      "sizeEnd": 22734,
+      "inodeChanged": true,
+      "source": "lib/ogn/ddb.ts:716-722",
+      "writeApi": "FileHandle.writeFile, then rename"
+    },
+    {
+      "path": "/var/lib/airradar/alert-engine-state.json",
+      "subsystem": "Alert engine state",
+      "bytesObserved": 32532,
+      "mbPerMinuteObserved": 0.003,
+      "shareOfNodePhysicalPercent": 0.008,
+      "events": 3,
+      "pattern": "ATOMIC REPLACE",
+      "sizeStart": 10786,
+      "sizeEnd": 10873,
+      "inodeChanged": true,
+      "source": "lib/server/alert-state.ts:101-102",
+      "writeApi": "writeFileSync, fsyncSync"
+    },
+    {
+      "path": "/var/lib/airradar/map-context-aup-v1.json",
+      "subsystem": "Map Context AUP/UUP archive",
+      "bytesObserved": 43846,
+      "mbPerMinuteObserved": 0.004,
+      "shareOfNodePhysicalPercent": 0.01,
+      "events": 11,
+      "pattern": "ATOMIC REPLACE",
+      "sizeStart": 3986,
+      "sizeEnd": 3986,
+      "inodeChanged": true,
+      "source": "lib/server/map-context.ts:76-84,287-295",
+      "writeApi": "fs.promises.writeFile temporary file, then rename"
+    },
+    {
+      "path": "/var/lib/airradar/alert-events.jsonl",
+      "subsystem": "Alert event ledger",
+      "bytesObserved": 1445,
+      "mbPerMinuteObserved": 0.0001,
+      "shareOfNodePhysicalPercent": 0.0003,
+      "events": 3,
+      "pattern": "APPEND",
+      "sizeStart": 4424850,
+      "sizeEnd": 4426295,
+      "inodeChanged": false,
+      "source": "lib/server/alert-history.ts:279-310",
+      "writeApi": "appendFile; occasional compaction path inspected but not observed"
+    }
+  ],
+  "directPathAccounting": {
+    "bytes": 215167783,
+    "shareOfNodePhysicalPercent": 51.08,
+    "unaccountedPhysicalBytes": 206181917,
+    "unaccountedSharePercent": 48.92,
+    "method": "1-second metadata/inode snapshots of persistent AirRadar state paths; short-lived temporary files can be missed"
+  },
+  "exclusions": {
+    "adsbdb": {
+      "path": "/var/lib/airradar/adsbdb/adsbdb-cache-v1.json",
+      "bytesObserved": 0,
+      "inodeChanged": false,
+      "regression": "NO"
+    },
+    "aviationWeather": {
+      "path": "/var/lib/airradar/weather/weather-cache-v1.json",
+      "bytesObserved": 0,
+      "inodeChanged": false,
+      "regression": "NO"
+    },
+    "postgresql": "Separate process; not attributed to Node PID 94888",
+    "logging": "Node stdout/stderr were journald sockets, not regular files; journal forwarding is outside Node write_bytes"
+  },
+  "semantics": {
+    "dominantVisibleWriter": "Map Context historical METAR archive",
+    "data": "Historical METAR observations, wind snapshots, and AUP/UUP revisions used by historical map-context resolution",
+    "durability": "Historical/reconstructable; loss affects playback coverage, not live radar",
+    "acceptableLossWindow": "Minutes to hours, subject to historical retention requirements"
+  },
+  "nextStep": "RUN DEEPER ATTRIBUTION",
+  "note": "No application code, configuration, deployment, restart, database, ADSBDB, weather cache, or suppression behavior was changed. The installed safe tools did not permit >=95% exact path attribution in this window."
+}

@@ -1,0 +1,67 @@
+{
+  "audit": "AIRRADAR NODE WRITE ATTRIBUTION V3",
+  "result": "D",
+  "readOnly": true,
+  "traceStarted": false,
+  "traceBlocker": "No compliant existing syscall tracer is installed. bpftrace, BCC file-write tools, strace, perf, inotifywait, sysdig, fsatrace, fatrace, trace-cmd, and the checked BCC module paths were absent. Installing packages is forbidden by the brief.",
+  "productionState": {
+    "checkedAt": "2026-09-30T10:20:00+02:00",
+    "version": "1.0.226",
+    "sha": "06e8aae5",
+    "pid": 94888,
+    "pidStableForThisCheck": true,
+    "serviceStart": "2026-09-30T07:38:13+02:00",
+    "health": "ok",
+    "database": "ok",
+    "source": "local-beast+json-failover",
+    "aircraftCount": 72
+  },
+  "window": {
+    "durationSeconds": 0,
+    "status": "not_started",
+    "reason": "A syscall-level path audit cannot be performed without an already-installed compliant tracer; metadata sampling would not satisfy V3."
+  },
+  "nodeIoSnapshot": {
+    "timestamp": "2026-09-30T10:20:00+02:00",
+    "read_bytes": 127725568,
+    "write_bytes": 6135964649,
+    "rchar": 9037619469,
+    "wchar": 6495985986,
+    "syscr": 2603816,
+    "syscw": 2035314,
+    "cancelled_write_bytes": 0
+  },
+  "syscallAttribution": [],
+  "accountedLogicalWritesPercent": 0,
+  "physicalVsLogical": {
+    "wcharPerMinute": null,
+    "writeBytesPerMinute": null,
+    "explanation": "No bounded start/end syscall window was captured. The V2 metadata audit found a gap between visible final-path bytes and Node write_bytes, but V3 cannot resolve it without tracing short-lived temporary and deleted files."
+  },
+  "metarArchive": {
+    "path": "/var/lib/airradar/map-context-metar-v1.json",
+    "configuration": "archiveMetadataPath(\"map-context-metar-v1.json\") in lib/server/map-context.ts:97, using the production weather-radar state directory",
+    "module": "lib/server/map-context.ts",
+    "function": "MapContextArchive.addMetar() -> JsonArchive.replace()",
+    "writeApi": "fs.promises.writeFile(temp), then rename(temp, target)",
+    "pollCadence": "getMapContextPollIntervalMs(), default 60 seconds; configured bounds 30 seconds to 15 minutes",
+    "pattern": "ATOMIC REPLACE",
+    "semantics": "Historical METAR archive for map-context playback/resolution; reconstructable from provider data, bounded by retention, and not part of live aircraft state",
+    "durability": "Immediate durability is not established as required; acceptable loss window is unknown without product policy"
+  },
+  "tempDeletedFiles": {
+    "paths": [],
+    "status": "not observable without tracer"
+  },
+  "stdoutStderr": {
+    "status": "not quantified",
+    "descriptorObservation": "Prior FD inventory showed journald pipes/sockets and no regular file descriptor",
+    "note": "No Node stdout/stderr byte volume can be reported without syscall tracing"
+  },
+  "regressions": {
+    "adsbdb": "not sampled in V3; V2 observed 0 writes and unchanged inode",
+    "aviationWeatherCache": "not sampled in V3; V2 observed 0 writes and unchanged inode"
+  },
+  "nextStep": "RUN DEEPER ATTRIBUTION",
+  "safety": "No application code, configuration, deployment, restart, database, or cache behavior was changed. No raw trace was created or retained."
+}
