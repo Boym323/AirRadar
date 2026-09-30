@@ -2,6 +2,45 @@
 
 All notable changes to AirRadar are documented here.
 
+## [1.0.226] - 2026-09-30
+
+Changes since v1.0.223.
+
+### Added
+
+- Enhance weather observation persistence with batch fallback mode and diagnostics (1aebb6f)
+- Add integration tests and documentation for weather batch insert with PostgreSQL (dbea4b8)
+- Add final post-optimization baseline and closure audit documentation (06e8aae)
+
+### Documentation
+
+- Update changelog for v1.0.224 (f110956)
+- Update changelog for v1.0.225 (111a3c2)
+- Record weather batch production comparison (2f64691)
+
+### Maintenance
+
+- Sync generated repository metadata (a993bb6)
+- Sync generated repository metadata (3fa85cc)
+- Sync generated repository metadata (95f56e5)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (a993bb6)
+- Merge pull request #225 from Boym323/automation/repository-metadata (e67c150)
+- feat: enhance weather observation persistence with batch fallback mode and diagnostics (1aebb6f)
+- docs: update changelog for v1.0.224 (f110956)
+- chore(metadata): sync generated repository metadata (3fa85cc)
+- Merge pull request #226 from Boym323/automation/repository-metadata (740e723)
+- feat: add integration tests and documentation for weather batch insert with PostgreSQL (dbea4b8)
+- docs: update changelog for v1.0.225 (111a3c2)
+- chore(metadata): sync generated repository metadata (95f56e5)
+- Merge pull request #227 from Boym323/automation/repository-metadata (4db71dd)
+- docs: record weather batch production comparison (2f64691)
+- feat: add final post-optimization baseline and closure audit documentation (06e8aae)
+
+</details>
 ## [1.0.223] - 2026-09-29
 
 Changes since v1.0.222.
