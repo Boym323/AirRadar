@@ -3,7 +3,9 @@
   "deployed": false,
   "migration": false,
   "canary": "not_run",
-  "productionMeasurements": "not_available",
-  "releaseAuthorization": "not_requested",
-  "nextStep": "FLIGHT INTELLIGENCE V1 NEEDS LONGER SHADOW VALIDATION"
+  "releaseAuthorization": "not_run_due_to_validation_block",
+  "git": { "startSha": "95c7ba6c7435364b4f44373dcd701daaa0b14627", "originMain": "95c7ba6c7435364b4f44373dcd701daaa0b14627" },
+  "productionMeasurements": { "databaseFlights": 123911, "databasePositions": 5106104, "databaseFlightEvents": 0, "replayFlights": 100, "replayPositions": 2173, "replayComparableEvents": { "CRUISE_ENTER": 13, "TOP_OF_DESCENT": 15, "APPROACH": 20, "HOLDING": 9 }, "detectorBenchmark": { "100": { "p50Ms": 1.362, "p95Ms": 1.784 }, "500": { "p50Ms": 3.77, "p95Ms": 8.505 }, "1000": { "p50Ms": 4.992, "p95Ms": 8.233 } }, "sseDeltaBenchmark": { "aircraft": 1000, "clients": 20, "changedAircraft": 1, "payloadBytes": 2102, "processingMs": 4.9 } },
+  "gates": { "fullSuite": "PASS", "build": "PASS_isolated_worktree", "browser": "PASS", "releaseGates": "NOT_RUN", "liveReplayParity": "BLOCKED_no_persisted_FlightEvent_rows", "airportOperationsParity": "BLOCKED_no_canonical_production_event_rows", "timeMachine": "PASS_test_coverage", "idempotency": "BLOCKED_no_durable_event_rows_to_replay", "productionHealth": "NOT_RUN" },
+  "nextStep": "Restore or obtain a read-only production-derived FlightEvent corpus, rerun parity/idempotency/sequence validation, then use the canonical release workflow."
 }

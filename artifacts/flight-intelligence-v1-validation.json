@@ -1,10 +1,16 @@
 {
   "focusedTests": { "files": 4, "passed": 36, "failed": 0 },
   "typecheckPrepared": "passed",
-  "productionReplayCorpus": "not_run",
-  "realPostgresql": "not_run",
-  "browserGate": "not_run",
-  "fullSuite": "not_run",
-  "productionBuild": "not_run",
-  "deployment": "not_requested"
+  "productionReplayCorpus": { "status": "completed_read_only", "flights": 100, "positions": 2173, "databaseFlightEvents": 0, "generatedComparableEvents": { "CRUISE_ENTER": 13, "TOP_OF_DESCENT": 15, "APPROACH": 20, "HOLDING": 9 }, "unmatchedReplayEvents": 57, "accuracyClaim": null, "limitation": "No persisted FlightEvent rows were available, so parity cannot be scored." },
+  "realPostgresql": "passed_read_only_schema_verification",
+  "browserGate": "passed_existing_prepared_build_core_and_browser_all",
+  "fullSuite": { "status": "passed", "testFilesPassed": 193, "testFilesSkipped": 3, "testsPassed": 1387, "testsSkipped": 10 },
+  "productionBuild": "passed_isolated_worktree",
+  "lint": "passed_with_7_warnings",
+  "featuresCheck": "passed",
+  "czechDocumentationCheck": "passed",
+  "visualCheck": "passed",
+  "jsonValidation": "passed",
+  "diffCheck": "passed",
+  "deployment": "blocked_by_missing_durable_event_parity_evidence"
 }
