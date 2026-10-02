@@ -1,11 +1,79 @@
 {
-  "result": "PARTIAL",
-  "deployed": false,
-  "migration": false,
-  "canary": "not_run",
-  "releaseAuthorization": "not_run_remaining_product_gates",
-  "git": { "startSha": "55a9c2a55936cd07327fb8470593f6fbbf7373af", "originMain": "55a9c2a55936cd07327fb8470593f6fbbf7373af" },
-  "productionMeasurements": { "databaseFlightEvents": 0, "validationFlights": 100, "validationPositions": 3985, "validationDurableEvents": 49, "validationSecondPassRows": 49, "validationThirdPassRows": 49, "validationUnexpectedNewRows": 0 },
-  "gates": { "disposableDurableCorpus": "PASS", "realPostgresql": "PASS", "temporalInstant": "PASS", "streamReplayDurableParity": "PASS", "idempotency": "PASS", "restart": "PASS", "ordering": "PASS", "fullSuite": "PASS", "lint": "PASS_with_7_warnings", "typecheck": "PASS", "build": "NOT_RUN_current_dirty_checkout", "browser": "NOT_RUN_current_candidate", "releaseGates": "NOT_RUN", "timeMachine": "NOT_RUN_current_corpus", "airportOperationsParity": "NOT_RUN_current_corpus", "productionHealth": "NOT_RUN", "productionCanary": "NOT_RUN" },
-  "nextStep": "Run the remaining current-candidate product and release gates; do not deploy or force replay into production until they pass."
+  "result": "PASS",
+  "deployed": true,
+  "migration": true,
+  "canary": {
+    "startedAt": "2026-10-02T09:05:11+02:00",
+    "endedAt": "2026-10-02T09:50:19+02:00",
+    "durationMinutes": 45.13,
+    "pid": 168724,
+    "naturalTraffic": true
+  },
+  "git": {
+    "sourceSha": "39c29da91ed6a0f733bbcc43c06373231214ad4f",
+    "releaseSha": "39c29da91ed6a0f733bbcc43c06373231214ad4f",
+    "originMain": "39c29da91ed6a0f733bbcc43c06373231214ad4f",
+    "version": "1.0.233",
+    "tag": "v1.0.233",
+    "tagMatchesSha": true
+  },
+  "productionMeasurements": {
+    "flightEventRowsBeforeDeployment": 0,
+    "flightEventRowsBeforeCanary": 117,
+    "flightEventRowsAfterCanary": 895,
+    "flightEventRowsPostWindowAudit": 904,
+    "flightEventsCreated": 778,
+    "flightEventsPerMinute": 17.25,
+    "detectorVersion": "flight-intelligence-v1",
+    "duplicateEventKeys": 0
+  },
+  "eventCountsCreatedDuringCanary": {
+    "AIRSPACE_ENTRY": 352,
+    "AIRSPACE_EXIT": 41,
+    "APPROACH": 78,
+    "CRUISE_ENTER": 25,
+    "DIVERSION": 5,
+    "GO_AROUND": 1,
+    "HOLDING": 1,
+    "HOLDING_CANDIDATE": 9,
+    "LANDING": 2,
+    "LEVEL_OFF": 194,
+    "ORBIT": 2,
+    "TOP_OF_DESCENT": 59,
+    "UNUSUAL_TURN": 9
+  },
+  "sequenceAudit": {
+    "repeatedLanding": 0,
+    "goAroundAfterLanding": 0,
+    "holdExitWithoutHold": 0,
+    "holdingAfterLanding": 0
+  },
+  "gates": {
+    "disposableDurableCorpus": "PASS",
+    "realPostgresql": "PASS",
+    "temporalInstant": "PASS",
+    "streamReplayDurableParity": "PASS",
+    "idempotency": "PASS",
+    "restart": "PASS",
+    "ordering": "PASS",
+    "focusedTimeMachineApiFlightIntelligence": "PASS",
+    "airportOperations": "PASS",
+    "productionBrowserResponsiveSse": "PASS",
+    "schemaHealth": "PASS",
+    "productionCanary": "PASS"
+  },
+  "performance": {
+    "cpuPercentObserved": { "min": 39, "max": 49 },
+    "rssGbObserved": { "min": 0.75, "max": 1.21 },
+    "nodeWriteBytesBefore": 23972915,
+    "nodeWriteBytesAfter": 192354951,
+    "flightEventWriteStorm": false
+  },
+  "errors": {
+    "flightIntelligence": 0,
+    "prisma": 0,
+    "temporal": 0,
+    "sse": 0
+  },
+  "nextStep": "ALERTS & FLEETS V1"
 }
