@@ -125,7 +125,11 @@ export function appendTrailPoint(
   return [...trail, next];
 }
 
-export const BROWSER_LIVE_TRAIL_MAX_POINTS = 300;
+// Keep the live cache bounded even when a large synthetic or real feed sends
+// frequent position updates. At the normal history sampling cadence this
+// retains roughly the latest 40 minutes while avoiding a 1.5M-point cache at
+// 5,000 aircraft.
+export const BROWSER_LIVE_TRAIL_MAX_POINTS = 120;
 export const BROWSER_LIVE_TRAIL_MAX_AGE_MS = 30 * 60_000;
 
 export function appendBoundedLiveTrailPoint(

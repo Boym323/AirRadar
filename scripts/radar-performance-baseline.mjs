@@ -366,8 +366,15 @@ async function exerciseSseReconnects() {
 
   for (let round = 0; round < soakSseRounds; round += 1) {
     const controllers = Array.from({ length: soakSseClients }, () => new AbortController());
-    const responses = await Promise.all(controllers.map((controller) =>
-      fetch(`${baseUrl}/api/stream?v=2&coverage=local`, { signal: controller.signal })
+    const responses = await Promise.all(controllers.map((controller, index) =>
+      fetch(`${baseUrl}/api/stream?v=2&coverage=local`, {
+        signal: controller.signal,
+        // The production proxy supplies the trusted client address in
+        // X-Real-IP. Give each synthetic client its own address so this
+        // churn test exercises the shared SSE capacity instead of the
+        // intentional per-client cap.
+        headers: { "x-real-ip": `192.0.2.${index + 1}` },
+      })
     ));
     if (responses.some((response) => !response.ok)) {
       violations.push(`SSE round ${round + 1} returned a non-2xx response`);

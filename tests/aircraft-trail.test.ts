@@ -140,7 +140,7 @@ describe("selected aircraft live trail", () => {
 
     expect(result).toHaveLength(BROWSER_LIVE_TRAIL_MAX_POINTS);
     expect(result.at(-1)?.recordedAt).toBe(points.at(-1)?.recordedAt);
-    expect(result[0]?.recordedAt).toBe(points[100]?.recordedAt);
+    expect(result[0]?.recordedAt).toBe(points[points.length - BROWSER_LIVE_TRAIL_MAX_POINTS]?.recordedAt);
   });
 
   it("uses current-session points when history contributes nothing and clears on aircraft switch", () => {
