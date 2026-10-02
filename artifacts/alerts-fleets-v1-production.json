@@ -1,15 +1,62 @@
 {
-  "result": "PARTIAL",
-  "releasePerformed": true,
+  "result": "BLOCKED",
+  "releasePerformed": false,
   "release": "1.0.239",
   "tag": "v1.0.239",
   "runtimeSha": "37086cef3e9c75c036ba5812f78e17f3659e1aaf",
-  "migrationPerformed": true,
-  "migrationResult": "PASS (already up to date; 0 applied)",
-  "serviceRestarted": true,
-  "health": "PASS (local and public)",
-  "canary": {"result": "PASS_STABLE_NOISE", "durationMinutes": 45, "fleetCount": 1, "ruleCount": 1, "channel": "IN_APP", "occurrences": 0, "deliveries": 0, "duplicateOccurrences": 0, "duplicateDeliveries": 0, "naturalFlightEvent": "NOT_OBSERVED", "temporaryConfigRemoved": true},
-  "pushoverConfigured": false,
-  "pushoverTest": "NOT_CONFIGURED",
-  "blocking": ["live FlightEvent occurrence not observed; deterministic evidence PASS", "natural squawk/geofence transitions not observed; deterministic evidence PASS"]
+  "migrationResult": "PASS (existing release; no migration run)",
+  "temporaryRule": {
+    "id": "c16de7c4-1598-415b-813c-e0fe24955258",
+    "name": "PRODUCTION E2E CANARY — DELETE",
+    "target": "ALL_AIRCRAFT",
+    "trigger": "FLIGHT_EVENT",
+    "eventType": "APPROACH",
+    "channel": "IN_APP",
+    "activatedAt": "2026-10-02T11:13:20.192Z"
+  },
+  "naturalFlightEvent": {
+    "observed": true,
+    "id": 5312,
+    "type": "APPROACH",
+    "occurredAt": "2026-10-02T11:13:30.009Z",
+    "aircraftIcao": "48AC82",
+    "callsign": "LOT328"
+  },
+  "alertOccurrence": {
+    "created": true,
+    "id": "alert-v1:c16de7c4-1598-415b-813c-e0fe24955258:FLIGHT_EVENT:48AC82:1790939458296:APPROACH:LZRU:0",
+    "countForFirstEvent": 1,
+    "actualDistinctOccurrencesDuringAudit": 8,
+    "latencyMs": 877,
+    "flightEventIdPersisted": null,
+    "sourceKeyDeterministic": true
+  },
+  "idempotency": {
+    "duplicateOccurrences": 0,
+    "uniqueRuleSourceKeys": 8,
+    "duplicateDeliveries": 0,
+    "deliveryRows": 8,
+    "deliveryExplanation": "IN_APP rows are intentionally modeled by the canonical repository; Pushover worker disabled."
+  },
+  "ui": {
+    "history": "FAIL",
+    "reason": "The legacy /alerts history does not render PostgreSQL AlertOccurrence rows; admin page is configuration-only."
+  },
+  "health": {
+    "app": "PASS",
+    "database": "PASS",
+    "receiver": "PASS",
+    "sse": "NOT_BROWSER_TESTED",
+    "service": "active"
+  },
+  "cleanup": {
+    "temporaryRuleDisabled": true,
+    "occurrencePreserved": true,
+    "productionConfigRestored": true
+  },
+  "pushover": "NOT CONFIGURED",
+  "blocking": [
+    "AlertOccurrence.flightEventId is NULL for canonical FlightEvent 5312",
+    "V1 AlertOccurrence is not rendered by the intended Alerts history UI"
+  ]
 }
