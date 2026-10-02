@@ -24,3 +24,12 @@ available in the checkout; absence of data is not treated as zero.
 
 No ground truth was manufactured from `Flight.endTime` or the predictor itself.
 All capability gates remain `SHADOW`.
+# Predictive Intelligence V1 validation
+
+Result: **PARTIAL**
+
+The real read-only corpus run evaluated 500 frozen flights (353 calibration / 147 holdout) and extracted 18,614 positions. The source contained 3,002 eligible completed flights in the fixed detector-compatible window, but none of the selected flights had a linked canonical `LANDING` event. Source-wide canonical events were present only from 2026-10-02 and all used `flight-intelligence-v1`; all 18 source-wide `LANDING` events had `runway = NULL`.
+
+Consequently ETA error metrics, runway correctness, runway-change usefulness, and labeled trajectory-positive metrics cannot be validly graduated from this source. Destination availability timestamps, historical airport operations, and flight-linked historical weather are also absent. The run recorded the exact coverage and limitations in the JSON artifact rather than substituting final destination or last-position fallbacks.
+
+Decisions: ETA=SHADOW, RUNWAY=SHADOW, RUNWAY_CHANGE=SHADOW, TRAJECTORY=SHADOW. Production was not built, deployed, restarted, or modified.

@@ -63,6 +63,7 @@
     "benchmark:radar:soak": "RADAR_PERF_SOAK=1 RADAR_PERF_SCENARIOS=1600,3000,5000 RADAR_PERF_MEASURE_MS=90000 node scripts/radar-performance-baseline.mjs",
     "intelligence:replay": "JITI_TSCONFIG_PATHS=true jiti scripts/replay-flight-intelligence.ts",
     "intelligence:corpus": "JITI_TSCONFIG_PATHS=true jiti scripts/flight-intelligence-v1-corpus.ts",
+    "predictive:calibration": "JITI_TSCONFIG_PATHS=true jiti scripts/predictive-intelligence-v1-calibration.ts",
     "intelligence:quality": "JITI_TSCONFIG_PATHS=true jiti scripts/flight-intelligence-quality.ts",
     "audit:flightaware-routes": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-flightaware-routes.ts",
     "audit:historical-altitude": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-historical-altitude.ts",
