@@ -1,0 +1,3703 @@
+{
+  "result": "PARTIAL",
+  "generatedAt": "2026-10-02T13:58:43.949Z",
+  "classifierVersion": "terminal-ground-truth-v1",
+  "repository": {
+    "head": "7fda393e507520925b4056eff3ae38675d500989",
+    "branch": "main",
+    "originMain": "7fda393e507520925b4056eff3ae38675d500989",
+    "workingTree": "M package.json\n?? artifacts/predictive-terminal-ground-truth-v1.json\n?? artifacts/predictive-terminal-ground-truth-v1.md\n?? lib/predictive-intelligence/terminal-ground-truth.ts\n?? scripts/predictive-terminal-ground-truth-v1.ts\n?? tests/terminal-ground-truth.test.ts"
+  },
+  "productionRuntime": "ExecMainStartTimestamp=Fri 2026-10-02 15:51:56 CEST\nFragmentPath=/etc/systemd/system/airradar.service",
+  "historicalOnGround": {
+    "flightPosition": false,
+    "otherExactSource": false,
+    "coverage": "0 / 5,413,293 FlightPosition rows",
+    "timestampAlignment": "not applicable; no exact historical field"
+  },
+  "sourceAudit": {
+    "tables": "Flight, FlightPosition, FlightEvent, AircraftWeatherObservation, navigation observations, receiver aggregates",
+    "rawReceiverHistory": false,
+    "readsbTar1090Archive": false,
+    "exactGroundState": "only transient live provider/parser state; not persisted historically",
+    "preservedSignals": [
+      "lat",
+      "lon",
+      "altitude",
+      "groundSpeed",
+      "track",
+      "verticalRate",
+      "recordedAt"
+    ]
+  },
+  "canonicalReplayRetest": {
+    "persistedLanding": 26,
+    "replayLanding": null,
+    "matches": null,
+    "misses": null,
+    "extras": null,
+    "timestampDelta": null,
+    "accepted": false,
+    "reason": "cannot rerun semantically equivalent replay because exact historical onGround is unavailable"
+  },
+  "terminalLandingClassifier": {
+    "canonicalComparison": 15,
+    "confirmed": 3,
+    "ambiguous": 8,
+    "unknown": 4,
+    "airportAgreementN": 3,
+    "airportAgreement": 2,
+    "landingTimeMedianDeltaSeconds": 144.012,
+    "landingTimeP90DeltaSeconds": 625.252,
+    "falsePositiveSample": 100,
+    "falsePositiveConfirmed": 0,
+    "status": "PARTIAL",
+    "note": "Independent classifier is implemented and tested, but current sparse FlightPosition coverage does not establish validation-grade touchdown truth across the canonical set."
+  },
+  "observedRunwayClassifier": {
+    "confirmed": 1,
+    "ambiguous": 1,
+    "unknown": 13,
+    "reportedRunwayComparisonN": 0,
+    "reportedRunwayAgreement": null,
+    "parallelAmbiguity": 1,
+    "status": "UNAVAILABLE",
+    "reason": "no independently reported historical runway and geometry-only labels are not validated"
+  },
+  "runwayContextAudit": {
+    "flightEventRunwayUsable": 0,
+    "metadataRows": 26,
+    "reportedRunway": 0,
+    "inferredRunway": 0,
+    "conflicts": 0,
+    "statuses": {
+      "REPORTED": 0,
+      "INFERRED": 0,
+      "UNKNOWN": 26
+    }
+  },
+  "flightEndTime": {
+    "canonicalComparison": 17,
+    "medianDeltaSeconds": 145,
+    "p90DeltaSeconds": 1098,
+    "minDeltaSeconds": -212,
+    "maxDeltaSeconds": 2189,
+    "semantics": "Flight closure at stale lastSeenAt continuity timeout; not touchdown",
+    "acceptedAsTruth": false
+  },
+  "prospectiveInstrumentation": {
+    "needed": true,
+    "fields": [
+      "onGroundAtDetection",
+      "groundSpeedAtDetection",
+      "trackAtDetection",
+      "baroAltitudeAtDetection",
+      "geomAltitudeAtDetection",
+      "terminalSampleGap",
+      "runwayContext"
+    ],
+    "writeAmplification": "0 rows; LANDING metadata only",
+    "schemaMigration": "NO if metadata-only"
+  },
+  "etaV3": {
+    "decision": "SHADOW",
+    "reason": "landing truth is not validation-grade"
+  },
+  "runwayV3": {
+    "decision": "SHADOW",
+    "reason": "observed runway truth unavailable"
+  },
+  "safety": {
+    "productionHistoricalWrites": 0,
+    "predictionWrites": 0,
+    "replayWrites": 0,
+    "dbTransaction": "READ ONLY; rolled back"
+  },
+  "details": {
+    "canonical": [
+      {
+        "flightId": 142452,
+        "event": {
+          "id": 6,
+          "flightId": 142452,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T07:01:09.516Z",
+          "airportIcao": "LKUH",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49C25C:1790924459751\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T07:01:09.516Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.runwayProximity\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 12.515,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 142407,
+        "event": {
+          "id": 148,
+          "flightId": 142407,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T07:06:27.387Z",
+          "airportIcao": "LKKU",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49C43B:1790924459751\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T07:06:27.387Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "CONFIRMED",
+          "landingAt": "2026-10-02T07:08:51.012Z",
+          "airportIcao": "LKKU",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "MEDIUM",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "terminal groundspeed was low or reduced",
+            "first low-altitude runway-zone sample followed by terminal continuation"
+          ],
+          "terminalSamples": 8,
+          "closestRunwayDistanceKm": 0.7177181726886503,
+          "samplingIntervalSeconds": {
+            "median": 21.521,
+            "aroundLanding": 20.892
+          },
+          "uncertaintySeconds": 21.521,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [
+              {
+                "designator": "02R",
+                "score": 3,
+                "lateralDistanceKm": 0.6908381725916615,
+                "thresholdDistanceKm": 0.7177181726886503
+              },
+              {
+                "designator": "02C",
+                "score": 3,
+                "lateralDistanceKm": 0.729771986182205,
+                "thresholdDistanceKm": 0.7478631597581147
+              },
+              {
+                "designator": "02L",
+                "score": 3,
+                "lateralDistanceKm": 0.8133741217569068,
+                "thresholdDistanceKm": 0.8178181790179515
+              },
+              {
+                "designator": "20R",
+                "score": 3,
+                "lateralDistanceKm": 1.7554251338952593,
+                "thresholdDistanceKm": 2.1430232683798494
+              }
+            ],
+            "evidence": [
+              "terminal trajectory did not establish a unique runway corridor"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 142617,
+        "event": {
+          "id": 1502,
+          "flightId": 142617,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T08:22:03.942Z",
+          "airportIcao": "LKKU",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"3D06A0:1790928572178\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T08:22:03.942Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.runwayProximity\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.499,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 142909,
+        "event": {
+          "id": 1759,
+          "flightId": 142909,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T08:36:01.237Z",
+          "airportIcao": "LKUH",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"3D3A82:1790930100209\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T08:36:01.237Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.runwayProximity\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 17.951,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 143252,
+        "event": {
+          "id": 3094,
+          "flightId": 143252,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T09:38:59.438Z",
+          "airportIcao": "URRT",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"505D09:1790933894739\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T09:38:59.438Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "fewer than five valid historical samples"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 47.788,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 143789,
+        "event": {
+          "id": 5449,
+          "flightId": 143789,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T11:19:43.456Z",
+          "airportIcao": "URRT",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49C2C1:1790939856597\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T11:19:43.456Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LKKU",
+          "runway": null,
+          "runwayStatus": "AMBIGUOUS",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "terminal groundspeed was low or reduced",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 10,
+          "closestRunwayDistanceKm": 1.906463842611777,
+          "samplingIntervalSeconds": {
+            "median": 20.48,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "AMBIGUOUS",
+            "designator": null,
+            "candidates": [
+              {
+                "designator": "20R",
+                "score": 7,
+                "lateralDistanceKm": 0.3167903438762353,
+                "thresholdDistanceKm": 1.906463842611777
+              },
+              {
+                "designator": "20L",
+                "score": 7,
+                "lateralDistanceKm": 0.32931628199650265,
+                "thresholdDistanceKm": 2.168385270949741
+              },
+              {
+                "designator": "02L",
+                "score": 5,
+                "lateralDistanceKm": 0.625382534655621,
+                "thresholdDistanceKm": 0.9695648603944357
+              },
+              {
+                "designator": "02C",
+                "score": 5,
+                "lateralDistanceKm": 0.708988738519351,
+                "thresholdDistanceKm": 1.0798576372346578
+              }
+            ],
+            "evidence": [
+              "multiple runway ends have comparable terminal geometry"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 143851,
+        "event": {
+          "id": 5509,
+          "flightId": 143851,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T11:23:39.022Z",
+          "airportIcao": "URRT",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49C1C5:1790939868918\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T11:23:39.022Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 23.101,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 143915,
+        "event": {
+          "id": 6078,
+          "flightId": 143915,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T11:45:04.400Z",
+          "airportIcao": "LKKU",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49D29A:1790941494111\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T11:45:04.400Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.runwayProximity\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.599,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 143948,
+        "event": {
+          "id": 6455,
+          "flightId": 143948,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T12:02:19.453Z",
+          "airportIcao": "LKKU",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49C0E7:1790941494111\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T12:02:19.453Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LKUH",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "terminal groundspeed was low or reduced",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 10,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.568,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": [
+              "runway geometry unavailable"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 144413,
+        "event": {
+          "id": 7840,
+          "flightId": 144413,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T13:07:02.312Z",
+          "airportIcao": "URRT",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49C2C1:1790946386024\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T13:07:02.312Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "fewer than five valid historical samples"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 0,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 144484,
+        "event": {
+          "id": 8247,
+          "flightId": 144484,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T13:20:57.904Z",
+          "airportIcao": "URRT",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49C2C1:1790947113522\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T13:20:57.904Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "fewer than five valid historical samples"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 6.605,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 144499,
+        "event": {
+          "id": 8378,
+          "flightId": 144499,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T13:26:46.272Z",
+          "airportIcao": "LZHL",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49C3B5:1790947245618\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T13:26:46.272Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "CONFIRMED",
+          "landingAt": "2026-10-02T13:37:11.252Z",
+          "airportIcao": "LKBA",
+          "runway": "26",
+          "runwayStatus": "CONFIRMED",
+          "confidence": "MEDIUM",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "terminal groundspeed was low or reduced",
+            "first low-altitude runway-zone sample followed by terminal continuation"
+          ],
+          "terminalSamples": 10,
+          "closestRunwayDistanceKm": 0.33827516287302134,
+          "samplingIntervalSeconds": {
+            "median": 21.472,
+            "aroundLanding": 22.41
+          },
+          "uncertaintySeconds": 22.41,
+          "observedRunway": {
+            "status": "CONFIRMED",
+            "designator": "26",
+            "candidates": [
+              {
+                "designator": "26",
+                "score": 10,
+                "lateralDistanceKm": 0.2651531053215388,
+                "thresholdDistanceKm": 0.33827516287302134
+              },
+              {
+                "designator": "08",
+                "score": 8,
+                "lateralDistanceKm": 0.06732862059166339,
+                "thresholdDistanceKm": 0.17236767106897338
+              }
+            ],
+            "evidence": [
+              "terminal track aligned with runway heading",
+              "multiple terminal samples occupied the centerline corridor",
+              "terminal track reached the threshold zone"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 144572,
+        "event": {
+          "id": 8634,
+          "flightId": 144572,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T13:34:28.800Z",
+          "airportIcao": "LKKJ",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49D255:1790947971244\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T13:34:28.800Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.runwayProximity\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.026,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 144650,
+        "event": {
+          "id": 9100,
+          "flightId": 144650,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T13:54:21.041Z",
+          "airportIcao": "URRT",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"505E30:1790949117690\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T13:54:21.041Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 19.882,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 144667,
+        "event": {
+          "id": 9157,
+          "flightId": 144667,
+          "type": "LANDING",
+          "occurredAt": "2026-10-02T13:56:51.924Z",
+          "airportIcao": "LKLU",
+          "runway": null,
+          "metadataJson": "{\"phase\":\"FINAL\",\"lifecycleKey\":\"49D6A1:1790949365756\",\"runwayContext\":{\"reportedRunway\":null,\"inferredRunway\":null,\"status\":\"UNKNOWN\",\"conflict\":false,\"effectiveRunway\":null,\"displayRunway\":null,\"source\":\"UNKNOWN\",\"confidence\":null},\"startedAt\":\"2026-10-02T13:56:51.924Z\",\"endedAt\":null,\"reasonCodes\":[\"intelligence.evidence.approachEstablished\",\"intelligence.evidence.lowAltitude\",\"intelligence.evidence.touchdownGroundspeed\"],\"detectorVersion\":\"flight-intelligence-v1\"}"
+        },
+        "result": {
+          "status": "CONFIRMED",
+          "landingAt": "2026-10-02T13:58:27.454Z",
+          "airportIcao": "LKLU",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "MEDIUM",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "terminal groundspeed was low or reduced",
+            "first low-altitude runway-zone sample followed by terminal continuation"
+          ],
+          "terminalSamples": 6,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.202,
+            "aroundLanding": 21.843
+          },
+          "uncertaintySeconds": 21.843,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": [
+              "runway geometry unavailable"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      }
+    ],
+    "negatives": [
+      {
+        "flightId": 5329,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.076,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 115298,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 7.837,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 84414,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 4.068,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 36492,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.143,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 103060,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 15.372,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 1970,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.062,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 20074,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.091,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 70697,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "fewer than five valid historical samples"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.779,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 43659,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.067,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 83110,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "EPRG",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 5,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.397,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": [
+              "runway geometry unavailable"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 128436,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "fewer than five valid historical samples"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": null,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 18829,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.07,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 25593,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.066,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 35837,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.136,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 9700,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.079,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 144487,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.677,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 4612,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.087,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 93861,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LOGP",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 8,
+          "closestRunwayDistanceKm": 1.8817988387756763,
+          "samplingIntervalSeconds": {
+            "median": 21.682,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [
+              {
+                "designator": "15",
+                "score": 3,
+                "lateralDistanceKm": 1.625143585205078,
+                "thresholdDistanceKm": 1.8817988387756763
+              },
+              {
+                "designator": "33",
+                "score": 0,
+                "lateralDistanceKm": 1.0947531127929686,
+                "thresholdDistanceKm": 2.544427858038907
+              }
+            ],
+            "evidence": [
+              "terminal trajectory did not establish a unique runway corridor"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 110698,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.081,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 140788,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 20.965,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 30390,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.098,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 6095,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "fewer than five valid historical samples"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": null,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 33363,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.092,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 50738,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.153,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 45311,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.137,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 11610,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.058,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 34761,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.122,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 94197,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LKKA",
+          "runway": null,
+          "runwayStatus": "AMBIGUOUS",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 7,
+          "closestRunwayDistanceKm": 1.9064668013000783,
+          "samplingIntervalSeconds": {
+            "median": 21.735,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "AMBIGUOUS",
+            "designator": null,
+            "candidates": [
+              {
+                "designator": "31",
+                "score": 7,
+                "lateralDistanceKm": 0.16750283808995148,
+                "thresholdDistanceKm": 1.9064668013000783
+              },
+              {
+                "designator": "13",
+                "score": 7,
+                "lateralDistanceKm": 0.14019239490414037,
+                "thresholdDistanceKm": 1.9465441627180073
+              }
+            ],
+            "evidence": [
+              "multiple runway ends have comparable terminal geometry"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 16774,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.082,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 89428,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.521,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 41852,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "fewer than five valid historical samples"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": null,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 38411,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.122,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 80448,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.837,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 28423,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.055,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 101071,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.358,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 96197,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.267,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 133573,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.758,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 34079,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.101,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 4897,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.077,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 115838,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.083,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 12977,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.079,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 82970,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.325,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 63584,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.623,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 105516,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.243,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 21461,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.108,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 120104,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 20.967,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 103855,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 20.398,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 45930,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.126,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 48678,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.092,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 80971,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.604,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 28462,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.055,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 137916,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.495,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 111752,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LZHL",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 9,
+          "closestRunwayDistanceKm": 4.2191192619531135,
+          "samplingIntervalSeconds": {
+            "median": 21.269,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [
+              {
+                "designator": "04",
+                "score": 4,
+                "lateralDistanceKm": 0.18964144718753856,
+                "thresholdDistanceKm": 4.2191192619531135
+              },
+              {
+                "designator": "22",
+                "score": 4,
+                "lateralDistanceKm": 0.19166217346399575,
+                "thresholdDistanceKm": 5.482609081702015
+              }
+            ],
+            "evidence": [
+              "terminal trajectory did not establish a unique runway corridor"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 40372,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.137,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 50409,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.149,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 106261,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "fewer than five valid historical samples"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 18.623,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 80696,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.635,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 135241,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 17.701,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 52181,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.152,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 86057,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LOLU",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 8,
+          "closestRunwayDistanceKm": 4.293278121502713,
+          "samplingIntervalSeconds": {
+            "median": 4.01,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [
+              {
+                "designator": "08",
+                "score": 0,
+                "lateralDistanceKm": 1.8449982129118911,
+                "thresholdDistanceKm": 4.293278121502713
+              },
+              {
+                "designator": "26",
+                "score": 0,
+                "lateralDistanceKm": 1.978338972189235,
+                "thresholdDistanceKm": 4.5934196903089095
+              }
+            ],
+            "evidence": [
+              "terminal trajectory did not establish a unique runway corridor"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 10013,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.079,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 17684,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.045,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 143479,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.604,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 20435,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.118,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 63799,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.805,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 58842,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.253,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 49988,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.134,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 135822,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.619,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 39833,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.122,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 138594,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.502,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 83476,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.517,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 122268,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.735,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 99959,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LKPI",
+          "runway": "26",
+          "runwayStatus": "CONFIRMED",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "terminal groundspeed was low or reduced",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 7,
+          "closestRunwayDistanceKm": 0.1903133936945154,
+          "samplingIntervalSeconds": {
+            "median": 21.682,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "CONFIRMED",
+            "designator": "26",
+            "candidates": [
+              {
+                "designator": "26",
+                "score": 10,
+                "lateralDistanceKm": 0.18320326115698543,
+                "thresholdDistanceKm": 0.1903133936945154
+              },
+              {
+                "designator": "08",
+                "score": 5,
+                "lateralDistanceKm": 0.8797445218880121,
+                "thresholdDistanceKm": 0.9160312950823128
+              }
+            ],
+            "evidence": [
+              "terminal track aligned with runway heading",
+              "multiple terminal samples occupied the centerline corridor",
+              "terminal track reached the threshold zone"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 130134,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 20.476,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 32353,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.07,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 80909,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.589,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 139343,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 0,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 122234,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.399,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 18363,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.08,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 68638,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LZJS",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 10,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.849,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": [
+              "runway geometry unavailable"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 134743,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.63,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 11205,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.078,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 81788,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LKMT",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "terminal groundspeed was low or reduced",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 7,
+          "closestRunwayDistanceKm": 4.9253293149052295,
+          "samplingIntervalSeconds": {
+            "median": 21.212,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [
+              {
+                "designator": "22",
+                "score": 0,
+                "lateralDistanceKm": 4.921556695934088,
+                "thresholdDistanceKm": 4.9253293149052295
+              },
+              {
+                "designator": "04",
+                "score": 0,
+                "lateralDistanceKm": 5.066699862299586,
+                "thresholdDistanceKm": 6.324669860554745
+              }
+            ],
+            "evidence": [
+              "terminal trajectory did not establish a unique runway corridor"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 117939,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.739,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 120574,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.073,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 49802,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.127,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 91627,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.354,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 90555,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": "LOSS",
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal distance decreased toward the airport",
+            "terminal descent reached low altitude",
+            "multiple low-altitude terminal samples were observed",
+            "touchdown was not directly observed"
+          ],
+          "terminalSamples": 6,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 19.251,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": [
+              "runway geometry unavailable"
+            ]
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 43290,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.092,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 108942,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "terminal geometry does not uniquely identify an airport"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.272,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 17591,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.049,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 26063,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 0.543,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 103458,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 20.018,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 54037,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.129,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 65380,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.731,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 117029,
+        "result": {
+          "status": "AMBIGUOUS",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "track ended after a terminal coverage gap"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 4.863,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 50956,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.145,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 133343,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.433,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 17793,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 21.047,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      },
+      {
+        "flightId": 122055,
+        "result": {
+          "status": "UNKNOWN",
+          "landingAt": null,
+          "airportIcao": null,
+          "runway": null,
+          "runwayStatus": "UNKNOWN",
+          "confidence": "LOW",
+          "evidence": [
+            "no airport has sufficient independent terminal evidence"
+          ],
+          "terminalSamples": 0,
+          "closestRunwayDistanceKm": null,
+          "samplingIntervalSeconds": {
+            "median": 11.655,
+            "aroundLanding": null
+          },
+          "uncertaintySeconds": null,
+          "observedRunway": {
+            "status": "UNKNOWN",
+            "designator": null,
+            "candidates": [],
+            "evidence": []
+          },
+          "sourceVersion": "terminal-ground-truth-v1"
+        }
+      }
+    ],
+    "flightsExamined": 115,
+    "positionsExamined": 4598,
+    "runtimeMs": 4540
+  },
+  "nextStep": "TERMINAL GROUND TRUTH PARTIAL — DEPLOY SPARSE PROSPECTIVE INSTRUMENTATION"
+}
