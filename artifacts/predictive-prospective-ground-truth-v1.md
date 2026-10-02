@@ -43,3 +43,28 @@ UNKNOWN. `getDestinationAsOf` returns the latest observation at or before T.
 
 Schema migration: additive `Flight.destinationProvenanceJson`; no historical
 backfill. Production deployment and natural-landing canary are pending.
+
+## Corrective release gate — 2026-10-02
+
+- Candidate: `d4249629a360c4ccfe70fc2a129f7b9efaa49122`; resolved release
+  version `1.0.250`; package version remains `1.0.0`.
+- ICAO and active lifecycle identity are required before delayed ground
+  confirmation. A single observation selects at most the newest compatible
+  pending event.
+- Confirmation requires both the existing 5 km event-point bound and a 5 km
+  airport bound from the already-loaded airport index; unknown airport geometry
+  fails closed.
+- Terminal evidence is measured with UTF-8 `Buffer.byteLength`; oldest
+  optional track observations are reduced first, and oversized required
+  evidence is not persisted.
+- Destination history is timestamp-validated, chronologically ordered, adjacent
+  semantic states are collapsed, same-time conflicts are rejected, and as-of
+  lookup selects the maximum timestamp at or before the query time.
+- Isolated validation: `npm ci` passed; full suite passed with 201 files, 1,415
+  tests passed, 10 skipped, and zero worker errors. Typecheck, lint, feature,
+  localization, visual, migration, production build, and desktop/mobile browser
+  gates passed. Lint retained seven existing warnings.
+- Disposable PostgreSQL: **BLOCKED**. No local PostgreSQL binaries or safe
+  container runtime are available; production PostgreSQL was not used.
+- Production deployment and canary: not performed because the mandatory real
+  PostgreSQL gate is unresolved.

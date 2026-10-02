@@ -6,5 +6,18 @@
   "pendingGroundConfirmation": { "maxEntries": 256, "ttlSeconds": 480, "maxUpdatesPerLanding": 1 },
   "destinationProvenance": { "version": "destination-provenance-v1", "maxRevisions": 8, "historicalBackfill": false },
   "predictionCapabilities": { "ETA": "SHADOW", "RUNWAY": "SHADOW", "RUNWAY_CHANGE": "SHADOW", "TRAJECTORY": "SHADOW" },
-  "production": { "deployed": false, "naturalLandingEvents": 0, "canaryMinutes": 0 }
+  "production": { "deployed": false, "naturalLandingEvents": 0, "canaryMinutes": 0 },
+  "correctiveReleaseGate": {
+    "date": "2026-10-02",
+    "result": "BLOCKED",
+    "candidateSha": "d4249629a360c4ccfe70fc2a129f7b9efaa49122",
+    "resolvedVersion": "1.0.250",
+    "packageVersionUnchanged": "1.0.0",
+    "isolatedNpmCi": "PASS",
+    "fullSuite": { "filesPassed": 201, "testsPassed": 1415, "testsSkipped": 10, "workerErrors": 0 },
+    "staticAndProductionGates": "PASS",
+    "disposablePostgres": "BLOCKED_UNAVAILABLE",
+    "productionDeployment": "NOT_PERFORMED",
+    "canary": "NOT_PERFORMED"
+  }
 }
