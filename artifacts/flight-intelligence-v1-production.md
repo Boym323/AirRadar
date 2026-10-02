@@ -1,21 +1,20 @@
 # Flight Intelligence V1 production report
 
-Result: PARTIAL. No production release, restart, migration, or canary was
-performed. The fresh build passed in an isolated worktree and the existing
-prepared build passed the complete production/browser gate.
+Result: PARTIAL. No production release, migration, restart, or canary was
+performed. The production database was read-only during validation and still
+contains zero `FlightEvent` rows, as expected before first deployment.
 
-The read-only PostgreSQL history contains 123,911 flights and 5,106,104
-positions, but zero `FlightEvent` rows. The bounded completed-flight replay
-covered 100 flights and 2,173 positions. It generated 13 `CRUISE_ENTER`, 15
-`TOP_OF_DESCENT`, 20 `APPROACH`, and 9 `HOLDING` comparable events. These are
-not accuracy measurements because there are no durable events for comparison.
+The disposable PostgreSQL corpus passed durable persistence, temporal type,
+replay parity, idempotency, restart, detector-version, ordering, and duplicate
+row checks. It contained 49 durable events from 100 flights and 3,985 source
+positions. The source slice had no `TAKEOFF`, `INITIAL_CLIMB`, `LANDING`,
+`HOLD_ENTER`, `HOLD_EXIT`, or `GO_AROUND` rows.
 
-Detector benchmark p95 was 1.784 ms at 100 aircraft, 8.505 ms at 500, and
-8.233 ms at 1,000. The 1,000-aircraft/20-client SSE delta was 2,102 bytes and
-4.9 ms for one changed aircraft. No production CPU/RSS/WAL/write-rate canary
-measurements exist because deployment was correctly blocked.
+Deployment status: NOT RUN.
 
-Blocking evidence: live/replay parity, durable idempotency, canonical Airport
-Operations parity, production health, and the release gates requiring those
-checks. Obtain a read-only production-derived `FlightEvent` corpus, rerun
-these checks, and only then use `deploy/release.sh`.
+Canary status: NOT RUN.
+
+Remaining before a production release decision: run the dedicated API/Timeline,
+Time Machine, Airport Operations, full production/browser gates against the
+current candidate, then use the canonical release workflow. Do not backfill
+production history or force a replay into production.

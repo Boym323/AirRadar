@@ -1,4 +1,5 @@
 import type { Aircraft } from "@/lib/aircraft/types";
+import { Temporal } from "temporal-polyfill";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { getFlightContinuityGapMs } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
@@ -47,14 +48,14 @@ interface FlightEventRow {
 
 interface FlightEventQuery {
   where(filter: Record<string, unknown>): FlightEventQuery;
-  orderBy(order: Record<string, string>): FlightEventQuery;
+  orderBy(order: unknown): FlightEventQuery;
   limit(value: number): FlightEventQuery;
   include(relation: string, callback: (query: RelationQuery) => RelationQuery): FlightEventQuery;
   all(): Promise<FlightEventRow[]>;
 }
 
 interface FlightEventTable extends FlightEventQuery {
-  create(input: { data: Record<string, unknown> }): Promise<unknown>;
+  create(input: Record<string, unknown>): Promise<unknown>;
 }
 
 interface FlightRow {
@@ -66,13 +67,18 @@ interface FlightRow {
 
 interface FlightQuery {
   where(filter: Record<string, unknown>): FlightQuery;
-  orderBy(order: Record<string, string>): FlightQuery;
+  orderBy(order: unknown): FlightQuery;
   limit(value: number): FlightQuery;
+  first(): Promise<FlightRow | null>;
   all(): Promise<FlightRow[]>;
 }
 
 interface FlightTable {
   where(filter: Record<string, unknown>): FlightQuery;
+}
+
+interface AircraftTable {
+  where(filter: Record<string, unknown>): { first(): Promise<{ id: number } | null> };
 }
 
 interface AirportTable {
@@ -221,7 +227,7 @@ export class FlightIntelligenceService {
       const table = (database.orm.public as unknown as { FlightEvent: FlightEventTable }).FlightEvent;
       const rows = await trackDbOperation("flight-intelligence.event.query", async () => await table
         .where(where)
-        .orderBy({ occurredAt: "desc" })
+        .orderBy((event: { occurredAt: { desc(): unknown } }) => event.occurredAt.desc())
         .include("aircraft", (aircraft) => aircraft.select("registration"))
         .include("flight", (flight) => flight.select("callsign", "registration"))
         .limit(limit)
@@ -250,15 +256,20 @@ export class FlightIntelligenceService {
     const database = getPrisma();
     if (!database) return;
     try {
-      const schema = database.orm.public as unknown as { FlightEvent: FlightEventTable; Flight: FlightTable };
+      const schema = database.orm.public as unknown as { FlightEvent: FlightEventTable; Flight: FlightTable; Aircraft: AircraftTable };
       const occurredAt = Date.parse(event.occurredAt);
       let linkedFlight: FlightRow | undefined;
+      const aircraft = await trackDbOperation("flight-intelligence.aircraft-link.query", async () => await schema.Aircraft
+        .where({ icaoHex: event.icaoHex })
+        .first());
       for (let attempt = 0; attempt < 3 && !linkedFlight; attempt += 1) {
-        const flights = await trackDbOperation("flight-intelligence.flight-link.query", async () => await schema.Flight
-          .where({ aircraft: { icaoHex: event.icaoHex } })
-          .orderBy({ lastSeenAt: "desc" })
-          .limit(8)
-          .all());
+        const flights = aircraft
+          ? await trackDbOperation("flight-intelligence.flight-link.query", async () => await schema.Flight
+            .where({ aircraftId: aircraft.id })
+            .orderBy((flight: { lastSeenAt: { desc(): unknown } }) => flight.lastSeenAt.desc())
+            .limit(8)
+            .all())
+          : [];
         const hasTemporalRows = flights.some((flight) => flight.startTime !== undefined || flight.lastSeenAt !== undefined || flight.endTime !== undefined);
         linkedFlight = flights.find((flight) => {
           const start = typeof flight.startTime === "undefined" ? NaN : Date.parse(String(flight.startTime));
@@ -272,13 +283,16 @@ export class FlightIntelligenceService {
       }
       event.flightId = linkedFlight?.id ?? null;
       await trackDbOperation("flight-intelligence.event.create", async () => await schema.FlightEvent.create({
-        data: {
           eventKey: event.eventKey,
           type: event.type,
           icaoHex: event.icaoHex,
           flightId: linkedFlight?.id ?? null,
-          occurredAt: new Date(event.occurredAt),
-          detectedAt: new Date(event.detectedAt),
+          // The Prisma contract uses the temporal PostgreSQL codec. Keep the
+          // application write path on the same Temporal.Instant type used by
+          // the rest of the persistence layer; JavaScript Date is not a
+          // contract-compatible substitute here.
+          occurredAt: Temporal.Instant.fromEpochMilliseconds(Date.parse(event.occurredAt)),
+          detectedAt: Temporal.Instant.fromEpochMilliseconds(Date.parse(event.detectedAt)),
           latitude: event.latitude,
           longitude: event.longitude,
           altitude: event.altitude,
@@ -297,10 +311,10 @@ export class FlightIntelligenceService {
             detectorVersion: event.detectorVersion ?? FLIGHT_INTELLIGENCE_DETECTOR_VERSION,
             ...(event.metadata ?? {}),
           }),
-        },
       }));
-    } catch {
+    } catch (error) {
       // Intelligence persistence is best effort.
+      if (process.env.FLIGHT_INTELLIGENCE_DEBUG_PERSIST === "true") console.error("[flight-intelligence.persistence]", error);
     }
   }
 

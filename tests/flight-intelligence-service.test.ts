@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Temporal } from "temporal-polyfill";
 
 const mocks = vi.hoisted(() => ({
   getPrisma: vi.fn(),
@@ -142,6 +143,7 @@ describe("FlightIntelligenceService database reads", () => {
       orm: {
         public: {
           Airport: { all: vi.fn().mockResolvedValue([]) },
+          Aircraft: { where: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue({ id: 1 }) }) },
           Flight: flightQuery,
           FlightEvent: { create },
         },
@@ -153,8 +155,11 @@ describe("FlightIntelligenceService database reads", () => {
     service.observe(undefined, aircraft({ atc, lastSeen: "2026-09-22T08:01:00.000Z" }), Date.parse("2026-09-22T08:01:00.000Z"));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ flightId: 42 }) }));
-    const persisted = create.mock.calls[0]?.[0]?.data as { metadataJson?: string };
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ flightId: 42 }));
+    const persisted = create.mock.calls[0]?.[0] as { metadataJson?: string; occurredAt: Temporal.Instant; detectedAt: Temporal.Instant };
+    expect(persisted.occurredAt).toBeInstanceOf(Temporal.Instant);
+    expect(persisted.detectedAt).toBeInstanceOf(Temporal.Instant);
+    expect((persisted.occurredAt as Temporal.Instant).epochMilliseconds).toBeGreaterThan(Date.parse("2026-09-22T08:00:00.000Z"));
     expect(JSON.parse(persisted.metadataJson ?? "{}")).toMatchObject({
       startedAt: expect.any(String),
       reasonCodes: expect.arrayContaining(["intelligence.evidence.sectorMatched"]),

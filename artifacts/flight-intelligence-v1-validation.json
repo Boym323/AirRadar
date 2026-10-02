@@ -1,16 +1,217 @@
 {
-  "focusedTests": { "files": 4, "passed": 36, "failed": 0 },
-  "typecheckPrepared": "passed",
-  "productionReplayCorpus": { "status": "completed_read_only", "flights": 100, "positions": 2173, "databaseFlightEvents": 0, "generatedComparableEvents": { "CRUISE_ENTER": 13, "TOP_OF_DESCENT": 15, "APPROACH": 20, "HOLDING": 9 }, "unmatchedReplayEvents": 57, "accuracyClaim": null, "limitation": "No persisted FlightEvent rows were available, so parity cannot be scored." },
-  "realPostgresql": "passed_read_only_schema_verification",
-  "browserGate": "passed_existing_prepared_build_core_and_browser_all",
-  "fullSuite": { "status": "passed", "testFilesPassed": 193, "testFilesSkipped": 3, "testsPassed": 1387, "testsSkipped": 10 },
-  "productionBuild": "passed_isolated_worktree",
-  "lint": "passed_with_7_warnings",
-  "featuresCheck": "passed",
-  "czechDocumentationCheck": "passed",
-  "visualCheck": "passed",
-  "jsonValidation": "passed",
-  "diffCheck": "passed",
-  "deployment": "blocked_by_missing_durable_event_parity_evidence"
+  "status": "PASS",
+  "candidate": "55a9c2a55936cd07327fb8470593f6fbbf7373af",
+  "source": {
+    "flights": 100,
+    "positions": 3985,
+    "flightIds": [
+      897,
+      899,
+      901,
+      902,
+      903,
+      904,
+      906,
+      908,
+      911,
+      912,
+      913,
+      914,
+      915,
+      916,
+      917,
+      918,
+      919,
+      920,
+      921,
+      922,
+      923,
+      925,
+      926,
+      927,
+      929,
+      930,
+      931,
+      932,
+      933,
+      934,
+      935,
+      936,
+      937,
+      938,
+      939,
+      940,
+      941,
+      942,
+      943,
+      944,
+      945,
+      946,
+      947,
+      948,
+      950,
+      951,
+      952,
+      953,
+      954,
+      955,
+      956,
+      957,
+      959,
+      960,
+      961,
+      962,
+      963,
+      964,
+      965,
+      966,
+      968,
+      969,
+      970,
+      971,
+      972,
+      973,
+      974,
+      975,
+      976,
+      977,
+      978,
+      979,
+      980,
+      981,
+      982,
+      983,
+      984,
+      985,
+      986,
+      987,
+      988,
+      989,
+      990,
+      991,
+      992,
+      993,
+      994,
+      995,
+      996,
+      997,
+      998,
+      999,
+      1001,
+      1002,
+      1003,
+      1004,
+      1005,
+      1006,
+      1007,
+      1008
+    ]
+  },
+  "production": {
+    "flightEventsBefore": 0,
+    "flightEventsAfter": 0
+  },
+  "disposable": {
+    "migrations": 15,
+    "airports": 0,
+    "runways": 0
+  },
+  "firstReplay": {
+    "generated": 49,
+    "byType": {
+      "TOP_OF_DESCENT": 15,
+      "LEVEL_OFF": 24,
+      "APPROACH": 4,
+      "CRUISE_ENTER": 6
+    },
+    "durable": 49,
+    "durableByType": {
+      "TOP_OF_DESCENT": 15,
+      "LEVEL_OFF": 24,
+      "CRUISE_ENTER": 6,
+      "APPROACH": 4
+    }
+  },
+  "idempotency": {
+    "firstPassRows": 49,
+    "secondPassRows": 49,
+    "thirdRestartPassRows": 49,
+    "unexpectedNewRows": 0,
+    "secondPassDetected": 49,
+    "thirdPassDetected": 49
+  },
+  "parity": {
+    "streamVsDurable": true,
+    "semanticMismatches": 0
+  },
+  "temporal": {
+    "postgresTimestamptzRoundTrip": true,
+    "temporalInstantWritePath": true,
+    "detectorVersions": [
+      "flight-intelligence-v1"
+    ]
+  },
+  "eventTypes": [
+    {
+      "type": "TAKEOFF",
+      "generated": 0,
+      "durable": 0
+    },
+    {
+      "type": "INITIAL_CLIMB",
+      "generated": 0,
+      "durable": 0
+    },
+    {
+      "type": "CRUISE_ENTER",
+      "generated": 6,
+      "durable": 6
+    },
+    {
+      "type": "TOP_OF_DESCENT",
+      "generated": 15,
+      "durable": 15
+    },
+    {
+      "type": "APPROACH",
+      "generated": 4,
+      "durable": 4
+    },
+    {
+      "type": "LANDING",
+      "generated": 0,
+      "durable": 0
+    },
+    {
+      "type": "HOLD_ENTER",
+      "generated": 0,
+      "durable": 0
+    },
+    {
+      "type": "HOLD_EXIT",
+      "generated": 0,
+      "durable": 0
+    },
+    {
+      "type": "GO_AROUND",
+      "generated": 0,
+      "durable": 0
+    }
+  ],
+  "ordering": {
+    "violations": []
+  },
+  "performance": {
+    "durationMs": 17159,
+    "rowsInserted": 49
+  },
+  "dbDiagnostics": {
+    "eventPersistenceAttempts": 147,
+    "successfulInserts": 49,
+    "deduplicatedOrFailed": 98
+  },
+  "cleanup": {
+    "temporaryDatabaseDropped": true,
+    "productionModified": false
+  }
 }

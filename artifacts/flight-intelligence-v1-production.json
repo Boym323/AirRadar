@@ -3,9 +3,9 @@
   "deployed": false,
   "migration": false,
   "canary": "not_run",
-  "releaseAuthorization": "not_run_due_to_validation_block",
-  "git": { "startSha": "95c7ba6c7435364b4f44373dcd701daaa0b14627", "originMain": "95c7ba6c7435364b4f44373dcd701daaa0b14627" },
-  "productionMeasurements": { "databaseFlights": 123911, "databasePositions": 5106104, "databaseFlightEvents": 0, "replayFlights": 100, "replayPositions": 2173, "replayComparableEvents": { "CRUISE_ENTER": 13, "TOP_OF_DESCENT": 15, "APPROACH": 20, "HOLDING": 9 }, "detectorBenchmark": { "100": { "p50Ms": 1.362, "p95Ms": 1.784 }, "500": { "p50Ms": 3.77, "p95Ms": 8.505 }, "1000": { "p50Ms": 4.992, "p95Ms": 8.233 } }, "sseDeltaBenchmark": { "aircraft": 1000, "clients": 20, "changedAircraft": 1, "payloadBytes": 2102, "processingMs": 4.9 } },
-  "gates": { "fullSuite": "PASS", "build": "PASS_isolated_worktree", "browser": "PASS", "releaseGates": "NOT_RUN", "liveReplayParity": "BLOCKED_no_persisted_FlightEvent_rows", "airportOperationsParity": "BLOCKED_no_canonical_production_event_rows", "timeMachine": "PASS_test_coverage", "idempotency": "BLOCKED_no_durable_event_rows_to_replay", "productionHealth": "NOT_RUN" },
-  "nextStep": "Restore or obtain a read-only production-derived FlightEvent corpus, rerun parity/idempotency/sequence validation, then use the canonical release workflow."
+  "releaseAuthorization": "not_run_remaining_product_gates",
+  "git": { "startSha": "55a9c2a55936cd07327fb8470593f6fbbf7373af", "originMain": "55a9c2a55936cd07327fb8470593f6fbbf7373af" },
+  "productionMeasurements": { "databaseFlightEvents": 0, "validationFlights": 100, "validationPositions": 3985, "validationDurableEvents": 49, "validationSecondPassRows": 49, "validationThirdPassRows": 49, "validationUnexpectedNewRows": 0 },
+  "gates": { "disposableDurableCorpus": "PASS", "realPostgresql": "PASS", "temporalInstant": "PASS", "streamReplayDurableParity": "PASS", "idempotency": "PASS", "restart": "PASS", "ordering": "PASS", "fullSuite": "PASS", "lint": "PASS_with_7_warnings", "typecheck": "PASS", "build": "NOT_RUN_current_dirty_checkout", "browser": "NOT_RUN_current_candidate", "releaseGates": "NOT_RUN", "timeMachine": "NOT_RUN_current_corpus", "airportOperationsParity": "NOT_RUN_current_corpus", "productionHealth": "NOT_RUN", "productionCanary": "NOT_RUN" },
+  "nextStep": "Run the remaining current-candidate product and release gates; do not deploy or force replay into production until they pass."
 }
