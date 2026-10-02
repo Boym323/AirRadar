@@ -1,0 +1,10 @@
+{
+  "result": "PARTIAL",
+  "focusedTests": "PASS",
+  "typecheck": "PASS",
+  "focusedLint": "PASS",
+  "postgres": "NOT_IMPLEMENTED",
+  "durableDeliveryQueue": "NOT_IMPLEMENTED",
+  "browserGate": "NOT_RUN",
+  "productionCanary": "NOT_RUN"
+}

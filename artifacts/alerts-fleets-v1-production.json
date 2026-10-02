@@ -1,0 +1,9 @@
+{
+  "result": "BLOCKED",
+  "releasePerformed": false,
+  "migrationPerformed": false,
+  "serviceRestarted": false,
+  "pushoverTest": "NOT_RUN",
+  "canary": "NOT_RUN",
+  "blocking": ["admin UI wiring", "durable delivery queue", "browser gate", "approved release"]
+}

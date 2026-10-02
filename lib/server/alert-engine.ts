@@ -167,6 +167,12 @@ export class AlertEngine {
     this.cleanupDedupCache(now);
     const previous = aircraftMap(previousValue);
     const current = aircraftMap(currentValue);
+    // The first live snapshot is a baseline.  In particular, an aircraft
+    // already broadcasting 7500/7600/7700 during a restart must not create a
+    // notification storm; only a later transition observed by this process is
+    // actionable.  Calls with an explicit previous snapshot retain the legacy
+    // transition semantics used by replay/tests.
+    const startupBaseline = previous.size === 0;
     let stateDirty = false;
 
     for (const aircraft of current.values()) {
@@ -198,6 +204,7 @@ export class AlertEngine {
 
       const currentSquawk = emergencySquawk(aircraft);
       const priorSquawk = emergencySquawk(prior);
+      if (startupBaseline && prior === undefined) continue;
       if (priorSquawk && currentSquawk !== priorSquawk) {
         this.dedupCache.delete(`squawk:${priorSquawk}:${aircraft.icaoHex}`);
         stateDirty = true;

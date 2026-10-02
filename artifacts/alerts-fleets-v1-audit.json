@@ -1,0 +1,7 @@
+{
+  "date": "2026-10-02",
+  "result": "PARTIAL",
+  "existing": ["single-process aircraft state", "canonical FlightEvent", "admin session", "bounded JSONL history", "server-side Pushover"],
+  "added": ["typed fleet matcher primitives", "deterministic occurrence IDs", "squawk transition baseline", "circular geofence hysteresis tracker"],
+  "remaining": ["admin CRUD UI for typed fleets/rules/geofences", "durable delivery queue restart recovery", "production canary"]
+}
