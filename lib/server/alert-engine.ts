@@ -9,6 +9,7 @@ import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
 import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligence/types";
 import { AlertV1TransitionTracker, evaluateAlertV1, geofenceTransitionSourceKey, squawkTransitionSourceKey, type AlertV1Signal } from "@/lib/server/alerts-fleets-v1";
 import { getAlertsFleetsRepository } from "@/lib/server/alerts-fleets-repository";
+import { getPrisma } from "@/lib/server/db";
 
 const MAX_DEDUP_ENTRIES = 10_000;
 const MAX_PENDING_ALERTS = 32;
@@ -328,15 +329,36 @@ export class AlertEngine {
   }
 
   private async persistDurableOccurrence(aircraft: Aircraft, event: FlightIntelligenceEvent): Promise<void> {
+    const flightEventId = await this.resolvePersistedFlightEventId(event);
+    if (flightEventId === null) return;
     await this.persistDurableSignal({
         sourceType: "FLIGHT_EVENT",
         sourceKey: event.eventKey,
         trigger: "FLIGHT_EVENT",
         aircraft: { icaoHex: aircraft.icaoHex, registration: aircraft.registration ?? null, callsign: aircraft.callsign ?? null },
         occurredAt: event.occurredAt,
-        flightEventId: Number(event.id),
+        flightEventId,
         flightEventType: event.type as AlertV1Signal["flightEventType"],
       });
+  }
+
+  private async resolvePersistedFlightEventId(event: FlightIntelligenceEvent): Promise<number | null> {
+    const numericId = Number(event.id);
+    if (Number.isSafeInteger(numericId) && numericId > 0) return numericId;
+    const database = getPrisma();
+    const table = database?.orm.public.FlightEvent as unknown as { where: (filter: { eventKey: string }) => { first: () => Promise<{ id?: number } | undefined> } } | undefined;
+    if (!table) return null;
+    // FlightEvent persistence and alert evaluation are intentionally separate
+    // optional lanes. The detector event carries a semantic key until the
+    // database assigns its canonical numeric id, so briefly retry the lookup
+    // before applying the FLIGHT_EVENT occurrence invariant.
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const row = await table.where({ eventKey: event.eventKey }).first();
+      const id = Number(row?.id);
+      if (Number.isSafeInteger(id) && id > 0) return id;
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
+    }
+    return null;
   }
 
   private async persistDurableSignal(signal: AlertV1Signal): Promise<void> {
