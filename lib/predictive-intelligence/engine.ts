@@ -5,10 +5,11 @@ import {
   PREDICTIVE_INTELLIGENCE_VERSION, type PredictionConfidence, type PredictionEvidence,
   type PredictionRunway, type PredictiveInput, type PredictiveFlightState, type PredictionSample,
 } from "./types";
+import { PREDICTIVE_CALIBRATION_CONFIG } from "./config";
 
 const NM_PER_KM = 0.5399568;
-const MIN_SAMPLE_WINDOW_MS = 90_000;
-const MAX_SAMPLE_AGE_MS = 5 * 60_000;
+const MIN_SAMPLE_WINDOW_MS = PREDICTIVE_CALIBRATION_CONFIG.eta.minimumProgressWindowMs;
+const MAX_SAMPLE_AGE_MS = PREDICTIVE_CALIBRATION_CONFIG.eta.maxSampleAgeMs;
 const angularDifference = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
 const finite = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
 const confidence = (score: number): PredictionConfidence => score >= 0.78 ? "HIGH" : score >= 0.52 ? "MEDIUM" : score > 0 ? "LOW" : "UNKNOWN";
@@ -34,14 +35,14 @@ function recentProgress(input: PredictiveInput, valid: readonly PredictionSample
   const firstDistance = haversineDistanceKm(first.lat, first.lon, input.destinationAirport.lat, input.destinationAirport.lon) * NM_PER_KM;
   const durationSec = (last.observedAt - first.observedAt) / 1000;
   const rateKt = (firstDistance - currentDistanceNm) / (durationSec / 3600);
-  return { rateKt: rateKt > 15 && rateKt < 650 ? rateKt : null, durationSec };
+  return { rateKt: rateKt > 15 && rateKt < PREDICTIVE_CALIBRATION_CONFIG.eta.maximumSpeedKt ? rateKt : null, durationSec };
 }
 function eta(input: PredictiveInput, valid: readonly PredictionSample[]): PredictiveFlightState["eta"] {
   const distance = distanceNm(input);
   if (distance === null || input.flightState.destinationStatus === "UNKNOWN" || distance < 0.3 || valid.length < 2) return { estimatedArrivalAt: null, confidence: "UNKNOWN", evidence: [] };
   const current = input.flightState.sample.groundSpeedKt;
   const progress = recentProgress(input, valid, distance);
-  const speed = progress.rateKt ?? (finite(current) && current > 40 ? current : null);
+  const speed = progress.rateKt ?? (finite(current) && current > PREDICTIVE_CALIBRATION_CONFIG.eta.minimumSpeedKt ? current : null);
   if (speed === null) return { estimatedArrivalAt: null, confidence: "UNKNOWN", evidence: [{ key: "reason", value: "insufficient motion context" }] };
   const correction = phase(input.flightState.phase) === "APPROACH" ? 0.92 : input.flightState.phase === "DESCENT" ? 0.88 : isHolding(input.flightState.phase) ? 0.7 : 1;
   const seconds = Math.min(4 * 3600, Math.max(60, distance / (speed * correction) * 3600));
@@ -88,8 +89,8 @@ function trajectory(input: PredictiveInput, valid: readonly PredictionSample[]):
   const firstDistance = haversineDistanceKm(first.lat, first.lon, input.destinationAirport.lat, input.destinationAirport.lon);
   const lastDistance = haversineDistanceKm(last.lat, last.lon, input.destinationAirport.lat, input.destinationAirport.lon);
   const evidence: PredictionEvidence[] = [{ key: "crossTrackKm", value: Math.round(crossTrackKm * 10) / 10 }, { key: "distanceChangeKm", value: Math.round((lastDistance - firstDistance) * 10) / 10 }];
-  if (crossTrackKm > 55 && headingAway && lastDistance > firstDistance + 5) return { state: "DEVIATING", confidence: "MEDIUM", evidence };
-  if (crossTrackKm > 25 || headingAway || lastDistance > firstDistance + 2) return { state: "POSSIBLE_DEVIATION", confidence: "LOW", evidence };
+  if (crossTrackKm > PREDICTIVE_CALIBRATION_CONFIG.trajectory.deviationCrossTrackKm && headingAway && lastDistance > firstDistance + 5) return { state: "DEVIATING", confidence: "MEDIUM", evidence };
+  if (crossTrackKm > PREDICTIVE_CALIBRATION_CONFIG.trajectory.possibleCrossTrackKm || headingAway || lastDistance > firstDistance + 2) return { state: "POSSIBLE_DEVIATION", confidence: "LOW", evidence };
   return { state: "NORMAL", confidence: "MEDIUM", evidence };
 }
 export function evaluatePredictiveIntelligence(input: PredictiveInput): { prediction: PredictiveFlightState; durationMs: number } {

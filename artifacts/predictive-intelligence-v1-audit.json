@@ -1,10 +1,11 @@
 {
   "result": "PARTIAL",
   "modelVersion": "predictive-intelligence-v1",
-  "git": { "startSha": "68d29e6d525fd1c4fd1bd8aeeb3ef07f453fa9be", "main": "68d29e6d525fd1c4fd1bd8aeeb3ef07f453fa9be", "originMain": "68d29e6d525fd1c4fd1bd8aeeb3ef07f453fa9be", "workingTree": "clean" },
+  "git": { "startSha": "97cd55d434b7864fe5597023e48fa00caad82fc7", "main": "97cd55d434b7864fe5597023e48fa00caad82fc7", "originMain": "97cd55d434b7864fe5597023e48fa00caad82fc7", "workingTreeAtStart": "clean" },
   "architecture": { "canonicalEngine": "PASS", "liveCadenceSeconds": 10, "boundedRuntimeEntries": 2000, "databaseWrites": 0, "filesystemWrites": 0, "perEvaluationHttpCalls": 0 },
   "graduation": { "ETA": "SHADOW", "RUNWAY": "SHADOW", "RUNWAY_CHANGE": "SHADOW", "TRAJECTORY": "SHADOW" },
-  "historicalCorpus": { "available": false, "reason": "No checked-in corpus/export; production database was not queried or modified" },
+  "calibrationContract": { "version": "predictive-intelligence-v1-calibration-1", "split": "stableHash(flightId + ':' + calibrationVersion) % 10 < 7", "noLookAheadMutationGate": "PASS", "asOfDestinationReplay": "SUPPORTED" },
+  "historicalCorpus": { "available": false, "reason": "No configured read-only historical database or checked-in corpus/export; production database was not queried or modified" },
   "productionShadow": { "available": false, "deployed": false, "reason": "Release/deployment was not run" },
   "publicApi": { "route": "/api/aircraft/:hex/prediction", "readOnly": true, "recomputes": false, "defaultCapabilityStatus": "SHADOW" }
 }

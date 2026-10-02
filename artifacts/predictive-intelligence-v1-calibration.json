@@ -1,0 +1,12 @@
+{
+  "result": "PARTIAL",
+  "calibrationVersion": "predictive-intelligence-v1-calibration-1",
+  "git": { "taskStartSha": "97cd55d434b7864fe5597023e48fa00caad82fc7", "main": "97cd55d434b7864fe5597023e48fa00caad82fc7", "originMain": "97cd55d434b7864fe5597023e48fa00caad82fc7", "workingTreeAtStart": "clean", "productionSha": null },
+  "architecture": { "canonicalEngine": "PASS", "replayUsesCanonicalEngine": "PASS", "liveCadenceSeconds": 10, "boundedRuntimeEntries": 2000, "predictionDatabaseWrites": 0, "predictionFilesystemWrites": 0 },
+  "corpus": { "candidateFlights": null, "frozenFlights": null, "calibrationFlights": null, "holdoutFlights": null, "available": false, "reason": "No configured read-only historical database or checked-in corpus" },
+  "split": { "algorithm": "stableHash(flightId + ':' + calibrationVersion) % 10 < 7", "seed": "predictive-intelligence-v1-calibration-1", "overlap": 0 },
+  "noLookAhead": { "replaySamples": "PASS", "futureMutationContract": "PASS", "destinationAsOf": "SUPPORTED_BY_REPLAY_CONTRACT", "productionSources": "NOT_EVIDENCED_WITHOUT_CORPUS" },
+  "metrics": { "eta": null, "runway": null, "runwayChange": null, "trajectory": null },
+  "capabilities": { "ETA": "SHADOW", "RUNWAY": "SHADOW", "RUNWAY_CHANGE": "SHADOW", "TRAJECTORY": "SHADOW" },
+  "production": { "modified": false, "deployed": false, "publicPredictiveCapabilitiesEnabled": false }
+}
