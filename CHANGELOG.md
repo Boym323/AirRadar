@@ -10,7 +10,7 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.243] - 2026-10-02
+## [1.0.244] - 2026-10-02
 
 Changes since v1.0.242.
 
@@ -18,30 +18,249 @@ Changes since v1.0.242.
 
 ### Fixed
 
-- Resolve canonical FlightEvent ids before occurrence persistence (8a82ed03)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix(alerts): resolve canonical FlightEvent ids before occurrence persistence (8a82ed03)
-
-</details>
-
-## [1.0.239] - 2026-10-02
-
-Changes since v1.0.238.
+- Resolve canonical FlightEvent ids before occurrence persistence (8a82ed0)
 
 ### Documentation
 
-- Update changelog for v1.0.238 (7dc0403b)
+- Update changelog for v1.0.243 (6c2b064)
+- Record V1 corrective production pass (1575054)
 
 <details>
 <summary>Technical commits</summary>
 
-- docs: update changelog for v1.0.238 (7dc0403b)
+- fix(alerts): resolve canonical FlightEvent ids before occurrence persistence (8a82ed0)
+- docs: update changelog for v1.0.243 (6c2b064)
+- docs(alerts): record V1 corrective production pass (1575054)
 
 </details>
 
+## [1.0.242] - 2026-10-02
+
+Changes since v1.0.241.
+
+**Features touched:** Watchlist, Alerts & Fleet.
+
+### Added
+
+- Implement Alerts & Fleets V1 with enhanced FlightEvent handling, corrective audits, and pagination support (201c181)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: implement Alerts & Fleets V1 with enhanced FlightEvent handling, corrective audits, and pagination support (201c181)
+
+</details>
+
+## [1.0.241] - 2026-10-02
+
+Changes since v1.0.240.
+
+### Fixed
+
+- Update production record to reflect BLOCKED status and detailed occurrence data (80a5116)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: update production record to reflect BLOCKED status and detailed occurrence data (80a5116)
+
+</details>
+
+## [1.0.240] - 2026-10-02
+
+Changes since v1.0.238.
+
+**Features touched:** Watchlist, Alerts & Fleet.
+
+### Documentation
+
+- Update changelog for v1.0.238 (7dc0403)
+- Update changelog for v1.0.239 (37086ce)
+- Record Alerts & Fleets V1 production canary (355a0d3)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: update changelog for v1.0.238 (7dc0403)
+- docs: update changelog for v1.0.239 (37086ce)
+- docs: record Alerts & Fleets V1 production canary (355a0d3)
+
+</details>
+
+## [1.0.237] - 2026-10-02
+
+Changes since v1.0.236.
+
+### Changed
+
+- Refactor code structure for improved readability and maintainability (0c71fe2)
+
+<details>
+<summary>Technical commits</summary>
+
+- Refactor code structure for improved readability and maintainability (0c71fe2)
+
+</details>
+
+## [1.0.236] - 2026-10-02
+
+Changes since v1.0.235.
+
+**Features touched:** Watchlist, Alerts & Fleet.
+
+### Added
+
+- Implement Alerts & Fleets V1 module with typed primitives, transition tracking, and geofence validation (b1cf782)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: implement Alerts & Fleets V1 module with typed primitives, transition tracking, and geofence validation (b1cf782)
+
+</details>
+
+## [1.0.235] - 2026-10-02
+
+Changes since v1.0.234.
+
+### Added
+
+- Adjust BROWSER_LIVE_TRAIL_MAX_POINTS to limit cache size and update test to reflect new logic (a8270bf)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: adjust BROWSER_LIVE_TRAIL_MAX_POINTS to limit cache size and update test to reflect new logic (a8270bf)
+
+</details>
+
+## [1.0.234] - 2026-10-02
+
+Changes since v1.0.233.
+
+**Features touched:** Flight Intelligence.
+
+### Added
+
+- Update Flight Intelligence production report with new canary results and performance metrics, and correct generated timestamp (500da53)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: update Flight Intelligence production report with new canary results and performance metrics, and correct generated timestamp (500da53)
+
+</details>
+
+## [1.0.233] - 2026-10-02
+
+Changes since v1.0.232.
+
+**Features touched:** Flight Intelligence.
+
+### Added
+
+- Enhance Flight Intelligence with new validation and corpus scripts, update database diagnostics, and improve event handling (39c29da)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: enhance Flight Intelligence with new validation and corpus scripts, update database diagnostics, and improve event handling (39c29da)
+
+</details>
+
+## [1.0.232] - 2026-10-01
+
+Changes since v1.0.231.
+
+**Features touched:** Flight Intelligence.
+
+### Documentation
+
+- Record Flight Intelligence V1 validation (55a9c2a)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: record Flight Intelligence V1 validation (55a9c2a)
+
+</details>
+
+## [1.0.231] - 2026-10-01
+
+Changes since v1.0.230.
+
+**Features touched:** Flight Intelligence.
+
+### Added
+
+- Extend Flight Intelligence with new events and detector versioning (95c7ba6)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: extend Flight Intelligence with new events and detector versioning (95c7ba6)
+
+</details>
+
+## [1.0.230] - 2026-09-30
+
+Changes since v1.0.229.
+
+### Changed
+
+- Add post-archive database baseline v2 JSON and markdown files (84b49fa)
+
+<details>
+<summary>Technical commits</summary>
+
+- Add post-archive database baseline v2 JSON and markdown files (84b49fa)
+
+</details>
+
+## [1.0.229] - 2026-09-30
+
+Changes since v1.0.228.
+
+### Added
+
+- Update I/O optimization artifacts with deployment details and performance metrics (f12940e)
+
+### Documentation
+
+- Update changelog for v1.0.228 (2bd4b8c)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: update changelog for v1.0.228 (2bd4b8c)
+- feat: update I/O optimization artifacts with deployment details and performance metrics (f12940e)
+
+</details>
+
+## [1.0.227] - 2026-09-30
+
+Changes since v1.0.226.
+
+### Added
+
+- Add node write attribution v2 and v3 artifacts for enhanced tracking (d2cd370)
+- Add node write attribution v4 artifacts for detailed tracking and analysis (21a9ee3)
+
+### Maintenance
+
+- Sync generated repository metadata (2952bf2)
+- Stop auto-merging repository metadata (67953ab)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (2952bf2)
+- Merge pull request #228 from Boym323/automation/repository-metadata (ab86b52)
+- feat: add node write attribution v2 and v3 artifacts for enhanced tracking (d2cd370)
+- ci: stop auto-merging repository metadata (67953ab)
+- feat: add node write attribution v4 artifacts for detailed tracking and analysis (21a9ee3)
+
+</details>
 ## [1.0.238] - 2026-10-02
 
 Changes since v1.0.238.
@@ -93,6 +312,7 @@ Changes since v1.0.223.
 - feat: add final post-optimization baseline and closure audit documentation (06e8aae)
 
 </details>
+
 ## [1.0.223] - 2026-09-29
 
 Changes since v1.0.222.
