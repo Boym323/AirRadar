@@ -10,6 +10,23 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.243] - 2026-10-02
+
+Changes since v1.0.242.
+
+**Features touched:** Navigation Integrity, Watchlist, Alerts & Fleet.
+
+### Fixed
+
+- Resolve canonical FlightEvent ids before occurrence persistence (8a82ed03)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(alerts): resolve canonical FlightEvent ids before occurrence persistence (8a82ed03)
+
+</details>
+
 ## [1.0.239] - 2026-10-02
 
 Changes since v1.0.238.
