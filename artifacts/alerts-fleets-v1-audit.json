@@ -3,5 +3,7 @@
   "result": "PARTIAL",
   "existing": ["single-process aircraft state", "canonical FlightEvent", "admin session", "bounded JSONL history", "server-side Pushover"],
   "added": ["typed fleet matcher primitives", "deterministic occurrence IDs", "squawk transition baseline", "circular geofence hysteresis tracker"],
-  "remaining": ["admin CRUD UI for typed fleets/rules/geofences", "durable delivery queue restart recovery", "production canary"]
+  "productionRelease": {"version": "1.0.239", "tag": "v1.0.239", "runtimeSha": "37086cef3e9c75c036ba5812f78e17f3659e1aaf", "migration": "PASS", "health": "PASS"},
+  "productionSecurity": {"adminUnauthenticatedStatus": 401, "pushover": "DISABLED_NOT_CONFIGURED", "receiverCoordinatesLeaked": false},
+  "remaining": ["natural FlightEvent occurrence was not observed during the bounded canary", "natural squawk/geofence transitions were not observed"]
 }

@@ -10,6 +10,10 @@
   "staleClaimRecovery": "PASS (2 rows recovered)",
   "temporalRoundTrip": "PASS",
   "browserGate": "PASS",
-  "productionBuild": "NOT_RUN (live service active)",
-  "productionCanary": "NOT_RUN"
+  "productionBuild": "PASS (v1.0.239; isolated canonical workflow)",
+  "productionMigration": "PASS (0 applied; already up to date)",
+  "productionCanary": "PASS (45 minutes; zero occurrences/deliveries/duplicates; no natural FlightEvent observed)",
+  "liveFlightEventOccurrence": "NOT_OBSERVED",
+  "naturalSquawk": "NOT_OBSERVED",
+  "naturalGeofence": "NOT_RUN"
 }

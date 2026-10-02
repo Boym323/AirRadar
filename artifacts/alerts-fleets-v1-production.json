@@ -1,9 +1,15 @@
 {
-  "result": "BLOCKED",
-  "releasePerformed": false,
-  "migrationPerformed": false,
-  "serviceRestarted": false,
-  "pushoverTest": "NOT_RUN",
-  "canary": "NOT_RUN",
-  "blocking": ["canonical isolated production build/release", "production migration gate", "deployment", "45-60 minute in-app canary"]
+  "result": "PARTIAL",
+  "releasePerformed": true,
+  "release": "1.0.239",
+  "tag": "v1.0.239",
+  "runtimeSha": "37086cef3e9c75c036ba5812f78e17f3659e1aaf",
+  "migrationPerformed": true,
+  "migrationResult": "PASS (already up to date; 0 applied)",
+  "serviceRestarted": true,
+  "health": "PASS (local and public)",
+  "canary": {"result": "PASS_STABLE_NOISE", "durationMinutes": 45, "fleetCount": 1, "ruleCount": 1, "channel": "IN_APP", "occurrences": 0, "deliveries": 0, "duplicateOccurrences": 0, "duplicateDeliveries": 0, "naturalFlightEvent": "NOT_OBSERVED", "temporaryConfigRemoved": true},
+  "pushoverConfigured": false,
+  "pushoverTest": "NOT_CONFIGURED",
+  "blocking": ["live FlightEvent occurrence not observed; deterministic evidence PASS", "natural squawk/geofence transitions not observed; deterministic evidence PASS"]
 }

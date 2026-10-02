@@ -23,6 +23,14 @@ Result: PARTIAL
 
 ## Not run / not yet applicable
 
-- Production build: NOT RUN directly because `airradar.service` is active;
-  the canonical isolated release workflow is required.
-- Production canary: NOT RUN.
+- Canonical isolated production build: PASS (v1.0.239; 124s release workflow)
+- Production migration: PASS (already up to date; 0 migrations applied)
+- Production canary: PASS for 45 minutes of stable zero-noise observation;
+  no natural FlightEvent occurred.
+
+## Production limitations
+
+- Live FlightEvent occurrence: NOT OBSERVED during the bounded canary;
+  deterministic occurrence/dedupe and PostgreSQL evidence remain PASS.
+- Natural squawk/geofence transitions: NOT OBSERVED; deterministic and
+  restart-baseline evidence remains PASS.

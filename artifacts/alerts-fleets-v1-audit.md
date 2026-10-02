@@ -34,7 +34,15 @@ requests. Pushover credentials are server-side environment values. Public
 serialization does not include them. Receiver position publication continues
 to use the existing public-position policy.
 
+Production verification on 2026-10-02: all five Alerts admin GET endpoints
+returned 401 without a session; the production version and health endpoints
+reported v1.0.239 / application ok; SSE served named snapshot events; and the
+temporary canary used IN_APP only. Pushover was disabled and the worker
+credentials were not configured.
+
 ## Scope guardrails
 
-No production database, release, service restart, or deployment was performed.
-Existing Flight Intelligence detectors were not duplicated.
+Production release v1.0.239 was performed through `deploy/release.sh` on
+commit `37086cef3e9c75c036ba5812f78e17f3659e1aaf`. Existing Flight
+Intelligence detectors were not duplicated. The temporary production canary
+fleet/rule was removed after observation.
