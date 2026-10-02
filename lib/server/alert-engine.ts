@@ -7,6 +7,8 @@ import { createAlertHistoryStore, type AlertHistoryReason, type AlertHistoryReco
 import { createAlertStateStore, type AlertStateStore } from "@/lib/server/alert-state";
 import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
 import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligence/types";
+import { evaluateAlertV1, type AlertV1Signal } from "@/lib/server/alerts-fleets-v1";
+import { getAlertsFleetsRepository } from "@/lib/server/alerts-fleets-repository";
 
 const MAX_DEDUP_ENTRIES = 10_000;
 const MAX_PENDING_ALERTS = 32;
@@ -251,6 +253,7 @@ export class AlertEngine {
    * deliberately because it is too noisy for push notifications.
    */
   observeIntelligenceEvent(aircraft: Aircraft, event: FlightIntelligenceEvent): void {
+    void this.persistDurableOccurrence(aircraft, event);
     if (!INTELLIGENCE_ALERT_EVENTS.has(event.type)) return;
     if (!eventIsFresh(event, aircraft, this.now())) return;
     if (event.type === "HOLDING" && event.metadata?.holdingStatus !== "HOLDING_CONFIRMED") return;
@@ -279,6 +282,32 @@ export class AlertEngine {
     this.rememberPermanentEvent(key);
     for (const rule of matchedRules) this.ruleLastTriggered.set(rule.id, this.now());
     this.persistState();
+  }
+
+  private async persistDurableOccurrence(aircraft: Aircraft, event: FlightIntelligenceEvent): Promise<void> {
+    try {
+      const config = await getAlertsFleetsRepository().loadConfig();
+      const signal: AlertV1Signal = {
+        sourceType: "FLIGHT_EVENT",
+        sourceKey: event.eventKey,
+        trigger: "FLIGHT_EVENT",
+        aircraft: { icaoHex: aircraft.icaoHex, registration: aircraft.registration ?? null, callsign: aircraft.callsign ?? null },
+        occurredAt: event.occurredAt,
+        flightEventId: String(event.id),
+        flightEventType: event.type as AlertV1Signal["flightEventType"],
+      };
+      for (const occurrence of evaluateAlertV1(signal, config)) {
+        const rule = config.rules.find((candidate) => candidate.id === occurrence.ruleId);
+        if (!rule) continue;
+        await getAlertsFleetsRepository().recordOccurrence({
+          id: occurrence.id, ruleId: occurrence.ruleId, sourceType: occurrence.sourceType, sourceKey: occurrence.sourceKey, trigger: occurrence.trigger,
+          aircraftIcao: occurrence.aircraft.icaoHex, registration: occurrence.aircraft.registration, callsign: occurrence.aircraft.callsign,
+          flightEventId: Number.isFinite(Number(event.id)) ? Number(event.id) : null, occurredAt: occurrence.occurredAt, payload: occurrence.payload, channels: rule.channels,
+        });
+      }
+    } catch {
+      // Durable alerts are optional enrichment and must not interrupt live ADS-B.
+    }
   }
 
   /** Emits only meaningful receiver health transitions; repeated degraded polls are suppressed. */

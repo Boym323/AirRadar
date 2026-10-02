@@ -153,7 +153,10 @@ dávkách bez materializace celé datové sady v paměti aplikace. Lokální fal
 prefix-blocků tar1090 je také omezen na 4 096 položek, 64 MiB a 15minutové
 LRU/TTL okno, takže opakované lookupy zdroje nemohou růst v paměti procesu bez
 praktického bajtového limitu. Browser watchlist je uložen v `localStorage`
-daného prohlížeče; serverová pravidla alertů jsou uložena v runtime state
+daného prohlížeče; trvalé V1 flotily, typované matchery, kruhové geofence,
+pravidla, výskyty a delivery řádky jsou uloženy v PostgreSQL. Zapnutá konfigurace
+se načítá do jedné vyměnitelné cache v paměti; mutace se nejprve zapíše a potom
+cache invaliduje. Legacy JSON úložiště zůstává pouze pro starší watchlist.
 adresáři (`/var/lib/airradar/alerts.json` v produkci), nikoli v PostgreSQL.
 Historie alertů je v produkci uložena jako append-only bezpečné event/status
 řádky v `/var/lib/airradar/alert-events.jsonl` a čte se z omezeného tailu s

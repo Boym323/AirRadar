@@ -1,0 +1,1040 @@
+[
+  {
+    "id": "table.alertDelivery",
+    "label": "Create table \"alertDelivery\"",
+    "summary": "Creates table \"alertDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "alertDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"alertDelivery\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertDelivery\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"alertDelivery\"",
+        "sql": "CREATE TABLE \"public\".\"alertDelivery\" (\n  \"attemptCount\" int4 DEFAULT 0 NOT NULL,\n  \"channel\" text NOT NULL,\n  \"claimedAt\" timestamptz,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"lastError\" text,\n  \"nextAttemptAt\" timestamptz NOT NULL,\n  \"occurrenceId\" text NOT NULL,\n  \"sentAt\" timestamptz,\n  \"status\" text DEFAULT 'PENDING' NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"alertDelivery\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertDelivery\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.alertFleet",
+    "label": "Create table \"alertFleet\"",
+    "summary": "Creates table \"alertFleet\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "alertFleet"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"alertFleet\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertFleet\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"alertFleet\"",
+        "sql": "CREATE TABLE \"public\".\"alertFleet\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"description\" text,\n  \"enabled\" bool DEFAULT true NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"alertFleet\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertFleet\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.alertFleetMatcher",
+    "label": "Create table \"alertFleetMatcher\"",
+    "summary": "Creates table \"alertFleetMatcher\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "alertFleetMatcher"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"alertFleetMatcher\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertFleetMatcher\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"alertFleetMatcher\"",
+        "sql": "CREATE TABLE \"public\".\"alertFleetMatcher\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"enabled\" bool DEFAULT true NOT NULL,\n  \"fleetId\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"type\" text NOT NULL,\n  \"value\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"alertFleetMatcher\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertFleetMatcher\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.alertGeofence",
+    "label": "Create table \"alertGeofence\"",
+    "summary": "Creates table \"alertGeofence\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "alertGeofence"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"alertGeofence\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertGeofence\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"alertGeofence\"",
+        "sql": "CREATE TABLE \"public\".\"alertGeofence\" (\n  \"centerLat\" float8 NOT NULL,\n  \"centerLon\" float8 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"enabled\" bool DEFAULT true NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"radiusMeters\" float8 NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"alertGeofence\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertGeofence\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.alertOccurrence",
+    "label": "Create table \"alertOccurrence\"",
+    "summary": "Creates table \"alertOccurrence\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "alertOccurrence"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"alertOccurrence\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"alertOccurrence\"",
+        "sql": "CREATE TABLE \"public\".\"alertOccurrence\" (\n  \"aircraftIcao\" text NOT NULL,\n  \"callsign\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"flightEventId\" int4,\n  \"flightId\" int4,\n  \"geofenceId\" text,\n  \"id\" text NOT NULL,\n  \"occurredAt\" timestamptz NOT NULL,\n  \"payloadJson\" text NOT NULL,\n  \"registration\" text,\n  \"ruleId\" text NOT NULL,\n  \"sourceKey\" text NOT NULL,\n  \"sourceType\" text NOT NULL,\n  \"trigger\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"alertOccurrence\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.alertRule",
+    "label": "Create table \"alertRule\"",
+    "summary": "Creates table \"alertRule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "alertRule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"alertRule\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertRule\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"alertRule\"",
+        "sql": "CREATE TABLE \"public\".\"alertRule\" (\n  \"activatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"channelsJson\" text NOT NULL,\n  \"cooldownMs\" int4,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"enabled\" bool DEFAULT true NOT NULL,\n  \"fleetId\" text,\n  \"geofenceId\" text,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"targetKind\" text NOT NULL,\n  \"trigger\" text NOT NULL,\n  \"triggerConfig\" text NOT NULL,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"alertRule\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertRule\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.alertDelivery.alertDelivery_occurrenceId_channel_key",
+    "label": "Add unique constraint on \"alertDelivery\" (occurrenceId, channel)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "alertDelivery_occurrenceId_channel_key",
+        "table": "alertDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"alertDelivery_occurrenceId_channel_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertDelivery_occurrenceId_channel_key",
+          "public",
+          "\"public\".\"alertDelivery\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"alertDelivery_occurrenceId_channel_key\"",
+        "sql": "ALTER TABLE \"public\".\"alertDelivery\" ADD CONSTRAINT \"alertDelivery_occurrenceId_channel_key\" UNIQUE (\"occurrenceId\", \"channel\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"alertDelivery_occurrenceId_channel_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertDelivery_occurrenceId_channel_key",
+          "public",
+          "\"public\".\"alertDelivery\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.alertFleetMatcher.alertFleetMatcher_fleetId_type_value_key",
+    "label": "Add unique constraint on \"alertFleetMatcher\" (fleetId, type, value)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "alertFleetMatcher_fleetId_type_value_key",
+        "table": "alertFleetMatcher"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"alertFleetMatcher_fleetId_type_value_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertFleetMatcher_fleetId_type_value_key",
+          "public",
+          "\"public\".\"alertFleetMatcher\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"alertFleetMatcher_fleetId_type_value_key\"",
+        "sql": "ALTER TABLE \"public\".\"alertFleetMatcher\" ADD CONSTRAINT \"alertFleetMatcher_fleetId_type_value_key\" UNIQUE (\"fleetId\", \"type\", \"value\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"alertFleetMatcher_fleetId_type_value_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertFleetMatcher_fleetId_type_value_key",
+          "public",
+          "\"public\".\"alertFleetMatcher\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.alertOccurrence.alertOccurrence_ruleId_sourceType_sourceKey_key",
+    "label": "Add unique constraint on \"alertOccurrence\" (ruleId, sourceType, sourceKey)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "alertOccurrence_ruleId_sourceType_sourceKey_key",
+        "table": "alertOccurrence"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"alertOccurrence_ruleId_sourceType_sourceKey_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertOccurrence_ruleId_sourceType_sourceKey_key",
+          "public",
+          "\"public\".\"alertOccurrence\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"alertOccurrence_ruleId_sourceType_sourceKey_key\"",
+        "sql": "ALTER TABLE \"public\".\"alertOccurrence\" ADD CONSTRAINT \"alertOccurrence_ruleId_sourceType_sourceKey_key\" UNIQUE (\"ruleId\", \"sourceType\", \"sourceKey\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"alertOccurrence_ruleId_sourceType_sourceKey_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertOccurrence_ruleId_sourceType_sourceKey_key",
+          "public",
+          "\"public\".\"alertOccurrence\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertDelivery.alertDelivery_claimedAt_idx_622598dc",
+    "label": "Create index \"alertDelivery_claimedAt_idx_622598dc\" on \"alertDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertDelivery_claimedAt_idx_622598dc",
+        "table": "alertDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertDelivery_claimedAt_idx_622598dc\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertDelivery_claimedAt_idx_622598dc\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertDelivery_claimedAt_idx_622598dc\"",
+        "sql": "CREATE INDEX \"alertDelivery_claimedAt_idx_622598dc\" ON \"public\".\"alertDelivery\" (\"claimedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertDelivery_claimedAt_idx_622598dc\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertDelivery_claimedAt_idx_622598dc\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertDelivery.alertDelivery_occurrenceId_idx_9f58affe",
+    "label": "Create index \"alertDelivery_occurrenceId_idx_9f58affe\" on \"alertDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertDelivery_occurrenceId_idx_9f58affe",
+        "table": "alertDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertDelivery_occurrenceId_idx_9f58affe\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertDelivery_occurrenceId_idx_9f58affe\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertDelivery_occurrenceId_idx_9f58affe\"",
+        "sql": "CREATE INDEX \"alertDelivery_occurrenceId_idx_9f58affe\" ON \"public\".\"alertDelivery\" (\"occurrenceId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertDelivery_occurrenceId_idx_9f58affe\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertDelivery_occurrenceId_idx_9f58affe\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertDelivery.alertDelivery_status_nextAttemptAt_idx_8ba20615",
+    "label": "Create index \"alertDelivery_status_nextAttemptAt_idx_8ba20615\" on \"alertDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertDelivery_status_nextAttemptAt_idx_8ba20615",
+        "table": "alertDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertDelivery_status_nextAttemptAt_idx_8ba20615\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertDelivery_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertDelivery_status_nextAttemptAt_idx_8ba20615\"",
+        "sql": "CREATE INDEX \"alertDelivery_status_nextAttemptAt_idx_8ba20615\" ON \"public\".\"alertDelivery\" (\"status\", \"nextAttemptAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertDelivery_status_nextAttemptAt_idx_8ba20615\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertDelivery_status_nextAttemptAt_idx_8ba20615\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertFleetMatcher.alertFleetMatcher_fleetId_enabled_idx_57625a71",
+    "label": "Create index \"alertFleetMatcher_fleetId_enabled_idx_57625a71\" on \"alertFleetMatcher\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertFleetMatcher_fleetId_enabled_idx_57625a71",
+        "table": "alertFleetMatcher"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertFleetMatcher_fleetId_enabled_idx_57625a71\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertFleetMatcher_fleetId_enabled_idx_57625a71\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertFleetMatcher_fleetId_enabled_idx_57625a71\"",
+        "sql": "CREATE INDEX \"alertFleetMatcher_fleetId_enabled_idx_57625a71\" ON \"public\".\"alertFleetMatcher\" (\"fleetId\", \"enabled\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertFleetMatcher_fleetId_enabled_idx_57625a71\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertFleetMatcher_fleetId_enabled_idx_57625a71\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertFleetMatcher.alertFleetMatcher_fleetId_idx_dce13b35",
+    "label": "Create index \"alertFleetMatcher_fleetId_idx_dce13b35\" on \"alertFleetMatcher\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertFleetMatcher_fleetId_idx_dce13b35",
+        "table": "alertFleetMatcher"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertFleetMatcher_fleetId_idx_dce13b35\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertFleetMatcher_fleetId_idx_dce13b35\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertFleetMatcher_fleetId_idx_dce13b35\"",
+        "sql": "CREATE INDEX \"alertFleetMatcher_fleetId_idx_dce13b35\" ON \"public\".\"alertFleetMatcher\" (\"fleetId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertFleetMatcher_fleetId_idx_dce13b35\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertFleetMatcher_fleetId_idx_dce13b35\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertOccurrence.alertOccurrence_aircraftIcao_occurredAt_idx_aef33eed",
+    "label": "Create index \"alertOccurrence_aircraftIcao_occurredAt_idx_aef33eed\" on \"alertOccurrence\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertOccurrence_aircraftIcao_occurredAt_idx_aef33eed",
+        "table": "alertOccurrence"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertOccurrence_aircraftIcao_occurredAt_idx_aef33eed\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence_aircraftIcao_occurredAt_idx_aef33eed\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertOccurrence_aircraftIcao_occurredAt_idx_aef33eed\"",
+        "sql": "CREATE INDEX \"alertOccurrence_aircraftIcao_occurredAt_idx_aef33eed\" ON \"public\".\"alertOccurrence\" (\"aircraftIcao\", \"occurredAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertOccurrence_aircraftIcao_occurredAt_idx_aef33eed\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence_aircraftIcao_occurredAt_idx_aef33eed\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertOccurrence.alertOccurrence_occurredAt_idx_c6b89167",
+    "label": "Create index \"alertOccurrence_occurredAt_idx_c6b89167\" on \"alertOccurrence\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertOccurrence_occurredAt_idx_c6b89167",
+        "table": "alertOccurrence"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertOccurrence_occurredAt_idx_c6b89167\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence_occurredAt_idx_c6b89167\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertOccurrence_occurredAt_idx_c6b89167\"",
+        "sql": "CREATE INDEX \"alertOccurrence_occurredAt_idx_c6b89167\" ON \"public\".\"alertOccurrence\" (\"occurredAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertOccurrence_occurredAt_idx_c6b89167\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence_occurredAt_idx_c6b89167\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertOccurrence.alertOccurrence_ruleId_idx_05e770f7",
+    "label": "Create index \"alertOccurrence_ruleId_idx_05e770f7\" on \"alertOccurrence\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertOccurrence_ruleId_idx_05e770f7",
+        "table": "alertOccurrence"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertOccurrence_ruleId_idx_05e770f7\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence_ruleId_idx_05e770f7\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertOccurrence_ruleId_idx_05e770f7\"",
+        "sql": "CREATE INDEX \"alertOccurrence_ruleId_idx_05e770f7\" ON \"public\".\"alertOccurrence\" (\"ruleId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertOccurrence_ruleId_idx_05e770f7\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence_ruleId_idx_05e770f7\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertOccurrence.alertOccurrence_trigger_occurredAt_idx_733f52c6",
+    "label": "Create index \"alertOccurrence_trigger_occurredAt_idx_733f52c6\" on \"alertOccurrence\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertOccurrence_trigger_occurredAt_idx_733f52c6",
+        "table": "alertOccurrence"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertOccurrence_trigger_occurredAt_idx_733f52c6\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence_trigger_occurredAt_idx_733f52c6\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertOccurrence_trigger_occurredAt_idx_733f52c6\"",
+        "sql": "CREATE INDEX \"alertOccurrence_trigger_occurredAt_idx_733f52c6\" ON \"public\".\"alertOccurrence\" (\"trigger\", \"occurredAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertOccurrence_trigger_occurredAt_idx_733f52c6\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertOccurrence_trigger_occurredAt_idx_733f52c6\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertRule.alertRule_enabled_idx_7f014af8",
+    "label": "Create index \"alertRule_enabled_idx_7f014af8\" on \"alertRule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertRule_enabled_idx_7f014af8",
+        "table": "alertRule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertRule_enabled_idx_7f014af8\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertRule_enabled_idx_7f014af8\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertRule_enabled_idx_7f014af8\"",
+        "sql": "CREATE INDEX \"alertRule_enabled_idx_7f014af8\" ON \"public\".\"alertRule\" (\"enabled\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertRule_enabled_idx_7f014af8\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertRule_enabled_idx_7f014af8\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertRule.alertRule_fleetId_idx_dce13b35",
+    "label": "Create index \"alertRule_fleetId_idx_dce13b35\" on \"alertRule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertRule_fleetId_idx_dce13b35",
+        "table": "alertRule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertRule_fleetId_idx_dce13b35\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertRule_fleetId_idx_dce13b35\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertRule_fleetId_idx_dce13b35\"",
+        "sql": "CREATE INDEX \"alertRule_fleetId_idx_dce13b35\" ON \"public\".\"alertRule\" (\"fleetId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertRule_fleetId_idx_dce13b35\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertRule_fleetId_idx_dce13b35\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.alertRule.alertRule_geofenceId_idx_28366201",
+    "label": "Create index \"alertRule_geofenceId_idx_28366201\" on \"alertRule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "alertRule_geofenceId_idx_28366201",
+        "table": "alertRule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"alertRule_geofenceId_idx_28366201\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertRule_geofenceId_idx_28366201\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"alertRule_geofenceId_idx_28366201\"",
+        "sql": "CREATE INDEX \"alertRule_geofenceId_idx_28366201\" ON \"public\".\"alertRule\" (\"geofenceId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"alertRule_geofenceId_idx_28366201\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"alertRule_geofenceId_idx_28366201\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.alertDelivery.alertDelivery_occurrenceId_fkey",
+    "label": "Add foreign key \"alertDelivery_occurrenceId_fkey\" on \"alertDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "alertDelivery_occurrenceId_fkey",
+        "table": "alertDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"alertDelivery_occurrenceId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertDelivery_occurrenceId_fkey",
+          "public",
+          "\"public\".\"alertDelivery\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"alertDelivery_occurrenceId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"alertDelivery\"\nADD CONSTRAINT \"alertDelivery_occurrenceId_fkey\"\nFOREIGN KEY (\"occurrenceId\")\nREFERENCES \"public\".\"alertOccurrence\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"alertDelivery_occurrenceId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertDelivery_occurrenceId_fkey",
+          "public",
+          "\"public\".\"alertDelivery\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.alertFleetMatcher.alertFleetMatcher_fleetId_fkey",
+    "label": "Add foreign key \"alertFleetMatcher_fleetId_fkey\" on \"alertFleetMatcher\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "alertFleetMatcher_fleetId_fkey",
+        "table": "alertFleetMatcher"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"alertFleetMatcher_fleetId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertFleetMatcher_fleetId_fkey",
+          "public",
+          "\"public\".\"alertFleetMatcher\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"alertFleetMatcher_fleetId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"alertFleetMatcher\"\nADD CONSTRAINT \"alertFleetMatcher_fleetId_fkey\"\nFOREIGN KEY (\"fleetId\")\nREFERENCES \"public\".\"alertFleet\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"alertFleetMatcher_fleetId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertFleetMatcher_fleetId_fkey",
+          "public",
+          "\"public\".\"alertFleetMatcher\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.alertOccurrence.alertOccurrence_ruleId_fkey",
+    "label": "Add foreign key \"alertOccurrence_ruleId_fkey\" on \"alertOccurrence\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "alertOccurrence_ruleId_fkey",
+        "table": "alertOccurrence"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"alertOccurrence_ruleId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertOccurrence_ruleId_fkey",
+          "public",
+          "\"public\".\"alertOccurrence\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"alertOccurrence_ruleId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"alertOccurrence\"\nADD CONSTRAINT \"alertOccurrence_ruleId_fkey\"\nFOREIGN KEY (\"ruleId\")\nREFERENCES \"public\".\"alertRule\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"alertOccurrence_ruleId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertOccurrence_ruleId_fkey",
+          "public",
+          "\"public\".\"alertOccurrence\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.alertRule.alertRule_fleetId_fkey",
+    "label": "Add foreign key \"alertRule_fleetId_fkey\" on \"alertRule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "alertRule_fleetId_fkey",
+        "table": "alertRule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"alertRule_fleetId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertRule_fleetId_fkey",
+          "public",
+          "\"public\".\"alertRule\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"alertRule_fleetId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"alertRule\"\nADD CONSTRAINT \"alertRule_fleetId_fkey\"\nFOREIGN KEY (\"fleetId\")\nREFERENCES \"public\".\"alertFleet\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"alertRule_fleetId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertRule_fleetId_fkey",
+          "public",
+          "\"public\".\"alertRule\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.alertRule.alertRule_geofenceId_fkey",
+    "label": "Add foreign key \"alertRule_geofenceId_fkey\" on \"alertRule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "alertRule_geofenceId_fkey",
+        "table": "alertRule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"alertRule_geofenceId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertRule_geofenceId_fkey",
+          "public",
+          "\"public\".\"alertRule\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"alertRule_geofenceId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"alertRule\"\nADD CONSTRAINT \"alertRule_geofenceId_fkey\"\nFOREIGN KEY (\"geofenceId\")\nREFERENCES \"public\".\"alertGeofence\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"alertRule_geofenceId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "alertRule_geofenceId_fkey",
+          "public",
+          "\"public\".\"alertRule\""
+        ]
+      }
+    ]
+  }
+]

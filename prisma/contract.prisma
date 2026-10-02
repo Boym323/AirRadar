@@ -444,3 +444,106 @@ model AltitudeAnomaly {
   @@index([icaoHex, observedAt])
   @@index([flightId, observedAt])
 }
+
+/// Durable Alerts & Fleets V1 configuration and delivery ledger.
+model AlertFleet {
+  id          String   @id
+  name        String
+  description String?
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  matchers    AlertFleetMatcher[]
+  rules       AlertRule[]
+}
+
+model AlertFleetMatcher {
+  id        String   @id
+  fleetId   String
+  type      String
+  value     String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  fleet     AlertFleet @relation(fields: [fleetId], references: [id], onDelete: Cascade)
+
+  @@unique([fleetId, type, value])
+  @@index([fleetId, enabled])
+}
+
+model AlertGeofence {
+  id           String   @id
+  name         String
+  centerLat    Float
+  centerLon    Float
+  radiusMeters Float
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
+  rules        AlertRule[]
+}
+
+model AlertRule {
+  id             String   @id
+  name           String
+  enabled        Boolean  @default(true)
+  targetKind     String
+  fleetId        String?
+  trigger        String
+  triggerConfig  String
+  channelsJson   String
+  cooldownMs     Int?
+  activatedAt    DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+  fleet          AlertFleet? @relation(fields: [fleetId], references: [id], onDelete: SetNull)
+  geofenceId     String?
+  geofence       AlertGeofence? @relation(fields: [geofenceId], references: [id], onDelete: SetNull)
+  occurrences    AlertOccurrence[]
+
+  @@index([enabled])
+  @@index([fleetId])
+  @@index([geofenceId])
+}
+
+model AlertOccurrence {
+  id             String   @id
+  ruleId         String
+  sourceType     String
+  sourceKey      String
+  trigger        String
+  aircraftIcao   String
+  registration   String?
+  callsign       String?
+  flightId       Int?
+  flightEventId  Int?
+  geofenceId     String?
+  occurredAt     DateTime
+  payloadJson    String
+  createdAt      DateTime @default(now())
+  rule           AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  deliveries     AlertDelivery[]
+
+  @@unique([ruleId, sourceType, sourceKey])
+  @@index([occurredAt])
+  @@index([aircraftIcao, occurredAt])
+  @@index([trigger, occurredAt])
+}
+
+model AlertDelivery {
+  id            String   @id
+  occurrenceId  String
+  channel       String
+  status        String   @default("PENDING")
+  attemptCount  Int      @default(0)
+  nextAttemptAt DateTime
+  claimedAt     DateTime?
+  sentAt        DateTime?
+  lastError     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+  occurrence    AlertOccurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+
+  @@unique([occurrenceId, channel])
+  @@index([status, nextAttemptAt])
+  @@index([claimedAt])
+}

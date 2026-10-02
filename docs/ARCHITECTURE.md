@@ -153,13 +153,11 @@ batch-writes the catalog without materializing the dataset in application
 memory. The local tar1090 prefix-block fallback is also bounded to 4,096
 entries, 64 MiB, and a 15-minute LRU/TTL window, so repeated source lookups
 cannot grow process memory without a practical byte bound. The
-browser's watchlist is stored in that browser's `localStorage`; server alert
-rules are stored in the runtime state directory (`/var/lib/airradar/alerts.json`
-in production), not in PostgreSQL. Alert history is stored as append-only safe
-event/status lines in `/var/lib/airradar/alert-events.jsonl` in production and
-is read from a bounded tail with bounded pagination. Local development keeps
-the equivalent files under `data/`; the tracked `data/alerts.json` is only a
-legacy migration source when the production state file does not yet exist.
+browser's watchlist is stored in that browser's `localStorage`; durable V1
+fleets, typed matchers, circular geofences, rules, occurrences, and delivery
+rows are stored in PostgreSQL. Enabled configuration is loaded into one
+replaceable in-memory cache; mutations persist first and invalidate that
+cache. The legacy JSON alert store remains only for the older watchlist path.
 Positive ADSBDB metadata/routes additionally use the optional bounded,
 versioned snapshot `/var/lib/airradar/adsbdb/adsbdb-cache-v1.json`; it is a
 last-known-good provider fallback, not a source of truth. The metadata and

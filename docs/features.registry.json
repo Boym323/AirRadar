@@ -218,13 +218,24 @@
       "pages": [
         "/watchlist",
         "/alerts",
-        "/fleet"
+        "/fleet",
+        "/admin/alerts"
       ],
       "apis": [
         "/api/alerts",
         "/api/watchlist",
         "/api/watchlist/:id",
-        "/api/watchlist/session"
+        "/api/watchlist/session",
+        "/api/admin/alerts/delivery",
+        "/api/admin/alerts/fleets",
+        "/api/admin/alerts/fleets/:id",
+        "/api/admin/alerts/fleets/:id/matchers",
+        "/api/admin/alerts/fleets/:id/matchers/:matcherId",
+        "/api/admin/alerts/geofences",
+        "/api/admin/alerts/geofences/:id",
+        "/api/admin/alerts/history",
+        "/api/admin/alerts/rules",
+        "/api/admin/alerts/rules/:id"
       ],
       "changelogScopes": [
         "alerts",

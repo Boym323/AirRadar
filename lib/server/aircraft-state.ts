@@ -25,6 +25,7 @@ import { getReceptionRecords } from "@/lib/server/reception-records";
 import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
 import { computeLocalCoverageRatioFromSources, computeSourceStats } from "@/lib/aircraft/source-awareness";
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
+import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
 import { haversineDistanceKm } from "@/lib/geo";
 import { logger } from "@/lib/server/logger";
 import { classifyAtcPrediction, getAtcPredictionValidation } from "@/lib/server/atc-prediction-validation";
@@ -186,6 +187,7 @@ export class AircraftStateService {
   start(): void {
     if (this.running || this.shuttingDown) return;
     this.running = true;
+    getAlertDeliveryWorker().start();
     this.networkProvider.start();
     this.statisticsReady = this.statistics.load()
       .catch((error) => {
@@ -215,6 +217,7 @@ export class AircraftStateService {
 
   async stop(options: { deadline?: number; closeStatistics?: boolean; closeProvider?: boolean } = {}): Promise<void> {
     this.shuttingDown = true;
+    await getAlertDeliveryWorker().stop();
     this.running = false;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;

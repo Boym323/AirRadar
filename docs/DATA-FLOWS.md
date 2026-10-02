@@ -379,12 +379,11 @@ path reports the aircraft's actual tuned frequency.
 - `/api/airports` serves the PostgreSQL airport catalog when non-empty and the
   bundled six-airport fallback otherwise. `GET /api/search` searches live RAM
   aircraft and the airport catalog with bounded input/results.
-- Server alert rules are read from the runtime state directory
-  (`/var/lib/airradar/alerts.json` in production); the watchlist API atomically
-  updates that file and reloads the shared `AlertEngine`. Local development
-  uses `data/alerts.json`, and the production loader can read that tracked file
-  only as a one-time legacy fallback before migration. The two files are never
-  used as concurrent writable stores.
+- Alerts & Fleets V1 configuration is persisted in PostgreSQL through the
+  server repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence`, and
+  `AlertRule`). Enabled rows are loaded into a replaceable in-memory cache;
+  CRUD writes persist first and then invalidate the cache. The legacy JSON
+  watchlist path remains separate and is not used for durable V1 configuration.
   Separately, the map's browser watchlist is a localStorage filter and is not
   a server notification rule.
 - `/fleet` derives its identities from the same server watchlist, keeping only

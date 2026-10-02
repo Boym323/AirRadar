@@ -373,12 +373,10 @@ skutečně naladěnou frekvenci letadla.
 - `/api/airports` poskytuje PostgreSQL katalog letišť, pokud není prázdný,
   jinak bundled fallback šesti letišť. `GET /api/search` prohledává živá
   letadla v RAM a katalog letišť s omezeným vstupem/výsledky.
-- Serverová pravidla alertů se čtou z runtime state adresáře
-  (`/var/lib/airradar/alerts.json` v produkci); watchlist API tento soubor
-  atomicky aktualizuje a reloaduje sdílený `AlertEngine`. Lokální vývoj
-  používá `data/alerts.json` a produkční loader smí tracked soubor číst pouze
-  jako jednorázový legacy fallback před migrací. Tyto dva soubory se nikdy
-  nepoužívají jako souběžně zapisovatelné stores.
+- Konfigurace Alerts & Fleets V1 se ukládá v PostgreSQL přes serverový
+  repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence` a `AlertRule`).
+  Zapnuté řádky se načítají do vyměnitelné cache v paměti; CRUD zápis nejprve
+  uloží data a potom cache invaliduje. Legacy JSON watchlist zůstává oddělený.
   Odděleně je browser watchlist mapy localStorage filtr, nikoli serverové
   notifikační pravidlo.
 - `/fleet` odvozuje identity ze stejného serverového watchlistu, ponechává jen
