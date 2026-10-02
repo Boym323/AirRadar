@@ -5,5 +5,5 @@
   "serviceRestarted": false,
   "pushoverTest": "NOT_RUN",
   "canary": "NOT_RUN",
-  "blocking": ["admin UI wiring", "durable delivery queue", "browser gate", "approved release"]
+  "blocking": ["canonical isolated production build/release", "production migration gate", "deployment", "45-60 minute in-app canary"]
 }

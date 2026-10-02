@@ -9,14 +9,20 @@ Result: PARTIAL
 - Deterministic occurrence dedupe: PASS
 - Squawk transition and restart-baseline unit coverage: PASS
 - Circular geofence hysteresis/confirmation and validation: PASS
+- Durable squawk/geofence integration through the canonical occurrence path: PASS
+- Fresh disposable PostgreSQL migration chain: PASS (16 migrations, 155 operations)
+- PostgreSQL occurrence concurrency: PASS (20 callers -> 1 occurrence, 2 deliveries)
+- PostgreSQL delivery claim concurrency: PASS (2 distinct rows claimed once)
+- PostgreSQL stale-claim recovery: PASS (2 rows recovered)
+- Temporal round-trip: PASS
 - TypeScript typecheck: PASS
-- Focused ESLint: PASS
+- Full suite: PASS (1,392 passed, 10 skipped)
+- ESLint: PASS (0 errors, 7 existing warnings)
+- Feature/docs/visual checks: PASS
+- Browser desktop/tablet/mobile gate: PASS
 
 ## Not run / not yet applicable
 
-- PostgreSQL schema/constraint tests: NOT IMPLEMENTED; the repository's
-  existing alert ledger is runtime-state JSONL rather than a Prisma alert
-  schema.
-- Durable delivery queue restart/retry integration: NOT IMPLEMENTED.
-- Browser responsive gate and production build: NOT RUN in the live checkout.
+- Production build: NOT RUN directly because `airradar.service` is active;
+  the canonical isolated release workflow is required.
 - Production canary: NOT RUN.

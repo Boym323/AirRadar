@@ -1,10 +1,15 @@
 {
   "result": "PARTIAL",
-  "focusedTests": "PASS",
+  "focusedTests": "PASS (33)",
+  "fullSuite": "PASS (1392 passed, 10 skipped)",
   "typecheck": "PASS",
-  "focusedLint": "PASS",
-  "postgres": "NOT_IMPLEMENTED",
-  "durableDeliveryQueue": "NOT_IMPLEMENTED",
-  "browserGate": "NOT_RUN",
+  "lint": "PASS (0 errors, 7 warnings)",
+  "postgresMigration": "PASS (16 migrations, 155 operations)",
+  "postgresOccurrenceConcurrency": "PASS (20 callers, 1 occurrence, 2 deliveries)",
+  "deliveryClaimConcurrency": "PASS (2 rows claimed once)",
+  "staleClaimRecovery": "PASS (2 rows recovered)",
+  "temporalRoundTrip": "PASS",
+  "browserGate": "PASS",
+  "productionBuild": "NOT_RUN (live service active)",
   "productionCanary": "NOT_RUN"
 }

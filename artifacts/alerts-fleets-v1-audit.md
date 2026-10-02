@@ -9,19 +9,23 @@ Date: 2026-10-02
 | Process ownership | `AircraftStateService` global singleton | Reuse; no second poller |
 | Canonical flight events | `FlightIntelligenceService` + `FlightEvent` persistence | Reuse event boundary |
 | Admin authorization | `WATCHLIST_ADMIN_TOKEN`, signed session cookie, same-origin check | Reuse for all mutations |
-| Runtime state | atomic files under `/var/lib/airradar` | Reuse for configuration/state |
-| History | bounded append-only JSONL ledger | Reuse for compact durable occurrences |
+| Runtime state | replaceable in-memory Prisma configuration cache | Reuse; mutations persist first and invalidate atomically |
+| History | `AlertOccurrence` / `AlertDelivery` PostgreSQL models | Reuse canonical durable occurrence path |
 | HTTP/retries | bounded `fetch`, rate-limit helpers, notifier queue | Reuse and keep provider isolated |
 | Maps/geometry | MapLibre UI and existing geographic helpers | Circle math in pure V1 module; no polygons |
 | Cleanup | byte-bounded alert ledger compaction | Reuse; no per-alert deletion |
 
-## Gaps found
+## Audited ownership
 
-Typed fleet/rule/geofence primitives were missing. The existing watchlist rules
-were identity-oriented and the existing engine used a server-wide cooldown.
-There was no typed circular-geofence hysteresis tracker. A separate durable
-database queue is also not present; the current notifier queue is bounded but
-in-memory, so delivery restart recovery remains the next implementation item.
+- FlightEvent signal evaluation: `AlertEngine.observeIntelligenceEvent()`
+- Squawk/geofence transition evaluation: `AlertV1TransitionTracker` from `AlertEngine.observe()`
+- Occurrence and delivery persistence: `AlertsFleetsRepository.recordOccurrence()`
+- Configuration cache: `AlertsFleetsRepository.loadConfig()`
+- Delivery worker/recovery: `AlertDeliveryWorker` and repository claim/recovery methods
+- Admin APIs/UI: `app/api/admin/alerts/**` and `/admin/alerts`
+
+Squawk and geofence transitions reuse the FlightEvent occurrence evaluator.
+Episode keys use normalized ICAO, transition, and canonical observation time.
 
 ## Security findings
 
@@ -32,6 +36,5 @@ to use the existing public-position policy.
 
 ## Scope guardrails
 
-No Prisma migration, production release, database reset, or deployment was
-performed during this audit/change. Existing Flight Intelligence detectors were
-not duplicated.
+No production database, release, service restart, or deployment was performed.
+Existing Flight Intelligence detectors were not duplicated.

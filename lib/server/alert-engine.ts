@@ -7,7 +7,7 @@ import { createAlertHistoryStore, type AlertHistoryReason, type AlertHistoryReco
 import { createAlertStateStore, type AlertStateStore } from "@/lib/server/alert-state";
 import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
 import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligence/types";
-import { evaluateAlertV1, type AlertV1Signal } from "@/lib/server/alerts-fleets-v1";
+import { AlertV1TransitionTracker, evaluateAlertV1, geofenceTransitionSourceKey, squawkTransitionSourceKey, type AlertV1Signal } from "@/lib/server/alerts-fleets-v1";
 import { getAlertsFleetsRepository } from "@/lib/server/alerts-fleets-repository";
 
 const MAX_DEDUP_ENTRIES = 10_000;
@@ -121,6 +121,9 @@ export class AlertEngine {
   private sequence = 0;
   private readonly permanentEvents = new Map<string, number>();
   private readonly ruleLastTriggered = new Map<string, number>();
+  private readonly durableTransitions = new AlertV1TransitionTracker();
+  private durableTransitionBaseline = false;
+  private durableTransitionInitializationStarted = false;
 
   constructor(options: AlertEngineOptions = {}) {
     const config = options.rules ? { rules: options.rules, errors: options.configErrors ?? [] } : loadAlertConfig();
@@ -245,6 +248,46 @@ export class AlertEngine {
     }
 
     if (stateDirty) this.persistState();
+    void this.observeDurableTransitions(previous, current);
+  }
+
+  private async observeDurableTransitions(previous: ReadonlyMap<string, Aircraft>, current: ReadonlyMap<string, Aircraft>): Promise<void> {
+    try {
+      if (this.durableTransitionInitializationStarted && !this.durableTransitionBaseline) return;
+      this.durableTransitionInitializationStarted = true;
+      const repository = getAlertsFleetsRepository();
+      const config = await repository.loadConfig();
+      if (!this.durableTransitionBaseline) {
+        for (const aircraft of current.values()) {
+          this.durableTransitions.observeSquawk(aircraft.icaoHex, aircraft.squawk);
+          for (const geofence of config.geofences) this.durableTransitions.observeGeofence(aircraft.icaoHex, geofence, aircraft.lat, aircraft.lon);
+        }
+        this.durableTransitions.beginBaseline();
+        this.durableTransitionBaseline = true;
+        return;
+      }
+      const active = new Set(current.keys());
+      this.durableTransitions.evict(active);
+      for (const aircraft of current.values()) {
+        const occurredAt = aircraft.lastSeen;
+        const squawk = this.durableTransitions.observeSquawk(aircraft.icaoHex, aircraft.squawk);
+        if (squawk?.current) await this.persistDurableSignal({
+          sourceType: "SQUAWK", sourceKey: squawkTransitionSourceKey(aircraft.icaoHex, squawk.previous, squawk.current, occurredAt), trigger: "SQUAWK",
+          aircraft: { icaoHex: aircraft.icaoHex, registration: aircraft.registration ?? null, callsign: aircraft.callsign ?? null }, occurredAt, squawk: squawk.current,
+        });
+        for (const geofence of config.geofences) {
+          const transition = this.durableTransitions.observeGeofence(aircraft.icaoHex, geofence, aircraft.lat, aircraft.lon);
+          if (!transition) continue;
+          await this.persistDurableSignal({
+            sourceType: "GEOFENCE", sourceKey: geofenceTransitionSourceKey(aircraft.icaoHex, geofence.id, transition.transition, occurredAt), trigger: transition.transition === "ENTER" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
+            aircraft: { icaoHex: aircraft.icaoHex, registration: aircraft.registration ?? null, callsign: aircraft.callsign ?? null }, occurredAt, geofenceId: geofence.id, geofenceName: geofence.name,
+            latitude: aircraft.lat ?? undefined, longitude: aircraft.lon ?? undefined, distanceMeters: transition.distanceMeters,
+          });
+        }
+      }
+    } catch {
+      // Durable alerts are optional enrichment and must not interrupt live ADS-B.
+    }
   }
 
   /**
@@ -285,9 +328,7 @@ export class AlertEngine {
   }
 
   private async persistDurableOccurrence(aircraft: Aircraft, event: FlightIntelligenceEvent): Promise<void> {
-    try {
-      const config = await getAlertsFleetsRepository().loadConfig();
-      const signal: AlertV1Signal = {
+    await this.persistDurableSignal({
         sourceType: "FLIGHT_EVENT",
         sourceKey: event.eventKey,
         trigger: "FLIGHT_EVENT",
@@ -295,14 +336,19 @@ export class AlertEngine {
         occurredAt: event.occurredAt,
         flightEventId: String(event.id),
         flightEventType: event.type as AlertV1Signal["flightEventType"],
-      };
+      });
+  }
+
+  private async persistDurableSignal(signal: AlertV1Signal): Promise<void> {
+    try {
+      const config = await getAlertsFleetsRepository().loadConfig();
       for (const occurrence of evaluateAlertV1(signal, config)) {
         const rule = config.rules.find((candidate) => candidate.id === occurrence.ruleId);
         if (!rule) continue;
         await getAlertsFleetsRepository().recordOccurrence({
           id: occurrence.id, ruleId: occurrence.ruleId, sourceType: occurrence.sourceType, sourceKey: occurrence.sourceKey, trigger: occurrence.trigger,
           aircraftIcao: occurrence.aircraft.icaoHex, registration: occurrence.aircraft.registration, callsign: occurrence.aircraft.callsign,
-          flightEventId: Number.isFinite(Number(event.id)) ? Number(event.id) : null, occurredAt: occurrence.occurredAt, payload: occurrence.payload, channels: rule.channels,
+          flightEventId: signal.flightEventId && Number.isFinite(Number(signal.flightEventId)) ? Number(signal.flightEventId) : null, occurredAt: occurrence.occurredAt, payload: occurrence.payload, channels: rule.channels,
         });
       }
     } catch {

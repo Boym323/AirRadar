@@ -6,6 +6,7 @@ No release, migration, service restart, production configuration change, or
 Pushover call was performed. The live checkout rule forbids treating an
 unprepared development change as a production build or canary.
 
-Blocking items are the typed configuration/admin UI wiring, durable delivery
-queue with claim/retry recovery, full browser gate, and an explicitly approved
-release/canary.
+Validation blockers are closed: durable squawk/geofence paths, real PostgreSQL
+concurrency, stale recovery, and the browser gate pass. Remaining production
+steps are the canonical isolated production build/release, production
+migration gate, deployment, and the 45-60 minute in-app canary.

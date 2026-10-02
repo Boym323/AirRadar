@@ -27,6 +27,10 @@ function table(name: string): Table | null {
   return database ? (database.orm.public as unknown as Record<string, Table>)[name] ?? null : null;
 }
 
+function tableFromTransaction(transaction: unknown, name: string): Table {
+  return (transaction as { orm: { public: Record<string, Table> } }).orm.public[name]!;
+}
+
 function now(): Temporal.Instant { return Temporal.Now.instant(); }
 function iso(value: unknown): string { return value instanceof Temporal.Instant ? value.toString() : new Date(String(value)).toISOString(); }
 function json(value: unknown): string { return JSON.stringify(value); }
@@ -127,24 +131,39 @@ export class AlertsFleetsRepository {
   async setRuleEnabled(id: string, enabled: boolean): Promise<void> { const t = table("AlertRule"); if (!t) throw new Error("database not configured"); await t.where({ id }).update({ enabled, updatedAt: now() }); this.invalidate(); }
 
   async recordOccurrence(input: AlertV1OccurrenceInput): Promise<{ created: boolean; id: string }> {
-    const t = table("AlertOccurrence"); if (!t) return { created: false, id: input.id };
+    const database = getPrisma(); if (!database) return { created: false, id: input.id };
+    const channels = [...new Set(input.channels)];
     try {
-      await t.create({ id: input.id, ruleId: input.ruleId, sourceType: input.sourceType, sourceKey: input.sourceKey, trigger: input.trigger, aircraftIcao: input.aircraftIcao, registration: input.registration ?? null, callsign: input.callsign ?? null, flightId: input.flightId ?? null, flightEventId: input.flightEventId ?? null, geofenceId: input.geofenceId ?? null, occurredAt: Temporal.Instant.fromEpochMilliseconds(Date.parse(input.occurredAt)), payloadJson: json(input.payload), createdAt: now() });
+      await database.transaction(async (transaction) => {
+        const schema = transaction.orm.public as unknown as { AlertOccurrence: Table; AlertDelivery: Table };
+        await schema.AlertOccurrence.create({ id: input.id, ruleId: input.ruleId, sourceType: input.sourceType, sourceKey: input.sourceKey, trigger: input.trigger, aircraftIcao: input.aircraftIcao, registration: input.registration ?? null, callsign: input.callsign ?? null, flightId: input.flightId ?? null, flightEventId: input.flightEventId ?? null, geofenceId: input.geofenceId ?? null, occurredAt: Temporal.Instant.fromEpochMilliseconds(Date.parse(input.occurredAt)), payloadJson: json(input.payload), createdAt: now() });
+        for (const channel of channels) await schema.AlertDelivery.create({ id: randomUUID(), occurrenceId: input.id, channel, status: "PENDING", attemptCount: 0, nextAttemptAt: now(), createdAt: now(), updatedAt: now() });
+      });
+      return { created: true, id: input.id };
     } catch (error) { if (/unique|duplicate|constraint/i.test(String(error))) return { created: false, id: input.id }; throw error; }
-    const deliveries = table("AlertDelivery"); if (deliveries) for (const channel of input.channels) { try { await deliveries.create({ id: randomUUID(), occurrenceId: input.id, channel, status: "PENDING", attemptCount: 0, nextAttemptAt: now(), createdAt: now(), updatedAt: now() }); } catch { /* unique occurrence/channel: already queued */ } }
-    return { created: true, id: input.id };
   }
 
   async listOccurrences(limit = 50): Promise<Row[]> { const t = table("AlertOccurrence"); return t ? t.orderBy((row: { occurredAt: { desc(): unknown } }) => row.occurredAt.desc()).limit(Math.min(200, Math.max(1, limit))).all() : []; }
   async listDeliveries(limit = 100): Promise<AlertV1Delivery[]> { const t = table("AlertDelivery"); if (!t) return []; return (await t.orderBy((row: { createdAt: { desc(): unknown } }) => row.createdAt.desc()).limit(Math.min(200, Math.max(1, limit))).all()).map((row) => ({ id: String(row.id), occurrenceId: String(row.occurrenceId), channel: String(row.channel), status: String(row.status), attemptCount: Number(row.attemptCount ?? 0), nextAttemptAt: iso(row.nextAttemptAt), claimedAt: row.claimedAt ? iso(row.claimedAt) : null, sentAt: row.sentAt ? iso(row.sentAt) : null, lastError: typeof row.lastError === "string" ? row.lastError.slice(0, 300) : null })); }
 
   async claimDelivery(nowMs = Date.now()): Promise<AlertV1Delivery | null> {
-    const t = table("AlertDelivery"); if (!t) return null;
-    const candidates = await t.where({ status: "PENDING" }).orderBy((row: { nextAttemptAt: { asc(): unknown } }) => row.nextAttemptAt.asc()).limit(20).all();
-    const candidate = candidates.find((row) => Date.parse(String(row.nextAttemptAt)) <= nowMs); if (!candidate) return null;
+    const database = getPrisma(); if (!database) return null;
     try {
-      const row = await t.where({ id: String(candidate.id), status: "PENDING" }).update({ status: "PROCESSING", claimedAt: Temporal.Instant.fromEpochMilliseconds(nowMs), attemptCount: Number(candidate.attemptCount ?? 0) + 1, updatedAt: Temporal.Instant.fromEpochMilliseconds(nowMs) });
-      return { id: String(row.id), occurrenceId: String(row.occurrenceId), channel: String(row.channel), status: "PROCESSING", attemptCount: Number(row.attemptCount), nextAttemptAt: iso(row.nextAttemptAt), claimedAt: iso(row.claimedAt), sentAt: row.sentAt ? iso(row.sentAt) : null, lastError: null };
+      return await database.transaction(async (transaction) => {
+        // This runtime's ORM update returns the row even when its predicate
+        // matched zero rows. A transaction-scoped PostgreSQL advisory lock
+        // therefore serializes the candidate read + conditional update across
+        // all worker instances, while the transaction still owns the claim.
+        const sql = database as unknown as { raw: { sql: (strings: TemplateStringsArray, ...values: unknown[]) => { affectedCount: () => { build: () => unknown } } } };
+        const lockPlan = sql.raw.sql`SELECT pg_advisory_xact_lock(784231947)`.affectedCount().build();
+        await (transaction as unknown as { execute: (query: unknown) => Promise<unknown> }).execute(lockPlan);
+        const locked = tableFromTransaction(transaction, "AlertDelivery");
+        const candidates = await locked.where({ status: "PENDING" }).orderBy((row: { nextAttemptAt: { asc(): unknown } }) => row.nextAttemptAt.asc()).limit(20).all();
+        const candidate = candidates.find((row) => Date.parse(String(row.nextAttemptAt)) <= nowMs); if (!candidate) return null;
+        const claimedAt = Temporal.Instant.fromEpochMilliseconds(nowMs);
+        const row = await locked.where({ id: String(candidate.id) }).update({ status: "PROCESSING", claimedAt, attemptCount: Number(candidate.attemptCount ?? 0) + 1, updatedAt: claimedAt });
+        return { id: String(row.id), occurrenceId: String(row.occurrenceId), channel: String(row.channel), status: "PROCESSING", attemptCount: Number(row.attemptCount), nextAttemptAt: iso(row.nextAttemptAt), claimedAt: iso(row.claimedAt), sentAt: row.sentAt ? iso(row.sentAt) : null, lastError: null };
+      });
     } catch { return null; }
   }
   async markDeliverySent(id: string): Promise<void> { const t = table("AlertDelivery"); if (!t) return; const at = now(); await t.where({ id }).update({ status: "SENT", sentAt: at, claimedAt: null, updatedAt: at, lastError: null }); }

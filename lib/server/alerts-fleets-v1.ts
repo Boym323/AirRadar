@@ -76,6 +76,7 @@ export interface AlertV1Signal {
   geofenceName?: string;
   latitude?: number;
   longitude?: number;
+  distanceMeters?: number;
 }
 
 export interface AlertV1Occurrence {
@@ -157,10 +158,24 @@ export function evaluateAlertV1(signal: AlertV1Signal, config: AlertV1Config, al
         callsign: signal.aircraft.callsign, flightEventType: signal.flightEventType ?? null,
         squawk: signal.squawk ?? null, geofenceId: signal.geofenceId ?? null,
         geofenceName: signal.geofenceName ?? null, latitude: signal.latitude ?? null,
-        longitude: signal.longitude ?? null,
+        longitude: signal.longitude ?? null, distanceMeters: signal.distanceMeters ?? null,
       },
     }];
   });
+}
+
+/**
+ * Episode keys are tied to the canonical observation timestamp, not to a
+ * generated id. Repeated frames never reach this helper because the tracker
+ * emits only confirmed transitions; a later transition has a different
+ * observation timestamp and therefore a different episode key.
+ */
+export function squawkTransitionSourceKey(icaoHex: string, previous: string | null, current: string, observedAt: string): string {
+  return `squawk:${normalized(icaoHex)}:${previous ?? "NON_SPECIAL"}->${current}:${observedAt}`;
+}
+
+export function geofenceTransitionSourceKey(icaoHex: string, geofenceId: string, transition: "ENTER" | "EXIT", observedAt: string): string {
+  return `geofence:${normalized(icaoHex)}:${geofenceId}:${transition}:${observedAt}`;
 }
 
 export function validateAlertV1Geofence(input: Pick<AlertV1Geofence, "centerLat" | "centerLon" | "radiusMeters">): void {

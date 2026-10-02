@@ -4,6 +4,8 @@ import {
   evaluateAlertV1,
   matchingAlertV1Fleets,
   occurrenceId,
+  geofenceTransitionSourceKey,
+  squawkTransitionSourceKey,
   signalMatchesRule,
   validateAlertV1Geofence,
   type AlertV1Config,
@@ -28,6 +30,15 @@ describe("Alerts & Fleets V1 primitives", () => {
     expect(first).toHaveLength(1);
     expect(first[0]!.id).toBe(occurrenceId("landing", "FLIGHT_EVENT", "42"));
     expect(evaluateAlertV1(signal, config, new Set([first[0]!.id]))).toEqual([]);
+  });
+
+  it("builds distinct, deterministic episode keys from canonical transitions", () => {
+    expect(squawkTransitionSourceKey("abc123", null, "7700", "2026-10-02T00:00:01Z"))
+      .toBe("squawk:ABC123:NON_SPECIAL->7700:2026-10-02T00:00:01Z");
+    expect(squawkTransitionSourceKey("abc123", null, "7700", "2026-10-02T00:00:02Z"))
+      .not.toBe(squawkTransitionSourceKey("abc123", null, "7700", "2026-10-02T00:00:01Z"));
+    expect(geofenceTransitionSourceKey("abc123", "zlin", "ENTER", "2026-10-02T00:00:01Z"))
+      .toBe("geofence:ABC123:zlin:ENTER:2026-10-02T00:00:01Z");
   });
 
   it("requires a meaningful squawk transition and ignores a restart baseline", () => {
