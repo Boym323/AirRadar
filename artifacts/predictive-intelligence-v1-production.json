@@ -1,0 +1,9 @@
+{
+  "status": "NOT_DEPLOYED",
+  "deployment": "not requested",
+  "shadowMode": "implemented in AircraftStateService but not released",
+  "publicStatus": { "eta": "SHADOW", "runway": "SHADOW", "runwayChange": "SHADOW", "trajectory": "SHADOW" },
+  "productionCanary": null,
+  "ioRegression": { "predictionDatabaseWrites": 0, "predictionFilesystemWrites": 0, "ssePayloadDelta": 0 },
+  "reason": "No release or production canary was requested; historical quality and browser gates remain outstanding."
+}

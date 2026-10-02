@@ -38,6 +38,9 @@ import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classifica
 import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 import { flightPositionPersistenceShadow } from "@/lib/server/flight-position-persistence-shadow";
+import { PredictiveStateStore } from "@/lib/predictive-intelligence";
+import type { FlightPhase } from "@/lib/intelligence/types";
+import type { PredictionSample } from "@/lib/predictive-intelligence";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -90,6 +93,15 @@ function mergeEnrichment(
   if (route) merged.route = route;
   if (flightPlan) merged.flightPlan = flightPlan;
   return Object.keys(merged).length ? merged : undefined;
+}
+
+function predictivePhase(aircraft: Aircraft): FlightPhase {
+  if (aircraft.onGround) return "GROUND";
+  if (aircraft.targetState?.approachMode || (aircraft.distanceKm !== null && aircraft.distanceKm <= 35 && aircraft.verticalRate !== null && aircraft.verticalRate < -150)) return "APPROACH";
+  if (aircraft.verticalRate !== null && aircraft.verticalRate > 250) return "CLIMB";
+  if (aircraft.verticalRate !== null && aircraft.verticalRate < -250) return "DESCENT";
+  if (aircraft.groundSpeed !== null && aircraft.groundSpeed > 120) return "CRUISE";
+  return "UNKNOWN";
 }
 
 function historyAircraftForSnapshot(snapshotItem: Aircraft, current: Aircraft | undefined): Aircraft {
@@ -153,6 +165,9 @@ export class AircraftStateService {
   private readonly atc: AtcSectorService;
   private readonly alerts: AlertEngine;
   private readonly intelligence = getFlightIntelligenceService();
+  /** Shadow-only predictive state; never serialized into radar SSE frames. */
+  private readonly predictive = new PredictiveStateStore();
+  private readonly predictiveEvaluatedAt = new Map<string, number>();
   private readonly statistics: ReceiverStatistics;
   private readonly receiverCoverage = new ReceiverCoverageAnalytics();
   private readonly navigationIntegrity = getNavigationIntegrityService();
@@ -636,9 +651,27 @@ export class AircraftStateService {
     for (const current of this.localAircraft.values()) {
       const events = this.intelligence.observe(previousAircraft.get(current.icaoHex), current, Date.parse(snapshot.fetchedAt));
       for (const event of events) this.alerts.observeIntelligenceEvent(current, event);
+      this.evaluatePredictiveShadow(current, Date.parse(snapshot.fetchedAt));
     }
+    for (const hex of this.predictiveEvaluatedAt.keys()) if (!currentHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
     this.navigationIntegrity.observe([...this.localAircraft.values()], new Date(snapshot.fetchedAt));
     this.invalidateSnapshotCache();
+  }
+
+  private evaluatePredictiveShadow(aircraft: Aircraft, now: number): void {
+    if (!Number.isFinite(now) || aircraft.lat === null || aircraft.lon === null) return;
+    const previousAt = this.predictiveEvaluatedAt.get(aircraft.icaoHex) ?? 0;
+    if (now - previousAt < 10_000) return;
+    this.predictiveEvaluatedAt.set(aircraft.icaoHex, now);
+    const route = aircraft.enrichment?.route;
+    const destination = route?.destinationAirport;
+    const samples: PredictionSample[] = aircraft.trail.slice(-24).map((point) => ({ observedAt: Date.parse(point.recordedAt), lat: point.lat, lon: point.lon, altitudeFt: point.altitude, groundSpeedKt: point.groundSpeed, verticalRateFpm: null, trackDeg: point.track })).filter((point) => Number.isFinite(point.observedAt));
+    samples.push({ observedAt: now, lat: aircraft.lat, lon: aircraft.lon, altitudeFt: aircraft.altitude, groundSpeedKt: aircraft.groundSpeed, verticalRateFpm: aircraft.verticalRate, trackDeg: aircraft.track });
+    this.predictive.evaluate({
+      flightState: { aircraftIcao: aircraft.icaoHex, timestamp: now, phase: predictivePhase(aircraft), sample: samples.at(-1)!, destination: route?.destination ?? null, destinationStatus: destination ? "KNOWN" : "UNKNOWN", distanceToDestinationNm: aircraft.distanceKm === null ? null : aircraft.distanceKm * 0.5399568, bearingToDestinationDeg: aircraft.bearing },
+      recentSamples: samples, destinationAirport: destination ? { icao: destination.icaoCode, lat: destination.latitude, lon: destination.longitude, elevationFt: destination.elevationFt } : null,
+      now,
+    });
   }
 
   private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {
