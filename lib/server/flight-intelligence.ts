@@ -8,13 +8,15 @@ import { FlightIntelligenceDetector } from "@/lib/intelligence/detector";
 import { confidenceLevel, FLIGHT_INTELLIGENCE_DETECTOR_VERSION, type FlightIntelligenceEvent, type FlightEventType, type FlightPhase } from "@/lib/intelligence/types";
 import type { RunwayContext } from "@/lib/route-intelligence/contracts";
 import { haversineDistanceKm } from "@/lib/geo";
-import type { LandingGroundObservation, LandingTerminalEvidenceV1 } from "@/lib/intelligence/terminal-evidence";
+import { fitTerminalEvidence, type LandingGroundObservation, type LandingTerminalEvidenceV1 } from "@/lib/intelligence/terminal-evidence";
 import { TERMINAL_EVIDENCE_VERSION } from "@/lib/intelligence/terminal-evidence";
 
 const MAX_EVENTS = 500;
 const AIRPORT_INDEX_RETRY_MS = 60_000;
 const PENDING_GROUND_TTL_MS = 8 * 60_000;
 const MAX_PENDING_GROUND = 256;
+const MAX_GROUND_EVENT_DISTANCE_KM = 5;
+const MAX_GROUND_AIRPORT_DISTANCE_KM = 5;
 
 type Listener = (event: FlightIntelligenceEvent) => void;
 
@@ -112,6 +114,7 @@ export class FlightIntelligenceService {
   private airportIndexLoaded = false;
   private airportIndexLoading: Promise<void> | null = null;
   private airportIndexRetryAt = 0;
+  private readonly airportsByIcao = new Map<string, { latitude: number; longitude: number }>();
   private readonly persistence = new Map<string, Promise<void>>();
   private readonly pendingGround = new Map<string, { event: FlightIntelligenceEvent; expiresAt: number }>();
   private readonly diagnostics = { landingEvents: 0, landingEvidenceCaptured: 0, landingDetectedOnGround: 0, landingPendingGroundConfirmation: 0, landingGroundConfirmedLater: 0, landingGroundConfirmationExpired: 0, landingEvidencePersistFailures: 0, reportedArrivalRunwayPresent: 0, terminalEvidenceVersion: TERMINAL_EVIDENCE_VERSION };
@@ -135,6 +138,12 @@ export class FlightIntelligenceService {
     this.airportIndexLoading = (async () => {
       try {
         const rows = await trackDbOperation("flight-intelligence.airport-index.query", async () => await table.all());
+        this.airportsByIcao.clear();
+        for (const row of rows) {
+          if (Number.isFinite(row.latitude) && Number.isFinite(row.longitude)) {
+            this.airportsByIcao.set(row.icao.toUpperCase(), { latitude: row.latitude, longitude: row.longitude });
+          }
+        }
         const runwayTable = (database!.orm.public as unknown as { AirportRunway?: AirportRunwayTable }).AirportRunway;
         const runwayResult = runwayTable && typeof runwayTable.all === "function"
           ? await Promise.allSettled([trackDbOperation("flight-intelligence.airport-index.query", async () => await runwayTable.all())])
@@ -231,16 +240,30 @@ export class FlightIntelligenceService {
 
   private confirmPendingGround(aircraft: Aircraft, observedAt: number): void {
     if (!aircraft.onGround || !Number.isFinite(observedAt)) return;
+    const activeLifecycleKey = this.detector.getLifecycleKey(aircraft.icaoHex);
+    if (!activeLifecycleKey || aircraft.lat === null || aircraft.lon === null) return;
+    const candidates: Array<[string, { event: FlightIntelligenceEvent; expiresAt: number }]> = [];
     for (const [key, pending] of this.pendingGround) {
       const event = pending.event;
       const evidence = event.metadata?.terminalEvidence as LandingTerminalEvidenceV1 | undefined;
+      if (event.icaoHex.toUpperCase() !== aircraft.icaoHex.toUpperCase()) continue;
+      if (event.lifecycleKey !== activeLifecycleKey) continue;
       if (event.callsign && aircraft.callsign && event.callsign !== aircraft.callsign) continue;
       const distance = event.latitude !== null && event.longitude !== null && aircraft.lat !== null && aircraft.lon !== null
         ? haversineDistanceKm(event.latitude, event.longitude, aircraft.lat, aircraft.lon) : Number.POSITIVE_INFINITY;
-      if (!evidence || observedAt < Date.parse(event.occurredAt) || observedAt > pending.expiresAt || distance > 5) continue;
-      if (event.airportIcao && evidence.detection.lat !== null && evidence.detection.lon !== null && aircraft.lat !== null && aircraft.lon !== null) {
-        // A landing lifecycle may only be finalized near the original event.
+      if (!evidence || observedAt < Date.parse(event.occurredAt) || observedAt > pending.expiresAt || distance > MAX_GROUND_EVENT_DISTANCE_KM) continue;
+      if (event.airportIcao) {
+        const airport = this.airportsByIcao.get(event.airportIcao.toUpperCase());
+        if (!airport || haversineDistanceKm(airport.latitude, airport.longitude, aircraft.lat, aircraft.lon) > MAX_GROUND_AIRPORT_DISTANCE_KM) continue;
       }
+      candidates.push([key, pending]);
+    }
+    candidates.sort((left, right) => Date.parse(right[1].event.occurredAt) - Date.parse(left[1].event.occurredAt));
+    const selected = candidates[0];
+    if (selected) {
+      const [key, pending] = selected;
+      const event = pending.event;
+      const evidence = event.metadata?.terminalEvidence as LandingTerminalEvidenceV1;
       const confirmation: LandingGroundObservation = { ...evidence.detection, ...this.groundObservation(aircraft, new Date(observedAt).toISOString()), onGround: true };
       evidence.groundConfirmation = confirmation;
       this.pendingGround.delete(key);
@@ -270,7 +293,9 @@ export class FlightIntelligenceService {
       const currentEvidence = currentMetadata.terminalEvidence as LandingTerminalEvidenceV1 | undefined;
       if (currentEvidence?.groundConfirmation) return;
       if (!row.update) return;
-      await trackDbOperation("flight-intelligence.terminal-evidence.update", async () => await row.update!({ metadataJson: JSON.stringify({ ...currentMetadata, terminalEvidence: evidence }) }));
+      const bounded = fitTerminalEvidence(evidence);
+      if (!bounded) { this.diagnostics.landingEvidencePersistFailures += 1; return; }
+      await trackDbOperation("flight-intelligence.terminal-evidence.update", async () => await row.update!({ metadataJson: JSON.stringify({ ...currentMetadata, terminalEvidence: bounded }) }));
     } catch {
       this.diagnostics.landingEvidencePersistFailures += 1;
     }

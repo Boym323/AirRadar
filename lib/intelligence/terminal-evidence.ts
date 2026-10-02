@@ -42,6 +42,21 @@ export interface LandingTerminalEvidenceV1 {
   destinationObservation: { destination: string; observedAt: string; source: string | null; providerRetrievedAt: string | null } | null;
 }
 
+export function terminalEvidenceBytes(evidence: LandingTerminalEvidenceV1): number {
+  return Buffer.byteLength(JSON.stringify(evidence), "utf8");
+}
+
+/** Keep factual detection/confirmation fields intact and reduce only old track points. */
+export function fitTerminalEvidence(evidence: LandingTerminalEvidenceV1): LandingTerminalEvidenceV1 | null {
+  const recentTrack = evidence.recentTrack.slice();
+  let candidate = { ...evidence, recentTrack };
+  while (recentTrack.length && terminalEvidenceBytes(candidate) > MAX_TERMINAL_EVIDENCE_BYTES) {
+    recentTrack.shift();
+    candidate = { ...evidence, recentTrack };
+  }
+  return terminalEvidenceBytes(candidate) <= MAX_TERMINAL_EVIDENCE_BYTES ? candidate : null;
+}
+
 function value(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -72,14 +87,14 @@ export function boundedTerminalTrack(history: readonly { aircraft: Aircraft; obs
     .map((item) => terminalObservation(item.aircraft, new Date(item.observedAt).toISOString()));
 }
 
-export function terminalEvidenceFor(aircraft: Aircraft, history: readonly { aircraft: Aircraft; observedAt: number }[], at: number): LandingTerminalEvidenceV1 {
+export function terminalEvidenceFor(aircraft: Aircraft, history: readonly { aircraft: Aircraft; observedAt: number }[], at: number): LandingTerminalEvidenceV1 | null {
   const detection = terminalObservation(aircraft, new Date(at).toISOString());
-  return {
+  return fitTerminalEvidence({
     version: TERMINAL_EVIDENCE_VERSION,
     detection,
     recentTrack: boundedTerminalTrack(history, at),
     groundConfirmation: aircraft.onGround ? { ...detection, onGround: true } : null,
     reportedArrivalRunway: reportedArrivalRunway(aircraft),
     destinationObservation: null,
-  };
+  });
 }

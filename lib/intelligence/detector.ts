@@ -174,19 +174,25 @@ export class FlightIntelligenceDetector {
   }
   /** Exact V2 phase accessor. `getPhase()` keeps the legacy LANDED→GROUND view. */
   getFlightPhase(icaoHex: string): FlightPhase | null { return this.tracks.get(icaoHex.toUpperCase())?.phase ?? null; }
+  getLifecycleKey(icaoHex: string): string | null {
+    const normalized = icaoHex.toUpperCase();
+    const state = this.tracks.get(normalized);
+    return state ? `${normalized}:${state.flightLifecycle}` : null;
+  }
   cleanup(activeHexes: ReadonlySet<string>): void { for (const hex of this.tracks.keys()) if (!activeHexes.has(hex)) this.tracks.delete(hex); }
 
   observe(previous: Aircraft | undefined, aircraft: Aircraft, observedAt = Date.parse(aircraft.lastSeen)): FlightIntelligenceEvent[] {
     void previous;
     if (aircraft.origin === "adsblol" || aircraft.lat === null || aircraft.lon === null) return [];
     const at = Number.isFinite(observedAt) ? observedAt : observedAtOf(aircraft, Date.now());
-    const state = this.tracks.get(aircraft.icaoHex) ?? this.newState(at);
+    const normalizedIcao = aircraft.icaoHex.toUpperCase();
+    const state = this.tracks.get(normalizedIcao) ?? this.newState(at);
     if (state.history.length && at <= state.history.at(-1)!.observedAt) return [];
     const prior = state.history.at(-1)?.aircraft;
     const gapMs = state.history.length ? at - state.history.at(-1)!.observedAt : 0;
     if (!isFreshObservation(aircraft) || (prior && (gapMs > MAX_OBSERVATION_GAP_MS || isDiscontinuous(prior, aircraft, gapMs)))) {
       this.resetForUnusableObservation(state);
-      this.tracks.set(aircraft.icaoHex, state);
+      this.tracks.set(normalizedIcao, state);
       return [];
     }
     if (state.lastCallsign && aircraft.callsign && state.lastCallsign !== aircraft.callsign) {
@@ -292,7 +298,8 @@ export class FlightIntelligenceDetector {
       } else if (state.phase === "GO_AROUND" && climbSignals.some((signal) => signal.active)) {
       this.transition(state, "CLIMB", true);
       } else if (state.phase === "APPROACH" && landingSignals.filter((signal) => signal.active).length >= 3 && this.transition(state, aircraft.onGround ? "LANDED" : "FINAL", aircraft.onGround && distanceKm !== null && distanceKm <= 2)) {
-      append(this.event("LANDING", aircraft, state, airport?.icaoCode ?? null, aircraft.onGround ? "LANDED" : "FINAL", scoreSignals(landingSignals), runwayFor("ARRIVAL"), "", null, { terminalEvidence: terminalEvidenceFor(aircraft, state.history, at) }));
+      const terminalEvidence = terminalEvidenceFor(aircraft, state.history, at);
+      append(this.event("LANDING", aircraft, state, airport?.icaoCode ?? null, aircraft.onGround ? "LANDED" : "FINAL", scoreSignals(landingSignals), runwayFor("ARRIVAL"), "", null, terminalEvidence ? { terminalEvidence } : undefined));
       } else if (state.phase === "FINAL" && aircraft.onGround) {
         this.transition(state, "LANDED", true);
       } else if (state.phase === "LANDING" && aircraft.onGround) {
@@ -351,7 +358,7 @@ export class FlightIntelligenceDetector {
       state.holdingActive = false;
     }
     this.observeAirspace(state, aircraft, at, append);
-    this.tracks.set(aircraft.icaoHex, state);
+    this.tracks.set(normalizedIcao, state);
     return events;
   }
 
