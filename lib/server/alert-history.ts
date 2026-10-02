@@ -2,6 +2,7 @@ import { appendFile, mkdir, open, rename, stat, unlink } from "node:fs/promises"
 import { dirname } from "node:path";
 import type { Aircraft } from "@/lib/aircraft/types";
 import { getRuntimeStatePath } from "@/lib/server/runtime-state";
+import { getAlertsFleetsRepository, type AlertV1HistoryRow } from "@/lib/server/alerts-fleets-repository";
 
 export type AlertHistoryEventType =
   | "watchlist"
@@ -23,6 +24,9 @@ export type AlertHistoryEventType =
   | "data_stale"
   | "receiver_degraded"
   | "weather_proximity";
+  // PostgreSQL-backed Alerts & Fleets V1 occurrence.
+  // Kept generic so unknown future V1 trigger families still render safely.
+export type AlertHistoryEventTypeWithV1 = AlertHistoryEventType | "alert_v1";
 export type AlertNotificationStatus = "pending" | "attempted" | "delivered" | "failed" | "disabled";
 export type AlertHistoryReason =
   | "watchlisted"
@@ -44,6 +48,7 @@ export type AlertHistoryReason =
   | "data_stale"
   | "receiver_degraded"
   | "weather_proximity";
+export type AlertHistoryReasonWithV1 = AlertHistoryReason | "alert_v1";
 export type AlertHistoryFilter = "all" | "watchlist" | "emergency" | "records" | "intelligence";
 export type ReceptionRecordScope = "daily" | "lifetime";
 
@@ -58,8 +63,8 @@ export interface AlertHistoryRecordValue {
 export interface AlertHistoryEntry {
   id: string;
   detectedAt: string;
-  type: AlertHistoryEventType;
-  reason: AlertHistoryReason;
+  type: AlertHistoryEventTypeWithV1;
+  reason: AlertHistoryReasonWithV1;
   aircraft: {
     icaoHex: string;
     registration: string | null;
@@ -80,6 +85,19 @@ export interface AlertHistoryEntry {
     sectorId: string | null;
   } | null;
   metadata?: Record<string, string | number | boolean | null>;
+  alertV1?: {
+    occurrenceId: string;
+    sourceType: string;
+    sourceKey: string;
+    trigger: string;
+    ruleName: string | null;
+    flightEventId: number | null;
+    flightEventType: string | null;
+    airportIcao: string | null;
+    runway: string | null;
+    geofenceId: string | null;
+    deliveryStatus: AlertNotificationStatus;
+  };
 }
 
 export interface AlertHistoryDetection {
@@ -218,6 +236,36 @@ function matchesFilter(entry: AlertHistoryEntry, filter: AlertHistoryFilter): bo
   if (filter === "emergency") return entry.type === "emergency" || entry.type === "emergency_7500" || entry.type === "emergency_7600" || entry.type === "emergency_7700";
   if (filter === "intelligence") return entry.type.startsWith("intelligence_");
   return entry.type === "new_aircraft" || entry.type === "reception_record";
+}
+
+function v1DeliveryStatus(row: AlertV1HistoryRow): AlertNotificationStatus {
+  if (!row.deliveries.length) return "disabled";
+  if (row.deliveries.some((delivery) => delivery.status === "FAILED")) return "failed";
+  if (row.deliveries.some((delivery) => delivery.status === "PROCESSING")) return "attempted";
+  if (row.deliveries.every((delivery) => delivery.status === "SENT")) return "delivered";
+  return "pending";
+}
+
+function entryFromV1(row: AlertV1HistoryRow): AlertHistoryEntry {
+  const occurrence = row.occurrence;
+  const payload = parseJson<Record<string, unknown>>(occurrence.payloadJson);
+  const event = row.flightEvent;
+  const flightEventType = typeof event?.type === "string" ? event.type : typeof payload.flightEventType === "string" ? payload.flightEventType : null;
+  return {
+    id: `alert-v1:${String(occurrence.id)}`,
+    detectedAt: validTimestamp(String(occurrence.occurredAt)),
+    type: "alert_v1",
+    reason: "alert_v1",
+    aircraft: { icaoHex: cleanText(String(occurrence.aircraftIcao), 16) ?? "UNKNOWN", registration: cleanText(typeof occurrence.registration === "string" ? occurrence.registration : null), callsign: cleanText(typeof occurrence.callsign === "string" ? occurrence.callsign : null), aircraftType: null },
+    ruleIds: typeof occurrence.ruleId === "string" ? [occurrence.ruleId] : [],
+    ruleNames: row.ruleName ? [row.ruleName] : [], radiusKm: null, squawk: typeof payload.squawk === "string" ? payload.squawk : null, record: null,
+    notificationStatus: v1DeliveryStatus(row), notificationAttemptedAt: null, intelligence: null,
+    alertV1: { occurrenceId: String(occurrence.id), sourceType: String(occurrence.sourceType), sourceKey: String(occurrence.sourceKey), trigger: String(occurrence.trigger), ruleName: row.ruleName, flightEventId: typeof occurrence.flightEventId === "number" && Number.isInteger(occurrence.flightEventId) ? occurrence.flightEventId : null, flightEventType, airportIcao: typeof event?.airportIcao === "string" ? event.airportIcao : null, runway: typeof event?.runway === "string" ? event.runway : null, geofenceId: typeof occurrence.geofenceId === "string" ? occurrence.geofenceId : null, deliveryStatus: v1DeliveryStatus(row) },
+  };
+}
+
+function parseJson<T>(value: unknown): T {
+  try { return typeof value === "string" ? JSON.parse(value) as T : {} as T; } catch { return {} as T; }
 }
 
 function pageFromLines(lines: Iterable<unknown>, options: AlertHistoryListOptions): AlertHistoryPage {
@@ -366,5 +414,12 @@ export function createAlertHistoryStore(): JsonlAlertHistoryStore | MemoryAlertH
 }
 
 export async function listAlertHistory(options: AlertHistoryListOptions = {}): Promise<AlertHistoryPage> {
-  return createAlertHistoryStore().list(options);
+  const legacy = await createAlertHistoryStore().list({ ...options, page: 0, pageSize: MAX_PAGE_SIZE });
+  let v1: AlertHistoryEntry[] = [];
+  try { v1 = (await getAlertsFleetsRepository().listOccurrenceHistory(200)).map(entryFromV1); } catch { /* PostgreSQL is optional for live radar and history */ }
+  const all = [...legacy.items, ...v1].filter((entry) => matchesFilter(entry, options.filter ?? "all")).sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
+  const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), MAX_PAGE_SIZE);
+  const page = Math.max(Math.trunc(options.page ?? 0), 0);
+  const items = all.slice(page * pageSize, (page + 1) * pageSize);
+  return { items, page, pageSize, nextPage: (page + 1) * pageSize < all.length ? page + 1 : null };
 }

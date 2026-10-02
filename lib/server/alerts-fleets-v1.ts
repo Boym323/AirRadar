@@ -69,7 +69,8 @@ export interface AlertV1Signal {
   trigger: AlertV1TriggerType;
   aircraft: AlertV1AircraftIdentity;
   occurredAt: string;
-  flightEventId?: string;
+  /** Canonical FlightEvent.id. Required when sourceType is FLIGHT_EVENT. */
+  flightEventId?: number;
   flightEventType?: AlertV1FlightEventType;
   squawk?: string;
   geofenceId?: string;

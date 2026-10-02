@@ -58,5 +58,14 @@
   "blocking": [
     "AlertOccurrence.flightEventId is NULL for canonical FlightEvent 5312",
     "V1 AlertOccurrence is not rendered by the intended Alerts history UI"
-  ]
+  ],
+  "correctiveImplementation": {
+    "status": "LOCAL_ONLY_NOT_DEPLOYED",
+    "flightEventRelationPersistence": "IMPLEMENTED",
+    "historyApiUi": "IMPLEMENTED",
+    "incompleteProductionRows": 8,
+    "backfill": "NOT_SAFE_NOT_EXECUTED",
+    "flightEvent5312Repair": "NOT_SAFE_NO_DETERMINISTIC_SOURCE_KEY_MAPPING",
+    "naturalPostFixGate": "PENDING"
+  }
 }

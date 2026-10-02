@@ -61,3 +61,9 @@ no Pushover attempt. No duplicate deliveries were observed.
 Next step: fix only the canonical FlightEvent-ID persistence defect and wire
 the V1 occurrence history to the intended Alerts history UI, then repeat the
 production gate with a new temporary rule.
+
+## Corrective implementation status
+
+The corrective implementation is prepared locally but not deployed. It passes the canonical numeric FlightEvent.id explicitly to persistence, rejects incomplete FLIGHT_EVENT occurrences, verifies the event exists before the atomic occurrence/delivery transaction, renders PostgreSQL V1 rows through the Alerts history API/UI, and preserves deterministic occurrence keys and delivery atomicity.
+
+Read-only audit found 8 incomplete production FLIGHT_EVENT rows, including the known canary row. Their source keys do not deterministically encode a canonical event ID, so no backfill was executed. Production release and the natural post-fix event gate remain pending.

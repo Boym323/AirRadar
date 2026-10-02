@@ -10,6 +10,7 @@ import {
   validateAlertV1Geofence,
   type AlertV1Config,
 } from "@/lib/server/alerts-fleets-v1";
+import { AlertV1OccurrenceInvariantError, getAlertsFleetsRepository, validateAlertV1OccurrenceInput } from "@/lib/server/alerts-fleets-repository";
 
 const aircraft = { icaoHex: "abc123", registration: " ok-abc ", callsign: "CSA123" };
 const config: AlertV1Config = {
@@ -19,13 +20,17 @@ const config: AlertV1Config = {
 };
 
 describe("Alerts & Fleets V1 primitives", () => {
+  it("rejects incomplete FlightEvent occurrence identity before persistence", async () => {
+    expect(() => validateAlertV1OccurrenceInput({ sourceType: "FLIGHT_EVENT", flightEventId: null })).toThrow(AlertV1OccurrenceInvariantError);
+    await expect(getAlertsFleetsRepository().recordOccurrence({ id: "missing-flight-event", ruleId: "rule", sourceType: "FLIGHT_EVENT", sourceKey: "event", trigger: "FLIGHT_EVENT", aircraftIcao: "ABC123", flightEventId: null, occurredAt: "2026-10-02T00:00:00Z", payload: {}, channels: ["IN_APP"] })).rejects.toThrow(AlertV1OccurrenceInvariantError);
+  });
   it("normalizes matcher values and applies exact/prefix semantics", () => {
     expect(matchingAlertV1Fleets(aircraft, config.fleets)).toEqual(["cargo"]);
-    expect(signalMatchesRule({ sourceType: "FLIGHT_EVENT", sourceKey: "42", trigger: "FLIGHT_EVENT", aircraft, occurredAt: "2026-10-02T00:00:00Z", flightEventId: "42", flightEventType: "LANDING" }, config.rules[0]!, config.fleets)).toBe(true);
+  expect(signalMatchesRule({ sourceType: "FLIGHT_EVENT", sourceKey: "42", trigger: "FLIGHT_EVENT", aircraft, occurredAt: "2026-10-02T00:00:00Z", flightEventId: 42, flightEventType: "LANDING" }, config.rules[0]!, config.fleets)).toBe(true);
   });
 
   it("creates deterministic, repeat-safe occurrences", () => {
-    const signal = { sourceType: "FLIGHT_EVENT" as const, sourceKey: "42", trigger: "FLIGHT_EVENT" as const, aircraft, occurredAt: "2026-10-02T00:00:00Z", flightEventId: "42", flightEventType: "LANDING" as const };
+  const signal = { sourceType: "FLIGHT_EVENT" as const, sourceKey: "42", trigger: "FLIGHT_EVENT" as const, aircraft, occurredAt: "2026-10-02T00:00:00Z", flightEventId: 42, flightEventType: "LANDING" as const };
     const first = evaluateAlertV1(signal, config);
     expect(first).toHaveLength(1);
     expect(first[0]!.id).toBe(occurrenceId("landing", "FLIGHT_EVENT", "42"));

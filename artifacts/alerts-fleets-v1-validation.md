@@ -34,3 +34,12 @@ Result: PARTIAL
   deterministic occurrence/dedupe and PostgreSQL evidence remain PASS.
 - Natural squawk/geofence transitions: NOT OBSERVED; deterministic and
   restart-baseline evidence remains PASS.
+
+## Corrective release validation
+
+- Focused corrective tests: PASS (14 tests in the alert/history targets)
+- Full suite after correction: PASS (1,393 passed, 10 skipped)
+- Typecheck and lint after correction: PASS (lint 0 errors, 7 existing warnings)
+- FlightEvent invariant negative test: PASS
+- Production read-only audit: 8 incomplete FlightEvent rows; deterministic backfill NOT SAFE; FlightEvent 5312 not present in the incomplete-row set
+- Production deployment and natural post-fix gate: NOT RUN

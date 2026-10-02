@@ -334,7 +334,7 @@ export class AlertEngine {
         trigger: "FLIGHT_EVENT",
         aircraft: { icaoHex: aircraft.icaoHex, registration: aircraft.registration ?? null, callsign: aircraft.callsign ?? null },
         occurredAt: event.occurredAt,
-        flightEventId: String(event.id),
+        flightEventId: Number(event.id),
         flightEventType: event.type as AlertV1Signal["flightEventType"],
       });
   }
@@ -348,7 +348,7 @@ export class AlertEngine {
         await getAlertsFleetsRepository().recordOccurrence({
           id: occurrence.id, ruleId: occurrence.ruleId, sourceType: occurrence.sourceType, sourceKey: occurrence.sourceKey, trigger: occurrence.trigger,
           aircraftIcao: occurrence.aircraft.icaoHex, registration: occurrence.aircraft.registration, callsign: occurrence.aircraft.callsign,
-          flightEventId: signal.flightEventId && Number.isFinite(Number(signal.flightEventId)) ? Number(signal.flightEventId) : null, occurredAt: occurrence.occurredAt, payload: occurrence.payload, channels: rule.channels,
+          flightEventId: signal.sourceType === "FLIGHT_EVENT" ? signal.flightEventId ?? null : null, occurredAt: occurrence.occurredAt, payload: occurrence.payload, channels: rule.channels,
         });
       }
     } catch {

@@ -43,7 +43,27 @@ export interface AlertV1OccurrenceInput {
   occurredAt: string; payload: Record<string, unknown>; channels: string[];
 }
 
+export class AlertV1OccurrenceInvariantError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AlertV1OccurrenceInvariantError";
+  }
+}
+
 export interface AlertV1Delivery { id: string; occurrenceId: string; channel: string; status: string; attemptCount: number; nextAttemptAt: string; claimedAt: string | null; sentAt: string | null; lastError: string | null; }
+
+export interface AlertV1HistoryRow {
+  occurrence: Row;
+  ruleName: string | null;
+  deliveries: AlertV1Delivery[];
+  flightEvent: Row | null;
+}
+
+export function validateAlertV1OccurrenceInput(input: Pick<AlertV1OccurrenceInput, "sourceType" | "flightEventId">): void {
+  if (input.sourceType === "FLIGHT_EVENT" && (input.flightEventId === null || input.flightEventId === undefined || !Number.isInteger(input.flightEventId) || input.flightEventId <= 0)) {
+    throw new AlertV1OccurrenceInvariantError("FLIGHT_EVENT occurrence requires canonical flightEventId");
+  }
+}
 
 function fleetFromRow(row: Row, matchers: AlertV1FleetMatcher[]): AlertV1Fleet {
   return { id: String(row.id), name: String(row.name), description: typeof row.description === "string" ? row.description : undefined, enabled: row.enabled !== false, matchers };
@@ -131,11 +151,15 @@ export class AlertsFleetsRepository {
   async setRuleEnabled(id: string, enabled: boolean): Promise<void> { const t = table("AlertRule"); if (!t) throw new Error("database not configured"); await t.where({ id }).update({ enabled, updatedAt: now() }); this.invalidate(); }
 
   async recordOccurrence(input: AlertV1OccurrenceInput): Promise<{ created: boolean; id: string }> {
+    validateAlertV1OccurrenceInput(input);
     const database = getPrisma(); if (!database) return { created: false, id: input.id };
     const channels = [...new Set(input.channels)];
     try {
       await database.transaction(async (transaction) => {
-        const schema = transaction.orm.public as unknown as { AlertOccurrence: Table; AlertDelivery: Table };
+        const schema = transaction.orm.public as unknown as { AlertOccurrence: Table; AlertDelivery: Table; FlightEvent: Table };
+        if (input.sourceType === "FLIGHT_EVENT" && !(await schema.FlightEvent.where({ id: input.flightEventId }).first())) {
+          throw new AlertV1OccurrenceInvariantError(`FlightEvent ${input.flightEventId} does not exist`);
+        }
         await schema.AlertOccurrence.create({ id: input.id, ruleId: input.ruleId, sourceType: input.sourceType, sourceKey: input.sourceKey, trigger: input.trigger, aircraftIcao: input.aircraftIcao, registration: input.registration ?? null, callsign: input.callsign ?? null, flightId: input.flightId ?? null, flightEventId: input.flightEventId ?? null, geofenceId: input.geofenceId ?? null, occurredAt: Temporal.Instant.fromEpochMilliseconds(Date.parse(input.occurredAt)), payloadJson: json(input.payload), createdAt: now() });
         for (const channel of channels) await schema.AlertDelivery.create({ id: randomUUID(), occurrenceId: input.id, channel, status: "PENDING", attemptCount: 0, nextAttemptAt: now(), createdAt: now(), updatedAt: now() });
       });
@@ -144,6 +168,22 @@ export class AlertsFleetsRepository {
   }
 
   async listOccurrences(limit = 50): Promise<Row[]> { const t = table("AlertOccurrence"); return t ? t.orderBy((row: { occurredAt: { desc(): unknown } }) => row.occurredAt.desc()).limit(Math.min(200, Math.max(1, limit))).all() : []; }
+  async listOccurrenceHistory(limit = 200): Promise<AlertV1HistoryRow[]> {
+    const occurrences = await this.listOccurrences(limit);
+    if (!occurrences.length) return [];
+    const rules = table("AlertRule") ? await table("AlertRule")!.where({}).all() : [];
+    const deliveryTable = table("AlertDelivery");
+    const flightEventTable = table("FlightEvent");
+    const ruleNames = new Map(rules.map((row) => [String(row.id), typeof row.name === "string" ? row.name : null]));
+    return Promise.all(occurrences.map(async (occurrence) => {
+      const [deliveryRows, flightEvent] = await Promise.all([
+        deliveryTable ? deliveryTable.where({ occurrenceId: String(occurrence.id) }).all() : Promise.resolve([]),
+        flightEventTable && occurrence.flightEventId ? flightEventTable.where({ id: occurrence.flightEventId }).first() : Promise.resolve(undefined),
+      ]);
+      const deliveries = deliveryRows.map((row) => ({ id: String(row.id), occurrenceId: String(row.occurrenceId), channel: String(row.channel), status: String(row.status), attemptCount: Number(row.attemptCount ?? 0), nextAttemptAt: iso(row.nextAttemptAt), claimedAt: row.claimedAt ? iso(row.claimedAt) : null, sentAt: row.sentAt ? iso(row.sentAt) : null, lastError: typeof row.lastError === "string" ? row.lastError.slice(0, 300) : null }));
+      return { occurrence, ruleName: ruleNames.get(String(occurrence.ruleId)) ?? null, deliveries, flightEvent: flightEvent ?? null };
+    }));
+  }
   async listDeliveries(limit = 100): Promise<AlertV1Delivery[]> { const t = table("AlertDelivery"); if (!t) return []; return (await t.orderBy((row: { createdAt: { desc(): unknown } }) => row.createdAt.desc()).limit(Math.min(200, Math.max(1, limit))).all()).map((row) => ({ id: String(row.id), occurrenceId: String(row.occurrenceId), channel: String(row.channel), status: String(row.status), attemptCount: Number(row.attemptCount ?? 0), nextAttemptAt: iso(row.nextAttemptAt), claimedAt: row.claimedAt ? iso(row.claimedAt) : null, sentAt: row.sentAt ? iso(row.sentAt) : null, lastError: typeof row.lastError === "string" ? row.lastError.slice(0, 300) : null })); }
 
   async claimDelivery(nowMs = Date.now()): Promise<AlertV1Delivery | null> {

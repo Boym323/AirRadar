@@ -46,3 +46,11 @@ Production release v1.0.239 was performed through `deploy/release.sh` on
 commit `37086cef3e9c75c036ba5812f78e17f3659e1aaf`. Existing Flight
 Intelligence detectors were not duplicated. The temporary production canary
 fleet/rule was removed after observation.
+
+## Corrective audit
+
+- Read-only production audit found 8 FLIGHT_EVENT occurrences with flightEventId IS NULL.
+- Their source keys contain aircraft/time/event context but no canonical FlightEvent.id; no deterministic backfill was safe.
+- The known canary row is present with a NULL relation, but its source key does
+  not encode 5312; no deterministic mapping was safe, so it was not modified.
+- Corrective code now carries the numeric canonical ID explicitly, rejects incomplete FlightEvent inputs, verifies the event exists in the transaction, and projects PostgreSQL V1 rows into /api/alerts.

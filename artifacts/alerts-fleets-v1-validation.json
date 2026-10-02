@@ -1,7 +1,7 @@
 {
   "result": "PARTIAL",
   "focusedTests": "PASS (33)",
-  "fullSuite": "PASS (1392 passed, 10 skipped)",
+  "fullSuite": "PASS (1393 passed, 10 skipped)",
   "typecheck": "PASS",
   "lint": "PASS (0 errors, 7 warnings)",
   "postgresMigration": "PASS (16 migrations, 155 operations)",
@@ -15,5 +15,9 @@
   "productionCanary": "PASS (45 minutes; zero occurrences/deliveries/duplicates; no natural FlightEvent observed)",
   "liveFlightEventOccurrence": "NOT_OBSERVED",
   "naturalSquawk": "NOT_OBSERVED",
-  "naturalGeofence": "NOT_RUN"
+  "naturalGeofence": "NOT_RUN",
+  "correctiveFocusedTests": "PASS (14)",
+  "flightEventInvariant": "PASS",
+  "productionReadOnlyAudit": "8 incomplete rows including known canary; backfill NOT_SAFE; no deterministic FlightEvent 5312 match",
+  "correctiveProductionGate": "NOT_RUN"
 }

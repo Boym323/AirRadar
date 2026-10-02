@@ -426,6 +426,7 @@ export const en = {
     types: { watchlist: "Watchlist", newAircraft: "New aircraft", dailyRecord: "Daily record", lifetimeRecord: "Lifetime record", emergency: "Emergency" },
     reasons: { watchlist: "A server watchlist rule matched.", newAircraft: "First ever durable observation confirmed.", record: "A genuine reception record was exceeded.", emergency: "An emergency state transition was reported." },
     notificationStatuses: { pending: "Pending", attempted: "Attempted", delivered: "Delivered", failed: "Failed", disabled: "Notifier disabled" },
+    v1: { event: "Alert rule", flightEvent: "Flight event", squawk: "Squawk", geofenceEnter: "Geofence enter", geofenceExit: "Geofence exit", fallback: "Alert occurrence", rule: "Rule", context: "Context", airport: "Airport", runway: "Runway", source: "Source", previousPage: "Previous page", nextPage: "Next page" },
   },
   intelligence: {
     title: "Live intelligence",
