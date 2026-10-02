@@ -7,9 +7,14 @@ import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { FlightIntelligenceDetector } from "@/lib/intelligence/detector";
 import { confidenceLevel, FLIGHT_INTELLIGENCE_DETECTOR_VERSION, type FlightIntelligenceEvent, type FlightEventType, type FlightPhase } from "@/lib/intelligence/types";
 import type { RunwayContext } from "@/lib/route-intelligence/contracts";
+import { haversineDistanceKm } from "@/lib/geo";
+import type { LandingGroundObservation, LandingTerminalEvidenceV1 } from "@/lib/intelligence/terminal-evidence";
+import { TERMINAL_EVIDENCE_VERSION } from "@/lib/intelligence/terminal-evidence";
 
 const MAX_EVENTS = 500;
 const AIRPORT_INDEX_RETRY_MS = 60_000;
+const PENDING_GROUND_TTL_MS = 8 * 60_000;
+const MAX_PENDING_GROUND = 256;
 
 type Listener = (event: FlightIntelligenceEvent) => void;
 
@@ -52,6 +57,8 @@ interface FlightEventQuery {
   limit(value: number): FlightEventQuery;
   include(relation: string, callback: (query: RelationQuery) => RelationQuery): FlightEventQuery;
   all(): Promise<FlightEventRow[]>;
+  first?(): Promise<FlightEventRow | null>;
+  update?(values: Record<string, unknown>): Promise<unknown>;
 }
 
 interface FlightEventTable extends FlightEventQuery {
@@ -105,6 +112,9 @@ export class FlightIntelligenceService {
   private airportIndexLoaded = false;
   private airportIndexLoading: Promise<void> | null = null;
   private airportIndexRetryAt = 0;
+  private readonly persistence = new Map<string, Promise<void>>();
+  private readonly pendingGround = new Map<string, { event: FlightIntelligenceEvent; expiresAt: number }>();
+  private readonly diagnostics = { landingEvents: 0, landingEvidenceCaptured: 0, landingDetectedOnGround: 0, landingPendingGroundConfirmation: 0, landingGroundConfirmedLater: 0, landingGroundConfirmationExpired: 0, landingEvidencePersistFailures: 0, reportedArrivalRunwayPresent: 0, terminalEvidenceVersion: TERMINAL_EVIDENCE_VERSION };
 
   constructor() {
     void this.ensureAirportIndex();
@@ -175,6 +185,7 @@ export class FlightIntelligenceService {
       // reject the live snapshot or stop the single state owner.
       return [];
     }
+    this.expirePendingGround(Date.now());
     for (const event of detected) {
       this.events.unshift(event);
       if (this.events.length > MAX_EVENTS) this.events.length = MAX_EVENTS;
@@ -185,9 +196,84 @@ export class FlightIntelligenceService {
           this.listeners.delete(listener);
         }
       }
-      void this.persist(event);
+      const persistence = this.persist(event);
+      this.persistence.set(event.eventKey, persistence);
+      void persistence.finally(() => this.persistence.delete(event.eventKey));
+      if (event.type === "LANDING") this.captureLanding(event, aircraft, persistence);
     }
+    this.confirmPendingGround(aircraft, observedAt ?? Date.parse(aircraft.lastSeen));
     return detected;
+  }
+
+  getDiagnostics() { return { ...this.diagnostics, pendingGroundConfirmation: this.pendingGround.size }; }
+
+  private captureLanding(event: FlightIntelligenceEvent, aircraft: Aircraft, persistence: Promise<void>): void {
+    const evidence = event.metadata?.terminalEvidence as LandingTerminalEvidenceV1 | undefined;
+    this.diagnostics.landingEvents += 1;
+    if (!evidence) return;
+    this.diagnostics.landingEvidenceCaptured += 1;
+    if (evidence.reportedArrivalRunway) this.diagnostics.reportedArrivalRunwayPresent += 1;
+    if (aircraft.onGround) this.diagnostics.landingDetectedOnGround += 1;
+    else {
+      this.pendingGround.set(event.eventKey, { event, expiresAt: Date.parse(event.occurredAt) + PENDING_GROUND_TTL_MS });
+      this.diagnostics.landingPendingGroundConfirmation += 1;
+      while (this.pendingGround.size > MAX_PENDING_GROUND) this.pendingGround.delete(this.pendingGround.keys().next().value!);
+    }
+    void persistence.catch(() => { this.diagnostics.landingEvidencePersistFailures += 1; });
+  }
+
+  private expirePendingGround(now: number): void {
+    for (const [key, pending] of this.pendingGround) if (pending.expiresAt < now) {
+      this.pendingGround.delete(key);
+      this.diagnostics.landingGroundConfirmationExpired += 1;
+    }
+  }
+
+  private confirmPendingGround(aircraft: Aircraft, observedAt: number): void {
+    if (!aircraft.onGround || !Number.isFinite(observedAt)) return;
+    for (const [key, pending] of this.pendingGround) {
+      const event = pending.event;
+      const evidence = event.metadata?.terminalEvidence as LandingTerminalEvidenceV1 | undefined;
+      if (event.callsign && aircraft.callsign && event.callsign !== aircraft.callsign) continue;
+      const distance = event.latitude !== null && event.longitude !== null && aircraft.lat !== null && aircraft.lon !== null
+        ? haversineDistanceKm(event.latitude, event.longitude, aircraft.lat, aircraft.lon) : Number.POSITIVE_INFINITY;
+      if (!evidence || observedAt < Date.parse(event.occurredAt) || observedAt > pending.expiresAt || distance > 5) continue;
+      if (event.airportIcao && evidence.detection.lat !== null && evidence.detection.lon !== null && aircraft.lat !== null && aircraft.lon !== null) {
+        // A landing lifecycle may only be finalized near the original event.
+      }
+      const confirmation: LandingGroundObservation = { ...evidence.detection, ...this.groundObservation(aircraft, new Date(observedAt).toISOString()), onGround: true };
+      evidence.groundConfirmation = confirmation;
+      this.pendingGround.delete(key);
+      this.diagnostics.landingGroundConfirmedLater += 1;
+      void this.finalizeLanding(event, evidence);
+    }
+  }
+
+  private groundObservation(aircraft: Aircraft, observedAt: string): LandingGroundObservation {
+    return {
+      observedAt, onGround: true, lat: aircraft.lat, lon: aircraft.lon, altitudeFt: aircraft.altitude,
+      baroAltitudeFt: aircraft.baroAltitude, geomAltitudeFt: aircraft.geomAltitude, groundSpeedKt: aircraft.groundSpeed,
+      trackDeg: aircraft.track, verticalRateFpm: aircraft.verticalRate, baroRateFpm: aircraft.baroRate, geomRateFpm: aircraft.geomRate,
+      seenSeconds: aircraft.seenSeconds, seenPosSeconds: aircraft.seenPosSeconds, source: aircraft.source ?? null, origin: aircraft.origin ?? null,
+    };
+  }
+
+  private async finalizeLanding(event: FlightIntelligenceEvent, evidence: LandingTerminalEvidenceV1): Promise<void> {
+    try {
+      await this.persistence.get(event.eventKey);
+      const database = getPrisma();
+      const table = database?.orm.public.FlightEvent as unknown as FlightEventTable | undefined;
+      if (!table?.where) return;
+      const row = table.where({ eventKey: event.eventKey });
+      const current = row.first ? await row.first() : null;
+      const currentMetadata = this.safeMetadata(current?.metadataJson);
+      const currentEvidence = currentMetadata.terminalEvidence as LandingTerminalEvidenceV1 | undefined;
+      if (currentEvidence?.groundConfirmation) return;
+      if (!row.update) return;
+      await trackDbOperation("flight-intelligence.terminal-evidence.update", async () => await row.update!({ metadataJson: JSON.stringify({ ...currentMetadata, terminalEvidence: evidence }) }));
+    } catch {
+      this.diagnostics.landingEvidencePersistFailures += 1;
+    }
   }
 
   cleanup(activeHexes: ReadonlySet<string>): void {
@@ -314,6 +400,7 @@ export class FlightIntelligenceService {
       }));
     } catch (error) {
       // Intelligence persistence is best effort.
+      if (event.type === "LANDING") this.diagnostics.landingEvidencePersistFailures += 1;
       if (process.env.FLIGHT_INTELLIGENCE_DEBUG_PERSIST === "true") console.error("[flight-intelligence.persistence]", error);
     }
   }

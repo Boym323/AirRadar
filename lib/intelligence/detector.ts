@@ -8,6 +8,7 @@ import type { RunwayContext } from "@/lib/route-intelligence/contracts";
 import type { FlightEventType, FlightIntelligenceEvent, FlightObservation, FlightPhase, HoldingStatus } from "@/lib/intelligence/types";
 import { confidenceLevel, FLIGHT_INTELLIGENCE_DETECTOR_VERSION } from "@/lib/intelligence/types";
 import { detectGoAround } from "@/lib/intelligence/go-around";
+import { terminalEvidenceFor } from "@/lib/intelligence/terminal-evidence";
 
 const MAX_HISTORY = 120;
 const MAX_EMITTED_KEYS = 200;
@@ -291,7 +292,7 @@ export class FlightIntelligenceDetector {
       } else if (state.phase === "GO_AROUND" && climbSignals.some((signal) => signal.active)) {
       this.transition(state, "CLIMB", true);
       } else if (state.phase === "APPROACH" && landingSignals.filter((signal) => signal.active).length >= 3 && this.transition(state, aircraft.onGround ? "LANDED" : "FINAL", aircraft.onGround && distanceKm !== null && distanceKm <= 2)) {
-      append(this.event("LANDING", aircraft, state, airport?.icaoCode ?? null, aircraft.onGround ? "LANDED" : "FINAL", scoreSignals(landingSignals), runwayFor("ARRIVAL")));
+      append(this.event("LANDING", aircraft, state, airport?.icaoCode ?? null, aircraft.onGround ? "LANDED" : "FINAL", scoreSignals(landingSignals), runwayFor("ARRIVAL"), "", null, { terminalEvidence: terminalEvidenceFor(aircraft, state.history, at) }));
       } else if (state.phase === "FINAL" && aircraft.onGround) {
         this.transition(state, "LANDED", true);
       } else if (state.phase === "LANDING" && aircraft.onGround) {

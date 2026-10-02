@@ -123,6 +123,7 @@ model Flight {
   airline String?
   origin String?
   destination String?
+  destinationProvenanceJson String?
   maxAltitude Int?
   minDistanceKm Float?
   startTime  DateTime         @default(now())

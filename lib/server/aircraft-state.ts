@@ -24,7 +24,7 @@ import { ReceiverStatistics, type ReceiverDailyReceptionRecord, type ReceiverSta
 import { getReceptionRecords } from "@/lib/server/reception-records";
 import { coverageStats, mergeAircraftMaps } from "@/lib/aircraft/source-merge";
 import { computeLocalCoverageRatioFromSources, computeSourceStats } from "@/lib/aircraft/source-awareness";
-import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
+import { getFlightIntelligenceService, type FlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { getAlertDeliveryWorker } from "@/lib/server/alert-delivery-worker";
 import { haversineDistanceKm } from "@/lib/geo";
 import { logger } from "@/lib/server/logger";
@@ -37,6 +37,7 @@ import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { aircraftIconNeedsInitialMetadata } from "@/lib/aircraft/icon-classification";
 import { flushAircraftWeatherPersistence, persistAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
+import { getDestinationProvenanceDiagnostics } from "@/lib/server/destination-provenance";
 import { flightPositionPersistenceShadow } from "@/lib/server/flight-position-persistence-shadow";
 import { PredictiveStateStore } from "@/lib/predictive-intelligence";
 import type { FlightPhase } from "@/lib/intelligence/types";
@@ -413,6 +414,8 @@ export class AircraftStateService {
     altitudeDiagnostics: ReturnType<typeof getAltitudeDiagnostics>;
     flightPositionPersistenceShadow: ReturnType<typeof flightPositionPersistenceShadow.diagnostics>;
     predictiveIntelligence: ReturnType<PredictiveStateStore["diagnostics"]>;
+    flightIntelligence: ReturnType<FlightIntelligenceService["getDiagnostics"]>;
+    destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -432,6 +435,8 @@ export class AircraftStateService {
       altitudeDiagnostics: getAltitudeDiagnostics(),
       flightPositionPersistenceShadow: flightPositionPersistenceShadow.diagnostics(),
       predictiveIntelligence: this.predictive.diagnostics(),
+      flightIntelligence: this.intelligence.getDiagnostics(),
+      destinationProvenance: getDestinationProvenanceDiagnostics(),
     };
   }
 

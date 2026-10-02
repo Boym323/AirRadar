@@ -1,0 +1,44 @@
+[
+  {
+    "id": "column.public.flight.destinationProvenanceJson",
+    "label": "Add column \"destinationProvenanceJson\" to \"flight\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "destinationProvenanceJson",
+        "table": "flight"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"destinationProvenanceJson\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flight",
+          "destinationProvenanceJson"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"destinationProvenanceJson\"",
+        "sql": "ALTER TABLE \"public\".\"flight\" ADD COLUMN \"destinationProvenanceJson\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"destinationProvenanceJson\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "flight",
+          "destinationProvenanceJson"
+        ]
+      }
+    ]
+  }
+]

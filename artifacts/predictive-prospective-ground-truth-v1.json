@@ -1,0 +1,10 @@
+{
+  "result": "PARTIAL",
+  "status": "IMPLEMENTED_NOT_DEPLOYED",
+  "terminalEvidenceVersion": "terminal-evidence-v1",
+  "terminalTrack": { "maxObservations": 16, "maxAgeSeconds": 90, "maxEncodedBytes": 16384 },
+  "pendingGroundConfirmation": { "maxEntries": 256, "ttlSeconds": 480, "maxUpdatesPerLanding": 1 },
+  "destinationProvenance": { "version": "destination-provenance-v1", "maxRevisions": 8, "historicalBackfill": false },
+  "predictionCapabilities": { "ETA": "SHADOW", "RUNWAY": "SHADOW", "RUNWAY_CHANGE": "SHADOW", "TRAJECTORY": "SHADOW" },
+  "production": { "deployed": false, "naturalLandingEvents": 0, "canaryMinutes": 0 }
+}

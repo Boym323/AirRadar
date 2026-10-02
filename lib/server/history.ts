@@ -18,6 +18,7 @@ import { shouldPersistAltitudeAnomaly } from "@/lib/aircraft/altitude-provenance
 import { filterPlausibleTrailPoints, isPlausibleTransition } from "@/lib/aircraft/trail";
 import { pruneAircraftWeatherRetention } from "@/lib/server/aircraft-weather";
 import { aircraftDurableValues, changedAircraftValues } from "@/lib/server/aircraft-update-policy";
+import { observeDestination } from "@/lib/server/destination-provenance";
 
 export interface HistoryResponse {
   source: "postgres" | "memory";
@@ -1190,6 +1191,8 @@ export async function recordAircraftSnapshot(
               : { endTime: recordedAtInstant, lastSeenAt: recordedAtInstant },
           );
         }
+        const route = item.enrichment?.route;
+        const destinationObservation = observeDestination(null, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
         flight = await schema.Flight.create({
           aircraftId: dbAircraft.id,
           instanceKey: `${item.icaoHex}:${recordedAt.getTime()}`,
@@ -1198,20 +1201,24 @@ export async function recordAircraftSnapshot(
           aircraftType: item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
           airline: item.enrichment?.route?.airline ?? null,
           origin: item.enrichment?.route?.origin ?? null,
-          destination: item.enrichment?.route?.destination ?? null,
+          destination: route?.destination ?? null,
+          destinationProvenanceJson: destinationObservation.value,
           maxAltitude: altitude ?? null,
           minDistanceKm: item.distanceKm,
           startTime: recordedAtInstant,
           lastSeenAt: recordedAtInstant,
         });
       } else {
+        const route = item.enrichment?.route;
+        const destinationObservation = observeDestination((flight as unknown as { destinationProvenanceJson?: string | null }).destinationProvenanceJson, route?.destination, effectiveRecordedAt.toISOString(), route?.source ?? null, item.enrichment?.flightPlan?.retrievedAt ?? route?.retrievedAt ?? null);
         await schema.Flight.where({ id: flight.id }).update({
           callsign: flight.callsign ?? item.callsign,
           registration: flight.registration ?? item.registration ?? item.enrichment?.metadata?.registration,
           aircraftType: flight.aircraftType ?? item.enrichment?.metadata?.icaoTypeCode ?? item.aircraftType,
           airline: flight.airline ?? item.enrichment?.route?.airline,
           origin: flight.origin ?? item.enrichment?.route?.origin,
-          destination: flight.destination ?? item.enrichment?.route?.destination,
+          destination: flight.destination ?? route?.destination,
+          ...(destinationObservation.changed ? { destinationProvenanceJson: destinationObservation.value } : {}),
           maxAltitude: Math.max(flight.maxAltitude ?? 0, altitude ?? 0) || null,
           minDistanceKm: Math.min(flight.minDistanceKm ?? Number.POSITIVE_INFINITY, item.distanceKm ?? Number.POSITIVE_INFINITY) === Number.POSITIVE_INFINITY
             ? null
