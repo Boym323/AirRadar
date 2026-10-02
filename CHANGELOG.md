@@ -10,33 +10,87 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.250] - 2026-10-02
+## [1.0.249] - 2026-10-02
 
-Changes since v1.0.249.
+Changes since v1.0.248.
 
-### Changed
+### Added
 
-- Add tests for prospective predictive ground truth contracts (fb90f868)
-
-### Fixed
-
-- Harden prospective ground truth release gate (426847fa)
-
-### Documentation
-
-- Record corrective ground truth release gate (514478d8)
-- Correct ground truth release identity (45ead803)
+- Implement terminal ground truth classification and reporting (a2003e9)
 
 <details>
 <summary>Technical commits</summary>
 
-- Add tests for prospective predictive ground truth contracts (fb90f868)
-- fix: harden prospective ground truth release gate (426847fa)
-- docs: record corrective ground truth release gate (514478d8)
-- docs: correct ground truth release identity (45ead803)
+- feat: implement terminal ground truth classification and reporting (a2003e9)
 
 </details>
 
+## [1.0.248] - 2026-10-02
+
+Changes since v1.0.247.
+
+### Added
+
+- Add predictive intelligence v2 recovery script and related artifacts (7fda393)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add predictive intelligence v2 recovery script and related artifacts (7fda393)
+
+</details>
+
+## [1.0.247] - 2026-10-02
+
+Changes since v1.0.246.
+
+### Changed
+
+- Add predictive intelligence V1 calibration script and update validation documentation (999d8b2)
+
+<details>
+<summary>Technical commits</summary>
+
+- Add predictive intelligence V1 calibration script and update validation documentation (999d8b2)
+
+</details>
+
+## [1.0.246] - 2026-10-02
+
+Changes since v1.0.245.
+
+### Added
+
+- Implement calibration contract, enhance replay functionality, and update related documentation (030b5cb)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(predictive-intelligence): implement calibration contract, enhance replay functionality, and update related documentation (030b5cb)
+
+</details>
+
+## [1.0.245] - 2026-10-02
+
+Changes since v1.0.244.
+
+### Added
+
+- Implement V1 predictive intelligence engine with state management, replay functionality, and associated tests (68d29e6)
+- Enhance predictive capabilities with graduation policy and public API integration (97cd55d)
+
+### Maintenance
+
+- Sync generated repository metadata (#229) (567e55d)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#229) (567e55d)
+- feat(predictive-intelligence): implement V1 predictive intelligence engine with state management, replay functionality, and associated tests (68d29e6)
+- feat(predictive-intelligence): enhance predictive capabilities with graduation policy and public API integration (97cd55d)
+
+</details>
 ## [1.0.244] - 2026-10-02
 
 Changes since v1.0.242.
@@ -288,6 +342,7 @@ Changes since v1.0.226.
 - feat: add node write attribution v4 artifacts for detailed tracking and analysis (21a9ee3)
 
 </details>
+
 ## [1.0.238] - 2026-10-02
 
 Changes since v1.0.238.
