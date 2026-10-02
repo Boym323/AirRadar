@@ -46,8 +46,9 @@ backfill. Production deployment and natural-landing canary are pending.
 
 ## Corrective release gate — 2026-10-02
 
-- Candidate: `d4249629a360c4ccfe70fc2a129f7b9efaa49122`; resolved release
-  version `1.0.250`; package version remains `1.0.0`.
+- Validated code SHA: `426847fa7cbe41b695cc79f187d0339e171a325d`.
+- Release HEAD SHA: `514478d8f5eb399484229d1887a1383989fa47c7`.
+- Resolved release version: `1.0.250`; package version remains `1.0.0`.
 - ICAO and active lifecycle identity are required before delayed ground
   confirmation. A single observation selects at most the newest compatible
   pending event.
