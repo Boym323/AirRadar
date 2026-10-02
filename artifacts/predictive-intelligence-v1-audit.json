@@ -1,16 +1,10 @@
 {
-  "generatedAt": "2026-10-02T00:00:00.000Z",
-  "repository": { "head": "1575054ff6cd90f97abe1ff017dab5212ea24d65", "branch": "main", "originMain": "567e55d1012590b608dff81f4bad479d399195da", "status": "behind 1", "productionVersion": "unverified", "productionRuntimeSha": "unverified" },
-  "capabilities": [
-    { "name": "great-circle distance/bearing", "existing": "lib/geo.ts", "quality": "reusable and tested", "reuse": "reuse", "gap": "none" },
-    { "name": "runway geometry and wind", "existing": "lib/airport-runway-wind.ts; lib/route-intelligence/runway-context.ts", "quality": "deterministic, existing inference", "reuse": "reuse", "gap": "no predictive hysteresis before V1" },
-    { "name": "airport operations", "existing": "lib/server/airport-operations.ts; lib/server/airport-movements.ts", "quality": "bounded on-demand aggregation", "reuse": "normalized adapter required", "gap": "no live predictive cache" },
-    { "name": "destination/route", "existing": "Aircraft enrichment and HistoryFlightDetail", "quality": "optional and source-dependent", "reuse": "destination only; do not require filed route", "gap": "coverage audit data unavailable in this checkout" },
-    { "name": "weather", "existing": "lib/server/aviation-weather-provider.ts", "quality": "cached METAR with stale handling", "reuse": "context adapter required", "gap": "no prediction-specific cache" },
-    { "name": "Flight Intelligence", "existing": "lib/intelligence/types.ts; lib/server/flight-intelligence.ts", "quality": "canonical phase/event state", "reuse": "consume phase/events at T", "gap": "engine integration remains to be wired" },
-    { "name": "historical replay", "existing": "lib/intelligence/replay.ts; lib/server/history.ts", "quality": "bounded history and replay primitives", "reuse": "new prediction replay uses same pure engine", "gap": "no production corpus/backtest runner yet" },
-    { "name": "Time Machine", "existing": "app/time-machine; lib/server/time-machine.ts", "quality": "existing temporal product", "reuse": "prediction adapter required", "gap": "UI integration not yet implemented" },
-    { "name": "flight detail API/UI", "existing": "app/api/aircraft/[hex]/route.ts; components/aircraft-detail-v3.tsx", "quality": "stable detail boundary and i18n", "reuse": "add compact predictive DTO/section", "gap": "public wiring not yet implemented" }
-  ],
-  "architectureDecision": { "canonicalEngine": "lib/predictive-intelligence/engine.ts", "modelVersion": "predictive-intelligence-v1", "databasePersistence": false, "noLookAhead": "replay input filters samples to observedAt <= T" }
+  "result": "PARTIAL",
+  "modelVersion": "predictive-intelligence-v1",
+  "git": { "startSha": "68d29e6d525fd1c4fd1bd8aeeb3ef07f453fa9be", "main": "68d29e6d525fd1c4fd1bd8aeeb3ef07f453fa9be", "originMain": "68d29e6d525fd1c4fd1bd8aeeb3ef07f453fa9be", "workingTree": "clean" },
+  "architecture": { "canonicalEngine": "PASS", "liveCadenceSeconds": 10, "boundedRuntimeEntries": 2000, "databaseWrites": 0, "filesystemWrites": 0, "perEvaluationHttpCalls": 0 },
+  "graduation": { "ETA": "SHADOW", "RUNWAY": "SHADOW", "RUNWAY_CHANGE": "SHADOW", "TRAJECTORY": "SHADOW" },
+  "historicalCorpus": { "available": false, "reason": "No checked-in corpus/export; production database was not queried or modified" },
+  "productionShadow": { "available": false, "deployed": false, "reason": "Release/deployment was not run" },
+  "publicApi": { "route": "/api/aircraft/:hex/prediction", "readOnly": true, "recomputes": false, "defaultCapabilityStatus": "SHADOW" }
 }

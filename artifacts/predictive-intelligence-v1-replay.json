@@ -1,12 +1,9 @@
 {
-  "status": "NOT_RUN",
-  "modelVersion": "predictive-intelligence-v1",
-  "corpus": { "completedFlights": null, "calibrationFlights": null, "holdoutFlights": null, "source": "No production corpus was executed in this change" },
-  "determinism": "PASS (unit-tested pure engine)",
-  "noLookAhead": "PASS (future-sample mutation test)",
-  "liveReplayParity": "PARTIAL (same pure engine and replay adapter; live corpus comparison not run)",
-  "etaMetrics": null,
-  "runwayMetrics": null,
-  "trajectoryMetrics": null,
-  "limitation": "Historical calibration/backtest runner and production corpus are not yet wired. No public graduation decision is made from this artifact."
+  "result": "PARTIAL",
+  "determinism": "PASS_BY_UNIT_COVERAGE",
+  "noLookAhead": { "FlightPosition": "PASS_BY_REPLAY_FILTER", "FlightEvent": "NOT_EVIDENCED", "weather": "NOT_EVIDENCED", "airportOperations": "NOT_EVIDENCED", "groundTruth": "NOT_EVIDENCED", "destinationMetadata": "PASS_BY_ENGINE_INPUT_BOUNDARY" },
+  "liveReplayParity": "NOT_EVIDENCED_ON_HISTORICAL_CORPUS",
+  "restart": "NOT_EVIDENCED",
+  "targetedTests": { "command": "npm run test:targeted -- tests/predictive-intelligence.test.ts tests/predictive-graduation.test.ts", "passed": 5 },
+  "corpus": { "available": false }
 }

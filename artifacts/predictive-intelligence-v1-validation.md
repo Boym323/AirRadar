@@ -1,3 +1,19 @@
-# Predictive Intelligence V1 validation
+# AirRadar Predictive Intelligence V1 — Validation
 
-Focused predictive tests and the existing aircraft-state regression tests pass. Feature-registry and Czech documentation checks pass. The production build and browser gates were not run because this is the live checkout and no release was requested. Public predictive UI/API is not enabled; all four capabilities remain shadow-only until replay and production evidence exist.
+## Current decision
+
+`ETA SHADOW`, `RUNWAY SHADOW`, `RUNWAY_CHANGE SHADOW`, `TRAJECTORY SHADOW`.
+
+No capability is public because the required real historical holdout and production shadow evidence is absent. This is a quality-preserving decision, not a model-quality claim.
+
+## Required evidence still open
+
+1. Representative completed-flight corpus, including difficult and unknown cases.
+2. Data-quality report and deterministic calibration/holdout split.
+3. ETA baseline, checkpoints, error/bias/coverage metrics, and outlier review.
+4. Observed landing-runway truth, runway baseline, checkpoint accuracy, and stability/hysteresis analysis.
+5. Runway-change false-change analysis.
+6. Historical trajectory negative/positive validation and false-positive review.
+7. Time Machine/API/browser gates over historical fixtures.
+
+No ground truth was manufactured from `Flight.endTime` or the predictor itself.

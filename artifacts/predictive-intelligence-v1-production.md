@@ -1,3 +1,7 @@
-# Predictive Intelligence V1 production evidence
+# AirRadar Predictive Intelligence V1 — Production Evidence
 
-No production deployment or canary was performed. The engine is integrated as shadow-only in the existing live process, with bounded in-memory state and no prediction-specific database/filesystem writes. Public UI/API, alerts, and notifications remain disabled.
+Status: NOT RUN.
+
+No production release, service restart, shadow canary, database measurement, filesystem measurement, or browser production gate was run. The repository rule requiring the canonical release workflow was respected.
+
+The production candidate remains safe by default: prediction state is bounded in process memory, prediction writes are absent, and the public API exposes no capability while statuses remain `SHADOW`.

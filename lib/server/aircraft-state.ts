@@ -412,6 +412,7 @@ export class AircraftStateService {
     coverageAnalytics: ReturnType<ReceiverCoverageAnalytics["getDiagnostics"]>;
     altitudeDiagnostics: ReturnType<typeof getAltitudeDiagnostics>;
     flightPositionPersistenceShadow: ReturnType<typeof flightPositionPersistenceShadow.diagnostics>;
+    predictiveIntelligence: ReturnType<PredictiveStateStore["diagnostics"]>;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -430,6 +431,7 @@ export class AircraftStateService {
       coverageAnalytics: this.receiverCoverage.getDiagnostics(),
       altitudeDiagnostics: getAltitudeDiagnostics(),
       flightPositionPersistenceShadow: flightPositionPersistenceShadow.diagnostics(),
+      predictiveIntelligence: this.predictive.diagnostics(),
     };
   }
 
@@ -469,6 +471,15 @@ export class AircraftStateService {
       networkStaleAfterMs: getAdsbLolStaleAfterMs(),
       sourcePreferences: this.sourcePreferences,
     }).find((item) => item.icaoHex === normalized) ?? null;
+  }
+
+  /** Read the last bounded live prediction; the API must never recompute it. */
+  getPredictiveState(icaoHex: string) {
+    return this.predictive.get(icaoHex);
+  }
+
+  getPredictiveDiagnostics() {
+    return this.predictive.diagnostics();
   }
 
   getNetworkDiagnostics() {

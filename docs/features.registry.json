@@ -55,6 +55,7 @@
       ],
       "apis": [
         "/api/aircraft/:hex/context",
+        "/api/aircraft/:hex/prediction",
         "/api/aircraft/:hex/photo",
         "/api/aircraft/:hex/route-weather",
         "/api/history/:hex",

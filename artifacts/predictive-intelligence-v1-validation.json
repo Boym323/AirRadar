@@ -1,14 +1,8 @@
 {
-  "status": "PARTIAL",
-  "focusedTests": { "predictiveIntelligence": "PASS", "aircraftStateRegression": "PASS", "count": 28 },
-  "typecheck": "PASS",
-  "lint": "PASS (changed files)",
-  "featureRegistry": "PASS",
-  "czechDocumentationCheck": "PASS",
-  "productionBuild": "NOT_RUN (live checkout safety rule)",
-  "browserGate": "NOT_RUN",
-  "databaseSchemaChange": false,
-  "newPredictionWritesPerMinute": 0,
-  "ssePayloadChange": 0,
-  "publicStatus": { "eta": "SHADOW", "runway": "SHADOW", "runwayChange": "SHADOW", "trajectory": "SHADOW" }
+  "result": "PARTIAL",
+  "capabilities": { "ETA": "SHADOW", "RUNWAY": "SHADOW", "RUNWAY_CHANGE": "SHADOW", "TRAJECTORY": "SHADOW" },
+  "corpus": { "candidateFlights": null, "calibrationFlights": null, "holdoutFlights": null, "available": false },
+  "metrics": { "eta": null, "runway": null, "runwayChange": null, "trajectory": null },
+  "groundTruth": { "arrivalTime": "NOT_AVAILABLE", "landingRunway": "NOT_AVAILABLE" },
+  "reason": "Real historical data and production evidence are not present in the workspace; no fabricated metrics are reported."
 }

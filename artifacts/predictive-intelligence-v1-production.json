@@ -1,9 +1,8 @@
 {
-  "status": "NOT_DEPLOYED",
-  "deployment": "not requested",
-  "shadowMode": "implemented in AircraftStateService but not released",
-  "publicStatus": { "eta": "SHADOW", "runway": "SHADOW", "runwayChange": "SHADOW", "trajectory": "SHADOW" },
-  "productionCanary": null,
-  "ioRegression": { "predictionDatabaseWrites": 0, "predictionFilesystemWrites": 0, "ssePayloadDelta": 0 },
-  "reason": "No release or production canary was requested; historical quality and browser gates remain outstanding."
+  "result": "NOT_RUN",
+  "deployment": { "performed": false, "workflow": "deploy/release.sh", "durationMinutes": null },
+  "shadow": { "eligibleFlights": null, "evaluations": null, "errors": null },
+  "runtime": { "cpuBefore": null, "cpuAfter": null, "rssBefore": null, "rssAfter": null, "predictionWritesPerMinute": 0 },
+  "gates": { "service": "NOT_RUN", "db": "NOT_RUN", "receiver": "NOT_RUN", "sse": "NOT_RUN", "radar": "NOT_RUN", "browser": "NOT_RUN" },
+  "reason": "User-requested evidence work was implemented locally, but no production release was authorized/executed in this workspace."
 }

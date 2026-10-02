@@ -1,9 +1,22 @@
-# Predictive Intelligence V1 audit
+# AirRadar Predictive Intelligence V1 — Audit
 
-Audit recorded from repository HEAD `1575054ff6cd90f97abe1ff017dab5212ea24d65` on 2026-10-02. `origin/main` is `567e55d1012590b608dff81f4bad479d399195da`; the checkout is one commit behind it and has no pre-existing working-tree changes at audit start.
+Status: PARTIAL (repository evidence complete; historical and production evidence unavailable in this checkout)
 
-Existing reusable capability covers great-circle geometry, runway geometry/wind, airport movement inference, cached Aviation Weather METAR, Flight Intelligence phases/events, sampled FlightPosition history, and Time Machine playback. There was no canonical predictive engine, prediction state store, no-look-ahead replay adapter, or predictive UI/API before this change.
+## Frozen implementation
 
-The V1 implementation starts with a pure deterministic engine in `lib/predictive-intelligence/`, bounded RAM state, and a replay function. It intentionally adds no Prisma model, prediction archive, per-evaluation filesystem write, HTTP request, or database write. Filed-route deviation is not used; trajectory uses destination-relative progression semantics.
+- Start/local `main`/`origin/main`: `68d29e6d525fd1c4fd1bd8aeeb3ef07f453fa9be`
+- Working tree at audit start: clean.
+- Canonical engine: `lib/predictive-intelligence/engine.ts`.
+- Replay calls the same engine as live shadow evaluation.
+- Live evaluation is gated to one evaluation per aircraft per 10 seconds in `AircraftStateService`.
+- Runtime state is bounded to 2,000 entries and is RAM-only.
+- No Prisma, filesystem, or per-evaluation HTTP call exists in the predictive path.
+- Model version is `predictive-intelligence-v1`.
 
-Known gaps before public graduation: live AircraftStateService wiring, cached context adapters, historical corpus/backtest metrics, Time Machine integration, flight-detail API/UI localization, production shadow deployment, and browser/production gates. Therefore this audit supports implementation work and does not claim a public release.
+## Release boundary
+
+The read-only `/api/aircraft/:hex/prediction` route reads the last bounded runtime prediction and never recomputes it. All capabilities default to `SHADOW`; public exposure requires explicit status configuration and is independently gated for ETA, RUNWAY, RUNWAY_CHANGE, and TRAJECTORY.
+
+## Blocked evidence
+
+No checked-in historical corpus/export or production shadow window was available. Therefore no historical calibration, holdout metrics, baseline comparison, browser prediction fixtures, production CPU/RSS comparison, or production I/O measurement is claimed here. No release or production deployment was run.
