@@ -1,71 +1,68 @@
 # Predictive Prospective Ground Truth V1
 
-Result: **PARTIAL — IMPLEMENTED, NOT DEPLOYED**
+Result: **PARTIAL — HEALTHY RELEASE, INSUFFICIENT NATURAL LANDING EVIDENCE**
 
-This change adds sparse prospective instrumentation only. Predictive scoring,
-confidence, public predictions, alerts, and all predictive capabilities remain
-shadow-only.
+## Release and migration
 
-## Landing evidence
+- Version/tag: `1.0.250` / `v1.0.250` (remote tag PASS).
+- Release/runtime SHA: `b39afe9171e722fabecf251a31375bb810d9577d`.
+- Deployment start: `2026-10-02T16:23:19.181Z`.
+- Runtime source diff since validated ancestor `426847fa7cbe41b695cc79f187d0339e171a325d`: none.
+- Migration `20261002T1413_predictive_prospective_ground_truth_v1`: CURRENT.
+- `public.flight.destinationProvenanceJson`: `text`, nullable, no default.
 
-- Version: `terminal-evidence-v1`.
-- Initial evidence is stored in the existing `FlightEvent.metadataJson`.
-- Detection preserves observed position, altitude variants, rates, speed,
-  track, freshness, source, and origin.
-- Recent track is capped at 16 observations and 90 seconds.
-- A LANDING detected airborne creates one in-memory pending confirmation, capped
-  at 256 entries with an 8-minute TTL. The first compatible on-ground sample
-  can perform one idempotent metadata update.
-- Existing landing phase transitions, thresholds, confidence weights, event
-  keys, runway resolver, and event timing are unchanged.
-- Canonical `LANDING.occurredAt` remains an event-detection time, not assumed
-  touchdown time: the active detector can emit it with `onGround=true` or
-  during the transition into `FINAL` while `onGround=false`.
-- Provider runway evidence is copied separately and normalized; inferred and
-  reported runway context remain distinct.
+Pre-migration backup: **MISSING**. Procedural deviation:
+`PRE_MIGRATION_BACKUP_MISSING`. The post-deploy backup is not equivalent:
+
+- Path: `/var/backups/airradar/airradar-post-1.0.250-20261002T162415Z.dump`
+- Size: `335165812` bytes
+- Timestamp: `2026-10-02 18:24:56.961769853 +0200`
+- SHA-256: `3f0c2c49810ebb7bd62a43f9283321a14c79782d838e1cb62e76ed5f944bb19b`
+
+## Gates and health
+
+- `npm ci`, build, full quality gates, production core, SSE, and desktop/mobile browser gates: **PASS**.
+- Full suite: 201 files, 1,415 passed, 10 skipped.
+- Service active; PID `246554`; restart count `0`.
+- Application, database, receiver, and SSE health: **PASS**.
+- Post-release `oom_kill`: `6`, unchanged from baseline.
+
+## Natural canary
+
+Read-only observation ran from `2026-10-02T16:28:50Z` through
+`2026-10-02T17:29:44Z` (61 sampled minutes; over 60 minutes post-release).
+Every sample was `health=ok/ok`, with stable RSS and no restart loop.
+
+- Post-release natural `LANDING`: `0`
+- Terminal evidence: `0`
+- Immediate/delayed confirmations: `0` / `0`
+- Unconfirmed/expired: `0 observed`
+- Reported runway: `0`
+- Duplicate, cross-ICAO, cross-lifecycle, wrong-airport, and oversized-evidence defects: `0 observed`; landing-specific validation was not applicable to an empty sample.
+
+No synthetic production events or writes were generated. Passive collection
+remains enabled; natural evidence is insufficient for a PASS classification.
 
 ## Destination provenance
 
-`Flight.destinationProvenanceJson` is an additive nullable field. Existing
-flight snapshot transactions append only semantic destination changes, with a
-maximum of eight revisions. Each record contains destination,
-`observedAt`, source, and provider retrieval time. Old rows resolve to
-UNKNOWN. `getDestinationAsOf` returns the latest observation at or before T.
+Read-only validation inspected `147` rows. All used
+`destination-provenance-v1`; there were `147` observations, maximum history
+length `1` (limit `8`), zero invalid JSON, chronology, timestamp, adjacent
+repeat, and as-of failures. The no-lookahead contract is preserved because each
+observation retains its own `observedAt`.
 
-## Write and hot-path budget
+## Performance sample
 
-- Normal ADS-B positions: no new database query, transaction, filesystem write,
-  or external call.
-- LANDING: existing FlightEvent insert plus zero or one confirmation update.
-- Destination: piggybacks the existing Flight write; no additional operation
-  for repeated values.
-- No FlightPosition widening and no backfill.
+One read-only 60-second sample measured `390` transactions/min, `0`
+inserts/min, `0` updates/min, and `0.000 MB/min` WAL growth. RSS peak was
+`976232 KiB` (~953 MiB), with no monotonic growth. Node physical
+`write_bytes` was not exposed by sanitized diagnostics. No pending landing
+confirmation was observed.
 
-Schema migration: additive `Flight.destinationProvenanceJson`; no historical
-backfill. Production deployment and natural-landing canary are pending.
+## Predictive and collection status
 
-## Corrective release gate — 2026-10-02
-
-- Validated code SHA: `426847fa7cbe41b695cc79f187d0339e171a325d`.
-- Release HEAD SHA: `514478d8f5eb399484229d1887a1383989fa47c7`.
-- Resolved release version: `1.0.250`; package version remains `1.0.0`.
-- ICAO and active lifecycle identity are required before delayed ground
-  confirmation. A single observation selects at most the newest compatible
-  pending event.
-- Confirmation requires both the existing 5 km event-point bound and a 5 km
-  airport bound from the already-loaded airport index; unknown airport geometry
-  fails closed.
-- Terminal evidence is measured with UTF-8 `Buffer.byteLength`; oldest
-  optional track observations are reduced first, and oversized required
-  evidence is not persisted.
-- Destination history is timestamp-validated, chronologically ordered, adjacent
-  semantic states are collapsed, same-time conflicts are rejected, and as-of
-  lookup selects the maximum timestamp at or before the query time.
-- Isolated validation: `npm ci` passed; full suite passed with 201 files, 1,415
-  tests passed, 10 skipped, and zero worker errors. Typecheck, lint, feature,
-  localization, visual, migration, production build, and desktop/mobile browser
-  gates passed. Lint retained seven existing warnings.
-- Disposable PostgreSQL: **BLOCKED**. No local PostgreSQL binaries or safe
-  container runtime are available; production PostgreSQL was not used.
-- Production deployment and canary: not performed because the mandatory real
-  PostgreSQL gate is unresolved.
+ETA, RUNWAY, RUNWAY_CHANGE, and TRAJECTORY remain `SHADOW`. Collection totals
+are 0 prospective landings, 0 ground confirmations, 0 reported-runway cases,
+0 prospective airport diversity, and 147 provenance rows. Continue passive
+collection toward at least 100 prospective landings, preferably 50
+ground-confirmed cases; do not graduate capabilities or mix evidence versions.

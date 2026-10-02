@@ -1,24 +1,13 @@
 {
   "result": "PARTIAL",
-  "status": "IMPLEMENTED_NOT_DEPLOYED",
-  "terminalEvidenceVersion": "terminal-evidence-v1",
-  "terminalTrack": { "maxObservations": 16, "maxAgeSeconds": 90, "maxEncodedBytes": 16384 },
-  "pendingGroundConfirmation": { "maxEntries": 256, "ttlSeconds": 480, "maxUpdatesPerLanding": 1 },
-  "destinationProvenance": { "version": "destination-provenance-v1", "maxRevisions": 8, "historicalBackfill": false },
-  "predictionCapabilities": { "ETA": "SHADOW", "RUNWAY": "SHADOW", "RUNWAY_CHANGE": "SHADOW", "TRAJECTORY": "SHADOW" },
-  "production": { "deployed": false, "naturalLandingEvents": 0, "canaryMinutes": 0 },
-  "correctiveReleaseGate": {
-    "date": "2026-10-02",
-    "result": "BLOCKED",
-    "validatedCodeSha": "426847fa7cbe41b695cc79f187d0339e171a325d",
-    "releaseHeadSha": "514478d8f5eb399484229d1887a1383989fa47c7",
-    "resolvedVersion": "1.0.250",
-    "packageVersionUnchanged": "1.0.0",
-    "isolatedNpmCi": "PASS",
-    "fullSuite": { "filesPassed": 201, "testsPassed": 1415, "testsSkipped": 10, "workerErrors": 0 },
-    "staticAndProductionGates": "PASS",
-    "disposablePostgres": "BLOCKED_UNAVAILABLE",
-    "productionDeployment": "NOT_PERFORMED",
-    "canary": "NOT_PERFORMED"
-  }
+  "status": "HEALTHY_RELEASE_INSUFFICIENT_NATURAL_LANDING_EVIDENCE",
+  "release": { "version": "1.0.250", "sha": "b39afe9171e722fabecf251a31375bb810d9577d", "validatedRuntimeAncestor": "426847fa7cbe41b695cc79f187d0339e171a325d", "tag": "v1.0.250", "remoteTag": "PASS", "deploymentStartedAt": "2026-10-02T16:23:19.181Z", "runtimeCodeChangedSinceValidation": false },
+  "migration": { "name": "20261002T1413_predictive_prospective_ground_truth_v1", "destinationProvenanceColumn": { "state": "PASS", "type": "text", "nullable": true, "default": null }, "state": "CURRENT" },
+  "backup": { "preMigrationBackup": "MISSING", "proceduralDeviation": "PRE_MIGRATION_BACKUP_MISSING", "postDeployBackup": { "state": "PASS", "path": "/var/backups/airradar/airradar-post-1.0.250-20261002T162415Z.dump", "sizeBytes": 335165812, "timestamp": "2026-10-02T18:24:56.961769853+02:00", "sha256": "3f0c2c49810ebb7bd62a43f9283321a14c79782d838e1cb62e76ed5f944bb19b" } },
+  "health": { "application": "PASS", "database": "PASS", "receiver": "PASS", "sse": "PASS", "service": "active", "pid": 246554, "restartCount": 0, "oomKillCounterAfterRelease": 6 },
+  "canary": { "startedAt": "2026-10-02T16:28:50Z", "endedAt": "2026-10-02T17:29:44Z", "observedMinutes": 61, "postReleaseLandingCount": 0, "terminalEvidenceCount": 0, "immediateGroundConfirmations": 0, "delayedGroundConfirmations": 0, "unconfirmedOrExpired": 0, "reportedRunwayCount": 0, "crossIcao": 0, "crossLifecycle": 0, "wrongAirport": 0, "oversizedTerminalEvidence": 0, "duplicateLandingEvents": 0, "duplicateFinalizations": 0, "landingEvidenceValidation": "NOT_APPLICABLE_ZERO_EVENTS" },
+  "destinationProvenance": { "rowsInspected": 147, "rowsWithProvenance": 147, "version": "destination-provenance-v1", "totalObservations": 147, "maxHistoryLength": 1, "maxRevisions": 8, "chronologyFailures": 0, "repeatSuppressionFailures": 0, "asOfFailures": 0, "noLookahead": "PASS" },
+  "performance": { "sampleSeconds": 60, "transactionsPerMinute": 390, "insertsPerMinute": 0, "updatesPerMinute": 0, "walMbPerMinute": 0, "rssPeakKiB": 976232, "nodePhysicalWriteBytes": "NOT_EXPOSED", "pendingGroundConfirmationPeak": 0 },
+  "predictiveCapabilities": { "ETA": "SHADOW", "RUNWAY": "SHADOW", "RUNWAY_CHANGE": "SHADOW", "TRAJECTORY": "SHADOW" },
+  "collection": { "prospectiveLandingTotal": 0, "groundConfirmedTotal": 0, "reportedRunwayTotal": 0, "airportCount": 0, "destinationProvenanceCoverage": 147, "mode": "PASSIVE_COLLECTION" }
 }
