@@ -10,6 +10,36 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.251] - 2026-10-02
+
+Changes since v1.0.250.
+
+**Features touched:** Map Context & Weather, System Observability.
+
+### Fixed
+
+- Map aircraft weather diagnostics into system status (ffbedacf)
+
+### Documentation
+
+- Finalize prospective ground truth release evidence (0cb25a43)
+- Update health and performance metrics in ground truth release documentation (7f0aa8cf)
+
+### Maintenance
+
+- Sync generated repository metadata (#230) (e39efff1)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: finalize prospective ground truth release evidence (0cb25a43)
+- chore(metadata): sync generated repository metadata (#230) (e39efff1)
+- docs: update health and performance metrics in ground truth release documentation (7f0aa8cf)
+- Merge remote-tracking branch 'origin/main' (addcf94c)
+- fix: map aircraft weather diagnostics into system status (ffbedacf)
+
+</details>
+
 ## [1.0.249] - 2026-10-02
 
 Changes since v1.0.248.
