@@ -41,7 +41,8 @@ import { getDestinationProvenanceDiagnostics } from "@/lib/server/destination-pr
 import { flightPositionPersistenceShadow } from "@/lib/server/flight-position-persistence-shadow";
 import { PredictiveStateStore } from "@/lib/predictive-intelligence";
 import type { FlightPhase } from "@/lib/intelligence/types";
-import type { PredictionSample } from "@/lib/predictive-intelligence";
+import type { PredictionSample, PredictiveInput } from "@/lib/predictive-intelligence/types";
+import type { Airport } from "@/lib/airports/types";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -96,13 +97,38 @@ function mergeEnrichment(
   return Object.keys(merged).length ? merged : undefined;
 }
 
-function predictivePhase(aircraft: Aircraft): FlightPhase {
+export function predictivePhase(aircraft: Aircraft, destination: Airport | null): FlightPhase {
   if (aircraft.onGround) return "GROUND";
-  if (aircraft.targetState?.approachMode || (aircraft.distanceKm !== null && aircraft.distanceKm <= 35 && aircraft.verticalRate !== null && aircraft.verticalRate < -150)) return "APPROACH";
+  const destinationDistanceKm = destination && aircraft.lat !== null && aircraft.lon !== null
+    ? haversineDistanceKm(aircraft.lat, aircraft.lon, destination.latitude, destination.longitude)
+    : null;
+  if (aircraft.targetState?.approachMode || (destinationDistanceKm !== null && destinationDistanceKm <= 35 && aircraft.verticalRate !== null && aircraft.verticalRate < -150)) return "APPROACH";
   if (aircraft.verticalRate !== null && aircraft.verticalRate > 250) return "CLIMB";
   if (aircraft.verticalRate !== null && aircraft.verticalRate < -250) return "DESCENT";
   if (aircraft.groundSpeed !== null && aircraft.groundSpeed > 120) return "CRUISE";
   return "UNKNOWN";
+}
+
+export function isAirportProximity(aircraft: Aircraft): boolean {
+  if (aircraft.targetState?.approachMode) return true;
+  const destination = aircraft.enrichment?.route?.destinationAirport;
+  if (!destination || aircraft.lat === null || aircraft.lon === null) return false;
+  return haversineDistanceKm(aircraft.lat, aircraft.lon, destination.latitude, destination.longitude) <= 15;
+}
+
+export function buildPredictiveShadowInput(aircraft: Aircraft, now: number, runways: PredictiveInput["runways"] = []): PredictiveInput | null {
+  if (!Number.isFinite(now) || aircraft.lat === null || aircraft.lon === null) return null;
+  const route = aircraft.enrichment?.route;
+  const destination = route?.destinationAirport;
+  const samples: PredictionSample[] = aircraft.trail.slice(-24).map((point) => ({ observedAt: Date.parse(point.recordedAt), lat: point.lat, lon: point.lon, altitudeFt: point.altitude, groundSpeedKt: point.groundSpeed, verticalRateFpm: null, trackDeg: point.track })).filter((point) => Number.isFinite(point.observedAt));
+  samples.push({ observedAt: now, lat: aircraft.lat, lon: aircraft.lon, altitudeFt: aircraft.altitude, groundSpeedKt: aircraft.groundSpeed, verticalRateFpm: aircraft.verticalRate, trackDeg: aircraft.track });
+  return {
+    flightState: { aircraftIcao: aircraft.icaoHex, timestamp: now, phase: predictivePhase(aircraft, destination ?? null), sample: samples.at(-1)!, destination: route?.destination ?? null, destinationStatus: destination ? "KNOWN" : "UNKNOWN" },
+    recentSamples: samples,
+    destinationAirport: destination ? { icao: destination.icaoCode, lat: destination.latitude, lon: destination.longitude, elevationFt: destination.elevationFt } : null,
+    runways,
+    now,
+  };
 }
 
 function historyAircraftForSnapshot(snapshotItem: Aircraft, current: Aircraft | undefined): Aircraft {
@@ -679,15 +705,9 @@ export class AircraftStateService {
     const previousAt = this.predictiveEvaluatedAt.get(aircraft.icaoHex) ?? 0;
     if (now - previousAt < 10_000) return;
     this.predictiveEvaluatedAt.set(aircraft.icaoHex, now);
-    const route = aircraft.enrichment?.route;
-    const destination = route?.destinationAirport;
-    const samples: PredictionSample[] = aircraft.trail.slice(-24).map((point) => ({ observedAt: Date.parse(point.recordedAt), lat: point.lat, lon: point.lon, altitudeFt: point.altitude, groundSpeedKt: point.groundSpeed, verticalRateFpm: null, trackDeg: point.track })).filter((point) => Number.isFinite(point.observedAt));
-    samples.push({ observedAt: now, lat: aircraft.lat, lon: aircraft.lon, altitudeFt: aircraft.altitude, groundSpeedKt: aircraft.groundSpeed, verticalRateFpm: aircraft.verticalRate, trackDeg: aircraft.track });
-    this.predictive.evaluate({
-      flightState: { aircraftIcao: aircraft.icaoHex, timestamp: now, phase: predictivePhase(aircraft), sample: samples.at(-1)!, destination: route?.destination ?? null, destinationStatus: destination ? "KNOWN" : "UNKNOWN", distanceToDestinationNm: aircraft.distanceKm === null ? null : aircraft.distanceKm * 0.5399568, bearingToDestinationDeg: aircraft.bearing },
-      recentSamples: samples, destinationAirport: destination ? { icao: destination.icaoCode, lat: destination.latitude, lon: destination.longitude, elevationFt: destination.elevationFt } : null,
-      now,
-    });
+    const destination = aircraft.enrichment?.route?.destinationAirport;
+    const input = buildPredictiveShadowInput(aircraft, now, destination ? this.intelligence.getRunways(destination.icaoCode) : []);
+    if (input) this.predictive.evaluate(input);
   }
 
   private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {
@@ -791,7 +811,7 @@ export class AircraftStateService {
           recordedAtMs: sampledAt, lat: item.lat, lon: item.lon, altitudeFt: item.altitude,
           trackDeg: item.track, groundSpeedKt: item.groundSpeed, verticalRateFpm: item.verticalRate,
           onGround: item.onGround, source: item.provenance?.positionSource ?? item.source,
-          airportProximity: Boolean(item.targetState?.approachMode) || (item.distanceKm !== null && item.distanceKm <= 15),
+          airportProximity: isAirportProximity(item),
           phase: item.onGround ? "airport" : item.targetState?.approachMode ? "approach" : item.verticalRate !== null && item.verticalRate >= 250 ? "climb" : item.verticalRate !== null && item.verticalRate <= -250 ? "descent" : item.groundSpeed !== null && item.groundSpeed > 120 ? "cruise" : "unknown",
         },
         nowMs: now,

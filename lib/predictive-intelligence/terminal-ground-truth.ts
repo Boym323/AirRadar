@@ -1,5 +1,5 @@
 import type { AirportRunway } from "@/lib/airports/infrastructure";
-import { haversineDistanceKm } from "@/lib/geo";
+import { haversineDistanceKm, initialBearing } from "@/lib/geo";
 import type { Airport } from "@/lib/airports/types";
 
 /**
@@ -77,9 +77,13 @@ function relativeAltitude(sample: TerminalTrackSample, airport: Airport): number
   return finite(sample.altitudeFt) ? sample.altitudeFt - (airport.elevationFt ?? 0) : null;
 }
 function runwayEnds(runway: AirportRunway): Array<{ designator: string; lat: number; lon: number; heading: number | null }> {
+  const leHeading = finite(runway.leHeadingDegT) ? runway.leHeadingDegT : finite(runway.leLatitude) && finite(runway.leLongitude) && finite(runway.heLatitude) && finite(runway.heLongitude)
+    ? initialBearing(runway.leLatitude, runway.leLongitude, runway.heLatitude, runway.heLongitude) : null;
+  const heHeading = finite(runway.heHeadingDegT) ? runway.heHeadingDegT : finite(runway.leLatitude) && finite(runway.leLongitude) && finite(runway.heLatitude) && finite(runway.heLongitude)
+    ? initialBearing(runway.heLatitude, runway.heLongitude, runway.leLatitude, runway.leLongitude) : null;
   return [
-    runway.leIdent && finite(runway.leLatitude) && finite(runway.leLongitude) ? { designator: runway.leIdent, lat: runway.leLatitude, lon: runway.leLongitude, heading: runway.leHeadingDegT } : null,
-    runway.heIdent && finite(runway.heLatitude) && finite(runway.heLongitude) ? { designator: runway.heIdent, lat: runway.heLatitude, lon: runway.heLongitude, heading: runway.heHeadingDegT } : null,
+    runway.leIdent && finite(runway.leLatitude) && finite(runway.leLongitude) ? { designator: runway.leIdent, lat: runway.leLatitude, lon: runway.leLongitude, heading: leHeading } : null,
+    runway.heIdent && finite(runway.heLatitude) && finite(runway.heLongitude) ? { designator: runway.heIdent, lat: runway.heLatitude, lon: runway.heLongitude, heading: heHeading } : null,
   ].filter((value): value is { designator: string; lat: number; lon: number; heading: number | null } => value !== null);
 }
 function localXY(lat: number, lon: number, originLat: number, originLon: number): { x: number; y: number } {
@@ -95,7 +99,8 @@ function observedRunway(samples: readonly TerminalTrackSample[], airport: Airpor
     const distances = terminal.map((sample) => haversineDistanceKm(sample.lat, sample.lon, end.lat, end.lon));
     const lateral = terminal.map((sample) => {
       const point = localXY(sample.lat, sample.lon, end.lat, end.lon);
-      const heading = (end.heading ?? 0) * Math.PI / 180;
+      if (!finite(end.heading)) return Number.POSITIVE_INFINITY;
+      const heading = end.heading * Math.PI / 180;
       return Math.abs(point.x * Math.sin(heading) - point.y * Math.cos(heading));
     });
     const aligned = terminal.filter((sample) => angleDelta(sample.trackDeg, end.heading) !== null && angleDelta(sample.trackDeg, end.heading)! <= 30).length;
@@ -135,13 +140,17 @@ export function classifyTerminalGroundTruth(input: TerminalGroundTruthInput): Te
     const score = (minDistanceKm <= AIRPORT_ASSOCIATION_KM ? 2 : 0) + (endDistance <= 8 ? 2 : 0) + (lowAltitude >= 2 ? 2 : 0) + (lowSpeed >= 2 ? 1 : 0) + (descending ? 2 : 0) + (converging ? 1 : 0);
     return { airport, distances, minDistanceKm, minIndex, terminal, lowAltitude, lowSpeed, descending, endDistance, score };
   }).sort((a, b) => b.score - a.score || a.minDistanceKm - b.minDistanceKm);
-  const best = candidates[0]!;
+  const best = candidates[0];
+  if (!best) return base("UNKNOWN", ["no airport candidates"], "LOW");
   if (best.minDistanceKm > AIRPORT_ASSOCIATION_KM || best.score < 7) return base("UNKNOWN", ["no airport has sufficient independent terminal evidence"], "LOW");
   const second = candidates[1];
   if (second && second.score === best.score && second.minDistanceKm <= AIRPORT_ASSOCIATION_KM) return base("AMBIGUOUS", ["terminal geometry does not uniquely identify an airport"], "LOW");
   const runwayCandidates = input.runwaysByAirport?.get(best.airport.icaoCode.toUpperCase()) ?? [];
   const runway = observedRunway(samples, best.airport, runwayCandidates, best.minIndex);
-  const exactGround = samples.find((sample, index) => sample.onGround === true && (index === 0 || samples[index - 1]?.onGround !== true));
+  const terminalStart = Math.max(1, best.minIndex - 5);
+  const terminalEnd = Math.min(samples.length - 1, best.minIndex + 5);
+  const exactGroundIndex = samples.findIndex((sample, index) => index >= terminalStart && index <= terminalEnd && sample.onGround === true && samples[index - 1]?.onGround !== true && best.distances[index]! <= AIRPORT_ASSOCIATION_KM);
+  const exactGround = exactGroundIndex >= 0 ? samples[exactGroundIndex] : undefined;
   const touchdown = exactGround ?? samples.slice(best.minIndex).find((sample) => {
     const altitude = relativeAltitude(sample, best.airport);
     return best.distances[samples.indexOf(sample)]! <= RUNWAY_ZONE_KM && altitude !== null && altitude <= LOW_ALTITUDE_FT && (sample.groundSpeedKt === null || sample.groundSpeedKt <= LOW_SPEED_KT);

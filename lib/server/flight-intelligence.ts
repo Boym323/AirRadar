@@ -115,6 +115,8 @@ export class FlightIntelligenceService {
   private airportIndexLoading: Promise<void> | null = null;
   private airportIndexRetryAt = 0;
   private readonly airportsByIcao = new Map<string, { latitude: number; longitude: number }>();
+  /** Bounded authoritative runway index loaded alongside the airport index. */
+  private readonly runwaysByAirport = new Map<string, readonly AirportRunway[]>();
   private readonly persistence = new Map<string, Promise<void>>();
   private readonly pendingGround = new Map<string, { event: FlightIntelligenceEvent; expiresAt: number }>();
   private readonly diagnostics = { landingEvents: 0, landingEvidenceCaptured: 0, landingDetectedOnGround: 0, landingPendingGroundConfirmation: 0, landingGroundConfirmedLater: 0, landingGroundConfirmationExpired: 0, landingEvidencePersistFailures: 0, reportedArrivalRunwayPresent: 0, terminalEvidenceVersion: TERMINAL_EVIDENCE_VERSION };
@@ -172,6 +174,8 @@ export class FlightIntelligenceService {
             return airport;
           }));
         this.detector.setRunways(runwaysByAirport);
+        this.runwaysByAirport.clear();
+        for (const [icao, values] of runwaysByAirport) this.runwaysByAirport.set(icao, values);
         this.airportIndexLoaded = true;
         this.airportIndexRetryAt = 0;
       } catch {
@@ -215,6 +219,11 @@ export class FlightIntelligenceService {
   }
 
   getDiagnostics() { return { ...this.diagnostics, pendingGroundConfirmation: this.pendingGround.size }; }
+
+  /** Returns the already-loaded runway geometry without doing I/O. */
+  getRunways(icao: string): readonly AirportRunway[] {
+    return this.runwaysByAirport.get(icao.trim().toUpperCase()) ?? [];
+  }
 
   private captureLanding(event: FlightIntelligenceEvent, aircraft: Aircraft, persistence: Promise<void>): void {
     const evidence = event.metadata?.terminalEvidence as LandingTerminalEvidenceV1 | undefined;

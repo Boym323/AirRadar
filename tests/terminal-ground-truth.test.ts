@@ -43,4 +43,68 @@ describe("terminal ground truth", () => {
     expect(result.landingAt).toBe(positions[4]!.recordedAt);
     expect(result.uncertaintySeconds).toBeGreaterThan(0);
   });
+
+  it("binds exact ground to the selected destination, not origin ground state", () => {
+    const origin = { ...airport, icaoCode: "ORIG", latitude: 49.9, longitude: 13.9 };
+    const destination = { ...airport, icaoCode: "DEST", latitude: 50, longitude: 14 };
+    const positions = track([
+      [13.9, 1_000, 20, 90, 0], [13.91, 1_000, 20, 90, 0], [13.95, 5_000, 180, 90, 900],
+      [13.98, 4_000, 160, 90, -500], [13.995, 1_400, 110, 90, -700], [14, 1_020, 70, 90, -100], [14.005, 1_010, 40, 90, 0],
+    ]);
+    positions[0]!.onGround = true;
+    positions[1]!.onGround = true;
+    positions[5]!.onGround = true;
+    const result = classifyTerminalGroundTruth({ airports: [origin, destination], positions });
+    expect(result.airportIcao).toBe("DEST");
+    expect(result.landingAt).toBe(positions[5]!.recordedAt);
+  });
+
+  it("does not confirm a landing after coverage loss before the destination", () => {
+    const positions = track([
+      [14.08, 4_000, 180, 270, -700], [14.06, 3_000, 170, 270, -600], [14.04, 2_000, 150, 270, -500], [14.03, 1_800, 140, 270, -300], [14.025, 1_700, 130, 270, -100],
+    ]);
+    const result = classifyTerminalGroundTruth({ airports: [airport], positions });
+    expect(result.landingAt).toBeNull();
+    expect(result.status).not.toBe("CONFIRMED");
+  });
+
+  it("does not treat a low pass near another airport as destination touchdown", () => {
+    const other = { ...airport, icaoCode: "OTHER", latitude: 50, longitude: 13.8 };
+    const destination = { ...airport, icaoCode: "DEST", latitude: 50, longitude: 14.1 };
+    const positions = track([
+      [13.8, 1_200, 100, 90, -100], [13.81, 1_100, 95, 90, 0], [14.01, 3_500, 150, 90, 700],
+      [14.05, 2_500, 130, 90, -400], [14.08, 1_300, 100, 90, -500], [14.1, 1_010, 60, 90, -100],
+    ]);
+    positions[1]!.onGround = true;
+    positions[5]!.onGround = true;
+    const result = classifyTerminalGroundTruth({ airports: [other, destination], positions });
+    expect(result.airportIcao).toBe("DEST");
+    expect(result.landingAt).toBe(positions[5]!.recordedAt);
+  });
+
+  it("derives runway heading from threshold geometry when heading is missing", () => {
+    const geometryOnly = { ...runway, leHeadingDegT: null, heHeadingDegT: null };
+    const result = classifyTerminalGroundTruth({ airports: [airport], runwaysByAirport: new Map([["TEST", [geometryOnly]]]), positions: track([
+      [14.08, 4_000, 150, 270, -700], [14.05, 2_500, 135, 270, -600], [14.03, 1_500, 110, 270, -400], [14.02, 1_100, 95, 270, -200], [14.01, 1_020, 75, 270, -50], [14.005, 1_010, 65, 270, 0],
+    ]) });
+    expect(result.runwayStatus).toBe("CONFIRMED");
+    expect(result.runway).toBe("27");
+  });
+
+  it("does not create runway alignment from a missing heading or incomplete geometry", () => {
+    const incomplete = { ...runway, leHeadingDegT: null, heHeadingDegT: null, heLatitude: null, heLongitude: null };
+    const result = classifyTerminalGroundTruth({ airports: [airport], runwaysByAirport: new Map([["TEST", [incomplete]]]), positions: track([
+      [14.08, 4_000, 150, 270, -700], [14.05, 2_500, 135, 270, -600], [14.03, 1_500, 110, 270, -400], [14.02, 1_100, 95, 270, -200], [14.01, 1_020, 75, 270, -50], [14.005, 1_010, 65, 270, 0],
+    ]) });
+    expect(result.runway).toBeNull();
+    expect(result.runwayStatus).not.toBe("CONFIRMED");
+  });
+
+  it("fails soft with an empty airport catalog", () => {
+    const result = classifyTerminalGroundTruth({ airports: [], positions: track([
+      [14.08, 4_000, 150, 270, -700], [14.05, 2_500, 135, 270, -600], [14.03, 1_500, 110, 270, -400], [14.02, 1_100, 95, 270, -200], [14.01, 1_020, 75, 270, -50],
+    ]) });
+    expect(result).toMatchObject({ status: "UNKNOWN", landingAt: null, airportIcao: null, runway: null });
+    expect(result.evidence).toContain("no airport candidates");
+  });
 });

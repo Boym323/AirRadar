@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { evaluatePredictiveIntelligence } from "@/lib/predictive-intelligence/engine";
 import { replayPredictiveIntelligence } from "@/lib/predictive-intelligence/replay";
 import type { PredictionSample } from "@/lib/predictive-intelligence/types";
+import { normalizeAircraft } from "@/lib/aircraft/normalize";
+import { buildPredictiveShadowInput, isAirportProximity, predictivePhase } from "@/lib/server/aircraft-state";
+import type { AirportRunway } from "@/lib/airports/infrastructure";
 
 const airport = { icao: "LKPR", lat: 50.1008, lon: 14.2632 };
 const sample = (at: number, lat: number, lon: number, trackDeg = 90): PredictionSample => ({ observedAt: at, lat, lon, altitudeFt: 20_000, groundSpeedKt: 300, verticalRateFpm: -500, trackDeg });
@@ -31,5 +34,46 @@ describe("Predictive Intelligence V1", () => {
     const result = evaluatePredictiveIntelligence({ flightState: { aircraftIcao: "ABC123", timestamp: now, phase: "CRUISE", sample: stale[1]!, destination: null, destinationStatus: "UNKNOWN" }, recentSamples: stale, destinationAirport: null, now });
     expect(result.prediction.eta.confidence).toBe("UNKNOWN");
     expect(result.prediction.runway.runway).toBeNull();
+  });
+
+  it("uses aircraft-to-destination geometry, not receiver coverage distance", () => {
+    const now = Date.parse("2026-01-01T12:00:00Z");
+    const receiver = { lat: 49.226, lon: 17.67, name: "Zlín" };
+    const aircraft = normalizeAircraft({ hex: "ABC123", lat: 49.25, lon: 17.70, alt_baro: 8_000, gs: 250, baro_rate: -400, seen: 0, seen_pos: 0 }, receiver, new Date(now));
+    if (!aircraft) throw new Error("aircraft could not be normalized");
+    const destination = { icaoCode: "LKPR", iataCode: "PRG", name: "Prague", city: null, country: null, latitude: 50.1008, longitude: 14.2632 };
+    aircraft.enrichment = { route: { callsign: "TEST", airline: null, airlineIcao: null, airlineIata: null, origin: "LKTB", destination: "LKPR", originAirport: null, destinationAirport: destination } };
+    const input = buildPredictiveShadowInput(aircraft, now);
+    if (!input) throw new Error("predictive input was not built");
+    const result = evaluatePredictiveIntelligence(input);
+    const distanceNm = Number(result.prediction.eta.evidence.find((item) => item.key === "distanceRemainingNm")?.value);
+    expect(distanceNm).toBeGreaterThan(100);
+    expect(predictivePhase(aircraft, destination)).not.toBe("APPROACH");
+  });
+
+  it("recognizes approach near the destination even when the receiver is far away", () => {
+    const now = Date.parse("2026-01-01T12:00:00Z");
+    const receiver = { lat: 49.226, lon: 17.67, name: "Zlín" };
+    const aircraft = normalizeAircraft({ hex: "ABC123", lat: 50.09, lon: 14.28, alt_baro: 1_200, gs: 110, baro_rate: -400, seen: 0, seen_pos: 0 }, receiver, new Date(now));
+    if (!aircraft) throw new Error("aircraft could not be normalized");
+    aircraft.onGround = false;
+    const destination = { icaoCode: "LKPR", iataCode: "PRG", name: "Prague", city: null, country: null, latitude: 50.1008, longitude: 14.2632 };
+    expect(aircraft.distanceKm).toBeGreaterThan(50);
+    expect(predictivePhase(aircraft, destination)).toBe("APPROACH");
+    aircraft.enrichment = { route: { callsign: "TEST", airline: null, airlineIcao: null, airlineIata: null, origin: null, destination: "LKPR", originAirport: null, destinationAirport: destination } };
+    expect(isAirportProximity(aircraft)).toBe(true);
+  });
+
+  it("passes cached runway geometry through the live predictive input", () => {
+    const now = Date.parse("2026-01-01T12:00:00Z");
+    const destination = { icaoCode: "LKPR", iataCode: "PRG", name: "Prague", city: null, country: null, latitude: 50.1008, longitude: 14.2632 };
+    const aircraft = normalizeAircraft({ hex: "ABC123", lat: 50.08, lon: 14.3, alt_baro: 2_000, gs: 130, seen: 0, seen_pos: 0 }, { lat: 49.226, lon: 17.67, name: "Zlín" }, new Date(now));
+    if (!aircraft) throw new Error("aircraft could not be normalized");
+    aircraft.enrichment = { route: { callsign: "TEST", airline: null, airlineIcao: null, airlineIata: null, origin: null, destination: "LKPR", originAirport: null, destinationAirport: destination } };
+    const runway = { id: 1, airportId: 1, sourceAirportIdent: "LKPR", lengthFt: 8_000, widthFt: 150, surface: "ASP", lighted: true, closed: false, leIdent: "12", leLatitude: 50.1, leLongitude: 14.23, leElevationFt: null, leHeadingDegT: 120, leDisplacedThresholdFt: null, heIdent: "30", heLatitude: 50.1, heLongitude: 14.30, heElevationFt: null, heHeadingDegT: 300, heDisplacedThresholdFt: null } satisfies AirportRunway;
+    const input = buildPredictiveShadowInput(aircraft, now, [runway]);
+    if (!input) throw new Error("predictive input was not built");
+    expect(input.runways).toEqual([runway]);
+    expect(evaluatePredictiveIntelligence(input).prediction.runway.evidence.some((item) => item.key === "reason" && item.value === "no runway geometry")).toBe(false);
   });
 });
