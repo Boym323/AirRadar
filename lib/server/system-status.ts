@@ -28,7 +28,7 @@ import {
 } from "@/lib/server/system-status-diagnostics";
 import { buildReceiverQuality } from "@/lib/server/receiver-quality";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
-import { getAircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
+import { getAircraftWeatherDiagnostics, type AircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
 import { recordSystemStatusRequest } from "@/lib/server/system-status-request-diagnostics";
 import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
@@ -151,6 +151,29 @@ function persistenceStatus(
   if (databaseStatus === "offline") return "offline";
   if (databaseStatus === "disabled") return "disabled";
   return failureCount || configuredStatus === "degraded" ? "degraded" : "ok";
+}
+
+export function mapAircraftWeatherDiagnosticsToSystemStatusInput(
+  diagnostics: AircraftWeatherDiagnostics,
+): NonNullable<SystemStatusBuildInput["aircraftWeather"]> {
+  return {
+    accepted: diagnostics.weatherAccepted,
+    persisted: diagnostics.weatherPersisted,
+    rejected: diagnostics.weatherRejected,
+    persistenceFailures: diagnostics.weatherPersistenceFailures,
+    accumulatorEntries: diagnostics.weatherAccumulatorEntries,
+    accumulatorEvicted: diagnostics.weatherAccumulatorEvicted,
+    accumulatorMaxObserved: diagnostics.weatherAccumulatorMaxObserved,
+    weatherReadsbAccepted: diagnostics.weatherReadsbAccepted,
+    weatherBds44Accepted: diagnostics.weatherBds44Accepted,
+    withWind: diagnostics.withWind,
+    withTemperature: diagnostics.withTemperature,
+    withPressure: diagnostics.withPressure,
+    withHumidity: diagnostics.withHumidity,
+    withTurbulence: diagnostics.withTurbulence,
+    lastAcceptedAt: diagnostics.lastAcceptedAt,
+    lastPersistedAt: diagnostics.lastPersistedAt,
+  } satisfies NonNullable<SystemStatusBuildInput["aircraftWeather"]>;
 }
 
 function aircraftWeatherStatus(input: SystemStatusBuildInput["aircraftWeather"]): SystemStatusResponse["aircraftWeather"] {
@@ -940,7 +963,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     },
     atsData: ats ? { available: true, routeCount: ats.counts.routes, pointCount: ats.counts.points, segmentCount: ats.counts.segments, effectiveDate: ats.source.effectiveDate } : { available: false, routeCount: 0, pointCount: 0, segmentCount: 0, effectiveDate: null },
     weather,
-    aircraftWeather: getAircraftWeatherDiagnostics(),
+    aircraftWeather: mapAircraftWeatherDiagnosticsToSystemStatusInput(getAircraftWeatherDiagnostics()),
     flightPositionPersistenceShadow: serviceDiagnostics?.flightPositionPersistenceShadow,
     navigationIntegrity: { ...getNavigationIntegrityService().getDiagnostics(), activeAnomalies: getNavigationIntegrityService().getCurrent().summary.activeAnomalies },
     mapContext: {

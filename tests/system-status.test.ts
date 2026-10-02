@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { NetworkProviderDiagnostics, StateSnapshot } from "@/lib/aircraft/types";
 import type { AtcDataResponse } from "@/lib/atc/types";
 import { getTranslations } from "@/lib/i18n";
-import { buildSystemStatus, toPublicSystemStatus } from "@/lib/server/system-status";
+import { buildSystemStatus, mapAircraftWeatherDiagnosticsToSystemStatusInput, toPublicSystemStatus } from "@/lib/server/system-status";
+import type { AircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
 
 const checkedAt = new Date("2026-09-08T12:00:00.000Z");
 const systemSource = readFileSync(new URL("../lib/server/system-status.ts", import.meta.url), "utf8");
@@ -74,6 +75,28 @@ function build(overrides: Partial<Parameters<typeof buildSystemStatus>[0]> = {})
     runtime: { version: "0.1.0", commit: "abcdef1234567", channel: "development", uptimeSeconds: 120, startedAt: "2026-09-08T11:58:00.000Z" },
     ...overrides,
   });
+}
+
+function aircraftWeatherDiagnostics(overrides: Partial<AircraftWeatherDiagnostics> = {}): AircraftWeatherDiagnostics {
+  return {
+    weatherCandidates: 20, weatherAccepted: 0, weatherRejected: 0, weatherBds44Accepted: 0,
+    weatherBds44Ambiguous: 0, weatherReadsbAccepted: 0, weatherPersisted: 0, weatherDeduplicated: 0,
+    weatherPersistedFirst: 0, weatherPersistedBds44: 0, weatherPersistedAltitudeBinChange: 0,
+    weatherPersistedWeatherChange: 0, weatherPersistedSourceChange: 0, weatherPersistedQualityChange: 0,
+    weatherPersistedHeartbeat: 0, weatherPersistedSpatialChange: 0, weatherCoalesced: 0,
+    weatherExactDeduplicated: 0, weatherPersistenceFailures: 0, weatherAccumulatorEntries: 0,
+    weatherAccumulatorEvicted: 0, weatherAccumulatorMaxObserved: 0, weatherQcRejected: 0,
+    withWind: 0, withTemperature: 0, withPressure: 0, withHumidity: 0, withTurbulence: 0,
+    lastAcceptedAt: null, lastPersistedAt: null, lastAnomalies: [], batchAttempts: 0, batchSuccesses: 0,
+    batchFailures: 0, batchInfrastructureFailures: 0, batchDedupFailures: 0, batchDataFailures: 0,
+    candidateRows: 0, insertedRows: 0, fallbackRows: 0, fallbackSuccesses: 0, fallbackFailures: 0,
+    maxBatchSize: 0, totalBatchRows: 0, capHitCount: 0, circuitOpenCount: 0, circuitSkippedRows: 0,
+    currentCircuitState: "closed", circuitOpenUntil: null, naturalInvocationCount: 0,
+    naturalEmptyInvocations: 0, naturalSingleRowInvocations: 0, naturalMultiRowInvocations: 0,
+    naturalCandidateRows: 0, naturalSelectedRows: 0, naturalMaxSelectedRows: 0, naturalBatchCapHits: 0,
+    naturalDistribution: { "0": 0, "1": 0, "2-4": 0, "5-8": 0, "9-16": 0, ">16": 0 },
+    ...overrides,
+  };
 }
 
 describe("SYSTEM / RECEIVER STATUS V1", () => {
@@ -168,6 +191,34 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     const degraded = build({ aircraftWeather: { accepted: 12, persisted: 10, persistenceFailures: 2 } });
     expect(degraded.aircraftWeather.status).toBe("degraded");
     expect(degraded.status).toBe("ok");
+  });
+
+  it("maps aircraft-weather diagnostics through the production system-status boundary", () => {
+    const diagnostics = aircraftWeatherDiagnostics({
+      weatherAccepted: 12, weatherPersisted: 8, weatherRejected: 3, weatherPersistenceFailures: 0,
+      weatherAccumulatorEntries: 4, weatherAccumulatorEvicted: 2, weatherAccumulatorMaxObserved: 7,
+      weatherReadsbAccepted: 9, weatherBds44Accepted: 3,
+      withWind: 10, withTemperature: 11, withPressure: 6, withHumidity: 5, withTurbulence: 2,
+      lastAcceptedAt: "2026-09-08T11:59:00.000Z", lastPersistedAt: "2026-09-08T11:59:30.000Z",
+    });
+    const mapped = mapAircraftWeatherDiagnosticsToSystemStatusInput(diagnostics);
+    const value = build({ aircraftWeather: mapped });
+    const publicValue = toPublicSystemStatus(value);
+
+    expect(value.aircraftWeather).toMatchObject({
+      status: "ok", accepted: 12, persisted: 8, rejected: 3, persistenceFailures: 0,
+      accumulatorEntries: 4, accumulatorEvictions: 2, accumulatorHighWaterMark: 7,
+      sources: { READSB_JSON: 9, BDS_4_4: 3 },
+      fields: { wind: 10, temperature: 11, pressure: 6, humidity: 5, turbulence: 2 },
+      lastAcceptedAt: diagnostics.lastAcceptedAt, lastPersistedAt: diagnostics.lastPersistedAt,
+    });
+    expect(publicValue.aircraftWeather.accepted).toBe(12);
+  });
+
+  it("preserves true no-data and degraded semantics through the adapter", () => {
+    expect(build({ aircraftWeather: mapAircraftWeatherDiagnosticsToSystemStatusInput(aircraftWeatherDiagnostics()) }).aircraftWeather.status).toBe("no_data");
+    const degraded = aircraftWeatherDiagnostics({ weatherAccepted: 12, weatherPersistenceFailures: 3 });
+    expect(build({ aircraftWeather: mapAircraftWeatherDiagnosticsToSystemStatusInput(degraded) }).aircraftWeather).toMatchObject({ status: "degraded", accepted: 12, persistenceFailures: 3 });
   });
 
   it("uses safe reason codes for real offline and degraded states", () => {
