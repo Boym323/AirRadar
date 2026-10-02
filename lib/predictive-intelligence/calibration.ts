@@ -53,15 +53,31 @@ export function stableHash(value: string): number {
   return hash >>> 0;
 }
 
-export function partitionForFlight(flightId: number | string, seed = CALIBRATION_SPLIT_SEED): CalibrationPartition {
+export function partitionForFlight(flightId: number | string, seed: string = CALIBRATION_SPLIT_SEED): CalibrationPartition {
   return stableHash(`${flightId}:${seed}`) % 10 < 7 ? "CALIBRATION" : "HOLDOUT";
 }
 
-export function splitCorpus<T extends { flightId: number | string }>(flights: readonly T[], seed = CALIBRATION_SPLIT_SEED) {
+export function splitCorpus<T extends { flightId: number | string }>(flights: readonly T[], seed: string = CALIBRATION_SPLIT_SEED) {
   const calibration: T[] = [];
   const holdout: T[] = [];
   for (const flight of flights) (partitionForFlight(flight.flightId, seed) === "CALIBRATION" ? calibration : holdout).push(flight);
   return { calibration, holdout, seed, algorithm: "stableHash(flightId + ':' + seed) % 10 < 7" as const };
+}
+
+/**
+ * Select a bounded, deterministic sample without coupling membership to the
+ * database's insertion/id order.  The caller must provide the complete
+ * eligible set (or a bounded, explicitly defined eligibility query).
+ */
+export function selectStableHashSample<T extends { flightId: number | string }>(
+  flights: readonly T[],
+  limit: number,
+  seed: string,
+): T[] {
+  if (!Number.isSafeInteger(limit) || limit < 0) throw new Error("Sample limit must be a non-negative safe integer");
+  return [...flights]
+    .sort((a, b) => stableHash(`${a.flightId}:${seed}`) - stableHash(`${b.flightId}:${seed}`) || String(a.flightId).localeCompare(String(b.flightId), undefined, { numeric: true }))
+    .slice(0, limit);
 }
 
 export function assertDisjoint<T extends { flightId: number | string }>(calibration: readonly T[], holdout: readonly T[]): void {

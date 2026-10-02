@@ -1,0 +1,500 @@
+{
+  "result": "PARTIAL",
+  "generatedAt": "2026-10-02T13:43:44.573Z",
+  "corpusVersion": "predictive-intelligence-v2-ground-truth-1",
+  "detectorVersion": "flight-intelligence-v1",
+  "repository": {
+    "head": "999d8b2f7ea52ee8e2a3b5de64e36465780b8c2f",
+    "branch": "main",
+    "originMain": "999d8b2f7ea52ee8e2a3b5de64e36465780b8c2f",
+    "workingTree": "clean at start"
+  },
+  "source": {
+    "type": "PRODUCTION-READ-ONLY",
+    "host": "192.168.1.55",
+    "database": "airradar",
+    "safeguards": [
+      "transaction READ ONLY",
+      "statement_timeout=30s",
+      "idle_in_transaction_session_timeout=60s",
+      "work_mem=4MB",
+      "max=1",
+      "bounded position pages"
+    ],
+    "writes": 0,
+    "ddl": 0
+  },
+  "inventory": {
+    "flights": {
+      "total": 132290,
+      "completed": 132153,
+      "earliest": "2026-09-06T16:29:17.945Z",
+      "latest": "2026-10-02T13:43:27.467Z"
+    },
+    "positions": {
+      "total": 5413293,
+      "earliest": "2026-09-06T16:29:17.945Z",
+      "latest": "2026-10-02T13:43:27.467Z"
+    },
+    "events": {
+      "total": 8826,
+      "earliest": "2026-10-02T07:01:08.685Z",
+      "latest": "2026-10-02T13:43:31.798Z"
+    },
+    "eventTypes": [
+      {
+        "type": "AIRSPACE_ENTRY",
+        "count": 3996
+      },
+      {
+        "type": "AIRSPACE_EXIT",
+        "count": 321
+      },
+      {
+        "type": "APPROACH",
+        "count": 822
+      },
+      {
+        "type": "CRUISE_ENTER",
+        "count": 214
+      },
+      {
+        "type": "DIVERSION",
+        "count": 86
+      },
+      {
+        "type": "GO_AROUND",
+        "count": 8
+      },
+      {
+        "type": "HOLDING",
+        "count": 3
+      },
+      {
+        "type": "HOLDING_CANDIDATE",
+        "count": 92
+      },
+      {
+        "type": "LANDING",
+        "count": 23
+      },
+      {
+        "type": "LEVEL_OFF",
+        "count": 2450
+      },
+      {
+        "type": "ORBIT",
+        "count": 3
+      },
+      {
+        "type": "TOP_OF_DESCENT",
+        "count": 581
+      },
+      {
+        "type": "UNUSUAL_TURN",
+        "count": 227
+      }
+    ],
+    "landingRunway": {
+      "total": 23,
+      "usable": 0
+    }
+  },
+  "phase2FailureProof": {
+    "v1Selection": "ORDER BY Flight.id LIMIT 500",
+    "v1Window": {
+      "start": "2026-10-02T00:00:00.000Z",
+      "end": "2026-10-02T13:30:00.000Z",
+      "flights": 500,
+      "minStart": "2026-10-02T00:01:58.691Z",
+      "maxEnd": "2026-10-02T05:08:44.529Z",
+      "linkedPersistedEvents": 0
+    },
+    "candidateFlights": 124993,
+    "selectedFlights": 500,
+    "selectedStart": "2026-09-06T21:14:19.228Z",
+    "selectedEnd": "2026-10-02T12:37:58.897Z",
+    "selectedPersistedEvents": 28,
+    "firstPersistedEvent": "2026-10-02T07:01:08.685Z",
+    "firstPersistedLinkedEvent": "2026-10-02T07:06:33.548Z",
+    "conclusion": "The V1 00:00–13:30 first-N sample has zero linked events because it ends before EVENT_ERA_START; ORDER BY id made that temporal bias deterministic."
+  },
+  "eventEra": {
+    "EVENT_ERA_START": "2026-10-02T07:01:08.685Z",
+    "evidence": [
+      {
+        "eraStart": "2026-10-02T07:01:08.685Z",
+        "firstDetected": "2026-10-02T07:01:09.092Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:01:09.046Z",
+        "firstDetected": "2026-10-02T07:01:09.093Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:01:09.055Z",
+        "firstDetected": "2026-10-02T07:01:09.073Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:01:09.067Z",
+        "firstDetected": "2026-10-02T07:01:09.084Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:01:09.516Z",
+        "firstDetected": "2026-10-02T07:01:12.142Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:01:18.123Z",
+        "firstDetected": "2026-10-02T07:01:18.292Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:01:51.819Z",
+        "firstDetected": "2026-10-02T07:01:51.962Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:01:52.862Z",
+        "firstDetected": "2026-10-02T07:02:01.093Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:02:00.368Z",
+        "firstDetected": "2026-10-02T07:02:01.127Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:02:13.274Z",
+        "firstDetected": "2026-10-02T07:02:13.384Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:02:22.176Z",
+        "firstDetected": "2026-10-02T07:02:22.568Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:02:51.381Z",
+        "firstDetected": "2026-10-02T07:02:59.364Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:03:50.946Z",
+        "firstDetected": "2026-10-02T07:03:51.481Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:03:59.731Z",
+        "firstDetected": "2026-10-02T07:04:00.654Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:04:00.479Z",
+        "firstDetected": "2026-10-02T07:04:00.655Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:04:09.712Z",
+        "firstDetected": "2026-10-02T07:04:09.888Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:04:21.035Z",
+        "firstDetected": "2026-10-02T07:04:22.129Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:04:30.843Z",
+        "firstDetected": "2026-10-02T07:04:31.301Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:04:43.540Z",
+        "firstDetected": "2026-10-02T07:04:43.526Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:04:52.530Z",
+        "firstDetected": "2026-10-02T07:04:52.699Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:05:10.854Z",
+        "firstDetected": "2026-10-02T07:05:11.084Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:05:19.150Z",
+        "firstDetected": "2026-10-02T07:05:20.287Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:05:38.494Z",
+        "firstDetected": "2026-10-02T07:05:38.641Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:05:50.859Z",
+        "firstDetected": "2026-10-02T07:05:50.881Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:05:51.498Z",
+        "firstDetected": "2026-10-02T07:06:00.075Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:05:51.708Z",
+        "firstDetected": "2026-10-02T07:06:03.132Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:05:51.708Z",
+        "firstDetected": "2026-10-02T07:05:53.942Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:05:52.142Z",
+        "firstDetected": "2026-10-02T07:05:53.941Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:06:15.171Z",
+        "firstDetected": "2026-10-02T07:06:15.371Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:06:27.387Z",
+        "firstDetected": "2026-10-02T07:06:27.590Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:06:32.539Z",
+        "firstDetected": "2026-10-02T07:06:33.738Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:06:33.548Z",
+        "firstDetected": "2026-10-02T07:06:33.741Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:06:40.081Z",
+        "firstDetected": "2026-10-02T07:06:42.942Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:06:57.621Z",
+        "firstDetected": "2026-10-02T07:06:58.280Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:07:34.910Z",
+        "firstDetected": "2026-10-02T07:07:35.073Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:07:39.574Z",
+        "firstDetected": "2026-10-02T07:07:47.338Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:07:52.407Z",
+        "firstDetected": "2026-10-02T07:07:53.457Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:08:20.951Z",
+        "firstDetected": "2026-10-02T07:08:21.075Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:08:23.871Z",
+        "firstDetected": "2026-10-02T07:08:24.131Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:08:27.894Z",
+        "firstDetected": "2026-10-02T07:08:30.250Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:08:30.151Z",
+        "firstDetected": "2026-10-02T07:08:30.228Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:08:39.379Z",
+        "firstDetected": "2026-10-02T07:08:39.426Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:08:45.358Z",
+        "firstDetected": "2026-10-02T07:08:45.603Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:09:00.753Z",
+        "firstDetected": "2026-10-02T07:09:01.090Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:09:04.021Z",
+        "firstDetected": "2026-10-02T07:09:04.155Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:09:10.260Z",
+        "firstDetected": "2026-10-02T07:09:10.273Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:09:10.695Z",
+        "firstDetected": "2026-10-02T07:09:22.581Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:09:10.695Z",
+        "firstDetected": "2026-10-02T07:09:25.641Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:09:46.962Z",
+        "firstDetected": "2026-10-02T07:09:47.067Z",
+        "detectorVersion": "flight-intelligence-v1"
+      },
+      {
+        "eraStart": "2026-10-02T07:10:17.016Z",
+        "firstDetected": "2026-10-02T07:10:17.778Z",
+        "detectorVersion": "flight-intelligence-v1"
+      }
+    ]
+  },
+  "corpus": {
+    "candidateFlights": 124993,
+    "frozenFlights": 500,
+    "calibrationFlights": 351,
+    "holdoutFlights": 149,
+    "overlap": 0,
+    "selection": "stableHash(flightId + ':' + corpusVersion), sorted by hash then id",
+    "temporalBuckets": "not required: complete eligible set is hash-sampled",
+    "destinations": {
+      "UNKNOWN": 239,
+      "LTAI": 20,
+      "EDDF": 16,
+      "LOWW": 15,
+      "EPWA": 9,
+      "LTFM": 9,
+      "LHBP": 9,
+      "LROP": 7,
+      "EGLL": 7,
+      "LKPR": 6,
+      "LTFJ": 5,
+      "EHAM": 5,
+      "LFPG": 5,
+      "EDDB": 4,
+      "EPKT": 4,
+      "LGRP": 4,
+      "OTHH": 4,
+      "EDDS": 4,
+      "LFOB": 3,
+      "LBWN": 3
+    }
+  },
+  "datasets": {
+    "GENERAL_CORPUS": 500,
+    "ETA_GROUND_TRUTH_CORPUS": 0,
+    "RUNWAY_GROUND_TRUTH_CORPUS": 0,
+    "TRAJECTORY_CORPUS": 500
+  },
+  "replay": {
+    "flights": 500,
+    "positions": 21520,
+    "events": 532,
+    "byType": {
+      "APPROACH": 108,
+      "CRUISE_ENTER": 46,
+      "HOLDING": 1,
+      "HOLDING_CANDIDATE": 9,
+      "LANDING": 32,
+      "LEVEL_OFF": 130,
+      "ORBIT": 2,
+      "TOP_OF_DESCENT": 83,
+      "UNUSUAL_TURN": 121
+    },
+    "landing": 32,
+    "approach": 108,
+    "terminalIncomplete": 41,
+    "stateIsolation": "one FlightIntelligenceDetector per flight",
+    "order": "recordedAt ASC, id ASC",
+    "wallClockDependency": "historical observedAt supplied; detector event detectedAt is ignored for scoring"
+  },
+  "overlapValidation": {
+    "persistedLandingFlights": 17,
+    "replayLandingDetected": 6,
+    "misses": 11,
+    "extraReplayLandings": 26,
+    "timestampDeltaSeconds": {
+      "median": 36.971,
+      "p90": 126.337,
+      "max": 126.337
+    },
+    "detectorIdentity": "flight-intelligence-v1",
+    "acceptance": "REJECTED: FlightPosition does not preserve onGround and the replay adapter supplies false; replayed LANDING is therefore not validated ground truth."
+  },
+  "groundTruth": {
+    "ETA": {
+      "eligible": 0,
+      "reason": "REJECTED pending canonical LANDING replay equivalence and destination as-of provenance"
+    },
+    "RUNWAY": {
+      "persistedLandingRows": 23,
+      "persistedUsableRows": 0,
+      "observedClassifier": "NOT_USED",
+      "reason": "Airport Operations uses inferred/probable runway context and is not accepted as independent truth without a separate validation audit; no externally observed historical runway source was found in the contract."
+    },
+    "RUNWAY_CHANGE": {
+      "eligible": 0,
+      "reason": "No independent runway truth"
+    },
+    "TRAJECTORY": {
+      "eligible": 500,
+      "labels": "unlabeled observational episodes; shadow only"
+    }
+  },
+  "destinationAudit": {
+    "currentFlightDestination": "created from item.enrichment.route.destination; later update uses existing Flight.destination ?? newly observed route destination",
+    "availabilityTimestamp": false,
+    "classification": "B/C cannot be ruled out historically",
+    "asOfPolicy": "final Flight.destination is not used for V2 early-checkpoint scoring; checkpoints require timestamped destination provenance and are excluded otherwise"
+  },
+  "noLookAhead": {
+    "position": "PASS: bounded historical rows filtered by recordedAt <= checkpoint by scorer",
+    "replayEvents": "PASS: replay output is ephemeral and can be filtered by occurredAt <= checkpoint",
+    "landingTruth": "PASS: attached only in scorer phase; absent from predictor input",
+    "runwayTruth": "PASS: not attached to predictor",
+    "destination": "PASS: unknown rather than final destination when availability is unproven"
+  },
+  "performance": {
+    "runtimeMs": 12436,
+    "positions": 22056,
+    "positionsPerSecond": 1774,
+    "peakRssBytes": 279310336
+  },
+  "decisions": {
+    "ETA": "SHADOW",
+    "RUNWAY": "SHADOW",
+    "RUNWAY_CHANGE": "SHADOW",
+    "TRAJECTORY": "SHADOW"
+  },
+  "production": {
+    "modified": false,
+    "deployed": false,
+    "restarted": false,
+    "publicPredictionsEnabled": false
+  }
+}
