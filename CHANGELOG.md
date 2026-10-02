@@ -10,6 +10,33 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.250] - 2026-10-02
+
+Changes since v1.0.249.
+
+### Changed
+
+- Add tests for prospective predictive ground truth contracts (fb90f868)
+
+### Fixed
+
+- Harden prospective ground truth release gate (426847fa)
+
+### Documentation
+
+- Record corrective ground truth release gate (514478d8)
+- Correct ground truth release identity (45ead803)
+
+<details>
+<summary>Technical commits</summary>
+
+- Add tests for prospective predictive ground truth contracts (fb90f868)
+- fix: harden prospective ground truth release gate (426847fa)
+- docs: record corrective ground truth release gate (514478d8)
+- docs: correct ground truth release identity (45ead803)
+
+</details>
+
 ## [1.0.244] - 2026-10-02
 
 Changes since v1.0.242.
