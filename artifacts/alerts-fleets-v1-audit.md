@@ -2,55 +2,34 @@
 
 Date: 2026-10-02
 
-## Reusable infrastructure
+## Result
 
-| Area | Existing implementation | V1 decision |
-| --- | --- | --- |
-| Process ownership | `AircraftStateService` global singleton | Reuse; no second poller |
-| Canonical flight events | `FlightIntelligenceService` + `FlightEvent` persistence | Reuse event boundary |
-| Admin authorization | `WATCHLIST_ADMIN_TOKEN`, signed session cookie, same-origin check | Reuse for all mutations |
-| Runtime state | replaceable in-memory Prisma configuration cache | Reuse; mutations persist first and invalidate atomically |
-| History | `AlertOccurrence` / `AlertDelivery` PostgreSQL models | Reuse canonical durable occurrence path |
-| HTTP/retries | bounded `fetch`, rate-limit helpers, notifier queue | Reuse and keep provider isolated |
-| Maps/geometry | MapLibre UI and existing geographic helpers | Circle math in pure V1 module; no polygons |
-| Cleanup | byte-bounded alert ledger compaction | Reuse; no per-alert deletion |
+PASS. Corrective release `v1.0.243` was deployed through
+`deploy/release.sh` at runtime commit `6c2b06493c0afbc494be247e56caa333e95d63d3`.
 
-## Audited ownership
+## Historical data policy
 
-- FlightEvent signal evaluation: `AlertEngine.observeIntelligenceEvent()`
-- Squawk/geofence transition evaluation: `AlertV1TransitionTracker` from `AlertEngine.observe()`
-- Occurrence and delivery persistence: `AlertsFleetsRepository.recordOccurrence()`
-- Configuration cache: `AlertsFleetsRepository.loadConfig()`
-- Delivery worker/recovery: `AlertDeliveryWorker` and repository claim/recovery methods
-- Admin APIs/UI: `app/api/admin/alerts/**` and `/admin/alerts`
+Production has 8 historical `FLIGHT_EVENT` `AlertOccurrence` rows with
+`flightEventId = NULL`. They predate the corrective invariant. Their canonical
+relations cannot be reconstructed safely, so they were preserved unchanged.
+No backfill, deletion, source-key rewrite, or heuristic relation was done.
+They render with neutral fallback context and no fabricated flight link.
 
-Squawk and geofence transitions reuse the FlightEvent occurrence evaluator.
-Episode keys use normalized ICAO, transition, and canonical observation time.
+## Corrective invariant
 
-## Security findings
+New events resolve the persisted numeric `FlightEvent.id` by deterministic
+`eventKey` before the occurrence path. The repository rejects missing IDs and
+verifies the referenced event inside the transaction. Regression coverage is
+in `tests/alert-engine-canonical-id.test.ts`.
 
-Configuration mutations already require the admin session and same-origin
-requests. Pushover credentials are server-side environment values. Public
-serialization does not include them. Receiver position publication continues
-to use the existing public-position policy.
+## Production evidence
 
-Production verification on 2026-10-02: all five Alerts admin GET endpoints
-returned 401 without a session; the production version and health endpoints
-reported v1.0.239 / application ok; SSE served named snapshot events; and the
-temporary canary used IN_APP only. Pushover was disabled and the worker
-credentials were not configured.
+- Natural post-fix events: FlightEvents `6533` and `6556`, both
+  `CRUISE_ENTER`, both linked correctly.
+- Duplicate occurrence keys: `0`; duplicate delivery keys: `0`.
+- Post-release `FLIGHT_EVENT` rows with NULL `flightEventId`: `0`.
+- Temporary IN_APP canary rule was removed; Pushover remains not configured.
 
-## Scope guardrails
-
-Production release v1.0.239 was performed through `deploy/release.sh` on
-commit `37086cef3e9c75c036ba5812f78e17f3659e1aaf`. Existing Flight
-Intelligence detectors were not duplicated. The temporary production canary
-fleet/rule was removed after observation.
-
-## Corrective audit
-
-- Read-only production audit found 8 FLIGHT_EVENT occurrences with flightEventId IS NULL.
-- Their source keys contain aircraft/time/event context but no canonical FlightEvent.id; no deterministic backfill was safe.
-- The known canary row is present with a NULL relation, but its source key does
-  not encode 5312; no deterministic mapping was safe, so it was not modified.
-- Corrective code now carries the numeric canonical ID explicitly, rejects incomplete FlightEvent inputs, verifies the event exists in the transaction, and projects PostgreSQL V1 rows into /api/alerts.
+Process ownership, delivery locking/retry architecture, squawk/geofence
+semantics, Pushover isolation, and Flight Intelligence ownership were not
+changed.

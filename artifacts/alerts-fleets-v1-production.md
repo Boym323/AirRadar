@@ -1,69 +1,46 @@
 # Alerts & Fleets V1 production record
 
-Result: BLOCKED — one natural occurrence was obtained, but the occurrence did
-not persist its canonical `FlightEvent` foreign-key ID, and the production
-history UI does not render V1 `AlertOccurrence` rows.
+Result: PASS
 
-Release: v1.0.239
-Runtime SHA: 37086cef3e9c75c036ba5812f78e17f3659e1aaf
-Tag: v1.0.239 (verified on deployed runtime metadata)
-Activation: 2026-10-02 13:13:20.192 CEST
-Migration/build: existing release PASS; no release or restart performed for
-this gate.
+## Release
 
-## Temporary rule
+- Previous runtime: `v1.0.242` / `201c18132a620a58bb58a813683b39d458a2f3b0`.
+- Corrective release: `v1.0.243`, tag `v1.0.243`.
+- Runtime SHA: `6c2b06493c0afbc494be247e56caa333e95d63d3`.
+- Corrective source candidate: `8a82ed034974ac7703c1787871f203b8fd548540`.
+- Deployment: 2026-10-02 14:02 CEST; migrations applied: `0`.
 
-- ID: `c16de7c4-1598-415b-813c-e0fe24955258`
-- Name: `PRODUCTION E2E CANARY — DELETE`
-- Target: `ALL_AIRCRAFT`
-- Trigger: `FLIGHT_EVENT` / `APPROACH`
-- Channel: `IN_APP` only
-- Pushover: disabled/not configured
-- No synthetic data, history edits, or detector changes were made.
+## Historical data
 
-Immediate no-retroactive check passed: occurrence count was unchanged at zero
-immediately after activation.
+Production contains 8 pre-fix `FLIGHT_EVENT` occurrences with
+`flightEventId = NULL`. They were not modified. The history API returned all 8
+and the EN/CZ Alerts UI rendered them safely with fallback context; no
+fabricated FlightEvent link, airport, runway, or relation was shown.
 
-## First natural match
+## Natural post-fix gate
 
-- FlightEvent: `5312`
-- Type: `APPROACH`
-- Occurred: `2026-10-02 13:13:30.009 CEST`
-- Aircraft: `48AC82`, callsign `LOT328`
-- Occurrence: `alert-v1:c16de7c4-1598-415b-813c-e0fe24955258:FLIGHT_EVENT:48AC82:1790939458296:APPROACH:LZRU:0`
-- Created: `2026-10-02 13:13:30.886 CEST`
-- End-to-end latency: `877 ms`
+Temporary rule: `PRODUCTION E2E CANARY — DELETE`, target `ALL_AIRCRAFT`,
+trigger `FLIGHT_EVENT / CRUISE_ENTER`, channel `IN_APP`, activated at
+2026-10-02 14:03:26 CEST.
 
-The source key is deterministic and matches the canonical event key, but
-`AlertOccurrence.flightEventId` is NULL instead of `5312`. This is a real
-persistence defect and blocks PASS.
+Natural linked occurrences observed:
 
-## Idempotency and delivery
+1. FlightEvent `6533`, `CRUISE_ENTER`, aircraft `3C65AE`, at 14:03:39 CEST.
+2. FlightEvent `6556`, `CRUISE_ENTER`, aircraft `4D242D`, at 14:04:56 CEST.
 
-During the approximately 2-minute post-match audit, the rule generated 8
-distinct natural APPROACH occurrences. There were 8 unique
-`ruleId + sourceType + sourceKey` keys and zero duplicate keys; the first
-FlightEvent produced exactly one occurrence. IN_APP delivery rows are
-intentionally modeled by the canonical repository: 8 rows, all PENDING, with
-no Pushover attempt. No duplicate deliveries were observed.
+Both had valid foreign keys and deterministic source keys. IN_APP delivery was
+`PENDING`; no artificial delivery was created. The temporary rule was removed
+at 14:06:40 CEST and configuration returned to zero active rules.
 
-## Cleanup and health
+## Final audit
 
-- Temporary rule disabled: YES; occurrence history preserved.
-- Production configuration restored: YES; public health reports alerts disabled.
-- App: PASS; DB: PASS; receiver: PASS; SSE: not separately browser-tested;
-  service: active.
-- UI: FAIL for this gate. `/alerts` is the legacy JSONL alert history and does
-  not display these PostgreSQL `AlertOccurrence` rows; the admin page exposes
-  configuration only.
+- Historical incomplete rows: `8`; backfilled: `0`.
+- New incomplete rows after deployment: `0`.
+- Duplicate occurrence keys: `0`; duplicate delivery keys: `0`.
+- App/DB/receiver/SSE/service health: PASS.
+- Production UI smoke: PASS at desktop/tablet/mobile; EN/CZ PASS.
 - Pushover: NOT CONFIGURED.
 
-Next step: fix only the canonical FlightEvent-ID persistence defect and wire
-the V1 occurrence history to the intended Alerts history UI, then repeat the
-production gate with a new temporary rule.
-
-## Corrective implementation status
-
-The corrective implementation is prepared locally but not deployed. It passes the canonical numeric FlightEvent.id explicitly to persistence, rejects incomplete FLIGHT_EVENT occurrences, verifies the event exists before the atomic occurrence/delivery transaction, renders PostgreSQL V1 rows through the Alerts history API/UI, and preserves deterministic occurrence keys and delivery atomicity.
-
-Read-only audit found 8 incomplete production FLIGHT_EVENT rows, including the known canary row. Their source keys do not deterministically encode a canonical event ID, so no backfill was executed. Production release and the natural post-fix event gate remain pending.
+Canary rows are disposable-rule history and may be removed by the normal
+rule-delete cascade; their DB/API parity and history visibility were verified
+before cleanup. No historical incomplete row was touched.

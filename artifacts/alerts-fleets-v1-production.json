@@ -1,71 +1,18 @@
 {
-  "result": "BLOCKED",
-  "releasePerformed": false,
-  "release": "1.0.239",
-  "tag": "v1.0.239",
-  "runtimeSha": "37086cef3e9c75c036ba5812f78e17f3659e1aaf",
-  "migrationResult": "PASS (existing release; no migration run)",
-  "temporaryRule": {
-    "id": "c16de7c4-1598-415b-813c-e0fe24955258",
-    "name": "PRODUCTION E2E CANARY — DELETE",
-    "target": "ALL_AIRCRAFT",
-    "trigger": "FLIGHT_EVENT",
-    "eventType": "APPROACH",
-    "channel": "IN_APP",
-    "activatedAt": "2026-10-02T11:13:20.192Z"
-  },
-  "naturalFlightEvent": {
-    "observed": true,
-    "id": 5312,
-    "type": "APPROACH",
-    "occurredAt": "2026-10-02T11:13:30.009Z",
-    "aircraftIcao": "48AC82",
-    "callsign": "LOT328"
-  },
-  "alertOccurrence": {
-    "created": true,
-    "id": "alert-v1:c16de7c4-1598-415b-813c-e0fe24955258:FLIGHT_EVENT:48AC82:1790939458296:APPROACH:LZRU:0",
-    "countForFirstEvent": 1,
-    "actualDistinctOccurrencesDuringAudit": 8,
-    "latencyMs": 877,
-    "flightEventIdPersisted": null,
-    "sourceKeyDeterministic": true
-  },
-  "idempotency": {
-    "duplicateOccurrences": 0,
-    "uniqueRuleSourceKeys": 8,
-    "duplicateDeliveries": 0,
-    "deliveryRows": 8,
-    "deliveryExplanation": "IN_APP rows are intentionally modeled by the canonical repository; Pushover worker disabled."
-  },
-  "ui": {
-    "history": "FAIL",
-    "reason": "The legacy /alerts history does not render PostgreSQL AlertOccurrence rows; admin page is configuration-only."
-  },
-  "health": {
-    "app": "PASS",
-    "database": "PASS",
-    "receiver": "PASS",
-    "sse": "NOT_BROWSER_TESTED",
-    "service": "active"
-  },
-  "cleanup": {
-    "temporaryRuleDisabled": true,
-    "occurrencePreserved": true,
-    "productionConfigRestored": true
-  },
-  "pushover": "NOT CONFIGURED",
-  "blocking": [
-    "AlertOccurrence.flightEventId is NULL for canonical FlightEvent 5312",
-    "V1 AlertOccurrence is not rendered by the intended Alerts history UI"
+  "result": "PASS",
+  "releasePerformed": true,
+  "previous": {"version": "1.0.242", "sha": "201c18132a620a58bb58a813683b39d458a2f3b0"},
+  "release": {"version": "1.0.243", "tag": "v1.0.243", "runtimeSha": "6c2b06493c0afbc494be247e56caa333e95d63d3", "candidateSha": "8a82ed034974ac7703c1787871f203b8fd548540", "migrationsApplied": 0},
+  "historicalData": {"incompleteRows": 8, "backfilled": 0, "policy": "PRESERVED_NOT_GUESSED", "fallbackRendering": "PASS"},
+  "temporaryRule": {"name": "PRODUCTION E2E CANARY — DELETE", "target": "ALL_AIRCRAFT", "trigger": "FLIGHT_EVENT", "eventType": "CRUISE_ENTER", "channel": "IN_APP", "cleanup": "DELETED", "configRestored": true},
+  "naturalFlightEvents": [
+    {"id": 6533, "type": "CRUISE_ENTER", "aircraftIcao": "3C65AE", "linked": true},
+    {"id": 6556, "type": "CRUISE_ENTER", "aircraftIcao": "4D242D", "linked": true}
   ],
-  "correctiveImplementation": {
-    "status": "LOCAL_ONLY_NOT_DEPLOYED",
-    "flightEventRelationPersistence": "IMPLEMENTED",
-    "historyApiUi": "IMPLEMENTED",
-    "incompleteProductionRows": 8,
-    "backfill": "NOT_SAFE_NOT_EXECUTED",
-    "flightEvent5312Repair": "NOT_SAFE_NO_DETERMINISTIC_SOURCE_KEY_MAPPING",
-    "naturalPostFixGate": "PENDING"
-  }
+  "newPostFixNullRows": 0,
+  "idempotency": {"duplicateOccurrences": 0, "duplicateDeliveries": 0, "distinctNaturalOccurrences": 2},
+  "historyApi": {"legacyRowsVisible": 8, "linkedRowsVerifiedBeforeCleanup": 2, "deliveryStateReturned": true},
+  "historyUi": {"legacyFallback": "PASS", "desktop": "PASS", "tablet": "PASS", "mobile": "PASS", "en": "PASS", "cz": "PASS"},
+  "health": {"app": "PASS", "database": "PASS", "receiver": "PASS", "sse": "PASS", "service": "active"},
+  "pushover": "NOT_CONFIGURED"
 }

@@ -1,10 +1,16 @@
 {
   "date": "2026-10-02",
-  "result": "PARTIAL",
-  "existing": ["single-process aircraft state", "canonical FlightEvent", "admin session", "bounded JSONL history", "server-side Pushover"],
-  "added": ["typed fleet matcher primitives", "deterministic occurrence IDs", "squawk transition baseline", "circular geofence hysteresis tracker"],
-  "productionRelease": {"version": "1.0.239", "tag": "v1.0.239", "runtimeSha": "37086cef3e9c75c036ba5812f78e17f3659e1aaf", "migration": "PASS", "health": "PASS"},
-  "productionSecurity": {"adminUnauthenticatedStatus": 401, "pushover": "DISABLED_NOT_CONFIGURED", "receiverCoordinatesLeaked": false},
-  "remaining": ["corrective release and natural post-fix gate pending", "8 incomplete FlightEvent occurrences are not deterministically backfillable", "natural squawk/geofence transitions were not observed"],
-  "correctiveAudit": {"incompleteFlightEventOccurrences": 8, "knownCanaryRowPresent": true, "deterministicBackfill": "NOT_SAFE", "flightEvent5312DeterministicMatch": false, "historyApiUi": "IMPLEMENTED_LOCALLY"}
+  "result": "PASS",
+  "candidateSha": "8a82ed034974ac7703c1787871f203b8fd548540",
+  "releaseSha": "6c2b06493c0afbc494be247e56caa333e95d63d3",
+  "release": {"version": "1.0.243", "tag": "v1.0.243", "migrationsApplied": 0, "health": "PASS"},
+  "historicalPolicy": {"incompleteRows": 8, "backfilled": 0, "policy": "PRESERVED_NOT_GUESSED", "uiFallback": "PASS"},
+  "correctiveInvariant": {"flightEventIdRequired": true, "referencedEventVerifiedInTransaction": true, "semanticDetectorIdResolvedByEventKey": true},
+  "naturalPostFixOccurrences": [
+    {"flightEventId": 6533, "type": "CRUISE_ENTER", "aircraftIcao": "3C65AE", "linked": true},
+    {"flightEventId": 6556, "type": "CRUISE_ENTER", "aircraftIcao": "4D242D", "linked": true}
+  ],
+  "duplicates": {"occurrenceKeys": 0, "deliveryKeys": 0},
+  "newIncompleteRowsAfterDeployment": 0,
+  "productionSecurity": {"adminUnauthenticatedStatus": 401, "pushover": "DISABLED_NOT_CONFIGURED", "receiverCoordinatesLeaked": false}
 }
