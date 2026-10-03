@@ -229,6 +229,7 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.queueDepth} value={formatNumber(data.predictiveValidation.queueDepth, 0, dictionary.locale)} />
         <Field label={dictionary.system.queueHighWaterMark} value={formatNumber(data.predictiveValidation.queueHighWaterMark, 0, dictionary.locale)} />
         <Field label={dictionary.system.prospectivePersistenceFailures} value={formatNumber(data.predictiveValidation.persistenceFailures, 0, dictionary.locale)} />
+        {data.predictiveValidation.lastFailureField && <Field label={dictionary.system.prospectiveLastFailureField} value={data.predictiveValidation.lastFailureField} />}
         <Field label={dictionary.system.validationReadiness} value={`ETA ${data.predictiveValidation.readiness.ETA} · RUNWAY ${data.predictiveValidation.readiness.RUNWAY}`} />
       </Card>}
 

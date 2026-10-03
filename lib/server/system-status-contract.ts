@@ -330,6 +330,7 @@ export interface SystemStatusResponse {
     lastSuccessfulWrite: string | null;
     lastFailureAt: string | null;
     lastFailureClassification: "invalid_timestamp" | "database" | "unconfigured" | null;
+    lastFailureField: "predictedAt" | "predictedLandingAt" | "createdAt" | null;
     rawRetentionDays: number;
     readiness: { ETA: string; RUNWAY: string; RUNWAY_CHANGE: string; TRAJECTORY: string };
   };

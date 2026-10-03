@@ -1339,6 +1339,7 @@ export const en = {
     queueDepth: "Queue depth",
     queueHighWaterMark: "Queue high-water mark",
     prospectivePersistenceFailures: "Persistence failures",
+    prospectiveLastFailureField: "Last failure field",
     validationReadiness: "Readiness",
     aircraftWeatherAccepted: "Recent accepted observations",
     aircraftWeatherPersisted: "Persisted observations",
