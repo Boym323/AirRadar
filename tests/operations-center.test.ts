@@ -8,6 +8,7 @@ import {
   operationsEventTone,
   recentOperationsEvents,
   recentOperationsTimeline,
+  relevantOperationsAirportIcaos,
 } from "@/lib/intelligence/operations-center";
 import type { FlightEventType, FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import type { AlertHistoryEntry } from "@/lib/server/alert-history";
@@ -213,6 +214,18 @@ describe("Operations Center intelligence selection", () => {
   it("keeps only currently live logbook highlights and ranks operational reasons", () => {
     const selected = liveOperationsHighlights(logbook());
     expect(selected.map((item) => item.icaoHex)).toEqual(["EMERG1", "RARE01"]);
+  });
+
+  it("derives at most two unique relevant airport contexts from the ranked timeline", () => {
+    const now = Date.parse("2026-10-03T20:00:00Z");
+    const loww = { ...event("GO_AROUND", "2026-10-03T19:55:00Z", "loww"), airportIcao: "LOWW" };
+    const lkpr = { ...event("APPROACH", "2026-10-03T19:56:00Z", "lkpr"), airportIcao: "LKPR" };
+    const duplicateLoww = { ...event("TAKEOFF", "2026-10-03T19:57:00Z", "loww-2"), airportIcao: "loww" };
+    const lkmt = { ...event("TAKEOFF", "2026-10-03T19:58:00Z", "lkmt"), airportIcao: "LKMT" };
+    const timeline = recentOperationsTimeline([loww, lkpr, duplicateLoww, lkmt], [], now, 10);
+
+    expect(relevantOperationsAirportIcaos(timeline)).toEqual(["LOWW", "LKMT"]);
+    expect(relevantOperationsAirportIcaos(timeline, 1)).toEqual(["LOWW"]);
   });
 
   it("honors the bounded render limit", () => {
