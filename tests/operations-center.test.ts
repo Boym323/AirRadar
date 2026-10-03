@@ -7,7 +7,7 @@ import {
 } from "@/lib/intelligence/operations-center";
 import type { FlightEventType, FlightIntelligenceEvent } from "@/lib/intelligence/types";
 
-function event(type: FlightEventType, occurredAt: string, key = type): FlightIntelligenceEvent {
+function event(type: FlightEventType, occurredAt: string, key: string = type): FlightIntelligenceEvent {
   return {
     id: key,
     eventKey: key,
