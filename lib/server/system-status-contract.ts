@@ -324,7 +324,12 @@ export interface SystemStatusResponse {
     persisted: number;
     observationsSkippedDedupe: number;
     persistenceFailures: number;
+    integrityRejects: number;
+    persistenceSuspended: boolean;
+    suspensionReason: "integrity_violation_23502" | "integrity_violation" | null;
     droppedObservations: number;
+    rejectedInvalid: number;
+    invalidSkipReasons: Record<string, number>;
     queueDepth: number;
     queueHighWaterMark: number;
     lastSuccessfulWrite: string | null;
@@ -338,6 +343,13 @@ export interface SystemStatusResponse {
       sqlState: string | null;
       sqlStateClass: "integrity_constraint" | "data_exception" | "connection" | "transaction_rollback" | "insufficient_resources" | "operator_intervention" | "other" | null;
       constraint: string | null;
+      table: string | null;
+      column: string | null;
+      detail: string | null;
+      capability: "ETA" | "RUNWAY" | "RUNWAY_CHANGE" | "TRAJECTORY" | null;
+      horizonBucket: string | null;
+      observationKeyHash: string | null;
+      writerOperation: "create" | null;
       causeConstructorName: string | null;
       causeName: string | null;
       causeCode: string | null;

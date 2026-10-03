@@ -1,4 +1,5 @@
 import type { Aircraft } from "@/lib/aircraft/types";
+import { createHash } from "node:crypto";
 import { getPrisma } from "@/lib/server/db";
 import { getBuildMetadata } from "@/lib/server/version";
 import { getPredictiveGraduationPolicy, type PredictiveCapability } from "./graduation";
@@ -113,7 +114,8 @@ export function prospectiveObservationFor(
 }
 
 export interface ProspectiveDiagnostics {
-  enabled: boolean; captured: number; persisted: number; skippedDedupe: number; dropped: number; persistenceFailures: number;
+  enabled: boolean; captured: number; persisted: number; skippedDedupe: number; dropped: number; rejectedInvalid: number; invalidSkipReasons: Record<string, number>; persistenceFailures: number; integrityRejects: number;
+  persistenceSuspended: boolean; suspensionReason: "integrity_violation_23502" | "integrity_violation" | null;
   queueDepth: number; queueHighWaterMark: number; oldestQueuedAt: string | null; lastSuccessfulWrite: string | null;
   lastFailureAt: string | null; lastFailureClassification: "invalid_timestamp" | "database" | "unconfigured" | null;
   lastFailureField: "predictedAt" | "predictedLandingAt" | "createdAt" | null;
@@ -133,6 +135,13 @@ export type DatabaseFailureSignature = {
   sqlState: string | null;
   sqlStateClass: DatabaseFailureSqlStateClass;
   constraint: string | null;
+  table: string | null;
+  column: string | null;
+  detail: string | null;
+  capability: PredictiveCapability | null;
+  horizonBucket: string | null;
+  observationKeyHash: string | null;
+  writerOperation: "create" | null;
   causeConstructorName: string | null;
   causeName: string | null;
   causeCode: string | null;
@@ -147,6 +156,12 @@ const CAPABILITIES: readonly PredictiveCapability[] = ["ETA", "RUNWAY", "RUNWAY_
 const boundedString = (value: unknown): string | null => {
   if (typeof value !== "string" || value.length === 0 || value.length > 128 || /[\r\n]/.test(value)) return null;
   return value;
+};
+const boundedDetail = (value: unknown): string | null => {
+  const result = boundedString(value);
+  if (!result) return null;
+  const normalized = result.replace(/\s+/g, " ");
+  return /^Failing row contains /i.test(normalized) ? "Failing row contains <redacted>" : normalized;
 };
 const structuralValue = (value: unknown): string | null => boundedString(value);
 const sqlStateClass = (sqlState: string | null): DatabaseFailureSqlStateClass => {
@@ -173,35 +188,94 @@ const messageClass = (error: unknown, sqlState: string | null): DatabaseFailureM
   return "unknown";
 };
 
-export function databaseFailureSignature(error: unknown): DatabaseFailureSignature {
+function sqlStateFrom(values: readonly Record<string, unknown>[]): string | null {
+  for (const value of values) {
+    for (const key of ["sqlState", "sqlstate", "code"]) {
+      const candidate = structuralValue(value[key]);
+      if (candidate && /^\d{5}$/.test(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+
+function errorValues(error: unknown): Array<Record<string, unknown>> {
   const values: Array<Record<string, unknown>> = [];
   let current = error;
   for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
     const value = current as Record<string, unknown>;
     values.push(value);
+    for (const nestedKey of ["meta", "driverAdapterError", "originalError"]) {
+      const nested = value[nestedKey];
+      if (nested && typeof nested === "object") values.push(nested as Record<string, unknown>);
+    }
     current = value.cause;
   }
+  return values;
+}
+
+function firstStructural(values: readonly Record<string, unknown>[], keys: readonly string[]): string | null {
+  for (const value of values) for (const key of keys) {
+    const found = structuralValue(value[key]);
+    if (found) return found;
+  }
+  return null;
+}
+
+function observationKeyHash(value: string | null): string | null {
+  return value ? createHash("sha256").update(value).digest("hex").slice(0, 16) : null;
+}
+
+export type DatabaseFailureContext = Pick<DatabaseFailureSignature, "capability" | "horizonBucket" | "observationKeyHash" | "writerOperation">;
+
+export function databaseFailureSignature(error: unknown, context: Partial<DatabaseFailureContext> = {}): DatabaseFailureSignature {
+  const values = errorValues(error);
   const top = values[0] ?? {};
   const cause = values[1] ?? {};
-  const sqlState = structuralValue(top.sqlState) ?? structuralValue(top.code);
+  const sqlState = sqlStateFrom(values);
+  const table = firstStructural(values, ["table", "table_name", "relation"]);
+  const column = firstStructural(values, ["column", "column_name"]);
+  const detail = firstStructural(values, ["detail", "serverDetail"]);
   return {
     constructorName: structuralValue((error as { constructor?: { name?: unknown } } | null)?.constructor?.name),
     name: structuralValue(top.name),
     code: structuralValue(top.code),
     sqlState,
     sqlStateClass: sqlStateClass(sqlState),
-    constraint: structuralValue(top.constraint),
+    constraint: firstStructural(values, ["constraint", "constraint_name"]),
+    table, column, detail: boundedDetail(detail),
+    capability: context.capability ?? null,
+    horizonBucket: context.horizonBucket ?? null,
+    observationKeyHash: context.observationKeyHash ?? null,
+    writerOperation: context.writerOperation ?? null,
     causeConstructorName: structuralValue((values[1] as { constructor?: { name?: unknown } } | undefined)?.constructor?.name),
     causeName: structuralValue(cause.name),
     causeCode: structuralValue(cause.code),
     causeSqlState: structuralValue(cause.sqlState) ?? structuralValue(cause.code),
-    causeConstraint: structuralValue(cause.constraint),
+    causeConstraint: structuralValue(cause.constraint) ?? structuralValue(cause.constraint_name),
     messageClass: messageClass(error, sqlState ?? structuralValue(cause.code)),
   };
 }
 
 function failureSignatureKey(signature: DatabaseFailureSignature): string {
-  return [signature.constructorName, signature.name, signature.code, signature.sqlState, signature.sqlStateClass, signature.constraint, signature.causeConstructorName, signature.causeName, signature.causeCode, signature.causeSqlState, signature.causeConstraint, signature.messageClass].map((value) => value ?? "-").join("|");
+  return [signature.constructorName, signature.name, signature.code, signature.sqlState, signature.sqlStateClass, signature.constraint, signature.table, signature.column, signature.detail, signature.capability, signature.horizonBucket, signature.observationKeyHash, signature.writerOperation, signature.causeConstructorName, signature.causeName, signature.causeCode, signature.causeSqlState, signature.causeConstraint, signature.messageClass].map((value) => value ?? "-").join("|");
+}
+
+export type InvalidObservationReason = "missing_observation_key" | "missing_lifecycle_key" | "invalid_capability" | "missing_aircraft_icao" | "missing_horizon_bucket" | "missing_flight_phase" | "missing_prediction_confidence" | "missing_evidence" | "missing_model_version" | "missing_software_version" | "missing_graduation_mode" | "invalid_position";
+const validCapabilities = new Set<string>(CAPABILITIES);
+export function validateProspectiveObservation(observation: ProspectiveObservation): InvalidObservationReason | null {
+  if (!observation.observationKey) return "missing_observation_key";
+  if (!observation.lifecycleKey) return "missing_lifecycle_key";
+  if (!validCapabilities.has(observation.capability)) return "invalid_capability";
+  if (!observation.aircraftIcao) return "missing_aircraft_icao";
+  if (!observation.horizonBucket) return "missing_horizon_bucket";
+  if (!observation.flightPhase) return "missing_flight_phase";
+  if (!observation.predictionConfidence) return "missing_prediction_confidence";
+  if (!observation.evidenceJson) return "missing_evidence";
+  if (!observation.modelVersion) return "missing_model_version";
+  if (!observation.softwareVersion) return "missing_software_version";
+  if (!observation.graduationMode) return "missing_graduation_mode";
+  if (!finite(observation.latitude) || !finite(observation.longitude)) return "invalid_position";
+  return null;
 }
 
 function toOrmInstant(value: number, field: string): Temporal.Instant {
@@ -221,6 +295,10 @@ function isExpectedDuplicate(error: unknown): boolean {
   return isUniqueViolation && constraint === "predictiveObservation_pkey";
 }
 
+export function isNonRetryableIntegrityFailure(error: unknown): boolean {
+  return databaseFailureSignature(error).sqlStateClass === "integrity_constraint";
+}
+
 function failureClassification(error: unknown): "invalid_timestamp" | "database" {
   return error instanceof TypeError && /timestamp/.test(error.message) ? "invalid_timestamp" : "database";
 }
@@ -237,7 +315,7 @@ export class ProspectiveValidationWriter {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private flushing = false;
   private readonly stats = {
-    captured: 0, persisted: 0, skippedDedupe: 0, dropped: 0, persistenceFailures: 0,
+    captured: 0, persisted: 0, skippedDedupe: 0, dropped: 0, rejectedInvalid: 0, invalidSkipReasons: {} as Record<string, number>, persistenceFailures: 0, integrityRejects: 0,
     queueHighWaterMark: 0, lastSuccessfulWrite: null as string | null,
     lastFailureAt: null as string | null,
     lastFailureClassification: null as ProspectiveDiagnostics["lastFailureClassification"],
@@ -245,13 +323,20 @@ export class ProspectiveValidationWriter {
     lastDatabaseFailure: null as DatabaseFailureSignature | null,
     databaseFailureHistogram: [] as DatabaseFailureHistogramEntry[],
     failuresByCapability: Object.fromEntries(CAPABILITIES.map((capability) => [capability, 0])) as Record<PredictiveCapability, number>,
+    persistenceSuspended: false,
+    suspensionReason: null as ProspectiveDiagnostics["suspensionReason"],
   };
   constructor(private readonly tableOverride?: ObservationTable | null) {}
-  private recordDatabaseFailure(error: unknown, capability: PredictiveCapability): void {
-    const signature = databaseFailureSignature(error);
+  private recordDatabaseFailure(error: unknown, item: ProspectiveObservation): void {
+    const signature = databaseFailureSignature(error, { capability: item.capability, horizonBucket: item.horizonBucket, observationKeyHash: observationKeyHash(item.observationKey), writerOperation: "create" });
     const now = new Date().toISOString();
     this.stats.lastDatabaseFailure = signature;
-    this.stats.failuresByCapability[capability] += 1;
+    this.stats.failuresByCapability[item.capability] += 1;
+    if (isNonRetryableIntegrityFailure(error)) {
+      this.stats.integrityRejects += 1;
+      this.stats.persistenceSuspended = true;
+      this.stats.suspensionReason = signature.sqlState === "23502" ? "integrity_violation_23502" : "integrity_violation";
+    }
     const key = failureSignatureKey(signature);
     const existing = this.stats.databaseFailureHistogram.find((entry) => entry.signature === key);
     if (existing) {
@@ -263,7 +348,17 @@ export class ProspectiveValidationWriter {
   }
   enqueue(observations: readonly ProspectiveObservation[]): void {
     if (!observations.length) return;
+    if (this.stats.persistenceSuspended) {
+      this.stats.dropped += observations.length;
+      return;
+    }
     for (const observation of observations) {
+      const invalidReason = validateProspectiveObservation(observation);
+      if (invalidReason) {
+        this.stats.rejectedInvalid += 1;
+        this.stats.invalidSkipReasons[invalidReason] = (this.stats.invalidSkipReasons[invalidReason] ?? 0) + 1;
+        continue;
+      }
       if (this.pending.has(observation.observationKey)) { this.stats.skippedDedupe += 1; continue; }
       if (this.queue.length >= MAX_QUEUE) { this.stats.dropped += 1; continue; }
       this.pending.add(observation.observationKey); this.queue.push(observation); this.stats.captured += 1;
@@ -288,7 +383,9 @@ export class ProspectiveValidationWriter {
         return;
       }
       let successfulWrites = 0;
-      for (const item of batch) {
+      let integrityFailure = false;
+      for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
+        const item = batch[batchIndex]!;
         try {
           await table.create({
             ...item,
@@ -308,11 +405,26 @@ export class ProspectiveValidationWriter {
           const classification = failureClassification(error);
           this.stats.lastFailureClassification = classification;
           this.stats.lastFailureField = failureField(error);
-          if (classification === "database") this.recordDatabaseFailure(error, item.capability);
+          if (classification === "database") {
+            this.recordDatabaseFailure(error, item);
+            integrityFailure = isNonRetryableIntegrityFailure(error);
+          }
+          // Integrity violations are deterministic and must never enter a
+          // transient retry loop. Stop this batch after the first one and
+          // discard pending prospective work without touching the evaluator.
+          if (integrityFailure) {
+            this.stats.dropped += batch.length - batchIndex - 1;
+            break;
+          }
         }
       }
       if (successfulWrites > 0) this.stats.lastSuccessfulWrite = new Date().toISOString();
     } finally {
+      if (this.stats.persistenceSuspended) {
+        this.stats.dropped += this.queue.length;
+        for (const item of this.queue) this.pending.delete(item.observationKey);
+        this.queue.length = 0;
+      }
       for (const item of batch) this.pending.delete(item.observationKey);
       this.flushing = false;
       if (this.queue.length) this.schedule();
@@ -324,6 +436,7 @@ export class ProspectiveValidationWriter {
       lastDatabaseFailure: this.stats.lastDatabaseFailure ? { ...this.stats.lastDatabaseFailure } : null,
       databaseFailureHistogram: this.stats.databaseFailureHistogram.map((entry) => ({ ...entry })),
       failuresByCapability: { ...this.stats.failuresByCapability },
+      invalidSkipReasons: { ...this.stats.invalidSkipReasons },
       queueDepth: this.queue.length, oldestQueuedAt: this.queue[0] ? new Date(this.queue[0].predictedAt).toISOString() : null,
     };
   }

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
 import { evaluatePredictiveIntelligence } from "@/lib/predictive-intelligence/engine";
-import { databaseFailureSignature, prospectiveObservationFor, ProspectiveValidationWriter, type ObservationTable, type ProspectiveObservation } from "@/lib/predictive-intelligence/prospective";
+import { databaseFailureSignature, isNonRetryableIntegrityFailure, prospectiveObservationFor, ProspectiveValidationWriter, validateProspectiveObservation, type ObservationTable, type ProspectiveObservation } from "@/lib/predictive-intelligence/prospective";
 import type { Aircraft } from "@/lib/aircraft/types";
 import type { PredictiveFlightState } from "@/lib/predictive-intelligence/types";
 import "temporal-polyfill/full/global";
@@ -112,6 +112,51 @@ describe("prospective validation scoring", () => {
     expect(writer.diagnostics()).toMatchObject({ persisted: 0, persistenceFailures: 1, lastSuccessfulWrite: null, lastFailureClassification: "database" });
   });
 
+  it("reproduces the schema mismatch for RUNWAY and TRAJECTORY optional horizon data", async () => {
+    const strictPreFixTable: ObservationTable = { create: async (input) => {
+      if (input.horizonSeconds === null) {
+        throw Object.assign(new Error('null value in column "horizonSeconds" of relation "predictiveObservation" violates not-null constraint'), {
+          sqlState: "23502", table_name: "predictiveObservation", column_name: "horizonSeconds",
+          detail: 'Failing row contains (RUNWAY, null horizon).', constraint_name: "predictiveObservation_horizonSeconds_not_null",
+        });
+      }
+      return input;
+    } };
+    for (const item of [
+      observation({ capability: "RUNWAY", horizonBucket: "first", horizonSeconds: null, predictedLandingAt: null, predictedRunway: "24" }),
+      observation({ capability: "TRAJECTORY", horizonBucket: "metadata", horizonSeconds: null, predictedLandingAt: null, predictedRunway: null }),
+    ]) {
+      const writer = new ProspectiveValidationWriter(strictPreFixTable);
+      writer.enqueue([item]);
+      await writer.flush();
+      expect(writer.diagnostics()).toMatchObject({ persistenceFailures: 1, lastDatabaseFailure: {
+        sqlState: "23502", table: "predictiveObservation", column: "horizonSeconds", messageClass: "not_null_violation",
+        capability: item.capability, horizonBucket: item.horizonBucket, writerOperation: "create",
+      } });
+      expect(writer.diagnostics().lastDatabaseFailure?.detail).toContain("Failing row");
+    }
+
+    const correctedNullableTable: ObservationTable = { create: async (input) => input };
+    const writer = new ProspectiveValidationWriter(correctedNullableTable);
+    writer.enqueue([
+      observation({ capability: "RUNWAY", horizonBucket: "first", horizonSeconds: null, predictedLandingAt: null, predictedRunway: "24" }),
+      observation({ capability: "TRAJECTORY", observationKey: "writer:test:TRAJECTORY:metadata", horizonBucket: "metadata", horizonSeconds: null, predictedLandingAt: null, predictedRunway: null }),
+    ]);
+    await writer.flush();
+    expect(writer.diagnostics()).toMatchObject({ persisted: 2, persistenceFailures: 0 });
+  });
+
+  it("skips invalid lifecycle identity before enqueue with an explicit reason", async () => {
+    const create = vi.fn(async (input: Record<string, unknown>) => input);
+    const writer = new ProspectiveValidationWriter({ create });
+    const invalid = observation({ lifecycleKey: "", observationKey: "writer:test:invalid" });
+    expect(validateProspectiveObservation(invalid)).toBe("missing_lifecycle_key");
+    writer.enqueue([invalid, observation({ observationKey: "writer:test:valid" })]);
+    await writer.flush();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(writer.diagnostics()).toMatchObject({ rejectedInvalid: 1, invalidSkipReasons: { missing_lifecycle_key: 1 }, persisted: 1 });
+  });
+
   it("persists one row for duplicate keys and classifies the duplicate as dedupe", async () => {
     vi.useFakeTimers();
     const rows = new Map<string, Record<string, unknown>>();
@@ -145,6 +190,55 @@ describe("prospective validation scoring", () => {
       expect(diagnostics.databaseFailureHistogram).toHaveLength(1);
       expect(JSON.stringify(diagnostics)).not.toContain(error.message);
     }
+  });
+
+  it("captures PostgreSQL table, column, detail, and safe observation context without payload data", () => {
+    const error = Object.assign(new Error('null value in column "horizonSeconds" of relation "predictiveObservation" violates not-null constraint'), {
+      sqlState: "23502", table_name: "predictiveObservation", column_name: "horizonSeconds",
+      detail: "Failing row contains sensitive aircraft evidence", constraint_name: "predictiveObservation_horizonSeconds_not_null",
+    });
+    const signature = databaseFailureSignature(error, { capability: "TRAJECTORY", horizonBucket: "metadata", observationKeyHash: "0123456789abcdef", writerOperation: "create" });
+    expect(signature).toMatchObject({ sqlState: "23502", table: "predictiveObservation", column: "horizonSeconds", detail: "Failing row contains <redacted>", capability: "TRAJECTORY", horizonBucket: "metadata", observationKeyHash: "0123456789abcdef", writerOperation: "create" });
+    expect(JSON.stringify(signature)).not.toContain("aircraft evidence");
+
+    const wrapped = Object.assign(new Error("persistence failed"), {
+      code: "P2025",
+      cause: Object.assign(new Error("driver rejected write"), {
+        code: "23502", schema: "public", table_name: "predictiveObservation", column_name: "someColumn",
+        detail: "Failing row contains (sensitive value)",
+      }),
+    });
+    expect(databaseFailureSignature(wrapped)).toMatchObject({ sqlState: "23502", table: "predictiveObservation", column: "someColumn", detail: "Failing row contains <redacted>" });
+  });
+
+  it("suspends prospective persistence after the first integrity violation", async () => {
+    const create = vi.fn(async (input: Record<string, unknown>) => {
+      if (create.mock.calls.length === 1) {
+        throw Object.assign(new Error("null value in column violates not-null constraint"), {
+          code: "23502", schema: "public", table: "predictiveObservation", column: "someColumn",
+          detail: "Failing row contains (sensitive value)",
+        });
+      }
+      return input;
+    });
+    const writer = new ProspectiveValidationWriter({ create });
+    writer.enqueue([observation(), observation({ observationKey: "writer:test:ETA:two" })]);
+    await writer.flush();
+    writer.enqueue([observation({ observationKey: "writer:test:ETA:three" })]);
+    await writer.flush();
+
+    expect(isNonRetryableIntegrityFailure(Object.assign(new Error("not null"), { code: "23502" }))).toBe(true);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(writer.diagnostics()).toMatchObject({
+      persisted: 0,
+      persistenceFailures: 1,
+      integrityRejects: 1,
+      persistenceSuspended: true,
+      suspensionReason: "integrity_violation_23502",
+      queueDepth: 0,
+      dropped: 2,
+      lastDatabaseFailure: { sqlState: "23502", table: "predictiveObservation", column: "someColumn" },
+    });
   });
 
   it("bounds cause traversal and classifies unknown wrappers without raw details", () => {
