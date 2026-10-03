@@ -1337,6 +1337,7 @@ export const cs = {
     queueDepth: "Hloubka fronty",
     queueHighWaterMark: "Maximum fronty",
     prospectivePersistenceFailures: "Chyby persistence",
+    prospectiveLastFailureField: "Pole poslední chyby",
     validationReadiness: "Readiness",
     aircraftWeatherAccepted: "Nedávno přijatá pozorování",
     aircraftWeatherPersisted: "Uložená pozorování",

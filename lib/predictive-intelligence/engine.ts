@@ -15,6 +15,11 @@ const finite = (value: number | null | undefined): value is number => typeof val
 const confidence = (score: number): PredictionConfidence => score >= 0.78 ? "HIGH" : score >= 0.52 ? "MEDIUM" : score > 0 ? "LOW" : "UNKNOWN";
 const phase = (value: FlightPhase): string => value === "FINAL" || value === "LANDING" ? "APPROACH" : value;
 const isHolding = (value: FlightPhase): boolean => String(value) === "HOLDING" || String(value) === "HOLD";
+function epochMilliseconds(value: number, field: string): number {
+  const normalized = Math.round(value);
+  if (!Number.isSafeInteger(normalized)) throw new RangeError(`${field} must be a safe epoch-millisecond integer`);
+  return normalized;
+}
 function validSample(sample: PredictionSample, now: number): boolean {
   return sample.observedAt <= now && now - sample.observedAt <= MAX_SAMPLE_AGE_MS && Math.abs(sample.lat) <= 90 && Math.abs(sample.lon) <= 180;
 }
@@ -49,7 +54,7 @@ function eta(input: PredictiveInput, valid: readonly PredictionSample[]): Predic
   let score = progress.rateKt !== null ? 0.76 : 0.48;
   if (isHolding(input.flightState.phase) || input.flightState.phase === "GO_AROUND") score -= 0.2;
   if (valid.at(-1)!.observedAt - valid[0]!.observedAt >= 5 * 60_000) score += 0.08;
-  return { estimatedArrivalAt: input.now + seconds * 1000, confidence: confidence(score), evidence: [
+  return { estimatedArrivalAt: epochMilliseconds(input.now + seconds * 1000, "estimatedArrivalAt"), confidence: confidence(score), evidence: [
     { key: "distanceRemainingNm", value: Math.round(distance * 10) / 10 }, { key: "effectiveSpeedKt", value: Math.round(speed) },
     { key: "phase", value: phase(input.flightState.phase) }, ...(progress.durationSec ? [{ key: "progressWindowSec", value: Math.round(progress.durationSec) }] : []),
   ] };
@@ -96,6 +101,6 @@ function trajectory(input: PredictiveInput, valid: readonly PredictionSample[]):
 export function evaluatePredictiveIntelligence(input: PredictiveInput): { prediction: PredictiveFlightState; durationMs: number } {
   const started = performance.now();
   const valid = [...input.recentSamples].filter((sample) => validSample(sample, input.now)).sort((a, b) => a.observedAt - b.observedAt).slice(-24);
-  const prediction = { modelVersion: PREDICTIVE_INTELLIGENCE_VERSION, evaluatedAt: input.now, eta: eta(input, valid), runway: runway(input, valid), trajectory: trajectory(input, valid) };
+  const prediction = { modelVersion: PREDICTIVE_INTELLIGENCE_VERSION, evaluatedAt: epochMilliseconds(input.now, "evaluatedAt"), eta: eta(input, valid), runway: runway(input, valid), trajectory: trajectory(input, valid) };
   return { prediction, durationMs: Math.round((performance.now() - started) * 100) / 100 };
 }

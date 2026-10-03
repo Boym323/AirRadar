@@ -91,7 +91,7 @@ export function prospectiveObservationFor(
   if (eta.estimatedArrivalAt !== null) {
     const horizonSeconds = Math.max(0, (eta.estimatedArrivalAt - predictedAt) / 1000);
     result.push(build("ETA", etaBucket(horizonSeconds), {
-      horizonSeconds, predictedLandingAt: eta.estimatedArrivalAt,
+      horizonSeconds: Math.round(horizonSeconds), predictedLandingAt: eta.estimatedArrivalAt,
       distanceRemainingNm: Number(eta.evidence.find((item) => item.key === "distanceRemainingNm")?.value) || null,
       predictionConfidence: eta.confidence, etaConfidence: eta.confidence,
       evidenceJson: JSON.stringify(eta.evidence.slice(0, 12)),
@@ -116,12 +116,13 @@ export interface ProspectiveDiagnostics {
   enabled: boolean; captured: number; persisted: number; skippedDedupe: number; dropped: number; persistenceFailures: number;
   queueDepth: number; queueHighWaterMark: number; oldestQueuedAt: string | null; lastSuccessfulWrite: string | null;
   lastFailureAt: string | null; lastFailureClassification: "invalid_timestamp" | "database" | "unconfigured" | null;
+  lastFailureField: "predictedAt" | "predictedLandingAt" | "createdAt" | null;
 }
 
 export type ObservationTable = { create: (input: Record<string, unknown>) => Promise<unknown> };
 
 function toOrmInstant(value: number, field: string): Temporal.Instant {
-  if (!Number.isFinite(value)) throw new TypeError(`${field} must be a finite timestamp`);
+  if (!Number.isSafeInteger(value)) throw new TypeError(`${field} must be a safe integer timestamp`);
   try {
     return Temporal.Instant.fromEpochMilliseconds(value);
   } catch {
@@ -145,6 +146,12 @@ function failureClassification(error: unknown): "invalid_timestamp" | "database"
   return error instanceof TypeError && /timestamp/.test(error.message) ? "invalid_timestamp" : "database";
 }
 
+function failureField(error: unknown): ProspectiveDiagnostics["lastFailureField"] {
+  if (!(error instanceof TypeError)) return null;
+  const match = /^(predictedAt|predictedLandingAt|createdAt)\b/.exec(error.message);
+  return (match?.[1] as ProspectiveDiagnostics["lastFailureField"]) ?? null;
+}
+
 export class ProspectiveValidationWriter {
   private readonly queue: ProspectiveObservation[] = [];
   private readonly pending = new Set<string>();
@@ -155,6 +162,7 @@ export class ProspectiveValidationWriter {
     queueHighWaterMark: 0, lastSuccessfulWrite: null as string | null,
     lastFailureAt: null as string | null,
     lastFailureClassification: null as ProspectiveDiagnostics["lastFailureClassification"],
+    lastFailureField: null as ProspectiveDiagnostics["lastFailureField"],
   };
   constructor(private readonly tableOverride?: ObservationTable | null) {}
   enqueue(observations: readonly ProspectiveObservation[]): void {
@@ -180,6 +188,7 @@ export class ProspectiveValidationWriter {
         this.stats.persistenceFailures += batch.length;
         this.stats.lastFailureAt = new Date().toISOString();
         this.stats.lastFailureClassification = "unconfigured";
+        this.stats.lastFailureField = null;
         return;
       }
       let successfulWrites = 0;
@@ -201,6 +210,7 @@ export class ProspectiveValidationWriter {
           this.stats.persistenceFailures += 1;
           this.stats.lastFailureAt = new Date().toISOString();
           this.stats.lastFailureClassification = failureClassification(error);
+          this.stats.lastFailureField = failureField(error);
         }
       }
       if (successfulWrites > 0) this.stats.lastSuccessfulWrite = new Date().toISOString();

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
+import { evaluatePredictiveIntelligence } from "@/lib/predictive-intelligence/engine";
 import { prospectiveObservationFor, ProspectiveValidationWriter, type ObservationTable, type ProspectiveObservation } from "@/lib/predictive-intelligence/prospective";
 import type { Aircraft } from "@/lib/aircraft/types";
 import type { PredictiveFlightState } from "@/lib/predictive-intelligence/types";
@@ -54,12 +55,52 @@ describe("prospective validation scoring", () => {
     expect(writer.diagnostics()).toMatchObject({ persisted: 1, persistenceFailures: 0, lastSuccessfulWrite: expect.any(String) });
   });
 
+  it("persists ETA produced by the real engine with canonical integer timestamps", async () => {
+    const now = Date.parse("2026-10-03T06:00:00.123Z");
+    const airport = { icao: "LKPR", lat: 50.1008, lon: 14.2632 };
+    const samples = [
+      { observedAt: now - 180_000, lat: 50.10, lon: 13.50, altitudeFt: 20_000, groundSpeedKt: 300, verticalRateFpm: -500, trackDeg: 90 },
+      { observedAt: now - 60_000, lat: 50.10, lon: 13.80, altitudeFt: 18_000, groundSpeedKt: 300, verticalRateFpm: -500, trackDeg: 90 },
+    ];
+    const prediction = evaluatePredictiveIntelligence({
+      flightState: { aircraftIcao: "ABC123", timestamp: now, phase: "CRUISE", sample: samples[1]!, destination: "LKPR", destinationStatus: "KNOWN" },
+      recentSamples: samples, destinationAirport: airport, now,
+    }).prediction;
+    expect(Number.isSafeInteger(prediction.evaluatedAt)).toBe(true);
+    expect(prediction.eta.estimatedArrivalAt).not.toBeNull();
+    expect(Number.isSafeInteger(prediction.eta.estimatedArrivalAt)).toBe(true);
+    expect(prediction.eta.estimatedArrivalAt).toBeGreaterThanOrEqual(now);
+
+    const aircraft = { icaoHex: "ABC123", callsign: "TEST1", lat: 50.10, lon: 13.80, altitude: 18_000, groundSpeed: 300, verticalRate: -500, track: 90, onGround: false, enrichment: { route: { destination: "LKPR" } } } as unknown as Aircraft;
+    const observations = prospectiveObservationFor(aircraft, prediction, "ABC123:flight-real-eta", null);
+    const rows = new Map<string, Record<string, unknown>>();
+    const writer = new ProspectiveValidationWriter(fakeTable(rows));
+    writer.enqueue(observations.filter((item) => item.capability === "ETA"));
+    await writer.flush();
+    expect(rows.get(observations[0]!.observationKey)?.capability).toBe("ETA");
+    expect(writer.diagnostics()).toMatchObject({ persisted: 1, persistenceFailures: 0 });
+  });
+
   it("records invalid timestamps as failures without false success", async () => {
     vi.useFakeTimers();
     const writer = new ProspectiveValidationWriter(fakeTable());
     writer.enqueue([observation({ predictedAt: Number.NaN })]);
     await writer.flush();
-    expect(writer.diagnostics()).toMatchObject({ persisted: 0, persistenceFailures: 1, lastSuccessfulWrite: null, lastFailureClassification: "invalid_timestamp" });
+    expect(writer.diagnostics()).toMatchObject({ persisted: 0, persistenceFailures: 1, lastSuccessfulWrite: null, lastFailureClassification: "invalid_timestamp", lastFailureField: "predictedAt" });
+  });
+
+  it.each([
+    ["predictedAt", { predictedAt: Date.parse("2026-10-03T06:00:00Z") + 0.5 }],
+    ["predictedLandingAt", { predictedLandingAt: Date.parse("2026-10-03T06:05:00Z") + 0.5 }],
+    ["predictedAt", { predictedAt: Number.POSITIVE_INFINITY }],
+    ["predictedLandingAt", { predictedLandingAt: Number.NaN }],
+    ["predictedAt", { predictedAt: Number.MAX_SAFE_INTEGER + 1 }],
+    ["predictedLandingAt", { predictedLandingAt: 8_640_000_000_000_001 }],
+  ] as const)("rejects invalid %s without false success", async (field, overrides) => {
+    const writer = new ProspectiveValidationWriter(fakeTable());
+    writer.enqueue([observation(overrides)]);
+    await writer.flush();
+    expect(writer.diagnostics()).toMatchObject({ persisted: 0, persistenceFailures: 1, lastFailureClassification: "invalid_timestamp", lastFailureField: field });
   });
 
   it("records primary persistence errors and isolates them from the caller", async () => {
