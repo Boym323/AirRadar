@@ -21,6 +21,7 @@ const aircraftTrafficListSource = readFileSync(new URL("../components/aircraft-t
 const radarTrafficBrowserSource = readFileSync(new URL("../components/radar/radar-traffic-browser.tsx", import.meta.url), "utf8");
 const radarDrawerDetailsSource = readFileSync(new URL("../components/radar/radar-drawer-details.tsx", import.meta.url), "utf8");
 const radarMapLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
+const radarOperationsCenterSource = readFileSync(new URL("../components/radar/radar-operations-center.tsx", import.meta.url), "utf8");
 const radarDrawerInteractionsSource = readFileSync(new URL("../components/radar/use-radar-drawer-interactions.ts", import.meta.url), "utf8");
 const radarLiveAircraftSource = readFileSync(new URL("../components/radar/use-radar-live-aircraft.ts", import.meta.url), "utf8");
 const radarAtcMapContextSource = readFileSync(new URL("../components/radar/use-radar-atc-map-context.ts", import.meta.url), "utf8");
@@ -239,6 +240,14 @@ describe("radar UI polish helpers", () => {
     expect(radarDrawerDetailsSource).toContain("<AircraftRadarQuickDetail");
     expect(radarMapLayerMenuSource).toContain('data-testid="map-layer-atc"');
     expect(radarDrawerInteractionsSource).toContain('window.addEventListener("keydown", handleKeyboardShortcut, true)');
+  });
+
+  it("keeps Operations Center in a focused read-only intelligence boundary", () => {
+    expect(appSource).toContain("<RadarOperationsCenter />");
+    expect(radarOperationsCenterSource).toContain("useIntelligenceStream()");
+    expect(radarOperationsCenterSource).not.toContain("useAircraftStream");
+    expect(radarOperationsCenterSource).not.toContain("maplibre");
+    expect(radarOperationsCenterSource).toContain('href={\`/aircraft/\${event.icaoHex}\`}');
   });
 
   it("keeps performance diagnostics opt-in and off the default hot path", () => {
