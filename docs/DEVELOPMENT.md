@@ -266,6 +266,12 @@ full-gate pass is stale after source, test, package, build, migration, or
 deployment changes. Report exactly which commands ran; never imply a skipped
 gate passed.
 
+Docs-only commits (Markdown documentation, `README.md`, and the explicit
+generated metadata allowlist) do not trigger production deployment. Runtime,
+release, schema, and configuration changes do; mixed commits deploy, and
+unknown paths fail safe to deploy. Machine-readable documentation such as
+`docs/features.registry.json` is therefore not docs-only.
+
 `test:production` starts the completed build in an isolated demo-mode child
 process and checks HTTP health, `/api/version`, homepage accessibility basics,
 SSE connect/snapshot/disconnect, static payload caching, watchlist mutation

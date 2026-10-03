@@ -82,6 +82,7 @@
     "changelog:check": "node scripts/changelog.mjs check",
     "metrics:code": "node scripts/code-metrics.mjs",
     "metrics:code:backfill": "node scripts/code-metrics.mjs --backfill",
+    "release-scope": "node scripts/release-scope.mjs",
     "features:generate": "node scripts/features-registry.mjs generate",
     "features:check": "node scripts/features-registry.mjs check",
     "docs:check": "node scripts/docs-localization.mjs",

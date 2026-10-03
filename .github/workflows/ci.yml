@@ -135,20 +135,10 @@ jobs:
             exit 0
           fi
 
-          mapfile -t changed_files < <(git diff --name-only "${parent}" "${GITHUB_SHA}")
-          deploy=false
-          for file in "${changed_files[@]}"; do
-            case "${file}" in
-              CHANGELOG.md|docs/metrics/code-history.json|docs/metrics/code-growth.svg)
-                ;;
-              *)
-                deploy=true
-                break
-                ;;
-            esac
-          done
+          scope_json="$(git diff --name-only -z "${parent}" "${GITHUB_SHA}" | node scripts/release-scope.mjs --stdin0)"
+          deploy="$(RELEASE_SCOPE_JSON="${scope_json}" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
           echo "deploy=${deploy}" >> "${GITHUB_OUTPUT}"
-          echo "Release required: ${deploy}"
+          echo "Release scope: ${scope_json}"
 
   deploy:
     name: Deploy production

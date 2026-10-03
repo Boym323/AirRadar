@@ -126,9 +126,7 @@ describe("code metrics", () => {
     );
 
     expect(metricsWorkflow).toContain('- "CHANGELOG.md"');
-    expect(ciWorkflow).toContain(
-      "CHANGELOG.md|docs/metrics/code-history.json|docs/metrics/code-growth.svg",
-    );
+    expect(ciWorkflow).toContain("node scripts/release-scope.mjs --stdin0");
   });
 
   it("scans a Git commit with the same metric as the working tree", async () => {

@@ -267,6 +267,13 @@ Předchozí úspěšný průchod všech bran je po změně zdrojového kódu, te
 balíčků, buildu, migrací nebo nasazení zastaralý. Vždy přesně uveďte, které
 příkazy byly spuštěny; nikdy netvrďte, že přeskočená kontrola prošla.
 
+Commity pouze s dokumentací (Markdown dokumentace, `README.md` a výslovně
+uvedené generované metadatové soubory) nespouštějí produkční nasazení. Změny
+runtime, release, schématu nebo konfigurace ano; smíšené commity se nasazují a
+neznámé cesty jsou z bezpečnostních důvodů klasifikovány jako deploy.
+Strojově čitelné soubory, například `docs/features.registry.json`, proto mezi
+docs-only nepatří.
+
 `test:production` spustí hotový build v izolovaném podprocesu v demo režimu a
 ověřuje HTTP health, `/api/version`, základní přístupnost domovské stránky,
 připojení/snapshot/odpojení SSE, cache statického payloadu, autorizaci změn

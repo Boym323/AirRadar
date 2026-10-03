@@ -53,9 +53,7 @@ describe("repository metadata automation", () => {
   });
 
   it("keeps generated metadata merges out of production deployment", () => {
-    expect(ciWorkflow).toContain(
-      "CHANGELOG.md|docs/metrics/code-history.json|docs/metrics/code-growth.svg",
-    );
+    expect(ciWorkflow).toContain("node scripts/release-scope.mjs --stdin0");
     expect(ciWorkflow).not.toContain("\n  sync-changelog:\n");
   });
 });
