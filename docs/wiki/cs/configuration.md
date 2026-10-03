@@ -12,3 +12,7 @@ RECEIVER_LON=14.4378
 Volitelné providery jako ADSB.lol a OGN jsou ve výchozím nastavení vypnuté a
 musí být explicitně povoleny. Přesné souřadnice přijímače nezveřejňujte. Viz
 [zdroje dat](../../DATA-SOURCES.md).
+
+Pravidla izolované vývojové databáze a `.env.dev.local` najdete v [sekci
+Vývojová databáze](../../DEVELOPMENT.md#vývojová-databáze) kanonického průvodce
+vývojem.

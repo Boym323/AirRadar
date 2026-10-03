@@ -67,11 +67,23 @@ Quality thresholds are advisory and no capability leaves `SHADOW`.
 
 ## Rollout
 
-1. Stage 0: migrate/verify in development with the switch off.
-2. Stage 1: enable capture for a canary and check queue, failures and growth.
+1. Stage 0: refresh `airradar_dev` from a read-only PROD snapshot, apply
+   `20261003T0515_predictive_prospective_observations_v1`, verify
+   `current_database() = airradar_dev`, and run DB integration checks with the
+   switch off. The migration is DEV-first; it remains pending in PROD until a
+   separately approved Stage 0 production rollout.
+2. Stage 1: after DEV migration, DB integration, and runtime safety checks pass,
+   enable capture for a DEV canary and check queue, failures and growth.
 3. Stage 2: observe 24 hours and audit lifecycle isolation.
 4. Stage 3: produce the first seven-day evidence report.
 5. Stage 4: review 30-day calibration and readiness evidence.
 
+The DEV canary uses
+`AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED=true`. Return it to
+`false` after the canary unless DEV capture is intentionally retained. With
+the switch `false`, prospective persistence writes are disabled, the predictive
+engine remains in `SHADOW`, and the public SSE snapshot is unchanged. Applying
+the schema does not automatically graduate the feature or expose it publicly.
 No stage deploys, restarts production, writes production data during
-implementation, or changes graduation policy.
+implementation, or changes graduation policy. Synthetic observation rows and
+validation reports belong only to DEV/test databases during this workflow.

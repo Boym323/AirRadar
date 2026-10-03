@@ -12,3 +12,7 @@ RECEIVER_LON=14.4378
 Optional providers such as ADSB.lol and OGN are disabled by default and must
 be enabled explicitly. Keep exact receiver coordinates out of public material.
 See [data sources](../../DATA-SOURCES.md).
+
+For the isolated development database and `.env.dev.local` rules, see the
+[Development database](../../DEVELOPMENT.md#development-database) section of
+the canonical development guide.

@@ -13,6 +13,200 @@ Zdrojem pravdy je `prisma/contract.prisma`; verzované migrace jsou v
 Uživatelské texty udržujte v `lib/i18n/` a používejte existující překladové
 klíče.
 
+## Vývojová databáze
+
+Izolovaná vývojová databáze má tyto kanonické identifikátory:
+
+```text
+Databáze: airradar_dev
+Role/uživatel: airradar_dev
+Schéma: public
+Env soubor: .env.dev.local
+```
+
+Vývoj používá samostatný soubor `.env.dev.local`. Prisma i vývojové runtime
+procesy nadále používají standardní proměnnou `DATABASE_URL`; oddělení DEV/PROD
+zajišťuje env soubor, nikoli jiný název proměnné. Lokální soubor vytvořte pouze
+s placeholdery:
+
+```env
+# Development database only
+DATABASE_URL="postgresql://airradar_dev:<DEV_PASSWORD>@<DB_HOST>:5432/airradar_dev"
+AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED=false
+```
+
+`.env.dev.local` nikdy necommitujte, nevkládejte do něj produkční
+`DATABASE_URL` a neukládejte jeho heslo do dokumentace. Před každou DEV
+migrací, testovacím zápisem nebo canary musí `DATABASE_URL` mířit na
+`airradar_dev`. Soubor chraňte a ověřte pravidla Gitu:
+
+```bash
+chmod 600 .env.dev.local
+git check-ignore .env.dev.local
+```
+
+Tento repozitář již ignoruje `.env*`. Pokud lokální checkout ignoraci nemá,
+použijte lokální exclude místo změny sdíleného pravidla:
+
+```bash
+echo ".env.dev.local" >> .git/info/exclude
+```
+
+Před použitím Prismy nebo integračními zápisy ověřte skutečný cíl:
+
+```bash
+set -a
+source .env.dev.local
+set +a
+
+psql "$DATABASE_URL" -c "SELECT current_database(), current_user, current_schema();"
+```
+
+Očekávaný výsledek je `airradar_dev | airradar_dev | public`. Pokud
+`current_database()` není `airradar_dev`, zastavte se: DEV migrace ani
+testovací zápisy se nesmí spustit.
+
+### Refresh z PROD do DEV
+
+Produkce je při refreshi pouze read-only zdroj. Logický snapshot ve vlastním
+formátu vytvořte pomocí produkčního read-only připojení dodaného operátorem;
+jeho URL ani přihlašovací údaje do tohoto dokumentu nepatří. Snapshot se potom
+obnoví pouze do izolované DEV databáze:
+
+```bash
+PROD_DB="<production-db-name>"
+DEV_DB="airradar_dev"
+DUMP="/var/backups/airradar-dev-bootstrap/$(date +%Y%m%dT%H%M%S)/airradar-prod-snapshot.dump"
+
+mkdir -p "$(dirname "$DUMP")"
+pg_dump \
+  --format=custom \
+  --no-owner \
+  --no-acl \
+  --file="$DUMP" \
+  "$PROD_DB"
+pg_restore --list "$DUMP" >/dev/null
+```
+
+Před jakoukoli destruktivní operací DEV vyžadujte guard názvu databáze:
+
+```bash
+[ "$PROD_DB" != "$DEV_DB" ] || {
+  echo "STOP: PROD and DEV database names are identical"
+  exit 1
+}
+
+dropdb --if-exists --force "$DEV_DB"
+createdb \
+  --owner=airradar_dev \
+  --encoding=UTF8 \
+  --template=template0 \
+  "$DEV_DB"
+```
+
+Heslo nevkládejte do příkazů. Pro autentizaci použijte `.pgpass` nebo schválený
+env/credential mechanismus:
+
+```bash
+pg_restore \
+  --dbname="$DEV_DB" \
+  --username=airradar_dev \
+  --no-owner \
+  --no-acl \
+  "$DUMP"
+```
+
+Při TCP připojení uveďte `<DB_HOST>` a DEV databázi explicitně:
+
+```bash
+pg_restore \
+  --host=<DB_HOST> \
+  --port=5432 \
+  --username=airradar_dev \
+  --dbname=airradar_dev \
+  --no-owner \
+  --no-acl \
+  "$DUMP"
+```
+
+Produkční databázi nikdy nedropujte, kvůli DEV refreshi neukončujte produkční
+session a proti produkci nepoužívejte `TRUNCATE`. Refresh z DEV databáze nedělá
+trvalý archive stagingové historie.
+
+Po obnově znovu načtěte `.env.dev.local` a ověřte cíl a schéma:
+
+```bash
+set -a
+source .env.dev.local
+set +a
+
+psql "$DATABASE_URL" -c "SELECT current_database(), current_user;"
+psql "$DATABASE_URL" -c '\dt'
+psql "$DATABASE_URL" -c \
+'SELECT migration_name, finished_at FROM "_prisma_migrations" ORDER BY finished_at DESC LIMIT 10;'
+```
+
+Po refreshi lze provést základní sanity counts pro `Flight` a
+`FlightPosition`; byte-identická velikost databáze není požadavek.
+
+### DEV migrace a lifecycle
+
+Pending migrace aplikujte až po výše uvedené kontrole připojení:
+
+```bash
+set -a
+source .env.dev.local
+set +a
+
+npx prisma migrate status
+psql "$DATABASE_URL" -Atc "SELECT current_database();"
+# Musí vypsat: airradar_dev
+npx prisma migrate deploy
+npx prisma migrate status
+```
+
+Doporučený lifecycle je:
+
+```text
+PROD snapshot → restore do airradar_dev → pending DEV migrace
+→ DB integrace → DEV canary → validační report → feature OFF → commit / CI
+```
+
+`airradar_dev` slouží pro validaci migrací, DB integrační testy, predictive
+prospective canary, validaci reportů, kontroly lifecycle/deduplikace,
+porovnání výkonu OFF versus ON a bezpečné experimenty se syntetickými řádky.
+Syntetické observation rows patří pouze do DEV/test databází.
+
+### Bezpečnost produkční databáze
+
+Role `airradar_dev` nesmí mít přístup k produkční databázi. Produkční
+administrátor má oddělení vynutit například takto:
+
+```sql
+REVOKE CONNECT ON DATABASE <PROD_DB> FROM airradar_dev;
+```
+
+Produkci používejte pouze jako read-only zdroj dumpu; integrační testy proti ní
+nikdy nespouštějte. Produkční cleanup je samostatná, výslovně potvrzená
+operace omezená na jednoznačně testovací data. Role DEV se nesmí použít pro
+připojení k produkčnímu dumpu.
+
+Pro Predictive Prospective Validation V2 aplikujte po obnovení PROD snapshotu
+migraci `20261003T0515_predictive_prospective_observations_v1` do DEV a switch
+ponechte OFF. Stage 0 je ověření DEV schématu; aplikace schématu neznamená
+graduation ani veřejné vystavení feature. DEV canary zapněte až po PASS DEV
+migrace, PASS DB integrace a PASS runtime safety checks:
+
+```env
+AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED=true
+```
+
+Po canary vraťte switch na `false`, pokud není záměrně ponecháno DEV capture.
+Při `false` nevznikají prospective persistence writes, prediktivní engine
+zůstává v režimu SHADOW a veřejný SSE snapshot se nemění. Viz
+[workflow Predictive Prospective Validation V2](PREDICTIVE-PROSPECTIVE-VALIDATION-V2.md)
+pro staged postup.
+
 ## Smyčka zpětné vazby a kontrolní brány
 
 Pro úzce zaměřenou změnu spusťte vybrané soubory:

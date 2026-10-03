@@ -67,10 +67,23 @@ této fázi nemění.
 
 ## Rollout
 
-1. Stage 0: ověření v developmentu se switchem OFF.
-2. Stage 1: canary capture a kontrola fronty, chyb a růstu databáze.
+1. Stage 0: obnovit `airradar_dev` z read-only PROD snapshotu, aplikovat
+   `20261003T0515_predictive_prospective_observations_v1`, ověřit
+   `current_database() = airradar_dev` a spustit DB integrační kontroly se
+   switchem OFF. Migrace je nejprve DEV; v PROD zůstává pending až do
+   samostatně schváleného produkčního Stage 0.
+2. Stage 1: po PASS DEV migrace, DB integrace a runtime safety checks zapnout
+   capture pro DEV canary a kontrolovat frontu, chyby a růst databáze.
 3. Stage 2: 24h health kontrola a audit izolace lifecycle.
 4. Stage 3: první sedmidenní evidence report.
 5. Stage 4: třicetidenní kalibrace a audit readiness.
 
-Žádná stage sama neznamená PUBLIC graduation ani automatickou změnu policy.
+DEV canary používá
+`AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED=true`. Po canary vraťte
+hodnotu na `false`, pokud není záměrně ponecháno DEV capture. Při `false` jsou
+prospective persistence writes vypnuté, prediktivní engine zůstává v režimu
+`SHADOW` a veřejný SSE snapshot se nemění. Aplikace schématu sama neznamená
+graduation ani veřejné vystavení feature. Žádná stage nenasazuje, nerestartuje
+produkci, během implementace do ní nezapisuje ani nemění graduation policy.
+Syntetické observation rows a validační reporty v tomto workflow patří pouze do
+DEV/test databází.

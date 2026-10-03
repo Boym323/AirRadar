@@ -11,6 +11,201 @@ The source of truth is `prisma/contract.prisma`; checked-in migrations are in
 `migrations/app/`. Generated Prisma/build artifacts are disposable. Keep
 user-facing text in `lib/i18n/` and use existing translation keys.
 
+## Development database
+
+The isolated development database is canonicalized as follows:
+
+```text
+Database: airradar_dev
+Role/user: airradar_dev
+Schema: public
+Environment file: .env.dev.local
+```
+
+Development uses the separate `.env.dev.local` file. Prisma and development
+runtime processes continue to use the standard `DATABASE_URL` variable; the
+DEV/PROD separation is provided by the environment file, not by a second
+variable name. Create it locally with placeholders only:
+
+```env
+# Development database only
+DATABASE_URL="postgresql://airradar_dev:<DEV_PASSWORD>@<DB_HOST>:5432/airradar_dev"
+AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED=false
+```
+
+Never commit `.env.dev.local`, put a production `DATABASE_URL` in it, or store
+its password in documentation. `DATABASE_URL` must point to `airradar_dev`
+before any DEV migration, test write, or canary. Protect the file and confirm
+Git's ignore rules:
+
+```bash
+chmod 600 .env.dev.local
+git check-ignore .env.dev.local
+```
+
+This repository already ignores `.env*`. If the local checkout does not, use a
+local exclude rather than changing the shared ignore policy:
+
+```bash
+echo ".env.dev.local" >> .git/info/exclude
+```
+
+Before using Prisma or running integration writes, verify the actual target:
+
+```bash
+set -a
+source .env.dev.local
+set +a
+
+psql "$DATABASE_URL" -c "SELECT current_database(), current_user, current_schema();"
+```
+
+The expected result is `airradar_dev | airradar_dev | public`. If
+`current_database()` is not `airradar_dev`, stop: DEV migrations and test
+writes must not run.
+
+### Refreshing DEV from PROD
+
+Production is a read-only source for a DEV refresh. Create a logical custom
+format snapshot with a production read-only connection supplied by the
+operator; do not put its URL or credentials in this document. The snapshot is
+then restored only into the isolated DEV database:
+
+```bash
+PROD_DB="<production-db-name>"
+DEV_DB="airradar_dev"
+DUMP="/var/backups/airradar-dev-bootstrap/$(date +%Y%m%dT%H%M%S)/airradar-prod-snapshot.dump"
+
+mkdir -p "$(dirname "$DUMP")"
+pg_dump \
+  --format=custom \
+  --no-owner \
+  --no-acl \
+  --file="$DUMP" \
+  "$PROD_DB"
+pg_restore --list "$DUMP" >/dev/null
+```
+
+Before any destructive DEV operation, require the database-name guard:
+
+```bash
+[ "$PROD_DB" != "$DEV_DB" ] || {
+  echo "STOP: PROD and DEV database names are identical"
+  exit 1
+}
+
+dropdb --if-exists --force "$DEV_DB"
+createdb \
+  --owner=airradar_dev \
+  --encoding=UTF8 \
+  --template=template0 \
+  "$DEV_DB"
+```
+
+Restore without embedding a password in the command. Use `.pgpass` or the
+approved environment/credential mechanism for authentication:
+
+```bash
+pg_restore \
+  --dbname="$DEV_DB" \
+  --username=airradar_dev \
+  --no-owner \
+  --no-acl \
+  "$DUMP"
+```
+
+For a TCP connection, specify `<DB_HOST>` and the DEV database explicitly:
+
+```bash
+pg_restore \
+  --host=<DB_HOST> \
+  --port=5432 \
+  --username=airradar_dev \
+  --dbname=airradar_dev \
+  --no-owner \
+  --no-acl \
+  "$DUMP"
+```
+
+Never drop the production database, terminate production sessions for a DEV
+refresh, or use `TRUNCATE` against production. A refresh does not make the
+DEV database a permanent staging-history archive.
+
+After restore, load `.env.dev.local` again and verify the target and schema:
+
+```bash
+set -a
+source .env.dev.local
+set +a
+
+psql "$DATABASE_URL" -c "SELECT current_database(), current_user;"
+psql "$DATABASE_URL" -c '\dt'
+psql "$DATABASE_URL" -c \
+'SELECT migration_name, finished_at FROM "_prisma_migrations" ORDER BY finished_at DESC LIMIT 10;'
+```
+
+Optional sanity counts for `Flight` and `FlightPosition` are useful after a
+restore; byte-identical database size is not a requirement.
+
+### DEV migrations and lifecycle
+
+Apply pending migrations only after the connection check above:
+
+```bash
+set -a
+source .env.dev.local
+set +a
+
+npx prisma migrate status
+psql "$DATABASE_URL" -Atc "SELECT current_database();"
+# The command above must print: airradar_dev
+npx prisma migrate deploy
+npx prisma migrate status
+```
+
+The recommended lifecycle is:
+
+```text
+PROD snapshot → restore to airradar_dev → apply pending DEV migrations
+→ DB integration → DEV canary → validation report → feature OFF → commit / CI
+```
+
+`airradar_dev` is for migration validation, DB integration tests, predictive
+prospective canaries, report validation, lifecycle/dedupe checks, OFF-versus-ON
+performance comparisons, and safe experiments with synthetic rows. Synthetic
+observation rows belong only in DEV/test databases.
+
+### Production database safety
+
+The `airradar_dev` role must not have access to the production database. A
+production administrator should enforce the separation, for example:
+
+```sql
+REVOKE CONNECT ON DATABASE <PROD_DB> FROM airradar_dev;
+```
+
+Use production only as a read-only dump source; never run integration tests
+against it. Production cleanup is a separate, explicitly confirmed operation
+limited to unambiguous test data. The DEV role must not be used for the
+production dump connection.
+
+For Predictive Prospective Validation V2, apply
+`20261003T0515_predictive_prospective_observations_v1` to DEV after restoring a
+PROD snapshot, while keeping the feature switch OFF. Stage 0 is a DEV schema
+validation step; a schema apply does not graduate the feature or expose it
+publicly. Enable the DEV canary only after DEV migration PASS, DB integration
+PASS, and runtime safety checks PASS:
+
+```env
+AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED=true
+```
+
+After the canary, return the switch to `false` unless DEV capture is
+deliberately retained. With `false`, there are no prospective persistence
+writes; the predictive engine remains in SHADOW mode and the public SSE
+snapshot is unchanged. See the [Predictive Prospective Validation V2
+workflow](PREDICTIVE-PROSPECTIVE-VALIDATION-V2.md) for the staged procedure.
+
 ## Feedback loop and gates
 
 For a focused change, run selected files:

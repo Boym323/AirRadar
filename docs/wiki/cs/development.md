@@ -6,3 +6,7 @@ a relevantní kontroly dokumentace. Nespouštějte produkční build v živém c
 pokud `airradar.service` obsluhuje provoz.
 
 Viz úplné pokyny v [DEVELOPMENT.md](../../DEVELOPMENT.md).
+
+Izolovaná databáze `airradar_dev`, nastavení `.env.dev.local`, guardy refreshu
+PROD → DEV, workflow migrací a bezpečnost predictive canary jsou popsány v
+[kanonické sekci Vývojová databáze](../../DEVELOPMENT.md#vývojová-databáze).
