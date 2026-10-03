@@ -399,8 +399,14 @@ místo toho, aby restart procesu považoval za nové pozorování.
 Europe/Prague. Čte vybraný rozsah dat z `ReceiverDailyStats` a
 `ReceiverDailyAircraft`, počítá Flight counts/routes/types v databázi a pro
 labely načítá nanejvýš first/latest celoživotní řádky pro každé letadlo.
-Týdenní porovnání čte předchozích sedm agregačních oken bez lifetime
-enrichmentu. Chybějící agregační řádky zůstávají v odpovědi chybějící místo
+Denní odpověď navíc skládá deterministické Daily Intelligence z omezených
+řádků `Flight.startTime`/`airline`, database-side agregací typů
+`FlightEvent`, omezené sady posledních `FlightEvent` a již omezené historie
+alertů. Z těchto vstupů vzniká nejrušnější hodina, top airlines, počty
+operačních událostí a omezená timeline hlavních událostí; při dosažení limitu
+vrací odpověď `dailyIntelligence.complete=false`. Týdenní porovnání čte
+předchozích sedm agregačních oken bez lifetime enrichmentu a bez Daily
+Intelligence. Chybějící agregační řádky zůstávají v odpovědi chybějící místo
 převodu na nuly. Recapy neskenují `FlightPosition`, neprovádějí provider
 requesty, nevytvářejí další EventSource ani nepřidávají další polling loop.
 
