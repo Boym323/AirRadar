@@ -137,10 +137,7 @@ export function RadarOperationsCenter() {
   );
 
   useEffect(() => {
-    if (!open || !relevantAirportKey) {
-      if (!open) setAirportOperations([]);
-      return;
-    }
+    if (!open || !relevantAirportKey) return;
     let active = true;
     const controller = new AbortController();
     const icaos = relevantAirportKey.split(",").filter(Boolean);
