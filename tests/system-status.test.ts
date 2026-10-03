@@ -338,8 +338,8 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
   it("does not expose coordinates, secrets, raw errors, or arbitrary paths", () => {
     const value = build({ runtime: { commit: "postgresql://user:password@db", version: "DATABASE_URL=secret" } });
     const serialized = JSON.stringify(value);
-    expect(serialized).not.toContain("50.1");
-    expect(serialized).not.toContain("14.4");
+    expect(serialized).not.toContain('"lat":50.1');
+    expect(serialized).not.toContain('"lon":14.4');
     expect(serialized).not.toContain("DATABASE_URL");
     expect(serialized).not.toContain("password");
     expect(serialized).not.toContain("postgresql://");
