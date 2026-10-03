@@ -28,6 +28,33 @@ The Flight Intelligence detector supplies the lifecycle identity. ICAO alone
 is not used as a flight identity. The deterministic observation key and the
 database primary key make retries and service restarts idempotent.
 
+## Prospective accounting and attribution
+
+Writer diagnostics use explicit meanings: `captured` counts every observation
+offered to the writer; `invalid` is rejected before enqueue; `dedupePending`
+is an in-flight key collision; `dedupeDatabase` is a database primary-key
+duplicate; `enqueued` is accepted into the bounded queue;
+`persistenceAttempted` counts actual `create()` calls;
+`rowsCommittedByWriter` counts successful `create()` callbacks;
+`persistenceFailures`, `integrityRejects`, and `dropped` are terminal outcomes.
+Queue depth and pending-key count are current values, while the high-water mark
+is lifetime process-local for that writer session. After a drain, both exposed
+reconciliation balances must be zero.
+
+Each writer has a session id, process start time, PID, counter start time, and
+bounded first/last commit timestamps plus committed row/batch counts. The
+runtime prospective lane has one production writer (`ProspectiveValidationWriter`);
+the validation script is read-only. `PredictiveObservation.createdAt` is the
+persistence timestamp available for exact canary-interval attribution. A
+canary must compare PID/session before and after the interval; any process or
+session change makes runtime-vs-database accounting
+`NON_COMPARABLE_PROCESS_RESTART`.
+
+Invalid diagnostics are bounded and include aggregate and per-capability reason
+histograms. Required non-null fields are validated before enqueue, including
+null/undefined/empty-string and invalid numeric/timestamp cases. No payloads
+are retained in these histograms.
+
 ## Scoring
 
 Ground Truth never receives ETA, runway, confidence, or predictive evidence.

@@ -971,7 +971,6 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       ...serviceDiagnostics.predictiveIntelligence.prospective,
       status: !serviceDiagnostics.predictiveIntelligence.prospective.enabled ? "disabled" : serviceDiagnostics.predictiveIntelligence.prospective.persistenceFailures > 0 ? "degraded" : serviceDiagnostics.predictiveIntelligence.prospective.captured > 0 ? "ok" : "no_data",
       observationsCaptured: serviceDiagnostics.predictiveIntelligence.prospective.captured,
-      observationsSkippedDedupe: serviceDiagnostics.predictiveIntelligence.prospective.skippedDedupe,
       rawRetentionDays: 90,
       readiness: { ETA: "INSUFFICIENT_DATA", RUNWAY: "INSUFFICIENT_DATA", RUNWAY_CHANGE: "INSUFFICIENT_DATA", TRAJECTORY: "INSUFFICIENT_DATA" },
     } : undefined,

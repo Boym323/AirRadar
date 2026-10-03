@@ -1,5 +1,5 @@
 import type { Aircraft } from "@/lib/aircraft/types";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { getPrisma } from "@/lib/server/db";
 import { getBuildMetadata } from "@/lib/server/version";
 import { getPredictiveGraduationPolicy, type PredictiveCapability } from "./graduation";
@@ -118,14 +118,20 @@ export function prospectiveObservationFor(
 }
 
 export interface ProspectiveDiagnostics {
-  enabled: boolean; captured: number; persisted: number; skippedDedupe: number; dropped: number; rejectedInvalid: number; invalidSkipReasons: Record<string, number>; invalidSkipReasonsByCapability: Record<PredictiveCapability, Record<string, number>>; persistenceFailures: number; integrityRejects: number;
+  enabled: boolean; writerSessionId: string; processStartedAt: string; pid: number; counterStartedAt: string;
+  captured: number; invalid: number; enqueued: number; dedupePending: number; dedupeDatabase: number;
+  persistenceAttempted: number; rowsCommittedByWriter: number; persistenceFailures: number; integrityRejects: number;
+  dropped: number; droppedBeforeEnqueue: number; droppedAfterEnqueue: number;
+  invalidSkipReasons: Record<string, number>; invalidSkipReasonsByCapability: Record<PredictiveCapability, Record<string, number>>;
   persistenceSuspended: boolean; suspensionReason: "integrity_violation_23502" | "integrity_violation" | null;
-  queueDepth: number; queueHighWaterMark: number; oldestQueuedAt: string | null; lastSuccessfulWrite: string | null;
+  queueDepth: number; pendingKeyCount: number; queueHighWaterMark: number; oldestQueuedAt: string | null;
+  firstCommitAt: string | null; lastCommitAt: string | null; committedBatches: number; lastBatchSize: number | null; maxBatchSize: number;
   lastFailureAt: string | null; lastFailureClassification: "invalid_timestamp" | "database" | "unconfigured" | null;
   lastFailureField: "predictedAt" | "predictedLandingAt" | "createdAt" | null;
   lastDatabaseFailure: DatabaseFailureSignature | null;
   databaseFailureHistogram: DatabaseFailureHistogramEntry[];
   failuresByCapability: Record<PredictiveCapability, number>;
+  accounting: { captureBalance: number; enqueueBalance: number; drained: boolean };
 }
 
 export type ObservationTable = { create: (input: Record<string, unknown>) => Promise<unknown> };
@@ -265,26 +271,50 @@ function failureSignatureKey(signature: DatabaseFailureSignature): string {
   return [signature.constructorName, signature.name, signature.code, signature.sqlState, signature.sqlStateClass, signature.constraint, signature.table, signature.column, signature.detail, signature.capability, signature.horizonBucket, signature.observationKeyHash, signature.writerOperation, signature.causeConstructorName, signature.causeName, signature.causeCode, signature.causeSqlState, signature.causeConstraint, signature.messageClass].map((value) => value ?? "-").join("|");
 }
 
-export type InvalidObservationReason = "missing_observation_key" | "malformed_observation_key" | "missing_lifecycle_key" | "invalid_capability" | "missing_aircraft_icao" | "missing_horizon_bucket" | "missing_flight_phase" | "missing_prediction_confidence" | "missing_evidence" | "missing_model_version" | "missing_software_version" | "missing_graduation_mode" | "invalid_predicted_at" | "invalid_predicted_landing_at" | "invalid_position";
+export type InvalidObservationReason = "missing_observation_key" | "malformed_observation_key" | "missing_lifecycle_key" | "invalid_capability" | "missing_aircraft_icao" | "missing_horizon_bucket" | "missing_flight_phase" | "missing_prediction_confidence" | "missing_evidence" | "missing_model_version" | "missing_software_version" | "missing_graduation_mode" | "invalid_predicted_at" | "invalid_predicted_landing_at" | "invalid_coordinates";
 const validCapabilities = new Set<string>(CAPABILITIES);
 export function validateProspectiveObservation(observation: ProspectiveObservation): InvalidObservationReason | null {
-  if (!observation.observationKey) return "missing_observation_key";
-  if (!observation.lifecycleKey) return "missing_lifecycle_key";
+  if (typeof observation.observationKey !== "string" || observation.observationKey.length === 0) return "missing_observation_key";
+  if (typeof observation.lifecycleKey !== "string" || observation.lifecycleKey.length === 0) return "missing_lifecycle_key";
   if (observation.observationKey.split(":").length < 4) return "malformed_observation_key";
   if (!validCapabilities.has(observation.capability)) return "invalid_capability";
-  if (!observation.aircraftIcao) return "missing_aircraft_icao";
-  if (!observation.horizonBucket) return "missing_horizon_bucket";
-  if (!observation.flightPhase) return "missing_flight_phase";
-  if (!observation.predictionConfidence) return "missing_prediction_confidence";
-  if (!observation.evidenceJson) return "missing_evidence";
-  if (!observation.modelVersion) return "missing_model_version";
-  if (!observation.softwareVersion) return "missing_software_version";
-  if (!observation.graduationMode) return "missing_graduation_mode";
+  if (typeof observation.aircraftIcao !== "string" || observation.aircraftIcao.trim().length === 0) return "missing_aircraft_icao";
+  if (typeof observation.horizonBucket !== "string" || observation.horizonBucket.trim().length === 0) return "missing_horizon_bucket";
+  if (typeof observation.flightPhase !== "string" || observation.flightPhase.trim().length === 0) return "missing_flight_phase";
+  if (typeof observation.predictionConfidence !== "string" || observation.predictionConfidence.trim().length === 0) return "missing_prediction_confidence";
+  if (typeof observation.evidenceJson !== "string" || observation.evidenceJson.trim().length === 0) return "missing_evidence";
+  if (typeof observation.modelVersion !== "string" || observation.modelVersion.trim().length === 0) return "missing_model_version";
+  if (typeof observation.softwareVersion !== "string" || observation.softwareVersion.trim().length === 0) return "missing_software_version";
+  if (typeof observation.graduationMode !== "string" || observation.graduationMode.trim().length === 0) return "missing_graduation_mode";
   if (!validTimestamp(observation.predictedAt)) return "invalid_predicted_at";
   if (observation.predictedLandingAt !== null && !validTimestamp(observation.predictedLandingAt)) return "invalid_predicted_landing_at";
-  if (!finite(observation.latitude) || !finite(observation.longitude)) return "invalid_position";
+  if (!finite(observation.latitude) || !finite(observation.longitude)) return "invalid_coordinates";
   return null;
 }
+
+export const PROSPECTIVE_PERSISTENCE_TIMESTAMP_FIELD = "createdAt" as const;
+export const PROSPECTIVE_REQUIRED_DB_FIELDS = ["observationKey", "lifecycleKey", "capability", "aircraftIcao", "predictedAt", "horizonBucket", "flightPhase", "latitude", "longitude", "predictionConfidence", "evidenceJson", "modelVersion", "softwareVersion", "graduationMode"] as const;
+export type ProspectiveRequiredDbField = typeof PROSPECTIVE_REQUIRED_DB_FIELDS[number];
+export const PROSPECTIVE_REQUIRED_DB_FIELD_MATRIX: ReadonlyArray<{ column: ProspectiveRequiredDbField; source: string; runtimeGuard: string; capability: "all" }> = [
+  ...PROSPECTIVE_REQUIRED_DB_FIELDS.map((column) => ({ column, source: `ProspectiveObservation.${column}`, runtimeGuard: "validateProspectiveObservation", capability: "all" as const })),
+];
+
+export type ProspectiveProcessSnapshot = Pick<ProspectiveDiagnostics, "writerSessionId" | "processStartedAt" | "pid">;
+export function compareProspectiveProcessSessions(before: ProspectiveProcessSnapshot, after: ProspectiveProcessSnapshot): {
+  mainPidBefore: number; mainPidAfter: number; processStartedAtBefore: string; processStartedAtAfter: string;
+  writerSessionIdBefore: string; writerSessionIdAfter: string; restartCount: number; comparable: boolean;
+} {
+  const restarted = before.pid !== after.pid || before.processStartedAt !== after.processStartedAt || before.writerSessionId !== after.writerSessionId;
+  return {
+    mainPidBefore: before.pid, mainPidAfter: after.pid,
+    processStartedAtBefore: before.processStartedAt, processStartedAtAfter: after.processStartedAt,
+    writerSessionIdBefore: before.writerSessionId, writerSessionIdAfter: after.writerSessionId,
+    restartCount: restarted ? 1 : 0, comparable: !restarted,
+  };
+}
+
+const PROCESS_STARTED_AT = new Date().toISOString();
+const PROCESS_PID = process.pid;
 
 function toOrmInstant(value: number, field: string): Temporal.Instant {
   if (!Number.isSafeInteger(value)) throw new TypeError(`${field} must be a safe integer timestamp`);
@@ -322,11 +352,15 @@ export class ProspectiveValidationWriter {
   private readonly pending = new Set<string>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private flushing = false;
+  private readonly writerSessionId = randomUUID().replace(/-/g, "").slice(0, 12);
+  private readonly counterStartedAt = new Date().toISOString();
   private readonly stats = {
-    captured: 0, persisted: 0, skippedDedupe: 0, dropped: 0, rejectedInvalid: 0, invalidSkipReasons: {} as Record<string, number>,
+    captured: 0, invalid: 0, enqueued: 0, dedupePending: 0, dedupeDatabase: 0, persistenceAttempted: 0, rowsCommittedByWriter: 0,
+    persistenceFailures: 0, integrityRejects: 0, dropped: 0, droppedBeforeEnqueue: 0, droppedAfterEnqueue: 0,
+    invalidSkipReasons: {} as Record<string, number>,
     invalidSkipReasonsByCapability: Object.fromEntries(CAPABILITIES.map((capability) => [capability, {}])) as Record<PredictiveCapability, Record<string, number>>,
-    persistenceFailures: 0, integrityRejects: 0,
-    queueHighWaterMark: 0, lastSuccessfulWrite: null as string | null,
+    queueHighWaterMark: 0,
+    firstCommitAt: null as string | null, lastCommitAt: null as string | null, committedBatches: 0, lastBatchSize: null as number | null, maxBatchSize: 0,
     lastFailureAt: null as string | null,
     lastFailureClassification: null as ProspectiveDiagnostics["lastFailureClassification"],
     lastFailureField: null as ProspectiveDiagnostics["lastFailureField"],
@@ -359,13 +393,16 @@ export class ProspectiveValidationWriter {
   enqueue(observations: readonly ProspectiveObservation[]): void {
     if (!observations.length) return;
     if (this.stats.persistenceSuspended) {
+      this.stats.captured += observations.length;
       this.stats.dropped += observations.length;
+      this.stats.droppedBeforeEnqueue += observations.length;
       return;
     }
     for (const observation of observations) {
+      this.stats.captured += 1;
       const invalidReason = validateProspectiveObservation(observation);
       if (invalidReason) {
-        this.stats.rejectedInvalid += 1;
+        this.stats.invalid += 1;
         if (Object.keys(this.stats.invalidSkipReasons).length < INVALID_REASON_HISTOGRAM_LIMIT || this.stats.invalidSkipReasons[invalidReason] !== undefined) {
           this.stats.invalidSkipReasons[invalidReason] = (this.stats.invalidSkipReasons[invalidReason] ?? 0) + 1;
         }
@@ -378,9 +415,9 @@ export class ProspectiveValidationWriter {
         }
         continue;
       }
-      if (this.pending.has(observation.observationKey)) { this.stats.skippedDedupe += 1; continue; }
-      if (this.queue.length >= MAX_QUEUE) { this.stats.dropped += 1; continue; }
-      this.pending.add(observation.observationKey); this.queue.push(observation); this.stats.captured += 1;
+      if (this.pending.has(observation.observationKey)) { this.stats.dedupePending += 1; continue; }
+      if (this.queue.length >= MAX_QUEUE) { this.stats.dropped += 1; this.stats.droppedBeforeEnqueue += 1; continue; }
+      this.pending.add(observation.observationKey); this.queue.push(observation); this.stats.enqueued += 1;
     }
     this.stats.queueHighWaterMark = Math.max(this.stats.queueHighWaterMark, this.queue.length);
     this.schedule();
@@ -406,17 +443,21 @@ export class ProspectiveValidationWriter {
       for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
         const item = batch[batchIndex]!;
         try {
+          this.stats.persistenceAttempted += 1;
           await table.create({
             ...item,
             predictedAt: toOrmInstant(item.predictedAt, "predictedAt"),
             predictedLandingAt: item.predictedLandingAt === null ? null : toOrmInstant(item.predictedLandingAt, "predictedLandingAt"),
             createdAt: Temporal.Now.instant(),
           });
-          this.stats.persisted += 1;
+          this.stats.rowsCommittedByWriter += 1;
           successfulWrites += 1;
+          const committedAt = new Date().toISOString();
+          this.stats.firstCommitAt ??= committedAt;
+          this.stats.lastCommitAt = committedAt;
         } catch (error) {
           if (isExpectedDuplicate(error)) {
-            this.stats.skippedDedupe += 1;
+            this.stats.dedupeDatabase += 1;
             continue;
           }
           this.stats.persistenceFailures += 1;
@@ -433,11 +474,16 @@ export class ProspectiveValidationWriter {
           // discard pending prospective work without touching the evaluator.
           if (integrityFailure) {
             this.stats.dropped += batch.length - batchIndex - 1;
+            this.stats.droppedAfterEnqueue += batch.length - batchIndex - 1;
             break;
           }
         }
       }
-      if (successfulWrites > 0) this.stats.lastSuccessfulWrite = new Date().toISOString();
+      this.stats.lastBatchSize = successfulWrites;
+      this.stats.maxBatchSize = Math.max(this.stats.maxBatchSize, successfulWrites);
+      if (successfulWrites > 0) {
+        this.stats.committedBatches += 1;
+      }
     } finally {
       if (this.stats.persistenceSuspended) {
         this.stats.dropped += this.queue.length;
@@ -449,15 +495,24 @@ export class ProspectiveValidationWriter {
       if (this.queue.length) this.schedule();
     }
   }
+  async drain(): Promise<void> {
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    while (this.queue.length) await this.flush();
+  }
   diagnostics(): ProspectiveDiagnostics {
     return {
-      enabled: isProspectiveValidationEnabled(), ...this.stats,
+      enabled: isProspectiveValidationEnabled(), writerSessionId: this.writerSessionId, processStartedAt: PROCESS_STARTED_AT, pid: PROCESS_PID, counterStartedAt: this.counterStartedAt, ...this.stats,
       lastDatabaseFailure: this.stats.lastDatabaseFailure ? { ...this.stats.lastDatabaseFailure } : null,
       databaseFailureHistogram: this.stats.databaseFailureHistogram.map((entry) => ({ ...entry })),
       failuresByCapability: { ...this.stats.failuresByCapability },
       invalidSkipReasons: { ...this.stats.invalidSkipReasons },
       invalidSkipReasonsByCapability: Object.fromEntries(CAPABILITIES.map((capability) => [capability, { ...this.stats.invalidSkipReasonsByCapability[capability] }])) as Record<PredictiveCapability, Record<string, number>>,
-      queueDepth: this.queue.length, oldestQueuedAt: this.queue[0] ? new Date(this.queue[0].predictedAt).toISOString() : null,
+      queueDepth: this.queue.length, pendingKeyCount: this.pending.size, oldestQueuedAt: this.queue[0] ? new Date(this.queue[0].predictedAt).toISOString() : null,
+      accounting: {
+        captureBalance: this.stats.captured - this.stats.invalid - this.stats.dedupePending - this.stats.enqueued - this.stats.droppedBeforeEnqueue,
+        enqueueBalance: this.stats.enqueued - this.queue.length - this.stats.rowsCommittedByWriter - this.stats.dedupeDatabase - this.stats.persistenceFailures - this.stats.droppedAfterEnqueue,
+        drained: this.queue.length === 0 && this.pending.size === 0 && !this.flushing,
+      },
     };
   }
 }

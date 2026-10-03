@@ -26,6 +26,31 @@ track, predikční hodnotu, confidence, auditní evidence, verzi modelu, release
 režim graduation. Prediction se zachytává prospektivně před událostí; budoucí
 údaje se zpětně nepřidávají a predikce se z budoucích dat nerekonstruuje.
 
+## Účetnictví a atribuce prospective writeru
+
+Diagnostika používá přesnou sémantiku: `captured` počítá každou observation
+nabídnutou writeru; `invalid` je odmítnutí před enqueue; `dedupePending` je
+kolize klíče ve frontě/in-flight; `dedupeDatabase` je duplicita primárního klíče
+v databázi; `enqueued` je přijetí do bounded fronty;
+`persistenceAttempted` počítá skutečná volání `create()`;
+`rowsCommittedByWriter` počítá úspěšné callbacky `create()`;
+`persistenceFailures`, `integrityRejects` a `dropped` jsou terminální výsledky.
+Queue depth a počet pending klíčů jsou okamžité hodnoty, high-water mark je
+procesní hodnota dané session. Po úplném drainu musí být oba reconciliation
+balance nulové.
+
+Každý writer má session ID, čas startu procesu, PID, začátek počítadla a
+omezené first/last commit timestampy včetně počtu committed řádků a batchů.
+Produkční prospective lane má jediný writer (`ProspectiveValidationWriter`);
+validační skript je read-only. `PredictiveObservation.createdAt` je existující
+čas persistence pro přesnou atribuci canary intervalu. Canary musí porovnat
+PID/session před a po intervalu; při změně procesu/session je runtime-vs-DB
+účetnictví `NON_COMPARABLE_PROCESS_RESTART`.
+
+Invalid diagnostika je bounded a obsahuje agregovaný i per-capability histogram
+důvodů. Povinná non-null pole se validují před enqueue včetně null/undefined,
+prázdných řetězců a neplatných čísel/časů. Histogramy neuchovávají payloady.
+
 ## Scoring
 
 Ground Truth nikdy nedostává ETA, runway, confidence ani predictive evidence.

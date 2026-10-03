@@ -225,7 +225,7 @@ export function SystemStatusPage() {
       {detailed && data.predictiveValidation && <Card title={dictionary.system.predictiveValidation} status={data.predictiveValidation.status === "no_data" ? "disabled" : data.predictiveValidation.status} dictionary={dictionary}>
         <Field label={dictionary.system.enabled} value={data.predictiveValidation.enabled ? dictionary.system.configured : dictionary.system.disabled} />
         <Field label={dictionary.system.observationsCaptured} value={formatNumber(data.predictiveValidation.observationsCaptured, 0, dictionary.locale)} />
-        <Field label={dictionary.system.observationsSkipped} value={formatNumber(data.predictiveValidation.observationsSkippedDedupe, 0, dictionary.locale)} />
+        <Field label={dictionary.system.observationsSkipped} value={formatNumber(data.predictiveValidation.invalid + data.predictiveValidation.dedupePending + data.predictiveValidation.dedupeDatabase, 0, dictionary.locale)} />
         <Field label={dictionary.system.queueDepth} value={formatNumber(data.predictiveValidation.queueDepth, 0, dictionary.locale)} />
         <Field label={dictionary.system.queueHighWaterMark} value={formatNumber(data.predictiveValidation.queueHighWaterMark, 0, dictionary.locale)} />
         <Field label={dictionary.system.prospectivePersistenceFailures} value={formatNumber(data.predictiveValidation.persistenceFailures, 0, dictionary.locale)} />

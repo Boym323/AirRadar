@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
 import { evaluatePredictiveIntelligence } from "@/lib/predictive-intelligence/engine";
-import { databaseFailureSignature, isNonRetryableIntegrityFailure, prospectiveObservationFor, ProspectiveValidationWriter, validateProspectiveObservation, type ObservationTable, type ProspectiveObservation } from "@/lib/predictive-intelligence/prospective";
+import { compareProspectiveProcessSessions, databaseFailureSignature, isNonRetryableIntegrityFailure, prospectiveObservationFor, PROSPECTIVE_REQUIRED_DB_FIELD_MATRIX, PROSPECTIVE_REQUIRED_DB_FIELDS, ProspectiveValidationWriter, validateProspectiveObservation, type ObservationTable, type ProspectiveObservation } from "@/lib/predictive-intelligence/prospective";
 import type { Aircraft } from "@/lib/aircraft/types";
 import type { PredictiveFlightState } from "@/lib/predictive-intelligence/types";
 import "temporal-polyfill/full/global";
@@ -52,7 +52,7 @@ describe("prospective validation scoring", () => {
     expect(row.predictedAt).toBeInstanceOf(Temporal.Instant);
     expect((row.predictedAt as Temporal.Instant).epochMilliseconds).toBe(Date.parse("2026-10-03T06:00:00.123Z"));
     expect((row.predictedLandingAt as Temporal.Instant).epochMilliseconds).toBe(Date.parse("2026-10-03T06:05:00.123Z"));
-    expect(writer.diagnostics()).toMatchObject({ persisted: 1, persistenceFailures: 0, lastSuccessfulWrite: expect.any(String) });
+    expect(writer.diagnostics()).toMatchObject({ rowsCommittedByWriter: 1, committedBatches: 1, firstCommitAt: expect.any(String), lastCommitAt: expect.any(String), persistenceFailures: 0 });
   });
 
   it("persists ETA produced by the real engine with canonical integer timestamps", async () => {
@@ -78,7 +78,7 @@ describe("prospective validation scoring", () => {
     writer.enqueue(observations.filter((item) => item.capability === "ETA"));
     await writer.flush();
     expect(rows.get(observations[0]!.observationKey)?.capability).toBe("ETA");
-    expect(writer.diagnostics()).toMatchObject({ persisted: 1, persistenceFailures: 0 });
+    expect(writer.diagnostics()).toMatchObject({ rowsCommittedByWriter: 1, persistenceFailures: 0 });
   });
 
   it("rejects invalid timestamps before enqueue with an explicit reason", async () => {
@@ -86,7 +86,7 @@ describe("prospective validation scoring", () => {
     const writer = new ProspectiveValidationWriter(fakeTable());
     writer.enqueue([observation({ predictedAt: Number.NaN })]);
     await writer.flush();
-    expect(writer.diagnostics()).toMatchObject({ persisted: 0, rejectedInvalid: 1, persistenceFailures: 0, lastSuccessfulWrite: null, invalidSkipReasons: { invalid_predicted_at: 1 } });
+    expect(writer.diagnostics()).toMatchObject({ rowsCommittedByWriter: 0, invalid: 1, persistenceFailures: 0, invalidSkipReasons: { invalid_predicted_at: 1 } });
   });
 
   it.each([
@@ -101,7 +101,7 @@ describe("prospective validation scoring", () => {
     writer.enqueue([observation(overrides)]);
     await writer.flush();
     const reason = field === "predictedAt" ? "invalid_predicted_at" : "invalid_predicted_landing_at";
-    expect(writer.diagnostics()).toMatchObject({ persisted: 0, rejectedInvalid: 1, persistenceFailures: 0, invalidSkipReasons: { [reason]: 1 } });
+    expect(writer.diagnostics()).toMatchObject({ rowsCommittedByWriter: 0, invalid: 1, persistenceFailures: 0, invalidSkipReasons: { [reason]: 1 } });
   });
 
   it("records primary persistence errors and isolates them from the caller", async () => {
@@ -110,7 +110,7 @@ describe("prospective validation scoring", () => {
     const writer = new ProspectiveValidationWriter(table);
     writer.enqueue([observation()]);
     await expect(writer.flush()).resolves.toBeUndefined();
-    expect(writer.diagnostics()).toMatchObject({ persisted: 0, persistenceFailures: 1, lastSuccessfulWrite: null, lastFailureClassification: "database" });
+    expect(writer.diagnostics()).toMatchObject({ rowsCommittedByWriter: 0, persistenceFailures: 1, lastFailureClassification: "database" });
   });
 
   it("reproduces the schema mismatch for RUNWAY and TRAJECTORY optional horizon data", async () => {
@@ -144,7 +144,7 @@ describe("prospective validation scoring", () => {
       observation({ capability: "TRAJECTORY", observationKey: "writer:test:TRAJECTORY:metadata", horizonBucket: "metadata", horizonSeconds: null, predictedLandingAt: null, predictedRunway: null }),
     ]);
     await writer.flush();
-    expect(writer.diagnostics()).toMatchObject({ persisted: 2, persistenceFailures: 0 });
+    expect(writer.diagnostics()).toMatchObject({ rowsCommittedByWriter: 2, persistenceFailures: 0 });
   });
 
   it("skips invalid lifecycle identity before enqueue with an explicit reason", async () => {
@@ -155,7 +155,7 @@ describe("prospective validation scoring", () => {
     writer.enqueue([invalid, observation({ observationKey: "writer:test:ETA:valid" })]);
     await writer.flush();
     expect(create).toHaveBeenCalledTimes(1);
-    expect(writer.diagnostics()).toMatchObject({ rejectedInvalid: 1, invalidSkipReasons: { missing_lifecycle_key: 1 }, persisted: 1 });
+    expect(writer.diagnostics()).toMatchObject({ invalid: 1, invalidSkipReasons: { missing_lifecycle_key: 1 }, rowsCommittedByWriter: 1 });
   });
 
   it("isolates invalid mixed-capability rows before persistence", async () => {
@@ -172,8 +172,8 @@ describe("prospective validation scoring", () => {
 
     expect(create).toHaveBeenCalledTimes(3);
     expect(writer.diagnostics()).toMatchObject({
-      persisted: 3,
-      rejectedInvalid: 2,
+      rowsCommittedByWriter: 3,
+      invalid: 2,
       persistenceFailures: 0,
       integrityRejects: 0,
       invalidSkipReasons: { missing_lifecycle_key: 1, invalid_predicted_at: 1 },
@@ -196,9 +196,75 @@ describe("prospective validation scoring", () => {
     restarted.enqueue([observation()]);
     await restarted.flush();
     expect(rows.size).toBe(1);
-    expect(first.diagnostics()).toMatchObject({ persisted: 1, skippedDedupe: 1, persistenceFailures: 0 });
-    expect(restarted.diagnostics()).toMatchObject({ persisted: 0, skippedDedupe: 1, persistenceFailures: 0 });
+    expect(first.diagnostics()).toMatchObject({ rowsCommittedByWriter: 1, dedupePending: 1, persistenceFailures: 0 });
+    expect(restarted.diagnostics()).toMatchObject({ rowsCommittedByWriter: 0, dedupeDatabase: 1, persistenceFailures: 0 });
     expect(restarted.diagnostics()).toMatchObject({ persistenceFailures: 0, lastDatabaseFailure: null, databaseFailureHistogram: [], failuresByCapability: { ETA: 0, RUNWAY: 0, RUNWAY_CHANGE: 0, TRAJECTORY: 0 } });
+  });
+
+  it("reconciles captured observations across invalid, pending/database dedupe, commit, failure, and drain", async () => {
+    const duplicateKey = "writer:test:ETA:database-duplicate";
+    const failureKey = "writer:test:ETA:failure";
+    const create = vi.fn(async (input: Record<string, unknown>) => {
+      if (input.observationKey === duplicateKey) throw Object.assign(new Error("duplicate"), { sqlState: "23505", constraint: "predictiveObservation_pkey" });
+      if (input.observationKey === failureKey) throw new Error("database unavailable");
+      return input;
+    });
+    const writer = new ProspectiveValidationWriter({ create });
+    writer.enqueue([
+      observation({ observationKey: "writer:test:ETA:committed" }),
+      observation({ observationKey: "writer:test:ETA:committed" }),
+      observation({ observationKey: duplicateKey }),
+      observation({ observationKey: failureKey }),
+      observation({ predictedAt: Number.NaN }),
+    ]);
+    await writer.drain();
+    const diagnostics = writer.diagnostics();
+    expect(diagnostics).toMatchObject({ captured: 5, invalid: 1, enqueued: 3, dedupePending: 1, dedupeDatabase: 1, persistenceAttempted: 3, rowsCommittedByWriter: 1, persistenceFailures: 1, dropped: 0, queueDepth: 0, pendingKeyCount: 0, accounting: { captureBalance: 0, enqueueBalance: 0, drained: true } });
+  });
+
+  it("uses bounded per-capability invalid reasons and rejects every required DB null-like value", async () => {
+    const cases: Array<[string, Partial<ProspectiveObservation>]> = [
+      ["missing_observation_key", { observationKey: "" }],
+      ["missing_lifecycle_key", { lifecycleKey: "" }],
+      ["invalid_capability", { capability: "" as ProspectiveObservation["capability"] }],
+      ["missing_aircraft_icao", { aircraftIcao: "" }],
+      ["missing_horizon_bucket", { horizonBucket: "" }],
+      ["missing_flight_phase", { flightPhase: "" }],
+      ["missing_prediction_confidence", { predictionConfidence: "" }],
+      ["missing_evidence", { evidenceJson: "" }],
+      ["missing_model_version", { modelVersion: "" }],
+      ["missing_software_version", { softwareVersion: "" }],
+      ["missing_graduation_mode", { graduationMode: "" }],
+      ["invalid_predicted_at", { predictedAt: undefined }],
+      ["invalid_coordinates", { latitude: Number.NaN }],
+    ];
+    const writer = new ProspectiveValidationWriter({ create: async (input) => input });
+    writer.enqueue(cases.map(([, overrides], index) => observation({ ...overrides, capability: overrides.capability ?? (index % 2 ? "TRAJECTORY" : "RUNWAY"), observationKey: Object.prototype.hasOwnProperty.call(overrides, "observationKey") ? overrides.observationKey : `invalid:test:${index}:key` })));
+    await writer.drain();
+    const diagnostics = writer.diagnostics();
+    expect(diagnostics.invalid).toBe(cases.length);
+    expect(diagnostics.invalidSkipReasonsByCapability.RUNWAY).toBeTruthy();
+    expect(diagnostics.invalidSkipReasonsByCapability.TRAJECTORY).toBeTruthy();
+    expect(diagnostics.accounting).toMatchObject({ captureBalance: 0, enqueueBalance: 0, drained: true });
+  });
+
+  it("starts each writer instance with a fresh session and zero counters", () => {
+    const first = new ProspectiveValidationWriter(null).diagnostics();
+    const second = new ProspectiveValidationWriter(null).diagnostics();
+    expect(second.writerSessionId).not.toBe(first.writerSessionId);
+    expect(second.counterStartedAt).toEqual(expect.any(String));
+    expect(second.captured).toBe(0);
+    expect(second.rowsCommittedByWriter).toBe(0);
+    expect(second.pid).toBe(process.pid);
+    expect(second.processStartedAt).toEqual(first.processStartedAt);
+  });
+
+  it("exposes the required DB field matrix and detects process/session restarts", () => {
+    expect(PROSPECTIVE_REQUIRED_DB_FIELD_MATRIX.map((entry) => entry.column)).toEqual([...PROSPECTIVE_REQUIRED_DB_FIELDS]);
+    expect(PROSPECTIVE_REQUIRED_DB_FIELD_MATRIX.every((entry) => entry.source.startsWith("ProspectiveObservation.") && entry.runtimeGuard === "validateProspectiveObservation" && entry.capability === "all")).toBe(true);
+    const before = { writerSessionId: "before", processStartedAt: "2026-10-03T06:00:00.000Z", pid: 10 };
+    expect(compareProspectiveProcessSessions(before, before)).toMatchObject({ mainPidBefore: 10, mainPidAfter: 10, restartCount: 0, comparable: true });
+    expect(compareProspectiveProcessSessions(before, { ...before, pid: 11, writerSessionId: "after" })).toMatchObject({ mainPidBefore: 10, mainPidAfter: 11, writerSessionIdAfter: "after", restartCount: 1, comparable: false });
   });
 
   it("keeps only structural database fingerprints and rejects other unique constraints", async () => {
@@ -259,7 +325,7 @@ describe("prospective validation scoring", () => {
     expect(isNonRetryableIntegrityFailure(Object.assign(new Error("not null"), { code: "23502" }))).toBe(true);
     expect(create).toHaveBeenCalledTimes(1);
     expect(writer.diagnostics()).toMatchObject({
-      persisted: 0,
+      rowsCommittedByWriter: 0,
       persistenceFailures: 1,
       integrityRejects: 1,
       persistenceSuspended: true,
