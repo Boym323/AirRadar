@@ -10,30 +10,108 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
-## [1.0.258] - 2026-10-03
+## [1.0.262] - 2026-10-03
+
+Changes since v1.0.261.
+
+### Changed
+
+- Instrument prospective attribution accounting (cdb1b78)
+
+<details>
+<summary>Technical commits</summary>
+
+- Instrument prospective attribution accounting (cdb1b78)
+
+</details>
+
+## [1.0.261] - 2026-10-03
+
+Changes since v1.0.260.
+
+### Added
+
+- Enhance prospective validation with improved timestamp validation and detailed invalid reason tracking (220289e)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: enhance prospective validation with improved timestamp validation and detailed invalid reason tracking (220289e)
+
+</details>
+
+## [1.0.260] - 2026-10-03
+
+Changes since v1.0.259.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Enhance system status metrics with integrity rejection and persistence suspension details (b32346f)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: enhance system status metrics with integrity rejection and persistence suspension details (b32346f)
+
+</details>
+
+## [1.0.259] - 2026-10-03
 
 Changes since v1.0.257.
 
 ### Added
 
-- Implement RadarTrafficHero component and traffic presentation logic (a9fd6dcb)
+- Implement RadarTrafficHero component and traffic presentation logic (a9fd6dc)
+- Update RadarTrafficHero component and related tests for improved metric presentation and accessibility (74a5745)
+
+### Documentation
+
+- Update changelog for v1.0.258 (fcc9c81)
 
 ### Maintenance
 
-- Add TypeScript SDK path to VSCode settings (b0ae168f)
-- Instrument prospective persistence failures (059a5757)
+- Add TypeScript SDK path to VSCode settings (b0ae168)
+- Instrument prospective persistence failures (059a575)
+- Align quick-detail production gate with traffic hero (501a224)
 
 <details>
 <summary>Technical commits</summary>
 
-- chore: add TypeScript SDK path to VSCode settings (b0ae168f)
-- chore: instrument prospective persistence failures (059a5757)
-- Merge pull request #236 from Boym323/fix/predictive-persistence-diagnostics (b7ba7644)
-- feat: implement RadarTrafficHero component and traffic presentation logic (a9fd6dcb)
-- Merge remote-tracking branch 'origin/main' (fc97cb38)
+- chore: add TypeScript SDK path to VSCode settings (b0ae168)
+- chore: instrument prospective persistence failures (059a575)
+- Merge pull request #236 from Boym323/fix/predictive-persistence-diagnostics (b7ba764)
+- feat: implement RadarTrafficHero component and traffic presentation logic (a9fd6dc)
+- Merge remote-tracking branch 'origin/main' (fc97cb3)
+- docs: update changelog for v1.0.258 (fcc9c81)
+- test: align quick-detail production gate with traffic hero (501a224)
+- feat: update RadarTrafficHero component and related tests for improved metric presentation and accessibility (74a5745)
+- merge main into quick-detail hero contract (54163ce)
+- Merge pull request #237 from Boym323/fix/quick-detail-hero-contract (d9f8f71)
 
 </details>
 
+## [1.0.257] - 2026-10-03
+
+Changes since v1.0.256.
+
+### Fixed
+
+- Normalize predictive timestamp invariants (8e79d44)
+
+### Maintenance
+
+- Sync generated repository metadata (#233) (87d4dfe)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#233) (87d4dfe)
+- fix: normalize predictive timestamp invariants (8e79d44)
+- Merge pull request #234 from Boym323/fix/predictive-timestamp-invariant (afcf9e2)
+
+</details>
 ## [1.0.256] - 2026-10-03
 
 Changes since v1.0.255.
@@ -55,6 +133,7 @@ Changes since v1.0.255.
 - chore: ignore generated predictive validation reports (364cdf3)
 
 </details>
+
 ## [1.0.255] - 2026-10-03
 
 Changes since v1.0.254.
@@ -71,6 +150,7 @@ Changes since v1.0.254.
 - ci: prevent production deploys for docs-only changes (6fd5d3e)
 
 </details>
+
 ## [1.0.254] - 2026-10-03
 
 Changes since v1.0.253.
@@ -154,6 +234,7 @@ Changes since v1.0.249.
 - docs: update changelog for v1.0.250 (b39afe9)
 
 </details>
+
 ## [1.0.251] - 2026-10-02
 
 Changes since v1.0.250.
@@ -265,6 +346,7 @@ Changes since v1.0.244.
 - feat(predictive-intelligence): enhance predictive capabilities with graduation policy and public API integration (97cd55d)
 
 </details>
+
 ## [1.0.244] - 2026-10-02
 
 Changes since v1.0.242.
