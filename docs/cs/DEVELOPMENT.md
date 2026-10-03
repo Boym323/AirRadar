@@ -273,6 +273,7 @@ runtime, release, schématu nebo konfigurace ano; smíšené commity se nasazuj�
 neznámé cesty jsou z bezpečnostních důvodů klasifikovány jako deploy.
 Strojově čitelné soubory, například `docs/features.registry.json`, proto mezi
 docs-only nepatří.
+Klasifikaci release scope pokrývají deterministické regresní testy.
 
 `test:production` spustí hotový build v izolovaném podprocesu v demo režimu a
 ověřuje HTTP health, `/api/version`, základní přístupnost domovské stránky,

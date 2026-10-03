@@ -271,6 +271,7 @@ generated metadata allowlist) do not trigger production deployment. Runtime,
 release, schema, and configuration changes do; mixed commits deploy, and
 unknown paths fail safe to deploy. Machine-readable documentation such as
 `docs/features.registry.json` is therefore not docs-only.
+The release-scope classifier is covered by deterministic regression tests.
 
 `test:production` starts the completed build in an isolated demo-mode child
 process and checks HTTP health, `/api/version`, homepage accessibility basics,
