@@ -78,17 +78,18 @@ export function RadarOperationsCenter() {
   const [supplementaryStatus, setSupplementaryStatus] = useState<SupplementaryStatus>("idle");
 
   useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), CLOCK_REFRESH_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), CLOCK_REFRESH_INTERVAL_MS);
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("keydown", onKeyDown);
-    };
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
   useEffect(() => {
@@ -137,10 +138,15 @@ export function RadarOperationsCenter() {
   );
 
   useEffect(() => {
-    if (!open || !relevantAirportKey) return;
+    if (!open) return;
+    if (!relevantAirportKey) {
+      setAirportOperations((current) => current.length ? [] : current);
+      return;
+    }
     let active = true;
     const controller = new AbortController();
     const icaos = relevantAirportKey.split(",").filter(Boolean);
+    setAirportOperations((current) => current.filter((operation) => icaos.includes(operation.airport.icao)));
 
     const loadAirports = async () => {
       const results = await Promise.allSettled(
