@@ -247,6 +247,8 @@ describe("radar UI polish helpers", () => {
     expect(radarOperationsCenterSource).toContain("useIntelligenceStream()");
     expect(radarOperationsCenterSource).toContain('"/api/alerts?page=0&pageSize=50&filter=all"');
     expect(radarOperationsCenterSource).toContain('"/api/logbook/summary"');
+    expect(radarOperationsCenterSource).toContain("/operations?period=24h");
+    expect(radarOperationsCenterSource).toContain("AIRPORT_CONTEXT_REFRESH_INTERVAL_MS = 300_000");
     expect(radarOperationsCenterSource).not.toContain("useAircraftStream");
     expect(radarOperationsCenterSource).not.toContain("maplibre");
     expect(radarOperationsCenterSource).not.toContain("method: \"POST\"");
