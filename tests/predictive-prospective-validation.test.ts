@@ -222,6 +222,34 @@ describe("prospective validation scoring", () => {
     expect(diagnostics).toMatchObject({ captured: 5, invalid: 1, enqueued: 3, dedupePending: 1, dedupeDatabase: 1, persistenceAttempted: 3, rowsCommittedByWriter: 1, persistenceFailures: 1, dropped: 0, queueDepth: 0, pendingKeyCount: 0, accounting: { captureBalance: 0, enqueueBalance: 0, drained: true } });
   });
 
+  it("reconciles queued rows discarded after an integrity failure across multiple batches", async () => {
+    const create = vi.fn(async () => {
+      throw Object.assign(new Error("not null violation"), { sqlState: "23502", constraint: "predictiveObservation_required" });
+    });
+    const writer = new ProspectiveValidationWriter({ create });
+    writer.enqueue(Array.from({ length: 30 }, (_, index) => observation({
+      observationKey: `writer:test:ETA:integrity-${index}`,
+    })));
+
+    await writer.drain();
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(writer.diagnostics()).toMatchObject({
+      captured: 30,
+      enqueued: 30,
+      persistenceAttempted: 1,
+      rowsCommittedByWriter: 0,
+      persistenceFailures: 1,
+      integrityRejects: 1,
+      persistenceSuspended: true,
+      dropped: 29,
+      droppedAfterEnqueue: 29,
+      queueDepth: 0,
+      pendingKeyCount: 0,
+      accounting: { captureBalance: 0, enqueueBalance: 0, drained: true },
+    });
+  });
+
   it("uses bounded per-capability invalid reasons and rejects every required DB null-like value", async () => {
     const cases: Array<[string, Partial<ProspectiveObservation>]> = [
       ["missing_observation_key", { observationKey: "" }],

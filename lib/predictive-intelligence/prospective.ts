@@ -486,7 +486,9 @@ export class ProspectiveValidationWriter {
       }
     } finally {
       if (this.stats.persistenceSuspended) {
-        this.stats.dropped += this.queue.length;
+        const queuedDropped = this.queue.length;
+        this.stats.dropped += queuedDropped;
+        this.stats.droppedAfterEnqueue += queuedDropped;
         for (const item of this.queue) this.pending.delete(item.observationKey);
         this.queue.length = 0;
       }
