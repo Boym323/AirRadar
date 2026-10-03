@@ -13,11 +13,11 @@ export interface RadarTrafficHeroProps {
 
 /** Shared live-traffic header semantics. Data-specific sections remain below it. */
 export function RadarTrafficHero({ sourceLabel, primaryLabel, secondaryLabel, altitude, speed, track, verticalRate, className = "" }: RadarTrafficHeroProps) {
-  return <section className={`radar-traffic-hero ${className}`.trim()} aria-label={`${sourceLabel} ${primaryLabel}`}>
+  return <section className={`radar-traffic-hero ${className}`.trim()} data-testid="radar-traffic-hero" aria-label={`${sourceLabel} ${primaryLabel}`}>
     <span className="source-badge source-badge-prominent">{sourceLabel}</span>
     <h2 className="radar-traffic-hero-primary">{primaryLabel}</h2>
     {secondaryLabel && <p className="radar-traffic-hero-secondary">{secondaryLabel}</p>}
-    <div className="radar-traffic-hero-metrics">
+    <div className="radar-traffic-hero-metrics" data-testid="radar-traffic-hero-metrics">
       <div><strong>{altitude}</strong><span>Altitude</span></div>
       <div><strong>{speed}</strong><span>Speed</span></div>
       <div><strong>{track}</strong><span>Track</span></div>

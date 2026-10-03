@@ -908,13 +908,17 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         const quickContract = await quickDetail.evaluate((element) => ({
           tabs: [...element.querySelectorAll('[role="tab"]')].map((tab) => ({ id: tab.id, selected: tab.getAttribute("aria-selected") })),
           activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
-          liveMetricGrids: element.querySelectorAll(".aircraft-quick-metrics").length,
+          trafficHeroes: element.querySelectorAll('[data-testid="radar-traffic-hero"]').length,
+          liveMetricContainers: element.querySelectorAll('[data-testid="radar-traffic-hero-metrics"]').length,
+          liveMetricSlots: element.querySelector('[data-testid="radar-traffic-hero-metrics"]')?.children.length ?? 0,
           technicalOpen: element.querySelector(".aircraft-quick-advanced")?.hasAttribute("open") ?? false,
           dataDisclosure: Boolean(element.querySelector('[role="tab"]#aircraft-tab-data')),
         }));
         if (quickContract.tabs.length !== 4
           || quickContract.activePanel !== "aircraft-tabpanel-flight"
-          || quickContract.liveMetricGrids !== 1
+          || quickContract.trafficHeroes !== 1
+          || quickContract.liveMetricContainers !== 1
+          || quickContract.liveMetricSlots !== 4
           || quickContract.technicalOpen
           || !quickContract.dataDisclosure) {
           throw new Error(`Aircraft quick-detail contract failed at ${viewport.width}px: ${JSON.stringify(quickContract)}`);

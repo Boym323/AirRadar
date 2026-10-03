@@ -114,6 +114,9 @@ describe("production release metadata gate", () => {
   it("tracks the current four-tab aircraft quick-detail smoke contract", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('quickContract.tabs.length !== 4');
+    expect(source).toContain('quickContract.trafficHeroes !== 1');
+    expect(source).toContain('quickContract.liveMetricContainers !== 1');
+    expect(source).toContain('quickContract.liveMetricSlots !== 4');
     expect(source).toContain('getByRole("tab", { name: "Situace", exact: true })');
     expect(source).toContain('"aircraft-tabpanel-situation"');
     expect(source).toContain('getByRole("tab", { name: "Let", exact: true })');
