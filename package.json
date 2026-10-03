@@ -122,7 +122,7 @@
     "postcss": "8.5.28",
     "prisma": "8.0.0-rc.13",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vite": "^7.3.6",
     "vitest": "^5.0.2"
   }
