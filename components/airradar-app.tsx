@@ -57,6 +57,7 @@ import { AirRadarTopbar, MobileBottomNav, RadarNavRail, UtcClock } from "@/compo
 import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
+import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext, type WindResponse } from "@/components/radar/use-radar-weather-context";
@@ -2226,6 +2227,7 @@ export function AirRadarApp() {
                 </div>}
               </Panel>
               <MapControlGroup className="map-control-group-primary">
+              <RadarOperationsCenter />
               <button ref={trafficTriggerRef} type="button" className={`traffic-trigger map-control ${drawerState !== "closed" ? "active" : ""}`} aria-expanded={drawerState !== "closed"} aria-controls="radar-sidebar" data-testid="traffic-trigger" onClick={() => openTrafficDrawer()}>
                 <span className="traffic-trigger-label">{t.radar.trafficNearby}</span>
                 <strong>{formatNumber(activeTrafficCount)}</strong>
