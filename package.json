@@ -66,6 +66,7 @@
     "predictive:calibration": "JITI_TSCONFIG_PATHS=true jiti scripts/predictive-intelligence-v1-calibration.ts",
     "predictive:recovery:v2": "JITI_TSCONFIG_PATHS=true jiti scripts/predictive-intelligence-v2-recovery.ts",
     "predictive:terminal-ground-truth:v1": "JITI_TSCONFIG_PATHS=true jiti scripts/predictive-terminal-ground-truth-v1.ts",
+    "predictive:validate:prospective": "JITI_TSCONFIG_PATHS=true jiti scripts/predictive-validate-prospective.ts",
     "intelligence:quality": "JITI_TSCONFIG_PATHS=true jiti scripts/flight-intelligence-quality.ts",
     "audit:flightaware-routes": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-flightaware-routes.ts",
     "audit:historical-altitude": "JITI_TSCONFIG_PATHS=true jiti scripts/audit-historical-altitude.ts",

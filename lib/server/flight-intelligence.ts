@@ -220,6 +220,8 @@ export class FlightIntelligenceService {
 
   getDiagnostics() { return { ...this.diagnostics, pendingGroundConfirmation: this.pendingGround.size }; }
 
+  getLifecycleKey(icaoHex: string): string | null { return this.detector.getLifecycleKey(icaoHex); }
+
   /** Returns the already-loaded runway geometry without doing I/O. */
   getRunways(icao: string): readonly AirportRunway[] {
     return this.runwaysByAirport.get(icao.trim().toUpperCase()) ?? [];

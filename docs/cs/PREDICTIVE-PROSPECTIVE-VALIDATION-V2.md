@@ -1,0 +1,63 @@
+# Prospektivní validace predikcí V2
+
+[English version](../PREDICTIVE-PROSPECTIVE-VALIDATION-V2.md)
+
+Jde o interní shadow-only měřicí linku. Prediction je neměnná hodnota
+prediktivního enginu v okamžiku `predictedAt`. Ground Truth se později
+nezávisle klasifikuje z uložených observačních dat a terminálního evidence
+frameworku. Validation tyto dvě datové sady porovnává. Graduation je oddělené
+budoucí rozhodnutí a tato linka jej nikdy neprovádí.
+
+## Capture
+
+`PredictiveObservation` je append-only a používá klíč
+`lifecycleKey + capability + sampling bucket + model version`. Zachycuje stav
+letadla, predikční hodnotu, důkazy a verze dostupné v okamžiku vzniku. Pozdější
+Ground Truth se do řádku nedopisuje.
+
+Capture je ve výchozím stavu vypnutý a zapíná se pouze proměnnou
+`AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED=true`. Writer je asynchronní
+a bounded; chyba persistence ani plná fronta nesmí zastavit receiver, aircraft
+state, SSE ani Flight Intelligence.
+
+Záznam obsahuje capability, ICAO, lifecycle identity, callsign, cíl, čas
+predikce, horizon bucket, fázi letu, souřadnice, výšku, rychlost, vertical rate,
+track, predikční hodnotu, confidence, auditní evidence, verzi modelu, release a
+režim graduation. Prediction se zachytává prospektivně před událostí; budoucí
+údaje se zpětně nepřidávají a predikce se z budoucích dat nerekonstruuje.
+
+## Scoring
+
+Ground Truth nikdy nedostává ETA, runway, confidence ani predictive evidence.
+Pouze `CONFIRMED` je scoreable; `AMBIGUOUS` a `UNKNOWN` jsou `UNSCORABLE`, ne
+chyba algoritmu. ETA i runway reporty zachovávají horizon/confidence členění,
+coverage a oddělené exact-end/physical-runway metriky.
+
+ETA používá znaménkovou chybu `predictedLandingAt - actualLandingAt`, absolutní
+chybu, MAE, medián, P75, P90, P95, bias a podíl předčasných/pozdních predikcí.
+Runway odděluje přesný konec od fyzické runway a zachovává UNKNOWN v coverage
+metrikách. Confidence HIGH, MEDIUM, LOW a UNKNOWN se agregují odděleně bez
+změny thresholdů nebo graduation policy.
+
+## Reports and retention
+
+`npm run predictive:validate:prospective` zapisuje reprodukovatelný JSON a
+Markdown do `artifacts/predictive-validation-prospective-v2.*`. Raw data mají
+navrženou retenci 90 dní; automatický cleanup ani produkční DB změna nejsou
+součástí implementace. Readiness je pouze evidence a graduation zůstává
+SHADOW.
+
+Report je reprodukovatelný z uložených observations a nezávislé historie. Při
+nedostatku dat vrací `INSUFFICIENT_DATA`, nikoliv zavádějící nulovou chybu nebo
+100% přesnost. Persistence failures, dropped samples, queue depth a high-water
+mark se uvádějí zvlášť, aby ztráta coverage nebyla vydávána za kvalitu modelu.
+
+## Rollout
+
+1. Stage 0: ověření v developmentu se switchem OFF.
+2. Stage 1: canary capture a kontrola fronty, chyb a růstu databáze.
+3. Stage 2: 24h health kontrola a audit izolace lifecycle.
+4. Stage 3: první sedmidenní evidence report.
+5. Stage 4: třicetidenní kalibrace a audit readiness.
+
+Žádná stage sama neznamená PUBLIC graduation ani automatickou změnu policy.

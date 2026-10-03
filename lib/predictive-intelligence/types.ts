@@ -31,6 +31,8 @@ export interface PredictionWeather {
 
 export interface PredictionFlightState {
   flightId?: number | null;
+  lifecycleKey?: string | null;
+  aircraft?: import("@/lib/aircraft/types").Aircraft;
   aircraftIcao: string;
   timestamp: number;
   phase: FlightPhase;
@@ -42,6 +44,7 @@ export interface PredictionFlightState {
 }
 
 export interface PredictiveInput {
+  aircraft?: import("@/lib/aircraft/types").Aircraft;
   flightState: PredictionFlightState;
   recentSamples: readonly PredictionSample[];
   destinationAirport: PredictionAirport | null;

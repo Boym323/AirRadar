@@ -7,6 +7,7 @@ export function toPublicSystemStatus(status: SystemStatusResponse): SystemStatus
   const { flightPositionPersistenceShadow: _flightPositionPersistenceShadow, ...publicStatus } = status;
   return {
     ...publicStatus,
+    predictiveValidation: undefined,
     detailLevel: "public",
     application: {
       ...status.application,

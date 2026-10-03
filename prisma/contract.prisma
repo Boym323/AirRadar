@@ -139,6 +139,46 @@ model Flight {
   @@index([startTime, destination])
 }
 
+/// Immutable prospective predictive observations. The row is written at the
+/// time of evaluation; later validation fields are intentionally not stored
+/// here so a prediction can never be rewritten by Ground Truth processing.
+model PredictiveObservation {
+  observationKey       String   @id
+  lifecycleKey         String
+  capability           String
+  aircraftIcao         String
+  flightId             Int?
+  callsign             String?
+  destinationIcao      String?
+  predictedAt          DateTime
+  horizonSeconds       Int?
+  horizonBucket        String
+  flightPhase           String
+  latitude             Float
+  longitude            Float
+  altitudeFt           Int?
+  groundSpeedKt        Float?
+  verticalRateFpm      Float?
+  trackDeg             Float?
+  predictedLandingAt   DateTime?
+  distanceRemainingNm  Float?
+  predictedRunway      String?
+  alternativeRunway    String?
+  previousRunway       String?
+  predictionConfidence String
+  etaConfidence        String?
+  evidenceJson         String
+  modelVersion         String
+  softwareVersion      String
+  graduationMode       String
+  createdAt             DateTime @default(now())
+
+  @@index([lifecycleKey, predictedAt])
+  @@index([capability, predictedAt])
+  @@index([destinationIcao, predictedAt])
+  @@index([flightId, predictedAt])
+}
+
 model FlightEvent {
   id              Int      @id @default(autoincrement())
   eventKey        String   @unique

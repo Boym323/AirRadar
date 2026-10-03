@@ -317,6 +317,19 @@ export interface SystemStatusResponse {
     lastObservationAt: string | null;
     lastPersistedAt: string | null;
   };
+  predictiveValidation?: {
+    enabled: boolean;
+    status: "ok" | "degraded" | "disabled" | "no_data";
+    observationsCaptured: number;
+    observationsSkippedDedupe: number;
+    persistenceFailures: number;
+    droppedObservations: number;
+    queueDepth: number;
+    queueHighWaterMark: number;
+    lastSuccessfulWrite: string | null;
+    rawRetentionDays: number;
+    readiness: { ETA: string; RUNWAY: string; RUNWAY_CHANGE: string; TRAJECTORY: string };
+  };
   alerts: {
     status: SystemStatus;
     enabled: boolean;
@@ -407,6 +420,7 @@ export interface SystemStatusBuildInput {
   };
   flightPositionPersistenceShadow?: FlightPositionPersistenceShadowDiagnostics;
   navigationIntegrity?: NavigationIntegrityDiagnostics & { activeAnomalies?: number };
+  predictiveValidation?: SystemStatusResponse["predictiveValidation"];
   mapContext?: { radar?: WeatherRadarDiagnostics; wind?: ReturnType<typeof defaultWindAloftProvider.diagnostics>; archive?: Awaited<ReturnType<typeof defaultMapContextArchive.diagnostics>>; radarArchive?: Awaited<ReturnType<typeof defaultWeatherRadarArchive.diagnostics>>; };
   adsbLol?: NetworkProviderDiagnostics;
   localAdsb?: Record<string, unknown>;

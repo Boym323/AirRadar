@@ -222,6 +222,16 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.providerCache} value={data.runtime.providerCacheLimit === null ? formatCount(data.runtime.providerCacheEntries, dictionary) : `${formatCount(data.runtime.providerCacheEntries, dictionary)} / ${formatCount(data.runtime.providerCacheLimit, dictionary)}`} />
       </Card>}
 
+      {detailed && data.predictiveValidation && <Card title={dictionary.system.predictiveValidation} status={data.predictiveValidation.status === "no_data" ? "disabled" : data.predictiveValidation.status} dictionary={dictionary}>
+        <Field label={dictionary.system.enabled} value={data.predictiveValidation.enabled ? dictionary.system.configured : dictionary.system.disabled} />
+        <Field label={dictionary.system.observationsCaptured} value={formatNumber(data.predictiveValidation.observationsCaptured, 0, dictionary.locale)} />
+        <Field label={dictionary.system.observationsSkipped} value={formatNumber(data.predictiveValidation.observationsSkippedDedupe, 0, dictionary.locale)} />
+        <Field label={dictionary.system.queueDepth} value={formatNumber(data.predictiveValidation.queueDepth, 0, dictionary.locale)} />
+        <Field label={dictionary.system.queueHighWaterMark} value={formatNumber(data.predictiveValidation.queueHighWaterMark, 0, dictionary.locale)} />
+        <Field label={dictionary.system.prospectivePersistenceFailures} value={formatNumber(data.predictiveValidation.persistenceFailures, 0, dictionary.locale)} />
+        <Field label={dictionary.system.validationReadiness} value={`ETA ${data.predictiveValidation.readiness.ETA} · RUNWAY ${data.predictiveValidation.readiness.RUNWAY}`} />
+      </Card>}
+
       <Card title={dictionary.system.receiver} status={data.receiver.readsb.status} dictionary={dictionary}>
         <Field label={dictionary.system.readsb} value={<StatusBadge status={data.receiver.readsb.status} dictionary={dictionary} />} />
         <Field label={dictionary.system.source} value={`${data.receiver.readsb.provider} · ${data.receiver.readsb.sourceStatus === "live" ? dictionary.system.online : data.receiver.readsb.sourceStatus === "offline" ? dictionary.system.offline : formatStatus("demo", dictionary)}`} />

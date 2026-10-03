@@ -48,6 +48,11 @@ sampling.
 The server-side provider boundary is `AircraftProvider`. The configured local
 provider fetches the readsb/tar1090 web root; the empty base URL selects the
 deterministic demo provider. The frontend never selects a provider.
+Predictive prospective validation is a separate optional persistence lane
+downstream of the existing shadow `PredictiveStateStore`. It writes immutable
+`PredictiveObservation` samples through a bounded asynchronous queue only when
+`AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED=true`; it is not part of
+the public snapshot/SSE contract and cannot block aircraft ingestion.
 `NetworkAircraftProvider` is a separate optional boundary for live-only
 coverage. `AdsbHubProvider` consumes the generic aggregated SBS/30003 stream
 from `data.adsbhub.org:5002`; these rows are not classified as MLAT. The

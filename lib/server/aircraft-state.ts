@@ -271,6 +271,7 @@ export class AircraftStateService {
     await this.awaitUntil(this.initialRefresh, deadline);
     await this.awaitUntil(networkStop, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
+    await this.awaitUntil(this.predictive.flushProspective(), deadline);
     // Weather coalescing is intentionally lossy on crashes, but a normal
     // restart gets a bounded best-effort flush of representative samples.
     await this.awaitUntil(flushAircraftWeatherPersistence(deadline), deadline);
@@ -707,7 +708,12 @@ export class AircraftStateService {
     this.predictiveEvaluatedAt.set(aircraft.icaoHex, now);
     const destination = aircraft.enrichment?.route?.destinationAirport;
     const input = buildPredictiveShadowInput(aircraft, now, destination ? this.intelligence.getRunways(destination.icaoCode) : []);
-    if (input) this.predictive.evaluate(input);
+    if (input) {
+      input.flightState.lifecycleKey = this.intelligence.getLifecycleKey(aircraft.icaoHex);
+      input.flightState.flightId = null;
+      input.aircraft = aircraft;
+      this.predictive.evaluate(input);
+    }
   }
 
   private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {

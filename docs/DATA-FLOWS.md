@@ -74,6 +74,13 @@ only fills missing, invalid, or older values.
    belongs to the same local aircraft observation. Network-only observations
    are not persisted, enriched, assigned ATC, or evaluated by alerts.
 
+Prospective predictive validation is downstream of the shadow predictive
+evaluation. At capture time it stores the immutable prediction and the
+Flight-Intelligence lifecycle key. Later reporting joins only independent
+Flight/FlightPosition terminal evidence; predictive output is never an input to
+Ground Truth classification. The lane is feature-off by default, bounded and
+fail-soft.
+
 ADSBDB metadata and route persistence is a recovery cache only. Runtime RAM is
 authoritative: `set`/`delete` mutate bounded maps and generation counters
 immediately, while a single checkpoint serializes the current maps at the

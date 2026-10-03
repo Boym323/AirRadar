@@ -804,6 +804,7 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
       enabled: false, startedAt: now.toISOString(), positionsSeen: 0, currentPersist: 0, currentSkip: 0, shadowPersist: 0, shadowSkip: 0, bothPersist: 0, bothSkip: 0, currentPersistShadowSkip: 0, currentSkipShadowPersist: 0, shadowFailures: 0, stateEntries: 0, maximumObservedEntries: 0, currentPersistRate: null, shadowPersistRate: null, estimatedWriteReductionPct: null, decisionMatrix: { currentPersistShadowPersist: 0, currentPersistShadowSkip: 0, currentSkipShadowPersist: 0, currentSkipShadowSkip: 0 }, reasonHistogram: {}, contextHistogram: {}, windowedRates: [],
     },
     navigationIntegrity,
+    ...(input.predictiveValidation ? { predictiveValidation: input.predictiveValidation } : {}),
     alerts: {
       status: alertsStatus,
       enabled: input.alerts.enabled,
@@ -966,6 +967,14 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     aircraftWeather: mapAircraftWeatherDiagnosticsToSystemStatusInput(getAircraftWeatherDiagnostics()),
     flightPositionPersistenceShadow: serviceDiagnostics?.flightPositionPersistenceShadow,
     navigationIntegrity: { ...getNavigationIntegrityService().getDiagnostics(), activeAnomalies: getNavigationIntegrityService().getCurrent().summary.activeAnomalies },
+    predictiveValidation: serviceDiagnostics?.predictiveIntelligence ? {
+      ...serviceDiagnostics.predictiveIntelligence.prospective,
+      status: !serviceDiagnostics.predictiveIntelligence.prospective.enabled ? "disabled" : serviceDiagnostics.predictiveIntelligence.prospective.persistenceFailures > 0 ? "degraded" : serviceDiagnostics.predictiveIntelligence.prospective.captured > 0 ? "ok" : "no_data",
+      observationsCaptured: serviceDiagnostics.predictiveIntelligence.prospective.captured,
+      observationsSkippedDedupe: serviceDiagnostics.predictiveIntelligence.prospective.skippedDedupe,
+      rawRetentionDays: 90,
+      readiness: { ETA: "INSUFFICIENT_DATA", RUNWAY: "INSUFFICIENT_DATA", RUNWAY_CHANGE: "INSUFFICIENT_DATA", TRAJECTORY: "INSUFFICIENT_DATA" },
+    } : undefined,
     mapContext: {
       radar: defaultWeatherRadarProvider.getDiagnostics(),
       wind: defaultWindAloftProvider.diagnostics(),
