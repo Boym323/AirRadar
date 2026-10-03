@@ -285,6 +285,54 @@
   white-space: nowrap;
 }
 
+.airportContext {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.airportList {
+  display: grid;
+}
+
+.airport {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  color: inherit;
+  text-decoration: none;
+}
+
+.airport:hover {
+  background: var(--surface-accent-soft);
+}
+
+.airport > span {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.airport > span:last-child {
+  justify-items: end;
+  max-width: 58%;
+  text-align: right;
+}
+
+.airport strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+}
+
+.airport small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .footer {
   display: flex;
   align-items: center;
@@ -329,7 +377,8 @@
   }
 
   .sectionHeading,
-  .highlight {
+  .highlight,
+  .airport {
     padding-inline: var(--space-3);
   }
 
