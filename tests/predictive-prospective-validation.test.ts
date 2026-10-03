@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
 import { evaluatePredictiveIntelligence } from "@/lib/predictive-intelligence/engine";
-import { prospectiveObservationFor, ProspectiveValidationWriter, type ObservationTable, type ProspectiveObservation } from "@/lib/predictive-intelligence/prospective";
+import { databaseFailureSignature, prospectiveObservationFor, ProspectiveValidationWriter, type ObservationTable, type ProspectiveObservation } from "@/lib/predictive-intelligence/prospective";
 import type { Aircraft } from "@/lib/aircraft/types";
 import type { PredictiveFlightState } from "@/lib/predictive-intelligence/types";
 import "temporal-polyfill/full/global";
@@ -16,7 +16,7 @@ function observation(overrides: Partial<ProspectiveObservation> = {}): Prospecti
 }
 
 function fakeTable(rows = new Map<string, Record<string, unknown>>()): ObservationTable {
-  return { create: async (input) => { const key = String(input.observationKey); if (rows.has(key)) { const error = Object.assign(new Error("duplicate key value violates unique constraint"), { code: "23505" }); throw error; } rows.set(key, input); return input; } };
+  return { create: async (input) => { const key = String(input.observationKey); if (rows.has(key)) { const error = Object.assign(new Error("duplicate key value violates unique constraint"), { sqlState: "23505", constraint: "predictiveObservation_pkey", cause: Object.assign(new Error("duplicate key value violates unique constraint"), { code: "23505", constraint: "predictiveObservation_pkey" }) }); throw error; } rows.set(key, input); return input; } };
 }
 
 describe("prospective validation scoring", () => {
@@ -124,5 +124,34 @@ describe("prospective validation scoring", () => {
     expect(rows.size).toBe(1);
     expect(first.diagnostics()).toMatchObject({ persisted: 1, skippedDedupe: 1, persistenceFailures: 0 });
     expect(restarted.diagnostics()).toMatchObject({ persisted: 0, skippedDedupe: 1, persistenceFailures: 0 });
+    expect(restarted.diagnostics()).toMatchObject({ persistenceFailures: 0, lastDatabaseFailure: null, databaseFailureHistogram: [], failuresByCapability: { ETA: 0, RUNWAY: 0, RUNWAY_CHANGE: 0, TRAJECTORY: 0 } });
+  });
+
+  it("keeps only structural database fingerprints and rejects other unique constraints", async () => {
+    const errors = [
+      Object.assign(new Error("numeric value out of range"), { sqlState: "22003" }),
+      Object.assign(new Error("null value in column violates not-null constraint"), { sqlState: "23502", constraint: "other_pkey" }),
+      Object.assign(new Error("connection failure"), { code: "08006" }),
+      Object.assign(new Error("duplicate key value violates unique constraint other_unique"), { sqlState: "23505", constraint: "other_unique" }),
+    ];
+    for (const error of errors) {
+      const writer = new ProspectiveValidationWriter({ create: async () => { throw error; } });
+      writer.enqueue([observation()]);
+      await writer.flush();
+      const diagnostics = writer.diagnostics();
+      expect(diagnostics.persistenceFailures).toBe(1);
+      const shape = error as Error & { code?: string; sqlState?: string };
+      expect(diagnostics.lastDatabaseFailure?.sqlState ?? diagnostics.lastDatabaseFailure?.code).toBe(shape.sqlState ?? shape.code);
+      expect(diagnostics.databaseFailureHistogram).toHaveLength(1);
+      expect(JSON.stringify(diagnostics)).not.toContain(error.message);
+    }
+  });
+
+  it("bounds cause traversal and classifies unknown wrappers without raw details", () => {
+    const error = Object.assign(new Error("secret payload must not escape"), { code: "WRAPPED", cause: { cause: { cause: { cause: { code: "TOO_DEEP" } } } } });
+    const signature = databaseFailureSignature(error);
+    expect(signature).toMatchObject({ constructorName: "Error", code: "WRAPPED", messageClass: "unknown" });
+    expect(JSON.stringify(signature)).not.toContain("secret");
+    expect(JSON.stringify(signature)).not.toContain("TOO_DEEP");
   });
 });
