@@ -293,8 +293,12 @@ manual reload.
 
 Recap pages are page-scoped reads. They merge the existing daily receiver
 aggregates with database-side `Flight` aggregates and bounded first/latest
-per-aircraft lifetime lookups; they never read `FlightPosition`, start a
-poller, or open an SSE connection. Recap indexes are additive and remain
+per-aircraft lifetime lookups; the daily recap additionally reads bounded
+`Flight.startTime`/`airline` rows plus database-side `FlightEvent`
+aggregates and a capped recent event set for deterministic Daily Intelligence.
+It never reads `FlightPosition`, starts a poller, or opens an SSE connection.
+Daily Intelligence caps the page-scoped reads and marks its highlight set
+incomplete when a cap is reached. Recap indexes are additive and remain
 pending until an explicitly authorized deployment applies them.
 
 ## Process lifecycle
