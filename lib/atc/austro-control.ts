@@ -150,7 +150,7 @@ export async function fetchAustroControlPdf(url: string, fetchImpl: typeof fetch
 export async function extractAustroControlPdfText(bytes: Uint8Array): Promise<string> {
   if (bytes.byteLength > MAX_PDF_BYTES || String.fromCharCode(...bytes.slice(0, 5)) !== "%PDF-") throw new Error("Invalid PDF input");
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const document = await pdfjs.getDocument({ data: bytes }).promise;
+  const document = await pdfjs.getDocument({ data: bytes, enableScripting: false, isEvalSupported: false }).promise;
   const pages: string[] = [];
   for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
     const page = await document.getPage(pageNumber);
