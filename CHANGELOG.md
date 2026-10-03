@@ -10,6 +10,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.256] - 2026-10-03
+
+Changes since v1.0.255.
+
+### Documentation
+
+- Clarify release scope verification (8fc6548)
+
+### Maintenance
+
+- Sync generated repository metadata (#232) (eada2b6)
+- Ignore generated predictive validation reports (364cdf3)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: clarify release scope verification (8fc6548)
+- chore(metadata): sync generated repository metadata (#232) (eada2b6)
+- chore: ignore generated predictive validation reports (364cdf3)
+
+</details>
 ## [1.0.255] - 2026-10-03
 
 Changes since v1.0.254.
