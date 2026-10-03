@@ -10,6 +10,82 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.265] - 2026-10-03
+
+Changes since v1.0.264.
+
+### Changed
+
+- Gate production dependency audit (a1636c8)
+- Enable Dependabot updates (61d3d5b)
+- Add CodeQL analysis (5c2769e)
+- Upgrade PDF.js to patched 6.2.108 (52cf28c)
+- Refresh patched PDF.js lockfile (f2b3473)
+- Disable scripting in ATC PDF parsing (1489c0f)
+
+### Fixed
+
+- Use supported PDF.js extraction hardening (57951b7)
+- Align ATC PDF parser with PDF.js 6 API (a5ed706)
+
+<details>
+<summary>Technical commits</summary>
+
+- security: gate production dependency audit (a1636c8)
+- security: enable Dependabot updates (61d3d5b)
+- security: add CodeQL analysis (5c2769e)
+- security: upgrade PDF.js to patched 6.2.108 (52cf28c)
+- security: refresh patched PDF.js lockfile (f2b3473)
+- security: disable scripting in ATC PDF parsing (1489c0f)
+- fix: use supported PDF.js extraction hardening (57951b7)
+- fix: align ATC PDF parser with PDF.js 6 API (a5ed706)
+- Merge pull request #241 from Boym323/security/dependency-code-scanning (99b00bc)
+
+</details>
+
+## [1.0.264] - 2026-10-03
+
+Changes since v1.0.263.
+
+### Changed
+
+- Upgrade Next.js to 16.3.8 (b1e50f2)
+- Refresh Next.js 16.3.8 lockfile (690a63f)
+
+<details>
+<summary>Technical commits</summary>
+
+- security: upgrade Next.js to 16.3.8 (b1e50f2)
+- security: refresh Next.js 16.3.8 lockfile (690a63f)
+- Merge pull request #240 from Boym323/security/next-16-3-8 (ddd8c7a)
+
+</details>
+
+## [1.0.263] - 2026-10-03
+
+Changes since v1.0.262.
+
+### Fixed
+
+- Reconcile queued prospective drops (bf73ac2)
+- Restore predictive status dropped counter (aa35c06)
+
+### Maintenance
+
+- Sync generated repository metadata (7e2a76f)
+- Cover prospective multi-batch integrity drain (a1d6d53)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (7e2a76f)
+- Merge pull request #235 from Boym323/automation/repository-metadata (920b6e6)
+- fix: reconcile queued prospective drops (bf73ac2)
+- fix: restore predictive status dropped counter (aa35c06)
+- test: cover prospective multi-batch integrity drain (a1d6d53)
+- Merge pull request #238 from Boym323/fix/prospective-accounting-contract (11da5cc)
+
+</details>
 ## [1.0.262] - 2026-10-03
 
 Changes since v1.0.261.
