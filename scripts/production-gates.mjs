@@ -917,6 +917,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             state: element.querySelector(`[data-testid="radar-traffic-hero-metric-${metric}"]`)?.getAttribute("data-state") ?? null,
             value: element.querySelector(`[data-testid="radar-traffic-hero-metric-${metric}"] strong`)?.textContent?.trim() ?? "",
           })),
+          liveMetricContainers: element.querySelectorAll('[data-testid="radar-traffic-hero-metrics"]').length,
+          liveMetricSlots: element.querySelector('[data-testid="radar-traffic-hero-metrics"]')?.children.length ?? 0,
           technicalOpen: element.querySelector(".aircraft-quick-advanced")?.hasAttribute("open") ?? false,
           dataDisclosure: Boolean(element.querySelector('[role="tab"]#aircraft-tab-data')),
         }));
@@ -927,6 +929,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           || !quickContract.heroPrimary
           || !quickContract.heroSource
           || missingHeroMetrics.length > 0
+          || quickContract.liveMetricContainers !== 1
+          || quickContract.liveMetricSlots !== 4
           || quickContract.technicalOpen
           || !quickContract.dataDisclosure) {
           throw new Error(`Aircraft quick-detail contract failed at ${viewport.width}px: ${JSON.stringify(quickContract)}`);

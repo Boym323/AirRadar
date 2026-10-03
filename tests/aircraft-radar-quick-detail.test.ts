@@ -35,8 +35,12 @@ describe("aircraft radar quick detail", () => {
     expect(componentSource).not.toContain('{ id: "telemetry"');
   });
 
-  it("renders the shared traffic hero contract, progressive ATC frequencies, technical disclosure and accessible actions", () => {
+  it("renders the shared traffic hero with four live metrics, progressive ATC frequencies, technical disclosure and accessible actions", () => {
     expect(componentSource).toContain("<RadarTrafficHero");
+    expect(componentSource).toContain("altitude={formatAltitude(aircraft.altitude)}");
+    expect(componentSource).toContain("speed={formatSpeed(aircraft.groundSpeed)}");
+    expect(componentSource).toContain("track={formatTrack(aircraft.track)}");
+    expect(componentSource).toContain("verticalRate={verticalRateLabel(aircraft.verticalRate)}");
     expect(componentSource).not.toContain('className="aircraft-quick-metrics"');
     expect(componentSource).toContain("detailSections");
     expect(componentSource).toContain("aircraftPositionSourceLabel");
