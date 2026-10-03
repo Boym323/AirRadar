@@ -10,6 +10,89 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.254] - 2026-10-03
+
+Changes since v1.0.253.
+
+### Changed
+
+- Fix predictive prospective validation DEV blockers (adf626f)
+
+### Documentation
+
+- Document isolated development database workflow (b1eea1e)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix predictive prospective validation DEV blockers (adf626f)
+- docs: document isolated development database workflow (b1eea1e)
+
+</details>
+
+## [1.0.253] - 2026-10-03
+
+Changes since v1.0.252.
+
+### Added
+
+- Implement prospective validation for predictive observations (622b2ae)
+
+### Changed
+
+- Refactor code structure for improved readability and maintainability (58e5d80)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(predictive-intelligence): implement prospective validation for predictive observations (622b2ae)
+- Refactor code structure for improved readability and maintainability (58e5d80)
+
+</details>
+
+## [1.0.252] - 2026-10-02
+
+Changes since v1.0.251.
+
+### Added
+
+- Enhance predictive intelligence with destination proximity and runway handling (64fa09d)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: enhance predictive intelligence with destination proximity and runway handling (64fa09d)
+
+</details>
+
+## [1.0.250] - 2026-10-02
+
+Changes since v1.0.249.
+
+### Changed
+
+- Add tests for prospective predictive ground truth contracts (fb90f86)
+
+### Fixed
+
+- Harden prospective ground truth release gate (426847f)
+
+### Documentation
+
+- Record corrective ground truth release gate (514478d)
+- Correct ground truth release identity (45ead80)
+- Update changelog for v1.0.250 (b39afe9)
+
+<details>
+<summary>Technical commits</summary>
+
+- Add tests for prospective predictive ground truth contracts (fb90f86)
+- fix: harden prospective ground truth release gate (426847f)
+- docs: record corrective ground truth release gate (514478d)
+- docs: correct ground truth release identity (45ead80)
+- docs: update changelog for v1.0.250 (b39afe9)
+
+</details>
 ## [1.0.251] - 2026-10-02
 
 Changes since v1.0.250.
