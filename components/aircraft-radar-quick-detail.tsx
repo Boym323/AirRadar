@@ -493,7 +493,7 @@ function AircraftOverview({ aircraft, emergency, emergencySquawk, onCenter, hist
   onToggleWatchlist: () => void;
   historyTrail: QuickHistoryTrail | null;
 }) {
-  // Shared RadarTrafficHero replaces the legacy className="aircraft-quick-metrics" grid.
+  // Shared RadarTrafficHero owns the live identity, source and metric presentation.
   const summary = trackingSummary(aircraft, historyTrail);
   const livePoint = aircraft.altitude === null ? null : { recordedAt: aircraft.lastSeen, altitude: aircraft.altitude };
   const chartPoints = historyTrail?.points ?? aircraft.trail ?? [];
