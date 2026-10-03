@@ -13,13 +13,13 @@ jobs:
   validate:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # Changelog backfill tests inspect dates and commit ranges for release tags.
           fetch-depth: 0
           # Keep tags explicit: the changelog test resolves historical release tags.
           fetch-tags: true
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -27,12 +27,12 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
       - name: Restore ESLint cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .cache/eslint
           key: eslint-${{ runner.os }}-${{ hashFiles('package-lock.json', 'eslint.config.mjs') }}
       - name: Restore Next compiler cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .next/cache
           key: next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-${{ github.sha }}
@@ -75,7 +75,7 @@ jobs:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
       - name: Restore Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           # package-lock contains the exact installed Playwright version.
@@ -87,7 +87,7 @@ jobs:
         run: npm run test:production:all
       - name: Upload visual system artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: visual-system-${{ github.sha }}
           path: |
@@ -107,7 +107,7 @@ jobs:
           exit "${benchmark_status}"
       - name: Upload radar performance baseline
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: radar-performance-baseline-${{ github.sha }}
           path: |
@@ -123,7 +123,7 @@ jobs:
     outputs:
       deploy: ${{ steps.scope.outputs.deploy }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
       - name: Detect release-required changes
