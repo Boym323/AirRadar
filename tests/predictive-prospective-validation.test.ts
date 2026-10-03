@@ -81,12 +81,12 @@ describe("prospective validation scoring", () => {
     expect(writer.diagnostics()).toMatchObject({ persisted: 1, persistenceFailures: 0 });
   });
 
-  it("records invalid timestamps as failures without false success", async () => {
+  it("rejects invalid timestamps before enqueue with an explicit reason", async () => {
     vi.useFakeTimers();
     const writer = new ProspectiveValidationWriter(fakeTable());
     writer.enqueue([observation({ predictedAt: Number.NaN })]);
     await writer.flush();
-    expect(writer.diagnostics()).toMatchObject({ persisted: 0, persistenceFailures: 1, lastSuccessfulWrite: null, lastFailureClassification: "invalid_timestamp", lastFailureField: "predictedAt" });
+    expect(writer.diagnostics()).toMatchObject({ persisted: 0, rejectedInvalid: 1, persistenceFailures: 0, lastSuccessfulWrite: null, invalidSkipReasons: { invalid_predicted_at: 1 } });
   });
 
   it.each([
@@ -100,7 +100,8 @@ describe("prospective validation scoring", () => {
     const writer = new ProspectiveValidationWriter(fakeTable());
     writer.enqueue([observation(overrides)]);
     await writer.flush();
-    expect(writer.diagnostics()).toMatchObject({ persisted: 0, persistenceFailures: 1, lastFailureClassification: "invalid_timestamp", lastFailureField: field });
+    const reason = field === "predictedAt" ? "invalid_predicted_at" : "invalid_predicted_landing_at";
+    expect(writer.diagnostics()).toMatchObject({ persisted: 0, rejectedInvalid: 1, persistenceFailures: 0, invalidSkipReasons: { [reason]: 1 } });
   });
 
   it("records primary persistence errors and isolates them from the caller", async () => {
@@ -151,10 +152,38 @@ describe("prospective validation scoring", () => {
     const writer = new ProspectiveValidationWriter({ create });
     const invalid = observation({ lifecycleKey: "", observationKey: "writer:test:invalid" });
     expect(validateProspectiveObservation(invalid)).toBe("missing_lifecycle_key");
-    writer.enqueue([invalid, observation({ observationKey: "writer:test:valid" })]);
+    writer.enqueue([invalid, observation({ observationKey: "writer:test:ETA:valid" })]);
     await writer.flush();
     expect(create).toHaveBeenCalledTimes(1);
     expect(writer.diagnostics()).toMatchObject({ rejectedInvalid: 1, invalidSkipReasons: { missing_lifecycle_key: 1 }, persisted: 1 });
+  });
+
+  it("isolates invalid mixed-capability rows before persistence", async () => {
+    const create = vi.fn(async (input: Record<string, unknown>) => input);
+    const writer = new ProspectiveValidationWriter({ create });
+    writer.enqueue([
+      observation({ observationKey: "mixed:flight:ETA:valid", capability: "ETA" }),
+      observation({ observationKey: "mixed:flight:RUNWAY:invalid", capability: "RUNWAY", lifecycleKey: "" }),
+      observation({ observationKey: "mixed:flight:RUNWAY:valid", capability: "RUNWAY", horizonSeconds: null, predictedLandingAt: null, predictedRunway: "24" }),
+      observation({ observationKey: "mixed:flight:TRAJECTORY:invalid", capability: "TRAJECTORY", predictedAt: Number.NaN, predictedLandingAt: null }),
+      observation({ observationKey: "mixed:flight:TRAJECTORY:valid", capability: "TRAJECTORY", horizonSeconds: null, predictedLandingAt: null }),
+    ]);
+    await writer.flush();
+
+    expect(create).toHaveBeenCalledTimes(3);
+    expect(writer.diagnostics()).toMatchObject({
+      persisted: 3,
+      rejectedInvalid: 2,
+      persistenceFailures: 0,
+      integrityRejects: 0,
+      invalidSkipReasons: { missing_lifecycle_key: 1, invalid_predicted_at: 1 },
+      invalidSkipReasonsByCapability: {
+        ETA: {},
+        RUNWAY: { missing_lifecycle_key: 1 },
+        RUNWAY_CHANGE: {},
+        TRAJECTORY: { invalid_predicted_at: 1 },
+      },
+    });
   });
 
   it("persists one row for duplicate keys and classifies the duplicate as dedupe", async () => {

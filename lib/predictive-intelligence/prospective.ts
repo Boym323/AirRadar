@@ -48,6 +48,10 @@ export type ProspectiveObservation = {
 };
 
 function finite(value: number | null | undefined): value is number { return typeof value === "number" && Number.isFinite(value); }
+const MAX_TEMPORAL_EPOCH_MILLISECONDS = 8_640_000_000_000_000;
+function validTimestamp(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && Math.abs(value) <= MAX_TEMPORAL_EPOCH_MILLISECONDS;
+}
 function etaBucket(seconds: number | null): string {
   if (!finite(seconds)) return "UNKNOWN";
   if (seconds <= 5 * 60) return "<=5m";
@@ -114,7 +118,7 @@ export function prospectiveObservationFor(
 }
 
 export interface ProspectiveDiagnostics {
-  enabled: boolean; captured: number; persisted: number; skippedDedupe: number; dropped: number; rejectedInvalid: number; invalidSkipReasons: Record<string, number>; persistenceFailures: number; integrityRejects: number;
+  enabled: boolean; captured: number; persisted: number; skippedDedupe: number; dropped: number; rejectedInvalid: number; invalidSkipReasons: Record<string, number>; invalidSkipReasonsByCapability: Record<PredictiveCapability, Record<string, number>>; persistenceFailures: number; integrityRejects: number;
   persistenceSuspended: boolean; suspensionReason: "integrity_violation_23502" | "integrity_violation" | null;
   queueDepth: number; queueHighWaterMark: number; oldestQueuedAt: string | null; lastSuccessfulWrite: string | null;
   lastFailureAt: string | null; lastFailureClassification: "invalid_timestamp" | "database" | "unconfigured" | null;
@@ -153,6 +157,7 @@ export type DatabaseFailureHistogramEntry = { signature: string; count: number; 
 
 const FAILURE_HISTOGRAM_LIMIT = 8;
 const CAPABILITIES: readonly PredictiveCapability[] = ["ETA", "RUNWAY", "RUNWAY_CHANGE", "TRAJECTORY"];
+const INVALID_REASON_HISTOGRAM_LIMIT = 32;
 const boundedString = (value: unknown): string | null => {
   if (typeof value !== "string" || value.length === 0 || value.length > 128 || /[\r\n]/.test(value)) return null;
   return value;
@@ -260,11 +265,12 @@ function failureSignatureKey(signature: DatabaseFailureSignature): string {
   return [signature.constructorName, signature.name, signature.code, signature.sqlState, signature.sqlStateClass, signature.constraint, signature.table, signature.column, signature.detail, signature.capability, signature.horizonBucket, signature.observationKeyHash, signature.writerOperation, signature.causeConstructorName, signature.causeName, signature.causeCode, signature.causeSqlState, signature.causeConstraint, signature.messageClass].map((value) => value ?? "-").join("|");
 }
 
-export type InvalidObservationReason = "missing_observation_key" | "missing_lifecycle_key" | "invalid_capability" | "missing_aircraft_icao" | "missing_horizon_bucket" | "missing_flight_phase" | "missing_prediction_confidence" | "missing_evidence" | "missing_model_version" | "missing_software_version" | "missing_graduation_mode" | "invalid_position";
+export type InvalidObservationReason = "missing_observation_key" | "malformed_observation_key" | "missing_lifecycle_key" | "invalid_capability" | "missing_aircraft_icao" | "missing_horizon_bucket" | "missing_flight_phase" | "missing_prediction_confidence" | "missing_evidence" | "missing_model_version" | "missing_software_version" | "missing_graduation_mode" | "invalid_predicted_at" | "invalid_predicted_landing_at" | "invalid_position";
 const validCapabilities = new Set<string>(CAPABILITIES);
 export function validateProspectiveObservation(observation: ProspectiveObservation): InvalidObservationReason | null {
   if (!observation.observationKey) return "missing_observation_key";
   if (!observation.lifecycleKey) return "missing_lifecycle_key";
+  if (observation.observationKey.split(":").length < 4) return "malformed_observation_key";
   if (!validCapabilities.has(observation.capability)) return "invalid_capability";
   if (!observation.aircraftIcao) return "missing_aircraft_icao";
   if (!observation.horizonBucket) return "missing_horizon_bucket";
@@ -274,6 +280,8 @@ export function validateProspectiveObservation(observation: ProspectiveObservati
   if (!observation.modelVersion) return "missing_model_version";
   if (!observation.softwareVersion) return "missing_software_version";
   if (!observation.graduationMode) return "missing_graduation_mode";
+  if (!validTimestamp(observation.predictedAt)) return "invalid_predicted_at";
+  if (observation.predictedLandingAt !== null && !validTimestamp(observation.predictedLandingAt)) return "invalid_predicted_landing_at";
   if (!finite(observation.latitude) || !finite(observation.longitude)) return "invalid_position";
   return null;
 }
@@ -315,7 +323,9 @@ export class ProspectiveValidationWriter {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private flushing = false;
   private readonly stats = {
-    captured: 0, persisted: 0, skippedDedupe: 0, dropped: 0, rejectedInvalid: 0, invalidSkipReasons: {} as Record<string, number>, persistenceFailures: 0, integrityRejects: 0,
+    captured: 0, persisted: 0, skippedDedupe: 0, dropped: 0, rejectedInvalid: 0, invalidSkipReasons: {} as Record<string, number>,
+    invalidSkipReasonsByCapability: Object.fromEntries(CAPABILITIES.map((capability) => [capability, {}])) as Record<PredictiveCapability, Record<string, number>>,
+    persistenceFailures: 0, integrityRejects: 0,
     queueHighWaterMark: 0, lastSuccessfulWrite: null as string | null,
     lastFailureAt: null as string | null,
     lastFailureClassification: null as ProspectiveDiagnostics["lastFailureClassification"],
@@ -356,7 +366,16 @@ export class ProspectiveValidationWriter {
       const invalidReason = validateProspectiveObservation(observation);
       if (invalidReason) {
         this.stats.rejectedInvalid += 1;
-        this.stats.invalidSkipReasons[invalidReason] = (this.stats.invalidSkipReasons[invalidReason] ?? 0) + 1;
+        if (Object.keys(this.stats.invalidSkipReasons).length < INVALID_REASON_HISTOGRAM_LIMIT || this.stats.invalidSkipReasons[invalidReason] !== undefined) {
+          this.stats.invalidSkipReasons[invalidReason] = (this.stats.invalidSkipReasons[invalidReason] ?? 0) + 1;
+        }
+        if (validCapabilities.has(observation.capability)) {
+          const capability = observation.capability as PredictiveCapability;
+          const byCapability = this.stats.invalidSkipReasonsByCapability[capability];
+          if (Object.keys(byCapability).length < INVALID_REASON_HISTOGRAM_LIMIT || byCapability[invalidReason] !== undefined) {
+            byCapability[invalidReason] = (byCapability[invalidReason] ?? 0) + 1;
+          }
+        }
         continue;
       }
       if (this.pending.has(observation.observationKey)) { this.stats.skippedDedupe += 1; continue; }
@@ -437,6 +456,7 @@ export class ProspectiveValidationWriter {
       databaseFailureHistogram: this.stats.databaseFailureHistogram.map((entry) => ({ ...entry })),
       failuresByCapability: { ...this.stats.failuresByCapability },
       invalidSkipReasons: { ...this.stats.invalidSkipReasons },
+      invalidSkipReasonsByCapability: Object.fromEntries(CAPABILITIES.map((capability) => [capability, { ...this.stats.invalidSkipReasonsByCapability[capability] }])) as Record<PredictiveCapability, Record<string, number>>,
       queueDepth: this.queue.length, oldestQueuedAt: this.queue[0] ? new Date(this.queue[0].predictedAt).toISOString() : null,
     };
   }
