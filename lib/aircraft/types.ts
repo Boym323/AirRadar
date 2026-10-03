@@ -475,6 +475,36 @@ export interface ReceiverRecapComparison {
   maxDistanceKm: number | null;
 }
 
+export type RecapDailyHighlightKind = "flight_event" | "emergency" | "reception_record" | "new_aircraft" | "watchlist";
+
+export interface RecapDailyHighlight {
+  key: string;
+  kind: RecapDailyHighlightKind;
+  occurredAt: string;
+  icaoHex: string;
+  callsign: string | null;
+  registration: string | null;
+  eventType: string | null;
+  airportIcao: string | null;
+  runway: string | null;
+  confidenceLevel: "low" | "medium" | "high" | null;
+  squawk: string | null;
+  distanceKm: number | null;
+}
+
+export interface RecapDailyIntelligence {
+  complete: boolean;
+  busiestHour: { hour: number; flights: number } | null;
+  topAirlines: RecapRankingItem[];
+  eventCounts: {
+    goArounds: number;
+    holdings: number;
+    diversions: number;
+    emergencies: number;
+  };
+  highlights: RecapDailyHighlight[];
+}
+
 export interface ReceiverRecapResponse {
   source: "postgres" | "unavailable";
   range: "daily" | "weekly";
@@ -494,6 +524,7 @@ export interface ReceiverRecapResponse {
   interestingAircraft: RecapInterestingItem[];
   bestReception: ReceiverReceptionRecord | null;
   alertCount: number | null;
+  dailyIntelligence: RecapDailyIntelligence | null;
   comparison: ReceiverRecapComparison | null;
 }
 
