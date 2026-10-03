@@ -12,15 +12,18 @@ import {
   liveOperationsHighlights,
   OPERATIONS_CENTER_WINDOW_MS,
   recentOperationsTimeline,
+  relevantOperationsAirportIcaos,
 } from "@/lib/intelligence/operations-center";
 import type { FlightEventType } from "@/lib/intelligence/types";
 import type { AlertHistoryEntry, AlertHistoryPage } from "@/lib/server/alert-history";
+import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
 import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useIntelligenceStream } from "@/components/use-intelligence-stream";
 import styles from "./radar-operations-center.module.css";
 
 const CLOCK_REFRESH_INTERVAL_MS = 60_000;
 const SUPPLEMENTARY_REFRESH_INTERVAL_MS = 120_000;
+const AIRPORT_CONTEXT_REFRESH_INTERVAL_MS = 300_000;
 
 type SupplementaryStatus = "idle" | "loading" | "ready" | "partial" | "unavailable";
 
@@ -71,6 +74,7 @@ export function RadarOperationsCenter() {
   const [now, setNow] = useState(() => Date.now());
   const [alerts, setAlerts] = useState<AlertHistoryEntry[]>([]);
   const [logbook, setLogbook] = useState<LogbookSummaryResponse | null>(null);
+  const [airportOperations, setAirportOperations] = useState<AirportOperationsResponse[]>([]);
   const [supplementaryStatus, setSupplementaryStatus] = useState<SupplementaryStatus>("idle");
 
   useEffect(() => {
@@ -127,6 +131,44 @@ export function RadarOperationsCenter() {
     [alerts, intelligenceEvents, now],
   );
   const highlights = useMemo(() => liveOperationsHighlights(logbook), [logbook]);
+  const relevantAirportKey = useMemo(
+    () => relevantOperationsAirportIcaos(timeline).join(","),
+    [timeline],
+  );
+
+  useEffect(() => {
+    if (!open || !relevantAirportKey) {
+      if (!open) setAirportOperations([]);
+      return;
+    }
+    let active = true;
+    const controller = new AbortController();
+    const icaos = relevantAirportKey.split(",").filter(Boolean);
+
+    const loadAirports = async () => {
+      const results = await Promise.allSettled(
+        icaos.map((icao) =>
+          fetchJson<AirportOperationsResponse>(
+            `/api/airports/${encodeURIComponent(icao)}/operations?period=24h`,
+            controller.signal,
+          ),
+        ),
+      );
+      if (!active) return;
+      setAirportOperations(
+        results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []),
+      );
+    };
+
+    void loadAirports();
+    const timer = window.setInterval(() => void loadAirports(), AIRPORT_CONTEXT_REFRESH_INTERVAL_MS);
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [open, relevantAirportKey]);
+
   const attentionCount = attentionOperationsCount(timeline);
   const evidenceTypes = t.intelligence.evidenceTypes as Record<string, string>;
   const loadingSupplementary = supplementaryStatus === "loading" || supplementaryStatus === "idle";
@@ -271,6 +313,40 @@ export function RadarOperationsCenter() {
                       </span>
                     </Link>
                   ))}
+                </div>
+              </section>
+            ) : null}
+
+            {airportOperations.length > 0 ? (
+              <section className={styles.airportContext} aria-labelledby="operations-airport-context">
+                <div className={styles.sectionHeading}>
+                  <span id="operations-airport-context">{t.intelligence.operationsAirportContext}</span>
+                  <small>{t.intelligence.operationsAirportInferred}</small>
+                </div>
+                <div className={styles.airportList}>
+                  {airportOperations.map((operation) => {
+                    const details = [
+                      operation.likelyRunway ? `${t.intelligence.operationsAirportRunway} ${operation.likelyRunway.designator}` : null,
+                      operation.goArounds.length > 0 ? `${operation.goArounds.length}× ${t.intelligence.operationsAirportGoAround}` : null,
+                      operation.holding.length > 0 ? `${operation.holding.length}× ${t.intelligence.operationsAirportHolding}` : null,
+                    ].filter(Boolean).join(" · ");
+                    return (
+                      <Link
+                        className={styles.airport}
+                        href={`/airports/${encodeURIComponent(operation.airport.icao)}`}
+                        key={operation.airport.icao}
+                      >
+                        <span>
+                          <strong>{operation.airport.icao}</strong>
+                          <small>{operation.airport.name}</small>
+                        </span>
+                        <span>
+                          <strong>{t.intelligence.operationsAirportActivity[operation.activity]}</strong>
+                          <small>{details || t.intelligence.operationsAirportNoSpecial}</small>
+                        </span>
+                      </Link>
+                    );
+                  })}
                 </div>
               </section>
             ) : null}
