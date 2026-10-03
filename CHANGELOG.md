@@ -10,6 +10,30 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.258] - 2026-10-03
+
+Changes since v1.0.257.
+
+### Added
+
+- Implement RadarTrafficHero component and traffic presentation logic (a9fd6dcb)
+
+### Maintenance
+
+- Add TypeScript SDK path to VSCode settings (b0ae168f)
+- Instrument prospective persistence failures (059a5757)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore: add TypeScript SDK path to VSCode settings (b0ae168f)
+- chore: instrument prospective persistence failures (059a5757)
+- Merge pull request #236 from Boym323/fix/predictive-persistence-diagnostics (b7ba7644)
+- feat: implement RadarTrafficHero component and traffic presentation logic (a9fd6dcb)
+- Merge remote-tracking branch 'origin/main' (fc97cb38)
+
+</details>
+
 ## [1.0.256] - 2026-10-03
 
 Changes since v1.0.255.
