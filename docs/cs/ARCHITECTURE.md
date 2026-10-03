@@ -279,9 +279,13 @@ runtime změny bez ručního reloadu.
 
 Recap stránky jsou page-scoped čtení. Slučují existující denní agregace
 přijímače s database-side agregacemi `Flight` a omezenými first/latest
-celoživotními lookupy pro každé letadlo; nikdy nečtou `FlightPosition`,
-nespouštějí poller ani neotevírají SSE spojení. Recap indexy jsou aditivní a
-zůstávají pending, dokud je neaplikuje explicitně autorizované nasazení.
+celoživotními lookupy pro každé letadlo; denní recap navíc čte omezené řádky
+`Flight.startTime`/`airline`, database-side agregace `FlightEvent` a
+omezenou sadu posledních událostí pro deterministické Daily Intelligence.
+Nikdy nečte `FlightPosition`, nespouští poller ani neotevírá SSE spojení.
+Daily Intelligence omezuje page-scoped čtení a označí sadu highlightů jako
+neúplnou, pokud je dosažen limit. Recap indexy jsou aditivní a zůstávají
+pending, dokud je neaplikuje explicitně autorizované nasazení.
 
 ## Životní cyklus procesu
 
