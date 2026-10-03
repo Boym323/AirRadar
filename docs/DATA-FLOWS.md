@@ -412,11 +412,17 @@ unavailable rather than treating a process restart as a new observation.
 `GET /api/recap?range=daily|weekly` is a page-scoped read in Europe/Prague
 local time. It reads the selected date range from `ReceiverDailyStats` and
 `ReceiverDailyAircraft`, computes Flight counts/routes/types in the database,
-and fetches at most first/latest lifetime rows per aircraft for labels. Weekly
+and fetches at most first/latest lifetime rows per aircraft for labels. The
+daily response also derives deterministic Daily Intelligence from bounded
+`Flight.startTime`/`airline` rows, database-side `FlightEvent` type
+aggregates, a capped recent `FlightEvent` set, and the already bounded alert
+history. These inputs provide busiest hour, top airlines, operational event
+counts and a bounded high-value timeline; the response reports
+`dailyIntelligence.complete=false` when a source cap is reached. Weekly
 comparison reads the preceding seven aggregate windows without lifetime
-enrichment. Missing aggregate rows remain missing in the response rather than
-becoming zeroes. Recaps do not scan `FlightPosition`, make provider requests,
-create another EventSource, or add another polling loop.
+enrichment or Daily Intelligence. Missing aggregate rows remain missing in the
+response rather than becoming zeroes. Recaps do not scan `FlightPosition`,
+make provider requests, create another EventSource, or add another polling loop.
 
 ## Time Machine historical flow
 
