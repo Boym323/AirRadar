@@ -195,6 +195,23 @@ export function attentionOperationsCount(items: OperationsTimelineItem[]): numbe
   return items.reduce((count, item) => count + (item.tone === "attention" ? 1 : 0), 0);
 }
 
+export function relevantOperationsAirportIcaos(
+  items: OperationsTimelineItem[],
+  limit = 2,
+): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    const raw = item.intelligence?.airportIcao ?? item.alert?.alertV1?.airportIcao ?? null;
+    const icao = raw?.trim().toUpperCase();
+    if (!icao || seen.has(icao)) continue;
+    seen.add(icao);
+    result.push(icao);
+    if (result.length >= Math.max(0, limit)) break;
+  }
+  return result;
+}
+
 function highlightScore(item: LogbookInterestingAircraft): number {
   return item.reasons.reduce((total, reason) => total + HIGHLIGHT_PRIORITY[reason], 0);
 }
