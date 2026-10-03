@@ -191,11 +191,8 @@ export function recentOperationsTimeline(
     .slice(0, Math.max(0, limit));
 }
 
-export function attentionOperationsCount(items: Array<FlightIntelligenceEvent | OperationsTimelineItem>): number {
-  return items.reduce((count, item) => {
-    const tone = "source" in item ? item.tone : operationsEventTone(item.type);
-    return count + (tone === "attention" ? 1 : 0);
-  }, 0);
+export function attentionOperationsCount(items: OperationsTimelineItem[]): number {
+  return items.reduce((count, item) => count + (item.tone === "attention" ? 1 : 0), 0);
 }
 
 function highlightScore(item: LogbookInterestingAircraft): number {
