@@ -90,7 +90,7 @@
     "icons:audit": "node scripts/aircraft-icon-audit.mjs"
   },
   "dependencies": {
-    "@prisma/orm-postgres": "8.0.0-rc.9",
+    "@prisma/orm-postgres": "8.0.0-rc.14",
     "@tanstack/react-query": "^5.104.0",
     "cheerio": "^1.2.0",
     "csv-parse": "^7.0.3",
