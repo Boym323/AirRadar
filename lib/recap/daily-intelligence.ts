@@ -125,36 +125,45 @@ function eventHighlight(event: DailyRecapEventInput): { priority: number; value:
   };
 }
 
-function alertPriority(entry: AlertHistoryEntry): number {
+function alertSquawk(entry: AlertHistoryEntry): string | null {
+  if (entry.squawk) return entry.squawk;
+  return entry.type === "alert_v1" && entry.alertV1?.sourceType === "SQUAWK"
+    ? entry.alertV1.sourceKey
+    : null;
+}
+
+function isEmergencyAlert(entry: AlertHistoryEntry): boolean {
   if (
     entry.type === "emergency"
     || entry.type === "emergency_7500"
     || entry.type === "emergency_7600"
     || entry.type === "emergency_7700"
-  ) return 150;
-  if (entry.type === "alert_v1" && entry.alertV1?.sourceType === "SQUAWK") return 148;
+  ) return true;
+  const squawk = alertSquawk(entry);
+  return entry.type === "alert_v1"
+    && entry.alertV1?.sourceType === "SQUAWK"
+    && (squawk === "7500" || squawk === "7600" || squawk === "7700");
+}
+
+function alertPriority(entry: AlertHistoryEntry): number {
+  if (entry.type === "emergency" || entry.type.startsWith("emergency_")) return 150;
+  if (isEmergencyAlert(entry)) return 148;
   if (entry.type === "reception_record") return entry.record?.scope === "lifetime" ? 140 : 130;
   if (entry.type === "new_aircraft") return 125;
   if (entry.type === "watchlist" || entry.type === "aircraft_appeared" || entry.type === "entered_radius") return 105;
-  if (entry.type === "alert_v1" && entry.alertV1?.sourceType !== "FLIGHT_EVENT") return 100;
+  if (entry.type === "alert_v1" && entry.alertV1?.sourceType !== "FLIGHT_EVENT" && entry.alertV1?.sourceType !== "SQUAWK") return 100;
   return 0;
 }
 
 function alertKind(entry: AlertHistoryEntry): RecapDailyHighlight["kind"] | null {
-  if (
-    entry.type === "emergency"
-    || entry.type === "emergency_7500"
-    || entry.type === "emergency_7600"
-    || entry.type === "emergency_7700"
-    || (entry.type === "alert_v1" && entry.alertV1?.sourceType === "SQUAWK")
-  ) return "emergency";
+  if (isEmergencyAlert(entry)) return "emergency";
   if (entry.type === "reception_record") return "reception_record";
   if (entry.type === "new_aircraft") return "new_aircraft";
   if (
     entry.type === "watchlist"
     || entry.type === "aircraft_appeared"
     || entry.type === "entered_radius"
-    || (entry.type === "alert_v1" && entry.alertV1?.sourceType !== "FLIGHT_EVENT")
+    || (entry.type === "alert_v1" && entry.alertV1?.sourceType !== "FLIGHT_EVENT" && entry.alertV1?.sourceType !== "SQUAWK")
   ) return "watchlist";
   return null;
 }
@@ -208,7 +217,7 @@ function alertHighlight(entry: AlertHistoryEntry): { priority: number; value: Re
       airportIcao: entry.alertV1?.airportIcao?.trim().toUpperCase() || entry.intelligence?.airportIcao?.trim().toUpperCase() || null,
       runway: entry.alertV1?.runway?.trim().toUpperCase() || null,
       confidenceLevel: entry.intelligence?.confidenceLevel ?? null,
-      squawk: entry.squawk ?? (entry.alertV1?.sourceType === "SQUAWK" ? entry.alertV1.sourceKey : null),
+      squawk: alertSquawk(entry),
       distanceKm: entry.record?.distanceKm ?? null,
     },
   };
