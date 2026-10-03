@@ -9,6 +9,8 @@ import { getReceptionRecords } from "@/lib/server/reception-records";
 
 const RECAP_RANKING_LIMIT = 5;
 const RECAP_INTERESTING_LIMIT = 8;
+const DAILY_INTELLIGENCE_FLIGHT_LIMIT = 50_000;
+const DAILY_INTELLIGENCE_EVENT_LIMIT = 250;
 
 type RecapRange = "daily" | "weekly";
 
@@ -253,6 +255,8 @@ async function loadDailyIntelligence(
       .where((row) => row.startTime.gte(fromInstant))
       .where((row) => row.startTime.lt(toInstant))
       .select("startTime", "airline")
+      .orderBy((row) => row.startTime.desc())
+      .limit(DAILY_INTELLIGENCE_FLIGHT_LIMIT + 1)
       .all())(),
     (async () => await schema.FlightEvent
       .where((row) => row.occurredAt.gte(fromInstant))
@@ -264,21 +268,25 @@ async function loadDailyIntelligence(
       .where((row) => row.occurredAt.lt(toInstant))
       .select("id", "eventKey", "type", "icaoHex", "occurredAt", "confidence", "airportIcao", "runway")
       .orderBy([(row) => row.occurredAt.desc(), (row) => row.id.desc()])
-      .limit(250)
+      .limit(DAILY_INTELLIGENCE_EVENT_LIMIT + 1)
       .all())(),
   ]);
   const flightRows = flightRowsRaw as unknown as Array<{ startTime: Temporal.Instant | Date; airline: string | null }>;
   const eventAggregates = eventAggregatesRaw as unknown as DailyRecapEventAggregateInput[];
   const eventRows = eventRowsRaw as unknown as Array<Omit<DailyRecapEventInput, "occurredAt"> & { occurredAt: Temporal.Instant | Date }>;
 
-  const flights: DailyRecapFlightInput[] = flightRows.map((row) => ({
-    startedAt: timestamp(row.startTime),
-    airline: row.airline,
-  }));
-  const events: DailyRecapEventInput[] = eventRows.map((row) => ({
-    ...row,
-    occurredAt: timestamp(row.occurredAt),
-  }));
+  const flights: DailyRecapFlightInput[] = flightRows
+    .slice(0, DAILY_INTELLIGENCE_FLIGHT_LIMIT)
+    .map((row) => ({
+      startedAt: timestamp(row.startTime),
+      airline: row.airline,
+    }));
+  const events: DailyRecapEventInput[] = eventRows
+    .slice(0, DAILY_INTELLIGENCE_EVENT_LIMIT)
+    .map((row) => ({
+      ...row,
+      occurredAt: timestamp(row.occurredAt),
+    }));
 
   return buildDailyIntelligence({
     flights,
@@ -286,7 +294,9 @@ async function loadDailyIntelligence(
     events,
     alerts: alerts.items,
     timezone: getAppTimezone(),
-    complete: alerts.nextPage === null && eventRows.length < 250,
+    complete: alerts.nextPage === null
+      && flightRows.length <= DAILY_INTELLIGENCE_FLIGHT_LIMIT
+      && eventRows.length <= DAILY_INTELLIGENCE_EVENT_LIMIT,
   });
 }
 
