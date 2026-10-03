@@ -52,6 +52,19 @@ nedostatku dat vrací `INSUFFICIENT_DATA`, nikoliv zavádějící nulovou chybu 
 100% přesnost. Persistence failures, dropped samples, queue depth a high-water
 mark se uvádějí zvlášť, aby ztráta coverage nebyla vydávána za kvalitu modelu.
 
+DEV migrace `20261003T0515_predictive_prospective_observations_v1` je
+forward-only a vytváří pouze novou tabulku `predictiveObservation`. Primární
+klíč je deterministický observation key pro deduplikaci retry/restart scénářů.
+Indexy capability, destination, flight, lifecycle a samostatný `predictedAt`
+odpovídají reportovacím a retention-cutoff dotazům. Očekávaný prostor indexů je
+malý proti JSON evidence payloadu; každý řádek přidává jeden table write a šest
+index entries, tedy přibližně 7 zápisů tabulky/indexů na observation před vlivem
+stránek PostgreSQL. Vytvoření nové tabulky a běžných indexů krátce vyžaduje
+`ACCESS EXCLUSIVE` lock; protože tabulka je nová a prázdná, neprobíhá rewrite
+velké existující tabulky ani backfill. Migraci lze aplikovat online vůči live
+radaru, ale před canary patří do běžného DEV maintenance okna. Produkce se v
+této fázi nemění.
+
 ## Rollout
 
 1. Stage 0: ověření v developmentu se switchem OFF.

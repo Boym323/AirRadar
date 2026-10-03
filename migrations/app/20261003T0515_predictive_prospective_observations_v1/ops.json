@@ -1,0 +1,236 @@
+[
+  {
+    "id": "table.predictiveObservation",
+    "label": "Create table \"predictiveObservation\"",
+    "summary": "Creates table \"predictiveObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "predictiveObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"predictiveObservation\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"predictiveObservation\"",
+        "sql": "CREATE TABLE \"public\".\"predictiveObservation\" (\n  \"aircraftIcao\" text NOT NULL,\n  \"alternativeRunway\" text,\n  \"altitudeFt\" int4,\n  \"callsign\" text,\n  \"capability\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"destinationIcao\" text,\n  \"distanceRemainingNm\" float8,\n  \"etaConfidence\" text,\n  \"evidenceJson\" text NOT NULL,\n  \"flightId\" int4,\n  \"flightPhase\" text NOT NULL,\n  \"graduationMode\" text NOT NULL,\n  \"groundSpeedKt\" float8,\n  \"horizonBucket\" text NOT NULL,\n  \"horizonSeconds\" int4,\n  \"latitude\" float8 NOT NULL,\n  \"lifecycleKey\" text NOT NULL,\n  \"longitude\" float8 NOT NULL,\n  \"modelVersion\" text NOT NULL,\n  \"observationKey\" text NOT NULL,\n  \"predictedAt\" timestamptz NOT NULL,\n  \"predictedLandingAt\" timestamptz,\n  \"predictedRunway\" text,\n  \"predictionConfidence\" text NOT NULL,\n  \"previousRunway\" text,\n  \"softwareVersion\" text NOT NULL,\n  \"trackDeg\" float8,\n  \"verticalRateFpm\" float8,\n  PRIMARY KEY (\"observationKey\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"predictiveObservation\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.predictiveObservation.predictiveObservation_capability_predictedAt_idx_285afb25",
+    "label": "Create index \"predictiveObservation_capability_predictedAt_idx_285afb25\" on \"predictiveObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "predictiveObservation_capability_predictedAt_idx_285afb25",
+        "table": "predictiveObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"predictiveObservation_capability_predictedAt_idx_285afb25\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_capability_predictedAt_idx_285afb25\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"predictiveObservation_capability_predictedAt_idx_285afb25\"",
+        "sql": "CREATE INDEX \"predictiveObservation_capability_predictedAt_idx_285afb25\" ON \"public\".\"predictiveObservation\" (\"capability\", \"predictedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"predictiveObservation_capability_predictedAt_idx_285afb25\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_capability_predictedAt_idx_285afb25\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.predictiveObservation.predictiveObservation_destinationIcao_predictedAt_idx_4b3c94e0",
+    "label": "Create index \"predictiveObservation_destinationIcao_predictedAt_idx_4b3c94e0\" on \"predictiveObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "predictiveObservation_destinationIcao_predictedAt_idx_4b3c94e0",
+        "table": "predictiveObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"predictiveObservation_destinationIcao_predictedAt_idx_4b3c94e0\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_destinationIcao_predictedAt_idx_4b3c94e0\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"predictiveObservation_destinationIcao_predictedAt_idx_4b3c94e0\"",
+        "sql": "CREATE INDEX \"predictiveObservation_destinationIcao_predictedAt_idx_4b3c94e0\" ON \"public\".\"predictiveObservation\" (\"destinationIcao\", \"predictedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"predictiveObservation_destinationIcao_predictedAt_idx_4b3c94e0\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_destinationIcao_predictedAt_idx_4b3c94e0\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.predictiveObservation.predictiveObservation_flightId_predictedAt_idx_1e774c2e",
+    "label": "Create index \"predictiveObservation_flightId_predictedAt_idx_1e774c2e\" on \"predictiveObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "predictiveObservation_flightId_predictedAt_idx_1e774c2e",
+        "table": "predictiveObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"predictiveObservation_flightId_predictedAt_idx_1e774c2e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_flightId_predictedAt_idx_1e774c2e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"predictiveObservation_flightId_predictedAt_idx_1e774c2e\"",
+        "sql": "CREATE INDEX \"predictiveObservation_flightId_predictedAt_idx_1e774c2e\" ON \"public\".\"predictiveObservation\" (\"flightId\", \"predictedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"predictiveObservation_flightId_predictedAt_idx_1e774c2e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_flightId_predictedAt_idx_1e774c2e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.predictiveObservation.predictiveObservation_lifecycleKey_predictedAt_idx_fd99cf03",
+    "label": "Create index \"predictiveObservation_lifecycleKey_predictedAt_idx_fd99cf03\" on \"predictiveObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "predictiveObservation_lifecycleKey_predictedAt_idx_fd99cf03",
+        "table": "predictiveObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"predictiveObservation_lifecycleKey_predictedAt_idx_fd99cf03\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_lifecycleKey_predictedAt_idx_fd99cf03\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"predictiveObservation_lifecycleKey_predictedAt_idx_fd99cf03\"",
+        "sql": "CREATE INDEX \"predictiveObservation_lifecycleKey_predictedAt_idx_fd99cf03\" ON \"public\".\"predictiveObservation\" (\"lifecycleKey\", \"predictedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"predictiveObservation_lifecycleKey_predictedAt_idx_fd99cf03\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_lifecycleKey_predictedAt_idx_fd99cf03\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.predictiveObservation.predictiveObservation_predictedAt_idx_8d1dd89c",
+    "label": "Create index \"predictiveObservation_predictedAt_idx_8d1dd89c\" on \"predictiveObservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "predictiveObservation_predictedAt_idx_8d1dd89c",
+        "table": "predictiveObservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"predictiveObservation_predictedAt_idx_8d1dd89c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_predictedAt_idx_8d1dd89c\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"predictiveObservation_predictedAt_idx_8d1dd89c\"",
+        "sql": "CREATE INDEX \"predictiveObservation_predictedAt_idx_8d1dd89c\" ON \"public\".\"predictiveObservation\" (\"predictedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"predictiveObservation_predictedAt_idx_8d1dd89c\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"predictiveObservation_predictedAt_idx_8d1dd89c\""
+        ]
+      }
+    ]
+  }
+]

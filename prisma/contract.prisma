@@ -177,6 +177,7 @@ model PredictiveObservation {
   @@index([capability, predictedAt])
   @@index([destinationIcao, predictedAt])
   @@index([flightId, predictedAt])
+  @@index([predictedAt])
 }
 
 model FlightEvent {

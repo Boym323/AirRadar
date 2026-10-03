@@ -47,6 +47,20 @@ Raw observations have a 90-day retention policy; aggregate reports are kept
 longer. Cleanup is not run automatically by the application and no production
 database cleanup is part of this implementation.
 
+The DEV migration `20261003T0515_predictive_prospective_observations_v1` is
+forward-only and creates only the new `predictiveObservation` table. The
+primary key is the deterministic observation key used for retry/restart
+deduplication. The capability, destination, flight, lifecycle, and standalone
+`predictedAt` indexes match report and retention-cutoff access patterns. The
+expected index footprint is small relative to the JSON evidence payload; each
+captured row adds one table write plus six index entries, so write amplification
+is approximately 7 index/table writes per observation before PostgreSQL page
+effects. Table creation and ordinary index creation take an `ACCESS EXCLUSIVE`
+table lock briefly; because the table is new and empty, there is no existing
+large-table rewrite or data backfill. The migration is online with respect to
+the live radar, but should be applied during a normal DEV maintenance window
+before enabling the canary. Production application is intentionally deferred.
+
 Readiness is evidence only: the default sample gates are 100 scoreable ETA
 flights plus 30 relevant observations, and 100 confirmed runway arrivals.
 Quality thresholds are advisory and no capability leaves `SHADOW`.
