@@ -57,7 +57,7 @@ function DailyIntelligence({ data, dictionary }: { data: ReceiverRecapResponse; 
     + intelligence.eventCounts.emergencies;
 
   return <>
-    <section className="recap-today-hero" aria-labelledby="recap-today-title">
+    <section className="recap-today-hero" aria-labelledby="recap-today-title" data-testid="daily-intelligence">
       <div className="recap-today-copy">
         <span className="recap-today-kicker">{dictionary.recap.dailyIntelligenceTitle}</span>
         <h2 id="recap-today-title">{dictionary.recap.dailyIntelligenceTitle}</h2>
@@ -103,7 +103,7 @@ function DailyIntelligence({ data, dictionary }: { data: ReceiverRecapResponse; 
 function DailyTimeline({ data, dictionary }: { data: ReceiverRecapResponse; dictionary: Dictionary }) {
   const intelligence = data.dailyIntelligence;
   if (!intelligence) return null;
-  return <section className="recap-card recap-daily-timeline" aria-labelledby="recap-daily-timeline-title">
+  return <section className="recap-card recap-daily-timeline" aria-labelledby="recap-daily-timeline-title" data-testid="daily-intelligence-timeline">
     <div className="recap-card-heading">
       <div>
         <h2 id="recap-daily-timeline-title">{dictionary.recap.dailyTimeline}</h2>
