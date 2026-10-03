@@ -10,6 +10,82 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.269] - 2026-10-03
+
+Changes since v1.0.268.
+
+### Maintenance
+
+- Bump dotenv from 17.4.2 to 18.0.5 (341d4da)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(deps-dev): bump dotenv from 17.4.2 to 18.0.5 (341d4da)
+- Merge pull request #251 from Boym323/dependabot/npm_and_yarn/dotenv-18.0.5 (d005d94)
+
+</details>
+
+## [1.0.268] - 2026-10-03
+
+Changes since v1.0.267.
+
+### Maintenance
+
+- Make coordinate redaction assertion deterministic (3d02ad7)
+
+<details>
+<summary>Technical commits</summary>
+
+- test: make coordinate redaction assertion deterministic (3d02ad7)
+- Merge pull request #253 from Boym323/test/system-status-coordinate-redaction (85dc7ac)
+
+</details>
+
+## [1.0.267] - 2026-10-03
+
+Changes since v1.0.266.
+
+### Maintenance
+
+- Bump vite from 7.3.6 to 8.3.1 (0c4926a)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(deps-dev): bump vite from 7.3.6 to 8.3.1 (0c4926a)
+- Merge pull request #244 from Boym323/dependabot/npm_and_yarn/vite-8.3.1 (8e7c5f7)
+
+</details>
+
+## [1.0.266] - 2026-10-03
+
+Changes since v1.0.265.
+
+### Maintenance
+
+- Sync generated repository metadata (6cdda41)
+- Update GitHub Actions in ci-heavy.yml (ccabfe9)
+- Update GitHub Actions in ci.yml (d291bcc)
+- Update GitHub Actions in codeql.yml (556a2a1)
+- Update GitHub Actions in radar-soak.yml (3050945)
+- Update GitHub Actions in repository-metadata.yml (d10a11e)
+- Refresh Vitest to 5.0.3 (c7ab817)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (6cdda41)
+- Merge pull request #239 from Boym323/automation/repository-metadata (20c5d31)
+- chore: update GitHub Actions in ci-heavy.yml (ccabfe9)
+- chore: update GitHub Actions in ci.yml (d291bcc)
+- chore: update GitHub Actions in codeql.yml (556a2a1)
+- chore: update GitHub Actions in radar-soak.yml (3050945)
+- chore: update GitHub Actions in repository-metadata.yml (d10a11e)
+- chore: refresh Vitest to 5.0.3 (c7ab817)
+- Merge pull request #250 from Boym323/chore/dependency-rollup-2026-10-03 (c2e8a23)
+
+</details>
 ## [1.0.265] - 2026-10-03
 
 Changes since v1.0.264.
