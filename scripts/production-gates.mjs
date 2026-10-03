@@ -909,14 +909,26 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           tabs: [...element.querySelectorAll('[role="tab"]')].map((tab) => ({ id: tab.id, selected: tab.getAttribute("aria-selected") })),
           activePanel: element.querySelector('[role="tabpanel"]')?.id ?? null,
           trafficHeroes: element.querySelectorAll('[data-testid="radar-traffic-hero"]').length,
+          heroPrimary: Boolean(element.querySelector('[data-testid="radar-traffic-hero-primary"]')?.textContent?.trim()),
+          heroSource: Boolean(element.querySelector('[data-testid="radar-traffic-hero-source"]')?.textContent?.trim()),
+          heroMetrics: ["altitude", "speed", "track", "vertical-rate"].map((metric) => ({
+            metric,
+            present: Boolean(element.querySelector(`[data-testid="radar-traffic-hero-metric-${metric}"]`)),
+            state: element.querySelector(`[data-testid="radar-traffic-hero-metric-${metric}"]`)?.getAttribute("data-state") ?? null,
+            value: element.querySelector(`[data-testid="radar-traffic-hero-metric-${metric}"] strong`)?.textContent?.trim() ?? "",
+          })),
           liveMetricContainers: element.querySelectorAll('[data-testid="radar-traffic-hero-metrics"]').length,
           liveMetricSlots: element.querySelector('[data-testid="radar-traffic-hero-metrics"]')?.children.length ?? 0,
           technicalOpen: element.querySelector(".aircraft-quick-advanced")?.hasAttribute("open") ?? false,
           dataDisclosure: Boolean(element.querySelector('[role="tab"]#aircraft-tab-data')),
         }));
+        const missingHeroMetrics = quickContract.heroMetrics.filter((metric) => !metric.present || metric.state !== "available" || !metric.value);
         if (quickContract.tabs.length !== 4
           || quickContract.activePanel !== "aircraft-tabpanel-flight"
           || quickContract.trafficHeroes !== 1
+          || !quickContract.heroPrimary
+          || !quickContract.heroSource
+          || missingHeroMetrics.length > 0
           || quickContract.liveMetricContainers !== 1
           || quickContract.liveMetricSlots !== 4
           || quickContract.technicalOpen

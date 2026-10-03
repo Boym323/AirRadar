@@ -117,6 +117,11 @@ describe("production release metadata gate", () => {
     expect(source).toContain('quickContract.trafficHeroes !== 1');
     expect(source).toContain('quickContract.liveMetricContainers !== 1');
     expect(source).toContain('quickContract.liveMetricSlots !== 4');
+    expect(source).toContain('data-testid="radar-traffic-hero"');
+    expect(source).toContain('data-testid="radar-traffic-hero-metric-${metric}"');
+    expect(source).toContain('metric.state !== "available"');
+    expect(source).toContain("missingHeroMetrics.length > 0");
+    expect(source).not.toContain('querySelectorAll(".aircraft-quick-metrics")');
     expect(source).toContain('getByRole("tab", { name: "Situace", exact: true })');
     expect(source).toContain('"aircraft-tabpanel-situation"');
     expect(source).toContain('getByRole("tab", { name: "Let", exact: true })');
