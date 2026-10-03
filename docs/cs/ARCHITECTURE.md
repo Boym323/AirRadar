@@ -316,6 +316,19 @@ provenience, nikoli dominantní pole `origin`: overlap je
 countery a client-side filtry. Live LOCAL capture ratio používá
 `RECEIVER_COMPARISON_RADIUS_NM` (výchozí 175 NM) a neukládá se.
 
+Prezentační vrstva provozu je záměrně oddělená od backendových modelů:
+
+```text
+AircraftView ─┐
+              ├─> lib/radar/traffic-presentation.ts → sdílená vizuální sémantika
+OgnTargetView ┘
+```
+
+Adaptery sdílejí rodiny ikon, source badge, význam labelů, stale stav,
+accessibility texty a hero hlavičku draweru. Oba backendové kontrakty zůstávají
+oddělené; OGN privacy/public serializace ani ADS-B provenance hranice se
+prezentační vrstvou neobcházejí.
+
 ## Integrita navigace
 
 Integrita navigace je omezená read-only odvozená větev napájená existujícími

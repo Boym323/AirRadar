@@ -20,6 +20,7 @@ import { AircraftAltitudeChart, aircraftAirportHref } from "@/components/aircraf
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { aircraftPositionSourceLabel, aircraftSourceLabel, classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { StatusBadge } from "@/components/ui-primitives";
+import { RadarTrafficHero } from "@/components/radar/radar-traffic-hero";
 import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import { AircraftObservedWeather } from "@/components/aircraft-observed-weather";
 import {
@@ -36,6 +37,7 @@ import {
   formatTrack,
   t,
 } from "@/lib/i18n";
+import { trafficSourcePresentation } from "@/lib/radar/traffic-presentation";
 
 interface QuickHistoryTrail {
   points: HistoryResponse["positions"];
@@ -491,6 +493,7 @@ function AircraftOverview({ aircraft, emergency, emergencySquawk, onCenter, hist
   onToggleWatchlist: () => void;
   historyTrail: QuickHistoryTrail | null;
 }) {
+  // Shared RadarTrafficHero replaces the legacy className="aircraft-quick-metrics" grid.
   const summary = trackingSummary(aircraft, historyTrail);
   const livePoint = aircraft.altitude === null ? null : { recordedAt: aircraft.lastSeen, altitude: aircraft.altitude };
   const chartPoints = historyTrail?.points ?? aircraft.trail ?? [];
@@ -501,12 +504,10 @@ function AircraftOverview({ aircraft, emergency, emergencySquawk, onCenter, hist
         <span className="aircraft-quick-live-state"><span aria-hidden="true">●</span> {t.status.liveShort}</span>
       </div>
       {emergency || emergencySquawk ? <div className="aircraft-quick-status-row" role="status"><StatusBadge variant="danger">{emergency ?? `${t.aircraft.squawk} ${emergencySquawk}`}</StatusBadge></div> : null}
-      <div className="aircraft-quick-metrics" aria-label={t.aircraft.flightData}>
-        <div><strong>{formatAltitude(aircraft.altitude)}</strong><span>{t.aircraft.altitude}</span></div>
-        <div><strong>{formatSpeed(aircraft.groundSpeed)}</strong><span>{t.aircraft.groundSpeed}</span></div>
-        <div><strong>{formatTrack(aircraft.track)}</strong><span>{t.aircraft.track}</span></div>
-        <div><strong>{verticalRateLabel(aircraft.verticalRate)}</strong><span>{t.aircraft.verticalRate}</span></div>
-      </div>
+      <RadarTrafficHero sourceLabel={trafficSourcePresentation(aircraft).detailLabel}
+        primaryLabel={aircraft.callsign || aircraft.registration || aircraft.icaoHex}
+        secondaryLabel={aircraft.aircraftType || null}
+        altitude={formatAltitude(aircraft.altitude)} speed={formatSpeed(aircraft.groundSpeed)} track={formatTrack(aircraft.track)} verticalRate={verticalRateLabel(aircraft.verticalRate)} />
       <nav className="aircraft-quick-actions" aria-label={t.aircraft.quickActions}>
         <button type="button" className="aircraft-quick-action" onClick={onCenter} disabled={aircraft.lat === null || aircraft.lon === null}>{t.aircraft.centerOnAircraft}</button>
         <button type="button" className={`aircraft-quick-action${watchlisted ? " active" : ""}`} aria-pressed={watchlisted} onClick={onToggleWatchlist}>{watchlisted ? t.watchlist.onWatchlist : t.watchlist.followAircraft}</button>

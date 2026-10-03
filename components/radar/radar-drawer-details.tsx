@@ -10,6 +10,8 @@ import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
 import { formatAge, formatAltitude, formatCoordinate, formatDistance, formatNumber, formatSpeed, formatTrack, t } from "@/lib/i18n";
 import type { OgnTargetView } from "@/lib/ogn/types";
+import { RadarTrafficHero } from "@/components/radar/radar-traffic-hero";
+import { toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
 
 const AircraftRadarQuickDetail = dynamic(() => import("@/components/aircraft-radar-quick-detail").then((module) => module.AircraftRadarQuickDetail));
 
@@ -112,19 +114,14 @@ export function RadarDrawerDetails({
 }
 
 function OgnDetailContent({ target }: { target: OgnTargetView }) {
-  const typeLabel = target.aircraftType.replaceAll("_", " ");
+  const presentation = toOgnTrafficPresentation(target);
+  const typeLabel = target.identityVisible && target.model ? `${typeLabelForTarget(target)} · ${target.model}` : typeLabelForTarget(target);
   const ageSeconds = Math.max(0, (Date.now() - Date.parse(target.receivedAt)) / 1000);
   const position = `${formatCoordinate(target.latitude)}, ${formatCoordinate(target.longitude)}`;
   return <div className="detail-content ogn-detail-content">
-    <div className="detail-hero">
-      <div className="detail-hero-type">{typeLabel}</div>
-      <div className="detail-hero-metrics">
-        <div><strong>{formatAltitude(target.altitudeFt)}</strong><span>{t.ogn.altitude}</span></div>
-        <div><strong>{formatSpeed(target.groundSpeedKt)}</strong><span>{t.ogn.groundSpeed}</span></div>
-        <div><strong>{formatTrack(target.trackDeg)}</strong><span>{t.ogn.track}</span></div>
-        <div><strong>{target.verticalRateFpm === null ? t.common.emptyValue : `${target.verticalRateFpm > 0 ? "+" : ""}${formatNumber(target.verticalRateFpm)} ft/min`}</strong><span>{t.ogn.verticalRate}</span></div>
-      </div>
-    </div>
+    <RadarTrafficHero sourceLabel={presentation.sourceLabel} primaryLabel={presentation.primaryLabel} secondaryLabel={typeLabel}
+      altitude={formatAltitude(target.altitudeFt)} speed={formatSpeed(target.groundSpeedKt)} track={formatTrack(target.trackDeg)}
+      verticalRate={target.verticalRateFpm === null ? t.common.emptyValue : `${target.verticalRateFpm > 0 ? "+" : ""}${formatNumber(target.verticalRateFpm)} ft/min`} />
     <DetailSection title={t.ogn.identity}>
       {target.identityVisible ? <>
         <DetailItem label={t.ogn.address} value={target.address || t.common.emptyValue} />
@@ -146,6 +143,10 @@ function OgnDetailContent({ target }: { target: OgnTargetView }) {
     </DetailSection>
     <div className="detail-disclaimer ogn-privacy-note">{t.ogn.sourceDisclaimer}</div>
   </div>;
+}
+
+function typeLabelForTarget(target: OgnTargetView): string {
+  return target.aircraftType.replaceAll("_", " ");
 }
 
 function DetailItem({ label, value }: { label: string; value: ReactNode }) {

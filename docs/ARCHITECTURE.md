@@ -216,6 +216,19 @@ UI interval; full SSE snapshots commit immediately. This split does not change
 the SSE protocol, confirmed-position motion semantics, or MapLibre marker
 ownership.
 
+Traffic presentation is deliberately separate from the backend models:
+
+```text
+AircraftView ─┐
+              ├─> lib/radar/traffic-presentation.ts → shared visual semantics
+OgnTargetView ┘
+```
+
+The adapters share icon families, source badges, label semantics, stale state,
+accessibility wording and the drawer hero presentation. The two backend
+contracts remain separate; OGN privacy/public serialization and ADS-B
+provenance boundaries are not bypassed by the client presentation layer.
+
 `AirRadarApp` remains the owner of the MapLibre instance, animation jobs,
 layer data, and cross-feature orchestration. Focused radar boundaries live
 under `components/radar/`: `useRadarLiveAircraft` owns the single browser

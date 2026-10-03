@@ -39,7 +39,7 @@ import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
 import { isOgnDuplicateOfAircraft } from "@/lib/ogn/deduplication";
-import { canonicalAircraftGlyphPath, type CanonicalAircraftGlyphKind } from "@/lib/aircraft/glyph-paths";
+import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
 import { airportVisibilityFilter, airportVisibilityTier, DEFAULT_AIRPORT_LAYER_VISIBILITY, type AirportLayerVisibility, AIRPORT_MAP_RADIUS_NM } from "@/lib/airport-visibility";
 import { createRangeRingsGeoJSON, RANGE_RING_RADII_KM } from "@/lib/range-rings";
 import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
@@ -91,6 +91,9 @@ import { AIRRADAR_MAP_THEME } from "@/lib/map-theme";
 import { AIRRADAR_BASE_MAP_STYLE_URL, AIRRADAR_MAP_ATTRIBUTION } from "@/lib/map-style";
 import { aircraftLabelOpacity, aircraftPositionIsStale } from "@/lib/radar-ui";
 import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
+import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
+import { aircraftIconSizeForPresentation, aircraftIconSizeAtZoom } from "@/lib/aircraft/icon-size";
+import { aircraftColor } from "@/lib/aircraft/color-mode";
 import {
   AIRCRAFT_WEBGL_LABEL_LAYER_ID,
   AIRCRAFT_WEBGL_LABEL_SOURCE_ID,
@@ -233,6 +236,9 @@ interface OgnMarkerHandle {
   marker: maplibregl.Marker;
   root: HTMLElement;
   icon: HTMLElement;
+  rotator: HTMLElement;
+  labelPrimary: HTMLElement;
+  labelSecondary: HTMLElement;
   label: HTMLElement;
 }
 
@@ -381,23 +387,11 @@ function createAircraftWeatherGeoJSON(observations: AircraftWeatherMapObservatio
 }
 
 function ognTargetLabel(target: OgnTargetView): string {
-  if (target.identityVisible) return target.registration || target.competitionNumber || target.model || target.senderCallsign || target.aircraftType.toUpperCase();
-  return target.aircraftType.toUpperCase();
-}
-
-function ognGlyphPath(aircraftType: OgnTargetView["aircraftType"]): string {
-  const kind: CanonicalAircraftGlyphKind = aircraftType === "glider" || aircraftType === "paraglider" || aircraftType === "hang_glider"
-    ? "glider"
-    : aircraftType === "helicopter"
-      ? "helicopter"
-      : aircraftType === "uav"
-        ? "drone"
-        : "airplane";
-  return canonicalAircraftGlyphPath(kind);
+  return ognPrimaryLabel(target);
 }
 
 function ognGlyphMarkup(aircraftType: OgnTargetView["aircraftType"]): string {
-  return `<svg class="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d="${ognGlyphPath(aircraftType)}"></path></svg>`;
+  return `<svg class="aircraft-glyph aircraft-glyph-${ognIconKind(aircraftType)}" viewBox="0 0 32 32" aria-hidden="true"><path d="${canonicalAircraftGlyphPath(ognIconKind(aircraftType))}"></path></svg>`;
 }
 
 export function AirRadarApp() {
@@ -1505,14 +1499,26 @@ export function AirRadarApp() {
       if (!handle) {
         const root = document.createElement("div");
         root.className = "ogn-marker";
+        root.classList.add("aircraft-marker");
         root.setAttribute("role", "button");
         root.setAttribute("tabindex", "0");
+        const visual = document.createElement("div");
+        visual.className = "aircraft-marker-visual";
+        const rotator = document.createElement("div");
+        rotator.className = "aircraft-plane-rotator";
         const icon = document.createElement("div");
-        icon.className = "ogn-marker-icon";
-        root.appendChild(icon);
+        icon.className = "aircraft-plane";
+        rotator.appendChild(icon);
+        visual.appendChild(rotator);
         const label = document.createElement("div");
-        label.className = "ogn-marker-label";
-        root.appendChild(label);
+        label.className = "aircraft-label";
+        const labelPrimary = document.createElement("span");
+        labelPrimary.className = "aircraft-label-primary";
+        const labelSecondary = document.createElement("span");
+        labelSecondary.className = "aircraft-label-secondary";
+        label.append(labelPrimary, labelSecondary);
+        visual.appendChild(label);
+        root.appendChild(visual);
         root.addEventListener("click", () => selectOgn(target.id));
         root.addEventListener("keydown", (event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -1526,13 +1532,17 @@ export function AirRadarApp() {
             .addTo(map),
           root,
           icon,
+          rotator,
+          labelPrimary,
+          labelSecondary,
           label,
         };
         ognMarkers.set(target.id, handle);
       } else {
         handle.marker.setLngLat([target.longitude, target.latitude]);
       }
-      handle.root.setAttribute("aria-label", ognTargetLabel(target));
+      const presentation = toOgnTrafficPresentation(target);
+      handle.root.setAttribute("aria-label", radarTrafficAriaLabel(presentation));
       handle.root.setAttribute("aria-pressed", String(target.id === selectedOgnId));
       handle.root.classList.toggle("selected", target.id === selectedOgnId);
       handle.root.classList.toggle("stale", target.stale);
@@ -1541,8 +1551,19 @@ export function AirRadarApp() {
         handle.icon.dataset.aircraftType = target.aircraftType;
         handle.icon.innerHTML = ognGlyphMarkup(target.aircraftType);
       }
-      const nextLabel = ognTargetLabel(target);
-      if (handle.label.textContent !== nextLabel) handle.label.textContent = nextLabel;
+      handle.icon.style.setProperty("--aircraft-icon-size", `${aircraftIconSizeAtZoom(aircraftIconSizeForPresentation(presentation.iconKind), mapZoom)}px`);
+      const markerColor = aircraftColor({ altitude: presentation.altitudeFt, groundSpeed: presentation.speedKt, verticalRate: presentation.verticalRateFpm }, colorMode);
+      if (markerColor) handle.icon.style.setProperty("--aircraft-color", markerColor);
+      else handle.icon.style.removeProperty("--aircraft-color");
+      handle.rotator.style.transform = target.trackDeg === null ? "" : `rotate(${target.trackDeg}deg)`;
+      const altitude = target.altitudeFt === null ? null : `${formatNumber(target.altitudeFt, 0)} ft`;
+      const nextPrimary = presentation.primaryLabel;
+      const nextSecondary = [altitude, presentation.sourceLabel].filter(Boolean).join(" · ");
+      if (handle.labelPrimary.textContent !== nextPrimary) handle.labelPrimary.textContent = nextPrimary;
+      if (handle.labelSecondary.textContent !== nextSecondary) handle.labelSecondary.textContent = nextSecondary;
+      handle.labelSecondary.hidden = !nextSecondary;
+      handle.label.dataset.contentEmpty = nextPrimary ? "false" : "true";
+      handle.label.dataset.priority = target.id === selectedOgnId ? "selected" : target.stale ? "stale" : "normal";
     }
 
     for (const [id, handle] of ognMarkers) {
@@ -1550,7 +1571,7 @@ export function AirRadarApp() {
       handle.marker.remove();
       ognMarkers.delete(id);
     }
-  }, [mapReady, ognEnabled, ognSnapshot.targets, selectOgn, selectedOgnId, showOgn, snapshot.aircraft]);
+  }, [colorMode, mapReady, mapZoom, ognEnabled, ognSnapshot.targets, selectOgn, selectedOgnId, showOgn, snapshot.aircraft]);
 
   const mapFilteredAircraft = useMemo(
     () => filterAircraftForMap(snapshot.aircraft, mapFilters),

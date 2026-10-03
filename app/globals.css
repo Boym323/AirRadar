@@ -752,6 +752,24 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .ogn-marker-label { position: absolute; top: 27px; left: 50%; max-width: 130px; transform: translateX(-50%); padding: 2px 4px; border: 1px solid rgba(102,216,207,.28); border-radius: 4px; background: rgba(8,17,29,.84); color: #b5f1eb; font-size: 8px; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; text-overflow: ellipsis; overflow: hidden; }
 .ogn-marker.selected .ogn-marker-icon { color: var(--amber); filter: drop-shadow(0 0 8px rgba(243,185,95,.84)); transform: scale(1.16); }
 .ogn-marker.selected .ogn-marker-label { border-color: rgba(243,185,95,.42); color: var(--amber); }
+
+/* OGN uses the same marker geometry and label contract as ADS-B. Its source is
+ * carried by the secondary label, never by a source-specific silhouette. */
+.ogn-marker { width: 38px; height: 38px; display: grid; place-items: center; cursor: pointer; z-index: 3; }
+.ogn-marker .aircraft-marker-visual { position: relative; width: 38px; height: 38px; display: grid; place-items: center; }
+.ogn-marker .aircraft-plane { width: var(--aircraft-icon-size, 18px); height: var(--aircraft-icon-size, 18px); display: grid; place-items: center; color: var(--aircraft-color, var(--accent)); }
+.ogn-marker .aircraft-glyph { width: 100%; height: 100%; fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.ogn-marker .aircraft-label { top: calc(50% + 25px); }
+.ogn-marker.selected .aircraft-plane { color: var(--selected); filter: drop-shadow(0 0 8px rgba(243,185,95,.84)); transform: scale(1.16); }
+.ogn-marker.stale:not(.selected) { opacity: .72; }
+
+.radar-traffic-hero { display: grid; gap: var(--space-2); margin-bottom: var(--space-3); }
+.radar-traffic-hero-primary { margin: 0; color: var(--text-primary); font-size: var(--font-size-xl); line-height: 1.1; }
+.radar-traffic-hero-secondary { margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm); text-transform: uppercase; }
+.radar-traffic-hero-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.radar-traffic-hero-metrics > div { display: grid; gap: 2px; min-width: 0; }
+.radar-traffic-hero-metrics strong { color: var(--text-primary); font-size: var(--font-size-md); font-variant-numeric: tabular-nums; }
+.radar-traffic-hero-metrics span { color: var(--text-muted); font-size: var(--font-size-2xs); text-transform: uppercase; }
 .receiver-marker { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--amber); background: rgba(243, 185, 95, .2); box-shadow: 0 0 0 7px rgba(243, 185, 95, .08); }
 .maplibregl-ctrl-group { background: rgba(8,17,29,.87) !important; border: 1px solid var(--line) !important; }
 .maplibregl-ctrl-group button { filter: invert(1) hue-rotate(160deg); }

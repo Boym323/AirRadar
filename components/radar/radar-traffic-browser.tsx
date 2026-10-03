@@ -9,6 +9,8 @@ import type { AircraftView, PublicStateSnapshot } from "@/lib/aircraft/types";
 import type { AircraftQuickFilter, MapAircraftFilters } from "@/lib/aircraft/map-filters";
 import { formatAltitude, formatDistance, formatSpeed, formatTrack, t, watchlistKindLabel, watchlistSummary } from "@/lib/i18n";
 import type { OgnStateSnapshot, OgnTargetView } from "@/lib/ogn/types";
+import { canonicalAircraftGlyphPath } from "@/lib/aircraft/glyph-paths";
+import { ognIconKind } from "@/lib/radar/traffic-presentation";
 
 const IntelligenceFeed = dynamic(() => import("@/components/intelligence-feed").then((module) => module.IntelligenceFeed));
 const LogbookSummary = dynamic(() => import("@/components/logbook-summary").then((module) => module.LogbookSummary));
@@ -243,15 +245,6 @@ export function RadarTrafficBrowser({
 }
 
 function OgnGlyph({ aircraftType }: { aircraftType: OgnTargetView["aircraftType"] }) {
-  return <svg className="ogn-glyph" viewBox="0 0 32 32" aria-hidden="true"><path d={ognGlyphPath(aircraftType)} /></svg>;
-}
-
-function ognGlyphPath(aircraftType: OgnTargetView["aircraftType"]): string {
-  return aircraftType === "glider" || aircraftType === "paraglider" || aircraftType === "hang_glider"
-    ? "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z"
-    : aircraftType === "helicopter"
-      ? "M5 9h22M16 9v5m-7 0h14l3 5H6l3-5Zm7 5v8m-5 0h10"
-      : aircraftType === "balloon" || aircraftType === "airship"
-        ? "M16 3c5 0 8 4 8 9 0 5-3 8-8 8s-8-3-8-8c0-5 3-9 8-9Zm0 17v6m-4 0h8"
-        : "M16 3 19 14 29 19 19 20 16 29 13 20 3 19 13 14Z";
+  const kind = ognIconKind(aircraftType);
+  return <svg className={`aircraft-glyph aircraft-glyph-${kind}`} viewBox="0 0 32 32" aria-hidden="true"><path d={canonicalAircraftGlyphPath(kind)} /></svg>;
 }
