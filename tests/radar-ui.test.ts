@@ -245,8 +245,15 @@ describe("radar UI polish helpers", () => {
   it("keeps Operations Center in a focused read-only intelligence boundary", () => {
     expect(appSource).toContain("<RadarOperationsCenter />");
     expect(radarOperationsCenterSource).toContain("useIntelligenceStream()");
+    expect(radarOperationsCenterSource).toContain('"/api/alerts?page=0&pageSize=50&filter=all"');
+    expect(radarOperationsCenterSource).toContain('"/api/logbook/summary"');
+    expect(radarOperationsCenterSource).toContain("/operations?period=24h");
+    expect(radarOperationsCenterSource).toContain("AIRPORT_CONTEXT_REFRESH_INTERVAL_MS = 300_000");
     expect(radarOperationsCenterSource).not.toContain("useAircraftStream");
     expect(radarOperationsCenterSource).not.toContain("maplibre");
+    expect(radarOperationsCenterSource).not.toContain("method: \"POST\"");
+    expect(radarOperationsCenterSource).not.toContain("method: \"PATCH\"");
+    expect(radarOperationsCenterSource).not.toContain("method: \"DELETE\"");
     expect(radarOperationsCenterSource).toContain('href={\`/aircraft/\${event.icaoHex}\`}');
   });
 
