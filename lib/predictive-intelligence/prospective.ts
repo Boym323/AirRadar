@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/server/db";
 import { getBuildMetadata } from "@/lib/server/version";
 import { getPredictiveGraduationPolicy, type PredictiveCapability } from "./graduation";
 import type { PredictiveFlightState } from "./types";
+import "temporal-polyfill/full/global";
 
 export const PROSPECTIVE_VALIDATION_ENV = "AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED";
 const MAX_QUEUE = 256;
@@ -112,18 +113,50 @@ export function prospectiveObservationFor(
 }
 
 export interface ProspectiveDiagnostics {
-  enabled: boolean; captured: number; skippedDedupe: number; dropped: number; persistenceFailures: number;
+  enabled: boolean; captured: number; persisted: number; skippedDedupe: number; dropped: number; persistenceFailures: number;
   queueDepth: number; queueHighWaterMark: number; oldestQueuedAt: string | null; lastSuccessfulWrite: string | null;
+  lastFailureAt: string | null; lastFailureClassification: "invalid_timestamp" | "database" | "unconfigured" | null;
 }
 
-type ObservationTable = { createMany?: (input: { data: ReadonlyArray<Record<string, unknown>>; skipDuplicates?: boolean }) => Promise<unknown>; create: (input: Record<string, unknown>) => Promise<unknown> };
+export type ObservationTable = { create: (input: Record<string, unknown>) => Promise<unknown> };
+
+function toOrmInstant(value: number, field: string): Temporal.Instant {
+  if (!Number.isFinite(value)) throw new TypeError(`${field} must be a finite timestamp`);
+  try {
+    return Temporal.Instant.fromEpochMilliseconds(value);
+  } catch {
+    throw new TypeError(`${field} is outside the supported timestamp range`);
+  }
+}
+
+function errorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const value = (error as { code?: unknown }).code;
+  return typeof value === "string" ? value : null;
+}
+
+function isExpectedDuplicate(error: unknown): boolean {
+  const code = errorCode(error);
+  const message = error instanceof Error ? error.message : String(error);
+  return code === "23505" || code === "P2002" || /duplicate|unique constraint|already exists/i.test(message);
+}
+
+function failureClassification(error: unknown): "invalid_timestamp" | "database" {
+  return error instanceof TypeError && /timestamp/.test(error.message) ? "invalid_timestamp" : "database";
+}
 
 export class ProspectiveValidationWriter {
   private readonly queue: ProspectiveObservation[] = [];
   private readonly pending = new Set<string>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private flushing = false;
-  private readonly stats = { captured: 0, skippedDedupe: 0, dropped: 0, persistenceFailures: 0, queueHighWaterMark: 0, lastSuccessfulWrite: null as string | null };
+  private readonly stats = {
+    captured: 0, persisted: 0, skippedDedupe: 0, dropped: 0, persistenceFailures: 0,
+    queueHighWaterMark: 0, lastSuccessfulWrite: null as string | null,
+    lastFailureAt: null as string | null,
+    lastFailureClassification: null as ProspectiveDiagnostics["lastFailureClassification"],
+  };
+  constructor(private readonly tableOverride?: ObservationTable | null) {}
   enqueue(observations: readonly ProspectiveObservation[]): void {
     if (!observations.length) return;
     for (const observation of observations) {
@@ -140,14 +173,38 @@ export class ProspectiveValidationWriter {
     this.flushing = true;
     const batch = this.queue.splice(0, BATCH_SIZE);
     try {
-      const table = getPrisma()?.orm.public.PredictiveObservation as unknown as ObservationTable | undefined;
-      if (!table) return;
-      const data = batch.map((item) => ({ ...item, predictedAt: new Date(item.predictedAt), predictedLandingAt: item.predictedLandingAt === null ? null : new Date(item.predictedLandingAt), createdAt: new Date() }));
-      if (table.createMany) await table.createMany({ data, skipDuplicates: true });
-      else for (const item of data) { try { await table.create(item); } catch { /* deterministic key makes duplicate inserts harmless */ } }
-      this.stats.lastSuccessfulWrite = new Date().toISOString();
-    } catch { this.stats.persistenceFailures += batch.length; }
-    finally {
+      const table = this.tableOverride === undefined
+        ? getPrisma()?.orm.public.PredictiveObservation as unknown as ObservationTable | undefined
+        : this.tableOverride;
+      if (!table) {
+        this.stats.persistenceFailures += batch.length;
+        this.stats.lastFailureAt = new Date().toISOString();
+        this.stats.lastFailureClassification = "unconfigured";
+        return;
+      }
+      let successfulWrites = 0;
+      for (const item of batch) {
+        try {
+          await table.create({
+            ...item,
+            predictedAt: toOrmInstant(item.predictedAt, "predictedAt"),
+            predictedLandingAt: item.predictedLandingAt === null ? null : toOrmInstant(item.predictedLandingAt, "predictedLandingAt"),
+            createdAt: Temporal.Now.instant(),
+          });
+          this.stats.persisted += 1;
+          successfulWrites += 1;
+        } catch (error) {
+          if (isExpectedDuplicate(error)) {
+            this.stats.skippedDedupe += 1;
+            continue;
+          }
+          this.stats.persistenceFailures += 1;
+          this.stats.lastFailureAt = new Date().toISOString();
+          this.stats.lastFailureClassification = failureClassification(error);
+        }
+      }
+      if (successfulWrites > 0) this.stats.lastSuccessfulWrite = new Date().toISOString();
+    } finally {
       for (const item of batch) this.pending.delete(item.observationKey);
       this.flushing = false;
       if (this.queue.length) this.schedule();

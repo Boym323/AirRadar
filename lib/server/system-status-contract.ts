@@ -321,12 +321,15 @@ export interface SystemStatusResponse {
     enabled: boolean;
     status: "ok" | "degraded" | "disabled" | "no_data";
     observationsCaptured: number;
+    persisted: number;
     observationsSkippedDedupe: number;
     persistenceFailures: number;
     droppedObservations: number;
     queueDepth: number;
     queueHighWaterMark: number;
     lastSuccessfulWrite: string | null;
+    lastFailureAt: string | null;
+    lastFailureClassification: "invalid_timestamp" | "database" | "unconfigured" | null;
     rawRetentionDays: number;
     readiness: { ETA: string; RUNWAY: string; RUNWAY_CHANGE: string; TRAJECTORY: string };
   };

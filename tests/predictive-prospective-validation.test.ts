@@ -1,8 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
-import { prospectiveObservationFor } from "@/lib/predictive-intelligence/prospective";
+import { prospectiveObservationFor, ProspectiveValidationWriter, type ObservationTable, type ProspectiveObservation } from "@/lib/predictive-intelligence/prospective";
 import type { Aircraft } from "@/lib/aircraft/types";
 import type { PredictiveFlightState } from "@/lib/predictive-intelligence/types";
+import "temporal-polyfill/full/global";
+
+afterEach(() => vi.useRealTimers());
+
+function observation(overrides: Partial<ProspectiveObservation> = {}): ProspectiveObservation {
+  return {
+    observationKey: "writer:test:ETA:one", lifecycleKey: "writer:test", capability: "ETA", aircraftIcao: "ABC123", flightId: null,
+    callsign: "TEST1", destinationIcao: "LKPR", predictedAt: Date.parse("2026-10-03T06:00:00.123Z"), horizonSeconds: 300, horizonBucket: "<=5m", flightPhase: "APPROACH", latitude: 50, longitude: 14, altitudeFt: 2_000, groundSpeedKt: 120, verticalRateFpm: -300, trackDeg: 240, predictedLandingAt: Date.parse("2026-10-03T06:05:00.123Z"), distanceRemainingNm: 5, predictedRunway: null, alternativeRunway: null, previousRunway: null, predictionConfidence: "HIGH", etaConfidence: "HIGH", evidenceJson: "[]", modelVersion: "test", softwareVersion: "test", graduationMode: "SHADOW", ...overrides,
+  };
+}
+
+function fakeTable(rows = new Map<string, Record<string, unknown>>()): ObservationTable {
+  return { create: async (input) => { const key = String(input.observationKey); if (rows.has(key)) { const error = Object.assign(new Error("duplicate key value violates unique constraint"), { code: "23505" }); throw error; } rows.set(key, input); return input; } };
+}
 
 describe("prospective validation scoring", () => {
   it("uses signed prediction minus actual ETA and excludes uncertain truth", () => {
@@ -25,5 +39,49 @@ describe("prospective validation scoring", () => {
     aircraft.lat = 51;
     expect(observations[0]).toMatchObject({ lifecycleKey: "ABC123:flight-a", latitude: 50, predictedLandingAt: 301_000 });
     expect(prospectiveObservationFor(aircraft, prediction, "ABC123:flight-b", null)[0]?.observationKey).not.toBe(observations[0]?.observationKey);
+  });
+
+  it("writes Temporal.Instant values without losing milliseconds", async () => {
+    vi.useFakeTimers();
+    const stored = new Map<string, Record<string, unknown>>();
+    const writer = new ProspectiveValidationWriter(fakeTable(stored));
+    writer.enqueue([observation()]);
+    await writer.flush();
+    const row = stored.get("writer:test:ETA:one")!;
+    expect(row.predictedAt).toBeInstanceOf(Temporal.Instant);
+    expect((row.predictedAt as Temporal.Instant).epochMilliseconds).toBe(Date.parse("2026-10-03T06:00:00.123Z"));
+    expect((row.predictedLandingAt as Temporal.Instant).epochMilliseconds).toBe(Date.parse("2026-10-03T06:05:00.123Z"));
+    expect(writer.diagnostics()).toMatchObject({ persisted: 1, persistenceFailures: 0, lastSuccessfulWrite: expect.any(String) });
+  });
+
+  it("records invalid timestamps as failures without false success", async () => {
+    vi.useFakeTimers();
+    const writer = new ProspectiveValidationWriter(fakeTable());
+    writer.enqueue([observation({ predictedAt: Number.NaN })]);
+    await writer.flush();
+    expect(writer.diagnostics()).toMatchObject({ persisted: 0, persistenceFailures: 1, lastSuccessfulWrite: null, lastFailureClassification: "invalid_timestamp" });
+  });
+
+  it("records primary persistence errors and isolates them from the caller", async () => {
+    vi.useFakeTimers();
+    const table: ObservationTable = { create: async () => { throw new Error("database unavailable"); } };
+    const writer = new ProspectiveValidationWriter(table);
+    writer.enqueue([observation()]);
+    await expect(writer.flush()).resolves.toBeUndefined();
+    expect(writer.diagnostics()).toMatchObject({ persisted: 0, persistenceFailures: 1, lastSuccessfulWrite: null, lastFailureClassification: "database" });
+  });
+
+  it("persists one row for duplicate keys and classifies the duplicate as dedupe", async () => {
+    vi.useFakeTimers();
+    const rows = new Map<string, Record<string, unknown>>();
+    const first = new ProspectiveValidationWriter(fakeTable(rows));
+    first.enqueue([observation(), observation()]);
+    await first.flush();
+    const restarted = new ProspectiveValidationWriter(fakeTable(rows));
+    restarted.enqueue([observation()]);
+    await restarted.flush();
+    expect(rows.size).toBe(1);
+    expect(first.diagnostics()).toMatchObject({ persisted: 1, skippedDedupe: 1, persistenceFailures: 0 });
+    expect(restarted.diagnostics()).toMatchObject({ persisted: 0, skippedDedupe: 1, persistenceFailures: 0 });
   });
 });
