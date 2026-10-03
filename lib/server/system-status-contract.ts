@@ -331,6 +331,22 @@ export interface SystemStatusResponse {
     lastFailureAt: string | null;
     lastFailureClassification: "invalid_timestamp" | "database" | "unconfigured" | null;
     lastFailureField: "predictedAt" | "predictedLandingAt" | "createdAt" | null;
+    lastDatabaseFailure: {
+      constructorName: string | null;
+      name: string | null;
+      code: string | null;
+      sqlState: string | null;
+      sqlStateClass: "integrity_constraint" | "data_exception" | "connection" | "transaction_rollback" | "insufficient_resources" | "operator_intervention" | "other" | null;
+      constraint: string | null;
+      causeConstructorName: string | null;
+      causeName: string | null;
+      causeCode: string | null;
+      causeSqlState: string | null;
+      causeConstraint: string | null;
+      messageClass: "unique_violation" | "foreign_key_violation" | "not_null_violation" | "data_exception" | "connection" | "timeout" | "serialization" | "insufficient_resources" | "operator_intervention" | "unknown";
+    } | null;
+    databaseFailureHistogram: Array<{ signature: string; count: number; firstSeenAt: string; lastSeenAt: string }>;
+    failuresByCapability: { ETA: number; RUNWAY: number; RUNWAY_CHANGE: number; TRAJECTORY: number };
     rawRetentionDays: number;
     readiness: { ETA: string; RUNWAY: string; RUNWAY_CHANGE: string; TRAJECTORY: string };
   };

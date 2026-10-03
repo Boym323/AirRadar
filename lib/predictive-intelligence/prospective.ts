@@ -117,9 +117,92 @@ export interface ProspectiveDiagnostics {
   queueDepth: number; queueHighWaterMark: number; oldestQueuedAt: string | null; lastSuccessfulWrite: string | null;
   lastFailureAt: string | null; lastFailureClassification: "invalid_timestamp" | "database" | "unconfigured" | null;
   lastFailureField: "predictedAt" | "predictedLandingAt" | "createdAt" | null;
+  lastDatabaseFailure: DatabaseFailureSignature | null;
+  databaseFailureHistogram: DatabaseFailureHistogramEntry[];
+  failuresByCapability: Record<PredictiveCapability, number>;
 }
 
 export type ObservationTable = { create: (input: Record<string, unknown>) => Promise<unknown> };
+
+export type DatabaseFailureMessageClass = "unique_violation" | "foreign_key_violation" | "not_null_violation" | "data_exception" | "connection" | "timeout" | "serialization" | "insufficient_resources" | "operator_intervention" | "unknown";
+export type DatabaseFailureSqlStateClass = "integrity_constraint" | "data_exception" | "connection" | "transaction_rollback" | "insufficient_resources" | "operator_intervention" | "other" | null;
+export type DatabaseFailureSignature = {
+  constructorName: string | null;
+  name: string | null;
+  code: string | null;
+  sqlState: string | null;
+  sqlStateClass: DatabaseFailureSqlStateClass;
+  constraint: string | null;
+  causeConstructorName: string | null;
+  causeName: string | null;
+  causeCode: string | null;
+  causeSqlState: string | null;
+  causeConstraint: string | null;
+  messageClass: DatabaseFailureMessageClass;
+};
+export type DatabaseFailureHistogramEntry = { signature: string; count: number; firstSeenAt: string; lastSeenAt: string };
+
+const FAILURE_HISTOGRAM_LIMIT = 8;
+const CAPABILITIES: readonly PredictiveCapability[] = ["ETA", "RUNWAY", "RUNWAY_CHANGE", "TRAJECTORY"];
+const boundedString = (value: unknown): string | null => {
+  if (typeof value !== "string" || value.length === 0 || value.length > 128 || /[\r\n]/.test(value)) return null;
+  return value;
+};
+const structuralValue = (value: unknown): string | null => boundedString(value);
+const sqlStateClass = (sqlState: string | null): DatabaseFailureSqlStateClass => {
+  if (!sqlState) return null;
+  if (sqlState.startsWith("23")) return "integrity_constraint";
+  if (sqlState.startsWith("22")) return "data_exception";
+  if (sqlState.startsWith("08")) return "connection";
+  if (sqlState.startsWith("40")) return "transaction_rollback";
+  if (sqlState.startsWith("53")) return "insufficient_resources";
+  if (sqlState.startsWith("57")) return "operator_intervention";
+  return "other";
+};
+const messageClass = (error: unknown, sqlState: string | null): DatabaseFailureMessageClass => {
+  if (sqlState === "23505") return "unique_violation";
+  if (sqlState === "23502") return "not_null_violation";
+  if (sqlState === "23503") return "foreign_key_violation";
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (/timeout|timed out/.test(message)) return "timeout";
+  if (/serialization|deadlock/.test(message)) return "serialization";
+  if (sqlState?.startsWith("22")) return "data_exception";
+  if (sqlState?.startsWith("08")) return "connection";
+  if (sqlState?.startsWith("53")) return "insufficient_resources";
+  if (sqlState?.startsWith("57")) return "operator_intervention";
+  return "unknown";
+};
+
+export function databaseFailureSignature(error: unknown): DatabaseFailureSignature {
+  const values: Array<Record<string, unknown>> = [];
+  let current = error;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    const value = current as Record<string, unknown>;
+    values.push(value);
+    current = value.cause;
+  }
+  const top = values[0] ?? {};
+  const cause = values[1] ?? {};
+  const sqlState = structuralValue(top.sqlState) ?? structuralValue(top.code);
+  return {
+    constructorName: structuralValue((error as { constructor?: { name?: unknown } } | null)?.constructor?.name),
+    name: structuralValue(top.name),
+    code: structuralValue(top.code),
+    sqlState,
+    sqlStateClass: sqlStateClass(sqlState),
+    constraint: structuralValue(top.constraint),
+    causeConstructorName: structuralValue((values[1] as { constructor?: { name?: unknown } } | undefined)?.constructor?.name),
+    causeName: structuralValue(cause.name),
+    causeCode: structuralValue(cause.code),
+    causeSqlState: structuralValue(cause.sqlState) ?? structuralValue(cause.code),
+    causeConstraint: structuralValue(cause.constraint),
+    messageClass: messageClass(error, sqlState ?? structuralValue(cause.code)),
+  };
+}
+
+function failureSignatureKey(signature: DatabaseFailureSignature): string {
+  return [signature.constructorName, signature.name, signature.code, signature.sqlState, signature.sqlStateClass, signature.constraint, signature.causeConstructorName, signature.causeName, signature.causeCode, signature.causeSqlState, signature.causeConstraint, signature.messageClass].map((value) => value ?? "-").join("|");
+}
 
 function toOrmInstant(value: number, field: string): Temporal.Instant {
   if (!Number.isSafeInteger(value)) throw new TypeError(`${field} must be a safe integer timestamp`);
@@ -130,16 +213,12 @@ function toOrmInstant(value: number, field: string): Temporal.Instant {
   }
 }
 
-function errorCode(error: unknown): string | null {
-  if (!error || typeof error !== "object") return null;
-  const value = (error as { code?: unknown }).code;
-  return typeof value === "string" ? value : null;
-}
-
 function isExpectedDuplicate(error: unknown): boolean {
-  const code = errorCode(error);
-  const message = error instanceof Error ? error.message : String(error);
-  return code === "23505" || code === "P2002" || /duplicate|unique constraint|already exists/i.test(message);
+  const signature = databaseFailureSignature(error);
+  if (signature.code === "P2002") return true;
+  const isUniqueViolation = signature.sqlState === "23505" || signature.causeSqlState === "23505";
+  const constraint = signature.constraint ?? signature.causeConstraint;
+  return isUniqueViolation && constraint === "predictiveObservation_pkey";
 }
 
 function failureClassification(error: unknown): "invalid_timestamp" | "database" {
@@ -163,8 +242,25 @@ export class ProspectiveValidationWriter {
     lastFailureAt: null as string | null,
     lastFailureClassification: null as ProspectiveDiagnostics["lastFailureClassification"],
     lastFailureField: null as ProspectiveDiagnostics["lastFailureField"],
+    lastDatabaseFailure: null as DatabaseFailureSignature | null,
+    databaseFailureHistogram: [] as DatabaseFailureHistogramEntry[],
+    failuresByCapability: Object.fromEntries(CAPABILITIES.map((capability) => [capability, 0])) as Record<PredictiveCapability, number>,
   };
   constructor(private readonly tableOverride?: ObservationTable | null) {}
+  private recordDatabaseFailure(error: unknown, capability: PredictiveCapability): void {
+    const signature = databaseFailureSignature(error);
+    const now = new Date().toISOString();
+    this.stats.lastDatabaseFailure = signature;
+    this.stats.failuresByCapability[capability] += 1;
+    const key = failureSignatureKey(signature);
+    const existing = this.stats.databaseFailureHistogram.find((entry) => entry.signature === key);
+    if (existing) {
+      existing.count += 1;
+      existing.lastSeenAt = now;
+    } else if (this.stats.databaseFailureHistogram.length < FAILURE_HISTOGRAM_LIMIT) {
+      this.stats.databaseFailureHistogram.push({ signature: key, count: 1, firstSeenAt: now, lastSeenAt: now });
+    }
+  }
   enqueue(observations: readonly ProspectiveObservation[]): void {
     if (!observations.length) return;
     for (const observation of observations) {
@@ -209,8 +305,10 @@ export class ProspectiveValidationWriter {
           }
           this.stats.persistenceFailures += 1;
           this.stats.lastFailureAt = new Date().toISOString();
-          this.stats.lastFailureClassification = failureClassification(error);
+          const classification = failureClassification(error);
+          this.stats.lastFailureClassification = classification;
           this.stats.lastFailureField = failureField(error);
+          if (classification === "database") this.recordDatabaseFailure(error, item.capability);
         }
       }
       if (successfulWrites > 0) this.stats.lastSuccessfulWrite = new Date().toISOString();
@@ -220,7 +318,15 @@ export class ProspectiveValidationWriter {
       if (this.queue.length) this.schedule();
     }
   }
-  diagnostics(): ProspectiveDiagnostics { return { enabled: isProspectiveValidationEnabled(), ...this.stats, queueDepth: this.queue.length, oldestQueuedAt: this.queue[0] ? new Date(this.queue[0].predictedAt).toISOString() : null }; }
+  diagnostics(): ProspectiveDiagnostics {
+    return {
+      enabled: isProspectiveValidationEnabled(), ...this.stats,
+      lastDatabaseFailure: this.stats.lastDatabaseFailure ? { ...this.stats.lastDatabaseFailure } : null,
+      databaseFailureHistogram: this.stats.databaseFailureHistogram.map((entry) => ({ ...entry })),
+      failuresByCapability: { ...this.stats.failuresByCapability },
+      queueDepth: this.queue.length, oldestQueuedAt: this.queue[0] ? new Date(this.queue[0].predictedAt).toISOString() : null,
+    };
+  }
 }
 
 export const prospectiveRetentionDays = RAW_RETENTION_DAYS;
