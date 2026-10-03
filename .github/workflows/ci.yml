@@ -24,6 +24,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: Restore ESLint cache
         uses: actions/cache@v5
         with:
