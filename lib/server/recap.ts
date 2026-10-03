@@ -248,25 +248,28 @@ async function loadDailyIntelligence(
 ) {
   const fromInstant = Temporal.Instant.fromEpochMilliseconds(from.getTime());
   const toInstant = Temporal.Instant.fromEpochMilliseconds(to.getTime());
-  const [flightRows, eventAggregates, eventRows] = await Promise.all([
-    schema.Flight
+  const [flightRowsRaw, eventAggregatesRaw, eventRowsRaw] = await Promise.all([
+    (async () => await schema.Flight
       .where((row) => row.startTime.gte(fromInstant))
       .where((row) => row.startTime.lt(toInstant))
       .select("startTime", "airline")
-      .all() as Promise<Array<{ startTime: Temporal.Instant | Date; airline: string | null }>>,
-    schema.FlightEvent
+      .all())(),
+    (async () => await schema.FlightEvent
       .where((row) => row.occurredAt.gte(fromInstant))
       .where((row) => row.occurredAt.lt(toInstant))
       .groupBy("type")
-      .aggregate((aggregate) => ({ count: aggregate.count() })) as Promise<DailyRecapEventAggregateInput[]>,
-    schema.FlightEvent
+      .aggregate((aggregate) => ({ count: aggregate.count() })))(),
+    (async () => await schema.FlightEvent
       .where((row) => row.occurredAt.gte(fromInstant))
       .where((row) => row.occurredAt.lt(toInstant))
       .select("id", "eventKey", "type", "icaoHex", "occurredAt", "confidence", "airportIcao", "runway")
       .orderBy([(row) => row.occurredAt.desc(), (row) => row.id.desc()])
       .limit(250)
-      .all() as Promise<Array<Omit<DailyRecapEventInput, "occurredAt"> & { occurredAt: Temporal.Instant | Date }>>,
+      .all())(),
   ]);
+  const flightRows = flightRowsRaw as unknown as Array<{ startTime: Temporal.Instant | Date; airline: string | null }>;
+  const eventAggregates = eventAggregatesRaw as unknown as DailyRecapEventAggregateInput[];
+  const eventRows = eventRowsRaw as unknown as Array<Omit<DailyRecapEventInput, "occurredAt"> & { occurredAt: Temporal.Instant | Date }>;
 
   const flights: DailyRecapFlightInput[] = flightRows.map((row) => ({
     startedAt: timestamp(row.startTime),
