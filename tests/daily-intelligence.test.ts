@@ -105,6 +105,38 @@ describe("Daily Intelligence composer", () => {
     });
   });
 
+  it("does not classify arbitrary V1 squawk rules as emergency events", () => {
+    const routineSquawk = alert("alert_v1", "2026-10-03T10:20:00Z", {
+      reason: "alert_v1",
+      squawk: "1200",
+      alertV1: {
+        occurrenceId: "2",
+        sourceType: "SQUAWK",
+        sourceKey: "1200",
+        trigger: "SQUAWK",
+        ruleName: "Custom squawk",
+        flightEventId: null,
+        flightEventType: null,
+        airportIcao: null,
+        runway: null,
+        geofenceId: null,
+        deliveryStatus: "delivered",
+      },
+    });
+
+    const result = buildDailyIntelligence({
+      flights: [],
+      eventAggregates: [],
+      events: [],
+      alerts: [routineSquawk],
+      timezone: "Europe/Prague",
+      complete: true,
+    });
+
+    expect(result.eventCounts.emergencies).toBe(0);
+    expect(result.highlights).toHaveLength(0);
+  });
+
   it("keeps high-value events in the bounded daily highlights and excludes duplicated Flight Intelligence ledger alerts", () => {
     const routine = Array.from({ length: 12 }, (_, index) => ({
       id: index + 1,
