@@ -58,7 +58,7 @@ zda operátor nakonfiguroval volitelného providera.
 | `/recap/daily` | Denní přehled přijímače s hranicemi podle pražského lokálního času a označením neúplného dne. | Produkce, pokud jsou dostupné historie/agregace PostgreSQL. |
 | `/recap/weekly` | Sedmidenní přehled přijímače s omezeným porovnáním proti předchozím sedmi dnům. | Produkce, pokud jsou dostupné historie/agregace PostgreSQL. |
 | `/fleet` | Konkrétní letadla z ICAO pravidel watchlistu, live/offline stav, počty nedávných pozorovaných letů, trasy/letiště a lazy fotografie. | Produkce; neidentitní pravidla watchlistu jsou vynechána, historie PostgreSQL je volitelná. |
-| `/system` | Sanitizovaný stav runtime, přijímače, persistence, statistik, ATC, počasí, OGN, alertů a letišť. Lazy providery weather/radar/wind/ADSBDB zobrazují cold-start stavy `ON DEMAND`/`LOADING` a omezené bezpečné důvody stavů degraded/offline. | Produkční read-only diagnostika; nikdy nespouští volitelné upstream požadavky. |
+| `/system` | Sanitizovaný stav runtime, přijímače, persistence, statistik, ATC, počasí, OGN, alertů a letišť plus process-local diagnostika kontinuity ADS-B s čítači omission/recovery, source failover a mass-drop guardu. Lazy providery weather/radar/wind/ADSBDB zobrazují cold-start stavy `ON DEMAND`/`LOADING` a omezené bezpečné důvody stavů degraded/offline. | Produkční read-only diagnostika; nikdy nespouští volitelné upstream požadavky. |
 
 ## PIREP / AIREP Intelligence V1
 
