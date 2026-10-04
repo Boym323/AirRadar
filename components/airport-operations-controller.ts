@@ -26,6 +26,8 @@ export function useAirportOperationsController(icaoCode: string): AirportOperati
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setOperations(null);
+    setWeather(null);
     setOperationsFailed(false);
     setWeatherFailed(false);
 
