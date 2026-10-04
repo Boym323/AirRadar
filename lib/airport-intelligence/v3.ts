@@ -281,6 +281,37 @@ export interface AirportFlowPressureSummary {
   };
 }
 
+export const AIRPORT_LIVE_BOARD_RUNWAY_FLOW_WINDOW_MS = 15 * 60_000;
+export const AIRPORT_LIVE_BOARD_RUNWAY_FLOW_MIN_SAMPLES = 3;
+export const AIRPORT_LIVE_BOARD_RUNWAY_FLOW_STABLE_SHARE = 0.75;
+export const AIRPORT_LIVE_BOARD_RUNWAY_FLOW_TRANSITION_SHARE = 0.60;
+
+export type AirportRunwayFlowState = "STABLE" | "TRANSITIONING" | "MIXED" | "INSUFFICIENT";
+export type AirportRunwayFlowWindAlignment = "ALIGNED" | "DIFFERENT" | "UNKNOWN";
+
+export interface AirportRunwayFlowLaneSummary {
+  runway: string | null;
+  share: number | null;
+  samples: number;
+}
+
+export interface AirportRunwayFlowWindowSummary extends AirportRunwayFlowLaneSummary {
+  arrivals: AirportRunwayFlowLaneSummary;
+  departures: AirportRunwayFlowLaneSummary;
+  reportedSamples: number;
+  inferredSamples: number;
+}
+
+export interface AirportRunwayFlowIntelligence {
+  windowMinutes: 15;
+  state: AirportRunwayFlowState;
+  current: AirportRunwayFlowWindowSummary;
+  previous: AirportRunwayFlowWindowSummary;
+  transition: { from: string; to: string } | null;
+  windFavoredRunway: string | null;
+  windAlignment: AirportRunwayFlowWindAlignment;
+}
+
 export function buildAirportJourneyFlowSummary(
   snapshot: AirportCorrelatedTrafficSnapshot,
   attentionLimit = AIRPORT_LIVE_BOARD_ATTENTION_LIMIT,
@@ -458,6 +489,145 @@ export function buildAirportFlowPressureSummary(
     goAroundRecent,
     pressure: { level: pressureLevel(score), score },
     runway: recentRunwayConsistency(operations.recentMovements, runwayFrom, generatedAt + 1),
+  };
+}
+
+function dominantRunwaySummary(movements: readonly AirportMovement[]): AirportRunwayFlowLaneSummary {
+  const counts = new Map<string, number>();
+  for (const movement of movements) {
+    const designator = movement.runway?.designator?.trim().toUpperCase();
+    if (!designator) continue;
+    counts.set(designator, (counts.get(designator) ?? 0) + 1);
+  }
+  const samples = [...counts.values()].reduce((sum, count) => sum + count, 0);
+  const top = [...counts.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], undefined, { numeric: true }))[0] ?? null;
+  if (!top || samples === 0) return { runway: null, share: null, samples: 0 };
+  return { runway: top[0], share: top[1] / samples, samples };
+}
+
+function runwayFlowWindow(
+  movements: readonly AirportMovement[],
+  fromMs: number,
+  toMs: number,
+): AirportRunwayFlowWindowSummary {
+  const relevant = new Set<AirportMovement["movement"]>([
+    "APPROACH",
+    "LANDING",
+    "TAKEOFF",
+    "DEPARTURE",
+    "GO_AROUND",
+  ]);
+  const arrivalKinds = new Set<AirportMovement["movement"]>(["APPROACH", "LANDING", "GO_AROUND"]);
+  const departureKinds = new Set<AirportMovement["movement"]>(["TAKEOFF", "DEPARTURE"]);
+  const seenFlights = new Set<number>();
+  const selected = movements
+    .filter((movement) => {
+      if (!relevant.has(movement.movement) || !movement.runway?.designator) return false;
+      const observedAt = Date.parse(movement.observedAt);
+      return Number.isFinite(observedAt) && observedAt >= fromMs && observedAt < toMs;
+    })
+    .slice()
+    .sort((left, right) =>
+      Date.parse(right.observedAt) - Date.parse(left.observedAt)
+      || right.flightId - left.flightId)
+    .filter((movement) => {
+      if (seenFlights.has(movement.flightId)) return false;
+      seenFlights.add(movement.flightId);
+      return true;
+    });
+
+  const overall = dominantRunwaySummary(selected);
+  return {
+    ...overall,
+    arrivals: dominantRunwaySummary(selected.filter((movement) => arrivalKinds.has(movement.movement))),
+    departures: dominantRunwaySummary(selected.filter((movement) => departureKinds.has(movement.movement))),
+    reportedSamples: selected.filter((movement) => movement.runway?.status === "reported").length,
+    inferredSamples: selected.filter((movement) => movement.runway?.status !== "reported").length,
+  };
+}
+
+function emptyRunwayFlowWindow(): AirportRunwayFlowWindowSummary {
+  return {
+    runway: null,
+    share: null,
+    samples: 0,
+    arrivals: { runway: null, share: null, samples: 0 },
+    departures: { runway: null, share: null, samples: 0 },
+    reportedSamples: 0,
+    inferredSamples: 0,
+  };
+}
+
+export function buildAirportRunwayFlowIntelligence(
+  operations: AirportOperationsResponse | null,
+  windFavoredRunway: string | null,
+): AirportRunwayFlowIntelligence {
+  const generatedAt = operations ? Date.parse(operations.generatedAt) : Number.NaN;
+  if (!operations || !Number.isFinite(generatedAt)) {
+    return {
+      windowMinutes: 15,
+      state: "INSUFFICIENT",
+      current: emptyRunwayFlowWindow(),
+      previous: emptyRunwayFlowWindow(),
+      transition: null,
+      windFavoredRunway: windFavoredRunway?.trim().toUpperCase() || null,
+      windAlignment: "UNKNOWN",
+    };
+  }
+
+  const currentFrom = generatedAt - AIRPORT_LIVE_BOARD_RUNWAY_FLOW_WINDOW_MS;
+  const previousFrom = currentFrom - AIRPORT_LIVE_BOARD_RUNWAY_FLOW_WINDOW_MS;
+  const current = runwayFlowWindow(operations.recentMovements, currentFrom, generatedAt + 1);
+  const previous = runwayFlowWindow(operations.recentMovements, previousFrom, currentFrom);
+  const currentShare = current.share ?? 0;
+  const previousShare = previous.share ?? 0;
+
+  let state: AirportRunwayFlowState;
+  if (
+    current.samples < AIRPORT_LIVE_BOARD_RUNWAY_FLOW_MIN_SAMPLES
+    || previous.samples < AIRPORT_LIVE_BOARD_RUNWAY_FLOW_MIN_SAMPLES
+    || !current.runway
+    || !previous.runway
+  ) {
+    state = "INSUFFICIENT";
+  } else if (
+    current.runway !== previous.runway
+    && currentShare >= AIRPORT_LIVE_BOARD_RUNWAY_FLOW_TRANSITION_SHARE
+    && previousShare >= AIRPORT_LIVE_BOARD_RUNWAY_FLOW_TRANSITION_SHARE
+  ) {
+    state = "TRANSITIONING";
+  } else if (
+    current.runway === previous.runway
+    && currentShare >= AIRPORT_LIVE_BOARD_RUNWAY_FLOW_STABLE_SHARE
+    && previousShare >= AIRPORT_LIVE_BOARD_RUNWAY_FLOW_STABLE_SHARE
+  ) {
+    state = "STABLE";
+  } else {
+    state = "MIXED";
+  }
+
+  const normalizedWindRunway = windFavoredRunway?.trim().toUpperCase() || null;
+  const windComparable = current.samples >= AIRPORT_LIVE_BOARD_RUNWAY_FLOW_MIN_SAMPLES
+    && current.runway !== null
+    && currentShare >= AIRPORT_LIVE_BOARD_RUNWAY_FLOW_TRANSITION_SHARE
+    && normalizedWindRunway !== null;
+  const windAlignment: AirportRunwayFlowWindAlignment = !windComparable
+    ? "UNKNOWN"
+    : current.runway === normalizedWindRunway
+      ? "ALIGNED"
+      : "DIFFERENT";
+
+  return {
+    windowMinutes: 15,
+    state,
+    current,
+    previous,
+    transition: state === "TRANSITIONING" && previous.runway && current.runway
+      ? { from: previous.runway, to: current.runway }
+      : null,
+    windFavoredRunway: normalizedWindRunway,
+    windAlignment,
   };
 }
 
