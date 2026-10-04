@@ -257,7 +257,7 @@
       "category": "alerts",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Server watchlists, alert history, rule mutations and fleet views.",
+      "summary": "Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views.",
       "pages": [
         "/watchlist",
         "/alerts",
@@ -268,6 +268,7 @@
         "/api/alerts",
         "/api/watchlist",
         "/api/watchlist/:id",
+        "/api/watchlist/activity",
         "/api/watchlist/session",
         "/api/admin/alerts/delivery",
         "/api/admin/alerts/fleets",
