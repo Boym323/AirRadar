@@ -76,15 +76,22 @@ function sequenceStage(stage: AirportActiveJourneyStage): boolean {
   return stage === "INBOUND" || stage === "HOLDING" || stage === "APPROACH" || stage === "FINAL";
 }
 
-export function buildAirportArrivalSequence(
-  snapshot: AirportCorrelatedTrafficSnapshot,
-  predictions: PredictiveOperationsResponse | null,
-  airportIcao: string,
-  limit = AIRPORT_LIVE_BOARD_V7_SEQUENCE_LIMIT,
-): AirportArrivalSequenceSummary {
-  const airport = canonicalAirport(airportIcao);
-  const byHex = new Map((predictions?.items ?? []).map((item) => [item.icaoHex.trim().toUpperCase(), item]));
-  const candidates = snapshot.inbound
+function stagePriority(stage: AirportActiveJourneyStage): number {
+  if (stage === "FINAL") return 0;
+  if (stage === "APPROACH") return 1;
+  if (stage === "HOLDING") return 2;
+  return 3;
+}
+
+export function buildAirportArrivalSequence(input: {
+  airportIcao: string;
+  traffic: AirportCorrelatedTrafficSnapshot;
+  predictive: PredictiveOperationsResponse | null;
+  limit?: number;
+}): AirportArrivalSequenceSummary {
+  const airport = canonicalAirport(input.airportIcao);
+  const byHex = new Map((input.predictive?.items ?? []).map((item) => [item.icaoHex.trim().toUpperCase(), item]));
+  const candidates = input.traffic.inbound
     .filter((observation) => !observation.aircraft.onGround && sequenceStage(observation.journey.stage))
     .flatMap((observation) => {
       const hex = observation.aircraft.icaoHex.trim().toUpperCase();
@@ -116,9 +123,10 @@ export function buildAirportArrivalSequence(
       const leftEta = left.etaAt ? Date.parse(left.etaAt) : Number.POSITIVE_INFINITY;
       const rightEta = right.etaAt ? Date.parse(right.etaAt) : Number.POSITIVE_INFINITY;
       if (leftEta !== rightEta) return leftEta - rightEta;
-      return left.distanceKm - right.distanceKm || left.icaoHex.localeCompare(right.icaoHex);
+      const stageDelta = stagePriority(left.stage) - stagePriority(right.stage);
+      return stageDelta || left.distanceKm - right.distanceKm || left.icaoHex.localeCompare(right.icaoHex);
     })
-    .slice(0, Math.max(1, limit))
+    .slice(0, Math.max(1, input.limit ?? AIRPORT_LIVE_BOARD_V7_SEQUENCE_LIMIT))
     .map((item, index) => ({ ...item, position: index + 1 }));
 
   const etaTimes = candidates
@@ -135,7 +143,7 @@ export function buildAirportArrivalSequence(
   const runwayValues = candidates.flatMap((item) => item.runway ? [item.runway] : []);
   return {
     version: "airport-live-board-v7",
-    generatedAt: predictions?.generatedAt ?? null,
+    generatedAt: input.predictive?.generatedAt ?? null,
     totalCandidates: candidates.length,
     etaPredicted,
     runwayPredicted: runwayValues.length,
