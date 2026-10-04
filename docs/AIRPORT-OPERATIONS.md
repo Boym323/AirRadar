@@ -124,3 +124,24 @@ distance ordering. The panel shows calibrated ETA uncertainty, median spacing
 between available ETAs, predicted-runway stability, and the existing observed
 V7 runway-flow evidence. The sequence is receiver/prediction intelligence, not
 ATC sequencing or FIDS.
+
+### V8 Approach Queue Intelligence
+
+V8 keeps the V7 arrival sequence unchanged and derives one additional bounded
+in-memory density signal from its already-filtered rows. It counts active
+arrivals, APPROACH/FINAL and HOLDING stages, PUBLIC ETA coverage, adjacent ETA
+gaps and median/minimum ETA spacing. No new aircraft candidate, route decision,
+prediction or runway value is introduced by V8.
+
+The state is deliberately descriptive rather than operational. EMPTY and
+LOW_DENSITY cover sparse snapshots, ACTIVE covers ordinary multi-aircraft
+traffic, BUILDING requires at least four arrivals plus corroborating density
+evidence, COMPRESSED requires at least three PUBLIC ETA samples and at least
+two adjacent ETA gaps of four minutes or less, and HOLDING_PRESENT requires at
+least two holding aircraft in the bounded sequence. These are AirRadar
+receiver/prediction-density labels, not ATC sequencing, separation minima,
+airport capacity, delay or safety assessments.
+
+V8 adds no fetch, timer, EventSource, API route, database read/write, migration
+or persistence path beyond the existing V7 arrival-sequence inputs.
+
