@@ -15,6 +15,7 @@ import {
   type CoverageIntelligenceRange,
   type CoverageIntelligenceResponse,
 } from "@/lib/statistics-coverage-intelligence";
+import type { ReceiverCoverageHourlyEvidenceRow } from "@/lib/receiver-coverage-intelligence-v2";
 
 function instantIso(value: Temporal.Instant | Date): string {
   return value instanceof Date ? value.toISOString() : value.toString();
@@ -71,6 +72,30 @@ function unavailable(range: CoverageIntelligenceRange, now: Date, timezone: stri
         reasons: ["coverage.source_unavailable"],
       },
     },
+    intelligenceV2: {
+      version: "receiver-coverage-intelligence-v2",
+      methodology: "rolling-24h-vs-prior-7d-hourly-capture",
+      window: {
+        currentFrom: new Date(now.getTime() - 24 * 3_600_000).toISOString(),
+        currentTo: now.toISOString(),
+        baselineFrom: new Date(now.getTime() - 8 * 24 * 3_600_000).toISOString(),
+        baselineTo: new Date(now.getTime() - 24 * 3_600_000).toISOString(),
+      },
+      health: {
+        state: "INSUFFICIENT_DATA",
+        currentRatio: null,
+        baselineRatio: null,
+        deltaPercentagePoints: null,
+        last6hRatio: null,
+        previous18hRatio: null,
+        degradedSectors: 0,
+        improvedSectors: 0,
+        evaluatedSectors: 0,
+        reasons: ["coverage_v2.source_unavailable"],
+      },
+      hourly: [],
+      sectors: [],
+    },
     records: { peakConcurrent: null, farthestReception: null, fastestAircraft: null, highestFlight: null },
   };
 }
@@ -102,7 +127,13 @@ export async function getCoverageIntelligence(
       .where((flight) => flight.startTime.gte(bounds.fromInstant))
       .where((flight) => flight.startTime.lt(bounds.toExclusiveInstant));
 
-    const [coverageRaw, altitudeCoverageRaw, statsRaw, flightStartsRaw, highestRaw] = await Promise.all([
+    const v2From = Temporal.Instant.fromEpochMilliseconds(now.getTime() - 8 * 24 * 3_600_000);
+    let hourlyAzimuthQuery = schema.ReceiverCoverageHourly.where((row) => row.hour.gte(v2From));
+    hourlyAzimuthQuery = hourlyAzimuthQuery.where({ dimension: "azimuth" });
+    let hourlyOverallQuery = schema.ReceiverCoverageHourly.where((row) => row.hour.gte(v2From));
+    hourlyOverallQuery = hourlyOverallQuery.where({ dimension: "overall" });
+
+    const [coverageRaw, altitudeCoverageRaw, statsRaw, flightStartsRaw, highestRaw, hourlyAzimuthRaw, hourlyOverallRaw] = await Promise.all([
       coverageQuery.all(),
       altitudeCoverageQuery.all(),
       statsQuery.all(),
@@ -117,6 +148,8 @@ export async function getCoverageIntelligence(
         .include("aircraft", (aircraft) => aircraft.select("icaoHex", "registration"))
         .limit(1)
         .all(),
+      hourlyAzimuthQuery.all(),
+      hourlyOverallQuery.all(),
     ]);
 
     const coverageByKey = new Map<string, CoverageIntelligenceDailyCoverageRow>();
@@ -250,6 +283,13 @@ export async function getCoverageIntelligence(
       observedAt: instantIso(highestRow.startTime),
     } : null;
 
+    const hourlyCoverageRows: ReceiverCoverageHourlyEvidenceRow[] = [...hourlyAzimuthRaw, ...hourlyOverallRaw].map((row) => ({
+      hour: instantIso(row.hour),
+      dimension: row.dimension,
+      bucketKey: row.bucketKey,
+      availableCount: row.availableCount,
+      capturedCount: row.capturedCount,
+    }));
     const flightRowsComplete = flightStartsRaw.length <= COVERAGE_INTELLIGENCE_FLIGHT_LIMIT;
     const flightStarts = flightStartsRaw.slice(0, COVERAGE_INTELLIGENCE_FLIGHT_LIMIT).map((row) => instantIso(row.startTime));
     return aggregateCoverageIntelligence({
@@ -264,6 +304,7 @@ export async function getCoverageIntelligence(
       flightStartTimes: flightStarts,
       flightRowsComplete,
       highestFlight,
+      hourlyCoverageRows,
     });
   } catch (error) {
     console.error("AirRadar coverage intelligence query failed", error);
