@@ -70,6 +70,24 @@ describe("Predictive Graduation Readiness V1", () => {
     });
   });
 
+  it("allows runway-change and trajectory to pass only after independent outcome truth and quality thresholds are satisfied", () => {
+    const evidence = goodEvidence();
+    evidence.RUNWAY_CHANGE.independentChangeTruthAvailable = true;
+    evidence.TRAJECTORY = {
+      observations: 180,
+      candidateObservations: 80,
+      validatedCandidates: 60,
+      precision: 0.9,
+      stateCaptureAvailable: true,
+      independentOutcomeTruthAvailable: true,
+      captureStaleRate: 0.01,
+    };
+
+    const evaluation = evaluatePredictiveReadiness(evidence);
+    expect(evaluation.capabilities.RUNWAY_CHANGE).toMatchObject({ decision: "PASS", reasons: [] });
+    expect(evaluation.capabilities.TRAJECTORY).toMatchObject({ decision: "PASS", reasons: [] });
+  });
+
   it("waits rather than failing when evidence volume is insufficient", () => {
     const evidence = goodEvidence();
     evidence.ETA.observations = PREDICTIVE_READINESS_THRESHOLDS.ETA.minimumObservations - 1;
