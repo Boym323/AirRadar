@@ -496,6 +496,7 @@ export const en = {
     operationsPredictiveReadiness: "Admin readiness",
     operationsPredictiveEta: "ETA",
     operationsPredictiveRunway: "RWY",
+    operationsPredictiveRunwayChange: "RWY Δ",
     operationsPredictiveShadow: "SHADOW",
     operationsPredictiveUnavailable: "Predictive context is temporarily unavailable.",
     description: "Probable events inferred from local ADS-B observations.",
