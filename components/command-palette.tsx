@@ -4,7 +4,7 @@ import type { Route } from "next";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UiIcon } from "@/components/ui-primitives";
-import { t } from "@/lib/i18n";
+import { formatDateTime, t } from "@/lib/i18n";
 import {
   COMMAND_SEARCH_RECENTS_KEY,
   OPEN_COMMAND_PALETTE_EVENT,
@@ -19,12 +19,14 @@ import {
   type AircraftSearchResult,
   type AirportSearchResult,
   type AtsPointSearchResult,
+  type FlightSearchResult,
   type GlobalSearchResponse,
+  type SmartSearchActionResult,
 } from "@/lib/search/types";
 
 const SEARCH_DEBOUNCE_MS = 220;
 
-type SearchResult = AircraftSearchResult | AirportSearchResult | AtsPointSearchResult;
+type SearchResult = AircraftSearchResult | AirportSearchResult | AtsPointSearchResult | FlightSearchResult | SmartSearchActionResult;
 
 interface StaticCommand {
   key: string;
@@ -44,7 +46,28 @@ type PaletteItem =
 function resultKey(item: SearchResult): string {
   if (item.kind === "aircraft") return `aircraft:${item.icaoHex}`;
   if (item.kind === "airport") return `airport:${item.icaoCode}`;
-  return `ats-point:${item.id}`;
+  if (item.kind === "ats-point") return `ats-point:${item.id}`;
+  if (item.kind === "flight") return `flight:${item.id}`;
+  return `action:${item.intent}:${item.airportIcao ?? ""}`;
+}
+
+function smartActionLabels(item: SmartSearchActionResult): { label: string; detail: string } {
+  if (item.intent === "go_arounds_today") {
+    return { label: t.commandSearch.goAroundsToday, detail: t.commandSearch.goAroundsTodayDetail };
+  }
+  if (item.intent === "rare_aircraft_today") {
+    return { label: t.commandSearch.rareAircraftToday, detail: t.commandSearch.rareAircraftTodayDetail };
+  }
+  if (item.intent === "airport_operations") {
+    return {
+      label: t.commandSearch.airportOperations(item.airportIcao ?? t.common.emptyValue),
+      detail: t.commandSearch.airportOperationsDetail,
+    };
+  }
+  return {
+    label: t.commandSearch.flightsToAirport(item.airportIcao ?? t.common.emptyValue),
+    detail: t.commandSearch.flightsToAirportDetail,
+  };
 }
 
 function resultLabels(item: SearchResult): { label: string; detail: string } {
@@ -62,15 +85,42 @@ function resultLabels(item: SearchResult): { label: string; detail: string } {
       detail: [item.name, item.city].filter(Boolean).join(" · "),
     };
   }
-  return {
-    label: item.name,
-    detail: [item.countryCode, item.pointKind === "NAVAID" ? "NAVAID" : "FIX", item.routeDesignators.join(", ")]
-      .filter(Boolean).join(" · "),
-  };
+  if (item.kind === "ats-point") {
+    return {
+      label: item.name,
+      detail: [item.countryCode, item.pointKind === "NAVAID" ? "NAVAID" : "FIX", item.routeDesignators.join(", ")]
+        .filter(Boolean).join(" · "),
+    };
+  }
+  if (item.kind === "flight") {
+    const label = item.callsign || item.registration || item.icaoHex;
+    return {
+      label,
+      detail: [
+        `${item.origin ?? t.common.emptyValue} → ${item.destination ?? t.common.emptyValue}`,
+        item.aircraftType,
+        formatDateTime(item.startTime),
+      ].filter(Boolean).join(" · "),
+    };
+  }
+  return smartActionLabels(item);
 }
 
-function resultIcon(item: SearchResult): "aircraft" | "airport" | "waypoint" {
-  return item.kind === "aircraft" ? "aircraft" : item.kind === "airport" ? "airport" : "waypoint";
+function resultIcon(item: SearchResult): "aircraft" | "airport" | "waypoint" | "flight" | "time" | "radar" {
+  if (item.kind === "aircraft") return "aircraft";
+  if (item.kind === "airport") return "airport";
+  if (item.kind === "ats-point") return "waypoint";
+  if (item.kind === "flight") return "flight";
+  if (item.intent === "go_arounds_today" || item.intent === "rare_aircraft_today") return "time";
+  return item.intent === "airport_operations" ? "radar" : "flight";
+}
+
+function resultKindLabel(item: SearchResult): string {
+  if (item.kind === "aircraft") return t.search.aircraftResults;
+  if (item.kind === "airport") return t.search.airportResults;
+  if (item.kind === "ats-point") return t.search.atsPointResults;
+  if (item.kind === "flight") return t.search.flightResults;
+  return t.commandSearch.smartActions;
 }
 
 function normalize(value: string): string {
@@ -203,9 +253,11 @@ export function CommandPalette() {
   }, [commands, query]);
 
   const resultItems = useMemo<SearchResult[]>(() => [
+    ...(results?.actions ?? []),
     ...(results?.aircraft ?? []),
     ...(results?.airports ?? []),
     ...(results?.atsPoints ?? []),
+    ...(results?.flights ?? []),
   ], [results]);
 
   const paletteItems = useMemo<PaletteItem[]>(() => {
@@ -350,7 +402,7 @@ export function CommandPalette() {
     >
       <span className="command-palette-item-icon" aria-hidden="true"><UiIcon name={resultIcon(result)} /></span>
       <span className="command-palette-item-copy"><strong>{labels.label}</strong><small>{labels.detail}</small></span>
-      <span className="command-palette-result-kind">{result.kind === "aircraft" ? t.search.aircraftResults : result.kind === "airport" ? t.search.airportResults : t.search.atsPointResults}</span>
+      <span className="command-palette-result-kind">{resultKindLabel(result)}</span>
     </button>;
   };
 
@@ -399,6 +451,10 @@ export function CommandPalette() {
         {query.trim().length >= MIN_GLOBAL_SEARCH_QUERY_LENGTH ? <>
           {loading ? <div className="command-palette-status">{t.search.loading}</div> : null}
           {requestFailed ? <div className="command-palette-status">{t.search.requestFailed}</div> : null}
+          {!loading && !requestFailed && results?.actions.length ? <section className="command-palette-group" aria-label={t.commandSearch.smartActions}>
+            <div className="command-palette-group-title">{t.commandSearch.smartActions}</div>
+            {results.actions.map(renderResult)}
+          </section> : null}
           {!loading && !requestFailed && results?.aircraft.length ? <section className="command-palette-group" aria-label={t.search.aircraftResults}>
             <div className="command-palette-group-title">{t.search.aircraftResults}</div>
             {results.aircraft.map(renderResult)}
@@ -410,6 +466,10 @@ export function CommandPalette() {
           {!loading && !requestFailed && results?.atsPoints.length ? <section className="command-palette-group" aria-label={t.search.atsPointResults}>
             <div className="command-palette-group-title">{t.search.atsPointResults}</div>
             {results.atsPoints.map(renderResult)}
+          </section> : null}
+          {!loading && !requestFailed && results?.flights.length ? <section className="command-palette-group" aria-label={t.search.flightResults}>
+            <div className="command-palette-group-title">{t.search.flightResults}</div>
+            {results.flights.map(renderResult)}
           </section> : null}
           {emptySearch ? <div className="command-palette-status">{t.search.noResults}</div> : null}
         </> : null}
