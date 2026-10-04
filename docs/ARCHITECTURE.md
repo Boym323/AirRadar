@@ -347,6 +347,13 @@ weather request are not started. Existing nearby-aircraft live traffic remains
 a separate read-only consumer of the established local aircraft SSE and V3 does
 not create another aircraft stream or write lane.
 
+Airport Live Board V1 remains inside that same boundary. The controller refreshes
+the two shared reads with a 30-second one-shot timer, clearing it and aborting
+in-flight work on unmount or manual refresh. The UI derives bounded arrival,
+departure, operational-event and runway-usage lanes in memory from the
+operations response and reuses the same METAR for a compact weather strip. No
+third API, EventSource, migration, table or write path is introduced.
+
 ### Aviation Weather
 
 `AviationWeatherProvider` is an optional, independent server-side subsystem.
