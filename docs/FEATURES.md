@@ -139,6 +139,7 @@ automatically promoted to `PUBLIC`.
 | `PATCH /api/watchlist/:id` | Update or enable/disable one rule. | Production; authenticated same-origin admin mutation. |
 | `DELETE /api/watchlist/:id` | Delete one server rule. | Production; authenticated same-origin admin mutation. |
 | `GET /api/health` | Sanitized application/database/readsb/ATC/alert health. | Production health contract. |
+| `GET /api/admin/predictive/readiness` | Admin-only 30-day bounded Predictive Graduation Readiness report from `PredictiveObservation` plus independent LANDING terminal evidence; never reads `FlightPosition`. | Read-only graduation gate; never auto-promotes a capability to PUBLIC. |
 | `GET /api/system/status` | Sanitized bounded system overview for `/system`, including server-known airport/ATC/ATS map-layer counts and source freshness. | Production diagnostics. |
 | `GET /api/version` | Safe release/build metadata. | Production release metadata endpoint. |
 
