@@ -22,7 +22,7 @@ not yet been historically attributed.
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
-| System Observability | production | operations | Pre-registry | `/system` | `/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version`<br>`/api/admin/altitude/:hex` | Sanitized health, runtime history, provider status and build identity. |
+| System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status and build identity. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback and historical context windows. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
@@ -75,6 +75,24 @@ destination actions use the exact `destination=` filter on
 `GET /api/history/flights`. Keyboard navigation and the five-item internal
 browser-local recent list remain unchanged; no LLM or additional live stream is
 involved.
+## Predictive Graduation Readiness V1
+
+Public predictive capabilities remain opt-in and default to `SHADOW`.
+Graduation Readiness adds a versioned, fail-closed evidence gate for ETA,
+runway, runway-change and trajectory advisories. The 30-day runtime report is
+admin-only on `/system` and `GET /api/admin/predictive/readiness`; it reads
+bounded `PredictiveObservation` rows plus independently captured persisted
+`LANDING` terminal evidence and never scans `FlightPosition`.
+
+Each capability receives `PASS`, `WAIT` or `FAIL` with stable reason
+codes and frozen `predictive-readiness-v1` thresholds. Missing ground truth,
+missing instrumentation, or a truncated bounded result yields `WAIT`;
+lifecycle integrity conflicts or sufficiently evidenced quality misses yield
+`FAIL`. Setting an `AIRRADAR_PREDICTIVE_*_STATUS=PUBLIC` environment value
+is not sufficient by itself: the aircraft prediction API applies the readiness
+gate and downgrades non-PASS capabilities back to `SHADOW`. No capability is
+automatically promoted to `PUBLIC`.
+
 ## APIs
 
 | Method and route | Purpose | Production status |
@@ -121,6 +139,7 @@ involved.
 | `PATCH /api/watchlist/:id` | Update or enable/disable one rule. | Production; authenticated same-origin admin mutation. |
 | `DELETE /api/watchlist/:id` | Delete one server rule. | Production; authenticated same-origin admin mutation. |
 | `GET /api/health` | Sanitized application/database/readsb/ATC/alert health. | Production health contract. |
+| `GET /api/admin/predictive/readiness` | Admin-only 30-day bounded Predictive Graduation Readiness report from `PredictiveObservation` plus independent LANDING terminal evidence; never reads `FlightPosition`. | Read-only graduation gate; never auto-promotes a capability to PUBLIC. |
 | `GET /api/system/status` | Sanitized bounded system overview for `/system`, including server-known airport/ATC/ATS map-layer counts and source freshness. | Production diagnostics. |
 | `GET /api/version` | Safe release/build metadata. | Production release metadata endpoint. |
 

@@ -92,6 +92,22 @@ Readiness is evidence only: the default sample gates are 100 scoreable ETA
 flights plus 30 relevant observations, and 100 confirmed runway arrivals.
 Quality thresholds are advisory and no capability leaves `SHADOW`.
 
+## Runtime graduation readiness
+
+The application also exposes a separate admin-only runtime readiness gate. It
+does not replace the offline validation report above. The runtime collector
+reads a bounded 30-day window of `PredictiveObservation` plus persisted
+`LANDING` terminal evidence only; it never reads `FlightPosition`. Thresholds
+are versioned as `predictive-readiness-v1` and each capability resolves to
+`PASS`, `WAIT`, or `FAIL`.
+
+Missing independent truth, unavailable instrumentation, or a capped/truncated
+query yields `WAIT`. Lifecycle identity conflicts or sufficiently evidenced
+quality misses yield `FAIL`. A configured `PUBLIC` capability is serialized
+publicly only while the runtime readiness decision is `PASS`; otherwise the
+effective policy is downgraded to `SHADOW`. The gate is fail-closed and never
+promotes a capability automatically.
+
 ## Rollout
 
 1. Stage 0: refresh `airradar_dev` from a read-only PROD snapshot, apply

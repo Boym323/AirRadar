@@ -22,6 +22,8 @@ export const DB_OPERATION_LANES = [
   "history.flight-detail.query",
   "history.aircraft-quick.query",
   "history.aircraft-detail.query",
+  "predictive-readiness.observations.query",
+  "predictive-readiness.landings.query",
 ] as const;
 
 export type DbOperationLane = (typeof DB_OPERATION_LANES)[number];
@@ -104,6 +106,8 @@ const metadata: Record<DbOperationLane, { kind: DbOperationKind; operation: DbOp
   "history.flight-detail.query": { kind: "READ", operation: "SELECT" },
   "history.aircraft-quick.query": { kind: "READ", operation: "SELECT" },
   "history.aircraft-detail.query": { kind: "READ", operation: "SELECT" },
+  "predictive-readiness.observations.query": { kind: "READ", operation: "SELECT" },
+  "predictive-readiness.landings.query": { kind: "READ", operation: "SELECT" },
 };
 
 export async function trackDbOperation<T>(lane: DbOperationLane, operation: () => Promise<T>, workUnits = 1): Promise<T> {

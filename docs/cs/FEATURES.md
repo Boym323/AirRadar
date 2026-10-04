@@ -76,6 +76,24 @@ nebo databází a naviguje pouze na existující AirRadar plochy. Destination ac
 používá přesný filtr `destination=` na `GET /api/history/flights`.
 Klávesové ovládání i pětipoložkový interní browser-local seznam recent zůstává
 beze změny; nepoužívá se LLM ani další live stream.
+## Predictive Graduation Readiness V1
+
+Veřejné predictive capability zůstávají explicitně opt-in a ve výchozím stavu
+`SHADOW`. Graduation Readiness přidává verzovaný fail-closed evidence gate
+pro ETA, runway, runway-change a trajectory advisory. Runtime report za 30 dní
+je pouze pro admina na `/system` a `GET /api/admin/predictive/readiness`;
+čte omezené řádky `PredictiveObservation` a nezávisle zachycené persistované
+terminal evidence událostí `LANDING` a nikdy neskenuje `FlightPosition`.
+
+Každá capability dostane `PASS`, `WAIT` nebo `FAIL` se stabilními reason
+codes a zmrazenými thresholdy `predictive-readiness-v1`. Chybějící ground
+truth, chybějící instrumentation nebo zkrácený bounded výsledek znamená
+`WAIT`; lifecycle integrity konflikt nebo dostatečně podložené nesplnění
+quality thresholdu znamená `FAIL`. Samotné nastavení
+`AIRRADAR_PREDICTIVE_*_STATUS=PUBLIC` nestačí: aircraft prediction API aplikuje
+readiness gate a capability bez PASS stáhne zpět do `SHADOW`. Žádná capability
+se automaticky nepovyšuje na `PUBLIC`.
+
 ## API
 
 | Metoda a routa | Účel | Produkční stav |
@@ -122,6 +140,7 @@ beze změny; nepoužívá se LLM ani další live stream.
 | `PATCH /api/watchlist/:id` | Aktualizuje nebo zapne/vypne jedno pravidlo. | Produkce; autentizovaná same-origin admin mutace. |
 | `DELETE /api/watchlist/:id` | Smaže jedno serverové pravidlo. | Produkce; autentizovaná same-origin admin mutace. |
 | `GET /api/health` | Sanitizovaný health aplikace/databáze/readsb/ATC/alertů. | Produkční health kontrakt. |
+| `GET /api/admin/predictive/readiness` | Admin-only 30denní bounded Predictive Graduation Readiness report z `PredictiveObservation` a nezávislého LANDING terminal evidence; nikdy nečte `FlightPosition`. | Read-only readiness gate; bez automatické PUBLIC promotion. |
 | `GET /api/system/status` | Sanitizovaný omezený systémový přehled pro `/system`, včetně serverem známých počtů vrstev letiště/ATC/ATS a čerstvosti zdrojů. | Produkční diagnostika. |
 | `GET /api/version` | Bezpečná metadata release/buildu. | Produkční endpoint metadat release. |
 

@@ -66,6 +66,18 @@ downstream of the existing shadow `PredictiveStateStore`. It writes immutable
 `PredictiveObservation` samples through a bounded asynchronous queue only when
 `AIRRADAR_PREDICTIVE_PROSPECTIVE_VALIDATION_ENABLED=true`; it is not part of
 the public snapshot/SSE contract and cannot block aircraft ingestion.
+
+Predictive Graduation Readiness is a separate read-only boundary over those
+immutable observations and persisted LANDING terminal evidence. Its 30-day
+runtime collector is capped at 15,000 predictive observations and 2,500 landing
+events, cached for five minutes, and never reads `FlightPosition`. The pure
+`predictive-readiness-v1` evaluator produces PASS/WAIT/FAIL per capability.
+Incomplete bounded evidence is forced to WAIT. The public aircraft prediction
+route consults readiness only when an operator explicitly configures at least
+one capability as PUBLIC; otherwise the all-SHADOW hot path performs no
+readiness database query. A configured PUBLIC capability whose current
+readiness is not PASS is exposed as SHADOW instead. The readiness layer can
+block graduation but never promotes a capability automatically.
 `NetworkAircraftProvider` is a separate optional boundary for live-only
 coverage. `AdsbHubProvider` consumes the generic aggregated SBS/30003 stream
 from `data.adsbhub.org:5002`; these rows are not classified as MLAT. The

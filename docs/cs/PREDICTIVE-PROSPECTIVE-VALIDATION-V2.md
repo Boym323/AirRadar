@@ -90,6 +90,21 @@ velké existující tabulky ani backfill. Migraci lze aplikovat online vůči li
 radaru, ale před canary patří do běžného DEV maintenance okna. Produkce se v
 této fázi nemění.
 
+## Runtime graduation readiness
+
+Aplikace má navíc samostatný admin-only runtime readiness gate. Nenahrazuje
+offline validační report výše. Runtime collector čte omezené 30denní okno
+`PredictiveObservation` a persistované LANDING terminal evidence; nikdy nečte
+`FlightPosition`. Thresholdy jsou verzované jako `predictive-readiness-v1`
+a každá capability dostane `PASS`, `WAIT` nebo `FAIL`.
+
+Chybějící nezávislý ground truth, chybějící instrumentation nebo dosažení
+bounded limitu znamená `WAIT`. Konflikt lifecycle identity nebo dostatečně
+podložené nesplnění quality thresholdu znamená `FAIL`. Capability nastavená
+na `PUBLIC` se veřejně serializuje pouze při aktuálním `PASS`; jinak je
+efektivní policy stažena zpět do `SHADOW`. Gate je fail-closed a nikdy
+capability automaticky nepovyšuje.
+
 ## Rollout
 
 1. Stage 0: obnovit `airradar_dev` z read-only PROD snapshotu, aplikovat

@@ -104,8 +104,8 @@
       "changelogKeywords": [
         "airport intelligence",
         "airport traffic",
-        "airport movement"
-        ,"airport operations"
+        "airport movement",
+        "airport operations"
       ]
     },
     {
@@ -391,24 +391,27 @@
         "/system"
       ],
       "apis": [
+        "/api/admin/altitude/:hex",
+        "/api/admin/predictive/readiness",
         "/api/health",
         "/api/system/runtime-history",
         "/api/system/status",
         "/api/system/stream",
-        "/api/version",
-        "/api/admin/altitude/:hex"
+        "/api/version"
       ],
       "changelogScopes": [
         "system",
         "health",
         "version",
-        "runtime"
+        "runtime",
+        "predictive-readiness"
       ],
       "changelogKeywords": [
         "system status",
         "runtime history",
         "health endpoint",
-        "build identity"
+        "build identity",
+        "predictive readiness"
       ]
     },
     {

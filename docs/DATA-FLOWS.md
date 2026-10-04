@@ -76,10 +76,26 @@ only fills missing, invalid, or older values.
 
 Prospective predictive validation is downstream of the shadow predictive
 evaluation. At capture time it stores the immutable prediction and the
-Flight-Intelligence lifecycle key. Later reporting joins only independent
+Flight-Intelligence lifecycle key. Offline validation tooling may join bounded
 Flight/FlightPosition terminal evidence; predictive output is never an input to
 Ground Truth classification. The lane is feature-off by default, bounded and
 fail-soft.
+
+Predictive Graduation Readiness is a lighter runtime read path. The admin-only
+`GET /api/admin/predictive/readiness` reads at most 15,000
+`PredictiveObservation` rows and 2,500 persisted `LANDING` FlightEvents from
+the latest 30 days. It correlates by lifecycle key (with bounded flight-id
+fallback), uses factual ground-confirmation timestamps and independently
+reported arrival runway evidence when available, computes only aggregate
+metrics, and never reads `FlightPosition`. Results are cached for five
+minutes. A cap hit marks the report incomplete and every otherwise passing
+capability remains WAIT.
+
+The public `GET /api/aircraft/:hex/prediction` path does no readiness DB work
+while the configured policy is entirely SHADOW/DISABLED. If an operator
+explicitly configures any capability PUBLIC, the read-only readiness report is
+consulted and any non-PASS capability is downgraded to SHADOW for serialization.
+There is no automatic PUBLIC promotion and no readiness write path.
 
 ADSBDB metadata and route persistence is a recovery cache only. Runtime RAM is
 authoritative: `set`/`delete` mutate bounded maps and generation counters

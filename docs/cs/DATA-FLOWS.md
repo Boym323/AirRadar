@@ -390,6 +390,24 @@ skutečně naladěnou frekvenci letadla.
   `origin=` a `destination=`. Skládají se s existujícími omezenými
   range/query filtry a používají je smart destination actions; endpoint nadále
   čte pouze Flight řádky.
+- Prospective predictive validation je downstream od shadow predictive
+  evaluace. Capture ukládá immutable prediction a Flight-Intelligence lifecycle
+  key. Těžší offline validační tooling může používat omezené Flight/FlightPosition
+  terminal evidence; predictive output nikdy není vstupem Ground Truth
+  klasifikace.
+- Predictive Graduation Readiness je lehčí runtime read cesta. Admin-only
+  `GET /api/admin/predictive/readiness` čte nejvýše 15 000
+  `PredictiveObservation` a 2 500 persistovaných LANDING FlightEvent z
+  posledních 30 dnů. Koreluje primárně lifecycle key, používá factual
+  ground-confirmation timestamps a nezávisle reportovaný arrival runway, pokud
+  existuje, vrací pouze agregované metriky a nikdy nečte `FlightPosition`.
+  Výsledek se cachuje pět minut. Dosažení limitu označí report jako neúplný a
+  žádná capability z takového evidence nemůže dostat PASS.
+- Veřejný `GET /api/aircraft/:hex/prediction` neprovádí readiness DB čtení,
+  dokud je policy čistě SHADOW/DISABLED. Pokud operátor explicitně nastaví
+  capability PUBLIC, read-only readiness gate ji bez aktuálního PASS efektivně
+  stáhne zpět do SHADOW. Automatická PUBLIC promotion ani readiness write path
+  neexistuje.
 - Konfigurace Alerts & Fleets V1 se ukládá v PostgreSQL přes serverový
   repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence` a `AlertRule`).
   Zapnuté řádky se načítají do vyměnitelné cache v paměti; CRUD zápis nejprve
