@@ -60,9 +60,9 @@ function eta(input: PredictiveInput, valid: readonly PredictionSample[]): Predic
   ] };
 }
 function runway(input: PredictiveInput, valid: readonly PredictionSample[]): PredictiveFlightState["runway"] {
-  if (!input.destinationAirport || input.flightState.destinationStatus === "UNKNOWN") return { runway: null, alternative: null, confidence: "UNKNOWN", changed: false, evidence: [] };
+  if (!input.destinationAirport || input.flightState.destinationStatus === "UNKNOWN") return { runway: null, alternative: null, changedFrom: null, confidence: "UNKNOWN", changed: false, evidence: [] };
   const candidates = runwayEnds(input.runways ?? []);
-  if (!candidates.length) return { runway: null, alternative: null, confidence: "UNKNOWN", changed: false, evidence: [{ key: "reason", value: "no runway geometry" }] };
+  if (!candidates.length) return { runway: null, alternative: null, changedFrom: null, confidence: "UNKNOWN", changed: false, evidence: [{ key: "reason", value: "no runway geometry" }] };
   const last = valid.at(-1) ?? input.flightState.sample;
   const destinationBearing = initialBearing(last.lat, last.lon, input.destinationAirport.lat, input.destinationAirport.lon);
   const usage = new Map((input.airportOperations?.runwayUsage ?? []).map((item) => [item.designator, item]));
@@ -79,7 +79,7 @@ function runway(input: PredictiveInput, valid: readonly PredictionSample[]): Pre
   const c = confidence((best.score >= 0.72 ? 0.72 : best.score) + (margin >= 0.15 ? 0.12 : 0));
   const previous = input.previousPrediction?.runway.runway;
   const changed = Boolean(previous && previous !== best.ident && c !== "LOW" && c !== "UNKNOWN" && margin >= 0.15);
-  return { runway: best.ident, alternative: second?.ident ?? null, confidence: c, changed, evidence: [
+  return { runway: best.ident, alternative: second?.ident ?? null, changedFrom: changed ? previous ?? null : null, confidence: c, changed, evidence: [
     ...(usage.has(best.ident) ? [{ key: "recentRunwayUsage", value: String(usage.get(best.ident)!.total) }] : []),
     ...(input.weather && !input.weather.stale ? [{ key: "surfaceWind", value: `${input.weather.windDirectionDeg ?? "VRB"}/${input.weather.windSpeedKt ?? "?"}kt` }] : []),
     { key: "candidateMargin", value: Math.round(margin * 100) / 100 },
