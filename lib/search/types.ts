@@ -2,7 +2,7 @@ export const MIN_GLOBAL_SEARCH_QUERY_LENGTH = 2;
 export const MAX_GLOBAL_SEARCH_QUERY_LENGTH = 64;
 export const GLOBAL_SEARCH_RESULT_LIMIT = 12;
 
-export type SearchHref = `/aircraft/${string}` | `/airports/${string}` | `/?aircraft=${string}` | `/?atsPoint=${string}`;
+export type SearchHref = `/aircraft/${string}` | `/airports/${string}` | `/airports/${string}#${string}` | `/flights/${string}` | `/flights?${string}` | `/recap/daily#${string}` | `/?aircraft=${string}` | `/?atsPoint=${string}`;
 
 export interface AircraftSearchResult {
   kind: "aircraft";
@@ -35,9 +35,37 @@ export interface AtsPointSearchResult {
   href: SearchHref;
 }
 
+export interface FlightSearchResult {
+  kind: "flight";
+  id: number;
+  icaoHex: string;
+  callsign: string | null;
+  registration: string | null;
+  aircraftType: string | null;
+  origin: string | null;
+  destination: string | null;
+  startTime: string;
+  href: SearchHref;
+}
+
+export type SmartSearchIntent =
+  | "go_arounds_today"
+  | "rare_aircraft_today"
+  | "airport_operations"
+  | "flights_to_airport";
+
+export interface SmartSearchActionResult {
+  kind: "action";
+  intent: SmartSearchIntent;
+  airportIcao: string | null;
+  href: SearchHref;
+}
+
 export interface GlobalSearchResponse {
   query: string;
   aircraft: AircraftSearchResult[];
   airports: AirportSearchResult[];
   atsPoints: AtsPointSearchResult[];
+  flights: FlightSearchResult[];
+  actions: SmartSearchActionResult[];
 }

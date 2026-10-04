@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GET as getFlight } from "@/app/api/history/flights/[id]/route";
+import { GET as listFlightsRoute } from "@/app/api/history/flights/route";
 import { GET as getAircraftDetailRoute } from "@/app/api/aircraft/[hex]/route";
 import {
   AIRCRAFT_RECENT_FLIGHT_LIMIT,
@@ -252,6 +253,37 @@ describe("flight history v2", () => {
     }) as never);
     const result = await listHistoryFlights({ range: "today", now: new Date("2026-01-02T00:30:00Z") });
     expect(result.flights.map((item) => item.callsign)).toEqual(["LOCAL-2"]);
+  });
+
+  it("filters historical flights by exact normalized destination", async () => {
+    const flights = [
+      { ...flight(1, "2026-09-07T10:00:00Z", "TO-PRG"), destination: "LKPR" },
+      { ...flight(2, "2026-09-07T09:00:00Z", "TO-VIE", 2), destination: "LOWW" },
+    ];
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights }) as never);
+
+    const result = await listHistoryFlights({
+      destination: "lkpr",
+      now: new Date("2026-09-07T12:00:00Z"),
+    });
+
+    expect(result.flights.map((item) => item.callsign)).toEqual(["TO-PRG"]);
+  });
+
+  it("exposes destination filtering through the public history route", async () => {
+    const flights = [
+      { ...flight(1, "2026-10-03T10:00:00Z", "TO-PRG"), destination: "LKPR" },
+      { ...flight(2, "2026-10-03T09:00:00Z", "TO-VIE", 2), destination: "LOWW" },
+    ];
+    vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights }) as never);
+
+    const response = await listFlightsRoute(new Request("http://localhost/api/history/flights?range=7d&destination=LKPR"));
+    const body = await response.json() as { flights: HistoryFlightSummary[] };
+    expect(response.status).toBe(200);
+    expect(body.flights.map((item) => item.callsign)).toEqual(["TO-PRG"]);
+
+    const invalid = await listFlightsRoute(new Request("http://localhost/api/history/flights?destination=PRG"));
+    expect(invalid.status).toBe(400);
   });
 
   it("searches by callsign", async () => {

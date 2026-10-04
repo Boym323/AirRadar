@@ -4,7 +4,7 @@ import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import type { AircraftView } from "@/lib/aircraft/types";
 import { GET as getSearch } from "@/app/api/search/route";
 import type { AirportDatabaseRow } from "@/lib/server/airport-resolver";
-import { searchGlobal } from "@/lib/server/search";
+import { searchGlobal, smartSearchActions } from "@/lib/server/search";
 import { getTranslations } from "@/lib/i18n";
 
 vi.mock("@/lib/server/db", () => ({ getPrisma: vi.fn(() => null) }));
@@ -163,8 +163,8 @@ describe("global search", () => {
 
   it("does not query for a short or empty query and returns an empty result", async () => {
     const table = new AirportTable([airport()]);
-    await expect(searchGlobal("a", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [] });
-    await expect(searchGlobal("  ", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [] });
+    await expect(searchGlobal("a", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [], flights: [], actions: [] });
+    await expect(searchGlobal("  ", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [], flights: [], actions: [] });
     expect(table.limits).toEqual([]);
   });
 
@@ -183,6 +183,56 @@ describe("global search", () => {
     expect(JSON.stringify(result)).not.toContain("database connection details");
   });
 
+  it("returns bounded historical Flight results through the shared search response", async () => {
+    const result = await searchGlobal("CSA123", {
+      aircraft: [],
+      database: null,
+      atsDocuments: [],
+      flights: [{
+        kind: "flight",
+        id: 42,
+        icaoHex: "49D001",
+        callsign: "CSA123",
+        registration: "OK-TST",
+        aircraftType: "A320",
+        origin: "LKPR",
+        destination: "LOWW",
+        startTime: "2026-10-04T07:00:00.000Z",
+        href: "/flights/42",
+      }],
+    });
+
+    expect(result.flights).toEqual([expect.objectContaining({
+      id: 42,
+      callsign: "CSA123",
+      href: "/flights/42",
+    })]);
+    expect(result.actions).toEqual([]);
+  });
+
+  it("recognizes deterministic smart actions without live or database dependencies", async () => {
+    expect(smartSearchActions("go-arounds today")).toEqual([
+      { kind: "action", intent: "go_arounds_today", airportIcao: null, href: "/recap/daily#operational-events" },
+    ]);
+    expect(smartSearchActions("vzácná letadla dnes")).toEqual([
+      { kind: "action", intent: "rare_aircraft_today", airportIcao: null, href: "/recap/daily#interesting-aircraft" },
+    ]);
+    expect(smartSearchActions("LOWW operations")).toEqual([
+      { kind: "action", intent: "airport_operations", airportIcao: "LOWW", href: "/airports/LOWW#airport-intelligence-v3" },
+    ]);
+    expect(smartSearchActions("lety do LKPR")).toEqual([
+      { kind: "action", intent: "flights_to_airport", airportIcao: "LKPR", href: "/flights?range=7d&destination=LKPR" },
+    ]);
+
+    await expect(searchGlobal("LOWW operations")).resolves.toMatchObject({
+      actions: [{ intent: "airport_operations", airportIcao: "LOWW" }],
+      aircraft: [],
+      airports: [],
+      atsPoints: [],
+      flights: [],
+    });
+  });
+
   it("returns only safe public DTO fields", async () => {
     const result = await searchGlobal("48af05", { aircraft: [aircraft()], database: null });
     expect(Object.keys(result.aircraft[0] ?? {}).sort()).toEqual(["aircraftType", "callsign", "href", "icaoHex", "kind", "manufacturer", "registration"].sort());
@@ -198,8 +248,8 @@ describe("global search API/UI contract", () => {
   });
 
   it("keeps Czech and English category and state labels", () => {
-    expect(getTranslations("cs").search).toMatchObject({ globalLabel: "Globální vyhledávání", aircraftResults: "Letadla", airportResults: "Letiště", atsPointResults: "Traťové body", loading: "Vyhledávání…" });
-    expect(getTranslations("en").search).toMatchObject({ globalLabel: "Global search", aircraftResults: "Aircraft", airportResults: "Airports", atsPointResults: "ATS points", loading: "Searching…" });
+    expect(getTranslations("cs").search).toMatchObject({ globalLabel: "Globální vyhledávání", aircraftResults: "Letadla", airportResults: "Letiště", atsPointResults: "Traťové body", flightResults: "Historické lety", loading: "Vyhledávání…" });
+    expect(getTranslations("en").search).toMatchObject({ globalLabel: "Global search", aircraftResults: "Aircraft", airportResults: "Airports", atsPointResults: "ATS points", flightResults: "Historical flights", loading: "Searching…" });
   });
 
   it("routes the topbar trigger into the global Command Search palette", () => {

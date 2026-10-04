@@ -50,12 +50,15 @@ Server-side provider boundary je `AircraftProvider`. Nakonfigurovaný lokální
 provider načítá web root readsb/tar1090; prázdná base URL vybírá deterministický
 demo provider. Frontend provider nikdy nevybírá.
 
-Command Search V1 je jednou mountnutý z root layoutu. Search control v topbaru
-je pouze trigger; root-level palette vlastní jedinou debounce větev
-`GET /api/search?q=`, statické navigační příkazy, klávesový stav a omezené
-browser-local recents. Nevytváří EventSource, aircraft subscription ani
-server-side persistenci. Deep-link Operations Center je UI open signál/query
-parametr nad existující radar komponentou, ne další operations datová větev.
+Command Search V2 zůstává jednou mountnutý z root layoutu. Search control v
+topbaru je pouze trigger; root-level palette vlastní jedinou debounce větev
+`GET /api/search?q=`, klávesový stav a omezené browser-local recents.
+Serverová search hranice může pro běžné dotazy navíc provést omezené dotazy nad
+nedávnými Flight řádky; nikdy nečte FlightPosition. Přesné smart actions se
+parsují ještě před čekáním na live stav nebo přístupem do databáze a vracejí
+pouze existující interní cíle. Action `lety do <ICAO>` používá existující
+history list s přesným destination filtrem. Command Search nevytváří
+EventSource, aircraft subscription, LLM větev ani server-side persistenci.
 
 `NetworkAircraftProvider` je
 samostatná volitelná hranice pro pouze živé pokrytí. `AdsbHubProvider`

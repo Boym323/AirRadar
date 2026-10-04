@@ -90,7 +90,7 @@ function DailyIntelligence({ data, dictionary }: { data: ReceiverRecapResponse; 
           <strong>{formatNumber(eventCount, 0, dictionary.locale)}</strong>
         </div>
       </div>
-      <div className="recap-daily-event-strip" aria-label={dictionary.recap.operationalEvents}>
+      <div id="operational-events" className="recap-daily-event-strip" aria-label={dictionary.recap.operationalEvents}>
         <Metric label={dictionary.recap.goArounds} value={formatNumber(intelligence.eventCounts.goArounds, 0, dictionary.locale)} />
         <Metric label={dictionary.recap.holdings} value={formatNumber(intelligence.eventCounts.holdings, 0, dictionary.locale)} />
         <Metric label={dictionary.recap.diversions} value={formatNumber(intelligence.eventCounts.diversions, 0, dictionary.locale)} />
@@ -159,7 +159,7 @@ export function RecapPage({ range }: { range: RecapRange }) {
         <section className="recap-card"><h2>{dictionary.recap.topTypes}</h2>{data.topAircraftTypes.length ? <ol>{data.topAircraftTypes.map((item) => <li key={item.name}><span>{item.name}</span><strong>{formatNumber(item.count, 0, dictionary.locale)}</strong></li>)}</ol> : <p>{dictionary.recap.noBreakdown}</p>}</section>
         <section className="recap-card"><h2>{dictionary.recap.topRoutes}</h2>{data.topRoutes.length ? <ol>{data.topRoutes.map((item) => <li key={`${item.origin}-${item.destination}`}><span>{item.origin} → {item.destination}</span><strong>{formatNumber(item.count, 0, dictionary.locale)}</strong></li>)}</ol> : <p>{dictionary.recap.noBreakdown}</p>}</section>
         {range === "daily" && data.dailyIntelligence ? <section className="recap-card"><h2>{dictionary.recap.topAirlines}</h2>{data.dailyIntelligence.topAirlines.length ? <ol>{data.dailyIntelligence.topAirlines.map((item) => <li key={item.name}><span>{item.name}</span><strong>{formatNumber(item.count, 0, dictionary.locale)}</strong></li>)}</ol> : <p>{dictionary.recap.noBreakdown}</p>}</section> : null}
-        <section className="recap-card"><h2>{dictionary.recap.interesting}</h2>{data.interestingAircraft.length ? <ul>{data.interestingAircraft.map((item) => <li key={`${item.icaoHex}-${item.reason}`}><Link href={`/aircraft/${encodeURIComponent(item.icaoHex)}`}>{item.callsign ?? item.registration ?? item.icaoHex}</Link><span>{dictionary.recap.reasons[item.reason]}</span></li>)}</ul> : <p>{dictionary.recap.noInteresting}</p>}</section>
+        <section id="interesting-aircraft" className="recap-card"><h2>{dictionary.recap.interesting}</h2>{data.interestingAircraft.length ? <ul>{data.interestingAircraft.map((item) => <li key={`${item.icaoHex}-${item.reason}`}><Link href={`/aircraft/${encodeURIComponent(item.icaoHex)}`}>{item.callsign ?? item.registration ?? item.icaoHex}</Link><span>{dictionary.recap.reasons[item.reason]}</span></li>)}</ul> : <p>{dictionary.recap.noInteresting}</p>}</section>
         <section className="recap-card"><h2>{dictionary.recap.bestReception}</h2>{data.bestReception ? <Link className="recap-record" href={`/aircraft/${encodeURIComponent(data.bestReception.icaoHex)}`}><strong>{formatDistance(data.bestReception.distanceKm, dictionary)}</strong><span>{data.bestReception.icaoHex} · {data.bestReception.registration ?? dictionary.common.emptyValue}</span><small>{formatDateTime(data.bestReception.recordedAt, dictionary)}</small></Link> : <p>{dictionary.recap.noReception}</p>}</section>
       </div>
       {range === "daily" ? <DailyTimeline data={data} dictionary={dictionary} /> : null}

@@ -60,16 +60,22 @@ zda operátor nakonfiguroval volitelného providera.
 | `/fleet` | Konkrétní letadla z ICAO pravidel watchlistu, live/offline stav, počty nedávných pozorovaných letů, trasy/letiště a lazy fotografie. | Produkce; neidentitní pravidla watchlistu jsou vynechána, historie PostgreSQL je volitelná. |
 | `/system` | Sanitizovaný stav runtime, přijímače, persistence, statistik, ATC, počasí, OGN, alertů a letišť. Lazy providery weather/radar/wind/ADSBDB zobrazují cold-start stavy `ON DEMAND`/`LOADING` a omezené bezpečné důvody stavů degraded/offline. | Produkční read-only diagnostika; nikdy nespouští volitelné upstream požadavky. |
 
-## Command Search V1
+## Command Search V2
 
-Root-level Command Search palette je dostupná ze všech rout přes
-`⌘K` / `Ctrl+K` a trigger hledání v topbaru. Znovu používá existující
-omezenou větev `GET /api/search?q=` pro živá letadla, letiště a ATS body a
-přidává čistě klientské navigační příkazy pro Live Radar, Today, Operations
-Center, Flights, Airports, Statistics, Alerts, Time Machine a System.
-Klávesové ovládání používá šipky nahoru/dolů, Enter a Escape. Nedávné výběry
-se ukládají pouze do browser `localStorage`, jsou omezené na pět interních
-AirRadar cest a nevytvářejí serverovou persistenci ani další live stream.
+Root-level Command Search palette zůstává dostupná ze všech rout přes
+`⌘K` / `Ctrl+K` a trigger v topbaru. `GET /api/search?q=` nově slučuje
+dosavadní výsledky živých letadel, letišť a ATS bodů s omezenými historickými
+Flight výsledky z posledních sedmi dnů. Flight search se zapíná od tří znaků,
+čte pouze Flight řádky, nikdy neskenuje FlightPosition a při nedostupném
+PostgreSQL selže fail-soft.
+
+Deterministické smart actions rozpoznávají záměrně malou sadu přesných intentů:
+dnešní go-aroundy, dnešní vzácná letadla, `<ICAO> operations` a
+`lety do <ICAO>`. Přesná smart action se vrátí ještě před prací s live stavem
+nebo databází a naviguje pouze na existující AirRadar plochy. Destination action
+používá přesný filtr `destination=` na `GET /api/history/flights`.
+Klávesové ovládání i pětipoložkový interní browser-local seznam recent zůstává
+beze změny; nepoužívá se LLM ani další live stream.
 ## API
 
 | Metoda a routa | Účel | Produkční stav |

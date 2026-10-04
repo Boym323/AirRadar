@@ -15,7 +15,8 @@ const radarSource = readFileSync(new URL("../components/airradar-app.tsx", impor
 const radarLayerMenuSource = readFileSync(new URL("../components/radar/radar-map-layer-menu.tsx", import.meta.url), "utf8");
 const shellSource = readFileSync(new URL("../components/airradar-shell.tsx", import.meta.url), "utf8");
 const streamSource = readFileSync(new URL("../components/use-aircraft-stream.ts", import.meta.url), "utf8");
-const searchSource = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
+const searchTriggerSource = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
+const commandPaletteSource = readFileSync(new URL("../components/command-palette.tsx", import.meta.url), "utf8");
 const serverSearchSource = readFileSync(new URL("../lib/server/search.ts", import.meta.url), "utf8");
 const flightPageSource = readFileSync(new URL("../app/flights/[id]/page.tsx", import.meta.url), "utf8");
 const flightDetailSource = readFileSync(new URL("../components/flight-detail.tsx", import.meta.url), "utf8");
@@ -104,9 +105,11 @@ describe("feature integration", () => {
     expect(`${radarSource}\n${streamSource}`.match(/new EventSource\(/g)).toHaveLength(2);
     expect(streamSource.match(/\/api\/stream/g)).toHaveLength(1);
     expect(radarSource).not.toContain("setInterval(");
-    expect(searchSource).not.toContain("EventSource");
-    expect(searchSource).not.toContain("/api/stream");
-    expect(searchSource).toContain("SEARCH_DEBOUNCE_MS = 220");
+    expect(searchTriggerSource).not.toContain("EventSource");
+    expect(searchTriggerSource).not.toContain("/api/stream");
+    expect(searchTriggerSource).toContain("requestCommandPaletteOpen");
+    expect(commandPaletteSource).toContain("SEARCH_DEBOUNCE_MS = 220");
+    expect(commandPaletteSource).toContain("/api/search?q=");
   });
 
   it("keeps range rings optional and within the public receiver privacy boundary", () => {
@@ -120,7 +123,8 @@ describe("feature integration", () => {
   it("keeps aircraft and airport result navigation canonical", () => {
     expect(serverSearchSource).toContain("href: `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`");
     expect(serverSearchSource).toContain("href: `/airports/${encodeURIComponent(airport.icaoCode)}`");
-    expect(searchSource).toContain("href={item.href as SearchHref}");
+    expect(commandPaletteSource).toContain("router.push(href as Route)");
+    expect(commandPaletteSource).toContain("href: item.result.href");
   });
 
   it("exposes a bounded standalone flight detail route with shared playback", () => {

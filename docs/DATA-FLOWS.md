@@ -392,12 +392,18 @@ path reports the aircraft's actual tuned frequency.
   pass through the server cache.
 - `/api/airports` serves the PostgreSQL airport catalog when non-empty and the
   bundled six-airport fallback otherwise. `GET /api/search` searches live RAM
-  aircraft, the airport catalog, and bounded ATS point data with bounded
-  input/results. Command Search V1 is a root-level client consumer of this same
-  endpoint with a 220 ms debounce. Static navigation commands do not call the
-  API. Recent selections remain capped browser-local `localStorage` entries
-  restricted to internal AirRadar paths; they do not enter server persistence
-  or any live-data lane.
+  aircraft, the airport catalog, bounded ATS point data, and at most a bounded
+  candidate set of Flight rows from the latest seven days. Historical Flight
+  search begins at three characters and never reads `FlightPosition`. Exact
+  Command Search V2 smart actions are parsed before live-state readiness or DB
+  access and therefore perform no search reads. The root-level client keeps the
+  same 220 ms debounce for ordinary search queries. Recent selections remain
+  capped browser-local `localStorage` entries restricted to internal AirRadar
+  paths; they do not enter server persistence or any live-data lane.
+- `GET /api/history/flights` additionally accepts exact normalized
+  `origin=` and `destination=` ICAO filters. These are composed with the
+  existing bounded range/query filters and are used by smart destination
+  actions; the endpoint still reads Flight rows only.
 - Alerts & Fleets V1 configuration is persisted in PostgreSQL through the
   server repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence`, and
   `AlertRule`). Enabled rows are loaded into a replaceable in-memory cache;

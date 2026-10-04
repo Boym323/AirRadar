@@ -57,6 +57,7 @@ export function AirportsPage() {
 export function FlightsPage() {
   const [range, setRange] = useState<HistoryFlightRange>("7d");
   const [search, setSearch] = useState("");
+  const [destination, setDestination] = useState<string | null>(null);
   const [flights, setFlights] = useState<HistoryFlightSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -66,6 +67,8 @@ export function FlightsPage() {
     const nextRange = params.get("range");
     setRange(nextRange === "today" || nextRange === "yesterday" || nextRange === "7d" ? nextRange : "7d");
     setSearch(params.get("q") ?? "");
+    const nextDestination = params.get("destination")?.trim().toUpperCase() ?? "";
+    setDestination(/^[A-Z]{4}$/.test(nextDestination) ? nextDestination : null);
   }, []);
 
   useEffect(() => {
@@ -73,20 +76,41 @@ export function FlightsPage() {
     const controller = new AbortController();
     const params = new URLSearchParams({ range });
     if (search.trim()) params.set("q", search.trim());
+    if (destination) params.set("destination", destination);
     setLoading(true); setError(false);
     void fetch(`/api/history/flights?${params.toString()}`, { cache: "no-store", signal: controller.signal }).then(async (response) => {
       if (!response.ok) throw new Error("flight request failed");
       return await response.json() as { flights: HistoryFlightSummary[] };
     }).then((value) => { if (active) setFlights(value.flights); }).catch((caught) => { if (active && (caught as Error).name !== "AbortError") { setFlights([]); setError(true); } }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; controller.abort(); };
-  }, [range, search]);
+  }, [range, search, destination]);
 
-  function updateRange(next: HistoryFlightRange) { setRange(next); window.history.replaceState(null, "", `/flights?range=${next}${search ? `&q=${encodeURIComponent(search)}` : ""}`); }
-  function updateSearch(value: string) { setSearch(value); window.history.replaceState(null, "", `/flights?range=${range}${value ? `&q=${encodeURIComponent(value)}` : ""}`); }
+  function replaceFlightsUrl(nextRange: HistoryFlightRange, nextSearch: string, nextDestination: string | null) {
+    const params = new URLSearchParams({ range: nextRange });
+    if (nextSearch.trim()) params.set("q", nextSearch.trim());
+    if (nextDestination) params.set("destination", nextDestination);
+    window.history.replaceState(null, "", `/flights?${params.toString()}`);
+  }
+
+  function updateRange(next: HistoryFlightRange) {
+    setRange(next);
+    replaceFlightsUrl(next, search, destination);
+  }
+
+  function updateSearch(value: string) {
+    setSearch(value);
+    replaceFlightsUrl(range, value, destination);
+  }
+
+  function clearDestination() {
+    setDestination(null);
+    replaceFlightsUrl(range, search, null);
+  }
 
   return <main className="browse-page">
     <BrowserHeader title={t.browse.flightsTitle} description={t.browse.flightsDescription} search={search} onSearch={updateSearch} placeholder={t.browse.flightsSearch} count={loading || error ? null : flights.length}>
       <div className="browse-segmented" role="group" aria-label={t.history.flightList}>{(["today", "yesterday", "7d"] as const).map((value) => <button key={value} type="button" className={range === value ? "active" : ""} aria-pressed={range === value} onClick={() => updateRange(value)}>{value === "today" ? t.history.today : value === "yesterday" ? t.history.yesterday : t.history.lastSevenDays}</button>)}</div>
+      {destination ? <button type="button" className="browse-filter-chip" onClick={clearDestination}>{t.browse.destinationFilter}: {destination} ×</button> : null}
     </BrowserHeader>
     <Panel className="browse-panel">
       <div className="browse-list-heading flight-browse-heading"><span>{t.browse.flightIdentity}</span><span>{t.browse.flightTelemetry}</span><span>{t.browse.flightTiming}</span></div>
