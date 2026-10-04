@@ -152,9 +152,10 @@ export function RadarOperationsCenter() {
     [alerts, intelligenceEvents, now],
   );
   const highlights = useMemo(() => liveOperationsHighlights(logbook), [logbook]);
+  const focusedAircraftHex = searchParams.get("aircraft")?.trim().toUpperCase() ?? null;
   const predictiveHexes = useMemo(
-    () => predictiveOperationsIcaos(timeline, highlights),
-    [highlights, timeline],
+    () => predictiveOperationsIcaos(timeline, highlights, 6, focusedAircraftHex),
+    [focusedAircraftHex, highlights, timeline],
   );
   const predictiveHexKey = predictiveHexes.join(",");
   const relevantAirportKey = useMemo(
