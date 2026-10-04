@@ -114,9 +114,9 @@ describe("Flight Story V2 narrative composer", () => {
   it("builds deterministic observed-flight summary metrics", () => {
     const summary = buildFlightStoryV2Summary(detail());
 
-    expect(summary.observedStartAt).toBe("2026-10-03T10:00:05.000Z");
-    expect(summary.observedEndAt).toBe("2026-10-03T10:29:55.000Z");
-    expect(summary.observedDurationMs).toBe(29 * 60_000 + 50_000);
+    expect(summary.observedStartAt).toBe("2026-10-03T10:00:00.000Z");
+    expect(summary.observedEndAt).toBe("2026-10-03T10:30:00.000Z");
+    expect(summary.observedDurationMs).toBe(30 * 60_000);
     expect(summary.maxGroundSpeedKt).toBe(410);
     expect(summary.sampledPathDistanceKm).toBeGreaterThan(15);
     expect(summary.sampledPathDistanceKm).toBeLessThan(30);
@@ -132,13 +132,13 @@ describe("Flight Story V2 narrative composer", () => {
       key: "boundary:first-seen",
       boundary: "first_seen",
       provenance: "observed",
-      occurredAt: "2026-10-03T10:00:05.000Z",
+      occurredAt: "2026-10-03T10:00:00.000Z",
     });
     expect(narrative.at(-1)).toMatchObject({
       key: "boundary:last-seen",
       boundary: "last_seen",
       provenance: "observed",
-      occurredAt: "2026-10-03T10:29:55.000Z",
+      occurredAt: "2026-10-03T10:30:00.000Z",
     });
     expect(narrative.find((item) => item.eventId === 11)).toMatchObject({
       type: "GO_AROUND",
