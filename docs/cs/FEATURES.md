@@ -376,3 +376,15 @@ ETA/runway advisories. Při nedostupné predikci bezpečně přejde na receivero
 řazení. Route konflikty jsou vynechány a UNKNOWN route vyžaduje shodu PUBLIC
 destination. UI ukazuje nejistotu ETA, medián rozestupu ETA, stabilitu
 predikované dráhy a kontext pozorovaného runway flow.
+
+### Airport Live Board V8 — Approach Queue Intelligence
+
+V8 znovu používá šestipoložkové V7 arrival sequence a přidává čistou omezenou
+projekci hustoty. Zobrazuje aktivní přílety, počty APPROACH/FINAL a HOLDING,
+pokrytí PUBLIC ETA, minimum/medián ETA rozestupu a počet sousedních ETA dvojic
+s rozestupem nejvýše čtyři minuty. Deterministický stav je EMPTY, LOW_DENSITY,
+ACTIVE, BUILDING, COMPRESSED nebo HOLDING_PRESENT s konzervativními evidence
+guardy. Nevzniká čtvrtý airport request, timer, stream, API ani persistence
+path a nejde o ATC pořadí, separační/kapacitní metriku ani bezpečnostní
+hodnocení.
+
