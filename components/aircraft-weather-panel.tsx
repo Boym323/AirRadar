@@ -174,7 +174,7 @@ export function AircraftWeatherPanel({ center, onClose, onMapDataChange, focused
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [center, radiusKm]);
+  }, [center?.lat, center?.lon, radiusKm]);
 
   useEffect(() => {
     const representative = new Map<string, AircraftWeatherObservationView>();
