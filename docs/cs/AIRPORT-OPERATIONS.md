@@ -101,9 +101,11 @@ pocházejí výhradně z živého receiverového inbound snapshotu; route konfli
 již přistálé položky se do pořadí nezařazují.
 
 Pro nejvýše šest aktivních inbound letadel používá jeden omezený batch request
-na existující `GET /api/operations/predictive?hexes=`. Klient z odpovědi
+na existující `GET /api/operations/predictive?hexes=`. Request se obnovuje
+stejným 30s refresh tokenem jako operations/weather controller, takže V7
+nepřidává druhý periodický timer ani další SSE spojení. Klient z odpovědi
 kopíruje pouze PUBLIC `etaAdvisory` a `runwayAdvisory`; admin preview se do
-boardu nepřenáší. Nevzniká další SSE spojení.
+boardu nepřenáší.
 
 Pořadí preferuje dostupné PUBLIC ETA, jinak používá deterministické pořadí
 journey stage a vzdálenosti. Board zobrazuje:
@@ -115,5 +117,7 @@ journey stage a vzdálenosti. Board zobrazuje:
 - dominantní predikovanou dráhu; a
 - existující 30min receiver-inferred runway-flow konzistenci z V6.
 
-Predikce se použije pouze tehdy, pokud destination z prediction endpointu
-odpovídá ICAO aktuálního boardu. V7 není ATC arrival sequence ani FIDS.
+Přílet s route relation CONFIRMED zůstává v pořadí i bez predikce. U položky s
+UNKNOWN route relation je vyžadováno, aby PUBLIC prediction destination
+odpovídala ICAO aktuálního boardu. Predikční ETA/runway se vždy použijí jen při
+této shodě destination. V7 není ATC arrival sequence ani FIDS.
