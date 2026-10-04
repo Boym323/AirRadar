@@ -194,6 +194,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       key: "ETA",
       result: report.capabilities.ETA,
       calibration: report.calibration.capabilities.ETA,
+      rollout: report.rollout.ETA,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.ETA.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.ETA.evidence.scoreableObservations, 0, dictionary.locale)],
@@ -208,6 +209,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       key: "RUNWAY",
       result: report.capabilities.RUNWAY,
       calibration: report.calibration.capabilities.RUNWAY,
+      rollout: report.rollout.RUNWAY,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY.evidence.scoreableObservations, 0, dictionary.locale)],
@@ -221,6 +223,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       key: "RUNWAY_CHANGE",
       result: report.capabilities.RUNWAY_CHANGE,
       calibration: report.calibration.capabilities.RUNWAY_CHANGE,
+      rollout: report.rollout.RUNWAY_CHANGE,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.scoreableObservations, 0, dictionary.locale)],
@@ -234,6 +237,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
       key: "TRAJECTORY",
       result: report.capabilities.TRAJECTORY,
       calibration: report.calibration.capabilities.TRAJECTORY,
+      rollout: report.rollout.TRAJECTORY,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.TRAJECTORY.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveValidatedCandidates, formatNumber(report.capabilities.TRAJECTORY.evidence.validatedCandidates, 0, dictionary.locale)],
@@ -297,6 +301,28 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
             label={`${dictionary.system.predictiveCalibrationQualityMargin} · ${predictiveCalibrationMetricLabel(margin.key, dictionary)}`}
             value={predictiveCalibrationMargin(margin, dictionary)}
           />)}
+        </dl>
+        <dl className="system-predictive-calibration" data-testid={`predictive-rollout-${capability.key.toLowerCase()}`}>
+          <Field
+            label={dictionary.system.predictiveRolloutVersion}
+            value={capability.rollout.version}
+          />
+          <Field
+            label={dictionary.system.predictiveRolloutState}
+            value={dictionary.system.predictiveRolloutStateLabels[capability.rollout.state]}
+          />
+          <Field
+            label={dictionary.system.predictiveRolloutPublicActive}
+            value={capability.rollout.publicActive ? dictionary.system.yes : dictionary.system.no}
+          />
+          <Field
+            label={dictionary.system.predictiveRolloutConfigChange}
+            value={capability.rollout.requiresExplicitConfigChange ? dictionary.system.yes : dictionary.system.no}
+          />
+          <Field
+            label={dictionary.system.predictiveRolloutBlockers}
+            value={capability.rollout.blockers.length ? capability.rollout.blockers.join(" · ") : dictionary.system.predictiveRolloutNone}
+          />
         </dl>
         {!capability.calibration.qualityEvaluated && <p className="system-predictive-reasons">{dictionary.system.predictiveCalibrationQualityPending}</p>}
         {capability.result.reasons.length > 0 && <p className="system-predictive-reasons"><strong>{dictionary.system.predictiveReasons}:</strong> {capability.result.reasons.join(" · ")}</p>}
