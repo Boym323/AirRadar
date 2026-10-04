@@ -64,6 +64,14 @@ Runway odděluje přesný konec od fyzické runway a zachovává UNKNOWN v cover
 metrikách. Confidence HIGH, MEDIUM, LOW a UNKNOWN se agregují odděleně bez
 změny thresholdů nebo graduation policy.
 
+Trajectory nyní prospektivně ukládá explicitní `trajectoryState` do omezeného
+`evidenceJson` pouze při změně stavu nebo confidence. Runtime readiness tak
+umí odlišit instrumentované trajectory observations od starších metadata-only
+řádků a samostatně počítat kandidáty `POSSIBLE_DEVIATION` a `DEVIATING`.
+Nezávislá outcome truth trajectory ale stále není k dispozici, proto
+`validatedCandidates` zůstává 0, precision není scoreable a capability
+zůstává `WAIT`; samotný state capture ji nesmí povýšit na PUBLIC.
+
 ## Reports and retention
 
 `npm run predictive:validate:prospective` zapisuje reprodukovatelný JSON a
