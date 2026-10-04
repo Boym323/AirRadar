@@ -7,6 +7,7 @@ import {
 } from "./types";
 
 export const RUNWAY_CHANGE_ADVISORY_STALE_AFTER_MS = 45_000;
+export const RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS = RUNWAY_CHANGE_EVENT_WINDOW_MS;
 
 export type RunwayChangeAdvisoryState = "available" | "unavailable" | "stale" | "expired";
 
