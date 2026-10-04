@@ -2,8 +2,10 @@ import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import {
   buildAdminEtaAdvisoryPreview,
   buildAdminRunwayAdvisoryPreview,
+  buildAdminRunwayChangeAdvisoryPreview,
   buildPublicEtaAdvisory,
   buildPublicRunwayAdvisory,
+  buildPublicRunwayChangeAdvisory,
   getPredictiveGraduationPolicy,
   toPublicPredictiveState,
 } from "@/lib/predictive-intelligence";
@@ -47,13 +49,18 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
   const prediction = toPublicPredictiveState(predictionState, effectivePolicy);
   const etaReadiness = readiness?.capabilities.ETA ?? null;
   const runwayReadiness = readiness?.capabilities.RUNWAY ?? null;
+  const runwayChangeReadiness = readiness?.capabilities.RUNWAY_CHANGE ?? null;
   const etaAdvisory = buildPublicEtaAdvisory(predictionState, effectivePolicy, etaReadiness);
   const runwayAdvisory = buildPublicRunwayAdvisory(predictionState, effectivePolicy, runwayReadiness);
+  const runwayChangeAdvisory = buildPublicRunwayChangeAdvisory(predictionState, effectivePolicy, runwayChangeReadiness);
   const adminPreview = admin && etaReadiness
     ? buildAdminEtaAdvisoryPreview(predictionState, configuredPolicy, etaReadiness)
     : undefined;
   const runwayAdminPreview = admin && runwayReadiness
     ? buildAdminRunwayAdvisoryPreview(predictionState, configuredPolicy, runwayReadiness)
+    : undefined;
+  const runwayChangeAdminPreview = admin && runwayChangeReadiness
+    ? buildAdminRunwayChangeAdvisoryPreview(predictionState, configuredPolicy, runwayChangeReadiness)
     : undefined;
 
   return Response.json(
@@ -61,8 +68,10 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
       prediction,
       etaAdvisory,
       runwayAdvisory,
+      runwayChangeAdvisory,
       ...(adminPreview ? { adminPreview } : {}),
       ...(runwayAdminPreview ? { runwayAdminPreview } : {}),
+      ...(runwayChangeAdminPreview ? { runwayChangeAdminPreview } : {}),
     },
     { headers: { "Cache-Control": "no-store" } },
   );
