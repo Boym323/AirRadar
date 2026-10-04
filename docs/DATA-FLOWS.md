@@ -144,6 +144,15 @@ rows; truncation makes the whole readiness collection incomplete. The flow
 never reads FlightPosition and does not write or update truth onto prediction
 rows.
 
+Predictive Graduation Calibration V1 is produced inside the same admin
+readiness request after evidence collection and PASS/WAIT/FAIL evaluation.
+There is no additional database query. The calibration builder consumes only
+the already-built `PredictiveReadinessEvidence`, evaluation result and
+collection-complete flag, then returns count deficits, truth requirements and
+quality margins. The browser renders this data only on the authenticated
+System Status page; public aircraft and Operations Center serializers do not
+consume calibration output.
+
 Predictive Operations Center V1 reuses the same advisory builders through
 `GET /api/operations/predictive?hexes=`. The caller provides at most six
 already-relevant ICAO identifiers. The server normalizes and deduplicates the

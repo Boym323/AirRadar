@@ -448,6 +448,13 @@ skutečně naladěnou frekvenci letadla.
   dotaz má limit 2 500 řádků; truncation označí celý readiness collection jako
   incomplete. Tento tok nikdy nečte FlightPosition a truth nezapisuje zpět do
   prediction řádků.
+- Predictive Graduation Calibration V1 vzniká uvnitř stejného admin readiness
+  requestu až po evidence collection a PASS/WAIT/FAIL evaluaci. Nepřidává žádný
+  DB dotaz. Calibration builder čte pouze již sestavené
+  `PredictiveReadinessEvidence`, evaluation výsledek a complete bit a vrací
+  count deficity, truth požadavky a quality marginy. Browser tato data
+  vykresluje jen na ověřené System Status stránce; veřejný aircraft ani
+  Operations Center serializer calibration výstup nepoužívá.
 - Predictive Operations Center V1 znovu používá stejné advisory buildery přes
   `GET /api/operations/predictive?hexes=`. Klient předává maximálně šest již
   relevantních ICAO identifikátorů. Server seznam normalizuje a deduplikuje,

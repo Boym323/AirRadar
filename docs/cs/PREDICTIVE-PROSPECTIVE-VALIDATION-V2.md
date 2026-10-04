@@ -119,6 +119,15 @@ na `PUBLIC` se veřejně serializuje pouze při aktuálním `PASS`; jinak je
 efektivní policy stažena zpět do `SHADOW`. Gate je fail-closed a nikdy
 capability automaticky nepovyšuje.
 
+Stejný admin report navíc obsahuje
+`predictive-graduation-calibration-v1`. Calibration je pouze diagnostická:
+převádí readiness na provozní fázi, přesné sample deficity, požadovanou
+truth/instrumentaci a quality margin vůči aktivnímu thresholdu. Quality margin
+je viditelný i před dosažením dostatečného objemu, ale při readiness WAIT je
+výslovně pouze preview a není rozhodovacím FAIL gate.
+`manualReviewEligible` vyžaduje kompletní bounded collection a readiness PASS
+a nikdy samo nemění capability policy.
+
 ## Rollout
 
 1. Stage 0: obnovit `airradar_dev` z read-only PROD snapshotu, aplikovat

@@ -307,6 +307,14 @@ FlightPosition a nepřidává write path, DB migraci, SSE lane ani vstup do
 predictive enginu. Každý event-type dotaz má limit 2 500 řádků; dosažení
 kteréhokoli limitu označí collection jako incomplete a gate zůstane fail-closed.
 
+Predictive Graduation Calibration V1 leží až za runtime readiness evaluací a
+záměrně není součástí prediction ani graduation decision graphu. Server předá
+stejný bounded evidence objekt, stejné PASS/WAIT/FAIL vyhodnocení a bit úplnosti
+collection do čisté funkce `buildPredictiveGraduationCalibration()`. Výstup
+pouze odvozuje fázi, přesné evidence deficity, truth požadavky, threshold
+marginy a manual-review eligibility. Nemůže měnit policy ani převést WAIT/FAIL
+na PASS.
+
 Predictive Operations Center V1 je omezený read-only agregační boundary nad
 radarovým panelem NOW. Browser odvodí maximálně šest ICAO kandidátů z existující
 prioritizované timeline a živých highlightů a pouze při otevřeném panelu volá

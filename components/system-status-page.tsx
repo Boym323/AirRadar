@@ -6,6 +6,11 @@ import { formatDateTime, formatDistance, formatNumber, getTranslations, type Loc
 import type { AircraftWeatherStatus, OperationalState, SystemStatus, SystemStatusApiResponse, SystemStatusResponse } from "@/lib/server/system-status";
 import type { NavigationIntegrityStatus } from "@/lib/server/system-status-contract";
 import type { PredictiveReadinessReport } from "@/lib/server/predictive-readiness";
+import type {
+  PredictiveGraduationEvidenceDeficit,
+  PredictiveGraduationQualityMargin,
+  PredictiveGraduationTruthRequirement,
+} from "@/lib/predictive-intelligence/graduation-calibration";
 import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
 
 function formatUptime(seconds: number, dictionary: LocaleDictionary): string {
@@ -120,6 +125,67 @@ function formatPredictiveError(value: number | null, dictionary: LocaleDictionar
     : `${formatNumber(value / 60, 1, dictionary.locale)} min`;
 }
 
+function predictiveCalibrationMetricLabel(key: string, dictionary: LocaleDictionary): string {
+  const labels: Record<string, string> = {
+    observations: dictionary.system.predictiveObservations,
+    scoreableObservations: dictionary.system.predictiveScoreable,
+    independentTruthFlights: dictionary.system.predictiveIndependentTruth,
+    validatedCandidates: dictionary.system.predictiveValidatedCandidates,
+    medianAbsoluteErrorSeconds: dictionary.system.predictiveMedianError,
+    p90AbsoluteErrorSeconds: dictionary.system.predictiveP90Error,
+    p95AbsoluteErrorSeconds: dictionary.system.predictiveP95Error,
+    exactEndAccuracy: dictionary.system.predictiveAccuracy,
+    coverage: dictionary.system.predictiveCoverage,
+    outcomePrecision: dictionary.system.predictivePrecision,
+    falsePositiveRate: dictionary.system.predictiveFalsePositiveRate,
+    precision: dictionary.system.predictivePrecision,
+    captureStaleRate: dictionary.system.predictiveCaptureStaleRate,
+    independentChangeTruthAvailable: dictionary.system.predictiveOutcomeTruth,
+    independentOutcomeTruthAvailable: dictionary.system.predictiveOutcomeTruth,
+    stateCaptureAvailable: dictionary.system.predictiveStateCapture,
+  };
+  return labels[key] ?? key;
+}
+
+function predictiveCalibrationDeficits(
+  deficits: readonly PredictiveGraduationEvidenceDeficit[],
+  dictionary: LocaleDictionary,
+): string {
+  if (!deficits.length) return dictionary.system.predictiveCalibrationNone;
+  return deficits
+    .map((item) => `${predictiveCalibrationMetricLabel(item.key, dictionary)} +${formatNumber(item.missing, 0, dictionary.locale)} (${formatNumber(item.current, 0, dictionary.locale)}/${formatNumber(item.target, 0, dictionary.locale)})`)
+    .join(" · ");
+}
+
+function predictiveCalibrationTruth(
+  requirements: readonly PredictiveGraduationTruthRequirement[],
+  dictionary: LocaleDictionary,
+): string {
+  const unavailable = requirements.filter((item) => !item.available);
+  if (!unavailable.length) return dictionary.system.predictiveCalibrationNone;
+  return unavailable.map((item) => predictiveCalibrationMetricLabel(item.key, dictionary)).join(" · ");
+}
+
+function predictiveCalibrationMargin(
+  margin: PredictiveGraduationQualityMargin,
+  dictionary: LocaleDictionary,
+): string {
+  const value = (input: number | null) => {
+    if (input === null) return dictionary.system.notAvailable;
+    if (margin.unit === "SECONDS") return formatPredictiveError(input, dictionary);
+    if (margin.unit === "RATE") return formatPredictivePercent(input, dictionary);
+    return formatNumber(input, 0, dictionary.locale);
+  };
+  const delta = margin.margin === null
+    ? dictionary.system.notAvailable
+    : margin.unit === "SECONDS"
+      ? `${margin.margin >= 0 ? "+" : "−"}${formatPredictiveError(Math.abs(margin.margin), dictionary)}`
+      : margin.unit === "RATE"
+        ? `${margin.margin >= 0 ? "+" : "−"}${formatPredictivePercent(Math.abs(margin.margin), dictionary)}`
+        : `${margin.margin >= 0 ? "+" : "−"}${formatNumber(Math.abs(margin.margin), 0, dictionary.locale)}`;
+  return `${value(margin.current)} · ${margin.direction === "AT_LEAST" ? "≥" : "≤"} ${value(margin.target)} · Δ ${delta}`;
+}
+
 function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveReadinessReport; dictionary: LocaleDictionary }) {
   const policies = (policy: PredictiveReadinessReport["configuredPolicy"]) =>
     (["ETA", "RUNWAY", "RUNWAY_CHANGE", "TRAJECTORY"] as const).map((key) => `${key} ${policy[key]}`).join(" · ");
@@ -127,6 +193,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
     {
       key: "ETA",
       result: report.capabilities.ETA,
+      calibration: report.calibration.capabilities.ETA,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.ETA.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.ETA.evidence.scoreableObservations, 0, dictionary.locale)],
@@ -140,6 +207,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
     {
       key: "RUNWAY",
       result: report.capabilities.RUNWAY,
+      calibration: report.calibration.capabilities.RUNWAY,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY.evidence.scoreableObservations, 0, dictionary.locale)],
@@ -152,6 +220,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
     {
       key: "RUNWAY_CHANGE",
       result: report.capabilities.RUNWAY_CHANGE,
+      calibration: report.calibration.capabilities.RUNWAY_CHANGE,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.scoreableObservations, 0, dictionary.locale)],
@@ -164,6 +233,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
     {
       key: "TRAJECTORY",
       result: report.capabilities.TRAJECTORY,
+      calibration: report.calibration.capabilities.TRAJECTORY,
       metrics: [
         [dictionary.system.predictiveObservations, formatNumber(report.capabilities.TRAJECTORY.evidence.observations, 0, dictionary.locale)],
         [dictionary.system.predictiveValidatedCandidates, formatNumber(report.capabilities.TRAJECTORY.evidence.validatedCandidates, 0, dictionary.locale)],
@@ -186,6 +256,7 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
     <dl className="system-fields system-predictive-readiness-meta">
       <Field label={dictionary.system.predictiveThresholdVersion} value={report.thresholds.version} />
       <Field label={dictionary.system.predictiveOutcomeTruthVersion} value={report.outcomeTruthVersion} />
+      <Field label={dictionary.system.predictiveCalibrationVersion} value={report.calibration.version} />
       <Field label={dictionary.system.predictiveOutcomeEvents} value={formatNumber(report.collection.outcomeEvents, 0, dictionary.locale)} />
       <Field label={dictionary.system.predictiveWindow} value={`${formatDateTime(report.window.from, dictionary)} – ${formatDateTime(report.window.to, dictionary)}`} />
       <Field label={dictionary.system.predictiveComplete} value={report.complete ? dictionary.system.predictiveCompleteYes : dictionary.system.predictiveCompleteNo} />
@@ -204,6 +275,30 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
         <dl>
           {capability.metrics.map(([label, value]) => <Field key={label} label={label} value={value} />)}
         </dl>
+        <dl className="system-predictive-calibration" data-testid={`predictive-calibration-${capability.key.toLowerCase()}`}>
+          <Field
+            label={dictionary.system.predictiveCalibrationPhase}
+            value={dictionary.system.predictiveCalibrationPhaseLabels[capability.calibration.phase]}
+          />
+          <Field
+            label={dictionary.system.predictiveCalibrationManualReview}
+            value={capability.calibration.manualReviewEligible ? dictionary.system.yes : dictionary.system.no}
+          />
+          <Field
+            label={dictionary.system.predictiveCalibrationEvidenceGap}
+            value={predictiveCalibrationDeficits(capability.calibration.evidenceDeficits, dictionary)}
+          />
+          <Field
+            label={dictionary.system.predictiveCalibrationTruthGap}
+            value={predictiveCalibrationTruth(capability.calibration.truthRequirements, dictionary)}
+          />
+          {capability.calibration.qualityMargins.map((margin) => <Field
+            key={margin.key}
+            label={`${dictionary.system.predictiveCalibrationQualityMargin} · ${predictiveCalibrationMetricLabel(margin.key, dictionary)}`}
+            value={predictiveCalibrationMargin(margin, dictionary)}
+          />)}
+        </dl>
+        {!capability.calibration.qualityEvaluated && <p className="system-predictive-reasons">{dictionary.system.predictiveCalibrationQualityPending}</p>}
         {capability.result.reasons.length > 0 && <p className="system-predictive-reasons"><strong>{dictionary.system.predictiveReasons}:</strong> {capability.result.reasons.join(" · ")}</p>}
       </section>)}
     </div>

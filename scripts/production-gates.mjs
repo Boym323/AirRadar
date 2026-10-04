@@ -419,6 +419,94 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             evidence: { observations: 86, candidateObservations: null, validatedCandidates: 0, precision: null, stateCaptureAvailable: false, independentOutcomeTruthAvailable: false, captureStaleRate: 0.006 },
           },
         },
+        calibration: {
+          version: "predictive-graduation-calibration-v1",
+          thresholdVersion: "predictive-readiness-v1",
+          complete: true,
+          capabilities: {
+            ETA: {
+              capability: "ETA",
+              decision: "PASS",
+              phase: "READY",
+              manualReviewEligible: true,
+              qualityEvaluated: true,
+              evidenceDeficits: [],
+              truthRequirements: [],
+              qualityMargins: [
+                { key: "medianAbsoluteErrorSeconds", current: 164, target: 300, direction: "AT_MOST", margin: 136, unit: "SECONDS", satisfied: true },
+                { key: "p90AbsoluteErrorSeconds", current: 438, target: 600, direction: "AT_MOST", margin: 162, unit: "SECONDS", satisfied: true },
+                { key: "p95AbsoluteErrorSeconds", current: 702, target: 900, direction: "AT_MOST", margin: 198, unit: "SECONDS", satisfied: true },
+                { key: "captureStaleRate", current: 0.012, target: 0.05, direction: "AT_MOST", margin: 0.038, unit: "RATE", satisfied: true },
+              ],
+              integrityBlockers: [],
+              collectionBlockers: [],
+              readinessReasons: [],
+            },
+            RUNWAY: {
+              capability: "RUNWAY",
+              decision: "WAIT",
+              phase: "COLLECTING",
+              manualReviewEligible: false,
+              qualityEvaluated: false,
+              evidenceDeficits: [
+                { key: "scoreableObservations", current: 28, target: 50, missing: 22, unit: "COUNT" },
+                { key: "independentTruthFlights", current: 22, target: 50, missing: 28, unit: "COUNT" },
+              ],
+              truthRequirements: [],
+              qualityMargins: [
+                { key: "exactEndAccuracy", current: 0.86, target: 0.85, direction: "AT_LEAST", margin: 0.01, unit: "RATE", satisfied: true },
+                { key: "coverage", current: 0.21, target: 0.6, direction: "AT_LEAST", margin: -0.39, unit: "RATE", satisfied: false },
+                { key: "captureStaleRate", current: 0.008, target: 0.05, direction: "AT_MOST", margin: 0.042, unit: "RATE", satisfied: true },
+              ],
+              integrityBlockers: [],
+              collectionBlockers: [],
+              readinessReasons: ["runway.insufficient_independent_truth"],
+            },
+            RUNWAY_CHANGE: {
+              capability: "RUNWAY_CHANGE",
+              decision: "WAIT",
+              phase: "TRUTH_BLOCKED",
+              manualReviewEligible: false,
+              qualityEvaluated: false,
+              evidenceDeficits: [
+                { key: "observations", current: 22, target: 30, missing: 8, unit: "COUNT" },
+                { key: "scoreableObservations", current: 9, target: 20, missing: 11, unit: "COUNT" },
+                { key: "independentTruthFlights", current: 8, target: 20, missing: 12, unit: "COUNT" },
+              ],
+              truthRequirements: [{ key: "independentChangeTruthAvailable", available: false }],
+              qualityMargins: [
+                { key: "outcomePrecision", current: 0.78, target: 0.8, direction: "AT_LEAST", margin: -0.02, unit: "RATE", satisfied: false },
+                { key: "falsePositiveRate", current: 0.22, target: 0.2, direction: "AT_MOST", margin: -0.02, unit: "RATE", satisfied: false },
+                { key: "captureStaleRate", current: 0.01, target: 0.05, direction: "AT_MOST", margin: 0.04, unit: "RATE", satisfied: true },
+              ],
+              integrityBlockers: [],
+              collectionBlockers: [],
+              readinessReasons: ["runway_change.independent_change_truth_unavailable"],
+            },
+            TRAJECTORY: {
+              capability: "TRAJECTORY",
+              decision: "WAIT",
+              phase: "TRUTH_BLOCKED",
+              manualReviewEligible: false,
+              qualityEvaluated: false,
+              evidenceDeficits: [
+                { key: "observations", current: 86, target: 100, missing: 14, unit: "COUNT" },
+                { key: "validatedCandidates", current: 0, target: 50, missing: 50, unit: "COUNT" },
+              ],
+              truthRequirements: [
+                { key: "stateCaptureAvailable", available: false },
+                { key: "independentOutcomeTruthAvailable", available: false },
+              ],
+              qualityMargins: [
+                { key: "precision", current: null, target: 0.8, direction: "AT_LEAST", margin: null, unit: "RATE", satisfied: null },
+                { key: "captureStaleRate", current: 0.006, target: 0.05, direction: "AT_MOST", margin: 0.044, unit: "RATE", satisfied: true },
+              ],
+              integrityBlockers: [],
+              collectionBlockers: [],
+              readinessReasons: ["trajectory.state_capture_unavailable", "trajectory.independent_outcome_truth_unavailable"],
+            },
+          },
+        },
       };
       const etaAdvisoryPublicFixture = {
         prediction: null,
@@ -870,6 +958,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.getByText("ETA", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("PASS", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("predictive-graduation-calibration-v1", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-calibration-eta"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-calibration-runway"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-calibration-runway_change"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Připraveno k review", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Sbírání evidence", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Blokováno truth / instrumentací", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockEtaAdvisory) {
             await visualPage.locator('[data-testid="predictive-eta-advisory"]').waitFor({ state: "visible", timeout: 15_000 });

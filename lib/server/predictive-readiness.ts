@@ -7,6 +7,10 @@ import {
   type PredictiveReadinessEvidence,
   type PredictiveReadinessEvaluation,
 } from "@/lib/predictive-intelligence/readiness";
+import {
+  buildPredictiveGraduationCalibration,
+  type PredictiveGraduationCalibration,
+} from "@/lib/predictive-intelligence/graduation-calibration";
 import { getPredictiveGraduationPolicy, type PredictiveGraduationPolicy } from "@/lib/predictive-intelligence/graduation";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
 import {
@@ -123,6 +127,7 @@ export interface PredictiveReadinessReport {
   };
   integrity: PredictiveReadinessEvidence["integrity"];
   capabilities: PredictiveReadinessEvaluation["capabilities"];
+  calibration: PredictiveGraduationCalibration;
 }
 
 let cached: { expiresAt: number; report: PredictiveReadinessReport } | null = null;
@@ -358,6 +363,7 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
     collection: { observations: 0, landingEvents: 0, outcomeEvents: 0, matchedLandingTruth: 0, captureStaleObservations: 0 },
     integrity: evidence.integrity,
     capabilities: capabilities.capabilities,
+    calibration: buildPredictiveGraduationCalibration(evidence, capabilities, { complete: false }),
   };
 }
 
@@ -635,6 +641,7 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
     },
     integrity: evidence.integrity,
     capabilities: evaluation.capabilities,
+    calibration: buildPredictiveGraduationCalibration(evidence, evaluation, { complete }),
   };
   cached = { expiresAt: now.getTime() + PREDICTIVE_READINESS_CACHE_MS, report };
   return report;

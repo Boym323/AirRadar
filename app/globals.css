@@ -1390,6 +1390,12 @@ code, pre, kbd, .mono, [data-mono="true"] {
   margin: 0;
   padding: var(--space-3) 0 0;
 }
+.system-predictive-calibration {
+  margin-top: var(--space-3) !important;
+  padding-top: var(--space-3) !important;
+  border-top: 1px dashed var(--border-subtle);
+}
+
 .system-predictive-reasons {
   margin: var(--space-3) 0 0;
   color: var(--text-muted);

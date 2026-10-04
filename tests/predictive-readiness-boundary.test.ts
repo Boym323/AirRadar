@@ -6,6 +6,7 @@ const collectorSource = readFileSync(new URL("../lib/server/predictive-readiness
 const publicRouteSource = readFileSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url), "utf8");
 const adminRouteSource = readFileSync(new URL("../app/api/admin/predictive/readiness/route.ts", import.meta.url), "utf8");
 const systemPageSource = readFileSync(new URL("../components/system-status-page.tsx", import.meta.url), "utf8");
+const calibrationSource = readFileSync(new URL("../lib/predictive-intelligence/graduation-calibration.ts", import.meta.url), "utf8");
 
 describe("Predictive Graduation Readiness boundary", () => {
   it("keeps the readiness collector bounded and outside FlightPosition history", () => {
@@ -42,6 +43,13 @@ describe("Predictive Graduation Readiness boundary", () => {
     expect(collectorSource).toContain("if (!configuredPublic(configured)) return configured");
   });
 
+  it("keeps graduation calibration admin-only and advisory", () => {
+    expect(calibrationSource).toContain("manualReviewEligible");
+    expect(calibrationSource).toContain("buildPredictiveGraduationCalibration");
+    expect(publicRouteSource).not.toContain("graduation-calibration");
+    expect(publicRouteSource).not.toContain("manualReviewEligible");
+  });
+
   it("guards public prediction exposure with one shared readiness report", () => {
     expect(publicRouteSource).toContain("readPredictiveReadinessReport");
     expect(publicRouteSource).toContain("enforcePredictiveReadiness");
@@ -55,11 +63,15 @@ describe("Predictive Graduation Readiness boundary", () => {
     expect(adminRouteSource).toContain('status: 401');
     expect(adminRouteSource).toContain('"Cache-Control": "no-store"');
     expect(adminRouteSource).toContain("readPredictiveReadinessReport()");
+    expect(collectorSource).toContain("buildPredictiveGraduationCalibration");
+    expect(collectorSource).toContain("calibration: buildPredictiveGraduationCalibration");
   });
 
   it("loads and renders readiness only for the admin system view", () => {
     expect(systemPageSource).toContain('fetch("/api/admin/predictive/readiness"');
     expect(systemPageSource).toContain('data?.detailLevel !== "admin"');
     expect(systemPageSource).toContain('data-testid="predictive-readiness"');
+    expect(systemPageSource).toContain('data-testid={`predictive-calibration-${capability.key.toLowerCase()}`}');
+    expect(systemPageSource).toContain("predictiveCalibrationManualReview");
   });
 });
