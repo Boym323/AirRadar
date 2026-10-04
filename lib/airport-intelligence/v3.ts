@@ -1,4 +1,5 @@
 import type { AirportRunway } from "@/lib/airports/infrastructure";
+import type { AirportTrafficObservation } from "@/lib/airport-traffic/live";
 import { calculateRunwayWind } from "@/lib/airport-runway-wind";
 import type { AirportMovement } from "@/lib/server/airport-movements";
 import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
@@ -32,6 +33,7 @@ export interface AirportLiveBoardSnapshot {
 
 export const AIRPORT_LIVE_BOARD_LANE_LIMIT = 6;
 export const AIRPORT_LIVE_BOARD_RUNWAY_LIMIT = 4;
+export const AIRPORT_LIVE_BOARD_ACTIVE_LIMIT = 6;
 const TIMELINE_LIMIT = 12;
 
 function runwayDirections(runways: readonly AirportRunway[]): Array<{ ident: string; headingDeg: number }> {
@@ -191,5 +193,29 @@ export function buildAirportLiveBoardSnapshot(
         right.total - left.total
         || left.designator.localeCompare(right.designator, undefined, { numeric: true }))
       .slice(0, AIRPORT_LIVE_BOARD_RUNWAY_LIMIT),
+  };
+}
+
+
+export interface AirportActiveTrafficSnapshot {
+  inbound: AirportTrafficObservation[];
+  outbound: AirportTrafficObservation[];
+}
+
+export function buildAirportActiveTrafficSnapshot(
+  observations: readonly AirportTrafficObservation[],
+  limit = AIRPORT_LIVE_BOARD_ACTIVE_LIMIT,
+): AirportActiveTrafficSnapshot {
+  const bounded = Math.max(1, limit);
+  const ordered = observations
+    .filter((item) => Number.isFinite(item.distanceKm))
+    .slice()
+    .sort((left, right) =>
+      left.distanceKm - right.distanceKm
+      || left.aircraft.icaoHex.localeCompare(right.aircraft.icaoHex));
+
+  return {
+    inbound: ordered.filter((item) => item.classification === "approaching").slice(0, bounded),
+    outbound: ordered.filter((item) => item.classification === "departing").slice(0, bounded),
   };
 }
