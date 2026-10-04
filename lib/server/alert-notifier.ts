@@ -73,6 +73,16 @@ function alertHeadline(alert: AircraftAlert, label: string): string {
     return `✈ ${label} vstoupil do ${Math.round(alert.radiusKm)} km`;
   }
   if (alert.type === "aircraft_appeared") return `✈ ${label} zachycen na watchlistu`;
+  if (alert.type === "predictive_eta") {
+    const destination = typeof alert.metadata?.destinationIcao === "string" ? ` ${alert.metadata.destinationIcao}` : "";
+    const horizon = typeof alert.metadata?.horizonMinutes === "number" ? ` za ${Math.round(alert.metadata.horizonMinutes)} min` : "";
+    return `✈ ${label} · predikovaná ETA${destination}${horizon}`;
+  }
+  if (alert.type === "predictive_runway_change") {
+    const from = typeof alert.metadata?.changedFrom === "string" ? alert.metadata.changedFrom : "?";
+    const runway = typeof alert.metadata?.runway === "string" ? alert.metadata.runway : "?";
+    return `✈ ${label} · predikce RWY ${from} → ${runway}`;
+  }
   if (alert.type === "new_aircraft") return `✈ ${label} poprvé zachycen`;
   if (alert.type === "reception_record") return `✈ ${label} překonal rekord příjmu`;
   if (alert.type?.startsWith("intelligence_")) {
@@ -98,6 +108,23 @@ export function formatAircraftAlert(alert: AircraftAlert): string {
     const registration = aircraft.registration || aircraft.enrichment?.metadata?.registration;
     const identity = registration ? `${type} · ${registration}` : type;
     lines.push(identity, `${formatDistance(aircraft.distanceKm)} · ${formatAltitude(aircraft.altitude)}`, formatTrack(aircraft.track));
+    if (alert.type === "predictive_eta" && alert.metadata) {
+      const eta = typeof alert.metadata.estimatedArrivalAt === "string" ? new Date(alert.metadata.estimatedArrivalAt) : null;
+      const uncertainty = typeof alert.metadata.uncertaintyMinutes === "number" ? Math.round(alert.metadata.uncertaintyMinutes) : null;
+      const confidence = typeof alert.metadata.confidence === "string" ? alert.metadata.confidence : null;
+      const context = [
+        eta && Number.isFinite(eta.getTime()) ? `ETA ${eta.toISOString().slice(11, 16)} UTC` : null,
+        uncertainty !== null ? `± ${uncertainty} min` : null,
+        confidence ? `jistota ${confidence}` : null,
+      ].filter(Boolean).join(" · ");
+      if (context) lines.push(context);
+    }
+    if (alert.type === "predictive_runway_change" && alert.metadata) {
+      const destination = typeof alert.metadata.destinationIcao === "string" ? alert.metadata.destinationIcao : null;
+      const confidence = typeof alert.metadata.confidence === "string" ? alert.metadata.confidence : null;
+      const context = [destination ? `letiště ${destination}` : null, confidence ? `jistota ${confidence}` : null].filter(Boolean).join(" · ");
+      if (context) lines.push(context);
+    }
     if (alert.intelligence) {
       const context = [
         `jistota ${alert.intelligence.confidenceLevel}`,
