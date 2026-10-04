@@ -12,7 +12,6 @@ import {
   buildAirportRunwayIntelligence,
 } from "@/lib/airport-intelligence/v3";
 import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/live-board-v7";
-import { useAirportPredictiveArrivals } from "@/components/airport-predictive-arrivals-controller";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 import type { AirportMovement } from "@/lib/server/airport-movements";
@@ -219,11 +218,10 @@ export function AirportOperationsBoard({
   const activeTraffic = buildAirportCorrelatedTrafficSnapshot(liveTraffic.observations, operations);
   const flow = buildAirportJourneyFlowSummary(activeTraffic);
   const pressure = buildAirportFlowPressureSummary(flow, operations);
-  const predictiveArrivals = useAirportPredictiveArrivals(activeTraffic.inbound.map((item) => item.aircraft.icaoHex));
   const arrivalSequence = buildAirportArrivalSequence({
     airportIcao: airport.icaoCode,
     traffic: activeTraffic,
-    predictive: predictiveArrivals.data,
+    predictive: controller.predictive,
   });
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
@@ -360,7 +358,7 @@ export function AirportOperationsBoard({
           <span className="ui-kicker">{t.airport.liveBoardV7Kicker}</span>
           <h3 id="airport-live-v7-sequence-title">{t.airport.liveBoardV7Title}</h3>
         </div>
-        <span>{predictiveArrivals.loading ? t.common.loading : predictiveArrivals.failed ? t.airport.liveBoardV7PredictionUnavailable : t.airport.liveBoardV7PublicOnly}</span>
+        <span>{controller.predictiveLoading ? t.common.loading : controller.predictiveFailed ? t.airport.liveBoardV7PredictionUnavailable : t.airport.liveBoardV7PublicOnly}</span>
       </div>
       <MetricStrip className="airport-live-flow-metrics">
         <MetricCard label={t.airport.liveBoardV7ActiveArrivals} value={String(arrivalSequence.items.length)} />
