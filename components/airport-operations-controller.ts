@@ -51,8 +51,10 @@ export function useAirportOperationsController(icaoCode: string): AirportOperati
         setOperations(null);
         setOperationsFailed(true);
       }
-      if (weatherResult.status === "fulfilled" && weatherResult.value.enabled !== false) setWeather(weatherResult.value);
-      else {
+      if (weatherResult.status === "fulfilled") {
+        setWeather(weatherResult.value.enabled === false ? null : weatherResult.value);
+        setWeatherFailed(false);
+      } else {
         setWeather(null);
         setWeatherFailed(true);
       }
@@ -66,11 +68,11 @@ export function useAirportOperationsController(icaoCode: string): AirportOperati
 
   const status: AirportOperationsLoadStatus = loading
     ? "loading"
-    : operations && weather
-      ? "ready"
-      : operations || weather
+    : operationsFailed && weatherFailed
+      ? "unavailable"
+      : operationsFailed || weatherFailed
         ? "partial"
-        : "unavailable";
+        : "ready";
 
   return { operations, weather, status, operationsFailed, weatherFailed, refresh };
 }
