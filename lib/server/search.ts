@@ -33,6 +33,7 @@ export interface SearchOptions {
   aircraft?: readonly AircraftView[];
   database?: SearchDatabase | null;
   atsDocuments?: readonly (CzAtsRouteDocument | null)[];
+  flights?: readonly FlightSearchResult[];
   now?: Date;
 }
 
@@ -375,6 +376,18 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
   const validation = validateSearchQuery(rawQuery);
   if (!validation.query) return emptySearchResponse();
 
+  const actions = smartSearchActions(validation.query);
+  if (actions.length) {
+    return {
+      query: validation.query,
+      aircraft: [],
+      airports: [],
+      atsPoints: [],
+      flights: [],
+      actions,
+    };
+  }
+
   let aircraft = options.aircraft;
   if (!aircraft) {
     const service = getAircraftStateService();
@@ -392,7 +405,9 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
   const [rankedAircraft, rankedAirports, rankedFlights] = await Promise.all([
     Promise.resolve(rankAircraft(aircraft, validation.query)),
     loadAirports(validation.query, database).then((items) => rankAirports(items, validation.query!)),
-    loadRecentFlights(validation.query, database, options.now ?? new Date()).then((items) => rankFlights(items, validation.query!)),
+    options.flights
+      ? Promise.resolve(rankFlights(options.flights, validation.query))
+      : loadRecentFlights(validation.query, database, options.now ?? new Date()).then((items) => rankFlights(items, validation.query!)),
   ]);
   const atsDocuments = options.atsDocuments ?? [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()];
   const rankedAtsPoints = rankAtsPoints(atsDocuments, validation.query);
@@ -405,6 +420,6 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
     airports: selected.filter((result): result is Scored<AirportSearchResult> => result.item.kind === "airport").map((result) => result.item),
     atsPoints: selected.filter((result): result is Scored<AtsPointSearchResult> => result.item.kind === "ats-point").map((result) => result.item),
     flights: selected.filter((result): result is Scored<FlightSearchResult> => result.item.kind === "flight").map((result) => result.item),
-    actions: smartSearchActions(validation.query),
+    actions: [],
   };
 }
