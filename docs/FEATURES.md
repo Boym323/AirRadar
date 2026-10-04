@@ -22,7 +22,7 @@ not yet been historically attributed.
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
-| System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status and build identity. |
+| System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, and bounded predictive readiness with versioned independent outcome truth. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback and historical context windows. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
@@ -137,10 +137,12 @@ older than five minutes, explicit `changedFrom` and `changedAt`, and at least
 MEDIUM confidence. WAIT, FAIL, SHADOW, stale, expired, LOW and UNKNOWN states
 render no public change. A valid admin session may receive a SHADOW preview
 with outcome precision, false-positive rate, independent-change-truth status
-and readiness reasons. The current V1 readiness evidence intentionally remains
-WAIT while independent runway-change truth is unavailable, so this code cannot
-graduate the capability by itself. The aircraft detail continues to use its
-single page-scoped prediction request.
+and readiness reasons. Predictive Outcome Truth V1 can now make change samples
+scoreable only when an independent confident APPROACH runway observed before
+the prediction matches `changedFrom` and a later LANDING carries a
+provider-reported final runway. Availability of that truth does not graduate
+the capability by itself; sample-volume and quality thresholds must still pass.
+The aircraft detail continues to use its single page-scoped prediction request.
 
 ## Predictive Trajectory Advisory V1
 
@@ -151,12 +153,43 @@ prediction no older than 45 seconds, a non-`UNKNOWN` state, and MEDIUM/HIGH
 confidence. LOW-confidence `POSSIBLE_DEVIATION` candidates remain admin-only
 diagnostics.
 
-Prospective capture now writes the explicit `trajectoryState` into bounded
+Prospective capture writes the explicit `trajectoryState` into bounded
 `evidenceJson` only when trajectory state or confidence changes. Runtime
 readiness can therefore distinguish stateful trajectory observations and count
 candidate deviations without a schema migration or high-frequency write lane.
-Independent outcome truth is still unavailable, so validated-candidate
-precision remains unavailable and readiness intentionally stays `WAIT`.
+Predictive Outcome Truth V1 can validate those candidates from later,
+independently persisted Flight Intelligence outcomes; readiness still requires
+the configured sample-volume and precision thresholds before it can PASS.
+
+## Predictive Outcome Truth V1
+
+Runtime readiness now has a versioned independent evidence layer,
+`predictive-outcome-truth-v1`, separate from
+`predictive-readiness-v1` thresholds. It reads only bounded persisted
+`FlightEvent` data and never reads `FlightPosition`, mutates historical
+events, or adds a prediction write lane.
+
+RUNWAY_CHANGE is scoreable only when a confident independent `APPROACH`
+event within two hours before the prediction establishes the same previous
+runway captured by the prediction, and a subsequent `LANDING` within six
+hours carries a provider-reported final runway. A correct sample predicted the
+observed new runway; a false-positive sample is one where the independent
+approach and final runway never changed.
+
+TRAJECTORY candidates (`POSSIBLE_DEVIATION` / `DEVIATING`) are positively
+validated only by a later confident `DIVERSION`, `GO_AROUND`, `HOLDING`,
+`ORBIT`, or `UNUSUAL_TURN` event in the same lifecycle. Negative truth is
+deliberately stricter: it requires a ground-confirmed `LANDING` at the same
+prospective destination. Missing ground confirmation, a different destination,
+identity mismatch, low-confidence evidence, or an out-of-window event remains
+UNSCORABLE rather than becoming a false negative.
+
+Each outcome event type is queried independently with a 2,500-row bound. If
+any outcome query, the landing query, or the predictive-observation query
+reaches its cap, the readiness report is incomplete and the affected public
+graduation remains fail-closed at `WAIT`. Truth-source availability alone
+never promotes a capability; the existing minimum sample and quality
+thresholds still decide PASS/WAIT/FAIL.
 
 ## Predictive Operations Center V1
 
