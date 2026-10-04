@@ -8,7 +8,9 @@ jsou výstupy, nikoli zdroje schématu.
 
 Read boundary Flight Story (`lib/server/flight-story.ts`) je samostatná
 read-only kompozice nad historickými tabulkami a není napojena na live polling
-ani na write větve intelligence.
+ani na write větve intelligence. Flight Story V2 skládá svůj souhrn a narativ
+na klientovi ze stejného omezeného payloadu; nevytváří další history dotaz,
+aircraft stream, EventSource ani druhý playback clock.
 
 ```text
 RTL-SDR / web root readsb
