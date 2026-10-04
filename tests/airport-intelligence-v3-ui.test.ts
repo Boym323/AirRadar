@@ -54,6 +54,9 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(boardSource).toContain("buildAirportJourneyFlowSummary");
     expect(boardSource).toContain('data-testid="airport-live-board-flow-pulse"');
     expect(boardSource).toContain('data-testid="airport-live-board-flow-attention"');
+    expect(boardSource).toContain("buildAirportFlowPressureSummary");
+    expect(boardSource).toContain('data-testid="airport-live-board-v6-pressure"');
+    expect(boardSource).toContain("liveBoardV6Disclaimer");
     expect(boardSource).toContain('variant="inferred"');
     expect(boardSource).toContain("t.airport.v3RunwayDisclaimer");
   });
