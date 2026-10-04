@@ -108,6 +108,15 @@ receive `adminPreview` for SHADOW/PUBLIC diagnostics; this field is omitted
 for anonymous callers. The aircraft detail reads the endpoint once on mount and
 does not create a second live stream or polling loop.
 
+Predictive Runway Advisory V1 adds `runwayAdvisory` to the same response only
+when RUNWAY remains effectively PUBLIC after readiness enforcement, readiness
+is PASS, the prediction is at most 45 seconds old, the runway is non-null and
+confidence is known. A valid admin session may additionally receive
+`runwayAdminPreview` with readiness reasons, exact-runway-end accuracy,
+coverage and freshness state. Anonymous callers never receive this preview.
+The aircraft detail still performs one prediction fetch and creates no second
+stream or polling loop.
+
 ADSBDB metadata and route persistence is a recovery cache only. Runtime RAM is
 authoritative: `set`/`delete` mutate bounded maps and generation counters
 immediately, while a single checkpoint serializes the current maps at the

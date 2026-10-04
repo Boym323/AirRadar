@@ -108,6 +108,22 @@ readiness/stale/expired stavem. Tento preview blok není součástí anonymní
 odpovědi. Detail letadla provede jeden page-scoped prediction fetch a
 nevytváří nový poller, EventSource ani persistence path.
 
+## Predictive Runway Advisory V1
+
+Stejná page-scoped prediction odpověď nyní přenáší i runway advisory bez
+dalšího fetch requestu nebo streamu. Veřejné zobrazení dráhy vyžaduje
+`RUNWAY=PUBLIC`, runtime readiness `PASS`, predikci nejvýše 45 sekund starou,
+nenulovou predikovanou dráhu a známou confidence. Stavy `WAIT`, `FAIL`,
+`SHADOW`, stale, unavailable nebo unknown-confidence veřejnou dráhu
+nevyrenderují.
+
+Platná admin session může dostat samostatný runway SHADOW preview s readiness
+reasons, přesností konce dráhy, coverage, confidence a freshness stavem. UI
+hodnotu jasně označuje jako predikovanou, nikoli pozorovanou nebo potvrzenou ATC
+informaci, a již zobrazenou hodnotu po překročení 45sekundové freshness hranice
+automaticky skryje. Nepřidává se persistence, migrace, model, poller ani
+EventSource.
+
 ## API
 
 | Metoda a routa | Účel | Produkční stav |

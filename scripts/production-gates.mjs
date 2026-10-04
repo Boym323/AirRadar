@@ -456,6 +456,43 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           provenance: "predicted",
         },
       };
+      const runwayAdvisoryPublicFixture = {
+        prediction: null,
+        etaAdvisory: null,
+        runwayAdvisory: {
+          kind: "RUNWAY",
+          state: "available",
+          runway: "24",
+          alternative: "06",
+          evaluatedAt: "2026-10-04T09:59:52.000Z",
+          ageSeconds: 8,
+          confidence: "MEDIUM",
+          modelVersion: "predictive-intelligence-v1",
+          provenance: "predicted",
+        },
+      };
+      const runwayAdvisoryAdminFixture = {
+        prediction: null,
+        etaAdvisory: null,
+        runwayAdvisory: null,
+        runwayAdminPreview: {
+          kind: "RUNWAY",
+          mode: "SHADOW",
+          readiness: "WAIT",
+          readinessReasons: ["runway.insufficient_independent_truth"],
+          publicEligible: false,
+          state: "available",
+          runway: "24",
+          alternative: "06",
+          evaluatedAt: "2026-10-04T09:59:52.000Z",
+          ageSeconds: 8,
+          confidence: "MEDIUM",
+          exactEndAccuracy: 0.82,
+          coverage: 0.58,
+          modelVersion: "predictive-intelligence-v1",
+          provenance: "predicted",
+        },
+      };
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
@@ -477,9 +514,11 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "predictive-readiness-mobile", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 390, height: 844 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "predictive-eta-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockEtaAdvisory: "public" },
+        { name: "predictive-runway-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockRunwayAdvisory: "public" },
         { name: "aircraft-detail-tablet", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 768, height: 1024 }, fullPage: false },
         { name: "aircraft-detail-mobile", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "predictive-eta-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockEtaAdvisory: "admin" },
+        { name: "predictive-runway-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockRunwayAdvisory: "admin" },
         { name: "aircraft-detail-telemetry-expanded", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandTelemetry: true },
         { name: "aircraft-detail-receiver", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandReceiver: true },
       ];
@@ -509,6 +548,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           if (target.mockEtaAdvisory) {
             await visualPage.route("**/api/aircraft/896139/prediction", async (route) => {
               const body = target.mockEtaAdvisory === "public" ? etaAdvisoryPublicFixture : etaAdvisoryAdminFixture;
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+            });
+          }
+          if (target.mockRunwayAdvisory) {
+            await visualPage.route("**/api/aircraft/896139/prediction", async (route) => {
+              const body = target.mockRunwayAdvisory === "public" ? runwayAdvisoryPublicFixture : runwayAdvisoryAdminFixture;
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
             });
           }
@@ -551,6 +596,17 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             } else {
               await visualPage.getByText("ADMIN · SHADOW PREVIEW").first().waitFor({ state: "visible", timeout: 15_000 });
               await visualPage.getByText(/WAIT/).first().waitFor({ state: "visible", timeout: 15_000 });
+            }
+          }
+          if (target.mockRunwayAdvisory) {
+            await visualPage.locator('[data-testid="predictive-runway-advisory"]').waitFor({ state: "visible", timeout: 15_000 });
+            if (target.mockRunwayAdvisory === "public") {
+              await visualPage.getByText("Predikovaná dráha").first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("24", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            } else {
+              await visualPage.getByText("ADMIN · SHADOW PREVIEW").first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText(/WAIT/).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText(/82 %/).first().waitFor({ state: "visible", timeout: 15_000 });
             }
           }
           if (target.openCommandPalette) {

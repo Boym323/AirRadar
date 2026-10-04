@@ -273,6 +273,13 @@ dostat SHADOW preview s readiness a stale/expired stavem. Anonymní odpověď te
 preview nikdy neobsahuje. Detail letadla provádí jeden request při mountu a
 nepřidává EventSource, polling loop, model, persistence lane ani write path.
 
+Predictive Runway Advisory V1 sdílí stejný request i prezentační boundary.
+Veřejná dráha vyžaduje efektivní RUNWAY=PUBLIC, readiness PASS, čerstvou
+predikci, nenulovou dráhu a známou confidence. Platná admin session může dostat
+samostatný SHADOW runway preview s readiness evidence. Browser již zobrazenou
+dráhu po stejné 45sekundové freshness hranici skryje. Nepřidává se druhý fetch,
+EventSource, persistence lane, migrace ani model.
+
 Airport Intelligence V3 přidává jeden page-scoped klientský controller pro
 24hodinový operations snapshot a počasí letiště. Operations Board, sjednocená
 časová osa pohybů, runway comparison i detailní weather panel znovu používají

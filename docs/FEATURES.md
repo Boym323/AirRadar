@@ -11,7 +11,7 @@ not yet been historically attributed.
 
 | Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
-| Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA advisory. |
+| Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA and runway advisories. |
 | Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, and inferred Airport Operations intelligence. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
@@ -106,6 +106,22 @@ With a valid admin session the same endpoint may add a SHADOW preview with
 readiness/stale/expired state. That preview is never part of an anonymous
 response. Aircraft detail performs one page-scoped prediction fetch and adds no
 poller, EventSource, or persistence path.
+
+## Predictive Runway Advisory V1
+
+The same page-scoped prediction response now carries a runway advisory without
+adding another fetch or stream. Public runway presentation requires
+`RUNWAY=PUBLIC`, runtime readiness `PASS`, a prediction no older than 45
+seconds, a non-null predicted runway, and known confidence. `WAIT`, `FAIL`,
+`SHADOW`, stale, unavailable, and unknown-confidence states render no public
+runway.
+
+A valid admin session may receive a separate runway SHADOW preview with
+readiness reasons, exact-runway-end accuracy, coverage, confidence and
+freshness state. The UI labels the value as predicted rather than observed or
+confirmed ATC information and auto-expires an already-rendered value at the
+same 45-second freshness boundary. No persistence, migration, model, poller or
+EventSource is added.
 
 ## APIs
 
