@@ -118,6 +118,15 @@ publicly only while the runtime readiness decision is `PASS`; otherwise the
 effective policy is downgraded to `SHADOW`. The gate is fail-closed and never
 promotes a capability automatically.
 
+The same admin report also includes
+`predictive-graduation-calibration-v1`. Calibration is diagnostic only: it
+maps readiness to operational phases, exact sample deficits, required
+truth/instrumentation and quality margin against the active threshold. Quality
+margin is visible before sufficient volume is reached but is explicitly marked
+non-decisioning while readiness is WAIT. `manualReviewEligible` requires a
+complete bounded collection plus readiness PASS and never changes capability
+policy automatically.
+
 ## Rollout
 
 1. Stage 0: refresh `airradar_dev` from a read-only PROD snapshot, apply
