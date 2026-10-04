@@ -365,8 +365,11 @@ describe("SYSTEM / RECEIVER STATUS V1", () => {
     expect(getTranslations("cs").system.pageTitle).toBe("Stav systému");
     expect(getTranslations("en").system.pageTitle).toBe("System status");
     expect(pageSource).toContain('fetch("/api/system/status"');
+    expect(pageSource).toContain('fetch("/api/admin/predictive/readiness"');
+    expect(pageSource).toContain('data-testid="predictive-readiness"');
     expect(pageSource).toContain("data.application.name");
     expect(stylesSource).toContain(".system-grid { display: grid; grid-template-columns: repeat(2");
     expect(stylesSource).toContain(".system-grid { grid-template-columns: 1fr;");
+    expect(stylesSource).toContain(".system-predictive-capabilities");
   });
 });
