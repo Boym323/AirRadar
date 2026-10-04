@@ -6,21 +6,21 @@ import {
   type PredictivePublicRolloutDecision,
 } from "./public-rollout";
 
-export const ETA_PUBLIC_ROLLOUT_VERSION = "eta-public-rollout-v1" as const;
+export const RUNWAY_CHANGE_PUBLIC_ROLLOUT_VERSION = "runway-change-public-rollout-v1" as const;
 
-export type EtaPublicRolloutDecision =
-  PredictivePublicRolloutDecision<typeof ETA_PUBLIC_ROLLOUT_VERSION>;
+export type RunwayChangePublicRolloutDecision =
+  PredictivePublicRolloutDecision<typeof RUNWAY_CHANGE_PUBLIC_ROLLOUT_VERSION>;
 
-type EtaReadiness = PredictiveReadinessCapabilityResult<unknown>;
+type RunwayChangeReadiness = PredictiveReadinessCapabilityResult<unknown>;
 
-export function buildEtaPublicRolloutDecision(input: {
+export function buildRunwayChangePublicRolloutDecision(input: {
   configuredMode: PredictiveCapabilityStatus;
   effectiveMode: PredictiveCapabilityStatus;
-  readiness: EtaReadiness;
+  readiness: RunwayChangeReadiness;
   calibration: PredictiveGraduationCapabilityCalibration;
-}): EtaPublicRolloutDecision {
+}): RunwayChangePublicRolloutDecision {
   return buildPredictivePublicRolloutDecision({
-    version: ETA_PUBLIC_ROLLOUT_VERSION,
+    version: RUNWAY_CHANGE_PUBLIC_ROLLOUT_VERSION,
     ...input,
   });
 }

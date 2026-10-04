@@ -64,7 +64,8 @@ describe("Predictive Graduation Readiness boundary", () => {
     expect(adminRouteSource).toContain('"Cache-Control": "no-store"');
     expect(adminRouteSource).toContain("readPredictiveReadinessReport()");
     expect(collectorSource).toContain("buildPredictiveGraduationCalibration");
-    expect(collectorSource).toContain("calibration: buildPredictiveGraduationCalibration");
+    expect(collectorSource).toContain("buildPredictivePublicRolloutReport");
+    expect(collectorSource).toContain("rollout: buildPredictivePublicRolloutReport");
   });
 
   it("loads and renders readiness only for the admin system view", () => {
@@ -72,6 +73,8 @@ describe("Predictive Graduation Readiness boundary", () => {
     expect(systemPageSource).toContain('data?.detailLevel !== "admin"');
     expect(systemPageSource).toContain('data-testid="predictive-readiness"');
     expect(systemPageSource).toContain('data-testid={`predictive-calibration-${capability.key.toLowerCase()}`}');
+    expect(systemPageSource).toContain('data-testid={`predictive-rollout-${capability.key.toLowerCase()}`}');
     expect(systemPageSource).toContain("predictiveCalibrationManualReview");
+    expect(systemPageSource).toContain("predictiveRolloutStateLabels");
   });
 });

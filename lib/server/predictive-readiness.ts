@@ -12,6 +12,10 @@ import {
   type PredictiveGraduationCalibration,
 } from "@/lib/predictive-intelligence/graduation-calibration";
 import { getPredictiveGraduationPolicy, type PredictiveGraduationPolicy } from "@/lib/predictive-intelligence/graduation";
+import { buildEtaPublicRolloutDecision } from "@/lib/predictive-intelligence/eta-rollout";
+import { buildRunwayPublicRolloutDecision } from "@/lib/predictive-intelligence/runway-rollout";
+import { buildRunwayChangePublicRolloutDecision } from "@/lib/predictive-intelligence/runway-change-rollout";
+import { buildTrajectoryPublicRolloutDecision } from "@/lib/predictive-intelligence/trajectory-rollout";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
 import {
   PREDICTIVE_OUTCOME_TRUTH_VERSION,
@@ -128,6 +132,48 @@ export interface PredictiveReadinessReport {
   integrity: PredictiveReadinessEvidence["integrity"];
   capabilities: PredictiveReadinessEvaluation["capabilities"];
   calibration: PredictiveGraduationCalibration;
+  rollout: PredictivePublicRolloutReport;
+}
+
+export interface PredictivePublicRolloutReport {
+  ETA: ReturnType<typeof buildEtaPublicRolloutDecision>;
+  RUNWAY: ReturnType<typeof buildRunwayPublicRolloutDecision>;
+  RUNWAY_CHANGE: ReturnType<typeof buildRunwayChangePublicRolloutDecision>;
+  TRAJECTORY: ReturnType<typeof buildTrajectoryPublicRolloutDecision>;
+}
+
+function buildPredictivePublicRolloutReport(
+  configuredPolicy: PredictiveGraduationPolicy,
+  effectivePolicy: PredictiveGraduationPolicy,
+  capabilities: PredictiveReadinessEvaluation["capabilities"],
+  calibration: PredictiveGraduationCalibration,
+): PredictivePublicRolloutReport {
+  return {
+    ETA: buildEtaPublicRolloutDecision({
+      configuredMode: configuredPolicy.ETA,
+      effectiveMode: effectivePolicy.ETA,
+      readiness: capabilities.ETA,
+      calibration: calibration.capabilities.ETA,
+    }),
+    RUNWAY: buildRunwayPublicRolloutDecision({
+      configuredMode: configuredPolicy.RUNWAY,
+      effectiveMode: effectivePolicy.RUNWAY,
+      readiness: capabilities.RUNWAY,
+      calibration: calibration.capabilities.RUNWAY,
+    }),
+    RUNWAY_CHANGE: buildRunwayChangePublicRolloutDecision({
+      configuredMode: configuredPolicy.RUNWAY_CHANGE,
+      effectiveMode: effectivePolicy.RUNWAY_CHANGE,
+      readiness: capabilities.RUNWAY_CHANGE,
+      calibration: calibration.capabilities.RUNWAY_CHANGE,
+    }),
+    TRAJECTORY: buildTrajectoryPublicRolloutDecision({
+      configuredMode: configuredPolicy.TRAJECTORY,
+      effectiveMode: effectivePolicy.TRAJECTORY,
+      readiness: capabilities.TRAJECTORY,
+      calibration: calibration.capabilities.TRAJECTORY,
+    }),
+  };
 }
 
 let cached: { expiresAt: number; report: PredictiveReadinessReport } | null = null;
@@ -346,6 +392,8 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
   const evidence = emptyEvidence();
   const capabilities = evaluatePredictiveReadiness(evidence, { complete: false });
   const configuredPolicy = getPredictiveGraduationPolicy();
+  const effectivePolicy = enforcePredictiveReadiness(configuredPolicy, capabilities);
+  const calibration = buildPredictiveGraduationCalibration(evidence, capabilities, { complete: false });
   return {
     source: "unavailable",
     generatedAt: now.toISOString(),
@@ -357,13 +405,19 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
       outcomeEventsPerType: PREDICTIVE_READINESS_OUTCOME_EVENT_LIMIT,
     },
     configuredPolicy,
-    effectivePolicy: enforcePredictiveReadiness(configuredPolicy, capabilities),
+    effectivePolicy,
     thresholds: PREDICTIVE_READINESS_THRESHOLDS,
     outcomeTruthVersion: PREDICTIVE_OUTCOME_TRUTH_VERSION,
     collection: { observations: 0, landingEvents: 0, outcomeEvents: 0, matchedLandingTruth: 0, captureStaleObservations: 0 },
     integrity: evidence.integrity,
     capabilities: capabilities.capabilities,
-    calibration: buildPredictiveGraduationCalibration(evidence, capabilities, { complete: false }),
+    calibration,
+    rollout: buildPredictivePublicRolloutReport(
+      configuredPolicy,
+      effectivePolicy,
+      capabilities.capabilities,
+      calibration,
+    ),
   };
 }
 
@@ -614,6 +668,8 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
   );
   const evaluation = evaluatePredictiveReadiness(evidence, { complete });
   const configuredPolicy = getPredictiveGraduationPolicy();
+  const effectivePolicy = enforcePredictiveReadiness(configuredPolicy, evaluation);
+  const calibration = buildPredictiveGraduationCalibration(evidence, evaluation, { complete });
   const report: PredictiveReadinessReport = {
     source: "postgres",
     generatedAt: now.toISOString(),
@@ -629,7 +685,7 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
       outcomeEventsPerType: PREDICTIVE_READINESS_OUTCOME_EVENT_LIMIT,
     },
     configuredPolicy,
-    effectivePolicy: enforcePredictiveReadiness(configuredPolicy, evaluation),
+    effectivePolicy,
     thresholds: PREDICTIVE_READINESS_THRESHOLDS,
     outcomeTruthVersion: PREDICTIVE_OUTCOME_TRUTH_VERSION,
     collection: {
@@ -641,7 +697,13 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
     },
     integrity: evidence.integrity,
     capabilities: evaluation.capabilities,
-    calibration: buildPredictiveGraduationCalibration(evidence, evaluation, { complete }),
+    calibration,
+    rollout: buildPredictivePublicRolloutReport(
+      configuredPolicy,
+      effectivePolicy,
+      evaluation.capabilities,
+      calibration,
+    ),
   };
   cached = { expiresAt: now.getTime() + PREDICTIVE_READINESS_CACHE_MS, report };
   return report;
