@@ -1,4 +1,5 @@
 import { buildReceiverCoverageIntelligenceV1, type ReceiverCoverageIntelligenceV1 } from "@/lib/receiver-coverage-intelligence-v1";
+import { buildReceiverCoverageIntelligenceV2, type ReceiverCoverageHourlyEvidenceRow, type ReceiverCoverageIntelligenceV2 } from "@/lib/receiver-coverage-intelligence-v2";
 
 export type CoverageIntelligenceRange = "7d" | "30d";
 
@@ -114,6 +115,7 @@ export interface CoverageIntelligenceResponse {
     busiestHour: CoverageIntelligenceBusiestHour | null;
   };
   intelligence: ReceiverCoverageIntelligenceV1;
+  intelligenceV2: ReceiverCoverageIntelligenceV2;
   records: {
     peakConcurrent: { date: string; count: number } | null;
     farthestReception: {
@@ -220,6 +222,7 @@ export function aggregateCoverageIntelligence(options: {
   flightStartTimes: string[];
   flightRowsComplete: boolean;
   highestFlight: CoverageIntelligenceHighestFlight | null;
+  hourlyCoverageRows?: ReceiverCoverageHourlyEvidenceRow[];
 }): CoverageIntelligenceResponse {
   const periodDays = options.range === "7d" ? 7 : 30;
   const requiredReliableDays = Math.ceil(periodDays / 2);
@@ -329,6 +332,10 @@ export function aggregateCoverageIntelligence(options: {
       currentDate: options.to,
       statsRows: options.statsRows,
       coverageRows: options.coverageRows,
+    }),
+    intelligenceV2: buildReceiverCoverageIntelligenceV2({
+      now: new Date(options.generatedAt),
+      rows: options.hourlyCoverageRows ?? [],
     }),
     records: {
       peakConcurrent: peak ? { date: peak.date, count: Math.max(0, Math.trunc(peak.maxConcurrentAircraft)) } : null,
