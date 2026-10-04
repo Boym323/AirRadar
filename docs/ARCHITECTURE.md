@@ -51,13 +51,16 @@ The server-side provider boundary is `AircraftProvider`. The configured local
 provider fetches the readsb/tar1090 web root; the empty base URL selects the
 deterministic demo provider. The frontend never selects a provider.
 
-Command Search V1 is mounted once from the root layout. The topbar search
+Command Search V2 remains mounted once from the root layout. The topbar search
 control is only a trigger; the root-level palette owns the single debounced
-`GET /api/search?q=` interaction lane, static navigation commands, keyboard
-state, and bounded browser-local recents. It creates no EventSource, no
-aircraft subscription, and no server-side persistence. Operations Center
-deep-linking is a UI open signal/query parameter over the existing radar
-component rather than another operations data lane.
+`GET /api/search?q=` interaction lane, keyboard state, and bounded
+browser-local recents. The server search boundary can additionally issue
+bounded recent Flight-row queries for ordinary searches; it never reads
+FlightPosition. Exact smart actions are parsed before live-state readiness or
+database access and return existing internal destinations only. The
+`flights to <ICAO>` action uses the existing history list with an exact
+destination filter. Command Search creates no EventSource, no aircraft
+subscription, no LLM lane, and no server-side persistence.
 Predictive prospective validation is a separate optional persistence lane
 downstream of the existing shadow `PredictiveStateStore`. It writes immutable
 `PredictiveObservation` samples through a bounded asynchronous queue only when
