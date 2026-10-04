@@ -10,6 +10,7 @@ import {
 import { getPredictiveGraduationPolicy, type PredictiveGraduationPolicy } from "@/lib/predictive-intelligence/graduation";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
 import {
+  PREDICTIVE_OUTCOME_TRUTH_VERSION,
   scoreRunwayChangeOutcome,
   scoreTrajectoryOutcome,
   TRAJECTORY_POSITIVE_OUTCOME_TYPES,
@@ -104,6 +105,7 @@ export interface PredictiveReadinessReport {
   configuredPolicy: PredictiveGraduationPolicy;
   effectivePolicy: PredictiveGraduationPolicy;
   thresholds: typeof PREDICTIVE_READINESS_THRESHOLDS;
+  outcomeTruthVersion: typeof PREDICTIVE_OUTCOME_TRUTH_VERSION;
   collection: {
     observations: number;
     landingEvents: number;
@@ -344,6 +346,7 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
     configuredPolicy,
     effectivePolicy: enforcePredictiveReadiness(configuredPolicy, capabilities),
     thresholds: PREDICTIVE_READINESS_THRESHOLDS,
+    outcomeTruthVersion: PREDICTIVE_OUTCOME_TRUTH_VERSION,
     collection: { observations: 0, landingEvents: 0, outcomeEvents: 0, matchedLandingTruth: 0, captureStaleObservations: 0 },
     integrity: evidence.integrity,
     capabilities: capabilities.capabilities,
@@ -614,6 +617,7 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
     configuredPolicy,
     effectivePolicy: enforcePredictiveReadiness(configuredPolicy, evaluation),
     thresholds: PREDICTIVE_READINESS_THRESHOLDS,
+    outcomeTruthVersion: PREDICTIVE_OUTCOME_TRUTH_VERSION,
     collection: {
       observations: rows.observations.length,
       landingEvents: rows.landings.length,
