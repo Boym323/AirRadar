@@ -230,3 +230,31 @@ metriku od RF coverage evidence.
 Přesný rolling 24h RF dosah V1 záměrně netvrdí. Současné schéma ukládá denní
 maxima, nikoli hodinová lokální maxima dosahu; jejich dopočítávání přes
 `FlightPosition` by porušilo bounded-read architekturu coverage stránky.
+
+## Receiver Coverage Intelligence V2
+
+V2 přidává rolling pohled s časovou lokalizací nad již ukládanými hodinovými
+daty `ReceiverCoverageHourly`. Nepřidává migraci, další poller ani čtení
+`FlightPosition`.
+
+Aktuální okno tvoří posledních 24 hodin a baseline bezprostředně předchozích
+sedm dní. Čtou se pouze hodinové řádky `overall` a `azimuth`, takže dotaz
+zůstává omezený.
+
+Pro každý 10° azimutový sektor V2 vrací:
+
+- available/captured evidence a capture ratio za posledních 24 hodin;
+- stejné hodnoty pro předchozí 7denní baseline;
+- rozdíl v procentních bodech; a
+- stav `GOOD`, `DEGRADED`, `IMPROVED` nebo `INSUFFICIENT_DATA`.
+
+Sektor je označen jako degraded pouze při dostatečné evidenci a současném
+významném absolutním i relativním poklesu. Celkový health má stavy `GOOD`,
+`DEGRADED`, `RECOVERING` a `INSUFFICIENT_DATA`. Stav recovering vyžaduje,
+aby byl receiver stále pod baseline, ale posledních šest hodin bylo výrazně
+lepší než předchozích osmnáct hodin.
+
+Hodinová série ukazuje, kdy se problém objevil, a sektorové porovnání ukazuje,
+ve kterém směru. Denní range intelligence V1 zůstává zachována a dál poskytuje
+fyzické dosahové metriky; V2 měří capture coverage vůči nezávislé síťové
+referenci.
