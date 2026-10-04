@@ -12,7 +12,7 @@ not yet been historically attributed.
 | Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
 | Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
-| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog and a bounded Airport Live Board with receiver-inferred arrivals, departures, runway usage, operational events, current weather and observed traffic. |
+| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with active inbound/outbound traffic. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
@@ -47,7 +47,7 @@ whether an operator has configured an optional provider.
 | `/` | Live MapLibre radar, aircraft list/filtering, selected aircraft detail, zoom-aware aircraft labels, live trail, route/airport/ATC overlays, optional receiver range rings and aircraft color modes, keyboard shortcuts, SSE connection state, compact ADS-B logbook summary, opt-in SIGMET, Czech ATS route-intelligence, and planned AUP/UUP airspace context. Optional LOCAL/EXTENDED coverage switch combines local readsb with RAM-only ADSB.lol network observations. Optional separate OGN/FLARM layer, list, and detail panel use a dedicated RAM-only SSE flow. | Production core; readsb or demo provider. OGN, weather, ATS route intelligence, and airspace-activity overlays are independent/fail-soft. |
 | `/aircraft/:hex` | Flight-card detail with callsign/registration/type/operator header, live movement and provenance, route/flight-plan context, first/last-seen timeline, bounded 30-minute altitude chart from the latest FlightPosition history, full-trail action, durable aircraft metadata, recent flight instances, 7/30-day summary, lifetime Flight-instance statistics, NEW/RARE/RETURNING logbook status, optional photo, and compact destination-first/origin weather. | Production; PostgreSQL required for durable detail, weather/photo optional. |
 | `/flights/:id` | Flight Story V2 with an observed-flight summary, clearly labeled airport context, notable-event badges, a narrative first-seen → inferred-event → last-seen timeline, bounded playback, and altitude/speed/vertical-rate profiles synchronized to one playback clock. | Production with PostgreSQL history. |
-| `/airports/:icao` | Airport Live Board V1 on the Airport Intelligence V3 foundation: one shared 24h operations/weather controller with 30-second bounded refresh, recent receiver-inferred arrivals/departures, operational events, runway usage + receiver-vs-wind intelligence, compact current weather, unified Flight Story timeline, plus catalog metadata, runway geometry, METAR/TAF, live nearby ADS-B traffic, navaids, nearby airports and 7/30-day receiver traffic summary. | Production; movement/runway results are bounded local-receiver inferences, not airport FIDS or authoritative ATC data. |
+| `/airports/:icao` | Airport Live Board V2 on the Airport Intelligence V3 foundation: one shared 24h operations/weather controller with 30-second bounded refresh, recent receiver-inferred arrivals/departures, operational events, runway usage + receiver-vs-wind intelligence, compact current weather, unified Flight Story timeline, plus catalog metadata, runway geometry, METAR/TAF, live nearby ADS-B traffic, navaids, nearby airports and 7/30-day receiver traffic summary. | Production; movement/runway results are bounded local-receiver inferences, not airport FIDS or authoritative ATC data. |
 | `/history` | Bounded flight-instance search/list, sampled position detail, playback map. | Production; PostgreSQL feature, no live-polling dependency. |
 | `/time-machine` | Bounded all-aircraft historical radar playback with UTC selection, timeline, event markers, aircraft selection, selected trail, and optional historical radar/METAR/wind/AUP-UUP context. | Production with PostgreSQL `FlightPosition` history; context availability follows bounded archive activation and retention. |
 | `/statistics` | Today/7-day/30-day receiver aggregate, current-versus-previous period comparison, trends, coverage visualization, reception records, bounded CSV export, receiver-observed traffic intelligence, and 7/30-day coverage reliability/receiver analytics. | Production core; traffic and range analytics use bounded PostgreSQL reads, while current receiver counters remain RAM-backed. |
@@ -58,16 +58,17 @@ whether an operator has configured an optional provider.
 | `/fleet` | Concrete aircraft from ICAO watchlist rules, live/offline state, recent observed-flight counts, routes/airports, and lazy photos. | Production; non-identity watchlist rules are omitted, PostgreSQL history is optional. |
 | `/system` | Sanitized runtime, receiver, persistence, statistics, ATC, weather, OGN, alerts, and airport status. Lazy weather/radar/wind/ADSBDB providers expose `ON DEMAND`/`LOADING` cold-start states and bounded safe reasons for degraded/offline states. | Production read-only diagnostics; it never triggers optional upstream requests. |
 
-## Airport Live Board V1
+## Airport Live Board V2
 
 The airport detail promotes the existing Airport Intelligence V3 board into a
-continuously refreshed operational view without adding another backend stream
-or persistence path. A single page-scoped controller still owns exactly two
+continuously refreshed operational view without adding persistence. V2 also
+reuses one page-scoped `/api/stream` subscription for both the Live Board and
+the Nearby Aircraft section instead of opening a second airport aircraft stream. A single page-scoped controller still owns exactly two
 reads: the bounded 24-hour `/api/airports/:icao/operations` snapshot and the
 airport-weather snapshot. It refreshes those reads with one 30-second one-shot
 timer; manual retry uses the same path.
 
-The board adds bounded, newest-first Recent Arrivals and Recent Departures lanes
+The board adds bounded NOW inbound/outbound lanes from fresh live ADS-B observations, plus newest-first Recent Arrivals and Recent Departures lanes
 with one latest movement per Flight, a separate GO_AROUND/HOLDING operational
 events lane, a four-runway usage breakdown, and a compact METAR strip for
 category, wind, visibility, temperature and QNH. Existing runway-vs-wind
