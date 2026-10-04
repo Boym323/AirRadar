@@ -20,6 +20,22 @@ function SummaryMetric({ label, value, detail }: { label: string; value: string;
   return <div className={styles.metric}><span>{label}</span><strong>{value}</strong>{detail ? <small>{detail}</small> : null}</div>;
 }
 
+function healthLabel(state: CoverageIntelligenceResponse["intelligence"]["health"]["state"]): string {
+  if (state === "GOOD") return text.coverageHealthGood;
+  if (state === "DEGRADED") return text.coverageHealthDegraded;
+  return text.coverageHealthInsufficient;
+}
+
+function healthReasonLabel(reason: string): string {
+  if (reason === "coverage.baseline_insufficient") return text.trendReasonBaseline;
+  if (reason === "coverage.source_unavailable") return text.trendReasonSource;
+  if (reason === "coverage.range_below_baseline") return text.trendReasonRange;
+  if (reason === "coverage.sectors_below_baseline") return text.trendReasonSectors;
+  if (reason === "coverage.unique_aircraft_below_baseline") return text.trendReasonUnique;
+  if (reason === "coverage.messages_below_baseline") return text.trendReasonMessages;
+  return reason;
+}
+
 function sectorLabel(sector: Pick<CoverageIntelligenceSector, "bearingFrom" | "bearingTo">): string {
   return `${String(sector.bearingFrom).padStart(3, "0")}°–${String(sector.bearingTo).padStart(3, "0")}°`;
 }
@@ -82,6 +98,16 @@ export default function StatisticsCoverageIntelligence() {
               detail={data.coverage.bestReliableP95 ? sectorLabel(data.coverage.bestReliableP95) : undefined}
             />
             <SummaryMetric label={text.reliableSectors} value={`${formatNumber(data.coverage.reliableSectors)} / 36`} detail={`≥ ${data.coverage.requiredReliableDays} d`} />
+            <SummaryMetric
+              label={text.coverageHealth}
+              value={healthLabel(data.intelligence.health.state)}
+              detail={data.intelligence.health.evaluatedDate ? `${data.intelligence.health.evaluatedDate} · ${data.intelligence.health.baselineDays} ${text.coverageHealthBaseline}` : undefined}
+            />
+            <SummaryMetric
+              label={text.uniqueAircraftToday}
+              value={data.intelligence.trend.currentDay ? formatNumber(data.intelligence.trend.currentDay.uniqueAircraft) : "—"}
+              detail={data.intelligence.trend.currentDay?.date}
+            />
             <SummaryMetric label={text.peakConcurrent} value={data.records.peakConcurrent ? formatNumber(data.records.peakConcurrent.count) : "—"} detail={data.records.peakConcurrent?.date} />
             <SummaryMetric
               label={text.receiverMessages}
@@ -111,6 +137,29 @@ export default function StatisticsCoverageIntelligence() {
           </div>
 
           <div className={styles.sections}>
+            <section className={styles.section} aria-labelledby="receiver-trend-title" data-testid="receiver-coverage-intelligence-v1">
+              <div className={styles.sectionHeader}>
+                <div><h3 id="receiver-trend-title">{text.trendTitle}</h3><p>{text.trendDescription}</p></div>
+              </div>
+              {data.intelligence.trend.recentDays.length ? <div className={styles.tableScroll}>
+                <table className={styles.table}>
+                  <thead><tr><th>{text.trendDate}</th><th>{text.trendMedianRange}</th><th>{text.trendMaxRange}</th><th>{text.trendSectors}</th><th>{text.trendUniqueAircraft}</th><th>{text.trendMessages}</th></tr></thead>
+                  <tbody>{data.intelligence.trend.recentDays.map((point) => <tr key={point.date}>
+                    <th>{point.date}{point.complete ? "" : ` · ${text.trendCurrent}`}</th>
+                    <td>{formatDistance(point.medianSectorRangeKm)}</td>
+                    <td>{formatDistance(point.maxDistanceKm)}</td>
+                    <td>{formatNumber(point.populatedSectors)} / 36</td>
+                    <td>{formatNumber(point.uniqueAircraft)}</td>
+                    <td>{point.receiverMessages === null ? "—" : formatNumber(point.receiverMessages)}</td>
+                  </tr>)}</tbody>
+                </table>
+              </div> : <p className={styles.status}>{text.noData}</p>}
+              <p className={styles.note}>
+                <strong>{text.trendHealthReasons}:</strong>{" "}
+                {data.intelligence.health.reasons.length ? data.intelligence.health.reasons.map(healthReasonLabel).join(" · ") : text.trendNoHealthReasons}
+              </p>
+            </section>
+
             <section className={styles.section} aria-labelledby="coverage-reliability-title">
               <div className={styles.sectionHeader}>
                 <div><h3 id="coverage-reliability-title">{text.coverageTitle}</h3><p>{text.coverageDescription}</p></div>

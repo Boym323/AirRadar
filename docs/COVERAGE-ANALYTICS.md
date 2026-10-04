@@ -194,3 +194,38 @@ Application rollback does not require an immediate database rollback. An older
 AirRadar build ignores the new nullable columns and table. If schema cleanup is
 ever desired, it should be a separate later migration after the application
 rollback is proven stable.
+
+
+## Receiver Coverage Intelligence V1
+
+V1 extends the existing coverage analytics without a new migration and without
+scanning `FlightPosition`. It uses only bounded aggregates AirRadar already
+persists:
+
+- `ReceiverDailyStats.uniqueAircraftCount`;
+- the daily maximum reception distance;
+- `ReceiverDailyCoverage` across 36 fixed 10-degree sectors; and
+- the daily readsb message counter when available.
+
+The API exposes `intelligence.version = receiver-coverage-intelligence-v1`.
+The trend contains the current local day plus at most seven completed days.
+Each point reports locally observed unique aircraft, maximum range, the median
+of per-sector daily maxima, populated sector count, and receiver messages.
+
+Health evaluation uses completed days only so a partial current day cannot
+create a false alert. A baseline needs at least three previous completed days
+with coverage in at least 12 sectors. The state is:
+
+- `GOOD` when no material coverage drop is corroborated;
+- `DEGRADED` for a severe range/sector drop or a drop corroborated by multiple
+  independent signals; and
+- `INSUFFICIENT_DATA` when the historical baseline or source is insufficient.
+
+A unique-aircraft drop alone never marks the receiver degraded because lower
+traffic volume is not receiver evidence. V1 therefore separates traffic volume
+from RF coverage evidence.
+
+V1 deliberately does not claim an exact rolling 24-hour RF range. The current
+schema stores daily maxima rather than hourly local range maxima; deriving that
+metric by scanning `FlightPosition` would violate the coverage page's bounded
+read architecture.

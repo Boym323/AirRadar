@@ -57,6 +57,20 @@ function unavailable(range: CoverageIntelligenceRange, now: Date, timezone: stri
     altitudeCoverage: { methodology: "daily-max-p95", bands: [] },
     messages: { observedDays: 0, total: null },
     hourly: { complete: false, observedFlights: 0, bins: [], busiestHour: null },
+    intelligence: {
+      version: "receiver-coverage-intelligence-v1",
+      trend: { methodology: "daily-receiver-aggregates", currentDay: null, recentDays: [] },
+      health: {
+        state: "INSUFFICIENT_DATA",
+        evaluatedDate: null,
+        baselineDays: 0,
+        rangeRatio: null,
+        sectorRatio: null,
+        uniqueAircraftRatio: null,
+        messageRatio: null,
+        reasons: ["coverage.source_unavailable"],
+      },
+    },
     records: { peakConcurrent: null, farthestReception: null, fastestAircraft: null, highestFlight: null },
   };
 }
@@ -128,6 +142,7 @@ export async function getCoverageIntelligence(
     for (const row of statsRaw) {
       statsByDate.set(row.date, {
         date: row.date,
+        uniqueAircraftCount: row.uniqueAircraftCount,
         maxConcurrentAircraft: row.maxConcurrentAircraft,
         maxDistanceKm: row.maxDistanceKm,
         maxDistanceIcaoHex: row.maxDistanceIcaoHex,
@@ -166,6 +181,7 @@ export async function getCoverageIntelligence(
       const persistedToday = statsByDate.get(current.date);
       statsByDate.set(current.date, mergeCurrentDayStats({
         date: current.date,
+        currentUniqueAircraftCount: current.uniqueAircraftCount,
         currentMaxConcurrentAircraft: current.maxConcurrentAircraft,
         currentMaxDistanceKm: current.maxDistanceKm,
         currentReception: reception ? {
@@ -197,6 +213,7 @@ export async function getCoverageIntelligence(
       }
       const persisted = statsByDate.get(advanced.date) ?? {
         date: advanced.date,
+        uniqueAircraftCount: 0,
         maxConcurrentAircraft: 0,
         maxDistanceKm: 0,
         maxDistanceIcaoHex: null,

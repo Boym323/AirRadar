@@ -21,6 +21,7 @@ const baseOptions = {
 function statsRow(overrides: Partial<CoverageIntelligenceDailyStatsRow> = {}): CoverageIntelligenceDailyStatsRow {
   return {
     date: "2026-09-10",
+    uniqueAircraftCount: 0,
     maxConcurrentAircraft: 0,
     maxDistanceKm: 0,
     maxDistanceIcaoHex: null,

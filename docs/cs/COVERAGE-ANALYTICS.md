@@ -196,3 +196,37 @@ Rollback aplikace nevyžaduje okamžitý rollback databáze. Starší build AirR
 ignoruje nové nullable sloupce a tabulku. Pokud bude někdy žádoucí cleanup
 schématu, má být samostatnou pozdější migrací až po ověření stabilního rollbacku
 aplikace.
+
+
+## Receiver Coverage Intelligence V1
+
+V1 rozšiřuje existující coverage analytiku bez nové migrace a bez skenování
+`FlightPosition`. Používá pouze bounded agregáty, které AirRadar už ukládá:
+
+- `ReceiverDailyStats.uniqueAircraftCount`;
+- denní maximum přijímací vzdálenosti;
+- `ReceiverDailyCoverage` pro 36 pevných 10° sektorů; a
+- denní počítadlo readsb zpráv, pokud je pro daný den dostupné.
+
+API vrací blok `intelligence.version = receiver-coverage-intelligence-v1`.
+Trend obsahuje aktuální lokální den a maximálně sedm dokončených dní.
+U každého dne se zobrazuje počet unikátních lokálně zachycených letadel,
+maximální dosah, medián maxim jednotlivých sektorů, počet sektorů s daty a
+počet zpráv přijímače.
+
+Health vyhodnocení používá pouze dokončené dny, aby částečný dnešní den
+nevytvářel falešný alarm. Pro baseline jsou potřeba alespoň tři předchozí
+dokončené dny s coverage alespoň ve 12 sektorech. Stav je:
+
+- `GOOD` — není potvrzený významný pokles coverage;
+- `DEGRADED` — závažný pokles dosahu/sektorů nebo pokles potvrzený více
+  nezávislými signály; a
+- `INSUFFICIENT_DATA` — chybí dostatečná baseline nebo zdroj dat.
+
+Samotný pokles počtu unikátních letadel nikdy nestačí k označení receiveru jako
+degraded, protože může jít pouze o nižší provoz. V1 proto odděluje provozní
+metriku od RF coverage evidence.
+
+Přesný rolling 24h RF dosah V1 záměrně netvrdí. Současné schéma ukládá denní
+maxima, nikoli hodinová lokální maxima dosahu; jejich dopočítávání přes
+`FlightPosition` by porušilo bounded-read architekturu coverage stránky.

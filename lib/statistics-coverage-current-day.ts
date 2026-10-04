@@ -40,6 +40,7 @@ function currentComplete(value: CurrentDayReceptionEvidence | null): CurrentDayR
  */
 export function mergeCurrentDayStats(options: {
   date: string;
+  currentUniqueAircraftCount: number;
   currentMaxConcurrentAircraft: number;
   currentMaxDistanceKm: number;
   currentReception: CurrentDayReceptionEvidence | null;
@@ -53,6 +54,7 @@ export function mergeCurrentDayStats(options: {
 
   return {
     date: options.date,
+    uniqueAircraftCount: Math.max(0, options.currentUniqueAircraftCount, options.persisted?.uniqueAircraftCount ?? 0),
     maxConcurrentAircraft: Math.max(0, options.currentMaxConcurrentAircraft, options.persisted?.maxConcurrentAircraft ?? 0),
     maxDistanceKm: selected?.distanceKm ?? Math.max(0, options.currentMaxDistanceKm, options.persisted?.maxDistanceKm ?? 0),
     maxDistanceIcaoHex: selected?.icaoHex ?? null,
