@@ -75,6 +75,24 @@ destination actions use the exact `destination=` filter on
 `GET /api/history/flights`. Keyboard navigation and the five-item internal
 browser-local recent list remain unchanged; no LLM or additional live stream is
 involved.
+## Predictive Graduation Readiness V1
+
+Public predictive capabilities remain opt-in and default to `SHADOW`.
+Graduation Readiness adds a versioned, fail-closed evidence gate for ETA,
+runway, runway-change and trajectory advisories. The 30-day runtime report is
+admin-only on `/system` and `GET /api/admin/predictive/readiness`; it reads
+bounded `PredictiveObservation` rows plus independently captured persisted
+`LANDING` terminal evidence and never scans `FlightPosition`.
+
+Each capability receives `PASS`, `WAIT` or `FAIL` with stable reason
+codes and frozen `predictive-readiness-v1` thresholds. Missing ground truth,
+missing instrumentation, or a truncated bounded result yields `WAIT`;
+lifecycle integrity conflicts or sufficiently evidenced quality misses yield
+`FAIL`. Setting an `AIRRADAR_PREDICTIVE_*_STATUS=PUBLIC` environment value
+is not sufficient by itself: the aircraft prediction API applies the readiness
+gate and downgrades non-PASS capabilities back to `SHADOW`. No capability is
+automatically promoted to `PUBLIC`.
+
 ## APIs
 
 | Method and route | Purpose | Production status |
