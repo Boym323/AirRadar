@@ -123,6 +123,14 @@ never reads FlightPosition and adds no write path, schema migration, SSE lane,
 or predictive-engine input. Per-type event queries are capped at 2,500 rows;
 any cap hit marks the readiness collection incomplete and therefore fail-closed.
 
+Predictive Graduation Calibration V1 sits downstream of the runtime readiness
+evaluation and is deliberately not part of the prediction or graduation
+decision graph. The server passes the same bounded evidence object, the same
+PASS/WAIT/FAIL evaluation, and the collection completeness bit into a pure
+`buildPredictiveGraduationCalibration()` function. The output only derives
+phase, exact evidence deficits, truth requirements, threshold margins and
+manual-review eligibility. It cannot mutate policy or turn WAIT/FAIL into PASS.
+
 Predictive Operations Center V1 is a bounded read-only aggregation boundary on
 the radar NOW panel. The browser derives at most six ICAO candidates from the
 existing prioritized timeline and live highlights, then requests
