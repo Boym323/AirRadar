@@ -32,6 +32,19 @@ Vítr a použití dráhy jsou oddělené informace: používejte „dráha zvýh
 větrem“ a „pravděpodobná dráha podle nedávného provozu“, nikoli provozní
 doporučení.
 
+## Airport Live Board V1
+
+Detail letiště znovu používá 24hodinovou operations odpověď a existující
+airport-weather odpověď v jediném page-scoped controlleru. Controller provádí
+one-shot refresh každých 30 sekund a neotevírá další aircraft stream. Poslední
+přílety a odlety jsou řazené newest-first, deduplikované podle Flight ID a
+omezené na šest řádků. GO_AROUND/HOLDING mají vlastní šestipoložkový provozní
+lane. Přehled využití drah je omezený na čtyři řádky.
+
+Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
+teplotu a QNH. Jde o pozorovací pohled přijímače a počasí, nikoli letištní
+letový řád, FIDS, přidělení dráhy nebo instrukce ATC.
+
 ## Omezení
 
 Výpadky přijímače, chybějící trasa nebo METAR, vrtulníky, touch-

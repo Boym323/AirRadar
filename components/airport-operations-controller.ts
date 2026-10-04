@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { AirportWeatherResponse } from "@/components/airport-weather";
 import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
 
+export const AIRPORT_LIVE_BOARD_REFRESH_MS = 30_000;
+
 export type AirportOperationsLoadStatus = "loading" | "ready" | "partial" | "unavailable";
 
 export interface AirportOperationsControllerState {
@@ -30,6 +32,11 @@ export function useAirportOperationsController(icaoCode: string): AirportOperati
     setWeather(null);
     setOperationsFailed(false);
     setWeatherFailed(false);
+
+    const refreshTimer = window.setTimeout(
+      () => setRefreshToken((value) => value + 1),
+      AIRPORT_LIVE_BOARD_REFRESH_MS,
+    );
 
     void Promise.allSettled([
       fetch(`/api/airports/${encodeURIComponent(icaoCode)}/operations?period=24h`, {
@@ -63,7 +70,10 @@ export function useAirportOperationsController(icaoCode: string): AirportOperati
       setLoading(false);
     });
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(refreshTimer);
+      controller.abort();
+    };
   }, [icaoCode, refreshToken]);
 
   const refresh = useCallback(() => setRefreshToken((value) => value + 1), []);

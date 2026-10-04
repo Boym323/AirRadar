@@ -23,6 +23,15 @@ export interface AirportOperationsTimelineItem {
   movement: AirportMovement;
 }
 
+export interface AirportLiveBoardSnapshot {
+  arrivals: AirportMovement[];
+  departures: AirportMovement[];
+  attention: AirportMovement[];
+  runwayUsage: AirportOperationsResponse["runwayUsage"];
+}
+
+export const AIRPORT_LIVE_BOARD_LANE_LIMIT = 6;
+export const AIRPORT_LIVE_BOARD_RUNWAY_LIMIT = 4;
 const TIMELINE_LIMIT = 12;
 
 function runwayDirections(runways: readonly AirportRunway[]): Array<{ ident: string; headingDeg: number }> {
@@ -126,4 +135,61 @@ export function buildAirportOperationsTimeline(
       key: `${movement.flightId}:${movement.movement}:${movement.observedAt}`,
       movement,
     }));
+}
+
+
+function newestUniqueMovements(
+  movements: readonly AirportMovement[],
+  kinds: ReadonlySet<AirportMovement["movement"]>,
+  limit: number,
+): AirportMovement[] {
+  const seenFlights = new Set<number>();
+  return movements
+    .filter((movement) =>
+      kinds.has(movement.movement)
+      && Number.isFinite(Date.parse(movement.observedAt)))
+    .sort((left, right) =>
+      Date.parse(right.observedAt) - Date.parse(left.observedAt)
+      || right.flightId - left.flightId)
+    .filter((movement) => {
+      if (seenFlights.has(movement.flightId)) return false;
+      seenFlights.add(movement.flightId);
+      return true;
+    })
+    .slice(0, Math.max(1, limit));
+}
+
+export function buildAirportLiveBoardSnapshot(
+  operations: AirportOperationsResponse | null,
+  laneLimit = AIRPORT_LIVE_BOARD_LANE_LIMIT,
+): AirportLiveBoardSnapshot {
+  if (!operations) return { arrivals: [], departures: [], attention: [], runwayUsage: [] };
+  const limit = Math.max(1, laneLimit);
+  return {
+    arrivals: newestUniqueMovements(
+      operations.recentMovements,
+      new Set<AirportMovement["movement"]>(["APPROACH", "LANDING"]),
+      limit,
+    ),
+    departures: newestUniqueMovements(
+      operations.recentMovements,
+      new Set<AirportMovement["movement"]>(["TAKEOFF", "DEPARTURE"]),
+      limit,
+    ),
+    attention: operations.recentMovements
+      .filter((movement) =>
+        (movement.movement === "GO_AROUND" || movement.movement === "HOLDING")
+        && Number.isFinite(Date.parse(movement.observedAt)))
+      .sort((left, right) =>
+        Date.parse(right.observedAt) - Date.parse(left.observedAt)
+        || right.flightId - left.flightId)
+      .slice(0, limit),
+    runwayUsage: operations.runwayUsage
+      .filter((item) => Number.isFinite(item.total) && item.total > 0)
+      .slice()
+      .sort((left, right) =>
+        right.total - left.total
+        || left.designator.localeCompare(right.designator, undefined, { numeric: true }))
+      .slice(0, AIRPORT_LIVE_BOARD_RUNWAY_LIMIT),
+  };
 }

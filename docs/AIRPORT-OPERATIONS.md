@@ -41,6 +41,19 @@ the lower-level source. Results are computed from historical sampled
 positions, so a selected period is not reconstructed from current aircraft
 state and may be incomplete when query caps are reached.
 
+## Airport Live Board V1
+
+The airport detail reuses the 24-hour operations response and the existing
+airport-weather response in one page-scoped controller. The controller performs
+a one-shot refresh every 30 seconds and never opens another aircraft stream.
+Recent Arrivals and Recent Departures are newest-first, deduplicated by Flight
+ID, and capped at six rows each. GO_AROUND/HOLDING events have their own
+six-row operational lane. Runway usage is capped at four rows.
+
+The board also reuses the same METAR to show flight category, wind, visibility,
+temperature and QNH. These are observational receiver/weather views rather than
+airport schedules, FIDS, runway assignments or ATC instructions.
+
 ## Limitations
 
 Receiver gaps, late acquisition, missing routes, missing METAR, helicopters,

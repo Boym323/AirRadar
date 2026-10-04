@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import {
+  buildAirportLiveBoardSnapshot,
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
 } from "@/lib/airport-intelligence/v3";
@@ -131,6 +132,43 @@ describe("Airport Intelligence V3 composer", () => {
       windFavoredRunway: null,
       alignment: "unknown",
     });
+  });
+
+  it("builds bounded deduplicated live-board arrival and departure lanes", () => {
+    const data = operations([
+      movement(1, "APPROACH", "2026-10-04T07:00:00.000Z"),
+      movement(1, "LANDING", "2026-10-04T07:05:00.000Z"),
+      movement(2, "APPROACH", "2026-10-04T07:04:00.000Z"),
+      movement(3, "TAKEOFF", "2026-10-04T07:03:00.000Z"),
+      movement(3, "DEPARTURE", "2026-10-04T07:06:00.000Z"),
+      movement(4, "DEPARTURE", "not-a-time"),
+    ]);
+
+    const live = buildAirportLiveBoardSnapshot(data);
+    expect(live.arrivals.map((item) => [item.flightId, item.movement])).toEqual([
+      [1, "LANDING"],
+      [2, "APPROACH"],
+    ]);
+    expect(live.departures.map((item) => [item.flightId, item.movement])).toEqual([
+      [3, "DEPARTURE"],
+    ]);
+  });
+
+  it("keeps operational attention events and runway usage bounded and ordered", () => {
+    const data = operations([
+      movement(1, "HOLDING", "2026-10-04T07:00:00.000Z", null),
+      movement(2, "GO_AROUND", "2026-10-04T07:10:00.000Z"),
+      movement(3, "LANDING", "2026-10-04T07:20:00.000Z"),
+    ]);
+    data.runwayUsage = [
+      { designator: "11", arrivals: 2, departures: 1, total: 3 },
+      { designator: "29", arrivals: 7, departures: 2, total: 9 },
+      { designator: "16", arrivals: 0, departures: 0, total: 0 },
+    ];
+
+    const live = buildAirportLiveBoardSnapshot(data, 1);
+    expect(live.attention.map((item) => item.movement)).toEqual(["GO_AROUND"]);
+    expect(live.runwayUsage.map((item) => item.designator)).toEqual(["29", "11"]);
   });
 
   it("builds a bounded newest-first unified movement timeline and drops invalid timestamps", () => {

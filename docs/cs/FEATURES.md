@@ -12,7 +12,7 @@ not yet been historically attributed.
 | Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
 | Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
-| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, and inferred Airport Operations intelligence. |
+| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog and a bounded Airport Live Board with receiver-inferred arrivals, departures, runway usage, operational events, current weather and observed traffic. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
@@ -49,7 +49,7 @@ zda operátor nakonfiguroval volitelného providera.
 | `/` | Živý MapLibre radar, seznam/filtrování letadel, detail vybraného letadla, labely letadel podle zoomu, živá stopa, překryvy tras/letišť/ATC, volitelné kruhy dosahu přijímače a barevné režimy letadel, klávesové zkratky, stav SSE spojení, kompaktní souhrn ADS-B logbooku, volitelný SIGMET, česká ATS route intelligence a kontext plánovaného vzdušného prostoru AUP/UUP. Volitelný přepínač pokrytí LOCAL/EXTENDED kombinuje lokální readsb s RAM-only síťovými pozorováními ADSB.lol. Volitelná samostatná vrstva, seznam a detail OGN/FLARM používají vyhrazený RAM-only SSE tok. | Produkční jádro; readsb nebo demo provider. OGN, počasí, ATS route intelligence a překryvy aktivity vzdušného prostoru jsou nezávislé/fail-soft. |
 | `/aircraft/:hex` | Detail ve stylu flight card s hlavičkou callsign/registrace/typ/provozovatel, živým pohybem a proveniencí, kontextem trasy/flight planu, časovou osou first/last seen, omezeným 30minutovým grafem výšky z nejnovější historie FlightPosition, akcí pro úplnou stopu, trvalými metadaty letadla, nedávnými instancemi letu, 7/30denním souhrnem, celoživotní statistikou instancí Flight, stavem logbooku NEW/RARE/RETURNING, volitelnou fotografií a kompaktním počasím nejprve pro cíl a potom pro odlet. | Produkce; PostgreSQL je nutné pro trvalý detail, počasí/foto jsou volitelné. |
 | `/flights/:id` | Flight Story V2 se souhrnem pozorovaného letu, jasně označeným kontextem letišť, badge výrazných událostí, narativní osou first-seen → odvozená událost → last-seen, omezeným playbackem a profily výšky/rychlosti/vertikální rychlosti synchronizovanými s jediným playback clockem. | Produkce s historií PostgreSQL. |
-| `/airports/:icao` | Airport Intelligence V3 s Operations Boardem napojeným na jeden sdílený 24h operations/weather controller, receiver-inferred aktivitou, sjednocenou časovou osou pohybů s odkazy na Flight Story, porovnáním runway evidence s větrem a dále s katalogovými metadaty, geometrií drah, METAR/TAF, živým okolním ADS-B provozem, navaid, okolními letišti a 7/30denním souhrnem provozu přijímače. | Produkce; výsledky pohybů/drah jsou omezené inference z lokální vzorkované historie a nejsou autoritativními ATC daty. |
+| `/airports/:icao` | Airport Live Board V1 nad Airport Intelligence V3: jeden sdílený 24h operations/weather controller s omezeným 30s refreshem, poslední receiver-inferred přílety/odlety, provozní události, využití drah + receiver-vs-wind intelligence, kompaktní aktuální počasí, sjednocená Flight Story timeline a dále katalogová metadata, geometrie drah, METAR/TAF, živý okolní ADS-B provoz, navaid, okolní letiště a 7/30denní souhrn. | Produkce; pohyby a dráhy jsou omezené inference lokálního přijímače, nikoli letištní FIDS nebo autoritativní ATC data. |
 | `/history` | Omezené vyhledávání/seznam instancí letu, detail vzorkovaných pozic a playback mapa. | Produkce; funkce PostgreSQL bez závislosti na živém pollingu. |
 | `/time-machine` | Omezené historické přehrávání radaru všech letadel s výběrem UTC, časovou osou, markery událostí, výběrem letadla, stopou vybraného letadla a volitelným historickým kontextem radar/METAR/vítr/AUP-UUP. | Produkce s historií PostgreSQL `FlightPosition`; dostupnost kontextu se řídí aktivací a retencí omezeného archivu. |
 | `/statistics` | Agregace přijímače dnes/7 dní/30 dní, porovnání aktuálního a předchozího období, trendy, vizualizace pokrytí, příjmové rekordy, omezený CSV export, receiver-observed traffic intelligence a 7/30denní analytika spolehlivosti pokrytí/přijímače. | Produkční jádro; traffic a range analytika používá omezená čtení PostgreSQL, aktuální čítače přijímače zůstávají v RAM. |
@@ -59,6 +59,27 @@ zda operátor nakonfiguroval volitelného providera.
 | `/recap/weekly` | Sedmidenní přehled přijímače s omezeným porovnáním proti předchozím sedmi dnům. | Produkce, pokud jsou dostupné historie/agregace PostgreSQL. |
 | `/fleet` | Konkrétní letadla z ICAO pravidel watchlistu, live/offline stav, počty nedávných pozorovaných letů, trasy/letiště a lazy fotografie. | Produkce; neidentitní pravidla watchlistu jsou vynechána, historie PostgreSQL je volitelná. |
 | `/system` | Sanitizovaný stav runtime, přijímače, persistence, statistik, ATC, počasí, OGN, alertů a letišť. Lazy providery weather/radar/wind/ADSBDB zobrazují cold-start stavy `ON DEMAND`/`LOADING` a omezené bezpečné důvody stavů degraded/offline. | Produkční read-only diagnostika; nikdy nespouští volitelné upstream požadavky. |
+
+## Airport Live Board V1
+
+Detail letiště rozšiřuje existující Airport Intelligence V3 board na průběžně
+obnovovaný provozní pohled bez dalšího backend streamu nebo persistence cesty.
+Jediný page-scoped controller dál vlastní přesně dvě čtení: omezený 24hodinový
+snapshot `/api/airports/:icao/operations` a snapshot počasí letiště. Obě čtení
+obnovuje jedním 30sekundovým one-shot timerem; ruční retry používá stejnou cestu.
+
+Board přidává omezené newest-first lane Poslední přílety a Poslední odlety s
+jedním nejnovějším pohybem na Flight, samostatný lane provozních událostí
+GO_AROUND/HOLDING, přehled využití maximálně čtyř drah a kompaktní METAR strip
+pro kategorii, vítr, dohlednost, teplotu a QNH. Existující runway-vs-wind
+intelligence i sjednocená movement timeline zůstávají zachované. Každý flight
+řádek odkazuje na existující Flight Story.
+
+Všechny pohyby a runway hodnoty zůstávají receiver-observed nebo
+receiver-inferred. Board není letištní FIDS, zdroj letového řádu, potvrzení
+přidělení dráhy ani ATC feed. Existující nearby-aircraft komponenta zůstává
+jediným airport konzumentem zavedeného aircraft SSE; Live Board V1 nepřidává
+EventSource, DB schéma, migraci ani write lane.
 
 ## Command Search V2
 

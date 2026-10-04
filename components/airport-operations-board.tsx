@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { aircraftFlightHref } from "@/lib/aircraft/detail-links";
 import {
+  buildAirportLiveBoardSnapshot,
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
 } from "@/lib/airport-intelligence/v3";
@@ -11,7 +12,7 @@ import type { AirportOperationsControllerState } from "@/components/airport-oper
 import type { AirportMovement } from "@/lib/server/airport-movements";
 import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
 import { ContextBadge, MetricCard, MetricStrip } from "@/components/ui-primitives";
-import { formatDateTime, formatSpeed, formatTime, t } from "@/lib/i18n";
+import { formatDateTime, formatNumber, formatSpeed, formatTime, formatWeatherVisibility, t } from "@/lib/i18n";
 
 function movementLabel(movement: AirportMovement["movement"]): string {
   return {
@@ -55,6 +56,43 @@ function statusLabel(status: AirportOperationsControllerState["status"]): string
   }[status];
 }
 
+
+function movementIdentity(movement: AirportMovement): string {
+  return movement.callsign || movement.registration || movement.icaoHex;
+}
+
+function LiveMovementLane({
+  title,
+  kicker,
+  movements,
+  testId,
+}: {
+  title: string;
+  kicker: string;
+  movements: AirportMovement[];
+  testId: string;
+}) {
+  return <section className="airport-live-lane" data-testid={testId}>
+    <div className="airport-live-lane-heading">
+      <div>
+        <span className="ui-kicker">{kicker}</span>
+        <h3>{title}</h3>
+      </div>
+      <span>{movements.length}</span>
+    </div>
+    {movements.length === 0 ? <p className="airport-v3-empty">{t.airport.liveBoardNoRecentMovements}</p> : <ol className="airport-live-flight-list">
+      {movements.map((movement) => <li key={`${movement.flightId}:${movement.movement}:${movement.observedAt}`}>
+        <time dateTime={movement.observedAt}>{formatTime(movement.observedAt)}</time>
+        <span className="airport-live-flight-main">
+          <Link href={aircraftFlightHref(movement.flightId)}>{movementIdentity(movement)}</Link>
+          <small>{movementLabel(movement.movement)} · {runwayLabel(movement)}</small>
+        </span>
+        <span className={`airport-v3-confidence ${movement.confidence}`}>{confidenceLabel(movement.confidence)}</span>
+      </li>)}
+    </ol>}
+  </section>;
+}
+
 export function AirportOperationsBoard({
   airport,
   runways,
@@ -67,20 +105,23 @@ export function AirportOperationsBoard({
   const operations = controller.operations;
   const weather = controller.weather;
   const runway = buildAirportRunwayIntelligence(operations, runways, weather?.metar ?? null);
+  const liveBoard = buildAirportLiveBoardSnapshot(operations);
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
-  const wind = weather?.metar && !weather.metar.windCalm && !weather.metar.windVariable
-    && weather.metar.windDirectionDeg !== null && weather.metar.windSpeedKt !== null
-    ? `${String(Math.round(weather.metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(weather.metar.windSpeedKt)}`
+  const metar = weather?.metar ?? null;
+  const wind = metar && !metar.windCalm && !metar.windVariable
+    && metar.windDirectionDeg !== null && metar.windSpeedKt !== null
+    ? `${String(Math.round(metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(metar.windSpeedKt)}`
     : null;
 
-  return <section id="airport-intelligence-v3" className="airport-v3-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3">
+  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v1">
+    <div data-testid="airport-live-board">
     <div className="airport-v3-hero">
       <div className="airport-v3-heading">
         <div>
-          <span className="ui-kicker">{t.airport.v3Kicker}</span>
+          <span className="ui-kicker">{t.airport.liveBoardKicker}</span>
           <h2 id="airport-v3-title">{airport.icaoCode} · {operations ? activityLabel(operations.activity) : statusLabel(controller.status)}</h2>
-          <p>{t.airport.v3Description}</p>
+          <p>{t.airport.liveBoardDescription}</p>
         </div>
         <div className="airport-v3-badges">
           <ContextBadge variant="inferred">{t.airport.v3ReceiverInferred}</ContextBadge>
@@ -106,10 +147,40 @@ export function AirportOperationsBoard({
       </MetricStrip>
 
       <div className="airport-v3-meta">
-        <span>{t.airport.v3Snapshot}: {operations ? formatDateTime(operations.generatedAt) : "—"}</span>
+        <span>{t.airport.liveBoardUpdated}: {operations ? formatDateTime(operations.generatedAt) : "—"}</span>
+        <span>{t.airport.liveBoardAutoRefresh}</span>
         <span>{t.airport.v3Completeness}: {operations ? (operations.complete && !operations.truncated ? t.airport.v3Complete : t.airport.v3Incomplete) : statusLabel(controller.status)}</span>
         {(controller.operationsFailed || controller.weatherFailed) ? <button type="button" onClick={controller.refresh}>{t.weather.retry}</button> : null}
       </div>
+    </div>
+
+    <section className="airport-live-weather-strip" aria-label={t.airport.liveBoardWeather} data-testid="airport-live-board-weather">
+      <span><small>{t.weather.flightCategory}</small><strong>{metar?.flightCategory ?? "—"}</strong></span>
+      <span><small>{t.weather.wind}</small><strong>{wind ?? "—"}</strong></span>
+      <span><small>{t.weather.visibility}</small><strong>{metar ? formatWeatherVisibility(metar.visibilityMeters, metar.visibilityGreaterThan) : "—"}</strong></span>
+      <span><small>{t.weather.temperature}</small><strong>{metar?.temperatureC === null || metar?.temperatureC === undefined ? "—" : `${formatNumber(metar.temperatureC, 0)} °C`}</strong></span>
+      <span><small>{t.weather.qnh}</small><strong>{metar?.altimeterHpa === null || metar?.altimeterHpa === undefined ? "—" : `${formatNumber(metar.altimeterHpa, 0)} hPa`}</strong></span>
+    </section>
+
+    <div className="airport-live-lanes">
+      <LiveMovementLane
+        kicker={t.airport.liveBoardArrivalsKicker}
+        title={t.airport.liveBoardArrivalsTitle}
+        movements={liveBoard.arrivals}
+        testId="airport-live-board-arrivals"
+      />
+      <LiveMovementLane
+        kicker={t.airport.liveBoardDeparturesKicker}
+        title={t.airport.liveBoardDeparturesTitle}
+        movements={liveBoard.departures}
+        testId="airport-live-board-departures"
+      />
+      <LiveMovementLane
+        kicker={t.airport.liveBoardAlertsKicker}
+        title={t.airport.liveBoardAlertsTitle}
+        movements={liveBoard.attention}
+        testId="airport-live-board-alerts"
+      />
     </div>
 
     <div className="airport-v3-grid">
@@ -136,6 +207,19 @@ export function AirportOperationsBoard({
               : t.weather.noClearWindFavoredRunway}</small>
           </div>
         </div>
+
+        {liveBoard.runwayUsage.length > 0 ? <div className="airport-live-runway-usage" data-testid="airport-live-board-runways">
+          <div className="airport-live-runway-usage-heading">
+            <strong>{t.airport.liveBoardRunwayUsage}</strong>
+            <span>{operations?.window ?? "24h"}</span>
+          </div>
+          {liveBoard.runwayUsage.map((item) => <div className="airport-live-runway-usage-row" key={item.designator}>
+            <strong>RWY {item.designator}</strong>
+            <span>{t.airport.liveBoardRunwayArrivals}: {item.arrivals}</span>
+            <span>{t.airport.liveBoardRunwayDepartures}: {item.departures}</span>
+            <span>{t.airport.liveBoardRunwayTotal}: {item.total}</span>
+          </div>)}
+        </div> : null}
 
         <p className={`airport-v3-runway-alignment ${runway.alignment}`}>
           {runway.alignment === "aligned"
@@ -175,6 +259,7 @@ export function AirportOperationsBoard({
               </ol>}
         <p className="airport-v3-disclaimer">{t.airport.movementDisclaimer}</p>
       </section>
+    </div>
     </div>
   </section>;
 }
