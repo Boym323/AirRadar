@@ -111,4 +111,9 @@ jobs:
 
           echo "Repository metadata PR #${pr_number} is ready."
 
-          echo "Repository metadata PR #${pr_number} is ready for review; automatic merge is disabled."
+          gh pr merge "${pr_number}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --squash \
+            --delete-branch
+
+          echo "Repository metadata PR #${pr_number} merged automatically."

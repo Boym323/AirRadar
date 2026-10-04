@@ -50,6 +50,9 @@ describe("repository metadata automation", () => {
       '--title "chore: sync repository metadata"',
     );
     expect(metadataWorkflow).toContain('gh pr merge "${pr_number}"');
+    expect(metadataWorkflow).toContain("--squash");
+    expect(metadataWorkflow).toContain("--delete-branch");
+    expect(metadataWorkflow).not.toContain("automatic merge is disabled");
   });
 
   it("keeps generated metadata merges out of production deployment", () => {
