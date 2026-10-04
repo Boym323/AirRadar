@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { closeSync, openSync, readFileSync, readSync, statSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readFileSync, readSync, statSync } from "node:fs";
 import type { OgnDdbEntry, OgnDdbResolution } from "@/lib/ogn/types";
 
 export const DEFAULT_OGN_SOFTRF_DDB_PATH = "/var/lib/airradar/ogn/softrf/ogn.db";
@@ -247,13 +247,17 @@ export class SoftRfDdb {
 
   private readMetadata(): { generatedAt: string; sha256: string } {
     let serialized: string;
+    let descriptor = -1;
     try {
-      const metadataStat = statSync(this.metadataPath);
+      descriptor = openSync(this.metadataPath, "r");
+      const metadataStat = fstatSync(descriptor);
       if (!metadataStat.isFile() || !Number.isSafeInteger(metadataStat.size) || metadataStat.size <= 0 || metadataStat.size > MAX_SOFTRF_METADATA_BYTES) throw new Error("METADATA_INVALID");
-      serialized = readFileSync(this.metadataPath, "utf8");
+      serialized = readFileSync(descriptor, "utf8");
     } catch (error) {
       if (error instanceof Error && error.message === "METADATA_INVALID") throw error;
       throw new Error("METADATA_UNAVAILABLE");
+    } finally {
+      if (descriptor !== -1) closeSync(descriptor);
     }
     let payload: unknown;
     try {
