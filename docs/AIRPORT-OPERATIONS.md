@@ -53,6 +53,27 @@ When correlation succeeds the active row exposes the matched Flight ID through F
 temperature and QNH. These are observational receiver/weather views rather than
 airport schedules, FIDS, runway assignments or ATC instructions.
 
+## Airport Live Board V6
+
+V6 keeps the V5 NOW Flow Pulse and adds a second pure projection over the same
+shared data: Flow Trend / Pressure. It compares receiver-inferred arrival and
+departure movements in the latest 15 minutes with the preceding 15 minutes.
+A one-movement difference remains STEADY; RISING or FALLING requires a delta
+of at least two, which deliberately reduces low-volume oscillation.
+
+Holding is counted over the current 15-minute window and go-arounds over a
+30-minute exception window. The pressure level is a bounded deterministic score
+over the current inbound, outbound, final, holding, go-around and route-conflict
+snapshot plus conservative bonuses for clearly rising arrival/departure flow.
+It is an observational flow indicator, not an airport-capacity, delay, safety
+or ATC metric.
+
+Recent runway consistency is evaluated over 30 minutes from runway-bearing
+movement evidence. At least three samples are required; STABLE requires one
+runway to account for at least 75 percent of those samples. Otherwise the result
+is MIXED or UNKNOWN. V6 adds no request, stream, database table or persistence
+write path.
+
 ## Limitations
 
 Receiver gaps, late acquisition, missing routes, missing METAR, helicopters,

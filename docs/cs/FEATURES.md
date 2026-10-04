@@ -78,6 +78,21 @@ airport SSE a omezeným operations snapshotem. Journey stavy, Flight Story linky
 recent movements, runway usage, METAR i runway-vs-wind intelligence zůstávají
 beze změny. Board je nadále observational/inferred, nikoli FIDS nebo ATC feed.
 
+## Airport Live Board V6
+
+V6 přidává krátkodobý panel Flow Trend / Pressure bez změny stávající
+shared-data architektury. Receiver-inferred přílety a odlety se porovnávají ve
+dvou navazujících 15minutových oknech; trend vyžaduje rozdíl alespoň dvou
+pohybů. Nedávný holding používá aktuální 15minutové okno, zatímco go-aroundy
+30minutové exception okno.
+
+Omezený deterministický pressure level shrnuje existující NOW flow a zřetelné
+rostoucí trendy. Konzistence runway flow používá posledních 30 minut pohybů s
+runway evidencí a vyžaduje alespoň tři vzorky; dominantní dráha musí mít podíl
+alespoň 75 procent, aby dostala stav STABILNÍ. Hodnoty zůstávají
+observational/inferred a nepředstavují kapacitu letiště, zpoždění ani ATC
+guidance. V6 nepřidává další fetch, EventSource ani persistence path.
+
 ## Command Search V2
 
 Root-level Command Search palette zůstává dostupná ze všech rout přes

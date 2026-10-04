@@ -12,7 +12,7 @@ not yet been historically attributed.
 | Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
 | Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
-| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, flow pulse, bounded operational exceptions, and LANDED completion. |
+| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, flow pulse, short-term flow pressure, runway consistency, bounded operational exceptions, and LANDED completion. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
@@ -77,6 +77,21 @@ single airport SSE plus bounded operations snapshot. Existing journey states,
 Flight Story links, recent movements, runway usage, METAR and runway-vs-wind
 intelligence remain unchanged. The board is observational/inferred, not FIDS or
 ATC guidance.
+
+## Airport Live Board V6
+
+V6 adds a short-term Flow Trend / Pressure panel without changing the existing
+shared-data architecture. Receiver-inferred arrivals and departures are compared
+across consecutive 15-minute windows; a trend requires a difference of at least
+two movements. Recent holding uses the current 15-minute window, while
+go-arounds use a 30-minute exception window.
+
+A bounded deterministic pressure level summarizes the existing NOW flow and
+clear rising-trend signals. Runway-flow consistency uses the latest 30 minutes
+of runway-bearing movement evidence and requires at least three samples; a
+dominant runway must reach 75 percent to be labeled STABLE. These values remain
+observational/inferred and do not represent airport capacity, delays or ATC
+guidance. V6 adds no fetch, EventSource or persistence path.
 
 ## Command Search V2
 

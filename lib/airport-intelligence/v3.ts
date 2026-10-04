@@ -247,6 +247,39 @@ export interface AirportJourneyFlowSummary {
 }
 
 export const AIRPORT_LIVE_BOARD_ATTENTION_LIMIT = 6;
+export const AIRPORT_LIVE_BOARD_FLOW_TREND_WINDOW_MS = 15 * 60_000;
+export const AIRPORT_LIVE_BOARD_EXCEPTION_WINDOW_MS = 30 * 60_000;
+export const AIRPORT_LIVE_BOARD_RUNWAY_CONSISTENCY_WINDOW_MS = 30 * 60_000;
+
+export type AirportFlowTrend = "RISING" | "STEADY" | "FALLING" | "NO_DATA";
+export type AirportFlowPressureLevel = "LOW" | "MODERATE" | "ELEVATED" | "HIGH";
+export type AirportRunwayFlowConsistency = "STABLE" | "MIXED" | "UNKNOWN";
+
+export interface AirportFlowWindowTrend {
+  current: number;
+  previous: number;
+  delta: number;
+  trend: AirportFlowTrend;
+}
+
+export interface AirportFlowPressureSummary {
+  trendWindowMinutes: 15;
+  exceptionWindowMinutes: 30;
+  arrivals: AirportFlowWindowTrend;
+  departures: AirportFlowWindowTrend;
+  holdingRecent: number;
+  goAroundRecent: number;
+  pressure: {
+    level: AirportFlowPressureLevel;
+    score: number;
+  };
+  runway: {
+    designator: string | null;
+    consistency: AirportRunwayFlowConsistency;
+    share: number | null;
+    samples: number;
+  };
+}
 
 export function buildAirportJourneyFlowSummary(
   snapshot: AirportCorrelatedTrafficSnapshot,
@@ -283,6 +316,148 @@ export function buildAirportJourneyFlowSummary(
         || left.distanceKm - right.distanceKm
         || left.aircraft.icaoHex.localeCompare(right.aircraft.icaoHex))
       .slice(0, Math.max(1, attentionLimit)),
+  };
+}
+
+function uniqueMovementCount(
+  movements: readonly AirportMovement[],
+  kinds: ReadonlySet<AirportMovement["movement"]>,
+  fromMs: number,
+  toMs: number,
+): number {
+  const flights = new Set<number>();
+  for (const movement of movements) {
+    if (!kinds.has(movement.movement)) continue;
+    const observedAt = Date.parse(movement.observedAt);
+    if (!Number.isFinite(observedAt) || observedAt < fromMs || observedAt >= toMs) continue;
+    flights.add(movement.flightId);
+  }
+  return flights.size;
+}
+
+function flowTrend(current: number, previous: number): AirportFlowWindowTrend {
+  const delta = current - previous;
+  const trend: AirportFlowTrend = current === 0 && previous === 0
+    ? "NO_DATA"
+    : delta >= 2
+      ? "RISING"
+      : delta <= -2
+        ? "FALLING"
+        : "STEADY";
+  return { current, previous, delta, trend };
+}
+
+function pressureLevel(score: number): AirportFlowPressureLevel {
+  if (score <= 3) return "LOW";
+  if (score <= 6) return "MODERATE";
+  if (score <= 9) return "ELEVATED";
+  return "HIGH";
+}
+
+function recentRunwayConsistency(
+  movements: readonly AirportMovement[],
+  fromMs: number,
+  toMs: number,
+): AirportFlowPressureSummary["runway"] {
+  const runwayRelevant = new Set<AirportMovement["movement"]>([
+    "APPROACH",
+    "LANDING",
+    "TAKEOFF",
+    "DEPARTURE",
+    "GO_AROUND",
+  ]);
+  const byFlight = new Map<number, string>();
+  for (const movement of movements) {
+    if (!runwayRelevant.has(movement.movement) || !movement.runway?.designator) continue;
+    const observedAt = Date.parse(movement.observedAt);
+    if (!Number.isFinite(observedAt) || observedAt < fromMs || observedAt >= toMs) continue;
+    if (!byFlight.has(movement.flightId)) {
+      byFlight.set(movement.flightId, movement.runway.designator.trim().toUpperCase());
+    }
+  }
+
+  const counts = new Map<string, number>();
+  for (const designator of byFlight.values()) counts.set(designator, (counts.get(designator) ?? 0) + 1);
+  const samples = byFlight.size;
+  const top = [...counts.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], undefined, { numeric: true }))[0] ?? null;
+  if (!top) return { designator: null, consistency: "UNKNOWN", share: null, samples: 0 };
+
+  const share = top[1] / samples;
+  const consistency: AirportRunwayFlowConsistency = samples < 3
+    ? "UNKNOWN"
+    : share >= 0.75
+      ? "STABLE"
+      : "MIXED";
+  return { designator: top[0], consistency, share, samples };
+}
+
+export function buildAirportFlowPressureSummary(
+  flow: AirportJourneyFlowSummary,
+  operations: AirportOperationsResponse | null,
+): AirportFlowPressureSummary {
+  const generatedAt = operations ? Date.parse(operations.generatedAt) : Number.NaN;
+  if (!operations || !Number.isFinite(generatedAt)) {
+    return {
+      trendWindowMinutes: 15,
+      exceptionWindowMinutes: 30,
+      arrivals: flowTrend(0, 0),
+      departures: flowTrend(0, 0),
+      holdingRecent: 0,
+      goAroundRecent: 0,
+      pressure: {
+        level: pressureLevel(
+          flow.inbound + flow.outbound + flow.final + 2 * flow.holding + 2 * flow.goAround + flow.routeConflicts,
+        ),
+        score: flow.inbound + flow.outbound + flow.final + 2 * flow.holding + 2 * flow.goAround + flow.routeConflicts,
+      },
+      runway: { designator: null, consistency: "UNKNOWN", share: null, samples: 0 },
+    };
+  }
+
+  const currentFrom = generatedAt - AIRPORT_LIVE_BOARD_FLOW_TREND_WINDOW_MS;
+  const previousFrom = currentFrom - AIRPORT_LIVE_BOARD_FLOW_TREND_WINDOW_MS;
+  const exceptionFrom = generatedAt - AIRPORT_LIVE_BOARD_EXCEPTION_WINDOW_MS;
+  const runwayFrom = generatedAt - AIRPORT_LIVE_BOARD_RUNWAY_CONSISTENCY_WINDOW_MS;
+  const arrivals = new Set<AirportMovement["movement"]>(["APPROACH", "LANDING"]);
+  const departures = new Set<AirportMovement["movement"]>(["TAKEOFF", "DEPARTURE"]);
+  const currentArrivals = uniqueMovementCount(operations.recentMovements, arrivals, currentFrom, generatedAt + 1);
+  const previousArrivals = uniqueMovementCount(operations.recentMovements, arrivals, previousFrom, currentFrom);
+  const currentDepartures = uniqueMovementCount(operations.recentMovements, departures, currentFrom, generatedAt + 1);
+  const previousDepartures = uniqueMovementCount(operations.recentMovements, departures, previousFrom, currentFrom);
+  const arrivalTrend = flowTrend(currentArrivals, previousArrivals);
+  const departureTrend = flowTrend(currentDepartures, previousDepartures);
+  const holdingRecent = uniqueMovementCount(
+    operations.recentMovements,
+    new Set<AirportMovement["movement"]>(["HOLDING"]),
+    currentFrom,
+    generatedAt + 1,
+  );
+  const goAroundRecent = uniqueMovementCount(
+    operations.recentMovements,
+    new Set<AirportMovement["movement"]>(["GO_AROUND"]),
+    exceptionFrom,
+    generatedAt + 1,
+  );
+
+  const score = flow.inbound
+    + flow.outbound
+    + flow.final
+    + 2 * flow.holding
+    + 2 * flow.goAround
+    + flow.routeConflicts
+    + (arrivalTrend.trend === "RISING" ? 1 : 0)
+    + (departureTrend.trend === "RISING" ? 1 : 0);
+
+  return {
+    trendWindowMinutes: 15,
+    exceptionWindowMinutes: 30,
+    arrivals: arrivalTrend,
+    departures: departureTrend,
+    holdingRecent,
+    goAroundRecent,
+    pressure: { level: pressureLevel(score), score },
+    runway: recentRunwayConsistency(operations.recentMovements, runwayFrom, generatedAt + 1),
   };
 }
 

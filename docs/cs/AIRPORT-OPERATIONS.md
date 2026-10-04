@@ -60,6 +60,26 @@ nebo CONFLICT a nikdy nepřepisují pozorovaný pohyb. V5 přidává omezený NO
 teplotu a QNH. Jde o pozorovací pohled přijímače a počasí, nikoli letištní
 letový řád, FIDS, přidělení dráhy nebo instrukce ATC.
 
+## Airport Live Board V6
+
+V6 zachovává NOW Flow Pulse z V5 a nad stejnými sdílenými daty přidává druhou
+čistou projekci: Flow Trend / Pressure. Porovnává receiver-inferred příletové a
+odletové pohyby za posledních 15 minut s předchozími 15 minutami. Rozdíl
+jediného pohybu zůstává STABILNÍ; stav ROSTE nebo KLESÁ vyžaduje rozdíl alespoň
+dvou pohybů, aby se omezilo kolísání při nízkém provozu.
+
+Holding se počítá za aktuálních 15 minut a go-aroundy v 30minutovém exception
+okně. Pressure level je omezené deterministické skóre nad aktuálním snapshotem
+inbound, outbound, final, holding, go-around a route conflict plus
+konzervativními bonusy za zřetelně rostoucí příletový nebo odletový tok. Jde o
+pozorovací ukazatel toku, nikoli metriku kapacity letiště, zpoždění, bezpečnosti
+nebo ATC.
+
+Konzistence dráhy se vyhodnocuje z runway evidence posledních 30 minut. Jsou
+potřeba alespoň tři vzorky; STABILNÍ evidence vyžaduje, aby jedna dráha tvořila
+alespoň 75 procent vzorků. Jinak je výsledek SMÍŠENÝ nebo NEURČENÝ. V6
+nepřidává nový request, stream, databázovou tabulku ani persistence write path.
+
 ## Omezení
 
 Výpadky přijímače, chybějící trasa nebo METAR, vrtulníky, touch-

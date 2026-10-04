@@ -5,6 +5,7 @@ import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { aircraftFlightHref } from "@/lib/aircraft/detail-links";
 import {
   buildAirportCorrelatedTrafficSnapshot,
+  buildAirportFlowPressureSummary,
   buildAirportJourneyFlowSummary,
   buildAirportLiveBoardSnapshot,
   buildAirportOperationsTimeline,
@@ -80,6 +81,33 @@ function routeRelationLabel(
       : null;
 }
 
+function flowTrendLabel(trend: ReturnType<typeof buildAirportFlowPressureSummary>["arrivals"]["trend"]): string {
+  return {
+    RISING: t.airport.liveBoardV6TrendRising,
+    STEADY: t.airport.liveBoardV6TrendSteady,
+    FALLING: t.airport.liveBoardV6TrendFalling,
+    NO_DATA: t.airport.liveBoardV6TrendNoData,
+  }[trend];
+}
+
+function pressureLabel(level: ReturnType<typeof buildAirportFlowPressureSummary>["pressure"]["level"]): string {
+  return {
+    LOW: t.airport.liveBoardV6PressureLow,
+    MODERATE: t.airport.liveBoardV6PressureModerate,
+    ELEVATED: t.airport.liveBoardV6PressureElevated,
+    HIGH: t.airport.liveBoardV6PressureHigh,
+  }[level];
+}
+
+function runwayConsistencyLabel(
+  consistency: ReturnType<typeof buildAirportFlowPressureSummary>["runway"]["consistency"],
+): string {
+  return {
+    STABLE: t.airport.liveBoardV6RunwayStable,
+    MIXED: t.airport.liveBoardV6RunwayMixed,
+    UNKNOWN: t.airport.liveBoardV6RunwayUnknown,
+  }[consistency];
+}
 
 function movementIdentity(movement: AirportMovement): string {
   return movement.callsign || movement.registration || movement.icaoHex;
@@ -188,6 +216,7 @@ export function AirportOperationsBoard({
   const liveBoard = buildAirportLiveBoardSnapshot(operations);
   const activeTraffic = buildAirportCorrelatedTrafficSnapshot(liveTraffic.observations, operations);
   const flow = buildAirportJourneyFlowSummary(activeTraffic);
+  const pressure = buildAirportFlowPressureSummary(flow, operations);
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
   const metar = weather?.metar ?? null;
@@ -196,7 +225,7 @@ export function AirportOperationsBoard({
     ? `${String(Math.round(metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(metar.windSpeedKt)}`
     : null;
 
-  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v5">
+  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v6">
     <div data-testid="airport-live-board">
     <div className="airport-v3-hero">
       <div className="airport-v3-heading">
@@ -270,6 +299,51 @@ export function AirportOperationsBoard({
           </li>;
         })}
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardFlowNoAttention}</p>}
+    </section>
+
+    <section className="airport-live-flow-pressure" data-testid="airport-live-board-v6-pressure" aria-labelledby="airport-live-v6-pressure-title">
+      <div className="airport-live-flow-heading">
+        <div>
+          <span className="ui-kicker">{t.airport.liveBoardV6Kicker}</span>
+          <h3 id="airport-live-v6-pressure-title">{t.airport.liveBoardV6Title}</h3>
+        </div>
+        <span>{t.airport.liveBoardV6Window}</span>
+      </div>
+      <MetricStrip className="airport-live-flow-metrics">
+        <MetricCard
+          label={t.airport.liveBoardV6Pressure}
+          value={pressureLabel(pressure.pressure.level)}
+          detail={t.airport.liveBoardV6PressureScore(pressure.pressure.score)}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV6Arrivals}
+          value={`${pressure.arrivals.current} / 15 min`}
+          detail={`${flowTrendLabel(pressure.arrivals.trend)} · Δ ${pressure.arrivals.delta >= 0 ? "+" : ""}${pressure.arrivals.delta}`}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV6Departures}
+          value={`${pressure.departures.current} / 15 min`}
+          detail={`${flowTrendLabel(pressure.departures.trend)} · Δ ${pressure.departures.delta >= 0 ? "+" : ""}${pressure.departures.delta}`}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV6Holding}
+          value={`${pressure.holdingRecent} / 15 min`}
+          detail={t.airport.liveBoardV6ObservedEvents}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV6GoAround}
+          value={`${pressure.goAroundRecent} / 30 min`}
+          detail={t.airport.liveBoardV6ObservedEvents}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV6RunwayFlow}
+          value={pressure.runway.designator ? `RWY ${pressure.runway.designator}` : "—"}
+          detail={pressure.runway.share === null
+            ? runwayConsistencyLabel(pressure.runway.consistency)
+            : `${runwayConsistencyLabel(pressure.runway.consistency)} · ${Math.round(pressure.runway.share * 100)} % · n=${pressure.runway.samples}`}
+        />
+      </MetricStrip>
+      <p className="airport-v3-disclaimer">{t.airport.liveBoardV6Disclaimer}</p>
     </section>
 
     <div className="airport-live-active" data-testid="airport-live-board-active">

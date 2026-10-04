@@ -997,7 +997,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           if (target.mockAirportV3) {
             await visualPage.locator('[data-testid="airport-live-board"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.locator('[data-product="airport-live-board-v5"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-product="airport-live-board-v6"]').waitFor({ state: "visible", timeout: 15_000 });
             const arrivals = visualPage.locator('[data-testid="airport-live-board-arrivals"]');
             const departures = visualPage.locator('[data-testid="airport-live-board-departures"]');
             const alerts = visualPage.locator('[data-testid="airport-live-board-alerts"]');
@@ -1013,6 +1013,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await activeInbound.waitFor({ state: "visible", timeout: 15_000 });
             await activeOutbound.waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.locator('[data-testid="airport-live-board-flow-pulse"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="airport-live-board-v6-pressure"]').waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.locator('[data-testid="airport-v3-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockPredictiveReadiness) {
