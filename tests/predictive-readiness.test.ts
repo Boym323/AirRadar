@@ -109,6 +109,15 @@ describe("Predictive Graduation Readiness V1", () => {
     expect(evaluation.capabilities.ETA.reasons).toContain("integrity.cross_icao_lifecycle_conflict");
   });
 
+  it("never passes a capability from incomplete bounded evidence", () => {
+    const evaluation = evaluatePredictiveReadiness(goodEvidence(), { complete: false });
+    expect(evaluation.capabilities.ETA).toMatchObject({
+      decision: "WAIT",
+      reasons: expect.arrayContaining(["collection.bounded_result_incomplete"]),
+    });
+    expect(evaluation.capabilities.RUNWAY.decision).toBe("WAIT");
+  });
+
   it("downgrades configured PUBLIC capabilities unless readiness is PASS", () => {
     const evaluation = evaluatePredictiveReadiness(goodEvidence());
     expect(enforcePredictiveReadiness({
