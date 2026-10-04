@@ -1,6 +1,10 @@
 import type { AirportCorrelatedTrafficSnapshot, AirportActiveJourneyStage } from "@/lib/airport-intelligence/v3";
 import type { PredictiveOperationsResponse } from "@/lib/predictive-intelligence/operations-center";
 
+export const AIRPORT_LIVE_BOARD_V7_SEQUENCE_LIMIT = 6;
+
+export type AirportArrivalPredictedRunwayConsistency = "STABLE" | "MIXED" | "UNKNOWN";
+
 export interface AirportArrivalSequenceItem {
   position: number;
   icaoHex: string;
@@ -15,11 +19,14 @@ export interface AirportArrivalSequenceItem {
 }
 
 export interface AirportArrivalSequence {
+  version: "airport-live-board-v7";
   items: AirportArrivalSequenceItem[];
   publicPredictionCount: number;
+  predictionCoverage: number | null;
   medianSpacingMinutes: number | null;
   predictedRunway: {
     designator: string | null;
+    consistency: AirportArrivalPredictedRunwayConsistency;
     share: number | null;
     samples: number;
   };
@@ -47,10 +54,30 @@ function median(values: number[]): number | null {
     : ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
 }
 
+function predictedRunwaySummary(runways: string[]): AirportArrivalSequence["predictedRunway"] {
+  const counts = new Map<string, number>();
+  for (const value of runways) {
+    const runway = value.trim().toUpperCase();
+    if (runway) counts.set(runway, (counts.get(runway) ?? 0) + 1);
+  }
+  const samples = [...counts.values()].reduce((sum, count) => sum + count, 0);
+  const top = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], undefined, { numeric: true }))[0] ?? null;
+  if (!top) return { designator: null, consistency: "UNKNOWN", share: null, samples: 0 };
+  const share = top[1] / samples;
+  return {
+    designator: top[0],
+    consistency: samples < 2 ? "UNKNOWN" : share >= 0.75 ? "STABLE" : "MIXED",
+    share,
+    samples,
+  };
+}
+
 export function buildAirportArrivalSequence(input: {
   airportIcao: string;
   traffic: AirportCorrelatedTrafficSnapshot;
   predictive: PredictiveOperationsResponse | null;
+  limit?: number;
 }): AirportArrivalSequence {
   const airportIcao = canonicalAirport(input.airportIcao);
   const predictiveByHex = new Map(
@@ -59,33 +86,40 @@ export function buildAirportArrivalSequence(input: {
 
   const candidates = input.traffic.inbound
     .filter((observation) =>
-      observation.journey.stage !== "LANDED"
+      !observation.aircraft.onGround
+      && observation.journey.stage !== "LANDED"
       && observation.journey.stage !== "GO_AROUND"
       && observation.journey.routeRelation !== "CONFLICT")
-    .map((observation) => {
+    .flatMap((observation) => {
       const aircraft = observation.aircraft;
       const predictive = predictiveByHex.get(aircraft.icaoHex.trim().toUpperCase()) ?? null;
       const predictionMatchesAirport = airportIcao !== null
         && canonicalAirport(predictive?.destination) === airportIcao;
+      const routeConfirmed = observation.journey.routeRelation === "CONFIRMED";
+      if (!routeConfirmed && !predictionMatchesAirport) return [];
+
       const eta = predictionMatchesAirport ? predictive?.etaAdvisory ?? null : null;
       const runway = predictionMatchesAirport ? predictive?.runwayAdvisory ?? null : null;
       const etaMs = eta ? Date.parse(eta.estimatedArrivalAt) : Number.NaN;
-      return {
+      return [{
         aircraft,
         observation,
         eta,
         runway,
         etaMs: Number.isFinite(etaMs) ? etaMs : null,
-      };
+      }];
     })
     .sort((left, right) => {
-      if (left.etaMs !== null && right.etaMs !== null) return left.etaMs - right.etaMs || left.observation.distanceKm - right.observation.distanceKm;
+      if (left.etaMs !== null && right.etaMs !== null) {
+        return left.etaMs - right.etaMs || left.observation.distanceKm - right.observation.distanceKm;
+      }
       if (left.etaMs !== null) return -1;
       if (right.etaMs !== null) return 1;
       return stagePriority(left.observation.journey.stage) - stagePriority(right.observation.journey.stage)
         || left.observation.distanceKm - right.observation.distanceKm
         || left.aircraft.icaoHex.localeCompare(right.aircraft.icaoHex);
-    });
+    })
+    .slice(0, Math.max(1, input.limit ?? AIRPORT_LIVE_BOARD_V7_SEQUENCE_LIMIT));
 
   const items = candidates.map((candidate, index): AirportArrivalSequenceItem => ({
     position: index + 1,
@@ -101,22 +135,17 @@ export function buildAirportArrivalSequence(input: {
   }));
 
   const etaTimes = candidates.flatMap((candidate) => candidate.etaMs === null ? [] : [candidate.etaMs]);
-  const spacings = etaTimes.slice(1).map((value, index) => (value - etaTimes[index]!) / 60_000).filter((value) => Number.isFinite(value) && value >= 0);
-  const runwayCounts = new Map<string, number>();
-  for (const item of items) {
-    if (item.predictedRunway) runwayCounts.set(item.predictedRunway, (runwayCounts.get(item.predictedRunway) ?? 0) + 1);
-  }
-  const runwayTop = [...runwayCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], undefined, { numeric: true }))[0] ?? null;
-  const runwaySamples = [...runwayCounts.values()].reduce((sum, count) => sum + count, 0);
+  const spacings = etaTimes.slice(1)
+    .map((value, index) => (value - etaTimes[index]!) / 60_000)
+    .filter((value) => Number.isFinite(value) && value >= 0);
+  const publicPredictionCount = items.filter((item) => item.eta !== null || item.predictedRunway !== null).length;
 
   return {
+    version: "airport-live-board-v7",
     items,
-    publicPredictionCount: items.filter((item) => item.eta !== null || item.predictedRunway !== null).length,
+    publicPredictionCount,
+    predictionCoverage: items.length ? publicPredictionCount / items.length : null,
     medianSpacingMinutes: median(spacings),
-    predictedRunway: {
-      designator: runwayTop?.[0] ?? null,
-      share: runwayTop && runwaySamples > 0 ? runwayTop[1] / runwaySamples : null,
-      samples: runwaySamples,
-    },
+    predictedRunway: predictedRunwaySummary(items.flatMap((item) => item.predictedRunway ? [item.predictedRunway] : [])),
   };
 }
