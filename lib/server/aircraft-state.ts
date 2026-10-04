@@ -173,6 +173,13 @@ export class AircraftStateService {
   /** Compatibility alias for local-only internals and existing tests. */
   private readonly aircraft = this.localAircraft;
   private readonly networkAircraft = new Map<string, Aircraft>();
+  /**
+   * Latest successful provider membership per source. These sets deliberately
+   * differ from the retained maps: a missing aircraft may remain visible for
+   * its stale/grace window while source-affinity failover is already timing.
+   */
+  private localObservedHexes = new Set<string>();
+  private networkObservedHexes = new Set<string>();
   /** Identity-level source affinity prevents local/network hand-offs for one ICAO. */
   private readonly sourcePreferences = new Map<string, "local" | "network">();
   /** Start of a preferred-source outage while the alternate observation remains live. */
@@ -558,7 +565,13 @@ export class AircraftStateService {
         this.lastError = error instanceof Error ? error.message : "Unknown aircraft provider error";
         this.messagesPerSecond = null;
         this.consecutiveFailures += 1;
-        this.removeStaleAircraft();
+        // A failed provider request proves no current membership. Keep the
+        // last good observations through the stale/source-affinity window so
+        // the map can fail over without a blank interval.
+        this.localObservedHexes = new Set();
+        const now = Date.now();
+        this.reconcileSourcePreferences(now);
+        this.removeStaleAircraft(now);
         this.invalidateSnapshotCache();
       }
 
@@ -689,15 +702,20 @@ export class AircraftStateService {
       const atc = previous?.atc ?? incoming.atc;
       this.localAircraft.set(incoming.icaoHex, { ...localIncoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
     }
-    for (const hex of this.localAircraft.keys()) {
-      if (!currentHexes.has(hex)) this.removeAircraft(hex);
-    }
-    this.reconcileSourcePreferences();
+    this.localObservedHexes = currentHexes;
+    const now = Date.now();
+    // Start/advance source-affinity failover before pruning. This lets a
+    // preferred source keep its last known position during the grace window,
+    // then hand off directly to a live alternate source without disappearing.
+    this.reconcileSourcePreferences(now);
+    this.pruneMissingAircraft("local", currentHexes, getAircraftStaleAfterMs(), now);
+    this.reconcileSourcePreferences(now);
+    const activeHexes = new Set(this.localAircraft.keys());
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) this.statistics.observe([...this.localAircraft.values()], this.currentReceiver, new Date());
     this.scheduleReceptionRecordEvaluation();
     this.alerts.observe(previousAircraft, this.localAircraft);
-    this.intelligence.cleanup(currentHexes);
+    this.intelligence.cleanup(activeHexes);
     const predictiveAlertCandidates: Array<{ aircraft: Aircraft; prediction: PredictiveFlightState }> = [];
     const snapshotAt = Date.parse(snapshot.fetchedAt);
     for (const current of this.localAircraft.values()) {
@@ -709,7 +727,7 @@ export class AircraftStateService {
     if (predictiveAlertCandidates.length && this.alerts.hasPredictiveRules()) {
       this.schedulePredictiveWatchlistAlerts(predictiveAlertCandidates);
     }
-    for (const hex of this.predictiveEvaluatedAt.keys()) if (!currentHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
+    for (const hex of this.predictiveEvaluatedAt.keys()) if (!activeHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
     this.navigationIntegrity.observe([...this.localAircraft.values()], new Date(snapshot.fetchedAt));
     this.invalidateSnapshotCache();
   }
@@ -775,7 +793,11 @@ export class AircraftStateService {
 
   private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {
     const currentHexes = new Set<string>();
+    const now = Date.now();
+    const cutoff = now - getAdsbLolStaleAfterMs();
     for (const incoming of snapshot.aircraft) {
+      const lastSeen = Date.parse(incoming.lastSeen);
+      if (!Number.isFinite(lastSeen) || lastSeen < cutoff) continue;
       currentHexes.add(incoming.icaoHex);
       this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "network");
       const previous = this.networkAircraft.get(incoming.icaoHex);
@@ -783,28 +805,35 @@ export class AircraftStateService {
       const trail = this.updateTrail(previous, networkIncoming);
       this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
     }
-    for (const hex of this.networkAircraft.keys()) {
-      if (!currentHexes.has(hex)) this.networkAircraft.delete(hex);
-    }
+    this.networkObservedHexes = currentHexes;
+    this.reconcileSourcePreferences(now);
+    this.pruneMissingAircraft("network", currentHexes, getAdsbLolStaleAfterMs(), now);
+    this.reconcileSourcePreferences(now);
     this.navigationIntegrity.observe([...this.networkAircraft.values()], new Date(snapshot.fetchedAt ?? new Date().toISOString()));
-    this.reconcileSourcePreferences();
     this.invalidateSnapshotCache();
   }
 
   private reconcileSourcePreferences(now = Date.now()): void {
     const graceMs = getSourceAffinityFailoverGraceMs();
     for (const [hex, preferred] of this.sourcePreferences) {
-      const preferredPresent = preferred === "local" ? this.localAircraft.has(hex) : this.networkAircraft.has(hex);
       const alternate: "local" | "network" = preferred === "local" ? "network" : "local";
-      const alternatePresent = alternate === "local" ? this.localAircraft.has(hex) : this.networkAircraft.has(hex);
+      const preferredObserved = preferred === "local" ? this.localObservedHexes.has(hex) : this.networkObservedHexes.has(hex);
+      const alternateObserved = alternate === "local" ? this.localObservedHexes.has(hex) : this.networkObservedHexes.has(hex);
+      const preferredRetained = preferred === "local" ? this.localAircraft.has(hex) : this.networkAircraft.has(hex);
+      const alternateRetained = alternate === "local" ? this.localAircraft.has(hex) : this.networkAircraft.has(hex);
 
-      if (preferredPresent) {
+      if (preferredObserved) {
         this.sourcePreferenceMissingSince.delete(hex);
         continue;
       }
-      if (!alternatePresent) {
-        this.sourcePreferences.delete(hex);
-        this.sourcePreferenceMissingSince.delete(hex);
+
+      // Do not switch to an alternate that is itself only stale-retained. If
+      // neither source has any retained identity left, discard the affinity.
+      if (!alternateObserved) {
+        if (!preferredRetained && !alternateRetained) {
+          this.sourcePreferences.delete(hex);
+          this.sourcePreferenceMissingSince.delete(hex);
+        }
         continue;
       }
 
@@ -820,11 +849,44 @@ export class AircraftStateService {
     }
   }
 
-  private removeStaleAircraft(): void {
-    const cutoff = Date.now() - getAircraftStaleAfterMs();
-    for (const [hex, item] of this.aircraft) {
-      if (Date.parse(item.lastSeen) < cutoff) this.removeAircraft(hex);
+  private pruneMissingAircraft(
+    origin: "local" | "network",
+    observedHexes: ReadonlySet<string>,
+    staleAfterMs: number,
+    now = Date.now(),
+  ): void {
+    const map = origin === "local" ? this.localAircraft : this.networkAircraft;
+    const alternateObservedHexes = origin === "local" ? this.networkObservedHexes : this.localObservedHexes;
+    const cutoff = now - staleAfterMs;
+    const graceMs = getSourceAffinityFailoverGraceMs();
+
+    for (const [hex, item] of map) {
+      if (observedHexes.has(hex)) continue;
+      const lastSeen = Date.parse(item.lastSeen);
+      const expired = !Number.isFinite(lastSeen) || lastSeen < cutoff;
+      if (!expired) continue;
+
+      // If this is still the preferred source and a live alternate exists,
+      // retain the last known position until affinity can switch. The marker
+      // becomes stale visually, but never disappears between data sources.
+      const missingSince = this.sourcePreferenceMissingSince.get(hex);
+      if (
+        this.sourcePreferences.get(hex) === origin
+        && alternateObservedHexes.has(hex)
+        && missingSince !== undefined
+        && now - missingSince < graceMs
+      ) {
+        continue;
+      }
+
+      if (origin === "local") this.removeAircraft(hex);
+      else this.networkAircraft.delete(hex);
     }
+  }
+
+  private removeStaleAircraft(now = Date.now()): void {
+    this.pruneMissingAircraft("local", this.localObservedHexes, getAircraftStaleAfterMs(), now);
+    this.reconcileSourcePreferences(now);
   }
 
   private removeAircraft(hex: string): void {
