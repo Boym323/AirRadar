@@ -222,6 +222,7 @@ export const cs = {
     aircraftResults: "Letadla",
     airportResults: "Letiště",
     atsPointResults: "Traťové body",
+    flightResults: "Historické lety",
     loading: "Vyhledávání…",
     noResults: "Nic nenalezeno",
     requestFailed: "Vyhledávání není dostupné",
@@ -250,6 +251,15 @@ export const cs = {
     alertsDetail: "Historie alertů a upozornění",
     timeMachineDetail: "Historický playback oblohy",
     systemDetail: "Stav přijímače, datových zdrojů a služeb",
+    smartActions: "Chytré příkazy",
+    goAroundsToday: "Go-aroundy dnes",
+    goAroundsTodayDetail: "Přejít na dnešní operační události",
+    rareAircraftToday: "Vzácná letadla dnes",
+    rareAircraftTodayDetail: "Přejít na dnešní zajímavá a vzácná letadla",
+    airportOperations: (icao: string) => `${icao} Operations`,
+    airportOperationsDetail: "Otevřít Airport Intelligence V3",
+    flightsToAirport: (icao: string) => `Lety do ${icao}`,
+    flightsToAirportDetail: "Filtrovat historické lety podle cílového letiště",
   },
 
   filters: {
