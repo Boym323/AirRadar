@@ -229,3 +229,31 @@ V1 deliberately does not claim an exact rolling 24-hour RF range. The current
 schema stores daily maxima rather than hourly local range maxima; deriving that
 metric by scanning `FlightPosition` would violate the coverage page's bounded
 read architecture.
+
+## Receiver Coverage Intelligence V2
+
+V2 adds a rolling, time-localized receiver view using the already persisted
+`ReceiverCoverageHourly` evidence. It adds no schema migration, poller or
+`FlightPosition` read.
+
+The current window is the trailing 24 hours. Its comparison baseline is the
+immediately preceding seven days. Only `overall` and `azimuth` hourly rows
+are read, so the query remains bounded.
+
+For every 10-degree azimuth sector V2 reports:
+
+- current 24-hour available/captured observations and capture ratio;
+- prior seven-day available/captured observations and capture ratio;
+- percentage-point delta; and
+- `GOOD`, `DEGRADED`, `IMPROVED` or `INSUFFICIENT_DATA`.
+
+A sector is degraded only with sufficient evidence and both a material absolute
+and relative drop. Overall health is `GOOD`, `DEGRADED`,
+`RECOVERING` or `INSUFFICIENT_DATA`. Recovery requires the receiver still
+to be below baseline while the latest six hours materially outperform the
+preceding 18 hours.
+
+The hourly series makes the onset of a degradation visible, while the sector
+comparison identifies direction. V1 daily range intelligence remains intact and
+continues to provide physical range statistics; V2 measures capture coverage
+against the independent network reference.

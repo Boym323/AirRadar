@@ -26,6 +26,22 @@ function healthLabel(state: CoverageIntelligenceResponse["intelligence"]["health
   return text.coverageHealthInsufficient;
 }
 
+function v2HealthLabel(state: CoverageIntelligenceResponse["intelligenceV2"]["health"]["state"]): string {
+  if (state === "GOOD") return text.coverageV2HealthGood;
+  if (state === "DEGRADED") return text.coverageV2HealthDegraded;
+  if (state === "RECOVERING") return text.coverageV2HealthRecovering;
+  return text.coverageHealthInsufficient;
+}
+
+function formatRatio(value: number | null): string {
+  return value === null ? "—" : `${formatNumber(value * 100, 1)} %`;
+}
+
+function formatDelta(value: number | null): string {
+  if (value === null) return "—";
+  return `${value > 0 ? "+" : ""}${formatNumber(value, 1)} pp`;
+}
+
 function healthReasonLabel(reason: string): string {
   if (reason === "coverage.baseline_insufficient") return text.trendReasonBaseline;
   if (reason === "coverage.source_unavailable") return text.trendReasonSource;
@@ -100,8 +116,8 @@ export default function StatisticsCoverageIntelligence() {
             <SummaryMetric label={text.reliableSectors} value={`${formatNumber(data.coverage.reliableSectors)} / 36`} detail={`≥ ${data.coverage.requiredReliableDays} d`} />
             <SummaryMetric
               label={text.coverageHealth}
-              value={healthLabel(data.intelligence.health.state)}
-              detail={data.intelligence.health.evaluatedDate ? `${data.intelligence.health.evaluatedDate} · ${data.intelligence.health.baselineDays} ${text.coverageHealthBaseline}` : undefined}
+              value={v2HealthLabel(data.intelligenceV2.health.state)}
+              detail={`${text.coverageV2Rolling}: ${formatRatio(data.intelligenceV2.health.currentRatio)} · Δ ${formatDelta(data.intelligenceV2.health.deltaPercentagePoints)}`}
             />
             <SummaryMetric
               label={text.uniqueAircraftToday}
@@ -137,6 +153,42 @@ export default function StatisticsCoverageIntelligence() {
           </div>
 
           <div className={styles.sections}>
+            <section className={styles.section} aria-labelledby="receiver-coverage-v2-title" data-testid="receiver-coverage-intelligence-v2">
+              <div className={styles.sectionHeader}>
+                <div><h3 id="receiver-coverage-v2-title">{text.coverageV2Title}</h3><p>{text.coverageV2Description}</p></div>
+              </div>
+              <div className={styles.metrics}>
+                <SummaryMetric label={text.coverageV2State} value={v2HealthLabel(data.intelligenceV2.health.state)} />
+                <SummaryMetric label={text.coverageV2Rolling} value={formatRatio(data.intelligenceV2.health.currentRatio)} detail={`Δ ${formatDelta(data.intelligenceV2.health.deltaPercentagePoints)}`} />
+                <SummaryMetric label={text.coverageV2Baseline} value={formatRatio(data.intelligenceV2.health.baselineRatio)} />
+                <SummaryMetric label={text.coverageV2Sectors} value={`${data.intelligenceV2.health.degradedSectors} / ${data.intelligenceV2.health.evaluatedSectors}`} detail={text.coverageV2Degraded} />
+              </div>
+              {data.intelligenceV2.hourly.length ? <div className={styles.hourChart} role="img" aria-label={text.coverageV2Hourly}>
+                {data.intelligenceV2.hourly.map((point) => {
+                  const ratio = point.captureRatio ?? 0;
+                  const hour = new Date(point.hour).getHours();
+                  return <div className={styles.hourColumn} key={point.hour} title={`${formatDateTime(point.hour)} · ${formatRatio(point.captureRatio)} · ${formatNumber(point.captured)}/${formatNumber(point.available)}`}>
+                    <div className={styles.hourBarTrack}><span className={styles.hourBar} style={{ height: `${Math.max(2, ratio * 100)}%` }} /></div>
+                    <strong>{String(hour).padStart(2, "0")}</strong>
+                    <small>{point.captureRatio === null ? "—" : formatNumber(point.captureRatio * 100, 0)}</small>
+                  </div>;
+                })}
+              </div> : <p className={styles.status}>{text.noData}</p>}
+              {data.intelligenceV2.sectors.some((sector) => sector.state !== "INSUFFICIENT_DATA") ? <div className={styles.tableScroll}>
+                <table className={styles.table}>
+                  <thead><tr><th>{text.sector}</th><th>{text.coverageV2Rolling}</th><th>{text.coverageV2Baseline}</th><th>{text.coverageV2Delta}</th><th>{text.coverageV2SectorState}</th></tr></thead>
+                  <tbody>{data.intelligenceV2.sectors.filter((sector) => sector.state !== "INSUFFICIENT_DATA").map((sector) => <tr key={sector.bearingFrom}>
+                    <th>{sectorLabel(sector)}</th>
+                    <td>{formatRatio(sector.currentRatio)}</td>
+                    <td>{formatRatio(sector.baselineRatio)}</td>
+                    <td>{formatDelta(sector.deltaPercentagePoints)}</td>
+                    <td>{sector.state === "DEGRADED" ? text.coverageV2Degraded : sector.state === "IMPROVED" ? text.coverageV2Improved : text.coverageV2Stable}</td>
+                  </tr>)}</tbody>
+                </table>
+              </div> : null}
+              <p className={styles.note}>{data.intelligenceV2.health.reasons.length ? data.intelligenceV2.health.reasons.map((reason) => reason === "coverage_v2.overall_capture_below_baseline" ? text.coverageV2ReasonOverall : reason === "coverage_v2.sector_degradation" ? text.coverageV2ReasonSector : text.coverageV2ReasonBaseline).join(" · ") : text.coverageV2NoIssues}</p>
+            </section>
+
             <section className={styles.section} aria-labelledby="receiver-trend-title" data-testid="receiver-coverage-intelligence-v1">
               <div className={styles.sectionHeader}>
                 <div><h3 id="receiver-trend-title">{text.trendTitle}</h3><p>{text.trendDescription}</p></div>
