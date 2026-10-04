@@ -31,6 +31,18 @@ interface CacheEntry {
   staleUntil: number;
 }
 
+export interface PirepProviderDiagnostics {
+  status: "on_demand" | "ok" | "degraded" | "offline";
+  requests: number;
+  failures: number;
+  consecutiveFailures: number;
+  cacheEntries: number;
+  inFlight: number;
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  lastLatencyMs: number | null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -196,6 +208,12 @@ export class PirepProvider {
   private readonly staleMs: number;
   private readonly cache = new Map<string, CacheEntry>();
   private readonly inFlight = new Map<string, Promise<PirepSnapshot>>();
+  private requests = 0;
+  private failures = 0;
+  private consecutiveFailures = 0;
+  private lastAttemptAt: string | null = null;
+  private lastSuccessAt: string | null = null;
+  private lastLatencyMs: number | null = null;
 
   constructor(options: PirepProviderOptions = {}) {
     this.fetcher = options.fetcher ?? fetch;
@@ -205,6 +223,22 @@ export class PirepProvider {
     this.timeoutMs = options.timeoutMs ?? getAviationWeatherRequestTimeoutMs();
     this.ttlMs = options.ttlMs ?? DEFAULT_TTL_MS;
     this.staleMs = options.staleMs ?? DEFAULT_STALE_MS;
+  }
+
+  getDiagnostics(): PirepProviderDiagnostics {
+    return {
+      status: this.lastSuccessAt === null
+        ? this.failures > 0 ? "offline" : "on_demand"
+        : this.consecutiveFailures > 0 ? "degraded" : "ok",
+      requests: this.requests,
+      failures: this.failures,
+      consecutiveFailures: this.consecutiveFailures,
+      cacheEntries: this.cache.size,
+      inFlight: this.inFlight.size,
+      lastAttemptAt: this.lastAttemptAt,
+      lastSuccessAt: this.lastSuccessAt,
+      lastLatencyMs: this.lastLatencyMs,
+    };
   }
 
   async getPireps(rawQuery: Partial<PirepQuery>, parentSignal?: AbortSignal): Promise<PirepSnapshot> {
@@ -238,6 +272,9 @@ export class PirepProvider {
       if (parentSignal.aborted) abortParent();
       else parentSignal.addEventListener("abort", abortParent, { once: true });
     }
+    const startedAt = this.now();
+    this.requests += 1;
+    this.lastAttemptAt = new Date(startedAt).toISOString();
     try {
       const response = await this.fetcher(pirepUrl(this.baseUrl, query), {
         cache: "no-store",
@@ -250,6 +287,9 @@ export class PirepProvider {
         reports = normalizePirepPayload(await response.json());
       }
       const fetchedAtMs = this.now();
+      this.lastLatencyMs = Math.max(0, fetchedAtMs - startedAt);
+      this.lastSuccessAt = new Date(fetchedAtMs).toISOString();
+      this.consecutiveFailures = 0;
       const snapshot: PirepSnapshot = {
         reports,
         fetchedAt: new Date(fetchedAtMs).toISOString(),
@@ -274,6 +314,11 @@ export class PirepProvider {
         this.cache.delete(oldest);
       }
       return snapshot;
+    } catch (error) {
+      this.lastLatencyMs = Math.max(0, this.now() - startedAt);
+      this.failures += 1;
+      this.consecutiveFailures += 1;
+      throw error;
     } finally {
       clearTimeout(timer);
       parentSignal?.removeEventListener("abort", abortParent);
