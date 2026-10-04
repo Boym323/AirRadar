@@ -437,8 +437,17 @@ skutečně naladěnou frekvenci letadla.
   Prospective trajectory řádek vzniká pouze při změně state nebo confidence a
   nese `trajectoryState` v omezeném `evidenceJson`. Readiness při počítání
   instrumentovaných observations a kandidátních odchylek ignoruje starší
-  metadata-only trajectory řádky. State capture je tak měřitelné bez nového
-  sloupce nebo migrace; nezávislá outcome truth stále chybí.
+  metadata-only trajectory řádky.
+- Predictive Outcome Truth V1 kombinuje neměnné `PredictiveObservation`
+  snapshoty s omezenými read-only dotazy na persistované `FlightEvent`
+  outcome. RUNWAY_CHANGE používá pre-prediction APPROACH runway a pozdější
+  provider-reported LANDING runway. TRAJECTORY používá následné confident
+  abnormální Flight Intelligence eventy jako positive truth a pouze
+  ground-confirmed landing na stejném prospective cíli jako negative truth.
+  Chybějící nebo nejednoznačná evidence zůstává UNSCORABLE. Každý event-type
+  dotaz má limit 2 500 řádků; truncation označí celý readiness collection jako
+  incomplete. Tento tok nikdy nečte FlightPosition a truth nezapisuje zpět do
+  prediction řádků.
 - Predictive Operations Center V1 znovu používá stejné advisory buildery přes
   `GET /api/operations/predictive?hexes=`. Klient předává maximálně šest již
   relevantních ICAO identifikátorů. Server seznam normalizuje a deduplikuje,
