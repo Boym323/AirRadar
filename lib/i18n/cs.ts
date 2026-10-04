@@ -1382,6 +1382,7 @@ export const cs = {
     flightIdentity: "Identita letu",
     flightTelemetry: "Letadlo a telemetrie",
     flightTiming: "Pozorované okno",
+    destinationFilter: "Cíl",
     noFlights: "Nejsou zachycené žádné lety",
     noResults: "Nenalezeny žádné výsledky",
     clearSearch: "Vymažte hledání a zobrazte všechny dostupné záznamy.",
