@@ -112,6 +112,20 @@ export function assertMigrationSource(root = process.cwd()) {
 const host = "127.0.0.1";
 const port = Number(process.env.PRODUCTION_GATE_PORT || 3199);
 const baseUrl = `http://${host}:${port}`;
+
+function urlHasHostname(value, expectedHostname) {
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.hostname === expectedHostname;
+  } catch {
+    return false;
+  }
+}
+
+function textReferencesHostname(value, expectedHostname) {
+  const candidates = String(value).match(/https?:\\/\\/[^\\s)"\']+/g) ?? [];
+  return candidates.some((candidate) => urlHasHostname(candidate, expectedHostname));
+}
 const atBoundaryArtifact = JSON.parse(readFileSync("data/atc/at-state-boundary.json", "utf8"));
 const atBoundaryBbox = atBoundaryArtifact.bbox;
 const atBoundaryPolygon = [[
@@ -374,14 +388,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     const configureRouteSmokePage = (page) => {
       page.on("pageerror", (error) => routeErrors.push(`page: ${error.message}`));
       page.on("console", (message) => {
-        if (message.type() === "error" && !message.text().includes("tile.openstreetmap.org") && !message.text().includes("503 (Service Unavailable)") && !message.text().includes("InvalidStateError: The source image could not be decoded")) {
+        if (message.type() === "error" && !textReferencesHostname(message.text(), "tile.openstreetmap.org") && !message.text().includes("503 (Service Unavailable)") && !message.text().includes("InvalidStateError: The source image could not be decoded")) {
           const location = message.location();
           const source = location.url ? ` @ ${location.url}:${location.lineNumber}:${location.columnNumber}` : "";
           routeErrors.push(`console.error: ${message.text()}${source}`);
         }
         if (message.type() === "warning") routeWarnings.push(message.text());
       });
-      page.on("response", (response) => { if (response.status() >= 500 && !response.url().includes("tile.openstreetmap.org")) { if (response.status() === 503 && (/\/api\/(history|time-machine)\//.test(response.url()))) unavailable.push(`${response.status()}: ${response.url()}`); else routeErrors.push(`http ${response.status()}: ${response.url()}`); } });
+      page.on("response", (response) => { if (response.status() >= 500 && !urlHasHostname(response.url(), "tile.openstreetmap.org")) { if (response.status() === 503 && (/\/api\/(history|time-machine)\//.test(response.url()))) unavailable.push(`${response.status()}: ${response.url()}`); else routeErrors.push(`http ${response.status()}: ${response.url()}`); } });
       return page;
     };
     const routes = [
@@ -525,7 +539,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       page.on("worker", (worker) => worker.on("error", (error) => browserErrors.push(`worker: ${error.message}`)));
       page.on("response", (response) => {
         if (response.status() >= 400) {
-          if (response.status() === 429 && response.url().includes("tile.openstreetmap.org")) {
+          if (response.status() === 429 && urlHasHostname(response.url(), "tile.openstreetmap.org")) {
             expectedRateLimitedTileErrors += 1;
             const request = response.request();
             console.log(`[production-gates] expected HTTP 429 ${response.url()} resourceType=${request.resourceType()} initiator=${request.frame()?.url() ?? "(no frame)"}`);
