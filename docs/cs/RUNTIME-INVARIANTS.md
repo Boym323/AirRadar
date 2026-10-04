@@ -156,10 +156,11 @@ Toto jsou kontrakty chování a bezpečnosti pro změny aktuálního systému.
 - Merge arbitration je explicitní: kandidát pozice musí mít platné `lat` a
   `lon` plus čerstvé `seen_pos`. State service přiřadí každému ICAO source
   affinity (`local` nebo `network`). Dočasné zmizení z preferovaného feedu
-  drží identitu letadla v extended sjednocení a během omezeného grace period
-  potlačí pozici alternativního feedu, aby marker nemohl skočit. Pokud
-  preferovaný feed zůstane nepřítomný a alternativní pozorování je stále živé,
-  affinity přepne na tento zdroj; pokud zmizí obě pozorování, affinity se
+  drží poslední dobré pozorování po omezené stale/affinity grace okno a současně
+  běží časovač výpadku. Pokud existuje živá alternativní pozice, affinity se po
+  grace period přepne přímo bez mezilehlého snapshotu bez pozice. Alternativní
+  pozice se může použít i okamžitě, pokud preferované pozorování chybí nebo
+  neumí dodat použitelnou polohu. Pokud zmizí obě pozorování, affinity se
   uvolní. V rámci zvoleného originu se preferuje čerstvá pozice a pokud je
   použitelná, zachová se poslední známá lokální pozice. Letadlo bez pozice
   zůstává zachováno s nullable souřadnicemi. Lokální popisná pole a lokální
