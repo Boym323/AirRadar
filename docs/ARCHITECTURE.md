@@ -8,7 +8,9 @@ not schema sources.
 
 The Flight Story read boundary (`lib/server/flight-story.ts`) is a separate
 read-only composition over history tables and is not connected to live polling
-or intelligence write lanes.
+or intelligence write lanes. Flight Story V2 composes its summary and narrative
+client-side from that same bounded payload; it does not create another history
+query, aircraft stream, EventSource, or playback clock.
 
 ```text
 RTL-SDR / readsb web root
