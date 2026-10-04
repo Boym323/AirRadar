@@ -29,6 +29,19 @@ function formatCount(value: number | null, dictionary: LocaleDictionary): string
   return value === null ? dictionary.system.notAvailable : formatNumber(value, 0, dictionary.locale);
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function diagnosticNumber(value: Record<string, unknown> | null, key: string): number {
+  const candidate = value?.[key];
+  return typeof candidate === "number" && Number.isFinite(candidate) ? candidate : 0;
+}
+
+function diagnosticBoolean(value: Record<string, unknown> | null, key: string): boolean {
+  return value?.[key] === true;
+}
+
 function formatBytes(value: number | null, dictionary: LocaleDictionary): string {
   if (value === null) return dictionary.system.notAvailable;
   if (value < 1024 * 1024) return `${formatNumber(value / 1024, 1, dictionary.locale)} KiB`;
@@ -418,6 +431,10 @@ export function SystemStatusPage() {
   }, [applyStatus]);
 
   const detailed = data?.detailLevel === "admin";
+  const continuity = asRecord(data?.localAdsb?.continuity);
+  const continuityLocal = asRecord(continuity?.local);
+  const continuityNetwork = asRecord(continuity?.network);
+  const continuityFailovers = asRecord(continuity?.sourceFailovers);
 
   return <main className="history-page system-page">
     <header className="history-page-header system-page-header">
@@ -507,6 +524,14 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.beastDecodeErrors} value={formatNumber(Number(data.localAdsb.decodeErrors ?? 0), 0, dictionary.locale)} />
         <Field label={dictionary.system.beastReconnects} value={formatNumber(Number(data.localAdsb.reconnects ?? 0), 0, dictionary.locale)} />
         <Field label={dictionary.system.beastFallback} value={data.localAdsb.activeSource === "json-fallback" ? dictionary.system.configured : dictionary.system.disabled} />
+        {continuity && <>
+          <Field label={dictionary.system.continuityLocalState} value={`${formatNumber(diagnosticNumber(continuityLocal, "observedAircraft"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(continuityLocal, "retainedAircraft"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.continuityNetworkState} value={`${formatNumber(diagnosticNumber(continuityNetwork, "observedAircraft"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(continuityNetwork, "retainedAircraft"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.continuityOmissions} value={`L ${formatNumber(diagnosticNumber(continuityLocal, "omissionEvents"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityLocal, "recoveredOmissions"), 0, dictionary.locale)} · N ${formatNumber(diagnosticNumber(continuityNetwork, "omissionEvents"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityNetwork, "recoveredOmissions"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.continuityExpirations} value={`L ${formatNumber(diagnosticNumber(continuityLocal, "staleExpirations"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityLocal, "reappearedWithinWindow"), 0, dictionary.locale)} · N ${formatNumber(diagnosticNumber(continuityNetwork, "staleExpirations"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityNetwork, "reappearedWithinWindow"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.continuityFailovers} value={`L→N ${formatNumber(diagnosticNumber(continuityFailovers, "localToNetwork"), 0, dictionary.locale)} · N→L ${formatNumber(diagnosticNumber(continuityFailovers, "networkToLocal"), 0, dictionary.locale)} · pending ${formatNumber(diagnosticNumber(continuityFailovers, "pendingAffinity"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.continuityMassDrop} value={`L ${formatNumber(diagnosticNumber(continuityLocal, "massDropCandidates"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityLocal, "massDropConfirmed"), 0, dictionary.locale)} · N ${formatNumber(diagnosticNumber(continuityNetwork, "massDropCandidates"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityNetwork, "massDropConfirmed"), 0, dictionary.locale)}${diagnosticBoolean(continuityLocal, "massDropPending") || diagnosticBoolean(continuityNetwork, "massDropPending") ? ` · ${dictionary.system.continuityPending}` : ""}`} />
+        </>}
       </Card>}
 
       <Card title={dictionary.system.networkCoverage} status={data.adsbLol.status} dictionary={dictionary}>
