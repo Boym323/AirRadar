@@ -94,6 +94,20 @@ quality thresholdu znamená `FAIL`. Samotné nastavení
 readiness gate a capability bez PASS stáhne zpět do `SHADOW`. Žádná capability
 se automaticky nepovyšuje na `PUBLIC`.
 
+## Predictive ETA Advisory V1
+
+Detail živého letadla používá existující
+`GET /api/aircraft/:hex/prediction` a zobrazuje ETA pouze tehdy, když je ETA
+explicitně nakonfigurována jako `PUBLIC`, aktuální readiness rozhodnutí je
+`PASS`, predikce je čerstvá, čas příletu leží v budoucnosti a readiness report
+obsahuje kalibrovanou p90 ETA chybu. Tato p90 chyba se zobrazí jako `±`
+uncertainty; AirRadar nevytváří heuristickou nejistotu.
+
+Při platné admin session může stejný endpoint připojit SHADOW preview s
+readiness/stale/expired stavem. Tento preview blok není součástí anonymní
+odpovědi. Detail letadla provede jeden page-scoped prediction fetch a
+nevytváří nový poller, EventSource ani persistence path.
+
 ## API
 
 | Metoda a routa | Účel | Produkční stav |
