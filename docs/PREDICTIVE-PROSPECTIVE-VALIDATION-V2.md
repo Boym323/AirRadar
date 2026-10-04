@@ -63,8 +63,11 @@ Only `CONFIRMED` truth is scoreable. `AMBIGUOUS` and `UNKNOWN` are reported as
 `predictedLandingAt - actualLandingAt`, absolute error, MAE, median, P75/P90/P95,
 bias, early/late split, horizon buckets, confidence calibration and coverage.
 Runway reports exact-end and physical-runway accuracy separately, including
-unknown-prediction rate and coverage. Runway-change and trajectory remain
-shadow metadata/counters.
+unknown-prediction rate and coverage. Runway-change remains shadow outcome evidence. Trajectory now persists explicit
+state transitions in bounded `evidenceJson`, allowing runtime readiness to count
+instrumented observations and deviation candidates. Independent trajectory
+outcome truth is still unavailable, so validated-candidate precision remains
+unscored and the capability stays `WAIT`.
 
 ## Reports and retention
 
