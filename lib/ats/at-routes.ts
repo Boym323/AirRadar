@@ -8,12 +8,19 @@ export function getAtAtsRoutesPath(): string { return process.env.ATS_AT_ROUTES_
 export function clearAtAtsRouteCache(): void { cached = null; }
 export function loadAtAtsRoutes(): CzAtsRouteDocument | null {
   const file = getAtAtsRoutesPath();
+  let descriptor = -1;
   try {
-    const stat = fs.statSync(/*turbopackIgnore: true*/ file);
+    descriptor = fs.openSync(/*turbopackIgnore: true*/ file, "r");
+    const stat = fs.fstatSync(descriptor);
     if (cached?.file === file && cached.mtimeMs === stat.mtimeMs) return cached.document;
-    const document = validateCzAtsRouteDocument(JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ file, "utf8")) as unknown);
+    const document = validateCzAtsRouteDocument(JSON.parse(fs.readFileSync(descriptor, "utf8")) as unknown);
     cached = { file, mtimeMs: stat.mtimeMs, document };
     return document;
-  } catch { cached = null; return null; }
+  } catch {
+    cached = null;
+    return null;
+  } finally {
+    if (descriptor !== -1) fs.closeSync(descriptor);
+  }
 }
 
