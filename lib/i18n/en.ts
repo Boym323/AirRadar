@@ -942,7 +942,7 @@ export const en = {
     v3RunwayKicker: "Runway Intelligence",
     v3RunwayTitle: "Receiver vs wind",
     v3ReceiverUsage: "Inferred usage",
-    v3ReceiverUsageDetail: (share: string, count: number, total: number) => `${share} · ${count} of ${total} runway-relevant movements`,
+    v3ReceiverUsageDetail: (share: string, count: number, total: number) => `${share} · ${count} of ${total} movements with runway evidence`,
     v3WindFavored: "Wind-favoured runway",
     v3WindComponents: (headwind: string, crosswind: string) => `headwind ${headwind} · crosswind ${crosswind}`,
     v3RunwayAligned: "Receiver-inferred usage matches the runway favoured by the current wind.",
