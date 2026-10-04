@@ -123,7 +123,7 @@ function urlHasHostname(value, expectedHostname) {
 }
 
 function textReferencesHostname(value, expectedHostname) {
-  const candidates = String(value).match(/https?:\/\/\/[^\s)"\']+/g) ?? [];
+  const candidates = String(value).match(/https?:\/\/[^\s)"']+/g) ?? [];
   return candidates.some((candidate) => urlHasHostname(candidate, expectedHostname));
 }
 const atBoundaryArtifact = JSON.parse(readFileSync("data/atc/at-state-boundary.json", "utf8"));
