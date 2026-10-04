@@ -132,6 +132,45 @@ describe("alert history", () => {
     expect((await store.list({ filter: "records" })).items.map((entry) => entry.id)).toEqual(["record-1"]);
   });
 
+  it("filters activity across watchlist, intelligence and emergency events by rule id", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
+    directories.push(directory);
+    const store = new JsonlAlertHistoryStore(join(directory, "events.jsonl"));
+    await store.recordDetected({
+      id: "appeared",
+      detectedAt: "2026-09-08T12:00:00Z",
+      type: "aircraft_appeared",
+      reason: "appeared",
+      aircraft,
+      ruleIds: ["watched"],
+      ruleNames: ["Watched plane"],
+    });
+    await store.recordDetected({
+      id: "takeoff",
+      detectedAt: "2026-09-08T12:01:00Z",
+      type: "intelligence_takeoff",
+      reason: "takeoff",
+      aircraft,
+      ruleIds: ["watched"],
+      ruleNames: ["Watched plane"],
+      intelligence: { eventType: "TAKEOFF", confidenceLevel: "high", airportIcao: "LKPR", sectorId: null },
+    });
+    await store.recordDetected({
+      id: "squawk",
+      detectedAt: "2026-09-08T12:02:00Z",
+      type: "emergency_7700",
+      reason: "squawk_7700",
+      aircraft,
+      ruleIds: ["other"],
+      ruleNames: ["Other plane"],
+      squawk: "7700",
+    });
+
+    const result = await store.list({ ruleIds: ["watched"], pageSize: 10 });
+    expect(result.items.map((entry) => entry.id)).toEqual(["takeoff", "appeared"]);
+    expect(result.nextPage).toBeNull();
+  });
+
   it("reloads from the same persistent file and isolates separate ledgers", async () => {
     const firstDirectory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
     const secondDirectory = await mkdtemp(join(tmpdir(), "airradar-alert-history-"));
