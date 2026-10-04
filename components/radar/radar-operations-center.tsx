@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type {
   LogbookInterestingReason,
@@ -19,6 +20,7 @@ import type { AlertHistoryEntry, AlertHistoryPage } from "@/lib/server/alert-his
 import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
 import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useIntelligenceStream } from "@/components/use-intelligence-stream";
+import { OPEN_OPERATIONS_CENTER_EVENT } from "@/lib/search/command-palette";
 import styles from "./radar-operations-center.module.css";
 
 const CLOCK_REFRESH_INTERVAL_MS = 60_000;
@@ -70,6 +72,7 @@ function highlightReasonLabel(reason: LogbookInterestingReason): string {
 
 export function RadarOperationsCenter() {
   const intelligenceEvents = useIntelligenceStream();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [alerts, setAlerts] = useState<AlertHistoryEntry[]>([]);
@@ -80,6 +83,16 @@ export function RadarOperationsCenter() {
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), CLOCK_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get("operations") === "1") setOpen(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const openFromCommand = () => setOpen(true);
+    window.addEventListener(OPEN_OPERATIONS_CENTER_EVENT, openFromCommand);
+    return () => window.removeEventListener(OPEN_OPERATIONS_CENTER_EVENT, openFromCommand);
   }, []);
 
   useEffect(() => {
