@@ -253,6 +253,14 @@ worldwide navaids retain an optional association through the same source key.
 The airport page loads core metadata and the three bounded infrastructure
 collections server-side; the browser never downloads upstream CSV files.
 
+Airport Intelligence V3 adds one page-scoped client controller for the 24-hour
+operations snapshot and airport weather. The Operations Board, unified movement
+timeline, runway comparison, and detailed weather panel reuse those two reads.
+The previous page-level duplicate 24-hour movement request and duplicate airport
+weather request are not started. Existing nearby-aircraft live traffic remains
+a separate read-only consumer of the established local aircraft SSE and V3 does
+not create another aircraft stream or write lane.
+
 ### Aviation Weather
 
 `AviationWeatherProvider` is an optional, independent server-side subsystem.
