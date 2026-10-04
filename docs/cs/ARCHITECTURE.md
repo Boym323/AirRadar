@@ -329,16 +329,18 @@ Airport Intelligence V3 přidává jeden page-scoped klientský controller pro
 24hodinový operations snapshot a počasí letiště. Operations Board, sjednocená
 časová osa pohybů, runway comparison i detailní weather panel znovu používají
 tato dvě čtení. Původní duplicitní 24h movement request a duplicitní weather
-request se na stránce nespouštějí. Existující live provoz okolních letadel
-zůstává samostatným read-only konzumentem zavedeného lokálního aircraft SSE;
-V3 nevytváří další aircraft stream ani write lane.
+request se na stránce nespouštějí. Airport Live Board V2 přesouvá existující live provoz okolních letadel do
+jediného page-scoped read-only SSE controlleru. Live Board i Nearby Aircraft
+znovu používají stejnou `/api/stream` subscription, takže letištní stránka má
+stále právě jeden aircraft stream a žádný nový write lane.
 
-Airport Live Board V1 zůstává uvnitř stejného boundary. Controller obnovuje
+Airport Live Board V2 zůstává uvnitř stejného boundary. Controller obnovuje
 obě sdílená čtení jedním 30sekundovým one-shot timerem, který při unmountu nebo
-ručním refreshi zruší a abortuje in-flight práci. UI v paměti odvozuje omezené
-lane příletů, odletů, provozních událostí a využití drah z operations odpovědi
-a pro kompaktní weather strip znovu používá stejný METAR. Nevzniká třetí API,
-EventSource, migrace, tabulka ani write path.
+ručním refreshi zruší a abortuje in-flight práci. UI v paměti odvozuje omezené lane recent příletů, recent odletů, provozních
+událostí a využití drah z operations odpovědi a pro kompaktní weather strip
+znovu používá stejný METAR. Sdílený SSE snapshot navíc krmí nearest-first NOW
+inbound/outbound lane přes existující konzervativní airport-traffic classifier.
+Nevzniká třetí API, druhý EventSource, migrace, tabulka ani write path.
 
 ### Aviation Weather
 
