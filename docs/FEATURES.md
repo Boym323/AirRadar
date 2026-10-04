@@ -383,4 +383,7 @@ inside 5/15/30 minutes, compares equal 0–15 and 15–30 minute windows for flo
 trend, detects ETA compression, derives conservative arrival pressure, groups
 predicted runway load, and compares the predicted dominant runway with
 receiver-observed runway flow when both have enough evidence. Evidence is
-labelled PUBLIC_STRONG, PUBLIC_PARTIAL, or RECEIVER_ONLY.
+labelled PUBLIC_STRONG, PUBLIC_PARTIAL, or RECEIVER_ONLY. The same bounded
+sequence also produces an Approach Queue state (EMPTY, LOW_DENSITY, ACTIVE,
+BUILDING, COMPRESSED, or HOLDING_PRESENT) without another request, stream or
+persistence path.
