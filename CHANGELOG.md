@@ -10,6 +10,31 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.298] - 2026-10-04
+
+Changes since v1.0.297.
+
+**Features touched:** Airport Intelligence, Receiver Coverage, Watchlist, Alerts & Fleet.
+
+### Added
+
+- Add Airport Live Board V6 flow pressure (#297) (afae88b)
+- Add Receiver Coverage Intelligence V1 (#298) (5719f2c)
+- Complete Aircraft Watchlist & Alerts V1 (#299) (d99feee)
+
+### Maintenance
+
+- Sync generated repository metadata (#296) (556d6f1)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#296) (556d6f1)
+- feat: add Airport Live Board V6 flow pressure (#297) (afae88b)
+- feat: add Receiver Coverage Intelligence V1 (#298) (5719f2c)
+- feat: complete Aircraft Watchlist & Alerts V1 (#299) (d99feee)
+
+</details>
 ## [1.0.297] - 2026-10-04
 
 Changes since v1.0.296.
