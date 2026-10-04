@@ -48,7 +48,26 @@ describe("predictive graduation boundary", () => {
     });
   });
 
-  it("only exposes a runway change while it is fresh and confidence is known", () => {
+  it("never substitutes the alternative candidate for runway-change provenance", () => {
+    const result = toPublicPredictiveState({
+      ...prediction,
+      runway: { runway: "24", alternative: "06", changedFrom: null, changedAt: 1_500, confidence: "MEDIUM", changed: true, evidence: [] },
+    }, {
+      ETA: "SHADOW",
+      RUNWAY: "SHADOW",
+      RUNWAY_CHANGE: "PUBLIC",
+      TRAJECTORY: "SHADOW",
+    }, 2_000);
+
+    expect(result?.runwayChange).toEqual({
+      status: "unavailable",
+      changedFrom: null,
+      runway: null,
+      confidence: "MEDIUM",
+    });
+  });
+
+  it("only exposes a runway change while snapshot/event freshness and confidence gates pass", () => {
     const result = toPublicPredictiveState({
       ...prediction,
       runway: { runway: "24", alternative: "18", changedFrom: "06", changedAt: 1_500, confidence: "MEDIUM", changed: true, evidence: [] },
