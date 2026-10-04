@@ -93,6 +93,17 @@ fresh prediction, a non-null runway and known confidence. A valid admin session
 may receive a separate SHADOW runway preview with readiness evidence. The
 browser expires a rendered runway at the same 45-second freshness boundary.
 No second fetch, EventSource, persistence lane, migration or model is added.
+
+Predictive Operations Center V1 is a bounded read-only aggregation boundary on
+the radar NOW panel. The browser derives at most six ICAO candidates from the
+existing prioritized timeline and live highlights, then requests
+`/api/operations/predictive` only while the panel is open. The server reads the
+existing in-memory predictive state for those aircraft and evaluates one shared
+readiness report before serializing ETA/runway advisories. Anonymous output
+contains only PUBLIC + PASS + fresh values; authenticated admin output may add
+SHADOW previews and ETA/RUNWAY readiness decisions. The endpoint is polled at a
+bounded 30-second interval and is deliberately separate from the main radar SSE,
+prediction engine, persistence, and prospective-validation write paths.
 `NetworkAircraftProvider` is a separate optional boundary for live-only
 coverage. `AdsbHubProvider` consumes the generic aggregated SBS/30003 stream
 from `data.adsbhub.org:5002`; these rows are not classified as MLAT. The
