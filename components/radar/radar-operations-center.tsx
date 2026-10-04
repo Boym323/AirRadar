@@ -172,8 +172,10 @@ export function RadarOperationsCenter() {
 
     let active = true;
     const controller = new AbortController();
+    setPredictiveOperations(null);
+    setPredictiveStatus("loading");
+    setPredictiveNow(Date.now());
     const loadPredictive = async () => {
-      setPredictiveStatus((current) => current === "idle" ? "loading" : current);
       try {
         const response = await fetchJson<PredictiveOperationsResponse>(
           `/api/operations/predictive?hexes=${encodeURIComponent(predictiveHexKey)}`,
@@ -185,6 +187,7 @@ export function RadarOperationsCenter() {
         setPredictiveStatus("ready");
       } catch {
         if (!active || controller.signal.aborted) return;
+        setPredictiveOperations(null);
         setPredictiveStatus("unavailable");
       }
     };
@@ -421,7 +424,7 @@ export function RadarOperationsCenter() {
               </section>
             ) : null}
 
-            {predictiveItems.length > 0 || predictiveOperations?.adminReadiness ? (
+            {predictiveItems.length > 0 || predictiveOperations?.adminReadiness || predictiveStatus === "unavailable" ? (
               <section className={styles.predictive} aria-labelledby="operations-predictive-title" data-testid="predictive-operations-center">
                 <div className={styles.sectionHeading}>
                   <span id="operations-predictive-title">{t.intelligence.operationsPredictiveTitle}</span>
