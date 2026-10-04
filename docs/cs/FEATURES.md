@@ -116,9 +116,14 @@ watchlist filtr na `/` zůstává oddělený od serverových pravidel alertů.
 Selhání volitelného enrichmentu a PostgreSQL se reprezentují jako prázdná,
 zastaralá, nedostupná nebo degradovaná data funkce místo odstavení živého
 radaru.
-# Flight Story V1
+# Flight Story V2
 
-Detail letu je synchronizované příběhové zobrazení s časovou osou událostí,
-přehráváním historických pozic, kurzorem profilu a celkovým kontextem oblohy
-Time Machine. Částečná data zůstávají použitelná a historická fakta se
-nevymýšlejí.
+Detail letu zachovává jediný omezený playback clock a přidává deterministický
+souhrn a narativní časovou osu. Persistované časy start/end Flight jsou
+označeny jako pozorované hranice; persistované Flight Intelligence události
+jsou označeny jako odvozené s confidence a nejbližší vzorkovanou telemetrií.
+Badge výrazných událostí shrnují GO_AROUND, DIVERSION, HOLDING a související
+high-attention události bez domýšlení faktů. Mapa, playback cursor, kurzor
+profilu, vybraná událost i historický Map Context nadále sdílejí stejný
+timestamp. Částečná data zůstávají použitelná a metadata trasy letišť zůstávají
+kontextem, nikoli důkazem skutečně proletěné trasy.
