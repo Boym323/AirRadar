@@ -74,7 +74,7 @@ export function AirportOperationsBoard({
     ? `${String(Math.round(weather.metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(weather.metar.windSpeedKt)}`
     : null;
 
-  return <section className="airport-v3-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3">
+  return <section id="airport-intelligence-v3" className="airport-v3-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3">
     <div className="airport-v3-hero">
       <div className="airport-v3-heading">
         <div>
