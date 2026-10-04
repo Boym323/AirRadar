@@ -138,3 +138,43 @@ export interface SigmetSnapshot {
   cacheSource?: WeatherCacheSource;
   snapshotAgeMs?: number;
 }
+
+
+export type PirepReportType = "PIREP" | "AIREP" | "UNKNOWN";
+
+export interface PirepObservation {
+  id: string;
+  reportType: PirepReportType;
+  urgent: boolean;
+  observedAt: string;
+  receivedAt: string | null;
+  latitude: number;
+  longitude: number;
+  altitudeFt: number | null;
+  aircraftType: string | null;
+  temperatureC: number | null;
+  windDirectionDeg: number | null;
+  windSpeedKt: number | null;
+  turbulence: { intensity: string | null; type: string | null; frequency: string | null } | null;
+  icing: { intensity: string | null; type: string | null } | null;
+  weather: string | null;
+  sky: string | null;
+  visibilitySm: number | null;
+  rawText: string | null;
+}
+
+export interface PirepSnapshot {
+  reports: PirepObservation[];
+  fetchedAt: string;
+  stale: boolean;
+  cacheSource: "live" | "memory-cache" | "stale-cache";
+  snapshotAgeMs: number;
+  source: "Aviation Weather Center";
+  query: {
+    latitude: number;
+    longitude: number;
+    radiusNm: number;
+    hours: number;
+    altitudeFt: number | null;
+  };
+}
