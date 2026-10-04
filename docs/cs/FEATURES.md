@@ -140,6 +140,7 @@ se automaticky nepovyšuje na `PUBLIC`.
 | `PATCH /api/watchlist/:id` | Aktualizuje nebo zapne/vypne jedno pravidlo. | Produkce; autentizovaná same-origin admin mutace. |
 | `DELETE /api/watchlist/:id` | Smaže jedno serverové pravidlo. | Produkce; autentizovaná same-origin admin mutace. |
 | `GET /api/health` | Sanitizovaný health aplikace/databáze/readsb/ATC/alertů. | Produkční health kontrakt. |
+| `GET /api/admin/predictive/readiness` | Admin-only 30denní bounded Predictive Graduation Readiness report z `PredictiveObservation` a nezávislého LANDING terminal evidence; nikdy nečte `FlightPosition`. | Read-only readiness gate; bez automatické PUBLIC promotion. |
 | `GET /api/system/status` | Sanitizovaný omezený systémový přehled pro `/system`, včetně serverem známých počtů vrstev letiště/ATC/ATS a čerstvosti zdrojů. | Produkční diagnostika. |
 | `GET /api/version` | Bezpečná metadata release/buildu. | Produkční endpoint metadat release. |
 
