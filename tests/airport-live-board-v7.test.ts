@@ -37,13 +37,13 @@ function predictive(): PredictiveOperationsResponse {
       {
         icaoHex: "AAA111", label: "AAA111", callsign: "AAA111", registration: null, destination: "LKTB",
         etaAdvisory: { kind: "ETA", state: "available", estimatedArrivalAt: "2026-10-04T20:08:00.000Z", evaluatedAt: "2026-10-04T20:00:00.000Z", ageSeconds: 3, horizonMinutes: 8, confidence: "MEDIUM", uncertaintyMinutes: 3, uncertaintyBasis: "readiness_p90", modelVersion: "predictive-intelligence-v1", provenance: "predicted" },
-        runwayAdvisory: { kind: "RUNWAY", state: "available", runway: "28", evaluatedAt: "2026-10-04T20:00:00.000Z", ageSeconds: 3, confidence: "HIGH", modelVersion: "predictive-intelligence-v1", provenance: "predicted" },
+        runwayAdvisory: { kind: "RUNWAY", state: "available", runway: "28", alternative: null, evaluatedAt: "2026-10-04T20:00:00.000Z", ageSeconds: 3, confidence: "HIGH", modelVersion: "predictive-intelligence-v1", provenance: "predicted" },
         runwayChangeAdvisory: null, trajectoryAdvisory: null,
       },
       {
         icaoHex: "BBB222", label: "BBB222", callsign: "BBB222", registration: null, destination: "LKTB",
         etaAdvisory: { kind: "ETA", state: "available", estimatedArrivalAt: "2026-10-04T20:04:00.000Z", evaluatedAt: "2026-10-04T20:00:00.000Z", ageSeconds: 3, horizonMinutes: 4, confidence: "HIGH", uncertaintyMinutes: 2, uncertaintyBasis: "readiness_p90", modelVersion: "predictive-intelligence-v1", provenance: "predicted" },
-        runwayAdvisory: { kind: "RUNWAY", state: "available", runway: "28", evaluatedAt: "2026-10-04T20:00:00.000Z", ageSeconds: 3, confidence: "HIGH", modelVersion: "predictive-intelligence-v1", provenance: "predicted" },
+        runwayAdvisory: { kind: "RUNWAY", state: "available", runway: "28", alternative: null, evaluatedAt: "2026-10-04T20:00:00.000Z", ageSeconds: 3, confidence: "HIGH", modelVersion: "predictive-intelligence-v1", provenance: "predicted" },
         runwayChangeAdvisory: null, trajectoryAdvisory: null,
       },
       {
