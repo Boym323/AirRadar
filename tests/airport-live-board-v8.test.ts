@@ -3,13 +3,20 @@ import { buildAirportArrivalFlowIntelligence } from "@/lib/airport-intelligence/
 import type { AirportArrivalSequenceSummary } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import type { AirportFlowPressureSummary, AirportRunwayFlowIntelligence } from "@/lib/airport-intelligence/v3";
 
-function sequence(etas: Array<{ minutes: number; runway?: string | null }>, totalCandidates = etas.length): AirportArrivalSequenceSummary {
+function sequence(
+  etas: Array<{
+    minutes: number;
+    runway?: string | null;
+    stage?: AirportArrivalSequenceSummary["items"][number]["stage"];
+  }>,
+  totalCandidates = etas.length,
+): AirportArrivalSequenceSummary {
   const base = Date.parse("2026-10-04T20:00:00.000Z");
   const items = etas.map((eta, index) => ({
     position: index + 1,
     icaoHex: `ABC00${index}`,
     label: `ABC00${index}`,
-    stage: "INBOUND" as const,
+    stage: eta.stage ?? "INBOUND",
     distanceKm: 30 - index,
     orderBasis: "ETA" as const,
     etaAt: new Date(base + eta.minutes * 60_000).toISOString(),
@@ -90,6 +97,8 @@ describe("Airport Live Board V8 arrival flow intelligence", () => {
     expect(result.compression.state).toBe("HIGH");
     expect(result.compression.compressedPairs).toBeGreaterThanOrEqual(2);
     expect(result.pressure.level).toBe("HIGH");
+    expect(result.queue.state).toBe("COMPRESSED");
+    expect(result.queue.reasons).toContain("eta_compression");
   });
 
   it("compares predicted runway load with observed receiver runway flow", () => {
@@ -150,4 +159,64 @@ describe("Airport Live Board V8 arrival flow intelligence", () => {
     expect(result.demand.between15And30Minutes).toBe(1);
     expect(result.demand.trend).toBe("DECREASING");
   });
+  it("classifies empty, sparse and ordinary active arrival sequences without inventing queue pressure", () => {
+    const empty = buildAirportArrivalFlowIntelligence({
+      sequence: sequence([]),
+      flowPressure: pressure(),
+      runwayFlow: runwayFlow(),
+    });
+    expect(empty.queue).toMatchObject({ state: "EMPTY", approachOrFinal: 0, holding: 0 });
+    expect(empty.queue.reasons).toEqual(["no_arrivals"]);
+
+    const sparse = buildAirportArrivalFlowIntelligence({
+      sequence: sequence([{ minutes: 5 }, { minutes: 14 }]),
+      flowPressure: pressure(),
+      runwayFlow: runwayFlow(),
+    });
+    expect(sparse.queue.state).toBe("LOW_DENSITY");
+    expect(sparse.queue.reasons).toEqual(["sparse_traffic"]);
+
+    const active = buildAirportArrivalFlowIntelligence({
+      sequence: sequence([{ minutes: 5 }, { minutes: 12 }, { minutes: 20 }]),
+      flowPressure: pressure(),
+      runwayFlow: runwayFlow(),
+    });
+    expect(active.queue.state).toBe("ACTIVE");
+    expect(active.queue.reasons).toEqual(["active_traffic"]);
+  });
+
+  it("marks a dense approach/final bank as a building queue without requiring PUBLIC ETA compression", () => {
+    const result = buildAirportArrivalFlowIntelligence({
+      sequence: sequence([
+        { minutes: 4, stage: "FINAL" },
+        { minutes: 10, stage: "APPROACH" },
+        { minutes: 16, stage: "APPROACH" },
+        { minutes: 22, stage: "INBOUND" },
+      ]),
+      flowPressure: pressure(),
+      runwayFlow: runwayFlow(),
+    });
+    expect(result.compression.state).toBe("NORMAL");
+    expect(result.queue.state).toBe("BUILDING");
+    expect(result.queue.approachOrFinal).toBe(3);
+    expect(result.queue.reasons).toContain("arrival_density");
+    expect(result.queue.reasons).toContain("approach_density");
+  });
+
+  it("prioritizes multiple holding aircraft as the strongest bounded queue signal", () => {
+    const result = buildAirportArrivalFlowIntelligence({
+      sequence: sequence([
+        { minutes: 4, stage: "HOLDING" },
+        { minutes: 7, stage: "HOLDING" },
+        { minutes: 10, stage: "APPROACH" },
+        { minutes: 13, stage: "INBOUND" },
+      ]),
+      flowPressure: pressure(),
+      runwayFlow: runwayFlow(),
+    });
+    expect(result.queue.state).toBe("HOLDING_PRESENT");
+    expect(result.queue.holding).toBe(2);
+    expect(result.queue.reasons).toEqual(["multiple_holding"]);
+  });
+
 });
