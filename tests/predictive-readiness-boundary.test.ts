@@ -42,6 +42,12 @@ describe("Predictive Graduation Readiness boundary", () => {
     expect(collectorSource).toContain("if (!configuredPublic(configured)) return configured");
   });
 
+  it("keeps graduation calibration admin-only and advisory", () => {
+    expect(collectorSource).toContain("manualReviewEligible");
+    expect(publicRouteSource).not.toContain("graduation-calibration");
+    expect(publicRouteSource).not.toContain("manualReviewEligible");
+  });
+
   it("guards public prediction exposure with one shared readiness report", () => {
     expect(publicRouteSource).toContain("readPredictiveReadinessReport");
     expect(publicRouteSource).toContain("enforcePredictiveReadiness");
@@ -55,11 +61,15 @@ describe("Predictive Graduation Readiness boundary", () => {
     expect(adminRouteSource).toContain('status: 401');
     expect(adminRouteSource).toContain('"Cache-Control": "no-store"');
     expect(adminRouteSource).toContain("readPredictiveReadinessReport()");
+    expect(collectorSource).toContain("buildPredictiveGraduationCalibration");
+    expect(collectorSource).toContain("calibration: buildPredictiveGraduationCalibration");
   });
 
   it("loads and renders readiness only for the admin system view", () => {
     expect(systemPageSource).toContain('fetch("/api/admin/predictive/readiness"');
     expect(systemPageSource).toContain('data?.detailLevel !== "admin"');
     expect(systemPageSource).toContain('data-testid="predictive-readiness"');
+    expect(systemPageSource).toContain('data-testid={`predictive-calibration-${capability.key.toLowerCase()}`}');
+    expect(systemPageSource).toContain("predictiveCalibrationManualReview");
   });
 });
