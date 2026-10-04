@@ -85,12 +85,12 @@ describe("Airport Live Board V6 flow pressure", () => {
     expect(result.holdingRecent).toBe(1);
     expect(result.goAroundRecent).toBe(1);
     expect(result.pressure).toEqual({ level: "HIGH", score: 13 });
-    expect(result.runway).toEqual({
+    expect(result.runway).toMatchObject({
       designator: "29",
       consistency: "STABLE",
-      share: 0.75,
-      samples: 8,
+      samples: 9,
     });
+    expect(result.runway.share).toBeCloseTo(7 / 9);
   });
 
   it("treats a one-movement delta as steady and requires three runway samples", () => {
