@@ -356,13 +356,12 @@ async function waitForSseState(cookie, predicate, timeoutMs = 5_000) {
     if (predicate(latest.runtime.activeSseClients)) return latest;
     await wait(100);
   }
-  throw new Error(`SSE state did not converge; last active client count=${latest?.runtime?.activeSseClients ?? "unknown"}`);
+  throw new Error("SSE state did not converge");
 }
 
 async function exerciseSseReconnects() {
   const cookie = await createAdminSessionCookie();
   const violations = [];
-  let peakClients = 0;
 
   for (let round = 0; round < soakSseRounds; round += 1) {
     const controllers = Array.from({ length: soakSseClients }, () => new AbortController());
@@ -380,28 +379,25 @@ async function exerciseSseReconnects() {
       violations.push(`SSE round ${round + 1} returned a non-2xx response`);
     }
 
-    const active = await waitForSseState(cookie, (count) => count >= Math.min(soakSseClients, 1));
-    peakClients = Math.max(peakClients, active.runtime.activeSseClients);
+    await waitForSseState(cookie, (count) => count >= Math.min(soakSseClients, 1));
 
     for (const response of responses) await response.body?.cancel().catch(() => undefined);
     for (const controller of controllers) controller.abort();
 
     try {
       await waitForSseState(cookie, (count) => count === 0);
-    } catch (error) {
-      violations.push(`SSE round ${round + 1} did not clean up: ${error instanceof Error ? error.message : String(error)}`);
+    } catch {
+      violations.push(`SSE round ${round + 1} did not clean up`);
     }
   }
 
   const finalStatus = await readAdminSystemStatus(cookie);
   if (finalStatus.runtime.activeSseClients !== 0) {
-    violations.push(`SSE clients leaked after churn: ${finalStatus.runtime.activeSseClients} still active`);
+    violations.push("SSE clients leaked after churn");
   }
   return {
     rounds: soakSseRounds,
     clientsPerRound: soakSseClients,
-    peakClients,
-    finalActiveClients: finalStatus.runtime.activeSseClients,
     violations,
   };
 }
@@ -583,8 +579,6 @@ function markdownReport(report) {
         "",
         `- Rounds: ${report.sseReconnects.rounds}`,
         `- Clients per round: ${report.sseReconnects.clientsPerRound}`,
-        `- Peak active clients: ${report.sseReconnects.peakClients}`,
-        `- Final active clients: ${report.sseReconnects.finalActiveClients}`,
         `- Status: ${report.sseReconnects.violations.length ? "FAIL" : "PASS"}`,
         "",
       );
@@ -660,13 +654,9 @@ async function main() {
     const reportJson = JSON.stringify(report, null, 2) + "\n";
     const reportMarkdown = markdownReport(report) + "\n";
     assertBoundedPerformanceArtifact(reportJson, reportMarkdown);
-    // This benchmark intentionally persists bounded diagnostics from the local
-    // synthetic AirRadar test server to a fixed artifacts/ path. The files are
-    // CI evidence, are never executed, and are size-limited above.
-    // codeql[js/http-to-file-access]
+    // Persist only bounded benchmark data. Network responses used by the SSE
+    // churn gate are reduced to local pass/fail evidence before reaching report.
     writeFileSync(`artifacts/${reportStem}.json`, reportJson);
-    // Same bounded, non-executable CI artifact contract as the JSON report.
-    // codeql[js/http-to-file-access]
     writeFileSync(`artifacts/${reportStem}.md`, reportMarkdown);
     console.log(`[radar-perf] report=artifacts/${reportStem}.json`);
     console.log(`[radar-perf] summary=artifacts/${reportStem}.md`);
