@@ -61,8 +61,27 @@ export function toPublicPredictiveState(prediction: PredictiveFlightState | null
       confidence: prediction.eta.confidence,
     };
   }
-  if (policy.RUNWAY === "PUBLIC") result.runway = { status: prediction.runway.runway === null ? "unavailable" : "available", runway: prediction.runway.runway, confidence: prediction.runway.confidence };
-  if (policy.RUNWAY_CHANGE === "PUBLIC") result.runwayChange = { status: prediction.runway.changed ? "available" : "unavailable", changedFrom: prediction.runway.changed ? prediction.runway.alternative : null, runway: prediction.runway.runway, confidence: prediction.runway.confidence };
-  if (policy.TRAJECTORY === "PUBLIC") result.trajectory = { state: prediction.trajectory.state, confidence: prediction.trajectory.confidence };
+  if (policy.RUNWAY === "PUBLIC" && fresh) {
+    const available = prediction.runway.runway !== null && prediction.runway.confidence !== "UNKNOWN";
+    result.runway = {
+      status: available ? "available" : "unavailable",
+      runway: available ? prediction.runway.runway : null,
+      confidence: prediction.runway.confidence,
+    };
+  }
+  if (policy.RUNWAY_CHANGE === "PUBLIC" && fresh) {
+    const available = prediction.runway.changed
+      && prediction.runway.runway !== null
+      && prediction.runway.confidence !== "UNKNOWN";
+    result.runwayChange = {
+      status: available ? "available" : "unavailable",
+      changedFrom: available ? prediction.runway.alternative : null,
+      runway: available ? prediction.runway.runway : null,
+      confidence: prediction.runway.confidence,
+    };
+  }
+  if (policy.TRAJECTORY === "PUBLIC" && fresh) {
+    result.trajectory = { state: prediction.trajectory.state, confidence: prediction.trajectory.confidence };
+  }
   return result;
 }

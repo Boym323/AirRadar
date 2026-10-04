@@ -15,11 +15,55 @@ describe("predictive graduation boundary", () => {
     expect(toPublicPredictiveState(prediction, getPredictiveGraduationPolicy({}), 2_000)).toEqual({ modelVersion: "predictive-intelligence-v1", evaluatedAt: "1970-01-01T00:00:01.000Z", freshness: "fresh" });
   });
 
-  it("suppresses stale ETA while preserving the overall stale prediction marker", () => {
-    const result = toPublicPredictiveState(prediction, { ETA: "PUBLIC", RUNWAY: "DISABLED", RUNWAY_CHANGE: "SHADOW", TRAJECTORY: "PUBLIC" }, 60_000);
-    expect(result).toMatchObject({ freshness: "stale", trajectory: { state: "NORMAL" } });
-    expect(result).not.toHaveProperty("eta");
-    expect(result).not.toHaveProperty("runway");
-    expect(result).not.toHaveProperty("runwayChange");
+  it("suppresses every stale public capability while preserving the overall stale marker", () => {
+    const result = toPublicPredictiveState(prediction, {
+      ETA: "PUBLIC",
+      RUNWAY: "PUBLIC",
+      RUNWAY_CHANGE: "PUBLIC",
+      TRAJECTORY: "PUBLIC",
+    }, 60_000);
+
+    expect(result).toEqual({
+      modelVersion: "predictive-intelligence-v1",
+      evaluatedAt: "1970-01-01T00:00:01.000Z",
+      freshness: "stale",
+    });
+  });
+
+  it("does not expose an unknown-confidence runway as available", () => {
+    const result = toPublicPredictiveState({
+      ...prediction,
+      runway: { ...prediction.runway, confidence: "UNKNOWN" },
+    }, {
+      ETA: "SHADOW",
+      RUNWAY: "PUBLIC",
+      RUNWAY_CHANGE: "SHADOW",
+      TRAJECTORY: "SHADOW",
+    }, 2_000);
+
+    expect(result?.runway).toEqual({
+      status: "unavailable",
+      runway: null,
+      confidence: "UNKNOWN",
+    });
+  });
+
+  it("only exposes a runway change while it is fresh and confidence is known", () => {
+    const result = toPublicPredictiveState({
+      ...prediction,
+      runway: { runway: "24", alternative: "06", confidence: "MEDIUM", changed: true, evidence: [] },
+    }, {
+      ETA: "SHADOW",
+      RUNWAY: "SHADOW",
+      RUNWAY_CHANGE: "PUBLIC",
+      TRAJECTORY: "SHADOW",
+    }, 2_000);
+
+    expect(result?.runwayChange).toEqual({
+      status: "available",
+      changedFrom: "06",
+      runway: "24",
+      confidence: "MEDIUM",
+    });
   });
 });
