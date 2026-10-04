@@ -493,6 +493,50 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           provenance: "predicted",
         },
       };
+      const runwayChangeAdvisoryPublicFixture = {
+        prediction: null,
+        etaAdvisory: null,
+        runwayAdvisory: null,
+        runwayChangeAdvisory: {
+          kind: "RUNWAY_CHANGE",
+          state: "available",
+          changedFrom: "06",
+          runway: "24",
+          changedAt: "2026-10-04T09:59:15.000Z",
+          evaluatedAt: "2026-10-04T09:59:52.000Z",
+          ageSeconds: 8,
+          changeAgeSeconds: 45,
+          confidence: "MEDIUM",
+          modelVersion: "predictive-intelligence-v1",
+          provenance: "predicted",
+        },
+      };
+      const runwayChangeAdvisoryAdminFixture = {
+        prediction: null,
+        etaAdvisory: null,
+        runwayAdvisory: null,
+        runwayChangeAdvisory: null,
+        runwayChangeAdminPreview: {
+          kind: "RUNWAY_CHANGE",
+          mode: "SHADOW",
+          readiness: "WAIT",
+          readinessReasons: ["runway_change.independent_change_truth_unavailable"],
+          publicEligible: false,
+          state: "available",
+          changedFrom: "06",
+          runway: "24",
+          changedAt: "2026-10-04T09:59:15.000Z",
+          evaluatedAt: "2026-10-04T09:59:52.000Z",
+          ageSeconds: 8,
+          changeAgeSeconds: 45,
+          confidence: "MEDIUM",
+          outcomePrecision: 0.88,
+          falsePositiveRate: 0.12,
+          independentChangeTruthAvailable: false,
+          modelVersion: "predictive-intelligence-v1",
+          provenance: "predicted",
+        },
+      };
       const predictiveOperationsEvaluatedAt = new Date(Date.now() - 8_000).toISOString();
       const predictiveOperationsEtaAt = new Date(Date.now() + 28 * 60_000).toISOString();
       const predictiveOperationsLogbookFixture = {
@@ -627,10 +671,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "predictive-eta-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockEtaAdvisory: "public" },
         { name: "predictive-runway-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockRunwayAdvisory: "public" },
+        { name: "predictive-runway-change-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-change-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockRunwayChangeAdvisory: "public" },
         { name: "aircraft-detail-tablet", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 768, height: 1024 }, fullPage: false },
         { name: "aircraft-detail-mobile", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "predictive-eta-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockEtaAdvisory: "admin" },
         { name: "predictive-runway-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockRunwayAdvisory: "admin" },
+        { name: "predictive-runway-change-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-change-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockRunwayChangeAdvisory: "admin" },
         { name: "aircraft-detail-telemetry-expanded", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandTelemetry: true },
         { name: "aircraft-detail-receiver", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandReceiver: true },
       ];
@@ -678,6 +724,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           if (target.mockRunwayAdvisory) {
             await visualPage.route("**/api/aircraft/896139/prediction", async (route) => {
               const body = target.mockRunwayAdvisory === "public" ? runwayAdvisoryPublicFixture : runwayAdvisoryAdminFixture;
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+            });
+          }
+          if (target.mockRunwayChangeAdvisory) {
+            await visualPage.route("**/api/aircraft/896139/prediction", async (route) => {
+              const body = target.mockRunwayChangeAdvisory === "public" ? runwayChangeAdvisoryPublicFixture : runwayChangeAdvisoryAdminFixture;
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
             });
           }
@@ -747,6 +799,16 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await visualPage.getByText("ADMIN · SHADOW PREVIEW").first().waitFor({ state: "visible", timeout: 15_000 });
               await visualPage.getByText(/WAIT/).first().waitFor({ state: "visible", timeout: 15_000 });
               await visualPage.getByText(/82 %/).first().waitFor({ state: "visible", timeout: 15_000 });
+            }
+          }
+          if (target.mockRunwayChangeAdvisory) {
+            await visualPage.locator('[data-testid="predictive-runway-change-advisory"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Predikovaná změna dráhy").first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("06 → 24", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            if (target.mockRunwayChangeAdvisory === "admin") {
+              await visualPage.getByText("ADMIN · SHADOW PREVIEW").first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText(/WAIT/).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText(/88 %/).first().waitFor({ state: "visible", timeout: 15_000 });
             }
           }
           if (target.openCommandPalette) {
