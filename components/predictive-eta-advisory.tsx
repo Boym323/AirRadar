@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  ETA_ADVISORY_STALE_AFTER_MS,
-  type AdminEtaAdvisoryPreview,
-  type PublicEtaAdvisory,
+import type {
+  AdminEtaAdvisoryPreview,
+  PublicEtaAdvisory,
 } from "@/lib/predictive-intelligence";
+import { ETA_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/eta-advisory";
 import { formatAge, formatTime, t } from "@/lib/i18n";
 
 interface EtaAdvisoryApiResponse {
