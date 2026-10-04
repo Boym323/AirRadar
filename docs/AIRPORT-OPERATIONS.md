@@ -91,9 +91,10 @@ and already landed items are excluded.
 
 For at most six active inbound aircraft, the board makes one bounded batch
 request to the existing `GET /api/operations/predictive?hexes=` endpoint. The
-client copies only PUBLIC `etaAdvisory` and `runwayAdvisory` fields; admin
-previews are never carried into the board. No additional SSE connection is
-created.
+request is refreshed by the same 30-second token used by the operations/weather
+controller, so V7 adds neither a second periodic timer nor another SSE
+connection. The client copies only PUBLIC `etaAdvisory` and
+`runwayAdvisory` fields; admin previews are never carried into the board.
 
 The sequence prefers available PUBLIC ETA values and otherwise falls back to a
 deterministic journey-stage and distance order. It shows:
@@ -105,5 +106,8 @@ deterministic journey-stage and distance order. It shows:
 - dominant predicted runway; and
 - the existing V6 30-minute receiver-inferred runway-flow consistency.
 
-Prediction data is used only when the prediction endpoint destination matches
-the current board ICAO. V7 is not an ATC arrival sequence or FIDS.
+A CONFIRMED route-relation arrival remains in the sequence without a
+prediction. UNKNOWN route-relation traffic requires a PUBLIC prediction whose
+destination matches the current board ICAO, and predictive ETA/runway values
+are used only when that destination matches. V7 is not an ATC arrival sequence
+or FIDS.
