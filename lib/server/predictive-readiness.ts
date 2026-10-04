@@ -9,11 +9,24 @@ import {
 } from "@/lib/predictive-intelligence/readiness";
 import { getPredictiveGraduationPolicy, type PredictiveGraduationPolicy } from "@/lib/predictive-intelligence/graduation";
 import { scoreEta, scoreRunway, summarizeEta } from "@/lib/predictive-intelligence/validation";
+import {
+  scoreRunwayChangeOutcome,
+  scoreTrajectoryOutcome,
+  TRAJECTORY_POSITIVE_OUTCOME_TYPES,
+  type PredictiveOutcomeEvent,
+  type PredictiveOutcomeEventType,
+  type PredictiveOutcomeObservation,
+} from "@/lib/predictive-intelligence/outcome-truth";
 
 export const PREDICTIVE_READINESS_WINDOW_DAYS = 30;
 export const PREDICTIVE_READINESS_OBSERVATION_LIMIT = 15_000;
 export const PREDICTIVE_READINESS_LANDING_LIMIT = 2_500;
+export const PREDICTIVE_READINESS_OUTCOME_EVENT_LIMIT = 2_500;
 export const PREDICTIVE_READINESS_CACHE_MS = 5 * 60_000;
+export const PREDICTIVE_READINESS_OUTCOME_TYPES = [
+  "APPROACH",
+  ...TRAJECTORY_POSITIVE_OUTCOME_TYPES,
+] as const;
 const CAPTURE_STALE_AFTER_MS = 45_000;
 const MATCH_AFTER_PREDICTION_LIMIT_MS = 6 * 60 * 60_000;
 
@@ -27,6 +40,7 @@ export interface PredictiveReadinessObservationRow {
   flightId: number | null;
   predictedAt: unknown;
   predictedLandingAt: unknown;
+  destinationIcao?: string | null;
   predictedRunway: string | null;
   previousRunway: string | null;
   evidenceJson: string;
@@ -39,6 +53,14 @@ export interface PredictiveReadinessLandingEventRow {
   flightId: number | null;
   occurredAt: unknown;
   metadataJson: string | null;
+  type?: string;
+  airportIcao?: string | null;
+  runway?: string | null;
+  confidence?: number | null;
+}
+
+export interface PredictiveReadinessOutcomeEventRow extends PredictiveReadinessLandingEventRow {
+  type: string;
 }
 
 interface Query<Row> {
@@ -50,7 +72,7 @@ interface Query<Row> {
 
 interface ReadinessSchema {
   PredictiveObservation: Query<PredictiveReadinessObservationRow>;
-  FlightEvent: Query<PredictiveReadinessLandingEventRow>;
+  FlightEvent: Query<PredictiveReadinessOutcomeEventRow>;
 }
 
 interface TerminalEvidenceLike {
@@ -69,6 +91,7 @@ interface LandingTruth {
   flightId: number | null;
   occurredAtMs: number;
   landingAtMs: number | null;
+  airportIcao: string | null;
   reportedRunway: string | null;
 }
 
@@ -77,13 +100,14 @@ export interface PredictiveReadinessReport {
   generatedAt: string;
   window: { from: string; to: string; days: number };
   complete: boolean;
-  limits: { observations: number; landingEvents: number };
+  limits: { observations: number; landingEvents: number; outcomeEventsPerType: number };
   configuredPolicy: PredictiveGraduationPolicy;
   effectivePolicy: PredictiveGraduationPolicy;
   thresholds: typeof PREDICTIVE_READINESS_THRESHOLDS;
   collection: {
     observations: number;
     landingEvents: number;
+    outcomeEvents: number;
     matchedLandingTruth: number;
     captureStaleObservations: number;
   };
@@ -151,7 +175,59 @@ function landingTruth(row: PredictiveReadinessLandingEventRow): LandingTruth | n
     flightId: row.flightId,
     occurredAtMs,
     landingAtMs,
+    airportIcao: typeof row.airportIcao === "string" && /^[A-Z0-9]{4}$/i.test(row.airportIcao.trim())
+      ? row.airportIcao.trim().toUpperCase()
+      : null,
     reportedRunway,
+  };
+}
+
+function outcomeEvent(row: PredictiveReadinessOutcomeEventRow): PredictiveOutcomeEvent | null {
+  const metadata = safeMetadata(row.metadataJson);
+  if (!metadata.lifecycleKey) return null;
+  const occurredAt = epochMs(row.occurredAt);
+  if (occurredAt === null) return null;
+  const type = row.type as PredictiveOutcomeEventType;
+  if (type !== "APPROACH" && type !== "LANDING" && !TRAJECTORY_POSITIVE_OUTCOME_TYPES.includes(type as typeof TRAJECTORY_POSITIVE_OUTCOME_TYPES[number])) {
+    return null;
+  }
+  const confidence = typeof row.confidence === "number" && Number.isFinite(row.confidence) ? row.confidence : null;
+  const airportIcao = typeof row.airportIcao === "string" && /^[A-Z0-9]{4}$/i.test(row.airportIcao.trim())
+    ? row.airportIcao.trim().toUpperCase()
+    : null;
+  return {
+    lifecycleKey: metadata.lifecycleKey,
+    aircraftIcao: row.icaoHex.toUpperCase(),
+    flightId: row.flightId,
+    type,
+    occurredAt,
+    confidence,
+    airportIcao,
+    runway: runway(row.runway),
+    groundConfirmedAt: type === "LANDING" ? epochMs(metadata.terminalEvidence?.groundConfirmation?.observedAt) : null,
+    reportedRunway: type === "LANDING" ? runway(metadata.terminalEvidence?.reportedArrivalRunway?.runway) : null,
+  };
+}
+
+function landingOutcomeEvent(row: PredictiveReadinessLandingEventRow): PredictiveOutcomeEvent | null {
+  return outcomeEvent({ ...row, type: "LANDING" });
+}
+
+function outcomeObservation(row: PredictiveReadinessObservationRow): PredictiveOutcomeObservation | null {
+  const predictedAt = epochMs(row.predictedAt);
+  if (predictedAt === null) return null;
+  const destinationIcao = typeof row.destinationIcao === "string" && /^[A-Z0-9]{4}$/i.test(row.destinationIcao.trim())
+    ? row.destinationIcao.trim().toUpperCase()
+    : null;
+  return {
+    lifecycleKey: row.lifecycleKey,
+    aircraftIcao: row.aircraftIcao.toUpperCase(),
+    flightId: row.flightId,
+    predictedAt,
+    destinationIcao,
+    predictedRunway: runway(row.predictedRunway),
+    previousRunway: runway(row.previousRunway),
+    trajectoryState: trajectoryState(row),
   };
 }
 
@@ -260,17 +336,25 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
     generatedAt: now.toISOString(),
     window: { from: new Date(from).toISOString(), to: now.toISOString(), days: PREDICTIVE_READINESS_WINDOW_DAYS },
     complete: false,
-    limits: { observations: PREDICTIVE_READINESS_OBSERVATION_LIMIT, landingEvents: PREDICTIVE_READINESS_LANDING_LIMIT },
+    limits: {
+      observations: PREDICTIVE_READINESS_OBSERVATION_LIMIT,
+      landingEvents: PREDICTIVE_READINESS_LANDING_LIMIT,
+      outcomeEventsPerType: PREDICTIVE_READINESS_OUTCOME_EVENT_LIMIT,
+    },
     configuredPolicy,
     effectivePolicy: enforcePredictiveReadiness(configuredPolicy, capabilities),
     thresholds: PREDICTIVE_READINESS_THRESHOLDS,
-    collection: { observations: 0, landingEvents: 0, matchedLandingTruth: 0, captureStaleObservations: 0 },
+    collection: { observations: 0, landingEvents: 0, outcomeEvents: 0, matchedLandingTruth: 0, captureStaleObservations: 0 },
     integrity: evidence.integrity,
     capabilities: capabilities.capabilities,
   };
 }
 
-export function buildPredictiveReadinessEvidence(observations: readonly PredictiveReadinessObservationRow[], landingRows: readonly PredictiveReadinessLandingEventRow[]): {
+export function buildPredictiveReadinessEvidence(
+  observations: readonly PredictiveReadinessObservationRow[],
+  landingRows: readonly PredictiveReadinessLandingEventRow[],
+  outcomeRows: readonly PredictiveReadinessOutcomeEventRow[] = [],
+): {
   evidence: PredictiveReadinessEvidence;
   matchedLandingTruth: number;
   captureStaleObservations: number;
@@ -279,6 +363,16 @@ export function buildPredictiveReadinessEvidence(observations: readonly Predicti
     const truth = landingTruth(row);
     return truth ? [truth] : [];
   });
+  const outcomeEvents = [
+    ...landingRows.flatMap((row) => {
+      const event = landingOutcomeEvent(row);
+      return event ? [event] : [];
+    }),
+    ...outcomeRows.flatMap((row) => {
+      const event = outcomeEvent(row);
+      return event ? [event] : [];
+    }),
+  ];
   const byLifecycle = new Map<string, LandingTruth>();
   const byFlight = new Map<number, LandingTruth>();
   for (const truth of truths.sort((left, right) => right.occurredAtMs - left.occurredAtMs)) {
@@ -306,6 +400,16 @@ export function buildPredictiveReadinessEvidence(observations: readonly Predicti
       const flights = lifecycleFlights.get(truth.lifecycleKey) ?? new Set<number>();
       flights.add(truth.flightId);
       lifecycleFlights.set(truth.lifecycleKey, flights);
+    }
+  }
+  for (const event of outcomeEvents) {
+    const icaos = lifecycleIcaos.get(event.lifecycleKey) ?? new Set<string>();
+    icaos.add(event.aircraftIcao);
+    lifecycleIcaos.set(event.lifecycleKey, icaos);
+    if (event.flightId !== null) {
+      const flights = lifecycleFlights.get(event.lifecycleKey) ?? new Set<number>();
+      flights.add(event.flightId);
+      lifecycleFlights.set(event.lifecycleKey, flights);
     }
   }
   const integrity = {
@@ -356,18 +460,28 @@ export function buildPredictiveReadinessEvidence(observations: readonly Predicti
   );
   const exactRunway = scoreableRunway.filter((result) => result.exactEnd === true).length;
 
-  const changeScores = changeRows.map((row) => {
-    const truth = matchedTruth(row);
-    return scoreRunway(row.predictedRunway, truth?.reportedRunway ?? null, truth?.reportedRunway ? "CONFIRMED" : "UNKNOWN");
+  const changeScores = changeRows.flatMap((row) => {
+    const observation = outcomeObservation(row);
+    if (!observation) return [];
+    const score = scoreRunwayChangeOutcome(observation, outcomeEvents);
+    return score.status === "SCORED" ? [score] : [];
   });
-  const scoreableChange = changeScores.filter((result) => result.status === "SCORED");
-  const correctChangeOutcome = scoreableChange.filter((result) => result.exactEnd === true).length;
-  const changeTruthFlights = new Set(
-    changeRows.flatMap((row) => {
-      const truth = matchedTruth(row);
-      return truth?.reportedRunway ? [truth.lifecycleKey] : [];
-    }),
-  );
+  const correctChangeOutcome = changeScores.filter((result) => result.correct === true).length;
+  const falsePositiveChanges = changeScores.filter((result) => result.falsePositive === true).length;
+  const changeTruthFlights = new Set(changeScores.flatMap((result) => result.lifecycleKey ? [result.lifecycleKey] : []));
+
+  const trajectoryInstrumentedRows = trajectoryRows.filter((row) => trajectoryState(row) !== null);
+  const trajectoryCandidateRows = trajectoryRows.filter((row) => {
+    const state = trajectoryState(row);
+    return state === "POSSIBLE_DEVIATION" || state === "DEVIATING";
+  });
+  const trajectoryScores = trajectoryCandidateRows.flatMap((row) => {
+    const observation = outcomeObservation(row);
+    if (!observation) return [];
+    const score = scoreTrajectoryOutcome(observation, outcomeEvents);
+    return score.status === "SCORED" ? [score] : [];
+  });
+  const correctTrajectoryOutcomes = trajectoryScores.filter((result) => result.correct === true).length;
 
   const matchedLandingTruth = observations.filter((row) => matchedTruth(row) !== null).length;
   let captureStaleObservations = 0;
@@ -397,55 +511,67 @@ export function buildPredictiveReadinessEvidence(observations: readonly Predicti
     },
     RUNWAY_CHANGE: {
       observations: changeRows.length,
-      scoreableObservations: scoreableChange.length,
+      scoreableObservations: changeScores.length,
       independentTruthFlights: changeTruthFlights.size,
-      outcomePrecision: scoreableChange.length ? correctChangeOutcome / scoreableChange.length : null,
-      falsePositiveRate: scoreableChange.length ? 1 - correctChangeOutcome / scoreableChange.length : null,
-      // A final reported runway can validate the outcome of a change candidate,
-      // but it cannot independently prove that the runway actually changed.
-      independentChangeTruthAvailable: false,
+      outcomePrecision: changeScores.length ? correctChangeOutcome / changeScores.length : null,
+      falsePositiveRate: changeScores.length ? falsePositiveChanges / changeScores.length : null,
+      independentChangeTruthAvailable: changeScores.length > 0,
       captureStaleRate: staleRate(changeRows),
     },
     TRAJECTORY: {
-      observations: trajectoryRows.filter((row) => trajectoryState(row) !== null).length,
-      candidateObservations: trajectoryRows.filter((row) => {
-        const state = trajectoryState(row);
-        return state === "POSSIBLE_DEVIATION" || state === "DEVIATING";
-      }).length,
-      validatedCandidates: 0,
-      precision: null,
-      stateCaptureAvailable: trajectoryRows.some((row) => trajectoryState(row) !== null),
-      // State capture is now reconstructable from bounded evidenceJson, but no
-      // independent persisted outcome source currently proves whether a
-      // candidate deviation was objectively correct.
-      independentOutcomeTruthAvailable: false,
-      captureStaleRate: staleRate(trajectoryRows.filter((row) => trajectoryState(row) !== null)),
+      observations: trajectoryInstrumentedRows.length,
+      candidateObservations: trajectoryCandidateRows.length,
+      validatedCandidates: trajectoryScores.length,
+      precision: trajectoryScores.length ? correctTrajectoryOutcomes / trajectoryScores.length : null,
+      stateCaptureAvailable: trajectoryInstrumentedRows.length > 0,
+      independentOutcomeTruthAvailable: trajectoryScores.length > 0,
+      captureStaleRate: staleRate(trajectoryInstrumentedRows),
     },
     integrity,
   };
   return { evidence, matchedLandingTruth, captureStaleObservations };
 }
 
-async function queryReadinessRows(now: Date): Promise<{ observations: PredictiveReadinessObservationRow[]; landings: PredictiveReadinessLandingEventRow[] } | null> {
+async function queryReadinessRows(now: Date): Promise<{
+  observations: PredictiveReadinessObservationRow[];
+  landings: PredictiveReadinessOutcomeEventRow[];
+  outcomes: PredictiveReadinessOutcomeEventRow[];
+  outcomeComplete: boolean;
+} | null> {
   const database = getPrisma();
   if (!database) return null;
   const schema = database.orm.public as unknown as ReadinessSchema;
   const fromMs = now.getTime() - PREDICTIVE_READINESS_WINDOW_DAYS * 86_400_000;
   const from = Temporal.Instant.fromEpochMilliseconds(fromMs);
   try {
-    const [observations, landings] = await Promise.all([
-      trackDbOperation("predictive-readiness.observations.query", async () => await schema.PredictiveObservation
-        .where({ predictedAt: { gte: from } })
-        .orderBy((row: { predictedAt: { desc(): unknown } }) => row.predictedAt.desc())
-        .limit(PREDICTIVE_READINESS_OBSERVATION_LIMIT)
-        .all()),
-      trackDbOperation("predictive-readiness.landings.query", async () => await schema.FlightEvent
-        .where({ type: "LANDING", occurredAt: { gte: from } })
+    const observationPromise = trackDbOperation("predictive-readiness.observations.query", async () => await schema.PredictiveObservation
+      .where({ predictedAt: { gte: from } })
+      .orderBy((row: { predictedAt: { desc(): unknown } }) => row.predictedAt.desc())
+      .limit(PREDICTIVE_READINESS_OBSERVATION_LIMIT)
+      .all());
+    const landingPromise = trackDbOperation("predictive-readiness.landings.query", async () => await schema.FlightEvent
+      .where({ type: "LANDING", occurredAt: { gte: from } })
+      .orderBy((row: { occurredAt: { desc(): unknown } }) => row.occurredAt.desc())
+      .limit(PREDICTIVE_READINESS_LANDING_LIMIT)
+      .all());
+    const outcomePromise = Promise.all(PREDICTIVE_READINESS_OUTCOME_TYPES.map(async (type) =>
+      await trackDbOperation(`predictive-readiness.outcomes.${type.toLowerCase()}.query`, async () => await schema.FlightEvent
+        .where({ type, occurredAt: { gte: from } })
         .orderBy((row: { occurredAt: { desc(): unknown } }) => row.occurredAt.desc())
-        .limit(PREDICTIVE_READINESS_LANDING_LIMIT)
-        .all()),
+        .limit(PREDICTIVE_READINESS_OUTCOME_EVENT_LIMIT)
+        .all())));
+
+    const [observations, landings, outcomeBatches] = await Promise.all([
+      observationPromise,
+      landingPromise,
+      outcomePromise,
     ]);
-    return { observations, landings };
+    return {
+      observations,
+      landings,
+      outcomes: outcomeBatches.flat(),
+      outcomeComplete: outcomeBatches.every((rows) => rows.length < PREDICTIVE_READINESS_OUTCOME_EVENT_LIMIT),
+    };
   } catch {
     return null;
   }
@@ -462,8 +588,13 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
   }
 
   const complete = rows.observations.length < PREDICTIVE_READINESS_OBSERVATION_LIMIT
-    && rows.landings.length < PREDICTIVE_READINESS_LANDING_LIMIT;
-  const { evidence, matchedLandingTruth, captureStaleObservations } = buildPredictiveReadinessEvidence(rows.observations, rows.landings);
+    && rows.landings.length < PREDICTIVE_READINESS_LANDING_LIMIT
+    && rows.outcomeComplete;
+  const { evidence, matchedLandingTruth, captureStaleObservations } = buildPredictiveReadinessEvidence(
+    rows.observations,
+    rows.landings,
+    rows.outcomes,
+  );
   const evaluation = evaluatePredictiveReadiness(evidence, { complete });
   const configuredPolicy = getPredictiveGraduationPolicy();
   const report: PredictiveReadinessReport = {
@@ -475,13 +606,18 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
       days: PREDICTIVE_READINESS_WINDOW_DAYS,
     },
     complete,
-    limits: { observations: PREDICTIVE_READINESS_OBSERVATION_LIMIT, landingEvents: PREDICTIVE_READINESS_LANDING_LIMIT },
+    limits: {
+      observations: PREDICTIVE_READINESS_OBSERVATION_LIMIT,
+      landingEvents: PREDICTIVE_READINESS_LANDING_LIMIT,
+      outcomeEventsPerType: PREDICTIVE_READINESS_OUTCOME_EVENT_LIMIT,
+    },
     configuredPolicy,
     effectivePolicy: enforcePredictiveReadiness(configuredPolicy, evaluation),
     thresholds: PREDICTIVE_READINESS_THRESHOLDS,
     collection: {
       observations: rows.observations.length,
       landingEvents: rows.landings.length,
+      outcomeEvents: rows.outcomes.length,
       matchedLandingTruth,
       captureStaleObservations,
     },
