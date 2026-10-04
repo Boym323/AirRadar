@@ -309,7 +309,10 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           { designator: "24", arrivals: 6, departures: 2, total: 8 },
           { designator: "06", arrivals: 1, departures: 1, total: 2 },
         ],
-        wind: [],
+        wind: [
+          { directionDeg: 240, speedKt: 12, runway: "24", headwindKt: 12, crosswindKt: 0 },
+          { directionDeg: 240, speedKt: 12, runway: "06", headwindKt: -12, crosswindKt: 0 },
+        ],
         goArounds: [
           { flightId: 7002, icaoHex: "4B1801", callsign: "SWR88", registration: "HB-TST", movement: "GO_AROUND", confidence: "medium", airport: "LKPR", runway: { designator: "24", status: "probable", confidence: "medium" }, observedAt: "2026-10-04T07:35:00.000Z", evidence: ["fixture"] },
         ],
