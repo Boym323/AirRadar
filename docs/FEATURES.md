@@ -78,6 +78,21 @@ Flight Story links, recent movements, runway usage, METAR and runway-vs-wind
 intelligence remain unchanged. The board is observational/inferred, not FIDS or
 ATC guidance.
 
+## Airport Live Board V6
+
+V6 adds a short-term Flow Trend / Pressure panel without changing the existing
+shared-data architecture. Receiver-inferred arrivals and departures are compared
+across consecutive 15-minute windows; a trend requires a difference of at least
+two movements. Recent holding uses the current 15-minute window, while
+go-arounds use a 30-minute exception window.
+
+A bounded deterministic pressure level summarizes the existing NOW flow and
+clear rising-trend signals. Runway-flow consistency uses the latest 30 minutes
+of runway-bearing movement evidence and requires at least three samples; a
+dominant runway must reach 75 percent to be labeled STABLE. These values remain
+observational/inferred and do not represent airport capacity, delays or ATC
+guidance. V6 adds no fetch, EventSource or persistence path.
+
 ## Command Search V2
 
 The root-level Command Search palette remains available from every route through
