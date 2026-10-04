@@ -10,6 +10,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.297] - 2026-10-04
+
+Changes since v1.0.296.
+
+### Added
+
+- Complete Predictive Public Rollout V1 (#294) (175d4e7)
+
+### Maintenance
+
+- Sync generated repository metadata (#293) (7246853)
+- Align predictive rollout boundary tests with shared engine (#295) (79d9e33)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#293) (7246853)
+- feat: complete Predictive Public Rollout V1 (#294) (175d4e7)
+- test: align predictive rollout boundary tests with shared engine (#295) (79d9e33)
+
+</details>
 ## [1.0.296] - 2026-10-04
 
 Changes since v1.0.295.
