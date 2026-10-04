@@ -124,6 +124,25 @@ informaci, a již zobrazenou hodnotu po překročení 45sekundové freshness hra
 automaticky skryje. Nepřidává se persistence, migrace, model, poller ani
 EventSource.
 
+## Predictive Runway Change Advisory V1
+
+Změna dráhy je samostatná capability od aktuální predikce dráhy. Engine
+uchovává skutečnou předchozí predikovanou dráhu jako `changedFrom`; běžné pole
+`alternative` nadále znamená druhého aktuálního kandidáta a nikdy se
+nepoužívá jako provenance změny. Potvrzený přechod predikce se drží pouze v RAM
+v omezeném pětiminutovém advisory okně bez nové persistence.
+
+Veřejné zobrazení vyžaduje `RUNWAY_CHANGE=PUBLIC`, runtime readiness `PASS`,
+prediction snapshot nejvýše 45 sekund starý, change event nejvýše pět minut
+starý, explicitní `changedFrom` a `changedAt` a minimálně MEDIUM confidence.
+WAIT, FAIL, SHADOW, stale, expired, LOW a UNKNOWN stav veřejnou změnu
+nevyrenderují. Platná admin session může dostat SHADOW preview s outcome
+precision, false-positive rate, stavem nezávislé change truth a readiness
+reasons. Současná V1 readiness evidence záměrně zůstává WAIT, dokud není k
+dispozici nezávislá truth skutečné změny dráhy, takže samotná implementace
+nemůže capability automaticky vystavit veřejně. Detail letadla nadále používá
+jediný page-scoped prediction request.
+
 ## Predictive Operations Center V1
 
 Radarový Operations Center přidává omezený prediktivní výhled pro letadla,
@@ -132,9 +151,9 @@ otevřeném panelu posílá maximálně šest ICAO identifikátorů na
 `GET /api/operations/predictive?hexes=`. Server čte existující prediction stav
 v RAM a pro celý request vyhodnotí jeden společný readiness report.
 
-Anonymní odpověď obsahuje jen ETA/runway advisories, které projdou stejnými
+Anonymní odpověď obsahuje jen ETA/runway/runway-change advisories, které projdou stejnými
 PUBLIC + PASS + freshness gate jako detail letadla. Platná admin session může
-navíc dostat SHADOW preview a rozhodnutí readiness pro ETA/RUNWAY. Klient
+navíc dostat SHADOW preview a rozhodnutí readiness pro ETA/RUNWAY/RUNWAY_CHANGE. Klient
 obnovuje omezený snapshot po 30 sekundách a již zobrazené hodnoty skryje na
 45sekundové freshness hranici. Predictive data se nepřidávají do hlavního radar
 SSE a nevzniká nová persistence, migrace, model ani stream.

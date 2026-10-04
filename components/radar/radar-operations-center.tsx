@@ -19,6 +19,7 @@ import {
 import type { FlightEventType } from "@/lib/intelligence/types";
 import type { PredictiveOperationsResponse } from "@/lib/predictive-intelligence";
 import { PREDICTIVE_OPERATIONS_STALE_AFTER_MS } from "@/lib/predictive-intelligence/operations-center";
+import { RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS } from "@/lib/predictive-intelligence/runway-change-advisory";
 import type { AlertHistoryEntry, AlertHistoryPage } from "@/lib/server/alert-history";
 import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
 import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
@@ -207,15 +208,27 @@ export function RadarOperationsCenter() {
     const expiresAt = predictiveOperations.items.flatMap((item) => [
       item.etaAdvisory?.evaluatedAt,
       item.runwayAdvisory?.evaluatedAt,
+      item.runwayChangeAdvisory?.evaluatedAt,
       item.etaAdminPreview?.state === "available" ? item.etaAdminPreview.evaluatedAt : null,
       item.runwayAdminPreview?.state === "available" ? item.runwayAdminPreview.evaluatedAt : null,
+      item.runwayChangeAdminPreview?.state === "available" ? item.runwayChangeAdminPreview.evaluatedAt : null,
     ]).flatMap((value) => {
       if (!value) return [];
       const evaluatedAt = Date.parse(value);
       return Number.isFinite(evaluatedAt) ? [evaluatedAt + PREDICTIVE_OPERATIONS_STALE_AFTER_MS] : [];
     }).filter((value) => value > predictiveNow);
 
-    const nextExpiry = expiresAt.length ? Math.min(...expiresAt) : null;
+    const changeExpiresAt = predictiveOperations.items.flatMap((item) => [
+      item.runwayChangeAdvisory?.changedAt,
+      item.runwayChangeAdminPreview?.state === "available" ? item.runwayChangeAdminPreview.changedAt : null,
+    ]).flatMap((value) => {
+      if (!value) return [];
+      const changedAt = Date.parse(value);
+      return Number.isFinite(changedAt) ? [changedAt + RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS] : [];
+    }).filter((value) => value > predictiveNow);
+
+    const allExpiresAt = [...expiresAt, ...changeExpiresAt];
+    const nextExpiry = allExpiresAt.length ? Math.min(...allExpiresAt) : null;
     if (nextExpiry === null) return;
     const timer = window.setTimeout(
       () => setPredictiveNow(Date.now()),
@@ -270,10 +283,16 @@ export function RadarOperationsCenter() {
         && Date.parse(item.runwayAdvisory.evaluatedAt) + PREDICTIVE_OPERATIONS_STALE_AFTER_MS >= predictiveNow
         ? item.runwayAdvisory
         : null;
+      const runwayChangePublic = item.runwayChangeAdvisory
+        && Date.parse(item.runwayChangeAdvisory.evaluatedAt) + PREDICTIVE_OPERATIONS_STALE_AFTER_MS >= predictiveNow
+        && Date.parse(item.runwayChangeAdvisory.changedAt) + RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS >= predictiveNow
+        ? item.runwayChangeAdvisory
+        : null;
       const etaPreview = item.etaAdminPreview;
       const runwayPreview = item.runwayAdminPreview;
-      if (!etaPublic && !runwayPublic && !etaPreview && !runwayPreview) return [];
-      return [{ ...item, etaAdvisory: etaPublic, runwayAdvisory: runwayPublic }];
+      const runwayChangePreview = item.runwayChangeAdminPreview;
+      if (!etaPublic && !runwayPublic && !runwayChangePublic && !etaPreview && !runwayPreview && !runwayChangePreview) return [];
+      return [{ ...item, etaAdvisory: etaPublic, runwayAdvisory: runwayPublic, runwayChangeAdvisory: runwayChangePublic }];
     });
   }, [predictiveNow, predictiveOperations]);
 
@@ -440,6 +459,9 @@ export function RadarOperationsCenter() {
                     <StatusBadge variant={predictiveOperations.adminReadiness.RUNWAY.decision === "PASS" ? "live" : predictiveOperations.adminReadiness.RUNWAY.decision === "FAIL" ? "danger" : "warning"}>
                       RWY {predictiveOperations.adminReadiness.RUNWAY.decision}
                     </StatusBadge>
+                    <StatusBadge variant={predictiveOperations.adminReadiness.RUNWAY_CHANGE.decision === "PASS" ? "live" : predictiveOperations.adminReadiness.RUNWAY_CHANGE.decision === "FAIL" ? "danger" : "warning"}>
+                      RWY Δ {predictiveOperations.adminReadiness.RUNWAY_CHANGE.decision}
+                    </StatusBadge>
                   </div>
                 ) : null}
                 {predictiveStatus === "loading" && !predictiveOperations ? <small className={styles.predictiveUnavailable}>{t.common.loading}</small> : null}
@@ -447,14 +469,25 @@ export function RadarOperationsCenter() {
                   {predictiveItems.map((item) => {
                     const eta = item.etaAdvisory ?? item.etaAdminPreview ?? null;
                     const runway = item.runwayAdvisory ?? item.runwayAdminPreview ?? null;
+                    const runwayChange = item.runwayChangeAdvisory ?? item.runwayChangeAdminPreview ?? null;
                     const etaPreviewOnly = !item.etaAdvisory && Boolean(item.etaAdminPreview);
                     const runwayPreviewOnly = !item.runwayAdvisory && Boolean(item.runwayAdminPreview);
+                    const runwayChangePreviewOnly = !item.runwayChangeAdvisory && Boolean(item.runwayChangeAdminPreview);
                     const etaEvaluatedAt = eta?.evaluatedAt ? Date.parse(eta.evaluatedAt) : Number.NaN;
                     const runwayEvaluatedAt = runway?.evaluatedAt ? Date.parse(runway.evaluatedAt) : Number.NaN;
                     const etaStale = etaPreviewOnly && Number.isFinite(etaEvaluatedAt)
                       && etaEvaluatedAt + PREDICTIVE_OPERATIONS_STALE_AFTER_MS < predictiveNow;
                     const runwayStale = runwayPreviewOnly && Number.isFinite(runwayEvaluatedAt)
                       && runwayEvaluatedAt + PREDICTIVE_OPERATIONS_STALE_AFTER_MS < predictiveNow;
+                    const runwayChangeEvaluatedAt = runwayChange?.evaluatedAt ? Date.parse(runwayChange.evaluatedAt) : Number.NaN;
+                    const runwayChangeChangedAt = runwayChange?.changedAt ? Date.parse(runwayChange.changedAt) : Number.NaN;
+                    const runwayChangeState = runwayChangePreviewOnly && (
+                      (Number.isFinite(runwayChangeEvaluatedAt) && runwayChangeEvaluatedAt + PREDICTIVE_OPERATIONS_STALE_AFTER_MS < predictiveNow)
+                        ? t.intelligence.stale
+                        : (Number.isFinite(runwayChangeChangedAt) && runwayChangeChangedAt + RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS < predictiveNow)
+                          ? t.aircraft.predictiveStateExpired
+                          : null
+                    );
                     return (
                       <Link
                         className={styles.predictiveItem}
@@ -473,6 +506,10 @@ export function RadarOperationsCenter() {
                           {runway ? <span>
                             <small>{t.intelligence.operationsPredictiveRunway}{runwayPreviewOnly ? ` · ${t.intelligence.operationsPredictiveShadow}` : ""}</small>
                             <strong>{runwayStale ? t.intelligence.stale : runway.runway ?? t.common.emptyValue}</strong>
+                          </span> : null}
+                          {runwayChange ? <span>
+                            <small>{t.intelligence.operationsPredictiveRunwayChange}{runwayChangePreviewOnly ? ` · ${t.intelligence.operationsPredictiveShadow}` : ""}</small>
+                            <strong>{runwayChangeState ?? (runwayChange.changedFrom && runwayChange.runway ? `${runwayChange.changedFrom}→${runwayChange.runway}` : t.common.emptyValue)}</strong>
                           </span> : null}
                         </span>
                       </Link>

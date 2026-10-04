@@ -11,12 +11,12 @@ not yet been historically attributed.
 
 | Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
-| Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA and runway advisories. |
+| Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, and runway-change advisories. |
 | Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, and inferred Airport Operations intelligence. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
-| Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center. |
+| Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center for ETA, runway, and runway changes. |
 | Map Context & Weather | production | weather | Pre-registry | — | `/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context and aircraft-observed weather. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
@@ -123,6 +123,25 @@ confirmed ATC information and auto-expires an already-rendered value at the
 same 45-second freshness boundary. No persistence, migration, model, poller or
 EventSource is added.
 
+## Predictive Runway Change Advisory V1
+
+A runway change is a distinct capability from the current runway prediction.
+The engine retains the actual previous predicted runway as `changedFrom`; the
+ordinary `alternative` field remains the second current runway candidate and
+is never used as change provenance. A confirmed prediction transition is held
+in RAM for a bounded five-minute advisory window without adding persistence.
+
+Public presentation requires `RUNWAY_CHANGE=PUBLIC`, runtime readiness
+`PASS`, a prediction snapshot no older than 45 seconds, a change event no
+older than five minutes, explicit `changedFrom` and `changedAt`, and at least
+MEDIUM confidence. WAIT, FAIL, SHADOW, stale, expired, LOW and UNKNOWN states
+render no public change. A valid admin session may receive a SHADOW preview
+with outcome precision, false-positive rate, independent-change-truth status
+and readiness reasons. The current V1 readiness evidence intentionally remains
+WAIT while independent runway-change truth is unavailable, so this code cannot
+graduate the capability by itself. The aircraft detail continues to use its
+single page-scoped prediction request.
+
 ## Predictive Operations Center V1
 
 The radar Operations Center adds a bounded predictive outlook for aircraft
@@ -132,9 +151,9 @@ sends at most six ICAO identifiers to
 reads the existing RAM prediction state and evaluates one shared readiness
 report for the whole request.
 
-Anonymous responses contain only ETA/runway advisories that survive the same
+Anonymous responses contain only ETA/runway/runway-change advisories that survive the same
 PUBLIC + PASS + freshness gates used on aircraft detail. A valid admin session
-may additionally receive SHADOW previews plus ETA/RUNWAY readiness decisions.
+may additionally receive SHADOW previews plus ETA/RUNWAY/RUNWAY_CHANGE readiness decisions.
 The client refreshes the bounded snapshot every 30 seconds and expires rendered
 values at the 45-second freshness boundary. Predictive data is not added to the
 main radar SSE, and no persistence, migration, model, or new stream is added.

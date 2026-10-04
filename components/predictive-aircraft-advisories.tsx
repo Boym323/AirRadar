@@ -4,25 +4,35 @@ import { useEffect, useState } from "react";
 import type {
   AdminEtaAdvisoryPreview,
   AdminRunwayAdvisoryPreview,
+  AdminRunwayChangeAdvisoryPreview,
   PublicEtaAdvisory,
   PublicRunwayAdvisory,
+  PublicRunwayChangeAdvisory,
 } from "@/lib/predictive-intelligence";
 import { ETA_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/eta-advisory";
 import { RUNWAY_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/runway-advisory";
+import {
+  RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS,
+  RUNWAY_CHANGE_ADVISORY_STALE_AFTER_MS,
+} from "@/lib/predictive-intelligence/runway-change-advisory";
 import { formatAge, formatTime, t } from "@/lib/i18n";
 
 interface PredictiveAdvisoryApiResponse {
   etaAdvisory: PublicEtaAdvisory | null;
   runwayAdvisory: PublicRunwayAdvisory | null;
+  runwayChangeAdvisory: PublicRunwayChangeAdvisory | null;
   adminPreview?: AdminEtaAdvisoryPreview;
   runwayAdminPreview?: AdminRunwayAdvisoryPreview;
+  runwayChangeAdminPreview?: AdminRunwayChangeAdvisoryPreview;
 }
 
 type AdvisoryConfidence =
   | PublicEtaAdvisory["confidence"]
   | AdminEtaAdvisoryPreview["confidence"]
   | PublicRunwayAdvisory["confidence"]
-  | AdminRunwayAdvisoryPreview["confidence"];
+  | AdminRunwayAdvisoryPreview["confidence"]
+  | PublicRunwayChangeAdvisory["confidence"]
+  | AdminRunwayChangeAdvisoryPreview["confidence"];
 
 function confidenceLabel(value: AdvisoryConfidence): string {
   if (value === "HIGH") return t.aircraft.predictiveConfidenceHigh;
@@ -147,9 +157,47 @@ export function PredictiveAircraftAdvisories({
     return () => window.clearTimeout(timeout);
   }, [runwayAdvisory]);
 
+  const runwayChangeAdvisory = response?.runwayChangeAdvisory ?? null;
+  useEffect(() => {
+    if (!runwayChangeAdvisory) return;
+
+    const evaluatedAt = runwayChangeAdvisory.evaluatedAt;
+    const timeout = window.setTimeout(() => {
+      setResponse((current) => {
+        if (!current || current.runwayChangeAdvisory?.evaluatedAt !== evaluatedAt) return current;
+        return {
+          ...current,
+          runwayChangeAdvisory: null,
+          ...(current.runwayChangeAdminPreview
+            ? {
+              runwayChangeAdminPreview: {
+                ...current.runwayChangeAdminPreview,
+                state: current.runwayChangeAdminPreview.changedAt
+                  && Number.isFinite(Date.parse(current.runwayChangeAdminPreview.changedAt))
+                  && Date.now() - Date.parse(current.runwayChangeAdminPreview.changedAt) >= RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS
+                  ? "expired"
+                  : "stale",
+                ageSeconds: Math.max(
+                  current.runwayChangeAdminPreview.ageSeconds ?? 0,
+                  Math.floor(RUNWAY_CHANGE_ADVISORY_STALE_AFTER_MS / 1_000) + 1,
+                ),
+              },
+            }
+            : {}),
+        };
+      });
+    }, Math.min(
+      remainingFreshMs(runwayChangeAdvisory.ageSeconds, RUNWAY_CHANGE_ADVISORY_STALE_AFTER_MS),
+      remainingFreshMs(runwayChangeAdvisory.changeAgeSeconds, RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS),
+    ));
+
+    return () => window.clearTimeout(timeout);
+  }, [runwayChangeAdvisory]);
+
   const etaPreview = response?.adminPreview;
   const runwayPreview = response?.runwayAdminPreview;
-  if (!etaAdvisory && !etaPreview && !runwayAdvisory && !runwayPreview) return null;
+  const runwayChangePreview = response?.runwayChangeAdminPreview;
+  if (!etaAdvisory && !etaPreview && !runwayAdvisory && !runwayPreview && !runwayChangeAdvisory && !runwayChangePreview) return null;
 
   const etaAdminOnly = !etaAdvisory && Boolean(etaPreview);
   const etaEstimatedArrivalAt = etaAdvisory?.estimatedArrivalAt ?? etaPreview?.estimatedArrivalAt ?? null;
@@ -163,6 +211,13 @@ export function PredictiveAircraftAdvisories({
   const runwayAlternative = runwayAdvisory?.alternative ?? runwayPreview?.alternative ?? null;
   const runwayAgeSeconds = runwayAdvisory?.ageSeconds ?? runwayPreview?.ageSeconds ?? null;
   const runwayConfidence = runwayAdvisory?.confidence ?? runwayPreview?.confidence ?? "UNKNOWN";
+
+  const runwayChangeAdminOnly = !runwayChangeAdvisory && Boolean(runwayChangePreview);
+  const changedFrom = runwayChangeAdvisory?.changedFrom ?? runwayChangePreview?.changedFrom ?? null;
+  const changedRunway = runwayChangeAdvisory?.runway ?? runwayChangePreview?.runway ?? null;
+  const runwayChangeAgeSeconds = runwayChangeAdvisory?.changeAgeSeconds ?? runwayChangePreview?.changeAgeSeconds ?? null;
+  const runwayChangeSnapshotAgeSeconds = runwayChangeAdvisory?.ageSeconds ?? runwayChangePreview?.ageSeconds ?? null;
+  const runwayChangeConfidence = runwayChangeAdvisory?.confidence ?? runwayChangePreview?.confidence ?? "UNKNOWN";
 
   return <>
     {(etaAdvisory || etaPreview) && <section
@@ -241,6 +296,45 @@ export function PredictiveAircraftAdvisories({
 
       <p className="predictive-eta-disclaimer">
         {runwayAdminOnly ? t.aircraft.predictiveRunwayAdminDisclaimer : t.aircraft.predictiveRunwayDisclaimer}
+      </p>
+    </section>}
+
+    {(runwayChangeAdvisory || runwayChangePreview) && <section
+      className={`predictive-eta-advisory predictive-runway-advisory predictive-runway-change-advisory${runwayChangeAdminOnly ? " admin-preview" : ""}`}
+      aria-labelledby="predictive-runway-change-title"
+      data-testid="predictive-runway-change-advisory"
+      data-mode={runwayChangeAdminOnly ? "admin-preview" : "public"}
+    >
+      <div className="predictive-eta-heading">
+        <div>
+          <span className="ui-kicker">{runwayChangeAdminOnly ? t.aircraft.predictiveAdminPreview : t.aircraft.predictiveLabel}</span>
+          <h2 id="predictive-runway-change-title">{t.aircraft.predictiveRunwayChangeTitle}</h2>
+        </div>
+        <span className={`predictive-eta-confidence ${runwayChangeConfidence.toLowerCase()}`}>{confidenceLabel(runwayChangeConfidence)}</span>
+      </div>
+
+      <div className="predictive-eta-primary">
+        <strong>{changedFrom && changedRunway ? `${changedFrom} → ${changedRunway}` : t.common.emptyValue}</strong>
+        <span>{t.aircraft.predictiveRunwayChangeLabel}</span>
+      </div>
+
+      <div className="predictive-eta-meta">
+        {runwayChangeAgeSeconds !== null && <span>{t.aircraft.predictiveRunwayChangeAge(formatAge(runwayChangeAgeSeconds))}</span>}
+        {runwayChangeSnapshotAgeSeconds !== null && <span>{t.aircraft.predictiveUpdated(formatAge(runwayChangeSnapshotAgeSeconds))}</span>}
+      </div>
+
+      {runwayChangePreview && <div className="predictive-eta-admin-meta">
+        <span>{t.aircraft.predictiveMode}: {runwayChangePreview.mode}</span>
+        <span>{t.aircraft.predictiveReadiness}: {readinessLabel(runwayChangePreview.readiness)}</span>
+        <span>{t.aircraft.predictiveState}: {previewStateLabel(runwayChangePreview.state)}</span>
+        <span>{t.aircraft.predictiveRunwayChangePrecision}: {percent(runwayChangePreview.outcomePrecision)}</span>
+        <span>{t.aircraft.predictiveRunwayChangeFalsePositive}: {percent(runwayChangePreview.falsePositiveRate)}</span>
+        <span>{t.aircraft.predictiveRunwayChangeTruth}: {runwayChangePreview.independentChangeTruthAvailable ? t.common.yes : t.common.no}</span>
+        {runwayChangePreview.readinessReasons.length > 0 && <span title={runwayChangePreview.readinessReasons.join(", ")}>{t.aircraft.predictiveReasons}: {runwayChangePreview.readinessReasons.length}</span>}
+      </div>}
+
+      <p className="predictive-eta-disclaimer">
+        {runwayChangeAdminOnly ? t.aircraft.predictiveRunwayChangeAdminDisclaimer : t.aircraft.predictiveRunwayChangeDisclaimer}
       </p>
     </section>}
   </>;

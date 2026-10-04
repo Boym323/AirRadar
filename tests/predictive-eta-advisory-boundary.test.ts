@@ -26,11 +26,11 @@ describe("Predictive ETA Advisory V1 boundary", () => {
     expect(advisorySource).not.toContain("setInterval");
   });
 
-  it("expires an already-rendered public ETA with one local one-shot timer", () => {
+  it("keeps one local one-shot expiry timer per predictive advisory", () => {
     expect(advisorySource).toContain('from "@/lib/predictive-intelligence/eta-advisory"');
     expect(advisorySource).toContain("ETA_ADVISORY_STALE_AFTER_MS");
-    expect(advisorySource.match(/window\.setTimeout\(/g)).toHaveLength(2);
-    expect(advisorySource.match(/window\.clearTimeout\(/g)).toHaveLength(2);
+    expect(advisorySource.match(/window\.setTimeout\(/g)).toHaveLength(3);
+    expect(advisorySource.match(/window\.clearTimeout\(/g)).toHaveLength(3);
     expect(advisorySource).toContain("etaAdvisory: null");
     expect(advisorySource).toContain('state: "stale"');
   });

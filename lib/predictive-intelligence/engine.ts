@@ -2,7 +2,7 @@ import { calculateRunwayWind } from "@/lib/airport-runway-wind";
 import { haversineDistanceKm, initialBearing, distanceToGreatCircleSegmentKm } from "@/lib/geo";
 import type { FlightPhase } from "@/lib/intelligence/types";
 import {
-  PREDICTIVE_INTELLIGENCE_VERSION, type PredictionConfidence, type PredictionEvidence,
+  PREDICTIVE_INTELLIGENCE_VERSION, RUNWAY_CHANGE_EVENT_WINDOW_MS, type PredictionConfidence, type PredictionEvidence,
   type PredictionRunway, type PredictiveInput, type PredictiveFlightState, type PredictionSample,
 } from "./types";
 import { PREDICTIVE_CALIBRATION_CONFIG } from "./config";
@@ -60,9 +60,9 @@ function eta(input: PredictiveInput, valid: readonly PredictionSample[]): Predic
   ] };
 }
 function runway(input: PredictiveInput, valid: readonly PredictionSample[]): PredictiveFlightState["runway"] {
-  if (!input.destinationAirport || input.flightState.destinationStatus === "UNKNOWN") return { runway: null, alternative: null, confidence: "UNKNOWN", changed: false, evidence: [] };
+  if (!input.destinationAirport || input.flightState.destinationStatus === "UNKNOWN") return { runway: null, alternative: null, changedFrom: null, changedAt: null, confidence: "UNKNOWN", changed: false, evidence: [] };
   const candidates = runwayEnds(input.runways ?? []);
-  if (!candidates.length) return { runway: null, alternative: null, confidence: "UNKNOWN", changed: false, evidence: [{ key: "reason", value: "no runway geometry" }] };
+  if (!candidates.length) return { runway: null, alternative: null, changedFrom: null, changedAt: null, confidence: "UNKNOWN", changed: false, evidence: [{ key: "reason", value: "no runway geometry" }] };
   const last = valid.at(-1) ?? input.flightState.sample;
   const destinationBearing = initialBearing(last.lat, last.lon, input.destinationAirport.lat, input.destinationAirport.lon);
   const usage = new Map((input.airportOperations?.runwayUsage ?? []).map((item) => [item.designator, item]));
@@ -77,9 +77,23 @@ function runway(input: PredictiveInput, valid: readonly PredictionSample[]): Pre
   }).sort((a, b) => b.score - a.score || a.ident.localeCompare(b.ident, undefined, { numeric: true }));
   const best = scores[0]!; const second = scores[1]; const margin = second ? best.score - second.score : best.score;
   const c = confidence((best.score >= 0.72 ? 0.72 : best.score) + (margin >= 0.15 ? 0.12 : 0));
-  const previous = input.previousPrediction?.runway.runway;
-  const changed = Boolean(previous && previous !== best.ident && c !== "LOW" && c !== "UNKNOWN" && margin >= 0.15);
-  return { runway: best.ident, alternative: second?.ident ?? null, confidence: c, changed, evidence: [
+  const previousRunway = input.previousPrediction?.runway;
+  const previous = previousRunway?.runway;
+  const immediateChange = Boolean(previous && previous !== best.ident && c !== "LOW" && c !== "UNKNOWN" && margin >= 0.15);
+  const carriedChange = Boolean(
+    !immediateChange
+    && previousRunway?.changed
+    && previousRunway.runway === best.ident
+    && previousRunway.changedFrom
+    && typeof previousRunway.changedAt === "number"
+    && Number.isFinite(previousRunway.changedAt)
+    && previousRunway.changedAt <= input.now
+    && input.now - previousRunway.changedAt <= RUNWAY_CHANGE_EVENT_WINDOW_MS
+  );
+  const changed = immediateChange || carriedChange;
+  const changedFrom = immediateChange ? previous ?? null : carriedChange ? previousRunway?.changedFrom ?? null : null;
+  const changedAt = immediateChange ? input.now : carriedChange ? previousRunway?.changedAt ?? null : null;
+  return { runway: best.ident, alternative: second?.ident ?? null, changedFrom, changedAt, confidence: c, changed, evidence: [
     ...(usage.has(best.ident) ? [{ key: "recentRunwayUsage", value: String(usage.get(best.ident)!.total) }] : []),
     ...(input.weather && !input.weather.stale ? [{ key: "surfaceWind", value: `${input.weather.windDirectionDeg ?? "VRB"}/${input.weather.windSpeedKt ?? "?"}kt` }] : []),
     { key: "candidateMargin", value: Math.round(margin * 100) / 100 },

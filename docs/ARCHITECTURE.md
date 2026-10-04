@@ -94,6 +94,17 @@ may receive a separate SHADOW runway preview with readiness evidence. The
 browser expires a rendered runway at the same 45-second freshness boundary.
 No second fetch, EventSource, persistence lane, migration or model is added.
 
+Predictive Runway Change Advisory V1 is a separate graduation capability over
+the same in-memory prediction state. The engine records the real previous
+predicted runway as `changedFrom` and a `changedAt` timestamp; `alternative`
+continues to mean the second current candidate. A real transition is retained
+in RAM for at most five minutes so an advisory is observable without changing
+the prospective-validation write semantics. Public serialization additionally
+requires a fresh <=45-second prediction snapshot, RUNWAY_CHANGE=PUBLIC,
+readiness PASS, non-expired change provenance and MEDIUM/HIGH confidence.
+Authenticated admin output may expose SHADOW/WAIT/FAIL diagnostics. No database
+field, migration, stream or extra aircraft-detail request is introduced.
+
 Predictive Operations Center V1 is a bounded read-only aggregation boundary on
 the radar NOW panel. The browser derives at most six ICAO candidates from the
 existing prioritized timeline and live highlights, then requests

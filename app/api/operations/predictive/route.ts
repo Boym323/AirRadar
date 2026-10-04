@@ -1,8 +1,10 @@
 import {
   buildAdminEtaAdvisoryPreview,
   buildAdminRunwayAdvisoryPreview,
+  buildAdminRunwayChangeAdvisoryPreview,
   buildPublicEtaAdvisory,
   buildPublicRunwayAdvisory,
+  buildPublicRunwayChangeAdvisory,
   getPredictiveGraduationPolicy,
   PREDICTIVE_OPERATIONS_MAX_AIRCRAFT,
   type PredictiveOperationsItem,
@@ -52,7 +54,8 @@ export async function GET(request: Request): Promise<Response> {
   const admin = isWatchlistSessionValid(request);
   const readinessRequired = admin
     || configuredPolicy.ETA === "PUBLIC"
-    || configuredPolicy.RUNWAY === "PUBLIC";
+    || configuredPolicy.RUNWAY === "PUBLIC"
+    || configuredPolicy.RUNWAY_CHANGE === "PUBLIC";
   const readiness = readinessRequired ? await readPredictiveReadinessReport() : null;
   const effectivePolicy = readiness
     ? enforcePredictiveReadiness(configuredPolicy, {
@@ -63,6 +66,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const etaReadiness = readiness?.capabilities.ETA ?? null;
   const runwayReadiness = readiness?.capabilities.RUNWAY ?? null;
+  const runwayChangeReadiness = readiness?.capabilities.RUNWAY_CHANGE ?? null;
   const items: PredictiveOperationsItem[] = [];
 
   for (const hex of hexes) {
@@ -70,14 +74,18 @@ export async function GET(request: Request): Promise<Response> {
     const aircraft = service.getAircraft(hex);
     const etaAdvisory = buildPublicEtaAdvisory(state, effectivePolicy, etaReadiness);
     const runwayAdvisory = buildPublicRunwayAdvisory(state, effectivePolicy, runwayReadiness);
+    const runwayChangeAdvisory = buildPublicRunwayChangeAdvisory(state, effectivePolicy, runwayChangeReadiness);
     const etaAdminPreview = admin && state && etaReadiness
       ? buildAdminEtaAdvisoryPreview(state, configuredPolicy, etaReadiness)
       : undefined;
     const runwayAdminPreview = admin && state && runwayReadiness
       ? buildAdminRunwayAdvisoryPreview(state, configuredPolicy, runwayReadiness)
       : undefined;
+    const runwayChangeAdminPreview = admin && state && runwayChangeReadiness
+      ? buildAdminRunwayChangeAdvisoryPreview(state, configuredPolicy, runwayChangeReadiness)
+      : undefined;
 
-    if (!etaAdvisory && !runwayAdvisory && !etaAdminPreview && !runwayAdminPreview) continue;
+    if (!etaAdvisory && !runwayAdvisory && !runwayChangeAdvisory && !etaAdminPreview && !runwayAdminPreview && !runwayChangeAdminPreview) continue;
 
     items.push({
       icaoHex: hex,
@@ -87,8 +95,10 @@ export async function GET(request: Request): Promise<Response> {
       destination: aircraft?.enrichment?.route?.destination ?? null,
       etaAdvisory,
       runwayAdvisory,
+      runwayChangeAdvisory,
       ...(etaAdminPreview ? { etaAdminPreview } : {}),
       ...(runwayAdminPreview ? { runwayAdminPreview } : {}),
+      ...(runwayChangeAdminPreview ? { runwayChangeAdminPreview } : {}),
     });
   }
 
@@ -105,6 +115,10 @@ export async function GET(request: Request): Promise<Response> {
           RUNWAY: {
             decision: readiness.capabilities.RUNWAY.decision,
             reasons: [...readiness.capabilities.RUNWAY.reasons],
+          },
+          RUNWAY_CHANGE: {
+            decision: readiness.capabilities.RUNWAY_CHANGE.decision,
+            reasons: [...readiness.capabilities.RUNWAY_CHANGE.reasons],
           },
         },
       }

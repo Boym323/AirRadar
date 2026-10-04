@@ -280,6 +280,16 @@ samostatný SHADOW runway preview s readiness evidence. Browser již zobrazenou
 dráhu po stejné 45sekundové freshness hranici skryje. Nepřidává se druhý fetch,
 EventSource, persistence lane, migrace ani model.
 
+Predictive Runway Change Advisory V1 je samostatná graduation capability nad
+stejným prediction stavem v RAM. Engine ukládá skutečnou předchozí predikovanou
+dráhu jako `changedFrom` a čas `changedAt`; `alternative` dál znamená pouze
+druhého aktuálního kandidáta. Skutečný přechod se drží v RAM maximálně pět
+minut, aby byl advisory pozorovatelný bez změny prospective-validation write
+semantiky. Veřejná serializace navíc vyžaduje fresh prediction snapshot do 45 s,
+RUNWAY_CHANGE=PUBLIC, readiness PASS, neexpirovanou provenance změny a
+MEDIUM/HIGH confidence. Ověřený admin může dostat SHADOW/WAIT/FAIL diagnostiku.
+Nevzniká nový DB field, migrace, stream ani další aircraft-detail request.
+
 Predictive Operations Center V1 je omezený read-only agregační boundary nad
 radarovým panelem NOW. Browser odvodí maximálně šest ICAO kandidátů z existující
 prioritizované timeline a živých highlightů a pouze při otevřeném panelu volá
