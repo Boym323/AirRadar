@@ -35,6 +35,8 @@ export function parseCommandSearchRecents(value: string | null): CommandPaletteR
         typeof record.key !== "string"
         || typeof record.label !== "string"
         || typeof record.href !== "string"
+        || !record.href.startsWith("/")
+        || record.href.startsWith("//")
         || !["command", "aircraft", "airport", "ats-point"].includes(String(record.kind))
       ) return [];
       return [{
