@@ -429,11 +429,14 @@ observation as a position candidate only when both coordinates are valid and
 `seen_pos` is fresh. Aircraft existence is separate from position usability:
 the extended result is the full local/network identity union, so local
 aircraft without a fresh position are retained. The state service assigns
-each ICAO a source affinity and keeps the aircraft on that source while either
-observation remains in RAM; a temporary source outage therefore cannot make
-the marker switch local ↔ network. Within the selected source, a fresh
-position is preferred and its last-known usable position is retained when
-necessary; coordinates otherwise remain null. Displayed
+each ICAO a source affinity, tracks latest provider membership separately from
+retained observations, and keeps the last good preferred position through the
+bounded stale/affinity grace window. When the preferred feed remains absent,
+handoff to a live alternate occurs directly without a positionless snapshot.
+If the preferred observation is absent or cannot supply a usable position,
+position arbitration may use the fresh alternate immediately. Within the
+selected source, a fresh position is preferred and its last-known usable
+position is retained when necessary; coordinates otherwise remain null. Displayed
 network-only aircraft are marked with source provenance; they do not enter
 history, local daily statistics, alerts, metadata enrichment, ATC resolution,
 or the local receiver health state. Public UI/API output includes ADSB.lol and
