@@ -529,6 +529,13 @@ async function measureScenario(browser, scenario, serverPid) {
   }
 }
 
+function assertBoundedPerformanceArtifact(json, markdown) {
+  const jsonBytes = Buffer.byteLength(json, "utf8");
+  const markdownBytes = Buffer.byteLength(markdown, "utf8");
+  if (jsonBytes > 4 * 1024 * 1024) throw new Error(`Radar performance JSON artifact exceeds 4 MiB (${jsonBytes} bytes)`);
+  if (markdownBytes > 1024 * 1024) throw new Error(`Radar performance Markdown artifact exceeds 1 MiB (${markdownBytes} bytes)`);
+}
+
 function markdownReport(report) {
   const lines = [
     "# Radar production performance baseline",
@@ -650,8 +657,16 @@ async function main() {
     };
     mkdirSync("artifacts", { recursive: true });
     const reportStem = soakMode ? "radar-performance-soak" : "radar-performance-baseline";
-    writeFileSync(`artifacts/${reportStem}.json`, JSON.stringify(report, null, 2) + "\n");
-    writeFileSync(`artifacts/${reportStem}.md`, markdownReport(report) + "\n");
+    const reportJson = JSON.stringify(report, null, 2) + "\n";
+    const reportMarkdown = markdownReport(report) + "\n";
+    assertBoundedPerformanceArtifact(reportJson, reportMarkdown);
+    // codeql[js/http-to-file-access]: this benchmark intentionally persists
+    // bounded diagnostics from the local synthetic AirRadar test server to a
+    // fixed artifacts/ path; the files are CI evidence and are never executed.
+    writeFileSync(`artifacts/${reportStem}.json`, reportJson);
+    // codeql[js/http-to-file-access]: same bounded, non-executable CI artifact
+    // contract as the JSON report above.
+    writeFileSync(`artifacts/${reportStem}.md`, reportMarkdown);
     console.log(`[radar-perf] report=artifacts/${reportStem}.json`);
     console.log(`[radar-perf] summary=artifacts/${reportStem}.md`);
     if (failed.length) {
