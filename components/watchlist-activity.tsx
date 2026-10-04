@@ -16,6 +16,8 @@ function eventLabel(entry: AlertHistoryEntry, locale: LocaleKey): string {
   if (entry.type === "intelligence_holding") return "Holding";
   if (entry.type === "intelligence_diversion") return cs ? "Odklon" : "Diversion";
   if (entry.type === "intelligence_top_of_descent") return "Top of descent";
+  if (entry.type === "predictive_eta") return locale === "cs" ? "ETA limit" : "ETA threshold";
+  if (entry.type === "predictive_runway_change") return locale === "cs" ? "Predikovaná změna RWY" : "Predicted runway change";
   if (entry.type === "emergency_7500") return "Squawk 7500";
   if (entry.type === "emergency_7600") return "Squawk 7600";
   if (entry.type === "emergency_7700") return "Squawk 7700";
@@ -27,6 +29,20 @@ function contextLabel(entry: AlertHistoryEntry, locale: LocaleKey): string | nul
     return locale === "cs" ? `Okruh ${Math.round(entry.radiusKm)} km` : `${Math.round(entry.radiusKm)} km radius`;
   }
   if (entry.squawk) return `Squawk ${entry.squawk}`;
+  if (entry.type === "predictive_eta") {
+    const destination = typeof entry.metadata?.destinationIcao === "string" ? entry.metadata.destinationIcao : null;
+    const horizon = typeof entry.metadata?.horizonMinutes === "number" ? Math.round(entry.metadata.horizonMinutes) : null;
+    if (destination && horizon !== null) return `${destination} · ${horizon} min`;
+    if (horizon !== null) return `${horizon} min`;
+    return destination;
+  }
+  if (entry.type === "predictive_runway_change") {
+    const from = typeof entry.metadata?.changedFrom === "string" ? entry.metadata.changedFrom : null;
+    const runway = typeof entry.metadata?.runway === "string" ? entry.metadata.runway : null;
+    const destination = typeof entry.metadata?.destinationIcao === "string" ? entry.metadata.destinationIcao : null;
+    const transition = from && runway ? `RWY ${from} → ${runway}` : null;
+    return [destination, transition].filter(Boolean).join(" · ") || null;
+  }
   const intelligence = entry.intelligence;
   if (intelligence?.airportIcao) return intelligence.airportIcao;
   return null;
@@ -83,6 +99,7 @@ export function WatchlistActivity({ locale }: { locale: LocaleKey }) {
         <span className="watchlist-status enabled">{copy.range}</span>
         <span className="watchlist-status enabled">{copy.takeoff}</span>
         <span className="watchlist-status enabled">{copy.landing}</span>
+        <span className="watchlist-status enabled">{copy.prediction}</span>
         <span className="watchlist-status enabled">7500 / 7600 / 7700</span>
       </div>
 
