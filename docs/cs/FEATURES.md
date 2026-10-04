@@ -386,4 +386,6 @@ porovnává stejně dlouhá okna 0–15 a 15–30 minut pro trend toku, detekuje
 compression, odvozuje konzervativní arrival pressure, seskupuje predikované
 zatížení drah a při dostatečné evidenci porovnává dominantní predikovanou dráhu
 s receiverově pozorovaným runway flow. Evidence je označená PUBLIC_STRONG,
-PUBLIC_PARTIAL nebo RECEIVER_ONLY.
+PUBLIC_PARTIAL nebo RECEIVER_ONLY. Stejné omezené pořadí navíc vytváří stav
+Approach Queue (EMPTY, LOW_DENSITY, ACTIVE, BUILDING, COMPRESSED nebo
+HOLDING_PRESENT) bez dalšího requestu, streamu nebo persistence path.
