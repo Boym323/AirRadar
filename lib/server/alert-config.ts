@@ -15,6 +15,9 @@ export interface AlertRule {
   type: AircraftRuleType;
   value: string;
   maxDistanceKm?: number;
+  etaThresholdMinutes?: number;
+  etaDestinationIcao?: string;
+  notifyRunwayChange?: boolean;
 }
 
 export interface AlertConfig {
@@ -91,9 +94,45 @@ export function parseAlertRules(input: unknown): { rules: AlertRule[]; errors: s
       }
     }
 
+    let etaThresholdMinutes: number | undefined;
+    if (record.etaThresholdMinutes !== undefined) {
+      if (typeof record.etaThresholdMinutes !== "number" || !Number.isInteger(record.etaThresholdMinutes) || record.etaThresholdMinutes < 1 || record.etaThresholdMinutes > 120) {
+        issue(errors, `${path}.etaThresholdMinutes must be an integer from 1 to 120`);
+        valid = false;
+      } else {
+        etaThresholdMinutes = record.etaThresholdMinutes;
+      }
+    }
+
+    let etaDestinationIcao: string | undefined;
+    if (record.etaDestinationIcao !== undefined) {
+      if (typeof record.etaDestinationIcao !== "string" || !/^[A-Za-z]{4}$/.test(record.etaDestinationIcao.trim())) {
+        issue(errors, `${path}.etaDestinationIcao must be a four-letter ICAO code`);
+        valid = false;
+      } else {
+        etaDestinationIcao = record.etaDestinationIcao.trim().toUpperCase();
+      }
+    }
+    if (etaDestinationIcao && etaThresholdMinutes === undefined) {
+      issue(errors, `${path}.etaDestinationIcao requires etaThresholdMinutes`);
+      valid = false;
+    }
+
+    const notifyRunwayChange = record.notifyRunwayChange === undefined ? false : record.notifyRunwayChange;
+    if (typeof notifyRunwayChange !== "boolean") {
+      issue(errors, `${path}.notifyRunwayChange must be boolean`);
+      valid = false;
+    }
+
     if (!valid || !type || typeof enabled !== "boolean") return;
     ids.add(id);
-    rules.push({ id, name, enabled, type, value, ...(maxDistanceKm === undefined ? {} : { maxDistanceKm }) });
+    rules.push({
+      id, name, enabled, type, value,
+      ...(maxDistanceKm === undefined ? {} : { maxDistanceKm }),
+      ...(etaThresholdMinutes === undefined ? {} : { etaThresholdMinutes }),
+      ...(etaDestinationIcao === undefined ? {} : { etaDestinationIcao }),
+      ...(notifyRunwayChange ? { notifyRunwayChange: true } : {}),
+    });
   });
 
   return { rules, errors };
