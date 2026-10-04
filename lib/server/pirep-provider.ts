@@ -147,7 +147,7 @@ export function normalizePirepQuery(value: Partial<PirepQuery>): PirepQuery | nu
   const longitude = Number(value.longitude);
   const radiusNm = Number(value.radiusNm);
   const hours = Number(value.hours);
-  const altitude = value.altitudeFt === undefined || value.altitudeFt === null || value.altitudeFt === "" as never ? null : Number(value.altitudeFt);
+  const altitude = value.altitudeFt === undefined || value.altitudeFt === null ? null : Number(value.altitudeFt);
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return null;
   if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return null;
   if (!Number.isFinite(radiusNm) || radiusNm < 10 || radiusNm > 300) return null;
