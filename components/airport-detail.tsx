@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import type { Airport } from "@/lib/airports/types";
 import { AirportMap } from "@/components/airport-map";
@@ -60,8 +61,15 @@ function AirportInfrastructureSections({ infrastructure }: { infrastructure: Air
 
 export function AirportDetail({ airport, infrastructure = { runways: [], frequencies: [], navaids: [] }, nearbyAirports = [] }: { airport: Airport; infrastructure?: AirportInfrastructure; nearbyAirports?: NearbyAirport[] }) {
   const location = [airport.city, airport.country].filter(Boolean).join(" · ");
-  const operationsController = useAirportOperationsController(airport.icaoCode);
   const liveTrafficController = useAirportLiveTrafficController(airport);
+  const predictiveHexes = useMemo(
+    () => liveTrafficController.observations
+      .filter((item) => !item.aircraft.onGround && item.classification === "approaching")
+      .slice(0, 6)
+      .map((item) => item.aircraft.icaoHex),
+    [liveTrafficController.observations],
+  );
+  const operationsController = useAirportOperationsController(airport.icaoCode, predictiveHexes);
 
   return <main className="airport-page">
     <PageHeader

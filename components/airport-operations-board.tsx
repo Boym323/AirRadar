@@ -12,6 +12,7 @@ import {
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
 } from "@/lib/airport-intelligence/v3";
+import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 import type { AirportMovement } from "@/lib/server/airport-movements";
@@ -252,6 +253,11 @@ export function AirportOperationsBoard({
   const flow = buildAirportJourneyFlowSummary(activeTraffic);
   const pressure = buildAirportFlowPressureSummary(flow, operations);
   const runwayFlow = buildAirportRunwayFlowIntelligence(operations, runway.windFavoredRunway);
+  const arrivalSequence = buildAirportArrivalSequence({
+    airportIcao: airport.icaoCode,
+    traffic: activeTraffic,
+    predictive: controller.predictive,
+  });
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
   const metar = weather?.metar ?? null;
@@ -435,6 +441,61 @@ export function AirportOperationsBoard({
         />
       </MetricStrip>
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV7Disclaimer}</p>
+    </section>
+
+    <section className="airport-live-arrival-sequence" data-testid="airport-live-board-v7-arrival-sequence" aria-labelledby="airport-live-v7-arrival-title">
+      <div className="airport-live-flow-heading">
+        <div>
+          <span className="ui-kicker">{t.airport.liveBoardV7ArrivalKicker}</span>
+          <h3 id="airport-live-v7-arrival-title">{t.airport.liveBoardV7ArrivalTitle}</h3>
+        </div>
+        <span>{controller.predictiveLoading ? t.common.loading : controller.predictiveFailed ? t.airport.liveBoardV7ArrivalPredictionUnavailable : t.airport.liveBoardV7ArrivalPublicOnly}</span>
+      </div>
+      <MetricStrip className="airport-live-flow-metrics">
+        <MetricCard label={t.airport.liveBoardV7ArrivalActive} value={String(arrivalSequence.totalCandidates)} />
+        <MetricCard
+          label={t.airport.liveBoardV7ArrivalEtaCoverage}
+          value={`${arrivalSequence.etaPredicted} / ${arrivalSequence.totalCandidates}`}
+          detail={arrivalSequence.predictionCoverage === null ? t.airport.liveBoardV7ArrivalNoPrediction : `${Math.round(arrivalSequence.predictionCoverage * 100)} % ETA`}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV7ArrivalMedianSpacing}
+          value={arrivalSequence.medianSpacingMinutes === null ? "—" : `${formatNumber(arrivalSequence.medianSpacingMinutes, 1)} min`}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV7ArrivalPredictedRunway}
+          value={arrivalSequence.runway.designator ? `RWY ${arrivalSequence.runway.designator}` : "—"}
+          detail={arrivalSequence.runway.share === null
+            ? t.airport.liveBoardV7ArrivalNoPrediction
+            : `${runwayConsistencyLabel(arrivalSequence.runway.consistency)} · ${Math.round(arrivalSequence.runway.share * 100)} % · n=${arrivalSequence.runway.samples}`}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV7ArrivalObservedRunway}
+          value={runwayFlowValue(runwayFlow.current.runway)}
+          detail={runwayFlow.current.share === null
+            ? t.airport.liveBoardV7NoEvidence
+            : t.airport.liveBoardV7LaneDetail(Math.round(runwayFlow.current.share * 100), runwayFlow.current.samples)}
+        />
+      </MetricStrip>
+      {arrivalSequence.items.length ? <ol className="airport-live-arrival-sequence-list">
+        {arrivalSequence.items.map((item) => <li key={item.icaoHex}>
+          <span className="airport-live-sequence-position">{item.position}</span>
+          <span className={`airport-live-journey airport-live-journey-${item.stage.toLowerCase().replace("_", "-")}`}>{journeyLabel(item.stage)}</span>
+          <span className="airport-live-flight-main">
+            <Link href={`/aircraft/${encodeURIComponent(item.icaoHex)}`}>{item.label}</Link>
+            <small>{formatDistance(item.distanceKm)}</small>
+          </span>
+          <span className="airport-live-sequence-eta">
+            <strong>{item.etaAt ? formatTime(item.etaAt) : "—"}</strong>
+            <small>{item.etaUncertaintyMinutes === null ? t.airport.liveBoardV7ArrivalNoPublicEta : `± ${formatNumber(item.etaUncertaintyMinutes, 0)} min`}</small>
+          </span>
+          <span className="airport-live-sequence-runway">
+            <strong>{item.runway ? `RWY ${item.runway}` : "—"}</strong>
+            <small>{item.runwayConfidence ?? item.etaConfidence ?? t.airport.liveBoardV7ArrivalNoPrediction}</small>
+          </span>
+        </li>)}
+      </ol> : <p className="airport-v3-empty">{t.airport.liveBoardV7ArrivalNoArrivals}</p>}
+      <p className="airport-v3-disclaimer">{t.airport.liveBoardV7ArrivalDisclaimer}</p>
     </section>
 
     <div className="airport-live-active" data-testid="airport-live-board-active">

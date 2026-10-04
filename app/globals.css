@@ -5444,3 +5444,70 @@ button, input, select, textarea { color-scheme: dark; }
 .airport-live-flow-pressure .airport-v3-disclaimer {
   margin: 0;
 }
+
+
+/* Airport Live Board V7 arrival sequence */
+.airport-live-arrival-sequence {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid rgba(55, 214, 192, .18);
+  border-radius: var(--radius-lg);
+  background: rgba(55, 214, 192, .025);
+}
+.airport-live-arrival-sequence-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.airport-live-arrival-sequence-list li {
+  display: grid;
+  grid-template-columns: 28px auto minmax(130px, 1fr) minmax(90px, auto) minmax(90px, auto);
+  gap: var(--space-2);
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid rgba(148, 163, 184, .12);
+}
+.airport-live-sequence-position {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(55, 214, 192, .3);
+  border-radius: 999px;
+  color: var(--mint);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: var(--font-size-2xs);
+  font-weight: 800;
+}
+.airport-live-sequence-eta,
+.airport-live-sequence-runway {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.airport-live-sequence-eta strong,
+.airport-live-sequence-runway strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+}
+.airport-live-sequence-eta small,
+.airport-live-sequence-runway small {
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+}
+.airport-live-arrival-sequence .airport-v3-disclaimer { margin: 0; }
+@media (max-width: 760px) {
+  .airport-live-arrival-sequence-list li {
+    grid-template-columns: 28px auto minmax(0, 1fr);
+  }
+  .airport-live-sequence-eta,
+  .airport-live-sequence-runway {
+    grid-column: 3;
+    text-align: left;
+  }
+}

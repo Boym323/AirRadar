@@ -103,3 +103,24 @@ touch-and-go traffic, nearby airports, and parallel runways reduce confidence.
 No new persistence table is used; this avoids duplicating Flight Intelligence
 history. `npm run audit:airport-operations` produces a deterministic quality
 artifact from synthetic scenarios and records coverage and ambiguity metrics.
+
+
+### V7 Arrival Sequence
+
+The V7 runway-flow panel is complemented by a bounded active-arrival sequence
+from the same live receiver snapshot. At most six approaching aircraft are sent
+in one batch to the existing `GET /api/operations/predictive?hexes=` endpoint.
+The request is refreshed by the airport controller's existing 30-second refresh
+token, so this adds neither another EventSource nor a second periodic timer.
+
+Only readiness-gated PUBLIC ETA and runway advisories are copied from the
+predictive response; admin previews are discarded. A CONFIRMED route arrival
+remains visible without prediction. UNKNOWN route traffic enters the sequence
+only when the PUBLIC prediction destination matches the board ICAO. Predictive
+ETA/runway values are also used only on that destination match.
+
+PUBLIC ETA rows sort first; the remainder use deterministic journey-stage and
+distance ordering. The panel shows calibrated ETA uncertainty, median spacing
+between available ETAs, predicted-runway stability, and the existing observed
+V7 runway-flow evidence. The sequence is receiver/prediction intelligence, not
+ATC sequencing or FIDS.
