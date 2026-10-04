@@ -240,7 +240,7 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
   const to = now.getTime();
   const from = to - PREDICTIVE_READINESS_WINDOW_DAYS * 86_400_000;
   const evidence = emptyEvidence();
-  const capabilities = evaluatePredictiveReadiness(evidence);
+  const capabilities = evaluatePredictiveReadiness(evidence, { complete: false });
   const configuredPolicy = getPredictiveGraduationPolicy();
   return {
     source: "unavailable",
@@ -438,10 +438,16 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
   const now = options.now ?? new Date();
   if (!options.force && cached && cached.expiresAt > now.getTime()) return cached.report;
   const rows = await queryReadinessRows(now);
-  if (!rows) return unavailableReport(now);
+  if (!rows) {
+    const report = unavailableReport(now);
+    cached = { expiresAt: now.getTime() + Math.min(PREDICTIVE_READINESS_CACHE_MS, 60_000), report };
+    return report;
+  }
 
+  const complete = rows.observations.length < PREDICTIVE_READINESS_OBSERVATION_LIMIT
+    && rows.landings.length < PREDICTIVE_READINESS_LANDING_LIMIT;
   const { evidence, matchedLandingTruth, captureStaleObservations } = buildEvidence(rows.observations, rows.landings);
-  const evaluation = evaluatePredictiveReadiness(evidence);
+  const evaluation = evaluatePredictiveReadiness(evidence, { complete });
   const configuredPolicy = getPredictiveGraduationPolicy();
   const report: PredictiveReadinessReport = {
     source: "postgres",
@@ -451,8 +457,7 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
       to: now.toISOString(),
       days: PREDICTIVE_READINESS_WINDOW_DAYS,
     },
-    complete: rows.observations.length < PREDICTIVE_READINESS_OBSERVATION_LIMIT
-      && rows.landings.length < PREDICTIVE_READINESS_LANDING_LIMIT,
+    complete,
     limits: { observations: PREDICTIVE_READINESS_OBSERVATION_LIMIT, landingEvents: PREDICTIVE_READINESS_LANDING_LIMIT },
     configuredPolicy,
     effectivePolicy: enforcePredictiveReadiness(configuredPolicy, evaluation),
