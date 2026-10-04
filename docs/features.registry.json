@@ -9,7 +9,7 @@
       "category": "radar",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center.",
+      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center for ETA, runway, and runway changes.",
       "pages": [
         "/"
       ],
@@ -52,7 +52,7 @@
       "category": "history",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA and runway advisories.",
+      "summary": "Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, and runway-change advisories.",
       "pages": [
         "/aircraft/:hex",
         "/flights/:id",
@@ -80,7 +80,9 @@
         "predictive-eta",
         "eta-advisory",
         "predictive-runway",
-        "runway-advisory"
+        "runway-advisory",
+        "predictive-runway-change",
+        "runway-change-advisory"
       ],
       "changelogKeywords": [
         "aircraft detail",
@@ -92,7 +94,10 @@
         "predicted arrival",
         "predictive runway",
         "runway advisory",
-        "predicted runway"
+        "predicted runway",
+        "predictive runway change",
+        "runway change advisory",
+        "changed runway"
       ]
     },
     {
