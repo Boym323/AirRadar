@@ -57,7 +57,7 @@ export interface PredictiveInput {
 
 export interface PredictionEvidence { key: string; value: string | number; }
 export interface EtaPrediction { estimatedArrivalAt: number | null; confidence: PredictionConfidence; evidence: PredictionEvidence[]; }
-export interface RunwayPrediction { runway: string | null; alternative: string | null; confidence: PredictionConfidence; changed: boolean; evidence: PredictionEvidence[]; }
+export interface RunwayPrediction { runway: string | null; alternative: string | null; changedFrom?: string | null; confidence: PredictionConfidence; changed: boolean; evidence: PredictionEvidence[]; }
 export interface TrajectoryPrediction { state: TrajectoryState; confidence: PredictionConfidence; evidence: PredictionEvidence[]; }
 export interface PredictiveFlightState {
   modelVersion: typeof PREDICTIVE_INTELLIGENCE_VERSION;
