@@ -34,10 +34,12 @@ async function capture(label) {
     const { stdout } = await execFileAsync("systemctl", ["show", "airradar.service", "-p", "MemoryCurrent", "-p", "CPUUsageNSec"]);
     for (const line of stdout.trim().split("\n")) { const [key, value] = line.split("=", 2); if (key) service[key] = Number(value) || value; }
   } catch { /* Local audit can run without systemd. */ }
-  let traffic = {};
+  let traffic = { state: "unavailable" };
   try {
     const response = await fetch("http://192.168.1.142:3000/api/health");
-    if (response.ok) traffic = await response.json();
+    // Persist only a locally derived reachability classification. The raw
+    // network response body is intentionally never copied into an artifact.
+    traffic = { state: response.ok ? "healthy" : "http_error" };
   } catch { /* The database audit remains useful without the local HTTP listener. */ }
   return { label, capturedAt: new Date().toISOString(), tables, database, wal, statements, pgStatStatementsAvailable, service, traffic };
 }
