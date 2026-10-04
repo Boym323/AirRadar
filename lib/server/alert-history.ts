@@ -134,10 +134,11 @@ interface NotificationLine {
   at: string;
 }
 
-interface AlertHistoryListOptions {
+export interface AlertHistoryListOptions {
   page?: number;
   pageSize?: number;
   filter?: AlertHistoryFilter;
+  ruleIds?: readonly string[];
 }
 
 const MAX_PAGE_SIZE = 100;
@@ -230,6 +231,13 @@ function lineFromUnknown(value: unknown): DetectionLine | NotificationLine | nul
   return null;
 }
 
+function matchesRuleIds(entry: AlertHistoryEntry, ruleIds: readonly string[] | undefined): boolean {
+  if (ruleIds === undefined) return true;
+  if (ruleIds.length === 0) return false;
+  const allowed = new Set(ruleIds);
+  return entry.ruleIds.some((ruleId) => allowed.has(ruleId));
+}
+
 function matchesFilter(entry: AlertHistoryEntry, filter: AlertHistoryFilter): boolean {
   if (filter === "all") return true;
   if (filter === "watchlist") return entry.type === "watchlist" || entry.type === "aircraft_appeared" || entry.type === "entered_radius";
@@ -285,7 +293,7 @@ function pageFromLines(lines: Iterable<unknown>, options: AlertHistoryListOption
   }
   const filter = options.filter ?? "all";
   const all = [...entries.values()]
-    .filter((entry) => matchesFilter(entry, filter))
+    .filter((entry) => matchesFilter(entry, filter) && matchesRuleIds(entry, options.ruleIds))
     .sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
   const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), MAX_PAGE_SIZE);
   const page = Math.max(Math.trunc(options.page ?? 0), 0);
@@ -418,7 +426,9 @@ export async function listAlertHistory(options: AlertHistoryListOptions = {}): P
   const legacy = await createAlertHistoryStore().list({ ...options, page: 0, pageSize: MAX_PAGE_SIZE });
   let v1: AlertHistoryEntry[] = [];
   try { v1 = (await getAlertsFleetsRepository().listOccurrenceHistory(200)).map(entryFromV1); } catch { /* PostgreSQL is optional for live radar and history */ }
-  const all = [...legacy.items, ...v1].filter((entry) => matchesFilter(entry, options.filter ?? "all")).sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
+  const all = [...legacy.items, ...v1]
+    .filter((entry) => matchesFilter(entry, options.filter ?? "all") && matchesRuleIds(entry, options.ruleIds))
+    .sort((a, b) => Date.parse(b.detectedAt) - Date.parse(a.detectedAt) || b.id.localeCompare(a.id));
   const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), MAX_PAGE_SIZE);
   const page = Math.max(Math.trunc(options.page ?? 0), 0);
   const items = all.slice(page * pageSize, (page + 1) * pageSize);
