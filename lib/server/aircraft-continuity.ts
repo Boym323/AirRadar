@@ -130,7 +130,7 @@ export class AircraftContinuityGuard {
       }
       removals.delete(hex);
     }
-    if (removals.size > 10_000) {
+    if (removals.size > MAX_RECENT_REMOVALS) {
       const cutoff = now - reappearWindowMs;
       for (const [key, value] of removals) {
         if (value < cutoff) removals.delete(key);
