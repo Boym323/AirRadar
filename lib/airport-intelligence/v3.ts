@@ -202,9 +202,28 @@ export interface AirportActiveTrafficSnapshot {
   outbound: AirportTrafficObservation[];
 }
 
+export type AirportActiveJourneyStage =
+  | "INBOUND"
+  | "HOLDING"
+  | "APPROACH"
+  | "FINAL"
+  | "GO_AROUND"
+  | "INITIAL_CLIMB"
+  | "OUTBOUND";
+
+export type AirportJourneyRouteRelation = "CONFIRMED" | "UNKNOWN" | "CONFLICT";
+
+export interface AirportActiveJourney {
+  stage: AirportActiveJourneyStage;
+  routeRelation: AirportJourneyRouteRelation;
+  origin: string | null;
+  destination: string | null;
+}
+
 export interface AirportCorrelatedTrafficObservation extends AirportTrafficObservation {
   movement: AirportMovement | null;
   movementAgeSeconds: number | null;
+  journey: AirportActiveJourney;
 }
 
 export interface AirportCorrelatedTrafficSnapshot {
@@ -214,6 +233,67 @@ export interface AirportCorrelatedTrafficSnapshot {
 
 export const AIRPORT_LIVE_BOARD_CORRELATION_MAX_AGE_MS = 20 * 60_000;
 export const AIRPORT_LIVE_BOARD_CORRELATION_FUTURE_TOLERANCE_MS = 2 * 60_000;
+
+export const AIRPORT_LIVE_BOARD_FINAL_DISTANCE_KM = 8;
+export const AIRPORT_LIVE_BOARD_FINAL_DESCENT_FPM = -150;
+
+function canonicalAirport(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toUpperCase() ?? "";
+  return /^[A-Z0-9]{4}$/.test(normalized) ? normalized : null;
+}
+
+function routeRelation(
+  observation: AirportTrafficObservation,
+  airportIcao: string | null,
+): Pick<AirportActiveJourney, "routeRelation" | "origin" | "destination"> {
+  const route = observation.aircraft.enrichment?.route;
+  const origin = canonicalAirport(route?.origin);
+  const destination = canonicalAirport(route?.destination);
+  if (!airportIcao) return { routeRelation: "UNKNOWN", origin, destination };
+
+  const relevant = observation.classification === "approaching" ? destination
+    : observation.classification === "departing" ? origin
+      : null;
+  return {
+    routeRelation: relevant === null ? "UNKNOWN" : relevant === airportIcao ? "CONFIRMED" : "CONFLICT",
+    origin,
+    destination,
+  };
+}
+
+function journeyStage(
+  observation: AirportTrafficObservation,
+  movement: AirportMovement | null,
+): AirportActiveJourneyStage {
+  if (observation.classification === "approaching") {
+    if (movement?.movement === "HOLDING") return "HOLDING";
+    if (movement?.movement === "APPROACH") {
+      const verticalRate = observation.aircraft.verticalRate;
+      const descending = typeof verticalRate === "number"
+        && Number.isFinite(verticalRate)
+        && verticalRate <= AIRPORT_LIVE_BOARD_FINAL_DESCENT_FPM;
+      return observation.distanceKm <= AIRPORT_LIVE_BOARD_FINAL_DISTANCE_KM && descending
+        ? "FINAL"
+        : "APPROACH";
+    }
+    return "INBOUND";
+  }
+
+  if (movement?.movement === "GO_AROUND") return "GO_AROUND";
+  if (movement?.movement === "TAKEOFF") return "INITIAL_CLIMB";
+  return "OUTBOUND";
+}
+
+function activeJourney(
+  observation: AirportTrafficObservation,
+  movement: AirportMovement | null,
+  airportIcao: string | null,
+): AirportActiveJourney {
+  return {
+    stage: journeyStage(observation, movement),
+    ...routeRelation(observation, airportIcao),
+  };
+}
 
 function normalizedIdentity(value: string | null | undefined): string | null {
   const normalized = value?.trim().toUpperCase().replace(/\s+/g, "") ?? "";
@@ -272,13 +352,16 @@ export function buildAirportCorrelatedTrafficSnapshot(
   limit = AIRPORT_LIVE_BOARD_ACTIVE_LIMIT,
 ): AirportCorrelatedTrafficSnapshot {
   const active = buildAirportActiveTrafficSnapshot(observations, limit);
+  const airportIcao = canonicalAirport(operations?.airport.icao);
   const correlate = (items: AirportTrafficObservation[]): AirportCorrelatedTrafficObservation[] =>
     items.map((observation) => {
       const match = correlatedMovement(observation, operations);
+      const movement = match?.movement ?? null;
       return {
         ...observation,
-        movement: match?.movement ?? null,
+        movement,
         movementAgeSeconds: match?.ageSeconds ?? null,
+        journey: activeJourney(observation, movement, airportIcao),
       };
     });
 
