@@ -507,6 +507,52 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             },
           },
         },
+        rollout: {
+          ETA: {
+            version: "eta-public-rollout-v1",
+            state: "READY_FOR_PUBLIC_CONFIG",
+            configuredMode: "SHADOW",
+            effectiveMode: "SHADOW",
+            readiness: "PASS",
+            manualReviewEligible: true,
+            publicActive: false,
+            requiresExplicitConfigChange: true,
+            blockers: [],
+          },
+          RUNWAY: {
+            version: "runway-public-rollout-v1",
+            state: "SHADOW_COLLECTING",
+            configuredMode: "SHADOW",
+            effectiveMode: "SHADOW",
+            readiness: "WAIT",
+            manualReviewEligible: false,
+            publicActive: false,
+            requiresExplicitConfigChange: false,
+            blockers: ["runway.insufficient_independent_truth"],
+          },
+          RUNWAY_CHANGE: {
+            version: "runway-change-public-rollout-v1",
+            state: "SHADOW_COLLECTING",
+            configuredMode: "SHADOW",
+            effectiveMode: "SHADOW",
+            readiness: "WAIT",
+            manualReviewEligible: false,
+            publicActive: false,
+            requiresExplicitConfigChange: false,
+            blockers: ["runway_change.independent_change_truth_unavailable"],
+          },
+          TRAJECTORY: {
+            version: "trajectory-public-rollout-v1",
+            state: "SHADOW_COLLECTING",
+            configuredMode: "SHADOW",
+            effectiveMode: "SHADOW",
+            readiness: "WAIT",
+            manualReviewEligible: false,
+            publicActive: false,
+            requiresExplicitConfigChange: false,
+            blockers: ["trajectory.state_capture_unavailable", "trajectory.independent_outcome_truth_unavailable"],
+          },
+        },
       };
       const etaAdvisoryPublicFixture = {
         prediction: null,
@@ -978,6 +1024,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.locator('[data-testid="predictive-calibration-eta"]').waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.locator('[data-testid="predictive-calibration-runway"]').waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.locator('[data-testid="predictive-calibration-runway_change"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-rollout-eta"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-rollout-runway"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-rollout-runway_change"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-rollout-trajectory"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("eta-public-rollout-v1", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("runway-change-public-rollout-v1", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Připraveno pro PUBLIC konfiguraci", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("SHADOW · sbírání evidence", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("Připraveno k review", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("Sbírání evidence", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("Blokováno truth / instrumentací", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
