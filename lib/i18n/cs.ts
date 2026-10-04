@@ -940,7 +940,7 @@ export const cs = {
     v3RunwayKicker: "Runway Intelligence",
     v3RunwayTitle: "Receiver vs vítr",
     v3ReceiverUsage: "Odvozené použití",
-    v3ReceiverUsageDetail: (share: string, count: number, total: number) => `${share} · ${count} z ${total} runway-relevant pohybů`,
+    v3ReceiverUsageDetail: (share: string, count: number, total: number) => `${share} · ${count} z ${total} pohybů s runway evidencí`,
     v3WindFavored: "Dráha zvýhodněná větrem",
     v3WindComponents: (headwind: string, crosswind: string) => `protivítr ${headwind} · boční ${crosswind}`,
     v3RunwayAligned: "Receiver-inferred použití odpovídá dráze zvýhodněné aktuálním větrem.",
