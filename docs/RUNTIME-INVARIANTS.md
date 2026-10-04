@@ -161,6 +161,19 @@ These are behavior and safety contracts for changes to the current system.
   still retained with nullable coordinates. Local descriptive
   fields and receiver-local RSSI/message counters remain authoritative for a
   local-affinity aircraft. Network-only aircraft have null local measurements.
+- Continuity Guard V2 treats a large count collapse in an otherwise successful
+  provider snapshot as suspicious when the previous baseline is at least
+  `AIRCRAFT_MASS_DROP_MIN_BASELINE` and the configured drop ratio is reached.
+  The first suspicious snapshot may advance source-affinity state but defers
+  destructive stale pruning for exactly one confirmation cycle. A second
+  similarly low snapshot confirms the drop and normal stale pruning resumes;
+  a recovered snapshot cancels the pending guard. The guard never converts a
+  failed provider request into a successful snapshot.
+- Continuity diagnostics are bounded process-local counters only. They expose
+  omission/recovery events, stale expirations, quick reappearances, source
+  failovers, mass-drop candidates/deferrals/confirmations/recoveries, retained
+  versus currently observed counts, and pending affinity state. They reset on
+  process restart and do not enter PostgreSQL history.
 - Network-only observations are excluded from PostgreSQL history, daily
   statistics/coverage, alerts, metadata enrichment, and ATC resolution. Public
   output includes safe source/provenance and ADSB.lol ODbL attribution, but no
