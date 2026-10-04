@@ -15,7 +15,7 @@ describe("Command Search V2 UI contract", () => {
     expect(paletteSource).toContain("t.commandSearch.smartActions");
     expect(paletteSource).toContain('item.kind === "flight"');
     expect(paletteSource).toContain("smartActionLabels(item)");
-    expect(paletteSource).toContain('result.kind === "flight"');
+    expect(paletteSource).toContain('item.kind === "flight"');
   });
 
   it("persists Flight and smart-action selections as safe browser-local recents", () => {
