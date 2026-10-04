@@ -12,10 +12,13 @@ import {
   attentionOperationsCount,
   liveOperationsHighlights,
   OPERATIONS_CENTER_WINDOW_MS,
+  predictiveOperationsIcaos,
   recentOperationsTimeline,
   relevantOperationsAirportIcaos,
 } from "@/lib/intelligence/operations-center";
 import type { FlightEventType } from "@/lib/intelligence/types";
+import type { PredictiveOperationsResponse } from "@/lib/predictive-intelligence";
+import { PREDICTIVE_OPERATIONS_STALE_AFTER_MS } from "@/lib/predictive-intelligence/operations-center";
 import type { AlertHistoryEntry, AlertHistoryPage } from "@/lib/server/alert-history";
 import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
 import { IconButton, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
@@ -26,6 +29,7 @@ import styles from "./radar-operations-center.module.css";
 const CLOCK_REFRESH_INTERVAL_MS = 60_000;
 const SUPPLEMENTARY_REFRESH_INTERVAL_MS = 120_000;
 const AIRPORT_CONTEXT_REFRESH_INTERVAL_MS = 300_000;
+const PREDICTIVE_REFRESH_INTERVAL_MS = 30_000;
 
 type SupplementaryStatus = "idle" | "loading" | "ready" | "partial" | "unavailable";
 
@@ -79,6 +83,9 @@ export function RadarOperationsCenter() {
   const [logbook, setLogbook] = useState<LogbookSummaryResponse | null>(null);
   const [airportOperations, setAirportOperations] = useState<AirportOperationsResponse[]>([]);
   const [supplementaryStatus, setSupplementaryStatus] = useState<SupplementaryStatus>("idle");
+  const [predictiveOperations, setPredictiveOperations] = useState<PredictiveOperationsResponse | null>(null);
+  const [predictiveStatus, setPredictiveStatus] = useState<SupplementaryStatus>("idle");
+  const [predictiveNow, setPredictiveNow] = useState(() => Date.now());
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), CLOCK_REFRESH_INTERVAL_MS);
@@ -145,10 +152,73 @@ export function RadarOperationsCenter() {
     [alerts, intelligenceEvents, now],
   );
   const highlights = useMemo(() => liveOperationsHighlights(logbook), [logbook]);
+  const predictiveHexes = useMemo(
+    () => predictiveOperationsIcaos(timeline, highlights),
+    [highlights, timeline],
+  );
+  const predictiveHexKey = predictiveHexes.join(",");
   const relevantAirportKey = useMemo(
     () => relevantOperationsAirportIcaos(timeline).join(","),
     [timeline],
   );
+
+  useEffect(() => {
+    if (!open) return;
+    if (!predictiveHexKey) {
+      setPredictiveOperations(null);
+      setPredictiveStatus("idle");
+      return;
+    }
+
+    let active = true;
+    const controller = new AbortController();
+    const loadPredictive = async () => {
+      setPredictiveStatus((current) => current === "idle" ? "loading" : current);
+      try {
+        const response = await fetchJson<PredictiveOperationsResponse>(
+          `/api/operations/predictive?hexes=${encodeURIComponent(predictiveHexKey)}`,
+          controller.signal,
+        );
+        if (!active) return;
+        setPredictiveOperations(response);
+        setPredictiveNow(Date.now());
+        setPredictiveStatus("ready");
+      } catch {
+        if (!active || controller.signal.aborted) return;
+        setPredictiveStatus("unavailable");
+      }
+    };
+
+    void loadPredictive();
+    const timer = window.setInterval(() => void loadPredictive(), PREDICTIVE_REFRESH_INTERVAL_MS);
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [open, predictiveHexKey]);
+
+  useEffect(() => {
+    if (!open || !predictiveOperations) return;
+    const expiresAt = predictiveOperations.items.flatMap((item) => [
+      item.etaAdvisory?.evaluatedAt,
+      item.runwayAdvisory?.evaluatedAt,
+      item.etaAdminPreview?.state === "available" ? item.etaAdminPreview.evaluatedAt : null,
+      item.runwayAdminPreview?.state === "available" ? item.runwayAdminPreview.evaluatedAt : null,
+    ]).flatMap((value) => {
+      if (!value) return [];
+      const evaluatedAt = Date.parse(value);
+      return Number.isFinite(evaluatedAt) ? [evaluatedAt + PREDICTIVE_OPERATIONS_STALE_AFTER_MS] : [];
+    }).filter((value) => value > predictiveNow);
+
+    const nextExpiry = expiresAt.length ? Math.min(...expiresAt) : null;
+    if (nextExpiry === null) return;
+    const timer = window.setTimeout(
+      () => setPredictiveNow(Date.now()),
+      Math.max(250, nextExpiry - Date.now() + 100),
+    );
+    return () => window.clearTimeout(timer);
+  }, [open, predictiveNow, predictiveOperations]);
 
   useEffect(() => {
     if (!open) return;
@@ -184,6 +254,24 @@ export function RadarOperationsCenter() {
       window.clearInterval(timer);
     };
   }, [open, relevantAirportKey]);
+
+  const predictiveItems = useMemo(() => {
+    if (!predictiveOperations) return [];
+    return predictiveOperations.items.flatMap((item) => {
+      const etaPublic = item.etaAdvisory
+        && Date.parse(item.etaAdvisory.evaluatedAt) + PREDICTIVE_OPERATIONS_STALE_AFTER_MS >= predictiveNow
+        ? item.etaAdvisory
+        : null;
+      const runwayPublic = item.runwayAdvisory
+        && Date.parse(item.runwayAdvisory.evaluatedAt) + PREDICTIVE_OPERATIONS_STALE_AFTER_MS >= predictiveNow
+        ? item.runwayAdvisory
+        : null;
+      const etaPreview = item.etaAdminPreview;
+      const runwayPreview = item.runwayAdminPreview;
+      if (!etaPublic && !runwayPublic && !etaPreview && !runwayPreview) return [];
+      return [{ ...item, etaAdvisory: etaPublic, runwayAdvisory: runwayPublic }];
+    });
+  }, [predictiveNow, predictiveOperations]);
 
   const attentionCount = attentionOperationsCount(timeline);
   const evidenceTypes = t.intelligence.evidenceTypes as Record<string, string>;
@@ -330,6 +418,63 @@ export function RadarOperationsCenter() {
                     </Link>
                   ))}
                 </div>
+              </section>
+            ) : null}
+
+            {predictiveItems.length > 0 || predictiveOperations?.adminReadiness ? (
+              <section className={styles.predictive} aria-labelledby="operations-predictive-title" data-testid="predictive-operations-center">
+                <div className={styles.sectionHeading}>
+                  <span id="operations-predictive-title">{t.intelligence.operationsPredictiveTitle}</span>
+                  <small>{t.intelligence.operationsPredictiveHint}</small>
+                </div>
+                {predictiveOperations?.adminReadiness ? (
+                  <div className={styles.predictiveReadiness} data-testid="predictive-operations-readiness">
+                    <span>{t.intelligence.operationsPredictiveReadiness}</span>
+                    <StatusBadge variant={predictiveOperations.adminReadiness.ETA.decision === "PASS" ? "live" : predictiveOperations.adminReadiness.ETA.decision === "FAIL" ? "danger" : "warning"}>
+                      ETA {predictiveOperations.adminReadiness.ETA.decision}
+                    </StatusBadge>
+                    <StatusBadge variant={predictiveOperations.adminReadiness.RUNWAY.decision === "PASS" ? "live" : predictiveOperations.adminReadiness.RUNWAY.decision === "FAIL" ? "danger" : "warning"}>
+                      RWY {predictiveOperations.adminReadiness.RUNWAY.decision}
+                    </StatusBadge>
+                  </div>
+                ) : null}
+                <div className={styles.predictiveList}>
+                  {predictiveItems.map((item) => {
+                    const eta = item.etaAdvisory ?? item.etaAdminPreview ?? null;
+                    const runway = item.runwayAdvisory ?? item.runwayAdminPreview ?? null;
+                    const etaPreviewOnly = !item.etaAdvisory && Boolean(item.etaAdminPreview);
+                    const runwayPreviewOnly = !item.runwayAdvisory && Boolean(item.runwayAdminPreview);
+                    const etaEvaluatedAt = eta?.evaluatedAt ? Date.parse(eta.evaluatedAt) : Number.NaN;
+                    const runwayEvaluatedAt = runway?.evaluatedAt ? Date.parse(runway.evaluatedAt) : Number.NaN;
+                    const etaStale = etaPreviewOnly && Number.isFinite(etaEvaluatedAt)
+                      && etaEvaluatedAt + PREDICTIVE_OPERATIONS_STALE_AFTER_MS < predictiveNow;
+                    const runwayStale = runwayPreviewOnly && Number.isFinite(runwayEvaluatedAt)
+                      && runwayEvaluatedAt + PREDICTIVE_OPERATIONS_STALE_AFTER_MS < predictiveNow;
+                    return (
+                      <Link
+                        className={styles.predictiveItem}
+                        href={`/aircraft/${encodeURIComponent(item.icaoHex)}`}
+                        key={item.icaoHex}
+                      >
+                        <span className={styles.predictiveIdentity}>
+                          <strong>{item.label}</strong>
+                          <small>{item.destination ? `${item.icaoHex} · → ${item.destination}` : item.icaoHex}</small>
+                        </span>
+                        <span className={styles.predictiveValues}>
+                          {eta ? <span>
+                            <small>{t.intelligence.operationsPredictiveEta}{etaPreviewOnly ? ` · ${t.intelligence.operationsPredictiveShadow}` : ""}</small>
+                            <strong>{etaStale ? t.intelligence.stale : "estimatedArrivalAt" in eta && eta.estimatedArrivalAt ? formatTime(eta.estimatedArrivalAt) : t.common.emptyValue}</strong>
+                          </span> : null}
+                          {runway ? <span>
+                            <small>{t.intelligence.operationsPredictiveRunway}{runwayPreviewOnly ? ` · ${t.intelligence.operationsPredictiveShadow}` : ""}</small>
+                            <strong>{runwayStale ? t.intelligence.stale : runway.runway ?? t.common.emptyValue}</strong>
+                          </span> : null}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+                {predictiveStatus === "unavailable" ? <small className={styles.predictiveUnavailable}>{t.intelligence.operationsPredictiveUnavailable}</small> : null}
               </section>
             ) : null}
 
