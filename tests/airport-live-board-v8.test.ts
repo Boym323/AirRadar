@@ -61,17 +61,17 @@ function runwayFlow(runway: string | null = "28", share: number | null = 0.8, sa
 describe("Airport Live Board V8 arrival flow intelligence", () => {
   it("builds 5/15/30 minute demand windows and detects increasing future demand", () => {
     const result = buildAirportArrivalFlowIntelligence({
-      sequence: sequence([{ minutes: 4 }, { minutes: 12 }, { minutes: 18 }, { minutes: 22 }, { minutes: 27 }]),
+      sequence: sequence([{ minutes: 4 }, { minutes: 12 }, { minutes: 18 }, { minutes: 22 }, { minutes: 27 }, { minutes: 29 }]),
       flowPressure: pressure(),
       runwayFlow: runwayFlow(),
     });
     expect(result.demand).toMatchObject({
       within5Minutes: 1,
       within15Minutes: 2,
-      within30Minutes: 5,
-      between15And30Minutes: 3,
-      etaSamples: 5,
-      trend: "STABLE",
+      within30Minutes: 6,
+      between15And30Minutes: 4,
+      etaSamples: 6,
+      trend: "INCREASING",
     });
     expect(result.evidence).toBe("PUBLIC_STRONG");
   });
