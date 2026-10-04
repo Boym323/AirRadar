@@ -231,6 +231,60 @@ export interface AirportCorrelatedTrafficSnapshot {
   outbound: AirportCorrelatedTrafficObservation[];
 }
 
+export interface AirportJourneyFlowSummary {
+  inbound: number;
+  outbound: number;
+  final: number;
+  holding: number;
+  goAround: number;
+  initialClimb: number;
+  correlated: number;
+  liveOnly: number;
+  routeConfirmed: number;
+  routeConflicts: number;
+  attention: AirportCorrelatedTrafficObservation[];
+}
+
+export const AIRPORT_LIVE_BOARD_ATTENTION_LIMIT = 6;
+
+export function buildAirportJourneyFlowSummary(
+  snapshot: AirportCorrelatedTrafficSnapshot,
+  attentionLimit = AIRPORT_LIVE_BOARD_ATTENTION_LIMIT,
+): AirportJourneyFlowSummary {
+  const all = [...snapshot.inbound, ...snapshot.outbound];
+  const stageCount = (stage: AirportActiveJourneyStage) =>
+    all.filter((item) => item.journey.stage === stage).length;
+  const priority = (item: AirportCorrelatedTrafficObservation): number =>
+    item.journey.stage === "GO_AROUND" ? 0
+      : item.journey.stage === "HOLDING" ? 1
+        : item.journey.routeRelation === "CONFLICT" ? 2
+          : 3;
+
+  return {
+    inbound: snapshot.inbound.length,
+    outbound: snapshot.outbound.length,
+    final: stageCount("FINAL"),
+    holding: stageCount("HOLDING"),
+    goAround: stageCount("GO_AROUND"),
+    initialClimb: stageCount("INITIAL_CLIMB"),
+    correlated: all.filter((item) => item.movement !== null).length,
+    liveOnly: all.filter((item) => item.movement === null).length,
+    routeConfirmed: all.filter((item) => item.journey.routeRelation === "CONFIRMED").length,
+    routeConflicts: all.filter((item) => item.journey.routeRelation === "CONFLICT").length,
+    attention: all
+      .filter((item) =>
+        item.journey.stage === "GO_AROUND"
+        || item.journey.stage === "HOLDING"
+        || item.journey.routeRelation === "CONFLICT")
+      .slice()
+      .sort((left, right) =>
+        priority(left) - priority(right)
+        || left.distanceKm - right.distanceKm
+        || left.aircraft.icaoHex.localeCompare(right.aircraft.icaoHex))
+      .slice(0, Math.max(1, attentionLimit)),
+  };
+}
+
 export const AIRPORT_LIVE_BOARD_CORRELATION_MAX_AGE_MS = 20 * 60_000;
 export const AIRPORT_LIVE_BOARD_CORRELATION_FUTURE_TOLERANCE_MS = 2 * 60_000;
 
