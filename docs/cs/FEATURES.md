@@ -93,6 +93,21 @@ alespoň 75 procent, aby dostala stav STABILNÍ. Hodnoty zůstávají
 observational/inferred a nepředstavují kapacitu letiště, zpoždění ani ATC
 guidance. V6 nepřidává další fetch, EventSource ani persistence path.
 
+## Airport Live Board V7
+
+V7 přidává Runway Flow / Stability nad existujícími sdílenými letištními daty.
+Porovnává dvě navazující 15minutová okna runway evidence, každý let deduplikuje
+na jeho nejnovější pohyb s runway evidencí, odděluje aktuální příletovou a
+odletovou evidenci a ukazuje počty reported versus inferred vzorků.
+
+STABILNÍ vyžaduje nejméně tři vzorky v obou oknech se stejnou dominantní dráhou
+a podílem alespoň 75 procent v obou. PŘECHOD vyžaduje nejméně tři vzorky v obou
+oknech, změnu dominantní dráhy a podporu nejméně 60 procent pro starou i novou
+dominantní dráhu. SMÍŠENÁ EVIDENCE a MÁLO DAT zůstávají explicitní fail-closed
+stavy. Aktuální flow se s dráhou zvýhodněnou větrem porovnává pouze při
+dostatečně silné runway evidenci. Nevzniká nový fetch, SSE, API ani persistence
+path.
+
 ## Command Search V2
 
 Root-level Command Search palette zůstává dostupná ze všech rout přes

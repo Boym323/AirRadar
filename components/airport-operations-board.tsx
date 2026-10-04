@@ -8,6 +8,7 @@ import {
   buildAirportFlowPressureSummary,
   buildAirportJourneyFlowSummary,
   buildAirportLiveBoardSnapshot,
+  buildAirportRunwayFlowIntelligence,
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
 } from "@/lib/airport-intelligence/v3";
@@ -107,6 +108,39 @@ function runwayConsistencyLabel(
     MIXED: t.airport.liveBoardV6RunwayMixed,
     UNKNOWN: t.airport.liveBoardV6RunwayUnknown,
   }[consistency];
+}
+
+function runwayFlowStateLabel(
+  state: ReturnType<typeof buildAirportRunwayFlowIntelligence>["state"],
+): string {
+  return {
+    STABLE: t.airport.liveBoardV7Stable,
+    TRANSITIONING: t.airport.liveBoardV7Transitioning,
+    MIXED: t.airport.liveBoardV7Mixed,
+    INSUFFICIENT: t.airport.liveBoardV7Insufficient,
+  }[state];
+}
+
+function runwayFlowWindLabel(
+  alignment: ReturnType<typeof buildAirportRunwayFlowIntelligence>["windAlignment"],
+): string {
+  return {
+    ALIGNED: t.airport.liveBoardV7WindAligned,
+    DIFFERENT: t.airport.liveBoardV7WindDifferent,
+    UNKNOWN: t.airport.liveBoardV7WindUnknown,
+  }[alignment];
+}
+
+function runwayFlowValue(runway: string | null): string {
+  return runway ? `RWY ${runway}` : "—";
+}
+
+function runwayFlowLaneDetail(
+  lane: ReturnType<typeof buildAirportRunwayFlowIntelligence>["current"]["arrivals"],
+): string {
+  return lane.share === null
+    ? t.airport.liveBoardV7NoEvidence
+    : t.airport.liveBoardV7LaneDetail(Math.round(lane.share * 100), lane.samples);
 }
 
 function movementIdentity(movement: AirportMovement): string {
@@ -217,6 +251,7 @@ export function AirportOperationsBoard({
   const activeTraffic = buildAirportCorrelatedTrafficSnapshot(liveTraffic.observations, operations);
   const flow = buildAirportJourneyFlowSummary(activeTraffic);
   const pressure = buildAirportFlowPressureSummary(flow, operations);
+  const runwayFlow = buildAirportRunwayFlowIntelligence(operations, runway.windFavoredRunway);
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
   const metar = weather?.metar ?? null;
@@ -225,7 +260,7 @@ export function AirportOperationsBoard({
     ? `${String(Math.round(metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(metar.windSpeedKt)}`
     : null;
 
-  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v6">
+  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v7">
     <div data-testid="airport-live-board">
     <div className="airport-v3-hero">
       <div className="airport-v3-heading">
@@ -344,6 +379,62 @@ export function AirportOperationsBoard({
         />
       </MetricStrip>
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV6Disclaimer}</p>
+    </section>
+
+    <section className="airport-live-runway-stability airport-live-flow-pressure" data-testid="airport-live-board-v7-runway-flow" aria-labelledby="airport-live-v7-runway-title">
+      <div className="airport-live-flow-heading">
+        <div>
+          <span className="ui-kicker">{t.airport.liveBoardV7Kicker}</span>
+          <h3 id="airport-live-v7-runway-title">{t.airport.liveBoardV7Title}</h3>
+        </div>
+        <span>{t.airport.liveBoardV7Window}</span>
+      </div>
+      <MetricStrip className="airport-live-flow-metrics">
+        <MetricCard
+          label={t.airport.liveBoardV7State}
+          value={runwayFlowStateLabel(runwayFlow.state)}
+          detail={runwayFlow.transition
+            ? t.airport.liveBoardV7Transition(runwayFlow.transition.from, runwayFlow.transition.to)
+            : t.airport.liveBoardV7StateDetail}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV7Current}
+          value={runwayFlowValue(runwayFlow.current.runway)}
+          detail={runwayFlow.current.share === null
+            ? t.airport.liveBoardV7NoEvidence
+            : t.airport.liveBoardV7EvidenceDetail(
+              Math.round(runwayFlow.current.share * 100),
+              runwayFlow.current.samples,
+              runwayFlow.current.reportedSamples,
+              runwayFlow.current.inferredSamples,
+            )}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV7Previous}
+          value={runwayFlowValue(runwayFlow.previous.runway)}
+          detail={runwayFlow.previous.share === null
+            ? t.airport.liveBoardV7NoEvidence
+            : t.airport.liveBoardV7LaneDetail(Math.round(runwayFlow.previous.share * 100), runwayFlow.previous.samples)}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV7Arrivals}
+          value={runwayFlowValue(runwayFlow.current.arrivals.runway)}
+          detail={runwayFlowLaneDetail(runwayFlow.current.arrivals)}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV7Departures}
+          value={runwayFlowValue(runwayFlow.current.departures.runway)}
+          detail={runwayFlowLaneDetail(runwayFlow.current.departures)}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV7WindAlignment}
+          value={runwayFlowWindLabel(runwayFlow.windAlignment)}
+          detail={runwayFlow.windFavoredRunway
+            ? t.airport.liveBoardV7WindFavored(runwayFlow.windFavoredRunway)
+            : t.airport.liveBoardV7NoWindComparison}
+        />
+      </MetricStrip>
+      <p className="airport-v3-disclaimer">{t.airport.liveBoardV7Disclaimer}</p>
     </section>
 
     <div className="airport-live-active" data-testid="airport-live-board-active">
