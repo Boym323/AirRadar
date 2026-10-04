@@ -235,7 +235,7 @@ function FlightStoryHero({ detail }: { detail: HistoryFlightDetail }) {
           <h2 id="flight-story-v2-title">{flight.callsign || t.history.unknownCallsign}</h2>
           <p><Link className="history-link" href={`/aircraft/${encodeURIComponent(flight.icaoHex)}`}>{flight.icaoHex}</Link>{flight.registration ? ` · ${flight.registration}` : ""}{flight.aircraftType ? ` · ${flight.aircraftType}` : ""}</p>
         </div>
-        <strong className="flight-story-v2-route">{route}</strong>
+        <span className="flight-story-v2-route-context"><small>{t.history.routeContext}</small><strong className="flight-story-v2-route">{route}</strong></span>
       </div>
       {summary.badges.length > 0 ? <div className="flight-story-v2-badges" aria-label={t.history.storyHighlights}>
         {summary.badges.map((type) => <span key={type}>{flightStoryEventLabel(type)}</span>)}
