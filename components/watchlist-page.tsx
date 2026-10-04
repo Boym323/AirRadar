@@ -13,6 +13,9 @@ interface RuleForm {
   type: RuleType;
   value: string;
   maxDistanceKm: string;
+  etaThresholdMinutes: string;
+  etaDestinationIcao: string;
+  notifyRunwayChange: boolean;
   enabled: boolean;
 }
 
@@ -25,7 +28,7 @@ class ApiError extends Error {
 }
 
 function emptyForm(): RuleForm {
-  return { name: "", type: "icaoHex", value: "", maxDistanceKm: "", enabled: true };
+  return { name: "", type: "icaoHex", value: "", maxDistanceKm: "", etaThresholdMinutes: "", etaDestinationIcao: "", notifyRunwayChange: false, enabled: true };
 }
 
 function formFromRule(rule: PublicWatchlistRule): RuleForm {
@@ -34,6 +37,9 @@ function formFromRule(rule: PublicWatchlistRule): RuleForm {
     type: rule.type,
     value: rule.value,
     maxDistanceKm: rule.maxDistanceKm === undefined ? "" : String(rule.maxDistanceKm),
+    etaThresholdMinutes: rule.etaThresholdMinutes === undefined ? "" : String(rule.etaThresholdMinutes),
+    etaDestinationIcao: rule.etaDestinationIcao ?? "",
+    notifyRunwayChange: rule.notifyRunwayChange,
     enabled: rule.enabled,
   };
 }
@@ -138,6 +144,38 @@ function RuleEditor({
           <input type="number" min="0.000001" step="any" value={form.maxDistanceKm} placeholder={dictionary.watchlist.maxDistancePlaceholder} onChange={(event) => setForm({ ...form, maxDistanceKm: event.target.value })} />
         </label>
       </div>
+      <div className="watchlist-editor-grid watchlist-predictive-options">
+        <label>
+          <span>{dictionary.watchlist.etaThreshold}</span>
+          <input
+            type="number"
+            min="1"
+            max="120"
+            step="1"
+            value={form.etaThresholdMinutes}
+            placeholder={dictionary.watchlist.etaThresholdPlaceholder}
+            onChange={(event) => {
+              const value = event.target.value;
+              setForm({ ...form, etaThresholdMinutes: value, ...(value ? {} : { etaDestinationIcao: "" }) });
+            }}
+          />
+        </label>
+        <label>
+          <span>{dictionary.watchlist.etaDestination}</span>
+          <input
+            maxLength={4}
+            value={form.etaDestinationIcao}
+            disabled={!form.etaThresholdMinutes}
+            placeholder="LKTB"
+            onChange={(event) => setForm({ ...form, etaDestinationIcao: event.target.value.toUpperCase() })}
+          />
+        </label>
+        <label className="watchlist-enabled-input">
+          <span>{dictionary.watchlist.runwayChangeAlert}</span>
+          <span><input type="checkbox" checked={form.notifyRunwayChange} onChange={(event) => setForm({ ...form, notifyRunwayChange: event.target.checked })} /> {dictionary.watchlist.runwayChangeAlertDescription}</span>
+        </label>
+      </div>
+      <p className="statistics-subtitle">{dictionary.watchlist.predictiveAlertDisclaimer}</p>
       <div className="watchlist-editor-actions" aria-label={dictionary.watchlist.maxDistance}>
         {DISTANCE_PRESETS_KM.map((distance) => (
           <button key={distance} className="secondary-button" type="button" disabled={busy} aria-pressed={form.maxDistanceKm === String(distance)} onClick={() => setForm({ ...form, maxDistanceKm: String(distance) })}>{distance} km</button>
@@ -260,6 +298,9 @@ export function WatchlistPage() {
           value: form.value,
           enabled: form.enabled,
           maxDistanceKm: form.maxDistanceKm ? Number(form.maxDistanceKm) : null,
+          etaThresholdMinutes: form.etaThresholdMinutes ? Number(form.etaThresholdMinutes) : null,
+          etaDestinationIcao: form.etaDestinationIcao || null,
+          notifyRunwayChange: form.notifyRunwayChange,
         }),
       });
       const next = await readResponse(response);
@@ -287,6 +328,9 @@ export function WatchlistPage() {
           value: editingForm.value,
           enabled: editingForm.enabled,
           maxDistanceKm: editingForm.maxDistanceKm ? Number(editingForm.maxDistanceKm) : null,
+          etaThresholdMinutes: editingForm.etaThresholdMinutes ? Number(editingForm.etaThresholdMinutes) : null,
+          etaDestinationIcao: editingForm.etaDestinationIcao || null,
+          notifyRunwayChange: editingForm.notifyRunwayChange,
         }),
       });
       setData(await readResponse(response));
@@ -385,6 +429,8 @@ export function WatchlistPage() {
                 <div className="watchlist-rule-header"><div><h3>{rule.name}</h3><div className="watchlist-rule-value"><span>{typeLabel(dictionary, rule.type)}</span><strong>{rule.value}</strong></div></div><span className={`watchlist-status ${rule.enabled ? "enabled" : "disabled"}`}>{rule.enabled ? dictionary.watchlist.enabled : dictionary.watchlist.disabled}</span></div>
                 <dl className="watchlist-rule-meta">
                   {rule.maxDistanceKm !== undefined && <div><dt>{dictionary.watchlist.maxDistance}</dt><dd>{rule.maxDistanceKm} km</dd></div>}
+                  {rule.etaThresholdMinutes !== undefined && <div><dt>{dictionary.watchlist.etaThreshold}</dt><dd>≤ {rule.etaThresholdMinutes} min{rule.etaDestinationIcao ? ` · ${rule.etaDestinationIcao}` : ""}</dd></div>}
+                  {rule.notifyRunwayChange && <div><dt>{dictionary.watchlist.runwayChangeAlert}</dt><dd>{dictionary.watchlist.enabled}</dd></div>}
                   <div><dt>{dictionary.watchlist.cooldown}</dt><dd title={dictionary.watchlist.cooldownDescription}>{formatCooldown(rule.cooldownMs, dictionary)}</dd></div>
                   <div><dt>{lastAlertLabel(dictionary)}</dt><dd>{rule.lastTriggeredAt ? formatObservedAt(rule.lastTriggeredAt, dictionary) : neverAlertedLabel(dictionary)}</dd></div>
                 </dl>
