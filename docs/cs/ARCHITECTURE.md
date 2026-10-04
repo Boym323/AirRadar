@@ -329,18 +329,23 @@ Airport Intelligence V3 přidává jeden page-scoped klientský controller pro
 24hodinový operations snapshot a počasí letiště. Operations Board, sjednocená
 časová osa pohybů, runway comparison i detailní weather panel znovu používají
 tato dvě čtení. Původní duplicitní 24h movement request a duplicitní weather
-request se na stránce nespouštějí. Airport Live Board V2 přesouvá existující live provoz okolních letadel do
+request se na stránce nespouštějí. Airport Live Board V3 přesouvá existující live provoz okolních letadel do
 jediného page-scoped read-only SSE controlleru. Live Board i Nearby Aircraft
 znovu používají stejnou `/api/stream` subscription, takže letištní stránka má
 stále právě jeden aircraft stream a žádný nový write lane.
 
-Airport Live Board V2 zůstává uvnitř stejného boundary. Controller obnovuje
+Airport Live Board V3 zůstává uvnitř stejného boundary. Controller obnovuje
 obě sdílená čtení jedním 30sekundovým one-shot timerem, který při unmountu nebo
 ručním refreshi zruší a abortuje in-flight práci. UI v paměti odvozuje omezené lane recent příletů, recent odletů, provozních
 událostí a využití drah z operations odpovědi a pro kompaktní weather strip
-znovu používá stejný METAR. Sdílený SSE snapshot navíc krmí nearest-first NOW
-inbound/outbound lane přes existující konzervativní airport-traffic classifier.
-Nevzniká třetí API, druhý EventSource, migrace, tabulka ani write path.
+znovu používá stejný METAR. Sdílený SSE snapshot navíc krmí nearest-first NOW inbound/outbound lane přes
+existující konzervativní airport-traffic classifier. V3 pak tato aktivní
+pozorování koreluje v paměti s už načteným omezeným operations snapshotem.
+Match je ICAO-first, callsign-safe, směrově kompatibilní a omezený na 20minutové
+okno eventu s dvouminutovou tolerancí budoucího clock skew. Úspěšný match
+zpřístupní existující Flight ID/Flight Story a metadata movement/runway/
+confidence; nejistý match zůstane pouze live. Nevzniká třetí API, druhý
+EventSource, migrace, tabulka ani write path.
 
 ### Aviation Weather
 
