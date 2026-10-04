@@ -58,16 +58,23 @@ whether an operator has configured an optional provider.
 | `/fleet` | Concrete aircraft from ICAO watchlist rules, live/offline state, recent observed-flight counts, routes/airports, and lazy photos. | Production; non-identity watchlist rules are omitted, PostgreSQL history is optional. |
 | `/system` | Sanitized runtime, receiver, persistence, statistics, ATC, weather, OGN, alerts, and airport status. Lazy weather/radar/wind/ADSBDB providers expose `ON DEMAND`/`LOADING` cold-start states and bounded safe reasons for degraded/offline states. | Production read-only diagnostics; it never triggers optional upstream requests. |
 
-## Command Search V1
+## Command Search V2
 
-A root-level Command Search palette is available from every route through
-`⌘K` / `Ctrl+K` and the topbar search trigger. It reuses the existing
-bounded `GET /api/search?q=` lane for live aircraft, airports and ATS points,
-and adds client-only navigation commands for Live Radar, Today, Operations
-Center, Flights, Airports, Statistics, Alerts, Time Machine and System.
-Keyboard navigation uses Arrow Up/Down, Enter and Escape. Recent selections are
-stored only in browser `localStorage`, capped to five internal AirRadar paths,
-and do not create server persistence or another live stream.
+The root-level Command Search palette remains available from every route through
+`⌘K` / `Ctrl+K` and the topbar trigger. `GET /api/search?q=` now merges the
+existing live aircraft, airport and ATS-point results with bounded historical
+Flight matches from the latest seven days. Flight search is enabled from three
+characters, reads Flight rows only, never scans FlightPosition, and fails soft
+when PostgreSQL is unavailable.
+
+Deterministic smart actions recognize a deliberately small set of exact intents:
+today's go-arounds, today's rare aircraft, `<ICAO> operations`, and
+`flights to <ICAO>`. Exact smart actions short-circuit before live-state or
+database work and navigate only to existing AirRadar surfaces. Historical
+destination actions use the exact `destination=` filter on
+`GET /api/history/flights`. Keyboard navigation and the five-item internal
+browser-local recent list remain unchanged; no LLM or additional live stream is
+involved.
 ## APIs
 
 | Method and route | Purpose | Production status |
