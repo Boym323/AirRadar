@@ -154,7 +154,7 @@ function approachQueueStateLabel(
     ACTIVE: t.airport.liveBoardV8QueueActive,
     BUILDING: t.airport.liveBoardV8QueueBuilding,
     COMPRESSED: t.airport.liveBoardV8QueueCompressed,
-    HOLDING_PRESENT: t.airport.liveBoardV8QueueHolding,
+    HOLDING_PRESENT: t.airport.liveBoardV8QueueHoldingPresent,
   }[state];
 }
 
