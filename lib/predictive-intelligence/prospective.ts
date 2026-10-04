@@ -111,8 +111,20 @@ export function prospectiveObservationFor(
       result.push(build("RUNWAY_CHANGE", `change:${predictedAt}`, { predictedRunway: runway.runway, previousRunway: previous.runway.runway, predictionConfidence: runway.confidence, evidenceJson: JSON.stringify(runway.evidence.slice(0, 12)) }));
     }
   }
-  if (prediction.trajectory.state !== "UNKNOWN") {
-    result.push(build("TRAJECTORY", "metadata", { predictionConfidence: prediction.trajectory.confidence, evidenceJson: JSON.stringify(prediction.trajectory.evidence.slice(0, 12)) }));
+  const trajectory = prediction.trajectory;
+  const meaningfulTrajectory = trajectory.state !== "UNKNOWN"
+    && (
+      previous?.trajectory.state !== trajectory.state
+      || previous?.trajectory.confidence !== trajectory.confidence
+    );
+  if (meaningfulTrajectory) {
+    result.push(build("TRAJECTORY", `state:${trajectory.state}:${predictedAt}`, {
+      predictionConfidence: trajectory.confidence,
+      evidenceJson: JSON.stringify([
+        { key: "trajectoryState", value: trajectory.state },
+        ...trajectory.evidence.slice(0, 11),
+      ]),
+    }));
   }
   return result;
 }
