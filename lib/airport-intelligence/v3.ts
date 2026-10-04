@@ -202,6 +202,92 @@ export interface AirportActiveTrafficSnapshot {
   outbound: AirportTrafficObservation[];
 }
 
+export interface AirportCorrelatedTrafficObservation extends AirportTrafficObservation {
+  movement: AirportMovement | null;
+  movementAgeSeconds: number | null;
+}
+
+export interface AirportCorrelatedTrafficSnapshot {
+  inbound: AirportCorrelatedTrafficObservation[];
+  outbound: AirportCorrelatedTrafficObservation[];
+}
+
+export const AIRPORT_LIVE_BOARD_CORRELATION_MAX_AGE_MS = 20 * 60_000;
+export const AIRPORT_LIVE_BOARD_CORRELATION_FUTURE_TOLERANCE_MS = 2 * 60_000;
+
+function normalizedIdentity(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toUpperCase().replace(/\s+/g, "") ?? "";
+  return normalized || null;
+}
+
+function compatibleMovement(
+  classification: AirportTrafficObservation["classification"],
+  movement: AirportMovement["movement"],
+): boolean {
+  if (classification === "approaching") {
+    return movement === "APPROACH" || movement === "HOLDING";
+  }
+  if (classification === "departing") {
+    return movement === "TAKEOFF" || movement === "DEPARTURE" || movement === "GO_AROUND";
+  }
+  return false;
+}
+
+function correlatedMovement(
+  observation: AirportTrafficObservation,
+  operations: AirportOperationsResponse | null,
+): { movement: AirportMovement; ageSeconds: number } | null {
+  if (!operations) return null;
+  const liveAt = Date.parse(observation.aircraft.lastSeen);
+  if (!Number.isFinite(liveAt)) return null;
+  const liveCallsign = normalizedIdentity(observation.aircraft.callsign);
+
+  const candidates = operations.recentMovements
+    .filter((movement) => {
+      if (!compatibleMovement(observation.classification, movement.movement)) return false;
+      if (movement.icaoHex.trim().toUpperCase() !== observation.aircraft.icaoHex.trim().toUpperCase()) return false;
+      const movementCallsign = normalizedIdentity(movement.callsign);
+      if (liveCallsign && movementCallsign && liveCallsign !== movementCallsign) return false;
+      const observedAt = Date.parse(movement.observedAt);
+      if (!Number.isFinite(observedAt)) return false;
+      const ageMs = liveAt - observedAt;
+      return ageMs >= -AIRPORT_LIVE_BOARD_CORRELATION_FUTURE_TOLERANCE_MS
+        && ageMs <= AIRPORT_LIVE_BOARD_CORRELATION_MAX_AGE_MS;
+    })
+    .sort((left, right) =>
+      Date.parse(right.observedAt) - Date.parse(left.observedAt)
+      || right.flightId - left.flightId);
+
+  const movement = candidates[0] ?? null;
+  if (!movement) return null;
+  return {
+    movement,
+    ageSeconds: Math.max(0, Math.round((liveAt - Date.parse(movement.observedAt)) / 1_000)),
+  };
+}
+
+export function buildAirportCorrelatedTrafficSnapshot(
+  observations: readonly AirportTrafficObservation[],
+  operations: AirportOperationsResponse | null,
+  limit = AIRPORT_LIVE_BOARD_ACTIVE_LIMIT,
+): AirportCorrelatedTrafficSnapshot {
+  const active = buildAirportActiveTrafficSnapshot(observations, limit);
+  const correlate = (items: AirportTrafficObservation[]): AirportCorrelatedTrafficObservation[] =>
+    items.map((observation) => {
+      const match = correlatedMovement(observation, operations);
+      return {
+        ...observation,
+        movement: match?.movement ?? null,
+        movementAgeSeconds: match?.ageSeconds ?? null,
+      };
+    });
+
+  return {
+    inbound: correlate(active.inbound),
+    outbound: correlate(active.outbound),
+  };
+}
+
 export function buildAirportActiveTrafficSnapshot(
   observations: readonly AirportTrafficObservation[],
   limit = AIRPORT_LIVE_BOARD_ACTIVE_LIMIT,
