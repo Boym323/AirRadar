@@ -52,7 +52,15 @@ export function toPublicPredictiveState(prediction: PredictiveFlightState | null
     evaluatedAt: new Date(prediction.evaluatedAt).toISOString(),
     freshness: fresh ? "fresh" : "stale",
   };
-  if (policy.ETA === "PUBLIC") result.eta = { status: prediction.eta.estimatedArrivalAt === null ? "unavailable" : "available", estimatedArrivalAt: prediction.eta.estimatedArrivalAt === null ? null : new Date(prediction.eta.estimatedArrivalAt).toISOString(), confidence: prediction.eta.confidence };
+  if (policy.ETA === "PUBLIC" && fresh) {
+    const estimatedArrivalAt = prediction.eta.estimatedArrivalAt;
+    const available = estimatedArrivalAt !== null && estimatedArrivalAt > now && prediction.eta.confidence !== "UNKNOWN";
+    result.eta = {
+      status: available ? "available" : "unavailable",
+      estimatedArrivalAt: available && estimatedArrivalAt !== null ? new Date(estimatedArrivalAt).toISOString() : null,
+      confidence: prediction.eta.confidence,
+    };
+  }
   if (policy.RUNWAY === "PUBLIC") result.runway = { status: prediction.runway.runway === null ? "unavailable" : "available", runway: prediction.runway.runway, confidence: prediction.runway.confidence };
   if (policy.RUNWAY_CHANGE === "PUBLIC") result.runwayChange = { status: prediction.runway.changed ? "available" : "unavailable", changedFrom: prediction.runway.changed ? prediction.runway.alternative : null, runway: prediction.runway.runway, confidence: prediction.runway.confidence };
   if (policy.TRAJECTORY === "PUBLIC") result.trajectory = { state: prediction.trajectory.state, confidence: prediction.trajectory.confidence };
