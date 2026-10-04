@@ -9,13 +9,14 @@
       "category": "radar",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots and SSE streaming.",
+      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center.",
       "pages": [
         "/"
       ],
       "apis": [
         "/api/aircraft",
         "/api/aircraft/:hex",
+        "/api/operations/predictive",
         "/api/search",
         "/api/stream"
       ],
@@ -28,7 +29,9 @@
         "beast-decoder",
         "animation",
         "trail",
-        "radar-perf"
+        "radar-perf",
+        "predictive-operations",
+        "operations-center"
       ],
       "changelogKeywords": [
         "live radar",
@@ -37,7 +40,10 @@
         "aircraft telemetry",
         "aircraft snapshot",
         "radar map",
-        "radar navigation"
+        "radar navigation",
+        "predictive operations",
+        "predictive operations center",
+        "operations center"
       ]
     },
     {

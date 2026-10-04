@@ -280,6 +280,16 @@ samostatný SHADOW runway preview s readiness evidence. Browser již zobrazenou
 dráhu po stejné 45sekundové freshness hranici skryje. Nepřidává se druhý fetch,
 EventSource, persistence lane, migrace ani model.
 
+Predictive Operations Center V1 je omezený read-only agregační boundary nad
+radarovým panelem NOW. Browser odvodí maximálně šest ICAO kandidátů z existující
+prioritizované timeline a živých highlightů a pouze při otevřeném panelu volá
+`/api/operations/predictive`. Server čte existující predictive stav v RAM a
+před serializací ETA/runway advisories vyhodnotí jeden společný readiness
+report. Anonymní výstup obsahuje pouze PUBLIC + PASS + fresh hodnoty; ověřený
+admin může navíc dostat SHADOW preview a rozhodnutí ETA/RUNWAY readiness.
+Endpoint se obnovuje omezeně po 30 sekundách a je záměrně oddělený od hlavního
+radar SSE, prediction enginu, persistence i prospective-validation write path.
+
 Airport Intelligence V3 přidává jeden page-scoped klientský controller pro
 24hodinový operations snapshot a počasí letiště. Operations Board, sjednocená
 časová osa pohybů, runway comparison i detailní weather panel znovu používají

@@ -117,6 +117,15 @@ coverage and freshness state. Anonymous callers never receive this preview.
 The aircraft detail still performs one prediction fetch and creates no second
 stream or polling loop.
 
+Predictive Operations Center V1 reuses the same advisory builders through
+`GET /api/operations/predictive?hexes=`. The caller provides at most six
+already-relevant ICAO identifiers. The server normalizes and deduplicates the
+list, reads one readiness report, then builds ETA/runway public advisories or
+authenticated SHADOW previews from the existing RAM state. No prediction is
+recomputed by the endpoint. The radar client refreshes this bounded response
+every 30 seconds only while Operations Center is open and locally expires
+rendered values at 45 seconds. This flow never enters the main aircraft SSE.
+
 ADSBDB metadata and route persistence is a recovery cache only. Runtime RAM is
 authoritative: `set`/`delete` mutate bounded maps and generation counters
 immediately, while a single checkpoint serializes the current maps at the
