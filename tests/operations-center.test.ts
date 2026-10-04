@@ -246,6 +246,11 @@ describe("Operations Center intelligence selection", () => {
       "RARE01",
     ]);
     expect(predictiveOperationsIcaos(timeline, highlights, 2)).toEqual(["49D001", "49D002"]);
+    expect(predictiveOperationsIcaos(timeline, highlights, 3, "ABC123")).toEqual([
+      "ABC123",
+      "49D001",
+      "49D002",
+    ]);
   });
 
   it("honors the bounded render limit", () => {
