@@ -124,6 +124,21 @@ informaci, a již zobrazenou hodnotu po překročení 45sekundové freshness hra
 automaticky skryje. Nepřidává se persistence, migrace, model, poller ani
 EventSource.
 
+## Predictive Operations Center V1
+
+Radarový Operations Center přidává omezený prediktivní výhled pro letadla,
+která už vybrala jeho hodinová NOW timeline a živé highlighty. Browser při
+otevřeném panelu posílá maximálně šest ICAO identifikátorů na
+`GET /api/operations/predictive?hexes=`. Server čte existující prediction stav
+v RAM a pro celý request vyhodnotí jeden společný readiness report.
+
+Anonymní odpověď obsahuje jen ETA/runway advisories, které projdou stejnými
+PUBLIC + PASS + freshness gate jako detail letadla. Platná admin session může
+navíc dostat SHADOW preview a rozhodnutí readiness pro ETA/RUNWAY. Klient
+obnovuje omezený snapshot po 30 sekundách a již zobrazené hodnoty skryje na
+45sekundové freshness hranici. Predictive data se nepřidávají do hlavního radar
+SSE a nevzniká nová persistence, migrace, model ani stream.
+
 ## API
 
 | Metoda a routa | Účel | Produkční stav |
