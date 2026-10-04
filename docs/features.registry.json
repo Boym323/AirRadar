@@ -181,7 +181,7 @@
       "category": "weather",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context and aircraft-observed weather.",
+      "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, and bounded PIREP/AIREP enrichment.",
       "pages": [],
       "apis": [
         "/api/map-context/at",
@@ -194,6 +194,7 @@
         "/api/weather/airport",
         "/api/weather/airport/:icao",
         "/api/weather/metar-map",
+        "/api/weather/pirep",
         "/api/weather/radar/frame/:id",
         "/api/weather/radar/frames",
         "/api/weather/sigmet",
@@ -209,6 +210,8 @@
       "changelogKeywords": [
         "map context",
         "metar",
+        "pirep",
+        "airep",
         "sigmet",
         "weather radar",
         "wind layer",
