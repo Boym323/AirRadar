@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const rolloutSource = readFileSync(new URL("../lib/predictive-intelligence/runway-rollout.ts", import.meta.url), "utf8");
+const sharedRolloutSource = readFileSync(new URL("../lib/predictive-intelligence/public-rollout.ts", import.meta.url), "utf8");
 const advisorySource = readFileSync(new URL("../lib/predictive-intelligence/runway-advisory.ts", import.meta.url), "utf8");
 const readinessSource = readFileSync(new URL("../lib/server/predictive-readiness.ts", import.meta.url), "utf8");
 
@@ -28,8 +29,10 @@ describe("Runway Public Rollout V1 boundary", () => {
   });
 
   it("requires explicit config after manual review and exposes fail-closed fallback", () => {
-    expect(rolloutSource).toContain('state: ready ? "READY_FOR_PUBLIC_CONFIG" : "SHADOW_COLLECTING"');
-    expect(rolloutSource).toContain("requiresExplicitConfigChange: ready");
-    expect(rolloutSource).toContain('state: publicActive ? "PUBLIC_ACTIVE" : "PUBLIC_FAIL_CLOSED"');
+    expect(rolloutSource).toContain("buildPredictivePublicRolloutDecision");
+    expect(rolloutSource).toContain('RUNWAY_PUBLIC_ROLLOUT_VERSION = "runway-public-rollout-v1"');
+    expect(sharedRolloutSource).toContain('state: ready ? "READY_FOR_PUBLIC_CONFIG" : "SHADOW_COLLECTING"');
+    expect(sharedRolloutSource).toContain("requiresExplicitConfigChange: ready");
+    expect(sharedRolloutSource).toContain('state: publicActive ? "PUBLIC_ACTIVE" : "PUBLIC_FAIL_CLOSED"');
   });
 });
