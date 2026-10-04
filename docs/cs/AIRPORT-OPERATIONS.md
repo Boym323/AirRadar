@@ -133,3 +133,23 @@ použijí pouze při této shodě destination.
 vzdálenosti. Panel ukazuje kalibrovanou nejistotu ETA, medián rozestupu
 dostupných ETA, stabilitu predikované dráhy a existující pozorovaný V7 runway
 flow. Jde o receiver/prediction intelligence, nikoli ATC pořadí nebo FIDS.
+
+### V8 Approach Queue Intelligence
+
+V8 zachovává V7 arrival sequence beze změny a nad jeho už filtrovanými řádky
+odvozuje jediný další omezený in-memory signál hustoty. Počítá aktivní přílety,
+stavy APPROACH/FINAL a HOLDING, pokrytí PUBLIC ETA, sousední ETA rozestupy a
+medián/minimum ETA rozestupu. V8 nepřidává žádného nového kandidáta, route
+rozhodnutí, predikci ani runway hodnotu.
+
+Stav je záměrně popisný, nikoli provozní. EMPTY a LOW_DENSITY pokrývají řídké
+snapshoty, ACTIVE běžný provoz více letadel, BUILDING vyžaduje nejméně čtyři
+přílety a další potvrzující hustotu, COMPRESSED vyžaduje nejméně tři PUBLIC ETA
+vzorky a alespoň dvě sousední ETA mezery nejvýše čtyři minuty a
+HOLDING_PRESENT vyžaduje nejméně dvě letadla v holdingu v omezeném pořadí.
+Jde o AirRadar receiver/prediction-density labely, nikoli ATC pořadí,
+separační minima, kapacitu letiště, zpoždění nebo bezpečnostní hodnocení.
+
+V8 nepřidává nový fetch, timer, EventSource, API route, databázové čtení/zápis,
+migraci ani persistence path nad existující vstupy V7 arrival sequence.
+
