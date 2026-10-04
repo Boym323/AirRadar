@@ -12,7 +12,7 @@ not yet been historically attributed.
 | Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
 | Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
-| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated active flight journeys through LANDED. |
+| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, flow pulse, bounded operational exceptions, and LANDED completion. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
@@ -60,26 +60,23 @@ zda operátor nakonfiguroval volitelného providera.
 | `/fleet` | Konkrétní letadla z ICAO pravidel watchlistu, live/offline stav, počty nedávných pozorovaných letů, trasy/letiště a lazy fotografie. | Produkce; neidentitní pravidla watchlistu jsou vynechána, historie PostgreSQL je volitelná. |
 | `/system` | Sanitizovaný stav runtime, přijímače, persistence, statistik, ATC, počasí, OGN, alertů a letišť. Lazy providery weather/radar/wind/ADSBDB zobrazují cold-start stavy `ON DEMAND`/`LOADING` a omezené bezpečné důvody stavů degraded/offline. | Produkční read-only diagnostika; nikdy nespouští volitelné upstream požadavky. |
 
-## Airport Live Board V4
+## Airport Live Board V5
 
-Detail letiště zachovává sdílenou architekturu V3: jeden page-scoped
-operations/weather controller a jednu sdílenou read-only `/api/stream`
-subscription. Aktivní NOW řádky se korelují pouze v paměti s už načteným
-omezeným operations snapshotem; nevzniká per-aircraft fetch, druhý EventSource,
-změna schématu ani write path.
+V5 zachovává stejnou omezenou sdílenou architekturu letiště a nepřidává žádnou
+novou síťovou ani persistence cestu. Aktivní journey snapshot z V4 — včetně
+konzervativního stavu LANDED — se skládá do NOW Flow Pulse s počty inbound,
+final, holding, outbound, go-around a route conflict. Viditelný zůstává také
+poměr korelovaných a live-only řádků.
 
-V4 odvozuje vysvětlitelný aktivní journey stav z live směru a čerstvé korelace:
-`INBOUND`, `HOLDING`, `APPROACH`, `FINAL`, `LANDED`, `GO_AROUND`,
-`INITIAL_CLIMB` nebo `OUTBOUND`. `FINAL` je záměrně konzervativní a
-vyžaduje korelovaný APPROACH, live vzdálenost <=8 km a klesání alespoň 150 fpm.
-`LANDED` vyžaduje live on-ground stav a čerstvý korelovaný LANDING; nesouvisející
-ground traffic zůstává mimo aktivní lane. Route enrichment je samostatný consistency signál `CONFIRMED`, `UNKNOWN`
-nebo `CONFLICT`; route konflikt nikdy nepřepisuje pozorovaný journey stav.
+Omezený attention seznam zobrazuje pouze provozní výjimky: GO_AROUND, HOLDING a
+route conflicts. Řazení je deterministické: nejdřív go-around, potom holding,
+route conflict a nakonec nejbližší letadlo; seznam má maximálně šest položek.
+Normální journey řádky včetně LANDED jsou z attention záměrně vynechané.
 
-Úspěšná korelace dál zpřístupní Flight Story, movement, runway, confidence a čas
-eventu. Chybějící/stale evidence zůstává pouze LIVE. Recent movements, provozní
-alerty, runway usage, METAR a runway-vs-wind intelligence zůstávají beze změny.
-Board je observational/inferred, nikoli FIDS nebo ATC guidance.
+Pulse i exception seznam jsou čisté in-memory projekce nad existujícím jediným
+airport SSE a omezeným operations snapshotem. Journey stavy, Flight Story linky,
+recent movements, runway usage, METAR i runway-vs-wind intelligence zůstávají
+beze změny. Board je nadále observational/inferred, nikoli FIDS nebo ATC feed.
 
 ## Command Search V2
 

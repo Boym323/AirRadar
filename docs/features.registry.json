@@ -112,7 +112,7 @@
       "category": "airports",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated active flight journeys through LANDED.",
+      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, flow pulse, bounded operational exceptions, and LANDED completion.",
       "pages": [
         "/airports",
         "/airports/:icao"
@@ -143,7 +143,11 @@
         "active flight journey",
         "journey state",
         "route consistency",
-        "landed journey"
+        "landed journey",
+        "flow pulse",
+        "airport flow",
+        "operational exceptions",
+        "route conflict"
       ]
     },
     {

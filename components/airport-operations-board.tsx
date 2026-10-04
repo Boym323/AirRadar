@@ -5,6 +5,7 @@ import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { aircraftFlightHref } from "@/lib/aircraft/detail-links";
 import {
   buildAirportCorrelatedTrafficSnapshot,
+  buildAirportJourneyFlowSummary,
   buildAirportLiveBoardSnapshot,
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
@@ -186,6 +187,7 @@ export function AirportOperationsBoard({
   const runway = buildAirportRunwayIntelligence(operations, runways, weather?.metar ?? null);
   const liveBoard = buildAirportLiveBoardSnapshot(operations);
   const activeTraffic = buildAirportCorrelatedTrafficSnapshot(liveTraffic.observations, operations);
+  const flow = buildAirportJourneyFlowSummary(activeTraffic);
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
   const metar = weather?.metar ?? null;
@@ -194,7 +196,7 @@ export function AirportOperationsBoard({
     ? `${String(Math.round(metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(metar.windSpeedKt)}`
     : null;
 
-  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v4">
+  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v5">
     <div data-testid="airport-live-board">
     <div className="airport-v3-hero">
       <div className="airport-v3-heading">
@@ -241,6 +243,33 @@ export function AirportOperationsBoard({
       <span><small>{t.weather.visibility}</small><strong>{metar ? formatWeatherVisibility(metar.visibilityMeters, metar.visibilityGreaterThan) : "—"}</strong></span>
       <span><small>{t.weather.temperature}</small><strong>{metar?.temperatureC === null || metar?.temperatureC === undefined ? "—" : `${formatNumber(metar.temperatureC, 0)} °C`}</strong></span>
       <span><small>{t.weather.qnh}</small><strong>{metar?.altimeterHpa === null || metar?.altimeterHpa === undefined ? "—" : `${formatNumber(metar.altimeterHpa, 0)} hPa`}</strong></span>
+    </section>
+
+    <section className="airport-live-flow-pulse" data-testid="airport-live-board-flow-pulse" aria-labelledby="airport-live-flow-title">
+      <div className="airport-live-flow-heading">
+        <div><span className="ui-kicker">{t.airport.liveBoardFlowKicker}</span><h3 id="airport-live-flow-title">{t.airport.liveBoardFlowTitle}</h3></div>
+        <span>{t.airport.liveBoardFlowCorrelation(flow.correlated, flow.liveOnly)}</span>
+      </div>
+      <MetricStrip className="airport-live-flow-metrics">
+        <MetricCard label={t.airport.liveBoardFlowInbound} value={String(flow.inbound)} />
+        <MetricCard label={t.airport.liveBoardFlowFinal} value={String(flow.final)} />
+        <MetricCard label={t.airport.liveBoardFlowHolding} value={String(flow.holding)} />
+        <MetricCard label={t.airport.liveBoardFlowOutbound} value={String(flow.outbound)} />
+        <MetricCard label={t.airport.liveBoardFlowGoAround} value={String(flow.goAround)} />
+        <MetricCard label={t.airport.liveBoardFlowRouteConflicts} value={String(flow.routeConflicts)} />
+      </MetricStrip>
+      {flow.attention.length > 0 ? <ol className="airport-live-flow-attention" data-testid="airport-live-board-flow-attention">
+        {flow.attention.map((observation) => {
+          const aircraft = observation.aircraft;
+          const label = aircraft.callsign || aircraft.registration || aircraft.icaoHex;
+          return <li key={aircraft.icaoHex}>
+            <span className={`airport-live-journey airport-live-journey-${observation.journey.stage.toLowerCase().replace("_", "-")}`}>{journeyLabel(observation.journey.stage)}</span>
+            {observation.movement ? <Link href={aircraftFlightHref(observation.movement.flightId)}>{label}</Link> : <Link href={`/aircraft/${encodeURIComponent(aircraft.icaoHex)}`}>{label}</Link>}
+            <span>{formatDistance(observation.distanceKm)}</span>
+            {observation.journey.routeRelation === "CONFLICT" ? <small className="airport-live-route-state conflict">{t.airport.liveBoardRouteConflict}</small> : null}
+          </li>;
+        })}
+      </ol> : <p className="airport-v3-empty">{t.airport.liveBoardFlowNoAttention}</p>}
     </section>
 
     <div className="airport-live-active" data-testid="airport-live-board-active">

@@ -3,6 +3,7 @@ import type { AirportRunway } from "@/lib/airports/infrastructure";
 import {
   buildAirportActiveTrafficSnapshot,
   buildAirportCorrelatedTrafficSnapshot,
+  buildAirportJourneyFlowSummary,
   buildAirportLiveBoardSnapshot,
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
@@ -344,6 +345,34 @@ describe("Airport Intelligence V3 composer", () => {
     ];
     const correlated = buildAirportCorrelatedTrafficSnapshot(observations, operations([takeoff, departure]));
     expect(correlated.outbound.map((item) => item.journey.stage)).toEqual(["INITIAL_CLIMB", "OUTBOUND"]);
+  });
+
+  it("summarizes NOW journey flow and prioritizes operational exceptions", () => {
+    const movements = [
+      { ...movement(91, "APPROACH", "2026-10-04T08:08:00.000Z"), icaoHex: "FLOW01", callsign: "FIN91" },
+      { ...movement(92, "HOLDING", "2026-10-04T08:07:00.000Z"), icaoHex: "FLOW02", callsign: "HOLD92" },
+      { ...movement(94, "GO_AROUND", "2026-10-04T08:09:00.000Z"), icaoHex: "FLOW04", callsign: "GA94" },
+      { ...movement(95, "TAKEOFF", "2026-10-04T08:09:00.000Z"), icaoHex: "FLOW05", callsign: "TO95" },
+    ];
+    const observations = [
+      { aircraft:{icaoHex:"FLOW01",callsign:"FIN91",lastSeen:"2026-10-04T08:10:00.000Z",verticalRate:-600,enrichment:{route:{origin:"LKPR",destination:"LOWW"}}} as never,distanceKm:5,bearingToAirport:0,classification:"approaching" as const },
+      { aircraft:{icaoHex:"FLOW02",callsign:"HOLD92",lastSeen:"2026-10-04T08:10:00.000Z",verticalRate:0,enrichment:{route:{origin:"LKPR",destination:"LOWW"}}} as never,distanceKm:11,bearingToAirport:0,classification:"approaching" as const },
+      { aircraft:{icaoHex:"FLOW03",callsign:"CON93",lastSeen:"2026-10-04T08:10:00.000Z",verticalRate:-300,enrichment:{route:{origin:"LKPR",destination:"EDDM"}}} as never,distanceKm:9,bearingToAirport:0,classification:"approaching" as const },
+      { aircraft:{icaoHex:"FLOW04",callsign:"GA94",lastSeen:"2026-10-04T08:10:00.000Z",verticalRate:1200,enrichment:{route:{origin:"LOWW",destination:"LKPR"}}} as never,distanceKm:7,bearingToAirport:0,classification:"departing" as const },
+      { aircraft:{icaoHex:"FLOW05",callsign:"TO95",lastSeen:"2026-10-04T08:10:00.000Z",verticalRate:1600,enrichment:{route:{origin:"LOWW",destination:"LKPR"}}} as never,distanceKm:4,bearingToAirport:0,classification:"departing" as const },
+    ];
+    const flow=buildAirportJourneyFlowSummary(buildAirportCorrelatedTrafficSnapshot(observations,operations(movements)));
+    expect(flow).toMatchObject({inbound:3,outbound:2,final:1,holding:1,goAround:1,initialClimb:1,correlated:4,liveOnly:1,routeConfirmed:4,routeConflicts:1});
+    expect(flow.attention.map((item)=>item.aircraft.icaoHex)).toEqual(["FLOW04","FLOW02","FLOW03"]);
+  });
+
+  it("bounds flow attention and leaves normal traffic out of the exception list", () => {
+    const normal={aircraft:{icaoHex:"NORMAL",lastSeen:"2026-10-04T08:10:00.000Z"} as never,distanceKm:12,bearingToAirport:0,classification:"approaching" as const};
+    const conflict={aircraft:{icaoHex:"CONFLICT",lastSeen:"2026-10-04T08:10:00.000Z",enrichment:{route:{origin:"LKPR",destination:"EDDM"}}} as never,distanceKm:8,bearingToAirport:0,classification:"approaching" as const};
+    const flow=buildAirportJourneyFlowSummary(buildAirportCorrelatedTrafficSnapshot([normal,conflict],operations([])),1);
+    expect(flow.attention).toHaveLength(1);
+    expect(flow.attention[0].aircraft.icaoHex).toBe("CONFLICT");
+    expect(flow.liveOnly).toBe(2);
   });
 
   it("builds bounded deduplicated live-board arrival and departure lanes", () => {

@@ -343,12 +343,12 @@ Airport Intelligence V3 adds one page-scoped client controller for the 24-hour
 operations snapshot and airport weather. The Operations Board, unified movement
 timeline, runway comparison, and detailed weather panel reuse those two reads.
 The previous page-level duplicate 24-hour movement request and duplicate airport
-weather request are not started. Airport Live Board V4 moves the existing nearby-aircraft live traffic into one
+weather request are not started. Airport Live Board V5 moves the existing nearby-aircraft live traffic into one
 page-scoped read-only SSE controller. The Live Board and Nearby Aircraft reuse
 that same `/api/stream` subscription, so the airport page still owns exactly one
 aircraft stream and no new write lane.
 
-Airport Live Board V4 remains inside that same boundary. The controller refreshes
+Airport Live Board V5 remains inside that same boundary. The controller refreshes
 the two shared reads with a 30-second one-shot timer, clearing it and aborting
 in-flight work on unmount or manual refresh. The UI derives bounded recent-arrival, recent-departure, operational-event and
 runway-usage lanes in memory from the operations response and reuses the same
@@ -358,7 +358,7 @@ correlates those active observations with the already-loaded bounded operations
 snapshot in memory. Matching is ICAO-first, callsign-safe, direction-compatible
 and limited to a 20-minute event window with a two-minute future clock-skew
 tolerance. A successful match exposes the existing Flight ID/Flight Story and
-movement/runway/confidence metadata; an uncertain match stays live-only. V4 adds a pure in-memory journey composer above this match: correlated movement and live geometry determine journey stage, while route origin/destination contributes only a separate consistency flag. LANDED is emitted only when a live aircraft still reports on-ground and the bounded operations snapshot supplies a fresh correlated LANDING; unrelated ground traffic is excluded from the airborne lanes. No third API, second EventSource, migration, table or write path is introduced.
+movement/runway/confidence metadata; an uncertain match stays live-only. V4 adds a pure in-memory journey composer above this match: correlated movement and live geometry determine journey stage, while route origin/destination contributes only a separate consistency flag. LANDED is emitted only when a live aircraft still reports on-ground and the bounded operations snapshot supplies a fresh correlated LANDING; unrelated ground traffic is excluded from the airborne lanes. V5 composes a bounded flow summary and attention projection from the already-derived active journeys in memory; LANDED remains a normal journey state and is not promoted into the exception list. It performs no additional I/O. No third API, second EventSource, migration, table or write path is introduced.
 
 ### Aviation Weather
 

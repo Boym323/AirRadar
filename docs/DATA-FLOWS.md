@@ -305,7 +305,7 @@ after restart.
 
 Airport Intelligence reads nearby aircraft from one page-scoped subscription
 to the existing local aircraft SSE and filters positioned, recent ADS-B
-observations within a 30 km radius. Airport Live Board V4 and Nearby Aircraft
+observations within a 30 km radius. Airport Live Board V5 and Nearby Aircraft
 consume that same in-memory snapshot; the page does not open a second airport
 aircraft stream. No weather, airport, or history query is triggered by an SSE
 update. Airport Intelligence V3 separately issues one page-scoped
@@ -319,7 +319,7 @@ from the observed METAR without inferring why they may differ. Timeline rows
 link to the existing Flight Story detail. OGN is not included in these airport
 features.
 
-Airport Live Board V4 refreshes only the operations/weather reads every 30
+Airport Live Board V5 refreshes only the operations/weather reads every 30
 seconds using a one-shot timer. The client sorts valid movement timestamps
 newest-first, deduplicates recent arrival/departure lanes by Flight ID, bounds
 each lane to six items, keeps GO_AROUND/HOLDING as a separate bounded
@@ -330,7 +330,7 @@ against `operations.recentMovements` in memory only. The join requires the same
 ICAO identity, non-conflicting callsigns, a movement compatible with inbound or
 outbound direction, and a timestamp within 20 minutes (plus two minutes of
 future clock-skew tolerance). The join can add an existing Flight Story link;
-it never triggers a per-aircraft history or intelligence request. V4 then derives journey stage from the correlated movement and current distance/vertical-rate guards; route origin/destination is evaluated independently as confirmed/unknown/conflict and cannot override that stage. A live on-ground observation can enter the arrival lane only when the same bounded operations snapshot supplies a fresh correlated LANDING, producing LANDED; other on-ground observations are excluded. Invalid/stale
+it never triggers a per-aircraft history or intelligence request. V4 then derives journey stage from the correlated movement and current distance/vertical-rate guards; route origin/destination is evaluated independently as confirmed/unknown/conflict and cannot override that stage. A live on-ground observation can enter the arrival lane only when the same bounded operations snapshot supplies a fresh correlated LANDING, producing LANDED; other on-ground observations are excluded. V5 folds the resulting bounded active snapshot into NOW flow counts and an attention list. The attention list includes only GO_AROUND, HOLDING, or route-conflict rows, is capped at six, and is ordered by exception priority then distance; LANDED stays part of normal inbound flow. Invalid/stale
 positions remain excluded and an SSE update does not trigger database, weather
 or operations reads.
 

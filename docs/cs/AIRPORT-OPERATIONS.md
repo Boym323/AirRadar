@@ -32,7 +32,7 @@ Vítr a použití dráhy jsou oddělené informace: používejte „dráha zvýh
 větrem“ a „pravděpodobná dráha podle nedávného provozu“, nikoli provozní
 doporučení.
 
-## Airport Live Board V4
+## Airport Live Board V5
 
 Detail letiště znovu používá 24hodinovou operations odpověď a existující
 airport-weather odpověď v jediném page-scoped controlleru. Controller provádí
@@ -56,7 +56,7 @@ FINAL vyžaduje čerstvý korelovaný APPROACH, live vzdálenost <=8 km a vertic
 rate <=-150 fpm. LANDED vyžaduje čerstvý korelovaný LANDING a současně live
 on-ground observation, takže nesouvisející stojící letadla se do aktivního
 arrival lane nikdy nepovýší. Route metadata se hodnotí odděleně jako CONFIRMED, UNKNOWN
-nebo CONFLICT a nikdy nepřepisují pozorovaný pohyb. Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
+nebo CONFLICT a nikdy nepřepisují pozorovaný pohyb. V5 přidává omezený NOW Flow Pulse počítaný čistě z aktivních journey řádků: inbound, final, holding, outbound, go-around a route-conflict počty plus attention seznam nejvýše šesti položek. Attention se řadí deterministicky GO_AROUND → HOLDING → route conflict a potom podle vzdálenosti. Normální provoz — včetně LANDED řádků — je z attention záměrně vynechaný. Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
 teplotu a QNH. Jde o pozorovací pohled přijímače a počasí, nikoli letištní
 letový řád, FIDS, přidělení dráhy nebo instrukce ATC.
 
