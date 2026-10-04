@@ -11,7 +11,7 @@ import {
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
 } from "@/lib/airport-intelligence/v3";
-import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/live-board-v7";
+import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 import type { AirportMovement } from "@/lib/server/airport-movements";
