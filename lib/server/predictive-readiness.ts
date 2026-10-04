@@ -19,7 +19,7 @@ const MATCH_AFTER_PREDICTION_LIMIT_MS = 6 * 60 * 60_000;
 
 type Capability = keyof PredictiveGraduationPolicy;
 
-interface ObservationRow {
+export interface PredictiveReadinessPredictiveReadinessObservationRow {
   observationKey: string;
   lifecycleKey: string;
   capability: string;
@@ -32,7 +32,7 @@ interface ObservationRow {
   createdAt: unknown;
 }
 
-interface LandingEventRow {
+export interface PredictiveReadinessPredictiveReadinessLandingEventRow {
   eventKey: string;
   icaoHex: string;
   flightId: number | null;
@@ -48,8 +48,8 @@ interface Query<Row> {
 }
 
 interface ReadinessSchema {
-  PredictiveObservation: Query<ObservationRow>;
-  FlightEvent: Query<LandingEventRow>;
+  PredictiveObservation: Query<PredictiveReadinessObservationRow>;
+  FlightEvent: Query<PredictiveReadinessLandingEventRow>;
 }
 
 interface TerminalEvidenceLike {
@@ -137,7 +137,7 @@ function runway(value: unknown): string | null {
     : null;
 }
 
-function landingTruth(row: LandingEventRow): LandingTruth | null {
+function landingTruth(row: PredictiveReadinessLandingEventRow): LandingTruth | null {
   const metadata = safeMetadata(row.metadataJson);
   if (!metadata.lifecycleKey) return null;
   const occurredAtMs = epochMs(row.occurredAt);
@@ -161,7 +161,7 @@ function percentile(values: readonly number[], percentileValue: number): number 
   return sorted[index] ?? null;
 }
 
-function staleRate(rows: readonly ObservationRow[]): number | null {
+function staleRate(rows: readonly PredictiveReadinessObservationRow[]): number | null {
   if (!rows.length) return null;
   let eligible = 0;
   let stale = 0;
@@ -257,7 +257,7 @@ function unavailableReport(now: Date): PredictiveReadinessReport {
   };
 }
 
-function buildEvidence(observations: readonly ObservationRow[], landingRows: readonly LandingEventRow[]): {
+export function buildPredictiveReadinessEvidence(observations: readonly PredictiveReadinessObservationRow[], landingRows: readonly PredictiveReadinessLandingEventRow[]): {
   evidence: PredictiveReadinessEvidence;
   matchedLandingTruth: number;
   captureStaleObservations: number;
@@ -300,7 +300,7 @@ function buildEvidence(observations: readonly ObservationRow[], landingRows: rea
     crossFlightLifecycleConflicts: [...lifecycleFlights.values()].filter((values) => values.size > 1).length,
   };
 
-  const matchedTruth = (row: ObservationRow): LandingTruth | null => {
+  const matchedTruth = (row: PredictiveReadinessObservationRow): LandingTruth | null => {
     const predictedAt = epochMs(row.predictedAt);
     if (predictedAt === null) return null;
     const candidate = byLifecycle.get(row.lifecycleKey)
@@ -409,7 +409,7 @@ function buildEvidence(observations: readonly ObservationRow[], landingRows: rea
   return { evidence, matchedLandingTruth, captureStaleObservations };
 }
 
-async function queryReadinessRows(now: Date): Promise<{ observations: ObservationRow[]; landings: LandingEventRow[] } | null> {
+async function queryReadinessRows(now: Date): Promise<{ observations: PredictiveReadinessObservationRow[]; landings: PredictiveReadinessLandingEventRow[] } | null> {
   const database = getPrisma();
   if (!database) return null;
   const schema = database.orm.public as unknown as ReadinessSchema;
@@ -446,7 +446,7 @@ export async function readPredictiveReadinessReport(options: { now?: Date; force
 
   const complete = rows.observations.length < PREDICTIVE_READINESS_OBSERVATION_LIMIT
     && rows.landings.length < PREDICTIVE_READINESS_LANDING_LIMIT;
-  const { evidence, matchedLandingTruth, captureStaleObservations } = buildEvidence(rows.observations, rows.landings);
+  const { evidence, matchedLandingTruth, captureStaleObservations } = buildPredictiveReadinessEvidence(rows.observations, rows.landings);
   const evaluation = evaluatePredictiveReadiness(evidence, { complete });
   const configuredPolicy = getPredictiveGraduationPolicy();
   const report: PredictiveReadinessReport = {
