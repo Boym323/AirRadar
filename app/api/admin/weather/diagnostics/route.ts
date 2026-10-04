@@ -1,6 +1,7 @@
 import { getAircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { isWatchlistSessionValid } from "@/lib/server/watchlist-auth";
+import { defaultPirepProvider } from "@/lib/server/pirep-provider";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,6 +12,7 @@ export async function GET(request: Request): Promise<Response> {
   return Response.json({
     generatedAt: new Date().toISOString(),
     ...getAircraftWeatherDiagnostics(),
+    pirepAirep: defaultPirepProvider.getDiagnostics(),
     bds44Decoder: {
       candidates: typeof local?.bds44 === "number" ? local.bds44 : 0,
       ambiguous: typeof local?.commBAmbiguous === "number" ? local.commBAmbiguous : 0,
