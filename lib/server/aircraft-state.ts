@@ -565,9 +565,9 @@ export class AircraftStateService {
         this.lastError = error instanceof Error ? error.message : "Unknown aircraft provider error";
         this.messagesPerSecond = null;
         this.consecutiveFailures += 1;
-        // A failed provider request proves no current membership. Keep the
-        // last good observations through the stale/source-affinity window so
-        // the map can fail over without a blank interval.
+        // A failed provider request supplies no current membership evidence.
+        // Keep the last good observations through the stale/source-affinity
+        // window so the map can fail over without a blank interval.
         this.localObservedHexes = new Set();
         const now = Date.now();
         this.reconcileSourcePreferences(now);
