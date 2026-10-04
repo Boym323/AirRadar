@@ -376,3 +376,14 @@ ETA/runway advisories. Při nedostupné predikci bezpečně přejde na receivero
 řazení. Route konflikty jsou vynechány a UNKNOWN route vyžaduje shodu PUBLIC
 destination. UI ukazuje nejistotu ETA, medián rozestupu ETA, stabilitu
 predikované dráhy a kontext pozorovaného runway flow.
+
+
+### Airport Live Board V8 — Arrival Flow Intelligence
+
+V8 převádí omezenou V7 active-arrival sequence na krátkodobou flow intelligence
+bez dalšího datového zdroje. Zobrazuje PUBLIC ETA demand do 5/15/30 minut,
+porovnává stejně dlouhá okna 0–15 a 15–30 minut pro trend toku, detekuje ETA
+compression, odvozuje konzervativní arrival pressure, seskupuje predikované
+zatížení drah a při dostatečné evidenci porovnává dominantní predikovanou dráhu
+s receiverově pozorovaným runway flow. Evidence je označená PUBLIC_STRONG,
+PUBLIC_PARTIAL nebo RECEIVER_ONLY.
