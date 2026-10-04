@@ -28,6 +28,14 @@ export const PREDICTIVE_READINESS_OUTCOME_TYPES = [
   "APPROACH",
   ...TRAJECTORY_POSITIVE_OUTCOME_TYPES,
 ] as const;
+const PREDICTIVE_READINESS_OUTCOME_QUERY_LANES = {
+  APPROACH: "predictive-readiness.outcomes.approach.query",
+  DIVERSION: "predictive-readiness.outcomes.diversion.query",
+  GO_AROUND: "predictive-readiness.outcomes.go-around.query",
+  HOLDING: "predictive-readiness.outcomes.holding.query",
+  ORBIT: "predictive-readiness.outcomes.orbit.query",
+  UNUSUAL_TURN: "predictive-readiness.outcomes.unusual-turn.query",
+} as const;
 const CAPTURE_STALE_AFTER_MS = 45_000;
 const MATCH_AFTER_PREDICTION_LIMIT_MS = 6 * 60 * 60_000;
 
@@ -558,7 +566,7 @@ async function queryReadinessRows(now: Date): Promise<{
       .limit(PREDICTIVE_READINESS_LANDING_LIMIT)
       .all());
     const outcomePromise = Promise.all(PREDICTIVE_READINESS_OUTCOME_TYPES.map(async (type) =>
-      await trackDbOperation(`predictive-readiness.outcomes.${type.toLowerCase()}.query`, async () => await schema.FlightEvent
+      await trackDbOperation(PREDICTIVE_READINESS_OUTCOME_QUERY_LANES[type], async () => await schema.FlightEvent
         .where({ type, occurredAt: { gte: from } })
         .orderBy((row: { occurredAt: { desc(): unknown } }) => row.occurredAt.desc())
         .limit(PREDICTIVE_READINESS_OUTCOME_EVENT_LIMIT)
