@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -73,8 +73,7 @@ function makeZip(entries: Array<[string, Buffer]>) {
 }
 
 function makeDatabase(rowCount = 105, idOffset = 0): { bytes: Buffer; directory: string } {
-  const directory = path.join(os.tmpdir(), `airradar-softrf-updater-${Math.random().toString(16).slice(2)}`);
-  mkdirSync(directory, { recursive: true });
+  const directory = mkdtempSync(path.join(os.tmpdir(), "airradar-softrf-updater-"));
   roots.push(directory);
   const databasePath = path.join(directory, "source.db");
   const database = new DatabaseSync(databasePath);
