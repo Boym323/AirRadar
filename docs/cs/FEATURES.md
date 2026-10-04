@@ -22,7 +22,7 @@ not yet been historically attributed.
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
-| System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, and bounded predictive readiness with versioned independent outcome truth. |
+| System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback and historical context windows. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
@@ -190,6 +190,29 @@ outcome dotaz, landing dotaz nebo predictive-observation dotaz dosáhne limitu,
 readiness report je incomplete a veřejná graduation zůstává fail-closed ve
 stavu `WAIT`. Samotná existence truth capability nikdy nepovyšuje; PASS/WAIT/
 FAIL dál určují existující minimální sample a quality thresholdy.
+
+## Predictive Graduation Calibration V1
+
+Admin-only readiness report nyní obsahuje
+`predictive-graduation-calibration-v1`, read-only interpretační vrstvu nad
+tou samou evidence, readiness evaluací a threshold verzí, kterou používá
+veřejný graduation gate. Vrstva nepřepočítává predikce, nemění thresholdy,
+nastavenou/efektivní policy ani sama capability nepovyšuje.
+
+Každá capability dostane fázi `READY`, `COLLECTING`,
+`TRUTH_BLOCKED`, `QUALITY_BLOCKED`, `HARD_BLOCKED` nebo
+`COLLECTION_BLOCKED`. Report ukazuje přesné chybějící počty observations,
+scoreable observations, independent truth flights nebo validated candidates,
+požadavky na truth/instrumentaci a quality margin vůči aktivním minimum/maximum
+thresholdům. Kladný quality margin znamená rezervu, záporný znamená aktuální
+nesplnění cíle.
+
+Quality metriky jsou při readiness WAIT kvůli nedostatku evidence nebo truth
+pouze preview a nejsou ještě rozhodovacím FAIL gate. Hodnota
+`manualReviewEligible=true` vznikne pouze při kompletním bounded collection a
+existujícím readiness rozhodnutí PASS. Jde jen o signál pro ruční/configuration
+review; veřejné vystavení stále vyžaduje explicitní změnu capability policy a
+runtime readiness gate zůstává fail-closed.
 
 ## Predictive Operations Center V1
 
