@@ -71,11 +71,13 @@ export function toPublicPredictiveState(prediction: PredictiveFlightState | null
   }
   if (policy.RUNWAY_CHANGE === "PUBLIC" && fresh) {
     const available = prediction.runway.changed
+      && prediction.runway.changedFrom !== null
+      && prediction.runway.changedFrom !== undefined
       && prediction.runway.runway !== null
       && prediction.runway.confidence !== "UNKNOWN";
     result.runwayChange = {
       status: available ? "available" : "unavailable",
-      changedFrom: available ? prediction.runway.alternative : null,
+      changedFrom: available ? prediction.runway.changedFrom ?? null : null,
       runway: available ? prediction.runway.runway : null,
       confidence: prediction.runway.confidence,
     };
