@@ -3,7 +3,6 @@ import type { PredictiveCapabilityStatus, PredictiveGraduationPolicy } from "@/l
 import type { EtaPrediction, PredictiveFlightState, PredictionConfidence } from "@/lib/predictive-intelligence/types";
 
 export const ETA_ADVISORY_STALE_AFTER_MS = 45_000;
-export const ETA_ADVISORY_MAX_HORIZON_MS = 6 * 60 * 60_000;
 
 export type EtaAdvisoryState = "available" | "unavailable" | "stale" | "expired";
 export type EtaUncertaintyBasis = "readiness_p90" | "not_calibrated";
@@ -73,7 +72,6 @@ function advisoryState(
   }
   const horizonMs = estimatedArrivalAt - now;
   if (horizonMs <= 0) return { state: "expired", eta: prediction.eta, ageSeconds, horizonMinutes: 0 };
-  if (horizonMs > ETA_ADVISORY_MAX_HORIZON_MS) return { state: "unavailable", eta: prediction.eta, ageSeconds, horizonMinutes: Math.ceil(horizonMs / 60_000) };
   return {
     state: "available",
     eta: prediction.eta,
