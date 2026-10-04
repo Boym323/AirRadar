@@ -349,13 +349,45 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         available: true,
         source: "browser fixture",
       };
+      const commandSearchFlightFixture = {
+        query: "CSA123",
+        aircraft: [],
+        airports: [],
+        atsPoints: [],
+        actions: [],
+        flights: [{
+          kind: "flight",
+          id: 8123,
+          icaoHex: "49D001",
+          callsign: "CSA123",
+          registration: "OK-TST",
+          aircraftType: "A320",
+          origin: "LKPR",
+          destination: "LOWW",
+          startTime: "2026-10-04T07:10:00.000Z",
+          href: "/flights/8123",
+        }],
+      };
+      const commandSearchActionFixture = {
+        query: "LOWW operations",
+        aircraft: [],
+        airports: [],
+        atsPoints: [],
+        flights: [],
+        actions: [{
+          kind: "action",
+          intent: "airport_operations",
+          airportIcao: "LOWW",
+          href: "/airports/LOWW#airport-intelligence-v3",
+        }],
+      };
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-landscape-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1024, height: 768 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
         { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
-        { name: "command-search-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: false, openCommandPalette: true },
+        { name: "command-search-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: false, openCommandPalette: true, commandQuery: "CSA123", mockCommandSearch: "flight", commandExpected: "Historical flights" },
         { name: "daily-intelligence-desktop", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockDailyRecap: true },
         { name: "airport-intelligence-v3-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-intelligence-v3"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
@@ -363,7 +395,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
-        { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true },
+        { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW Operations" },
         { name: "daily-intelligence-mobile", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 390, height: 844 }, fullPage: true, mockDailyRecap: true },
         { name: "airport-intelligence-v3-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-intelligence-v3"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true },
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
@@ -389,6 +421,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(airportWeatherFixture) });
             });
           }
+          if (target.mockCommandSearch) {
+            await visualPage.route("**/api/search?q=*", async (route) => {
+              const body = target.mockCommandSearch === "flight" ? commandSearchFlightFixture : commandSearchActionFixture;
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+            });
+          }
           const response = await visualPage.goto(`${baseUrl}${target.path}`, { waitUntil: "domcontentloaded" });
           if (!response?.ok()) throw new Error(`Visual smoke ${target.path} returned HTTP ${response?.status()}`);
           await visualPage.locator(target.selector).waitFor({ state: "visible", timeout: 15_000 });
@@ -402,7 +440,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           if (target.openCommandPalette) {
             await visualPage.keyboard.press("Control+K");
             await visualPage.locator('[data-testid="command-palette"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.locator("#command-palette-input").waitFor({ state: "visible", timeout: 15_000 });
+            const commandInput = visualPage.locator("#command-palette-input");
+            await commandInput.waitFor({ state: "visible", timeout: 15_000 });
+            if (target.commandQuery) {
+              await commandInput.fill(target.commandQuery);
+              await visualPage.getByText(target.commandExpected).first().waitFor({ state: "visible", timeout: 15_000 });
+            }
           }
           if (target.selectAircraft) {
             const trafficTrigger = visualPage.locator('[data-testid="traffic-trigger"]');
