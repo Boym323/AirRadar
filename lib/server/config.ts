@@ -228,6 +228,18 @@ export function getAdsbLolNetworkRadiusNm(): number { return boundedInteger("ADS
 
 export function getReceiverComparisonRadiusNm(): number { return boundedInteger("RECEIVER_COMPARISON_RADIUS_NM", 175, 1, 500); }
 export function getSourceAffinityFailoverGraceMs(): number { return boundedMilliseconds("SOURCE_AFFINITY_FAILOVER_GRACE_MS", 15_000, 1_000, 120_000); }
+export function isAircraftMassDropGuardEnabled(): boolean {
+  return process.env.AIRCRAFT_MASS_DROP_GUARD_ENABLED?.trim().toLowerCase() !== "false";
+}
+export function getAircraftMassDropMinBaseline(): number {
+  return boundedInteger("AIRCRAFT_MASS_DROP_MIN_BASELINE", 20, 5, 10_000);
+}
+export function getAircraftMassDropRatio(): number {
+  return Math.min(0.95, Math.max(0.2, envNumber("AIRCRAFT_MASS_DROP_RATIO", 0.5)));
+}
+export function getAircraftReappearWindowMs(): number {
+  return boundedMilliseconds("AIRCRAFT_REAPPEAR_WINDOW_MS", 30_000, 5_000, 300_000);
+}
 export function getAdsbLolRawStaleMs(): number { return boundedMilliseconds("ADSBLOL_RAW_STALE_MS", 15_000, 2_000, 120_000); }
 export function getAdsbLolRawReconnectMaxMs(): number { return boundedMilliseconds("ADSBLOL_RAW_RECONNECT_MAX_MS", 30_000, 1_000, 300_000); }
 export function getAdsbLolRawMaxTracks(): number { return boundedInteger("ADSBLOL_RAW_MAX_TRACKS", 10_000, 100, 50_000); }
