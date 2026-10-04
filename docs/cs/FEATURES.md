@@ -330,3 +330,16 @@ high-attention události bez domýšlení faktů. Mapa, playback cursor, kurzor
 profilu, vybraná událost i historický Map Context nadále sdílejí stejný
 timestamp. Částečná data zůstávají použitelná a metadata trasy letišť zůstávají
 kontextem, nikoli důkazem skutečně proletěné trasy.
+
+
+## Airport Live Board V7
+
+V7 přidává do existujícího airport boardu omezené pořadí aktivních příletů.
+Znovu používá jediný live aircraft stream i existující 30s refresh token
+letištního controlleru. Pro nejvýše šest inbound letadel provede jeden batch
+request na `/api/operations/predictive?hexes=` a použije pouze readiness-gated
+PUBLIC ETA a runway advisories; admin preview zahazuje. Provoz s CONFIRMED route
+zůstává viditelný i bez predikce, zatímco UNKNOWN route vyžaduje shodu PUBLIC
+prediction destination. Panel zobrazuje pořadí příletů, kalibrovanou nejistotu
+ETA, stabilitu predikované dráhy, medián rozestupu ETA a existující receiverový
+runway flow. Nejde o ATC sekvenci ani FIDS.
