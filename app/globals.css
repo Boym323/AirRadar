@@ -2221,11 +2221,22 @@ button, input, select, textarea { color-scheme: dark; }
   color: var(--text-muted);
   font-size: var(--font-size-xs);
 }
+.flight-story-v2-route-context {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+.flight-story-v2-route-context > small {
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
 .flight-story-v2-route {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  flex-shrink: 0;
   color: var(--text-primary);
   font-family: var(--font-geist-mono), monospace;
   font-size: var(--font-size-lg);
@@ -2500,6 +2511,7 @@ button, input, select, textarea { color-scheme: dark; }
   .history-detail-heading, .history-playback-controls, .flight-profiles { padding-left: 15px; padding-right: 15px; }
   .flight-story-v2-hero { grid-template-columns: 1fr; gap: var(--space-4); padding: var(--space-4); }
   .flight-story-v2-title-row { align-items: flex-start; flex-direction: column; gap: var(--space-3); }
+  .flight-story-v2-route-context { justify-items: start; }
   .flight-story-v2-route { font-size: var(--font-size-md); }
   .flight-story-v2-narrative-heading { flex-direction: column; gap: var(--space-2); }
   .flight-story-v2-narrative-heading > small { max-width: none; text-align: left; }
