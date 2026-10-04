@@ -493,8 +493,119 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           provenance: "predicted",
         },
       };
+      const predictiveOperationsEvaluatedAt = new Date(Date.now() - 8_000).toISOString();
+      const predictiveOperationsEtaAt = new Date(Date.now() + 28 * 60_000).toISOString();
+      const predictiveOperationsLogbookFixture = {
+        source: "postgres",
+        generatedAt: new Date().toISOString(),
+        liveAircraft: 1,
+        uniqueAircraftToday: 1,
+        newAircraftToday: 0,
+        rareAircraftToday: 1,
+        returningAircraftToday: 0,
+        watchlistedLiveAircraft: 0,
+        interestingAircraft: [{
+          icaoHex: "896139",
+          labels: ["rare"],
+          reasons: ["rare"],
+          flightCount: 2,
+          returningGapDays: null,
+          isLive: true,
+          callsign: "UAE123",
+          registration: "A6-EOT",
+          aircraftType: "A388",
+          distanceKm: 48,
+        }],
+        todayReceptionRecord: null,
+        lifetimeReceptionRecord: null,
+      };
+      const predictiveOperationsPublicFixture = {
+        generatedAt: new Date().toISOString(),
+        items: [{
+          icaoHex: "896139",
+          label: "UAE123",
+          callsign: "UAE123",
+          registration: "A6-EOT",
+          destination: "LOWW",
+          etaAdvisory: {
+            kind: "ETA",
+            state: "available",
+            estimatedArrivalAt: predictiveOperationsEtaAt,
+            evaluatedAt: predictiveOperationsEvaluatedAt,
+            ageSeconds: 8,
+            horizonMinutes: 28,
+            confidence: "MEDIUM",
+            uncertaintyMinutes: 4,
+            uncertaintyBasis: "readiness_p90",
+            modelVersion: "predictive-intelligence-v1",
+            provenance: "predicted",
+          },
+          runwayAdvisory: {
+            kind: "RUNWAY",
+            state: "available",
+            runway: "24",
+            alternative: "06",
+            evaluatedAt: predictiveOperationsEvaluatedAt,
+            ageSeconds: 8,
+            confidence: "MEDIUM",
+            modelVersion: "predictive-intelligence-v1",
+            provenance: "predicted",
+          },
+        }],
+      };
+      const predictiveOperationsAdminFixture = {
+        generatedAt: new Date().toISOString(),
+        items: [{
+          icaoHex: "896139",
+          label: "UAE123",
+          callsign: "UAE123",
+          registration: "A6-EOT",
+          destination: "LOWW",
+          etaAdvisory: null,
+          runwayAdvisory: null,
+          etaAdminPreview: {
+            kind: "ETA",
+            mode: "SHADOW",
+            readiness: "WAIT",
+            readinessReasons: ["eta.insufficient_independent_truth"],
+            publicEligible: false,
+            state: "available",
+            estimatedArrivalAt: predictiveOperationsEtaAt,
+            evaluatedAt: predictiveOperationsEvaluatedAt,
+            ageSeconds: 8,
+            horizonMinutes: 28,
+            confidence: "MEDIUM",
+            uncertaintyMinutes: null,
+            uncertaintyBasis: "not_calibrated",
+            modelVersion: "predictive-intelligence-v1",
+            provenance: "predicted",
+          },
+          runwayAdminPreview: {
+            kind: "RUNWAY",
+            mode: "SHADOW",
+            readiness: "WAIT",
+            readinessReasons: ["runway.insufficient_independent_truth"],
+            publicEligible: false,
+            state: "available",
+            runway: "24",
+            alternative: "06",
+            evaluatedAt: predictiveOperationsEvaluatedAt,
+            ageSeconds: 8,
+            confidence: "MEDIUM",
+            exactEndAccuracy: 0.82,
+            coverage: 0.58,
+            modelVersion: "predictive-intelligence-v1",
+            provenance: "predicted",
+          },
+        }],
+        adminReadiness: {
+          ETA: { decision: "WAIT", reasons: ["eta.insufficient_independent_truth"] },
+          RUNWAY: { decision: "WAIT", reasons: ["runway.insufficient_independent_truth"] },
+        },
+      };
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
+        { name: "predictive-operations-public-desktop", path: "/?mapDiagnostics=1&operations=1", selector: '[data-testid="predictive-operations-center"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockPredictiveOperations: "public" },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-landscape-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1024, height: 768 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
@@ -506,6 +617,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
+        { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1&operations=1", selector: '[data-testid="predictive-operations-center"]', viewport: { width: 390, height: 844 }, fullPage: false, mockPredictiveOperations: "admin" },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
         { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW Operations" },
@@ -526,6 +638,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       for (const target of visualTargets) {
         const visualPage = await browser.newPage({ viewport: target.viewport });
         try {
+          if (target.mockPredictiveOperations) {
+            await visualPage.route("**/api/logbook/summary", async (route) => {
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(predictiveOperationsLogbookFixture) });
+            });
+            await visualPage.route("**/api/alerts?*", async (route) => {
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ items: [] }) });
+            });
+            await visualPage.route("**/api/operations/predictive?hexes=*", async (route) => {
+              const body = target.mockPredictiveOperations === "public" ? predictiveOperationsPublicFixture : predictiveOperationsAdminFixture;
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+            });
+          }
           if (target.mockDailyRecap) {
             await visualPage.route("**/api/recap?range=daily", async (route) => {
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(dailyRecapFixture) });
@@ -556,6 +680,16 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               const body = target.mockRunwayAdvisory === "public" ? runwayAdvisoryPublicFixture : runwayAdvisoryAdminFixture;
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
             });
+          }
+          if (target.mockPredictiveOperations) {
+            await visualPage.locator('[data-testid="predictive-operations-center"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("UAE123", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("24", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            if (target.mockPredictiveOperations === "admin") {
+              await visualPage.locator('[data-testid="predictive-operations-readiness"]').waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("ETA WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("RWY WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            }
           }
           if (target.mockPredictiveReadiness) {
             await visualPage.route("**/api/system/status", async (route) => {
