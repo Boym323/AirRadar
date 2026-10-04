@@ -60,11 +60,16 @@ function confidenceLevel(value: number): FlightStoryNarrativeItem["confidenceLev
 }
 
 function flightStart(detail: HistoryFlightDetail): string {
-  return detail.positions[0]?.recordedAt ?? detail.flight.startTime;
+  return Number.isFinite(Date.parse(detail.flight.startTime))
+    ? detail.flight.startTime
+    : detail.positions[0]?.recordedAt ?? detail.flight.startTime;
 }
 
 function flightEnd(detail: HistoryFlightDetail): string {
-  return detail.positions.at(-1)?.recordedAt ?? detail.flight.endTime ?? detail.flight.lastSeenAt;
+  const persistedEnd = detail.flight.endTime ?? detail.flight.lastSeenAt;
+  return Number.isFinite(Date.parse(persistedEnd))
+    ? persistedEnd
+    : detail.positions.at(-1)?.recordedAt ?? persistedEnd;
 }
 
 function nearestTelemetry(
@@ -102,17 +107,6 @@ function nearestTelemetry(
     groundSpeed: finiteOrNull(nearest.groundSpeed),
     verticalRate: finiteOrNull(nearest.verticalRate),
     track: finiteOrNull(nearest.track),
-  };
-}
-
-function boundaryTelemetry(
-  position: HistoryFlightDetail["positions"][number] | undefined,
-): FlightStoryNarrativeTelemetry {
-  return {
-    altitude: finiteOrNull(position?.altitude),
-    groundSpeed: finiteOrNull(position?.groundSpeed),
-    verticalRate: finiteOrNull(position?.verticalRate),
-    track: finiteOrNull(position?.track),
   };
 }
 
@@ -197,7 +191,7 @@ export function buildFlightStoryNarrative(detail: HistoryFlightDetail): FlightSt
     airportIcao: null,
     runway: null,
     sectorId: null,
-    telemetry: boundaryTelemetry(detail.positions[0]),
+    telemetry: nearestTelemetry(detail.positions, startAt, null),
   }];
 
   for (const event of detail.events) {
@@ -230,7 +224,7 @@ export function buildFlightStoryNarrative(detail: HistoryFlightDetail): FlightSt
     airportIcao: null,
     runway: null,
     sectorId: null,
-    telemetry: boundaryTelemetry(detail.positions.at(-1)),
+    telemetry: nearestTelemetry(detail.positions, endAt, null),
   });
 
   return items.sort((left, right) => {
