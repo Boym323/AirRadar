@@ -1,5 +1,7 @@
 export type AircraftContinuityOrigin = "local" | "network";
 
+const MAX_RECENT_REMOVALS = 10_000;
+
 export interface AircraftMassDropGuardConfig {
   enabled: boolean;
   minBaseline: number;
@@ -40,6 +42,8 @@ export interface AircraftContinuityDiagnostics {
     missingTracked: number;
     massDropPending: boolean;
     pendingMassDropBaseline: number | null;
+    pendingMassDropFirstObserved: number | null;
+    pendingMassDropSince: string | null;
   };
   network: OriginCounters & {
     observedAircraft: number;
@@ -47,6 +51,8 @@ export interface AircraftContinuityDiagnostics {
     missingTracked: number;
     massDropPending: boolean;
     pendingMassDropBaseline: number | null;
+    pendingMassDropFirstObserved: number | null;
+    pendingMassDropSince: string | null;
   };
   sourceFailovers: {
     localToNetwork: number;
@@ -135,7 +141,13 @@ export class AircraftContinuityGuard {
   recordRemoval(origin: AircraftContinuityOrigin, hex: string, now: number): void {
     this.counters[origin].staleExpirations += 1;
     this.missingSince[origin].delete(hex);
-    this.recentRemovals[origin].set(hex, now);
+    const removals = this.recentRemovals[origin];
+    if (!removals.has(hex) && removals.size >= MAX_RECENT_REMOVALS) {
+      const oldest = removals.keys().next().value as string | undefined;
+      if (oldest !== undefined) removals.delete(oldest);
+    }
+    removals.delete(hex);
+    removals.set(hex, now);
     this.lastEventAt = now;
   }
 
@@ -239,6 +251,8 @@ export class AircraftContinuityGuard {
         missingTracked: this.missingSince.local.size,
         massDropPending: localPending !== null,
         pendingMassDropBaseline: localPending?.baselineCount ?? null,
+        pendingMassDropFirstObserved: localPending?.firstObservedCount ?? null,
+        pendingMassDropSince: localPending ? new Date(localPending.startedAt).toISOString() : null,
       },
       network: {
         ...this.counters.network,
@@ -247,6 +261,8 @@ export class AircraftContinuityGuard {
         missingTracked: this.missingSince.network.size,
         massDropPending: networkPending !== null,
         pendingMassDropBaseline: networkPending?.baselineCount ?? null,
+        pendingMassDropFirstObserved: networkPending?.firstObservedCount ?? null,
+        pendingMassDropSince: networkPending ? new Date(networkPending.startedAt).toISOString() : null,
       },
       sourceFailovers: {
         ...this.sourceFailovers,
