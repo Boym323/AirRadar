@@ -74,6 +74,28 @@ runway to account for at least 75 percent of those samples. Otherwise the result
 is MIXED or UNKNOWN. V6 adds no request, stream, database table or persistence
 write path.
 
+## Airport Live Board V7
+
+V7 keeps the V6 Flow Trend / Pressure panel and adds Runway Flow / Stability as
+another pure projection over the same bounded operations snapshot. It compares
+runway-bearing movements in the latest 15-minute window with the preceding
+15-minute window. Each flight contributes at most one runway sample per window,
+using its newest runway-bearing movement in that window.
+
+The runway-flow state is conservative. STABLE requires at least three samples in
+both windows, the same dominant runway in both, and at least a 75 percent share
+for that runway in each window. TRANSITIONING requires at least three samples in
+both windows, a different dominant runway, and at least a 60 percent share for
+both the previous and current dominant runways. Otherwise the result is MIXED
+or INSUFFICIENT.
+
+The panel also shows current arrival and departure runway evidence separately,
+reported versus inferred runway-sample counts, and comparison with the current
+wind-favoured runway when the current runway evidence is strong enough. A
+transition is an observed change in bounded receiver evidence, not confirmation
+of an airport configuration change or an ATC instruction. V7 adds no request,
+EventSource, API route, database table or persistence write path.
+
 ## Limitations
 
 Receiver gaps, late acquisition, missing routes, missing METAR, helicopters,
