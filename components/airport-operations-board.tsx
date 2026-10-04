@@ -58,6 +58,26 @@ function statusLabel(status: AirportOperationsControllerState["status"]): string
   }[status];
 }
 
+function journeyLabel(stage: ReturnType<typeof buildAirportCorrelatedTrafficSnapshot>["inbound"][number]["journey"]["stage"]): string {
+  return {
+    INBOUND: t.airport.liveBoardJourneyInbound,
+    HOLDING: t.airport.liveBoardJourneyHolding,
+    APPROACH: t.airport.liveBoardJourneyApproach,
+    FINAL: t.airport.liveBoardJourneyFinal,
+    GO_AROUND: t.airport.liveBoardJourneyGoAround,
+    INITIAL_CLIMB: t.airport.liveBoardJourneyInitialClimb,
+    OUTBOUND: t.airport.liveBoardJourneyOutbound,
+  }[stage];
+}
+
+function routeRelationLabel(
+  relation: ReturnType<typeof buildAirportCorrelatedTrafficSnapshot>["inbound"][number]["journey"]["routeRelation"],
+): string | null {
+  return relation === "CONFIRMED" ? t.airport.liveBoardRouteConfirmed
+    : relation === "CONFLICT" ? t.airport.liveBoardRouteConflict
+      : null;
+}
+
 
 function movementIdentity(movement: AirportMovement): string {
   return movement.callsign || movement.registration || movement.icaoHex;
@@ -119,11 +139,16 @@ function ActiveTrafficLane({
         const aircraft = observation.aircraft;
         const label = aircraft.callsign || aircraft.registration || aircraft.icaoHex;
         const route = aircraft.enrichment?.route;
+        const routeState = routeRelationLabel(observation.journey.routeRelation);
         return <li key={aircraft.icaoHex}>
           <span className="airport-live-now">{t.status.liveShort}</span>
+          <span className={`airport-live-journey airport-live-journey-${observation.journey.stage.toLowerCase().replace("_", "-")}`}>
+            {journeyLabel(observation.journey.stage)}
+          </span>
           <span className="airport-live-flight-main">
             <Link href={`/aircraft/${encodeURIComponent(aircraft.icaoHex)}`}>{label}</Link>
             <small>{route?.origin && route?.destination ? `${route.origin} → ${route.destination}` : aircraft.registration ?? aircraft.icaoHex}</small>
+            {routeState ? <small className={`airport-live-route-state ${observation.journey.routeRelation.toLowerCase()}`}>{routeState}</small> : null}
           </span>
           <span className="airport-live-active-meta">
             <span>{formatDistance(observation.distanceKm)} · {formatAltitude(aircraft.altitude)}</span>
@@ -168,7 +193,7 @@ export function AirportOperationsBoard({
     ? `${String(Math.round(metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(metar.windSpeedKt)}`
     : null;
 
-  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v3">
+  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v4">
     <div data-testid="airport-live-board">
     <div className="airport-v3-hero">
       <div className="airport-v3-heading">
