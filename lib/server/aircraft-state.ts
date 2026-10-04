@@ -867,8 +867,8 @@ export class AircraftStateService {
       if (!expired) continue;
 
       // If this is still the preferred source and a live alternate exists,
-      // retain the last known position until affinity can switch. The marker
-      // becomes stale visually, but never disappears between data sources.
+      // retain the last known position until affinity can switch so the map
+      // never has a positionless interval between data sources.
       const missingSince = this.sourcePreferenceMissingSince.get(hex);
       if (
         this.sourcePreferences.get(hex) === origin
