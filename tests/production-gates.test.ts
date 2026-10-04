@@ -58,12 +58,13 @@ describe("production release metadata gate", () => {
     expect(source).toContain('AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json")');
   });
 
-  it("tracks the Airport Live Board V6 production smoke contract", () => {
+  it("tracks the Airport Live Board V7 production smoke contract", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain('[data-product="airport-live-board-v6"]');
+    expect(source).toContain('[data-product="airport-live-board-v7"]');
     expect(source).toContain('[data-testid="airport-live-board-flow-pulse"]');
     expect(source).toContain('[data-testid="airport-live-board-v6-pressure"]');
-    expect(source).not.toContain('[data-product="airport-live-board-v5"]');
+    expect(source).toContain('[data-testid="airport-live-board-v7-runway-flow"]');
+    expect(source).not.toContain('[data-product="airport-live-board-v6"]');
   });
 
   it("keeps visual smoke readiness independent of remote map tiles", () => {
