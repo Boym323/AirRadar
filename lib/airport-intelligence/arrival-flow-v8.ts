@@ -90,13 +90,16 @@ function pressureLevel(score: number): AirportArrivalPressureLevel {
   return "HIGH";
 }
 
-function evidenceLevel(sequence: AirportArrivalSequenceSummary): AirportArrivalFlowEvidence {
-  if (
-    sequence.etaPredicted >= 2
-    && sequence.predictionCoverage !== null
-    && sequence.predictionCoverage >= 0.75
-  ) return "PUBLIC_STRONG";
-  if (sequence.etaPredicted > 0 || sequence.runwayPredicted > 0) return "PUBLIC_PARTIAL";
+function evidenceLevel(
+  sequence: AirportArrivalSequenceSummary,
+  etaWithin30Minutes: number,
+  runwayWithin30Minutes: number,
+): AirportArrivalFlowEvidence {
+  const horizonCoverage = sequence.totalCandidates > 0
+    ? etaWithin30Minutes / sequence.totalCandidates
+    : 0;
+  if (etaWithin30Minutes >= 2 && horizonCoverage >= 0.75) return "PUBLIC_STRONG";
+  if (etaWithin30Minutes > 0 || runwayWithin30Minutes > 0) return "PUBLIC_PARTIAL";
   return "RECEIVER_ONLY";
 }
 
@@ -215,7 +218,7 @@ export function buildAirportArrivalFlowIntelligence(input: {
   return {
     version: "airport-live-board-v8",
     referenceTime: referenceMs === null ? null : new Date(referenceMs).toISOString(),
-    evidence: evidenceLevel(input.sequence),
+    evidence: evidenceLevel(input.sequence, demand.etaSamples, runwaySamples),
     demand: {
       ...demand,
       trend: demandTrend(demand.within15Minutes, demand.between15And30Minutes, demand.etaSamples),
