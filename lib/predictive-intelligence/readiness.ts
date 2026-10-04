@@ -138,10 +138,11 @@ function capabilityResult<T>(
   return { capability, decision: "PASS", evidence, reasons: [] };
 }
 
-export function evaluatePredictiveReadiness(input: PredictiveReadinessEvidence): PredictiveReadinessEvaluation {
+export function evaluatePredictiveReadiness(input: PredictiveReadinessEvidence, options: { complete?: boolean } = {}): PredictiveReadinessEvaluation {
   const integrityFailures = commonIntegrityFailure(input.integrity);
+  const collectionWait = options.complete === false ? ["collection.bounded_result_incomplete"] : [];
 
-  const etaWait: string[] = [];
+  const etaWait: string[] = [...collectionWait];
   const etaFail = [...integrityFailures];
   const etaThreshold = PREDICTIVE_READINESS_THRESHOLDS.ETA;
   if (input.ETA.observations < etaThreshold.minimumObservations) etaWait.push("eta.insufficient_observations");
@@ -153,7 +154,7 @@ export function evaluatePredictiveReadiness(input: PredictiveReadinessEvidence):
   if (etaHasEvidence && (input.ETA.p95AbsoluteErrorSeconds === null || input.ETA.p95AbsoluteErrorSeconds > etaThreshold.maximumP95AbsoluteErrorSeconds)) etaFail.push("eta.p95_error_exceeds_threshold");
   if (etaHasEvidence && staleFailure(input.ETA.captureStaleRate)) etaFail.push("eta.capture_stale_rate_exceeds_threshold");
 
-  const runwayWait: string[] = [];
+  const runwayWait: string[] = [...collectionWait];
   const runwayFail = [...integrityFailures];
   const runwayThreshold = PREDICTIVE_READINESS_THRESHOLDS.RUNWAY;
   if (input.RUNWAY.observations < runwayThreshold.minimumObservations) runwayWait.push("runway.insufficient_observations");
@@ -164,7 +165,7 @@ export function evaluatePredictiveReadiness(input: PredictiveReadinessEvidence):
   if (runwayHasEvidence && (input.RUNWAY.coverage === null || input.RUNWAY.coverage < runwayThreshold.minimumCoverage)) runwayFail.push("runway.coverage_below_threshold");
   if (runwayHasEvidence && staleFailure(input.RUNWAY.captureStaleRate)) runwayFail.push("runway.capture_stale_rate_exceeds_threshold");
 
-  const changeWait: string[] = [];
+  const changeWait: string[] = [...collectionWait];
   const changeFail = [...integrityFailures];
   const changeThreshold = PREDICTIVE_READINESS_THRESHOLDS.RUNWAY_CHANGE;
   if (!input.RUNWAY_CHANGE.independentChangeTruthAvailable) changeWait.push("runway_change.independent_change_truth_unavailable");
@@ -176,7 +177,7 @@ export function evaluatePredictiveReadiness(input: PredictiveReadinessEvidence):
   if (changeHasEvidence && (input.RUNWAY_CHANGE.falsePositiveRate === null || input.RUNWAY_CHANGE.falsePositiveRate > changeThreshold.maximumFalsePositiveRate)) changeFail.push("runway_change.false_positive_rate_exceeds_threshold");
   if (changeHasEvidence && staleFailure(input.RUNWAY_CHANGE.captureStaleRate)) changeFail.push("runway_change.capture_stale_rate_exceeds_threshold");
 
-  const trajectoryWait: string[] = [];
+  const trajectoryWait: string[] = [...collectionWait];
   const trajectoryFail = [...integrityFailures];
   const trajectoryThreshold = PREDICTIVE_READINESS_THRESHOLDS.TRAJECTORY;
   if (!input.TRAJECTORY.stateCaptureAvailable) trajectoryWait.push("trajectory.state_capture_unavailable");
