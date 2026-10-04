@@ -10,6 +10,9 @@ import type { FlightIntelligenceEvent, FlightEventType } from "@/lib/intelligenc
 import { AlertV1TransitionTracker, evaluateAlertV1, geofenceTransitionSourceKey, squawkTransitionSourceKey, type AlertV1Signal } from "@/lib/server/alerts-fleets-v1";
 import { getAlertsFleetsRepository } from "@/lib/server/alerts-fleets-repository";
 import { getPrisma } from "@/lib/server/db";
+import { evaluateWatchlistPredictiveRule } from "@/lib/watchlist-predictive-alerts-v2";
+import type { PublicEtaAdvisory } from "@/lib/predictive-intelligence/eta-advisory";
+import type { PublicRunwayChangeAdvisory } from "@/lib/predictive-intelligence/runway-change-advisory";
 
 const MAX_DEDUP_ENTRIES = 10_000;
 const MAX_PENDING_ALERTS = 32;
@@ -163,6 +166,57 @@ export class AlertEngine {
   getRuleLastTriggeredAt(ruleId: string): string | null {
     const timestamp = this.ruleLastTriggered.get(ruleId);
     return timestamp === undefined ? null : new Date(timestamp).toISOString();
+  }
+
+  hasPredictiveRules(): boolean {
+    return this.rules.some((rule) => rule.etaThresholdMinutes !== undefined || rule.notifyRunwayChange === true);
+  }
+
+  observePredictiveAdvisories(
+    aircraft: Aircraft,
+    input: {
+      destinationIcao: string | null;
+      etaAdvisory: PublicEtaAdvisory | null;
+      runwayChangeAdvisory: PublicRunwayChangeAdvisory | null;
+    },
+  ): void {
+    const matchedRules = this.rules.filter((rule) =>
+      (rule.etaThresholdMinutes !== undefined || rule.notifyRunwayChange === true)
+      && matchesAircraftRule(aircraft, rule)
+    );
+    if (!matchedRules.length) return;
+
+    let stateDirty = false;
+    for (const rule of matchedRules) {
+      const candidates = evaluateWatchlistPredictiveRule({
+        rule,
+        aircraftIcao: aircraft.icaoHex,
+        callsign: aircraft.callsign,
+        destinationIcao: input.destinationIcao,
+        etaAdvisory: input.etaAdvisory,
+        runwayChangeAdvisory: input.runwayChangeAdvisory,
+      });
+      for (const candidate of candidates) {
+        if (this.permanentEvents.has(candidate.eventKey)) continue;
+        const type: AlertHistoryEventType = candidate.kind === "ETA_THRESHOLD" ? "predictive_eta" : "predictive_runway_change";
+        const reason: AlertHistoryReason = candidate.kind === "ETA_THRESHOLD" ? "eta_threshold" : "runway_change";
+        const accepted = this.enqueue({
+          aircraft,
+          matchedRules: [rule],
+          emergency: false,
+          priority: "normal",
+          type,
+          reason,
+          eventId: candidate.eventKey,
+          metadata: candidate.metadata,
+        });
+        if (!accepted) continue;
+        this.rememberPermanentEvent(candidate.eventKey);
+        this.ruleLastTriggered.set(rule.id, this.now());
+        stateDirty = true;
+      }
+    }
+    if (stateDirty) this.persistState();
   }
 
   observe(
