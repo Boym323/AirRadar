@@ -287,7 +287,7 @@ describe("aircraft state service", () => {
     expect(extended.coverageStats).toMatchObject({ displayedAircraft: 2, localAircraft: 2, networkAircraft: 0, networkOnlyAircraft: 0 });
   });
 
-  it("fails over source affinity after a bounded preferred-source outage", () => {
+  it("keeps the preferred last-known position and fails over without a blank interval", () => {
     vi.useFakeTimers();
     vi.stubEnv("SOURCE_AFFINITY_FAILOVER_GRACE_MS", "1000");
     const base = new Date("2026-09-22T08:00:00.000Z");
@@ -322,8 +322,9 @@ describe("aircraft state service", () => {
     internal.applyNetworkSnapshot({ aircraft: [], fetchedAt: base.toISOString(), provider: "adsb.lol" });
     expect(service.getSnapshot({ coverage: "extended" }).aircraft[0]).toMatchObject({
       icaoHex: "ABC123",
-      lat: null,
-      lon: null,
+      lat: 50.2,
+      lon: 14.2,
+      origin: "adsblol",
     });
 
     const afterGrace = new Date(base.getTime() + 1_100);
@@ -378,25 +379,58 @@ describe("aircraft state service", () => {
     });
   });
 
-  it("degrades extended coverage to exactly local after network state is cleared", () => {
+  it("retains a missing network aircraft until its stale window expires", () => {
+    vi.useFakeTimers();
+    vi.stubEnv("ADSBLOL_STALE_AFTER_MS", "30000");
+    const base = new Date("2026-09-22T08:20:00.000Z");
+    vi.setSystemTime(base);
     const receiver = { lat: 50, lon: 14, name: "Test" };
-    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 }, receiver);
-    const network = normalizeAircraft({ hex: "DEF456", flight: "NETWORK456", lat: 50.2, lon: 14.2, seen: 0, seen_pos: 0 }, receiver);
+    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 }, receiver, base);
+    const network = normalizeAircraft({ hex: "DEF456", flight: "NETWORK456", lat: 50.2, lon: 14.2, seen: 0, seen_pos: 0 }, receiver, base);
     if (!local || !network) throw new Error("test aircraft could not be normalized");
     const service = new AircraftStateService(new MockReadsbProvider(receiver));
     const internal = service as unknown as {
       applySnapshot: (snapshot: ProviderSnapshot) => void;
       applyNetworkSnapshot: (snapshot: { aircraft: Aircraft[]; fetchedAt: string | null; provider: string }) => void;
     };
-    const fetchedAt = new Date().toISOString();
-    internal.applySnapshot({ aircraft: [local], receiver, fetchedAt, provider: "readsb" });
-    internal.applyNetworkSnapshot({ aircraft: [network], fetchedAt, provider: "adsb.lol" });
+    internal.applySnapshot({ aircraft: [local], receiver, fetchedAt: base.toISOString(), provider: "readsb" });
+    internal.applyNetworkSnapshot({ aircraft: [network], fetchedAt: base.toISOString(), provider: "adsb.lol" });
     expect(service.getSnapshot({ coverage: "extended" }).aircraft.map((item) => item.icaoHex).sort()).toEqual(["ABC123", "DEF456"]);
 
-    internal.applyNetworkSnapshot({ aircraft: [], fetchedAt, provider: "adsb.lol" });
+    const shortGap = new Date(base.getTime() + 10_000);
+    vi.setSystemTime(shortGap);
+    internal.applyNetworkSnapshot({ aircraft: [], fetchedAt: shortGap.toISOString(), provider: "adsb.lol" });
+    expect(service.getSnapshot({ coverage: "extended" }).aircraft.map((item) => item.icaoHex).sort()).toEqual(["ABC123", "DEF456"]);
+
+    const expired = new Date(base.getTime() + 30_001);
+    vi.setSystemTime(expired);
+    internal.applyNetworkSnapshot({ aircraft: [], fetchedAt: expired.toISOString(), provider: "adsb.lol" });
     const degraded = service.getSnapshot({ coverage: "extended" });
     expect(degraded.aircraft.map((item) => item.icaoHex)).toEqual(["ABC123"]);
     expect(degraded.coverageStats).toMatchObject({ displayedAircraft: 1, localAircraft: 1, networkAircraft: 0, networkOnlyAircraft: 0 });
+  });
+
+  it("retains a locally observed aircraft through a short successful snapshot omission", () => {
+    vi.useFakeTimers();
+    vi.stubEnv("AIRCRAFT_STALE_AFTER_MS", "15000");
+    const base = new Date("2026-09-22T08:30:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const local = normalizeAircraft({ hex: "ABC123", flight: "LOCAL123", lat: 50.1, lon: 14.1, seen: 0, seen_pos: 0 }, receiver, base);
+    if (!local) throw new Error("test aircraft could not be normalized");
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as { applySnapshot: (snapshot: ProviderSnapshot) => void };
+
+    internal.applySnapshot({ aircraft: [local], receiver, fetchedAt: base.toISOString(), provider: "readsb" });
+    const shortGap = new Date(base.getTime() + 3_000);
+    vi.setSystemTime(shortGap);
+    internal.applySnapshot({ aircraft: [], receiver, fetchedAt: shortGap.toISOString(), provider: "readsb" });
+    expect(service.getSnapshot().aircraft[0]).toMatchObject({ icaoHex: "ABC123", lat: 50.1, lon: 14.1 });
+
+    const expired = new Date(base.getTime() + 15_001);
+    vi.setSystemTime(expired);
+    internal.applySnapshot({ aircraft: [], receiver, fetchedAt: expired.toISOString(), provider: "readsb" });
+    expect(service.getSnapshot().aircraft).toEqual([]);
   });
 
   it("keeps the history sample throttle across a short disappearance", async () => {
@@ -737,18 +771,30 @@ describe("aircraft state service", () => {
     vi.useRealTimers();
   });
 
-  it("removes ATC resolution keys when an aircraft disappears", async () => {
+  it("removes ATC resolution keys only after a missing aircraft becomes stale", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("AIRCRAFT_STALE_AFTER_MS", "15000");
+    const base = new Date("2026-09-22T09:00:00.000Z");
+    vi.setSystemTime(base);
     const receiver = { lat: 50, lon: 14, name: "Test" };
-    const aircraft = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 }, receiver);
+    const aircraft = normalizeAircraft({ hex: "ABC123", flight: "TEST123", lat: 50, lon: 14 }, receiver, base);
     if (!aircraft) throw new Error("test aircraft could not be normalized");
     const provider: AircraftProvider = { name: "test", getSnapshot: async () => ({ aircraft: [], receiver, fetchedAt: new Date().toISOString(), provider: "test" }) };
     const service = new AircraftStateService(provider, new EnrichmentService({}), new AtcSectorService(new EmptyAtcSectorProvider()));
-    const snapshot: ProviderSnapshot = { aircraft: [aircraft], receiver, fetchedAt: new Date().toISOString(), provider: "test" };
+    const snapshot: ProviderSnapshot = { aircraft: [aircraft], receiver, fetchedAt: base.toISOString(), provider: "test" };
     const internal = service as unknown as { applySnapshot: (value: ProviderSnapshot) => void; resolveAtc: (value: ProviderSnapshot) => Promise<void>; atcResolutionKeys: Map<string, string> };
     internal.applySnapshot(snapshot);
     await internal.resolveAtc(snapshot);
     expect(internal.atcResolutionKeys.has("ABC123")).toBe(true);
-    internal.applySnapshot({ ...snapshot, aircraft: [] });
+
+    const shortGap = new Date(base.getTime() + 3_000);
+    vi.setSystemTime(shortGap);
+    internal.applySnapshot({ ...snapshot, aircraft: [], fetchedAt: shortGap.toISOString() });
+    expect(internal.atcResolutionKeys.has("ABC123")).toBe(true);
+
+    const expired = new Date(base.getTime() + 15_001);
+    vi.setSystemTime(expired);
+    internal.applySnapshot({ ...snapshot, aircraft: [], fetchedAt: expired.toISOString() });
     expect(internal.atcResolutionKeys.has("ABC123")).toBe(false);
   });
 
