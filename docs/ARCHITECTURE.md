@@ -193,7 +193,11 @@ independent lanes:
   timer advances; a live alternate then takes over without a positionless
   interval. An absent or positionless preferred observation may use a usable
   alternate position immediately while identity/metadata provenance remains
-  explicit.
+  explicit. `AircraftContinuityGuard` sits beside that state owner: it keeps
+  bounded process-local continuity counters and applies a one-cycle
+  confirmation barrier before destructive pruning after a large successful
+  snapshot count collapse. It does not change SSE framing, persistence, or
+  provider retry semantics; diagnostics are surfaced via system status.
 - `EnrichmentService` invokes configured metadata, route, and flight-plan
   providers asynchronously. It uses normalized keys, positive/negative TTLs,
   in-flight coalescing, and bounded concurrency.

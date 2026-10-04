@@ -2,6 +2,9 @@ import type { Aircraft, AircraftEnrichment, CoverageMode, ProviderSnapshot, Rece
 import {
   getAircraftStaleAfterMs,
   getAdsbLolStaleAfterMs,
+  getAircraftMassDropMinBaseline,
+  getAircraftMassDropRatio,
+  getAircraftReappearWindowMs,
   getHistorySampleIntervalMs,
   getMaxProviderRetryIntervalMs,
   getPollIntervalMs,
@@ -10,8 +13,10 @@ import {
   getNetworkTrailMaxPoints,
   getReceiverComparisonRadiusNm,
   getSourceAffinityFailoverGraceMs,
+  isAircraftMassDropGuardEnabled,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
+import { AircraftContinuityGuard, type AircraftContinuityOrigin, type AircraftMassDropDecision } from "@/lib/server/aircraft-continuity";
 import { createAircraftProvider, createEnrichmentService, createNetworkAircraftProvider } from "@/lib/server/providers";
 import type { EnrichmentService } from "@/lib/server/enrichment-cache";
 import type { AircraftProvider, NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
@@ -184,6 +189,7 @@ export class AircraftStateService {
   private readonly sourcePreferences = new Map<string, "local" | "network">();
   /** Start of a preferred-source outage while the alternate observation remains live. */
   private readonly sourcePreferenceMissingSince = new Map<string, number>();
+  private readonly continuity = new AircraftContinuityGuard();
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -457,6 +463,7 @@ export class AircraftStateService {
     predictiveIntelligence: ReturnType<PredictiveStateStore["diagnostics"]>;
     flightIntelligence: ReturnType<FlightIntelligenceService["getDiagnostics"]>;
     destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
+    continuity: ReturnType<AircraftContinuityGuard["diagnostics"]>;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -478,6 +485,13 @@ export class AircraftStateService {
       predictiveIntelligence: this.predictive.diagnostics(),
       flightIntelligence: this.intelligence.getDiagnostics(),
       destinationProvenance: getDestinationProvenanceDiagnostics(),
+      continuity: this.continuity.diagnostics({
+        localObserved: this.localObservedHexes.size,
+        localRetained: this.localAircraft.size,
+        networkObserved: this.networkObservedHexes.size,
+        networkRetained: this.networkAircraft.size,
+        pendingAffinity: this.sourcePreferenceMissingSince.size,
+      }),
     };
   }
 
@@ -568,8 +582,10 @@ export class AircraftStateService {
         // A failed provider request supplies no current membership evidence.
         // Keep the last good observations through the stale/source-affinity
         // window so the map can fail over without a blank interval.
+        const previousObserved = this.localObservedHexes;
         this.localObservedHexes = new Set();
         const now = Date.now();
+        this.continuity.observeMembership("local", previousObserved, this.localObservedHexes, now);
         this.reconcileSourcePreferences(now);
         this.removeStaleAircraft(now);
         this.invalidateSnapshotCache();
@@ -687,10 +703,13 @@ export class AircraftStateService {
   private applySnapshot(snapshot: ProviderSnapshot): void {
     this.currentReceiver = snapshot.receiver;
     const previousAircraft = new Map(this.localAircraft);
+    const previousObservedHexes = this.localObservedHexes;
     const currentHexes = new Set<string>();
+    const now = Date.now();
     for (const incoming of snapshot.aircraft) {
-      if (Date.parse(incoming.lastSeen) < Date.now() - getAircraftStaleAfterMs()) continue;
+      if (Date.parse(incoming.lastSeen) < now - getAircraftStaleAfterMs()) continue;
       currentHexes.add(incoming.icaoHex);
+      this.continuity.recordObservation("local", incoming.icaoHex, now, getAircraftReappearWindowMs());
       this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "local");
       const previous = this.localAircraft.get(incoming.icaoHex);
       const localIncoming = plausiblePosition(previous, { ...incoming, origin: "local" as const });
@@ -702,13 +721,20 @@ export class AircraftStateService {
       const atc = previous?.atc ?? incoming.atc;
       this.localAircraft.set(incoming.icaoHex, { ...localIncoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
     }
+    this.continuity.observeMembership("local", previousObservedHexes, currentHexes, now);
+    const massDropBaseline = previousObservedHexes.size > 0 ? previousObservedHexes : new Set(this.localAircraft.keys());
+    const massDrop = this.continuity.evaluateMassDrop("local", massDropBaseline, currentHexes, now, {
+      enabled: isAircraftMassDropGuardEnabled(),
+      minBaseline: getAircraftMassDropMinBaseline(),
+      dropRatio: getAircraftMassDropRatio(),
+    });
+    this.logMassDropDecision("local", massDrop);
     this.localObservedHexes = currentHexes;
-    const now = Date.now();
     // Start/advance source-affinity failover before pruning. This lets a
     // preferred source keep its last known position during the grace window,
     // then hand off directly to a live alternate source without disappearing.
     this.reconcileSourcePreferences(now);
-    this.pruneMissingAircraft("local", currentHexes, getAircraftStaleAfterMs(), now);
+    if (!massDrop.deferPrune) this.pruneMissingAircraft("local", currentHexes, getAircraftStaleAfterMs(), now);
     this.reconcileSourcePreferences(now);
     const activeHexes = new Set(this.localAircraft.keys());
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
@@ -792,6 +818,7 @@ export class AircraftStateService {
   }
 
   private applyNetworkSnapshot(snapshot: NetworkAircraftSnapshot): void {
+    const previousObservedHexes = this.networkObservedHexes;
     const currentHexes = new Set<string>();
     const now = Date.now();
     const cutoff = now - getAdsbLolStaleAfterMs();
@@ -799,18 +826,42 @@ export class AircraftStateService {
       const lastSeen = Date.parse(incoming.lastSeen);
       if (!Number.isFinite(lastSeen) || lastSeen < cutoff) continue;
       currentHexes.add(incoming.icaoHex);
+      this.continuity.recordObservation("network", incoming.icaoHex, now, getAircraftReappearWindowMs());
       this.sourcePreferences.set(incoming.icaoHex, this.sourcePreferences.get(incoming.icaoHex) ?? "network");
       const previous = this.networkAircraft.get(incoming.icaoHex);
       const networkIncoming = plausiblePosition(previous, { ...incoming, origin: incoming.origin ?? "adsblol" });
       const trail = this.updateTrail(previous, networkIncoming);
       this.networkAircraft.set(incoming.icaoHex, { ...networkIncoming, trail });
     }
+    this.continuity.observeMembership("network", previousObservedHexes, currentHexes, now);
+    const massDrop = this.continuity.evaluateMassDrop("network", previousObservedHexes, currentHexes, now, {
+      enabled: isAircraftMassDropGuardEnabled(),
+      minBaseline: getAircraftMassDropMinBaseline(),
+      dropRatio: getAircraftMassDropRatio(),
+    });
+    this.logMassDropDecision("network", massDrop);
     this.networkObservedHexes = currentHexes;
     this.reconcileSourcePreferences(now);
-    this.pruneMissingAircraft("network", currentHexes, getAdsbLolStaleAfterMs(), now);
+    if (!massDrop.deferPrune) this.pruneMissingAircraft("network", currentHexes, getAdsbLolStaleAfterMs(), now);
     this.reconcileSourcePreferences(now);
     this.navigationIntegrity.observe([...this.networkAircraft.values()], new Date(snapshot.fetchedAt ?? new Date().toISOString()));
     this.invalidateSnapshotCache();
+  }
+
+  private logMassDropDecision(origin: AircraftContinuityOrigin, decision: AircraftMassDropDecision): void {
+    const details = {
+      origin,
+      baselineAircraft: decision.baselineCount,
+      observedAircraft: decision.currentCount,
+      dropRatio: Math.round(decision.dropRatio * 1_000) / 1_000,
+    };
+    if (decision.deferPrune) {
+      logger.warn(details, "AirRadar continuity guard deferred suspicious mass disappearance");
+    } else if (decision.confirmed) {
+      logger.warn(details, "AirRadar continuity guard confirmed mass disappearance");
+    } else if (decision.recovered) {
+      logger.info(details, "AirRadar continuity guard recovered before confirmation");
+    }
   }
 
   private reconcileSourcePreferences(now = Date.now()): void {
@@ -845,6 +896,7 @@ export class AircraftStateService {
       if (now - missingSince >= graceMs) {
         this.sourcePreferences.set(hex, alternate);
         this.sourcePreferenceMissingSince.delete(hex);
+        this.continuity.recordFailover(preferred, alternate, now);
       }
     }
   }
@@ -879,6 +931,7 @@ export class AircraftStateService {
         continue;
       }
 
+      this.continuity.recordRemoval(origin, hex, now);
       if (origin === "local") this.removeAircraft(hex);
       else this.networkAircraft.delete(hex);
     }

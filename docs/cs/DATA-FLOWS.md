@@ -337,6 +337,17 @@ proveniencí zdroje; nevstupují do historie, lokálních denních statistik,
 alertů, enrichmentu metadat, ATC resolution ani health lokálního přijímače.
 Veřejný UI/API výstup obsahuje atribuci ADSB.lol a ODbL 1.0.
 
+Každý úspěšný lokální nebo síťový snapshot dále prochází přes Continuity Guard
+V2. Guard porovnává počet letadel s předchozí zavedenou membership baseline.
+Ve výchozím nastavení ztráta alespoň 50 % z baseline nejméně 20 letadel odloží
+destruktivní stale pruning o jeden cyklus. Druhý podobně nízký snapshot propad
+potvrdí; návrat provozu pending guard zruší. Chyby providerů dál používají
+stávající stale/retry cestu a další úspěšné porovnání může u lokálního zdroje
+vycházet z retencovaného stavu. Process-local diagnostika kontinuity je
+zveřejněna v system status pod `localAdsb.continuity`; obsahuje čítače
+omission/recovery, stale-expiry, quick-reappearance, source-failover a
+mass-drop událostí a nepersistuje se.
+
 ## ATC tok
 
 `GET /api/atc/sectors` vrací aktivní datovou sadu sektorů/vysílačů. V demo

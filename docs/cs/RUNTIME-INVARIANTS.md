@@ -166,6 +166,19 @@ Toto jsou kontrakty chování a bezpečnosti pro změny aktuálního systému.
   zůstává zachováno s nullable souřadnicemi. Lokální popisná pole a lokální
   RSSI/message čítače přijímače zůstávají autoritativní pro letadlo s local
   affinity. Network-only letadla mají lokální měření null.
+- Continuity Guard V2 považuje velký propad počtu v jinak úspěšném snapshotu
+  providera za podezřelý, pokud předchozí baseline dosahuje alespoň
+  `AIRCRAFT_MASS_DROP_MIN_BASELINE` a je dosažen nakonfigurovaný poměr
+  propadu. První podezřelý snapshot může posunout stav source affinity, ale
+  destruktivní stale pruning odloží přesně o jeden potvrzovací cyklus. Druhý
+  podobně nízký snapshot propad potvrdí a běžný pruning pokračuje; zotavený
+  snapshot pending guard zruší. Chyba providera se nikdy nepřeklasifikuje na
+  úspěšný snapshot.
+- Diagnostika kontinuity obsahuje pouze omezené process-local čítače:
+  omission/recovery události, stale expirace, rychlé návraty, source failovery,
+  mass-drop kandidáty/odklady/potvrzení/zotavení, počet retencovaných a právě
+  pozorovaných letadel a pending affinity stav. Po restartu procesu se resetuje
+  a nezapisuje se do PostgreSQL historie.
 - Network-only pozorování jsou vyloučena z historie PostgreSQL, denních
   statistik/pokrytí, alertů, enrichmentu metadat a ATC rozlišení. Veřejný výstup
   obsahuje bezpečný source/provenience údaj a ADSB.lol ODbL atribuci, ale ve

@@ -985,7 +985,11 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
     localAdsb: serviceDiagnostics?.local && typeof serviceDiagnostics.local === "object" ? {
       ...(serviceDiagnostics.local as Record<string, unknown>),
       altitudeDiagnostics: getAltitudeDiagnostics(),
-    } : { altitudeDiagnostics: getAltitudeDiagnostics() },
+      continuity: serviceDiagnostics.continuity,
+    } : {
+      altitudeDiagnostics: getAltitudeDiagnostics(),
+      ...(serviceDiagnostics?.continuity ? { continuity: serviceDiagnostics.continuity } : {}),
+    },
     adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
     ogn: ognService.getDiagnostics(),
     runtime: {

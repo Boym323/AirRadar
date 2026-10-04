@@ -112,6 +112,11 @@ nezávislé větve:
   převezme marker bez mezilehlého stavu bez pozice. Pokud preferované pozorování
   chybí nebo nemá použitelnou polohu, může se okamžitě použít použitelná
   alternativní pozice při zachování explicitní provenience identity/metadat.
+  Vedle tohoto vlastníka stavu běží `AircraftContinuityGuard`: drží omezené
+  process-local čítače kontinuity a při velkém propadu počtu v úspěšném
+  snapshotu vloží před destruktivní pruning jeden potvrzovací cyklus. Nemění
+  SSE framing, persistenci ani retry sémantiku providerů; diagnostika se
+  zveřejňuje přes system status.
 - `EnrichmentService` volá nakonfigurované providery metadat, tras a flight
   planů asynchronně. Používá normalizované klíče, pozitivní/negativní TTL,
   slučování in-flight požadavků a omezenou concurrency.
