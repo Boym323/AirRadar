@@ -645,7 +645,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.route("**/api/alerts?*", async (route) => {
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ items: [] }) });
             });
-            await visualPage.route("**/api/operations/predictive?hexes=*", async (route) => {
+            await visualPage.route(/\/api\/operations\/predictive(?:\?.*)?$/, async (route) => {
               const body = target.mockPredictiveOperations === "public" ? predictiveOperationsPublicFixture : predictiveOperationsAdminFixture;
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
             });
