@@ -1,4 +1,4 @@
-import type { PredictiveFlightState, PredictionConfidence } from "./types";
+import { RUNWAY_CHANGE_EVENT_WINDOW_MS, type PredictiveFlightState, type PredictionConfidence } from "./types";
 
 export type PredictiveCapability = "ETA" | "RUNWAY" | "RUNWAY_CHANGE" | "TRAJECTORY";
 export type PredictiveCapabilityStatus = "PUBLIC" | "SHADOW" | "DISABLED";
@@ -70,11 +70,18 @@ export function toPublicPredictiveState(prediction: PredictiveFlightState | null
     };
   }
   if (policy.RUNWAY_CHANGE === "PUBLIC" && fresh) {
+    const changedAt = prediction.runway.changedAt;
+    const recentChange = typeof changedAt === "number"
+      && Number.isFinite(changedAt)
+      && changedAt <= now
+      && now - changedAt <= RUNWAY_CHANGE_EVENT_WINDOW_MS;
     const available = prediction.runway.changed
       && prediction.runway.changedFrom !== null
       && prediction.runway.changedFrom !== undefined
       && prediction.runway.runway !== null
-      && prediction.runway.confidence !== "UNKNOWN";
+      && prediction.runway.confidence !== "LOW"
+      && prediction.runway.confidence !== "UNKNOWN"
+      && recentChange;
     result.runwayChange = {
       status: available ? "available" : "unavailable",
       changedFrom: available ? prediction.runway.changedFrom ?? null : null,
