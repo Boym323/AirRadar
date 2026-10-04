@@ -75,7 +75,7 @@ export function WatchlistActivity({ locale }: { locale: LocaleKey }) {
           <h2 id="watchlist-activity-title">{copy.title}</h2>
           <p className="statistics-subtitle">{copy.subtitle}</p>
         </div>
-        <Link className="secondary-button" href="/alerts?filter=watchlist">{copy.openHistory}</Link>
+        <Link className="secondary-button" href="/alerts">{copy.openHistory}</Link>
       </div>
 
       <div className="watchlist-editor-actions" aria-label={copy.coverage}>
