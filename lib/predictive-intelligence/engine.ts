@@ -85,7 +85,9 @@ function runway(input: PredictiveInput, valid: readonly PredictionSample[]): Pre
     && previousRunway?.changed
     && previousRunway.runway === best.ident
     && previousRunway.changedFrom
-    && previousRunway.changedAt
+    && typeof previousRunway.changedAt === "number"
+    && Number.isFinite(previousRunway.changedAt)
+    && previousRunway.changedAt <= input.now
     && input.now - previousRunway.changedAt <= RUNWAY_CHANGE_EVENT_WINDOW_MS
   );
   const changed = immediateChange || carriedChange;
