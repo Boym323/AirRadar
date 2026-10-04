@@ -5425,3 +5425,18 @@ button, input, select, textarea { color-scheme: dark; }
 .airport-live-flow-attention a { min-width:0; overflow:hidden; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
 .airport-live-flow-attention > li > span:not(.airport-live-journey) { color:var(--text-muted); font-size:var(--font-size-2xs); }
 @media (max-width:760px) { .airport-live-flow-heading { align-items:start; flex-direction:column; } .airport-live-flow-attention li { grid-template-columns:auto minmax(0,1fr) auto; } .airport-live-flow-attention .airport-live-route-state { grid-column:2 / -1; } }
+
+
+/* Airport Live Board V6 flow pressure */
+.airport-live-flow-pressure {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: var(--radius-lg);
+  background: rgba(15, 23, 42, .16);
+}
+.airport-live-flow-pressure .airport-v3-disclaimer {
+  margin: 0;
+}
