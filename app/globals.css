@@ -5397,6 +5397,7 @@ button, input, select, textarea { color-scheme: dark; }
   white-space: nowrap;
 }
 .airport-live-journey-final,
+.airport-live-journey-landed,
 .airport-live-journey-approach,
 .airport-live-journey-holding {
   border-color: rgba(55, 214, 192, .35);
