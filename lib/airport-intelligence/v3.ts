@@ -74,7 +74,19 @@ export function buildAirportRunwayIntelligence(
       ?? operations?.likelyRunway?.sampleCount
       ?? 0
     : 0;
-  const favored = windFavoredRunway(runways, metar);
+  const favoredFromRunways = windFavoredRunway(runways, metar);
+  const favoredFromOperations = operations?.wind
+    .slice()
+    .sort((left, right) =>
+      right.headwindKt - left.headwindKt
+      || left.crosswindKt - right.crosswindKt
+      || left.runway.localeCompare(right.runway, undefined, { numeric: true }))[0] ?? null;
+  const favored = favoredFromRunways
+    ?? (favoredFromOperations ? {
+      ident: favoredFromOperations.runway.trim().toUpperCase(),
+      headwindKt: favoredFromOperations.headwindKt,
+      crosswindKt: favoredFromOperations.crosswindKt,
+    } : null);
   const alignment: AirportRunwayWindAlignment = inferredRunway && favored
     ? inferredRunway === favored.ident ? "aligned" : "different"
     : "unknown";
