@@ -10,6 +10,489 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.295] - 2026-10-04
+
+Changes since v1.0.294.
+
+**Features touched:** Airport Intelligence.
+
+### Added
+
+- Add Airport Live Board V5 flow pulse (#289) (3dad47e)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Airport Live Board V5 flow pulse (#289) (3dad47e)
+
+</details>
+
+## [1.0.294] - 2026-10-04
+
+Changes since v1.0.293.
+
+### Added
+
+- Add Runway Public Rollout V1 (#290) (acdb24b)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Runway Public Rollout V1 (#290) (acdb24b)
+
+</details>
+
+## [1.0.293] - 2026-10-04
+
+Changes since v1.0.292.
+
+**Features touched:** Airport Intelligence.
+
+### Added
+
+- Complete Airport Live Board V4 with LANDED journey (#288) (1387cfe)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: complete Airport Live Board V4 with LANDED journey (#288) (1387cfe)
+
+</details>
+
+## [1.0.292] - 2026-10-04
+
+Changes since v1.0.291.
+
+**Features touched:** Airport Intelligence.
+
+### Added
+
+- Add Airport Live Board V4 active journey (#287) (08bc129)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Airport Live Board V4 active journey (#287) (08bc129)
+
+</details>
+
+## [1.0.291] - 2026-10-04
+
+Changes since v1.0.290.
+
+### Added
+
+- Add ETA Public Rollout V1 (#284) (4f97d56)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add ETA Public Rollout V1 (#284) (4f97d56)
+
+</details>
+
+## [1.0.290] - 2026-10-04
+
+Changes since v1.0.289.
+
+**Features touched:** Airport Intelligence.
+
+### Added
+
+- Add Airport Live Board V3 flight correlation (#286) (b56ddbd)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Airport Live Board V3 flight correlation (#286) (b56ddbd)
+
+</details>
+
+## [1.0.289] - 2026-10-04
+
+Changes since v1.0.288.
+
+**Features touched:** Airport Intelligence.
+
+### Added
+
+- Add Airport Live Board V2 active traffic (#285) (0450ff5)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Airport Live Board V2 active traffic (#285) (0450ff5)
+
+</details>
+
+## [1.0.288] - 2026-10-04
+
+Changes since v1.0.287.
+
+**Features touched:** Airport Intelligence.
+
+### Added
+
+- Add Airport Live Board V1 (#283) (208b26a)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Airport Live Board V1 (#283) (208b26a)
+
+</details>
+
+## [1.0.287] - 2026-10-04
+
+Changes since v1.0.286.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Add Predictive Graduation Calibration V1 (#281) (1b159ab)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Predictive Graduation Calibration V1 (#281) (1b159ab)
+
+</details>
+
+## [1.0.286] - 2026-10-04
+
+Changes since v1.0.285.
+
+**Features touched:** System Observability.
+
+### Added
+
+- Add Predictive Outcome Truth V1 (#280) (4b65984)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Predictive Outcome Truth V1 (#280) (4b65984)
+
+</details>
+
+## [1.0.285] - 2026-10-04
+
+Changes since v1.0.284.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Added
+
+- Add Predictive Trajectory Advisory V1 (#279) (db8902f)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Predictive Trajectory Advisory V1 (#279) (db8902f)
+
+</details>
+
+## [1.0.284] - 2026-10-04
+
+Changes since v1.0.283.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Added
+
+- Add Predictive Runway Change Advisory V1 (#278) (46a5aa3)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Predictive Runway Change Advisory V1 (#278) (46a5aa3)
+
+</details>
+
+## [1.0.283] - 2026-10-04
+
+Changes since v1.0.282.
+
+**Features touched:** Live Radar.
+
+### Added
+
+- Add Predictive Operations Center V1 (#277) (a82daac)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Predictive Operations Center V1 (#277) (a82daac)
+
+</details>
+
+## [1.0.282] - 2026-10-04
+
+Changes since v1.0.281.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Added
+
+- Add Predictive Runway Advisory V1 (#276) (4461ff0)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Predictive Runway Advisory V1 (#276) (4461ff0)
+
+</details>
+
+## [1.0.281] - 2026-10-04
+
+Changes since v1.0.280.
+
+### Fixed
+
+- Enforce freshness across public predictive capabilities (#275) (7616b67)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: enforce freshness across public predictive capabilities (#275) (7616b67)
+
+</details>
+
+## [1.0.280] - 2026-10-04
+
+Changes since v1.0.279.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Fixed
+
+- Auto-expire stale Predictive ETA Advisory (#274) (2354b68)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: auto-expire stale Predictive ETA Advisory (#274) (2354b68)
+
+</details>
+
+## [1.0.279] - 2026-10-04
+
+Changes since v1.0.278.
+
+**Features touched:** Aircraft & Flight Detail.
+
+### Added
+
+- Add Predictive ETA Advisory V1 (#273) (3ccb994)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Predictive ETA Advisory V1 (#273) (3ccb994)
+
+</details>
+
+## [1.0.278] - 2026-10-04
+
+Changes since v1.0.277.
+
+### Added
+
+- Add global Command Search V1 palette (#270) (eeb3913)
+- Add Command Search V2 historical flights and smart actions (#271) (733b455)
+- Add Predictive Graduation Readiness V1 (#272) (bc8c45d)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add global Command Search V1 palette (#270) (eeb3913)
+- feat: add Command Search V2 historical flights and smart actions (#271) (733b455)
+- feat: add Predictive Graduation Readiness V1 (#272) (bc8c45d)
+
+</details>
+
+## [1.0.277] - 2026-10-04
+
+Changes since v1.0.276.
+
+**Features touched:** Airport Intelligence.
+
+### Added
+
+- Add Airport Intelligence V3 operations board (#269) (be43070)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Airport Intelligence V3 operations board (#269) (be43070)
+
+</details>
+
+## [1.0.276] - 2026-10-04
+
+Changes since v1.0.275.
+
+### Changed
+
+- Break network-to-artifact taint flow in radar benchmark (c4c5c04)
+
+<details>
+<summary>Technical commits</summary>
+
+- security: break network-to-artifact taint flow in radar benchmark (c4c5c04)
+- Merge pull request #268 from Boym323/security/codeql-radar-no-network-artifact-flow (c505038)
+
+</details>
+
+## [1.0.275] - 2026-10-04
+
+Changes since v1.0.274.
+
+### Fixed
+
+- Place CodeQL suppressions on reported sinks (6aba004)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix: place CodeQL suppressions on reported sinks (6aba004)
+- Merge pull request #267 from Boym323/security/codeql-medium-suppression-fix (522997a)
+
+</details>
+
+## [1.0.274] - 2026-10-04
+
+Changes since v1.0.273.
+
+### Changed
+
+- Resolve CodeQL network-to-file finding in scripts/sync-tar1090-icons.mjs (aac536e)
+- Resolve CodeQL network-to-file finding in scripts/audit-db-write-amplification.mjs (96074bc)
+- Resolve CodeQL network-to-file finding in scripts/radar-performance-baseline.mjs (e0d4838)
+
+<details>
+<summary>Technical commits</summary>
+
+- security: resolve CodeQL network-to-file finding in scripts/sync-tar1090-icons.mjs (aac536e)
+- security: resolve CodeQL network-to-file finding in scripts/audit-db-write-amplification.mjs (96074bc)
+- security: resolve CodeQL network-to-file finding in scripts/radar-performance-baseline.mjs (e0d4838)
+- Merge pull request #266 from Boym323/security/codeql-medium-cleanup (ae7f47b)
+
+</details>
+
+## [1.0.273] - 2026-10-04
+
+Changes since v1.0.272.
+
+**Features touched:** ATC & ATS Intelligence, OGN / FLARM.
+
+### Changed
+
+- Address CodeQL high finding in scripts/production-gates.mjs (1bba0c6)
+- Address CodeQL high finding in tests/update-ogn-softrf.test.ts (e6cc497)
+- Address CodeQL high finding in tests/ogn-softrf.test.ts (8b5624e)
+- Address CodeQL high finding in tests/ogn-ddb-persistence.test.ts (3758770)
+- Address CodeQL high finding in tests/alert-state.test.ts (d60a06d)
+- Harden file IO in lib/server/runtime-telemetry.ts (cd0f924)
+- Harden file IO in lib/server/aviation-weather-persistence.ts (f9e12c5)
+- Harden file IO in lib/server/adsbdb-persistence.ts (31f9bce)
+- Harden file IO in lib/ogn/ddb.ts (6cad5bc)
+- Remove file TOCTOU in lib/server/alert-history.ts (e903451)
+- Remove file TOCTOU in lib/procedures/repository.ts (2f27d04)
+- Remove file TOCTOU in lib/ats/cz-routes.ts (da07eca)
+- Remove file TOCTOU in lib/ats/sk-routes.ts (6fe640c)
+- Remove file TOCTOU in lib/ats/at-routes.ts (cc88055)
+- Remove file TOCTOU in lib/ogn/softrf.ts (5b11665)
+- Fix strict URL token extraction (900a6dc)
+- Normalize URL extraction regex (56fc41e)
+
+### Fixed
+
+- Restore post-write file size probe (cca1d99)
+
+<details>
+<summary>Technical commits</summary>
+
+- security: address CodeQL high finding in scripts/production-gates.mjs (1bba0c6)
+- security: address CodeQL high finding in tests/update-ogn-softrf.test.ts (e6cc497)
+- security: address CodeQL high finding in tests/ogn-softrf.test.ts (8b5624e)
+- security: address CodeQL high finding in tests/ogn-ddb-persistence.test.ts (3758770)
+- security: address CodeQL high finding in tests/alert-state.test.ts (d60a06d)
+- security: harden file IO in lib/server/runtime-telemetry.ts (cd0f924)
+- security: harden file IO in lib/server/aviation-weather-persistence.ts (f9e12c5)
+- security: harden file IO in lib/server/adsbdb-persistence.ts (31f9bce)
+- security: harden file IO in lib/ogn/ddb.ts (6cad5bc)
+- security: remove file TOCTOU in lib/server/alert-history.ts (e903451)
+- security: remove file TOCTOU in lib/procedures/repository.ts (2f27d04)
+- security: remove file TOCTOU in lib/ats/cz-routes.ts (da07eca)
+- security: remove file TOCTOU in lib/ats/sk-routes.ts (6fe640c)
+- security: remove file TOCTOU in lib/ats/at-routes.ts (cc88055)
+- security: remove file TOCTOU in lib/ogn/softrf.ts (5b11665)
+- security: fix strict URL token extraction (900a6dc)
+- security: normalize URL extraction regex (56fc41e)
+- fix: restore post-write file size probe (cca1d99)
+- Merge pull request #265 from Boym323/security/codeql-high-cleanup (c5a2e18)
+
+</details>
+
+## [1.0.272] - 2026-10-04
+
+Changes since v1.0.271.
+
+### Added
+
+- Add Flight Story V2 summary and narrative timeline (#264) (f7e5ca6)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Flight Story V2 summary and narrative timeline (#264) (f7e5ca6)
+
+</details>
+
+## [1.0.271] - 2026-10-04
+
+Changes since v1.0.270.
+
+**Features touched:** Live Radar, Statistics & Recaps.
+
+### Added
+
+- Expand Operations Center with alerts and airport context (#262) (0aa1462)
+- Add Daily Intelligence V2 to daily recap (#263) (35a5fe0)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: expand Operations Center with alerts and airport context (#262) (0aa1462)
+- feat: add Daily Intelligence V2 to daily recap (#263) (35a5fe0)
+
+</details>
+
+## [1.0.270] - 2026-10-03
+
+Changes since v1.0.269.
+
+**Features touched:** Live Radar.
+
+### Added
+
+- Add Operations Center V1 to live radar (#259) (b1bcd82)
+
+### Maintenance
+
+- Bump pdfjs-dist to 6.3.289 (9c8b4f0)
+- Sync generated repository metadata (1812d47)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(deps): bump pdfjs-dist to 6.3.289 (9c8b4f0)
+- chore: sync generated repository metadata (1812d47)
+- feat: add Operations Center V1 to live radar (#259) (b1bcd82)
+
+</details>
 ## [1.0.269] - 2026-10-03
 
 Changes since v1.0.268.
