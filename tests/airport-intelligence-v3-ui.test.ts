@@ -19,6 +19,10 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(controllerSource).toContain("/operations?period=24h");
     expect(controllerSource).toContain("/api/weather/airport/");
     expect(controllerSource.match(/fetch\(/g)).toHaveLength(2);
+    expect(controllerSource).toContain("AIRPORT_LIVE_BOARD_REFRESH_MS = 30_000");
+    expect(controllerSource).toContain("window.setTimeout");
+    expect(controllerSource).toContain("window.clearTimeout");
+    expect(controllerSource).not.toContain("setInterval");
     expect(controllerSource).not.toContain("new EventSource");
     expect(controllerSource).not.toContain("POST");
     expect(controllerSource).not.toContain("PATCH");
@@ -29,6 +33,12 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(boardSource).toContain("aircraftFlightHref(movement.flightId)");
     expect(boardSource).toContain('data-testid="airport-intelligence-v3"');
     expect(boardSource).toContain('data-testid="airport-v3-timeline"');
+    expect(boardSource).toContain('data-testid="airport-live-board"');
+    expect(boardSource).toContain('data-testid="airport-live-board-arrivals"');
+    expect(boardSource).toContain('data-testid="airport-live-board-departures"');
+    expect(boardSource).toContain('data-testid="airport-live-board-alerts"');
+    expect(boardSource).toContain('data-testid="airport-live-board-runways"');
+    expect(boardSource).toContain('data-testid="airport-live-board-weather"');
     expect(boardSource).toContain('variant="inferred"');
     expect(boardSource).toContain("t.airport.v3RunwayDisclaimer");
   });
