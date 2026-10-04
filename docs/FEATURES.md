@@ -46,7 +46,7 @@ whether an operator has configured an optional provider.
 | --- | --- | --- |
 | `/` | Live MapLibre radar, aircraft list/filtering, selected aircraft detail, zoom-aware aircraft labels, live trail, route/airport/ATC overlays, optional receiver range rings and aircraft color modes, keyboard shortcuts, SSE connection state, compact ADS-B logbook summary, opt-in SIGMET, Czech ATS route-intelligence, and planned AUP/UUP airspace context. Optional LOCAL/EXTENDED coverage switch combines local readsb with RAM-only ADSB.lol network observations. Optional separate OGN/FLARM layer, list, and detail panel use a dedicated RAM-only SSE flow. | Production core; readsb or demo provider. OGN, weather, ATS route intelligence, and airspace-activity overlays are independent/fail-soft. |
 | `/aircraft/:hex` | Flight-card detail with callsign/registration/type/operator header, live movement and provenance, route/flight-plan context, first/last-seen timeline, bounded 30-minute altitude chart from the latest FlightPosition history, full-trail action, durable aircraft metadata, recent flight instances, 7/30-day summary, lifetime Flight-instance statistics, NEW/RARE/RETURNING logbook status, optional photo, and compact destination-first/origin weather. | Production; PostgreSQL required for durable detail, weather/photo optional. |
-| `/flights/:id` | Standalone captured-flight detail with aircraft and airport links, clearly labeled observed sampled path versus airport route context, bounded playback, and altitude/speed/vertical-rate profiles synchronized to the playback timeline. | Production with PostgreSQL history. |
+| `/flights/:id` | Flight Story V2 with an observed-flight summary, clearly labeled airport context, notable-event badges, a narrative first-seen → inferred-event → last-seen timeline, bounded playback, and altitude/speed/vertical-rate profiles synchronized to one playback clock. | Production with PostgreSQL history. |
 | `/airports/:icao` | Airport Intelligence detail with catalog metadata, source runway geometry, decoded/raw METAR and TAF, wind-favored runway calculations, live nearby ADS-B traffic, bounded inferred movement intelligence, observed movement evidence, associated navaids, nearby airports, and 7/30-day receiver traffic summary. | Production; movement results are inferred from local sampled history and are not authoritative ATC data. |
 | `/history` | Bounded flight-instance search/list, sampled position detail, playback map. | Production; PostgreSQL feature, no live-polling dependency. |
 | `/time-machine` | Bounded all-aircraft historical radar playback with UTC selection, timeline, event markers, aircraft selection, selected trail, and optional historical radar/METAR/wind/AUP-UUP context. | Production with PostgreSQL `FlightPosition` history; context availability follows bounded archive activation and retention. |
@@ -108,8 +108,14 @@ whether an operator has configured an optional provider.
 | `GET /api/version` | Safe release/build metadata. | Production release metadata endpoint. |
 
 The server alert engine is evaluated only from the local ADS-B aircraft state. Its bounded cooldown/durable-event state is atomically persisted outside PostgreSQL so a process restart does not reset recent deduplication. The browser-only local watchlist filter on `/` remains separate from server alert rules. Optional enrichment and PostgreSQL failures are represented as empty, stale, unavailable, or degraded feature data rather than taking down the live radar.
-# Flight Story V1
+# Flight Story V2
 
-Flight detail is a synchronized story view with event timeline, historical
-position playback, profile cursor, and whole-sky Time Machine context. Partial
-data remains usable and historical facts are not fabricated.
+Flight detail keeps one bounded playback clock and adds a deterministic summary
+plus a narrative timeline. Persisted Flight start/end times are labeled as
+observed boundaries; persisted Flight Intelligence events are labeled inferred
+with confidence and nearby sampled telemetry. Notable-event badges summarize
+GO_AROUND, DIVERSION, HOLDING and related high-attention events without
+inventing facts. The map, playback cursor, profile cursor, selected event and
+historical Map Context continue to share the same timestamp. Partial data
+remains usable and airport route metadata remains context rather than proof of
+the flown path.

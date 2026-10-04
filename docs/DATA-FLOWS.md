@@ -445,9 +445,14 @@ read APIs expose bounded current, aircraft, history and diagnostic views.
 # Flight Story
 
 `/flights/[id]` reads a bounded Flight Story containing Flight identity,
-full-span sampled positions, persisted FlightEvents, and route context. One
-playback timestamp drives map, timeline, profile, event selection, and Map
-Context V2. No detector, alert, or notification write path runs during playback.
+full-span sampled positions, persisted FlightEvents, and route context. Flight
+Story V2 derives the summary and narrative entirely from that payload: the
+persisted Flight start/end values are observed boundaries, the sampled path
+provides bounded distance/max-speed metrics, and FlightEvents remain explicitly
+inferred with confidence plus nearest sampled telemetry. One playback timestamp
+drives map, narrative seek, profile, event selection, and Map Context V2. No
+second stream or history query is opened and no detector, alert, or notification
+write path runs during playback.
 ## Altitude provenance flow
 
 Beast, local `aircraft.json`, and optional network observations are normalized
