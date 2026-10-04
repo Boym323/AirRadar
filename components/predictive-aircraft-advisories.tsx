@@ -172,8 +172,9 @@ export function PredictiveAircraftAdvisories({
             ? {
               runwayChangeAdminPreview: {
                 ...current.runwayChangeAdminPreview,
-                state: current.runwayChangeAdminPreview.changeAgeSeconds !== null
-                  && current.runwayChangeAdminPreview.changeAgeSeconds * 1_000 >= RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS
+                state: current.runwayChangeAdminPreview.changedAt
+                  && Number.isFinite(Date.parse(current.runwayChangeAdminPreview.changedAt))
+                  && Date.now() - Date.parse(current.runwayChangeAdminPreview.changedAt) >= RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS
                   ? "expired"
                   : "stale",
                 ageSeconds: Math.max(
