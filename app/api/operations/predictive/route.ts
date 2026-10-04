@@ -2,9 +2,11 @@ import {
   buildAdminEtaAdvisoryPreview,
   buildAdminRunwayAdvisoryPreview,
   buildAdminRunwayChangeAdvisoryPreview,
+  buildAdminTrajectoryAdvisoryPreview,
   buildPublicEtaAdvisory,
   buildPublicRunwayAdvisory,
   buildPublicRunwayChangeAdvisory,
+  buildPublicTrajectoryAdvisory,
   getPredictiveGraduationPolicy,
   PREDICTIVE_OPERATIONS_MAX_AIRCRAFT,
   type PredictiveOperationsItem,
@@ -55,7 +57,8 @@ export async function GET(request: Request): Promise<Response> {
   const readinessRequired = admin
     || configuredPolicy.ETA === "PUBLIC"
     || configuredPolicy.RUNWAY === "PUBLIC"
-    || configuredPolicy.RUNWAY_CHANGE === "PUBLIC";
+    || configuredPolicy.RUNWAY_CHANGE === "PUBLIC"
+    || configuredPolicy.TRAJECTORY === "PUBLIC";
   const readiness = readinessRequired ? await readPredictiveReadinessReport() : null;
   const effectivePolicy = readiness
     ? enforcePredictiveReadiness(configuredPolicy, {
@@ -67,6 +70,7 @@ export async function GET(request: Request): Promise<Response> {
   const etaReadiness = readiness?.capabilities.ETA ?? null;
   const runwayReadiness = readiness?.capabilities.RUNWAY ?? null;
   const runwayChangeReadiness = readiness?.capabilities.RUNWAY_CHANGE ?? null;
+  const trajectoryReadiness = readiness?.capabilities.TRAJECTORY ?? null;
   const items: PredictiveOperationsItem[] = [];
 
   for (const hex of hexes) {
@@ -75,6 +79,7 @@ export async function GET(request: Request): Promise<Response> {
     const etaAdvisory = buildPublicEtaAdvisory(state, effectivePolicy, etaReadiness);
     const runwayAdvisory = buildPublicRunwayAdvisory(state, effectivePolicy, runwayReadiness);
     const runwayChangeAdvisory = buildPublicRunwayChangeAdvisory(state, effectivePolicy, runwayChangeReadiness);
+    const trajectoryAdvisory = buildPublicTrajectoryAdvisory(state, effectivePolicy, trajectoryReadiness);
     const etaAdminPreview = admin && state && etaReadiness
       ? buildAdminEtaAdvisoryPreview(state, configuredPolicy, etaReadiness)
       : undefined;
@@ -84,8 +89,11 @@ export async function GET(request: Request): Promise<Response> {
     const runwayChangeAdminPreview = admin && state && runwayChangeReadiness
       ? buildAdminRunwayChangeAdvisoryPreview(state, configuredPolicy, runwayChangeReadiness)
       : undefined;
+    const trajectoryAdminPreview = admin && state && trajectoryReadiness
+      ? buildAdminTrajectoryAdvisoryPreview(state, configuredPolicy, trajectoryReadiness)
+      : undefined;
 
-    if (!etaAdvisory && !runwayAdvisory && !runwayChangeAdvisory && !etaAdminPreview && !runwayAdminPreview && !runwayChangeAdminPreview) continue;
+    if (!etaAdvisory && !runwayAdvisory && !runwayChangeAdvisory && !trajectoryAdvisory && !etaAdminPreview && !runwayAdminPreview && !runwayChangeAdminPreview && !trajectoryAdminPreview) continue;
 
     items.push({
       icaoHex: hex,
@@ -96,9 +104,11 @@ export async function GET(request: Request): Promise<Response> {
       etaAdvisory,
       runwayAdvisory,
       runwayChangeAdvisory,
+      trajectoryAdvisory,
       ...(etaAdminPreview ? { etaAdminPreview } : {}),
       ...(runwayAdminPreview ? { runwayAdminPreview } : {}),
       ...(runwayChangeAdminPreview ? { runwayChangeAdminPreview } : {}),
+      ...(trajectoryAdminPreview ? { trajectoryAdminPreview } : {}),
     });
   }
 
@@ -119,6 +129,10 @@ export async function GET(request: Request): Promise<Response> {
           RUNWAY_CHANGE: {
             decision: readiness.capabilities.RUNWAY_CHANGE.decision,
             reasons: [...readiness.capabilities.RUNWAY_CHANGE.reasons],
+          },
+          TRAJECTORY: {
+            decision: readiness.capabilities.TRAJECTORY.decision,
+            reasons: [...readiness.capabilities.TRAJECTORY.reasons],
           },
         },
       }
