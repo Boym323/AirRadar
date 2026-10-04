@@ -22,7 +22,7 @@ not yet been historically attributed.
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
-| System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status and build identity. |
+| System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, and bounded predictive readiness with versioned independent outcome truth. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback and historical context windows. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
@@ -138,10 +138,12 @@ starý, explicitní `changedFrom` a `changedAt` a minimálně MEDIUM confidence.
 WAIT, FAIL, SHADOW, stale, expired, LOW a UNKNOWN stav veřejnou změnu
 nevyrenderují. Platná admin session může dostat SHADOW preview s outcome
 precision, false-positive rate, stavem nezávislé change truth a readiness
-reasons. Současná V1 readiness evidence záměrně zůstává WAIT, dokud není k
-dispozici nezávislá truth skutečné změny dráhy, takže samotná implementace
-nemůže capability automaticky vystavit veřejně. Detail letadla nadále používá
-jediný page-scoped prediction request.
+reasons. Predictive Outcome Truth V1 nyní označí change sample jako scoreable
+jen tehdy, když nezávislý confident APPROACH před predikcí potvrdí stejnou
+předchozí dráhu jako `changedFrom` a pozdější LANDING obsahuje
+provider-reported finální dráhu. Samotná dostupnost truth capability
+negraduuje; stále musí projít minimální sample i quality thresholdy. Detail
+letadla nadále používá jediný page-scoped prediction request.
 
 ## Predictive Trajectory Advisory V1
 
@@ -152,12 +154,42 @@ nejvýše 45 sekund starý, stav odlišný od `UNKNOWN` a MEDIUM/HIGH confidence
 LOW-confidence kandidát `POSSIBLE_DEVIATION` zůstává pouze admin
 diagnostikou.
 
-Prospective capture nyní ukládá explicitní `trajectoryState` do omezeného
+Prospective capture ukládá explicitní `trajectoryState` do omezeného
 `evidenceJson` pouze při změně stavu trajectory nebo confidence. Runtime
 readiness tak umí bez DB migrace a bez high-frequency write lane rozlišit
-stateful trajectory observations a počítat kandidátní odchylky. Nezávislá
-outcome truth stále není k dispozici, takže precision validovaných kandidátů
-zůstává nedostupná a readiness záměrně zůstává `WAIT`.
+stateful trajectory observations a počítat kandidátní odchylky. Predictive
+Outcome Truth V1 je nyní může validovat proti pozdějším nezávisle persistovaným
+Flight Intelligence outcome; readiness ale stále musí splnit nastavené sample
+a precision thresholdy, než může přejít na PASS.
+
+## Predictive Outcome Truth V1
+
+Runtime readiness nyní používá verzovanou nezávislou evidence vrstvu
+`predictive-outcome-truth-v1`, oddělenou od thresholdů
+`predictive-readiness-v1`. Čte pouze omezené persistované `FlightEvent`
+řádky; nečte `FlightPosition`, nemění historické eventy a nepřidává žádný
+prediction write lane.
+
+RUNWAY_CHANGE je scoreable pouze tehdy, když confident nezávislý `APPROACH`
+nejvýše dvě hodiny před predikcí potvrzuje stejnou předchozí dráhu zachycenou
+predikcí a následný `LANDING` do šesti hodin obsahuje provider-reported
+finální dráhu. Správný sample trefil pozorovanou novou dráhu; false positive je
+případ, kdy se nezávisle pozorovaná dráha mezi approach a landing vůbec
+nezměnila.
+
+TRAJECTORY kandidáti (`POSSIBLE_DEVIATION` / `DEVIATING`) dostanou pozitivní
+truth pouze z následného confident eventu `DIVERSION`, `GO_AROUND`,
+`HOLDING`, `ORBIT` nebo `UNUSUAL_TURN` ve stejném lifecycle. Negativní
+truth je záměrně přísnější: vyžaduje ground-confirmed `LANDING` na stejném
+prospektivním cíli. Chybějící ground confirmation, jiný cíl, identity mismatch,
+nízká confidence nebo event mimo časové okno zůstává UNSCORABLE místo vzniku
+falešného negative.
+
+Každý outcome event type má samostatný limit 2 500 řádků. Pokud kterýkoli
+outcome dotaz, landing dotaz nebo predictive-observation dotaz dosáhne limitu,
+readiness report je incomplete a veřejná graduation zůstává fail-closed ve
+stavu `WAIT`. Samotná existence truth capability nikdy nepovyšuje; PASS/WAIT/
+FAIL dál určují existující minimální sample a quality thresholdy.
 
 ## Predictive Operations Center V1
 
