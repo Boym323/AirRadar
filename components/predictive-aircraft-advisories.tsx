@@ -5,9 +5,11 @@ import type {
   AdminEtaAdvisoryPreview,
   AdminRunwayAdvisoryPreview,
   AdminRunwayChangeAdvisoryPreview,
+  AdminTrajectoryAdvisoryPreview,
   PublicEtaAdvisory,
   PublicRunwayAdvisory,
   PublicRunwayChangeAdvisory,
+  PublicTrajectoryAdvisory,
 } from "@/lib/predictive-intelligence";
 import { ETA_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/eta-advisory";
 import { RUNWAY_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/runway-advisory";
@@ -15,15 +17,18 @@ import {
   RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS,
   RUNWAY_CHANGE_ADVISORY_STALE_AFTER_MS,
 } from "@/lib/predictive-intelligence/runway-change-advisory";
+import { TRAJECTORY_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/trajectory-advisory";
 import { formatAge, formatTime, t } from "@/lib/i18n";
 
 interface PredictiveAdvisoryApiResponse {
   etaAdvisory: PublicEtaAdvisory | null;
   runwayAdvisory: PublicRunwayAdvisory | null;
   runwayChangeAdvisory: PublicRunwayChangeAdvisory | null;
+  trajectoryAdvisory: PublicTrajectoryAdvisory | null;
   adminPreview?: AdminEtaAdvisoryPreview;
   runwayAdminPreview?: AdminRunwayAdvisoryPreview;
   runwayChangeAdminPreview?: AdminRunwayChangeAdvisoryPreview;
+  trajectoryAdminPreview?: AdminTrajectoryAdvisoryPreview;
 }
 
 type AdvisoryConfidence =
@@ -32,13 +37,22 @@ type AdvisoryConfidence =
   | PublicRunwayAdvisory["confidence"]
   | AdminRunwayAdvisoryPreview["confidence"]
   | PublicRunwayChangeAdvisory["confidence"]
-  | AdminRunwayChangeAdvisoryPreview["confidence"];
+  | AdminRunwayChangeAdvisoryPreview["confidence"]
+  | PublicTrajectoryAdvisory["confidence"]
+  | AdminTrajectoryAdvisoryPreview["confidence"];
 
 function confidenceLabel(value: AdvisoryConfidence): string {
   if (value === "HIGH") return t.aircraft.predictiveConfidenceHigh;
   if (value === "MEDIUM") return t.aircraft.predictiveConfidenceMedium;
   if (value === "LOW") return t.aircraft.predictiveConfidenceLow;
   return t.aircraft.predictiveConfidenceUnknown;
+}
+
+function trajectoryStateLabel(value: "NORMAL" | "POSSIBLE_DEVIATION" | "DEVIATING" | "UNKNOWN"): string {
+  if (value === "NORMAL") return t.aircraft.predictiveTrajectoryNormal;
+  if (value === "POSSIBLE_DEVIATION") return t.aircraft.predictiveTrajectoryPossibleDeviation;
+  if (value === "DEVIATING") return t.aircraft.predictiveTrajectoryDeviating;
+  return t.aircraft.predictiveTrajectoryUnknown;
 }
 
 function readinessLabel(value: "PASS" | "WAIT" | "FAIL"): string {
@@ -194,10 +208,41 @@ export function PredictiveAircraftAdvisories({
     return () => window.clearTimeout(timeout);
   }, [runwayChangeAdvisory]);
 
+  const trajectoryAdvisory = response?.trajectoryAdvisory ?? null;
+  useEffect(() => {
+    if (!trajectoryAdvisory) return;
+
+    const evaluatedAt = trajectoryAdvisory.evaluatedAt;
+    const timeout = window.setTimeout(() => {
+      setResponse((current) => {
+        if (!current || current.trajectoryAdvisory?.evaluatedAt !== evaluatedAt) return current;
+        return {
+          ...current,
+          trajectoryAdvisory: null,
+          ...(current.trajectoryAdminPreview
+            ? {
+              trajectoryAdminPreview: {
+                ...current.trajectoryAdminPreview,
+                state: "stale",
+                ageSeconds: Math.max(
+                  current.trajectoryAdminPreview.ageSeconds ?? 0,
+                  Math.floor(TRAJECTORY_ADVISORY_STALE_AFTER_MS / 1_000) + 1,
+                ),
+              },
+            }
+            : {}),
+        };
+      });
+    }, remainingFreshMs(trajectoryAdvisory.ageSeconds, TRAJECTORY_ADVISORY_STALE_AFTER_MS));
+
+    return () => window.clearTimeout(timeout);
+  }, [trajectoryAdvisory]);
+
   const etaPreview = response?.adminPreview;
   const runwayPreview = response?.runwayAdminPreview;
   const runwayChangePreview = response?.runwayChangeAdminPreview;
-  if (!etaAdvisory && !etaPreview && !runwayAdvisory && !runwayPreview && !runwayChangeAdvisory && !runwayChangePreview) return null;
+  const trajectoryPreview = response?.trajectoryAdminPreview;
+  if (!etaAdvisory && !etaPreview && !runwayAdvisory && !runwayPreview && !runwayChangeAdvisory && !runwayChangePreview && !trajectoryAdvisory && !trajectoryPreview) return null;
 
   const etaAdminOnly = !etaAdvisory && Boolean(etaPreview);
   const etaEstimatedArrivalAt = etaAdvisory?.estimatedArrivalAt ?? etaPreview?.estimatedArrivalAt ?? null;
@@ -218,6 +263,11 @@ export function PredictiveAircraftAdvisories({
   const runwayChangeAgeSeconds = runwayChangeAdvisory?.changeAgeSeconds ?? runwayChangePreview?.changeAgeSeconds ?? null;
   const runwayChangeSnapshotAgeSeconds = runwayChangeAdvisory?.ageSeconds ?? runwayChangePreview?.ageSeconds ?? null;
   const runwayChangeConfidence = runwayChangeAdvisory?.confidence ?? runwayChangePreview?.confidence ?? "UNKNOWN";
+
+  const trajectoryAdminOnly = !trajectoryAdvisory && Boolean(trajectoryPreview);
+  const trajectoryState = trajectoryAdvisory?.trajectoryState ?? trajectoryPreview?.trajectoryState ?? "UNKNOWN";
+  const trajectoryAgeSeconds = trajectoryAdvisory?.ageSeconds ?? trajectoryPreview?.ageSeconds ?? null;
+  const trajectoryConfidence = trajectoryAdvisory?.confidence ?? trajectoryPreview?.confidence ?? "UNKNOWN";
 
   return <>
     {(etaAdvisory || etaPreview) && <section
@@ -335,6 +385,46 @@ export function PredictiveAircraftAdvisories({
 
       <p className="predictive-eta-disclaimer">
         {runwayChangeAdminOnly ? t.aircraft.predictiveRunwayChangeAdminDisclaimer : t.aircraft.predictiveRunwayChangeDisclaimer}
+      </p>
+    </section>}
+
+    {(trajectoryAdvisory || trajectoryPreview) && <section
+      className={`predictive-eta-advisory predictive-trajectory-advisory${trajectoryAdminOnly ? " admin-preview" : ""}`}
+      aria-labelledby="predictive-trajectory-title"
+      data-testid="predictive-trajectory-advisory"
+      data-mode={trajectoryAdminOnly ? "admin-preview" : "public"}
+    >
+      <div className="predictive-eta-heading">
+        <div>
+          <span className="ui-kicker">{trajectoryAdminOnly ? t.aircraft.predictiveAdminPreview : t.aircraft.predictiveLabel}</span>
+          <h2 id="predictive-trajectory-title">{t.aircraft.predictiveTrajectoryTitle}</h2>
+        </div>
+        <span className={`predictive-eta-confidence ${trajectoryConfidence.toLowerCase()}`}>{confidenceLabel(trajectoryConfidence)}</span>
+      </div>
+
+      <div className="predictive-eta-primary">
+        <strong>{trajectoryStateLabel(trajectoryState)}</strong>
+        <span>{t.aircraft.predictiveTrajectoryLabel}</span>
+      </div>
+
+      <div className="predictive-eta-meta">
+        {trajectoryAgeSeconds !== null && <span>{t.aircraft.predictiveUpdated(formatAge(trajectoryAgeSeconds))}</span>}
+      </div>
+
+      {trajectoryPreview && <div className="predictive-eta-admin-meta">
+        <span>{t.aircraft.predictiveMode}: {trajectoryPreview.mode}</span>
+        <span>{t.aircraft.predictiveReadiness}: {readinessLabel(trajectoryPreview.readiness)}</span>
+        <span>{t.aircraft.predictiveState}: {previewStateLabel(trajectoryPreview.state)}</span>
+        <span>{t.aircraft.predictiveTrajectoryCandidates}: {trajectoryPreview.candidateObservations ?? t.common.emptyValue}</span>
+        <span>{t.aircraft.predictiveTrajectoryValidated}: {trajectoryPreview.validatedCandidates}</span>
+        <span>{t.aircraft.predictiveTrajectoryPrecision}: {percent(trajectoryPreview.precision)}</span>
+        <span>{t.aircraft.predictiveTrajectoryStateCapture}: {trajectoryPreview.stateCaptureAvailable ? t.common.yes : t.common.no}</span>
+        <span>{t.aircraft.predictiveTrajectoryTruth}: {trajectoryPreview.independentOutcomeTruthAvailable ? t.common.yes : t.common.no}</span>
+        {trajectoryPreview.readinessReasons.length > 0 && <span title={trajectoryPreview.readinessReasons.join(", ")}>{t.aircraft.predictiveReasons}: {trajectoryPreview.readinessReasons.length}</span>}
+      </div>}
+
+      <p className="predictive-eta-disclaimer">
+        {trajectoryAdminOnly ? t.aircraft.predictiveTrajectoryAdminDisclaimer : t.aircraft.predictiveTrajectoryDisclaimer}
       </p>
     </section>}
   </>;
