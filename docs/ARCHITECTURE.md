@@ -187,9 +187,13 @@ independent lanes:
   timeout/rate-limit/backoff handling, keeps a stale-if-error network snapshot,
   and exposes sanitized diagnostics. Its aircraft are merged with local
   observations only when an extended live snapshot is requested. The state
-  service assigns a stable local/network source affinity per ICAO, so a
-  temporary outage cannot hand the same aircraft from one feed to the other;
-  the selected source owns the displayed observation and its metadata.
+  service assigns a stable local/network source affinity per ICAO. Latest
+  provider membership is tracked separately from retained observations so a
+  temporary outage keeps the last good position while the bounded handoff
+  timer advances; a live alternate then takes over without a positionless
+  interval. An absent or positionless preferred observation may use a usable
+  alternate position immediately while identity/metadata provenance remains
+  explicit.
 - `EnrichmentService` invokes configured metadata, route, and flight-plan
   providers asynchronously. It uses normalized keys, positive/negative TTLs,
   in-flight coalescing, and bounded concurrency.
