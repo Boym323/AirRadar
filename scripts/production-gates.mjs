@@ -381,6 +381,44 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           href: "/airports/LOWW#airport-intelligence-v3",
         }],
       };
+      const predictiveReadinessFixture = {
+        source: "postgres",
+        generatedAt: "2026-10-04T09:00:00.000Z",
+        window: { from: "2026-09-04T09:00:00.000Z", to: "2026-10-04T09:00:00.000Z", days: 30 },
+        complete: true,
+        limits: { observations: 15000, landingEvents: 2500 },
+        configuredPolicy: { ETA: "SHADOW", RUNWAY: "SHADOW", RUNWAY_CHANGE: "SHADOW", TRAJECTORY: "SHADOW" },
+        effectivePolicy: { ETA: "SHADOW", RUNWAY: "SHADOW", RUNWAY_CHANGE: "SHADOW", TRAJECTORY: "SHADOW" },
+        thresholds: { version: "predictive-readiness-v1" },
+        collection: { observations: 420, landingEvents: 93, matchedLandingTruth: 141, captureStaleObservations: 3 },
+        integrity: { crossIcaoLifecycleConflicts: 0, crossFlightLifecycleConflicts: 0 },
+        capabilities: {
+          ETA: {
+            capability: "ETA",
+            decision: "PASS",
+            reasons: [],
+            evidence: { observations: 180, scoreableObservations: 142, independentTruthFlights: 81, medianAbsoluteErrorSeconds: 164, p90AbsoluteErrorSeconds: 438, p95AbsoluteErrorSeconds: 702, captureStaleRate: 0.012 },
+          },
+          RUNWAY: {
+            capability: "RUNWAY",
+            decision: "WAIT",
+            reasons: ["runway.insufficient_independent_truth"],
+            evidence: { observations: 132, scoreableObservations: 28, independentTruthFlights: 22, exactEndAccuracy: 0.86, coverage: 0.21, captureStaleRate: 0.008 },
+          },
+          RUNWAY_CHANGE: {
+            capability: "RUNWAY_CHANGE",
+            decision: "WAIT",
+            reasons: ["runway_change.independent_change_truth_unavailable"],
+            evidence: { observations: 22, scoreableObservations: 9, independentTruthFlights: 8, outcomePrecision: 0.78, falsePositiveRate: 0.22, independentChangeTruthAvailable: false, captureStaleRate: 0.01 },
+          },
+          TRAJECTORY: {
+            capability: "TRAJECTORY",
+            decision: "WAIT",
+            reasons: ["trajectory.state_capture_unavailable", "trajectory.independent_outcome_truth_unavailable"],
+            evidence: { observations: 86, candidateObservations: null, validatedCandidates: 0, precision: null, stateCaptureAvailable: false, independentOutcomeTruthAvailable: false, captureStaleRate: 0.006 },
+          },
+        },
+      };
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
@@ -392,12 +430,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "airport-intelligence-v3-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-intelligence-v3"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
+        { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
         { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW Operations" },
         { name: "daily-intelligence-mobile", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 390, height: 844 }, fullPage: true, mockDailyRecap: true },
         { name: "airport-intelligence-v3-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-intelligence-v3"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true },
+        { name: "predictive-readiness-mobile", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 390, height: 844 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "aircraft-detail-tablet", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 768, height: 1024 }, fullPage: false },
         { name: "aircraft-detail-mobile", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 390, height: 844 }, fullPage: false },
@@ -427,6 +467,21 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
             });
           }
+          if (target.mockPredictiveReadiness) {
+            await visualPage.route("**/api/system/status", async (route) => {
+              const upstream = await route.fetch();
+              const body = await upstream.json();
+              await route.fulfill({
+                status: upstream.status(),
+                headers: { ...upstream.headers(), "content-type": "application/json" },
+                body: JSON.stringify({ ...body, detailLevel: "admin" }),
+              });
+            });
+            await visualPage.route("**/api/system/stream", async (route) => { await route.abort(); });
+            await visualPage.route("**/api/admin/predictive/readiness", async (route) => {
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(predictiveReadinessFixture) });
+            });
+          }
           const response = await visualPage.goto(`${baseUrl}${target.path}`, { waitUntil: "domcontentloaded" });
           if (!response?.ok()) throw new Error(`Visual smoke ${target.path} returned HTTP ${response?.status()}`);
           await visualPage.locator(target.selector).waitFor({ state: "visible", timeout: 15_000 });
@@ -436,6 +491,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           if (target.mockAirportV3) {
             await visualPage.locator('[data-testid="airport-v3-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("CSA123").first().waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.mockPredictiveReadiness) {
+            await visualPage.locator('[data-testid="predictive-readiness"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("ETA", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("PASS", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.openCommandPalette) {
             await visualPage.keyboard.press("Control+K");
