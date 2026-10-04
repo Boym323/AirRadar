@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { WatchlistActivity } from "@/components/watchlist-activity";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
 import type { PublicWatchlistResponse, PublicWatchlistRule } from "@/lib/server/watchlist-store";
@@ -403,6 +404,8 @@ export function WatchlistPage() {
         <div><strong>{dictionary.watchlist.emergencyRule}</strong><span>{data?.emergency.enabled ? dictionary.watchlist.emergencyEnabled : dictionary.watchlist.emergencyDisabled}</span></div>
         <small>{dictionary.watchlist.serverConfigured}</small>
       </section>
+
+      <WatchlistActivity locale={locale} />
     </main>
   );
 }
