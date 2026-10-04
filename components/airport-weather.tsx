@@ -20,6 +20,13 @@ export interface AirportWeatherResponse {
   source?: string;
 }
 
+export interface AirportWeatherPanelSharedState {
+  weather: AirportWeatherResponse | null;
+  loading: boolean;
+  failed: boolean;
+  onRetry: () => void;
+}
+
 interface AirportWeatherBatchResponse {
   enabled?: boolean;
   available?: boolean;
@@ -166,30 +173,46 @@ function WeatherSummary({ weather }: { weather: AirportWeatherResponse }) {
   </div>;
 }
 
-export function AirportWeatherPanel({ airport, runways = [] }: { airport: Airport; runways?: AirportRunway[] }) {
-  const [weather, setWeather] = useState<AirportWeatherResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
+export function AirportWeatherPanel({
+  airport,
+  runways = [],
+  sharedState,
+}: {
+  airport: Airport;
+  runways?: AirportRunway[];
+  sharedState?: AirportWeatherPanelSharedState;
+}) {
+  const [internalWeather, setInternalWeather] = useState<AirportWeatherResponse | null>(null);
+  const [internalLoading, setInternalLoading] = useState(true);
+  const [internalFailed, setInternalFailed] = useState(false);
+  const externallyControlled = sharedState !== undefined;
 
   const loadWeather = useCallback(async () => {
-    setLoading(true);
-    setFailed(false);
+    setInternalLoading(true);
+    setInternalFailed(false);
     try {
       const response = await fetch(`/api/weather/airport/${encodeURIComponent(airport.icaoCode)}`, { cache: "no-store" });
       if (!response.ok) throw new Error("weather request failed");
       const data = await response.json() as AirportWeatherResponse;
-      setWeather(data.enabled === false ? null : data);
+      setInternalWeather(data.enabled === false ? null : data);
     } catch {
-      setFailed(true);
+      setInternalFailed(true);
     } finally {
-      setLoading(false);
+      setInternalLoading(false);
     }
   }, [airport.icaoCode]);
 
-  useEffect(() => { void loadWeather(); }, [loadWeather]);
+  useEffect(() => {
+    if (!externallyControlled) void loadWeather();
+  }, [externallyControlled, loadWeather]);
+
+  const weather = sharedState?.weather ?? internalWeather;
+  const loading = sharedState?.loading ?? internalLoading;
+  const failed = sharedState?.failed ?? internalFailed;
+  const retry = sharedState?.onRetry ?? (() => void loadWeather());
 
   return <div className="airport-weather-panel">
-    <WeatherLoadState loading={loading} failed={failed} onRetry={() => void loadWeather()} />
+    <WeatherLoadState loading={loading} failed={failed} onRetry={retry} />
     {!loading && !failed && weather && <><WeatherReports weather={weather} /><RunwayWindPanel runways={runways} metar={weather.metar} /></>}
     {!loading && !failed && !weather && <div className="weather-unavailable">{t.weather.unavailableData}</div>}
   </div>;
