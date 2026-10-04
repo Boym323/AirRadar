@@ -216,16 +216,20 @@ receiver-inferred; klient jej porovnává se složkami větru z pozorovaného ME
 bez odvozování důvodu případného rozdílu. Řádky timeline odkazují na existující
 Flight Story detail. OGN není zahrnuto v těchto letištních funkcích.
 
-Airport Live Board V2 obnovuje pouze operations/weather čtení každých 30
+Airport Live Board V3 obnovuje pouze operations/weather čtení každých 30
 sekund pomocí one-shot timeru. Jedna page-scoped aircraft SSE subscription je
 sdílená mezi Live Boardem a Nearby Aircraft, takže se druhý airport stream
 neotevírá. Klient řadí platné movement timestampy newest-first, deduplikuje
 recent arrival/departure lane podle Flight ID, každý lane omezuje na šest
 položek, GO_AROUND/HOLDING drží v samostatném omezeném lane provozních událostí
-a zobrazuje nejvýše čtyři runway-usage řádky. Sdílený SSE snapshot navíc krmí
-NOW inbound/outbound lane přes existující konzervativní airport-traffic
-classifier; stale nebo neplatné pozice jsou vyřazené. SSE update nespouští
-databázový, weather ani operations request.
+a zobrazuje nejvýše čtyři runway-usage řádky. Sdílený SSE snapshot navíc krmí NOW inbound/outbound lane přes existující
+konzervativní airport-traffic classifier. V3 každý aktivní observation koreluje
+pouze v paměti proti `operations.recentMovements`. Join vyžaduje stejnou ICAO
+identitu, nekonfliktní callsign, movement kompatibilní se směrem inbound/
+outbound a timestamp v 20minutovém okně s dvouminutovou tolerancí budoucího
+clock skew. Join může doplnit existující Flight Story link; nikdy nespouští
+per-aircraft history nebo intelligence request. Stale nebo neplatné pozice jsou
+vyřazené a SSE update nespouští databázový, weather ani operations request.
 
 Každý úspěšný refresh providera nahrazuje čekající history snapshot. Jediný
 history writer vypouští tuto slučovanou frontu. Pro každé letadlo s platnou
