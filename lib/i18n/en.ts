@@ -1384,6 +1384,7 @@ export const en = {
     flightIdentity: "Flight identity",
     flightTelemetry: "Aircraft and telemetry",
     flightTiming: "Observed window",
+    destinationFilter: "Destination",
     noFlights: "No captured flights",
     noResults: "No matching results",
     clearSearch: "Clear the search to see all available records.",
