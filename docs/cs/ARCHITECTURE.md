@@ -333,6 +333,13 @@ request se na stránce nespouštějí. Existující live provoz okolních letade
 zůstává samostatným read-only konzumentem zavedeného lokálního aircraft SSE;
 V3 nevytváří další aircraft stream ani write lane.
 
+Airport Live Board V1 zůstává uvnitř stejného boundary. Controller obnovuje
+obě sdílená čtení jedním 30sekundovým one-shot timerem, který při unmountu nebo
+ručním refreshi zruší a abortuje in-flight práci. UI v paměti odvozuje omezené
+lane příletů, odletů, provozních událostí a využití drah z operations odpovědi
+a pro kompaktní weather strip znovu používá stejný METAR. Nevzniká třetí API,
+EventSource, migrace, tabulka ani write path.
+
 ### Aviation Weather
 
 `AviationWeatherProvider` je volitelný nezávislý server-side subsystém. Čte
