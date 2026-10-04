@@ -82,7 +82,7 @@ export function PredictiveEtaAdvisory({
     const evaluatedAt = advisory.evaluatedAt;
     const timeout = window.setTimeout(() => {
       setResponse((current) => {
-        if (current?.etaAdvisory?.evaluatedAt !== evaluatedAt) return current;
+        if (!current || current.etaAdvisory?.evaluatedAt !== evaluatedAt) return current;
         return {
           ...current,
           etaAdvisory: null,
