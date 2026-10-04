@@ -224,6 +224,7 @@ export const en = {
     aircraftResults: "Aircraft",
     airportResults: "Airports",
     atsPointResults: "ATS points",
+    flightResults: "Historical flights",
     loading: "Searching…",
     noResults: "No results",
     requestFailed: "Search is unavailable",
@@ -252,6 +253,15 @@ export const en = {
     alertsDetail: "Alert and notification history",
     timeMachineDetail: "Historical sky playback",
     systemDetail: "Receiver, data source and service health",
+    smartActions: "Smart actions",
+    goAroundsToday: "Go-arounds today",
+    goAroundsTodayDetail: "Open today's operational events",
+    rareAircraftToday: "Rare aircraft today",
+    rareAircraftTodayDetail: "Open today's interesting and rare aircraft",
+    airportOperations: (icao: string) => `${icao} Operations`,
+    airportOperationsDetail: "Open Airport Intelligence V3",
+    flightsToAirport: (icao: string) => `Flights to ${icao}`,
+    flightsToAirportDetail: "Filter historical flights by destination airport",
   },
 
   filters: {
