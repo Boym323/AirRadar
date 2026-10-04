@@ -726,7 +726,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "operations-center-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, openOperationsCenter: true },
-        { name: "predictive-operations-public-desktop", path: "/?mapDiagnostics=1", selector: '[data-testid="predictive-operations-center"]', viewport: { width: 1366, height: 900 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "public" },
+        { name: "predictive-operations-public-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "public" },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-landscape-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1024, height: 768 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
@@ -739,7 +739,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
-        { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1", selector: '[data-testid="predictive-operations-center"]', viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "admin" },
+        { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "admin" },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
         { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW Operations" },
@@ -819,20 +819,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
             });
           }
-          if (target.mockPredictiveOperations) {
-            await visualPage.locator('[data-testid="predictive-operations-center"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.getByText("UAE123", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.getByText("24", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            if (target.mockPredictiveOperations === "admin") {
-              await visualPage.locator('[data-testid="predictive-operations-readiness"]').waitFor({ state: "visible", timeout: 15_000 });
-              await visualPage.getByText("ETA WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-              await visualPage.getByText("RWY WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-              await visualPage.getByText("TRJ WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-              await visualPage.getByText("Možná odchylka", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            } else {
-              await visualPage.getByText("Odchylka", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            }
-          }
           if (target.mockPredictiveReadiness) {
             await visualPage.route("**/api/system/status", async (route) => {
               const upstream = await route.fetch();
@@ -856,6 +842,20 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await operationsTrigger.waitFor({ state: "visible", timeout: 15_000 });
             await operationsTrigger.click();
             await visualPage.locator('[data-testid="operations-center-panel"]').waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.mockPredictiveOperations) {
+            await visualPage.locator('[data-testid="predictive-operations-center"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("UAE123", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("24", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            if (target.mockPredictiveOperations === "admin") {
+              await visualPage.locator('[data-testid="predictive-operations-readiness"]').waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("ETA WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("RWY WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("TRJ WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("Možná odchylka", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            } else {
+              await visualPage.getByText("Odchylka", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            }
           }
           if (target.mockDailyRecap) {
             await visualPage.locator('[data-testid="daily-intelligence-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
