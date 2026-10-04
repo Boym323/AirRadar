@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import {
   buildAirportActiveTrafficSnapshot,
+  buildAirportCorrelatedTrafficSnapshot,
   buildAirportLiveBoardSnapshot,
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
@@ -144,6 +145,73 @@ describe("Airport Intelligence V3 composer", () => {
     ], 2);
     expect(live.inbound.map((item) => item.aircraft.icaoHex)).toEqual(["IN1", "IN2"]);
     expect(live.outbound.map((item) => item.aircraft.icaoHex)).toEqual(["OUT1"]);
+  });
+
+  it("correlates live airport traffic only with fresh identity-safe compatible movements", () => {
+    const liveAt = "2026-10-04T08:10:00.000Z";
+    const observations = [
+      {
+        aircraft: { icaoHex: "ABC001", callsign: "TEST1", lastSeen: liveAt } as never,
+        distanceKm: 5,
+        bearingToAirport: 0,
+        classification: "approaching" as const,
+      },
+      {
+        aircraft: { icaoHex: "ABC002", callsign: "TEST2", lastSeen: liveAt } as never,
+        distanceKm: 7,
+        bearingToAirport: 0,
+        classification: "departing" as const,
+      },
+    ];
+    const data = operations([
+      movement(11, "APPROACH", "2026-10-04T08:05:00.000Z"),
+      movement(12, "DEPARTURE", "2026-10-04T08:04:00.000Z"),
+    ]);
+    data.recentMovements[0] = { ...data.recentMovements[0], icaoHex: "ABC001", callsign: "TEST1" };
+    data.recentMovements[1] = { ...data.recentMovements[1], icaoHex: "ABC002", callsign: "TEST2" };
+
+    const correlated = buildAirportCorrelatedTrafficSnapshot(observations, data);
+    expect(correlated.inbound[0]).toMatchObject({
+      movement: { flightId: 11, movement: "APPROACH" },
+      movementAgeSeconds: 300,
+    });
+    expect(correlated.outbound[0]).toMatchObject({
+      movement: { flightId: 12, movement: "DEPARTURE" },
+      movementAgeSeconds: 360,
+    });
+  });
+
+  it("keeps active traffic live-only when correlation is stale, identity-conflicting, or direction-incompatible", () => {
+    const observation = {
+      aircraft: { icaoHex: "ABC001", callsign: "LIVE1", lastSeen: "2026-10-04T08:30:00.000Z" } as never,
+      distanceKm: 5,
+      bearingToAirport: 0,
+      classification: "approaching" as const,
+    };
+    const stale = movement(21, "APPROACH", "2026-10-04T08:00:00.000Z");
+    const wrongCallsign = { ...movement(22, "APPROACH", "2026-10-04T08:25:00.000Z"), icaoHex: "ABC001", callsign: "OTHER" };
+    const wrongDirection = { ...movement(23, "DEPARTURE", "2026-10-04T08:26:00.000Z"), icaoHex: "ABC001", callsign: "LIVE1" };
+    const data = operations([
+      { ...stale, icaoHex: "ABC001", callsign: "LIVE1" },
+      wrongCallsign,
+      wrongDirection,
+    ]);
+
+    const correlated = buildAirportCorrelatedTrafficSnapshot([observation], data);
+    expect(correlated.inbound[0]).toMatchObject({ movement: null, movementAgeSeconds: null });
+  });
+
+  it("correlates a live outbound climb with a recent go-around Flight Story", () => {
+    const observation = {
+      aircraft: { icaoHex: "ABC777", callsign: "MISSED1", lastSeen: "2026-10-04T08:10:00.000Z" } as never,
+      distanceKm: 6,
+      bearingToAirport: 0,
+      classification: "departing" as const,
+    };
+    const goAround = { ...movement(77, "GO_AROUND", "2026-10-04T08:08:00.000Z"), icaoHex: "ABC777", callsign: "MISSED1" };
+    const correlated = buildAirportCorrelatedTrafficSnapshot([observation], operations([goAround]));
+
+    expect(correlated.outbound[0].movement).toMatchObject({ flightId: 77, movement: "GO_AROUND" });
   });
 
   it("builds bounded deduplicated live-board arrival and departure lanes", () => {
