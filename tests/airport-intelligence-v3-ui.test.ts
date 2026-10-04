@@ -10,7 +10,7 @@ const nearbySource = readFileSync(new URL("../components/airport-nearby-aircraft
 
 describe("Airport Intelligence V3 UI boundary", () => {
   it("uses one page-scoped operations/weather controller for the V3 board and weather panel", () => {
-    expect(detailSource).toContain("useAirportOperationsController(airport.icaoCode)");
+    expect(detailSource).toContain("useAirportOperationsController(airport.icaoCode, predictiveHexes)");
     expect(detailSource).toContain("<AirportOperationsBoard");
     expect(detailSource).toContain("sharedState={{");
     expect(detailSource).not.toContain("<AirportMovements");
