@@ -1157,7 +1157,7 @@ export const en = {
     liveBoardV8QueueActive: "Active",
     liveBoardV8QueueBuilding: "Building density",
     liveBoardV8QueueCompressed: "Compressed sequence",
-    liveBoardV8QueueHolding: "Multiple holding",
+    liveBoardV8QueueHoldingPresent: "Multiple holding",
     liveBoardV8QueueActiveArrivals: "Active arrivals",
     liveBoardV8QueueApproachFinal: (count: number) => `${count} approach/final`,
     liveBoardV8QueueHolding: "Holding in sequence",
