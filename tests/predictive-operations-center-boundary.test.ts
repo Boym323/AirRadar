@@ -15,12 +15,15 @@ describe("Predictive Operations Center V1 boundary", () => {
     expect(routeSource).toContain("enforcePredictiveReadiness");
     expect(routeSource).toContain("buildPublicEtaAdvisory");
     expect(routeSource).toContain("buildPublicRunwayAdvisory");
+    expect(routeSource).toContain("buildPublicRunwayChangeAdvisory");
   });
 
   it("keeps SHADOW previews behind the existing admin session", () => {
     expect(routeSource).toContain("isWatchlistSessionValid(request)");
     expect(routeSource).toContain("admin && state && etaReadiness");
     expect(routeSource).toContain("admin && state && runwayReadiness");
+    expect(routeSource).toContain("admin && state && runwayChangeReadiness");
+    expect(routeSource).toContain("RUNWAY_CHANGE");
     expect(routeSource).toContain("adminReadiness");
   });
 
@@ -33,6 +36,7 @@ describe("Predictive Operations Center V1 boundary", () => {
   it("uses the client-safe predictive operations module for stale expiry", () => {
     expect(componentSource).toContain('from "@/lib/predictive-intelligence/operations-center"');
     expect(componentSource).toContain("PREDICTIVE_OPERATIONS_STALE_AFTER_MS");
+    expect(componentSource).toContain("RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS");
     expect(componentSource).toContain('data-testid="predictive-operations-center"');
   });
 });
