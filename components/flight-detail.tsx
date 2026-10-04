@@ -20,6 +20,11 @@ import type { MapContextManifest } from "@/lib/server/map-context";
 import { aircraftAirportHref } from "@/lib/aircraft/detail-links";
 import { FlightProfile } from "@/components/flight-profile";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
+import {
+  buildFlightStoryNarrative,
+  buildFlightStoryV2Summary,
+  type FlightStoryNarrativeItem,
+} from "@/lib/flight-story/narrative";
 
 const HISTORY_MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -187,19 +192,124 @@ function PlaybackRouteContext({ flight }: { flight: HistoryFlightDetail["flight"
   </div>;
 }
 
-function FlightStoryTimeline({ events, start, end, currentTime, selectedEventId, onSeek, onSelect }: { events: FlightStoryEvent[]; start: number; end: number; currentTime: number; selectedEventId: number | null; onSeek: (timestamp: number) => void; onSelect: (event: FlightStoryEvent) => void }) {
-  return <section className="flight-story-timeline" aria-label={t.history.timeline}>
-    <div className="flight-story-timeline-heading"><strong>{t.history.timeline}</strong><span>{events.length ? `${events.length} ${t.history.events.toLowerCase()}` : t.history.noEvents}</span></div>
-    <div className="flight-story-timeline-track" role="list">
-      <button type="button" className="flight-story-boundary" onClick={() => onSeek(start)}>{formatTime(new Date(start).toISOString())} · {t.history.start}</button>
-      {events.map((event) => <button key={event.id} type="button" role="listitem" className={`flight-story-event${event.id === selectedEventId ? " selected" : ""}`} onClick={() => onSelect(event)}><span>{formatTime(event.occurredAt)}</span><strong>{event.type.replaceAll("_", " ")}</strong><small>{event.summary || t.common.emptyValue}</small></button>)}
-      <button type="button" className="flight-story-boundary" onClick={() => onSeek(end)}>{formatTime(new Date(end).toISOString())} · {t.history.end}</button>
+function formatStoryDuration(durationMs: number): string {
+  const totalMinutes = Math.max(0, Math.round(durationMs / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `${hours} h ${minutes.toString().padStart(2, "0")} min`;
+  return `${minutes} min`;
+}
+
+function formatVerticalRate(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return t.common.emptyValue;
+  const rounded = Math.round(value);
+  return `${rounded > 0 ? "+" : ""}${rounded.toLocaleString(t.locale === "cs" ? "cs-CZ" : "en-US")} ft/min`;
+}
+
+function flightStoryEventLabel(type: string | null): string {
+  if (!type) return t.common.emptyValue;
+  const labels = t.intelligence.types as Record<string, string>;
+  return labels[type] ?? type.replaceAll("_", " ");
+}
+
+function flightStoryNarrativeContext(item: FlightStoryNarrativeItem): string {
+  return [
+    item.airportIcao,
+    item.runway ? `RWY ${item.runway}` : null,
+    item.sectorId,
+  ].filter(Boolean).join(" · ");
+}
+
+function FlightStoryHero({ detail }: { detail: HistoryFlightDetail }) {
+  const summary = useMemo(() => buildFlightStoryV2Summary(detail), [detail]);
+  const { flight } = detail;
+  const route = flight.origin || flight.destination
+    ? <><AirportCodeLink code={flight.origin} /> <span aria-hidden="true">→</span> <AirportCodeLink code={flight.destination} /></>
+    : t.common.emptyValue;
+
+  return <section className="flight-story-v2-hero" data-testid="flight-story-v2-summary" aria-labelledby="flight-story-v2-title">
+    <div className="flight-story-v2-identity">
+      <span className="flight-story-v2-kicker">{t.history.storyV2}</span>
+      <div className="flight-story-v2-title-row">
+        <div>
+          <h2 id="flight-story-v2-title">{flight.callsign || t.history.unknownCallsign}</h2>
+          <p><Link className="history-link" href={`/aircraft/${encodeURIComponent(flight.icaoHex)}`}>{flight.icaoHex}</Link>{flight.registration ? ` · ${flight.registration}` : ""}{flight.aircraftType ? ` · ${flight.aircraftType}` : ""}</p>
+        </div>
+        <strong className="flight-story-v2-route">{route}</strong>
+      </div>
+      {summary.badges.length > 0 ? <div className="flight-story-v2-badges" aria-label={t.history.storyHighlights}>
+        {summary.badges.map((type) => <span key={type}>{flightStoryEventLabel(type)}</span>)}
+      </div> : null}
+      <p className="flight-story-v2-disclaimer">{t.history.storyEvidenceDisclaimer}</p>
     </div>
-    <div className="flight-story-timeline-position" style={{ left: `${end > start ? Math.max(0, Math.min(100, ((currentTime - start) / (end - start)) * 100)) : 0}%` }} aria-hidden="true" />
+
+    <div className="flight-story-v2-metrics">
+      <div><span>{t.history.observedWindow}</span><strong>{formatStoryDuration(summary.observedDurationMs)}</strong><small>{formatTime(summary.observedStartAt)}–{formatTime(summary.observedEndAt)}</small></div>
+      <div><span>{t.history.maxAltitude}</span><strong>{formatAltitude(flight.maxAltitude)}</strong></div>
+      <div><span>{t.history.maxGroundSpeed}</span><strong>{formatSpeed(summary.maxGroundSpeedKt)}</strong></div>
+      <div><span>{t.history.sampledPath}</span><strong>{formatDistance(summary.sampledPathDistanceKm)}</strong><small>{summary.sampled ? t.history.sampledPathBounded : t.history.sampledPathObserved}</small></div>
+      <div><span>{t.history.storyEvents}</span><strong>{summary.eventCount}</strong><small>{summary.attentionEventCount ? t.history.storyAttention(summary.attentionEventCount) : t.history.storyNoAttention}</small></div>
+      <div><span>{t.history.positionCount}</span><strong>{summary.positionCount}</strong><small>{summary.sampled ? t.history.sampledPositions : t.history.observedPositions}</small></div>
+    </div>
   </section>;
 }
 
-function FlightPlayback({ positions, flight, events, initialAt, selectedEventId, onPlaybackChange, onEventSelect }: { positions: PlaybackPosition[]; flight: HistoryFlightDetail["flight"]; events: FlightStoryEvent[]; initialAt?: number | null; selectedEventId: number | null; onPlaybackChange: (timestamp: number) => void; onEventSelect: (event: FlightStoryEvent) => void }) {
+function FlightNarrativeTimeline({
+  items,
+  events,
+  currentTime,
+  selectedEventId,
+  onSeek,
+  onSelect,
+}: {
+  items: FlightStoryNarrativeItem[];
+  events: FlightStoryEvent[];
+  currentTime: number;
+  selectedEventId: number | null;
+  onSeek: (timestamp: number) => void;
+  onSelect: (event: FlightStoryEvent | null) => void;
+}) {
+  const activeIndex = items.reduce((current, item, index) => Date.parse(item.occurredAt) <= currentTime ? index : current, 0);
+  return <section className="flight-story-v2-narrative" aria-labelledby="flight-story-v2-narrative-title" data-testid="flight-story-v2-narrative">
+    <div className="flight-story-v2-narrative-heading">
+      <div><strong id="flight-story-v2-narrative-title">{t.history.storyNarrative}</strong><span>{t.history.storyNarrativeDescription}</span></div>
+      <small>{t.history.storyEvidenceDisclaimer}</small>
+    </div>
+    <ol className="flight-story-v2-narrative-list">
+      {items.map((item, index) => {
+        const event = item.eventId === null ? null : events.find((candidate) => candidate.id === item.eventId) ?? null;
+        const context = flightStoryNarrativeContext(item);
+        const label = item.boundary === "first_seen"
+          ? t.history.firstSeen
+          : item.boundary === "last_seen"
+            ? t.history.lastSeen
+            : flightStoryEventLabel(item.type);
+        const selected = item.eventId !== null && item.eventId === selectedEventId;
+        return <li key={item.key} className={`${item.provenance}${selected ? " selected" : ""}${index === activeIndex ? " current" : ""}`}>
+          <button type="button" onClick={() => {
+            onSelect(event);
+            onSeek(Date.parse(item.occurredAt));
+          }}>
+            <span className="flight-story-v2-node" aria-hidden="true" />
+            <span className="flight-story-v2-time"><time dateTime={item.occurredAt}>{formatTime(item.occurredAt)}</time><small>{item.provenance === "observed" ? t.history.storyObserved : t.history.storyInferred}</small></span>
+            <span className="flight-story-v2-event">
+              <strong>{label}</strong>
+              {context ? <small>{context}</small> : null}
+            </span>
+            <span className="flight-story-v2-telemetry">
+              <small>{t.aircraft.altitude}<strong>{formatAltitude(item.telemetry.altitude)}</strong></small>
+              <small>{t.aircraft.groundSpeed}<strong>{formatSpeed(item.telemetry.groundSpeed)}</strong></small>
+              <small>{t.aircraft.verticalRate}<strong>{formatVerticalRate(item.telemetry.verticalRate)}</strong></small>
+            </span>
+            {item.confidenceLevel ? <span className={`flight-story-v2-confidence ${item.confidenceLevel}`}>{t.intelligence.confidence[item.confidenceLevel]}</span> : null}
+          </button>
+        </li>;
+      })}
+    </ol>
+  </section>;
+}
+
+function FlightPlayback({ positions, flight, events, narrative, initialAt, selectedEventId, onPlaybackChange, onEventSelect }: { positions: PlaybackPosition[]; flight: HistoryFlightDetail["flight"]; events: FlightStoryEvent[]; narrative: FlightStoryNarrativeItem[]; initialAt?: number | null; selectedEventId: number | null; onPlaybackChange: (timestamp: number) => void; onEventSelect: (event: FlightStoryEvent | null) => void }) {
   const range = useMemo(() => playbackTimeRange(positions), [positions]);
   const start = range?.start ?? 0;
   const end = range?.end ?? 0;
@@ -293,7 +403,7 @@ function FlightPlayback({ positions, flight, events, initialAt, selectedEventId,
           <div><span>{t.aircraft.track}</span><strong>{formatTrack(sample.track)}</strong></div>
         </div>
         <PlaybackRouteContext flight={flight} />
-        <FlightStoryTimeline events={events} start={start} end={end} currentTime={playbackAt} selectedEventId={selectedEventId} onSeek={setTime} onSelect={(event) => { onEventSelect(event); setTime(Date.parse(event.occurredAt)); }} />
+        <FlightNarrativeTimeline items={narrative} events={events} currentTime={playbackAt} selectedEventId={selectedEventId} onSeek={setTime} onSelect={onEventSelect} />
       </div>
     </div>
   );
@@ -333,33 +443,15 @@ export function FlightDetailPanel({ detail, initialAt }: { detail: HistoryFlight
   const { flight } = detail;
   const [playbackAt, setPlaybackAt] = useState<number | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
-  const route = flight.origin && flight.destination ? (
-    <>
-      <AirportCodeLink code={flight.origin} /> <span aria-hidden="true">→</span> <AirportCodeLink code={flight.destination} />
-    </>
-  ) : t.common.emptyValue;
+  const narrative = useMemo(() => buildFlightStoryNarrative(detail), [detail]);
 
   return (
     <div className="history-detail-content">
-      <div className="history-detail-heading">
-        <div>
-          <div className="history-detail-callsign">{flight.callsign || t.history.unknownCallsign}</div>
-          <div className="history-detail-registration"><Link className="history-link" href={`/aircraft/${encodeURIComponent(flight.icaoHex)}`}>{flight.icaoHex}</Link> · {flight.registration || t.common.emptyValue}</div>
-        </div>
-        <span className="history-detail-badge">{flight.aircraftType || t.aircraft.unknownAircraftType}</span>
-      </div>
-      <div className="history-detail-grid">
-        <div><span>{t.route.originDestination}</span><strong className="history-detail-route">{route}</strong></div>
-        <div><span>{t.route.airline}</span><strong>{flight.airline || t.common.emptyValue}</strong></div>
-        <div><span>{t.history.start}</span><strong>{formatDateTime(flight.startTime)}</strong></div>
-        <div><span>{t.history.end}</span><strong>{formatDateTime(flight.endTime ?? flight.lastSeenAt)}</strong></div>
-        <div><span>{t.history.maxAltitude}</span><strong>{formatAltitude(flight.maxAltitude)}</strong></div>
-        <div><span>{t.history.minDistance}</span><strong>{formatDistance(flight.minDistanceKm)}</strong></div>
-      </div>
+      <FlightStoryHero detail={detail} />
       {detail.positions.length ? (
         <>
           {detail.truncated && <div className="history-note history-truncated">{t.history.playbackTruncated}</div>}
-          <FlightPlayback positions={detail.positions} flight={flight} events={detail.events} initialAt={initialAt} selectedEventId={selectedEventId} onPlaybackChange={setPlaybackAt} onEventSelect={(event) => setSelectedEventId(event.id)} />
+          <FlightPlayback positions={detail.positions} flight={flight} events={detail.events} narrative={narrative} initialAt={initialAt} selectedEventId={selectedEventId} onPlaybackChange={setPlaybackAt} onEventSelect={(event) => setSelectedEventId(event?.id ?? null)} />
           <FlightProfile positions={detail.positions} playbackAt={playbackAt} />
           <FlightStoryContext playbackAt={playbackAt} />
           {playbackAt !== null && <Link className="history-link flight-story-time-machine-link" href={`/time-machine?at=${encodeURIComponent(new Date(playbackAt).toISOString())}`}>{t.history.openWholeSky}</Link>}
