@@ -228,7 +228,7 @@ pouze v paměti proti `operations.recentMovements`. Join vyžaduje stejnou ICAO
 identitu, nekonfliktní callsign, movement kompatibilní se směrem inbound/
 outbound a timestamp v 20minutovém okně s dvouminutovou tolerancí budoucího
 clock skew. Join může doplnit existující Flight Story link; nikdy nespouští
-per-aircraft history nebo intelligence request. V4 následně odvodí journey stage z korelovaného movementu a aktuálních guardů vzdálenosti/vertical-rate; route origin/destination se vyhodnocuje nezávisle jako confirmed/unknown/conflict a stage nepřepisuje. V5 z výsledného omezeného aktivního snapshotu skládá NOW flow počty a attention seznam. Attention obsahuje pouze GO_AROUND, HOLDING nebo route-conflict řádky, je omezený na šest položek a řadí se podle priority výjimky a potom vzdálenosti. Stale nebo neplatné pozice jsou
+per-aircraft history nebo intelligence request. V4 následně odvodí journey stage z korelovaného movementu a aktuálních guardů vzdálenosti/vertical-rate; route origin/destination se vyhodnocuje nezávisle jako confirmed/unknown/conflict a stage nepřepisuje. Live on-ground observation se smí dostat do arrival lane pouze tehdy, když stejný omezený operations snapshot obsahuje čerstvý korelovaný LANDING; vznikne stav LANDED, ostatní on-ground observations se vyřadí. V5 z výsledného omezeného aktivního snapshotu skládá NOW flow počty a attention seznam. Attention obsahuje pouze GO_AROUND, HOLDING nebo route-conflict řádky, je omezený na šest položek a řadí se podle priority výjimky a potom vzdálenosti; LANDED zůstává součástí normálního inbound flow. Stale nebo neplatné pozice jsou
 vyřazené a SSE update nespouští databázový, weather ani operations request.
 
 Každý úspěšný refresh providera nahrazuje čekající history snapshot. Jediný

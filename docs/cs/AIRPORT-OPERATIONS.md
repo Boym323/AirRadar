@@ -51,14 +51,12 @@ Při úspěšné korelaci aktivní řádek zpřístupní odpovídající Flight 
 Flight Story a zobrazí poslední kompatibilní movement, runway, confidence a čas
 eventu. Chybějící, stale nebo konfliktní evidence zůstává pouze LIVE a nic se
 nedohaduje. V4 nad touto evidencí přidává vysvětlitelný aktivní journey stav:
-INBOUND, HOLDING, APPROACH, FINAL, GO_AROUND, INITIAL_CLIMB nebo OUTBOUND.
+INBOUND, HOLDING, APPROACH, FINAL, LANDED, GO_AROUND, INITIAL_CLIMB nebo OUTBOUND.
 FINAL vyžaduje čerstvý korelovaný APPROACH, live vzdálenost <=8 km a vertical
-rate <=-150 fpm. Route metadata se hodnotí odděleně jako CONFIRMED, UNKNOWN
-nebo CONFLICT a nikdy nepřepisují pozorovaný pohyb. V5 přidává omezený NOW
-Flow Pulse počítaný výhradně z těchto aktivních journey řádků: inbound, final,
-holding, outbound, go-around a route-conflict počty plus maximálně šest řádků
-attention. Pořadí je deterministické GO_AROUND → HOLDING → route conflict a
-potom nejbližší letadlo. Normální provoz se do attention seznamu nedostane. Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
+rate <=-150 fpm. LANDED vyžaduje čerstvý korelovaný LANDING a současně live
+on-ground observation, takže nesouvisející stojící letadla se do aktivního
+arrival lane nikdy nepovýší. Route metadata se hodnotí odděleně jako CONFIRMED, UNKNOWN
+nebo CONFLICT a nikdy nepřepisují pozorovaný pohyb. V5 přidává omezený NOW Flow Pulse počítaný čistě z aktivních journey řádků: inbound, final, holding, outbound, go-around a route-conflict počty plus attention seznam nejvýše šesti položek. Attention se řadí deterministicky GO_AROUND → HOLDING → route conflict a potom podle vzdálenosti. Normální provoz — včetně LANDED řádků — je z attention záměrně vynechaný. Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
 teplotu a QNH. Jde o pozorovací pohled přijímače a počasí, nikoli letištní
 letový řád, FIDS, přidělení dráhy nebo instrukce ATC.
 

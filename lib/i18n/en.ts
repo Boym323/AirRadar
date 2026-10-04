@@ -1066,6 +1066,7 @@ export const en = {
     liveBoardJourneyHolding: "Holding",
     liveBoardJourneyApproach: "Approach",
     liveBoardJourneyFinal: "Final",
+    liveBoardJourneyLanded: "Landed",
     liveBoardJourneyGoAround: "Go-around",
     liveBoardJourneyInitialClimb: "Initial climb",
     liveBoardJourneyOutbound: "Outbound",

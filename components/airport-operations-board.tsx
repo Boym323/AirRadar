@@ -65,6 +65,7 @@ function journeyLabel(stage: ReturnType<typeof buildAirportCorrelatedTrafficSnap
     HOLDING: t.airport.liveBoardJourneyHolding,
     APPROACH: t.airport.liveBoardJourneyApproach,
     FINAL: t.airport.liveBoardJourneyFinal,
+    LANDED: t.airport.liveBoardJourneyLanded,
     GO_AROUND: t.airport.liveBoardJourneyGoAround,
     INITIAL_CLIMB: t.airport.liveBoardJourneyInitialClimb,
     OUTBOUND: t.airport.liveBoardJourneyOutbound,
@@ -246,10 +247,7 @@ export function AirportOperationsBoard({
 
     <section className="airport-live-flow-pulse" data-testid="airport-live-board-flow-pulse" aria-labelledby="airport-live-flow-title">
       <div className="airport-live-flow-heading">
-        <div>
-          <span className="ui-kicker">{t.airport.liveBoardFlowKicker}</span>
-          <h3 id="airport-live-flow-title">{t.airport.liveBoardFlowTitle}</h3>
-        </div>
+        <div><span className="ui-kicker">{t.airport.liveBoardFlowKicker}</span><h3 id="airport-live-flow-title">{t.airport.liveBoardFlowTitle}</h3></div>
         <span>{t.airport.liveBoardFlowCorrelation(flow.correlated, flow.liveOnly)}</span>
       </div>
       <MetricStrip className="airport-live-flow-metrics">
@@ -265,12 +263,8 @@ export function AirportOperationsBoard({
           const aircraft = observation.aircraft;
           const label = aircraft.callsign || aircraft.registration || aircraft.icaoHex;
           return <li key={aircraft.icaoHex}>
-            <span className={`airport-live-journey airport-live-journey-${observation.journey.stage.toLowerCase().replace("_", "-")}`}>
-              {journeyLabel(observation.journey.stage)}
-            </span>
-            {observation.movement
-              ? <Link href={aircraftFlightHref(observation.movement.flightId)}>{label}</Link>
-              : <Link href={`/aircraft/${encodeURIComponent(aircraft.icaoHex)}`}>{label}</Link>}
+            <span className={`airport-live-journey airport-live-journey-${observation.journey.stage.toLowerCase().replace("_", "-")}`}>{journeyLabel(observation.journey.stage)}</span>
+            {observation.movement ? <Link href={aircraftFlightHref(observation.movement.flightId)}>{label}</Link> : <Link href={`/aircraft/${encodeURIComponent(aircraft.icaoHex)}`}>{label}</Link>}
             <span>{formatDistance(observation.distanceKm)}</span>
             {observation.journey.routeRelation === "CONFLICT" ? <small className="airport-live-route-state conflict">{t.airport.liveBoardRouteConflict}</small> : null}
           </li>;
