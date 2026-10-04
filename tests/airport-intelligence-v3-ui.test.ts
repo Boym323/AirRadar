@@ -5,6 +5,8 @@ const detailSource = readFileSync(new URL("../components/airport-detail.tsx", im
 const controllerSource = readFileSync(new URL("../components/airport-operations-controller.ts", import.meta.url), "utf8");
 const boardSource = readFileSync(new URL("../components/airport-operations-board.tsx", import.meta.url), "utf8");
 const weatherSource = readFileSync(new URL("../components/airport-weather.tsx", import.meta.url), "utf8");
+const liveTrafficSource = readFileSync(new URL("../components/airport-live-traffic-controller.ts", import.meta.url), "utf8");
+const nearbySource = readFileSync(new URL("../components/airport-nearby-aircraft.tsx", import.meta.url), "utf8");
 
 describe("Airport Intelligence V3 UI boundary", () => {
   it("uses one page-scoped operations/weather controller for the V3 board and weather panel", () => {
@@ -39,8 +41,18 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(boardSource).toContain('testId="airport-live-board-alerts"');
     expect(boardSource).toContain('data-testid="airport-live-board-runways"');
     expect(boardSource).toContain('data-testid="airport-live-board-weather"');
+    expect(boardSource).toContain('data-product="airport-live-board-v2"');
+    expect(boardSource).toContain('data-testid="airport-live-board-active-inbound"');
+    expect(boardSource).toContain('data-testid="airport-live-board-active-outbound"');
     expect(boardSource).toContain('variant="inferred"');
     expect(boardSource).toContain("t.airport.v3RunwayDisclaimer");
+  });
+
+  it("shares exactly one airport live aircraft stream across board and nearby traffic", () => {
+    expect(detailSource).toContain("useAirportLiveTrafficController(airport)");
+    expect(liveTrafficSource.match(/new EventSource\(/g)).toHaveLength(1);
+    expect(liveTrafficSource).toContain('new EventSource("/api/stream")');
+    expect(nearbySource).not.toContain("new EventSource");
   });
 
   it("allows the airport weather panel to consume the shared snapshot without starting its own request", () => {
