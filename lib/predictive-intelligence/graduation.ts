@@ -89,7 +89,12 @@ export function toPublicPredictiveState(prediction: PredictiveFlightState | null
       confidence: prediction.runway.confidence,
     };
   }
-  if (policy.TRAJECTORY === "PUBLIC" && fresh) {
+  if (
+    policy.TRAJECTORY === "PUBLIC"
+    && fresh
+    && prediction.trajectory.state !== "UNKNOWN"
+    && (prediction.trajectory.confidence === "MEDIUM" || prediction.trajectory.confidence === "HIGH")
+  ) {
     result.trajectory = { state: prediction.trajectory.state, confidence: prediction.trajectory.confidence };
   }
   return result;
