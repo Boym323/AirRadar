@@ -1,4 +1,4 @@
-import { appendFile, mkdir, open, rename, stat, unlink } from "node:fs/promises";
+import { appendFile, mkdir, open, rename, unlink } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Aircraft } from "@/lib/aircraft/types";
 import { getRuntimeStatePath } from "@/lib/server/runtime-state";
@@ -332,12 +332,13 @@ export class JsonlAlertHistoryStore {
   }
 
   private async compactIfNeeded(): Promise<void> {
-    const size = (await stat(this.path)).size;
-    if (size <= this.retention.maxBytes) return;
-    const start = Math.max(0, size - this.retention.retentionBytes);
     const handle = await open(this.path, "r");
     let text = "";
+    let start = 0;
     try {
+      const size = (await handle.stat()).size;
+      if (size <= this.retention.maxBytes) return;
+      start = Math.max(0, size - this.retention.retentionBytes);
       const buffer = Buffer.alloc(size - start);
       await handle.read(buffer, 0, buffer.length, start);
       text = buffer.toString("utf8");
@@ -362,16 +363,16 @@ export class JsonlAlertHistoryStore {
   }
 
   private async readTail(): Promise<unknown[]> {
-    let size: number;
+    let handle;
     try {
-      size = (await stat(this.path)).size;
+      handle = await open(this.path, "r");
     } catch {
       return [];
     }
-    if (size <= 0) return [];
-    const start = Math.max(0, size - MAX_READ_BYTES);
-    const handle = await open(this.path, "r");
     try {
+      const size = (await handle.stat()).size;
+      if (size <= 0) return [];
+      const start = Math.max(0, size - MAX_READ_BYTES);
       const buffer = Buffer.alloc(size - start);
       await handle.read(buffer, 0, buffer.length, start);
       const text = buffer.toString("utf8");
