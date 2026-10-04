@@ -2,6 +2,7 @@ import type { AirportRunway } from "@/lib/airports/infrastructure";
 import type { FlightPhase, FlightIntelligenceEvent } from "@/lib/intelligence/types";
 
 export const PREDICTIVE_INTELLIGENCE_VERSION = "predictive-intelligence-v1" as const;
+export const RUNWAY_CHANGE_EVENT_WINDOW_MS = 5 * 60_000;
 export type PredictionConfidence = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 export type DestinationStatus = "KNOWN" | "INFERRED" | "UNKNOWN";
 export type TrajectoryState = "NORMAL" | "POSSIBLE_DEVIATION" | "DEVIATING" | "UNKNOWN";
@@ -57,7 +58,7 @@ export interface PredictiveInput {
 
 export interface PredictionEvidence { key: string; value: string | number; }
 export interface EtaPrediction { estimatedArrivalAt: number | null; confidence: PredictionConfidence; evidence: PredictionEvidence[]; }
-export interface RunwayPrediction { runway: string | null; alternative: string | null; changedFrom?: string | null; confidence: PredictionConfidence; changed: boolean; evidence: PredictionEvidence[]; }
+export interface RunwayPrediction { runway: string | null; alternative: string | null; changedFrom?: string | null; changedAt?: number | null; confidence: PredictionConfidence; changed: boolean; evidence: PredictionEvidence[]; }
 export interface TrajectoryPrediction { state: TrajectoryState; confidence: PredictionConfidence; evidence: PredictionEvidence[]; }
 export interface PredictiveFlightState {
   modelVersion: typeof PREDICTIVE_INTELLIGENCE_VERSION;
