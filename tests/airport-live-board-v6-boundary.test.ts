@@ -16,14 +16,14 @@ describe("Airport Live Board V6 boundary", () => {
     expect(intelligenceSource).not.toContain("new EventSource");
   });
 
-  it("does not add another request or aircraft stream", () => {
-    expect(controllerSource.match(/fetch\(/g)).toHaveLength(2);
+  it("keeps V6 pure while the later V7 controller owns three bounded reads", () => {
+    expect(controllerSource.match(/fetch\(/g)).toHaveLength(3);
     expect(liveTrafficSource.match(/new EventSource\(/g)).toHaveLength(1);
     expect(boardSource).not.toContain("fetch(");
     expect(boardSource).not.toContain("new EventSource");
   });
 
-  it("keeps the V6 pressure contract inside the V7 product", () => {
+  it("keeps the V6 pressure contract inside the V8 product", () => {
     expect(boardSource).toContain('data-product="airport-live-board-v8"');
     expect(boardSource).toContain("buildAirportJourneyFlowSummary");
     expect(boardSource).toContain("buildAirportFlowPressureSummary(flow, operations)");
