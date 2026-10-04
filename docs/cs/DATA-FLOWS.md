@@ -424,6 +424,14 @@ skutečně naladěnou frekvenci letadla.
   reasons, přesností konce dráhy, coverage a freshness stavem; anonymní klient
   tento preview nikdy nedostane. Aircraft detail nadále používá jediný prediction
   fetch bez dalšího streamu nebo pollingu.
+- Predictive Operations Center V1 znovu používá stejné advisory buildery přes
+  `GET /api/operations/predictive?hexes=`. Klient předává maximálně šest již
+  relevantních ICAO identifikátorů. Server seznam normalizuje a deduplikuje,
+  načte jeden readiness report a z existujícího RAM stavu vytvoří veřejné
+  ETA/runway advisories nebo ověřené admin SHADOW preview. Endpoint žádnou
+  predikci znovu nepočítá. Radarový klient tento omezený snapshot při otevřeném
+  Operations Center obnovuje po 30 sekundách a zobrazené hodnoty lokálně
+  expiruje po 45 sekundách. Tento tok nikdy nevstupuje do hlavního aircraft SSE.
 - Konfigurace Alerts & Fleets V1 se ukládá v PostgreSQL přes serverový
   repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence` a `AlertRule`).
   Zapnuté řádky se načítají do vyměnitelné cache v paměti; CRUD zápis nejprve
