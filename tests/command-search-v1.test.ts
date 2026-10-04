@@ -35,6 +35,8 @@ describe("Command Search V1 recents", () => {
   it("rejects malformed localStorage payloads without throwing", () => {
     expect(parseCommandSearchRecents("not-json")).toEqual([]);
     expect(parseCommandSearchRecents(JSON.stringify([{ key: 1 }]))).toEqual([]);
+    expect(parseCommandSearchRecents(JSON.stringify([{ key: "x", kind: "command", label: "x", detail: null, href: "javascript:alert(1)" }]))).toEqual([]);
+    expect(parseCommandSearchRecents(JSON.stringify([{ key: "x", kind: "command", label: "x", detail: null, href: "//example.com" }]))).toEqual([]);
   });
 });
 
