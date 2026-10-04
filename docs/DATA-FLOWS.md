@@ -317,6 +317,13 @@ from the observed METAR without inferring why they may differ. Timeline rows
 link to the existing Flight Story detail. OGN is not included in these airport
 features.
 
+Airport Live Board V1 refreshes only those same two reads every 30 seconds using
+a one-shot timer. The client sorts valid movement timestamps newest-first,
+deduplicates arrival/departure lanes by Flight ID, bounds each lane to six
+items, keeps GO_AROUND/HOLDING as a separate bounded operational-events lane,
+and displays at most four runway-usage rows. Invalid timestamps are excluded.
+No live-board refresh is driven by aircraft SSE updates.
+
 Every successful provider refresh replaces the pending history snapshot. A
 single history writer drains that coalesced queue. For each aircraft with a
 valid position, `persistHistory()` writes only when its last sample is older
