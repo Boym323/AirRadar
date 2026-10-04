@@ -80,12 +80,13 @@ function isoTime(...values: unknown[]): string | null {
 }
 
 function reportType(record: Record<string, unknown>, rawText: string | null): PirepReportType {
-  const raw = textValue(32, record.reportType, record.report_type, record.type, record.dataSource)?.toUpperCase() ?? "";
+  const raw = textValue(32, record.pirepType, record.airepType, record.reportType, record.report_type, record.type, record.dataSource, record.data)?.toUpperCase() ?? "";
+  if (raw.includes("AMDAR")) return "AMDAR";
   if (raw.includes("AIREP")) return "AIREP";
   if (raw.includes("PIREP") || raw === "UA" || raw === "UUA") return "PIREP";
   const prefix = rawText?.trim().toUpperCase() ?? "";
-  if (prefix.startsWith("ARP") || prefix.includes(" AIREP ")) return "AIREP";
-  if (prefix.startsWith("UA ") || prefix.startsWith("UUA ")) return "PIREP";
+  if (prefix.startsWith("ARP") || prefix.startsWith("ARS") || prefix.includes(" AIREP ")) return "AIREP";
+  if (prefix.startsWith("UA ") || prefix.startsWith("UUA ") || prefix.includes(" UA ") || prefix.includes(" UUA ")) return "PIREP";
   return "UNKNOWN";
 }
 
@@ -120,15 +121,15 @@ export function normalizePirepPayload(payload: unknown): PirepObservation[] {
 
     const rawText = textValue(2_000, value.rawOb, value.rawText, value.rawPirep, value.rawAirep);
     const type = reportType(value, rawText);
-    const turbulenceIntensity = normalizedIntensity(value.turbInten, value.turbIntensity, value.turbulenceIntensity);
-    const turbulenceType = textValue(48, value.turbType, value.turbulenceType);
-    const turbulenceFrequency = textValue(48, value.turbFreq, value.turbulenceFrequency);
-    const icingIntensity = normalizedIntensity(value.iceInten, value.icingInten, value.icingIntensity);
-    const icingType = textValue(48, value.iceType, value.icingType);
+    const turbulenceIntensity = normalizedIntensity(value.tbInt1, value.tbInt2, value.turbInten, value.turbIntensity, value.turbulenceIntensity);
+    const turbulenceType = textValue(48, value.tbType1, value.tbType2, value.turbType, value.turbulenceType);
+    const turbulenceFrequency = textValue(48, value.tbFreq1, value.tbFreq2, value.turbFreq, value.turbulenceFrequency);
+    const icingIntensity = normalizedIntensity(value.icgInt1, value.icgInt2, value.iceInten, value.icingInten, value.icingIntensity);
+    const icingType = textValue(48, value.icgType1, value.icgType2, value.iceType, value.icingType);
     const report: PirepObservation = {
       id: stableId(value, observedAt, latitude, longitude, rawText),
       reportType: type,
-      urgent: normalizedIntensity(value.reportType, value.type) === "UUA" || rawText?.trim().toUpperCase().startsWith("UUA ") === true,
+      urgent: [value.pirepType, value.reportType, value.type].some((candidate) => normalizedIntensity(candidate)?.includes("URGENT") || normalizedIntensity(candidate) === "UUA") || rawText?.trim().toUpperCase().includes(" UUA ") === true || rawText?.trim().toUpperCase().startsWith("UUA ") === true,
       observedAt,
       receivedAt: isoTime(value.receiptTime, value.receivedAt),
       latitude,
