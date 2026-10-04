@@ -3,6 +3,7 @@ import { mergeCurrentDayStats } from "@/lib/statistics-coverage-current-day";
 
 const persistedComplete = {
   date: "2026-09-10",
+  uniqueAircraftCount: 500,
   maxConcurrentAircraft: 80,
   maxDistanceKm: 300,
   maxDistanceIcaoHex: "AAAAAA",
@@ -21,6 +22,7 @@ describe("coverage intelligence current-day merge", () => {
   it("keeps the larger complete persisted reception while taking the higher concurrent maximum", () => {
     const result = mergeCurrentDayStats({
       date: "2026-09-10",
+      currentUniqueAircraftCount: 550,
       currentMaxConcurrentAircraft: 90,
       currentMaxDistanceKm: 250,
       currentReception: {
@@ -34,6 +36,7 @@ describe("coverage intelligence current-day merge", () => {
       persisted: persistedComplete,
     });
 
+    expect(result.uniqueAircraftCount).toBe(550);
     expect(result.maxConcurrentAircraft).toBe(90);
     expect(result.maxDistanceKm).toBe(300);
     expect(result.maxDistanceIcaoHex).toBe("AAAAAA");
@@ -45,6 +48,7 @@ describe("coverage intelligence current-day merge", () => {
   it("uses a complete RAM reception instead of pairing an incomplete persisted maximum with stale metadata", () => {
     const result = mergeCurrentDayStats({
       date: "2026-09-10",
+      currentUniqueAircraftCount: 550,
       currentMaxConcurrentAircraft: 75,
       currentMaxDistanceKm: 250,
       currentReception: {
@@ -74,6 +78,7 @@ describe("coverage intelligence current-day merge", () => {
   it("keeps incomplete raw maxima metadata-free when no complete reception exists", () => {
     const result = mergeCurrentDayStats({
       date: "2026-09-10",
+      currentUniqueAircraftCount: 550,
       currentMaxConcurrentAircraft: 0,
       currentMaxDistanceKm: 200,
       currentReception: null,
