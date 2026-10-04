@@ -131,13 +131,17 @@ function base(
   qualityMargins: PredictiveGraduationQualityMargin[],
 ): PredictiveGraduationCapabilityCalibration {
   const phase = classify(result, complete);
+  const filteredDeficits = evidenceDeficits.filter((value): value is PredictiveGraduationEvidenceDeficit => value !== null);
+  const qualityEvaluated = complete
+    && filteredDeficits.length === 0
+    && truthRequirements.every((requirement) => requirement.available);
   return {
     capability,
     decision: result.decision,
     phase,
     manualReviewEligible: complete && result.decision === "PASS",
-    qualityEvaluated: result.decision !== "WAIT",
-    evidenceDeficits: evidenceDeficits.filter((value): value is PredictiveGraduationEvidenceDeficit => value !== null),
+    qualityEvaluated,
+    evidenceDeficits: filteredDeficits,
     truthRequirements,
     qualityMargins,
     integrityBlockers: result.reasons.filter((reason) => reason.startsWith("integrity.")),
