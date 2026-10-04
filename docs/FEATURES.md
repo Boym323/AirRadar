@@ -67,10 +67,12 @@ bounded operations snapshot; no per-aircraft fetch, second EventSource, schema
 change or write path is introduced.
 
 V4 derives an explainable active journey state from live direction plus fresh
-correlation: `INBOUND`, `HOLDING`, `APPROACH`, `FINAL`, `GO_AROUND`,
+correlation: `INBOUND`, `HOLDING`, `APPROACH`, `FINAL`, `LANDED`, `GO_AROUND`,
 `INITIAL_CLIMB` or `OUTBOUND`. `FINAL` is deliberately conservative and
 requires a correlated APPROACH, <=8 km live distance and descent of at least
-150 fpm. Route enrichment is a separate consistency signal:
+150 fpm. `LANDED` is equally strict: a live on-ground aircraft is shown only
+when a fresh correlated LANDING exists; unrelated ground traffic stays out of
+the active lanes. Route enrichment is a separate consistency signal:
 `CONFIRMED`, `UNKNOWN` or `CONFLICT`; a route conflict never rewrites the
 observed journey state.
 
