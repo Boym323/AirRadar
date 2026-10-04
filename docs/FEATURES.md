@@ -373,3 +373,14 @@ ETA/runway advisories only, and fails soft to receiver-derived ordering when
 predictions are unavailable. Route conflicts are excluded and UNKNOWN routes
 need a matching PUBLIC destination. The UI shows ETA uncertainty, median ETA
 spacing, predicted-runway stability and observed runway-flow context.
+
+
+### Airport Live Board V8 — Arrival Flow Intelligence
+
+V8 turns the bounded V7 active-arrival sequence into short-horizon flow
+intelligence without adding another data source. It reports PUBLIC ETA demand
+inside 5/15/30 minutes, compares equal 0–15 and 15–30 minute windows for flow
+trend, detects ETA compression, derives conservative arrival pressure, groups
+predicted runway load, and compares the predicted dominant runway with
+receiver-observed runway flow when both have enough evidence. Evidence is
+labelled PUBLIC_STRONG, PUBLIC_PARTIAL, or RECEIVER_ONLY.

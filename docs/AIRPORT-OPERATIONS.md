@@ -124,3 +124,39 @@ distance ordering. The panel shows calibrated ETA uncertainty, median spacing
 between available ETAs, predicted-runway stability, and the existing observed
 V7 runway-flow evidence. The sequence is receiver/prediction intelligence, not
 ATC sequencing or FIDS.
+
+
+## Airport Live Board V8
+
+V8 adds Arrival Flow Intelligence as a pure projection over the existing V7
+arrival sequence, V6 flow-pressure evidence, and V7 runway-flow evidence. It
+adds no API route, EventSource, database table, persistence path, or refresh
+timer.
+
+The current product horizon is intentionally bounded to the active arrival
+sequence and therefore does not claim complete airport demand. Readiness-gated
+PUBLIC ETA values are grouped into 5-, 15-, and 30-minute demand windows.
+The 0–15 and 15–30 minute buckets are equal-length windows; their difference
+drives the conservative INCREASING / STABLE / DECREASING trend. Fewer than two
+usable ETA samples yields NO_DATA.
+
+Arrival pressure combines the bounded active-arrival count, arrivals expected
+inside 15 minutes, recent receiver-inferred holding/go-around evidence, and ETA
+compression. Compression is derived only from adjacent PUBLIC ETA spacing
+inside the 30-minute horizon and is reported as NORMAL, ELEVATED, HIGH, or
+UNKNOWN.
+
+Predicted runway load is grouped from PUBLIC runway advisories attached to
+arrivals with a PUBLIC ETA inside 30 minutes. Predicted-vs-observed runway
+alignment is shown only when both sides have enough evidence: the predicted
+dominant runway needs at least two samples and a 60 percent share, while the
+receiver-observed current runway flow needs at least three samples and a 60
+percent share. Otherwise the comparison is UNKNOWN.
+
+Evidence is explicit. PUBLIC_STRONG requires at least two PUBLIC ETA samples
+inside the V8 30-minute horizon and at least 75 percent coverage of the bounded
+active-arrival sequence. PUBLIC_PARTIAL covers thinner public prediction
+evidence; otherwise V8 reports RECEIVER_ONLY.
+
+V8 is not ATC sequencing, FIDS, airport capacity, slot demand, or a delay
+forecast.

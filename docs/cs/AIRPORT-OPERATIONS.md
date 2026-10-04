@@ -133,3 +133,36 @@ použijí pouze při této shodě destination.
 vzdálenosti. Panel ukazuje kalibrovanou nejistotu ETA, medián rozestupu
 dostupných ETA, stabilitu predikované dráhy a existující pozorovaný V7 runway
 flow. Jde o receiver/prediction intelligence, nikoli ATC pořadí nebo FIDS.
+
+
+## Airport Live Board V8
+
+V8 přidává Arrival Flow Intelligence jako čistou projekci nad existujícím V7
+arrival sequence, V6 flow-pressure evidencí a V7 runway-flow evidencí. Nepřidává
+žádnou API route, EventSource, databázovou tabulku, persistence path ani další
+refresh timer.
+
+Produktový horizont je záměrně omezený na aktivní arrival sequence, takže V8
+netvrdí, že představuje úplnou poptávku letiště. Readiness-gated PUBLIC ETA se
+seskupují do oken 5, 15 a 30 minut. Okna 0–15 a 15–30 minut mají stejnou délku;
+jejich rozdíl určuje konzervativní trend INCREASING / STABLE / DECREASING.
+Při méně než dvou použitelných ETA vzorcích je stav NO_DATA.
+
+Arrival pressure kombinuje omezený počet aktivních příletů, přílety očekávané
+do 15 minut, nedávné receiver-inferred holding/go-around evidence a ETA
+compression. Compression se odvozuje pouze ze sousedních PUBLIC ETA rozestupů
+uvnitř 30min horizontu a má stav NORMAL, ELEVATED, HIGH nebo UNKNOWN.
+
+Predicted runway load se seskupuje z PUBLIC runway advisories u příletů s PUBLIC
+ETA do 30 minut. Predicted-vs-observed runway alignment se zobrazuje jen tehdy,
+když mají obě strany dost evidence: dominantní predikovaná dráha potřebuje
+alespoň dva vzorky a 60% podíl, receiverově pozorovaný current runway flow
+alespoň tři vzorky a 60% podíl. Jinak je výsledek UNKNOWN.
+
+Evidence je explicitní. PUBLIC_STRONG vyžaduje alespoň dvě PUBLIC ETA uvnitř
+30min horizontu V8 a nejméně 75% pokrytí omezené aktivní arrival sequence.
+PUBLIC_PARTIAL označuje slabší veřejnou predikční evidenci; jinak V8 vrací
+RECEIVER_ONLY.
+
+V8 není ATC sequencing, FIDS, kapacita letiště, slot demand ani předpověď
+zpoždění.
