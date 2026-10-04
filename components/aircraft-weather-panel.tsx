@@ -98,6 +98,8 @@ export function AircraftWeatherPanel({ center, onClose, onMapDataChange, focused
   const [pireps, setPireps] = useState<PirepObservation[]>([]);
   const [pirepLoading, setPirepLoading] = useState(false);
   const [pirepUnavailable, setPirepUnavailable] = useState(false);
+  const pirepCenterLat = center?.lat ?? null;
+  const pirepCenterLon = center?.lon ?? null;
 
   const query = useMemo(() => {
     const range = altitudeRange(altitudeFilter);
@@ -139,7 +141,7 @@ export function AircraftWeatherPanel({ center, onClose, onMapDataChange, focused
   }, [loadObservations, loadProfile]);
 
   useEffect(() => {
-    if (!center) {
+    if (pirepCenterLat === null || pirepCenterLon === null) {
       setPireps([]);
       setPirepUnavailable(false);
       return;
@@ -150,8 +152,8 @@ export function AircraftWeatherPanel({ center, onClose, onMapDataChange, focused
       setPirepLoading(true);
       try {
         const params = new URLSearchParams({
-          lat: String(center.lat),
-          lon: String(center.lon),
+          lat: String(pirepCenterLat),
+          lon: String(pirepCenterLon),
           radiusNm: String(Math.max(20, Math.min(300, Math.round(radiusKm / 1.852)))),
           hours: "6",
         });
@@ -174,7 +176,7 @@ export function AircraftWeatherPanel({ center, onClose, onMapDataChange, focused
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [center?.lat, center?.lon, radiusKm]);
+  }, [pirepCenterLat, pirepCenterLon, radiusKm]);
 
   useEffect(() => {
     const representative = new Map<string, AircraftWeatherObservationView>();
