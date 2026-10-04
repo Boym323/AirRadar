@@ -956,11 +956,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             const alerts = visualPage.locator('[data-testid="airport-live-board-alerts"]');
             const runways = visualPage.locator('[data-testid="airport-live-board-runways"]');
             const weather = visualPage.locator('[data-testid="airport-live-board-weather"]');
+            const activeInbound = visualPage.locator('[data-testid="airport-live-board-active-inbound"]');
+            const activeOutbound = visualPage.locator('[data-testid="airport-live-board-active-outbound"]');
             await arrivals.getByText("CSA123", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
             await departures.getByText("AUA456", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
             await alerts.getByText("SWR88", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
             await runways.getByText("RWY 24", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
             await weather.getByText("VFR", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+            await activeInbound.waitFor({ state: "visible", timeout: 15_000 });
+            await activeOutbound.waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.locator('[data-testid="airport-v3-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockPredictiveReadiness) {
