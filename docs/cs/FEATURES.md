@@ -69,10 +69,11 @@ omezeným operations snapshotem; nevzniká per-aircraft fetch, druhý EventSourc
 změna schématu ani write path.
 
 V4 odvozuje vysvětlitelný aktivní journey stav z live směru a čerstvé korelace:
-`INBOUND`, `HOLDING`, `APPROACH`, `FINAL`, `GO_AROUND`,
+`INBOUND`, `HOLDING`, `APPROACH`, `FINAL`, `LANDED`, `GO_AROUND`,
 `INITIAL_CLIMB` nebo `OUTBOUND`. `FINAL` je záměrně konzervativní a
 vyžaduje korelovaný APPROACH, live vzdálenost <=8 km a klesání alespoň 150 fpm.
-Route enrichment je samostatný consistency signál `CONFIRMED`, `UNKNOWN`
+`LANDED` vyžaduje live on-ground stav a čerstvý korelovaný LANDING; nesouvisející
+ground traffic zůstává mimo aktivní lane. Route enrichment je samostatný consistency signál `CONFIRMED`, `UNKNOWN`
 nebo `CONFLICT`; route konflikt nikdy nepřepisuje pozorovaný journey stav.
 
 Úspěšná korelace dál zpřístupní Flight Story, movement, runway, confidence a čas
