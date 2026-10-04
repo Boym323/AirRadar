@@ -378,7 +378,12 @@ skutečně naladěnou frekvenci letadla.
   server cache.
 - `/api/airports` poskytuje PostgreSQL katalog letišť, pokud není prázdný,
   jinak bundled fallback šesti letišť. `GET /api/search` prohledává živá
-  letadla v RAM a katalog letišť s omezeným vstupem/výsledky.
+  letadla v RAM, katalog letišť a omezená data ATS bodů s omezeným
+  vstupem/výsledky. Command Search V1 je root-level klientský konzument stejného
+  endpointu s debounce 220 ms. Statické navigační příkazy API nevolají. Nedávné
+  výběry zůstávají omezenými browser-local záznamy v `localStorage` a přijímají
+  pouze interní AirRadar cesty; nevstupují do serverové persistence ani žádné
+  live datové větve.
 - Konfigurace Alerts & Fleets V1 se ukládá v PostgreSQL přes serverový
   repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence` a `AlertRule`).
   Zapnuté řádky se načítají do vyměnitelné cache v paměti; CRUD zápis nejprve
