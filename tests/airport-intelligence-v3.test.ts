@@ -145,6 +145,11 @@ describe("Airport Intelligence V3 composer", () => {
     ], 2);
     expect(live.inbound.map((item) => item.aircraft.icaoHex)).toEqual(["IN1", "IN2"]);
     expect(live.outbound.map((item) => item.aircraft.icaoHex)).toEqual(["OUT1"]);
+    const withGround = buildAirportActiveTrafficSnapshot([
+      ...live.inbound,
+      { aircraft: { icaoHex: "GROUND", onGround: true } as never, distanceKm: 1, bearingToAirport: 0, classification: "approaching" },
+    ]);
+    expect(withGround.inbound.some((item) => item.aircraft.icaoHex === "GROUND")).toBe(false);
   });
 
   it("correlates live airport traffic only with fresh identity-safe compatible movements", () => {
@@ -252,6 +257,49 @@ describe("Airport Intelligence V3 composer", () => {
     };
     const correlated = buildAirportCorrelatedTrafficSnapshot([observation], operations([approach]));
     expect(correlated.inbound[0].journey.stage).toBe("APPROACH");
+  });
+
+  it("derives LANDED only from a fresh correlated landing and keeps unrelated ground traffic out", () => {
+    const landing = { ...movement(86, "LANDING", "2026-10-04T08:08:00.000Z"), icaoHex: "ABC086", callsign: "LAND86" };
+    const observations = [
+      {
+        aircraft: {
+          icaoHex: "ABC086",
+          callsign: "LAND86",
+          lastSeen: "2026-10-04T08:10:00.000Z",
+          onGround: true,
+          enrichment: { route: { origin: "LKPR", destination: "LOWW" } },
+        } as never,
+        distanceKm: 1.2,
+        bearingToAirport: 0,
+        classification: "unknown" as const,
+      },
+      {
+        aircraft: {
+          icaoHex: "PARK01",
+          callsign: "PARK1",
+          lastSeen: "2026-10-04T08:10:00.000Z",
+          onGround: true,
+        } as never,
+        distanceKm: 1.5,
+        bearingToAirport: 0,
+        classification: "unknown" as const,
+      },
+    ];
+
+    const correlated = buildAirportCorrelatedTrafficSnapshot(observations, operations([landing]));
+    expect(correlated.inbound).toHaveLength(1);
+    expect(correlated.inbound[0]).toMatchObject({
+      aircraft: { icaoHex: "ABC086" },
+      movement: { flightId: 86, movement: "LANDING" },
+      journey: {
+        stage: "LANDED",
+        routeRelation: "CONFIRMED",
+        origin: "LKPR",
+        destination: "LOWW",
+      },
+    });
+    expect(correlated.outbound).toEqual([]);
   });
 
   it("preserves GO_AROUND journey state even when route metadata conflicts with the airport", () => {
