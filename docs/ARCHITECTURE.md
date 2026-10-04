@@ -358,7 +358,7 @@ correlates those active observations with the already-loaded bounded operations
 snapshot in memory. Matching is ICAO-first, callsign-safe, direction-compatible
 and limited to a 20-minute event window with a two-minute future clock-skew
 tolerance. A successful match exposes the existing Flight ID/Flight Story and
-movement/runway/confidence metadata; an uncertain match stays live-only. V4 adds a pure in-memory journey composer above this match: correlated movement and live geometry determine journey stage, while route origin/destination contributes only a separate consistency flag. No third API, second EventSource, migration, table or write path is introduced.
+movement/runway/confidence metadata; an uncertain match stays live-only. V4 adds a pure in-memory journey composer above this match: correlated movement and live geometry determine journey stage, while route origin/destination contributes only a separate consistency flag. LANDED is emitted only when a live aircraft still reports on-ground and the bounded operations snapshot supplies a fresh correlated LANDING; unrelated ground traffic is excluded from the airborne lanes. No third API, second EventSource, migration, table or write path is introduced.
 
 ### Aviation Weather
 
