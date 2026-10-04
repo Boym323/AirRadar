@@ -425,7 +425,7 @@ export function RadarOperationsCenter() {
               </section>
             ) : null}
 
-            {predictiveItems.length > 0 || predictiveOperations?.adminReadiness || predictiveStatus === "unavailable" ? (
+            {predictiveHexKey && (predictiveItems.length > 0 || predictiveOperations?.adminReadiness || predictiveStatus === "loading" || predictiveStatus === "unavailable") ? (
               <section className={styles.predictive} aria-labelledby="operations-predictive-title" data-testid="predictive-operations-center">
                 <div className={styles.sectionHeading}>
                   <span id="operations-predictive-title">{t.intelligence.operationsPredictiveTitle}</span>
@@ -442,6 +442,7 @@ export function RadarOperationsCenter() {
                     </StatusBadge>
                   </div>
                 ) : null}
+                {predictiveStatus === "loading" && !predictiveOperations ? <small className={styles.predictiveUnavailable}>{t.common.loading}</small> : null}
                 <div className={styles.predictiveList}>
                   {predictiveItems.map((item) => {
                     const eta = item.etaAdvisory ?? item.etaAdminPreview ?? null;
