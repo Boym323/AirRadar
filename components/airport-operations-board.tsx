@@ -361,11 +361,11 @@ export function AirportOperationsBoard({
         <span>{controller.predictiveLoading ? t.common.loading : controller.predictiveFailed ? t.airport.liveBoardV7PredictionUnavailable : t.airport.liveBoardV7PublicOnly}</span>
       </div>
       <MetricStrip className="airport-live-flow-metrics">
-        <MetricCard label={t.airport.liveBoardV7ActiveArrivals} value={String(arrivalSequence.items.length)} />
+        <MetricCard label={t.airport.liveBoardV7ActiveArrivals} value={String(arrivalSequence.totalCandidates)} />
         <MetricCard
           label={t.airport.liveBoardV7PublicPredictions}
-          value={`${arrivalSequence.publicPredictionCount} / ${arrivalSequence.items.length}`}
-          detail={arrivalSequence.predictionCoverage === null ? t.airport.liveBoardV7NoPrediction : `${Math.round(arrivalSequence.predictionCoverage * 100)} %`}
+          value={`${arrivalSequence.etaPredicted} / ${arrivalSequence.totalCandidates}`}
+          detail={arrivalSequence.predictionCoverage === null ? t.airport.liveBoardV7NoPrediction : `${Math.round(arrivalSequence.predictionCoverage * 100)} % ETA`}
         />
         <MetricCard
           label={t.airport.liveBoardV7MedianSpacing}
@@ -373,10 +373,10 @@ export function AirportOperationsBoard({
         />
         <MetricCard
           label={t.airport.liveBoardV7PredictedRunway}
-          value={arrivalSequence.predictedRunway.designator ? `RWY ${arrivalSequence.predictedRunway.designator}` : "—"}
-          detail={arrivalSequence.predictedRunway.share === null
+          value={arrivalSequence.runway.designator ? `RWY ${arrivalSequence.runway.designator}` : "—"}
+          detail={arrivalSequence.runway.share === null
             ? t.airport.liveBoardV7NoPrediction
-            : `${runwayConsistencyLabel(arrivalSequence.predictedRunway.consistency)} · ${Math.round(arrivalSequence.predictedRunway.share * 100)} % · n=${arrivalSequence.predictedRunway.samples}`}
+            : `${runwayConsistencyLabel(arrivalSequence.runway.consistency)} · ${Math.round(arrivalSequence.runway.share * 100)} % · n=${arrivalSequence.runway.samples}`}
         />
         <MetricCard
           label={t.airport.liveBoardV7ObservedRunway}
@@ -393,12 +393,12 @@ export function AirportOperationsBoard({
             <small>{formatDistance(item.distanceKm)}</small>
           </span>
           <span className="airport-live-sequence-eta">
-            <strong>{item.eta ? formatTime(item.eta) : "—"}</strong>
+            <strong>{item.etaAt ? formatTime(item.etaAt) : "—"}</strong>
             <small>{item.etaUncertaintyMinutes === null ? t.airport.liveBoardV7NoPublicEta : `± ${formatNumber(item.etaUncertaintyMinutes, 0)} min`}</small>
           </span>
           <span className="airport-live-sequence-runway">
-            <strong>{item.predictedRunway ? `RWY ${item.predictedRunway}` : "—"}</strong>
-            <small>{item.predictionConfidence ?? t.airport.liveBoardV7NoPrediction}</small>
+            <strong>{item.runway ? `RWY ${item.runway}` : "—"}</strong>
+            <small>{item.runwayConfidence ?? item.etaConfidence ?? t.airport.liveBoardV7NoPrediction}</small>
           </span>
         </li>)}
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardV7NoArrivals}</p>}
