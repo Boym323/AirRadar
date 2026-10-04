@@ -12,7 +12,7 @@ not yet been historically attributed.
 | Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
 | Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
-| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated active flight journeys. |
+| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated active flight journeys through LANDED. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
@@ -67,10 +67,12 @@ bounded operations snapshot; no per-aircraft fetch, second EventSource, schema
 change or write path is introduced.
 
 V4 derives an explainable active journey state from live direction plus fresh
-correlation: `INBOUND`, `HOLDING`, `APPROACH`, `FINAL`, `GO_AROUND`,
+correlation: `INBOUND`, `HOLDING`, `APPROACH`, `FINAL`, `LANDED`, `GO_AROUND`,
 `INITIAL_CLIMB` or `OUTBOUND`. `FINAL` is deliberately conservative and
 requires a correlated APPROACH, <=8 km live distance and descent of at least
-150 fpm. Route enrichment is a separate consistency signal:
+150 fpm. `LANDED` is equally strict: a live on-ground aircraft is shown only
+when a fresh correlated LANDING exists; unrelated ground traffic stays out of
+the active lanes. Route enrichment is a separate consistency signal:
 `CONFIRMED`, `UNKNOWN` or `CONFLICT`; a route conflict never rewrites the
 observed journey state.
 

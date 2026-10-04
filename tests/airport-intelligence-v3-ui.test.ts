@@ -48,6 +48,7 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(boardSource).toContain("aircraftFlightHref(observation.movement.flightId)");
     expect(boardSource).toContain("liveBoardLiveOnly");
     expect(boardSource).toContain("journeyLabel(observation.journey.stage)");
+    expect(boardSource).toContain("liveBoardJourneyLanded");
     expect(boardSource).toContain("routeRelationLabel(observation.journey.routeRelation)");
     expect(boardSource).toContain("liveBoardRouteConflict");
     expect(boardSource).toContain('variant="inferred"');

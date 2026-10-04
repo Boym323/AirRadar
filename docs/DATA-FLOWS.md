@@ -330,7 +330,7 @@ against `operations.recentMovements` in memory only. The join requires the same
 ICAO identity, non-conflicting callsigns, a movement compatible with inbound or
 outbound direction, and a timestamp within 20 minutes (plus two minutes of
 future clock-skew tolerance). The join can add an existing Flight Story link;
-it never triggers a per-aircraft history or intelligence request. V4 then derives journey stage from the correlated movement and current distance/vertical-rate guards; route origin/destination is evaluated independently as confirmed/unknown/conflict and cannot override that stage. Invalid/stale
+it never triggers a per-aircraft history or intelligence request. V4 then derives journey stage from the correlated movement and current distance/vertical-rate guards; route origin/destination is evaluated independently as confirmed/unknown/conflict and cannot override that stage. A live on-ground observation can enter the arrival lane only when the same bounded operations snapshot supplies a fresh correlated LANDING, producing LANDED; other on-ground observations are excluded. Invalid/stale
 positions remain excluded and an SSE update does not trigger database, weather
 or operations reads.
 

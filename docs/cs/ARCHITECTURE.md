@@ -344,7 +344,7 @@ pozorování koreluje v paměti s už načteným omezeným operations snapshotem
 Match je ICAO-first, callsign-safe, směrově kompatibilní a omezený na 20minutové
 okno eventu s dvouminutovou tolerancí budoucího clock skew. Úspěšný match
 zpřístupní existující Flight ID/Flight Story a metadata movement/runway/
-confidence; nejistý match zůstane pouze live. V4 nad tímto matchem přidává čistě in-memory journey composer: korelovaný movement a live geometrie určují journey stage, zatímco route origin/destination přidává pouze samostatný consistency flag. Nevzniká třetí API, druhý EventSource, migrace, tabulka ani write path.
+confidence; nejistý match zůstane pouze live. V4 nad tímto matchem přidává čistě in-memory journey composer: korelovaný movement a live geometrie určují journey stage, zatímco route origin/destination přidává pouze samostatný consistency flag. LANDED vznikne jen z čerstvého korelovaného LANDING, když live letadlo stále hlásí on-ground; obecný ground traffic je z airborne lane vyloučen. Nevzniká třetí API, druhý EventSource, migrace, tabulka ani write path.
 
 ### Aviation Weather
 

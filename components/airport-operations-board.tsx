@@ -64,6 +64,7 @@ function journeyLabel(stage: ReturnType<typeof buildAirportCorrelatedTrafficSnap
     HOLDING: t.airport.liveBoardJourneyHolding,
     APPROACH: t.airport.liveBoardJourneyApproach,
     FINAL: t.airport.liveBoardJourneyFinal,
+    LANDED: t.airport.liveBoardJourneyLanded,
     GO_AROUND: t.airport.liveBoardJourneyGoAround,
     INITIAL_CLIMB: t.airport.liveBoardJourneyInitialClimb,
     OUTBOUND: t.airport.liveBoardJourneyOutbound,

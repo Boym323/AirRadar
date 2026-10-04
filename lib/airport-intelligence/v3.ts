@@ -207,6 +207,7 @@ export type AirportActiveJourneyStage =
   | "HOLDING"
   | "APPROACH"
   | "FINAL"
+  | "LANDED"
   | "GO_AROUND"
   | "INITIAL_CLIMB"
   | "OUTBOUND";
@@ -245,15 +246,17 @@ function canonicalAirport(value: string | null | undefined): string | null {
 function routeRelation(
   observation: AirportTrafficObservation,
   airportIcao: string | null,
+  movement: AirportMovement | null,
 ): Pick<AirportActiveJourney, "routeRelation" | "origin" | "destination"> {
   const route = observation.aircraft.enrichment?.route;
   const origin = canonicalAirport(route?.origin);
   const destination = canonicalAirport(route?.destination);
   if (!airportIcao) return { routeRelation: "UNKNOWN", origin, destination };
 
-  const relevant = observation.classification === "approaching" ? destination
-    : observation.classification === "departing" ? origin
-      : null;
+  const relevant = movement?.movement === "LANDING" ? destination
+    : observation.classification === "approaching" ? destination
+      : observation.classification === "departing" ? origin
+        : null;
   return {
     routeRelation: relevant === null ? "UNKNOWN" : relevant === airportIcao ? "CONFIRMED" : "CONFLICT",
     origin,
@@ -265,6 +268,7 @@ function journeyStage(
   observation: AirportTrafficObservation,
   movement: AirportMovement | null,
 ): AirportActiveJourneyStage {
+  if (movement?.movement === "LANDING" && observation.aircraft.onGround) return "LANDED";
   if (observation.classification === "approaching") {
     if (movement?.movement === "HOLDING") return "HOLDING";
     if (movement?.movement === "APPROACH") {
@@ -291,7 +295,7 @@ function activeJourney(
 ): AirportActiveJourney {
   return {
     stage: journeyStage(observation, movement),
-    ...routeRelation(observation, airportIcao),
+    ...routeRelation(observation, airportIcao, movement),
   };
 }
 
@@ -301,9 +305,11 @@ function normalizedIdentity(value: string | null | undefined): string | null {
 }
 
 function compatibleMovement(
-  classification: AirportTrafficObservation["classification"],
+  observation: AirportTrafficObservation,
   movement: AirportMovement["movement"],
 ): boolean {
+  if (observation.aircraft.onGround && movement === "LANDING") return true;
+  const classification = observation.classification;
   if (classification === "approaching") {
     return movement === "APPROACH" || movement === "HOLDING";
   }
@@ -324,7 +330,7 @@ function correlatedMovement(
 
   const candidates = operations.recentMovements
     .filter((movement) => {
-      if (!compatibleMovement(observation.classification, movement.movement)) return false;
+      if (!compatibleMovement(observation, movement.movement)) return false;
       if (movement.icaoHex.trim().toUpperCase() !== observation.aircraft.icaoHex.trim().toUpperCase()) return false;
       const movementCallsign = normalizedIdentity(movement.callsign);
       if (liveCallsign && movementCallsign && liveCallsign !== movementCallsign) return false;
@@ -365,8 +371,27 @@ export function buildAirportCorrelatedTrafficSnapshot(
       };
     });
 
+  const inbound = correlate(active.inbound);
+  const inboundHexes = new Set(inbound.map((item) => item.aircraft.icaoHex.toUpperCase()));
+  const landed = observations
+    .filter((observation) => observation.aircraft.onGround && !inboundHexes.has(observation.aircraft.icaoHex.toUpperCase()))
+    .flatMap((observation) => {
+      const match = correlatedMovement(observation, operations);
+      if (match?.movement.movement !== "LANDING") return [];
+      return [{
+        ...observation,
+        movement: match.movement,
+        movementAgeSeconds: match.ageSeconds,
+        journey: activeJourney(observation, match.movement, airportIcao),
+      } satisfies AirportCorrelatedTrafficObservation];
+    });
+
   return {
-    inbound: correlate(active.inbound),
+    inbound: [...inbound, ...landed]
+      .sort((left, right) =>
+        left.distanceKm - right.distanceKm
+        || left.aircraft.icaoHex.localeCompare(right.aircraft.icaoHex))
+      .slice(0, Math.max(1, limit)),
     outbound: correlate(active.outbound),
   };
 }
@@ -384,7 +409,7 @@ export function buildAirportActiveTrafficSnapshot(
       || left.aircraft.icaoHex.localeCompare(right.aircraft.icaoHex));
 
   return {
-    inbound: ordered.filter((item) => item.classification === "approaching").slice(0, bounded),
-    outbound: ordered.filter((item) => item.classification === "departing").slice(0, bounded),
+    inbound: ordered.filter((item) => !item.aircraft.onGround && item.classification === "approaching").slice(0, bounded),
+    outbound: ordered.filter((item) => !item.aircraft.onGround && item.classification === "departing").slice(0, bounded),
   };
 }
