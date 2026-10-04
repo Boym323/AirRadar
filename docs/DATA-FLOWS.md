@@ -442,6 +442,17 @@ history, local daily statistics, alerts, metadata enrichment, ATC resolution,
 or the local receiver health state. Public UI/API output includes ADSB.lol and
 ODbL 1.0 attribution.
 
+A successful local or network snapshot also passes through Continuity Guard V2.
+The guard compares aircraft count with the preceding established membership
+baseline. By default, a loss of at least 50% from a baseline of at least 20
+aircraft defers destructive stale pruning for one cycle. A second similarly low
+snapshot confirms the collapse; recovery cancels the pending guard. Provider
+errors remain governed by the existing stale/retry path and can seed the next
+successful comparison from retained local state. Process-local continuity
+diagnostics are exposed through system status under `localAdsb.continuity`;
+they include omission/recovery, stale-expiry, quick-reappearance, source-
+failover, and mass-drop counters and are not persisted.
+
 ## ATC flow
 
 `GET /api/atc/sectors` returns the active sector/transmitter dataset. In demo
