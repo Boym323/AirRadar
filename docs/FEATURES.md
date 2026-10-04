@@ -342,3 +342,14 @@ inventing facts. The map, playback cursor, profile cursor, selected event and
 historical Map Context continue to share the same timestamp. Partial data
 remains usable and airport route metadata remains context rather than proof of
 the flown path.
+
+
+### Airport Live Board V7 — Arrival Sequence
+
+The V7 airport board also provides a six-aircraft active-arrival sequence. It
+reuses the existing aircraft stream and airport 30-second refresh cycle, makes
+one bounded predictive batch request, consumes PUBLIC readiness-gated
+ETA/runway advisories only, and fails soft to receiver-derived ordering when
+predictions are unavailable. Route conflicts are excluded and UNKNOWN routes
+need a matching PUBLIC destination. The UI shows ETA uncertainty, median ETA
+spacing, predicted-runway stability and observed runway-flow context.
