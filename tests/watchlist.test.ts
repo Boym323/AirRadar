@@ -68,6 +68,42 @@ describe("server watchlist management", () => {
     expect(await listWatchlistRules(configPath)).toEqual([]);
   });
 
+  it("persists predictive ETA and runway-change options", async () => {
+    const created = await createWatchlistRule({
+      id: "predictive",
+      name: "Predictive",
+      type: "icaoHex",
+      value: "ABC123",
+      etaThresholdMinutes: 15,
+      etaDestinationIcao: "lktb",
+      notifyRunwayChange: true,
+    }, configPath);
+    expect(created).toMatchObject({
+      etaThresholdMinutes: 15,
+      etaDestinationIcao: "LKTB",
+      notifyRunwayChange: true,
+    });
+    const source = JSON.parse(await readFile(configPath, "utf8")) as Array<Record<string, unknown>>;
+    expect(source[0]).toMatchObject({
+      etaThresholdMinutes: 15,
+      etaDestinationIcao: "LKTB",
+      notifyRunwayChange: true,
+    });
+    const response = toPublicWatchlistResponse([created], snapshot());
+    expect(response.rules[0]).toMatchObject({
+      etaThresholdMinutes: 15,
+      etaDestinationIcao: "LKTB",
+      notifyRunwayChange: true,
+    });
+  });
+
+  it("rejects invalid predictive watchlist options", async () => {
+    await expect(createWatchlistRule({ name: "bad eta", type: "callsign", value: "TEST", etaThresholdMinutes: 0 }, configPath)).rejects.toMatchObject({ code: "invalid_eta_threshold" });
+    await expect(createWatchlistRule({ name: "bad eta", type: "callsign", value: "TEST", etaThresholdMinutes: 121 }, configPath)).rejects.toMatchObject({ code: "invalid_eta_threshold" });
+    await expect(createWatchlistRule({ name: "bad destination", type: "callsign", value: "TEST", etaThresholdMinutes: 15, etaDestinationIcao: "BRQ" }, configPath)).rejects.toMatchObject({ code: "invalid_destination" });
+    await expect(createWatchlistRule({ name: "destination only", type: "callsign", value: "TEST", etaDestinationIcao: "LKTB" }, configPath)).rejects.toMatchObject({ code: "invalid_destination" });
+  });
+
   it("rejects invalid ICAO, distance and cooldown values", async () => {
     await expect(createWatchlistRule({ name: "bad", type: "icaoHex", value: "not-hex" }, configPath)).rejects.toMatchObject({ code: "invalid_icao" });
     await expect(createWatchlistRule({ name: "bad", type: "callsign", value: "TEST", maxDistanceKm: 0 }, configPath)).rejects.toMatchObject({ code: "invalid_distance" });
@@ -120,9 +156,14 @@ describe("server watchlist management", () => {
     expect(aircraftWatchlistHref("ABC123", "OK-TEST")).toBe("/watchlist?icaoHex=ABC123&registration=OK-TEST");
   });
 
-  it("retains strict config validation for empty rules and positive distances", () => {
-    const parsed = parseAlertRules([{ id: "empty", enabled: true, type: "callsign", value: "" }, { id: "zero", enabled: true, type: "callsign", value: "X", maxDistanceKm: 0 }]);
-    expect(parsed.rules).toEqual([]);
+  it("retains strict config validation for empty rules, distances and predictive settings", () => {
+    const parsed = parseAlertRules([
+      { id: "empty", enabled: true, type: "callsign", value: "" },
+      { id: "zero", enabled: true, type: "callsign", value: "X", maxDistanceKm: 0 },
+      { id: "eta", enabled: true, type: "callsign", value: "Y", etaThresholdMinutes: 15, etaDestinationIcao: "lktb", notifyRunwayChange: true },
+    ]);
+    expect(parsed.rules).toHaveLength(1);
+    expect(parsed.rules[0]).toMatchObject({ id: "eta", etaThresholdMinutes: 15, etaDestinationIcao: "LKTB", notifyRunwayChange: true });
     expect(parsed.errors.join(" ")).toContain("non-empty");
     expect(parsed.errors.join(" ")).toContain("positive");
   });

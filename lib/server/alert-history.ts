@@ -21,6 +21,8 @@ export type AlertHistoryEventType =
   | "intelligence_holding"
   | "intelligence_diversion"
   | "intelligence_top_of_descent"
+  | "predictive_eta"
+  | "predictive_runway_change"
   | "data_stale"
   | "receiver_degraded"
   | "weather_proximity";
@@ -45,6 +47,8 @@ export type AlertHistoryReason =
   | "holding"
   | "diversion"
   | "top_of_descent"
+  | "eta_threshold"
+  | "runway_change"
   | "data_stale"
   | "receiver_degraded"
   | "weather_proximity";
@@ -240,7 +244,7 @@ function matchesRuleIds(entry: AlertHistoryEntry, ruleIds: readonly string[] | u
 
 function matchesFilter(entry: AlertHistoryEntry, filter: AlertHistoryFilter): boolean {
   if (filter === "all") return true;
-  if (filter === "watchlist") return entry.type === "watchlist" || entry.type === "aircraft_appeared" || entry.type === "entered_radius";
+  if (filter === "watchlist") return entry.type === "watchlist" || entry.type === "aircraft_appeared" || entry.type === "entered_radius" || entry.type === "predictive_eta" || entry.type === "predictive_runway_change";
   if (filter === "emergency") return entry.type === "emergency" || entry.type === "emergency_7500" || entry.type === "emergency_7600" || entry.type === "emergency_7700";
   if (filter === "intelligence") return entry.type.startsWith("intelligence_");
   return entry.type === "new_aircraft" || entry.type === "reception_record";
