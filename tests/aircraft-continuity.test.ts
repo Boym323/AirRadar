@@ -15,6 +15,18 @@ describe("aircraft continuity guard", () => {
 
     const first = guard.evaluateMassDrop("local", baseline, low, 1_000, config);
     expect(first).toMatchObject({ suspicious: true, deferPrune: true, confirmed: false, baselineCount: 80, currentCount: 8 });
+    expect(guard.diagnostics({
+      localObserved: 8,
+      localRetained: 80,
+      networkObserved: 0,
+      networkRetained: 0,
+      pendingAffinity: 0,
+    }).local).toMatchObject({
+      massDropPending: true,
+      pendingMassDropBaseline: 80,
+      pendingMassDropFirstObserved: 8,
+      pendingMassDropSince: new Date(1_000).toISOString(),
+    });
 
     const second = guard.evaluateMassDrop("local", low, low, 2_000, config);
     expect(second).toMatchObject({ suspicious: true, deferPrune: false, confirmed: true, baselineCount: 80, currentCount: 8 });
@@ -58,10 +70,11 @@ describe("aircraft continuity guard", () => {
     });
   });
 
-  it("does not guard small baselines or ordinary churn", () => {
+  it("does not guard small baselines, ordinary churn, or a disabled guard", () => {
     const guard = new AircraftContinuityGuard();
     expect(guard.evaluateMassDrop("local", hexes(10), hexes(1), 1_000, config).deferPrune).toBe(false);
     expect(guard.evaluateMassDrop("local", hexes(80), hexes(50), 2_000, config).deferPrune).toBe(false);
+    expect(guard.evaluateMassDrop("network", hexes(80), hexes(1), 3_000, { ...config, enabled: false }).deferPrune).toBe(false);
   });
 
   it("tracks omission recovery, stale expiration, quick reappearance, and source failover", () => {
