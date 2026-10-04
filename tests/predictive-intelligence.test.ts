@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluatePredictiveIntelligence } from "@/lib/predictive-intelligence/engine";
 import { replayPredictiveIntelligence } from "@/lib/predictive-intelligence/replay";
-import type { PredictionSample } from "@/lib/predictive-intelligence/types";
+import { RUNWAY_CHANGE_EVENT_WINDOW_MS, type PredictionRunway, type PredictionSample, type PredictiveFlightState } from "@/lib/predictive-intelligence/types";
 import { normalizeAircraft } from "@/lib/aircraft/normalize";
 import { buildPredictiveShadowInput, isAirportProximity, predictivePhase } from "@/lib/server/aircraft-state";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
@@ -62,6 +62,95 @@ describe("Predictive Intelligence V1", () => {
     expect(predictivePhase(aircraft, destination)).toBe("APPROACH");
     aircraft.enrichment = { route: { callsign: "TEST", airline: null, airlineIcao: null, airlineIata: null, origin: null, destination: "LKPR", originAirport: null, destinationAirport: destination } };
     expect(isAirportProximity(aircraft)).toBe(true);
+  });
+
+  it("retains real runway change provenance for the bounded event window", () => {
+    const now = Date.parse("2026-01-01T12:00:00Z");
+    const runwayGeometry: PredictionRunway = {
+      leIdent: "06",
+      heIdent: "24",
+      leLatitude: 50.10,
+      leLongitude: 14.22,
+      leHeadingDegT: 60,
+      heLatitude: 50.10,
+      heLongitude: 14.30,
+      heHeadingDegT: 240,
+      closed: false,
+    };
+    const previous: PredictiveFlightState = {
+      modelVersion: "predictive-intelligence-v1",
+      evaluatedAt: now - 30_000,
+      eta: { estimatedArrivalAt: null, confidence: "UNKNOWN", evidence: [] },
+      runway: { runway: "06", alternative: "24", changedFrom: null, changedAt: null, confidence: "MEDIUM", changed: false, evidence: [] },
+      trajectory: { state: "NORMAL", confidence: "MEDIUM", evidence: [] },
+    };
+    const currentSample = sample(now, 50.10, 14.18, 240);
+    const first = evaluatePredictiveIntelligence({
+      flightState: { aircraftIcao: "ABC123", timestamp: now, phase: "APPROACH", sample: currentSample, destination: "LKPR", destinationStatus: "KNOWN" },
+      recentSamples: [sample(now - 60_000, 50.10, 14.10, 240), currentSample],
+      destinationAirport: airport,
+      runways: [runwayGeometry],
+      airportOperations: {
+        runwayUsage: [
+          { designator: "24", arrivals: 10, total: 10 },
+          { designator: "06", arrivals: 0, total: 10 },
+        ],
+      },
+      previousPrediction: previous,
+      now,
+    }).prediction;
+
+    expect(first.runway).toMatchObject({
+      runway: "24",
+      changed: true,
+      changedFrom: "06",
+      changedAt: now,
+    });
+
+    const carriedAt = now + 30_000;
+    const carriedSample = sample(carriedAt, 50.10, 14.20, 240);
+    const carried = evaluatePredictiveIntelligence({
+      flightState: { aircraftIcao: "ABC123", timestamp: carriedAt, phase: "APPROACH", sample: carriedSample, destination: "LKPR", destinationStatus: "KNOWN" },
+      recentSamples: [sample(carriedAt - 60_000, 50.10, 14.12, 240), carriedSample],
+      destinationAirport: airport,
+      runways: [runwayGeometry],
+      airportOperations: {
+        runwayUsage: [
+          { designator: "24", arrivals: 10, total: 10 },
+          { designator: "06", arrivals: 0, total: 10 },
+        ],
+      },
+      previousPrediction: first,
+      now: carriedAt,
+    }).prediction;
+
+    expect(carried.runway).toMatchObject({
+      runway: "24",
+      changed: true,
+      changedFrom: "06",
+      changedAt: now,
+    });
+
+    const expiredAt = now + RUNWAY_CHANGE_EVENT_WINDOW_MS + 1;
+    const expiredSample = sample(expiredAt, 50.10, 14.21, 240);
+    const expired = evaluatePredictiveIntelligence({
+      flightState: { aircraftIcao: "ABC123", timestamp: expiredAt, phase: "APPROACH", sample: expiredSample, destination: "LKPR", destinationStatus: "KNOWN" },
+      recentSamples: [sample(expiredAt - 60_000, 50.10, 14.13, 240), expiredSample],
+      destinationAirport: airport,
+      runways: [runwayGeometry],
+      airportOperations: {
+        runwayUsage: [
+          { designator: "24", arrivals: 10, total: 10 },
+          { designator: "06", arrivals: 0, total: 10 },
+        ],
+      },
+      previousPrediction: carried,
+      now: expiredAt,
+    }).prediction;
+
+    expect(expired.runway.changed).toBe(false);
+    expect(expired.runway.changedFrom).toBeNull();
+    expect(expired.runway.changedAt).toBeNull();
   });
 
   it("passes cached runway geometry through the live predictive input", () => {
