@@ -282,6 +282,70 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         },
         comparison: null,
       };
+      const airportOperationsFixture = {
+        airport: { icao: "LKPR", name: "Václav Havel Airport Prague" },
+        generatedAt: "2026-10-04T08:00:00.000Z",
+        window: "24h",
+        provenance: "INFERRED",
+        complete: true,
+        truncated: false,
+        activity: "BUSY",
+        likelyRunway: { designator: "24", confidence: "high", sampleCount: 8 },
+        arrivals: [
+          { flightId: 7001, icaoHex: "49D001", callsign: "CSA123", registration: "OK-TST", movement: "LANDING", confidence: "high", airport: "LKPR", runway: { designator: "24", status: "probable", confidence: "high" }, observedAt: "2026-10-04T07:42:00.000Z", evidence: ["fixture"] },
+          { flightId: 7002, icaoHex: "4B1801", callsign: "SWR88", registration: "HB-TST", movement: "GO_AROUND", confidence: "medium", airport: "LKPR", runway: { designator: "24", status: "probable", confidence: "medium" }, observedAt: "2026-10-04T07:35:00.000Z", evidence: ["fixture"] },
+        ],
+        departures: [
+          { flightId: 7003, icaoHex: "440001", callsign: "AUA456", registration: "OE-TST", movement: "TAKEOFF", confidence: "high", airport: "LKPR", runway: { designator: "24", status: "probable", confidence: "high" }, observedAt: "2026-10-04T07:30:00.000Z", evidence: ["fixture"] },
+        ],
+        approaches: [],
+        recentMovements: [
+          { flightId: 7001, icaoHex: "49D001", callsign: "CSA123", registration: "OK-TST", movement: "LANDING", confidence: "high", airport: "LKPR", runway: { designator: "24", status: "probable", confidence: "high" }, observedAt: "2026-10-04T07:42:00.000Z", evidence: ["fixture"] },
+          { flightId: 7002, icaoHex: "4B1801", callsign: "SWR88", registration: "HB-TST", movement: "GO_AROUND", confidence: "medium", airport: "LKPR", runway: { designator: "24", status: "probable", confidence: "medium" }, observedAt: "2026-10-04T07:35:00.000Z", evidence: ["fixture"] },
+          { flightId: 7003, icaoHex: "440001", callsign: "AUA456", registration: "OE-TST", movement: "TAKEOFF", confidence: "high", airport: "LKPR", runway: { designator: "24", status: "probable", confidence: "high" }, observedAt: "2026-10-04T07:30:00.000Z", evidence: ["fixture"] },
+          { flightId: 7004, icaoHex: "3C0001", callsign: "DLH789", registration: "D-TST", movement: "HOLDING", confidence: "medium", airport: "LKPR", runway: null, observedAt: "2026-10-04T07:20:00.000Z", evidence: ["fixture"] },
+        ],
+        runwayUsage: [
+          { designator: "24", arrivals: 6, departures: 2, total: 8 },
+          { designator: "06", arrivals: 1, departures: 1, total: 2 },
+        ],
+        wind: [],
+        goArounds: [
+          { flightId: 7002, icaoHex: "4B1801", callsign: "SWR88", registration: "HB-TST", movement: "GO_AROUND", confidence: "medium", airport: "LKPR", runway: { designator: "24", status: "probable", confidence: "medium" }, observedAt: "2026-10-04T07:35:00.000Z", evidence: ["fixture"] },
+        ],
+        holding: [
+          { flightId: 7004, icaoHex: "3C0001", callsign: "DLH789", registration: "D-TST", movement: "HOLDING", confidence: "medium", airport: "LKPR", runway: null, observedAt: "2026-10-04T07:20:00.000Z", evidence: ["fixture"] },
+        ],
+        diagnostics: { flightsExamined: 18, positionsExamined: 420, queryDurationMs: 9 },
+      };
+      const airportWeatherFixture = {
+        metar: {
+          observedAt: "2026-10-04T07:30:00.000Z",
+          observationTime: "2026-10-04T07:30:00.000Z",
+          windDirectionDeg: 240,
+          windSpeedKt: 12,
+          windGustKt: 18,
+          windVariable: false,
+          windCalm: false,
+          flightCategory: "VFR",
+          visibilityMeters: 10000,
+          visibilityGreaterThan: true,
+          visibilityLessThan: false,
+          temperatureC: 16,
+          dewpointC: 8,
+          altimeterHpa: 1018,
+          cavok: false,
+          clouds: [],
+          weather: [],
+          rawText: "LKPR 040730Z 24012G18KT 9999 FEW030 16/08 Q1018",
+        },
+        taf: null,
+        fetchedAt: "2026-10-04T07:31:00.000Z",
+        stale: false,
+        enabled: true,
+        available: true,
+        source: "browser fixture",
+      };
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
@@ -289,12 +353,14 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
         { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "daily-intelligence-desktop", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockDailyRecap: true },
+        { name: "airport-intelligence-v3-desktop", path: "/airports/LKPR", selector: '[data-testid="airport-intelligence-v3"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockAirportV3: true },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
         { name: "daily-intelligence-mobile", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 390, height: 844 }, fullPage: true, mockDailyRecap: true },
+        { name: "airport-intelligence-v3-mobile", path: "/airports/LKPR", selector: '[data-testid="airport-intelligence-v3"]', viewport: { width: 390, height: 844 }, fullPage: true, mockAirportV3: true },
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "aircraft-detail-tablet", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 768, height: 1024 }, fullPage: false },
         { name: "aircraft-detail-mobile", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 390, height: 844 }, fullPage: false },
@@ -310,11 +376,23 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(dailyRecapFixture) });
             });
           }
+          if (target.mockAirportV3) {
+            await visualPage.route("**/api/airports/LKPR/operations?period=24h", async (route) => {
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(airportOperationsFixture) });
+            });
+            await visualPage.route("**/api/weather/airport/LKPR", async (route) => {
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(airportWeatherFixture) });
+            });
+          }
           const response = await visualPage.goto(`${baseUrl}${target.path}`, { waitUntil: "domcontentloaded" });
           if (!response?.ok()) throw new Error(`Visual smoke ${target.path} returned HTTP ${response?.status()}`);
           await visualPage.locator(target.selector).waitFor({ state: "visible", timeout: 15_000 });
           if (target.mockDailyRecap) {
             await visualPage.locator('[data-testid="daily-intelligence-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.mockAirportV3) {
+            await visualPage.locator('[data-testid="airport-v3-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("CSA123").first().waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.selectAircraft) {
             const trafficTrigger = visualPage.locator('[data-testid="traffic-trigger"]');
