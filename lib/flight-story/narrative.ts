@@ -179,7 +179,7 @@ export function buildFlightStoryV2Summary(detail: HistoryFlightDetail): FlightSt
 export function buildFlightStoryNarrative(detail: HistoryFlightDetail): FlightStoryNarrativeItem[] {
   const startAt = flightStart(detail);
   const endAt = flightEnd(detail);
-  const items: FlightStoryNarrativeItem[] = [{
+  const firstSeen: FlightStoryNarrativeItem = {
     key: "boundary:first-seen",
     kind: "boundary",
     boundary: "first_seen",
@@ -192,11 +192,10 @@ export function buildFlightStoryNarrative(detail: HistoryFlightDetail): FlightSt
     runway: null,
     sectorId: null,
     telemetry: nearestTelemetry(detail.positions, startAt, null),
-  }];
-
-  for (const event of detail.events) {
-    if (!Number.isFinite(Date.parse(event.occurredAt))) continue;
-    items.push({
+  };
+  const eventItems = detail.events
+    .filter((event) => Number.isFinite(Date.parse(event.occurredAt)))
+    .map<FlightStoryNarrativeItem>((event) => ({
       key: `event:${event.id}`,
       kind: "event",
       boundary: null,
@@ -209,10 +208,11 @@ export function buildFlightStoryNarrative(detail: HistoryFlightDetail): FlightSt
       runway: event.runway?.trim().toUpperCase() || null,
       sectorId: event.sectorId?.trim() || null,
       telemetry: nearestTelemetry(detail.positions, event.occurredAt, event.altitude),
-    });
-  }
-
-  items.push({
+    }))
+    .sort((left, right) =>
+      Date.parse(left.occurredAt) - Date.parse(right.occurredAt)
+      || left.key.localeCompare(right.key));
+  const lastSeen: FlightStoryNarrativeItem = {
     key: "boundary:last-seen",
     kind: "boundary",
     boundary: "last_seen",
@@ -225,15 +225,7 @@ export function buildFlightStoryNarrative(detail: HistoryFlightDetail): FlightSt
     runway: null,
     sectorId: null,
     telemetry: nearestTelemetry(detail.positions, endAt, null),
-  });
+  };
 
-  return items.sort((left, right) => {
-    const time = Date.parse(left.occurredAt) - Date.parse(right.occurredAt);
-    if (time !== 0) return time;
-    if (left.boundary === "first_seen") return -1;
-    if (right.boundary === "first_seen") return 1;
-    if (left.boundary === "last_seen") return 1;
-    if (right.boundary === "last_seen") return -1;
-    return left.key.localeCompare(right.key);
-  });
+  return [firstSeen, ...eventItems, lastSeen];
 }
