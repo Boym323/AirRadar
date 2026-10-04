@@ -117,6 +117,15 @@ coverage and freshness state. Anonymous callers never receive this preview.
 The aircraft detail still performs one prediction fetch and creates no second
 stream or polling loop.
 
+Predictive Runway Change Advisory V1 adds `runwayChangeAdvisory` and, for a
+valid admin session, `runwayChangeAdminPreview` to that same response. A
+transition stores `changedFrom` and `changedAt` in the bounded RAM prediction
+state. Subsequent evaluations may carry that event for up to five minutes while
+the predicted runway remains the same; prospective RUNWAY_CHANGE observations
+are still emitted only on a real previous-runway != current-runway transition.
+Public output also requires the current prediction snapshot to remain within
+the 45-second freshness boundary.
+
 Predictive Operations Center V1 reuses the same advisory builders through
 `GET /api/operations/predictive?hexes=`. The caller provides at most six
 already-relevant ICAO identifiers. The server normalizes and deduplicates the
