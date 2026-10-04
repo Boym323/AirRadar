@@ -660,12 +660,13 @@ async function main() {
     const reportJson = JSON.stringify(report, null, 2) + "\n";
     const reportMarkdown = markdownReport(report) + "\n";
     assertBoundedPerformanceArtifact(reportJson, reportMarkdown);
-    // codeql[js/http-to-file-access]: this benchmark intentionally persists
-    // bounded diagnostics from the local synthetic AirRadar test server to a
-    // fixed artifacts/ path; the files are CI evidence and are never executed.
+    // This benchmark intentionally persists bounded diagnostics from the local
+    // synthetic AirRadar test server to a fixed artifacts/ path. The files are
+    // CI evidence, are never executed, and are size-limited above.
+    // codeql[js/http-to-file-access]
     writeFileSync(`artifacts/${reportStem}.json`, reportJson);
-    // codeql[js/http-to-file-access]: same bounded, non-executable CI artifact
-    // contract as the JSON report above.
+    // Same bounded, non-executable CI artifact contract as the JSON report.
+    // codeql[js/http-to-file-access]
     writeFileSync(`artifacts/${reportStem}.md`, reportMarkdown);
     console.log(`[radar-perf] report=artifacts/${reportStem}.json`);
     console.log(`[radar-perf] summary=artifacts/${reportStem}.md`);
