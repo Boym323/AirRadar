@@ -11,7 +11,7 @@ import {
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
 } from "@/lib/airport-intelligence/v3";
-import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/live-board-v7";
+import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 import type { AirportMovement } from "@/lib/server/airport-movements";
@@ -218,11 +218,7 @@ export function AirportOperationsBoard({
   const activeTraffic = buildAirportCorrelatedTrafficSnapshot(liveTraffic.observations, operations);
   const flow = buildAirportJourneyFlowSummary(activeTraffic);
   const pressure = buildAirportFlowPressureSummary(flow, operations);
-  const arrivalSequence = buildAirportArrivalSequence({
-    airportIcao: airport.icaoCode,
-    traffic: activeTraffic,
-    predictive: controller.predictive,
-  });
+  const arrivalSequence = buildAirportArrivalSequence(activeTraffic, controller.predictive, airport.icaoCode);
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
   const metar = weather?.metar ?? null;
@@ -361,16 +357,20 @@ export function AirportOperationsBoard({
         <span>{controller.predictiveLoading ? t.common.loading : controller.predictiveFailed ? t.airport.liveBoardV7PredictionUnavailable : t.airport.liveBoardV7PublicOnly}</span>
       </div>
       <MetricStrip className="airport-live-flow-metrics">
-        <MetricCard label={t.airport.liveBoardV7ActiveArrivals} value={String(arrivalSequence.items.length)} />
-        <MetricCard label={t.airport.liveBoardV7PublicPredictions} value={String(arrivalSequence.publicPredictionCount)} />
+        <MetricCard label={t.airport.liveBoardV7ActiveArrivals} value={String(arrivalSequence.totalCandidates)} />
+        <MetricCard
+          label={t.airport.liveBoardV7PublicPredictions}
+          value={`${arrivalSequence.etaPredicted} / ${arrivalSequence.totalCandidates}`}
+          detail={arrivalSequence.predictionCoverage === null ? t.airport.liveBoardV7NoPrediction : `${Math.round(arrivalSequence.predictionCoverage * 100)} % ETA`}
+        />
         <MetricCard
           label={t.airport.liveBoardV7MedianSpacing}
           value={arrivalSequence.medianSpacingMinutes === null ? "—" : `${formatNumber(arrivalSequence.medianSpacingMinutes, 1)} min`}
         />
         <MetricCard
           label={t.airport.liveBoardV7PredictedRunway}
-          value={arrivalSequence.predictedRunway.designator ? `RWY ${arrivalSequence.predictedRunway.designator}` : "—"}
-          detail={arrivalSequence.predictedRunway.share === null ? t.airport.liveBoardV7NoPrediction : `${Math.round(arrivalSequence.predictedRunway.share * 100)} % · n=${arrivalSequence.predictedRunway.samples}`}
+          value={arrivalSequence.runway.designator ? `RWY ${arrivalSequence.runway.designator}` : "—"}
+          detail={arrivalSequence.runway.share === null ? t.airport.liveBoardV7NoPrediction : `${Math.round(arrivalSequence.runway.share * 100)} % · n=${arrivalSequence.runway.samples}`}
         />
         <MetricCard
           label={t.airport.liveBoardV7ObservedRunway}
@@ -387,12 +387,12 @@ export function AirportOperationsBoard({
             <small>{formatDistance(item.distanceKm)}</small>
           </span>
           <span className="airport-live-sequence-eta">
-            <strong>{item.eta ? formatTime(item.eta) : "—"}</strong>
+            <strong>{item.etaAt ? formatTime(item.etaAt) : "—"}</strong>
             <small>{item.etaUncertaintyMinutes === null ? t.airport.liveBoardV7NoPublicEta : `± ${formatNumber(item.etaUncertaintyMinutes, 0)} min`}</small>
           </span>
           <span className="airport-live-sequence-runway">
-            <strong>{item.predictedRunway ? `RWY ${item.predictedRunway}` : "—"}</strong>
-            <small>{item.predictionConfidence ?? t.airport.liveBoardV7NoPrediction}</small>
+            <strong>{item.runway ? `RWY ${item.runway}` : "—"}</strong>
+            <small>{item.runwayConfidence ?? item.etaConfidence ?? t.airport.liveBoardV7NoPrediction}</small>
           </span>
         </li>)}
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardV7NoArrivals}</p>}
