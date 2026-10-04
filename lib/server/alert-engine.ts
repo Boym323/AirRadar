@@ -206,8 +206,7 @@ export class AlertEngine {
         }
       }
 
-      if (!isEmergencyAlertEnabled()) continue;
-
+      const emergencyAlertsEnabled = isEmergencyAlertEnabled();
       const currentSquawk = emergencySquawk(aircraft);
       const priorSquawk = emergencySquawk(prior);
       if (startupBaseline && prior === undefined) continue;
@@ -215,25 +214,27 @@ export class AlertEngine {
         this.dedupCache.delete(`squawk:${priorSquawk}:${aircraft.icaoHex}`);
         stateDirty = true;
       }
-      if (currentSquawk && currentSquawk !== priorSquawk) {
+      if (currentSquawk && currentSquawk !== priorSquawk && (emergencyAlertsEnabled || matchedRules.length > 0)) {
         const key = `squawk:${currentSquawk}:${aircraft.icaoHex}`;
         if (this.isAvailable(key, now)) {
           const event = emergencyEvent(currentSquawk);
           const accepted = this.enqueue({
             aircraft,
-            matchedRules: [],
+            matchedRules,
             emergency: true,
             priority: "high",
+            deliveryMode: emergencyAlertsEnabled ? "configured" : "history_only",
             type: event.type,
             reason: event.reason,
             squawk: currentSquawk,
           });
           if (accepted) {
             this.reserve(key, now);
+            for (const rule of matchedRules) this.ruleLastTriggered.set(rule.id, now);
             stateDirty = true;
           }
         }
-      } else if (!currentSquawk && isEmergency(aircraft) && !isEmergency(prior)) {
+      } else if (emergencyAlertsEnabled && !currentSquawk && isEmergency(aircraft) && !isEmergency(prior)) {
         const key = `emergency:${aircraft.icaoHex}`;
         if (this.isAvailable(key, now)) {
           const accepted = this.enqueue({ aircraft, matchedRules: [], emergency: true, priority: "high", type: "emergency", reason: "emergency" });
@@ -243,7 +244,7 @@ export class AlertEngine {
           }
         }
       }
-      if (isEmergency(prior) && !isEmergency(aircraft)) {
+      if (emergencyAlertsEnabled && isEmergency(prior) && !isEmergency(aircraft)) {
         if (this.dedupCache.delete(`emergency:${aircraft.icaoHex}`)) stateDirty = true;
       }
     }
@@ -513,6 +514,11 @@ export class AlertEngine {
       intelligence: alert.intelligence ?? null,
       metadata: alert.metadata,
     }).catch(() => undefined);
+
+    if (alert.deliveryMode === "history_only") {
+      void this.history.recordNotification(eventId, "disabled").catch(() => undefined);
+      return true;
+    }
 
     const normalPending = this.pending.reduce(
       (count, pending) => count + (pending.priority === "high" ? 0 : 1),

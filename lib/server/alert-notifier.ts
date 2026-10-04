@@ -9,6 +9,11 @@ export interface AircraftAlert {
   matchedRules: AlertRule[];
   emergency: boolean;
   priority: "normal" | "high";
+  /**
+   * "history_only" records the event but never invokes an external notifier.
+   * This lets watchlist product events exist independently of push delivery.
+   */
+  deliveryMode?: "configured" | "history_only";
   type?: AlertHistoryEventType;
   reason?: AlertHistoryReason;
   eventId?: string;
