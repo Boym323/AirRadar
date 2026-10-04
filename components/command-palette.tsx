@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UiIcon } from "@/components/ui-primitives";
@@ -236,7 +237,7 @@ export function CommandPalette() {
 
   function navigate(href: string): void {
     setOpen(false);
-    router.push(href);
+    router.push(href as Route);
   }
 
   function choose(item: PaletteItem): void {
