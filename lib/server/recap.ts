@@ -1,5 +1,6 @@
 import "temporal-polyfill/full/global";
 import type { ReceiverRecapComparison, ReceiverRecapResponse, RecapInterestingItem, RecapRankingItem, RecapRouteItem, ReceiverReceptionRecord } from "@/lib/aircraft/types";
+import { buildDailyIntelligence, type DailyRecapEventAggregateInput, type DailyRecapEventInput, type DailyRecapFlightInput } from "@/lib/recap/daily-intelligence";
 import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
 import { dayKey, getAppTimezone } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
@@ -8,6 +9,8 @@ import { getReceptionRecords } from "@/lib/server/reception-records";
 
 const RECAP_RANKING_LIMIT = 5;
 const RECAP_INTERESTING_LIMIT = 8;
+const DAILY_INTELLIGENCE_FLIGHT_LIMIT = 50_000;
+const DAILY_INTELLIGENCE_EVENT_LIMIT = 250;
 
 type RecapRange = "daily" | "weekly";
 
@@ -143,6 +146,7 @@ function emptyRecap(range: RecapRange, now: Date, source: ReceiverRecapResponse[
     interestingAircraft: [],
     bestReception: null,
     alertCount: null,
+    dailyIntelligence: null,
     comparison: range === "weekly" ? emptyComparison() : null,
   };
 }
@@ -238,6 +242,64 @@ function mergeCurrentDay(rows: { stats: RecapDailyStatsRow[]; aircraft: RecapDai
   }
 }
 
+async function loadDailyIntelligence(
+  schema: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"],
+  from: Date,
+  to: Date,
+  alerts: Awaited<ReturnType<typeof listAlertHistory>>,
+) {
+  const fromInstant = Temporal.Instant.fromEpochMilliseconds(from.getTime());
+  const toInstant = Temporal.Instant.fromEpochMilliseconds(to.getTime());
+  const [flightRowsRaw, eventAggregatesRaw, eventRowsRaw] = await Promise.all([
+    (async () => await schema.Flight
+      .where((row) => row.startTime.gte(fromInstant))
+      .where((row) => row.startTime.lt(toInstant))
+      .select("startTime", "airline")
+      .orderBy((row) => row.startTime.desc())
+      .limit(DAILY_INTELLIGENCE_FLIGHT_LIMIT + 1)
+      .all())(),
+    (async () => await schema.FlightEvent
+      .where((row) => row.occurredAt.gte(fromInstant))
+      .where((row) => row.occurredAt.lt(toInstant))
+      .groupBy("type")
+      .aggregate((aggregate) => ({ count: aggregate.count() })))(),
+    (async () => await schema.FlightEvent
+      .where((row) => row.occurredAt.gte(fromInstant))
+      .where((row) => row.occurredAt.lt(toInstant))
+      .select("id", "eventKey", "type", "icaoHex", "occurredAt", "confidence", "airportIcao", "runway")
+      .orderBy([(row) => row.occurredAt.desc(), (row) => row.id.desc()])
+      .limit(DAILY_INTELLIGENCE_EVENT_LIMIT + 1)
+      .all())(),
+  ]);
+  const flightRows = flightRowsRaw as unknown as Array<{ startTime: Temporal.Instant | Date; airline: string | null }>;
+  const eventAggregates = eventAggregatesRaw as unknown as DailyRecapEventAggregateInput[];
+  const eventRows = eventRowsRaw as unknown as Array<Omit<DailyRecapEventInput, "occurredAt"> & { occurredAt: Temporal.Instant | Date }>;
+
+  const flights: DailyRecapFlightInput[] = flightRows
+    .slice(0, DAILY_INTELLIGENCE_FLIGHT_LIMIT)
+    .map((row) => ({
+      startedAt: timestamp(row.startTime),
+      airline: row.airline,
+    }));
+  const events: DailyRecapEventInput[] = eventRows
+    .slice(0, DAILY_INTELLIGENCE_EVENT_LIMIT)
+    .map((row) => ({
+      ...row,
+      occurredAt: timestamp(row.occurredAt),
+    }));
+
+  return buildDailyIntelligence({
+    flights,
+    eventAggregates,
+    events,
+    alerts: alerts.items,
+    timezone: getAppTimezone(),
+    complete: alerts.nextPage === null
+      && flightRows.length <= DAILY_INTELLIGENCE_FLIGHT_LIMIT
+      && eventRows.length <= DAILY_INTELLIGENCE_EVENT_LIMIT,
+  });
+}
+
 function compareRows(rows: RecapRows): ReceiverRecapComparison {
   const unique = new Set(rows.aircraft.map((item) => item.icaoHex.toUpperCase()));
   for (const aircraft of rows.aircraftRows) unique.add(aircraft.icaoHex.toUpperCase());
@@ -300,7 +362,14 @@ async function buildPeriod(
     .filter((record): record is ReceiverReceptionRecord => record !== null && record.date >= bounds.fromKey && record.date <= bounds.toKey)
     .sort((a, b) => b.distanceKm - a.distanceKm)[0] ?? null;
   const alerts = await listAlertHistory({ pageSize: 100 });
-  const alertCount = alerts.items.filter((item) => dayKey(new Date(item.detectedAt)) >= bounds.fromKey && dayKey(new Date(item.detectedAt)) <= bounds.toKey).length;
+  const periodAlerts = {
+    ...alerts,
+    items: alerts.items.filter((item) => dayKey(new Date(item.detectedAt)) >= bounds.fromKey && dayKey(new Date(item.detectedAt)) <= bounds.toKey),
+  };
+  const alertCount = periodAlerts.items.length;
+  const dailyIntelligence = range === "daily"
+    ? await loadDailyIntelligence(schema, bounds.from, bounds.to, periodAlerts)
+    : null;
   const response: ReceiverRecapResponse = {
     source: "postgres",
     range,
@@ -320,6 +389,7 @@ async function buildPeriod(
     interestingAircraft: interesting.slice(0, RECAP_INTERESTING_LIMIT),
     bestReception,
     alertCount,
+    dailyIntelligence,
     comparison: null,
   };
   return { response, rows };

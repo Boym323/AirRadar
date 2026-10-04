@@ -236,17 +236,51 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     const captureVisualSmoke = configuredViewport ? async () => {} : async () => {
       const visualSmokeDirectory = resolve("artifacts/visual-smoke");
       mkdirSync(visualSmokeDirectory, { recursive: true });
+      const dailyRecapFixture = {
+        source: "postgres",
+        range: "daily",
+        from: "2026-10-03",
+        to: "2026-10-03",
+        timezone: "Europe/Prague",
+        isCurrentDay: true,
+        hasData: true,
+        uniqueAircraft: 1284,
+        observedFlights: 1640,
+        newAircraft: 12,
+        rareOrReturning: 18,
+        maxDistanceKm: 287,
+        coverageKm: 287,
+        topAircraftTypes: [{ name: "A320", count: 214 }, { name: "B738", count: 188 }],
+        topRoutes: [{ origin: "LOWW", destination: "EDDF", count: 18 }, { origin: "LKPR", destination: "LOWW", count: 14 }],
+        interestingAircraft: [{ icaoHex: "49D001", callsign: "CSA123", registration: "OK-TST", reason: "rare" }],
+        bestReception: { date: "2026-10-03", distanceKm: 287, icaoHex: "49D001", registration: "OK-TST", recordedAt: "2026-10-03T11:30:00.000Z", bearing: 275 },
+        alertCount: 9,
+        dailyIntelligence: {
+          complete: true,
+          busiestHour: { hour: 17, flights: 142 },
+          topAirlines: [{ name: "RYANAIR", count: 176 }, { name: "AUSTRIAN", count: 131 }],
+          eventCounts: { goArounds: 3, holdings: 4, diversions: 1, emergencies: 1 },
+          highlights: [
+            { key: "alert:emergency", kind: "emergency", occurredAt: "2026-10-03T17:42:00.000Z", icaoHex: "49D001", callsign: "CSA123", registration: "OK-TST", eventType: null, airportIcao: null, runway: null, confidenceLevel: null, squawk: "7700", distanceKm: null },
+            { key: "event:go-around", kind: "flight_event", occurredAt: "2026-10-03T16:20:00.000Z", icaoHex: "4B1801", callsign: null, registration: null, eventType: "GO_AROUND", airportIcao: "LOWW", runway: "29", confidenceLevel: "high", squawk: null, distanceKm: null },
+            { key: "alert:record", kind: "reception_record", occurredAt: "2026-10-03T11:30:00.000Z", icaoHex: "49D001", callsign: "CSA123", registration: "OK-TST", eventType: null, airportIcao: null, runway: null, confidenceLevel: null, squawk: null, distanceKm: 287 },
+          ],
+        },
+        comparison: null,
+      };
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-landscape-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1024, height: 768 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
         { name: "statistics-desktop", path: "/statistics", selector: ".statistics-page", viewport: { width: 1366, height: 900 }, fullPage: true },
+        { name: "daily-intelligence-desktop", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockDailyRecap: true },
         { name: "time-machine-desktop", path: "/time-machine", selector: ".time-machine-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
+        { name: "daily-intelligence-mobile", path: "/recap/daily", selector: '[data-testid="daily-intelligence"]', viewport: { width: 390, height: 844 }, fullPage: true, mockDailyRecap: true },
         { name: "aircraft-detail-desktop", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "aircraft-detail-tablet", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 768, height: 1024 }, fullPage: false },
         { name: "aircraft-detail-mobile", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 390, height: 844 }, fullPage: false },
@@ -257,9 +291,17 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       for (const target of visualTargets) {
         const visualPage = await browser.newPage({ viewport: target.viewport });
         try {
+          if (target.mockDailyRecap) {
+            await visualPage.route("**/api/recap?range=daily", async (route) => {
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(dailyRecapFixture) });
+            });
+          }
           const response = await visualPage.goto(`${baseUrl}${target.path}`, { waitUntil: "domcontentloaded" });
           if (!response?.ok()) throw new Error(`Visual smoke ${target.path} returned HTTP ${response?.status()}`);
           await visualPage.locator(target.selector).waitFor({ state: "visible", timeout: 15_000 });
+          if (target.mockDailyRecap) {
+            await visualPage.locator('[data-testid="daily-intelligence-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
+          }
           if (target.selectAircraft) {
             const trafficTrigger = visualPage.locator('[data-testid="traffic-trigger"]');
             if (await trafficTrigger.isVisible()) await trafficTrigger.click();
