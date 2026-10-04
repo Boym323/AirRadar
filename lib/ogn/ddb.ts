@@ -1,4 +1,5 @@
-import { closeSync, openSync, readSync, statSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { chmod, mkdir, open, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import type { OgnDdbDiagnostics, OgnDdbEntry, OgnDdbPersistenceDiagnostics, OgnDdbResolution } from "@/lib/ogn/types";
@@ -547,22 +548,16 @@ export class OgnDdb {
 
   private loadPersistentCache(): void {
     this.lastLoadAt = this.now();
-    let fileSize: number;
-    try {
-      fileSize = statSync(this.cacheFile).size;
-    } catch (error) {
-      if (this.errorCode(error) !== "ENOENT") this.lastLoadError = "stat_failed";
-      return;
-    }
-    if (!Number.isSafeInteger(fileSize) || fileSize < 0 || fileSize > MAX_PERSISTENT_CACHE_BYTES) {
-      this.lastLoadError = "file_too_large";
-      return;
-    }
     let payload: unknown;
     let serialized = "";
     let descriptor = -1;
     try {
       descriptor = openSync(this.cacheFile, "r");
+      const fileSize = fstatSync(descriptor).size;
+      if (!Number.isSafeInteger(fileSize) || fileSize < 0 || fileSize > MAX_PERSISTENT_CACHE_BYTES) {
+        this.lastLoadError = "file_too_large";
+        return;
+      }
       const buffer = Buffer.alloc(MAX_PERSISTENT_CACHE_BYTES + 1);
       let total = 0;
       while (total < buffer.length) {
@@ -575,8 +570,8 @@ export class OgnDdb {
         return;
       }
       serialized = buffer.subarray(0, total).toString("utf8");
-    } catch {
-      this.lastLoadError = "read_failed";
+    } catch (error) {
+      if (this.errorCode(error) !== "ENOENT") this.lastLoadError = "read_failed";
       return;
     } finally {
       if (descriptor !== -1) {
@@ -708,10 +703,10 @@ export class OgnDdb {
   }
 
   private async writePersistentSnapshot(payload: PersistentDdbFile): Promise<void> {
-    const temporaryFile = `${this.cacheFile}.tmp`;
+    const temporaryFile = `${this.cacheFile}.tmp-${process.pid}-${randomUUID()}`;
     try {
       await mkdir(path.dirname(this.cacheFile), { recursive: true, mode: 0o750 });
-      const handle = await open(temporaryFile, "w", 0o600);
+      const handle = await open(temporaryFile, "wx", 0o600);
       try {
         await handle.writeFile(`${JSON.stringify(payload)}\n`, "utf8");
         await handle.sync();
