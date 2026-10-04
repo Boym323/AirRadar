@@ -60,6 +60,16 @@ zda operátor nakonfiguroval volitelného providera.
 | `/fleet` | Konkrétní letadla z ICAO pravidel watchlistu, live/offline stav, počty nedávných pozorovaných letů, trasy/letiště a lazy fotografie. | Produkce; neidentitní pravidla watchlistu jsou vynechána, historie PostgreSQL je volitelná. |
 | `/system` | Sanitizovaný stav runtime, přijímače, persistence, statistik, ATC, počasí, OGN, alertů a letišť. Lazy providery weather/radar/wind/ADSBDB zobrazují cold-start stavy `ON DEMAND`/`LOADING` a omezené bezpečné důvody stavů degraded/offline. | Produkční read-only diagnostika; nikdy nespouští volitelné upstream požadavky. |
 
+## Command Search V1
+
+Root-level Command Search palette je dostupná ze všech rout přes
+`⌘K` / `Ctrl+K` a trigger hledání v topbaru. Znovu používá existující
+omezenou větev `GET /api/search?q=` pro živá letadla, letiště a ATS body a
+přidává čistě klientské navigační příkazy pro Live Radar, Today, Operations
+Center, Flights, Airports, Statistics, Alerts, Time Machine a System.
+Klávesové ovládání používá šipky nahoru/dolů, Enter a Escape. Nedávné výběry
+se ukládají pouze do browser `localStorage`, jsou omezené na pět interních
+AirRadar cest a nevytvářejí serverovou persistenci ani další live stream.
 ## API
 
 | Metoda a routa | Účel | Produkční stav |
