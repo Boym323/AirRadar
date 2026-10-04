@@ -16,7 +16,7 @@ import {
   isAircraftMassDropGuardEnabled,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
-import { AircraftContinuityGuard } from "@/lib/server/aircraft-continuity";
+import { AircraftContinuityGuard, type AircraftContinuityOrigin, type AircraftMassDropDecision } from "@/lib/server/aircraft-continuity";
 import { createAircraftProvider, createEnrichmentService, createNetworkAircraftProvider } from "@/lib/server/providers";
 import type { EnrichmentService } from "@/lib/server/enrichment-cache";
 import type { AircraftProvider, NetworkAircraftProvider, NetworkAircraftSnapshot } from "@/lib/server/provider";
@@ -728,6 +728,7 @@ export class AircraftStateService {
       minBaseline: getAircraftMassDropMinBaseline(),
       dropRatio: getAircraftMassDropRatio(),
     });
+    this.logMassDropDecision("local", massDrop);
     this.localObservedHexes = currentHexes;
     // Start/advance source-affinity failover before pruning. This lets a
     // preferred source keep its last known position during the grace window,
@@ -838,12 +839,29 @@ export class AircraftStateService {
       minBaseline: getAircraftMassDropMinBaseline(),
       dropRatio: getAircraftMassDropRatio(),
     });
+    this.logMassDropDecision("network", massDrop);
     this.networkObservedHexes = currentHexes;
     this.reconcileSourcePreferences(now);
     if (!massDrop.deferPrune) this.pruneMissingAircraft("network", currentHexes, getAdsbLolStaleAfterMs(), now);
     this.reconcileSourcePreferences(now);
     this.navigationIntegrity.observe([...this.networkAircraft.values()], new Date(snapshot.fetchedAt ?? new Date().toISOString()));
     this.invalidateSnapshotCache();
+  }
+
+  private logMassDropDecision(origin: AircraftContinuityOrigin, decision: AircraftMassDropDecision): void {
+    const details = {
+      origin,
+      baselineAircraft: decision.baselineCount,
+      observedAircraft: decision.currentCount,
+      dropRatio: Math.round(decision.dropRatio * 1_000) / 1_000,
+    };
+    if (decision.deferPrune) {
+      logger.warn(details, "AirRadar continuity guard deferred suspicious mass disappearance");
+    } else if (decision.confirmed) {
+      logger.warn(details, "AirRadar continuity guard confirmed mass disappearance");
+    } else if (decision.recovered) {
+      logger.info(details, "AirRadar continuity guard recovered before confirmation");
+    }
   }
 
   private reconcileSourcePreferences(now = Date.now()): void {
