@@ -185,6 +185,8 @@ function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveRe
     </div>
     <dl className="system-fields system-predictive-readiness-meta">
       <Field label={dictionary.system.predictiveThresholdVersion} value={report.thresholds.version} />
+      <Field label={dictionary.system.predictiveOutcomeTruthVersion} value={report.outcomeTruthVersion} />
+      <Field label={dictionary.system.predictiveOutcomeEvents} value={formatNumber(report.collection.outcomeEvents, 0, dictionary.locale)} />
       <Field label={dictionary.system.predictiveWindow} value={`${formatDateTime(report.window.from, dictionary)} – ${formatDateTime(report.window.to, dictionary)}`} />
       <Field label={dictionary.system.predictiveComplete} value={report.complete ? dictionary.system.predictiveCompleteYes : dictionary.system.predictiveCompleteNo} />
       <Field label={dictionary.system.predictiveConfiguredPolicy} value={policies(report.configuredPolicy)} />
