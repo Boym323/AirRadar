@@ -125,6 +125,17 @@ export function CommandPalette() {
 
   useEffect(() => {
     if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape, true);
+    return () => window.removeEventListener("keydown", closeOnEscape, true);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const timer = window.setTimeout(() => inputRef.current?.focus(), 0);
@@ -154,9 +165,10 @@ export function CommandPalette() {
       return;
     }
     const controller = new AbortController();
+    setResults(null);
+    setLoading(true);
+    setRequestFailed(false);
     const timer = window.setTimeout(() => {
-      setLoading(true);
-      setRequestFailed(false);
       void fetch(`/api/search?q=${encodeURIComponent(normalized)}`, {
         signal: controller.signal,
         cache: "no-store",
