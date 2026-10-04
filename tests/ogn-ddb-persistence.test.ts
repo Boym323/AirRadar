@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, open, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -22,6 +22,15 @@ function response(devices: unknown[]) {
 async function temporaryCacheFile(): Promise<{ directory: string; file: string }> {
   const directory = await mkdtemp(path.join(os.tmpdir(), "airradar-ogn-ddb-"));
   return { directory, file: path.join(directory, "ogn-ddb-cache-v1.json") };
+}
+
+async function fileMode(file: string): Promise<number> {
+  const handle = await open(file, "r");
+  try {
+    return (await handle.stat()).mode & 0o777;
+  } finally {
+    await handle.close();
+  }
 }
 
 async function resolveTargeted(file: string, now: () => number, devices: unknown[], options: Record<string, unknown> = {}): Promise<OgnDdb> {
@@ -142,7 +151,7 @@ describe("persistent OGN DDB cache", () => {
       const diagnostics = ddb.getDiagnostics().persistence;
       expect(diagnostics.writes).toBe(1);
       expect(diagnostics.lastSaveEntries).toBe(10);
-      expect((await stat(file)).mode & 0o777).toBe(0o600);
+      expect(await fileMode(file)).toBe(0o600);
       expect(await readdir(directory)).toEqual(["ogn-ddb-cache-v1.json"]);
       expect(JSON.parse(await readFile(file, "utf8"))).toMatchObject({ version: 1, entries: expect.any(Array) });
     } finally {
