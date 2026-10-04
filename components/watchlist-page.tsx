@@ -86,6 +86,8 @@ function translatedError(dictionary: LocaleDictionary, error: unknown, action: "
     if (error.code === "invalid_icao") return dictionary.watchlist.invalidIcao;
     if (error.code === "invalid_distance") return dictionary.watchlist.invalidDistance;
     if (error.code === "invalid_cooldown") return dictionary.watchlist.invalidCooldown;
+    if (error.code === "invalid_eta_threshold") return dictionary.watchlist.invalidEtaThreshold;
+    if (error.code === "invalid_destination") return dictionary.watchlist.invalidDestination;
     if (error.code === "duplicate_rule") return dictionary.watchlist.duplicateRule;
   }
   if (action === "load") return dictionary.watchlist.loadFailed;
