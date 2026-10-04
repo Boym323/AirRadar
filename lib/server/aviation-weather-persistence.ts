@@ -1,4 +1,5 @@
-import { closeSync, openSync, readSync, statSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, fstatSync, openSync, readSync, statSync } from "node:fs";
 import { chmod, mkdir, open, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 
@@ -187,22 +188,16 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
   load(): PersistentWeatherEntry[] {
     const now = this.now();
     this.lastLoadAt = now;
-    let fileSize: number;
-    try {
-      fileSize = statSync(this.cacheFile).size;
-    } catch (error) {
-      if (this.errorCode(error) !== "ENOENT") this.lastLoadError = "stat_failed";
-      return [];
-    }
-    if (!Number.isSafeInteger(fileSize) || fileSize < 0 || fileSize > this.maxBytes) {
-      this.lastLoadError = "file_too_large";
-      return [];
-    }
-
     let descriptor = -1;
     let serialized = "";
     try {
       descriptor = openSync(this.cacheFile, "r");
+      const fileSize = fstatSync(descriptor).size;
+      this.fileSizeBytes = fileSize;
+      if (!Number.isSafeInteger(fileSize) || fileSize < 0 || fileSize > this.maxBytes) {
+        this.lastLoadError = "file_too_large";
+        return [];
+      }
       const buffer = Buffer.alloc(this.maxBytes + 1);
       let total = 0;
       while (total < buffer.length) {
@@ -215,8 +210,8 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
         return [];
       }
       serialized = buffer.subarray(0, total).toString("utf8");
-    } catch {
-      this.lastLoadError = "read_failed";
+    } catch (error) {
+      if (this.errorCode(error) !== "ENOENT") this.lastLoadError = "read_failed";
       return [];
     } finally {
       if (descriptor !== -1) {
@@ -366,7 +361,7 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
   }
 
   private async writeSnapshot(entries: PersistentWeatherEntry[], targetGeneration: number, reason: "periodic" | "graceful" | "explicit"): Promise<void> {
-    const temporaryFile = `${this.cacheFile}.tmp`;
+    const temporaryFile = `${this.cacheFile}.tmp-${process.pid}-${randomUUID()}`;
     try {
       const now = this.now();
       const retainedEntries = entries.filter((entry) => validTimestamp(entry.fetchedAt, now, this.maxAgeMsFor(entry.product)) !== null);
@@ -374,7 +369,7 @@ export class AviationWeatherPersistence implements AviationWeatherCachePersisten
       const serialized = `${JSON.stringify(payload)}\n`;
       if (Buffer.byteLength(serialized, "utf8") > this.maxBytes) throw new Error("payload_too_large");
       await mkdir(path.dirname(this.cacheFile), { recursive: true, mode: 0o750 });
-      const handle = await open(temporaryFile, "w", 0o600);
+      const handle = await open(temporaryFile, "wx", 0o600);
       try {
         await handle.writeFile(serialized, "utf8");
         await handle.sync();

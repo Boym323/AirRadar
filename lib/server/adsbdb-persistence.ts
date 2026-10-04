@@ -1,4 +1,5 @@
-import { closeSync, openSync, readSync, statSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { chmod, mkdir, open, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import type { AircraftMetadata, FlightRoute } from "@/lib/aircraft/types";
@@ -373,22 +374,16 @@ export class AdsbDbPersistence {
   private load(): void {
     const now = this.now();
     this.lastLoadAt = now;
-    let fileSize: number;
-    try {
-      fileSize = statSync(this.cacheFile).size;
-      this.fileSizeBytes = fileSize;
-    } catch (error) {
-      if (errorCode(error) !== "ENOENT") this.failLoad("stat_failed");
-      return;
-    }
-    if (!Number.isSafeInteger(fileSize) || fileSize < 0 || fileSize > this.maxBytes) {
-      this.failLoad("file_too_large");
-      return;
-    }
     let descriptor = -1;
     let serialized = "";
     try {
       descriptor = openSync(this.cacheFile, "r");
+      const fileSize = fstatSync(descriptor).size;
+      this.fileSizeBytes = fileSize;
+      if (!Number.isSafeInteger(fileSize) || fileSize < 0 || fileSize > this.maxBytes) {
+        this.failLoad("file_too_large");
+        return;
+      }
       const buffer = Buffer.alloc(this.maxBytes + 1);
       let total = 0;
       while (total < buffer.length) {
@@ -401,8 +396,8 @@ export class AdsbDbPersistence {
         return;
       }
       serialized = buffer.subarray(0, total).toString("utf8");
-    } catch {
-      this.failLoad("read_failed");
+    } catch (error) {
+      if (errorCode(error) !== "ENOENT") this.failLoad("read_failed");
       return;
     } finally {
       if (descriptor !== -1) {
@@ -475,7 +470,7 @@ export class AdsbDbPersistence {
   }
 
   private async writeSnapshot(): Promise<void> {
-    const temporaryFile = `${this.cacheFile}.tmp`;
+    const temporaryFile = `${this.cacheFile}.tmp-${process.pid}-${randomUUID()}`;
     try {
       const now = this.now();
       const metadata = [...this.entries.metadata.values()]
@@ -493,7 +488,7 @@ export class AdsbDbPersistence {
       const serialized = `${JSON.stringify(payload)}\n`;
       if (Buffer.byteLength(serialized, "utf8") > this.maxBytes) throw new Error("payload_too_large");
       await mkdir(path.dirname(this.cacheFile), { recursive: true, mode: 0o750 });
-      const handle = await open(temporaryFile, "w", 0o600);
+      const handle = await open(temporaryFile, "wx", 0o600);
       try {
         await handle.writeFile(serialized, "utf8");
         await handle.sync();

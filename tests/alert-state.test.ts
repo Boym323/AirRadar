@@ -1,10 +1,19 @@
-import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, open, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { JsonAlertStateStore } from "@/lib/server/alert-state";
 
 const directories: string[] = [];
+
+async function fileMode(file: string): Promise<number> {
+  const handle = await open(file, "r");
+  try {
+    return (await handle.stat()).mode & 0o777;
+  } finally {
+    await handle.close();
+  }
+}
 
 afterEach(async () => {
   await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
@@ -27,7 +36,7 @@ describe("persistent alert engine state", () => {
       permanent: [["new:ABC123", 900]],
       ruleLastTriggered: [["near", 1_000]],
     });
-    expect((await stat(path)).mode & 0o777).toBe(0o600);
+    expect(await fileMode(path)).toBe(0o600);
     expect((await readdir(directory)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
     const stored = JSON.parse(await readFile(path, "utf8")) as { version?: number; updatedAt?: string };
     expect(stored.version).toBe(1);

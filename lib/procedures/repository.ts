@@ -33,14 +33,21 @@ export function getProcedureDatasetPath(): string { return process.env.PROCEDURE
 export function clearProcedureRepositoryCache(): void { cached = null; }
 export function loadProcedureRepository(): ProcedureRepository | null {
   const file = getProcedureDatasetPath();
+  let descriptor = -1;
   try {
-    const stat = fs.statSync(/*turbopackIgnore: true*/ file);
+    descriptor = fs.openSync(/*turbopackIgnore: true*/ file, "r");
+    const stat = fs.fstatSync(descriptor);
     if (cached?.file === file && cached.mtimeMs === stat.mtimeMs) return cached.repository;
-    const dataset = validateProcedureDataset(JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ file, "utf8")));
+    const dataset = validateProcedureDataset(JSON.parse(fs.readFileSync(descriptor, "utf8")));
     const repository = new ProcedureRepository(dataset);
     cached = { file, mtimeMs: stat.mtimeMs, repository };
     return repository;
-  } catch { cached = null; return null; }
+  } catch {
+    cached = null;
+    return null;
+  } finally {
+    if (descriptor !== -1) fs.closeSync(descriptor);
+  }
 }
 
 export function lookupProcedures(query: { airport?: string | null; type?: ProcedureType | null; designator?: string | null }): Procedure[] {

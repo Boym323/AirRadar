@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,10 +12,7 @@ const now = Date.parse("2026-09-10T12:00:00.000Z");
 const directories: string[] = [];
 
 function makeSnapshot(rows: Array<{ type?: number; id?: number; track?: number; ident?: number }>, ageMs = 0): string {
-  const directory = os.tmpdir();
-  const name = `airradar-softrf-${Math.random().toString(16).slice(2)}`;
-  const root = path.join(directory, name);
-  mkdirSync(root, { recursive: true });
+  const root = mkdtempSync(path.join(os.tmpdir(), "airradar-softrf-"));
   directories.push(root);
   const databasePath = path.join(root, "ogn.db");
   const database = new DatabaseSync(databasePath);
