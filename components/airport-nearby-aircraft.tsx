@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import type { Airport } from "@/lib/airports/types";
-import type { PublicStateSnapshot } from "@/lib/aircraft/types";
 import { formatAltitude, formatDistance, t } from "@/lib/i18n";
-import { nearbyAirportAircraft, type AirportTrafficObservation } from "@/lib/airport-traffic/live";
+import type { AirportTrafficObservation } from "@/lib/airport-traffic/live";
+import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 
 function movementLabel(observation: AirportTrafficObservation): string {
   if (observation.classification === "approaching") return t.airport.approaching;
@@ -14,31 +12,8 @@ function movementLabel(observation: AirportTrafficObservation): string {
   return t.airport.unknownMovement;
 }
 
-export function AirportNearbyAircraft({ airport }: { airport: Airport }) {
-  const [observations, setObservations] = useState<AirportTrafficObservation[]>([]);
-  const [connected, setConnected] = useState(false);
-  const previousDistances = useRef(new Map<string, number>());
-
-  useEffect(() => {
-    const source = new EventSource("/api/stream");
-    const handleSnapshot = (event: Event) => {
-      try {
-        const snapshot = JSON.parse((event as MessageEvent<string>).data) as PublicStateSnapshot;
-        const next = nearbyAirportAircraft(snapshot.aircraft, airport, previousDistances.current);
-        setObservations(next);
-        previousDistances.current = new Map(next.map((item) => [item.aircraft.icaoHex, item.distanceKm]));
-        setConnected(true);
-      } catch {
-        // A malformed live event is isolated from the rest of the airport page.
-      }
-    };
-    source.addEventListener("snapshot", handleSnapshot);
-    source.onerror = () => setConnected(false);
-    return () => {
-      source.removeEventListener("snapshot", handleSnapshot);
-      source.close();
-    };
-  }, [airport]);
+export function AirportNearbyAircraft({ liveTraffic }: { liveTraffic: AirportLiveTrafficControllerState }) {
+  const { observations, connected } = liveTraffic;
 
   return <section className="airport-card airport-nearby-aircraft-card" aria-labelledby="airport-nearby-aircraft-title">
     <div className="airport-section-heading">
