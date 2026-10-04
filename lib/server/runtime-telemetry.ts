@@ -1,4 +1,5 @@
-import { readFileSync, statSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { chmod, mkdir, open, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import type { NetworkProviderStatus } from "@/lib/aircraft/types";
@@ -269,21 +270,39 @@ export class RuntimeTelemetryStore {
   }
 
   private load(): void {
-    let size: number;
+    let descriptor = -1;
+    let serialized = "";
     try {
-      size = statSync(this.file).size;
+      descriptor = openSync(this.file, "r");
+      const size = fstatSync(descriptor).size;
+      if (!Number.isSafeInteger(size) || size < 0 || size > this.maxBytes) {
+        this.lastLoadError = "file_too_large";
+        return;
+      }
+      const buffer = Buffer.alloc(this.maxBytes + 1);
+      let total = 0;
+      while (total < buffer.length) {
+        const bytes = readSync(descriptor, buffer, total, buffer.length - total, null);
+        if (bytes === 0) break;
+        total += bytes;
+      }
+      if (total > this.maxBytes) {
+        this.lastLoadError = "file_too_large";
+        return;
+      }
+      serialized = buffer.subarray(0, total).toString("utf8");
     } catch (error) {
-      if (errorCode(error) !== "ENOENT") this.lastLoadError = "stat_failed";
+      if (errorCode(error) !== "ENOENT") this.lastLoadError = "read_failed";
       return;
-    }
-    if (!Number.isSafeInteger(size) || size < 0 || size > this.maxBytes) {
-      this.lastLoadError = "file_too_large";
-      return;
+    } finally {
+      if (descriptor !== -1) {
+        try { closeSync(descriptor); } catch { this.lastLoadError = "read_failed"; }
+      }
     }
 
     let payload: unknown;
     try {
-      payload = JSON.parse(readFileSync(this.file, "utf8")) as unknown;
+      payload = JSON.parse(serialized) as unknown;
     } catch {
       this.lastLoadError = "invalid_json";
       return;
@@ -307,7 +326,7 @@ export class RuntimeTelemetryStore {
   }
 
   private async writeSnapshot(): Promise<void> {
-    const temporaryFile = `${this.file}.tmp-${process.pid}`;
+    const temporaryFile = `${this.file}.tmp-${process.pid}-${randomUUID()}`;
     try {
       this.prune(this.now());
       const payload: RuntimeTelemetryFile = {
@@ -318,7 +337,7 @@ export class RuntimeTelemetryStore {
       const serialized = `${JSON.stringify(payload)}\n`;
       if (Buffer.byteLength(serialized, "utf8") > this.maxBytes) throw new Error("payload_too_large");
       await mkdir(path.dirname(this.file), { recursive: true, mode: 0o750 });
-      const handle = await open(temporaryFile, "w", 0o600);
+      const handle = await open(temporaryFile, "wx", 0o600);
       try {
         await handle.writeFile(serialized, "utf8");
         await handle.sync();
