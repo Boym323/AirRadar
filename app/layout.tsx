@@ -6,6 +6,7 @@ import "./globals.css";
 import "./radar-aircraft-panel.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { AirRadarQueryProvider } from "@/components/query-provider";
+import { CommandPalette } from "@/components/command-palette";
 
 export const metadata: Metadata = {
   title: "AirRadar — osobní radar leteckého provozu",
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="cs" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
-        <AirRadarQueryProvider>{children}</AirRadarQueryProvider>
+        <AirRadarQueryProvider>{children}<CommandPalette /></AirRadarQueryProvider>
         <PwaRegister />
       </body>
     </html>
