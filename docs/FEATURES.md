@@ -373,3 +373,15 @@ ETA/runway advisories only, and fails soft to receiver-derived ordering when
 predictions are unavailable. Route conflicts are excluded and UNKNOWN routes
 need a matching PUBLIC destination. The UI shows ETA uncertainty, median ETA
 spacing, predicted-runway stability and observed runway-flow context.
+
+### Airport Live Board V8 — Approach Queue Intelligence
+
+V8 reuses the V7 six-aircraft arrival sequence and adds a pure bounded density
+projection. It reports active arrivals, APPROACH/FINAL and HOLDING counts,
+PUBLIC ETA coverage, minimum/median ETA spacing and the number of adjacent ETA
+pairs at or below four minutes. The deterministic state is EMPTY, LOW_DENSITY,
+ACTIVE, BUILDING, COMPRESSED or HOLDING_PRESENT with conservative evidence
+guards. It adds no fourth airport request, timer, stream, API or persistence
+path and is explicitly not ATC sequencing, a separation/capacity metric or a
+safety assessment.
+
