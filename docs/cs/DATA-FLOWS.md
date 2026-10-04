@@ -378,12 +378,18 @@ skutečně naladěnou frekvenci letadla.
   server cache.
 - `/api/airports` poskytuje PostgreSQL katalog letišť, pokud není prázdný,
   jinak bundled fallback šesti letišť. `GET /api/search` prohledává živá
-  letadla v RAM, katalog letišť a omezená data ATS bodů s omezeným
-  vstupem/výsledky. Command Search V1 je root-level klientský konzument stejného
-  endpointu s debounce 220 ms. Statické navigační příkazy API nevolají. Nedávné
-  výběry zůstávají omezenými browser-local záznamy v `localStorage` a přijímají
-  pouze interní AirRadar cesty; nevstupují do serverové persistence ani žádné
-  live datové větve.
+  letadla v RAM, katalog letišť, omezená data ATS bodů a omezenou množinu
+  kandidátních Flight řádků z posledních sedmi dnů. Historický Flight search se
+  zapíná od tří znaků a nikdy nečte `FlightPosition`. Přesné smart actions
+  Command Search V2 se parsují ještě před čekáním na live stav nebo přístupem do
+  DB, takže neprovádějí žádné search read dotazy. Root-level klient zachovává
+  debounce 220 ms pro běžné search query. Nedávné výběry zůstávají omezenými
+  browser-local záznamy v `localStorage` a přijímají pouze interní AirRadar
+  cesty; nevstupují do serverové persistence ani žádné live datové větve.
+- `GET /api/history/flights` nově přijímá také přesné normalizované ICAO filtry
+  `origin=` a `destination=`. Skládají se s existujícími omezenými
+  range/query filtry a používají je smart destination actions; endpoint nadále
+  čte pouze Flight řádky.
 - Konfigurace Alerts & Fleets V1 se ukládá v PostgreSQL přes serverový
   repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence` a `AlertRule`).
   Zapnuté řádky se načítají do vyměnitelné cache v paměti; CRUD zápis nejprve
