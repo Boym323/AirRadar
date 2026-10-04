@@ -78,6 +78,14 @@ one capability as PUBLIC; otherwise the all-SHADOW hot path performs no
 readiness database query. A configured PUBLIC capability whose current
 readiness is not PASS is exposed as SHADOW instead. The readiness layer can
 block graduation but never promotes a capability automatically.
+
+Predictive ETA Advisory V1 is a presentation boundary on the existing aircraft
+prediction route. Public ETA requires effective ETA=PUBLIC, readiness PASS,
+fresh non-expired ETA and a calibrated readiness p90 ETA error; the p90 value is
+the displayed uncertainty band. A valid admin session may receive a SHADOW
+preview with readiness and stale/expired state. Anonymous responses never
+contain that preview. Aircraft detail performs one request on mount and adds no
+EventSource, polling loop, model, persistence lane or write path.
 `NetworkAircraftProvider` is a separate optional boundary for live-only
 coverage. `AdsbHubProvider` consumes the generic aggregated SBS/30003 stream
 from `data.adsbhub.org:5002`; these rows are not classified as MLAT. The

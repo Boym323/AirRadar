@@ -11,7 +11,7 @@ not yet been historically attributed.
 
 | Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
-| Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights and sampled history. |
+| Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA advisory. |
 | Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, and inferred Airport Operations intelligence. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
@@ -92,6 +92,20 @@ lifecycle integrity conflicts or sufficiently evidenced quality misses yield
 is not sufficient by itself: the aircraft prediction API applies the readiness
 gate and downgrades non-PASS capabilities back to `SHADOW`. No capability is
 automatically promoted to `PUBLIC`.
+
+## Predictive ETA Advisory V1
+
+The live aircraft detail reuses
+`GET /api/aircraft/:hex/prediction` and renders ETA only when ETA is
+explicitly configured `PUBLIC`, the current readiness decision is `PASS`,
+the prediction is fresh, the arrival time is still in the future, and the
+readiness report contains a calibrated p90 ETA error. That p90 error is shown
+as the `±` uncertainty; AirRadar does not invent a heuristic uncertainty.
+
+With a valid admin session the same endpoint may add a SHADOW preview with
+readiness/stale/expired state. That preview is never part of an anonymous
+response. Aircraft detail performs one page-scoped prediction fetch and adds no
+poller, EventSource, or persistence path.
 
 ## APIs
 

@@ -15,9 +15,10 @@ describe("predictive graduation boundary", () => {
     expect(toPublicPredictiveState(prediction, getPredictiveGraduationPolicy({}), 2_000)).toEqual({ modelVersion: "predictive-intelligence-v1", evaluatedAt: "1970-01-01T00:00:01.000Z", freshness: "fresh" });
   });
 
-  it("publishes only explicitly graduated capabilities and marks stale state", () => {
+  it("suppresses stale ETA while preserving the overall stale prediction marker", () => {
     const result = toPublicPredictiveState(prediction, { ETA: "PUBLIC", RUNWAY: "DISABLED", RUNWAY_CHANGE: "SHADOW", TRAJECTORY: "PUBLIC" }, 60_000);
-    expect(result).toMatchObject({ freshness: "stale", eta: { status: "available" }, trajectory: { state: "NORMAL" } });
+    expect(result).toMatchObject({ freshness: "stale", trajectory: { state: "NORMAL" } });
+    expect(result).not.toHaveProperty("eta");
     expect(result).not.toHaveProperty("runway");
     expect(result).not.toHaveProperty("runwayChange");
   });

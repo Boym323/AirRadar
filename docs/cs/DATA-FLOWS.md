@@ -408,6 +408,15 @@ skutečně naladěnou frekvenci letadla.
   capability PUBLIC, read-only readiness gate ji bez aktuálního PASS efektivně
   stáhne zpět do SHADOW. Automatická PUBLIC promotion ani readiness write path
   neexistuje.
+- Predictive ETA Advisory V1 používá stejnou aircraft prediction odpověď.
+  Anonymní klient dostane `etaAdvisory` pouze pokud ETA po readiness enforcement
+  zůstává efektivně PUBLIC, readiness je PASS, predikce není starší než 45 s,
+  ETA leží v budoucnosti a readiness report obsahuje konečnou p90 absolutní ETA
+  chybu. Tato p90 chyba se zaokrouhlí nahoru na minuty a zobrazí se jako ±
+  uncertainty; žádná heuristická nejistota se nevymýšlí. Platná admin session
+  může navíc dostat `adminPreview` pro SHADOW/PUBLIC diagnostiku; anonymní
+  klient tento field nikdy nedostane. Aircraft detail čte endpoint jednou při
+  mountu a nevytváří druhý live stream ani polling loop.
 - Konfigurace Alerts & Fleets V1 se ukládá v PostgreSQL přes serverový
   repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence` a `AlertRule`).
   Zapnuté řádky se načítají do vyměnitelné cache v paměti; CRUD zápis nejprve

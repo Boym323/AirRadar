@@ -34,9 +34,11 @@ describe("Predictive Graduation Readiness boundary", () => {
     expect(collectorSource).toContain("if (!configuredPublic(configured)) return configured");
   });
 
-  it("guards public prediction exposure with the effective readiness policy", () => {
-    expect(publicRouteSource).toContain("getEffectivePredictiveGraduationPolicy");
-    expect(publicRouteSource).toContain("toPublicPredictiveState(service.getPredictiveState(hex), effectivePolicy)");
+  it("guards public prediction exposure with one shared readiness report", () => {
+    expect(publicRouteSource).toContain("readPredictiveReadinessReport");
+    expect(publicRouteSource).toContain("enforcePredictiveReadiness");
+    expect(publicRouteSource).toContain("toPublicPredictiveState(predictionState, effectivePolicy)");
+    expect(publicRouteSource).toContain("buildPublicEtaAdvisory(predictionState, effectivePolicy, etaReadiness)");
   });
 
   it("keeps the readiness report admin-only and no-store", () => {

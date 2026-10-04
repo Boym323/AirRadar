@@ -265,6 +265,14 @@ operátor explicitně nastaví některou capability na PUBLIC, API readiness gat
 ověří; bez PASS ji efektivně stáhne zpět do SHADOW. Readiness smí public
 graduation zablokovat, ale nikdy capability automaticky nepovyšuje.
 
+Predictive ETA Advisory V1 je prezentační hranice nad existujícím aircraft
+prediction API. Veřejná ETA vyžaduje efektivní ETA=PUBLIC, readiness PASS,
+čerstvou neexpirovanou ETA a kalibrovanou p90 ETA chybu z readiness reportu;
+právě p90 se používá jako zobrazené pásmo nejistoty. Platná admin session může
+dostat SHADOW preview s readiness a stale/expired stavem. Anonymní odpověď tento
+preview nikdy neobsahuje. Detail letadla provádí jeden request při mountu a
+nepřidává EventSource, polling loop, model, persistence lane ani write path.
+
 Airport Intelligence V3 přidává jeden page-scoped klientský controller pro
 24hodinový operations snapshot a počasí letiště. Operations Board, sjednocená
 časová osa pohybů, runway comparison i detailní weather panel znovu používají
