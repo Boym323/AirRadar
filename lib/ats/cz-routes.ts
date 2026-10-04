@@ -28,15 +28,19 @@ export function getCzAtsRoutesPath(): string { return process.env.ATS_CZ_ROUTES_
 export function clearCzAtsRouteCache(): void { cached = null; }
 export function loadCzAtsRoutes(): CzAtsRouteDocument | null {
   const file = getCzAtsRoutesPath();
+  let descriptor = -1;
   try {
-    const stat = fs.statSync(/*turbopackIgnore: true*/ file);
+    descriptor = fs.openSync(/*turbopackIgnore: true*/ file, "r");
+    const stat = fs.fstatSync(descriptor);
     if (cached?.file === file && cached.mtimeMs === stat.mtimeMs) return cached.document;
-    const document = validateCzAtsRouteDocument(JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ file, "utf8")));
+    const document = validateCzAtsRouteDocument(JSON.parse(fs.readFileSync(descriptor, "utf8")));
     cached = { file, mtimeMs: stat.mtimeMs, document };
     return document;
   } catch {
     // A failed read must not leave a previous valid document available.
     cached = null;
     return null;
+  } finally {
+    if (descriptor !== -1) fs.closeSync(descriptor);
   }
 }
