@@ -3,7 +3,7 @@
 <!-- feature-registry:start -->
 ## Feature registry
 
-This table is generated from [`features.registry.json`](features.registry.json).
+This table is generated from [`features.registry.json`](../features.registry.json).
 CI verifies that every Next.js page and API route is owned by at least one
 registered feature and that the registry contains no stale routes. “Pre-registry”
 means the feature existed before registry adoption and its original release has
