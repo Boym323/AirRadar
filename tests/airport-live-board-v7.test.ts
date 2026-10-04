@@ -61,7 +61,7 @@ function predictive(): PredictiveOperationsResponse {
 
 describe("Airport Live Board V7 arrival sequence", () => {
   it("orders PUBLIC ETA arrivals first and excludes route conflicts", () => {
-    const result = buildAirportArrivalSequence(traffic(), predictive(), "LKTB");
+    const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: traffic(), predictive: predictive() });
     expect(result.version).toBe("airport-live-board-v7");
     expect(result.items.map((item) => item.icaoHex)).toEqual(["BBB222", "AAA111", "CCC333"]);
     expect(result.items[0]).toMatchObject({ position: 1, etaHorizonMinutes: 4, runway: "28", orderBasis: "ETA" });
@@ -69,19 +69,20 @@ describe("Airport Live Board V7 arrival sequence", () => {
   });
 
   it("computes median public ETA spacing and predicted runway stability", () => {
-    const result = buildAirportArrivalSequence(traffic(), predictive(), "LKTB");
+    const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: traffic(), predictive: predictive() });
     expect(result.medianSpacingMinutes).toBe(4);
-    expect(result.publicPredictionCount).toBe(2);
+    expect(result.etaPredicted).toBe(2);
+    expect(result.runwayPredicted).toBe(2);
     expect(result.predictionCoverage).toBeCloseTo(2 / 3);
-    expect(result.predictedRunway).toEqual({ designator: "28", consistency: "STABLE", share: 1, samples: 2 });
+    expect(result.runway).toEqual({ designator: "28", consistency: "STABLE", share: 1, samples: 2 });
   });
 
   it("falls back deterministically to journey stage and distance without predictions", () => {
-    const result = buildAirportArrivalSequence(traffic(), null, "LKTB");
+    const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: traffic(), predictive: null });
     expect(result.items.map((item) => item.icaoHex)).toEqual(["BBB222", "AAA111", "CCC333"]);
     expect(result.medianSpacingMinutes).toBeNull();
     expect(result.items.every((item) => item.orderBasis === "DISTANCE")).toBe(true);
-    expect(result.predictedRunway.consistency).toBe("UNKNOWN");
+    expect(result.runway.consistency).toBe("UNKNOWN");
   });
 
   it("requires either a confirmed route or a PUBLIC prediction matching the airport", () => {
