@@ -106,9 +106,12 @@ nezávislé větve:
   drží stale-if-error síťový snapshot a zveřejňuje sanitizovanou diagnostiku.
   Jejich letadla se slučují s lokálními pozorováními pouze při požadavku na
   extended live snapshot. State service přiřadí každému ICAO stabilní
-  local/network source affinity, takže dočasný výpadek nemůže předat stejné
-  letadlo z jednoho feedu druhému; zvolený zdroj vlastní zobrazené pozorování
-  i jeho metadata.
+  local/network source affinity. Poslední membership providerů sleduje
+  odděleně od retencovaných pozorování, takže dočasný výpadek drží poslední
+  dobrou pozici, zatímco běží omezený handoff časovač; živá alternativa pak
+  převezme marker bez mezilehlého stavu bez pozice. Pokud preferované pozorování
+  chybí nebo nemá použitelnou polohu, může se okamžitě použít použitelná
+  alternativní pozice při zachování explicitní provenience identity/metadat.
 - `EnrichmentService` volá nakonfigurované providery metadat, tras a flight
   planů asynchronně. Používá normalizované klíče, pozitivní/negativní TTL,
   slučování in-flight požadavků a omezenou concurrency.
