@@ -202,15 +202,17 @@ describe("global search API/UI contract", () => {
     expect(getTranslations("en").search).toMatchObject({ globalLabel: "Global search", aircraftResults: "Aircraft", airportResults: "Airports", atsPointResults: "ATS points", loading: "Searching…" });
   });
 
-  it("contains the debounced keyboard and navigation behavior", () => {
-    const source = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
-    expect(source).toContain("SEARCH_DEBOUNCE_MS = 220");
-    expect(source).toContain("/api/search?q=");
-    expect(source).toContain("ArrowDown");
-    expect(source).toContain("ArrowUp");
-    expect(source).toContain('event.key === "Enter"');
-    expect(source).toContain('event.key === "Escape"');
-    expect(source).toContain("onClick={() => setOpen(false)}");
-    expect(source).toContain("role=\"listbox\"");
+  it("routes the topbar trigger into the global Command Search palette", () => {
+    const triggerSource = readFileSync(new URL("../components/global-search.tsx", import.meta.url), "utf8");
+    const paletteSource = readFileSync(new URL("../components/command-palette.tsx", import.meta.url), "utf8");
+    expect(triggerSource).toContain("requestCommandPaletteOpen");
+    expect(triggerSource).toContain('data-testid="command-palette-trigger"');
+    expect(paletteSource).toContain("SEARCH_DEBOUNCE_MS = 220");
+    expect(paletteSource).toContain("/api/search?q=");
+    expect(paletteSource).toContain("ArrowDown");
+    expect(paletteSource).toContain("ArrowUp");
+    expect(paletteSource).toContain('event.key === "Enter"');
+    expect(paletteSource).toContain('event.key === "Escape"');
+    expect(paletteSource).toContain('role="listbox"');
   });
 });
