@@ -137,8 +137,10 @@ older than five minutes, explicit `changedFrom` and `changedAt`, and at least
 MEDIUM confidence. WAIT, FAIL, SHADOW, stale, expired, LOW and UNKNOWN states
 render no public change. A valid admin session may receive a SHADOW preview
 with outcome precision, false-positive rate, independent-change-truth status
-and readiness reasons. The aircraft detail continues to use its single
-page-scoped prediction request.
+and readiness reasons. The current V1 readiness evidence intentionally remains
+WAIT while independent runway-change truth is unavailable, so this code cannot
+graduate the capability by itself. The aircraft detail continues to use its
+single page-scoped prediction request.
 
 ## Predictive Operations Center V1
 
