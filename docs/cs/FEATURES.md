@@ -12,7 +12,7 @@ not yet been historically attributed.
 | Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
 | Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
-| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with active inbound/outbound traffic. |
+| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with active traffic correlated to recent Flight Story movements. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
@@ -60,26 +60,28 @@ zda operátor nakonfiguroval volitelného providera.
 | `/fleet` | Konkrétní letadla z ICAO pravidel watchlistu, live/offline stav, počty nedávných pozorovaných letů, trasy/letiště a lazy fotografie. | Produkce; neidentitní pravidla watchlistu jsou vynechána, historie PostgreSQL je volitelná. |
 | `/system` | Sanitizovaný stav runtime, přijímače, persistence, statistik, ATC, počasí, OGN, alertů a letišť. Lazy providery weather/radar/wind/ADSBDB zobrazují cold-start stavy `ON DEMAND`/`LOADING` a omezené bezpečné důvody stavů degraded/offline. | Produkční read-only diagnostika; nikdy nespouští volitelné upstream požadavky. |
 
-## Airport Live Board V2
+## Airport Live Board V3
 
-Detail letiště rozšiřuje existující Airport Intelligence V3 board na průběžně
-obnovovaný provozní pohled bez dalšího backend streamu nebo persistence cesty.
-Jediný page-scoped controller dál vlastní přesně dvě čtení: omezený 24hodinový
-snapshot `/api/airports/:icao/operations` a snapshot počasí letiště. Obě čtení
-obnovuje jedním 30sekundovým one-shot timerem; ruční retry používá stejnou cestu.
+Detail letiště zachovává architekturu Airport Intelligence V3: jeden
+page-scoped operations/weather controller a jednu sdílenou read-only
+`/api/stream` subscription, kterou používá Live Board i Nearby Aircraft.
+Nevzniká druhý airport aircraft stream, nová persistence cesta ani
+per-aircraft request.
 
-Board přidává omezené newest-first lane Poslední přílety a Poslední odlety s
-jedním nejnovějším pohybem na Flight, samostatný lane provozních událostí
-GO_AROUND/HOLDING, přehled využití maximálně čtyř drah a kompaktní METAR strip
-pro kategorii, vítr, dohlednost, teplotu a QNH. Existující runway-vs-wind
-intelligence i sjednocená movement timeline zůstávají zachované. Každý flight
-řádek odkazuje na existující Flight Story.
+Board ponechává omezené NOW inbound/outbound lane z čerstvých ADS-B observations
+a každý aktivní řádek koreluje pouze v paměti proti už načtenému omezenému
+`/api/airports/:icao/operations` snapshotu. Match vyžaduje stejnou ICAO
+identitu, nekonfliktní callsign, směrově kompatibilní movement a event nejvýše
+20 minut od live observation s dvouminutovou tolerancí budoucího clock skew.
+Úspěšný match zpřístupní existující Flight ID přes Flight Story a zobrazí
+movement, runway, confidence a čas eventu. Chybějící, stale nebo konfliktní
+evidence zůstává explicitně pouze LIVE.
 
-Všechny pohyby a runway hodnoty zůstávají receiver-observed nebo
-receiver-inferred. Board není letištní FIDS, zdroj letového řádu, potvrzení
-přidělení dráhy ani ATC feed. Existující nearby-aircraft komponenta zůstává
-jediným airport konzumentem zavedeného aircraft SSE; Live Board V1 nepřidává
-EventSource, DB schéma, migraci ani write lane.
+Recent Arrivals/Departures, GO_AROUND/HOLDING provozní eventy, přehled až čtyř
+drah, METAR strip, receiver-vs-wind intelligence i sjednocená movement timeline
+zůstávají beze změny. Všechny movement/runway hodnoty jsou nadále
+receiver-observed nebo receiver-inferred; board není FIDS, zdroj letového řádu,
+potvrzení přidělení dráhy ani ATC feed.
 
 ## Command Search V2
 

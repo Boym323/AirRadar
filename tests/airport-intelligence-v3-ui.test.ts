@@ -41,9 +41,12 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(boardSource).toContain('testId="airport-live-board-alerts"');
     expect(boardSource).toContain('data-testid="airport-live-board-runways"');
     expect(boardSource).toContain('data-testid="airport-live-board-weather"');
-    expect(boardSource).toContain('data-product="airport-live-board-v2"');
+    expect(boardSource).toContain('data-product="airport-live-board-v3"');
     expect(boardSource).toContain('testId="airport-live-board-active-inbound"');
     expect(boardSource).toContain('testId="airport-live-board-active-outbound"');
+    expect(boardSource).toContain("buildAirportCorrelatedTrafficSnapshot");
+    expect(boardSource).toContain("aircraftFlightHref(observation.movement.flightId)");
+    expect(boardSource).toContain("liveBoardLiveOnly");
     expect(boardSource).toContain('variant="inferred"');
     expect(boardSource).toContain("t.airport.v3RunwayDisclaimer");
   });
@@ -53,6 +56,8 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(liveTrafficSource.match(/new EventSource\(/g)).toHaveLength(1);
     expect(liveTrafficSource).toContain('new EventSource("/api/stream")');
     expect(nearbySource).not.toContain("new EventSource");
+    expect(boardSource).not.toContain("fetch(");
+    expect(boardSource).not.toContain("new EventSource");
   });
 
   it("allows the airport weather panel to consume the shared snapshot without starting its own request", () => {

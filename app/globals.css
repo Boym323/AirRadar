@@ -5353,3 +5353,29 @@ button, input, select, textarea { color-scheme: dark; }
 @media (max-width: 760px) {
   .airport-live-active { grid-template-columns: 1fr; }
 }
+
+
+/* Airport Live Board V3 flight correlation */
+.airport-live-active-meta {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+.airport-live-active-meta > span,
+.airport-live-active-meta > small {
+  color: var(--text-muted);
+}
+.airport-live-correlation-link {
+  max-width: 210px;
+  overflow: hidden;
+  color: var(--mint);
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.airport-live-correlation-link:hover { text-decoration: underline; }
+@media (max-width: 760px) {
+  .airport-live-active-meta { justify-items: start; }
+}

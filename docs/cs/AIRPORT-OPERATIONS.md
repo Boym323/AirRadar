@@ -32,19 +32,25 @@ Vítr a použití dráhy jsou oddělené informace: používejte „dráha zvýh
 větrem“ a „pravděpodobná dráha podle nedávného provozu“, nikoli provozní
 doporučení.
 
-## Airport Live Board V2
+## Airport Live Board V3
 
 Detail letiště znovu používá 24hodinovou operations odpověď a existující
 airport-weather odpověď v jediném page-scoped controlleru. Controller provádí
-one-shot refresh každých 30 sekund. V2 současně sdílí jednu existující
-`/api/stream` subscription mezi Live Boardem a Nearby Aircraft. NOW inbound a
-NOW outbound jsou odvozené z čerstvých ADS-B pozic existujícím konzervativním
-airport-traffic classifierem, řazené podle vzdálenosti a omezené na šest
-letadel. Poslední přílety a odlety zůstávají newest-first, deduplikované podle
+one-shot refresh každých 30 sekund. V3 dál sdílí jedinou existující `/api/stream` subscription mezi Live Boardem
+a Nearby Aircraft. NOW inbound a NOW outbound jsou stále odvozené z čerstvých
+ADS-B pozic existujícím konzervativním airport-traffic classifierem, řazené
+podle vzdálenosti a omezené na šest letadel. Každý aktivní řádek se následně
+v paměti koreluje s už načteným omezeným Airport Operations snapshotem.
+Korelace se přijme pouze pro stejnou ICAO identitu, nekonfliktní callsign,
+směrově kompatibilní movement a event vzdálený nejvýše 20 minut od live
+pozorování s tolerancí dvou minut na clock skew. Poslední přílety a odlety zůstávají newest-first, deduplikované podle
 Flight ID a omezené na šest řádků. GO_AROUND/HOLDING mají vlastní šestipoložkový provozní
 lane. Přehled využití drah je omezený na čtyři řádky.
 
-Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
+Při úspěšné korelaci aktivní řádek zpřístupní odpovídající Flight ID přes
+Flight Story a zobrazí poslední kompatibilní movement, runway, confidence a čas
+eventu. Chybějící, stale nebo konfliktní evidence zůstává pouze LIVE a nic se
+nedohaduje. Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
 teplotu a QNH. Jde o pozorovací pohled přijímače a počasí, nikoli letištní
 letový řád, FIDS, přidělení dráhy nebo instrukce ATC.
 

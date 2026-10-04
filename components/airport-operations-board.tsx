@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import { aircraftFlightHref } from "@/lib/aircraft/detail-links";
 import {
-  buildAirportActiveTrafficSnapshot,
+  buildAirportCorrelatedTrafficSnapshot,
   buildAirportLiveBoardSnapshot,
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
@@ -103,7 +103,7 @@ function ActiveTrafficLane({
 }: {
   title: string;
   kicker: string;
-  observations: AirportLiveTrafficControllerState["observations"];
+  observations: ReturnType<typeof buildAirportCorrelatedTrafficSnapshot>["inbound"];
   testId: string;
 }) {
   return <section className="airport-live-lane airport-live-active-lane" data-testid={testId}>
@@ -125,7 +125,19 @@ function ActiveTrafficLane({
             <Link href={`/aircraft/${encodeURIComponent(aircraft.icaoHex)}`}>{label}</Link>
             <small>{route?.origin && route?.destination ? `${route.origin} → ${route.destination}` : aircraft.registration ?? aircraft.icaoHex}</small>
           </span>
-          <span className="airport-live-active-meta">{formatDistance(observation.distanceKm)} · {formatAltitude(aircraft.altitude)}</span>
+          <span className="airport-live-active-meta">
+            <span>{formatDistance(observation.distanceKm)} · {formatAltitude(aircraft.altitude)}</span>
+            {observation.movement ? <>
+              <Link
+                className="airport-live-correlation-link"
+                href={aircraftFlightHref(observation.movement.flightId)}
+                aria-label={t.airport.liveBoardOpenCorrelatedFlightStory}
+              >
+                {movementLabel(observation.movement.movement)} · {runwayLabel(observation.movement)}
+              </Link>
+              <small>{confidenceLabel(observation.movement.confidence)} · {formatTime(observation.movement.observedAt)}</small>
+            </> : <small>{t.airport.liveBoardLiveOnly}</small>}
+          </span>
         </li>;
       })}
     </ol>}
@@ -147,7 +159,7 @@ export function AirportOperationsBoard({
   const weather = controller.weather;
   const runway = buildAirportRunwayIntelligence(operations, runways, weather?.metar ?? null);
   const liveBoard = buildAirportLiveBoardSnapshot(operations);
-  const activeTraffic = buildAirportActiveTrafficSnapshot(liveTraffic.observations);
+  const activeTraffic = buildAirportCorrelatedTrafficSnapshot(liveTraffic.observations, operations);
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
   const metar = weather?.metar ?? null;
@@ -156,7 +168,7 @@ export function AirportOperationsBoard({
     ? `${String(Math.round(metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(metar.windSpeedKt)}`
     : null;
 
-  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v2">
+  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v3">
     <div data-testid="airport-live-board">
     <div className="airport-v3-hero">
       <div className="airport-v3-heading">
