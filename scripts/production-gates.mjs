@@ -951,7 +951,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           if (target.mockAirportV3) {
             await visualPage.locator('[data-testid="airport-live-board"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.locator('[data-product="airport-live-board-v3"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-product="airport-live-board-v4"]').waitFor({ state: "visible", timeout: 15_000 });
             const arrivals = visualPage.locator('[data-testid="airport-live-board-arrivals"]');
             const departures = visualPage.locator('[data-testid="airport-live-board-departures"]');
             const alerts = visualPage.locator('[data-testid="airport-live-board-alerts"]');
