@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 const controllerSource = readFileSync(new URL("../components/airport-operations-controller.ts", import.meta.url), "utf8");
 const detailSource = readFileSync(new URL("../components/airport-detail.tsx", import.meta.url), "utf8");
 const boardSource = readFileSync(new URL("../components/airport-operations-board.tsx", import.meta.url), "utf8");
-const modelSource = readFileSync(new URL("../lib/airport-intelligence/live-board-v7.ts", import.meta.url), "utf8");
+const modelSource = readFileSync(new URL("../lib/airport-intelligence/arrival-sequence-v7.ts", import.meta.url), "utf8");
 
 describe("Airport Live Board V7 boundary", () => {
   it("uses one bounded batch prediction endpoint on the existing 30-second refresh cycle", () => {
@@ -21,8 +21,8 @@ describe("Airport Live Board V7 boundary", () => {
     expect(controllerSource).toContain("runwayAdvisory: item.runwayAdvisory");
     expect(controllerSource).not.toContain("etaAdminPreview");
     expect(controllerSource).not.toContain("runwayAdminPreview");
-    expect(modelSource).toContain("predictive?.etaAdvisory");
-    expect(modelSource).toContain("predictive?.runwayAdvisory");
+    expect(modelSource).toContain("prediction?.etaAdvisory");
+    expect(modelSource).toContain("prediction?.runwayAdvisory");
   });
 
   it("requires confirmed route evidence or PUBLIC prediction destination match", () => {
@@ -37,6 +37,6 @@ describe("Airport Live Board V7 boundary", () => {
     expect(boardSource).not.toContain("new EventSource");
     expect(boardSource).toContain('data-product="airport-live-board-v7"');
     expect(boardSource).toContain('data-testid="airport-live-board-v7-arrival-sequence"');
-    expect(boardSource).toContain("arrivalSequence.predictedRunway");
+    expect(boardSource).toContain("arrivalSequence.runway");
   });
 });
