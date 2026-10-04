@@ -200,21 +200,18 @@ export function mergeAircraftObservations(
   receiver: ReceiverPosition,
   options: { localStaleAfterMs: number; networkStaleAfterMs: number; now?: number; preferredOrigin?: "local" | "network" },
 ): Aircraft | null {
-  // Source affinity controls which observation may drive the marker, but it
-  // must never remove an identity from the extended local ∪ network union.
-  // When the preferred source is temporarily absent, keep the alternate
-  // observation for identity/metadata while suppressing its position so the
-  // marker cannot jump to a different feed.
+  // Source affinity controls which observation should drive the marker, but it
+  // must never create a positionless interval when that preferred observation
+  // is absent or cannot supply a usable position. Lock to a preferred source
+  // only while it can actually drive the marker; otherwise let the ordinary
+  // local-first/fresh-network arbitration provide a continuity fallback.
   if (!local && !network) return null;
-  const preferredAvailable = options.preferredOrigin === "local"
-    ? Boolean(local)
-    : options.preferredOrigin === "network"
-      ? Boolean(network)
-      : false;
-  const preferredUnavailable = options.preferredOrigin !== undefined && !preferredAvailable;
-  const selectedLocal = options.preferredOrigin === "network" && network ? undefined : local;
-  const selectedNetwork = options.preferredOrigin === "local" && local ? undefined : network;
   const now = options.now ?? Date.now();
+  const lockLocal = options.preferredOrigin === "local" && Boolean(local && hasUsablePosition(local));
+  const lockNetwork = options.preferredOrigin === "network"
+    && Boolean(network && isFreshPosition(network, options.networkStaleAfterMs, now));
+  const selectedLocal = lockNetwork ? undefined : local;
+  const selectedNetwork = lockLocal ? undefined : network;
   // Aircraft existence is based on an observation, not on whether that
   // observation currently has a fresh usable position. Position arbitration
   // is a separate concern: use a fresh candidate when available, otherwise
@@ -223,8 +220,8 @@ export function mergeAircraftObservations(
   // position was rejected by selectPositionObservation().
   const base = selectedLocal ?? selectedNetwork!;
   const altitudeDecision = selectAircraftAltitude(base.icaoHex, selectedLocal, selectedNetwork, now);
-  const selectedPosition = preferredUnavailable ? undefined : selectPositionObservation(selectedLocal, selectedNetwork, options, now);
-  const fallbackPosition = !preferredUnavailable && selectedLocal && hasUsablePosition(selectedLocal) ? selectedLocal : undefined;
+  const selectedPosition = selectPositionObservation(selectedLocal, selectedNetwork, options, now);
+  const fallbackPosition = selectedLocal && hasUsablePosition(selectedLocal) ? selectedLocal : undefined;
   const kinematics = selectedPosition ?? base;
   const position = selectedPosition ?? fallbackPosition;
   const emergencyObservation = selectedEmergencyObservation(selectedLocal, selectedNetwork, options, now);
