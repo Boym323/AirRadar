@@ -39,5 +39,6 @@ describe("Airport Live Board V7 arrival sequence boundary", () => {
     expect(boardSource).toContain('data-testid="airport-live-board-v7-arrival-sequence"');
     expect(boardSource).toContain("buildAirportRunwayFlowIntelligence");
     expect(boardSource).toContain("buildAirportArrivalSequence");
+    expect(boardSource).toContain('data-testid="airport-live-board-v8-approach-queue"');
   });
 });
