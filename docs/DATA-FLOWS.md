@@ -97,6 +97,17 @@ explicitly configures any capability PUBLIC, the read-only readiness report is
 consulted and any non-PASS capability is downgraded to SHADOW for serialization.
 There is no automatic PUBLIC promotion and no readiness write path.
 
+Predictive ETA Advisory V1 reuses this same aircraft prediction response. For
+anonymous callers the response adds an `etaAdvisory` only when ETA remains
+effectively PUBLIC after readiness enforcement, the readiness decision is PASS,
+the prediction is no more than 45 seconds old, the ETA is still in the future,
+and the readiness report contains a finite p90 ETA absolute error. That p90
+error is rounded up to minutes and becomes the displayed ± uncertainty band.
+No heuristic uncertainty is invented. A valid admin session may additionally
+receive `adminPreview` for SHADOW/PUBLIC diagnostics; this field is omitted
+for anonymous callers. The aircraft detail reads the endpoint once on mount and
+does not create a second live stream or polling loop.
+
 ADSBDB metadata and route persistence is a recovery cache only. Runtime RAM is
 authoritative: `set`/`delete` mutate bounded maps and generation counters
 immediately, while a single checkpoint serializes the current maps at the
