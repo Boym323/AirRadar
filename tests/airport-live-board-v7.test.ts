@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/live-board-v7";
+import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-sequence-v7";
 import type { AirportCorrelatedTrafficSnapshot } from "@/lib/airport-intelligence/v3";
 import type { PredictiveOperationsResponse } from "@/lib/predictive-intelligence/operations-center";
 
@@ -61,15 +61,15 @@ function predictive(): PredictiveOperationsResponse {
 
 describe("Airport Live Board V7 arrival sequence", () => {
   it("orders PUBLIC ETA arrivals first and excludes route conflicts", () => {
-    const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: traffic(), predictive: predictive() });
+    const result = buildAirportArrivalSequence(traffic(), predictive(), "LKTB");
     expect(result.version).toBe("airport-live-board-v7");
     expect(result.items.map((item) => item.icaoHex)).toEqual(["BBB222", "AAA111", "CCC333"]);
-    expect(result.items[0]).toMatchObject({ position: 1, etaHorizonMinutes: 4, predictedRunway: "28" });
-    expect(result.items[2]).toMatchObject({ eta: null, predictedRunway: null });
+    expect(result.items[0]).toMatchObject({ position: 1, etaHorizonMinutes: 4, runway: "28", orderBasis: "ETA" });
+    expect(result.items[2]).toMatchObject({ etaAt: null, runway: null, orderBasis: "DISTANCE" });
   });
 
   it("computes median public ETA spacing and predicted runway stability", () => {
-    const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: traffic(), predictive: predictive() });
+    const result = buildAirportArrivalSequence(traffic(), predictive(), "LKTB");
     expect(result.medianSpacingMinutes).toBe(4);
     expect(result.publicPredictionCount).toBe(2);
     expect(result.predictionCoverage).toBeCloseTo(2 / 3);
@@ -77,9 +77,10 @@ describe("Airport Live Board V7 arrival sequence", () => {
   });
 
   it("falls back deterministically to journey stage and distance without predictions", () => {
-    const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: traffic(), predictive: null });
+    const result = buildAirportArrivalSequence(traffic(), null, "LKTB");
     expect(result.items.map((item) => item.icaoHex)).toEqual(["BBB222", "AAA111", "CCC333"]);
     expect(result.medianSpacingMinutes).toBeNull();
+    expect(result.items.every((item) => item.orderBasis === "DISTANCE")).toBe(true);
     expect(result.predictedRunway.consistency).toBe("UNKNOWN");
   });
 
