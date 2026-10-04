@@ -327,3 +327,16 @@ inventing facts. The map, playback cursor, profile cursor, selected event and
 historical Map Context continue to share the same timestamp. Partial data
 remains usable and airport route metadata remains context rather than proof of
 the flown path.
+
+
+## Airport Live Board V7
+
+V7 adds a bounded active-arrival sequence to the existing airport board.
+It reuses the single live aircraft stream plus the airport controller's existing
+30-second refresh token. For at most six inbound aircraft, one batch call to
+`/api/operations/predictive?hexes=` contributes readiness-gated PUBLIC ETA and
+runway advisories only; admin previews are discarded. CONFIRMED route traffic
+remains visible without predictions, while UNKNOWN route traffic requires a
+PUBLIC destination match. The panel shows arrival order, calibrated ETA
+uncertainty, predicted-runway stability, median ETA spacing, and the existing
+receiver-observed runway flow. It is not ATC sequencing or FIDS.
