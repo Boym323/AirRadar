@@ -216,6 +216,13 @@ receiver-inferred; klient jej porovnává se složkami větru z pozorovaného ME
 bez odvozování důvodu případného rozdílu. Řádky timeline odkazují na existující
 Flight Story detail. OGN není zahrnuto v těchto letištních funkcích.
 
+Airport Live Board V1 obnovuje pouze tato dvě stejná čtení každých 30 sekund
+pomocí one-shot timeru. Klient řadí platné movement timestampy newest-first,
+deduplikuje arrival/departure lane podle Flight ID, každý lane omezuje na šest
+položek, GO_AROUND/HOLDING drží v samostatném omezeném lane provozních událostí
+a zobrazuje nejvýše čtyři runway-usage řádky. Neplatné timestampy vyřazuje.
+Aircraft SSE aktualizace Live Board refresh nespouštějí.
+
 Každý úspěšný refresh providera nahrazuje čekající history snapshot. Jediný
 history writer vypouští tuto slučovanou frontu. Pro každé letadlo s platnou
 pozicí `persistHistory()` zapisuje pouze tehdy, když je poslední vzorek starší
