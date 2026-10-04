@@ -409,7 +409,7 @@ export function buildAirportActiveTrafficSnapshot(
       || left.aircraft.icaoHex.localeCompare(right.aircraft.icaoHex));
 
   return {
-    inbound: ordered.filter((item) => item.classification === "approaching").slice(0, bounded),
-    outbound: ordered.filter((item) => item.classification === "departing").slice(0, bounded),
+    inbound: ordered.filter((item) => !item.aircraft.onGround && item.classification === "approaching").slice(0, bounded),
+    outbound: ordered.filter((item) => !item.aircraft.onGround && item.classification === "departing").slice(0, bounded),
   };
 }
