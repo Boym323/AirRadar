@@ -264,14 +264,13 @@ export function AirportOperationsBoard({
         {flow.attention.map((observation) => {
           const aircraft = observation.aircraft;
           const label = aircraft.callsign || aircraft.registration || aircraft.icaoHex;
-          const href = observation.movement
-            ? aircraftFlightHref(observation.movement.flightId)
-            : `/aircraft/${encodeURIComponent(aircraft.icaoHex)}`;
           return <li key={aircraft.icaoHex}>
             <span className={`airport-live-journey airport-live-journey-${observation.journey.stage.toLowerCase().replace("_", "-")}`}>
               {journeyLabel(observation.journey.stage)}
             </span>
-            <Link href={href}>{label}</Link>
+            {observation.movement
+              ? <Link href={aircraftFlightHref(observation.movement.flightId)}>{label}</Link>
+              : <Link href={`/aircraft/${encodeURIComponent(aircraft.icaoHex)}`}>{label}</Link>}
             <span>{formatDistance(observation.distanceKm)}</span>
             {observation.journey.routeRelation === "CONFLICT" ? <small className="airport-live-route-state conflict">{t.airport.liveBoardRouteConflict}</small> : null}
           </li>;
