@@ -80,6 +80,27 @@ potřeba alespoň tři vzorky; STABILNÍ evidence vyžaduje, aby jedna dráha tv
 alespoň 75 procent vzorků. Jinak je výsledek SMÍŠENÝ nebo NEURČENÝ. V6
 nepřidává nový request, stream, databázovou tabulku ani persistence write path.
 
+## Airport Live Board V7
+
+V7 zachovává Flow Trend / Pressure z V6 a přidává Runway Flow / Stability jako
+další čistou projekci nad stejným omezeným operations snapshotem. Porovnává
+pohyby s runway evidencí za posledních 15 minut s předchozím 15minutovým oknem.
+Každý let přispěje v jednom okně nejvýše jedním runway vzorkem podle svého
+nejnovějšího pohybu s runway evidencí.
+
+Stav runway flow je záměrně konzervativní. STABILNÍ vyžaduje nejméně tři vzorky
+v obou oknech, stejnou dominantní dráhu a alespoň 75% podíl této dráhy v každém
+okně. PŘECHOD vyžaduje nejméně tři vzorky v obou oknech, změnu dominantní dráhy
+a alespoň 60% podíl předchozí i nové dominantní dráhy. Jinak je výsledek SMÍŠENÁ
+EVIDENCE nebo MÁLO DAT.
+
+Panel zvlášť ukazuje aktuální runway evidenci příletů a odletů, počet reported
+versus inferred runway vzorků a porovnání s dráhou zvýhodněnou aktuálním větrem,
+pokud je aktuální evidence dostatečně silná. Přechod znamená změnu omezené
+receiverové evidence, nikoli potvrzení změny konfigurace letiště nebo pokyn ATC.
+V7 nepřidává nový request, EventSource, API route, databázovou tabulku ani
+persistence write path.
+
 ## Omezení
 
 Výpadky přijímače, chybějící trasa nebo METAR, vrtulníky, touch-
