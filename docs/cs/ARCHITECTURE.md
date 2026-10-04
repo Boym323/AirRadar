@@ -251,6 +251,20 @@ letiště; celosvětová navaid si zachovávají volitelnou asociaci přes stejn
 source key. Stránka letiště načítá core metadata a tři omezené kolekce
 infrastruktury server-side; prohlížeč nikdy nestahuje upstream CSV soubory.
 
+Predictive prospective validation zůstává samostatnou volitelnou persistence
+větví downstream od shadow `PredictiveStateStore`. Predictive Graduation
+Readiness nad ní přidává pouze read-only hranici nad immutable
+`PredictiveObservation` a persistovaným LANDING terminal evidence. Runtime
+collector používá 30denní okno, limity 15 000 predictive observations a 2 500
+landing events, pětiminutovou cache a nikdy nečte `FlightPosition`.
+
+Čistý evaluator `predictive-readiness-v1` vrací pro každou capability
+PASS/WAIT/FAIL. Neúplný bounded výsledek je vždy WAIT. Aircraft prediction API
+readiness vůbec nečte, dokud všechny capability zůstávají SHADOW. Pokud
+operátor explicitně nastaví některou capability na PUBLIC, API readiness gate
+ověří; bez PASS ji efektivně stáhne zpět do SHADOW. Readiness smí public
+graduation zablokovat, ale nikdy capability automaticky nepovyšuje.
+
 Airport Intelligence V3 přidává jeden page-scoped klientský controller pro
 24hodinový operations snapshot a počasí letiště. Operations Board, sjednocená
 časová osa pohybů, runway comparison i detailní weather panel znovu používají
