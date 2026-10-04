@@ -413,7 +413,7 @@
       "category": "operations",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Sanitized health, runtime history, provider status, build identity, and bounded predictive readiness with versioned independent outcome truth.",
+      "summary": "Sanitized health, runtime history, provider status, build identity, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration.",
       "pages": [
         "/system"
       ],
@@ -432,7 +432,8 @@
         "version",
         "runtime",
         "predictive-readiness",
-        "predictive-outcome-truth"
+        "predictive-outcome-truth",
+        "predictive-graduation-calibration"
       ],
       "changelogKeywords": [
         "system status",
@@ -441,7 +442,10 @@
         "build identity",
         "predictive readiness",
         "predictive outcome truth",
-        "independent outcome truth"
+        "independent outcome truth",
+        "predictive graduation calibration",
+        "graduation gap",
+        "manual public review"
       ]
     },
     {
