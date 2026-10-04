@@ -225,9 +225,16 @@ after restart.
 Airport Intelligence reads nearby aircraft from the existing local aircraft
 SSE on the client and filters positioned, recent ADS-B observations within a
 30 km radius. No weather, airport, or history query is triggered by an SSE
-update. Airport observed-movement rows reuse bounded `Flight` route queries;
-they require receiver-proximity evidence and remain explicitly observed, not
-official airport movements. OGN is not included in either airport feature.
+update. Airport Intelligence V3 separately issues one page-scoped
+`GET /api/airports/:icao/operations?period=24h` and one airport-weather read;
+the Operations Board, unified movement timeline, runway comparison, and
+detailed weather panel reuse those two results instead of starting another
+24-hour movement request or duplicate weather request. The operations response
+propagates the bounded movement query's `complete`/`truncated` state. Runway
+usage remains receiver-inferred; the client compares it with wind components
+from the observed METAR without inferring why they may differ. Timeline rows
+link to the existing Flight Story detail. OGN is not included in these airport
+features.
 
 Every successful provider refresh replaces the pending history snapshot. A
 single history writer drains that coalesced queue. For each aircraft with a

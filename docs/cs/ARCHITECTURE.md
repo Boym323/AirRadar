@@ -239,6 +239,14 @@ letiště; celosvětová navaid si zachovávají volitelnou asociaci přes stejn
 source key. Stránka letiště načítá core metadata a tři omezené kolekce
 infrastruktury server-side; prohlížeč nikdy nestahuje upstream CSV soubory.
 
+Airport Intelligence V3 přidává jeden page-scoped klientský controller pro
+24hodinový operations snapshot a počasí letiště. Operations Board, sjednocená
+časová osa pohybů, runway comparison i detailní weather panel znovu používají
+tato dvě čtení. Původní duplicitní 24h movement request a duplicitní weather
+request se na stránce nespouštějí. Existující live provoz okolních letadel
+zůstává samostatným read-only konzumentem zavedeného lokálního aircraft SSE;
+V3 nevytváří další aircraft stream ani write lane.
+
 ### Aviation Weather
 
 `AviationWeatherProvider` je volitelný nezávislý server-side subsystém. Čte

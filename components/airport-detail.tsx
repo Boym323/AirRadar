@@ -4,10 +4,10 @@ import Link from "next/link";
 import type { Airport } from "@/lib/airports/types";
 import { AirportMap } from "@/components/airport-map";
 import { AirportTrafficSummary } from "@/components/airport-traffic-summary";
-import { AirportMovements } from "@/components/airport-movements";
 import { AirportWeatherPanel } from "@/components/airport-weather";
+import { AirportOperationsBoard } from "@/components/airport-operations-board";
+import { useAirportOperationsController } from "@/components/airport-operations-controller";
 import { AirportNearbyAircraft } from "@/components/airport-nearby-aircraft";
-import { AirportOperationalSummary } from "@/components/airport-operational-summary";
 import { PageHeader } from "@/components/ui-primitives";
 import { formatCoordinate, t } from "@/lib/i18n";
 import { formatDistance, formatTrack } from "@/lib/i18n";
@@ -59,6 +59,7 @@ function AirportInfrastructureSections({ infrastructure }: { infrastructure: Air
 
 export function AirportDetail({ airport, infrastructure = { runways: [], frequencies: [], navaids: [] }, nearbyAirports = [] }: { airport: Airport; infrastructure?: AirportInfrastructure; nearbyAirports?: NearbyAirport[] }) {
   const location = [airport.city, airport.country].filter(Boolean).join(" · ");
+  const operationsController = useAirportOperationsController(airport.icaoCode);
 
   return <main className="airport-page">
     <PageHeader
@@ -69,7 +70,7 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
       description={location}
     />
 
-    <AirportOperationalSummary airport={airport} />
+    <AirportOperationsBoard airport={airport} runways={infrastructure.runways} controller={operationsController} />
 
     <div className="airport-layout">
       <div className="airport-overview">
@@ -81,13 +82,20 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
         <section className="airport-card airport-weather-card" aria-labelledby="airport-weather-title">
           <h2 id="airport-weather-title">{t.weather.title}</h2>
           {/* Existing contract: <AirportWeatherPanel airport={airport} />; runway wind remains additive. */}
-          <AirportWeatherPanel airport={airport} runways={infrastructure.runways} />
+          <AirportWeatherPanel
+            airport={airport}
+            runways={infrastructure.runways}
+            sharedState={{
+              weather: operationsController.weather,
+              loading: operationsController.status === "loading",
+              failed: operationsController.weatherFailed,
+              onRetry: operationsController.refresh,
+            }}
+          />
         </section>
       </div>
 
       <div className="airport-content">
-        <AirportMovements airport={airport} />
-
         <AirportTrafficSummary airport={airport} />
 
         <AirportNearbyAircraft airport={airport} />
