@@ -18,6 +18,9 @@ export interface WatchlistRuleInput {
   type?: unknown;
   value?: unknown;
   maxDistanceKm?: unknown;
+  etaThresholdMinutes?: unknown;
+  etaDestinationIcao?: unknown;
+  notifyRunwayChange?: unknown;
   /** The engine has one server-wide cooldown; this is accepted only as a safe validation echo. */
   cooldownMs?: unknown;
 }
@@ -42,6 +45,9 @@ export interface PublicWatchlistRule {
   type: AlertRule["type"];
   value: string;
   maxDistanceKm?: number;
+  etaThresholdMinutes?: number;
+  etaDestinationIcao?: string;
+  notifyRunwayChange: boolean;
   cooldownMs: number;
   lastTriggeredAt: string | null;
   currentState: WatchlistCurrentState;
@@ -54,7 +60,7 @@ export interface PublicWatchlistResponse {
 }
 
 export class WatchlistValidationError extends Error {
-  constructor(readonly code: "invalid_rule" | "invalid_icao" | "invalid_distance" | "invalid_cooldown" | "duplicate_rule") {
+  constructor(readonly code: "invalid_rule" | "invalid_icao" | "invalid_distance" | "invalid_cooldown" | "invalid_eta_threshold" | "invalid_destination" | "duplicate_rule") {
     super(code);
     this.name = "WatchlistValidationError";
   }
@@ -140,6 +146,30 @@ function validateCooldown(rawCooldown: unknown): void {
   }
 }
 
+function normalizeEtaThreshold(raw: unknown, fallback: number | undefined): number | undefined {
+  if (raw === undefined) return fallback;
+  if (raw === null || raw === "") return undefined;
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 1 || raw > 120) {
+    throw new WatchlistValidationError("invalid_eta_threshold");
+  }
+  return raw;
+}
+
+function normalizeDestination(raw: unknown, fallback: string | undefined): string | undefined {
+  if (raw === undefined) return fallback;
+  if (raw === null || raw === "") return undefined;
+  if (typeof raw !== "string" || !/^[A-Za-z]{4}$/.test(raw.trim())) {
+    throw new WatchlistValidationError("invalid_destination");
+  }
+  return raw.trim().toUpperCase();
+}
+
+function normalizeRunwayChange(raw: unknown, fallback = false): boolean {
+  if (raw === undefined) return fallback;
+  if (typeof raw !== "boolean") throw new WatchlistValidationError("invalid_rule");
+  return raw;
+}
+
 export function normalizeWatchlistRule(
   input: WatchlistRuleInput,
   existing: AlertRule | undefined,
@@ -161,6 +191,10 @@ export function normalizeWatchlistRule(
   if (typeof enabled !== "boolean") throw new WatchlistValidationError("invalid_rule");
   validateCooldown(input.cooldownMs);
   const maxDistanceKm = normalizeDistance(input.maxDistanceKm, existing?.maxDistanceKm);
+  const etaThresholdMinutes = normalizeEtaThreshold(input.etaThresholdMinutes, existing?.etaThresholdMinutes);
+  const etaDestinationIcao = normalizeDestination(input.etaDestinationIcao, existing?.etaDestinationIcao);
+  const notifyRunwayChange = normalizeRunwayChange(input.notifyRunwayChange, existing?.notifyRunwayChange ?? false);
+  if (etaDestinationIcao && etaThresholdMinutes === undefined) throw new WatchlistValidationError("invalid_destination");
 
   return {
     id,
@@ -169,6 +203,9 @@ export function normalizeWatchlistRule(
     type,
     value,
     ...(maxDistanceKm === undefined ? {} : { maxDistanceKm }),
+    ...(etaThresholdMinutes === undefined ? {} : { etaThresholdMinutes }),
+    ...(etaThresholdMinutes === undefined || etaDestinationIcao === undefined ? {} : { etaDestinationIcao }),
+    ...(notifyRunwayChange ? { notifyRunwayChange: true } : {}),
   };
 }
 
@@ -180,6 +217,9 @@ function persistedRule(rule: AlertRule): Record<string, unknown> {
     type: rule.type,
     value: rule.value,
     ...(rule.maxDistanceKm === undefined ? {} : { maxDistanceKm: rule.maxDistanceKm }),
+    ...(rule.etaThresholdMinutes === undefined ? {} : { etaThresholdMinutes: rule.etaThresholdMinutes }),
+    ...(rule.etaDestinationIcao === undefined ? {} : { etaDestinationIcao: rule.etaDestinationIcao }),
+    ...(rule.notifyRunwayChange ? { notifyRunwayChange: true } : {}),
   };
 }
 
@@ -288,6 +328,9 @@ export function toPublicWatchlistResponse(
       type: rule.type,
       value: rule.value,
       ...(rule.maxDistanceKm === undefined ? {} : { maxDistanceKm: rule.maxDistanceKm }),
+      ...(rule.etaThresholdMinutes === undefined ? {} : { etaThresholdMinutes: rule.etaThresholdMinutes }),
+      ...(rule.etaDestinationIcao === undefined ? {} : { etaDestinationIcao: rule.etaDestinationIcao }),
+      notifyRunwayChange: rule.notifyRunwayChange === true,
       cooldownMs,
       lastTriggeredAt: lastTriggeredByRule.get(rule.id) ?? null,
       currentState: currentState(rule, snapshot),
