@@ -93,6 +93,21 @@ dominant runway must reach 75 percent to be labeled STABLE. These values remain
 observational/inferred and do not represent airport capacity, delays or ATC
 guidance. V6 adds no fetch, EventSource or persistence path.
 
+## Airport Live Board V7
+
+V7 adds Runway Flow / Stability over the existing shared airport data. It
+compares consecutive 15-minute runway-evidence windows, deduplicates each flight
+to its newest runway-bearing movement, separates current arrival/departure
+evidence, and reports reported versus inferred sample counts.
+
+STABLE requires at least three samples in both windows with the same dominant
+runway at >=75 percent in each. TRANSITIONING requires at least three samples in
+both windows, a changed dominant runway, and >=60 percent support for both the
+old and new dominant runway. MIXED and INSUFFICIENT remain explicit fail-closed
+states. Current flow is compared with the wind-favoured runway only when runway
+evidence is sufficiently strong. No new fetch, SSE, API or persistence path is
+introduced.
+
 ## Command Search V2
 
 The root-level Command Search palette remains available from every route through
