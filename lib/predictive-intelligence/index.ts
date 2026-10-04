@@ -12,4 +12,5 @@ export * from "./eta-advisory";
 export * from "./runway-advisory";
 export * from "./runway-change-advisory";
 export * from "./trajectory-advisory";
+export * from "./outcome-truth";
 export * from "./operations-center";
