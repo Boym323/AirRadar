@@ -6,6 +6,7 @@ const collectorSource = readFileSync(new URL("../lib/server/predictive-readiness
 const publicRouteSource = readFileSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url), "utf8");
 const adminRouteSource = readFileSync(new URL("../app/api/admin/predictive/readiness/route.ts", import.meta.url), "utf8");
 const systemPageSource = readFileSync(new URL("../components/system-status-page.tsx", import.meta.url), "utf8");
+const calibrationSource = readFileSync(new URL("../lib/predictive-intelligence/graduation-calibration.ts", import.meta.url), "utf8");
 
 describe("Predictive Graduation Readiness boundary", () => {
   it("keeps the readiness collector bounded and outside FlightPosition history", () => {
@@ -43,7 +44,8 @@ describe("Predictive Graduation Readiness boundary", () => {
   });
 
   it("keeps graduation calibration admin-only and advisory", () => {
-    expect(collectorSource).toContain("manualReviewEligible");
+    expect(calibrationSource).toContain("manualReviewEligible");
+    expect(calibrationSource).toContain("buildPredictiveGraduationCalibration");
     expect(publicRouteSource).not.toContain("graduation-calibration");
     expect(publicRouteSource).not.toContain("manualReviewEligible");
   });
