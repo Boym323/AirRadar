@@ -345,3 +345,14 @@ high-attention události bez domýšlení faktů. Mapa, playback cursor, kurzor
 profilu, vybraná událost i historický Map Context nadále sdílejí stejný
 timestamp. Částečná data zůstávají použitelná a metadata trasy letišť zůstávají
 kontextem, nikoli důkazem skutečně proletěné trasy.
+
+
+### Airport Live Board V7 — Arrival Sequence
+
+V7 airport board obsahuje také pořadí nejvýše šesti aktivních příletů. Znovu
+používá existující aircraft stream i 30s refresh cyklus letiště, provádí jeden
+omezený predictive batch request a spotřebovává pouze readiness-gated PUBLIC
+ETA/runway advisories. Při nedostupné predikci bezpečně přejde na receiverové
+řazení. Route konflikty jsou vynechány a UNKNOWN route vyžaduje shodu PUBLIC
+destination. UI ukazuje nejistotu ETA, medián rozestupu ETA, stabilitu
+predikované dráhy a kontext pozorovaného runway flow.
