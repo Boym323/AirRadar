@@ -6,6 +6,7 @@ import {
   operationsAlertTone,
   operationsEventPriority,
   operationsEventTone,
+  predictiveOperationsIcaos,
   recentOperationsEvents,
   recentOperationsTimeline,
   relevantOperationsAirportIcaos,
@@ -226,6 +227,25 @@ describe("Operations Center intelligence selection", () => {
 
     expect(relevantOperationsAirportIcaos(timeline)).toEqual(["LOWW", "LKMT"]);
     expect(relevantOperationsAirportIcaos(timeline, 1)).toEqual(["LOWW"]);
+  });
+
+
+  it("derives bounded unique predictive candidates from timeline before live highlights", () => {
+    const now = Date.parse("2026-10-03T20:00:00Z");
+    const timeline = recentOperationsTimeline([
+      event("GO_AROUND", "2026-10-03T19:55:00Z", "first"),
+      { ...event("APPROACH", "2026-10-03T19:54:00Z", "second"), icaoHex: "49D002" },
+      { ...event("LANDING", "2026-10-03T19:53:00Z", "duplicate"), icaoHex: "49d001" },
+    ], [], now);
+    const highlights = logbook().interestingAircraft;
+
+    expect(predictiveOperationsIcaos(timeline, highlights, 4)).toEqual([
+      "49D001",
+      "49D002",
+      "EMERG1",
+      "RARE01",
+    ]);
+    expect(predictiveOperationsIcaos(timeline, highlights, 2)).toEqual(["49D001", "49D002"]);
   });
 
   it("honors the bounded render limit", () => {
