@@ -42,8 +42,8 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(boardSource).toContain('data-testid="airport-live-board-runways"');
     expect(boardSource).toContain('data-testid="airport-live-board-weather"');
     expect(boardSource).toContain('data-product="airport-live-board-v2"');
-    expect(boardSource).toContain('data-testid="airport-live-board-active-inbound"');
-    expect(boardSource).toContain('data-testid="airport-live-board-active-outbound"');
+    expect(boardSource).toContain('testId="airport-live-board-active-inbound"');
+    expect(boardSource).toContain('testId="airport-live-board-active-outbound"');
     expect(boardSource).toContain('variant="inferred"');
     expect(boardSource).toContain("t.airport.v3RunwayDisclaimer");
   });
