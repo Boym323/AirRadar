@@ -413,7 +413,7 @@
       "category": "operations",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Sanitized health, runtime history, provider status and build identity.",
+      "summary": "Sanitized health, runtime history, provider status, build identity, and bounded predictive readiness with versioned independent outcome truth.",
       "pages": [
         "/system"
       ],
@@ -431,14 +431,17 @@
         "health",
         "version",
         "runtime",
-        "predictive-readiness"
+        "predictive-readiness",
+        "predictive-outcome-truth"
       ],
       "changelogKeywords": [
         "system status",
         "runtime history",
         "health endpoint",
         "build identity",
-        "predictive readiness"
+        "predictive readiness",
+        "predictive outcome truth",
+        "independent outcome truth"
       ]
     },
     {
