@@ -150,13 +150,15 @@ These are behavior and safety contracts for changes to the current system.
 - Merge arbitration is explicit: a position candidate must have valid `lat`
   and `lon` plus fresh `seen_pos`. The state service assigns each ICAO a
   source affinity (`local` or `network`). A temporary disappearance from
-  the preferred feed keeps the aircraft identity in the extended union and
-  suppresses the alternate feed's position during a bounded grace period so
-  the marker cannot jump. If the preferred feed remains absent while the
-  alternate observation stays live, affinity fails over to that source; if
-  both observations disappear, affinity is released. Within the selected origin, a fresh position is preferred and a
-  local last-known position is retained when usable. An aircraft with no
-  position is still retained with nullable coordinates. Local descriptive
+  the preferred feed keeps its last good observation through the bounded stale
+  and affinity grace windows while the absence timer advances. If a live
+  alternate position exists, affinity then hands off directly without an
+  intermediate positionless snapshot. Affinity may also use the alternate
+  immediately when the preferred observation is absent or cannot supply a
+  usable position. If both observations disappear, affinity is released.
+  Within the selected origin, a fresh position is preferred and a local
+  last-known position is retained when usable. An aircraft with no position is
+  still retained with nullable coordinates. Local descriptive
   fields and receiver-local RSSI/message counters remain authoritative for a
   local-affinity aircraft. Network-only aircraft have null local measurements.
 - Network-only observations are excluded from PostgreSQL history, daily

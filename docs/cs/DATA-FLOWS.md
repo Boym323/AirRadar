@@ -325,11 +325,14 @@ hexu a považuje pozorování za kandidáta pozice jen tehdy, když jsou obě
 souřadnice platné a `seen_pos` čerstvé. Existence letadla je oddělená od
 použitelnosti pozice: extended výsledek je úplné sjednocení lokálních/síťových
 identit, takže lokální letadla bez čerstvé pozice zůstávají zachována. State
-service každému ICAO přiřadí source affinity a drží letadlo na tomto zdroji,
-dokud některé z pozorování zůstává v RAM; dočasný výpadek zdroje proto nemůže
-přepnout marker local ↔ network. V rámci zvoleného zdroje se preferuje čerstvá
-pozice a v případě potřeby se zachová její poslední známá použitelná pozice;
-jinak souřadnice zůstávají null. Zobrazená network-only letadla jsou označena
+service každému ICAO přiřadí source affinity, odděleně sleduje poslední
+membership jednotlivých providerů a během omezeného stale/affinity grace okna
+drží poslední dobrou preferovanou pozici. Pokud preferovaný feed zůstane
+nepřítomný, živý alternativní zdroj převezme marker přímo bez snapshotu s null
+pozicí. Pokud preferované pozorování chybí nebo neumí dodat použitelnou polohu,
+může arbitráž použít čerstvou alternativu okamžitě. V rámci zvoleného zdroje se
+preferuje čerstvá pozice a v případě potřeby se zachová její poslední známá
+použitelná pozice; jinak souřadnice zůstávají null. Zobrazená network-only letadla jsou označena
 proveniencí zdroje; nevstupují do historie, lokálních denních statistik,
 alertů, enrichmentu metadat, ATC resolution ani health lokálního přijímače.
 Veřejný UI/API výstup obsahuje atribuci ADSB.lol a ODbL 1.0.
