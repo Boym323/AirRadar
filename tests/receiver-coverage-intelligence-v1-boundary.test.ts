@@ -29,6 +29,7 @@ describe("Receiver Coverage Intelligence V1 boundary", () => {
   it("renders the V1 trend in the existing coverage intelligence page", () => {
     expect(pageSource).toContain('data-testid="receiver-coverage-intelligence-v1"');
     expect(pageSource).toContain("data.intelligence.trend.recentDays");
-    expect(pageSource).toContain("data.intelligence.health.state");
+    expect(pageSource).toContain("data.intelligence.health.reasons");
+    expect(pageSource).toContain("healthReasonLabel");
   });
 });
