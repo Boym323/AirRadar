@@ -2,7 +2,7 @@ import { calculateRunwayWind } from "@/lib/airport-runway-wind";
 import { haversineDistanceKm, initialBearing, distanceToGreatCircleSegmentKm } from "@/lib/geo";
 import type { FlightPhase } from "@/lib/intelligence/types";
 import {
-  PREDICTIVE_INTELLIGENCE_VERSION, type PredictionConfidence, type PredictionEvidence,
+  PREDICTIVE_INTELLIGENCE_VERSION, RUNWAY_CHANGE_EVENT_WINDOW_MS, type PredictionConfidence, type PredictionEvidence,
   type PredictionRunway, type PredictiveInput, type PredictiveFlightState, type PredictionSample,
 } from "./types";
 import { PREDICTIVE_CALIBRATION_CONFIG } from "./config";
