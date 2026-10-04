@@ -295,8 +295,17 @@ readiness boundary. Veřejná serializace vyžaduje TRAJECTORY=PUBLIC, readiness
 PASS, snapshot do 45 sekund, stav odlišný od UNKNOWN a MEDIUM/HIGH confidence.
 Prospective lane ukládá `trajectoryState` do omezeného `evidenceJson` pouze
 při změně state/confidence, takže readiness rozpozná instrumentované řádky bez
-změny DB schématu. Nezávislá outcome truth záměrně stále chybí; capability proto
-zůstává WAIT a nemůže se sama povýšit.
+změny DB schématu. Predictive Outcome Truth V1 dodává oddělený verzovaný zdroj
+validace outcome; graduation capability dál závisí na readiness thresholdech a
+nikdy nevznikne jen díky existenci outcome dat.
+
+Predictive Outcome Truth V1 je záměrně mimo prediction graph. Čte omezené
+persistované Flight Intelligence eventy po jednotlivých typech, páruje je pouze
+podle prospective lifecycle/ICAO/flight identity a časových oken a předává
+scoreable RUNWAY_CHANGE/TRAJECTORY evidence readiness evaluatoru. Nečte
+FlightPosition a nepřidává write path, DB migraci, SSE lane ani vstup do
+predictive enginu. Každý event-type dotaz má limit 2 500 řádků; dosažení
+kteréhokoli limitu označí collection jako incomplete a gate zůstane fail-closed.
 
 Predictive Operations Center V1 je omezený read-only agregační boundary nad
 radarovým panelem NOW. Browser odvodí maximálně šest ICAO kandidátů z existující
