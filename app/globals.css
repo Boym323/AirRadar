@@ -5326,3 +5326,30 @@ button, input, select, textarea { color-scheme: dark; }
     grid-column: 2;
   }
 }
+
+
+/* Airport Live Board V2 active traffic */
+.airport-live-active {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+.airport-live-active-lane {
+  border-color: rgba(55, 214, 192, .22);
+  background: rgba(55, 214, 192, .035);
+}
+.airport-live-now {
+  color: var(--mint);
+  font-size: var(--font-size-2xs);
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.airport-live-active-meta {
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .airport-live-active { grid-template-columns: 1fr; }
+}

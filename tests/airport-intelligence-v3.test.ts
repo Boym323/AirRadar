@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AirportRunway } from "@/lib/airports/infrastructure";
 import {
+  buildAirportActiveTrafficSnapshot,
   buildAirportLiveBoardSnapshot,
   buildAirportOperationsTimeline,
   buildAirportRunwayIntelligence,
@@ -132,6 +133,17 @@ describe("Airport Intelligence V3 composer", () => {
       windFavoredRunway: null,
       alignment: "unknown",
     });
+  });
+
+  it("builds bounded nearest-first NOW inbound and outbound lanes from live ADS-B observations", () => {
+    const live = buildAirportActiveTrafficSnapshot([
+      { aircraft: { icaoHex: "IN2" } as never, distanceKm: 12, bearingToAirport: 0, classification: "approaching" },
+      { aircraft: { icaoHex: "OUT1" } as never, distanceKm: 8, bearingToAirport: 0, classification: "departing" },
+      { aircraft: { icaoHex: "IN1" } as never, distanceKm: 5, bearingToAirport: 0, classification: "approaching" },
+      { aircraft: { icaoHex: "OVER" } as never, distanceKm: 2, bearingToAirport: 0, classification: "overflying" },
+    ], 2);
+    expect(live.inbound.map((item) => item.aircraft.icaoHex)).toEqual(["IN1", "IN2"]);
+    expect(live.outbound.map((item) => item.aircraft.icaoHex)).toEqual(["OUT1"]);
   });
 
   it("builds bounded deduplicated live-board arrival and departure lanes", () => {

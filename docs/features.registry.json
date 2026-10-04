@@ -112,7 +112,7 @@
       "category": "airports",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Airport catalog and a bounded Airport Live Board with receiver-inferred arrivals, departures, runway usage, operational events, current weather and observed traffic.",
+      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with active inbound/outbound traffic.",
       "pages": [
         "/airports",
         "/airports/:icao"
