@@ -417,6 +417,13 @@ skutečně naladěnou frekvenci letadla.
   může navíc dostat `adminPreview` pro SHADOW/PUBLIC diagnostiku; anonymní
   klient tento field nikdy nedostane. Aircraft detail čte endpoint jednou při
   mountu a nevytváří druhý live stream ani polling loop.
+- Predictive Runway Advisory V1 přidává do stejné odpovědi `runwayAdvisory`
+  pouze pokud RUNWAY po readiness enforcement zůstává efektivně PUBLIC,
+  readiness je PASS, predikce není starší než 45 s, dráha není null a confidence
+  je známá. Platná admin session může dostat `runwayAdminPreview` s readiness
+  reasons, přesností konce dráhy, coverage a freshness stavem; anonymní klient
+  tento preview nikdy nedostane. Aircraft detail nadále používá jediný prediction
+  fetch bez dalšího streamu nebo pollingu.
 - Konfigurace Alerts & Fleets V1 se ukládá v PostgreSQL přes serverový
   repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence` a `AlertRule`).
   Zapnuté řádky se načítají do vyměnitelné cache v paměti; CRUD zápis nejprve

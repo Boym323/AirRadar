@@ -1,7 +1,9 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import {
   buildAdminEtaAdvisoryPreview,
+  buildAdminRunwayAdvisoryPreview,
   buildPublicEtaAdvisory,
+  buildPublicRunwayAdvisory,
   getPredictiveGraduationPolicy,
   toPublicPredictiveState,
 } from "@/lib/predictive-intelligence";
@@ -44,16 +46,23 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
 
   const prediction = toPublicPredictiveState(predictionState, effectivePolicy);
   const etaReadiness = readiness?.capabilities.ETA ?? null;
+  const runwayReadiness = readiness?.capabilities.RUNWAY ?? null;
   const etaAdvisory = buildPublicEtaAdvisory(predictionState, effectivePolicy, etaReadiness);
+  const runwayAdvisory = buildPublicRunwayAdvisory(predictionState, effectivePolicy, runwayReadiness);
   const adminPreview = admin && etaReadiness
     ? buildAdminEtaAdvisoryPreview(predictionState, configuredPolicy, etaReadiness)
+    : undefined;
+  const runwayAdminPreview = admin && runwayReadiness
+    ? buildAdminRunwayAdvisoryPreview(predictionState, configuredPolicy, runwayReadiness)
     : undefined;
 
   return Response.json(
     {
       prediction,
       etaAdvisory,
+      runwayAdvisory,
       ...(adminPreview ? { adminPreview } : {}),
+      ...(runwayAdminPreview ? { runwayAdminPreview } : {}),
     },
     { headers: { "Cache-Control": "no-store" } },
   );

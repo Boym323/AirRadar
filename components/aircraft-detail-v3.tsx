@@ -10,7 +10,7 @@ import { aircraftWatchlistHref } from "@/lib/aircraft/detail-links";
 import { formatAge, formatAltitude, formatDistance, formatNumber, formatSpeed, formatTime, formatTrack, t } from "@/lib/i18n";
 import { FlightRouteWeather } from "@/components/airport-weather";
 import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
-import { PredictiveEtaAdvisory } from "@/components/predictive-eta-advisory";
+import { PredictiveAircraftAdvisories } from "@/components/predictive-aircraft-advisories";
 import {
   AircraftAltitudeChart,
   AircraftHistorySummaryCard,
@@ -366,7 +366,7 @@ export function AircraftDetailV3({
           <AircraftHeroPhoto icaoHex={icaoHex} registration={registration} onAvailabilityChange={handlePhotoAvailability} />
         </div>
       </div>
-      <PredictiveEtaAdvisory
+      <PredictiveAircraftAdvisories
         icaoHex={icaoHex}
         enabled={Boolean(liveAircraft && icaoHex !== t.common.emptyValue)}
       />

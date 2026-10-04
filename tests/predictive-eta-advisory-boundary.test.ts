@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const routeSource = readFileSync(new URL("../app/api/aircraft/[hex]/prediction/route.ts", import.meta.url), "utf8");
-const advisorySource = readFileSync(new URL("../components/predictive-eta-advisory.tsx", import.meta.url), "utf8");
+const advisorySource = readFileSync(new URL("../components/predictive-aircraft-advisories.tsx", import.meta.url), "utf8");
 const detailSource = readFileSync(new URL("../components/aircraft-detail-v3.tsx", import.meta.url), "utf8");
 const graduationSource = readFileSync(new URL("../lib/predictive-intelligence/graduation.ts", import.meta.url), "utf8");
 
@@ -29,14 +29,14 @@ describe("Predictive ETA Advisory V1 boundary", () => {
   it("expires an already-rendered public ETA with one local one-shot timer", () => {
     expect(advisorySource).toContain('from "@/lib/predictive-intelligence/eta-advisory"');
     expect(advisorySource).toContain("ETA_ADVISORY_STALE_AFTER_MS");
-    expect(advisorySource.match(/window\.setTimeout\(/g)).toHaveLength(1);
-    expect(advisorySource.match(/window\.clearTimeout\(/g)).toHaveLength(1);
+    expect(advisorySource.match(/window\.setTimeout\(/g)).toHaveLength(2);
+    expect(advisorySource.match(/window\.clearTimeout\(/g)).toHaveLength(2);
     expect(advisorySource).toContain("etaAdvisory: null");
     expect(advisorySource).toContain('state: "stale"');
   });
 
-  it("mounts ETA Advisory only on the existing aircraft detail surface", () => {
-    expect(detailSource).toContain("PredictiveEtaAdvisory");
+  it("mounts predictive advisories only on the existing aircraft detail surface", () => {
+    expect(detailSource).toContain("PredictiveAircraftAdvisories");
     expect(detailSource).toContain("enabled={Boolean(liveAircraft");
     expect(advisorySource).toContain('data-testid="predictive-eta-advisory"');
   });

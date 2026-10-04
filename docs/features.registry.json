@@ -46,7 +46,7 @@
       "category": "history",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA advisory.",
+      "summary": "Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA and runway advisories.",
       "pages": [
         "/aircraft/:hex",
         "/flights/:id",
@@ -72,7 +72,9 @@
         "adsbdb",
         "route-intelligence",
         "predictive-eta",
-        "eta-advisory"
+        "eta-advisory",
+        "predictive-runway",
+        "runway-advisory"
       ],
       "changelogKeywords": [
         "aircraft detail",
@@ -81,7 +83,10 @@
         "route weather",
         "predictive eta",
         "eta advisory",
-        "predicted arrival"
+        "predicted arrival",
+        "predictive runway",
+        "runway advisory",
+        "predicted runway"
       ]
     },
     {

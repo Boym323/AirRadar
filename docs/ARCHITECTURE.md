@@ -86,6 +86,13 @@ the displayed uncertainty band. A valid admin session may receive a SHADOW
 preview with readiness and stale/expired state. Anonymous responses never
 contain that preview. Aircraft detail performs one request on mount and adds no
 EventSource, polling loop, model, persistence lane or write path.
+
+Predictive Runway Advisory V1 shares that same request and presentation
+boundary. Public runway requires effective RUNWAY=PUBLIC, readiness PASS, a
+fresh prediction, a non-null runway and known confidence. A valid admin session
+may receive a separate SHADOW runway preview with readiness evidence. The
+browser expires a rendered runway at the same 45-second freshness boundary.
+No second fetch, EventSource, persistence lane, migration or model is added.
 `NetworkAircraftProvider` is a separate optional boundary for live-only
 coverage. `AdsbHubProvider` consumes the generic aggregated SBS/30003 stream
 from `data.adsbhub.org:5002`; these rows are not classified as MLAT. The
