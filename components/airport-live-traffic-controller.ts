@@ -22,6 +22,9 @@ export function useAirportLiveTrafficController(
   const [receivedAt, setReceivedAt] = useState<string | null>(null);
   const previousDistances = useRef(new Map<string, number>());
 
+  const latitude = airport.latitude;
+  const longitude = airport.longitude;
+
   useEffect(() => {
     const source = new EventSource("/api/stream");
     setConnected(false);
@@ -34,7 +37,7 @@ export function useAirportLiveTrafficController(
         const snapshot = JSON.parse((event as MessageEvent<string>).data) as PublicStateSnapshot;
         const next = nearbyAirportAircraft(
           snapshot.aircraft,
-          airport,
+          { latitude, longitude },
           previousDistances.current,
         );
         setObservations(next);
@@ -55,7 +58,7 @@ export function useAirportLiveTrafficController(
       source.removeEventListener("snapshot", handleSnapshot);
       source.close();
     };
-  }, [airport.latitude, airport.longitude]);
+  }, [latitude, longitude]);
 
   return { observations, connected, receivedAt };
 }
