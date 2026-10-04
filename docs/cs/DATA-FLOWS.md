@@ -216,7 +216,7 @@ receiver-inferred; klient jej porovnává se složkami větru z pozorovaného ME
 bez odvozování důvodu případného rozdílu. Řádky timeline odkazují na existující
 Flight Story detail. OGN není zahrnuto v těchto letištních funkcích.
 
-Airport Live Board V3 obnovuje pouze operations/weather čtení každých 30
+Airport Live Board V4 obnovuje pouze operations/weather čtení každých 30
 sekund pomocí one-shot timeru. Jedna page-scoped aircraft SSE subscription je
 sdílená mezi Live Boardem a Nearby Aircraft, takže se druhý airport stream
 neotevírá. Klient řadí platné movement timestampy newest-first, deduplikuje
@@ -228,7 +228,7 @@ pouze v paměti proti `operations.recentMovements`. Join vyžaduje stejnou ICAO
 identitu, nekonfliktní callsign, movement kompatibilní se směrem inbound/
 outbound a timestamp v 20minutovém okně s dvouminutovou tolerancí budoucího
 clock skew. Join může doplnit existující Flight Story link; nikdy nespouští
-per-aircraft history nebo intelligence request. Stale nebo neplatné pozice jsou
+per-aircraft history nebo intelligence request. V4 následně odvodí journey stage z korelovaného movementu a aktuálních guardů vzdálenosti/vertical-rate; route origin/destination se vyhodnocuje nezávisle jako confirmed/unknown/conflict a stage nepřepisuje. Stale nebo neplatné pozice jsou
 vyřazené a SSE update nespouští databázový, weather ani operations request.
 
 Každý úspěšný refresh providera nahrazuje čekající history snapshot. Jediný
