@@ -424,6 +424,14 @@ skutečně naladěnou frekvenci letadla.
   reasons, přesností konce dráhy, coverage a freshness stavem; anonymní klient
   tento preview nikdy nedostane. Aircraft detail nadále používá jediný prediction
   fetch bez dalšího streamu nebo pollingu.
+- Predictive Runway Change Advisory V1 přidává do stejné odpovědi
+  `runwayChangeAdvisory` a pro platnou admin session také
+  `runwayChangeAdminPreview`. Při skutečném přechodu se do omezeného RAM
+  prediction stavu uloží `changedFrom` a `changedAt`. Další evaluace mohou
+  event držet nejvýše pět minut, pokud predikovaná dráha zůstává stejná;
+  prospective RUNWAY_CHANGE observation se dál vytváří pouze při skutečném
+  přechodu previous-runway != current-runway. Veřejný výstup současně vyžaduje
+  prediction snapshot uvnitř 45sekundové freshness hranice.
 - Predictive Operations Center V1 znovu používá stejné advisory buildery přes
   `GET /api/operations/predictive?hexes=`. Klient předává maximálně šest již
   relevantních ICAO identifikátorů. Server seznam normalizuje a deduplikuje,
