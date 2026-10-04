@@ -1,6 +1,7 @@
 import { listHistoryFlights, HistoryDatabaseUnavailableError, normalizeHistoryRange } from "@/lib/server/history";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 import { normalizeIcaoHex } from "@/lib/server/validation";
+import { normalizeAirportIcao } from "@/lib/server/airport-resolver";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,18 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json({ error: "Invalid aircraft identifier" }, { status: 400, headers: noStoreHeaders() });
   }
 
+  const rawOrigin = url.searchParams.get("origin");
+  const origin = rawOrigin === null ? null : normalizeAirportIcao(rawOrigin);
+  if (rawOrigin !== null && !origin) {
+    return Response.json({ error: "Invalid origin airport" }, { status: 400, headers: noStoreHeaders() });
+  }
+
+  const rawDestination = url.searchParams.get("destination");
+  const destination = rawDestination === null ? null : normalizeAirportIcao(rawDestination);
+  if (rawDestination !== null && !destination) {
+    return Response.json({ error: "Invalid destination airport" }, { status: 400, headers: noStoreHeaders() });
+  }
+
   const rawLimit = url.searchParams.get("limit");
   const parsedLimit = rawLimit === null ? undefined : Number(rawLimit);
   if (parsedLimit !== undefined && (!Number.isSafeInteger(parsedLimit) || parsedLimit < 1)) {
@@ -30,6 +43,8 @@ export async function GET(request: Request): Promise<Response> {
       range: normalizeHistoryRange(url.searchParams.get("range")),
       query: url.searchParams.get("q"),
       icaoHex,
+      origin,
+      destination,
       limit: parsedLimit,
     });
     return Response.json(result, { headers: noStoreHeaders() });
