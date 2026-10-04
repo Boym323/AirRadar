@@ -722,7 +722,8 @@ export class AircraftStateService {
       this.localAircraft.set(incoming.icaoHex, { ...localIncoming, ...(enrichment ? { enrichment } : {}), ...(atc !== undefined ? { atc } : {}), trail });
     }
     this.continuity.observeMembership("local", previousObservedHexes, currentHexes, now);
-    const massDrop = this.continuity.evaluateMassDrop("local", previousObservedHexes, currentHexes, now, {
+    const massDropBaseline = previousObservedHexes.size > 0 ? previousObservedHexes : new Set(this.localAircraft.keys());
+    const massDrop = this.continuity.evaluateMassDrop("local", massDropBaseline, currentHexes, now, {
       enabled: isAircraftMassDropGuardEnabled(),
       minBaseline: getAircraftMassDropMinBaseline(),
       dropRatio: getAircraftMassDropRatio(),
