@@ -112,7 +112,7 @@
       "category": "airports",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, flow pulse, bounded operational exceptions, and LANDED completion.",
+      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, flow pulse, short-term flow pressure, runway consistency, bounded operational exceptions, and LANDED completion.",
       "pages": [
         "/airports",
         "/airports/:icao"
@@ -147,7 +147,11 @@
         "flow pulse",
         "airport flow",
         "operational exceptions",
-        "route conflict"
+        "route conflict",
+        "flow pressure",
+        "traffic pressure",
+        "runway consistency",
+        "flow trend"
       ]
     },
     {
