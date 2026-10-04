@@ -1536,6 +1536,8 @@ export const en = {
     predictiveReadinessSubtitle: "30-day bounded evidence gate for public advisory capabilities",
     predictiveReadinessUnavailable: "Predictive readiness report is unavailable.",
     predictiveThresholdVersion: "Threshold version",
+    predictiveOutcomeTruthVersion: "Outcome truth version",
+    predictiveOutcomeEvents: "Outcome events",
     predictiveWindow: "Window",
     predictiveComplete: "Completeness",
     predictiveCompleteYes: "Complete within bounds",
