@@ -5511,3 +5511,34 @@ button, input, select, textarea { color-scheme: dark; }
     text-align: left;
   }
 }
+
+
+/* Airport Live Board V8 arrival flow */
+.airport-live-arrival-flow-v8 {
+  border-color: rgba(114, 189, 244, .18);
+  background: rgba(114, 189, 244, .025);
+}
+.airport-live-v8-runway-load {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+.airport-live-v8-runway-load > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+.airport-live-v8-runway-load strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+}
+.airport-live-v8-runway-load span,
+.airport-live-v8-runway-load small {
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+  font-variant-numeric: tabular-nums;
+}
