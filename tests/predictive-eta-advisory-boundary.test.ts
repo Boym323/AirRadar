@@ -24,7 +24,15 @@ describe("Predictive ETA Advisory V1 boundary", () => {
     expect(advisorySource).toContain("/prediction");
     expect(advisorySource).not.toContain("new EventSource");
     expect(advisorySource).not.toContain("setInterval");
-    expect(advisorySource).not.toContain("setTimeout");
+  });
+
+  it("expires an already-rendered public ETA with one local one-shot timer", () => {
+    expect(advisorySource).toContain('from "@/lib/predictive-intelligence/eta-advisory"');
+    expect(advisorySource).toContain("ETA_ADVISORY_STALE_AFTER_MS");
+    expect(advisorySource.match(/window\.setTimeout\(/g)).toHaveLength(1);
+    expect(advisorySource.match(/window\.clearTimeout\(/g)).toHaveLength(1);
+    expect(advisorySource).toContain("etaAdvisory: null");
+    expect(advisorySource).toContain('state: "stale"');
   });
 
   it("mounts ETA Advisory only on the existing aircraft detail surface", () => {

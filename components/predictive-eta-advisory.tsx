@@ -5,6 +5,7 @@ import type {
   AdminEtaAdvisoryPreview,
   PublicEtaAdvisory,
 } from "@/lib/predictive-intelligence";
+import { ETA_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/eta-advisory";
 import { formatAge, formatTime, t } from "@/lib/i18n";
 
 interface EtaAdvisoryApiResponse {
@@ -66,6 +67,44 @@ export function PredictiveEtaAdvisory({
   }, [enabled, icaoHex]);
 
   const advisory = response?.etaAdvisory ?? null;
+
+  useEffect(() => {
+    if (!advisory) return;
+
+    // The API only returns a fresh public advisory, but a page can remain open
+    // past the freshness boundary. Expire the already-rendered value locally
+    // with one one-shot timer; this is not a polling or streaming path.
+    const staleAfterSeconds = Math.floor(ETA_ADVISORY_STALE_AFTER_MS / 1_000);
+    const remainingFreshMs = Math.max(
+      250,
+      ETA_ADVISORY_STALE_AFTER_MS - advisory.ageSeconds * 1_000 + 1_000,
+    );
+    const evaluatedAt = advisory.evaluatedAt;
+    const timeout = window.setTimeout(() => {
+      setResponse((current) => {
+        if (!current || current.etaAdvisory?.evaluatedAt !== evaluatedAt) return current;
+        return {
+          ...current,
+          etaAdvisory: null,
+          ...(current.adminPreview
+            ? {
+              adminPreview: {
+                ...current.adminPreview,
+                state: "stale",
+                ageSeconds: Math.max(
+                  current.adminPreview.ageSeconds ?? 0,
+                  staleAfterSeconds + 1,
+                ),
+              },
+            }
+            : {}),
+        };
+      });
+    }, remainingFreshMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [advisory]);
+
   const preview = response?.adminPreview;
   if (!advisory && !preview) return null;
 
