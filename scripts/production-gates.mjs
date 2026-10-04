@@ -958,6 +958,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await visualPage.getByText("ETA", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("PASS", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
             await visualPage.getByText("WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("predictive-graduation-calibration-v1", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-calibration-eta"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-calibration-runway"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.locator('[data-testid="predictive-calibration-runway_change"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Připraveno k review", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Sbírání evidence", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Blokováno truth / instrumentací", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockEtaAdvisory) {
             await visualPage.locator('[data-testid="predictive-eta-advisory"]').waitFor({ state: "visible", timeout: 15_000 });
