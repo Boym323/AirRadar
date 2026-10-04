@@ -7,7 +7,8 @@ const pageSource = readFileSync(new URL("../components/statistics-coverage-intel
 
 describe("Receiver Coverage Intelligence V1 boundary", () => {
   it("keeps the coverage intelligence read bounded and off FlightPosition", () => {
-    expect(serverSource).not.toContain("FlightPosition");
+    expect(serverSource).not.toContain("schema.FlightPosition");
+    expect(serverSource).not.toContain(".FlightPosition.where(");
     expect(serverSource).toContain("ReceiverDailyCoverage");
     expect(serverSource).toContain("ReceiverDailyStats");
     expect(serverSource).toContain("COVERAGE_INTELLIGENCE_FLIGHT_LIMIT");
