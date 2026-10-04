@@ -51,7 +51,7 @@ describe("predictive graduation boundary", () => {
   it("only exposes a runway change while it is fresh and confidence is known", () => {
     const result = toPublicPredictiveState({
       ...prediction,
-      runway: { runway: "24", alternative: "06", confidence: "MEDIUM", changed: true, evidence: [] },
+      runway: { runway: "24", alternative: "18", changedFrom: "06", changedAt: 1_500, confidence: "MEDIUM", changed: true, evidence: [] },
     }, {
       ETA: "SHADOW",
       RUNWAY: "SHADOW",
