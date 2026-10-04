@@ -3,7 +3,12 @@ import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/live-boa
 import type { AirportCorrelatedTrafficSnapshot } from "@/lib/airport-intelligence/v3";
 import type { PredictiveOperationsResponse } from "@/lib/predictive-intelligence/operations-center";
 
-function observation(hex: string, distanceKm: number, stage: "INBOUND" | "APPROACH" | "FINAL" | "HOLDING", routeRelation: "CONFIRMED" | "UNKNOWN" | "CONFLICT" = "CONFIRMED") {
+function observation(
+  hex: string,
+  distanceKm: number,
+  stage: "INBOUND" | "APPROACH" | "FINAL" | "HOLDING",
+  routeRelation: "CONFIRMED" | "UNKNOWN" | "CONFLICT" = "CONFIRMED",
+): AirportCorrelatedTrafficSnapshot["inbound"][number] {
   return {
     aircraft: {
       icaoHex: hex, callsign: hex, registration: null, aircraftType: null, aircraftDescription: null,
@@ -12,9 +17,9 @@ function observation(hex: string, distanceKm: number, stage: "INBOUND" | "APPROA
       messages: null, seenSeconds: 0, seenPosSeconds: 0, lastSeen: "2026-10-04T20:00:00.000Z", source: "ADS-B",
       sourceType: null, onGround: false, distanceKm, bearing: 90, trail: [],
     },
-    distanceKm, bearingToAirport: 270, classification: "approaching" as const,
+    distanceKm, bearingToAirport: 270, classification: "approaching",
     movement: null, movementAgeSeconds: null,
-    journey: { stage, routeRelation, origin: "LKPR", destination: "LKTB" },
+    journey: { stage, routeRelation, origin: "LKPR", destination: routeRelation === "CONFLICT" ? "LOWW" : "LKTB" },
   };
 }
 
@@ -48,8 +53,7 @@ function predictive(): PredictiveOperationsResponse {
       },
       {
         icaoHex: "CCC333", label: "CCC333", callsign: "CCC333", registration: null, destination: "LKPR",
-        etaAdvisory: { kind: "ETA", state: "available", estimatedArrivalAt: "2026-10-04T20:06:00.000Z", evaluatedAt: "2026-10-04T20:00:00.000Z", ageSeconds: 3, horizonMinutes: 6, confidence: "MEDIUM", uncertaintyMinutes: 3, uncertaintyBasis: "readiness_p90", modelVersion: "predictive-intelligence-v1", provenance: "predicted" },
-        runwayAdvisory: null, runwayChangeAdvisory: null, trajectoryAdvisory: null,
+        etaAdvisory: null, runwayAdvisory: null, runwayChangeAdvisory: null, trajectoryAdvisory: null,
       },
     ],
   };
@@ -58,21 +62,47 @@ function predictive(): PredictiveOperationsResponse {
 describe("Airport Live Board V7 arrival sequence", () => {
   it("orders PUBLIC ETA arrivals first and excludes route conflicts", () => {
     const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: traffic(), predictive: predictive() });
+    expect(result.version).toBe("airport-live-board-v7");
     expect(result.items.map((item) => item.icaoHex)).toEqual(["BBB222", "AAA111", "CCC333"]);
     expect(result.items[0]).toMatchObject({ position: 1, etaHorizonMinutes: 4, predictedRunway: "28" });
     expect(result.items[2]).toMatchObject({ eta: null, predictedRunway: null });
   });
 
-  it("computes median public ETA spacing and dominant predicted runway", () => {
+  it("computes median public ETA spacing and predicted runway stability", () => {
     const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: traffic(), predictive: predictive() });
     expect(result.medianSpacingMinutes).toBe(4);
     expect(result.publicPredictionCount).toBe(2);
-    expect(result.predictedRunway).toEqual({ designator: "28", share: 1, samples: 2 });
+    expect(result.predictionCoverage).toBeCloseTo(2 / 3);
+    expect(result.predictedRunway).toEqual({ designator: "28", consistency: "STABLE", share: 1, samples: 2 });
   });
 
   it("falls back deterministically to journey stage and distance without predictions", () => {
     const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: traffic(), predictive: null });
     expect(result.items.map((item) => item.icaoHex)).toEqual(["BBB222", "AAA111", "CCC333"]);
     expect(result.medianSpacingMinutes).toBeNull();
+    expect(result.predictedRunway.consistency).toBe("UNKNOWN");
+  });
+
+  it("requires either a confirmed route or a PUBLIC prediction matching the airport", () => {
+    const unknown = {
+      inbound: [
+        observation("UNK111", 10, "INBOUND", "UNKNOWN"),
+        observation("AAA111", 20, "INBOUND", "UNKNOWN"),
+      ],
+      outbound: [],
+    };
+    const result = buildAirportArrivalSequence({ airportIcao: "LKTB", traffic: unknown, predictive: predictive() });
+    expect(result.items.map((item) => item.icaoHex)).toEqual(["AAA111"]);
+  });
+
+  it("caps the arrival sequence to six aircraft", () => {
+    const inbound = Array.from({ length: 8 }, (_, index) =>
+      observation(`ABC00${index}`, 8 + index, "INBOUND"));
+    const result = buildAirportArrivalSequence({
+      airportIcao: "LKTB",
+      traffic: { inbound, outbound: [] },
+      predictive: null,
+    });
+    expect(result.items).toHaveLength(6);
   });
 });
