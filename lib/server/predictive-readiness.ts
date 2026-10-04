@@ -19,7 +19,7 @@ const MATCH_AFTER_PREDICTION_LIMIT_MS = 6 * 60 * 60_000;
 
 type Capability = keyof PredictiveGraduationPolicy;
 
-export interface PredictiveReadinessPredictiveReadinessObservationRow {
+export interface PredictiveReadinessObservationRow {
   observationKey: string;
   lifecycleKey: string;
   capability: string;
@@ -32,7 +32,7 @@ export interface PredictiveReadinessPredictiveReadinessObservationRow {
   createdAt: unknown;
 }
 
-export interface PredictiveReadinessPredictiveReadinessLandingEventRow {
+export interface PredictiveReadinessLandingEventRow {
   eventKey: string;
   icaoHex: string;
   flightId: number | null;
@@ -152,13 +152,6 @@ function landingTruth(row: PredictiveReadinessLandingEventRow): LandingTruth | n
     landingAtMs,
     reportedRunway,
   };
-}
-
-function percentile(values: readonly number[], percentileValue: number): number | null {
-  if (!values.length) return null;
-  const sorted = [...values].sort((left, right) => left - right);
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * percentileValue) - 1));
-  return sorted[index] ?? null;
 }
 
 function staleRate(rows: readonly PredictiveReadinessObservationRow[]): number | null {
