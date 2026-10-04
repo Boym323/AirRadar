@@ -393,6 +393,8 @@ export async function listHistoryFlights(options: {
   range?: HistoryFlightRange;
   query?: string | null;
   icaoHex?: string | null;
+  origin?: string | null;
+  destination?: string | null;
   limit?: number;
   now?: Date;
 } = {}): Promise<{ flights: HistoryFlightSummary[]; range: HistoryFlightRange; limit: number }> {
@@ -402,6 +404,8 @@ export async function listHistoryFlights(options: {
   const range = normalizeHistoryRange(options.range);
   const limit = Math.min(Math.max(Math.trunc(options.limit ?? HISTORY_FLIGHT_LIMIT), 1), HISTORY_FLIGHT_LIMIT);
   const exactHex = options.icaoHex?.trim().toUpperCase() || null;
+  const exactOrigin = options.origin ? normalizeAirportIcao(options.origin) : null;
+  const exactDestination = options.destination ? normalizeAirportIcao(options.destination) : null;
   const search = normalizeSearch(options.query);
   try {
     const schema = database.orm.public;
@@ -413,20 +417,28 @@ export async function listHistoryFlights(options: {
     }
 
     const { from, to } = historyRangeBounds(range, options.now);
+    const withRouteFilters = (query: NonNullable<ReturnType<typeof getPrisma>>["orm"]["public"]["Flight"]) => {
+      let filtered = query;
+      if (exactOrigin) filtered = filtered.where({ origin: exactOrigin });
+      if (exactDestination) filtered = filtered.where({ destination: exactDestination });
+      return filtered;
+    };
     if (!search) {
-      const flights = await queryFlightSummaries(schema, from, to, limit);
+      const flights = await queryFlightSummaries(schema, from, to, limit, withRouteFilters);
       return { flights: orderFlightSummaries(flights), range, limit };
     }
 
     const pattern = searchPattern(search);
-    const [callsignMatches, flightRegistrationMatches, aircraftRegistrationMatches, hexMatches] = await Promise.all([
-      queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.callsign.ilike(pattern))),
-      queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.registration.ilike(pattern))),
-      queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.aircraft.some((aircraft) => aircraft.registration.ilike(pattern)))),
-      queryFlightSummaries(schema, from, to, limit, (query) => query.where((flight) => flight.aircraft.some((aircraft) => aircraft.icaoHex.ilike(pattern)))),
+    const [callsignMatches, flightRegistrationMatches, aircraftRegistrationMatches, hexMatches, originMatches, destinationMatches] = await Promise.all([
+      queryFlightSummaries(schema, from, to, limit, (query) => withRouteFilters(query.where((flight) => flight.callsign.ilike(pattern)))),
+      queryFlightSummaries(schema, from, to, limit, (query) => withRouteFilters(query.where((flight) => flight.registration.ilike(pattern)))),
+      queryFlightSummaries(schema, from, to, limit, (query) => withRouteFilters(query.where((flight) => flight.aircraft.some((aircraft) => aircraft.registration.ilike(pattern))))),
+      queryFlightSummaries(schema, from, to, limit, (query) => withRouteFilters(query.where((flight) => flight.aircraft.some((aircraft) => aircraft.icaoHex.ilike(pattern))))),
+      queryFlightSummaries(schema, from, to, limit, (query) => withRouteFilters(query.where((flight) => flight.origin.ilike(pattern)))),
+      queryFlightSummaries(schema, from, to, limit, (query) => withRouteFilters(query.where((flight) => flight.destination.ilike(pattern)))),
     ]);
     const unique = new Map<number, HistoryFlightSummary>();
-    for (const flight of [...callsignMatches, ...flightRegistrationMatches, ...aircraftRegistrationMatches, ...hexMatches]) unique.set(flight.id, flight);
+    for (const flight of [...callsignMatches, ...flightRegistrationMatches, ...aircraftRegistrationMatches, ...hexMatches, ...originMatches, ...destinationMatches]) unique.set(flight.id, flight);
     return { flights: orderFlightSummaries([...unique.values()]).slice(0, limit), range, limit };
   } catch {
     throw new HistoryDatabaseUnavailableError();
