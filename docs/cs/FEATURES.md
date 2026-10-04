@@ -60,6 +60,26 @@ zda operátor nakonfiguroval volitelného providera.
 | `/fleet` | Konkrétní letadla z ICAO pravidel watchlistu, live/offline stav, počty nedávných pozorovaných letů, trasy/letiště a lazy fotografie. | Produkce; neidentitní pravidla watchlistu jsou vynechána, historie PostgreSQL je volitelná. |
 | `/system` | Sanitizovaný stav runtime, přijímače, persistence, statistik, ATC, počasí, OGN, alertů a letišť. Lazy providery weather/radar/wind/ADSBDB zobrazují cold-start stavy `ON DEMAND`/`LOADING` a omezené bezpečné důvody stavů degraded/offline. | Produkční read-only diagnostika; nikdy nespouští volitelné upstream požadavky. |
 
+## PIREP / AIREP Intelligence V1
+
+AirRadar může obohatit kontext počasí pozorovaného vlastním ADS-B přijímačem o
+omezená pilotní/letadlová hlášení z veřejného Data API Aviation Weather Center.
+Integrace běží pouze na serveru a na vyžádání; prohlížeč nikdy nevolá upstream
+službu přímo.
+
+`GET /api/weather/pirep?lat=&lon=&radiusNm=&hours=&altitudeFt=` přijímá
+omezený geografický dotaz (10–300 NM, 1–24 hodin, volitelně 0–60 000 ft),
+používá pětiminutovou paměťovou cache s omezeným stale-if-error oknem,
+omezuje počet normalizovaných výsledků a zachovává provenance zdroje Aviation
+Weather Center. Nevznikají žádné databázové zápisy, migrace, background poller
+ani práce v ADS-B hot path.
+
+Aircraft Weather zobrazuje externí PIREP/AIREP hlášení pouze při známém
+konkrétním středu mapy/receiveru. Turbulence, námraza, teplota, vítr, typ
+letadla, výška, naléhavost a stáří pozorování jsou zobrazené odděleně od
+vlastních Mode-S/BDS 4.4 pozorování AirRadaru. Externí hlášení se automaticky
+nepřiřazují ke konkrétním letadlům zachyceným lokálním přijímačem.
+
 ## Airport Live Board V5
 
 V5 zachovává stejnou omezenou sdílenou architekturu letiště a nepřidává žádnou
