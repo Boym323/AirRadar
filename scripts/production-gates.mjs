@@ -605,7 +605,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       };
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
-        { name: "predictive-operations-public-desktop", path: "/?mapDiagnostics=1&aircraft=896139", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, mockPredictiveOperations: "public", openOperationsCenter: true },
+        { name: "operations-center-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, openOperationsCenter: true },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-landscape-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1024, height: 768 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
@@ -617,7 +617,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "system-desktop", path: "/system", selector: ".system-page", viewport: { width: 1366, height: 900 }, fullPage: true },
         { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
-        { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1&aircraft=896139", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, mockPredictiveOperations: "admin", openOperationsCenter: true },
+        { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
         { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW Operations" },
