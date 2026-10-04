@@ -108,6 +108,22 @@ describe("Airport Intelligence V3 composer", () => {
     expect(result.alignment).toBe("different");
   });
 
+  it("uses the existing operations wind projection when runway geometry is unavailable", () => {
+    const data = {
+      ...operations(),
+      wind: [
+        { directionDeg: 290, speedKt: 12, runway: "29", headwindKt: 12, crosswindKt: 0 },
+        { directionDeg: 290, speedKt: 12, runway: "11", headwindKt: -12, crosswindKt: 0 },
+      ],
+    };
+    const result = buildAirportRunwayIntelligence(data, [], metar(290));
+    expect(result).toMatchObject({
+      inferredRunway: "29",
+      windFavoredRunway: "29",
+      alignment: "aligned",
+    });
+  });
+
   it("stays unknown when wind or runway evidence is insufficient", () => {
     const noUsage = { ...operations(), likelyRunway: null, runwayUsage: [] };
     expect(buildAirportRunwayIntelligence(noUsage, runways, null)).toMatchObject({
