@@ -110,7 +110,7 @@ export function FlightsPage() {
   return <main className="browse-page">
     <BrowserHeader title={t.browse.flightsTitle} description={t.browse.flightsDescription} search={search} onSearch={updateSearch} placeholder={t.browse.flightsSearch} count={loading || error ? null : flights.length}>
       <div className="browse-segmented" role="group" aria-label={t.history.flightList}>{(["today", "yesterday", "7d"] as const).map((value) => <button key={value} type="button" className={range === value ? "active" : ""} aria-pressed={range === value} onClick={() => updateRange(value)}>{value === "today" ? t.history.today : value === "yesterday" ? t.history.yesterday : t.history.lastSevenDays}</button>)}</div>
-      {destination ? <button type="button" className="browse-filter-chip" onClick={clearDestination}>{t.route.destination}: {destination} ×</button> : null}
+      {destination ? <button type="button" className="browse-filter-chip" onClick={clearDestination}>{t.browse.destinationFilter}: {destination} ×</button> : null}
     </BrowserHeader>
     <Panel className="browse-panel">
       <div className="browse-list-heading flight-browse-heading"><span>{t.browse.flightIdentity}</span><span>{t.browse.flightTelemetry}</span><span>{t.browse.flightTiming}</span></div>
