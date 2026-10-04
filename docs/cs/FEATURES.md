@@ -138,7 +138,10 @@ starý, explicitní `changedFrom` a `changedAt` a minimálně MEDIUM confidence.
 WAIT, FAIL, SHADOW, stale, expired, LOW a UNKNOWN stav veřejnou změnu
 nevyrenderují. Platná admin session může dostat SHADOW preview s outcome
 precision, false-positive rate, stavem nezávislé change truth a readiness
-reasons. Detail letadla nadále používá jediný page-scoped prediction request.
+reasons. Současná V1 readiness evidence záměrně zůstává WAIT, dokud není k
+dispozici nezávislá truth skutečné změny dráhy, takže samotná implementace
+nemůže capability automaticky vystavit veřejně. Detail letadla nadále používá
+jediný page-scoped prediction request.
 
 ## Predictive Operations Center V1
 
