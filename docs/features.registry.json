@@ -112,7 +112,7 @@
       "category": "airports",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with active traffic correlated to recent Flight Story movements.",
+      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated active flight journeys.",
       "pages": [
         "/airports",
         "/airports/:icao"
@@ -139,7 +139,10 @@
         "recent departures",
         "flight correlation",
         "live flight correlation",
-        "flight story correlation"
+        "flight story correlation",
+        "active flight journey",
+        "journey state",
+        "route consistency"
       ]
     },
     {

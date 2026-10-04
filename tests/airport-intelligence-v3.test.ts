@@ -214,6 +214,90 @@ describe("Airport Intelligence V3 composer", () => {
     expect(correlated.outbound[0].movement).toMatchObject({ flightId: 77, movement: "GO_AROUND" });
   });
 
+  it("derives FINAL only from a fresh correlated approach with close descending live geometry", () => {
+    const approach = { ...movement(81, "APPROACH", "2026-10-04T08:08:00.000Z"), icaoHex: "ABC081", callsign: "FINAL81" };
+    const observation = {
+      aircraft: {
+        icaoHex: "ABC081",
+        callsign: "FINAL81",
+        lastSeen: "2026-10-04T08:10:00.000Z",
+        verticalRate: -700,
+        enrichment: { route: { origin: "LKPR", destination: "LOWW" } },
+      } as never,
+      distanceKm: 6,
+      bearingToAirport: 0,
+      classification: "approaching" as const,
+    };
+    const correlated = buildAirportCorrelatedTrafficSnapshot([observation], operations([approach]));
+    expect(correlated.inbound[0].journey).toEqual({
+      stage: "FINAL",
+      routeRelation: "CONFIRMED",
+      origin: "LKPR",
+      destination: "LOWW",
+    });
+  });
+
+  it("keeps a correlated approach at APPROACH outside the final geometry guard", () => {
+    const approach = { ...movement(82, "APPROACH", "2026-10-04T08:08:00.000Z"), icaoHex: "ABC082", callsign: "APP82" };
+    const observation = {
+      aircraft: {
+        icaoHex: "ABC082",
+        callsign: "APP82",
+        lastSeen: "2026-10-04T08:10:00.000Z",
+        verticalRate: -700,
+      } as never,
+      distanceKm: 12,
+      bearingToAirport: 0,
+      classification: "approaching" as const,
+    };
+    const correlated = buildAirportCorrelatedTrafficSnapshot([observation], operations([approach]));
+    expect(correlated.inbound[0].journey.stage).toBe("APPROACH");
+  });
+
+  it("preserves GO_AROUND journey state even when route metadata conflicts with the airport", () => {
+    const goAround = { ...movement(83, "GO_AROUND", "2026-10-04T08:08:00.000Z"), icaoHex: "ABC083", callsign: "GA83" };
+    const observation = {
+      aircraft: {
+        icaoHex: "ABC083",
+        callsign: "GA83",
+        lastSeen: "2026-10-04T08:10:00.000Z",
+        verticalRate: 1200,
+        enrichment: { route: { origin: "LKPR", destination: "EDDM" } },
+      } as never,
+      distanceKm: 7,
+      bearingToAirport: 0,
+      classification: "departing" as const,
+    };
+    const correlated = buildAirportCorrelatedTrafficSnapshot([observation], operations([goAround]));
+    expect(correlated.outbound[0].journey).toMatchObject({
+      stage: "GO_AROUND",
+      routeRelation: "CONFLICT",
+      origin: "LKPR",
+      destination: "EDDM",
+    });
+  });
+
+  it("distinguishes initial climb from generic outbound traffic", () => {
+    const takeoff = { ...movement(84, "TAKEOFF", "2026-10-04T08:09:00.000Z"), icaoHex: "ABC084", callsign: "TO84" };
+    const departure = { ...movement(85, "DEPARTURE", "2026-10-04T08:09:00.000Z"), icaoHex: "ABC085", callsign: "DEP85" };
+    const observations = [
+      {
+        aircraft: { icaoHex: "ABC084", callsign: "TO84", lastSeen: "2026-10-04T08:10:00.000Z" } as never,
+        distanceKm: 3,
+        bearingToAirport: 0,
+        classification: "departing" as const,
+      },
+      {
+        aircraft: { icaoHex: "ABC085", callsign: "DEP85", lastSeen: "2026-10-04T08:10:00.000Z" } as never,
+        distanceKm: 14,
+        bearingToAirport: 0,
+        classification: "departing" as const,
+      },
+    ];
+    const correlated = buildAirportCorrelatedTrafficSnapshot(observations, operations([takeoff, departure]));
+    expect(correlated.outbound.map((item) => item.journey.stage)).toEqual(["INITIAL_CLIMB", "OUTBOUND"]);
+  });
+
   it("builds bounded deduplicated live-board arrival and departure lanes", () => {
     const data = operations([
       movement(1, "APPROACH", "2026-10-04T07:00:00.000Z"),

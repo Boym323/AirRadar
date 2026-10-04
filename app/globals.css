@@ -5379,3 +5379,36 @@ button, input, select, textarea { color-scheme: dark; }
 @media (max-width: 760px) {
   .airport-live-active-meta { justify-items: start; }
 }
+
+
+/* Airport Live Board V4 active journey */
+.airport-live-journey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 3px 7px;
+  border: 1px solid rgba(148, 163, 184, .24);
+  border-radius: 999px;
+  font-size: var(--font-size-2xs);
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.airport-live-journey-final,
+.airport-live-journey-approach,
+.airport-live-journey-holding {
+  border-color: rgba(55, 214, 192, .35);
+}
+.airport-live-journey-go-around {
+  border-color: rgba(251, 191, 36, .45);
+}
+.airport-live-route-state {
+  font-size: var(--font-size-2xs);
+}
+.airport-live-route-state.confirmed { color: var(--mint); }
+.airport-live-route-state.conflict { color: var(--warning); }
+@media (max-width: 760px) {
+  .airport-live-journey { justify-self: start; }
+}
