@@ -92,3 +92,28 @@ jsou pouze dolní mez. Nezavádí se nová tabulka databáze, aby se neduplikova
 historie Flight Intelligence. Úroveň aktivity je deterministická: QUIET je
 nula pohybů, LIGHT jeden až tři, MODERATE čtyři až osm a BUSY devět nebo více
 relevantních pohybů v daném okně. Přelety se do použití dráhy nezapočítávají.
+
+
+## Airport Live Board V7 — Arrival Sequence
+
+V7 přidává aktivní pořadí příletů nad existující V6 flow vrstvou. Kandidáti
+pocházejí výhradně z živého receiverového inbound snapshotu; route konflikty a
+již přistálé položky se do pořadí nezařazují.
+
+Pro nejvýše šest aktivních inbound letadel používá jeden omezený batch request
+na existující `GET /api/operations/predictive?hexes=`. Klient z odpovědi
+kopíruje pouze PUBLIC `etaAdvisory` a `runwayAdvisory`; admin preview se do
+boardu nepřenáší. Nevzniká další SSE spojení.
+
+Pořadí preferuje dostupné PUBLIC ETA, jinak používá deterministické pořadí
+journey stage a vzdálenosti. Board zobrazuje:
+
+- pořadí aktivních příletů;
+- readiness-gated PUBLIC ETA s kalibrovanou nejistotou;
+- readiness-gated predikovanou dráhu;
+- medián rozestupu mezi dostupnými ETA;
+- dominantní predikovanou dráhu; a
+- existující 30min receiver-inferred runway-flow konzistenci z V6.
+
+Predikce se použije pouze tehdy, pokud destination z prediction endpointu
+odpovídá ICAO aktuálního boardu. V7 není ATC arrival sequence ani FIDS.
