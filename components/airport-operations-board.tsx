@@ -13,6 +13,7 @@ import {
   buildAirportRunwayIntelligence,
 } from "@/lib/airport-intelligence/v3";
 import { buildAirportArrivalSequence } from "@/lib/airport-intelligence/arrival-sequence-v7";
+import { buildAirportApproachQueueIntelligence } from "@/lib/airport-intelligence/approach-queue-v8";
 import type { AirportOperationsControllerState } from "@/components/airport-operations-controller";
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 import type { AirportMovement } from "@/lib/server/airport-movements";
@@ -144,6 +145,19 @@ function runwayFlowLaneDetail(
     : t.airport.liveBoardV7LaneDetail(Math.round(lane.share * 100), lane.samples);
 }
 
+function approachQueueStateLabel(
+  state: ReturnType<typeof buildAirportApproachQueueIntelligence>["state"],
+): string {
+  return {
+    EMPTY: t.airport.liveBoardV8QueueEmpty,
+    LOW_DENSITY: t.airport.liveBoardV8QueueLowDensity,
+    ACTIVE: t.airport.liveBoardV8QueueActive,
+    BUILDING: t.airport.liveBoardV8QueueBuilding,
+    COMPRESSED: t.airport.liveBoardV8QueueCompressed,
+    HOLDING_PRESENT: t.airport.liveBoardV8QueueHolding,
+  }[state];
+}
+
 function movementIdentity(movement: AirportMovement): string {
   return movement.callsign || movement.registration || movement.icaoHex;
 }
@@ -258,6 +272,7 @@ export function AirportOperationsBoard({
     traffic: activeTraffic,
     predictive: controller.predictive,
   });
+  const approachQueue = buildAirportApproachQueueIntelligence(arrivalSequence);
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
   const metar = weather?.metar ?? null;
@@ -266,7 +281,7 @@ export function AirportOperationsBoard({
     ? `${String(Math.round(metar.windDirectionDeg)).padStart(3, "0")}° / ${formatSpeed(metar.windSpeedKt)}`
     : null;
 
-  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v7">
+  return <section id="airport-intelligence-v3" className="airport-v3-board airport-live-board" aria-labelledby="airport-v3-title" data-testid="airport-intelligence-v3" data-product="airport-live-board-v8">
     <div data-testid="airport-live-board">
     <div className="airport-v3-hero">
       <div className="airport-v3-heading">
@@ -496,6 +511,51 @@ export function AirportOperationsBoard({
         </li>)}
       </ol> : <p className="airport-v3-empty">{t.airport.liveBoardV7ArrivalNoArrivals}</p>}
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV7ArrivalDisclaimer}</p>
+    </section>
+
+    <section className="airport-live-flow-pressure" data-testid="airport-live-board-v8-approach-queue" aria-labelledby="airport-live-v8-queue-title">
+      <div className="airport-live-flow-heading">
+        <div>
+          <span className="ui-kicker">{t.airport.liveBoardV8QueueKicker}</span>
+          <h3 id="airport-live-v8-queue-title">{t.airport.liveBoardV8QueueTitle}</h3>
+        </div>
+        <span>{t.airport.liveBoardV8QueueWindow}</span>
+      </div>
+      <MetricStrip className="airport-live-flow-metrics">
+        <MetricCard
+          label={t.airport.liveBoardV8QueueSignal}
+          value={approachQueueStateLabel(approachQueue.state)}
+          detail={t.airport.liveBoardV8QueueSignalDetail}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV8QueueActiveArrivals}
+          value={String(approachQueue.activeArrivals)}
+          detail={t.airport.liveBoardV8QueueApproachFinal(approachQueue.approachOrFinal)}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV8QueueHolding}
+          value={String(approachQueue.holding)}
+          detail={t.airport.liveBoardV8QueueReceiverStages}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV8QueueEtaCoverage}
+          value={approachQueue.etaCoverage === null ? "—" : `${Math.round(approachQueue.etaCoverage * 100)} %`}
+          detail={`${approachQueue.etaSamples} / ${approachQueue.activeArrivals} PUBLIC ETA`}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV8QueueMinimumSpacing}
+          value={approachQueue.minimumSpacingMinutes === null ? "—" : `${formatNumber(approachQueue.minimumSpacingMinutes, 1)} min`}
+          detail={approachQueue.medianSpacingMinutes === null
+            ? t.airport.liveBoardV8QueueNoSpacing
+            : t.airport.liveBoardV8QueueMedianSpacing(formatNumber(approachQueue.medianSpacingMinutes, 1))}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV8QueueCompressedPairs}
+          value={String(approachQueue.compressedPairs)}
+          detail={t.airport.liveBoardV8QueueCompressedThreshold}
+        />
+      </MetricStrip>
+      <p className="airport-v3-disclaimer">{t.airport.liveBoardV8QueueDisclaimer}</p>
     </section>
 
     <div className="airport-live-active" data-testid="airport-live-board-active">
