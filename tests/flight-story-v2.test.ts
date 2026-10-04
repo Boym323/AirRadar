@@ -157,6 +157,20 @@ describe("Flight Story V2 narrative composer", () => {
     expect(narrative.find((item) => item.eventId === 13)?.confidenceLevel).toBe("low");
   });
 
+  it("keeps observed boundaries first and last even when an attached event has an inconsistent timestamp", () => {
+    const input = detail();
+    input.events = [{
+      ...input.events[0]!,
+      id: 77,
+      occurredAt: "2026-10-03T09:59:00.000Z",
+    }];
+
+    const narrative = buildFlightStoryNarrative(input);
+    expect(narrative[0]?.boundary).toBe("first_seen");
+    expect(narrative[1]?.eventId).toBe(77);
+    expect(narrative.at(-1)?.boundary).toBe("last_seen");
+  });
+
   it("falls back to event altitude when no nearby telemetry sample exists", () => {
     const input = detail();
     input.events = [{
