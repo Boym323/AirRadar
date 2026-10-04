@@ -272,8 +272,8 @@ describe("flight history v2", () => {
 
   it("exposes destination filtering through the public history route", async () => {
     const flights = [
-      { ...flight(1, "2026-09-07T10:00:00Z", "TO-PRG"), destination: "LKPR" },
-      { ...flight(2, "2026-09-07T09:00:00Z", "TO-VIE", 2), destination: "LOWW" },
+      { ...flight(1, "2026-10-03T10:00:00Z", "TO-PRG"), destination: "LKPR" },
+      { ...flight(2, "2026-10-03T09:00:00Z", "TO-VIE", 2), destination: "LOWW" },
     ];
     vi.mocked(getPrisma).mockReturnValue(fakeDatabase({ aircraft, flights }) as never);
 
