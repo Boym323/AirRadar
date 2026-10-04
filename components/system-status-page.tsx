@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { formatDateTime, formatDistance, formatNumber, getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
 import type { AircraftWeatherStatus, OperationalState, SystemStatus, SystemStatusApiResponse, SystemStatusResponse } from "@/lib/server/system-status";
 import type { NavigationIntegrityStatus } from "@/lib/server/system-status-contract";
+import type { PredictiveReadinessReport } from "@/lib/server/predictive-readiness";
 import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
 
 function formatUptime(seconds: number, dictionary: LocaleDictionary): string {
@@ -104,6 +105,109 @@ function Card({
   </UiCard>;
 }
 
+function predictiveDecisionVariant(decision: "PASS" | "WAIT" | "FAIL"): StatusBadgeVariant {
+  return decision === "PASS" ? "success" : decision === "FAIL" ? "danger" : "warning";
+}
+
+function formatPredictivePercent(value: number | null, dictionary: LocaleDictionary): string {
+  return value === null ? dictionary.system.notAvailable : `${formatNumber(value * 100, 1, dictionary.locale)} %`;
+}
+
+function formatPredictiveError(value: number | null, dictionary: LocaleDictionary): string {
+  if (value === null) return dictionary.system.notAvailable;
+  return value < 60
+    ? `${formatNumber(value, 0, dictionary.locale)} s`
+    : `${formatNumber(value / 60, 1, dictionary.locale)} min`;
+}
+
+function PredictiveReadinessPanel({ report, dictionary }: { report: PredictiveReadinessReport; dictionary: LocaleDictionary }) {
+  const policies = (policy: PredictiveReadinessReport["configuredPolicy"]) =>
+    (["ETA", "RUNWAY", "RUNWAY_CHANGE", "TRAJECTORY"] as const).map((key) => `${key} ${policy[key]}`).join(" · ");
+  const capabilities = [
+    {
+      key: "ETA",
+      result: report.capabilities.ETA,
+      metrics: [
+        [dictionary.system.predictiveObservations, formatNumber(report.capabilities.ETA.evidence.observations, 0, dictionary.locale)],
+        [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.ETA.evidence.scoreableObservations, 0, dictionary.locale)],
+        [dictionary.system.predictiveIndependentTruth, formatNumber(report.capabilities.ETA.evidence.independentTruthFlights, 0, dictionary.locale)],
+        [dictionary.system.predictiveMedianError, formatPredictiveError(report.capabilities.ETA.evidence.medianAbsoluteErrorSeconds, dictionary)],
+        [dictionary.system.predictiveP90Error, formatPredictiveError(report.capabilities.ETA.evidence.p90AbsoluteErrorSeconds, dictionary)],
+        [dictionary.system.predictiveP95Error, formatPredictiveError(report.capabilities.ETA.evidence.p95AbsoluteErrorSeconds, dictionary)],
+        [dictionary.system.predictiveCaptureStaleRate, formatPredictivePercent(report.capabilities.ETA.evidence.captureStaleRate, dictionary)],
+      ],
+    },
+    {
+      key: "RUNWAY",
+      result: report.capabilities.RUNWAY,
+      metrics: [
+        [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY.evidence.observations, 0, dictionary.locale)],
+        [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY.evidence.scoreableObservations, 0, dictionary.locale)],
+        [dictionary.system.predictiveIndependentTruth, formatNumber(report.capabilities.RUNWAY.evidence.independentTruthFlights, 0, dictionary.locale)],
+        [dictionary.system.predictiveAccuracy, formatPredictivePercent(report.capabilities.RUNWAY.evidence.exactEndAccuracy, dictionary)],
+        [dictionary.system.predictiveCoverage, formatPredictivePercent(report.capabilities.RUNWAY.evidence.coverage, dictionary)],
+        [dictionary.system.predictiveCaptureStaleRate, formatPredictivePercent(report.capabilities.RUNWAY.evidence.captureStaleRate, dictionary)],
+      ],
+    },
+    {
+      key: "RUNWAY_CHANGE",
+      result: report.capabilities.RUNWAY_CHANGE,
+      metrics: [
+        [dictionary.system.predictiveObservations, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.observations, 0, dictionary.locale)],
+        [dictionary.system.predictiveScoreable, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.scoreableObservations, 0, dictionary.locale)],
+        [dictionary.system.predictiveIndependentTruth, formatNumber(report.capabilities.RUNWAY_CHANGE.evidence.independentTruthFlights, 0, dictionary.locale)],
+        [dictionary.system.predictivePrecision, formatPredictivePercent(report.capabilities.RUNWAY_CHANGE.evidence.outcomePrecision, dictionary)],
+        [dictionary.system.predictiveFalsePositiveRate, formatPredictivePercent(report.capabilities.RUNWAY_CHANGE.evidence.falsePositiveRate, dictionary)],
+        [dictionary.system.predictiveOutcomeTruth, report.capabilities.RUNWAY_CHANGE.evidence.independentChangeTruthAvailable ? dictionary.system.yes : dictionary.system.no],
+      ],
+    },
+    {
+      key: "TRAJECTORY",
+      result: report.capabilities.TRAJECTORY,
+      metrics: [
+        [dictionary.system.predictiveObservations, formatNumber(report.capabilities.TRAJECTORY.evidence.observations, 0, dictionary.locale)],
+        [dictionary.system.predictiveValidatedCandidates, formatNumber(report.capabilities.TRAJECTORY.evidence.validatedCandidates, 0, dictionary.locale)],
+        [dictionary.system.predictiveStateCapture, report.capabilities.TRAJECTORY.evidence.stateCaptureAvailable ? dictionary.system.yes : dictionary.system.no],
+        [dictionary.system.predictiveOutcomeTruth, report.capabilities.TRAJECTORY.evidence.independentOutcomeTruthAvailable ? dictionary.system.yes : dictionary.system.no],
+        [dictionary.system.predictivePrecision, formatPredictivePercent(report.capabilities.TRAJECTORY.evidence.precision, dictionary)],
+        [dictionary.system.predictiveCaptureStaleRate, formatPredictivePercent(report.capabilities.TRAJECTORY.evidence.captureStaleRate, dictionary)],
+      ],
+    },
+  ] as const;
+
+  return <UiCard className="system-card system-predictive-readiness" data-testid="predictive-readiness">
+    <div className="system-card-header">
+      <div>
+        <h2>{dictionary.system.predictiveReadiness}</h2>
+        <p className="system-card-subtitle">{dictionary.system.predictiveReadinessSubtitle}</p>
+      </div>
+      <UiStatusBadge variant={report.source === "postgres" ? "neutral" : "stale"}>{report.source.toUpperCase()}</UiStatusBadge>
+    </div>
+    <dl className="system-fields system-predictive-readiness-meta">
+      <Field label={dictionary.system.predictiveThresholdVersion} value={report.thresholds.version} />
+      <Field label={dictionary.system.predictiveWindow} value={`${formatDateTime(report.window.from, dictionary)} – ${formatDateTime(report.window.to, dictionary)}`} />
+      <Field label={dictionary.system.predictiveComplete} value={report.complete ? dictionary.system.predictiveCompleteYes : dictionary.system.predictiveCompleteNo} />
+      <Field label={dictionary.system.predictiveConfiguredPolicy} value={policies(report.configuredPolicy)} />
+      <Field label={dictionary.system.predictiveEffectivePolicy} value={policies(report.effectivePolicy)} />
+      <Field label={dictionary.system.predictiveIntegrity} value={`${dictionary.system.predictiveCrossIcao}: ${report.integrity.crossIcaoLifecycleConflicts} · ${dictionary.system.predictiveCrossFlight}: ${report.integrity.crossFlightLifecycleConflicts}`} />
+    </dl>
+    <div className="system-predictive-capabilities">
+      {capabilities.map((capability) => <section key={capability.key} className="system-predictive-capability">
+        <div className="system-predictive-capability-heading">
+          <strong>{capability.key}</strong>
+          <UiStatusBadge variant={predictiveDecisionVariant(capability.result.decision)}>
+            {capability.result.decision === "PASS" ? dictionary.system.predictiveDecisionPass : capability.result.decision === "FAIL" ? dictionary.system.predictiveDecisionFail : dictionary.system.predictiveDecisionWait}
+          </UiStatusBadge>
+        </div>
+        <dl>
+          {capability.metrics.map(([label, value]) => <Field key={label} label={label} value={value} />)}
+        </dl>
+        {capability.result.reasons.length > 0 && <p className="system-predictive-reasons"><strong>{dictionary.system.predictiveReasons}:</strong> {capability.result.reasons.join(" · ")}</p>}
+      </section>)}
+    </div>
+  </UiCard>;
+}
+
 function LinkNav({ dictionary, locale, onLocaleChange }: { dictionary: LocaleDictionary; locale: LocaleKey; onLocaleChange: () => void }) {
   return <nav className="system-nav" aria-label={dictionary.system.navigation}>
     <Link href="/">{dictionary.system.backToRadar}</Link>
@@ -122,6 +226,8 @@ export function SystemStatusPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [streamConnected, setStreamConnected] = useState(false);
+  const [predictiveReadiness, setPredictiveReadiness] = useState<PredictiveReadinessReport | null>(null);
+  const [predictiveReadinessError, setPredictiveReadinessError] = useState(false);
 
   const applyStatus = useCallback((next: SystemStatusApiResponse) => {
     setData((current) => {
@@ -146,7 +252,27 @@ export function SystemStatusPage() {
     }
   }, [applyStatus]);
 
+  const loadPredictiveReadiness = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/predictive/readiness", { cache: "no-store" });
+      if (!response.ok) throw new Error("predictive readiness request failed");
+      setPredictiveReadiness(await response.json() as PredictiveReadinessReport);
+      setPredictiveReadinessError(false);
+    } catch {
+      setPredictiveReadinessError(true);
+    }
+  }, []);
+
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (data?.detailLevel !== "admin") {
+      setPredictiveReadiness(null);
+      setPredictiveReadinessError(false);
+      return;
+    }
+    void loadPredictiveReadiness();
+  }, [data?.detailLevel, loadPredictiveReadiness]);
 
   useEffect(() => {
     const source = new EventSource("/api/system/stream");
@@ -188,7 +314,7 @@ export function SystemStatusPage() {
           <span aria-hidden="true">●</span> {streamConnected ? dictionary.system.realtime : dictionary.system.reconnecting}
         </span>
       </div>
-      <Button variant="primary" className="primary-button" onClick={() => void load()} disabled={loading}>{loading ? dictionary.system.refreshing : dictionary.system.refresh}</Button>
+      <Button variant="primary" className="primary-button" onClick={() => { void load(); if (data?.detailLevel === "admin") void loadPredictiveReadiness(); }} disabled={loading}>{loading ? dictionary.system.refreshing : dictionary.system.refresh}</Button>
     </div>
 
     {loading && !data && <p className="system-message">{dictionary.system.loading}</p>}
@@ -221,6 +347,9 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.metadataCache} value={data.runtime.metadataHotCacheLimit === null ? formatCount(data.runtime.metadataHotCacheSize, dictionary) : `${formatCount(data.runtime.metadataHotCacheSize, dictionary)} / ${formatCount(data.runtime.metadataHotCacheLimit, dictionary)}`} />
         <Field label={dictionary.system.providerCache} value={data.runtime.providerCacheLimit === null ? formatCount(data.runtime.providerCacheEntries, dictionary) : `${formatCount(data.runtime.providerCacheEntries, dictionary)} / ${formatCount(data.runtime.providerCacheLimit, dictionary)}`} />
       </Card>}
+
+      {detailed && predictiveReadiness && <PredictiveReadinessPanel report={predictiveReadiness} dictionary={dictionary} />}
+      {detailed && predictiveReadinessError && !predictiveReadiness && <UiCard className="system-card system-predictive-readiness"><p className="system-message">{dictionary.system.predictiveReadinessUnavailable}</p></UiCard>}
 
       {detailed && data.predictiveValidation && <Card title={dictionary.system.predictiveValidation} status={data.predictiveValidation.status === "no_data" ? "disabled" : data.predictiveValidation.status} dictionary={dictionary}>
         <Field label={dictionary.system.enabled} value={data.predictiveValidation.enabled ? dictionary.system.configured : dictionary.system.disabled} />
