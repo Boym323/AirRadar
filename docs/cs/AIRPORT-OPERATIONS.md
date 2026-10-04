@@ -32,7 +32,7 @@ Vítr a použití dráhy jsou oddělené informace: používejte „dráha zvýh
 větrem“ a „pravděpodobná dráha podle nedávného provozu“, nikoli provozní
 doporučení.
 
-## Airport Live Board V3
+## Airport Live Board V4
 
 Detail letiště znovu používá 24hodinovou operations odpověď a existující
 airport-weather odpověď v jediném page-scoped controlleru. Controller provádí
@@ -50,7 +50,11 @@ lane. Přehled využití drah je omezený na čtyři řádky.
 Při úspěšné korelaci aktivní řádek zpřístupní odpovídající Flight ID přes
 Flight Story a zobrazí poslední kompatibilní movement, runway, confidence a čas
 eventu. Chybějící, stale nebo konfliktní evidence zůstává pouze LIVE a nic se
-nedohaduje. Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
+nedohaduje. V4 nad touto evidencí přidává vysvětlitelný aktivní journey stav:
+INBOUND, HOLDING, APPROACH, FINAL, GO_AROUND, INITIAL_CLIMB nebo OUTBOUND.
+FINAL vyžaduje čerstvý korelovaný APPROACH, live vzdálenost <=8 km a vertical
+rate <=-150 fpm. Route metadata se hodnotí odděleně jako CONFIRMED, UNKNOWN
+nebo CONFLICT a nikdy nepřepisují pozorovaný pohyb. Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
 teplotu a QNH. Jde o pozorovací pohled přijímače a počasí, nikoli letištní
 letový řád, FIDS, přidělení dráhy nebo instrukce ATC.
 
