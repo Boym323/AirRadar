@@ -205,10 +205,16 @@ získaných recovery dat, která se po restartu znovu načtou.
 
 Airport Intelligence čte okolní letadla z existujícího lokálního aircraft SSE
 na klientovi a filtruje nedávná ADS-B pozorování s pozicí v radiusu 30 km.
-Aktualizace SSE nespouští žádný dotaz na počasí, letiště ani historii. Řádky
-pozorovaných airport movements znovu používají omezené `Flight` route
-dotazy; vyžadují důkaz blízkosti přijímače a zůstávají explicitně pozorované,
-nikoli oficiální pohyby letiště. OGN není zahrnuto v žádné z těchto funkcí.
+Aktualizace SSE nespouští žádný dotaz na počasí, letiště ani historii. Airport
+Intelligence V3 odděleně provede jeden page-scoped
+`GET /api/airports/:icao/operations?period=24h` a jedno čtení počasí letiště;
+Operations Board, sjednocená časová osa pohybů, runway comparison a detailní
+weather panel znovu použijí tyto dva výsledky místo dalšího 24h movement
+requestu nebo duplicitního weather requestu. Operations odpověď propaguje
+`complete`/`truncated` stav omezeného movement dotazu. Použití dráhy zůstává
+receiver-inferred; klient jej porovnává se složkami větru z pozorovaného METAR
+bez odvozování důvodu případného rozdílu. Řádky timeline odkazují na existující
+Flight Story detail. OGN není zahrnuto v těchto letištních funkcích.
 
 Každý úspěšný refresh providera nahrazuje čekající history snapshot. Jediný
 history writer vypouští tuto slučovanou frontu. Pro každé letadlo s platnou
