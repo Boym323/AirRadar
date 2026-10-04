@@ -64,13 +64,16 @@ Runway odděluje přesný konec od fyzické runway a zachovává UNKNOWN v cover
 metrikách. Confidence HIGH, MEDIUM, LOW a UNKNOWN se agregují odděleně bez
 změny thresholdů nebo graduation policy.
 
-Trajectory nyní prospektivně ukládá explicitní `trajectoryState` do omezeného
+Trajectory prospektivně ukládá explicitní `trajectoryState` do omezeného
 `evidenceJson` pouze při změně stavu nebo confidence. Runtime readiness tak
 umí odlišit instrumentované trajectory observations od starších metadata-only
 řádků a samostatně počítat kandidáty `POSSIBLE_DEVIATION` a `DEVIATING`.
-Nezávislá outcome truth trajectory ale stále není k dispozici, proto
-`validatedCandidates` zůstává 0, precision není scoreable a capability
-zůstává `WAIT`; samotný state capture ji nesmí povýšit na PUBLIC.
+Runway-change a trajectory outcome scoring nyní používají oddělený kontrakt
+`predictive-outcome-truth-v1`. Runway change vyžaduje nezávislou APPROACH
+runway před predikcí a pozdější provider-reported LANDING runway. Trajectory
+positive truth vyžaduje následný confident DIVERSION, GO_AROUND, HOLDING, ORBIT
+nebo UNUSUAL_TURN; negative truth vyžaduje ground-confirmed landing na stejném
+prospective cíli. Chybějící evidence zůstává UNSCORABLE.
 
 ## Reports and retention
 
@@ -101,10 +104,13 @@ této fázi nemění.
 ## Runtime graduation readiness
 
 Aplikace má navíc samostatný admin-only runtime readiness gate. Nenahrazuje
-offline validační report výše. Runtime collector čte omezené 30denní okno
-`PredictiveObservation` a persistované LANDING terminal evidence; nikdy nečte
-`FlightPosition`. Thresholdy jsou verzované jako `predictive-readiness-v1`
-a každá capability dostane `PASS`, `WAIT` nebo `FAIL`.
+offline validační report výše. Runtime collector čte omezené 30denní okno `PredictiveObservation`,
+persistované LANDING terminal evidence a vybrané persistované Flight
+Intelligence outcome eventy; nikdy nečte `FlightPosition`. Outcome sémantika
+má samostatnou verzi `predictive-outcome-truth-v1`, zatímco thresholdy
+zůstávají `predictive-readiness-v1`. Každý outcome type má samostatný limit
+2 500 řádků a dosažení kteréhokoli limitu označí collection jako incomplete.
+Každá capability dostane `PASS`, `WAIT` nebo `FAIL`.
 
 Chybějící nezávislý ground truth, chybějící instrumentation nebo dosažení
 bounded limitu znamená `WAIT`. Konflikt lifecycle identity nebo dostatečně

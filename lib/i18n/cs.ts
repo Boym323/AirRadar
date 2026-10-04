@@ -1534,6 +1534,8 @@ export const cs = {
     predictiveReadinessSubtitle: "30denní bounded evidence gate pro veřejné advisory capability",
     predictiveReadinessUnavailable: "Readiness report není dostupný.",
     predictiveThresholdVersion: "Threshold verze",
+    predictiveOutcomeTruthVersion: "Outcome truth verze",
+    predictiveOutcomeEvents: "Outcome eventy",
     predictiveWindow: "Okno",
     predictiveComplete: "Úplnost",
     predictiveCompleteYes: "Kompletní v limitech",

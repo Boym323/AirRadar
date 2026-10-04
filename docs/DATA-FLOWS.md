@@ -131,8 +131,18 @@ Predictive Trajectory Advisory V1 adds `trajectoryAdvisory` and authenticated
 are emitted only when state or confidence changes and carry
 `trajectoryState` in bounded `evidenceJson`. Readiness ignores legacy
 metadata-only trajectory rows when counting instrumented observations and
-candidate deviations. This makes state capture measurable without adding a
-column or migration; independent outcome truth remains unavailable.
+candidate deviations.
+
+Predictive Outcome Truth V1 combines immutable `PredictiveObservation`
+snapshots with bounded, read-only persisted `FlightEvent` outcome queries.
+RUNWAY_CHANGE uses a pre-prediction APPROACH runway plus a later
+provider-reported LANDING runway. TRAJECTORY uses later confident abnormal
+Flight Intelligence events as positive truth and only a ground-confirmed
+landing at the same prospective destination as negative truth. Missing or
+ambiguous evidence remains UNSCORABLE. Each event-type query is capped at 2,500
+rows; truncation makes the whole readiness collection incomplete. The flow
+never reads FlightPosition and does not write or update truth onto prediction
+rows.
 
 Predictive Operations Center V1 reuses the same advisory builders through
 `GET /api/operations/predictive?hexes=`. The caller provides at most six

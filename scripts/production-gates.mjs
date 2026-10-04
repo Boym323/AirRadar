@@ -386,11 +386,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         generatedAt: "2026-10-04T09:00:00.000Z",
         window: { from: "2026-09-04T09:00:00.000Z", to: "2026-10-04T09:00:00.000Z", days: 30 },
         complete: true,
-        limits: { observations: 15000, landingEvents: 2500 },
+        limits: { observations: 15000, landingEvents: 2500, outcomeEventsPerType: 2500 },
         configuredPolicy: { ETA: "SHADOW", RUNWAY: "SHADOW", RUNWAY_CHANGE: "SHADOW", TRAJECTORY: "SHADOW" },
         effectivePolicy: { ETA: "SHADOW", RUNWAY: "SHADOW", RUNWAY_CHANGE: "SHADOW", TRAJECTORY: "SHADOW" },
         thresholds: { version: "predictive-readiness-v1" },
-        collection: { observations: 420, landingEvents: 93, matchedLandingTruth: 141, captureStaleObservations: 3 },
+        outcomeTruthVersion: "predictive-outcome-truth-v1",
+        collection: { observations: 420, landingEvents: 93, outcomeEvents: 47, matchedLandingTruth: 141, captureStaleObservations: 3 },
         integrity: { crossIcaoLifecycleConflicts: 0, crossFlightLifecycleConflicts: 0 },
         capabilities: {
           ETA: {

@@ -63,11 +63,15 @@ Only `CONFIRMED` truth is scoreable. `AMBIGUOUS` and `UNKNOWN` are reported as
 `predictedLandingAt - actualLandingAt`, absolute error, MAE, median, P75/P90/P95,
 bias, early/late split, horizon buckets, confidence calibration and coverage.
 Runway reports exact-end and physical-runway accuracy separately, including
-unknown-prediction rate and coverage. Runway-change remains shadow outcome evidence. Trajectory now persists explicit
-state transitions in bounded `evidenceJson`, allowing runtime readiness to count
-instrumented observations and deviation candidates. Independent trajectory
-outcome truth is still unavailable, so validated-candidate precision remains
-unscored and the capability stays `WAIT`.
+unknown-prediction rate and coverage. Runway-change and trajectory outcome
+scoring use the separate `predictive-outcome-truth-v1` contract. A runway
+change requires independent APPROACH runway provenance before the prediction
+and a later provider-reported LANDING runway. Trajectory candidate positives
+require a subsequent confident DIVERSION, GO_AROUND, HOLDING, ORBIT, or
+UNUSUAL_TURN; a negative requires a ground-confirmed landing at the same
+prospective destination. Missing evidence remains UNSCORABLE. Trajectory still
+persists explicit state transitions in bounded `evidenceJson`, allowing
+runtime readiness to count instrumented observations and candidates.
 
 ## Reports and retention
 
@@ -99,9 +103,12 @@ Quality thresholds are advisory and no capability leaves `SHADOW`.
 
 The application also exposes a separate admin-only runtime readiness gate. It
 does not replace the offline validation report above. The runtime collector
-reads a bounded 30-day window of `PredictiveObservation` plus persisted
-`LANDING` terminal evidence only; it never reads `FlightPosition`. Thresholds
-are versioned as `predictive-readiness-v1` and each capability resolves to
+reads a bounded 30-day window of `PredictiveObservation`, persisted
+`LANDING` terminal evidence, and selected persisted Flight Intelligence
+outcome event types; it never reads `FlightPosition`. Outcome semantics are
+versioned separately as `predictive-outcome-truth-v1`, while thresholds remain
+`predictive-readiness-v1`. Each outcome type is independently capped at 2,500
+rows; any cap hit marks the collection incomplete. Each capability resolves to
 `PASS`, `WAIT`, or `FAIL`.
 
 Missing independent truth, unavailable instrumentation, or a capped/truncated

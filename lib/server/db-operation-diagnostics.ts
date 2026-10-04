@@ -24,6 +24,12 @@ export const DB_OPERATION_LANES = [
   "history.aircraft-detail.query",
   "predictive-readiness.observations.query",
   "predictive-readiness.landings.query",
+  "predictive-readiness.outcomes.approach.query",
+  "predictive-readiness.outcomes.diversion.query",
+  "predictive-readiness.outcomes.go-around.query",
+  "predictive-readiness.outcomes.holding.query",
+  "predictive-readiness.outcomes.orbit.query",
+  "predictive-readiness.outcomes.unusual-turn.query",
 ] as const;
 
 export type DbOperationLane = (typeof DB_OPERATION_LANES)[number];
@@ -108,6 +114,12 @@ const metadata: Record<DbOperationLane, { kind: DbOperationKind; operation: DbOp
   "history.aircraft-detail.query": { kind: "READ", operation: "SELECT" },
   "predictive-readiness.observations.query": { kind: "READ", operation: "SELECT" },
   "predictive-readiness.landings.query": { kind: "READ", operation: "SELECT" },
+  "predictive-readiness.outcomes.approach.query": { kind: "READ", operation: "SELECT" },
+  "predictive-readiness.outcomes.diversion.query": { kind: "READ", operation: "SELECT" },
+  "predictive-readiness.outcomes.go-around.query": { kind: "READ", operation: "SELECT" },
+  "predictive-readiness.outcomes.holding.query": { kind: "READ", operation: "SELECT" },
+  "predictive-readiness.outcomes.orbit.query": { kind: "READ", operation: "SELECT" },
+  "predictive-readiness.outcomes.unusual-turn.query": { kind: "READ", operation: "SELECT" },
 };
 
 export async function trackDbOperation<T>(lane: DbOperationLane, operation: () => Promise<T>, workUnits = 1): Promise<T> {

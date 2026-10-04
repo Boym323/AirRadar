@@ -110,9 +110,18 @@ and readiness boundary. Public serialization requires TRAJECTORY=PUBLIC,
 readiness PASS, a <=45-second snapshot, a non-UNKNOWN state and MEDIUM/HIGH
 confidence. The prospective lane records `trajectoryState` inside bounded
 `evidenceJson` only on state/confidence transitions, so readiness can identify
-instrumented observations without changing the database schema. Independent
-outcome truth is intentionally still unavailable; therefore the capability
-remains WAIT and cannot self-graduate.
+instrumented observations without changing the database schema. Predictive
+Outcome Truth V1 supplies a separate versioned validation source for candidate
+outcomes; capability graduation still depends on the readiness thresholds and
+never occurs merely because outcome data exists.
+
+Predictive Outcome Truth V1 is intentionally outside the prediction graph. It
+reads bounded persisted Flight Intelligence events by type, joins them only by
+prospective lifecycle/ICAO/flight identity and time windows, and exposes
+scoreable RUNWAY_CHANGE/TRAJECTORY evidence to the readiness evaluator. It
+never reads FlightPosition and adds no write path, schema migration, SSE lane,
+or predictive-engine input. Per-type event queries are capped at 2,500 rows;
+any cap hit marks the readiness collection incomplete and therefore fail-closed.
 
 Predictive Operations Center V1 is a bounded read-only aggregation boundary on
 the radar NOW panel. The browser derives at most six ICAO candidates from the
