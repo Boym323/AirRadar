@@ -294,6 +294,33 @@ describe("server alerts", () => {
     expect(notifier.calls.every((item) => item.type === "emergency_7700")).toBe(true);
   });
 
+  it("records a watchlisted special squawk as history-only when global emergency push is disabled", async () => {
+    vi.stubEnv("ALERT_EMERGENCY_ENABLED", "false");
+    const notifier = recordingNotifier();
+    const recordDetected = vi.fn(async () => undefined);
+    const recordNotification = vi.fn(async () => undefined);
+    const engine = new AlertEngine({
+      rules: [rule("watched", "icaoHex", "ABC123")],
+      notifier,
+      history: { recordDetected, recordNotification },
+    });
+    const normal = aircraft("ABC123", { squawk: "7000", emergency: null });
+    const emergency = aircraft("ABC123", { squawk: "7700", emergency: "general" });
+
+    engine.observe([normal], [emergency]);
+    await flushAlerts();
+
+    expect(notifier.calls).toHaveLength(0);
+    expect(recordDetected).toHaveBeenCalledWith(expect.objectContaining({
+      type: "emergency_7700",
+      reason: "squawk_7700",
+      squawk: "7700",
+      ruleIds: ["watched"],
+    }));
+    expect(recordNotification).toHaveBeenCalledWith(expect.any(String), "disabled");
+    expect(engine.getRuleLastTriggeredAt("watched")).not.toBeNull();
+  });
+
   it("keeps reserved queue capacity for a critical emergency behind a normal-alert burst", async () => {
     vi.stubEnv("ALERT_EMERGENCY_ENABLED", "true");
     const notifier: AlertNotifier = {
