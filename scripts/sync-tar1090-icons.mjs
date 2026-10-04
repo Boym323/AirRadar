@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import vm from "node:vm";
 
 const TAR1090_COMMIT = "115e40e6968eb6cdeb9e5ed7bdcdd1a2234ed2a2";
@@ -7,6 +7,7 @@ const MARKERS_URL = `${TAR1090_REPOSITORY}/raw/${TAR1090_COMMIT}/html/markers.js
 const LICENSE_URL = `${TAR1090_REPOSITORY}/raw/${TAR1090_COMMIT}/LICENSE`;
 const outputDirectory = new URL("../public/aircraft-icons-tar1090/", import.meta.url);
 const sourceMapPath = new URL("../lib/aircraft/tar1090-icon-map.ts", import.meta.url);
+const licensePath = new URL("LICENSE", outputDirectory);
 
 function extractObject(source, declaration, endMarker) {
   const start = source.indexOf(declaration);
@@ -82,10 +83,15 @@ async function fetchText(url) {
   return response.text();
 }
 
-const [markersSource, license] = await Promise.all([
+// Keep the vendored license as a reviewed, repository-controlled artifact.
+const checkedInLicense = await readFile(licensePath, "utf8");
+const [markersSource, upstreamLicense] = await Promise.all([
   fetchText(MARKERS_URL),
   fetchText(LICENSE_URL),
 ]);
+if (upstreamLicense !== checkedInLicense) {
+  throw new Error("tar1090 LICENSE changed upstream; review and update the checked-in license before syncing assets");
+}
 const { shapes, typeDesignatorIcons, categoryIcons } = readTar1090Objects(markersSource);
 
 await rm(outputDirectory, { recursive: true, force: true });
@@ -150,7 +156,7 @@ await writeFile(
   "utf8",
 );
 
-await writeFile(new URL("LICENSE", outputDirectory), license, "utf8");
+await writeFile(licensePath, checkedInLicense, "utf8");
 await writeFile(
   new URL("README.md", outputDirectory),
   [
