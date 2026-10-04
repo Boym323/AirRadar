@@ -256,7 +256,7 @@ export class PirepProvider {
       .catch((error) => {
         const stale = this.cache.get(key);
         if (stale && stale.staleUntil > this.now()) {
-          return { ...stale.snapshot, stale: true, cacheSource: "stale-cache", snapshotAgeMs: this.now() - Date.parse(stale.snapshot.fetchedAt) };
+          return { ...stale.snapshot, stale: true, cacheSource: "stale-cache", snapshotAgeMs: this.now() - Date.parse(stale.snapshot.fetchedAt) } satisfies PirepSnapshot;
         }
         throw error;
       })
