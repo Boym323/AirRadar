@@ -229,3 +229,29 @@ export function liveOperationsHighlights(
       || left.icaoHex.localeCompare(right.icaoHex))
     .slice(0, Math.max(0, limit));
 }
+
+
+export function predictiveOperationsIcaos(
+  timeline: OperationsTimelineItem[],
+  highlights: LogbookInterestingAircraft[],
+  limit = 6,
+): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+  const add = (value: string | null | undefined) => {
+    const hex = value?.trim().toUpperCase();
+    if (!hex || seen.has(hex)) return;
+    seen.add(hex);
+    result.push(hex);
+  };
+
+  for (const item of timeline) {
+    add(item.icaoHex);
+    if (result.length >= Math.max(0, limit)) return result;
+  }
+  for (const item of highlights) {
+    add(item.icaoHex);
+    if (result.length >= Math.max(0, limit)) return result;
+  }
+  return result;
+}
