@@ -1155,7 +1155,7 @@ export const cs = {
     liveBoardV8QueueActive: "Aktivní",
     liveBoardV8QueueBuilding: "Narůstající hustota",
     liveBoardV8QueueCompressed: "Stlačené pořadí",
-    liveBoardV8QueueHolding: "Více holdingů",
+    liveBoardV8QueueHoldingPresent: "Více holdingů",
     liveBoardV8QueueActiveArrivals: "Aktivní přílety",
     liveBoardV8QueueApproachFinal: (count: number) => `${count} approach/final`,
     liveBoardV8QueueHolding: "Holding v pořadí",
