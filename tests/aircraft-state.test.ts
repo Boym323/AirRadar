@@ -433,6 +433,115 @@ describe("aircraft state service", () => {
     expect(service.getSnapshot().aircraft).toEqual([]);
   });
 
+  it("defers one suspicious mass-disappearance cycle before pruning stale local aircraft", () => {
+    vi.useFakeTimers();
+    vi.stubEnv("AIRCRAFT_STALE_AFTER_MS", "15000");
+    vi.stubEnv("AIRCRAFT_MASS_DROP_MIN_BASELINE", "20");
+    vi.stubEnv("AIRCRAFT_MASS_DROP_RATIO", "0.5");
+    const base = new Date("2026-09-22T08:40:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const makeAircraft = (index: number, at: Date): Aircraft => {
+      const hex = index.toString(16).padStart(6, "0").toUpperCase();
+      const aircraft = normalizeAircraft({
+        hex,
+        flight: `TEST${index}`,
+        lat: 50 + index / 10_000,
+        lon: 14 + index / 10_000,
+        seen: 0,
+        seen_pos: 0,
+      }, receiver, at);
+      if (!aircraft) throw new Error("test aircraft could not be normalized");
+      return aircraft;
+    };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as { applySnapshot: (snapshot: ProviderSnapshot) => void };
+    const initial = Array.from({ length: 20 }, (_, index) => makeAircraft(index + 1, base));
+    internal.applySnapshot({ aircraft: initial, receiver, fetchedAt: base.toISOString(), provider: "readsb" });
+
+    const firstDropAt = new Date(base.getTime() + 16_000);
+    vi.setSystemTime(firstDropAt);
+    const firstLow = [makeAircraft(1, firstDropAt), makeAircraft(2, firstDropAt)];
+    internal.applySnapshot({ aircraft: firstLow, receiver, fetchedAt: firstDropAt.toISOString(), provider: "readsb" });
+
+    expect(service.getSnapshot().aircraft).toHaveLength(20);
+    expect(service.getDiagnostics().continuity.local).toMatchObject({
+      massDropCandidates: 1,
+      massDropDeferrals: 1,
+      massDropConfirmed: 0,
+      massDropPending: true,
+      retainedAircraft: 20,
+      observedAircraft: 2,
+    });
+
+    const confirmedAt = new Date(base.getTime() + 17_000);
+    vi.setSystemTime(confirmedAt);
+    const secondLow = [makeAircraft(1, confirmedAt), makeAircraft(2, confirmedAt)];
+    internal.applySnapshot({ aircraft: secondLow, receiver, fetchedAt: confirmedAt.toISOString(), provider: "readsb" });
+
+    expect(service.getSnapshot().aircraft.map((aircraft) => aircraft.icaoHex).sort()).toEqual(["000001", "000002"]);
+    expect(service.getDiagnostics().continuity.local).toMatchObject({
+      massDropCandidates: 1,
+      massDropDeferrals: 1,
+      massDropConfirmed: 1,
+      massDropPending: false,
+      staleExpirations: 18,
+    });
+  });
+
+  it("cancels a deferred mass drop when the next local snapshot recovers", () => {
+    vi.useFakeTimers();
+    vi.stubEnv("AIRCRAFT_STALE_AFTER_MS", "15000");
+    vi.stubEnv("AIRCRAFT_MASS_DROP_MIN_BASELINE", "20");
+    vi.stubEnv("AIRCRAFT_MASS_DROP_RATIO", "0.5");
+    const base = new Date("2026-09-22T08:50:00.000Z");
+    vi.setSystemTime(base);
+    const receiver = { lat: 50, lon: 14, name: "Test" };
+    const makeAircraft = (index: number, at: Date): Aircraft => {
+      const hex = index.toString(16).padStart(6, "0").toUpperCase();
+      const aircraft = normalizeAircraft({ hex, flight: `TEST${index}`, lat: 50, lon: 14 + index / 10_000, seen: 0, seen_pos: 0 }, receiver, at);
+      if (!aircraft) throw new Error("test aircraft could not be normalized");
+      return aircraft;
+    };
+    const service = new AircraftStateService(new MockReadsbProvider(receiver));
+    const internal = service as unknown as { applySnapshot: (snapshot: ProviderSnapshot) => void };
+    internal.applySnapshot({
+      aircraft: Array.from({ length: 20 }, (_, index) => makeAircraft(index + 1, base)),
+      receiver,
+      fetchedAt: base.toISOString(),
+      provider: "readsb",
+    });
+
+    const dropAt = new Date(base.getTime() + 16_000);
+    vi.setSystemTime(dropAt);
+    internal.applySnapshot({
+      aircraft: [makeAircraft(1, dropAt), makeAircraft(2, dropAt)],
+      receiver,
+      fetchedAt: dropAt.toISOString(),
+      provider: "readsb",
+    });
+    expect(service.getSnapshot().aircraft).toHaveLength(20);
+
+    const recoveredAt = new Date(base.getTime() + 17_000);
+    vi.setSystemTime(recoveredAt);
+    internal.applySnapshot({
+      aircraft: Array.from({ length: 20 }, (_, index) => makeAircraft(index + 1, recoveredAt)),
+      receiver,
+      fetchedAt: recoveredAt.toISOString(),
+      provider: "readsb",
+    });
+
+    expect(service.getSnapshot().aircraft).toHaveLength(20);
+    expect(service.getDiagnostics().continuity.local).toMatchObject({
+      massDropCandidates: 1,
+      massDropDeferrals: 1,
+      massDropConfirmed: 0,
+      massDropRecovered: 1,
+      massDropPending: false,
+      recoveredOmissions: 18,
+    });
+  });
+
   it("keeps the history sample throttle across a short disappearance", async () => {
     vi.useFakeTimers();
     vi.stubEnv("HISTORY_SAMPLE_INTERVAL_MS", "20000");
