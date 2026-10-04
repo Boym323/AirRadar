@@ -140,7 +140,7 @@ export interface SigmetSnapshot {
 }
 
 
-export type PirepReportType = "PIREP" | "AIREP" | "UNKNOWN";
+export type PirepReportType = "PIREP" | "AIREP" | "AMDAR" | "UNKNOWN";
 
 export interface PirepObservation {
   id: string;
