@@ -6,7 +6,7 @@ describe("PIREP/AIREP provider", () => {
     const result = normalizePirepPayload([
       {
         id: "p1",
-        reportType: "UUA",
+        pirepType: "Urgent PIREP",
         obsTime: "2026-10-04T18:00:00Z",
         lat: 50.1,
         lon: 14.2,
@@ -15,15 +15,16 @@ describe("PIREP/AIREP provider", () => {
         temp: -12,
         wdir: 270,
         wspd: 45,
-        turbInten: "MOD",
-        turbType: "CAT",
-        iceInten: "LGT",
-        iceType: "RIME",
+        tbInt1: "MOD",
+        tbType1: "CAT",
+        tbFreq1: "OCNL",
+        icgInt1: "LGT",
+        icgType1: "RIME",
         rawOb: "UUA TEST /TB MOD CAT /IC LGT RIME",
       },
       {
         reportId: "a1",
-        reportType: "AIREP",
+        pirepType: "AIREP",
         reportTime: "2026-10-04T17:55:00Z",
         latitude: 49.9,
         longitude: 15.0,
@@ -44,7 +45,7 @@ describe("PIREP/AIREP provider", () => {
       temperatureC: -12,
       windDirectionDeg: 270,
       windSpeedKt: 45,
-      turbulence: { intensity: "MOD", type: "CAT" },
+      turbulence: { intensity: "MOD", type: "CAT", frequency: "OCNL" },
       icing: { intensity: "LGT", type: "RIME" },
     });
     expect(result[1]).toMatchObject({
