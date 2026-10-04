@@ -107,7 +107,7 @@ export function AirportOperationsBoard({
 
       <div className="airport-v3-meta">
         <span>{t.airport.v3Snapshot}: {operations ? formatDateTime(operations.generatedAt) : "—"}</span>
-        <span>{t.airport.v3Completeness}: {operations ? (operations.diagnostics && operations.diagnostics.positionsExamined >= 0 && controller.status !== "unavailable" ? t.airport.v3Bounded : t.airport.v3StatusUnavailable) : statusLabel(controller.status)}</span>
+        <span>{t.airport.v3Completeness}: {operations ? (operations.complete && !operations.truncated ? t.airport.v3Complete : t.airport.v3Incomplete) : statusLabel(controller.status)}</span>
         {(controller.operationsFailed || controller.weatherFailed) ? <button type="button" onClick={controller.refresh}>{t.weather.retry}</button> : null}
       </div>
     </div>
