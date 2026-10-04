@@ -24,7 +24,7 @@ describe("Airport Live Board V6 boundary", () => {
   });
 
   it("keeps the V6 pressure contract inside the V7 product", () => {
-    expect(boardSource).toContain('data-product="airport-live-board-v7"');
+    expect(boardSource).toContain('data-product="airport-live-board-v8"');
     expect(boardSource).toContain("buildAirportJourneyFlowSummary");
     expect(boardSource).toContain("buildAirportFlowPressureSummary(flow, operations)");
     expect(boardSource).toContain('data-testid="airport-live-board-v6-pressure"');
