@@ -32,13 +32,16 @@ Vítr a použití dráhy jsou oddělené informace: používejte „dráha zvýh
 větrem“ a „pravděpodobná dráha podle nedávného provozu“, nikoli provozní
 doporučení.
 
-## Airport Live Board V1
+## Airport Live Board V2
 
 Detail letiště znovu používá 24hodinovou operations odpověď a existující
 airport-weather odpověď v jediném page-scoped controlleru. Controller provádí
-one-shot refresh každých 30 sekund a neotevírá další aircraft stream. Poslední
-přílety a odlety jsou řazené newest-first, deduplikované podle Flight ID a
-omezené na šest řádků. GO_AROUND/HOLDING mají vlastní šestipoložkový provozní
+one-shot refresh každých 30 sekund. V2 současně sdílí jednu existující
+`/api/stream` subscription mezi Live Boardem a Nearby Aircraft. NOW inbound a
+NOW outbound jsou odvozené z čerstvých ADS-B pozic existujícím konzervativním
+airport-traffic classifierem, řazené podle vzdálenosti a omezené na šest
+letadel. Poslední přílety a odlety zůstávají newest-first, deduplikované podle
+Flight ID a omezené na šest řádků. GO_AROUND/HOLDING mají vlastní šestipoložkový provozní
 lane. Přehled využití drah je omezený na čtyři řádky.
 
 Board zároveň znovu používá stejný METAR pro kategorii letu, vítr, dohlednost,
