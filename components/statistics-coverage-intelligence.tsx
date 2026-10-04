@@ -26,6 +26,16 @@ function healthLabel(state: CoverageIntelligenceResponse["intelligence"]["health
   return text.coverageHealthInsufficient;
 }
 
+function healthReasonLabel(reason: string): string {
+  if (reason === "coverage.baseline_insufficient") return text.trendReasonBaseline;
+  if (reason === "coverage.source_unavailable") return text.trendReasonSource;
+  if (reason === "coverage.range_below_baseline") return text.trendReasonRange;
+  if (reason === "coverage.sectors_below_baseline") return text.trendReasonSectors;
+  if (reason === "coverage.unique_aircraft_below_baseline") return text.trendReasonUnique;
+  if (reason === "coverage.messages_below_baseline") return text.trendReasonMessages;
+  return reason;
+}
+
 function sectorLabel(sector: Pick<CoverageIntelligenceSector, "bearingFrom" | "bearingTo">): string {
   return `${String(sector.bearingFrom).padStart(3, "0")}°–${String(sector.bearingTo).padStart(3, "0")}°`;
 }
@@ -146,7 +156,7 @@ export default function StatisticsCoverageIntelligence() {
               </div> : <p className={styles.status}>{text.noData}</p>}
               <p className={styles.note}>
                 <strong>{text.trendHealthReasons}:</strong>{" "}
-                {data.intelligence.health.reasons.length ? data.intelligence.health.reasons.join(" · ") : text.trendNoHealthReasons}
+                {data.intelligence.health.reasons.length ? data.intelligence.health.reasons.map(healthReasonLabel).join(" · ") : text.trendNoHealthReasons}
               </p>
             </section>
 
