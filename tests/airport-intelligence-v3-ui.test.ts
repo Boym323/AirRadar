@@ -20,7 +20,7 @@ describe("Airport Intelligence V3 UI boundary", () => {
   it("keeps the controller read-only and avoids another live aircraft stream", () => {
     expect(controllerSource).toContain("/operations?period=24h");
     expect(controllerSource).toContain("/api/weather/airport/");
-    expect(controllerSource.match(/fetch\(/g)).toHaveLength(2);
+    expect(controllerSource.match(/fetch\(/g)).toHaveLength(3);
     expect(controllerSource).toContain("AIRPORT_LIVE_BOARD_REFRESH_MS = 30_000");
     expect(controllerSource).toContain("window.setTimeout");
     expect(controllerSource).toContain("window.clearTimeout");
@@ -41,7 +41,7 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(boardSource).toContain('testId="airport-live-board-alerts"');
     expect(boardSource).toContain('data-testid="airport-live-board-runways"');
     expect(boardSource).toContain('data-testid="airport-live-board-weather"');
-    expect(boardSource).toContain('data-product="airport-live-board-v7"');
+    expect(boardSource).toContain('data-product="airport-live-board-v8"');
     expect(boardSource).toContain('testId="airport-live-board-active-inbound"');
     expect(boardSource).toContain('testId="airport-live-board-active-outbound"');
     expect(boardSource).toContain("buildAirportCorrelatedTrafficSnapshot");
@@ -60,6 +60,9 @@ describe("Airport Intelligence V3 UI boundary", () => {
     expect(boardSource).toContain("buildAirportRunwayFlowIntelligence");
     expect(boardSource).toContain('data-testid="airport-live-board-v7-runway-flow"');
     expect(boardSource).toContain("liveBoardV7Disclaimer");
+    expect(boardSource).toContain("buildAirportApproachQueueIntelligence");
+    expect(boardSource).toContain('data-testid="airport-live-board-v8-approach-queue"');
+    expect(boardSource).toContain("liveBoardV8QueueDisclaimer");
     expect(boardSource).toContain('variant="inferred"');
     expect(boardSource).toContain("t.airport.v3RunwayDisclaimer");
   });
