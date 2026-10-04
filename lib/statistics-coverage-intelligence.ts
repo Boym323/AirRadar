@@ -1,3 +1,5 @@
+import { buildReceiverCoverageIntelligenceV1, type ReceiverCoverageIntelligenceV1 } from "@/lib/receiver-coverage-intelligence-v1";
+
 export type CoverageIntelligenceRange = "7d" | "30d";
 
 export interface CoverageIntelligenceDailyCoverageRow {
@@ -15,6 +17,7 @@ export interface CoverageIntelligenceDailyAltitudeCoverageRow {
 
 export interface CoverageIntelligenceDailyStatsRow {
   date: string;
+  uniqueAircraftCount: number;
   maxConcurrentAircraft: number;
   maxDistanceKm: number;
   maxDistanceIcaoHex: string | null;
@@ -110,6 +113,7 @@ export interface CoverageIntelligenceResponse {
     bins: CoverageIntelligenceHourBin[];
     busiestHour: CoverageIntelligenceBusiestHour | null;
   };
+  intelligence: ReceiverCoverageIntelligenceV1;
   records: {
     peakConcurrent: { date: string; count: number } | null;
     farthestReception: {
@@ -321,6 +325,11 @@ export function aggregateCoverageIntelligence(options: {
       bins: options.flightRowsComplete ? hourOfDay : [],
       busiestHour: busiestEntry ? { localHour: busiestEntry[0], count: busiestEntry[1] } : null,
     },
+    intelligence: buildReceiverCoverageIntelligenceV1({
+      currentDate: options.to,
+      statsRows: options.statsRows,
+      coverageRows: options.coverageRows,
+    }),
     records: {
       peakConcurrent: peak ? { date: peak.date, count: Math.max(0, Math.trunc(peak.maxConcurrentAircraft)) } : null,
       farthestReception: farthest ? {
