@@ -235,6 +235,7 @@ export function predictiveOperationsIcaos(
   timeline: OperationsTimelineItem[],
   highlights: LogbookInterestingAircraft[],
   limit = 6,
+  preferredIcao?: string | null,
 ): string[] {
   const result: string[] = [];
   const seen = new Set<string>();
@@ -244,6 +245,9 @@ export function predictiveOperationsIcaos(
     seen.add(hex);
     result.push(hex);
   };
+
+  add(preferredIcao);
+  if (result.length >= Math.max(0, limit)) return result;
 
   for (const item of timeline) {
     add(item.icaoHex);
