@@ -432,9 +432,13 @@ omezené current, aircraft, history a diagnostic pohledy.
 
 `/flights/[id]` čte omezený Flight Story obsahující identitu Flight,
 vzorkované pozice v celém rozsahu, persistované FlightEvents a route context.
-Jeden playback timestamp řídí mapu, timeline, profil, výběr události a Map
-Context V2. Během playbacku neběží žádná write cesta detectoru, alertu ani
-notifikace.
+Flight Story V2 skládá souhrn a narativ výhradně z tohoto payloadu: persistované
+hodnoty start/end Flight jsou pozorované hranice, vzorkovaná trasa poskytuje
+omezenou metriku délky/maximální rychlosti a FlightEvents zůstávají explicitně
+odvozené s confidence a nejbližší vzorkovanou telemetrií. Jeden playback
+timestamp řídí mapu, seek narativu, profil, výběr události a Map Context V2.
+Neotevírá se druhý stream ani history dotaz a během playbacku neběží žádná
+write cesta detectoru, alertu ani notifikace.
 ## Tok provenience výšky
 
 Beast, lokální `aircraft.json` a volitelná síťová pozorování se normalizují
