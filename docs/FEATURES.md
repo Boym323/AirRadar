@@ -58,6 +58,16 @@ whether an operator has configured an optional provider.
 | `/fleet` | Concrete aircraft from ICAO watchlist rules, live/offline state, recent observed-flight counts, routes/airports, and lazy photos. | Production; non-identity watchlist rules are omitted, PostgreSQL history is optional. |
 | `/system` | Sanitized runtime, receiver, persistence, statistics, ATC, weather, OGN, alerts, and airport status. Lazy weather/radar/wind/ADSBDB providers expose `ON DEMAND`/`LOADING` cold-start states and bounded safe reasons for degraded/offline states. | Production read-only diagnostics; it never triggers optional upstream requests. |
 
+## Command Search V1
+
+A root-level Command Search palette is available from every route through
+`⌘K` / `Ctrl+K` and the topbar search trigger. It reuses the existing
+bounded `GET /api/search?q=` lane for live aircraft, airports and ATS points,
+and adds client-only navigation commands for Live Radar, Today, Operations
+Center, Flights, Airports, Statistics, Alerts, Time Machine and System.
+Keyboard navigation uses Arrow Up/Down, Enter and Escape. Recent selections are
+stored only in browser `localStorage`, capped to five internal AirRadar paths,
+and do not create server persistence or another live stream.
 ## APIs
 
 | Method and route | Purpose | Production status |

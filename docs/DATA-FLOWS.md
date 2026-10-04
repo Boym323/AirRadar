@@ -392,7 +392,12 @@ path reports the aircraft's actual tuned frequency.
   pass through the server cache.
 - `/api/airports` serves the PostgreSQL airport catalog when non-empty and the
   bundled six-airport fallback otherwise. `GET /api/search` searches live RAM
-  aircraft and the airport catalog with bounded input/results.
+  aircraft, the airport catalog, and bounded ATS point data with bounded
+  input/results. Command Search V1 is a root-level client consumer of this same
+  endpoint with a 220 ms debounce. Static navigation commands do not call the
+  API. Recent selections remain capped browser-local `localStorage` entries
+  restricted to internal AirRadar paths; they do not enter server persistence
+  or any live-data lane.
 - Alerts & Fleets V1 configuration is persisted in PostgreSQL through the
   server repository (`AlertFleet`, `AlertFleetMatcher`, `AlertGeofence`, and
   `AlertRule`). Enabled rows are loaded into a replaceable in-memory cache;
