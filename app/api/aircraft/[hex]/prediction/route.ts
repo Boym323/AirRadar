@@ -3,9 +3,11 @@ import {
   buildAdminEtaAdvisoryPreview,
   buildAdminRunwayAdvisoryPreview,
   buildAdminRunwayChangeAdvisoryPreview,
+  buildAdminTrajectoryAdvisoryPreview,
   buildPublicEtaAdvisory,
   buildPublicRunwayAdvisory,
   buildPublicRunwayChangeAdvisory,
+  buildPublicTrajectoryAdvisory,
   getPredictiveGraduationPolicy,
   toPublicPredictiveState,
 } from "@/lib/predictive-intelligence";
@@ -50,9 +52,11 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
   const etaReadiness = readiness?.capabilities.ETA ?? null;
   const runwayReadiness = readiness?.capabilities.RUNWAY ?? null;
   const runwayChangeReadiness = readiness?.capabilities.RUNWAY_CHANGE ?? null;
+  const trajectoryReadiness = readiness?.capabilities.TRAJECTORY ?? null;
   const etaAdvisory = buildPublicEtaAdvisory(predictionState, effectivePolicy, etaReadiness);
   const runwayAdvisory = buildPublicRunwayAdvisory(predictionState, effectivePolicy, runwayReadiness);
   const runwayChangeAdvisory = buildPublicRunwayChangeAdvisory(predictionState, effectivePolicy, runwayChangeReadiness);
+  const trajectoryAdvisory = buildPublicTrajectoryAdvisory(predictionState, effectivePolicy, trajectoryReadiness);
   const adminPreview = admin && etaReadiness
     ? buildAdminEtaAdvisoryPreview(predictionState, configuredPolicy, etaReadiness)
     : undefined;
@@ -62,6 +66,9 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
   const runwayChangeAdminPreview = admin && runwayChangeReadiness
     ? buildAdminRunwayChangeAdvisoryPreview(predictionState, configuredPolicy, runwayChangeReadiness)
     : undefined;
+  const trajectoryAdminPreview = admin && trajectoryReadiness
+    ? buildAdminTrajectoryAdvisoryPreview(predictionState, configuredPolicy, trajectoryReadiness)
+    : undefined;
 
   return Response.json(
     {
@@ -69,9 +76,11 @@ export async function GET(request: Request, context: { params: Promise<{ hex: st
       etaAdvisory,
       runwayAdvisory,
       runwayChangeAdvisory,
+      trajectoryAdvisory,
       ...(adminPreview ? { adminPreview } : {}),
       ...(runwayAdminPreview ? { runwayAdminPreview } : {}),
       ...(runwayChangeAdminPreview ? { runwayChangeAdminPreview } : {}),
+      ...(trajectoryAdminPreview ? { trajectoryAdminPreview } : {}),
     },
     { headers: { "Cache-Control": "no-store" } },
   );

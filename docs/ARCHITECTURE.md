@@ -105,14 +105,23 @@ readiness PASS, non-expired change provenance and MEDIUM/HIGH confidence.
 Authenticated admin output may expose SHADOW/WAIT/FAIL diagnostics. No database
 field, migration, stream or extra aircraft-detail request is introduced.
 
+Predictive Trajectory Advisory V1 reuses the same in-memory trajectory state
+and readiness boundary. Public serialization requires TRAJECTORY=PUBLIC,
+readiness PASS, a <=45-second snapshot, a non-UNKNOWN state and MEDIUM/HIGH
+confidence. The prospective lane records `trajectoryState` inside bounded
+`evidenceJson` only on state/confidence transitions, so readiness can identify
+instrumented observations without changing the database schema. Independent
+outcome truth is intentionally still unavailable; therefore the capability
+remains WAIT and cannot self-graduate.
+
 Predictive Operations Center V1 is a bounded read-only aggregation boundary on
 the radar NOW panel. The browser derives at most six ICAO candidates from the
 existing prioritized timeline and live highlights, then requests
 `/api/operations/predictive` only while the panel is open. The server reads the
 existing in-memory predictive state for those aircraft and evaluates one shared
-readiness report before serializing ETA/runway advisories. Anonymous output
+readiness report before serializing ETA/runway/runway-change/trajectory advisories. Anonymous output
 contains only PUBLIC + PASS + fresh values; authenticated admin output may add
-SHADOW previews and ETA/RUNWAY readiness decisions. The endpoint is polled at a
+SHADOW previews and ETA/RUNWAY/RUNWAY_CHANGE/TRAJECTORY readiness decisions. The endpoint is polled at a
 bounded 30-second interval and is deliberately separate from the main radar SSE,
 prediction engine, persistence, and prospective-validation write paths.
 `NetworkAircraftProvider` is a separate optional boundary for live-only

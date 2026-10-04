@@ -4,7 +4,7 @@ import {
   PREDICTIVE_READINESS_THRESHOLDS,
   type PredictiveReadinessEvidence,
 } from "@/lib/predictive-intelligence/readiness";
-import { enforcePredictiveReadiness } from "@/lib/server/predictive-readiness";
+import { buildPredictiveReadinessEvidence, enforcePredictiveReadiness, type PredictiveReadinessObservationRow } from "@/lib/server/predictive-readiness";
 
 function goodEvidence(): PredictiveReadinessEvidence {
   return {
@@ -116,6 +116,56 @@ describe("Predictive Graduation Readiness V1", () => {
       reasons: expect.arrayContaining(["collection.bounded_result_incomplete"]),
     });
     expect(evaluation.capabilities.RUNWAY.decision).toBe("WAIT");
+  });
+
+  it("reconstructs trajectory state capture from bounded evidence while independent truth remains unavailable", () => {
+    const row = (
+      lifecycleKey: string,
+      state: "NORMAL" | "POSSIBLE_DEVIATION" | "DEVIATING",
+      predictedAt: number,
+    ): PredictiveReadinessObservationRow => ({
+      observationKey: `${lifecycleKey}:TRAJECTORY:${state}:${predictedAt}`,
+      lifecycleKey,
+      capability: "TRAJECTORY",
+      aircraftIcao: "ABC123",
+      flightId: null,
+      predictedAt,
+      predictedLandingAt: null,
+      predictedRunway: null,
+      previousRunway: null,
+      evidenceJson: JSON.stringify([{ key: "trajectoryState", value: state }]),
+      createdAt: predictedAt + 500,
+    });
+
+    const built = buildPredictiveReadinessEvidence([
+      row("flight-a", "NORMAL", 1_000),
+      row("flight-b", "POSSIBLE_DEVIATION", 2_000),
+      row("flight-c", "DEVIATING", 3_000),
+      {
+        ...row("legacy", "NORMAL", 4_000),
+        evidenceJson: "[]",
+      },
+    ], []);
+
+    expect(built.evidence.TRAJECTORY).toMatchObject({
+      observations: 3,
+      candidateObservations: 2,
+      validatedCandidates: 0,
+      precision: null,
+      stateCaptureAvailable: true,
+      independentOutcomeTruthAvailable: false,
+      captureStaleRate: 0,
+    });
+    expect(evaluatePredictiveReadiness(built.evidence).capabilities.TRAJECTORY).toMatchObject({
+      decision: "WAIT",
+      reasons: expect.arrayContaining([
+        "trajectory.independent_outcome_truth_unavailable",
+        "trajectory.insufficient_observations",
+        "trajectory.insufficient_validated_candidates",
+      ]),
+    });
+    expect(evaluatePredictiveReadiness(built.evidence).capabilities.TRAJECTORY.reasons)
+      .not.toContain("trajectory.state_capture_unavailable");
   });
 
   it("downgrades configured PUBLIC capabilities unless readiness is PASS", () => {

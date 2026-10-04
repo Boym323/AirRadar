@@ -16,6 +16,7 @@ describe("Predictive Operations Center V1 boundary", () => {
     expect(routeSource).toContain("buildPublicEtaAdvisory");
     expect(routeSource).toContain("buildPublicRunwayAdvisory");
     expect(routeSource).toContain("buildPublicRunwayChangeAdvisory");
+    expect(routeSource).toContain("buildPublicTrajectoryAdvisory");
   });
 
   it("keeps SHADOW previews behind the existing admin session", () => {
@@ -23,7 +24,9 @@ describe("Predictive Operations Center V1 boundary", () => {
     expect(routeSource).toContain("admin && state && etaReadiness");
     expect(routeSource).toContain("admin && state && runwayReadiness");
     expect(routeSource).toContain("admin && state && runwayChangeReadiness");
+    expect(routeSource).toContain("admin && state && trajectoryReadiness");
     expect(routeSource).toContain("RUNWAY_CHANGE");
+    expect(routeSource).toContain("TRAJECTORY");
     expect(routeSource).toContain("adminReadiness");
   });
 

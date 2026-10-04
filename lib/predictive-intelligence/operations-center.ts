@@ -10,6 +10,10 @@ import type {
   AdminRunwayChangeAdvisoryPreview,
   PublicRunwayChangeAdvisory,
 } from "./runway-change-advisory";
+import type {
+  AdminTrajectoryAdvisoryPreview,
+  PublicTrajectoryAdvisory,
+} from "./trajectory-advisory";
 import type { PredictiveReadinessDecision } from "./readiness";
 
 export const PREDICTIVE_OPERATIONS_MAX_AIRCRAFT = 6;
@@ -29,9 +33,11 @@ export interface PredictiveOperationsItem {
   etaAdvisory: PublicEtaAdvisory | null;
   runwayAdvisory: PublicRunwayAdvisory | null;
   runwayChangeAdvisory: PublicRunwayChangeAdvisory | null;
+  trajectoryAdvisory: PublicTrajectoryAdvisory | null;
   etaAdminPreview?: AdminEtaAdvisoryPreview;
   runwayAdminPreview?: AdminRunwayAdvisoryPreview;
   runwayChangeAdminPreview?: AdminRunwayChangeAdvisoryPreview;
+  trajectoryAdminPreview?: AdminTrajectoryAdvisoryPreview;
 }
 
 export interface PredictiveOperationsResponse {
@@ -41,5 +47,6 @@ export interface PredictiveOperationsResponse {
     ETA: PredictiveOperationsReadinessCapability;
     RUNWAY: PredictiveOperationsReadinessCapability;
     RUNWAY_CHANGE: PredictiveOperationsReadinessCapability;
+    TRAJECTORY: PredictiveOperationsReadinessCapability;
   };
 }

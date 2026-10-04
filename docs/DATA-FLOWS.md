@@ -126,10 +126,18 @@ are still emitted only on a real previous-runway != current-runway transition.
 Public output also requires the current prediction snapshot to remain within
 the 45-second freshness boundary.
 
+Predictive Trajectory Advisory V1 adds `trajectoryAdvisory` and authenticated
+`trajectoryAdminPreview` to the same response. Prospective trajectory rows
+are emitted only when state or confidence changes and carry
+`trajectoryState` in bounded `evidenceJson`. Readiness ignores legacy
+metadata-only trajectory rows when counting instrumented observations and
+candidate deviations. This makes state capture measurable without adding a
+column or migration; independent outcome truth remains unavailable.
+
 Predictive Operations Center V1 reuses the same advisory builders through
 `GET /api/operations/predictive?hexes=`. The caller provides at most six
 already-relevant ICAO identifiers. The server normalizes and deduplicates the
-list, reads one readiness report, then builds ETA/runway public advisories or
+list, reads one readiness report, then builds ETA/runway/runway-change/trajectory public advisories or
 authenticated SHADOW previews from the existing RAM state. No prediction is
 recomputed by the endpoint. The radar client refreshes this bounded response
 every 30 seconds only while Operations Center is open and locally expires

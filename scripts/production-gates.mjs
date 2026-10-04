@@ -537,6 +537,48 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           provenance: "predicted",
         },
       };
+      const trajectoryAdvisoryPublicFixture = {
+        prediction: null,
+        etaAdvisory: null,
+        runwayAdvisory: null,
+        runwayChangeAdvisory: null,
+        trajectoryAdvisory: {
+          kind: "TRAJECTORY",
+          state: "available",
+          trajectoryState: "DEVIATING",
+          evaluatedAt: "2026-10-04T09:59:52.000Z",
+          ageSeconds: 8,
+          confidence: "MEDIUM",
+          modelVersion: "predictive-intelligence-v1",
+          provenance: "predicted",
+        },
+      };
+      const trajectoryAdvisoryAdminFixture = {
+        prediction: null,
+        etaAdvisory: null,
+        runwayAdvisory: null,
+        runwayChangeAdvisory: null,
+        trajectoryAdvisory: null,
+        trajectoryAdminPreview: {
+          kind: "TRAJECTORY",
+          mode: "SHADOW",
+          readiness: "WAIT",
+          readinessReasons: ["trajectory.independent_outcome_truth_unavailable"],
+          publicEligible: false,
+          state: "available",
+          trajectoryState: "POSSIBLE_DEVIATION",
+          evaluatedAt: "2026-10-04T09:59:52.000Z",
+          ageSeconds: 8,
+          confidence: "LOW",
+          candidateObservations: 42,
+          validatedCandidates: 0,
+          precision: null,
+          stateCaptureAvailable: true,
+          independentOutcomeTruthAvailable: false,
+          modelVersion: "predictive-intelligence-v1",
+          provenance: "predicted",
+        },
+      };
       const predictiveOperationsEvaluatedAt = new Date(Date.now() - 8_000).toISOString();
       const predictiveOperationsEtaAt = new Date(Date.now() + 28 * 60_000).toISOString();
       const predictiveOperationsLogbookFixture = {
@@ -595,6 +637,17 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             modelVersion: "predictive-intelligence-v1",
             provenance: "predicted",
           },
+          runwayChangeAdvisory: null,
+          trajectoryAdvisory: {
+            kind: "TRAJECTORY",
+            state: "available",
+            trajectoryState: "DEVIATING",
+            evaluatedAt: predictiveOperationsEvaluatedAt,
+            ageSeconds: 8,
+            confidence: "MEDIUM",
+            modelVersion: "predictive-intelligence-v1",
+            provenance: "predicted",
+          },
         }],
       };
       const predictiveOperationsAdminFixture = {
@@ -607,6 +660,8 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           destination: "LOWW",
           etaAdvisory: null,
           runwayAdvisory: null,
+          runwayChangeAdvisory: null,
+          trajectoryAdvisory: null,
           etaAdminPreview: {
             kind: "ETA",
             mode: "SHADOW",
@@ -641,15 +696,37 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             modelVersion: "predictive-intelligence-v1",
             provenance: "predicted",
           },
+          trajectoryAdminPreview: {
+            kind: "TRAJECTORY",
+            mode: "SHADOW",
+            readiness: "WAIT",
+            readinessReasons: ["trajectory.independent_outcome_truth_unavailable"],
+            publicEligible: false,
+            state: "available",
+            trajectoryState: "POSSIBLE_DEVIATION",
+            evaluatedAt: predictiveOperationsEvaluatedAt,
+            ageSeconds: 8,
+            confidence: "LOW",
+            candidateObservations: 42,
+            validatedCandidates: 0,
+            precision: null,
+            stateCaptureAvailable: true,
+            independentOutcomeTruthAvailable: false,
+            modelVersion: "predictive-intelligence-v1",
+            provenance: "predicted",
+          },
         }],
         adminReadiness: {
           ETA: { decision: "WAIT", reasons: ["eta.insufficient_independent_truth"] },
           RUNWAY: { decision: "WAIT", reasons: ["runway.insufficient_independent_truth"] },
+          RUNWAY_CHANGE: { decision: "WAIT", reasons: ["runway_change.independent_change_truth_unavailable"] },
+          TRAJECTORY: { decision: "WAIT", reasons: ["trajectory.independent_outcome_truth_unavailable"] },
         },
       };
       const visualTargets = [
         { name: "radar-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false },
         { name: "operations-center-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, openOperationsCenter: true },
+        { name: "predictive-operations-public-desktop", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "public" },
         { name: "radar-desktop-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1366, height: 900 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-landscape-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 1024, height: 768 }, fullPage: false, selectAircraft: true },
         { name: "radar-tablet-portrait-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 768, height: 1024 }, fullPage: false, selectAircraft: true },
@@ -662,6 +739,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "predictive-readiness-desktop", path: "/system", selector: '[data-testid="predictive-readiness"]', viewport: { width: 1366, height: 900 }, fullPage: true, mockPredictiveReadiness: true },
         { name: "radar-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "operations-center-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true },
+        { name: "predictive-operations-admin-mobile", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, openOperationsCenter: true, mockPredictiveOperations: "admin" },
         { name: "radar-mobile-selected", path: "/?mapDiagnostics=1", selector: ".radar-content", viewport: { width: 390, height: 844 }, fullPage: false, selectAircraft: true },
         { name: "statistics-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: true },
         { name: "command-search-mobile", path: "/statistics", selector: ".statistics-page", viewport: { width: 390, height: 844 }, fullPage: false, openCommandPalette: true, commandQuery: "LOWW operations", mockCommandSearch: "action", commandExpected: "LOWW Operations" },
@@ -672,11 +750,13 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         { name: "predictive-eta-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockEtaAdvisory: "public" },
         { name: "predictive-runway-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockRunwayAdvisory: "public" },
         { name: "predictive-runway-change-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-change-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockRunwayChangeAdvisory: "public" },
+        { name: "predictive-trajectory-public-desktop", path: "/aircraft/896139", selector: '[data-testid="predictive-trajectory-advisory"]', viewport: { width: 1366, height: 900 }, fullPage: false, mockTrajectoryAdvisory: "public" },
         { name: "aircraft-detail-tablet", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 768, height: 1024 }, fullPage: false },
         { name: "aircraft-detail-mobile", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 390, height: 844 }, fullPage: false },
         { name: "predictive-eta-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-eta-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockEtaAdvisory: "admin" },
         { name: "predictive-runway-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockRunwayAdvisory: "admin" },
         { name: "predictive-runway-change-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-runway-change-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockRunwayChangeAdvisory: "admin" },
+        { name: "predictive-trajectory-admin-mobile", path: "/aircraft/896139", selector: '[data-testid="predictive-trajectory-advisory"]', viewport: { width: 390, height: 844 }, fullPage: false, mockTrajectoryAdvisory: "admin" },
         { name: "aircraft-detail-telemetry-expanded", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandTelemetry: true },
         { name: "aircraft-detail-receiver", path: "/aircraft/896139", selector: ".aircraft-page", viewport: { width: 1366, height: 900 }, fullPage: false, expandReceiver: true },
       ];
@@ -733,15 +813,11 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
             });
           }
-          if (target.mockPredictiveOperations) {
-            await visualPage.locator('[data-testid="predictive-operations-center"]').waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.getByText("UAE123", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            await visualPage.getByText("24", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            if (target.mockPredictiveOperations === "admin") {
-              await visualPage.locator('[data-testid="predictive-operations-readiness"]').waitFor({ state: "visible", timeout: 15_000 });
-              await visualPage.getByText("ETA WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-              await visualPage.getByText("RWY WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
-            }
+          if (target.mockTrajectoryAdvisory) {
+            await visualPage.route("**/api/aircraft/896139/prediction", async (route) => {
+              const body = target.mockTrajectoryAdvisory === "public" ? trajectoryAdvisoryPublicFixture : trajectoryAdvisoryAdminFixture;
+              await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+            });
           }
           if (target.mockPredictiveReadiness) {
             await visualPage.route("**/api/system/status", async (route) => {
@@ -766,6 +842,20 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             await operationsTrigger.waitFor({ state: "visible", timeout: 15_000 });
             await operationsTrigger.click();
             await visualPage.locator('[data-testid="operations-center-panel"]').waitFor({ state: "visible", timeout: 15_000 });
+          }
+          if (target.mockPredictiveOperations) {
+            await visualPage.locator('[data-testid="predictive-operations-center"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("UAE123", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("24", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            if (target.mockPredictiveOperations === "admin") {
+              await visualPage.locator('[data-testid="predictive-operations-readiness"]').waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("ETA WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("RWY WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("TRJ WAIT", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("Možná odchylka", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            } else {
+              await visualPage.getByText("Odchylka", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            }
           }
           if (target.mockDailyRecap) {
             await visualPage.locator('[data-testid="daily-intelligence-timeline"]').waitFor({ state: "visible", timeout: 15_000 });
@@ -809,6 +899,18 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
               await visualPage.getByText("ADMIN · SHADOW PREVIEW").first().waitFor({ state: "visible", timeout: 15_000 });
               await visualPage.getByText(/WAIT/).first().waitFor({ state: "visible", timeout: 15_000 });
               await visualPage.getByText(/88 %/).first().waitFor({ state: "visible", timeout: 15_000 });
+            }
+          }
+          if (target.mockTrajectoryAdvisory) {
+            await visualPage.locator('[data-testid="predictive-trajectory-advisory"]').waitFor({ state: "visible", timeout: 15_000 });
+            await visualPage.getByText("Predikce trajektorie").first().waitFor({ state: "visible", timeout: 15_000 });
+            if (target.mockTrajectoryAdvisory === "public") {
+              await visualPage.getByText("Odchylka", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+            } else {
+              await visualPage.getByText("ADMIN · SHADOW PREVIEW").first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText("Možná odchylka", { exact: true }).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText(/WAIT/).first().waitFor({ state: "visible", timeout: 15_000 });
+              await visualPage.getByText(/42/).first().waitFor({ state: "visible", timeout: 15_000 });
             }
           }
           if (target.openCommandPalette) {

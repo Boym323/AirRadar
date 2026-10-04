@@ -67,6 +67,28 @@ describe("predictive graduation boundary", () => {
     });
   });
 
+  it("publishes trajectory only for fresh known MEDIUM/HIGH states", () => {
+    const publicPolicy = {
+      ETA: "SHADOW",
+      RUNWAY: "SHADOW",
+      RUNWAY_CHANGE: "SHADOW",
+      TRAJECTORY: "PUBLIC",
+    } as const;
+
+    expect(toPublicPredictiveState(prediction, publicPolicy, 2_000)?.trajectory).toEqual({
+      state: "NORMAL",
+      confidence: "MEDIUM",
+    });
+    expect(toPublicPredictiveState({
+      ...prediction,
+      trajectory: { state: "POSSIBLE_DEVIATION", confidence: "LOW", evidence: [] },
+    }, publicPolicy, 2_000)?.trajectory).toBeUndefined();
+    expect(toPublicPredictiveState({
+      ...prediction,
+      trajectory: { state: "UNKNOWN", confidence: "UNKNOWN", evidence: [] },
+    }, publicPolicy, 2_000)?.trajectory).toBeUndefined();
+  });
+
   it("only exposes a runway change while snapshot/event freshness and confidence gates pass", () => {
     const result = toPublicPredictiveState({
       ...prediction,

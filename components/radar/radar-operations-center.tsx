@@ -209,9 +209,11 @@ export function RadarOperationsCenter() {
       item.etaAdvisory?.evaluatedAt,
       item.runwayAdvisory?.evaluatedAt,
       item.runwayChangeAdvisory?.evaluatedAt,
+      item.trajectoryAdvisory?.evaluatedAt,
       item.etaAdminPreview?.state === "available" ? item.etaAdminPreview.evaluatedAt : null,
       item.runwayAdminPreview?.state === "available" ? item.runwayAdminPreview.evaluatedAt : null,
       item.runwayChangeAdminPreview?.state === "available" ? item.runwayChangeAdminPreview.evaluatedAt : null,
+      item.trajectoryAdminPreview?.state === "available" ? item.trajectoryAdminPreview.evaluatedAt : null,
     ]).flatMap((value) => {
       if (!value) return [];
       const evaluatedAt = Date.parse(value);
@@ -288,11 +290,22 @@ export function RadarOperationsCenter() {
         && Date.parse(item.runwayChangeAdvisory.changedAt) + RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS >= predictiveNow
         ? item.runwayChangeAdvisory
         : null;
+      const trajectoryPublic = item.trajectoryAdvisory
+        && Date.parse(item.trajectoryAdvisory.evaluatedAt) + PREDICTIVE_OPERATIONS_STALE_AFTER_MS >= predictiveNow
+        ? item.trajectoryAdvisory
+        : null;
       const etaPreview = item.etaAdminPreview;
       const runwayPreview = item.runwayAdminPreview;
       const runwayChangePreview = item.runwayChangeAdminPreview;
-      if (!etaPublic && !runwayPublic && !runwayChangePublic && !etaPreview && !runwayPreview && !runwayChangePreview) return [];
-      return [{ ...item, etaAdvisory: etaPublic, runwayAdvisory: runwayPublic, runwayChangeAdvisory: runwayChangePublic }];
+      const trajectoryPreview = item.trajectoryAdminPreview;
+      if (!etaPublic && !runwayPublic && !runwayChangePublic && !trajectoryPublic && !etaPreview && !runwayPreview && !runwayChangePreview && !trajectoryPreview) return [];
+      return [{
+        ...item,
+        etaAdvisory: etaPublic,
+        runwayAdvisory: runwayPublic,
+        runwayChangeAdvisory: runwayChangePublic,
+        trajectoryAdvisory: trajectoryPublic,
+      }];
     });
   }, [predictiveNow, predictiveOperations]);
 
@@ -462,6 +475,9 @@ export function RadarOperationsCenter() {
                     <StatusBadge variant={predictiveOperations.adminReadiness.RUNWAY_CHANGE.decision === "PASS" ? "live" : predictiveOperations.adminReadiness.RUNWAY_CHANGE.decision === "FAIL" ? "danger" : "warning"}>
                       RWY Δ {predictiveOperations.adminReadiness.RUNWAY_CHANGE.decision}
                     </StatusBadge>
+                    <StatusBadge variant={predictiveOperations.adminReadiness.TRAJECTORY.decision === "PASS" ? "live" : predictiveOperations.adminReadiness.TRAJECTORY.decision === "FAIL" ? "danger" : "warning"}>
+                      TRJ {predictiveOperations.adminReadiness.TRAJECTORY.decision}
+                    </StatusBadge>
                   </div>
                 ) : null}
                 {predictiveStatus === "loading" && !predictiveOperations ? <small className={styles.predictiveUnavailable}>{t.common.loading}</small> : null}
@@ -470,9 +486,11 @@ export function RadarOperationsCenter() {
                     const eta = item.etaAdvisory ?? item.etaAdminPreview ?? null;
                     const runway = item.runwayAdvisory ?? item.runwayAdminPreview ?? null;
                     const runwayChange = item.runwayChangeAdvisory ?? item.runwayChangeAdminPreview ?? null;
+                    const trajectory = item.trajectoryAdvisory ?? item.trajectoryAdminPreview ?? null;
                     const etaPreviewOnly = !item.etaAdvisory && Boolean(item.etaAdminPreview);
                     const runwayPreviewOnly = !item.runwayAdvisory && Boolean(item.runwayAdminPreview);
                     const runwayChangePreviewOnly = !item.runwayChangeAdvisory && Boolean(item.runwayChangeAdminPreview);
+                    const trajectoryPreviewOnly = !item.trajectoryAdvisory && Boolean(item.trajectoryAdminPreview);
                     const etaEvaluatedAt = eta?.evaluatedAt ? Date.parse(eta.evaluatedAt) : Number.NaN;
                     const runwayEvaluatedAt = runway?.evaluatedAt ? Date.parse(runway.evaluatedAt) : Number.NaN;
                     const etaStale = etaPreviewOnly && Number.isFinite(etaEvaluatedAt)
@@ -488,6 +506,9 @@ export function RadarOperationsCenter() {
                           ? t.aircraft.predictiveStateExpired
                           : null
                     );
+                    const trajectoryEvaluatedAt = trajectory?.evaluatedAt ? Date.parse(trajectory.evaluatedAt) : Number.NaN;
+                    const trajectoryStale = trajectoryPreviewOnly && Number.isFinite(trajectoryEvaluatedAt)
+                      && trajectoryEvaluatedAt + PREDICTIVE_OPERATIONS_STALE_AFTER_MS < predictiveNow;
                     return (
                       <Link
                         className={styles.predictiveItem}
@@ -510,6 +531,10 @@ export function RadarOperationsCenter() {
                           {runwayChange ? <span>
                             <small>{t.intelligence.operationsPredictiveRunwayChange}{runwayChangePreviewOnly ? ` · ${t.intelligence.operationsPredictiveShadow}` : ""}</small>
                             <strong>{runwayChangeState ?? (runwayChange.changedFrom && runwayChange.runway ? `${runwayChange.changedFrom}→${runwayChange.runway}` : t.common.emptyValue)}</strong>
+                          </span> : null}
+                          {trajectory ? <span>
+                            <small>{t.intelligence.operationsPredictiveTrajectory}{trajectoryPreviewOnly ? ` · ${t.intelligence.operationsPredictiveShadow}` : ""}</small>
+                            <strong>{trajectoryStale ? t.intelligence.stale : t.intelligence.operationsPredictiveTrajectoryStates[trajectory.trajectoryState]}</strong>
                           </span> : null}
                         </span>
                       </Link>

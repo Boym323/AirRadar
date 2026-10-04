@@ -290,13 +290,21 @@ RUNWAY_CHANGE=PUBLIC, readiness PASS, neexpirovanou provenance změny a
 MEDIUM/HIGH confidence. Ověřený admin může dostat SHADOW/WAIT/FAIL diagnostiku.
 Nevzniká nový DB field, migrace, stream ani další aircraft-detail request.
 
+Predictive Trajectory Advisory V1 znovu používá stejný trajectory stav v RAM a
+readiness boundary. Veřejná serializace vyžaduje TRAJECTORY=PUBLIC, readiness
+PASS, snapshot do 45 sekund, stav odlišný od UNKNOWN a MEDIUM/HIGH confidence.
+Prospective lane ukládá `trajectoryState` do omezeného `evidenceJson` pouze
+při změně state/confidence, takže readiness rozpozná instrumentované řádky bez
+změny DB schématu. Nezávislá outcome truth záměrně stále chybí; capability proto
+zůstává WAIT a nemůže se sama povýšit.
+
 Predictive Operations Center V1 je omezený read-only agregační boundary nad
 radarovým panelem NOW. Browser odvodí maximálně šest ICAO kandidátů z existující
 prioritizované timeline a živých highlightů a pouze při otevřeném panelu volá
 `/api/operations/predictive`. Server čte existující predictive stav v RAM a
-před serializací ETA/runway advisories vyhodnotí jeden společný readiness
+před serializací ETA/runway/runway-change/trajectory advisories vyhodnotí jeden společný readiness
 report. Anonymní výstup obsahuje pouze PUBLIC + PASS + fresh hodnoty; ověřený
-admin může navíc dostat SHADOW preview a rozhodnutí ETA/RUNWAY readiness.
+admin může navíc dostat SHADOW preview a rozhodnutí ETA/RUNWAY/RUNWAY_CHANGE/TRAJECTORY readiness.
 Endpoint se obnovuje omezeně po 30 sekundách a je záměrně oddělený od hlavního
 radar SSE, prediction enginu, persistence i prospective-validation write path.
 

@@ -29,6 +29,7 @@ export interface PredictiveReadinessObservationRow {
   predictedLandingAt: unknown;
   predictedRunway: string | null;
   previousRunway: string | null;
+  evidenceJson: string;
   createdAt: unknown;
 }
 
@@ -152,6 +153,25 @@ function landingTruth(row: PredictiveReadinessLandingEventRow): LandingTruth | n
     landingAtMs,
     reportedRunway,
   };
+}
+
+function trajectoryState(row: PredictiveReadinessObservationRow): "NORMAL" | "POSSIBLE_DEVIATION" | "DEVIATING" | null {
+  if (!row.evidenceJson || row.evidenceJson.length > 16_384) return null;
+  try {
+    const evidence = JSON.parse(row.evidenceJson) as unknown;
+    if (!Array.isArray(evidence)) return null;
+    for (const item of evidence.slice(0, 16)) {
+      if (!item || typeof item !== "object") continue;
+      const record = item as { key?: unknown; value?: unknown };
+      if (record.key !== "trajectoryState") continue;
+      return record.value === "NORMAL" || record.value === "POSSIBLE_DEVIATION" || record.value === "DEVIATING"
+        ? record.value
+        : null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function staleRate(rows: readonly PredictiveReadinessObservationRow[]): number | null {
@@ -387,15 +407,19 @@ export function buildPredictiveReadinessEvidence(observations: readonly Predicti
       captureStaleRate: staleRate(changeRows),
     },
     TRAJECTORY: {
-      observations: trajectoryRows.length,
-      // ProspectiveObservation V1 does not persist the trajectory state itself,
-      // so candidate/non-candidate classification cannot be reconstructed safely.
-      candidateObservations: null,
+      observations: trajectoryRows.filter((row) => trajectoryState(row) !== null).length,
+      candidateObservations: trajectoryRows.filter((row) => {
+        const state = trajectoryState(row);
+        return state === "POSSIBLE_DEVIATION" || state === "DEVIATING";
+      }).length,
       validatedCandidates: 0,
       precision: null,
-      stateCaptureAvailable: false,
+      stateCaptureAvailable: trajectoryRows.some((row) => trajectoryState(row) !== null),
+      // State capture is now reconstructable from bounded evidenceJson, but no
+      // independent persisted outcome source currently proves whether a
+      // candidate deviation was objectively correct.
       independentOutcomeTruthAvailable: false,
-      captureStaleRate: staleRate(trajectoryRows),
+      captureStaleRate: staleRate(trajectoryRows.filter((row) => trajectoryState(row) !== null)),
     },
     integrity,
   };

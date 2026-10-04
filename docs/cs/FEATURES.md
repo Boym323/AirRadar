@@ -1,30 +1,30 @@
 # Funkce a routy
 
 <!-- feature-registry:start -->
-## Registr funkcí
+## Feature registry
 
-Tato tabulka je generována z [`features.registry.json`](../features.registry.json).
-CI ověřuje, že každou stránku Next.js a API routu vlastní alespoň jedna
-registrovaná funkce a že registr neobsahuje zastaralé routy. „Pre-registry“
-znamená, že funkce existovala už před zavedením registru a její původní vydání
-zatím nebylo historicky přiřazeno.
+This table is generated from [`features.registry.json`](../features.registry.json).
+CI verifies that every Next.js page and API route is owned by at least one
+registered feature and that the registry contains no stale routes. “Pre-registry”
+means the feature existed before registry adoption and its original release has
+not yet been historically attributed.
 
-| Funkce | Stav | Kategorie | Zavedeno | Stránky | API | Shrnutí |
+| Feature | Status | Category | Introduced | Pages | APIs | Summary |
 | --- | --- | --- | --- | --- | --- | --- |
-| Detail letadla a letu | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Identita letadla, kontext, fotografie, počasí na trase, zachycené lety a vzorkovaná historie. |
-| Informace o letištích | production | airports | Pre-registry | `/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/traffic` | Katalog letišť, kontext drah, pozorovaný provoz a odvozené informace o pohybech. |
-| ATC a ATS informace | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sektory, přechody, validace, ATS tratě, postupy a plánovaná aktivita vzdušného prostoru. |
-| Letové informace | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Časová osa a stream událostí životního cyklu a přechodů letu. |
-| Správa využití FlightAware | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrativní diagnostika využití volitelné integrace FlightAware. |
-| Živý radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/search`<br>`/api/stream` | Lokální a rozšířený živý ADS-B radar, vyhledávání, snapshoty letadel a SSE streamování. |
-| Kontext mapy a počasí | production | weather | Pre-registry | — | `/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind` | Aktuální a historický radar, METAR, vítr, SIGMET a mapový kontext AUP/UUP. |
-| Integrita navigace | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics` | Konzervativní ADS-B pozorování integrity navigace, omezené regionální kandidáty anomálií, API, diagnostika a radarová vrstva. |
-| OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Volitelný OGN/FLARM stav respektující soukromí a nezávislý SSE stream. |
-| Pokrytí přijímače | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Analýza pokrytí přijímače a samostatný detail pokrytí. |
-| Statistiky a přehledy | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Statistiky přijímače, informace o provozu, příjmové rekordy a denní/týdenní přehledy. |
-| Pozorovatelnost systému | production | operations | Pre-registry | `/system` | `/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version`<br>`/api/admin/altitude/:hex` | Sanitizovaný health, runtime historie, stav providerů a identita buildu. |
-| Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Omezené historické přehrávání všech letadel a okna historického kontextu. |
-| Watchlist, alerty a flotila | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/session` | Serverové watchlisty, historie alertů, změny pravidel a pohledy na flotilu. |
+| Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
+| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, and inferred Airport Operations intelligence. |
+| ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
+| Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
+| FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
+| Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
+| Map Context & Weather | production | weather | Pre-registry | — | `/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context and aircraft-observed weather. |
+| Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
+| OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
+| Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
+| Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
+| System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status and build identity. |
+| Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback and historical context windows. |
+| Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
 ## Map Context V1/V2
 
@@ -143,6 +143,22 @@ dispozici nezávislá truth skutečné změny dráhy, takže samotná implementa
 nemůže capability automaticky vystavit veřejně. Detail letadla nadále používá
 jediný page-scoped prediction request.
 
+## Predictive Trajectory Advisory V1
+
+Trajectory Advisory zpřístupňuje stav trajectory modelu vůči cílovému letišti
+přes stejný aircraft prediction request. Veřejný výstup je fail-closed:
+vyžaduje `TRAJECTORY=PUBLIC`, runtime readiness `PASS`, prediction snapshot
+nejvýše 45 sekund starý, stav odlišný od `UNKNOWN` a MEDIUM/HIGH confidence.
+LOW-confidence kandidát `POSSIBLE_DEVIATION` zůstává pouze admin
+diagnostikou.
+
+Prospective capture nyní ukládá explicitní `trajectoryState` do omezeného
+`evidenceJson` pouze při změně stavu trajectory nebo confidence. Runtime
+readiness tak umí bez DB migrace a bez high-frequency write lane rozlišit
+stateful trajectory observations a počítat kandidátní odchylky. Nezávislá
+outcome truth stále není k dispozici, takže precision validovaných kandidátů
+zůstává nedostupná a readiness záměrně zůstává `WAIT`.
+
 ## Predictive Operations Center V1
 
 Radarový Operations Center přidává omezený prediktivní výhled pro letadla,
@@ -151,9 +167,9 @@ otevřeném panelu posílá maximálně šest ICAO identifikátorů na
 `GET /api/operations/predictive?hexes=`. Server čte existující prediction stav
 v RAM a pro celý request vyhodnotí jeden společný readiness report.
 
-Anonymní odpověď obsahuje jen ETA/runway/runway-change advisories, které projdou stejnými
+Anonymní odpověď obsahuje jen ETA/runway/runway-change/trajectory advisories, které projdou stejnými
 PUBLIC + PASS + freshness gate jako detail letadla. Platná admin session může
-navíc dostat SHADOW preview a rozhodnutí readiness pro ETA/RUNWAY/RUNWAY_CHANGE. Klient
+navíc dostat SHADOW preview a rozhodnutí readiness pro ETA/RUNWAY/RUNWAY_CHANGE/TRAJECTORY. Klient
 obnovuje omezený snapshot po 30 sekundách a již zobrazené hodnoty skryje na
 45sekundové freshness hranici. Predictive data se nepřidávají do hlavního radar
 SSE a nevzniká nová persistence, migrace, model ani stream.

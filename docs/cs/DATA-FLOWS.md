@@ -432,11 +432,18 @@ skutečně naladěnou frekvenci letadla.
   prospective RUNWAY_CHANGE observation se dál vytváří pouze při skutečném
   přechodu previous-runway != current-runway. Veřejný výstup současně vyžaduje
   prediction snapshot uvnitř 45sekundové freshness hranice.
+- Predictive Trajectory Advisory V1 přidává do stejné odpovědi
+  `trajectoryAdvisory` a pro ověřeného admina `trajectoryAdminPreview`.
+  Prospective trajectory řádek vzniká pouze při změně state nebo confidence a
+  nese `trajectoryState` v omezeném `evidenceJson`. Readiness při počítání
+  instrumentovaných observations a kandidátních odchylek ignoruje starší
+  metadata-only trajectory řádky. State capture je tak měřitelné bez nového
+  sloupce nebo migrace; nezávislá outcome truth stále chybí.
 - Predictive Operations Center V1 znovu používá stejné advisory buildery přes
   `GET /api/operations/predictive?hexes=`. Klient předává maximálně šest již
   relevantních ICAO identifikátorů. Server seznam normalizuje a deduplikuje,
   načte jeden readiness report a z existujícího RAM stavu vytvoří veřejné
-  ETA/runway advisories nebo ověřené admin SHADOW preview. Endpoint žádnou
+  ETA/runway/runway-change/trajectory advisories nebo ověřené admin SHADOW preview. Endpoint žádnou
   predikci znovu nepočítá. Radarový klient tento omezený snapshot při otevřeném
   Operations Center obnovuje po 30 sekundách a zobrazené hodnoty lokálně
   expiruje po 45 sekundách. Tento tok nikdy nevstupuje do hlavního aircraft SSE.

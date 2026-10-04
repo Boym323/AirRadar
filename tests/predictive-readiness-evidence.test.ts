@@ -19,6 +19,7 @@ function observation(
     predictedLandingAt: capability === "ETA" ? "2026-10-04T10:31:00.000Z" : null,
     predictedRunway: capability === "RUNWAY" ? "24" : null,
     previousRunway: null,
+    evidenceJson: "[]",
     createdAt: "2026-10-04T10:00:02.000Z",
     ...overrides,
   };

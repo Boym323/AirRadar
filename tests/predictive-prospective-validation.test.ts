@@ -42,6 +42,69 @@ describe("prospective validation scoring", () => {
     expect(prospectiveObservationFor(aircraft, prediction, "ABC123:flight-b", null)[0]?.observationKey).not.toBe(observations[0]?.observationKey);
   });
 
+  it("captures trajectory state only on state/confidence transitions with explicit evidence", () => {
+    const aircraft = {
+      icaoHex: "ABC123",
+      callsign: "TEST1",
+      lat: 50,
+      lon: 14,
+      altitude: 12_000,
+      groundSpeed: 240,
+      verticalRate: -500,
+      track: 240,
+      onGround: false,
+      enrichment: { route: { destination: "LKPR" } },
+    } as unknown as Aircraft;
+    const base: PredictiveFlightState = {
+      modelVersion: "predictive-intelligence-v1",
+      evaluatedAt: 10_000,
+      eta: { estimatedArrivalAt: null, confidence: "UNKNOWN", evidence: [] },
+      runway: { runway: null, alternative: null, confidence: "UNKNOWN", changed: false, evidence: [] },
+      trajectory: {
+        state: "NORMAL",
+        confidence: "MEDIUM",
+        evidence: [{ key: "crossTrackKm", value: 2.1 }],
+      },
+    };
+
+    const first = prospectiveObservationFor(aircraft, base, "ABC123:flight-trajectory", null);
+    const firstTrajectory = first.find((item) => item.capability === "TRAJECTORY");
+    expect(firstTrajectory?.horizonBucket).toBe("state:NORMAL:10000");
+    expect(JSON.parse(firstTrajectory?.evidenceJson ?? "[]")).toEqual([
+      { key: "trajectoryState", value: "NORMAL" },
+      { key: "crossTrackKm", value: 2.1 },
+    ]);
+
+    const unchanged = prospectiveObservationFor(
+      aircraft,
+      { ...base, evaluatedAt: 20_000 },
+      "ABC123:flight-trajectory",
+      base,
+    );
+    expect(unchanged.some((item) => item.capability === "TRAJECTORY")).toBe(false);
+
+    const changed: PredictiveFlightState = {
+      ...base,
+      evaluatedAt: 30_000,
+      trajectory: {
+        state: "POSSIBLE_DEVIATION",
+        confidence: "LOW",
+        evidence: [{ key: "crossTrackKm", value: 9.4 }],
+      },
+    };
+    const changedTrajectory = prospectiveObservationFor(
+      aircraft,
+      changed,
+      "ABC123:flight-trajectory",
+      base,
+    ).find((item) => item.capability === "TRAJECTORY");
+    expect(changedTrajectory?.horizonBucket).toBe("state:POSSIBLE_DEVIATION:30000");
+    expect(JSON.parse(changedTrajectory?.evidenceJson ?? "[]")[0]).toEqual({
+      key: "trajectoryState",
+      value: "POSSIBLE_DEVIATION",
+    });
+  });
+
   it("writes Temporal.Instant values without losing milliseconds", async () => {
     vi.useFakeTimers();
     const stored = new Map<string, Record<string, unknown>>();

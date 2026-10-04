@@ -39,6 +39,7 @@ describe("Predictive Graduation Readiness boundary", () => {
     expect(publicRouteSource).toContain("enforcePredictiveReadiness");
     expect(publicRouteSource).toContain("toPublicPredictiveState(predictionState, effectivePolicy)");
     expect(publicRouteSource).toContain("buildPublicEtaAdvisory(predictionState, effectivePolicy, etaReadiness)");
+    expect(publicRouteSource).toContain("buildPublicTrajectoryAdvisory(predictionState, effectivePolicy, trajectoryReadiness)");
   });
 
   it("keeps the readiness report admin-only and no-store", () => {
