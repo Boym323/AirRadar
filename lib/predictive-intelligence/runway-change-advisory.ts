@@ -75,7 +75,11 @@ function advisoryState(
     return { state: "unavailable", ageSeconds, changeAgeSeconds: null };
   }
 
-  const changeAgeMs = Math.max(0, now - changedAt);
+  if (!Number.isFinite(changedAt) || changedAt > now) {
+    return { state: "unavailable", ageSeconds, changeAgeSeconds: null };
+  }
+
+  const changeAgeMs = now - changedAt;
   const changeAgeSeconds = Math.floor(changeAgeMs / 1_000);
   if (changeAgeMs > RUNWAY_CHANGE_EVENT_WINDOW_MS) {
     return { state: "expired", ageSeconds, changeAgeSeconds };
