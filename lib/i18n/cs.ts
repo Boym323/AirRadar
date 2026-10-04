@@ -494,6 +494,7 @@ export const cs = {
     operationsPredictiveReadiness: "Admin readiness",
     operationsPredictiveEta: "ETA",
     operationsPredictiveRunway: "RWY",
+    operationsPredictiveRunwayChange: "RWY Δ",
     operationsPredictiveShadow: "SHADOW",
     operationsPredictiveUnavailable: "Prediktivní kontext je dočasně nedostupný.",
     description: "Pravděpodobné události odvozené z lokálních ADS-B pozorování.",
