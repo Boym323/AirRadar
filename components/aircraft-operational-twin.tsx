@@ -73,7 +73,7 @@ export function AircraftOperationalTwin({
 
   const corridor = data.corridor;
   const evidence = data.evidence;
-  const weather = data.weatherCorridor;
+  const weather = data.weatherCorridor ?? null;
   return <section className={styles.panel} aria-labelledby="operational-twin-title" data-testid="operational-digital-twin-v1">
     <div className={styles.heading}>
       <div>
@@ -94,7 +94,7 @@ export function AircraftOperationalTwin({
       {t.operationalTwin.evidenceSummary(evidence.observed, evidence.published, evidence.planned, evidence.predicted, evidence.inferred)}
     </div>
 
-    <section className={styles.weatherCorridor} aria-labelledby="weather-corridor-title" data-testid="weather-corridor-intelligence-v1">
+    {weather && <section className={styles.weatherCorridor} aria-labelledby="weather-corridor-title" data-testid="weather-corridor-intelligence-v1">
       <div className={styles.weatherHeading}>
         <div>
           <span>{t.operationalTwin.weatherCorridorSubtitle}</span>
@@ -136,7 +136,7 @@ export function AircraftOperationalTwin({
           </div>
         </li>)}
       </ol> : <p className={styles.status}>{t.operationalTwin.weatherCorridorNoEvents}</p>}
-    </section>
+    </section>}
 
     <h3>{t.operationalTwin.events}</h3>
     {data.events.length ? <ol className={styles.timeline}>
