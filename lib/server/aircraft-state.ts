@@ -14,6 +14,7 @@ import {
   getReceiverComparisonRadiusNm,
   getSourceAffinityFailoverGraceMs,
   isAircraftMassDropGuardEnabled,
+  isTrackFusionShadowEnabled,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 import { AircraftContinuityGuard, type AircraftContinuityOrigin, type AircraftMassDropDecision } from "@/lib/server/aircraft-continuity";
@@ -54,6 +55,7 @@ import { enforcePredictiveReadiness, readPredictiveReadinessReport } from "@/lib
 import type { FlightPhase } from "@/lib/intelligence/types";
 import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@/lib/predictive-intelligence/types";
 import type { Airport } from "@/lib/airports/types";
+import { TrackFusionShadow } from "@/lib/track-fusion";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -190,6 +192,8 @@ export class AircraftStateService {
   /** Start of a preferred-source outage while the alternate observation remains live. */
   private readonly sourcePreferenceMissingSince = new Map<string, number>();
   private readonly continuity = new AircraftContinuityGuard();
+  /** Shadow-only multi-source state estimator. It never mutates canonical live aircraft. */
+  private readonly trackFusionShadow = new TrackFusionShadow(isTrackFusionShadowEnabled());
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -464,6 +468,7 @@ export class AircraftStateService {
     flightIntelligence: ReturnType<FlightIntelligenceService["getDiagnostics"]>;
     destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
     continuity: ReturnType<AircraftContinuityGuard["diagnostics"]>;
+    trackFusionShadow: ReturnType<TrackFusionShadow["diagnostics"]>;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -492,6 +497,7 @@ export class AircraftStateService {
         networkRetained: this.networkAircraft.size,
         pendingAffinity: this.sourcePreferenceMissingSince.size,
       }),
+      trackFusionShadow: this.trackFusionShadow.diagnostics(),
     };
   }
 
@@ -588,6 +594,7 @@ export class AircraftStateService {
         this.continuity.observeMembership("local", previousObserved, this.localObservedHexes, now);
         this.reconcileSourcePreferences(now);
         this.removeStaleAircraft(now);
+        this.observeTrackFusionShadow(now);
         this.invalidateSnapshotCache();
       }
 
@@ -736,6 +743,7 @@ export class AircraftStateService {
     this.reconcileSourcePreferences(now);
     if (!massDrop.deferPrune) this.pruneMissingAircraft("local", currentHexes, getAircraftStaleAfterMs(), now);
     this.reconcileSourcePreferences(now);
+    this.observeTrackFusionShadow(now);
     const activeHexes = new Set(this.localAircraft.keys());
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) this.statistics.observe([...this.localAircraft.values()], this.currentReceiver, new Date());
@@ -844,8 +852,21 @@ export class AircraftStateService {
     this.reconcileSourcePreferences(now);
     if (!massDrop.deferPrune) this.pruneMissingAircraft("network", currentHexes, getAdsbLolStaleAfterMs(), now);
     this.reconcileSourcePreferences(now);
+    this.observeTrackFusionShadow(now);
     this.navigationIntegrity.observe([...this.networkAircraft.values()], new Date(snapshot.fetchedAt ?? new Date().toISOString()));
     this.invalidateSnapshotCache();
+  }
+
+  private observeTrackFusionShadow(now = Date.now()): void {
+    this.trackFusionShadow.observe({
+      local: this.localAircraft,
+      network: this.networkAircraft,
+      receiver: this.currentReceiver,
+      localStaleAfterMs: getAircraftStaleAfterMs(),
+      networkStaleAfterMs: getAdsbLolStaleAfterMs(),
+      sourcePreferences: this.sourcePreferences,
+      now,
+    });
   }
 
   private logMassDropDecision(origin: AircraftContinuityOrigin, decision: AircraftMassDropDecision): void {
