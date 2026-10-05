@@ -540,14 +540,15 @@
       "category": "intelligence",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded 30-minute aircraft situation projection with live map uncertainty, process-local 5/15/30-minute outcome calibration, and an additive ICON-EU wind-adjusted timing shadow that never replaces canonical timing.",
+      "summary": "Bounded 30-minute aircraft situation projection with live map uncertainty, process-local position and event outcome calibration, plus an additive ICON-EU wind-adjusted timing shadow that never replaces canonical timing.",
       "pages": [
         "/aircraft/:hex",
         "/"
       ],
       "apis": [
         "/api/aircraft/:hex/situation",
-        "/api/admin/operational-twin/outcome"
+        "/api/admin/operational-twin/outcome",
+        "/api/admin/operational-twin/event-outcome"
       ],
       "changelogScopes": [
         "operational-twin",
@@ -580,7 +581,15 @@
         "wind-adjusted timing",
         "still-air proxy",
         "timing shadow",
-        "icon-eu timing"
+        "icon-eu timing",
+        "event outcome",
+        "event timing validation",
+        "waypoint outcome",
+        "sector entry outcome",
+        "sigmet outcome",
+        "arrival eta outcome",
+        "runway expectation outcome",
+        "event precision"
       ]
     },
     {

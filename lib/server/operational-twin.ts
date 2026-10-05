@@ -325,5 +325,6 @@ export async function getOperationalTwinForAircraft(
     ),
   });
   service.captureOperationalTwinOutcome(situation);
+  service.captureOperationalTwinEventOutcome(situation, { atcDataset: preparedDataset, sigmets, destination });
   return situation;
 }
