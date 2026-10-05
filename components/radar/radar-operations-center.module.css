@@ -206,6 +206,66 @@
   font-size: var(--font-size-xs);
 }
 
+
+.regional {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.regionalList {
+  display: grid;
+}
+
+.regionalItem {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.regionalItemHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.regionalItemHeader strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+}
+
+.regionalItem > small,
+.regionalUnavailable {
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+}
+
+.regionalUnavailable {
+  display: block;
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.regionalAircraft {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.regionalAircraft a {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--surface-accent-soft);
+  color: var(--accent);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: var(--font-size-2xs);
+  text-decoration: none;
+}
+
+.regionalAircraft a:hover {
+  border-color: var(--border-accent);
+}
+
 .highlights {
   border-top: 1px solid var(--border-subtle);
 }
@@ -448,6 +508,8 @@
   }
 
   .sectionHeading,
+  .regionalItem,
+  .regionalUnavailable,
   .highlight,
   .predictiveItem,
   .predictiveReadiness,
