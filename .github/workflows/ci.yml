@@ -298,11 +298,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Clear previous validated production build
+        run: rm -rf -- /tmp/airradar-ci-production-build
       - name: Download validated production build
         uses: actions/download-artifact@v8
         with:
           name: production-build-${{ github.sha }}
-          path: ${{ runner.temp }}/airradar-production-build
+          path: /tmp/airradar-ci-production-build
       - name: Verify production ATS routes before release
         run: |
           set -Eeuo pipefail
@@ -336,9 +338,7 @@ jobs:
       - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
-          sudo -n env \
-            AIRRADAR_BUILD_ARTIFACT_DIR="${RUNNER_TEMP}/airradar-production-build" \
-            /var/www/airradar/deploy/release.sh \
+          sudo -n /var/www/airradar/deploy/release.sh \
             --branch main \
             --automated \
             --commit "${GITHUB_SHA}"
