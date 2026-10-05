@@ -496,3 +496,21 @@ existující tabulky `OperationalTwinCalibrationBucket` pod lane
 poloha ani raw pending predikce. Výsledek readiness je pouze `WAIT/PASS/FAIL`
 a nemění chování WATCH/ATTENTION.
 
+## Digital Twin Calibration Center V1
+
+Admin stránka `/admin/operational-twin/calibration` sjednocuje existující
+kalibrační/readiness lane do jednoho read-only provozního přehledu. Používá
+jediný admin-only no-store endpoint
+`/api/admin/operational-twin/calibration` a nevytváří druhý kalibrační engine
+ani background poller.
+
+Center zobrazuje kvalitu corridor outcome, event outcome precision/timing,
+Truth-first V2 recall, důkazy wind timing graduation, kvalitu Regional
+Attention outcome a stav restart-stable calibration persistence. U Regional
+Attention ukazuje také řezy 5/15/30 minut a výslovně hlásí neskórované
+destination clustery.
+
+Stránka je pouze diagnostická. Nemůže měnit graduation policy, veřejnou
+prediction policy, semantiku WATCH/ATTENTION, thresholdy ani uložená kalibrační
+data.
+
