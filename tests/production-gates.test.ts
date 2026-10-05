@@ -37,6 +37,13 @@ describe("production release metadata gate", () => {
     expect(result.directories.at(-1)).toBe("20261005T1530_operational_twin_calibration_persistence_v1");
     expect(result.finalContractHash).toMatch(/^[a-f0-9]{64}$/);
   });
+  it("retries the real command palette keyboard shortcut once after hydration", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source.match(/keyboard\.press\("Control\+K"\)/g)).toHaveLength(2);
+    expect(source).toContain("if (!await commandPalette.isVisible())");
+    expect(source).toContain("waitForTimeout(500)");
+  });
+
   it("keeps breakpoint edges in the no-reload sweep while reloading only representative devices", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("const sweepWidths = [430, 480, 700, 720, 820, 821, 899, 900, 901, 950, 951, 1024, 1100, 1101, 1400, 1401]");
