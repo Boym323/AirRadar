@@ -18,6 +18,20 @@ function kinds(value: string | null): AviationNavPointKind[] {
   return [...new Set(parsed.filter((item): item is AviationNavPointKind => item === "NAVAID" || item === "FIX"))];
 }
 
+function identifiers(value: string | null): { ids: string[]; truncated: boolean } {
+  if (!value) return { ids: [], truncated: false };
+  const parsed = [...new Set(value.split(",")
+    .map((item) => item.trim().toUpperCase())
+    .filter((item) => /^[A-Z0-9]{2,8}$/.test(item)))];
+  return { ids: parsed.slice(0, 24), truncated: parsed.length > 24 };
+}
+
+function chunks<T>(values: readonly T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += size) result.push(values.slice(index, index + size));
+  return result;
+}
+
 export async function GET(request: Request): Promise<Response> {
   if (!isAviationNavDataEnabled()) {
     return Response.json({ enabled: false, available: false, points: [], source: "Aviation Weather Center" }, {
@@ -33,9 +47,34 @@ export async function GET(request: Request): Promise<Response> {
   const longitude = finite(url.searchParams.get("lon"));
   const radiusNm = finite(url.searchParams.get("radiusNm")) ?? 120;
   const requestedKinds = kinds(url.searchParams.get("kinds"));
+  const requestedIdentifiers = identifiers(url.searchParams.get("ids"));
+
+  if (requestedIdentifiers.ids.length > 0) {
+    try {
+      const batches = await Promise.all(chunks(requestedIdentifiers.ids, 8)
+        .map((batch) => defaultAviationNavDataProvider.searchIdentifiers(batch, request.signal)));
+      const dedup = new Map<string, (typeof batches)[number][number]>();
+      for (const point of batches.flat()) {
+        dedup.set(`${point.kind}:${point.id}:${point.latitude.toFixed(5)}:${point.longitude.toFixed(5)}`, point);
+      }
+      return Response.json({
+        enabled: true,
+        available: true,
+        points: [...dedup.values()],
+        source: "Aviation Weather Center",
+        query: { ids: requestedIdentifiers.ids },
+        truncated: requestedIdentifiers.truncated,
+      }, { headers: { "Cache-Control": "no-store" } });
+    } catch {
+      return Response.json({ error: "Aviation navigation identifier lookup temporarily unavailable" }, {
+        status: 503,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+  }
 
   if (latitude === null || longitude === null) {
-    return Response.json({ error: "lat and lon are required" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    return Response.json({ error: "lat and lon are required when ids are not supplied" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
 
   try {

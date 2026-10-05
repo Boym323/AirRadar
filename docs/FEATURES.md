@@ -16,7 +16,7 @@ not yet been historically attributed.
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/navigation/data`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
-| Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
+| Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
 | Map Context & Weather | production | weather | Pre-registry | — | `/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, and bounded PIREP/AIREP enrichment. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
@@ -109,6 +109,30 @@ the radar on that point. When a selected aircraft has a filed route, the
 already-loaded AWC points referenced by that route are highlighted using the
 existing Route Intelligence tokenizer. This is display/enrichment only:
 AWC points never replace eAIP ATS/procedure geometry or alter route authority.
+
+## Route Corridor Intelligence V1
+
+Route Corridor Intelligence extends the existing Route Intelligence V2 model for
+the currently selected aircraft. The browser performs one bounded same-origin
+navigation-reference lookup when the filed-route identifier set changes; it
+does not add another aircraft stream, timer, or background poller.
+
+Published ATS and procedure geometry remains authoritative. Bounded AWC
+NAVAID/FIX coordinates can resolve otherwise-unresolved filed/DCT endpoints,
+but that fallback is labeled as schematic `FILED_ROUTE` geometry and never
+promoted to published ATS evidence.
+
+The live radar renders resolved route geometry as completed, current and
+remaining segments and keeps the previous origin-current-destination line as a
+fallback. The aircraft drawer shows progress, next fix, remaining resolved
+distance, groundspeed-based ETA, cross-track deviation, expected segment track,
+track difference and reconstruction confidence.
+
+A persistent `DEVIATING` state requires three distinct observations with more
+than 10 NM cross-track deviation spanning at least 10 seconds; recovery requires
+two observations spanning at least five seconds. These are informational
+display thresholds, not certified navigation limits or ATC guidance. V1 does
+not persist deviation events and adds no database migration.
 
 ## Airport Live Board V5
 
