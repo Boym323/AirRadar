@@ -381,3 +381,17 @@ která jej vytvořila.
   capture sample.
 - Zápisy pokrytí jsou omezené hodinové agregace a nesmějí vstoupit do lokálních
   větví historie/statistik.
+
+
+## Operational Digital Twin invariants
+
+- Digital Twin nikdy nevlastní ani nespouští receiver polling lifecycle.
+- Čte pouze aktuální RAM stav; pro live corridor nesmí dotazovat
+  `FlightPosition` ani durable flight history.
+- Horizont je omezený na 30 minut a intersection sampling na dvě minuty.
+- AUP/UUP zůstává PLANNED evidence a nikdy se nesmí serializovat jako potvrzená
+  real-time aktivace.
+- Predikční ETA/runway/trajectory vstupy musí projít existujícím PUBLIC
+  graduation/readiness gate; admin/SHADOW preview je zakázáno.
+- Chybějící externí kontext je fail-soft a nesmí způsobit degraded stav live
+  radaru.
