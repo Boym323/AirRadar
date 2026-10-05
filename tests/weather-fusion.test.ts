@@ -180,6 +180,27 @@ describe("Aviation Weather Fusion V1", () => {
     expect(result.overall.severity).toBe("UNKNOWN");
   });
 
+  it("uses latest evidence per weather field instead of only the newest observation", () => {
+    const result = buildWeatherFusion({
+      aircraftHex: "ABC123", lat: 49.2, lon: 17.7, altitudeFt: 30000, now,
+      aircraftObservations: [
+        observation({ observedAt: new Date("2026-10-05T04:59:30Z"), turbulenceLevel: null, windDirectionDeg: null, windSpeedKt: null }),
+        observation({ observedAt: new Date("2026-10-05T04:58:00Z"), turbulenceLevel: 2, windDirectionDeg: 270, windSpeedKt: 55 }),
+      ],
+      pireps: [], sigmets: [], metar: null, modelWind: modelWind(),
+    });
+    expect(result.risks.find((risk) => risk.kind === "TURBULENCE")).toMatchObject({ severity: "MODERATE" });
+    expect(result.wind.status).toBe("AGREE");
+  });
+
+  it("does not project surface freezing-moisture METAR evidence to cruise altitude", () => {
+    const result = buildWeatherFusion({
+      aircraftHex: "ABC123", lat: 49.2, lon: 17.7, altitudeFt: 30000, now,
+      aircraftObservations: [], pireps: [], sigmets: [], metar: metar(), modelWind: null,
+    });
+    expect(result.evidence.find((item) => item.code === "METAR_FREEZING_MOISTURE")).toBeUndefined();
+  });
+
   it("downgrades stale onboard evidence and wind comparison confidence", () => {
     const result = buildWeatherFusion({
       aircraftHex: "ABC123", lat: 49.2, lon: 17.7, altitudeFt: 30000, now,
