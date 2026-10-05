@@ -355,3 +355,21 @@ kontextové prahy; nejde o collision/conflict, TCAS, STCA ani bezpečnostní
 výstrahu. Navazující attention vrstva může tyto vazby pouze sumarizovat bez
 změny této hranice.
 
+## Operational Attention V1
+
+Operational Attention V1 je deterministická sumarizace nad Regional Situation
+Graph V1. Vrací ji stejný požadavek `GET /api/operations/situation` v poli
+`attention`; nepřidává druhý live snapshot, poller, perzistenci ani dotaz na
+provider.
+
+Omezený seznam zatím zvýrazňuje dva vysvětlitelné vzory: zvýšenou vazbu
+projektované společné přítomnosti, která už existuje v regionálním grafu, a
+cluster alespoň tří živých letadel se stejnou rozpoznanou destinací. Položky
+jsou seřazené a omezené na 12. `WATCH` a `ATTENTION` jsou pouze produktové
+priority.
+
+Každá odpověď zachovává `OPERATIONAL_CONTEXT_ONLY`,
+`NOT_COLLISION_WARNING` a `NOT_SEPARATION_PRODUCT`. Funkce nepočítá ztrátu
+rozstupu, pravděpodobnost srážky, logiku TCAS/STCA ani nevydává navigační nebo
+ATC pokyny.
+
