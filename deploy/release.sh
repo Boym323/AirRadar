@@ -22,6 +22,7 @@ readonly EXPECTED_SYSTEMD_UNIT_NAME="${SERVICE_NAME}.service"
 readonly EXPECTED_PRODUCTION_ENTRYPOINT="${APP_DIR}/scripts/start-production.mjs"
 readonly EXPECTED_ENVIRONMENT_FILE="${APP_DIR}/.env"
 readonly RUNTIME_STATE_DIRECTORY="/var/lib/airradar"
+readonly DEPENDENCY_STATE_FILE="${RUNTIME_STATE_DIRECTORY}/deploy-package-lock.sha256"
 readonly LEGACY_ALERT_CONFIG_PATH="${APP_DIR}/data/alerts.json"
 readonly RELEASE_BUILD_DIR=".next-release-${BASHPID}"
 readonly RELEASE_BUILD_BACKUP_DIR=".next-release-backup-${BASHPID}"
@@ -390,10 +391,10 @@ preflight() {
   require_command mktemp
   require_command cmp
   require_command mv
+  require_command sha256sum
   if [[ -n "${BUILD_ARTIFACT_DIR}" ]]; then
     (( AUTOMATED == 1 )) || die "--build-artifact-dir is supported only with --automated."
     require_command tar
-    require_command sha256sum
   fi
   clean_automated_generated_changes
   check_repository
@@ -554,6 +555,7 @@ const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
 const fail = (message) => { throw new Error(message); };
 
 if (manifest.schemaVersion !== 1) fail("unsupported artifact manifest schema");
+if (manifest.runtime !== "standalone") fail("validated artifact is not a standalone runtime");
 if (!/^[a-f0-9]{64}$/.test(manifest.archiveSha256 ?? "")) fail("invalid artifact archive SHA-256");
 if (manifest.commit !== commit) fail("artifact commit " + manifest.commit + " does not match " + commit);
 if (manifest.version !== version || manifest.tag !== tag || manifest.channel !== channel) {
@@ -594,6 +596,10 @@ NODE
     release_build_lock
     die "Validated production build is missing BUILD_ID."
   }
+  [[ -f "${APP_DIR}/${RELEASE_BUILD_DIR}/standalone/server.js" ]] || {
+    release_build_lock
+    die "Validated production build is missing standalone/server.js."
+  }
   cp -- "${metadata}" "${STAGED_BUILD_METADATA_PATH}"
   release_build_lock
   log "Validated production build staged successfully (sha256=${actual_sha})."
@@ -623,11 +629,59 @@ generate_release_changelog() {
   log "Changelog committed at ${NEW_SHA}"
 }
 
+
+artifact_runtime() {
+  if [[ -z "${BUILD_ARTIFACT_DIR}" || ! -f "${BUILD_ARTIFACT_DIR}/manifest.json" ]]; then
+    printf 'legacy'
+    return 0
+  fi
+  node - "${BUILD_ARTIFACT_DIR}/manifest.json" <<'NODE'
+const fs = require("node:fs");
+const manifest = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+process.stdout.write(typeof manifest.runtime === "string" ? manifest.runtime : "legacy");
+NODE
+}
+
+record_dependency_state() {
+  local lock_hash temp_file
+  lock_hash="$(sha256sum "${APP_DIR}/package-lock.json" | awk '{print $1}')"
+  if [[ ! -d "${RUNTIME_STATE_DIRECTORY}" ]]; then
+    run_privileged install -d -o "${SERVICE_NAME}" -g "${SERVICE_NAME}" -m 0750 "${RUNTIME_STATE_DIRECTORY}"
+  fi
+  temp_file="$(mktemp)"
+  printf '%s\n' "${lock_hash}" > "${temp_file}"
+  run_privileged install -o root -g root -m 0644 "${temp_file}" "${DEPENDENCY_STATE_FILE}"
+  rm -f -- "${temp_file}"
+}
+
+prepare_deploy_dependencies() {
+  local lock_hash recorded_hash="" runtime
+  lock_hash="$(sha256sum "${APP_DIR}/package-lock.json" | awk '{print $1}')"
+  runtime="$(artifact_runtime)"
+
+  if [[ -f "${DEPENDENCY_STATE_FILE}" ]]; then
+    recorded_hash="$(tr -d '[:space:]' < "${DEPENDENCY_STATE_FILE}")"
+  fi
+
+  if (( AUTOMATED == 1 )) \
+    && [[ "${runtime}" == "standalone" ]] \
+    && [[ "${recorded_hash}" == "${lock_hash}" ]] \
+    && [[ -x "${APP_DIR}/node_modules/.bin/prisma" ]] \
+    && [[ -f "${APP_DIR}/node_modules/@prisma/orm-postgres/package.json" ]] \
+    && [[ -f "${APP_DIR}/node_modules/dotenv/package.json" ]]; then
+    log "Standalone deploy tooling matches package-lock.json; skipping npm ci."
+    return 0
+  fi
+
+  log "Installing deploy dependencies"
+  npm ci --prefer-offline --no-audit --no-fund
+  record_dependency_state
+}
+
 run_release_steps() {
   cleanup_stale_smoke_validation_dirs
 
-  log "Installing dependencies"
-  npm ci --prefer-offline --no-audit --no-fund
+  prepare_deploy_dependencies
 
   log "Generating Prisma contract"
   npm run prisma:generate
