@@ -70,6 +70,17 @@ describe("production release metadata gate", () => {
     expect(source).not.toContain('[data-product="airport-live-board-v7"]');
   });
 
+  it("tracks the Digital Twin V2 map source contract", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain('"operational-twin-v2"');
+    expect(source).toContain('"operational-twin-v2-uncertainty"');
+    expect(source).toContain('"operational-twin-v2-route"');
+    expect(source).toContain('"operational-twin-v2-kinematic"');
+    expect(source).toContain('"operational-twin-v2-milestones"');
+    expect(source).toContain('"operational-twin-v2-events"');
+    expect(source).toContain('"operational-twin-v2-weather-events"');
+  });
+
   it("keeps visual smoke readiness independent of remote map tiles", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("return Boolean(map);");
