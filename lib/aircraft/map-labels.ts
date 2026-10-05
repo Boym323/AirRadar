@@ -8,6 +8,12 @@ export interface AircraftMapLabelLines {
   secondary: string | null;
 }
 
+export interface TrafficMapLabelInput {
+  identity: string;
+  altitudeFt: number | null;
+  speedKt: number | null;
+}
+
 export function aircraftMapLabelLevel(zoom: number): AircraftMapLabelLevel {
   if (zoom < 6.5) return "hidden";
   if (zoom < 8.5) return "callsign";
@@ -21,16 +27,38 @@ function aircraftMapIdentity(
   return aircraft.callsign || aircraft.registration || aircraft.enrichment?.metadata?.registration || aircraft.icaoHex;
 }
 
-function compactAltitude(aircraft: Pick<AircraftView, "altitude">): string | null {
-  if (aircraft.altitude === null || !Number.isFinite(aircraft.altitude)) return null;
-  return aircraft.altitude >= 10_000
-    ? `FL${Math.round(aircraft.altitude / 100)}`
-    : `${formatNumber(aircraft.altitude, 0)} ft`;
+function compactAltitudeValue(altitudeFt: number | null): string | null {
+  if (altitudeFt === null || !Number.isFinite(altitudeFt)) return null;
+  return altitudeFt >= 10_000
+    ? `FL${Math.round(altitudeFt / 100)}`
+    : `${formatNumber(altitudeFt, 0)} ft`;
 }
 
-function compactSpeed(aircraft: Pick<AircraftView, "groundSpeed">): string | null {
-  if (aircraft.groundSpeed === null || !Number.isFinite(aircraft.groundSpeed)) return null;
-  return `${formatNumber(aircraft.groundSpeed, 0)}KT`;
+function compactSpeedValue(speedKt: number | null): string | null {
+  if (speedKt === null || !Number.isFinite(speedKt)) return null;
+  return `${formatNumber(speedKt, 0)}KT`;
+}
+
+export function trafficMapLabelLines(
+  traffic: TrafficMapLabelInput,
+  zoom: number,
+  options: { suppressTelemetry?: boolean } = {},
+): AircraftMapLabelLines | null {
+  const level = aircraftMapLabelLevel(zoom);
+  if (level === "hidden") return null;
+  if (level === "callsign" || options.suppressTelemetry) return { primary: traffic.identity, secondary: null };
+  const values = [compactAltitudeValue(traffic.altitudeFt)];
+  if (level === "callsignAltitudeType") values.push(compactSpeedValue(traffic.speedKt));
+  return { primary: traffic.identity, secondary: values.filter((value): value is string => Boolean(value)).join(" · ") || null };
+}
+
+export function trafficMapLabelText(
+  traffic: TrafficMapLabelInput,
+  zoom: number,
+  options: { suppressTelemetry?: boolean } = {},
+): string | null {
+  const lines = trafficMapLabelLines(traffic, zoom, options);
+  return lines ? [lines.primary, lines.secondary].filter((value): value is string => Boolean(value)).join("\n") : null;
 }
 
 /**
@@ -43,13 +71,11 @@ export function aircraftMapLabelLines(
   zoom: number,
   options: { suppressTelemetry?: boolean } = {},
 ): AircraftMapLabelLines | null {
-  const level = aircraftMapLabelLevel(zoom);
-  if (level === "hidden") return null;
-  const primary = aircraftMapIdentity(aircraft);
-  if (level === "callsign" || options.suppressTelemetry) return { primary, secondary: null };
-  const values = [compactAltitude(aircraft)];
-  if (level === "callsignAltitudeType") values.push(compactSpeed(aircraft));
-  return { primary, secondary: values.filter((value): value is string => Boolean(value)).join(" · ") || null };
+  return trafficMapLabelLines({
+    identity: aircraftMapIdentity(aircraft),
+    altitudeFt: aircraft.altitude,
+    speedKt: aircraft.groundSpeed,
+  }, zoom, options);
 }
 
 export function aircraftMapLabelText(

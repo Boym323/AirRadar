@@ -20,7 +20,7 @@ import { shouldRecenterOnReceiver } from "@/lib/receiver";
 import type { AircraftView, CoverageMode, PublicReceiverPosition, PublicStateSnapshot, ReceiverPosition, TrailPoint } from "@/lib/aircraft/types";
 import { positionObservedAt } from "@/lib/aircraft/source-merge";
 import { boundTrailPoints, selectedTrail } from "@/lib/aircraft/trail";
-import { aircraftMapLabelLevel, aircraftMapLabelText } from "@/lib/aircraft/map-labels";
+import { aircraftMapLabelLevel, aircraftMapLabelText, trafficMapLabelText } from "@/lib/aircraft/map-labels";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcDataResponse, AtcSector } from "@/lib/atc/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
@@ -95,7 +95,7 @@ import {
   type AircraftMarkerHandle,
 } from "@/lib/radar/aircraft-marker-controller";
 import { createLabelCollisionScheduler } from "@/lib/radar/aircraft-label-collision";
-import { applyAircraftLabelCollisionLayout } from "@/lib/radar/aircraft-label-controller";
+import { applyAircraftLabelCollisionLayout, type AircraftLabelCollisionHandle } from "@/lib/radar/aircraft-label-controller";
 import { radarBottomControlOffset, radarCameraPadding, type RadarMapPadding } from "@/lib/radar/layout";
 import type { RadarPerformanceDiagnosticsSession } from "@/lib/radar/performance-diagnostics";
 import { createAircraftMotionRuntime, type AircraftMotionRuntime } from "@/lib/radar/aircraft-motion-runtime";
@@ -136,6 +136,8 @@ const EMPTY_OGN_SNAPSHOT: OgnStateSnapshot = { enabled: false, status: "disabled
 const EMPTY_ATS_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_PROCEDURE_GEOJSON = { type: "FeatureCollection" as const, features: [] };
 const EMPTY_NAVIGATION_INTEGRITY_GEOJSON = { type: "FeatureCollection" as const, features: [] };
+const OGN_LABEL_SOURCE_ID = "ogn-traffic-labels";
+const OGN_LABEL_LAYER_ID = "ogn-traffic-labels-symbol";
 
 function createNavigationIntegrityGeoJSON(cells: Array<{ latCell: number; lonCell: number; state: string; affectedAircraftCount: number }>): FeatureCollection {
   const size = 0.2;
@@ -240,12 +242,46 @@ function aircraftWebglLabelFeature(
   };
 }
 
+function ognMapLabelFeature(target: OgnTargetView, zoom: number, selected: boolean) {
+  const presentation = toOgnTrafficPresentation(target);
+  return {
+    type: "Feature" as const,
+    id: target.id,
+    properties: {
+      targetId: target.id,
+      label: selected ? "" : trafficMapLabelText({
+        identity: presentation.primaryLabel,
+        altitudeFt: presentation.altitudeFt,
+        speedKt: presentation.speedKt,
+      }, zoom, { suppressTelemetry: target.stale }) ?? "",
+      stale: target.stale,
+    },
+    geometry: {
+      type: "Point" as const,
+      coordinates: [target.longitude, target.latitude] as [number, number],
+    },
+  };
+}
+
+function setOgnDomLabel(handle: OgnMarkerHandle, value: string | null): boolean {
+  if (handle.labelText === value) return false;
+  handle.labelText = value;
+  const [primary = "", secondary = ""] = value?.split("\n", 2) ?? [];
+  handle.labelPrimary.textContent = primary;
+  handle.labelSecondary.textContent = secondary;
+  handle.labelSecondary.hidden = !secondary;
+  handle.label.dataset.contentEmpty = value ? "false" : "true";
+  handle.labelWidth = null;
+  handle.labelHeight = null;
+  return true;
+}
+
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 
-interface OgnMarkerHandle {
+interface OgnMarkerHandle extends AircraftLabelCollisionHandle {
   marker: maplibregl.Marker;
   root: HTMLElement;
   icon: HTMLElement;
@@ -253,6 +289,10 @@ interface OgnMarkerHandle {
   labelPrimary: HTMLElement;
   labelSecondary: HTMLElement;
   label: HTMLElement;
+  labelText: string | null;
+  labelPriority: "selected" | "normal" | "stale";
+  labelWidth: number | null;
+  labelHeight: number | null;
 }
 
 // OpenFreeMap keeps the basemap open and no-key while providing a dark vector
@@ -1035,6 +1075,7 @@ export function AirRadarApp() {
       center: [startingReceiver.lon, startingReceiver.lat],
       zoom: 7.4,
       minZoom: 3,
+      crossSourceCollisions: true,
       attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
@@ -1069,6 +1110,7 @@ export function AirRadarApp() {
       applyAircraftLabelCollisionLayout({
         map,
         aircraftMarkers,
+        additionalMarkers: ognMarkers,
         routeAirportFeatures: routeAirportGeoJsonRef.current.features,
         routeAirportLabelLayerId: ROUTE_V2_AIRPORT_LABEL_LAYER_ID,
       });
@@ -1407,6 +1449,44 @@ export function AirRadarApp() {
           "text-halo-width": 1,
         },
       });
+      map.addSource(OGN_LABEL_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: OGN_LABEL_LAYER_ID,
+        type: "symbol",
+        source: OGN_LABEL_SOURCE_ID,
+        minzoom: 6.5,
+        layout: {
+          "text-field": ["get", "label"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 6.5, 9, 10.5, 10, 14, 11],
+          "text-line-height": 1.1,
+          "text-offset": [0, 1.4],
+          "text-padding": 4,
+          "text-allow-overlap": false,
+          "text-ignore-placement": false,
+          "text-optional": true,
+          visibility: "none",
+        },
+        paint: {
+          "text-color": ["case", ["get", "stale"], AIRRADAR_MAP_THEME.labelMuted, AIRRADAR_MAP_THEME.label],
+          "text-opacity": ["case", ["get", "stale"], 0.72, 1],
+          "text-halo-color": AIRRADAR_MAP_THEME.outline,
+          "text-halo-width": 1,
+        },
+      });
+      const ognLabelTargetId = (event: MapLayerMouseEvent): string | null => {
+        const value = event.features?.[0]?.properties?.targetId;
+        return typeof value === "string" && value ? value : null;
+      };
+      map.on("click", OGN_LABEL_LAYER_ID, (event) => {
+        const id = ognLabelTargetId(event);
+        if (id) selectOgn(id);
+      });
+      map.on("mouseenter", OGN_LABEL_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", OGN_LABEL_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
       const webglAircraftHex = (event: MapLayerMouseEvent): string | null => {
         const value = event.features?.[0]?.properties?.icaoHex;
         return typeof value === "string" && value ? value : null;
@@ -1627,6 +1707,10 @@ export function AirRadarApp() {
           labelPrimary,
           labelSecondary,
           label,
+          labelText: null,
+          labelPriority: "normal",
+          labelWidth: null,
+          labelHeight: null,
         };
         ognMarkers.set(target.id, handle);
       } else {
@@ -1647,14 +1731,17 @@ export function AirRadarApp() {
       if (markerColor) handle.icon.style.setProperty("--aircraft-color", markerColor);
       else handle.icon.style.removeProperty("--aircraft-color");
       handle.rotator.style.transform = target.trackDeg === null ? "" : `rotate(${target.trackDeg}deg)`;
-      const altitude = target.altitudeFt === null ? null : `${formatNumber(target.altitudeFt, 0)} ft`;
-      const nextPrimary = presentation.primaryLabel;
-      const nextSecondary = [altitude, presentation.sourceLabel].filter(Boolean).join(" · ");
-      if (handle.labelPrimary.textContent !== nextPrimary) handle.labelPrimary.textContent = nextPrimary;
-      if (handle.labelSecondary.textContent !== nextSecondary) handle.labelSecondary.textContent = nextSecondary;
-      handle.labelSecondary.hidden = !nextSecondary;
-      handle.label.dataset.contentEmpty = nextPrimary ? "false" : "true";
-      handle.label.dataset.priority = target.id === selectedOgnId ? "selected" : target.stale ? "stale" : "normal";
+      const selected = target.id === selectedOgnId;
+      const baseLabel = trafficMapLabelText({
+        identity: presentation.primaryLabel,
+        altitudeFt: presentation.altitudeFt,
+        speedKt: presentation.speedKt,
+      }, mapZoom, { suppressTelemetry: target.stale && !selected });
+      const domLabel = selected ? (baseLabel ?? presentation.primaryLabel) : null;
+      const labelChanged = setOgnDomLabel(handle, domLabel);
+      handle.labelPriority = selected ? "selected" : target.stale ? "stale" : "normal";
+      handle.label.dataset.priority = handle.labelPriority;
+      if (labelChanged) labelCollisionSchedulerRef.current?.();
     }
 
     for (const [id, handle] of ognMarkers) {
@@ -1662,6 +1749,20 @@ export function AirRadarApp() {
       handle.marker.remove();
       ognMarkers.delete(id);
     }
+
+    const labelSource = map.getSource(OGN_LABEL_SOURCE_ID) as GeoJSONSource | undefined;
+    labelSource?.setData({
+      type: "FeatureCollection",
+      features: visible
+        ? visibleTargets
+          .filter((target) => Number.isFinite(target.latitude) && Number.isFinite(target.longitude))
+          .map((target) => ognMapLabelFeature(target, mapZoom, target.id === selectedOgnId))
+        : [],
+    });
+    if (map.getLayer(OGN_LABEL_LAYER_ID)) {
+      map.setLayoutProperty(OGN_LABEL_LAYER_ID, "visibility", visible ? "visible" : "none");
+    }
+    labelCollisionSchedulerRef.current?.();
   }, [colorMode, mapReady, mapZoom, ognEnabled, ognSnapshot.targets, selectOgn, selectedOgnId, showOgn, snapshot.aircraft]);
 
   const mapFilteredAircraft = useMemo(

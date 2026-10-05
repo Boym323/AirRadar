@@ -1,6 +1,7 @@
 import type { FilterSpecification } from "maplibre-gl";
 import type * as maplibregl from "maplibre-gl";
 import type { AircraftMarkerHandle } from "@/lib/radar/aircraft-marker-controller";
+import type { AircraftLabelPriority } from "@/lib/radar/aircraft-label-collision";
 import { layoutAircraftLabels, type ScreenRect } from "@/lib/radar/aircraft-label-collision";
 
 export interface RouteAirportLabelFeature {
@@ -8,9 +9,20 @@ export interface RouteAirportLabelFeature {
   geometry: { coordinates: [number, number] };
 }
 
+export interface AircraftLabelCollisionHandle {
+  marker: Pick<maplibregl.Marker, "getLngLat">;
+  root: HTMLElement;
+  label: HTMLElement;
+  labelText: string | null;
+  labelPriority: AircraftLabelPriority;
+  labelWidth: number | null;
+  labelHeight: number | null;
+}
+
 export interface AircraftLabelCollisionInput {
   map: maplibregl.Map;
   aircraftMarkers: ReadonlyMap<string, AircraftMarkerHandle>;
+  additionalMarkers?: ReadonlyMap<string, AircraftLabelCollisionHandle>;
   routeAirportFeatures: readonly RouteAirportLabelFeature[];
   routeAirportLabelLayerId: string;
 }
@@ -27,38 +39,43 @@ export function applyAircraftLabelCollisionLayout(input: AircraftLabelCollisionI
     point: { x: number; y: number };
     width: number;
     height: number;
-    priority: AircraftMarkerHandle["labelPriority"];
+    priority: AircraftLabelPriority;
     forceVisible: boolean;
   }>;
-  const handleByHex = new Map<string, AircraftMarkerHandle>();
-  for (const [hex, handle] of input.aircraftMarkers) {
-    if (!handle.labelText || handle.root.style.visibility === "hidden") {
-      handle.label.dataset.collisionHidden = "false";
-      continue;
+  const handleById = new Map<string, AircraftLabelCollisionHandle>();
+  const addMarkers = (namespace: string, markers: ReadonlyMap<string, AircraftLabelCollisionHandle>) => {
+    for (const [rawId, handle] of markers) {
+      if (!handle.labelText || handle.root.style.visibility === "hidden") {
+        handle.label.dataset.collisionHidden = "false";
+        continue;
+      }
+      if (handle.labelWidth === null || handle.labelHeight === null) {
+        handle.labelWidth = handle.label.offsetWidth;
+        handle.labelHeight = handle.label.offsetHeight;
+      }
+      if (handle.labelWidth <= 0 || handle.labelHeight <= 0) continue;
+      const id = `${namespace}:${rawId}`;
+      const point = input.map.project(handle.marker.getLngLat());
+      collisionItems.push({
+        id,
+        point: { x: point.x, y: point.y },
+        width: handle.labelWidth,
+        height: handle.labelHeight,
+        priority: handle.labelPriority,
+        forceVisible: handle.labelPriority === "selected" || handle.labelPriority === "emergency",
+      });
+      handleById.set(id, handle);
     }
-    if (handle.labelWidth === null || handle.labelHeight === null) {
-      handle.labelWidth = handle.label.offsetWidth;
-      handle.labelHeight = handle.label.offsetHeight;
-    }
-    if (handle.labelWidth <= 0 || handle.labelHeight <= 0) continue;
-    const point = input.map.project(handle.marker.getLngLat());
-    collisionItems.push({
-      id: hex,
-      point: { x: point.x, y: point.y },
-      width: handle.labelWidth,
-      height: handle.labelHeight,
-      priority: handle.labelPriority,
-      forceVisible: handle.labelPriority === "selected" || handle.labelPriority === "emergency",
-    });
-    handleByHex.set(hex, handle);
-  }
+  };
+  addMarkers("adsb", input.aircraftMarkers);
+  if (input.additionalMarkers) addMarkers("additional", input.additionalMarkers);
 
   const result = layoutAircraftLabels(collisionItems);
   const visibleAircraftLabelRects: ScreenRect[] = [];
-  for (const [hex, handle] of handleByHex) {
-    const placement = result.placements.get(hex);
-    const candidate = result.candidates.get(hex)?.find((item) => item.placement === placement);
-    if (placement && candidate && !result.hidden.has(hex)) {
+  for (const [id, handle] of handleById) {
+    const placement = result.placements.get(id);
+    const candidate = result.candidates.get(id)?.find((item) => item.placement === placement);
+    if (placement && candidate && !result.hidden.has(id)) {
       handle.label.dataset.placement = placement;
       handle.label.dataset.collisionHidden = "false";
       visibleAircraftLabelRects.push(candidate.rect);
