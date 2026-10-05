@@ -14,6 +14,7 @@ import {
 } from "@/lib/route-intelligence";
 import type { AtcContextDataset, PreparedAtcContextDataset } from "@/lib/atc-context/types";
 import {
+  buildNavigationIntegrityCorridorIntelligence,
   buildOperationalTwinCorridor,
   buildOperationalTwinEvents,
   buildOperationalTwinSituation,
@@ -25,6 +26,7 @@ import {
 import type { AirspacePlanSnapshot } from "@/lib/airspace-activity/types";
 import type { SigmetSnapshot } from "@/lib/weather/types";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
+import { getNavigationIntegrityService } from "@/lib/server/navigation-integrity";
 import { getAirspacePlan } from "@/lib/server/airspace-activity";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { defaultPirepProvider } from "@/lib/server/pirep-provider";
@@ -296,6 +298,13 @@ export async function getOperationalTwinForAircraft(
     observedGroundSpeedKt: state.groundSpeedKt,
   });
 
+  const navigationIntegrityCurrent = getNavigationIntegrityService().getCurrent("15m", now);
+  const navigationIntegrityCorridor = buildNavigationIntegrityCorridorIntelligence({
+    corridor,
+    current: navigationIntegrityCurrent,
+    generatedAt: now,
+  });
+
   const destination = live.enrichment?.route?.destination?.trim().toUpperCase() ?? null;
   const events = buildOperationalTwinEvents({
     generatedAt: now,
@@ -324,6 +333,7 @@ export async function getOperationalTwinForAircraft(
       predictive.etaAdvisory || predictive.runwayAdvisory || predictive.trajectoryAdvisory,
     ),
   });
+  situation.navigationIntegrityCorridor = navigationIntegrityCorridor;
   service.captureOperationalTwinOutcome(situation);
   service.captureOperationalTwinEventOutcome(situation, { atcDataset: preparedDataset, sigmets, destination });
   return situation;
