@@ -10,8 +10,35 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  validate:
+  pr-scope:
+    name: PR scope
     if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    outputs:
+      heavy: ${{ steps.scope.outputs.heavy }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Classify pull request scope
+        id: scope
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -Eeuo pipefail
+          scope_json="$(git diff --name-only -z "${BASE_SHA}" "${HEAD_SHA}" | node scripts/release-scope.mjs --stdin0)"
+          heavy="$(RELEASE_SCOPE_JSON="${scope_json}" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
+          echo "heavy=${heavy}" >> "${GITHUB_OUTPUT}"
+          echo "PR scope: ${scope_json}"
+
+  validate:
+    if: github.event_name == 'pull_request' && always()
+    needs: pr-scope
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -24,15 +51,33 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Require successful PR scope classification
+        if: needs.pr-scope.result != 'success'
+        run: |
+          echo "::error::PR scope classification did not complete successfully."
+          exit 1
+      - name: Lightweight documentation and metadata validation
+        if: needs.pr-scope.outputs.heavy == 'false'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -Eeuo pipefail
+          git diff --check "${BASE_SHA}" "${HEAD_SHA}"
+          node scripts/docs-localization.mjs
       - run: npm ci --prefer-offline --no-audit --no-fund
+        if: needs.pr-scope.outputs.heavy != 'false'
       - name: Audit production dependencies
+        if: needs.pr-scope.outputs.heavy != 'false'
         run: npm audit --omit=dev --audit-level=high
       - name: Restore ESLint cache
+        if: needs.pr-scope.outputs.heavy != 'false'
         uses: actions/cache@v6
         with:
           path: .cache/eslint
           key: eslint-${{ runner.os }}-${{ hashFiles('package-lock.json', 'eslint.config.mjs') }}
       - name: Restore Next compiler cache
+        if: needs.pr-scope.outputs.heavy != 'false'
         uses: actions/cache@v6
         with:
           path: .next/cache
@@ -40,17 +85,24 @@ jobs:
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
       - run: npm run prisma:generate
+        if: needs.pr-scope.outputs.heavy != 'false'
       - name: Verify Prisma migration integrity
+        if: needs.pr-scope.outputs.heavy != 'false'
         run: npx prisma migration check
       - name: Verify feature registry
+        if: needs.pr-scope.outputs.heavy != 'false'
         run: npm run features:check
       - name: Verify Czech documentation localization
+        if: needs.pr-scope.outputs.heavy != 'false'
         run: npm run docs:check
       - name: Verify visual system budget
+        if: needs.pr-scope.outputs.heavy != 'false'
         run: npm run visual:check
       - name: Audit aircraft icon geometry
+        if: needs.pr-scope.outputs.heavy != 'false'
         run: npm run icons:audit
       - name: Run lint, typecheck, and Vitest in parallel
+        if: needs.pr-scope.outputs.heavy != 'false'
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -70,6 +122,7 @@ jobs:
             exit 1
           fi
       - run: npm run build:prepared
+        if: needs.pr-scope.outputs.heavy != 'false'
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
   release-scope:
