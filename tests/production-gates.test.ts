@@ -33,7 +33,7 @@ describe("production release metadata gate", () => {
 
   it("validates the complete checked-in migration chain", () => {
     const result = assertMigrationSource(process.cwd());
-    expect(result.directories).toHaveLength(18);
+    expect(result.directories).toHaveLength(19);
     expect(result.directories.at(-1)).toBe("20261003T0515_predictive_prospective_observations_v1");
     expect(result.finalContractHash).toMatch(/^[a-f0-9]{64}$/);
   });
