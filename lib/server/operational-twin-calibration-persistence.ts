@@ -2,8 +2,10 @@ import "temporal-polyfill/full/global";
 import {
   OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION,
   OPERATIONAL_TWIN_OUTCOME_VERSION,
+  REGIONAL_ATTENTION_OUTCOME_VERSION,
   type OperationalTwinEventOutcomeValidator,
   type OperationalTwinOutcomeValidator,
+  type RegionalAttentionOutcomeValidator,
 } from "@/lib/operational-twin";
 import { getPrisma } from "@/lib/server/db";
 import { trackDbTransaction } from "@/lib/server/db-transaction-diagnostics";
@@ -13,8 +15,9 @@ const FLUSH_DELAY_MS = 60_000;
 const RETENTION_MS = 26 * 60 * 60_000;
 const LANE_OUTCOME = "CORRIDOR_OUTCOME";
 const LANE_EVENT_OUTCOME = "EVENT_OUTCOME";
+const LANE_REGIONAL_ATTENTION_OUTCOME = "REGIONAL_ATTENTION_OUTCOME";
 
-type Lane = typeof LANE_OUTCOME | typeof LANE_EVENT_OUTCOME;
+type Lane = typeof LANE_OUTCOME | typeof LANE_EVENT_OUTCOME | typeof LANE_REGIONAL_ATTENTION_OUTCOME;
 
 interface PersistedRow {
   lane: Lane;
@@ -30,6 +33,7 @@ export interface OperationalTwinCalibrationPersistenceStatus {
   databaseAvailable: boolean;
   hydratedOutcomeBuckets: number;
   hydratedEventOutcomeBuckets: number;
+  hydratedRegionalAttentionOutcomeBuckets: number;
   trackedPersistedBuckets: number;
   rowsWritten: number;
   rowsDeleted: number;
@@ -58,6 +62,7 @@ export class OperationalTwinCalibrationPersistence {
     databaseAvailable: false,
     hydratedOutcomeBuckets: 0,
     hydratedEventOutcomeBuckets: 0,
+    hydratedRegionalAttentionOutcomeBuckets: 0,
     trackedPersistedBuckets: 0,
     rowsWritten: 0,
     rowsDeleted: 0,
@@ -70,6 +75,7 @@ export class OperationalTwinCalibrationPersistence {
   constructor(
     private readonly outcome: OperationalTwinOutcomeValidator,
     private readonly eventOutcome: OperationalTwinEventOutcomeValidator,
+    private readonly regionalAttentionOutcome: RegionalAttentionOutcomeValidator,
   ) {}
 
   getStatus(): OperationalTwinCalibrationPersistenceStatus {
@@ -97,13 +103,18 @@ export class OperationalTwinCalibrationPersistence {
       const eventRows = rows
         .filter((row) => row.lane === LANE_EVENT_OUTCOME && row.version === OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION)
         .map((row) => ({ startMs: timestampMs(row.bucketStart), payloadJson: row.payloadJson }));
+      const regionalAttentionRows = rows
+        .filter((row) => row.lane === LANE_REGIONAL_ATTENTION_OUTCOME && row.version === REGIONAL_ATTENTION_OUTCOME_VERSION)
+        .map((row) => ({ startMs: timestampMs(row.bucketStart), payloadJson: row.payloadJson }));
 
       this.status.hydratedOutcomeBuckets = this.outcome.hydrateCalibrationBuckets(outcomeRows, now);
       this.status.hydratedEventOutcomeBuckets = this.eventOutcome.hydrateCalibrationBuckets(eventRows, now);
+      this.status.hydratedRegionalAttentionOutcomeBuckets = this.regionalAttentionOutcome.hydrateCalibrationBuckets(regionalAttentionRows, now);
       for (const row of rows) {
         if (
           (row.lane !== LANE_OUTCOME || row.version !== OPERATIONAL_TWIN_OUTCOME_VERSION)
           && (row.lane !== LANE_EVENT_OUTCOME || row.version !== OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION)
+          && (row.lane !== LANE_REGIONAL_ATTENTION_OUTCOME || row.version !== REGIONAL_ATTENTION_OUTCOME_VERSION)
         ) continue;
         const bucketStartMs = timestampMs(row.bucketStart);
         this.persistedPayloads.set(this.key(row.lane as Lane, row.version, bucketStartMs), row.payloadJson);
@@ -147,6 +158,12 @@ export class OperationalTwinCalibrationPersistence {
       ...this.eventOutcome.exportCalibrationBuckets(now).map<PersistedRow>((bucket) => ({
         lane: LANE_EVENT_OUTCOME,
         version: OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION,
+        bucketStartMs: bucket.startMs,
+        payloadJson: bucket.payloadJson,
+      })),
+      ...this.regionalAttentionOutcome.exportCalibrationBuckets(now).map<PersistedRow>((bucket) => ({
+        lane: LANE_REGIONAL_ATTENTION_OUTCOME,
+        version: REGIONAL_ATTENTION_OUTCOME_VERSION,
         bucketStartMs: bucket.startMs,
         payloadJson: bucket.payloadJson,
       })),
