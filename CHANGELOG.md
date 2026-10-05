@@ -10,6 +10,40 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.300] - 2026-10-05
+
+Changes since v1.0.299.
+
+**Features touched:** Airport Intelligence, Map Context & Weather, System Observability.
+
+### Added
+
+- Add PIREP / AIREP Intelligence V1 (#306) (b53bfcd8)
+- Complete Airport Live Board V7 with arrival sequence (#307) (1890fa7e)
+- Add Airport Live Board V8 arrival flow intelligence (#310) (1a0dcaac)
+- Add Aircraft Continuity Guard V2 (#314) (9a0a6022)
+
+### Fixed
+
+- Preserve aircraft continuity across transient source gaps (#312) (0545042b)
+
+### Maintenance
+
+- Sync generated repository metadata (#308) (59980859)
+- Align Airport Intelligence boundary with V8 (#315) (2647506a)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add PIREP / AIREP Intelligence V1 (#306) (b53bfcd8)
+- chore(metadata): sync generated repository metadata (#308) (59980859)
+- feat: complete Airport Live Board V7 with arrival sequence (#307) (1890fa7e)
+- feat: add Airport Live Board V8 arrival flow intelligence (#310) (1a0dcaac)
+- fix: preserve aircraft continuity across transient source gaps (#312) (0545042b)
+- feat: add Aircraft Continuity Guard V2 (#314) (9a0a6022)
+- test: align Airport Intelligence boundary with V8 (#315) (2647506a)
+
+</details>
 ## [1.0.299] - 2026-10-04
 
 Changes since v1.0.298.
