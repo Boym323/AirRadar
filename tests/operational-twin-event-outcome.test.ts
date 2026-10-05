@@ -378,4 +378,29 @@ describe("Operational Digital Twin Event Outcome Validation V2", () => {
       byType,
     })).toEqual({ decision: "PASS", reasons: [], complete: true });
   });
+  it("round-trips anonymous event calibration buckets without aircraft-level payload", () => {
+    const predictedAt = baseNow + 5 * 60_000;
+    const source = new OperationalTwinEventOutcomeValidator();
+    source.capture(situation([
+      event("WAYPOINT", 5, {
+        id: `waypoint:VLM:${new Date(predictedAt).toISOString()}`,
+        title: "VLM",
+        lat: 49,
+        lon: 17.5,
+      }),
+    ]), { atcDataset: null, sigmets: null, destination: null });
+    const truth = aircraft(predictedAt + 30_000, 49, 17.5);
+    source.observeLocal(new Map([[truth.icaoHex, truth]]), predictedAt + 31_000);
+
+    const exported = source.exportCalibrationBuckets(predictedAt + 31_000);
+    expect(exported.length).toBeGreaterThan(0);
+    const serialized = exported.map((row) => row.payloadJson).join("\n");
+    expect(serialized).not.toMatch(/ABC123|TEST123|icaoHex|callsign|registration|semanticKey|title|lat|lon/i);
+
+    const restored = new OperationalTwinEventOutcomeValidator();
+    expect(restored.hydrateCalibrationBuckets(exported, predictedAt + 31_000)).toBeGreaterThan(0);
+    const report = restored.report(new Date(predictedAt + 31_000));
+    expect(report.overall.observed).toBe(1);
+    expect(report.byType.WAYPOINT.observed).toBe(1);
+  });
 });
