@@ -3,8 +3,8 @@ import {
   TrackFusionReadinessMonitor,
   evaluateTrackFusionReadiness,
   type TrackFusionReadinessEvidence,
+  type TrackFusionShadowDiagnostics,
 } from "@/lib/track-fusion";
-import type { TrackFusionShadowDiagnostics } from "@/lib/track-fusion";
 
 const base = Date.parse("2026-10-05T08:00:00.000Z");
 
@@ -37,7 +37,16 @@ function evidence(overrides: Partial<TrackFusionReadinessEvidence> = {}): TrackF
   };
 }
 
-function diagnostics(input: Partial<TrackFusionShadowDiagnostics> & {
+function diagnostics(input: {
+  evaluations?: number;
+  positionComparisons?: number;
+  positionDisagreements?: number;
+  estimatedGapFills?: number;
+  acceptedSourceTransitions?: number;
+  rejectedSourceTransitions?: number;
+  canonicalPositionComparisons?: number;
+  canonicalPositionDivergences?: number;
+  capacityEvictions?: number;
   histogram?: number[];
 } = {}): TrackFusionShadowDiagnostics {
   const histogram = input.histogram ?? [0, 0, 0, 0, 0, 0, 0, 0];
@@ -51,16 +60,16 @@ function diagnostics(input: Partial<TrackFusionShadowDiagnostics> & {
     degradedTracks: 0,
     estimatedTracks: 0,
     noPositionTracks: 0,
-    capacityEvictions: 0,
-    evaluations: 0,
+    capacityEvictions: input.capacityEvictions ?? 0,
+    evaluations: input.evaluations ?? 0,
     dedupedEvaluations: 0,
-    positionComparisons: 0,
-    positionDisagreements: 0,
-    estimatedGapFills: 0,
-    acceptedSourceTransitions: 0,
-    rejectedSourceTransitions: 0,
-    canonicalPositionComparisons: 0,
-    canonicalPositionDivergences: 0,
+    positionComparisons: input.positionComparisons ?? 0,
+    positionDisagreements: input.positionDisagreements ?? 0,
+    estimatedGapFills: input.estimatedGapFills ?? 0,
+    acceptedSourceTransitions: input.acceptedSourceTransitions ?? 0,
+    rejectedSourceTransitions: input.rejectedSourceTransitions ?? 0,
+    canonicalPositionComparisons: input.canonicalPositionComparisons ?? 0,
+    canonicalPositionDivergences: input.canonicalPositionDivergences ?? 0,
     fieldSelections: {
       position: { local: 0, network: 0, estimated: 0 },
       altitude: { local: 0, network: 0, estimated: 0 },
@@ -86,7 +95,6 @@ function diagnostics(input: Partial<TrackFusionShadowDiagnostics> & {
     canonicalResidualNm: { average: null, maximum: null },
     lastEvaluatedAt: null,
     recentDisagreements: [],
-    ...input,
   };
 }
 
@@ -131,20 +139,20 @@ describe("Track Fusion Readiness V1", () => {
     expect(report.rollout.digitalTwinEffective).toBe(false);
   });
 
-  it("returns PASS and enables Digital Twin only with explicit rollout configuration", () => {
-    const disabled = evaluateTrackFusionReadiness(evidence(), true);
-    expect(disabled.decision).toBe("PASS");
-    expect(disabled.rollout.digitalTwinEffective).toBe(false);
+  it("returns PASS but keeps Digital Twin disabled without explicit configuration", () => {
+    const report = evaluateTrackFusionReadiness(evidence(), true);
+    expect(report.decision).toBe("PASS");
+    expect(report.rollout.digitalTwinConfigured).toBe(false);
+    expect(report.rollout.digitalTwinEffective).toBe(false);
 
-    const enabled = evaluateTrackFusionReadiness(evidence(), true, { digitalTwinConfigured: true });
-    expect(enabled.decision).toBe("PASS");
-    expect(enabled.rollout.digitalTwinEffective).toBe(true);
+    const configured = evaluateTrackFusionReadiness(evidence(), true, { digitalTwinConfigured: true });
+    expect(configured.decision).toBe("PASS");
+    expect(configured.rollout.digitalTwinEffective).toBe(true);
   });
 
-  it("aggregates bounded process-local deltas and derives p95 from the histogram", () => {
+  it("aggregates process-local deltas and computes residual p95 from bounded buckets", () => {
     const monitor = new TrackFusionReadinessMonitor();
     monitor.observe(diagnostics(), base);
-
     monitor.observe(diagnostics({
       evaluations: 6_000,
       positionComparisons: 500,
@@ -161,14 +169,15 @@ describe("Track Fusion Readiness V1", () => {
       now: new Date(base + 121 * 60_000),
       digitalTwinConfigured: true,
     });
-    expect(report.evidence.window.processLocal).toBe(true);
+
     expect(report.evidence.window.spanMinutes).toBe(121);
     expect(report.evidence.positionResidualP95Nm).toBe(1);
+    expect(report.evidence.sourceTransitions).toBe(20);
     expect(report.decision).toBe("PASS");
     expect(report.rollout.digitalTwinEffective).toBe(true);
   });
 
-  it("resets evidence if cumulative shadow counters move backwards", () => {
+  it("resets to WAIT when cumulative shadow counters move backwards", () => {
     const monitor = new TrackFusionReadinessMonitor();
     monitor.observe(diagnostics(), base);
     monitor.observe(diagnostics({
@@ -181,6 +190,7 @@ describe("Track Fusion Readiness V1", () => {
 
     monitor.observe(diagnostics({ evaluations: 1 }), base + 121 * 60_000);
     const report = monitor.report(true, { now: new Date(base + 122 * 60_000) });
+
     expect(report.decision).toBe("WAIT");
     expect(report.evidence.evaluations).toBe(0);
     expect(report.evidence.window.spanMinutes).toBe(1);
