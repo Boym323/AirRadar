@@ -441,3 +441,16 @@ která jej vytvořila.
 - Validation nemůže měnit canonical Aircraft, source affinity, Track Fusion
   arbitration, public radar/SSE, receiver statistics ani FlightPosition.
 - Outcome PASS je pouze evidence a sám o sobě nemůže Track Fusion povýšit.
+
+## Invarianty truth-first validace
+
+- Truth-first observation se vyhodnotí před zachycením nových budoucích
+  predikcí stejného požadavku; predikce nemůže splnit truth ze stejného
+  okamžiku.
+- Waypoint truth vzniká z pozorovaného postupu Route Intelligence, sector truth
+  z debounced boundary událostí Flight Intelligence a SIGMET truth z pozdější
+  skutečné polohy uvnitř právě platného advisory.
+- Truth-first V2 nepřidává receiver poller, provider loop, databázový handle ani
+  změnu veřejného radaru. Waypoint/SIGMET truth zůstává request-driven a
+  process-local.
+
