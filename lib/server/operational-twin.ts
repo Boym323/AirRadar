@@ -127,6 +127,7 @@ function proceduresForRoute(live: NonNullable<ReturnType<ReturnType<typeof getAi
 function routeSnapshot(
   live: NonNullable<ReturnType<ReturnType<typeof getAircraftStateService>["getAircraft"]>>,
   dataset: AtcContextDataset | null,
+  state: OperationalTwinAircraftState,
 ): RouteIntelligenceV2Snapshot | null {
   const network = mergedNetwork(dataset);
   if (!network || !live.enrichment) return null;
@@ -144,10 +145,10 @@ function routeSnapshot(
         source: flightAware?.operational?.arrivalRunway ? "FLIGHTAWARE" : "UNKNOWN",
       },
       aircraft: {
-        lat: live.lat,
-        lon: live.lon,
-        track: live.track,
-        altitude: live.baroAltitude ?? live.altitude ?? live.geomAltitude,
+        lat: state.lat,
+        lon: state.lon,
+        track: state.trackDeg,
+        altitude: state.altitudeFt,
       },
     });
   } catch {
@@ -250,7 +251,7 @@ export async function getOperationalTwinForAircraft(
   ]);
 
   const preparedDataset: PreparedAtcContextDataset | null = datasetResult.value;
-  const route = routeSnapshot(live, preparedDataset);
+  const route = routeSnapshot(live, preparedDataset, state);
   const corridor = buildOperationalTwinCorridor(state, route, now);
   if (!corridor) return unavailable(icaoHex, "corridor_unavailable");
 
