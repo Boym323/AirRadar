@@ -10,6 +10,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.321] - 2026-10-05
+
+Changes since v1.0.320.
+
+**Features touched:** Live Radar.
+
+### Added
+
+- Add Regional Operations Center V1 (#368) (2f930db)
+
+### Fixed
+
+- Stabilize command palette browser gate (#369) (a345357)
+
+### Maintenance
+
+- Sync generated repository metadata (#367) (16fa59b)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#367) (16fa59b)
+- feat: add Regional Operations Center V1 (#368) (2f930db)
+- fix: stabilize command palette browser gate (#369) (a345357)
+
+</details>
 ## [1.0.320] - 2026-10-05
 
 Changes since v1.0.319.
