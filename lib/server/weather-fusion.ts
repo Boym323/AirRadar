@@ -148,7 +148,6 @@ export async function getAircraftWeatherFusion(
   const modelWind = windResult.status === "fulfilled" ? windResult.value : null;
 
   const latestObservation = observations[0] ?? null;
-  const aircraftSource: WeatherFusionSource = latestObservation?.source === "BDS_4_4" ? "AIRCRAFT_BDS44" : "AIRCRAFT_OTHER";
   const sourceAvailability: Partial<Record<WeatherFusionSource, "AVAILABLE" | "STALE" | "UNAVAILABLE">> = {
     AIRCRAFT_BDS44: latestObservation?.source === "BDS_4_4" ? sourceState(aircraftWeatherResult) : "UNAVAILABLE",
     AIRCRAFT_OTHER: latestObservation && latestObservation.source !== "BDS_4_4" ? sourceState(aircraftWeatherResult) : "UNAVAILABLE",
@@ -163,7 +162,6 @@ export async function getAircraftWeatherFusion(
     sourceAvailability.AIRCRAFT_BDS44 = "UNAVAILABLE";
     sourceAvailability.AIRCRAFT_OTHER = "UNAVAILABLE";
   }
-  void aircraftSource;
 
   return {
     status: "available",
