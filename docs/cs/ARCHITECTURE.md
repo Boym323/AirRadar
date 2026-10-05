@@ -535,3 +535,16 @@ Validator je pouze v RAM, nemá vlastní timer ani databázovou cestu a Digital
 Twin znovu nepřepočítává. Jeho výstup je pouze diagnostický a nemůže ovlivnit
 canonical aircraft state, Track Fusion selection, radar/SSE, historii,
 Navigation Integrity, predictive inputs ani alerts.
+
+## Operational Digital Twin Event Outcome Validation V2
+
+Existující on-demand Digital Twin assembly předá už načtený ATC a SIGMET
+kontext samostatnému omezenému event validatoru. Validator sám nevolá žádný
+provider. Budoucí LOCAL receiver snapshoty vyhodnocují waypoint, sector a
+SIGMET truth, zatímco už vytvořené Flight Intelligence LANDING eventy
+vyhodnocují arrival ETA a provider-reported runway truth.
+
+Větev je jednosměrná a pouze diagnostická. Nemůže měnit Digital Twin corridor,
+canonical Aircraft state, Track Fusion, radar/SSE, historii, Navigation
+Integrity, predictive state ani alerts. Evidence je process-local a restart
+vrací outcome stav na WAIT.
