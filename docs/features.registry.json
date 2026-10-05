@@ -185,6 +185,30 @@
       ]
     },
     {
+      "id": "trajectory-conformance",
+      "name": "Trajectory Conformance",
+      "category": "navigation / intelligence",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence.",
+      "pages": [
+        "/"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "trajectory-conformance",
+        "route-conformance"
+      ],
+      "changelogKeywords": [
+        "trajectory conformance",
+        "route conformance",
+        "probable direct",
+        "route rejoin",
+        "persistent deviation",
+        "route uncertain"
+      ]
+    },
+    {
       "id": "map-context-weather",
       "name": "Map Context & Weather",
       "category": "weather",

@@ -25,6 +25,7 @@ not yet been historically attributed.
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback and historical context windows. |
+| Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
 ## Map Context V1/V2
@@ -201,6 +202,34 @@ than 10 NM cross-track deviation spanning at least 10 seconds; recovery requires
 two observations spanning at least five seconds. These are informational
 display thresholds, not certified navigation limits or ATC guidance. V1 does
 not persist deviation events and adds no database migration.
+
+## Trajectory Conformance V1
+
+Trajectory Conformance V1 is a selected-aircraft state machine over the
+existing Route Corridor Intelligence V1 and Route Intelligence V2 outputs. It
+adds no aircraft stream, timer, provider, database model or persistence path.
+
+States are `ROUTE_UNKNOWN`, `ROUTE_UNCERTAIN`, `ON_ROUTE`, `OFFSET`,
+`DEVIATING`, `REJOINING` and `PROBABLE_DIRECT`. V1 consumes only already
+computed route geometry, cross-track state, track difference and ordered
+reconstructed route elements.
+
+`REJOINING` is entered only after confirmed `DEVIATING`, and recovery to
+`ON_ROUTE` requires two distinct observations spanning at least five seconds.
+A probable direct is never inferred from ordinary route progress alone: after
+confirmed deviation the aircraft must skip at least two resolved en-route
+elements spanning at least 10 NM and stably reacquire a later element. From a
+mere `OFFSET` state the evidence requirement is stricter: at least three
+elements and 20 NM.
+
+Reconstruction coverage below 50 percent or an unusable dynamic route fails
+closed to `ROUTE_UNCERTAIN`. Detection retains only a bounded tracker for the
+selected aircraft plus shadow counters; V1 emits no Flight Intelligence events
+and writes nothing to PostgreSQL.
+
+The Route Corridor card labels the result explicitly as inferred intelligence.
+`PROBABLE_DIRECT` is not proof of ATC clearance and `DEVIATING` is not a
+certified navigation or safety alert.
 
 ## Airport Live Board V5
 
