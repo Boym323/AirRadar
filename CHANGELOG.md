@@ -10,6 +10,69 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.318] - 2026-10-05
+
+Changes since v1.0.317.
+
+### Added
+
+- Add Digital Twin truth-first validation V1 (#359) (61426b3)
+
+### Maintenance
+
+- Sync generated repository metadata (#363) (2842c33)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#363) (2842c33)
+- feat: add Digital Twin truth-first validation V1 (#359) (61426b3)
+
+</details>
+
+## [1.0.317] - 2026-10-05
+
+Changes since v1.0.316.
+
+**Features touched:** Operational Digital Twin.
+
+### Added
+
+- Add Operational Attention V1 (#358) (da4e0e8)
+
+### Maintenance
+
+- Sync generated repository metadata (#362) (1a91e33)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#362) (1a91e33)
+- feat: add Operational Attention V1 (#358) (da4e0e8)
+
+</details>
+
+## [1.0.316] - 2026-10-05
+
+Changes since v1.0.315.
+
+**Features touched:** Operational Digital Twin.
+
+### Added
+
+- Add Regional Situation Graph V1 (#357) (54b072b)
+
+### Maintenance
+
+- Sync generated repository metadata (#356) (97d8508)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#356) (97d8508)
+- feat: add Regional Situation Graph V1 (#357) (54b072b)
+
+</details>
 ## [1.0.315] - 2026-10-05
 
 Changes since v1.0.314.
