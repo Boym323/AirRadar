@@ -1971,6 +1971,17 @@ export const cs = {
     noEvents: "V příštích 30 minutách nejsou z dostupných zdrojů odvozené žádné další události.",
     generated: "Výpočet",
     limitations: "Omezení modelu",
+
+    limitationText: {
+      BOUNDED_PROJECTION: "Corridor je omezený 30minutový situační odhad, ne clearance ani certifikovaná trajektorie.",
+      SAMPLED_INTERSECTIONS: "Budoucí průniky jsou vzorkované po dvou minutách a skutečný crossing může nastat mezi body.",
+      ATC_UNAVAILABLE: "ATC/ATS kontext není dostupný; sector a route události mohou být neúplné.",
+      AIRSPACE_PLAN_UNAVAILABLE: "AUP/UUP plán není dostupný; plánovaná alokace se nikdy nepovažuje za potvrzenou real-time aktivaci.",
+      SIGMET_UNAVAILABLE: "SIGMET kontext není dostupný.",
+      PUBLIC_PREDICTION_UNAVAILABLE: "Readiness-gated PUBLIC ETA/runway/trajectory advisories nejsou dostupné.",
+      KINEMATIC_FALLBACK: "Není dostupná použitelná route geometrie; corridor pokračuje podle aktuálního tracku a groundspeed.",
+      OFF_ROUTE: "Route Intelligence hlásí OFF_ROUTE; publikovaná route geometrie se pro corridor nepoužívá.",
+    },
     eventTypes: {
       WAYPOINT: "Waypoint",
       ATC_SECTOR_ENTRY: "Vstup do ATC prostoru",
