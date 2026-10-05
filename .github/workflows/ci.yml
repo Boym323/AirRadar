@@ -69,18 +69,6 @@ jobs:
             echo "Parallel validation failed (lint=$lint_status typecheck=$typecheck_status test=$test_status)"
             exit 1
           fi
-      - name: Prepare release build identity
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          release_version="$(node scripts/version.mjs resolve-release-version --channel stable)"
-          {
-            echo "AIRRADAR_VERSION=${release_version}"
-            echo "AIRRADAR_TAG=v${release_version}"
-            echo "AIRRADAR_COMMIT=${GITHUB_SHA}"
-            echo "AIRRADAR_CHANNEL=production"
-            echo "AIRRADAR_BUILD_TIME=$(date --utc --iso-8601=seconds)"
-          } >> "${GITHUB_ENV}"
       - run: npm run build:prepared
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
@@ -153,6 +141,18 @@ jobs:
             echo "Release validation failed (typecheck=$typecheck_status test=$test_status)"
             exit 1
           fi
+      - name: Prepare release build identity
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          release_version="$(node scripts/version.mjs resolve-release-version --channel stable)"
+          {
+            echo "AIRRADAR_VERSION=${release_version}"
+            echo "AIRRADAR_TAG=v${release_version}"
+            echo "AIRRADAR_COMMIT=${GITHUB_SHA}"
+            echo "AIRRADAR_CHANNEL=production"
+            echo "AIRRADAR_BUILD_TIME=$(date --utc --iso-8601=seconds)"
+          } >> "${GITHUB_ENV}"
       - run: npm run build:prepared
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
