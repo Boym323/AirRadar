@@ -230,3 +230,57 @@ Protected inspection is available at:
 
 The System page also exposes the same bounded report for authenticated admin
 diagnostics.
+
+## Event Outcome Validation V2
+
+Digital Twin now validates predicted future events separately from V1 corridor
+position calibration. The V2 lane is request-driven and captures only events
+that were already produced by the existing situation calculation.
+
+Scoreable event classes are:
+
+- `WAYPOINT` — truth is a future LOCAL receiver position within 3 NM of the
+  published/interpreted waypoint;
+- `ATC_SECTOR_ENTRY` — truth is a future LOCAL receiver observation inside
+  the exact published sector geometry and compatible vertical context captured
+  by the situation request;
+- `SIGMET_INTERSECTION` — truth is a future LOCAL receiver observation inside
+  the exact captured SIGMET geometry, validity window and vertical limits;
+- `ARRIVAL_ETA` — truth is an independent Flight Intelligence `LANDING`
+  event, destination-aware when both sides provide an airport;
+- `RUNWAY_EXPECTATION` — truth requires the landing event's independent
+  provider-reported arrival runway from terminal evidence. Inferred runway
+  geometry is not substituted.
+
+Each captured prediction is evaluated inside a bounded event-specific time
+window. Successful observations report signed and absolute timing error.
+Runway/destination mismatches and continuously observed spatial/arrival
+predictions that fail to occur inside the allowed window become false
+positives. Missing receiver continuity or missing provider runway truth remains
+separate as `expiredNoTruth` / `unscoreableTruth` and is never converted into
+a false positive.
+
+The report includes overall, per-event-type and lead-time slices
+(`0_5`, `5_15`, `15_30` minutes), prediction precision, mean timing error,
+two/five-minute timing coverage, and truth availability. Evidence is bounded to
+24 process-local hours in five-minute buckets and pending predictions are
+capacity bounded.
+
+V2 deliberately does **not** publish recall. The validator starts from captured
+predictions and therefore cannot claim that every real event which occurred had
+a corresponding prediction. A later truth-first lane would be required for a
+valid missed-event/recall metric.
+
+PASS/WAIT/FAIL is fail-closed. The first threshold version requires at least two
+hours of evidence, 60 scoreable samples, 30 observed timing samples, and at
+least two event types with 10 scoreable samples each. Once complete, PASS
+requires precision >=70%, mean absolute timing error <=240 seconds, and missing
+truth <=40%.
+
+Protected inspection:
+
+`GET /api/admin/operational-twin/event-outcome`
+
+The validator adds no persistence, FlightPosition/history read, upstream
+request, timer, EventSource, second Digital Twin calculation or modification of
+the canonical corridor.
