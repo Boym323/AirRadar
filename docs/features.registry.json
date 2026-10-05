@@ -570,12 +570,13 @@
       "category": "receiver / intelligence",
       "status": "internal",
       "introducedVersion": null,
-      "summary": "Shadow-only per-field multi-source state estimator with source-quality scoring, position residuals, bounded handover validation, short gap estimation and admin diagnostics; never alters canonical live state or local receiver persistence.",
+      "summary": "Shadow-only per-field multi-source state estimator with bounded 24-hour process-local readiness evidence, PASS/WAIT/FAIL graduation and fail-closed opt-in Digital Twin consumption; never alters canonical live state or local receiver persistence.",
       "pages": [
         "/system"
       ],
       "apis": [
-        "/api/admin/track-fusion/:hex"
+        "/api/admin/track-fusion/:hex",
+        "/api/admin/track-fusion/readiness"
       ],
       "changelogScopes": [
         "track-fusion",
@@ -588,7 +589,10 @@
         "state estimator",
         "source handover",
         "position residual",
-        "track uncertainty"
+        "track uncertainty",
+        "track fusion readiness",
+        "fusion graduation",
+        "digital twin fusion rollout"
       ]
     }
   ]
