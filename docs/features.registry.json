@@ -505,6 +505,32 @@
       "changelogKeywords": [
         "flightaware usage"
       ]
+    },
+    {
+      "id": "operational-digital-twin",
+      "name": "Operational Digital Twin",
+      "category": "intelligence",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded 30-minute aircraft situation projection that fuses route geometry, ATC/ATS context, planned AUP/UUP, SIGMET intersections and readiness-gated PUBLIC predictive advisories into one provenance-aware timeline.",
+      "pages": [
+        "/aircraft/:hex"
+      ],
+      "apis": [
+        "/api/aircraft/:hex/situation"
+      ],
+      "changelogScopes": [
+        "operational-twin",
+        "digital-twin",
+        "situation"
+      ],
+      "changelogKeywords": [
+        "operational digital twin",
+        "4d situation",
+        "situation timeline",
+        "trajectory corridor",
+        "future intersection"
+      ]
     }
   ]
 }

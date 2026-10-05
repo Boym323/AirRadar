@@ -457,3 +457,18 @@ lokálními a síťovými ADS-B snapshoty. Zachovává provenienci jednotlivých
 používá deterministické buňky 0,2° a výšková pásma a odděluje regionální stav
 anomálie od health přijímače/databáze. V1 kontrakt, retence, omezení a API jsou
 v [NAVIGATION-INTEGRITY.md](NAVIGATION-INTEGRITY.md).
+
+
+## Operational Digital Twin V1
+
+Digital Twin je on-demand composition layer, nikoli další vlastník live stavu.
+`/api/aircraft/:hex/situation` čte už běžící RAM stav letadla a vytváří
+omezený 30minutový corridor. Route Intelligence V2 dodává
+publikovanou/interpretovanou geometrii, pokud je použitelná; jinak je projekce
+kinematická. Stejný corridor se vyhodnocuje proti existujícímu připravenému
+ATC/ATS datasetu, plan-only AUP/UUP cache, bounded SIGMET provideru a
+readiness-gated PUBLIC predictive advisories.
+
+Vrstva nemá persistence, background poller, EventSource, FlightPosition scan
+ani placený enrichment call. Výpadek provideru odstraní pouze danou třídu
+kontextu a nesmí ovlivnit readsb → RAM → SSE.

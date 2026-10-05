@@ -363,3 +363,18 @@ component that created it.
   capture sample.
 - Coverage writes are bounded hourly aggregates and cannot enter local
   history/statistics lanes.
+
+
+## Operational Digital Twin invariants
+
+- Digital Twin never owns or starts the receiver polling lifecycle.
+- It reads current RAM state only; it must not query `FlightPosition` or
+  durable flight history to construct the live corridor.
+- Its horizon is bounded to 30 minutes and its intersection sampling interval is
+  bounded to two minutes.
+- AUP/UUP remains PLANNED evidence and can never be serialized as confirmed
+  real-time activation.
+- Predictive ETA/runway/trajectory inputs must pass the existing PUBLIC
+  graduation/readiness gate; admin/SHADOW previews are forbidden.
+- Missing external context is fail-soft and cannot make the live radar
+  unhealthy.
