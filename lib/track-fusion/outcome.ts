@@ -86,6 +86,9 @@ interface Aggregate {
 
 interface OutcomeBucket {
   startMs: number;
+  created: number;
+  completed: number;
+  expiredWithoutTruth: number;
   byHorizon: Record<number, Aggregate>;
   byScenario: Record<TrackFusionOutcomeScenario, Aggregate>;
 }
@@ -323,10 +326,11 @@ export class TrackFusionOutcomeValidator {
       const previousSource = this.lastFusedSource.get(track.icaoHex) ?? null;
       if (currentSource) this.lastFusedSource.set(track.icaoHex, currentSource);
 
-      const previousBaselineAt = this.lastBaselineAt.get(track.icaoHex) ?? Number.NEGATIVE_INFINITY;
-      if (now - previousBaselineAt < BASELINE_INTERVAL_MS) continue;
       if (track.quality !== "GOOD" && track.quality !== "DEGRADED") continue;
       if (!currentSource) continue;
+      const kind = scenario(previousSource, currentSource);
+      const previousBaselineAt = this.lastBaselineAt.get(track.icaoHex) ?? Number.NEGATIVE_INFINITY;
+      if (now - previousBaselineAt < BASELINE_INTERVAL_MS && !handoverScenario(kind)) continue;
 
       const canonical = mergeAircraftObservations(
         input.local.get(track.icaoHex),
@@ -344,7 +348,6 @@ export class TrackFusionOutcomeValidator {
       const fusedProjection = fusedState(track);
       if (!canonicalProjection || !fusedProjection) continue;
 
-      const kind = scenario(previousSource, currentSource);
       for (const horizonSeconds of TRACK_FUSION_OUTCOME_HORIZONS_SECONDS) {
         const targetAt = now + horizonSeconds * 1_000;
         const id = `${track.icaoHex}:${now}:${horizonSeconds}`;
@@ -361,6 +364,7 @@ export class TrackFusionOutcomeValidator {
           fusedPositionSource: currentSource,
         });
         this.created += 1;
+        this.bucketFor(now).created += 1;
       }
       this.lastBaselineAt.set(track.icaoHex, now);
     }
@@ -380,7 +384,13 @@ export class TrackFusionOutcomeValidator {
       byScenario.set(value, emptyAggregate());
     }
 
+    let windowCreated = 0;
+    let windowCompleted = 0;
+    let windowExpiredWithoutTruth = 0;
     for (const bucket of buckets) {
+      windowCreated += bucket.created;
+      windowCompleted += bucket.completed;
+      windowExpiredWithoutTruth += bucket.expiredWithoutTruth;
       for (const [horizon, aggregate] of Object.entries(bucket.byHorizon)) {
         const target = byHorizon.get(Number(horizon));
         if (target) addAggregate(target, aggregate);
@@ -404,8 +414,8 @@ export class TrackFusionOutcomeValidator {
     const handover = emptyAggregate();
     for (const [name, aggregate] of byScenario) if (handoverScenario(name)) addAggregate(handover, aggregate);
     const handoverSlice = aggregateToSlice(handover);
-    const evaluatedOrExpired = this.completed + this.expiredWithoutTruth;
-    const expiredTruthRate = evaluatedOrExpired ? this.expiredWithoutTruth / evaluatedOrExpired : null;
+    const evaluatedOrExpired = windowCompleted + windowExpiredWithoutTruth;
+    const expiredTruthRate = evaluatedOrExpired ? windowExpiredWithoutTruth / evaluatedOrExpired : null;
 
     const reasons: TrackFusionOutcomeReason[] = [];
     if (spanMinutes < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumSpanMinutes) reasons.push("process_window_insufficient");
@@ -447,9 +457,9 @@ export class TrackFusionOutcomeValidator {
         processLocal: true,
       },
       pending: this.pending.size,
-      created: this.created,
-      completed: this.completed,
-      expiredWithoutTruth: this.expiredWithoutTruth,
+      created: windowCreated,
+      completed: windowCompleted,
+      expiredWithoutTruth: windowExpiredWithoutTruth,
       expiredTruthRate: expiredTruthRate === null ? null : Number(expiredTruthRate.toFixed(4)),
       overall: overallSlice,
       horizons: horizonSlices,
@@ -468,6 +478,29 @@ export class TrackFusionOutcomeValidator {
     this.expiredWithoutTruth = 0;
   }
 
+  private bucketFor(timestamp: number): OutcomeBucket {
+    const startMs = Math.floor(timestamp / BUCKET_MS) * BUCKET_MS;
+    let bucket = this.buckets.find((candidate) => candidate.startMs === startMs);
+    if (!bucket) {
+      bucket = {
+        startMs,
+        created: 0,
+        completed: 0,
+        expiredWithoutTruth: 0,
+        byHorizon: Object.fromEntries(TRACK_FUSION_OUTCOME_HORIZONS_SECONDS.map((horizon) => [horizon, emptyAggregate()])),
+        byScenario: {
+          STEADY_LOCAL: emptyAggregate(),
+          STEADY_NETWORK: emptyAggregate(),
+          HANDOVER_LOCAL_TO_NETWORK: emptyAggregate(),
+          HANDOVER_NETWORK_TO_LOCAL: emptyAggregate(),
+        },
+      };
+      this.buckets.push(bucket);
+      this.buckets.sort((left, right) => left.startMs - right.startMs);
+    }
+    return bucket;
+  }
+
   private resolvePending(local: ReadonlyMap<string, Aircraft>, now: number): void {
     for (const [id, sample] of this.pending) {
       if (now < sample.targetAt) continue;
@@ -478,12 +511,14 @@ export class TrackFusionOutcomeValidator {
         this.recordOutcome(sample, truth, truthAt);
         this.pending.delete(id);
         this.completed += 1;
+        this.bucketFor(truthAt).completed += 1;
         continue;
       }
 
       if (now > sample.expiresAt || (truthAt !== null && truthAt > sample.expiresAt)) {
         this.pending.delete(id);
         this.expiredWithoutTruth += 1;
+        this.bucketFor(Math.min(now, sample.expiresAt)).expiredWithoutTruth += 1;
       }
     }
   }
@@ -525,21 +560,7 @@ export class TrackFusionOutcomeValidator {
       outcome.fusedAltitudeErrorFtSum = Math.abs(fusedAltitude - actualAltitude);
     }
 
-    const startMs = Math.floor(truthAt / BUCKET_MS) * BUCKET_MS;
-    let bucket = this.buckets.at(-1);
-    if (!bucket || bucket.startMs !== startMs) {
-      bucket = {
-        startMs,
-        byHorizon: Object.fromEntries(TRACK_FUSION_OUTCOME_HORIZONS_SECONDS.map((horizon) => [horizon, emptyAggregate()])),
-        byScenario: {
-          STEADY_LOCAL: emptyAggregate(),
-          STEADY_NETWORK: emptyAggregate(),
-          HANDOVER_LOCAL_TO_NETWORK: emptyAggregate(),
-          HANDOVER_NETWORK_TO_LOCAL: emptyAggregate(),
-        },
-      };
-      this.buckets.push(bucket);
-    }
+    const bucket = this.bucketFor(truthAt);
     addAggregate(bucket.byHorizon[sample.horizonSeconds]!, outcome);
     addAggregate(bucket.byScenario[sample.scenario], outcome);
   }
@@ -549,6 +570,7 @@ export class TrackFusionOutcomeValidator {
       if (now - sample.createdAt > PENDING_RETENTION_MS) {
         this.pending.delete(id);
         this.expiredWithoutTruth += 1;
+        this.bucketFor(Math.min(now, sample.expiresAt)).expiredWithoutTruth += 1;
       }
     }
     if (this.pending.size > MAX_PENDING) {
@@ -557,6 +579,7 @@ export class TrackFusionOutcomeValidator {
       for (const sample of oldest) {
         this.pending.delete(sample.id);
         this.expiredWithoutTruth += 1;
+        this.bucketFor(now).expiredWithoutTruth += 1;
       }
     }
 
