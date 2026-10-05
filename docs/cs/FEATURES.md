@@ -632,3 +632,8 @@ handover outcomes a samostatný PASS / WAIT / FAIL net-benefit gate. Validator
 je process-local a pouze v RAM; neprovádí history scan, DB zápis, upstream
 request, timer ani druhý fusion pass. Podrobnosti jsou v
 [`TRACK-FUSION-OUTCOME.md`](TRACK-FUSION-OUTCOME.md).
+
+## Operational Digital Twin V2 — Map Corridor Visualization
+
+Radar nad existujícím situation response vybraného letadla vykresluje 30minutový budoucí corridor, uncertainty envelope, časové markery +5/+10/+15/+20/+30 minut a situační/weather event markery. Route-aware projekce je plná, kinematický fallback přerušovaný. V2 znovu používá existující 60s selected-aircraft situation refresh a nepřidává request, timer, SSE, API ani persistence.
+
