@@ -540,7 +540,7 @@
       "category": "intelligence",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded 30-minute aircraft situation projection with route, weather, Navigation Integrity and PUBLIC predictive context, prospective outcome validation, wind timing graduation/promotion, regional multi-aircraft attention, truth-first terminal recall, and restart-stable anonymous calibration aggregates.",
+      "summary": "Bounded 30-minute aircraft situation projection with route, weather, Navigation Integrity and PUBLIC predictive context, prospective outcome validation, wind timing graduation/promotion, regional multi-aircraft attention, multi-domain truth-first recall, and restart-stable anonymous calibration aggregates.",
       "pages": [
         "/aircraft/:hex",
         "/"
@@ -611,6 +611,10 @@
         "operational attention",
         "destination cluster",
         "regional copresence",
+        "truth-first recall",
+        "waypoint recall",
+        "sector entry recall",
+        "sigmet recall",
         "calibration persistence",
         "anonymous calibration aggregates",
         "five-minute calibration buckets",
