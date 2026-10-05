@@ -47,14 +47,6 @@ export interface AircraftWindSample {
 
 export interface AircraftWindAheadPoint extends AircraftWindSample {
   distanceNm: number;
-  sourceDistanceKm: number;
-  windSpeedKt: number;
-  windFromDeg: number;
-  headwindKt: number;
-  tailwindKt: number;
-  crosswindKt: number;
-  crosswindFrom: "left" | "right" | null;
-  signedAlongTrackKt: number;
 }
 
 export interface AircraftWindAheadProfile {
