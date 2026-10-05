@@ -96,10 +96,10 @@ function wind(): AircraftWindSnapshot {
     levelHpa: 700,
     stale: false,
     points: [
-      { lat: 50, lon: 14, speedKt: 20, directionDeg: 270 },
-      { lat: 50, lon: 15, speedKt: 30, directionDeg: 270 },
-      { lat: 50, lon: 16, speedKt: 40, directionDeg: 270 },
-      { lat: 50, lon: 17, speedKt: 50, directionDeg: 270 },
+      { lat: 50, lon: 14, speedKt: 20, directionDeg: 90 },
+      { lat: 50, lon: 15, speedKt: 30, directionDeg: 90 },
+      { lat: 50, lon: 16, speedKt: 40, directionDeg: 90 },
+      { lat: 50, lon: 17, speedKt: 50, directionDeg: 90 },
     ],
   };
 }
