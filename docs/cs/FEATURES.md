@@ -630,4 +630,5 @@ position.
 Výstup obsahuje FUSED / CANONICAL / TIE, mean position a altitude error,
 handover outcomes a samostatný PASS / WAIT / FAIL net-benefit gate. Validator
 je process-local a pouze v RAM; neprovádí history scan, DB zápis, upstream
-request, timer ani druhý fusion pass.
+request, timer ani druhý fusion pass. Podrobnosti jsou v
+[`TRACK-FUSION-OUTCOME.md`](TRACK-FUSION-OUTCOME.md).
