@@ -548,6 +548,15 @@ export class AircraftStateService {
     return this.predictive.diagnostics();
   }
 
+  /** Shadow-only fused state for admin validation; never used by SSE or persistence. */
+  getTrackFusionShadowTrack(icaoHex: string) {
+    return this.trackFusionShadow.getTrack(icaoHex);
+  }
+
+  getTrackFusionShadowDiagnostics() {
+    return this.trackFusionShadow.diagnostics();
+  }
+
   getNetworkDiagnostics() {
     return this.networkProvider.getDiagnostics();
   }
