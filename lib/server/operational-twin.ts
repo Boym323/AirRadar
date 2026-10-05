@@ -27,7 +27,7 @@ import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getAirspacePlan } from "@/lib/server/airspace-activity";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { defaultPirepProvider } from "@/lib/server/pirep-provider";
-import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
+import { defaultWindAloftProvider, type WindLevelHpa } from "@/lib/server/wind-aloft";
 import { isAviationWeatherEnabled } from "@/lib/server/config";
 import { windLevelForAltitude } from "@/lib/weather/aircraft-wind-context";
 import { buildWeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
@@ -224,7 +224,7 @@ export async function getOperationalTwinForAircraft(
   const windLevels = [...new Set(
     corridor.points
       .map((point) => windLevelForAltitude(point.altitudeFt))
-      .filter((level): level is NonNullable<typeof level> => level !== null),
+      .filter((level): level is WindLevelHpa => level !== null),
   )];
   const windResults = await Promise.allSettled(
     windLevels.map((level) => defaultWindAloftProvider.getWind(level)),
