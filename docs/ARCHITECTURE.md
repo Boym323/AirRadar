@@ -550,3 +550,21 @@ The lane is one-way and diagnostic only. It cannot mutate Digital Twin
 corridors, canonical Aircraft state, Track Fusion, radar/SSE, history,
 Navigation Integrity, predictive state or alerts. Evidence is process-local and
 a restart returns the outcome state to WAIT.
+
+## Operational Digital Twin × Navigation Integrity Corridor V1
+
+The integration is a one-way read from the existing process-local Navigation
+Integrity service into the on-demand Operational Digital Twin assembler. The
+Digital Twin does not call the public Navigation Integrity API and does not
+trigger detector evaluation, persistence or database access.
+
+`NavigationIntegrityService.getCurrent("15m")`
+→ active regional anomaly regions
+→ sampled Digital Twin corridor points
+→ exact grid-cell + altitude-band match
+→ inferred future regional-evidence intersection
+→ existing situation response and Digital Twin map source.
+
+The result is descriptive evidence only and cannot alter Navigation Integrity
+classification, canonical aircraft state, Track Fusion, predictions, history
+or alerts.
