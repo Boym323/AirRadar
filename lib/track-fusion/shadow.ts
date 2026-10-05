@@ -341,15 +341,19 @@ export class TrackFusionShadow {
 
     if (!position && input.previous?.position) {
       const previousAt = Date.parse(input.previous.position.observedAt);
-      if (Number.isFinite(previousAt) && input.now - previousAt <= MAX_ESTIMATION_GAP_MS) {
+      const previousEvaluatedAt = Date.parse(input.previous.evaluatedAt);
+      const incrementalGapMs = Number.isFinite(previousAt) ? Math.max(0, input.now - previousAt) : Number.POSITIVE_INFINITY;
+      const cumulativeGapMs = input.previous.position.estimated && Number.isFinite(previousEvaluatedAt)
+        ? input.previous.position.ageMs + Math.max(0, input.now - previousEvaluatedAt)
+        : incrementalGapMs;
+      if (Number.isFinite(previousAt) && cumulativeGapMs <= MAX_ESTIMATION_GAP_MS) {
         const projected = projectedPosition(input.previous, input.now);
         if (projected) {
-          const gapMs = Math.max(0, input.now - previousAt);
           const priorUncertainty = input.previous.position.uncertainty ?? 1;
           const speed = input.previous.groundSpeed?.value ?? 0;
-          const traveledNm = speed * gapMs / 3_600_000;
+          const traveledNm = speed * incrementalGapMs / 3_600_000;
           const uncertainty = Number((priorUncertainty + 0.15 + traveledNm * 0.08).toFixed(3));
-          const score = Math.max(20, input.previous.position.score - Math.ceil(gapMs / 1_000) * 5);
+          const score = Math.max(20, input.previous.position.score - Math.ceil(incrementalGapMs / 1_000) * 5);
           position = {
             value: projected,
             observedAt: new Date(input.now).toISOString(),
@@ -359,7 +363,7 @@ export class TrackFusionShadow {
             protocol: rejectedTransition ? "handover-rejected-dead-reckoning" : "dead-reckoning",
             score,
             confidence: confidenceFromScore(score),
-            ageMs: gapMs,
+            ageMs: cumulativeGapMs,
             uncertainty,
             estimated: true,
           };
