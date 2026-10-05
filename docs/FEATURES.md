@@ -17,6 +17,7 @@ not yet been historically attributed.
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
 | Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
+| Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 | Map Context & Weather | production | weather | Pre-registry | — | `/api/aircraft/:hex/weather-fusion`<br>`/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
@@ -169,6 +170,34 @@ than 10 NM cross-track deviation spanning at least 10 seconds; recovery requires
 two observations spanning at least five seconds. These are informational
 display thresholds, not certified navigation limits or ATC guidance. V1 does
 not persist deviation events and adds no database migration.
+
+## Trajectory Conformance V1
+
+Trajectory Conformance V1 is a selected-aircraft state machine over the
+existing Route Corridor Intelligence V1 and Route Intelligence V2 outputs. It
+adds no aircraft stream, timer, provider, database model or persistence path.
+
+States are `ROUTE_UNKNOWN`, `ROUTE_UNCERTAIN`, `ON_ROUTE`, `OFFSET`,
+`DEVIATING`, `REJOINING` and `PROBABLE_DIRECT`. V1 consumes only already
+computed route geometry, cross-track state, track difference and ordered
+reconstructed route elements.
+
+`REJOINING` is entered only after confirmed `DEVIATING`, and recovery to
+`ON_ROUTE` requires two distinct observations spanning at least five seconds.
+A probable direct is never inferred from ordinary route progress alone: after
+confirmed deviation the aircraft must skip at least two resolved en-route
+elements spanning at least 10 NM and stably reacquire a later element. From a
+mere `OFFSET` state the evidence requirement is stricter: at least three
+elements and 20 NM.
+
+Reconstruction coverage below 50 percent or an unusable dynamic route fails
+closed to `ROUTE_UNCERTAIN`. Detection retains only a bounded tracker for the
+selected aircraft plus shadow counters; V1 emits no Flight Intelligence events
+and writes nothing to PostgreSQL.
+
+The Route Corridor card labels the result explicitly as inferred intelligence.
+`PROBABLE_DIRECT` is not proof of ATC clearance and `DEVIATING` is not a
+certified navigation or safety alert.
 
 ## Airport Live Board V5
 
