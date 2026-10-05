@@ -424,3 +424,20 @@ která jej vytvořila.
   nebo LOW-confidence fused numerická pole.
 - Pokud per-aircraft fusion gate není splněn, Digital Twin zůstává
   local-canonical a nesmí se tiše rozšířit na network-only canonical provoz.
+
+
+## Track Fusion outcome validation invariants
+
+- Outcome validation je prospektivní: žádný sample nemá výsledek před příchodem
+  pozdější LOCAL position observation v cílovém horizontu.
+- Ground truth V1 je pouze current-RAM LOCAL receiver position; NETWORK, fused,
+  estimated ani historické FlightPosition rows se nesmí stát truth.
+- Baseline horizonty jsou omezené na 5/15/30 sekund a pending state je omezený
+  na 6 000 samples s retention 45 sekund.
+- Outcome agregace jsou process-local, omezené na 24 hodin v pětiminutových
+  bucketech a po restartu se resetují.
+- Validator nemá vlastní timer, socket, EventSource, upstream request, Prisma
+  handle ani persistence path.
+- Validation nemůže měnit canonical Aircraft, source affinity, Track Fusion
+  arbitration, public radar/SSE, receiver statistics ani FlightPosition.
+- Outcome PASS je pouze evidence a sám o sobě nemůže Track Fusion povýšit.
