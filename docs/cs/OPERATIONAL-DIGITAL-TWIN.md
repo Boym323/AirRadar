@@ -470,3 +470,29 @@ protože znovu používají existující kontext Digital Twin požadavku a nepř
 žádný poller ani provider loop. Report zůstává process-local a před odchodem ze
 stavu `WAIT` vyžaduje dostatek truth událostí i nejméně dvě zastoupené domény.
 
+## Regional Attention Outcome Validation V1
+
+Regional Attention Outcome Validation V1 prospektivně ověřuje položky
+`REGIONAL_COPRESENCE` proti pozdějšímu kanonickému LOCAL stavu dvojice
+letadel. Capture je request-driven z existující odpovědi
+`/api/operations/situation` a nepřidává receiver poller, provider loop ani
+veřejný alert.
+
+Skórovat lze pouze skutečně budoucí co-presence položky s alespoň minutovým
+lead time. Outcome lane sleduje, zda obě letadla následně vstoupí do stejného
+zvýšeného regionálního kontextu (do 10 NM a 4 000 ft), precision,
+missing-truth rate, timing MAE, pozorovanou horizontální/vertikální vzdálenost
+a řezy 5/15/30 minut. Truth vyžaduje čerstvou LOCAL polohu a použitelnou výšku
+obou letadel.
+
+`DESTINATION_CLUSTER` zůstává ve V1 výslovně bez skóre, protože společný
+vyřešený cíl sám o sobě není nezávislý budoucí outcome. Okamžitá co-presence s
+lead time pod jednu minutu se také vede odděleně, aby nenafukovala prospektivní
+kalibraci.
+
+Dokončená kalibrace se ukládá pouze jako anonymní pětiminutové agregáty do
+existující tabulky `OperationalTwinCalibrationBucket` pod lane
+`REGIONAL_ATTENTION_OUTCOME`. Neuchovává se identita letadla, dvojice,
+poloha ani raw pending predikce. Výsledek readiness je pouze `WAIT/PASS/FAIL`
+a nemění chování WATCH/ATTENTION.
+

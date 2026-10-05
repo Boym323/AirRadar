@@ -57,7 +57,8 @@ import type { FlightPhase } from "@/lib/intelligence/types";
 import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@/lib/predictive-intelligence/types";
 import type { Airport } from "@/lib/airports/types";
 import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
-import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
+import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
+import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
 import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
@@ -205,12 +206,15 @@ export class AircraftStateService {
   private readonly operationalTwinOutcome = new OperationalTwinOutcomeValidator();
   /** Predicted Digital Twin event timing/precision validation against independent live evidence. */
   private readonly operationalTwinEventOutcome = new OperationalTwinEventOutcomeValidator();
-  /** Truth-first terminal recall validation from independent Flight Intelligence LANDING events. */
+  /** Truth-first multi-domain recall validation from independent later observations. */
   private readonly operationalTwinTruthFirst = new OperationalTwinTruthFirstValidator();
+  /** Prospective Regional Attention validation against future LOCAL pair state. */
+  private readonly regionalAttentionOutcome = new RegionalAttentionOutcomeValidator();
   /** PostgreSQL persistence for anonymous completed five-minute calibration aggregates only. */
   private readonly operationalTwinCalibrationPersistence = new OperationalTwinCalibrationPersistence(
     this.operationalTwinOutcome,
     this.operationalTwinEventOutcome,
+    this.regionalAttentionOutcome,
   );
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
@@ -498,6 +502,7 @@ export class AircraftStateService {
     trackFusionOutcome: ReturnType<TrackFusionOutcomeValidator["report"]>;
     operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
     operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
+    regionalAttentionOutcome: ReturnType<RegionalAttentionOutcomeValidator["report"]>;
     operationalTwinCalibrationPersistence: ReturnType<OperationalTwinCalibrationPersistence["getStatus"]>;
   } {
     return {
@@ -532,6 +537,7 @@ export class AircraftStateService {
       trackFusionOutcome: this.getTrackFusionOutcomeReport(),
       operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
       operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
+      regionalAttentionOutcome: this.getRegionalAttentionOutcomeReport(),
       operationalTwinCalibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
     };
   }
@@ -632,6 +638,18 @@ export class AircraftStateService {
     return {
       ...this.operationalTwinEventOutcome.report(now),
       truthFirst: this.operationalTwinTruthFirst.report(now),
+      calibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
+    };
+  }
+
+  captureRegionalAttentionOutcome(summary: OperationalAttentionSummary): void {
+    this.regionalAttentionOutcome.capture(summary);
+    this.operationalTwinCalibrationPersistence.scheduleFlush();
+  }
+
+  getRegionalAttentionOutcomeReport(now = new Date()) {
+    return {
+      ...this.regionalAttentionOutcome.report(now),
       calibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
     };
   }
@@ -834,6 +852,7 @@ export class AircraftStateService {
     this.observeTrackFusionShadow(now);
     this.operationalTwinOutcome.observeTruth(this.localAircraft, now);
     this.operationalTwinEventOutcome.observeLocal(this.localAircraft, now);
+    this.regionalAttentionOutcome.observeTruth(this.localAircraft, now);
     const activeHexes = new Set(this.localAircraft.keys());
     this.messagesPerSecond = snapshot.messagesPerSecond ?? null;
     if (!this.shuttingDown) this.statistics.observe([...this.localAircraft.values()], this.currentReceiver, new Date());

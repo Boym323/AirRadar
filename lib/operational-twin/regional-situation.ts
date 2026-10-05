@@ -11,8 +11,8 @@ const MAX_OBSERVATION_AGE_MS = 90_000;
 const MIN_GROUND_SPEED_KT = 60;
 const MAX_CONTEXT_HORIZONTAL_NM = 20;
 const MAX_CONTEXT_VERTICAL_FT = 8_000;
-const ELEVATED_HORIZONTAL_NM = 10;
-const ELEVATED_VERTICAL_FT = 4_000;
+export const REGIONAL_SITUATION_ELEVATED_HORIZONTAL_NM = 10;
+export const REGIONAL_SITUATION_ELEVATED_VERTICAL_FT = 4_000;
 
 export type RegionalSituationReason = "PROJECTED_COPRESENCE" | "SHARED_DESTINATION";
 export type RegionalSituationSignificance = "CONTEXT" | "ELEVATED";
@@ -162,7 +162,7 @@ function relationForPair(a: Candidate, b: Candidate): RegionalSituationEdge | nu
         closestProjectedVerticalFt = verticalFt;
         closestProjectedOffsetMinutes = first.offsetMinutes;
       }
-      if (horizontalNm <= ELEVATED_HORIZONTAL_NM && (verticalFt === null || verticalFt <= ELEVATED_VERTICAL_FT)) {
+      if (horizontalNm <= REGIONAL_SITUATION_ELEVATED_HORIZONTAL_NM && (verticalFt === null || verticalFt <= REGIONAL_SITUATION_ELEVATED_VERTICAL_FT)) {
         elevated = true;
       }
     }

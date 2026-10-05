@@ -492,3 +492,29 @@ or provider loop. The report stays process-local and requires both sufficient
 truth volume and at least two represented truth domains before it can leave
 `WAIT`.
 
+## Regional Attention Outcome Validation V1
+
+Regional Attention Outcome Validation V1 prospectively validates
+`REGIONAL_COPRESENCE` attention items against later canonical LOCAL receiver
+pair state. Capture is request-driven from the existing
+`/api/operations/situation` response and does not add a receiver poller,
+provider loop or public alert path.
+
+Only genuinely prospective co-presence items with at least one minute of lead
+time are scoreable. The outcome lane records whether both aircraft later enter
+the same elevated regional context (within 10 NM and 4,000 ft), precision,
+missing-truth rate, timing MAE, observed horizontal/vertical spacing, and
+5/15/30-minute horizon slices. Truth requires fresh LOCAL positions and usable
+altitudes for both aircraft.
+
+`DESTINATION_CLUSTER` remains explicitly unscored in V1 because sharing a
+resolved destination is not by itself an independent future outcome. Immediate
+co-presence (lead below one minute) is also tracked separately rather than
+inflating prospective calibration.
+
+Completed calibration is stored only as anonymous five-minute aggregates in the
+existing `OperationalTwinCalibrationBucket` table under the
+`REGIONAL_ATTENTION_OUTCOME` lane. No aircraft identity, pair identity,
+position or raw pending prediction is persisted. The readiness result is
+`WAIT/PASS/FAIL` only and does not change WATCH/ATTENTION behavior.
+
