@@ -12,7 +12,7 @@ import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-contex
 import type { SigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import type { AircraftDestinationWindContext, AircraftWindAheadProfile, AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
-import type { RouteCorridorSnapshot } from "@/lib/route-intelligence";
+import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
 import type { FlightIntelligenceEvent, FlightPhase } from "@/lib/intelligence/types";
@@ -59,6 +59,7 @@ export interface AircraftRadarQuickDetailProps {
   windStatus: RadarLayerDataStatus;
   routeWeather: RouteWeatherContext | null;
   routeCorridor?: RouteCorridorSnapshot | null;
+  routeConformance?: TrajectoryConformanceSnapshot | null;
   intelligenceEvents?: FlightIntelligenceEvent[];
   watchlisted: boolean;
   onBack: () => void;
@@ -230,7 +231,7 @@ function corridorEta(value: number | null): string | null {
   return `~${formatNumber(value, 0)} min`;
 }
 
-function RouteCorridorSection({ corridor }: { corridor: RouteCorridorSnapshot | null }) {
+function RouteCorridorSection({ corridor, conformance }: { corridor: RouteCorridorSnapshot | null; conformance: TrajectoryConformanceSnapshot | null }) {
   if (!corridor) return null;
   const next = corridor.nextPoint
     ? `${corridor.nextPoint.name}${corridor.distanceToNextNm === null ? "" : ` · ${formatNumber(corridor.distanceToNextNm, 1)} NM`}${corridor.etaToNextMinutes === null ? "" : ` · ${corridorEta(corridor.etaToNextMinutes)}`}`
@@ -248,8 +249,15 @@ function RouteCorridorSection({ corridor }: { corridor: RouteCorridorSnapshot | 
       <DetailValue label={t.routeCorridor.expectedTrack} value={corridor.expectedTrackDeg === null ? null : formatTrack(corridor.expectedTrackDeg)} />
       <DetailValue label={t.routeCorridor.trackDelta} value={corridor.trackDeltaDeg === null ? null : `${formatNumber(corridor.trackDeltaDeg, 0)}°`} />
       <DetailValue label={t.routeCorridor.confidence} value={t.routeCorridor.confidenceValues[corridor.confidence]} />
+      {conformance && <DetailValue label={t.routeConformance.status} value={t.routeConformance.statuses[conformance.status]} />}
+      {conformance && <DetailValue label={t.routeConformance.confidence} value={t.routeConformance.confidenceValues[conformance.confidence]} />}
+      {conformance?.probableDirect && <DetailValue
+        label={t.routeConformance.probableDirect}
+        value={t.routeConformance.directSummary(conformance.probableDirect.skippedElements, conformance.probableDirect.rejoinedAt)}
+      />}
     </div>
     <p className="aircraft-quick-disclaimer">{t.routeCorridor.disclaimer}</p>
+    {conformance && <p className="aircraft-quick-disclaimer">{t.routeConformance.disclaimer}</p>}
   </QuickSection>;
 }
 
@@ -666,6 +674,7 @@ export function AircraftRadarQuickDetail({
   windStatus,
   routeWeather,
   routeCorridor = null,
+  routeConformance = null,
   intelligenceEvents = [],
   watchlisted,
   onBack,
@@ -726,7 +735,7 @@ export function AircraftRadarQuickDetail({
         <RouteSection route={route} callsign={aircraft.callsign || aircraft.icaoHex} visible={hasRouteData} />
         {!hasRouteData && <p className="aircraft-quick-empty">{t.aircraft.noRouteData}</p>}
       </QuickSection>
-      <RouteCorridorSection corridor={routeCorridor} />
+      <RouteCorridorSection corridor={routeCorridor} conformance={routeConformance} />
       <FlightStateSection aircraft={aircraft} />
     </div>}
     {activeTab === "situation" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-situation" aria-labelledby="aircraft-tab-situation">
