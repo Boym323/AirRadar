@@ -10,6 +10,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.305] - 2026-10-05
+
+Changes since v1.0.304.
+
+**Features touched:** Trajectory Conformance.
+
+### Added
+
+- Add Trajectory Conformance V1 (#332) (b0bd6d9)
+
+### Maintenance
+
+- Sync generated repository metadata (#330) (8186a85)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#330) (8186a85)
+- feat: add Trajectory Conformance V1 (#332) (b0bd6d9)
+
+</details>
 ## [1.0.304] - 2026-10-05
 
 Changes since v1.0.303.
