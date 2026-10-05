@@ -49,17 +49,21 @@ export function createRegionalAttentionMapFocusGeoJSON(
   const byHex = new Map(aircraft.map((item) => [item.icaoHex.toUpperCase(), item]));
   const source = byHex.get(detail.aircraft[0].toUpperCase());
   const target = byHex.get(detail.aircraft[1].toUpperCase());
+  const sourceLat = source?.lat;
+  const sourceLon = source?.lon;
+  const targetLat = target?.lat;
+  const targetLon = target?.lon;
   if (
     !source
     || !target
-    || source.lat === null
-    || source.lon === null
-    || target.lat === null
-    || target.lon === null
-    || !Number.isFinite(source.lat)
-    || !Number.isFinite(source.lon)
-    || !Number.isFinite(target.lat)
-    || !Number.isFinite(target.lon)
+    || typeof sourceLat !== "number"
+    || typeof sourceLon !== "number"
+    || typeof targetLat !== "number"
+    || typeof targetLon !== "number"
+    || !Number.isFinite(sourceLat)
+    || !Number.isFinite(sourceLon)
+    || !Number.isFinite(targetLat)
+    || !Number.isFinite(targetLon)
   ) return emptyRegionalAttentionMapFocusGeoJSON();
 
   const base = {
@@ -76,18 +80,18 @@ export function createRegionalAttentionMapFocusGeoJSON(
         properties: { ...base, kind: "line" },
         geometry: {
           type: "LineString",
-          coordinates: [[source.lon, source.lat], [target.lon, target.lat]],
+          coordinates: [[sourceLon, sourceLat], [targetLon, targetLat]],
         },
       },
       {
         type: "Feature",
         properties: { ...base, kind: "aircraft", icaoHex: source.icaoHex },
-        geometry: { type: "Point", coordinates: [source.lon, source.lat] },
+        geometry: { type: "Point", coordinates: [sourceLon, sourceLat] },
       },
       {
         type: "Feature",
         properties: { ...base, kind: "aircraft", icaoHex: target.icaoHex },
-        geometry: { type: "Point", coordinates: [target.lon, target.lat] },
+        geometry: { type: "Point", coordinates: [targetLon, targetLat] },
       },
     ],
   };
