@@ -131,7 +131,7 @@ function distanceNm(lat1: number, lon1: number, lat2: number, lon2: number): num
   return r * 2 * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
-function pirepSeverity(value: string | null | undefined): Exclude<WeatherFusionSeverity, "UNKNOWN"> | null {
+export function classifyPirepSeverity(value: string | null | undefined): Exclude<WeatherFusionSeverity, "UNKNOWN"> | null {
   const text = normalized(value);
   if (!text || /^(NEG|NIL|NONE|SMTH|SMOOTH)$/.test(text)) return text ? "NONE" : null;
   if (/(EXTREME|EXTRM|SEV)/.test(text)) return "HIGH";
@@ -148,11 +148,22 @@ function bdsTurbulenceSeverity(level: number | null): Exclude<WeatherFusionSever
   return "HIGH";
 }
 
+export function classifyWeatherHazard(
+  hazard: string | null | undefined,
+  phenomenon: string | null | undefined,
+): WeatherFusionRiskKind | null {
+  const text = `${hazard ?? ""} ${phenomenon ?? ""}`.toUpperCase();
+  if (/TURB/.test(text)) return "TURBULENCE";
+  if (/ICE|ICING/.test(text)) return "ICING";
+  if (/TS|THUNDER|CONV|CB/.test(text)) return "CONVECTION";
+  return null;
+}
+
 function sigmetRisk(value: AircraftSigmetContext): { risk: WeatherFusionRiskKind; code: WeatherFusionEvidenceCode } | null {
-  const text = `${value.hazard ?? ""} ${value.phenomenon ?? ""}`.toUpperCase();
-  if (/TURB/.test(text)) return { risk: "TURBULENCE", code: "SIGMET_TURBULENCE" };
-  if (/ICE|ICING/.test(text)) return { risk: "ICING", code: "SIGMET_ICING" };
-  if (/TS|THUNDER|CONV|CB/.test(text)) return { risk: "CONVECTION", code: "SIGMET_CONVECTION" };
+  const risk = classifyWeatherHazard(value.hazard, value.phenomenon);
+  if (risk === "TURBULENCE") return { risk, code: "SIGMET_TURBULENCE" };
+  if (risk === "ICING") return { risk, code: "SIGMET_ICING" };
+  if (risk === "CONVECTION") return { risk, code: "SIGMET_CONVECTION" };
   return null;
 }
 
@@ -256,7 +267,7 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
     if (distance > 120) continue;
     const altitudeDelta = input.altitudeFt === null || report.altitudeFt === null ? null : Math.abs(report.altitudeFt - input.altitudeFt);
     if (altitudeDelta !== null && altitudeDelta > 10_000) continue;
-    const turb = pirepSeverity(report.turbulence?.intensity);
+    const turb = classifyPirepSeverity(report.turbulence?.intensity);
     if (turb !== null) {
       evidence.push({
         id: `pirep:${report.id}:turb`,
@@ -271,7 +282,7 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
         detail: report.turbulence?.intensity ?? null,
       });
     }
-    const icing = pirepSeverity(report.icing?.intensity);
+    const icing = classifyPirepSeverity(report.icing?.intensity);
     if (icing !== null) {
       evidence.push({
         id: `pirep:${report.id}:icing`,
