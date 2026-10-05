@@ -633,3 +633,30 @@ pouze Operational Digital Twin input
 
 Readiness flow nemá poller ani persistence. Všechny neúspěšné gate se vrací na
 existující local canonical Digital Twin input.
+
+
+## Track Fusion outcome validation flow
+
+```text
+freshly evaluated Track Fusion track
+          +
+existující canonical merge
+          ↓
+prospektivní baseline T
+     ├─→ +5 s
+     ├─→ +15 s
+     └─→ +30 s
+          ↓
+budoucí fresh LOCAL receiver position
+          ↓
+canonical error vs fused error
+          ↓
+FUSED / CANONICAL / TIE
+          ↓
+24h / 5min bounded agregace
+          ↓
+Outcome PASS / WAIT / FAIL
+```
+
+Budoucí LOCAL observation se používá pouze z aktuální RAM. Feature nečte ani
+nezapisuje historickou position persistence.
