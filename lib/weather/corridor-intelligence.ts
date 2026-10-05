@@ -1,5 +1,5 @@
 import { haversineDistanceKm } from "@/lib/geo";
-import type { OperationalTwinCorridor, OperationalTwinTrajectoryPoint } from "@/lib/operational-twin";
+import type { OperationalTwinCorridor, OperationalTwinTrajectoryPoint } from "@/lib/operational-twin/types";
 import {
   sampleWindAtPosition,
   windLevelForAltitude,
