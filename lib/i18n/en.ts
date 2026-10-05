@@ -1930,6 +1930,15 @@ export const en = {
     trackFusionDigitalTwinEffective: "effective · PASS",
     trackFusionDigitalTwinWaiting: "configured · waiting for PASS",
 
+    trackFusionOutcome: "Outcome validation",
+    trackFusionOutcomeWindow: "Outcome window",
+    trackFusionOutcomeSamples: "Truth samples / pending",
+    trackFusionOutcomeWins: "Fused / canonical / tie",
+    trackFusionOutcomeMargin: "Net win margin",
+    trackFusionOutcomeError: "Mean error fused / canonical",
+    trackFusionOutcomeExpired: "Expired truth",
+    trackFusionOutcomeHandover: "Handover samples",
+
     rateLimited: "Rate limited",
     retryAfter: "Retry after",
     nextRetry: "Next retry",
