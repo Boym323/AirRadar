@@ -12,6 +12,7 @@ export const OPERATIONAL_TWIN_MILESTONE_LAYER_ID = "operational-twin-v2-mileston
 export const OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID = "operational-twin-v2-milestone-labels";
 export const OPERATIONAL_TWIN_EVENT_LAYER_ID = "operational-twin-v2-events";
 export const OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID = "operational-twin-v2-weather-events";
+export const OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID = "operational-twin-navigation-integrity-corridor-v1";
 
 export const OPERATIONAL_TWIN_MAP_MILESTONES_MINUTES = [5, 10, 15, 20, 30] as const;
 
@@ -219,6 +220,30 @@ export function createOperationalTwinMapGeoJSON(
         confidence: event.confidence,
         source: event.source,
         altitudeFt: event.altitudeFt,
+      },
+    ));
+  }
+
+  for (const event of situation.navigationIntegrityCorridor?.events ?? []) {
+    features.push(feature(
+      { type: "Point", coordinates: [event.lon, event.lat] },
+      {
+        kind: "navigation-integrity-event",
+        eventType: "NAVIGATION_INTEGRITY_REGION",
+        title: "Navigation integrity evidence ahead",
+        detail: `${event.affectedAircraftCount} affected aircraft · ${event.sampledPoints} sampled corridor point${event.sampledPoints === 1 ? "" : "s"}`,
+        offsetMinutes: event.entryOffsetMinutes,
+        exitOffsetMinutes: event.exitOffsetMinutes,
+        severity: event.severity,
+        confidence: event.confidence,
+        provenance: event.provenance,
+        source: event.source,
+        altitudeFt: event.altitudeFt,
+        altitudeBand: event.altitudeBand,
+        localAircraftCount: event.localAircraftCount,
+        networkAircraftCount: event.networkAircraftCount,
+        baselineMaturity: event.baselineMaturity,
+        anomalyId: event.anomalyId,
       },
     ));
   }
