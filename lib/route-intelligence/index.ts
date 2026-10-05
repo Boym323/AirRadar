@@ -610,3 +610,19 @@ export type {
   RouteCorridorStatus,
   RouteCorridorTrackerState,
 } from "./corridor";
+
+export {
+  buildTrajectoryConformance,
+  TRAJECTORY_CONFORMANCE_THRESHOLDS,
+} from "./conformance";
+export type {
+  ProbableDirectEvidence,
+  TrajectoryConformanceConfidence,
+  TrajectoryConformanceCounters,
+  TrajectoryConformanceEvidence,
+  TrajectoryConformanceInput,
+  TrajectoryConformanceResult,
+  TrajectoryConformanceSnapshot,
+  TrajectoryConformanceStatus,
+  TrajectoryConformanceTrackerState,
+} from "./conformance";
