@@ -1950,6 +1950,18 @@ export const cs = {
     operationalTwinOutcomeCapture: "Capture režim",
     operationalTwinOutcomeRequestDriven: "on-demand situation · bez extra pollingu",
 
+    windTimingGraduationTitle: "Digital Twin · wind timing graduation",
+    windTimingGraduationDecision: "Graduation rozhodnutí",
+    windTimingGraduationSamples: "Paired / pending / meaningful",
+    windTimingGraduationMae: "MAE canonical / shadow",
+    windTimingGraduationImprovement: "Relativní zlepšení MAE",
+    windTimingGraduationWins: "Shadow / canonical / tie",
+    windTimingGraduationWinRate: "Shadow win rate",
+    windTimingGraduationCoverage: "Truth coverage",
+    windTimingGraduationPromotion: "Promotion",
+    windTimingGraduationEligible: "způsobilý k ruční graduaci",
+    windTimingGraduationCanonical: "canonical timing zůstává aktivní",
+
     rateLimited: "Rate limit",
     retryAfter: "Další pokus",
     nextRetry: "Další retry",
