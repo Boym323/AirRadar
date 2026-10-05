@@ -75,6 +75,7 @@ export function AircraftOperationalTwin({
   const evidence = data.evidence;
   const weather = data.weatherCorridor ?? null;
   const windTimingShadow = data.windTimingShadow ?? null;
+  const navigationIntegrity = data.navigationIntegrityCorridor ?? null;
   return <section className={styles.panel} aria-labelledby="operational-twin-title" data-testid="operational-digital-twin-v1">
     <div className={styles.heading}>
       <div>
@@ -153,6 +154,42 @@ export function AircraftOperationalTwin({
         </li>)}</ul>
       </> : <p className={styles.status}>{t.operationalTwin.windTimingShadowNoData}</p>}
     </details>}
+
+    {navigationIntegrity && <section className={styles.weatherCorridor} aria-labelledby="navigation-integrity-corridor-title" data-testid="navigation-integrity-corridor-v1">
+      <div className={styles.weatherHeading}>
+        <div>
+          <span>{t.operationalTwin.navigationIntegritySubtitle}</span>
+          <h3 id="navigation-integrity-corridor-title">{t.operationalTwin.navigationIntegrityTitle}</h3>
+        </div>
+        <strong data-status={navigationIntegrity.status}>{t.operationalTwin.navigationIntegrityStatus[navigationIntegrity.status]}</strong>
+      </div>
+      <div className={styles.weatherSources}>
+        <span>{t.operationalTwin.navigationIntegrityWindow(navigationIntegrity.sourceWindow)} · {t.operationalTwin.navigationIntegrityActive(navigationIntegrity.activeAnomalies)}</span>
+      </div>
+      {navigationIntegrity.events.length ? <ol className={styles.weatherTimeline}>
+        {navigationIntegrity.events.slice(0, 6).map((event) => <li key={event.id}>
+          <div className={styles.weatherTime}>
+            <strong>{relativeTime(event.entryOffsetMinutes)}</strong>
+            <small>{event.exitOffsetMinutes > event.entryOffsetMinutes
+              ? t.operationalTwin.navigationIntegrityUntil(relativeTime(event.exitOffsetMinutes))
+              : t.operationalTwin.navigationIntegritySampledPoint}</small>
+          </div>
+          <div className={styles.weatherEvent}>
+            <div className={styles.eventHeader}>
+              <span>{t.operationalTwin.navigationIntegrityRegion}</span>
+              <div className={styles.badges}>
+                <span>{event.severity}</span>
+                <span>{t.operationalTwin.confidence[event.confidence]}</span>
+              </div>
+            </div>
+            <strong>{t.operationalTwin.navigationIntegrityAhead}</strong>
+            <small>{t.operationalTwin.navigationIntegrityAffected(event.affectedAircraftCount, event.localAircraftCount, event.networkAircraftCount)}</small>
+            <small>{t.operationalTwin.navigationIntegrityBaseline(event.baselineMaturity)}</small>
+          </div>
+        </li>)}
+      </ol> : <p className={styles.status}>{t.operationalTwin.navigationIntegrityNoEvents}</p>}
+      <p className={styles.disclaimer}>{t.operationalTwin.navigationIntegrityDisclaimer}</p>
+    </section>}
 
     <h3>{t.operationalTwin.events}</h3>
     {data.events.length ? <ol className={styles.timeline}>

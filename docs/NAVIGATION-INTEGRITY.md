@@ -120,3 +120,18 @@ aggregated anomaly events may be retained longer. Public projections expose
 bounded cells and aircraft context without hidden receiver coordinates or
 internal filesystem/database details. All query windows, identifiers, and
 counts are validated and capped.
+
+## Digital Twin corridor integration
+
+Operational Digital Twin consumes the already-running process-local Navigation
+Integrity service directly. For a selected aircraft, active regional anomaly
+cells are intersected with the future 30-minute sampled corridor only when the
+projected altitude belongs to the same Navigation Integrity altitude band.
+
+The Digital Twin projection preserves the anomaly severity, confidence,
+affected-aircraft counts, LOCAL/NETWORK source evidence, baseline maturity and
+audit categories. It does not relabel the regional heuristic as GNSS
+interference and zero future intersections are not an all-clear.
+
+The integration introduces no new public Navigation Integrity request, database
+read/write, persistence or polling loop.

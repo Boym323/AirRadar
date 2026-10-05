@@ -42,6 +42,7 @@ import {
   OPERATIONAL_TWIN_MAP_SOURCE_ID,
   OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID,
   OPERATIONAL_TWIN_MILESTONE_LAYER_ID,
+  OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID,
   OPERATIONAL_TWIN_ROUTE_LAYER_ID,
   OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
   OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
@@ -1354,6 +1355,23 @@ export function AirRadarApp() {
           "circle-stroke-width": 1.5,
         },
       });
+      map.addLayer({
+        id: OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID,
+        type: "circle",
+        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "navigation-integrity-event"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": ["match", ["get", "severity"],
+            "SEVERE", AIRRADAR_MAP_THEME.hazard,
+            "DEGRADED", AIRRADAR_MAP_THEME.warning,
+            AIRRADAR_MAP_THEME.accent],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 4.4, 9, 6, 13, 7.6],
+          "circle-opacity": 0.86,
+          "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
+          "circle-stroke-width": 1.6,
+        },
+      });
       const openOperationalTwinMapEvent = (event: MapLayerMouseEvent) => {
         const properties = event.features?.[0]?.properties;
         if (!properties) return;
@@ -1379,7 +1397,7 @@ export function AirRadarApp() {
           .setDOMContent(content)
           .addTo(map);
       };
-      for (const layer of [OPERATIONAL_TWIN_EVENT_LAYER_ID, OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID] as const) {
+      for (const layer of [OPERATIONAL_TWIN_EVENT_LAYER_ID, OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID, OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID] as const) {
         map.on("click", layer, openOperationalTwinMapEvent);
         map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
@@ -2492,6 +2510,7 @@ export function AirRadarApp() {
       OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID,
       OPERATIONAL_TWIN_EVENT_LAYER_ID,
       OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
+      OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID,
     ] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
     }

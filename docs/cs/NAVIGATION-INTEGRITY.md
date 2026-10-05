@@ -107,3 +107,18 @@ anomální události mohou být uchovány déle. Veřejné projekce vracejí ome
 buňky a kontext letadla bez skrytých souřadnic receiveru a bez interních cest
 filesystemu/databáze. Všechna časová okna, identifikátory a počty se validují a
 omezují.
+
+## Integrace s Digital Twin corridorem
+
+Operational Digital Twin používá přímo už běžící process-local Navigation
+Integrity service. Pro vybrané letadlo se aktivní regionální anomaly cells
+protínají s budoucím vzorkovaným 30minutovým corridorem pouze tehdy, když
+projektovaná výška patří do stejného Navigation Integrity altitude bandu.
+
+Digital Twin zachovává severity, confidence, počet zasažených letadel,
+LOCAL/NETWORK source evidence, baseline maturity a audit categories. Regionální
+heuristika se nepřejmenovává na GNSS interference a nulový počet budoucích
+průniků není all-clear.
+
+Integrace nepřidává veřejný Navigation Integrity request, databázové
+čtení/zápis, persistence ani polling loop.
