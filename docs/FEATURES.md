@@ -116,6 +116,41 @@ sources are missing. It adds no database migration, background poller, SSE
 connection or ADS-B hot-path work. Existing provider caches remain authoritative
 for upstream request control and the fusion endpoint itself is `no-store`.
 
+## Weather Avoidance Intelligence V1
+
+Weather Avoidance Intelligence V1 upgrades the existing SIGMET trajectory
+deviation signal into a conservative multi-layer correlation product for the
+currently selected aircraft. It does not infer crew intent.
+
+The signal starts from the existing geometric prerequisite: an earlier
+2–10-minute track projection intersected an active SIGMET, the aircraft made a
+meaningful course change, and the short current-track projection no longer
+enters that advisory. V1 then cross-checks two newer intelligence layers:
+
+- Trajectory Conformance must independently show OFFSET, DEVIATING, REJOINING,
+  or PROBABLE_DIRECT before the stronger `POSSIBLE_WEATHER_AVOIDANCE`
+  classification is allowed.
+- The existing 30-minute Weather Corridor must have usable SIGMET coverage and
+  no new entry into the same SIGMET. If the corridor still enters the advisory,
+  the result is explicitly `CURRENT_CORRIDOR_EXPOSED` instead.
+
+High confidence requires the original medium-confidence SIGMET deviation,
+available/current SIGMET corridor data, a route-aware 30-minute corridor and
+non-low Trajectory Conformance confidence. Stale SIGMET data, a kinematic
+corridor, low conformance confidence, or missing corridor coverage cap or reduce
+the result. Missing evidence fails closed to the weaker
+`CORRELATED_DEVIATION` classification.
+
+The radar detail shows the earlier projected exposure, current 30-minute
+exposure, route-conformance state and correlation confidence. The feature
+reuses the existing selected-aircraft `/api/aircraft/:hex/situation` request
+on a bounded 60-second refresh; it adds no database model, persistence path,
+SSE stream, upstream weather provider, or ADS-B hot-path work.
+
+The output is informational correlation only. It does not claim why the crew
+changed course, whether ATC instructed the maneuver, or whether the maneuver was
+a flight-safety decision.
+
 ## Weather Corridor Intelligence V1
 
 Weather Corridor Intelligence V1 applies the same conservative weather

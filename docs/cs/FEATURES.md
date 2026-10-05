@@ -117,6 +117,40 @@ vrací PARTIAL/INSUFFICIENT. Nepřidává databázovou migraci, background polle
 SSE spojení ani práci v ADS-B hot path. Řízení upstream požadavků zůstává na
 existujících provider cache a samotný fusion endpoint je `no-store`.
 
+## Weather Avoidance Intelligence V1
+
+Weather Avoidance Intelligence V1 povyšuje existující SIGMET trajectory
+deviation signál na konzervativní vícevrstvou korelaci pro právě vybrané
+letadlo. Neurčuje úmysl posádky.
+
+Signál začíná stávající geometrickou podmínkou: starší projekce tracku zhruba
+2–10 minut zpět směřovala do aktivního SIGMETu, letadlo provedlo významnou
+změnu kurzu a krátká projekce podle současného tracku už do stejné oblasti
+nevstupuje. V1 tento stav ověřuje dvěma novějšími intelligence vrstvami:
+
+- Trajectory Conformance musí nezávisle ukazovat OFFSET, DEVIATING, REJOINING
+  nebo PROBABLE_DIRECT, než je dovolena silnější klasifikace
+  `POSSIBLE_WEATHER_AVOIDANCE`.
+- Existující 30minutový Weather Corridor musí mít použitelný SIGMET zdroj a
+  nesmí znovu vstupovat do stejného SIGMETu. Pokud aktuální koridor do advisory
+  stále vstupuje, výsledek je výslovně `CURRENT_CORRIDOR_EXPOSED`.
+
+HIGH confidence vyžaduje původní medium-confidence SIGMET deviation, aktuální
+a dostupná SIGMET corridor data, route-aware 30minutový koridor a Trajectory
+Conformance s jistotou vyšší než LOW. Stale SIGMET, kinematický koridor, nízká
+conformance confidence nebo chybějící corridor coverage výsledek omezí.
+Chybějící evidence fail-closed zůstává ve slabší klasifikaci
+`CORRELATED_DEVIATION`.
+
+Radar detail ukazuje původní očekávanou expozici, aktuální 30minutovou expozici,
+stav Trajectory Conformance a jistotu korelace. Funkce znovu používá existující
+selected-aircraft `/api/aircraft/:hex/situation` s omezeným 60sekundovým
+refreshem; nevytváří DB model, persistence cestu, SSE stream, nový weather
+provider ani práci v ADS-B hot path.
+
+Výsledek je pouze informativní korelace. Netvrdí, proč posádka změnila kurz,
+zda manévr nařídilo ATC ani zda šlo o bezpečnostní rozhodnutí.
+
 ## Weather Corridor Intelligence V1
 
 Weather Corridor Intelligence V1 aplikuje stejné konzervativní weather

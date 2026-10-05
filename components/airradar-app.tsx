@@ -33,7 +33,9 @@ import type { FlightIntelligenceEvent } from "@/lib/intelligence/types";
 import type { MetarMapObservation } from "@/lib/weather/types";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
+import type { OperationalTwinApiResponse } from "@/lib/operational-twin";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
+import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
 import type { WindLevelHpa } from "@/lib/server/wind-aloft";
 import type { AircraftWeatherMapObservation } from "@/components/aircraft-weather-panel";
@@ -433,6 +435,7 @@ export function AirRadarApp() {
   const [aircraftDetail, setAircraftDetail] = useState<AircraftQuickDetailResponse | null>(null);
   const [selectedAtcContext, setSelectedAtcContext] = useState<AtcContextResult | null>(null);
   const [selectedRouteWeather, setSelectedRouteWeather] = useState<RouteWeatherContext | null>(null);
+  const [selectedOperationalTwin, setSelectedOperationalTwin] = useState<OperationalTwinApiResponse | null>(null);
   const [selectedIntelligenceEvents, setSelectedIntelligenceEvents] = useState<FlightIntelligenceEvent[]>([]);
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
   const [search, setSearch] = useState("");
@@ -2125,6 +2128,13 @@ export function AirRadarApp() {
     selectedHistoryTrail?.points ?? selectedAircraft?.trail ?? [],
     sigmetData,
   ), [selectedAircraft, selectedHistoryTrail, sigmetData]);
+  const selectedWeatherAvoidance = useMemo(() => buildWeatherAvoidanceIntelligence({
+    deviation: selectedSigmetDeviation,
+    conformance: selectedRouteCorridor.conformance,
+    weatherCorridor: selectedOperationalTwin?.status === "available"
+      ? selectedOperationalTwin.weatherCorridor
+      : null,
+  }), [selectedOperationalTwin, selectedRouteCorridor.conformance, selectedSigmetDeviation]);
   const selectedDestination = selectedAircraft?.enrichment?.route?.destinationAirport ?? null;
   const selectedWind = useSelectedAircraftWindContext(
     selectedAircraft,
@@ -2188,6 +2198,28 @@ export function AirRadarApp() {
     schedule();
     return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
   }, [contextAircraftHex, contextHasPosition, selectedAtcContext?.status]);
+
+  useEffect(() => {
+    setSelectedOperationalTwin(null);
+    if (!contextAircraftHex || !contextHasPosition) return;
+    let active = true;
+    let timer: number | null = null;
+    const refresh = () => {
+      void fetch(`/api/aircraft/${encodeURIComponent(contextAircraftHex)}/situation`, { cache: "no-store" })
+        .then(async (response) => {
+          if (!response.ok && response.status >= 500) throw new Error("operational twin unavailable");
+          return await response.json() as OperationalTwinApiResponse;
+        })
+        .then((value) => { if (active) setSelectedOperationalTwin(value); })
+        .catch(() => { if (active) setSelectedOperationalTwin(null); });
+    };
+    refresh();
+    const schedule = () => {
+      timer = window.setTimeout(() => { refresh(); schedule(); }, 60_000);
+    };
+    schedule();
+    return () => { active = false; if (timer !== null) window.clearTimeout(timer); };
+  }, [contextAircraftHex, contextHasPosition]);
 
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
 
@@ -2520,6 +2552,7 @@ export function AirRadarApp() {
             atcContext={selectedAtcContext}
             sigmetContext={selectedSigmetContext}
             sigmetDeviation={selectedSigmetDeviation}
+            weatherAvoidance={selectedWeatherAvoidance}
             sigmetStale={sigmetData.stale}
             windContext={selectedWind.context}
             windAhead={selectedWind.ahead}
