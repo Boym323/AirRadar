@@ -470,3 +470,25 @@ terminology. It is not a collision-warning or separation product. Snapshots
 older than the bounded freshness window are visibly marked stale and endpoint
 failure is fail-soft for the rest of the Operations Center.
 
+## Truth-first Validation V2
+
+Truth-first Validation V2 expands recall measurement beyond terminal outcomes.
+It keeps the existing independent landing/runway truth and adds three
+independent later-observation lanes:
+
+- `WAYPOINT`: an observed Route Intelligence progress transition from one
+  next point to the following point,
+- `ATC_SECTOR_ENTRY`: the debounced Flight Intelligence
+  `AIRSPACE_ENTRY` event,
+- `SIGMET_INTERSECTION`: a later observed aircraft position entering the
+  valid SIGMET geometry and vertical band.
+
+The observation step runs before the current request's future events are
+captured, so a newly generated prediction cannot satisfy truth from the same
+instant. Matching is aircraft + event type + semantic identity and remains
+bounded to the prior 35 minutes. Waypoint and SIGMET truth are request-driven
+because they reuse the existing Digital Twin request context and add no poller
+or provider loop. The report stays process-local and requires both sufficient
+truth volume and at least two represented truth domains before it can leave
+`WAIT`.
+

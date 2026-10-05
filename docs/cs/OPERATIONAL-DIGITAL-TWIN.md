@@ -449,3 +449,24 @@ Nejde o collision warning ani separation produkt. Snapshot starší než omezen�
 freshness okno se označí jako zastaralý a výpadek endpointu je fail-soft vůči
 zbytku Operations Center.
 
+## Truth-first Validation V2
+
+Truth-first Validation V2 rozšiřuje měření recall mimo terminální outcome.
+Zachovává nezávislou landing/runway truth a přidává tři zdroje později
+pozorované truth:
+
+- `WAYPOINT`: pozorovaný přechod Route Intelligence z jednoho next pointu na
+  následující,
+- `ATC_SECTOR_ENTRY`: debounced událost Flight Intelligence
+  `AIRSPACE_ENTRY`,
+- `SIGMET_INTERSECTION`: pozdější skutečná poloha letadla vstoupí do platné
+  geometrie a vertikálního rozsahu SIGMETu.
+
+Observation krok probíhá před zachycením budoucích událostí aktuálního
+požadavku, takže nově vytvořená predikce nemůže sama splnit truth stejného
+okamžiku. Párování používá letadlo + typ události + sémantickou identitu a je
+omezené na předchozích 35 minut. Waypoint a SIGMET truth jsou request-driven,
+protože znovu používají existující kontext Digital Twin požadavku a nepřidávají
+žádný poller ani provider loop. Report zůstává process-local a před odchodem ze
+stavu `WAIT` vyžaduje dostatek truth událostí i nejméně dvě zastoupené domény.
+
