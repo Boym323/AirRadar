@@ -25,7 +25,7 @@ not yet been historically attributed.
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback and historical context windows. |
-| Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex`<br>`/api/admin/track-fusion/readiness` | Shadow-only per-field multi-source state estimator with bounded 24-hour process-local readiness evidence, PASS/WAIT/FAIL graduation and fail-closed opt-in Digital Twin consumption; never alters canonical live state or local receiver persistence. |
+| Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex`<br>`/api/admin/track-fusion/readiness`<br>`/api/admin/track-fusion/outcome` | Shadow-only per-field multi-source state estimator with readiness graduation plus bounded prospective canonical-vs-fused outcome validation against future LOCAL truth; never alters canonical live state or local receiver persistence. |
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
@@ -619,3 +619,17 @@ The first fail-closed consumer is Operational Digital Twin. Fused input is
 disabled by default and requires an explicit flag, readiness PASS and a GOOD
 observed fused position for the requested aircraft. Canonical radar, SSE and
 receiver persistence remain unchanged.
+
+
+## Track Fusion Outcome Validation V1
+
+Track Fusion now runs a bounded prospective canonical-vs-fused validation lane.
+For eligible freshly evaluated tracks it captures both states, projects them to
+5/15/30-second horizons, and later scores them against a future fresh LOCAL
+receiver position. The result reports FUSED_BETTER / CANONICAL_BETTER / TIE,
+mean position and altitude error, handover-specific outcomes and a separate
+PASS / WAIT / FAIL net-benefit decision.
+
+The validator is process-local and in-memory only. It performs no history scan,
+database write, upstream request, timer or second fusion pass. See
+[`TRACK-FUSION-OUTCOME.md`](TRACK-FUSION-OUTCOME.md).
