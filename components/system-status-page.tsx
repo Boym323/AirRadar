@@ -445,6 +445,12 @@ export function SystemStatusPage() {
   const trackFusionReadinessEvidence = asRecord(trackFusionReadiness?.evidence);
   const trackFusionReadinessWindow = asRecord(trackFusionReadinessEvidence?.window);
   const trackFusionReadinessRollout = asRecord(trackFusionReadiness?.rollout);
+  const trackFusionOutcome = asRecord(data?.localAdsb?.trackFusionOutcome);
+  const trackFusionOutcomeWindow = asRecord(trackFusionOutcome?.window);
+  const trackFusionOutcomeOverall = asRecord(trackFusionOutcome?.overall);
+  const trackFusionOutcomeScenarios = asRecord(trackFusionOutcome?.scenarios);
+  const trackFusionOutcomeHandoverLn = asRecord(trackFusionOutcomeScenarios?.HANDOVER_LOCAL_TO_NETWORK);
+  const trackFusionOutcomeHandoverNl = asRecord(trackFusionOutcomeScenarios?.HANDOVER_NETWORK_TO_LOCAL);
   const trackFusionResidual = asRecord(trackFusion?.positionResidualNm);
   const trackFusionCanonicalResidual = asRecord(trackFusion?.canonicalResidualNm);
   const trackFusionResidualAverage = diagnosticOptionalNumber(trackFusionResidual, "average");
@@ -571,6 +577,26 @@ export function SystemStatusPage() {
             : diagnosticBoolean(trackFusionReadinessRollout, "digitalTwinConfigured")
               ? dictionary.system.trackFusionDigitalTwinWaiting
               : dictionary.system.disabled} />
+        </>}
+        {trackFusionOutcome && <>
+          <Field label={dictionary.system.trackFusionOutcome} value={String(trackFusionOutcome.decision ?? dictionary.system.notAvailable)} />
+          <Field label={dictionary.system.trackFusionOutcomeWindow} value={`${formatNumber(diagnosticNumber(trackFusionOutcomeWindow, "spanMinutes"), 0, dictionary.locale)} min · ${formatNumber(diagnosticNumber(trackFusionOutcome, "completed"), 0, dictionary.locale)} completed`} />
+          <Field label={dictionary.system.trackFusionOutcomeSamples} value={`${formatNumber(diagnosticNumber(trackFusionOutcome, "completed"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusionOutcome, "pending"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.trackFusionOutcomeWins} value={`${formatNumber(diagnosticNumber(trackFusionOutcomeOverall, "fusedBetter"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusionOutcomeOverall, "canonicalBetter"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusionOutcomeOverall, "ties"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.trackFusionOutcomeMargin} value={diagnosticOptionalNumber(trackFusionOutcomeOverall, "netWinMargin") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber((diagnosticOptionalNumber(trackFusionOutcomeOverall, "netWinMargin") ?? 0) * 100, 1, dictionary.locale)} %`} />
+          <Field label={dictionary.system.trackFusionOutcomeError} value={diagnosticOptionalNumber(trackFusionOutcomeOverall, "fusedMeanErrorNm") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber(diagnosticOptionalNumber(trackFusionOutcomeOverall, "fusedMeanErrorNm") ?? 0, 3, dictionary.locale)} / ${formatNumber(diagnosticOptionalNumber(trackFusionOutcomeOverall, "canonicalMeanErrorNm") ?? 0, 3, dictionary.locale)} NM`} />
+          <Field label={dictionary.system.trackFusionOutcomeExpired} value={diagnosticOptionalNumber(trackFusionOutcome, "expiredTruthRate") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber((diagnosticOptionalNumber(trackFusionOutcome, "expiredTruthRate") ?? 0) * 100, 1, dictionary.locale)} %`} />
+          <Field label={dictionary.system.trackFusionOutcomeHandover} value={formatNumber(
+            diagnosticNumber(trackFusionOutcomeHandoverLn, "samples") + diagnosticNumber(trackFusionOutcomeHandoverNl, "samples"),
+            0,
+            dictionary.locale,
+          )} />
         </>}
       </Card>}
 
