@@ -437,10 +437,15 @@ export class TrackFusionShadow {
     target: ResidualAccumulator,
     withP95: boolean,
   ): TrackFusionShadowDiagnostics["positionResidualNm"] {
-    if (!target.count) return { average: null, maximum: null, p95UpperBound: null };
+    const histogram = RESIDUAL_BUCKETS.map((upperBoundNm, index) => ({
+      upperBoundNm: Number.isFinite(upperBoundNm) ? upperBoundNm : null,
+      count: target.buckets[index] ?? 0,
+    }));
+    if (!target.count) return { average: null, maximum: null, p95UpperBound: null, histogram };
     const base = {
       average: Number((target.sum / target.count).toFixed(3)),
       maximum: Number(target.maximum.toFixed(3)),
+      histogram,
     };
     if (!withP95) return { ...base, p95UpperBound: null };
     const targetCount = Math.ceil(target.count * 0.95);
