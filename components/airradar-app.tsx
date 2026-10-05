@@ -34,6 +34,18 @@ import type { MetarMapObservation } from "@/lib/weather/types";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import type { OperationalTwinApiResponse } from "@/lib/operational-twin";
+import {
+  createOperationalTwinMapGeoJSON,
+  emptyOperationalTwinMapGeoJSON,
+  OPERATIONAL_TWIN_EVENT_LAYER_ID,
+  OPERATIONAL_TWIN_KINEMATIC_LAYER_ID,
+  OPERATIONAL_TWIN_MAP_SOURCE_ID,
+  OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID,
+  OPERATIONAL_TWIN_MILESTONE_LAYER_ID,
+  OPERATIONAL_TWIN_ROUTE_LAYER_ID,
+  OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
+  OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
+} from "@/lib/operational-twin/map";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
@@ -447,6 +459,11 @@ function parseNavPointFocus(value: string | null): { kind: "NAVAID" | "FIX"; id:
   const lon = Number(lonText);
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
   return { kind, id, lat, lon };
+}
+
+function relativeTwinMapOffset(minutes: number): string {
+  if (minutes <= 0.05) return "NOW";
+  return `+${formatNumber(minutes, minutes < 10 ? 1 : 0)} min`;
 }
 
 function ognTargetLabel(target: OgnTargetView): string {
@@ -1233,6 +1250,140 @@ export function AirRadarApp() {
       map.addLayer({ id: "selected-trail-live-tail-line", type: "line", source: "selected-trail-live-tail", paint: { "line-color": AIRRADAR_MAP_THEME.selectedStrong, "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 2.6, 13, 3.4] } });
       map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource(ROUTE_INTELLIGENCE_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addSource(OPERATIONAL_TWIN_MAP_SOURCE_ID, { type: "geojson", data: emptyOperationalTwinMapGeoJSON() });
+      map.addLayer({
+        id: OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
+        type: "fill",
+        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "uncertainty"],
+        layout: { visibility: "none" },
+        paint: { "fill-color": AIRRADAR_MAP_THEME.selected, "fill-opacity": 0.075 },
+      });
+      map.addLayer({
+        id: OPERATIONAL_TWIN_ROUTE_LAYER_ID,
+        type: "line",
+        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
+        filter: ["all", ["==", ["get", "kind"], "corridor"], ["==", ["get", "mode"], "ROUTE_AWARE"]],
+        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": AIRRADAR_MAP_THEME.selectedStrong,
+          "line-opacity": 0.9,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.6, 8, 2.4, 13, 3.4],
+        },
+      });
+      map.addLayer({
+        id: OPERATIONAL_TWIN_KINEMATIC_LAYER_ID,
+        type: "line",
+        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
+        filter: ["all", ["==", ["get", "kind"], "corridor"], ["==", ["get", "mode"], "KINEMATIC"]],
+        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": AIRRADAR_MAP_THEME.selectedStrong,
+          "line-opacity": 0.82,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.5, 8, 2.2, 13, 3.2],
+          "line-dasharray": [2, 2],
+        },
+      });
+      map.addLayer({
+        id: OPERATIONAL_TWIN_MILESTONE_LAYER_ID,
+        type: "circle",
+        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "milestone"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": AIRRADAR_MAP_THEME.selectedStrong,
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 2.4, 9, 3.8, 13, 5],
+          "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
+          "circle-stroke-width": 1.2,
+        },
+      });
+      map.addLayer({
+        id: OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID,
+        type: "symbol",
+        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
+        minzoom: 5.5,
+        filter: ["==", ["get", "kind"], "milestone"],
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "label"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": 9,
+          "text-offset": [0, 1.1],
+          "text-padding": 5,
+          "text-allow-overlap": false,
+          "text-ignore-placement": false,
+        },
+        paint: {
+          "text-color": AIRRADAR_MAP_THEME.selectedStrong,
+          "text-halo-color": AIRRADAR_MAP_THEME.outline,
+          "text-halo-width": 1,
+        },
+      });
+      map.addLayer({
+        id: OPERATIONAL_TWIN_EVENT_LAYER_ID,
+        type: "circle",
+        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "event"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": ["match", ["get", "eventType"],
+            "SIGMET_INTERSECTION", AIRRADAR_MAP_THEME.hazard,
+            "PLANNED_AIRSPACE", AIRRADAR_MAP_THEME.airspace,
+            "ATC_SECTOR_ENTRY", AIRRADAR_MAP_THEME.atc.highlight,
+            "RUNWAY_EXPECTATION", AIRRADAR_MAP_THEME.accent,
+            AIRRADAR_MAP_THEME.weather],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3.2, 9, 4.6, 13, 6],
+          "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
+          "circle-stroke-width": 1.4,
+        },
+      });
+      map.addLayer({
+        id: OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
+        type: "circle",
+        source: OPERATIONAL_TWIN_MAP_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "weather-event"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": ["match", ["get", "severity"],
+            "SEVERE", AIRRADAR_MAP_THEME.hazard,
+            "MODERATE", AIRRADAR_MAP_THEME.warning,
+            AIRRADAR_MAP_THEME.weather],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 4, 9, 5.5, 13, 7],
+          "circle-opacity": 0.8,
+          "circle-stroke-color": AIRRADAR_MAP_THEME.outline,
+          "circle-stroke-width": 1.5,
+        },
+      });
+      const openOperationalTwinMapEvent = (event: MapLayerMouseEvent) => {
+        const properties = event.features?.[0]?.properties;
+        if (!properties) return;
+        const content = document.createElement("div");
+        content.className = "map-popup";
+        const title = document.createElement("strong");
+        title.textContent = String(properties.title ?? properties.eventType ?? t.operationalTwin.title);
+        const detail = document.createElement("span");
+        const offset = Number(properties.offsetMinutes);
+        const offsetLabel = Number.isFinite(offset) ? relativeTwinMapOffset(offset) : "";
+        detail.textContent = [
+          offsetLabel,
+          properties.eventType ? String(properties.eventType).replaceAll("_", " ") : null,
+          properties.confidence ? String(properties.confidence) : null,
+          properties.provenance ? String(properties.provenance) : null,
+          properties.severity ? String(properties.severity) : null,
+          properties.source ? String(properties.source) : null,
+          properties.detail ? String(properties.detail) : null,
+        ].filter(Boolean).join(" · ");
+        content.append(title, detail);
+        new maplibregl.Popup({ closeButton: true, maxWidth: "320px" })
+          .setLngLat(event.lngLat)
+          .setDOMContent(content)
+          .addTo(map);
+      };
+      for (const layer of [OPERATIONAL_TWIN_EVENT_LAYER_ID, OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID] as const) {
+        map.on("click", layer, openOperationalTwinMapEvent);
+        map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
+      }
       map.addLayer({
         id: ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID,
         type: "line",
@@ -2327,6 +2478,28 @@ export function AirRadarApp() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
+    const availableTwin = selectedAircraftVisible && selectedOperationalTwin?.status === "available"
+      ? selectedOperationalTwin
+      : null;
+    const twinSource = map.getSource(OPERATIONAL_TWIN_MAP_SOURCE_ID) as GeoJSONSource | undefined;
+    twinSource?.setData(createOperationalTwinMapGeoJSON(availableTwin));
+    const visibility = availableTwin ? "visible" : "none";
+    for (const layer of [
+      OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
+      OPERATIONAL_TWIN_ROUTE_LAYER_ID,
+      OPERATIONAL_TWIN_KINEMATIC_LAYER_ID,
+      OPERATIONAL_TWIN_MILESTONE_LAYER_ID,
+      OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID,
+      OPERATIONAL_TWIN_EVENT_LAYER_ID,
+      OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
+    ] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visibility);
+    }
+  }, [mapReady, selectedAircraftVisible, selectedOperationalTwin]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
     const source = map.getSource(ROUTE_INTELLIGENCE_SOURCE_ID) as GeoJSONSource | undefined;
     const geojson = selectedAircraftVisible
       ? createRouteIntelligenceGeoJSON(selectedRouteCorridor.route)
@@ -2564,7 +2737,7 @@ export function AirRadarApp() {
               {networkNotice && <span className="network-notice">{networkNotice}</span>}
               {networkEnabled && <span className="network-attribution">{t.radar.networkAttribution}</span>}
             </div>}
-            {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || showAtc || showAtsRoutes || showWeatherRadar || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
+            {showRangeRings || colorMode !== "default" || (selectedAircraftVisible && selectedAircraft?.enrichment?.route) || (selectedAircraftVisible && selectedOperationalTwin?.status === "available") || showAtc || showAtsRoutes || showWeatherRadar || showMetar || showAupUup || showNavigationIntegrity ? <Panel className="map-overlay-card contextual-legend">
               {showRangeRings && receiverPositionAvailable && <span className="range-legend-item"><strong>{t.layers.rangeRings}</strong><span><i className="legend-line range-ring" /> {RANGE_RING_RADII_KM.join(" · ")} km</span></span>}
               {(showAtc || showAupUup) && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atc}</strong><span><i className="legend-line atc-context" /> {t.atc.sector}</span><span><i className="legend-line atc-background" /> {t.layers.atc}</span>{showAupUup && <span><i className="legend-line planned" /> {activityT.legendUpcoming}</span>}</span>}
               {showAtsRoutes && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.atsRoutes}</strong><span><i className="legend-line ats-network" /> {t.layers.atsRoutes}</span><span><i className="legend-line ats-selected" /> {t.route.context}</span></span>}
@@ -2573,6 +2746,7 @@ export function AirRadarApp() {
               {showNavigationIntegrity && <span className="layer-legend aviation-layer-legend"><strong>{t.layers.navigationIntegrity}</strong><span><i className="legend-line planned" /> {t.layers.navigationIntegrityReduced}</span><small>{t.layers.navigationIntegrityDisclaimer}</small></span>}
               {colorMode !== "default" && <span className="color-mode-legend"><strong>{t.layers.colorModes[colorMode]}</strong><span><i className="color-legend-swatch low" /> {t.layers.colorLegendLow}</span><span><i className="color-legend-swatch high" /> {t.layers.colorLegendHigh}</span><span><i className="color-legend-swatch fallback" /> {t.layers.colorLegendFallback}</span></span>}
               {selectedAircraftVisible && selectedAircraft?.enrichment?.route && <span className="layer-legend"><span><i className="legend-line actual" /> {t.route.actualTrail}</span><span><i className="legend-line completed" /> {t.route.originToCurrent}</span><span><i className="legend-line remaining" /> {t.route.currentToDestination}</span><small>{t.route.contextDisclaimer}</small></span>}
+              {selectedAircraftVisible && selectedOperationalTwin?.status === "available" && <span className="layer-legend" data-testid="operational-twin-map-legend"><strong>{t.operationalTwin.title}</strong><span><i className="legend-line remaining" /> {selectedOperationalTwin.corridor.mode === "ROUTE_AWARE" ? t.operationalTwin.routeAware : t.operationalTwin.kinematic}</span><small>± {formatNumber(selectedOperationalTwin.corridor.maxUncertaintyNm, 1)} NM · {selectedOperationalTwin.corridor.horizonMinutes} min</small></span>}
             </Panel> : null}
             {showAircraftWeather && <AircraftWeatherPanel
               center={aircraftWeatherCenter}
