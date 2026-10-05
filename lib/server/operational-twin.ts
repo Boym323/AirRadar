@@ -17,6 +17,7 @@ import {
   buildOperationalTwinCorridor,
   buildOperationalTwinEvents,
   buildOperationalTwinSituation,
+  buildOperationalTwinWindTimingShadow,
   OPERATIONAL_TWIN_VERSION,
   type OperationalTwinAircraftState,
   type OperationalTwinApiResponse,
@@ -289,6 +290,12 @@ export async function getOperationalTwinForAircraft(
     now,
   });
 
+  const windTimingShadow = buildOperationalTwinWindTimingShadow({
+    corridor,
+    weatherCorridor,
+    observedGroundSpeedKt: state.groundSpeedKt,
+  });
+
   const destination = live.enrichment?.route?.destination?.trim().toUpperCase() ?? null;
   const events = buildOperationalTwinEvents({
     generatedAt: now,
@@ -309,6 +316,7 @@ export async function getOperationalTwinForAircraft(
     corridor,
     events,
     weatherCorridor,
+    windTimingShadow,
     atcAvailable: preparedDataset !== null,
     airspacePlanAvailable: Boolean(airspacePlan && airspacePlan.status !== "unavailable"),
     sigmetAvailable: Boolean(sigmets && sigmetResult.ok),
