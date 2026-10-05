@@ -7,7 +7,7 @@ describe("validated production build artifact", () => {
     expect(workflow).toContain("name: Package validated production build");
     expect(workflow).toContain("name: production-build-${{ github.sha }}");
     expect(workflow).toContain("actions/download-artifact@v7");
-    expect(workflow).toContain('--build-artifact-dir "${RUNNER_TEMP}/airradar-production-build"');
+    expect(workflow).toContain('AIRRADAR_BUILD_ARTIFACT_DIR="${RUNNER_TEMP}/airradar-production-build"');
   });
 
   it("verifies identity and checksum before reusing the CI build", async () => {
