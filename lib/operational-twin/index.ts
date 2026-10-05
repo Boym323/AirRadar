@@ -9,7 +9,7 @@ import type { OperationalTwinAircraftState } from "./corridor";
 export function buildOperationalTwinSituation(input: {
   generatedAt: Date;
   aircraft: OperationalTwinAircraftState;
-  corridor: OperationalTwinCorridor | null;
+  corridor: OperationalTwinCorridor;
   events: OperationalTwinEvent[];
   atcAvailable: boolean;
   airspacePlanAvailable: boolean;
@@ -37,7 +37,7 @@ export function buildOperationalTwinSituation(input: {
 
   return {
     version: OPERATIONAL_TWIN_VERSION,
-    status: input.corridor ? "available" : "unavailable",
+    status: "available",
     generatedAt: input.generatedAt.toISOString(),
     aircraft: {
       icaoHex: input.aircraft.icaoHex,
