@@ -47,6 +47,7 @@ import {
   createRouteAirportGeoJSON,
   createRouteGeoJSON,
   createRouteIntelligenceGeoJSON,
+  emptyRouteIntelligenceGeoJSON,
   ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID,
   ROUTE_INTELLIGENCE_CURRENT_LAYER_ID,
   ROUTE_INTELLIGENCE_REMAINING_LAYER_ID,
@@ -2196,7 +2197,7 @@ export function AirRadarApp() {
     const source = map.getSource(ROUTE_INTELLIGENCE_SOURCE_ID) as GeoJSONSource | undefined;
     const geojson = selectedAircraftVisible
       ? createRouteIntelligenceGeoJSON(selectedRouteCorridor.route)
-      : { type: "FeatureCollection", features: [] } as const;
+      : emptyRouteIntelligenceGeoJSON();
     const active = selectedAircraftVisible && geojson.features.length > 0;
     routeIntelligenceActiveRef.current = active;
     source?.setData(geojson);
