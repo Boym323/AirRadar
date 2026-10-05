@@ -19,6 +19,12 @@ import {
 import type { FlightEventType } from "@/lib/intelligence/types";
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
 import type { RegionalSituationGraph } from "@/lib/operational-twin/regional-situation";
+import {
+  REGIONAL_ATTENTION_MAP_FOCUS_EVENT,
+  regionalAttentionHorizonForOffset,
+  type RegionalAttentionHorizonMinutes,
+  type RegionalAttentionMapFocusEventDetail,
+} from "@/lib/operational-twin/regional-attention-ui";
 import type { PredictiveOperationsResponse } from "@/lib/predictive-intelligence";
 import { PREDICTIVE_OPERATIONS_STALE_AFTER_MS } from "@/lib/predictive-intelligence/operations-center";
 import { RUNWAY_CHANGE_ADVISORY_EVENT_WINDOW_MS } from "@/lib/predictive-intelligence/runway-change-advisory";
@@ -36,7 +42,17 @@ const PREDICTIVE_REFRESH_INTERVAL_MS = 30_000;
 const REGIONAL_REFRESH_INTERVAL_MS = 30_000;
 const REGIONAL_STALE_AFTER_MS = 90_000;
 
-type RegionalOperationsResponse = RegionalSituationGraph & { attention: OperationalAttentionSummary };
+type RegionalAttentionGraduationStatus = {
+  version: "regional-attention-graduation-v1";
+  decision: "PASS" | "WAIT" | "FAIL";
+  graduated: boolean;
+  scope: "REGIONAL_COPRESENCE_CONTEXT_ONLY";
+};
+
+type RegionalOperationsResponse = RegionalSituationGraph & {
+  attention: OperationalAttentionSummary;
+  attentionGraduation: RegionalAttentionGraduationStatus;
+};
 
 type SupplementaryStatus = "idle" | "loading" | "ready" | "partial" | "unavailable";
 
@@ -81,6 +97,13 @@ function highlightReasonLabel(reason: LogbookInterestingReason): string {
   return t.dashboard.reasons[reason];
 }
 
+function dispatchRegionalMapFocus(detail: RegionalAttentionMapFocusEventDetail): void {
+  window.dispatchEvent(new CustomEvent<RegionalAttentionMapFocusEventDetail>(
+    REGIONAL_ATTENTION_MAP_FOCUS_EVENT,
+    { detail },
+  ));
+}
+
 export function RadarOperationsCenter() {
   const intelligenceEvents = useIntelligenceStream();
   const searchParams = useSearchParams();
@@ -95,6 +118,8 @@ export function RadarOperationsCenter() {
   const [predictiveNow, setPredictiveNow] = useState(() => Date.now());
   const [regionalSituation, setRegionalSituation] = useState<RegionalOperationsResponse | null>(null);
   const [regionalStatus, setRegionalStatus] = useState<SupplementaryStatus>("idle");
+  const [regionalHorizon, setRegionalHorizon] = useState<RegionalAttentionHorizonMinutes>(30);
+  const [regionalMapFocusId, setRegionalMapFocusId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), CLOCK_REFRESH_INTERVAL_MS);
@@ -355,8 +380,55 @@ export function RadarOperationsCenter() {
     && (!Number.isFinite(regionalGeneratedAt) || regionalGeneratedAt + REGIONAL_STALE_AFTER_MS < now);
   const regionalAttentionCount = regionalSituation?.attention.attention ?? 0;
   const totalAttentionCount = attentionCount + regionalAttentionCount;
+  const regionalItems = useMemo(
+    () => (regionalSituation?.attention.items ?? []).filter((item) =>
+      item.type !== "REGIONAL_COPRESENCE"
+      || item.projectedOffsetMinutes === null
+      || item.projectedOffsetMinutes <= regionalHorizon
+    ),
+    [regionalHorizon, regionalSituation],
+  );
+  const regionalGraduated = regionalSituation?.attentionGraduation.graduated === true;
   const evidenceTypes = t.intelligence.evidenceTypes as Record<string, string>;
   const loadingSupplementary = supplementaryStatus === "loading" || supplementaryStatus === "idle";
+
+  useEffect(() => {
+    if (!regionalMapFocusId) return;
+    const activeItem = regionalSituation?.attention.items.find((item) => item.id === regionalMapFocusId);
+    if (
+      !open
+      || !regionalGraduated
+      || !activeItem
+      || activeItem.type !== "REGIONAL_COPRESENCE"
+      || activeItem.aircraft.length !== 2
+    ) {
+      setRegionalMapFocusId(null);
+      dispatchRegionalMapFocus(null);
+    }
+  }, [open, regionalGraduated, regionalMapFocusId, regionalSituation]);
+
+  const focusRegionalItem = (item: OperationalAttentionSummary["items"][number]) => {
+    if (
+      !regionalGraduated
+      || item.type !== "REGIONAL_COPRESENCE"
+      || item.aircraft.length !== 2
+    ) return;
+    const horizon = regionalAttentionHorizonForOffset(item.projectedOffsetMinutes);
+    if (!horizon) return;
+    setRegionalMapFocusId(item.id);
+    dispatchRegionalMapFocus({
+      graduated: true,
+      itemId: item.id,
+      aircraft: [item.aircraft[0]!, item.aircraft[1]!],
+      horizonMinutes: horizon,
+      projectedDistanceNm: item.projectedDistanceNm,
+    });
+  };
+
+  const clearRegionalMapFocus = () => {
+    setRegionalMapFocusId(null);
+    dispatchRegionalMapFocus(null);
+  };
 
   return (
     <>
@@ -414,12 +486,46 @@ export function RadarOperationsCenter() {
                       : t.intelligence.operationsRegionalHint}
                   </small>
                 </div>
+                {regionalSituation ? (
+                  <div className={styles.regionalToolbar}>
+                    <div
+                      className={styles.regionalHorizons}
+                      role="group"
+                      aria-label={t.intelligence.operationsRegionalHorizon}
+                    >
+                      {([5, 15, 30] as const).map((horizon) => (
+                        <button
+                          type="button"
+                          className={regionalHorizon === horizon ? styles.regionalHorizonActive : ""}
+                          aria-pressed={regionalHorizon === horizon}
+                          key={horizon}
+                          onClick={() => setRegionalHorizon(horizon)}
+                        >
+                          {horizon} min
+                        </button>
+                      ))}
+                    </div>
+                    <StatusBadge
+                      variant={regionalGraduated
+                        ? "live"
+                        : regionalSituation.attentionGraduation.decision === "FAIL"
+                          ? "danger"
+                          : "warning"}
+                    >
+                      {regionalGraduated
+                        ? t.intelligence.operationsRegionalGraduated
+                        : t.intelligence.operationsRegionalCalibration(
+                          regionalSituation.attentionGraduation.decision,
+                        )}
+                    </StatusBadge>
+                  </div>
+                ) : null}
                 {regionalStatus === "loading" && !regionalSituation ? (
                   <small className={styles.regionalUnavailable}>{t.common.loading}</small>
                 ) : null}
-                {regionalSituation?.attention.items.length ? (
+                {regionalItems.length ? (
                   <div className={styles.regionalList}>
-                    {regionalSituation.attention.items.map((item) => {
+                    {regionalItems.map((item) => {
                       const labels = item.aircraft.map((hex) => regionalNodes.get(hex)?.label ?? hex);
                       const detail = item.type === "DESTINATION_CLUSTER"
                         ? t.intelligence.operationsRegionalDestinationCluster(labels.length, item.destination ?? t.common.emptyValue)
@@ -427,6 +533,11 @@ export function RadarOperationsCenter() {
                           item.projectedOffsetMinutes ?? 0,
                           item.projectedDistanceNm === null ? t.common.emptyValue : item.projectedDistanceNm.toFixed(1),
                         );
+                      const canHighlight = regionalGraduated
+                        && item.type === "REGIONAL_COPRESENCE"
+                        && item.aircraft.length === 2
+                        && regionalAttentionHorizonForOffset(item.projectedOffsetMinutes) !== null;
+                      const focused = regionalMapFocusId === item.id;
                       return (
                         <article className={styles.regionalItem} key={item.id}>
                           <div className={styles.regionalItemHeader}>
@@ -448,12 +559,42 @@ export function RadarOperationsCenter() {
                             ))}
                           </div>
                           {item.destination ? <small>{t.intelligence.operationsRegionalDestination(item.destination)}</small> : null}
+                          <details className={styles.regionalEvidence}>
+                            <summary>{t.intelligence.operationsRegionalEvidence}</summary>
+                            <ul>
+                              {item.evidence.map((evidence) => <li key={evidence}>{evidence}</li>)}
+                              {item.projectedDistanceNm !== null ? (
+                                <li>{t.intelligence.operationsRegionalProjectedDistance(item.projectedDistanceNm.toFixed(1))}</li>
+                              ) : null}
+                              {item.projectedOffsetMinutes !== null ? (
+                                <li>{t.intelligence.operationsRegionalProjectedTime(item.projectedOffsetMinutes)}</li>
+                              ) : null}
+                            </ul>
+                          </details>
+                          {item.type === "REGIONAL_COPRESENCE" ? (
+                            <div className={styles.regionalActions}>
+                              {canHighlight ? (
+                                <button
+                                  type="button"
+                                  className={focused ? styles.regionalMapActive : ""}
+                                  aria-pressed={focused}
+                                  onClick={() => focused ? clearRegionalMapFocus() : focusRegionalItem(item)}
+                                >
+                                  {focused
+                                    ? t.intelligence.operationsRegionalClearMap
+                                    : t.intelligence.operationsRegionalHighlightMap}
+                                </button>
+                              ) : (
+                                <small>{t.intelligence.operationsRegionalMapLocked}</small>
+                              )}
+                            </div>
+                          ) : null}
                         </article>
                       );
                     })}
                   </div>
                 ) : regionalSituation && regionalStatus !== "unavailable" ? (
-                  <small className={styles.regionalUnavailable}>{t.intelligence.operationsRegionalQuiet}</small>
+                  <small className={styles.regionalUnavailable}>{t.intelligence.operationsRegionalNoHorizon(regionalHorizon)}</small>
                 ) : null}
                 {regionalStatus === "unavailable" || regionalStatus === "partial" ? (
                   <small className={styles.regionalUnavailable}>{t.intelligence.operationsRegionalUnavailable}</small>
