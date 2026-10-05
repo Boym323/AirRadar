@@ -180,6 +180,26 @@ describe("Aviation Weather Fusion V1", () => {
     expect(result.overall.severity).toBe("UNKNOWN");
   });
 
+  it("downgrades stale onboard evidence and wind comparison confidence", () => {
+    const result = buildWeatherFusion({
+      aircraftHex: "ABC123", lat: 49.2, lon: 17.7, altitudeFt: 30000, now,
+      aircraftObservations: [observation({ observedAt: new Date("2026-10-05T04:40:00Z") })],
+      pireps: [], sigmets: [], metar: null, modelWind: modelWind(),
+    });
+    expect(result.risks.find((risk) => risk.kind === "TURBULENCE")).toMatchObject({ severity: "MODERATE", confidence: "LOW" });
+    expect(result.wind.confidence).toBe("LOW");
+  });
+
+  it("does not infer METAR icing from arbitrary letters inside station or text tokens", () => {
+    const result = buildWeatherFusion({
+      aircraftHex: "ABC123", lat: 49.2, lon: 17.7, altitudeFt: 3000, now,
+      aircraftObservations: [], pireps: [], sigmets: [],
+      metar: metar({ stationId: "LKRA", rawText: "LKRA 050450Z 25005KT CAVOK 02/M01 Q1013" }),
+      modelWind: null,
+    });
+    expect(result.evidence.find((item) => item.code === "METAR_FREEZING_MOISTURE")).toBeUndefined();
+  });
+
   it("drops PIREP evidence that is too far away vertically", () => {
     const result = buildWeatherFusion({
       aircraftHex: "ABC123", lat: 49.2, lon: 17.7, altitudeFt: 30000, now,
