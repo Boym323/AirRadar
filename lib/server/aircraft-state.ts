@@ -57,7 +57,7 @@ import type { FlightPhase } from "@/lib/intelligence/types";
 import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@/lib/predictive-intelligence/types";
 import type { Airport } from "@/lib/airports/types";
 import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
-import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation } from "@/lib/operational-twin";
+import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
 import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
@@ -610,6 +610,13 @@ export class AircraftStateService {
 
   getOperationalTwinOutcomeReport(now = new Date()) {
     return this.operationalTwinOutcome.report(now);
+  }
+
+  observeOperationalTwinTruthContext(
+    context: OperationalTwinTruthObservationContext,
+    now = Date.now(),
+  ): void {
+    this.operationalTwinTruthFirst.observeContext(context, now);
   }
 
   captureOperationalTwinEventOutcome(
