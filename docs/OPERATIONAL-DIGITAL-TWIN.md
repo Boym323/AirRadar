@@ -470,6 +470,14 @@ terminology. It is not a collision-warning or separation product. Snapshots
 older than the bounded freshness window are visibly marked stale and endpoint
 failure is fail-soft for the rest of the Operations Center.
 
+## Regional Operations Center V1.1
+
+Regional Operations Center V1.1 keeps the existing bounded regional-situation request and adds an operator-facing 5/15/30-minute projection filter, localized evidence detail, and a graduation status derived from the existing Regional Attention Graduation report. The public situation endpoint exposes only a compact readiness projection; it does not mutate calibration policy or public WATCH/ATTENTION semantics.
+
+Map highlighting is fail-closed. A co-presence pair can be highlighted only when Regional Attention Graduation is `PASS` and `manualPromotionEligible=true`. The overlay connects the pair's current LOCAL radar positions as contextual orientation only; it does not draw a protected area, predicted collision path, loss-of-separation boundary, TCAS/STCA alert, or ATC instruction. Closing the Operations Center or losing graduation/current positions clears the overlay.
+
+V1.1 adds no provider loop, receiver poller, database path, or second live-state authority. Destination clusters remain outside graduation and cannot unlock map highlighting.
+
 ## Truth-first Validation V2
 
 Truth-first Validation V2 expands recall measurement beyond terminal outcomes.
