@@ -62,6 +62,17 @@ function mergedNetwork(dataset: AtcContextDataset | null): RouteIntelligenceNetw
   };
 }
 
+function fusionTrackEligible(
+  fused: TrackFusionTrack | null,
+  readiness: TrackFusionReadinessReport,
+): boolean {
+  return readiness.rollout.digitalTwinEffective
+    && fused?.quality === "GOOD"
+    && fused.position !== null
+    && !fused.position.estimated
+    && fused.position.confidence !== "LOW";
+}
+
 function observedFusionNumber(
   estimate: TrackFusionTrack["altitude"] | TrackFusionTrack["groundSpeed"] | TrackFusionTrack["track"] | TrackFusionTrack["verticalRate"],
   fallback: number | null,
@@ -75,11 +86,7 @@ function aircraftState(
   readiness: TrackFusionReadinessReport,
 ): OperationalTwinAircraftState | null {
   if (!live) return null;
-  const fusionEligible = readiness.rollout.digitalTwinEffective
-    && fused?.quality === "GOOD"
-    && fused.position !== null
-    && !fused.position.estimated
-    && fused.position.confidence !== "LOW";
+  const fusionEligible = fusionTrackEligible(fused, readiness);
 
   const lat = fusionEligible ? fused.position!.value.lat : live.lat;
   const lon = fusionEligible ? fused.position!.value.lon : live.lon;
@@ -208,11 +215,13 @@ export async function getOperationalTwinForAircraft(
   const service = getAircraftStateService();
   const readiness = service.getTrackFusionReadinessReport(now);
   const fusionConfigured = isTrackFusionDigitalTwinEnabled();
-  const fusionEffective = fusionConfigured && readiness.decision === "PASS";
-  const live = service.getAircraft(icaoHex, fusionEffective ? "extended" : "local");
+  const fused = fusionConfigured && readiness.decision === "PASS"
+    ? service.getTrackFusionShadowTrack(icaoHex)
+    : null;
+  const fusionEligible = fusionTrackEligible(fused, readiness);
+  const live = service.getAircraft(icaoHex, fusionEligible ? "extended" : "local");
   if (!live) return unavailable(icaoHex, "aircraft_not_live");
 
-  const fused = fusionEffective ? service.getTrackFusionShadowTrack(icaoHex) : null;
   const state = aircraftState(live, fused, readiness);
   if (!state) return unavailable(icaoHex, "invalid_position");
 
