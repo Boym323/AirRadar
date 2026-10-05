@@ -69,6 +69,18 @@ jobs:
             echo "Parallel validation failed (lint=$lint_status typecheck=$typecheck_status test=$test_status)"
             exit 1
           fi
+      - name: Prepare release build identity
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          release_version="$(node scripts/version.mjs resolve-release-version --channel stable)"
+          {
+            echo "AIRRADAR_VERSION=${release_version}"
+            echo "AIRRADAR_TAG=v${release_version}"
+            echo "AIRRADAR_COMMIT=${GITHUB_SHA}"
+            echo "AIRRADAR_CHANNEL=production"
+            echo "AIRRADAR_BUILD_TIME=$(date --utc --iso-8601=seconds)"
+          } >> "${GITHUB_ENV}"
       - run: npm run build:prepared
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
@@ -186,6 +198,43 @@ jobs:
             artifacts/radar-performance-baseline.md
           if-no-files-found: ignore
 
+      - name: Package validated production build
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          artifact_dir="artifacts/production-build"
+          rm -rf -- "${artifact_dir}"
+          mkdir -p -- "${artifact_dir}"
+          tar -C .next -czf "${artifact_dir}/next-build.tar.gz" .
+          cp generated/build-version.json "${artifact_dir}/build-version.json"
+          archive_sha="$(sha256sum "${artifact_dir}/next-build.tar.gz" | awk '{print $1}')"
+          node - "${artifact_dir}/build-version.json" "${artifact_dir}/manifest.json" "${archive_sha}" <<'NODE'
+          const fs = require("node:fs");
+          const [metadataPath, manifestPath, archiveSha256] = process.argv.slice(2);
+          const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
+          const manifest = {
+            schemaVersion: 1,
+            commit: metadata.commit,
+            version: metadata.version,
+            tag: metadata.tag,
+            channel: metadata.channel,
+            buildTime: metadata.buildTime,
+            archiveSha256,
+          };
+          if (!manifest.commit || !/^[a-f0-9]{40}$/i.test(manifest.commit)) {
+            throw new Error("Build metadata is missing the full release commit.");
+          }
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+          NODE
+      - name: Upload validated production build
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-build-${{ github.sha }}
+          path: artifacts/production-build/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
   deploy:
     name: Deploy production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
@@ -196,6 +245,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Download validated production build
+        uses: actions/download-artifact@v7
+        with:
+          name: production-build-${{ github.sha }}
+          path: ${{ runner.temp }}/airradar-production-build
       - name: Verify production ATS routes before release
         run: |
           set -Eeuo pipefail
@@ -232,7 +286,8 @@ jobs:
           sudo -n /var/www/airradar/deploy/release.sh \
             --branch main \
             --automated \
-            --commit "${GITHUB_SHA}"
+            --commit "${GITHUB_SHA}" \
+            --build-artifact-dir "${RUNNER_TEMP}/airradar-production-build"
 
       - name: Verify deployed release identity
         shell: bash
