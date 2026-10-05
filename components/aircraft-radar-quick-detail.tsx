@@ -58,7 +58,7 @@ export interface AircraftRadarQuickDetailProps {
   destinationWind: AircraftDestinationWindContext | null;
   windStatus: RadarLayerDataStatus;
   routeWeather: RouteWeatherContext | null;
-  routeCorridor: RouteCorridorSnapshot | null;
+  routeCorridor?: RouteCorridorSnapshot | null;
   intelligenceEvents?: FlightIntelligenceEvent[];
   watchlisted: boolean;
   onBack: () => void;
@@ -665,7 +665,7 @@ export function AircraftRadarQuickDetail({
   destinationWind,
   windStatus,
   routeWeather,
-  routeCorridor,
+  routeCorridor = null,
   intelligenceEvents = [],
   watchlisted,
   onBack,
