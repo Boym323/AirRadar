@@ -37,7 +37,7 @@ describe("repository metadata automation", () => {
     expect(metadataWorkflow).toContain("workflow_dispatch:");
   });
 
-  it("syncs changelog and metrics into one audit PR and merges it", () => {
+  it("syncs changelog and metrics into one audit PR and merges it only after validation", () => {
     expect(metadataWorkflow).toContain("node scripts/changelog.mjs backfill");
     expect(metadataWorkflow).toContain("node scripts/changelog.mjs check");
     expect(metadataWorkflow).toContain(
@@ -49,10 +49,18 @@ describe("repository metadata automation", () => {
     expect(metadataWorkflow).toContain(
       '--title "chore: sync repository metadata"',
     );
+    expect(metadataWorkflow).toContain("merge-metadata-pr:");
+    expect(metadataWorkflow).toContain("github.event.workflow_run.head_branch == 'automation/repository-metadata'");
+    expect(metadataWorkflow).toContain("merge will follow after its required CI passes");
     expect(metadataWorkflow).toContain('gh pr merge "${pr_number}"');
     expect(metadataWorkflow).toContain("--squash");
     expect(metadataWorkflow).toContain("--delete-branch");
     expect(metadataWorkflow).not.toContain("automatic merge is disabled");
+  });
+
+  it("does not recurse after the generated metadata merge", () => {
+    expect(metadataWorkflow).toContain("startsWith(github.event.workflow_run.display_title");
+    expect(metadataWorkflow).toContain("chore(metadata): sync generated repository metadata");
   });
 
   it("keeps generated metadata merges out of production deployment", () => {
