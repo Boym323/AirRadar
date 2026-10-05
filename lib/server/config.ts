@@ -231,6 +231,9 @@ export function getSourceAffinityFailoverGraceMs(): number { return boundedMilli
 export function isTrackFusionShadowEnabled(): boolean {
   return process.env.AIRRADAR_TRACK_FUSION_SHADOW_ENABLED?.trim().toLowerCase() !== "false";
 }
+export function isTrackFusionDigitalTwinEnabled(): boolean {
+  return process.env.AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED?.trim().toLowerCase() === "true";
+}
 export function isAircraftMassDropGuardEnabled(): boolean {
   return process.env.AIRCRAFT_MASS_DROP_GUARD_ENABLED?.trim().toLowerCase() !== "false";
 }
