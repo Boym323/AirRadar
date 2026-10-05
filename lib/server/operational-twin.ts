@@ -62,10 +62,14 @@ function mergedNetwork(dataset: AtcContextDataset | null): RouteIntelligenceNetw
   };
 }
 
+type EligibleFusionTrack = TrackFusionTrack & {
+  position: NonNullable<TrackFusionTrack["position"]>;
+};
+
 function fusionTrackEligible(
   fused: TrackFusionTrack | null,
   readiness: TrackFusionReadinessReport,
-): boolean {
+): fused is EligibleFusionTrack {
   return readiness.rollout.digitalTwinEffective
     && fused?.quality === "GOOD"
     && fused.position !== null
@@ -88,15 +92,15 @@ function aircraftState(
   if (!live) return null;
   const fusionEligible = fusionTrackEligible(fused, readiness);
 
-  const lat = fusionEligible ? fused.position!.value.lat : live.lat;
-  const lon = fusionEligible ? fused.position!.value.lon : live.lon;
+  const lat = fusionEligible ? fused.position.value.lat : live.lat;
+  const lon = fusionEligible ? fused.position.value.lon : live.lon;
   if (lat === null || lon === null) return null;
 
   return {
     icaoHex: live.icaoHex,
     callsign: live.callsign ?? null,
     registration: live.registration ?? null,
-    observedAt: fusionEligible ? fused.position!.observedAt : live.lastSeen,
+    observedAt: fusionEligible ? fused.position.observedAt : live.lastSeen,
     lat,
     lon,
     altitudeFt: fusionEligible
