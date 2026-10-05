@@ -6,6 +6,8 @@ const stateSource = readFileSync(new URL("../lib/server/aircraft-state.ts", impo
 const situationSource = readFileSync(new URL("../lib/server/operational-twin.ts", import.meta.url), "utf8");
 const routeSource = readFileSync(new URL("../app/api/admin/operational-twin/outcome/route.ts", import.meta.url), "utf8");
 const historySource = readFileSync(new URL("../lib/server/history.ts", import.meta.url), "utf8");
+const systemStatusSource = readFileSync(new URL("../lib/server/system-status.ts", import.meta.url), "utf8");
+const systemPageSource = readFileSync(new URL("../components/system-status-page.tsx", import.meta.url), "utf8");
 
 describe("Operational Digital Twin Outcome Validation V1 boundary", () => {
   it("uses bounded request-driven in-memory prospective validation", () => {
@@ -37,6 +39,13 @@ describe("Operational Digital Twin Outcome Validation V1 boundary", () => {
     expect(historySource).not.toContain("operationalTwinOutcome");
     expect(stateSource).not.toContain("recordAircraftSnapshot(this.operationalTwinOutcome");
     expect(stateSource).not.toContain("this.aircraft.set(operationalTwinOutcome");
+  });
+
+  it("surfaces the bounded report only through admin diagnostics", () => {
+    expect(systemStatusSource).toContain("operationalTwinOutcome: serviceDiagnostics.operationalTwinOutcome");
+    expect(systemPageSource).toContain('data-testid="operational-twin-outcome-validation"');
+    expect(systemPageSource).toContain("uncertaintyCoverage");
+    expect(systemPageSource).toContain("meanErrorToUncertaintyRatio");
   });
 
   it("keeps outcome inspection admin-only and no-store", () => {
