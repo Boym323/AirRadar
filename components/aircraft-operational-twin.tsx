@@ -3,10 +3,15 @@
 import { useEffect, useState } from "react";
 import { formatNumber, formatTime, t } from "@/lib/i18n";
 import type { OperationalTwinApiResponse, OperationalTwinEvent } from "@/lib/operational-twin";
+import type { WeatherCorridorEvent } from "@/lib/weather/corridor-intelligence";
 import styles from "./aircraft-operational-twin.module.css";
 
 function eventTypeLabel(type: OperationalTwinEvent["type"]): string {
   return t.operationalTwin.eventTypes[type];
+}
+
+function weatherEventTypeLabel(type: WeatherCorridorEvent["type"]): string {
+  return t.operationalTwin.weatherCorridorEventTypes[type];
 }
 
 function relativeTime(minutes: number): string {
@@ -68,6 +73,7 @@ export function AircraftOperationalTwin({
 
   const corridor = data.corridor;
   const evidence = data.evidence;
+  const weather = data.weatherCorridor;
   return <section className={styles.panel} aria-labelledby="operational-twin-title" data-testid="operational-digital-twin-v1">
     <div className={styles.heading}>
       <div>
@@ -87,6 +93,50 @@ export function AircraftOperationalTwin({
     <div className={styles.evidence}>
       {t.operationalTwin.evidenceSummary(evidence.observed, evidence.published, evidence.planned, evidence.predicted, evidence.inferred)}
     </div>
+
+    <section className={styles.weatherCorridor} aria-labelledby="weather-corridor-title" data-testid="weather-corridor-intelligence-v1">
+      <div className={styles.weatherHeading}>
+        <div>
+          <span>{t.operationalTwin.weatherCorridorSubtitle}</span>
+          <h3 id="weather-corridor-title">{t.operationalTwin.weatherCorridorTitle}</h3>
+        </div>
+        <strong data-status={weather.status}>{t.operationalTwin.weatherCorridorStatus[weather.status]}</strong>
+      </div>
+
+      <div className={styles.weatherSources}>
+        {weather.sources.map((source) => <span key={source.source} data-state={source.state}>
+          {t.weather.weatherFusionSource[source.source]} · {t.weather.weatherFusionSourceState[source.state]}{source.count > 0 ? ` · ${source.count}` : ""}
+        </span>)}
+      </div>
+
+      <div className={styles.weatherWind}>
+        <span>{t.operationalTwin.weatherCorridorWind}</span>
+        <strong>{t.operationalTwin.weatherCorridorWindTrend[weather.wind.trend]}</strong>
+        {weather.wind.deltaAlongTrackKt !== null && <small>
+          {t.operationalTwin.weatherCorridorWindDelta(formatNumber(weather.wind.deltaAlongTrackKt, 0))}
+        </small>}
+      </div>
+
+      {weather.events.length ? <ol className={styles.weatherTimeline}>
+        {weather.events.slice(0, 8).map((event) => <li key={event.id}>
+          <div className={styles.weatherTime}>
+            <strong>{relativeTime(event.offsetMinutes)}</strong>
+            <small>{t.operationalTwin.weatherCorridorDistance(formatNumber(event.distanceAlongCorridorNm, 0))}</small>
+          </div>
+          <div className={styles.weatherEvent}>
+            <div className={styles.eventHeader}>
+              <span>{weatherEventTypeLabel(event.type)}</span>
+              <div className={styles.badges}>
+                <span>{t.weather.weatherFusionSeverity[event.severity]}</span>
+                <span>{t.weather.weatherFusionConfidence[event.confidence]}</span>
+              </div>
+            </div>
+            <strong>{t.weather.weatherFusionRisk[event.risk]}</strong>
+            <small>{t.weather.weatherFusionSource[event.source]} · {event.sourceReference}</small>
+          </div>
+        </li>)}
+      </ol> : <p className={styles.status}>{t.operationalTwin.weatherCorridorNoEvents}</p>}
+    </section>
 
     <h3>{t.operationalTwin.events}</h3>
     {data.events.length ? <ol className={styles.timeline}>
