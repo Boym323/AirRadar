@@ -5,6 +5,15 @@ export const OPERATIONAL_TWIN_STEP_MINUTES = 2;
 export type OperationalTwinProvenance = "OBSERVED" | "PUBLISHED" | "PLANNED" | "PREDICTED" | "INFERRED";
 export type OperationalTwinConfidence = "HIGH" | "MEDIUM" | "LOW";
 export type OperationalTwinCorridorMode = "ROUTE_AWARE" | "KINEMATIC";
+export type OperationalTwinLimitationCode =
+  | "BOUNDED_PROJECTION"
+  | "SAMPLED_INTERSECTIONS"
+  | "ATC_UNAVAILABLE"
+  | "AIRSPACE_PLAN_UNAVAILABLE"
+  | "SIGMET_UNAVAILABLE"
+  | "PUBLIC_PREDICTION_UNAVAILABLE"
+  | "KINEMATIC_FALLBACK"
+  | "OFF_ROUTE";
 
 export type OperationalTwinEventType =
   | "WAYPOINT"
@@ -85,7 +94,7 @@ export interface OperationalTwinSituation {
   corridor: OperationalTwinCorridor | null;
   events: OperationalTwinEvent[];
   evidence: OperationalTwinEvidenceSummary;
-  limitations: string[];
+  limitations: OperationalTwinLimitationCode[];
 }
 
 
