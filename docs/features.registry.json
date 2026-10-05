@@ -570,13 +570,14 @@
       "category": "receiver / intelligence",
       "status": "internal",
       "introducedVersion": null,
-      "summary": "Shadow-only per-field multi-source state estimator with bounded 24-hour process-local readiness evidence, PASS/WAIT/FAIL graduation and fail-closed opt-in Digital Twin consumption; never alters canonical live state or local receiver persistence.",
+      "summary": "Shadow-only per-field multi-source state estimator with readiness graduation plus bounded prospective canonical-vs-fused outcome validation against future LOCAL truth; never alters canonical live state or local receiver persistence.",
       "pages": [
         "/system"
       ],
       "apis": [
         "/api/admin/track-fusion/:hex",
-        "/api/admin/track-fusion/readiness"
+        "/api/admin/track-fusion/readiness",
+        "/api/admin/track-fusion/outcome"
       ],
       "changelogScopes": [
         "track-fusion",
@@ -592,7 +593,11 @@
         "track uncertainty",
         "track fusion readiness",
         "fusion graduation",
-        "digital twin fusion rollout"
+        "digital twin fusion rollout",
+        "track fusion outcome",
+        "fusion net benefit",
+        "prospective fusion truth",
+        "canonical vs fused"
       ]
     }
   ]

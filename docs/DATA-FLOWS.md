@@ -659,3 +659,30 @@ Operational Digital Twin input only
 
 The readiness path has no poller or persistence. All failure paths fall back to
 the existing local canonical Digital Twin input.
+
+
+## Track Fusion outcome validation flow
+
+```text
+freshly evaluated Track Fusion track
+          +
+existing canonical merge
+          ↓
+prospective baseline T
+     ├─→ +5 s
+     ├─→ +15 s
+     └─→ +30 s
+          ↓
+future fresh LOCAL receiver position
+          ↓
+canonical error vs fused error
+          ↓
+FUSED / CANONICAL / TIE
+          ↓
+24h / 5min bounded aggregates
+          ↓
+Outcome PASS / WAIT / FAIL
+```
+
+The future LOCAL observation is consumed only from current RAM. This feature
+does not query or write historical position persistence.

@@ -1928,6 +1928,15 @@ export const cs = {
     trackFusionDigitalTwinEffective: "aktivní · PASS",
     trackFusionDigitalTwinWaiting: "nastaveno · čeká na PASS",
 
+    trackFusionOutcome: "Outcome validation",
+    trackFusionOutcomeWindow: "Outcome okno",
+    trackFusionOutcomeSamples: "Truth samples / pending",
+    trackFusionOutcomeWins: "Fused / canonical / tie",
+    trackFusionOutcomeMargin: "Net win margin",
+    trackFusionOutcomeError: "Mean error fused / canonical",
+    trackFusionOutcomeExpired: "Expired truth",
+    trackFusionOutcomeHandover: "Handover samples",
+
     rateLimited: "Rate limit",
     retryAfter: "Další pokus",
     nextRetry: "Další retry",

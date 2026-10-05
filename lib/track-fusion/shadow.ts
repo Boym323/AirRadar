@@ -182,10 +182,11 @@ export class TrackFusionShadow {
 
   constructor(private readonly enabled = true) {}
 
-  observe(input: TrackFusionShadowInput): void {
-    if (!this.enabled) return;
+  observe(input: TrackFusionShadowInput): TrackFusionTrack[] {
+    if (!this.enabled) return [];
     const now = input.now ?? Date.now();
     const keys = new Set([...input.local.keys(), ...input.network.keys()]);
+    const evaluatedTracks: TrackFusionTrack[] = [];
     let overlapTracks = 0;
 
     for (const hex of keys) {
@@ -222,6 +223,7 @@ export class TrackFusionShadow {
         ? next.position
         : memory?.anchorPosition ?? null;
       this.tracks.set(hex, { state: next, fingerprint, lastEvaluatedAt: now, anchorPosition });
+      evaluatedTracks.push(next);
       this.evaluations += 1;
     }
 
@@ -238,6 +240,7 @@ export class TrackFusionShadow {
     }
     this.currentOverlapTracks = overlapTracks;
     this.lastEvaluatedAt = now;
+    return evaluatedTracks;
   }
 
   getTrack(icaoHex: string): TrackFusionTrack | null {
