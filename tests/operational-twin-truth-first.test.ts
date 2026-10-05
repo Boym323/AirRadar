@@ -168,9 +168,9 @@ describe("Operational Digital Twin Truth-first Validation V2", () => {
       icaoHex: "ABC123",
       occurredAt: "2026-10-05T15:11:00.000Z",
       sectorId: "LZBB_CTA",
-    } as unknown as FlightIntelligenceEvent], Date.parse("2026-10-05T15:09:00.000Z"));
+    } as unknown as FlightIntelligenceEvent], Date.parse("2026-10-05T15:11:00.000Z"));
 
-    expect(validator.report(new Date("2026-10-05T15:10:00.000Z")).byType.ATC_SECTOR_ENTRY).toMatchObject({
+    expect(validator.report(new Date("2026-10-05T15:12:00.000Z")).byType.ATC_SECTOR_ENTRY).toMatchObject({
       truthEvents: 1,
       predictedTruthEvents: 1,
       recall: 1,
