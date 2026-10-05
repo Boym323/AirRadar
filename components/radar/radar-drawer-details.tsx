@@ -26,6 +26,7 @@ interface RadarDrawerDetailsProps {
   atcContext: AtcContextResult | null;
   sigmetContext: AircraftRadarQuickDetailProps["sigmetContext"];
   sigmetDeviation: AircraftRadarQuickDetailProps["sigmetDeviation"];
+  weatherAvoidance: AircraftRadarQuickDetailProps["weatherAvoidance"];
   sigmetStale: boolean;
   windContext: AircraftRadarQuickDetailProps["windContext"];
   windAhead: AircraftRadarQuickDetailProps["windAhead"];
@@ -54,6 +55,7 @@ export function RadarDrawerDetails({
   atcContext,
   sigmetContext,
   sigmetDeviation,
+  weatherAvoidance,
   sigmetStale,
   windContext,
   windAhead,
@@ -87,6 +89,7 @@ export function RadarDrawerDetails({
       atcContext={atcContext}
       sigmetContext={sigmetContext}
       sigmetDeviation={sigmetDeviation}
+      weatherAvoidance={weatherAvoidance}
       sigmetStale={sigmetStale}
       windContext={windContext}
       windAhead={windAhead}
