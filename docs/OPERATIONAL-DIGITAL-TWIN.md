@@ -351,3 +351,25 @@ The paired comparison is returned inside the existing protected Event Outcome
 report and is also visible on the authenticated System page. It adds no timer,
 poller, database persistence, FlightPosition read, second truth observer or
 second Digital Twin calculation.
+
+## Regional Situation Graph V1
+
+The regional situation graph is the first bounded multi-aircraft Digital Twin
+surface. `GET /api/operations/situation` reads one existing LOCAL
+`AircraftStateService` snapshot and derives at most 80 fresh airborne nodes
+and 160 contextual relations. It creates no poller, timer, database read/write,
+provider request, or second live-state authority.
+
+Relations are intentionally operational context only. V1 can connect aircraft
+that share the same resolved destination and aircraft whose simple 5/15/30
+minute kinematic projections enter the same broad contextual volume. Projection
+uses current track/groundspeed and a vertically bounded continuation of the
+observed vertical rate. It does not consume ATC clearances, infer intent, or
+model separation minima.
+
+The graph always carries explicit `NOT_SEPARATION_PRODUCT` and
+`NO_ATC_CLEARANCE_INFERENCE` limitations. An `ELEVATED` relation means only
+that the bounded contextual thresholds are tighter; it is not a collision,
+conflict, TCAS, STCA, or safety alert. A later attention layer may summarize
+these relations without changing that boundary.
+
