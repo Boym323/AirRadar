@@ -18,10 +18,15 @@ The aircraft side uses the existing enrichment only:
 - the existing provider source (`FlightAware`, `ADSBDB`, demo, or another
   configured source).
 
-The ATS side uses the file-backed `lib/ats/cz-routes.ts` document, including its
-effective date, route designators, points, segments, and explicit
-discontinuities. No provider is polled by Route Intelligence, and it does not
-write to PostgreSQL.
+The authoritative ATS side uses the file-backed `lib/ats/cz-routes.ts`
+document, including its effective date, route designators, points, segments,
+and explicit discontinuities. Route Intelligence does not write to PostgreSQL.
+
+Route Corridor Intelligence V1 may additionally use the existing server-side
+Aviation Weather Center navigation provider for bounded exact NAVAID/FIX
+identifier lookups while one aircraft is selected. Those reference coordinates
+can resolve filed or DCT connector endpoints only. They never replace published
+ATS or procedure geometry, and their provenance remains explicit.
 
 ## Tokenizer and matching
 
@@ -82,9 +87,11 @@ progress past its endpoint within the same threshold.
 ATS `availabilityStatus` remains `UNKNOWN`. Route Intelligence does not infer
 live CDR availability, NOTAM closures, SID/STAR procedures, runway assignment,
 ATC clearance, trajectory, or operational activation. International portions
-outside the loaded Czech ATS document remain unresolved gaps. The displayed
-aircraft route source and ATS source/effective date remain separate provenance
-fields.
+outside the loaded published ATS data remain unresolved unless both filed
+connector endpoints can be resolved uniquely from the bounded reference-point
+lookup. Such fallback geometry is explicitly `FILED_ROUTE` / `SCHEMATIC`,
+not published ATS geometry. The displayed aircraft route source, ATS
+source/effective date, and reference provenance remain separate.
 
 Terminal procedures are a separate static ingestion boundary. `lib/procedures`
 consumes the shared `Procedure` contracts, and `npm run procedures:sync` produces
@@ -97,3 +104,42 @@ keyed by route, airport context, ATS effective date, procedure identity/version,
 and relevant runway context. Dynamic analysis then uses the current position,
 track, and altitude without rebuilding the static route. Missing procedures,
 ATS data, or runway context produce explicit degraded states.
+
+## Route Corridor Intelligence V1
+
+Route Corridor Intelligence is an additive selected-aircraft projection over
+the existing Route Intelligence V2 route and dynamic state. It does not create
+a second route authority or live aircraft stream.
+
+When a selected aircraft has a filed route, the browser extracts at most 24
+candidate waypoint identifiers and performs one bounded request through the
+existing same-origin `/api/navigation/data?ids=...` endpoint. The server
+splits that set into batches of at most eight identifiers and reuses the
+existing AWC cache, in-flight coalescing and upstream request budget. There is
+no timer, background poller, database write, or additional EventSource.
+
+Published ATS and SID/STAR geometry always has priority. If a filed leg cannot
+be reconstructed from the published ATS network but both endpoint identifiers
+resolve uniquely through the reference dataset, V1 may draw a schematic
+`FILED_ROUTE` connector between those points. Ambiguous or coordinate-less
+matches remain unresolved.
+
+The corridor projection reuses the V2 great-circle dynamic engine and exposes
+route progress, next fix, groundspeed-based ETA, remaining resolved-route
+distance, cross-track deviation, expected segment track, observed-track
+difference, and reconstruction confidence. Remaining distance is explicitly
+marked partial whenever unresolved route geometry remains.
+
+The live map renders reconstructed geometry as completed, current and remaining
+segments. If no usable reconstructed corridor exists, the established
+origin-current-destination visualization remains the fallback.
+
+`DEVIATING` is deliberately hysteretic. Cross-track deviation above 10 NM must
+be present in three distinct observations spanning at least 10 seconds before
+the state is published. Recovery requires two observations spanning at least
+five seconds. A single excursion is only `OFFSET`. These are product display
+thresholds, not navigation limits or an ATC/safety determination.
+
+V1 is display/on-demand intelligence only. It does not persist route deviation
+events into Flight Intelligence and does not claim ATC clearance, certified
+navigation guidance, or operational route conformance.
