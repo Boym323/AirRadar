@@ -354,6 +354,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         aircraft: [],
         airports: [],
         atsPoints: [],
+        navPoints: [],
         actions: [],
         flights: [{
           kind: "flight",
@@ -373,6 +374,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         aircraft: [],
         airports: [],
         atsPoints: [],
+        navPoints: [],
         flights: [],
         actions: [{
           kind: "action",
