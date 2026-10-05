@@ -5,6 +5,7 @@ export const REGIONAL_SITUATION_VERSION = "regional-situation-v1";
 export const REGIONAL_SITUATION_MAX_AIRCRAFT = 80;
 export const REGIONAL_SITUATION_MAX_EDGES = 160;
 export const REGIONAL_SITUATION_HORIZONS_MINUTES = [5, 15, 30] as const;
+const REGIONAL_SITUATION_SAMPLE_STEP_MINUTES = 1;
 
 const MAX_OBSERVATION_AGE_MS = 90_000;
 const MIN_GROUND_SPEED_KT = 60;
@@ -99,7 +100,7 @@ function candidateFromAircraft(aircraft: AircraftView, nowMs: number): Candidate
   const observedAtMs = Date.parse(aircraft.lastSeen);
   if (!Number.isFinite(observedAtMs) || Math.abs(nowMs - observedAtMs) > MAX_OBSERVATION_AGE_MS) return null;
 
-  const samples = REGIONAL_SITUATION_HORIZONS_MINUTES.map((offsetMinutes) => {
+  const samples = Array.from({ length: 30 / REGIONAL_SITUATION_SAMPLE_STEP_MINUTES + 1 }, (_, index) => index * REGIONAL_SITUATION_SAMPLE_STEP_MINUTES).map((offsetMinutes) => {
     const distanceKm = aircraft.groundSpeed! * 1.852 * (offsetMinutes / 60);
     const [lon, lat] = destinationPoint(aircraft.lat!, aircraft.lon!, distanceKm, aircraft.track!);
     return {
