@@ -63,9 +63,12 @@ import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft
 import { EMPTY_SIGMET_DATA, useRadarWeatherContext, type WindResponse } from "@/components/radar/use-radar-weather-context";
 import { useSelectedAircraftWindContext } from "@/components/radar/use-selected-aircraft-wind-context";
 import { useRadarAtcMapContext, type SectorTrafficView } from "@/components/radar/use-radar-atc-map-context";
+import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
 import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
+import { createAviationNavGeoJSON } from "@/lib/navigation-data/map";
+import { routeReferencePointIds } from "@/lib/navigation-data/route-reference";
 import { configureMapLibreWorker } from "@/lib/maplibre-worker";
 import { createProcedureGeoJSON } from "@/lib/procedure-visualization";
 import type { Procedure } from "@/lib/route-intelligence/contracts";
@@ -387,6 +390,16 @@ function createAircraftWeatherGeoJSON(observations: AircraftWeatherMapObservatio
   };
 }
 
+function parseNavPointFocus(value: string | null): { kind: "NAVAID" | "FIX"; id: string; lat: number; lon: number } | null {
+  if (!value) return null;
+  const [kind, id, latText, lonText, ...extra] = value.split(":");
+  if (extra.length || (kind !== "NAVAID" && kind !== "FIX") || !/^[A-Z0-9]{2,8}$/.test(id ?? "")) return null;
+  const lat = Number(latText);
+  const lon = Number(lonText);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return { kind, id, lat, lon };
+}
+
 function ognTargetLabel(target: OgnTargetView): string {
   return ognPrimaryLabel(target);
 }
@@ -399,6 +412,8 @@ export function AirRadarApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const atsPointFocus = searchParams.get("atsPoint");
+  const navPointFocus = searchParams.get("navPoint");
+  const focusedNavPoint = useMemo(() => parseNavPointFocus(navPointFocus), [navPointFocus]);
   const aircraftFocus = searchParams.get("aircraft")?.trim().toUpperCase() ?? null;
   const [snapshot, setSnapshot] = useState<PublicStateSnapshot>(EMPTY_SNAPSHOT);
   const [ognSnapshot, setOgnSnapshot] = useState<OgnStateSnapshot>(EMPTY_OGN_SNAPSHOT);
@@ -481,6 +496,7 @@ export function AirRadarApp() {
     onSigmetUnavailable: () => setShowSigmet(false),
   });
   const [showAtsRoutes, setShowAtsRoutes] = useState(false);
+  const [showNavData, setShowNavData] = useState(false);
   const [showSids, setShowSids] = useState(false);
   const [showStars, setShowStars] = useState(false);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
@@ -657,6 +673,16 @@ export function AirRadarApp() {
   const airports = useMemo(() => airportsDataset.data ?? [], [airportsDataset.data]);
   const atcData = atcDataset.data ?? EMPTY_ATC_DATA;
   const atsRoutes = atsDataset.data;
+  const { dataset: navDataDataset, points: navDataPoints } = useRadarNavDataContext({
+    enabled: showNavData || focusedNavPoint !== null,
+    latitude: focusedNavPoint?.lat ?? snapshot.receiver.lat,
+    longitude: focusedNavPoint?.lon ?? snapshot.receiver.lon,
+    radiusNm: 120,
+  });
+  const selectedNavRoutePointIds = useMemo(() => {
+    const selected = snapshot.aircraft.find((aircraft) => aircraft.icaoHex === selectedHex);
+    return routeReferencePointIds(selected?.enrichment?.flightPlan, navDataPoints);
+  }, [navDataPoints, selectedHex, snapshot.aircraft]);
 
   useEffect(() => {
     try {
@@ -676,6 +702,7 @@ export function AirRadarApp() {
       const storedWindLevel = Number(window.localStorage.getItem("airradar-wind-level"));
       if (WIND_PRESSURE_LEVELS.includes(storedWindLevel as WindLevelHpa)) setWindLevel(storedWindLevel as WindLevelHpa);
       setShowAupUup(window.localStorage.getItem("airradar-aup-uup-layer") === "true");
+      setShowNavData(window.localStorage.getItem("airradar-nav-data-layer") === "true");
     } catch {
       // Local storage is optional; the radar remains usable when it is blocked.
     } finally {
@@ -753,6 +780,30 @@ export function AirRadarApp() {
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-layer", String(showWind)); } catch { /* optional */ } }, [showWind]);
   useEffect(() => { try { window.localStorage.setItem("airradar-wind-level", String(windLevel)); } catch { /* optional */ } }, [windLevel]);
   useEffect(() => { try { window.localStorage.setItem("airradar-aup-uup-layer", String(showAupUup)); } catch { /* optional */ } }, [showAupUup]);
+  useEffect(() => { try { window.localStorage.setItem("airradar-nav-data-layer", String(showNavData)); } catch { /* optional */ } }, [showNavData]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const source = map.getSource("aviation-nav-data") as GeoJSONSource | undefined;
+    source?.setData(createAviationNavGeoJSON(navDataPoints, selectedNavRoutePointIds));
+    const visibility = showNavData ? "visible" : "none";
+    if (map.getLayer("aviation-nav-data-points")) map.setLayoutProperty("aviation-nav-data-points", "visibility", visibility);
+    if (map.getLayer("aviation-nav-data-labels")) map.setLayoutProperty("aviation-nav-data-labels", "visibility", visibility);
+  }, [mapReady, navDataPoints, selectedNavRoutePointIds, showNavData]);
+
+  useEffect(() => {
+    if (!focusedNavPoint) return;
+    setShowNavData(true);
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    map.easeTo({
+      center: [focusedNavPoint.lon, focusedNavPoint.lat],
+      zoom: Math.max(map.getZoom(), 10),
+      padding: currentRadarPadding(),
+      duration: prefersReducedMotion() ? 0 : 500,
+    });
+  }, [currentRadarPadding, focusedNavPoint, mapReady]);
+
   useEffect(() => {
     if (!showNavigationIntegrity) { setNavigationIntegrityCells([]); return; }
     let cancelled = false;
@@ -1093,6 +1144,9 @@ export function AirRadarApp() {
           "text-halo-width": 1,
         },
       });
+      map.addSource("aviation-nav-data", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({ id: "aviation-nav-data-points", type: "circle", source: "aviation-nav-data", minzoom: 6.5, layout: { visibility: "none" }, paint: { "circle-color": ["case", ["==", ["get", "routeMatched"], true], AIRRADAR_MAP_THEME.accent, ["==", ["get", "kind"], "NAVAID"], AIRRADAR_MAP_THEME.routes.atsCdr, AIRRADAR_MAP_THEME.labelMuted], "circle-radius": ["case", ["==", ["get", "routeMatched"], true], ["interpolate", ["linear"], ["zoom"], 6.5, 3, 10, 4, 13, 5], ["interpolate", ["linear"], ["zoom"], 6.5, 2, 10, 3, 13, 4]], "circle-stroke-color": AIRRADAR_MAP_THEME.outline, "circle-stroke-width": 1 } });
+      map.addLayer({ id: "aviation-nav-data-labels", type: "symbol", source: "aviation-nav-data", minzoom: 8.5, layout: { visibility: "none", "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 9, "text-offset": [0, 1.1], "text-padding": 8, "text-allow-overlap": false, "text-ignore-placement": false }, paint: { "text-color": AIRRADAR_MAP_THEME.labelMuted, "text-halo-color": AIRRADAR_MAP_THEME.outline, "text-halo-width": 1 } });
       map.addSource("ats-routes", { type: "geojson", data: EMPTY_ATS_GEOJSON });
       map.addSource("procedures-sid", { type: "geojson", data: EMPTY_PROCEDURE_GEOJSON });
       map.addLayer({ id: "procedures-sid-line", type: "line", source: "procedures-sid", minzoom: 7.5, layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, paint: { "line-color": AIRRADAR_MAP_THEME.procedures.sid, "line-opacity": 0.54, "line-width": ["interpolate", ["linear"], ["zoom"], 7.5, 1, 13, 1.8] } });
@@ -2261,6 +2315,9 @@ export function AirRadarApp() {
                 }}
                 atsDataset={atsDataset}
                 atsRoutes={atsRoutes}
+                showNavData={showNavData}
+                onShowNavDataChange={setShowNavData}
+                navDataDataset={navDataDataset}
                 showSids={showSids}
                 onShowSidsChange={setShowSids}
                 showStars={showStars}
