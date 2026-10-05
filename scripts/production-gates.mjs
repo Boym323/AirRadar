@@ -2061,7 +2061,10 @@ async function main() {
   const expectedVersion = expectedBuildVersion();
   assertMigrationSource();
   const runtimeStateDirectory = mkdtempSync(resolve(tmpdir(), "airradar-production-gate-"));
-  const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", host, "--port", String(port)], {
+  const productionArgs = existsSync(resolve(".next", "standalone", "server.js"))
+    ? ["scripts/start-production.mjs", "start", "--hostname", host, "--port", String(port)]
+    : ["node_modules/next/dist/bin/next", "start", "--hostname", host, "--port", String(port)];
+  const child = spawn(process.execPath, productionArgs, {
     cwd: process.cwd(),
     env: {
       ...process.env,
