@@ -546,7 +546,7 @@ stage_validated_build_artifact() {
   [[ -f "${manifest}" ]] || die "Validated build artifact is missing ${manifest}."
   [[ -f "${metadata}" ]] || die "Validated build artifact is missing ${metadata}."
 
-  expected_sha="$(node - "${manifest}" "${metadata}" "${NEW_SHA}" "${RELEASE_VERSION}" "${RELEASE_TAG}" "${RELEASE_BUILD_CHANNEL}" <<\'NODE\'
+  expected_sha="$(node - "${manifest}" "${metadata}" "${NEW_SHA}" "${RELEASE_VERSION}" "${RELEASE_TAG}" "${RELEASE_BUILD_CHANNEL}" <<'NODE'
 const fs = require("node:fs");
 const [manifestPath, metadataPath, commit, version, tag, channel] = process.argv.slice(2);
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -575,10 +575,10 @@ process.stdout.write(manifest.archiveSha256);
 NODE
 )" || die "Validated build artifact manifest verification failed."
 
-  actual_sha="$(sha256sum "${archive}" | awk \'{print $1}\')"
+  actual_sha="$(sha256sum "${archive}" | awk '{print $1}')"
   [[ "${actual_sha}" == "${expected_sha}" ]] || die "Validated build artifact checksum mismatch."
 
-  if tar -tzf "${archive}" | grep -Eq \'(^/|(^|/)\.\.(/|$))\'; then
+  if tar -tzf "${archive}" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
     die "Validated build artifact contains an unsafe path."
   fi
 
