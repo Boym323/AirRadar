@@ -454,3 +454,15 @@ která jej vytvořila.
   změnu veřejného radaru. Waypoint/SIGMET truth zůstává request-driven a
   process-local.
 
+## Invarianty Regional Attention outcome
+
+- Capture Regional Attention outcome je request-driven existujícím endpointem
+  regionální situace; nikdy nespouští další aircraft/provider poller.
+- Outcome truth se vyhodnocuje pouze proti čerstvému kanonickému LOCAL stavu.
+  Network-only pozorování kalibrační lane nesplní.
+- Persistují se pouze agregované pětiminutové kalibrační buckety. Identity
+  letadel/dvojic, souřadnice a pending predikce zůstávají pouze v RAM.
+- `DESTINATION_CLUSTER` se ve V1 záměrně neskóruje.
+- Outcome readiness sama o sobě nemůže měnit veřejnou semantiku
+  WATCH/ATTENTION.
+
