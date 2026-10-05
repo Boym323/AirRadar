@@ -134,6 +134,48 @@ export interface TrackFusionOutcomeReport {
   scenarios: Record<TrackFusionOutcomeScenario, TrackFusionOutcomeSlice>;
 }
 
+export interface TrackFusionOutcomeDecisionInput {
+  spanMinutes: number;
+  overall: TrackFusionOutcomeSlice;
+  horizons: TrackFusionOutcomeSlice[];
+  handover: TrackFusionOutcomeSlice;
+  expiredTruthRate: number | null;
+}
+
+export function evaluateTrackFusionOutcomeDecision(
+  input: TrackFusionOutcomeDecisionInput,
+): { decision: TrackFusionOutcomeDecision; reasons: TrackFusionOutcomeReason[]; complete: boolean } {
+  const reasons: TrackFusionOutcomeReason[] = [];
+  if (input.spanMinutes < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumSpanMinutes) reasons.push("process_window_insufficient");
+  if (input.overall.samples < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumSamples) reasons.push("samples_insufficient");
+  if (input.horizons.some((slice) => slice.samples < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumSamplesPerHorizon)) {
+    reasons.push("horizon_samples_insufficient");
+  }
+  if (input.handover.samples < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumHandoverSamples) reasons.push("handover_samples_insufficient");
+
+  const complete = reasons.length === 0;
+  if (complete) {
+    if (input.overall.netWinMargin === null || input.overall.netWinMargin < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumNetWinMargin) {
+      reasons.push("net_win_margin_low");
+    }
+    if (input.overall.meanErrorRatio === null || input.overall.meanErrorRatio > TRACK_FUSION_OUTCOME_THRESHOLDS.maximumMeanErrorRatio) {
+      reasons.push("mean_error_ratio_high");
+    }
+    if (input.handover.meanErrorRatio === null || input.handover.meanErrorRatio > TRACK_FUSION_OUTCOME_THRESHOLDS.maximumHandoverMeanErrorRatio) {
+      reasons.push("handover_mean_error_ratio_high");
+    }
+    if (input.expiredTruthRate === null || input.expiredTruthRate > TRACK_FUSION_OUTCOME_THRESHOLDS.maximumExpiredTruthRate) {
+      reasons.push("expired_truth_rate_high");
+    }
+  }
+
+  return {
+    decision: !complete ? "WAIT" : reasons.length ? "FAIL" : "PASS",
+    reasons,
+    complete,
+  };
+}
+
 export interface TrackFusionOutcomeObserveInput {
   local: ReadonlyMap<string, Aircraft>;
   network: ReadonlyMap<string, Aircraft>;
@@ -413,36 +455,20 @@ export class TrackFusionOutcomeValidator {
     const evaluatedOrExpired = windowCompleted + windowExpiredWithoutTruth;
     const expiredTruthRate = evaluatedOrExpired ? windowExpiredWithoutTruth / evaluatedOrExpired : null;
 
-    const reasons: TrackFusionOutcomeReason[] = [];
-    if (spanMinutes < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumSpanMinutes) reasons.push("process_window_insufficient");
-    if (overall.samples < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumSamples) reasons.push("samples_insufficient");
-    if ([...byHorizon.values()].some((aggregate) => aggregate.samples < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumSamplesPerHorizon)) {
-      reasons.push("horizon_samples_insufficient");
-    }
-    if (handover.samples < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumHandoverSamples) reasons.push("handover_samples_insufficient");
-
-    const complete = reasons.length === 0;
-    if (complete) {
-      if (overallSlice.netWinMargin === null || overallSlice.netWinMargin < TRACK_FUSION_OUTCOME_THRESHOLDS.minimumNetWinMargin) {
-        reasons.push("net_win_margin_low");
-      }
-      if (overallSlice.meanErrorRatio === null || overallSlice.meanErrorRatio > TRACK_FUSION_OUTCOME_THRESHOLDS.maximumMeanErrorRatio) {
-        reasons.push("mean_error_ratio_high");
-      }
-      if (handoverSlice.meanErrorRatio === null || handoverSlice.meanErrorRatio > TRACK_FUSION_OUTCOME_THRESHOLDS.maximumHandoverMeanErrorRatio) {
-        reasons.push("handover_mean_error_ratio_high");
-      }
-      if (expiredTruthRate === null || expiredTruthRate > TRACK_FUSION_OUTCOME_THRESHOLDS.maximumExpiredTruthRate) {
-        reasons.push("expired_truth_rate_high");
-      }
-    }
+    const evaluated = evaluateTrackFusionOutcomeDecision({
+      spanMinutes,
+      overall: overallSlice,
+      horizons: [...byHorizon.values()].map(aggregateToSlice),
+      handover: handoverSlice,
+      expiredTruthRate,
+    });
 
     return {
       version: TRACK_FUSION_OUTCOME_VERSION,
       generatedAt: now.toISOString(),
-      decision: !complete ? "WAIT" : reasons.length ? "FAIL" : "PASS",
-      reasons,
-      complete,
+      decision: evaluated.decision,
+      reasons: evaluated.reasons,
+      complete: evaluated.complete,
       thresholds: TRACK_FUSION_OUTCOME_THRESHOLDS,
       window: {
         from: new Date(first).toISOString(),
