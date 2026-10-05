@@ -185,9 +185,10 @@
       "category": "weather",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, and bounded PIREP/AIREP enrichment.",
+      "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion.",
       "pages": [],
       "apis": [
+        "/api/aircraft/:hex/weather-fusion",
         "/api/map-context/at",
         "/api/map-context/aup",
         "/api/map-context/metar",
@@ -226,7 +227,10 @@
         "bds 4,4",
         "bds4,4",
         "bds44",
-        "aircraft observed weather"
+        "aircraft observed weather",
+        "weather fusion",
+        "multi-source weather",
+        "weather evidence"
       ]
     },
     {
