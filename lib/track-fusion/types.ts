@@ -83,6 +83,7 @@ export interface TrackFusionShadowDiagnostics {
   degradedTracks: number;
   estimatedTracks: number;
   noPositionTracks: number;
+  capacityEvictions: number;
   evaluations: number;
   dedupedEvaluations: number;
   positionComparisons: number;
