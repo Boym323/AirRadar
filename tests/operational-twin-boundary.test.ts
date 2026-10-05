@@ -5,6 +5,7 @@ const serverSource = readFileSync(new URL("../lib/server/operational-twin.ts", i
 const routeSource = readFileSync(new URL("../app/api/aircraft/[hex]/situation/route.ts", import.meta.url), "utf8");
 const corridorSource = readFileSync(new URL("../lib/operational-twin/corridor.ts", import.meta.url), "utf8");
 const panelSource = readFileSync(new URL("../components/aircraft-operational-twin.tsx", import.meta.url), "utf8");
+const weatherCorridorSource = readFileSync(new URL("../lib/weather/corridor-intelligence.ts", import.meta.url), "utf8");
 
 describe("Operational Digital Twin V1 boundary", () => {
   it("keeps the 4D horizon bounded and deterministic", () => {
@@ -35,6 +36,16 @@ describe("Operational Digital Twin V1 boundary", () => {
     expect(serverSource).toContain("getAirspacePlan");
     expect(serverSource).not.toContain("getAirspaceActivity(");
     expect(serverSource).toContain("defaultAviationWeatherProvider.getSigmets");
+  });
+
+  it("uses one bounded Weather Corridor enrichment path without client polling", () => {
+    expect(serverSource).toContain("defaultPirepProvider.getPireps");
+    expect(serverSource).toContain("radiusNm: 300");
+    expect(serverSource).toContain("defaultWindAloftProvider.getWind");
+    expect(serverSource).toContain("buildWeatherCorridorIntelligence");
+    expect(weatherCorridorSource).not.toContain("fetch(");
+    expect(weatherCorridorSource).not.toContain("process.env");
+    expect(panelSource).toContain('data-testid="weather-corridor-intelligence-v1"');
   });
 
   it("protects the public endpoint and adds no client timer or stream", () => {
