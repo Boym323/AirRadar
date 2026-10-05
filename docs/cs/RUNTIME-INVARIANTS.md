@@ -408,3 +408,19 @@ která jej vytvořila.
 - Estimated position je omezená na šest sekund a musí zůstat explicitně
   označená ESTIMATED.
 - Veřejná radar/SSE serializace je ve V1 beze změny.
+
+
+## Track Fusion graduation invariants
+
+- Readiness evidence je process-local, omezená na 24 hodin a po restartu se
+  vrací na WAIT.
+- Readiness nemá vlastní timer, network request, databázovou cestu ani
+  persistence.
+- PASS nikdy nemění canonical Aircraft, radar SSE, receiver history,
+  FlightPosition ani receiver statistics.
+- Digital Twin fusion je defaultně vypnutá a vyžaduje explicitní konfiguraci i
+  readiness PASS.
+- První Digital Twin rollout zakazuje dead-reckoned fused position a estimated
+  nebo LOW-confidence fused numerická pole.
+- Pokud per-aircraft fusion gate není splněn, Digital Twin zůstává
+  local-canonical a nesmí se tiše rozšířit na network-only canonical provoz.
