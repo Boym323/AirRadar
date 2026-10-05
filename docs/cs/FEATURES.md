@@ -17,6 +17,7 @@ not yet been historically attributed.
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
 | Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
+| Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 | Map Context & Weather | production | weather | Pre-registry | — | `/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context and aircraft-observed weather. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
@@ -170,6 +171,33 @@ nad 10 NM během alespoň 10 sekund; návrat vyžaduje dvě pozorování během 
 pěti sekund. Jde o informativní zobrazovací thresholdy, nikoli certifikované
 navigační limity nebo ATC guidance. V1 deviation eventy nepersistuje a nepřidává
 databázovou migraci.
+
+## Trajectory Conformance V1
+
+Trajectory Conformance V1 je selected-aircraft state machine nad existující
+Route Corridor Intelligence V1 a Route Intelligence V2. Nevytváří nový
+aircraft stream, timer, provider, DB model ani persistence path.
+
+Stavy jsou `ROUTE_UNKNOWN`, `ROUTE_UNCERTAIN`, `ON_ROUTE`, `OFFSET`,
+`DEVIATING`, `REJOINING` a `PROBABLE_DIRECT`. V1 používá pouze již
+vypočtenou route geometry, cross-track stav, track rozdíl a sekvenci
+rekonstruovaných route elementů.
+
+`REJOINING` vzniká pouze po potvrzeném `DEVIATING` a návrat do `ON_ROUTE`
+vyžaduje dvě různá pozorování během alespoň pěti sekund. Pravděpodobný direct
+se netvrdí z běžného posunu route progress: po potvrzeném deviation musí
+letadlo přeskočit alespoň dva vyřešené en-route prvky o souhrnné délce nejméně
+10 NM a znovu se stabilně zachytit na pozdějším elementu. Z pouhého `OFFSET`
+je podmínka přísnější: alespoň tři prvky a 20 NM.
+
+Pokrytí rekonstrukce pod 50 % nebo nepoužitelný dynamic route stav fail-closed
+přechází do `ROUTE_UNCERTAIN`. Detekce udržuje pouze omezený tracker právě
+vybraného letadla a shadow countery; V1 nevytváří Flight Intelligence eventy a
+nic neukládá do PostgreSQL.
+
+Výsledky v Route Corridor kartě jsou výslovně označené jako odvozená
+intelligence. `PROBABLE_DIRECT` není důkaz ATC clearance a `DEVIATING` není
+certifikované navigační nebo bezpečnostní varování.
 
 ## Airport Live Board V5
 
