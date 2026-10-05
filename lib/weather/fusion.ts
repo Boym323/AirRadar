@@ -175,7 +175,7 @@ function evidenceConfidence(source: WeatherFusionSource, distance: number | null
   if (source === "AIRCRAFT_OTHER") return "MEDIUM";
   if (source === "SIGMET") return "HIGH";
   if (source === "PIREP_AIREP") {
-    if ((distance ?? 999) <= 30 && (altitudeDelta === null || altitudeDelta <= 3_000)) return "HIGH";
+    if ((distance ?? 999) <= 30 && altitudeDelta !== null && altitudeDelta <= 3_000) return "HIGH";
     if ((distance ?? 999) <= 80 && (altitudeDelta === null || altitudeDelta <= 6_000)) return "MEDIUM";
     return "LOW";
   }
@@ -220,29 +220,34 @@ function newest(values: Array<string | null | undefined>): string | null {
 export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResult {
   const now = input.now ?? new Date();
   const evidence: WeatherFusionEvidence[] = [];
-  const latestAircraft = [...input.aircraftObservations]
+  const acceptedAircraft = [...input.aircraftObservations]
     .filter((item) => item.quality !== "REJECTED")
-    .sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime())[0] ?? null;
-
-  const latestAircraftStale = latestAircraft
-    ? now.getTime() - latestAircraft.observedAt.getTime() > 10 * 60_000
+    .sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime());
+  const latestAircraft = acceptedAircraft[0] ?? null;
+  const latestTurbulence = acceptedAircraft.find((item) => item.turbulenceLevel !== null) ?? null;
+  const latestWind = acceptedAircraft.find((item) => item.windDirectionDeg !== null && item.windSpeedKt !== null) ?? null;
+  const turbulenceStale = latestTurbulence
+    ? now.getTime() - latestTurbulence.observedAt.getTime() > 10 * 60_000
+    : true;
+  const windStale = latestWind
+    ? now.getTime() - latestWind.observedAt.getTime() > 10 * 60_000
     : true;
 
-  if (latestAircraft) {
-    const severity = bdsTurbulenceSeverity(latestAircraft.turbulenceLevel);
+  if (latestTurbulence) {
+    const severity = bdsTurbulenceSeverity(latestTurbulence.turbulenceLevel);
     if (severity !== null) {
-      const source: WeatherFusionSource = latestAircraft.source === "BDS_4_4" ? "AIRCRAFT_BDS44" : "AIRCRAFT_OTHER";
+      const source: WeatherFusionSource = latestTurbulence.source === "BDS_4_4" ? "AIRCRAFT_BDS44" : "AIRCRAFT_OTHER";
       evidence.push({
-        id: `aircraft:${latestAircraft.aircraftHex}:${latestAircraft.observedAt.toISOString()}:turb`,
+        id: `aircraft:${latestTurbulence.aircraftHex}:${latestTurbulence.observedAt.toISOString()}:turb`,
         source,
         risk: "TURBULENCE",
         severity,
-        confidence: evidenceConfidence(source, 0, input.altitudeFt === null ? null : Math.abs(latestAircraft.altitudeFt - input.altitudeFt), latestAircraftStale),
+        confidence: evidenceConfidence(source, 0, input.altitudeFt === null ? null : Math.abs(latestTurbulence.altitudeFt - input.altitudeFt), turbulenceStale),
         code: "BDS_TURBULENCE",
-        observedAt: latestAircraft.observedAt.toISOString(),
-        distanceNm: distanceNm(input.lat, input.lon, latestAircraft.lat, latestAircraft.lon),
-        altitudeDeltaFt: input.altitudeFt === null ? null : Math.abs(latestAircraft.altitudeFt - input.altitudeFt),
-        detail: latestAircraft.turbulenceLevel === null ? null : String(latestAircraft.turbulenceLevel),
+        observedAt: latestTurbulence.observedAt.toISOString(),
+        distanceNm: distanceNm(input.lat, input.lon, latestTurbulence.lat, latestTurbulence.lon),
+        altitudeDeltaFt: input.altitudeFt === null ? null : Math.abs(latestTurbulence.altitudeFt - input.altitudeFt),
+        detail: latestTurbulence.turbulenceLevel === null ? null : String(latestTurbulence.turbulenceLevel),
       });
     }
   }
@@ -316,7 +321,7 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
         detail: input.metar.rawText,
       });
     }
-    if (metarFreezingMoisture(input.metar)) {
+    if (input.altitudeFt !== null && input.altitudeFt <= 10_000 && metarFreezingMoisture(input.metar)) {
       evidence.push({
         id: `metar:${input.metar.stationId}:icing`,
         source: "METAR",
@@ -339,13 +344,12 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
   const allClear = risks.every((risk) => risk.severity === "NONE");
   const dominant = positiveRisks[0] ?? null;
 
-  const observedWind = latestAircraft?.windDirectionDeg !== null && latestAircraft?.windDirectionDeg !== undefined
-    && latestAircraft.windSpeedKt !== null && latestAircraft.windSpeedKt !== undefined
+  const observedWind = latestWind
     ? {
-        source: (latestAircraft.source === "BDS_4_4" ? "AIRCRAFT_BDS44" : "AIRCRAFT_OTHER") as "AIRCRAFT_BDS44" | "AIRCRAFT_OTHER",
-        directionDeg: latestAircraft.windDirectionDeg,
-        speedKt: latestAircraft.windSpeedKt,
-        observedAt: latestAircraft.observedAt.toISOString(),
+        source: (latestWind.source === "BDS_4_4" ? "AIRCRAFT_BDS44" : "AIRCRAFT_OTHER") as "AIRCRAFT_BDS44" | "AIRCRAFT_OTHER",
+        directionDeg: latestWind.windDirectionDeg!,
+        speedKt: latestWind.windSpeedKt!,
+        observedAt: latestWind.observedAt.toISOString(),
       }
     : null;
   const modelWind = input.modelWind ? {
@@ -369,7 +373,7 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
         : "DIVERGENT";
     wind = {
       status,
-      confidence: latestAircraftStale || modelWind.stale
+      confidence: windStale || modelWind.stale
         ? "LOW"
         : observedWind.source === "AIRCRAFT_BDS44"
           ? "HIGH"
@@ -382,8 +386,16 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
   }
 
   const sourceEvidence: Record<WeatherFusionSource, { count: number; times: Array<string | null>; fallbackState: "AVAILABLE" | "STALE" | "UNAVAILABLE" }> = {
-    AIRCRAFT_BDS44: { count: latestAircraft?.source === "BDS_4_4" ? 1 : 0, times: [latestAircraft?.source === "BDS_4_4" ? latestAircraft.observedAt.toISOString() : null], fallbackState: latestAircraft?.source === "BDS_4_4" ? "AVAILABLE" : "UNAVAILABLE" },
-    AIRCRAFT_OTHER: { count: latestAircraft && latestAircraft.source !== "BDS_4_4" ? 1 : 0, times: [latestAircraft && latestAircraft.source !== "BDS_4_4" ? latestAircraft.observedAt.toISOString() : null], fallbackState: latestAircraft && latestAircraft.source !== "BDS_4_4" ? "AVAILABLE" : "UNAVAILABLE" },
+    AIRCRAFT_BDS44: {
+      count: acceptedAircraft.filter((item) => item.source === "BDS_4_4").length,
+      times: acceptedAircraft.filter((item) => item.source === "BDS_4_4").map((item) => item.observedAt.toISOString()),
+      fallbackState: acceptedAircraft.some((item) => item.source === "BDS_4_4") ? "AVAILABLE" : "UNAVAILABLE",
+    },
+    AIRCRAFT_OTHER: {
+      count: acceptedAircraft.filter((item) => item.source !== "BDS_4_4").length,
+      times: acceptedAircraft.filter((item) => item.source !== "BDS_4_4").map((item) => item.observedAt.toISOString()),
+      fallbackState: acceptedAircraft.some((item) => item.source !== "BDS_4_4") ? "AVAILABLE" : "UNAVAILABLE",
+    },
     PIREP_AIREP: { count: input.pireps.length, times: input.pireps.map((item) => item.observedAt), fallbackState: input.pireps.length ? "AVAILABLE" : "UNAVAILABLE" },
     SIGMET: { count: input.sigmets.length, times: [], fallbackState: input.sigmets.length ? "AVAILABLE" : "UNAVAILABLE" },
     METAR: { count: input.metar ? 1 : 0, times: [input.metar?.observedAt ?? null], fallbackState: input.metar ? input.metar.stale ? "STALE" : "AVAILABLE" : "UNAVAILABLE" },
