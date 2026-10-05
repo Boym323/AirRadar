@@ -223,7 +223,6 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
   const acceptedAircraft = [...input.aircraftObservations]
     .filter((item) => item.quality !== "REJECTED")
     .sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime());
-  const latestAircraft = acceptedAircraft[0] ?? null;
   const latestTurbulence = acceptedAircraft.find((item) => item.turbulenceLevel !== null) ?? null;
   const latestWind = acceptedAircraft.find((item) => item.windDirectionDeg !== null && item.windSpeedKt !== null) ?? null;
   const turbulenceStale = latestTurbulence
