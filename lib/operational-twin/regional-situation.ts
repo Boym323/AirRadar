@@ -1,4 +1,4 @@
-import type { Aircraft } from "@/lib/aircraft/types";
+import type { AircraftView } from "@/lib/aircraft/types";
 import { destinationPoint, haversineDistanceKm } from "@/lib/geo";
 
 export const REGIONAL_SITUATION_VERSION = "regional-situation-v1";
@@ -77,7 +77,7 @@ function finite(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function projectedAltitude(aircraft: Aircraft, offsetMinutes: number): number | null {
+function projectedAltitude(aircraft: AircraftView, offsetMinutes: number): number | null {
   const altitude = aircraft.baroAltitude ?? aircraft.altitude ?? aircraft.geomAltitude;
   if (!finite(altitude)) return null;
   const verticalRate = aircraft.verticalRate ?? aircraft.baroRate ?? aircraft.geomRate;
@@ -86,7 +86,7 @@ function projectedAltitude(aircraft: Aircraft, offsetMinutes: number): number | 
   return Math.max(0, Math.min(60_000, altitude + verticalRate * appliedMinutes));
 }
 
-function candidateFromAircraft(aircraft: Aircraft, nowMs: number): Candidate | null {
+function candidateFromAircraft(aircraft: AircraftView, nowMs: number): Candidate | null {
   if (
     aircraft.onGround
     || !finite(aircraft.lat)
@@ -183,7 +183,7 @@ function relationForPair(a: Candidate, b: Candidate): RegionalSituationEdge | nu
 }
 
 export function buildRegionalSituationGraph(
-  aircraft: readonly Aircraft[],
+  aircraft: readonly AircraftView[],
   now = new Date(),
 ): RegionalSituationGraph {
   const candidates = aircraft
