@@ -264,6 +264,10 @@ parse_args() {
         ;;
     esac
   done
+
+  if (( AUTOMATED == 1 )) && [[ -z "${BUILD_ARTIFACT_DIR}" ]] && [[ -d "/tmp/airradar-ci-production-build" ]]; then
+    BUILD_ARTIFACT_DIR="/tmp/airradar-ci-production-build"
+  fi
 }
 
 require_command() {
