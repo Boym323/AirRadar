@@ -485,6 +485,7 @@ function spatialTruthMatches(pending: PendingEventOutcome, point: TruthPoint): b
         pending.descriptor.lon,
       ) / KM_PER_NM <= WAYPOINT_RADIUS_NM;
     case "ATC_SECTOR_ENTRY": {
+      const descriptor = pending.descriptor;
       const context = computeAtcContext({
         lat: point.lat,
         lon: point.lon,
@@ -497,8 +498,8 @@ function spatialTruthMatches(pending: PendingEventOutcome, point: TruthPoint): b
         verticalRate: point.verticalRateFpm,
         timestamp: new Date(point.at).toISOString(),
         onGround: point.onGround,
-      }, pending.descriptor.dataset, new Date(point.at));
-      return context.currentAirspaces.some((airspace) => airspace.id === pending.descriptor.sectorId);
+      }, descriptor.dataset, new Date(point.at));
+      return context.currentAirspaces.some((airspace) => airspace.id === descriptor.sectorId);
     }
     case "SIGMET_INTERSECTION":
       return sigmetValidAt(pending.descriptor.feature, point.at)
