@@ -50,6 +50,9 @@ interface RadarMapLayerMenuProps {
   showAtsRoutes: boolean;
   onShowAtsRoutesChange: (value: boolean) => void;
   atsDataset: DatasetState<unknown>;
+  showNavData: boolean;
+  onShowNavDataChange: (value: boolean) => void;
+  navDataDataset: DatasetState<unknown>;
   atsRoutes: AtsRoutesSummary | null | undefined;
   showSids: boolean;
   onShowSidsChange: (value: boolean) => void;
@@ -121,6 +124,9 @@ export function RadarMapLayerMenu({
   showAtsRoutes,
   onShowAtsRoutesChange,
   atsDataset,
+  showNavData,
+  onShowNavDataChange,
+  navDataDataset,
   atsRoutes,
   showSids,
   onShowSidsChange,
@@ -181,6 +187,9 @@ export function RadarMapLayerMenu({
         {showAtc && airspaceActivity?.planned.status !== "unavailable" && <div className="map-layer-sublevel">{activityT.legendCurrent} · {activityT.legendUpcoming}{airspaceActivity?.planned.status === "stale" ? ` · ${activityT.stale}` : ""}<br /><small>{activityT.disclaimer}</small></div>}
         <div className="map-layer-subgroup-heading">{t.layers.groups.atsProcedures}</div>
         <label data-testid="map-layer-ats"><input type="checkbox" checked={showAtsRoutes} onChange={(event) => onShowAtsRoutesChange(event.target.checked)} /> {datasetStateLabel(t.layers.atsRoutes, atsDataset, (count) => t.layers.routesCount(formatNumber(count)))}</label>
+        <label data-testid="map-layer-nav-data"><input type="checkbox" checked={showNavData} onChange={(event) => onShowNavDataChange(event.target.checked)} /> {datasetStateLabel(t.layers.navData, navDataDataset, (count) => String(count))}</label>
+        {showNavData && navDataDataset.status === "unavailable" && <div className="map-layer-sublevel">{t.layers.navDataUnavailable}</div>}
+        {showNavData && <div className="map-layer-sublevel"><small>{t.layers.navDataDescription}</small></div>}
         <label data-testid="map-layer-sid"><input type="checkbox" checked={showSids} onChange={(event) => onShowSidsChange(event.target.checked)} /> {t.layers.sids}</label>
         <label data-testid="map-layer-star"><input type="checkbox" checked={showStars} onChange={(event) => onShowStarsChange(event.target.checked)} /> {t.layers.stars}</label>
         {showAtsRoutes && atsRoutes?.available && atsRoutes.counts && atsRoutes.source && <div className="map-layer-sublevel">{t.layers.atsRoutesSummary(String(atsRoutes.counts.routes), String(atsRoutes.counts.segments), atsRoutes.source.effectiveDate)}<br /><a href={atsRoutes.source.reference} target="_blank" rel="noreferrer">{t.layers.atsSource}</a></div>}
