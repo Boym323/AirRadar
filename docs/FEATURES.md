@@ -633,3 +633,8 @@ PASS / WAIT / FAIL net-benefit decision.
 The validator is process-local and in-memory only. It performs no history scan,
 database write, upstream request, timer or second fusion pass. See
 [`TRACK-FUSION-OUTCOME.md`](TRACK-FUSION-OUTCOME.md).
+
+## Operational Digital Twin V2 — Map Corridor Visualization
+
+The radar renders the selected aircraft's existing situation response as a 30-minute future corridor with an uncertainty envelope, +5/+10/+15/+20/+30 minute markers, and situation/weather event markers. Route-aware projection is solid and the kinematic fallback is dashed. V2 reuses the existing 60-second selected-aircraft situation refresh and adds no request, timer, SSE, API or persistence path.
+
