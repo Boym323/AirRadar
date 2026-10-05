@@ -1907,6 +1907,12 @@ export const en = {
     trackFusionGapFills: "Estimated gap fills",
     trackFusionCanonical: "Canonical divergence",
     trackFusionCapacity: "Capacity evictions",
+    trackFusionReadiness: "Readiness",
+    trackFusionReadinessWindow: "Readiness window",
+    trackFusionReadinessEvidence: "Readiness evidence",
+    trackFusionDigitalTwin: "Digital Twin rollout",
+    trackFusionDigitalTwinEffective: "effective · PASS",
+    trackFusionDigitalTwinWaiting: "configured · waiting for PASS",
 
     rateLimited: "Rate limited",
     retryAfter: "Retry after",

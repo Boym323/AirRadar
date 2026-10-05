@@ -1905,6 +1905,12 @@ export const cs = {
     trackFusionGapFills: "Estimated gap fills",
     trackFusionCanonical: "Divergence proti canonical",
     trackFusionCapacity: "Capacity evictions",
+    trackFusionReadiness: "Readiness",
+    trackFusionReadinessWindow: "Readiness okno",
+    trackFusionReadinessEvidence: "Readiness evidence",
+    trackFusionDigitalTwin: "Digital Twin rollout",
+    trackFusionDigitalTwinEffective: "aktivní · PASS",
+    trackFusionDigitalTwinWaiting: "nastaveno · čeká na PASS",
 
     rateLimited: "Rate limit",
     retryAfter: "Další pokus",

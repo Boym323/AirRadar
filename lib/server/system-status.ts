@@ -987,10 +987,12 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       altitudeDiagnostics: getAltitudeDiagnostics(),
       continuity: serviceDiagnostics.continuity,
       trackFusionShadow: serviceDiagnostics.trackFusionShadow,
+      trackFusionReadiness: serviceDiagnostics.trackFusionReadiness,
     } : {
       altitudeDiagnostics: getAltitudeDiagnostics(),
       ...(serviceDiagnostics?.continuity ? { continuity: serviceDiagnostics.continuity } : {}),
       ...(serviceDiagnostics?.trackFusionShadow ? { trackFusionShadow: serviceDiagnostics.trackFusionShadow } : {}),
+      ...(serviceDiagnostics?.trackFusionReadiness ? { trackFusionReadiness: serviceDiagnostics.trackFusionReadiness } : {}),
     },
     adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
     ogn: ognService.getDiagnostics(),

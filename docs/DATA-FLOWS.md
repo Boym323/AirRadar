@@ -637,3 +637,25 @@ retained NETWORK Aircraft → normalized field observations ──┘
 The flow is in-memory and read-only. The existing local-history lane continues
 to receive only LOCAL provider observations and is intentionally independent of
 the shadow track.
+
+
+## Track Fusion graduation flow
+
+```text
+LOCAL + NETWORK retained aircraft
+          ↓
+Track Fusion Shadow
+          ↓ cumulative diagnostics
+24h process-local / 5min readiness buckets
+          ↓
+      PASS / WAIT / FAIL
+          ↓
+explicit Digital Twin flag?
+          ↓
+per-aircraft GOOD observed fused track?
+          ↓ yes
+Operational Digital Twin input only
+```
+
+The readiness path has no poller or persistence. All failure paths fall back to
+the existing local canonical Digital Twin input.

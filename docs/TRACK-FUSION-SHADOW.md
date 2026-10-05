@@ -96,3 +96,52 @@ logic only after shadow evidence is reviewed. V1 performs no promotion.
 4. promote fused state only to an opt-in display path;
 5. evaluate Digital Twin input separately;
 6. keep durable local-receiver evidence unchanged.
+
+
+## Readiness / Graduation V1
+
+Track Fusion readiness is process-local and fail-closed. Shadow diagnostics are
+sampled into bounded five-minute aggregate buckets covering at most 24 hours.
+No database table or background timer is introduced.
+
+A process restart intentionally resets the readiness evidence and therefore
+returns `WAIT` until the minimum evidence is rebuilt. V1 requires:
+
+- at least 120 minutes of runtime evidence;
+- at least 5,000 fusion evaluations;
+- at least 200 LOCAL↔NETWORK position comparisons;
+- at least 10 observed source transitions;
+- at least 1,000 comparisons against the current canonical position.
+
+Once those evidence gates are complete, quality thresholds are evaluated:
+
+- LOCAL↔NETWORK residual p95 must be at most 1.0 NM;
+- disagreement rate must be at most 5%;
+- rejected source-transition rate must be at most 25%;
+- estimated gap-fill rate must be at most 10%;
+- canonical divergence rate must be at most 5%;
+- there must be no capacity evictions.
+
+The versioned decision is `PASS`, `WAIT`, or `FAIL`. Admins can inspect it
+through `GET /api/admin/track-fusion/readiness` and the `/system` page.
+
+### First graduated consumer: Operational Digital Twin
+
+Track Fusion still does not replace the public radar or canonical Aircraft
+state. The first prepared consumer is Operational Digital Twin and it is
+disabled by default.
+
+`AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED=true` is necessary but not
+sufficient. Fused state is used only when:
+
+1. readiness is `PASS`;
+2. the specific aircraft has a `GOOD` fused track;
+3. the fused position is observed rather than dead-reckoned;
+4. the position confidence is not LOW.
+
+Only observed non-LOW fused numeric fields are consumed. Estimated altitude,
+speed, track or vertical rate fall back to the canonical live value.
+
+If any gate is not met, Digital Twin continues to use the existing local
+canonical state. Enabling the flag therefore cannot by itself broaden Digital
+Twin to network-only traffic.

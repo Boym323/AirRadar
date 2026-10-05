@@ -441,6 +441,10 @@ export function SystemStatusPage() {
   const continuityNetwork = asRecord(continuity?.network);
   const continuityFailovers = asRecord(continuity?.sourceFailovers);
   const trackFusion = asRecord(data?.localAdsb?.trackFusionShadow);
+  const trackFusionReadiness = asRecord(data?.localAdsb?.trackFusionReadiness);
+  const trackFusionReadinessEvidence = asRecord(trackFusionReadiness?.evidence);
+  const trackFusionReadinessWindow = asRecord(trackFusionReadinessEvidence?.window);
+  const trackFusionReadinessRollout = asRecord(trackFusionReadiness?.rollout);
   const trackFusionResidual = asRecord(trackFusion?.positionResidualNm);
   const trackFusionCanonicalResidual = asRecord(trackFusion?.canonicalResidualNm);
   const trackFusionResidualAverage = diagnosticOptionalNumber(trackFusionResidual, "average");
@@ -558,6 +562,16 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.trackFusionGapFills} value={formatNumber(diagnosticNumber(trackFusion, "estimatedGapFills"), 0, dictionary.locale)} />
         <Field label={dictionary.system.trackFusionCanonical} value={`${formatNumber(diagnosticNumber(trackFusion, "canonicalPositionDivergences"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusion, "canonicalPositionComparisons"), 0, dictionary.locale)} · avg ${trackFusionCanonicalAverage === null ? dictionary.system.notAvailable : `${formatNumber(trackFusionCanonicalAverage, 2, dictionary.locale)} NM`}`} />
         <Field label={dictionary.system.trackFusionCapacity} value={formatNumber(diagnosticNumber(trackFusion, "capacityEvictions"), 0, dictionary.locale)} />
+        {trackFusionReadiness && <>
+          <Field label={dictionary.system.trackFusionReadiness} value={String(trackFusionReadiness.decision ?? dictionary.system.notAvailable)} />
+          <Field label={dictionary.system.trackFusionReadinessWindow} value={`${formatNumber(diagnosticNumber(trackFusionReadinessWindow, "spanMinutes"), 0, dictionary.locale)} min · ${formatNumber(diagnosticNumber(trackFusionReadinessEvidence, "evaluations"), 0, dictionary.locale)} eval`} />
+          <Field label={dictionary.system.trackFusionReadinessEvidence} value={`overlap ${formatNumber(diagnosticNumber(trackFusionReadinessEvidence, "positionComparisons"), 0, dictionary.locale)} · transitions ${formatNumber(diagnosticNumber(trackFusionReadinessEvidence, "sourceTransitions"), 0, dictionary.locale)} · canonical ${formatNumber(diagnosticNumber(trackFusionReadinessEvidence, "canonicalPositionComparisons"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.trackFusionDigitalTwin} value={diagnosticBoolean(trackFusionReadinessRollout, "digitalTwinEffective")
+            ? dictionary.system.trackFusionDigitalTwinEffective
+            : diagnosticBoolean(trackFusionReadinessRollout, "digitalTwinConfigured")
+              ? dictionary.system.trackFusionDigitalTwinWaiting
+              : dictionary.system.disabled} />
+        </>}
       </Card>}
 
       <Card title={dictionary.system.networkCoverage} status={data.adsbLol.status} dictionary={dictionary}>

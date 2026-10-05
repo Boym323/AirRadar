@@ -131,3 +131,19 @@ Přirozené pokračování:
 3. route-aware propagace času se započtením větru;
 4. průniky s Navigation Integrity regions;
 5. regionální multi-aircraft situation graph a operational alerts.
+
+
+## Track Fusion graduation input
+
+Operational Digital Twin může volitelně používat Track Fusion state, ale
+integrace je fail-closed a defaultně vypnutá.
+
+`AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED=true` začne být účinné až tehdy,
+když process-local Track Fusion readiness vrací `PASS` a konkrétní letadlo má
+GOOD observed fused position. Dead-reckoned position je z prvního rollout
+vyloučená. Estimated numerická pole se rovněž vrací na canonical live hodnotu.
+
+Situation response označuje vstup pomocí
+`aircraft.stateSource = CANONICAL | TRACK_FUSION` a vrací aktuální Track
+Fusion readiness. Pokud per-aircraft fusion gate není splněn, endpoint zůstává
+local-canonical a tiše se nerozšíří na network-only canonical letadlo.

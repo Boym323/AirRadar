@@ -391,3 +391,18 @@ component that created it.
 - Estimated position is bounded to six seconds and must remain explicitly
   marked ESTIMATED.
 - Public radar/SSE serialization is unchanged in V1.
+
+
+## Track Fusion graduation invariants
+
+- Readiness evidence is process-local, bounded to 24 hours and resets to WAIT
+  after restart.
+- Readiness owns no timer, network request, database path or persistence.
+- PASS never changes canonical Aircraft, radar SSE, receiver history,
+  FlightPosition or receiver statistics.
+- Digital Twin fusion is disabled by default and requires both explicit
+  configuration and readiness PASS.
+- The first Digital Twin rollout forbids dead-reckoned fused position and
+  estimated/LOW-confidence fused numeric fields.
+- If the per-aircraft fusion gate is not met, Digital Twin stays local-canonical
+  and must not silently broaden to network-only canonical traffic.

@@ -48,6 +48,8 @@ export function buildOperationalTwinSituation(input: {
       callsign: input.aircraft.callsign,
       registration: input.aircraft.registration,
       observedAt: input.aircraft.observedAt,
+      stateSource: input.aircraft.stateSource ?? "CANONICAL",
+      trackFusionReadiness: input.aircraft.trackFusionReadiness ?? null,
     },
     corridor: input.corridor,
     weatherCorridor: input.weatherCorridor,

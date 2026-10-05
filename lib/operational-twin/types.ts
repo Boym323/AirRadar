@@ -93,6 +93,8 @@ export interface OperationalTwinSituation {
     callsign: string | null;
     registration: string | null;
     observedAt: string;
+    stateSource: "CANONICAL" | "TRACK_FUSION";
+    trackFusionReadiness: "PASS" | "WAIT" | "FAIL" | null;
   };
   corridor: OperationalTwinCorridor;
   weatherCorridor: WeatherCorridorIntelligence;

@@ -498,3 +498,17 @@ NETWORK provider → network map ┘
 Shadow output is not fed back into `localAircraft`, `networkAircraft`,
 `mergeAircraftMaps`, history persistence, receiver statistics, Navigation
 Integrity, alerts or predictive input. This one-way boundary is required for V1.
+
+
+## Track Fusion Readiness / Graduation V1
+
+The shadow estimator now feeds a bounded process-local readiness monitor. The
+monitor samples only cumulative shadow diagnostics, converts them to five-minute
+delta buckets, and retains at most 24 hours in RAM. It owns no timer and performs
+no database I/O. A process restart resets evidence and readiness returns WAIT.
+
+Operational Digital Twin is the first prepared consumer. It can read fused state
+only when the explicit Digital Twin fusion flag is enabled, readiness is PASS,
+and the requested aircraft has a GOOD observed fused position. Public radar,
+canonical Aircraft state, history, receiver statistics and FlightPosition remain
+unchanged.

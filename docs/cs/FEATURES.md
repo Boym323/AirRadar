@@ -571,3 +571,16 @@ V1 záměrně nemění veřejný radar state, SSE, trails, alerts, Navigation
 Integrity, predictive inputs, receiver statistiky ani PostgreSQL history.
 Fused/estimated state nikdy není local receiver evidence. Viz
 [`TRACK-FUSION-SHADOW.md`](TRACK-FUSION-SHADOW.md).
+
+
+## Track Fusion Readiness / Graduation V1
+
+Track Fusion Shadow nově sbírá 24hodinovou process-local readiness evidenci v
+pětiminutových bucketech a vrací verzovaný stav PASS / WAIT / FAIL. Admin
+readiness je dostupná na `/system` a přes
+`GET /api/admin/track-fusion/readiness`.
+
+První fail-closed consumer je Operational Digital Twin. Fused vstup je defaultně
+vypnutý a vyžaduje explicitní flag, readiness PASS a GOOD observed fused
+position konkrétního letadla. Canonical radar, SSE a receiver persistence se
+nemění.
