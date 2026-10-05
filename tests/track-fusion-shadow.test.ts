@@ -179,6 +179,26 @@ describe("Track Fusion Shadow V1", () => {
     expect(track?.position?.protocol).toBe("handover-rejected-dead-reckoning");
     expect(shadow.diagnostics().rejectedSourceTransitions).toBe(1);
     expect(shadow.diagnostics().estimatedGapFills).toBe(1);
+
+    const stillFar = aircraft({
+      origin: "adsblol",
+      source: "ADS-B",
+      lat: 49.2,
+      lon: 18.51,
+      groundSpeed: 360,
+      track: 90,
+      lastSeenMs: baseNow + 7_000,
+    });
+    shadow.observe({
+      ...maps(null, stillFar),
+      receiver,
+      localStaleAfterMs: 15_000,
+      networkStaleAfterMs: 15_000,
+      now: baseNow + 7_000,
+    });
+    expect(shadow.getTrack("ABC123")?.position).toBeNull();
+    expect(shadow.getTrack("ABC123")?.quality).toBe("NO_POSITION");
+    expect(shadow.diagnostics().rejectedSourceTransitions).toBe(2);
   });
 
   it("stops estimated position after the cumulative six-second gap bound", () => {
