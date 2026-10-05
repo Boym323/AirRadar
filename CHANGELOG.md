@@ -10,6 +10,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.311] - 2026-10-05
+
+Changes since v1.0.310.
+
+**Features touched:** Operational Digital Twin.
+
+### Added
+
+- Add Operational Digital Twin Outcome Validation V1 (#345) (b18aba6)
+
+### Maintenance
+
+- Sync generated repository metadata (#344) (ad90edd)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#344) (ad90edd)
+- feat: add Operational Digital Twin Outcome Validation V1 (#345) (b18aba6)
+
+</details>
 ## [1.0.310] - 2026-10-05
 
 Changes since v1.0.309.
