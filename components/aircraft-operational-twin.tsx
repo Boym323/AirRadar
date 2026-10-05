@@ -113,7 +113,7 @@ export function AircraftOperationalTwin({
 
     <details className={styles.limitations}>
       <summary>{t.operationalTwin.limitations}</summary>
-      <ul>{data.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
+      <ul>{data.limitations.map((item) => <li key={item}>{t.operationalTwin.limitationText[item]}</li>)}</ul>
     </details>
     <p className={styles.disclaimer}>{t.operationalTwin.disclaimer}</p>
   </section>;
