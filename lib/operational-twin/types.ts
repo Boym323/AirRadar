@@ -103,7 +103,7 @@ export interface OperationalTwinUnavailable {
   status: "unavailable" | "stale";
   generatedAt: string;
   icaoHex: string;
-  reason: "aircraft_not_live" | "invalid_position" | "stale_position" | "corridor_unavailable" | "internal_error";
+  reason: "invalid_aircraft" | "aircraft_not_live" | "invalid_position" | "stale_position" | "corridor_unavailable" | "internal_error";
 }
 
 export type OperationalTwinApiResponse = OperationalTwinSituation | OperationalTwinUnavailable;
