@@ -197,7 +197,7 @@ describe("global search", () => {
   it("does not query for a short or empty query and returns an empty result", async () => {
     const table = new AirportTable([airport()]);
     await expect(searchGlobal("a", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [], navPoints: [], flights: [], actions: [] });
-    await expect(searchGlobal("  ", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [], flights: [], actions: [] });
+    await expect(searchGlobal("  ", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [], navPoints: [], flights: [], actions: [] });
     expect(table.limits).toEqual([]);
   });
 
