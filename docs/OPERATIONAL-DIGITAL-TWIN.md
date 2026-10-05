@@ -305,3 +305,49 @@ the canonical corridor.
 ## Navigation Integrity Corridor V1
 
 The Digital Twin now intersects its existing sampled 30-minute corridor with already-computed active Navigation Integrity regional anomalies. An intersection requires both grid-cell and altitude-band compatibility. The result preserves severity, confidence, affected-aircraft counts, LOCAL/NETWORK evidence, baseline maturity and audit categories. Zero intersections are not an all-clear, and the feature never claims GNSS jamming, spoofing, or an aircraft navigation fault. It adds no HTTP request, timer, detector pass, database access or persistence.
+
+## Wind Timing Graduation V1
+
+Event Outcome Validation V2 now carries a paired waypoint-timing graduation
+lane for the existing Wind-adjusted Timing Shadow V1. The same captured
+waypoint prediction stores both the canonical event time and the wind-adjusted
+shadow time. When one future LOCAL waypoint truth observation resolves the
+event, AirRadar scores both timings against that exact same truth point.
+
+Only `AVAILABLE` wind shadows are admitted. `STALE` and `INSUFFICIENT`
+wind timing never enter graduation evidence. The comparison is waypoint-only
+because Wind-adjusted Timing Shadow V1 currently re-times waypoint/checkpoint
+distance along the unchanged corridor geometry; it does not independently
+re-time sector, SIGMET, runway or arrival events.
+
+The report exposes:
+
+- paired waypoint samples;
+- unresolved/unpaired outcomes and truth coverage;
+- canonical and shadow mean absolute timing error;
+- mean and relative MAE improvement;
+- shadow wins, canonical wins and ties;
+- shadow win rate;
+- mean absolute wind timing adjustment;
+- meaningful-adjustment sample volume;
+- PASS / WAIT / FAIL graduation state.
+
+The first threshold set requires at least two hours of process-local evidence,
+30 paired waypoint samples, 20 paired samples with at least a 30-second timing
+adjustment, and 60% truth coverage. Once those evidence gates are complete:
+
+- PASS requires at least 5% relative MAE improvement and at least 55% shadow
+  win rate;
+- FAIL requires a material regression of at least 5% MAE or a shadow win rate
+  of 45% or less;
+- intermediate evidence remains WAIT as inconclusive.
+
+PASS is **not** automatic promotion. The report explicitly returns
+`autoPromotion=false`, `manualPromotionEligible=true` only after PASS, and
+`canonicalTimingRemainsActive=true` in all states. Canonical corridor/event
+timing is therefore unchanged by this phase.
+
+The paired comparison is returned inside the existing protected Event Outcome
+report and is also visible on the authenticated System page. It adds no timer,
+poller, database persistence, FlightPosition read, second truth observer or
+second Digital Twin calculation.
