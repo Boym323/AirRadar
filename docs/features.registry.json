@@ -543,9 +543,11 @@
       "summary": "Bounded 30-minute aircraft situation projection with route, weather, Navigation Integrity and PUBLIC predictive context, prospective outcome validation, wind timing graduation/promotion, regional multi-aircraft attention with LOCAL prospective outcome calibration, multi-domain truth-first recall, and restart-stable anonymous calibration aggregates.",
       "pages": [
         "/aircraft/:hex",
-        "/"
+        "/",
+        "/admin/operational-twin/calibration"
       ],
       "apis": [
+        "/api/admin/operational-twin/calibration",
         "/api/admin/operational-twin/event-outcome",
         "/api/admin/operational-twin/outcome",
         "/api/admin/operational-twin/regional-attention-outcome",
@@ -560,6 +562,7 @@
         "multi-aircraft-situation",
         "operational-attention",
         "regional-attention-outcome",
+        "digital-twin-calibration-center",
         "digital-twin-calibration-persistence"
       ],
       "changelogKeywords": [
@@ -615,6 +618,9 @@
         "regional copresence",
         "regional attention outcome",
         "regional attention calibration",
+        "calibration center",
+        "calibration dashboard",
+        "readiness diagnostics",
         "copresence precision",
         "copresence timing mae",
         "truth-first recall",
