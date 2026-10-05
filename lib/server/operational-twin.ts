@@ -12,7 +12,6 @@ import {
   type RouteIntelligenceNetwork,
   type RouteIntelligenceV2Snapshot,
 } from "@/lib/route-intelligence";
-import { prepareAtcContextDataset } from "@/lib/atc-context/engine";
 import type { AtcContextDataset, PreparedAtcContextDataset } from "@/lib/atc-context/types";
 import {
   buildOperationalTwinCorridor,
@@ -197,11 +196,8 @@ export async function getOperationalTwinForAircraft(
     publicPredictiveContext(icaoHex),
   ]);
 
-  const dataset: AtcContextDataset | null = datasetResult.value;
-  const preparedDataset: PreparedAtcContextDataset | null = dataset
-    ? prepareAtcContextDataset(dataset)
-    : null;
-  const route = routeSnapshot(live, dataset);
+  const preparedDataset: PreparedAtcContextDataset | null = datasetResult.value;
+  const route = routeSnapshot(live, preparedDataset);
   const corridor = buildOperationalTwinCorridor(state, route, now);
   if (!corridor) return unavailable(icaoHex, "corridor_unavailable");
 
