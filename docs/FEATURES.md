@@ -653,3 +653,8 @@ Predicted waypoint, ATC sector-entry, SIGMET-intersection, arrival-ETA and runwa
 ## Navigation Integrity Corridor V1
 
 The Operational Digital Twin intersects its existing sampled 30-minute corridor with the already-computed process-local Navigation Integrity active anomaly regions. A match requires both grid-cell and altitude-band compatibility; the result preserves severity, confidence, affected-aircraft counts, LOCAL/NETWORK evidence, baseline maturity and audit categories. Zero intersections are not an all-clear, and the feature never claims GNSS jamming, spoofing, or an aircraft navigation fault. No new HTTP request, timer, detector pass, database access or persistence path is added.
+
+## Wind Timing Graduation V1
+
+Event Outcome V2 now compares canonical and wind-adjusted timing for the same waypoint against one identical LOCAL truth observation. The process-local graduation gate is fail-closed: it requires sufficient span, paired sample volume, meaningful wind adjustments and truth coverage; PASS additionally requires at least 5% MAE improvement and a 55% shadow win rate. PASS only marks the model eligible for manual graduation — canonical timing remains active and there is no automatic promotion.
+
