@@ -203,6 +203,33 @@ pěti sekund. Jde o informativní zobrazovací thresholdy, nikoli certifikované
 navigační limity nebo ATC guidance. V1 deviation eventy nepersistuje a nepřidává
 databázovou migraci.
 
+## Trajectory Conformance V1
+
+Trajectory Conformance V1 je selected-aircraft state machine nad existující
+Route Corridor Intelligence V1 a Route Intelligence V2. Nevytváří nový
+aircraft stream, timer, provider, DB model ani persistence path.
+
+Stavy jsou `ROUTE_UNKNOWN`, `ROUTE_UNCERTAIN`, `ON_ROUTE`, `OFFSET`,
+`DEVIATING`, `REJOINING` a `PROBABLE_DIRECT`. V1 používá pouze již
+vypočtenou route geometry, cross-track stav, track rozdíl a sekvenci
+rekonstruovaných route elementů.
+
+`REJOINING` vzniká pouze po potvrzeném `DEVIATING` a návrat do `ON_ROUTE`
+vyžaduje dvě různá pozorování během alespoň pěti sekund. Pravděpodobný direct
+se netvrdí z běžného posunu route progress: po potvrzeném deviation musí
+letadlo přeskočit alespoň dva vyřešené en-route prvky o souhrnné délce nejméně
+10 NM a znovu se stabilně zachytit na pozdějším elementu. Z pouhého `OFFSET`
+je podmínka přísnější: alespoň tři prvky a 20 NM.
+
+Pokrytí rekonstrukce pod 50 % nebo nepoužitelný dynamic route stav fail-closed
+přechází do `ROUTE_UNCERTAIN`. Detekce udržuje pouze omezený tracker právě
+vybraného letadla a shadow countery; V1 nevytváří Flight Intelligence eventy a
+nic neukládá do PostgreSQL.
+
+Výsledky v Route Corridor kartě jsou výslovně označené jako odvozená
+intelligence. `PROBABLE_DIRECT` není důkaz ATC clearance a `DEVIATING` není
+certifikované navigační nebo bezpečnostní varování.
+
 ## Airport Live Board V5
 
 V5 zachovává stejnou omezenou sdílenou architekturu letiště a nepřidává žádnou
