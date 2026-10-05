@@ -466,3 +466,12 @@ která jej vytvořila.
 - Outcome readiness sama o sobě nemůže měnit veřejnou semantiku
   WATCH/ATTENTION.
 
+## Invarianty Regional Attention graduation
+
+- Graduation spotřebovává pouze Regional Attention outcome report; sama
+  nezachytává stav letadel ani nespouští další provider/databázový loop.
+- `PASS` je pouze evidence/readiness stav. V1 nikdy automaticky nepromuje
+  veřejné chování WATCH/ATTENTION.
+- Destination clustery, collision warnings a separation-product semantika jsou
+  výslovně mimo scope graduation.
+
