@@ -440,3 +440,19 @@ export type {
   RouteCorridorStatus,
   RouteCorridorTrackerState,
 } from "./route-intelligence/corridor";
+
+export {
+  buildTrajectoryConformance,
+  TRAJECTORY_CONFORMANCE_THRESHOLDS,
+} from "./route-intelligence/conformance";
+export type {
+  ProbableDirectEvidence,
+  TrajectoryConformanceConfidence,
+  TrajectoryConformanceCounters,
+  TrajectoryConformanceEvidence,
+  TrajectoryConformanceInput,
+  TrajectoryConformanceResult,
+  TrajectoryConformanceSnapshot,
+  TrajectoryConformanceStatus,
+  TrajectoryConformanceTrackerState,
+} from "./route-intelligence/conformance";
