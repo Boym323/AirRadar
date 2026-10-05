@@ -138,3 +138,21 @@ Natural follow-ups are:
 3. route-aware wind-adjusted speed/time propagation;
 4. navigation-integrity region intersections;
 5. regional multi-aircraft situation graphs and operational alerts.
+
+
+## Track Fusion graduation input
+
+Operational Digital Twin can optionally consume the Track Fusion state, but the
+integration is fail-closed and disabled by default.
+
+`AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED=true` only becomes effective when
+the process-local Track Fusion readiness report is `PASS` and the requested
+aircraft has a GOOD observed fused position. Dead-reckoned position is excluded
+from this first rollout. Estimated numeric fields also fall back to canonical
+live values.
+
+The situation response identifies the input with
+`aircraft.stateSource = CANONICAL | TRACK_FUSION` and reports the current
+Track Fusion readiness decision. If the per-aircraft fusion gate is not met,
+the endpoint remains local-canonical and does not silently expand to a
+network-only canonical aircraft.
