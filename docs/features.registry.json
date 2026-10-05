@@ -333,7 +333,7 @@
       "category": "atc",
       "status": "production",
       "introducedVersion": null,
-      "summary": "ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity.",
+      "summary": "ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data.",
       "pages": [],
       "apis": [
         "/api/airspace/activity",
@@ -345,6 +345,7 @@
         "/api/atc/sectors/transitions",
         "/api/atc/validation",
         "/api/ats/routes",
+        "/api/navigation/data",
         "/api/procedures"
       ],
       "changelogScopes": [
@@ -357,7 +358,10 @@
         "atc sector",
         "ats route",
         "airspace activity",
-        "procedure"
+        "procedure",
+        "navaid",
+        "waypoint",
+        "navigation data"
       ]
     },
     {
