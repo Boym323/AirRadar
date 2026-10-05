@@ -1,3 +1,5 @@
+import type { WeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
+
 export const OPERATIONAL_TWIN_VERSION = "operational-digital-twin-v1" as const;
 export const OPERATIONAL_TWIN_HORIZON_MINUTES = 30;
 export const OPERATIONAL_TWIN_STEP_MINUTES = 2;
@@ -12,6 +14,7 @@ export type OperationalTwinLimitationCode =
   | "AIRSPACE_PLAN_UNAVAILABLE"
   | "SIGMET_UNAVAILABLE"
   | "PUBLIC_PREDICTION_UNAVAILABLE"
+  | "WEATHER_CORRIDOR_PARTIAL"
   | "KINEMATIC_FALLBACK"
   | "OFF_ROUTE";
 
@@ -92,6 +95,7 @@ export interface OperationalTwinSituation {
     observedAt: string;
   };
   corridor: OperationalTwinCorridor;
+  weatherCorridor: WeatherCorridorIntelligence;
   events: OperationalTwinEvent[];
   evidence: OperationalTwinEvidenceSummary;
   limitations: OperationalTwinLimitationCode[];
