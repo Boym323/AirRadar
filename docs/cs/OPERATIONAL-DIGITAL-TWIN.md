@@ -433,3 +433,19 @@ poškozený či starý bucket, Digital Twin pokračuje s novou process-local
 evidencí. Promotion/readiness prahy se nemění; persistence pouze zachovává
 evidenci a nezmírňuje graduation gate.
 
+## Regional Operations Center V1
+
+Regional Operations Center V1 zobrazuje existující omezený Regional Situation
+Graph a souhrn Operational Attention přímo v živém Operations Center na radaru.
+Prohlížeč volá `/api/operations/situation` každých 30 sekund pouze při
+otevřeném panelu; server dál čte jediný existující LOCAL snapshot
+`AircraftStateService` a nespouští další receiver poller, provider loop ani
+novou persistence cestu.
+
+Povrch prioritizuje destination clustery a zvýšenou projektovanou blízkost,
+ukazuje dotčená letadla a každé z nich propojuje na stávající focus query
+radaru. Záměrně používá kontextové označení `SLEDOVAT` / `POZORNOST`.
+Nejde o collision warning ani separation produkt. Snapshot starší než omezené
+freshness okno se označí jako zastaralý a výpadek endpointu je fail-soft vůči
+zbytku Operations Center.
+

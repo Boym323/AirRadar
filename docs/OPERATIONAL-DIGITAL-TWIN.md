@@ -454,3 +454,19 @@ malformed/stale bucket, the Digital Twin continues with fresh process-local
 evidence. Promotion/readiness thresholds are unchanged; persistence preserves
 evidence, it does not weaken graduation gates.
 
+## Regional Operations Center V1
+
+Regional Operations Center V1 surfaces the existing bounded Regional Situation
+Graph and Operational Attention summary in the live radar Operations Center.
+The browser polls `/api/operations/situation` every 30 seconds only while the
+panel is open; the server still reads one existing LOCAL
+`AircraftStateService` snapshot and starts no additional receiver poller,
+provider request loop or persistence path.
+
+The surface prioritizes destination clusters and elevated projected co-presence,
+shows the affected aircraft, and links each aircraft back to the existing radar
+focus query. It deliberately uses contextual `WATCH` / `ATTENTION`
+terminology. It is not a collision-warning or separation product. Snapshots
+older than the bounded freshness window are visibly marked stale and endpoint
+failure is fail-soft for the rest of the Operations Center.
+
