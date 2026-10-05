@@ -25,6 +25,7 @@ import {
 const MAX_ESTIMATION_GAP_MS = 6_000;
 const MAX_FIELD_HOLD_MS = 10_000;
 const TRACK_RETENTION_MS = 120_000;
+const MAX_TRACKS = 25_000;
 const MAX_RECENT_DISAGREEMENTS = 20;
 const POSITION_DISAGREEMENT_NM = 2;
 const CANONICAL_DIVERGENCE_NM = 0.5;
@@ -142,7 +143,7 @@ function holdNumeric(
 function trackQuality(position: TrackFusionFieldEstimate<TrackFusionPositionValue> | null): TrackFusionTrackQuality {
   if (!position) return "NO_POSITION";
   if (position.estimated) return "ESTIMATED";
-  if (position.score >= 68 && (position.uncertainty ?? Number.POSITIVE_INFINITY) <= 1) return "GOOD";
+  if (position.score >= 68 && (position.uncertainty ?? Number.POSITIVE_INFINITY) <= 2) return "GOOD";
   return "DEGRADED";
 }
 
@@ -171,6 +172,7 @@ export class TrackFusionShadow {
   private rejectedSourceTransitions = 0;
   private canonicalPositionComparisons = 0;
   private canonicalPositionDivergences = 0;
+  private capacityEvictions = 0;
   private readonly fieldSelections = emptySelections();
   private readonly positionResidual = emptyResidual();
   private readonly canonicalResidual = emptyResidual();
@@ -222,6 +224,14 @@ export class TrackFusionShadow {
     for (const [hex, memory] of this.tracks) {
       if (!keys.has(hex) && now - memory.lastEvaluatedAt > TRACK_RETENTION_MS) this.tracks.delete(hex);
     }
+    if (this.tracks.size > MAX_TRACKS) {
+      const excess = this.tracks.size - MAX_TRACKS;
+      const oldest = [...this.tracks.entries()]
+        .sort((left, right) => left[1].lastEvaluatedAt - right[1].lastEvaluatedAt)
+        .slice(0, excess);
+      for (const [hex] of oldest) this.tracks.delete(hex);
+      this.capacityEvictions += oldest.length;
+    }
     this.currentOverlapTracks = overlapTracks;
     this.lastEvaluatedAt = now;
   }
@@ -251,6 +261,7 @@ export class TrackFusionShadow {
       degradedTracks,
       estimatedTracks,
       noPositionTracks,
+      capacityEvictions: this.capacityEvictions,
       evaluations: this.evaluations,
       dedupedEvaluations: this.dedupedEvaluations,
       positionComparisons: this.positionComparisons,
