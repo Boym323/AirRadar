@@ -26,6 +26,8 @@ export interface OperationalTwinAircraftState {
   trackDeg: number | null;
   verticalRateFpm: number | null;
   onGround: boolean;
+  stateSource?: "CANONICAL" | "TRACK_FUSION";
+  trackFusionReadiness?: "PASS" | "WAIT" | "FAIL" | null;
 }
 
 interface RoutePath {
