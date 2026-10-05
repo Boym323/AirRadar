@@ -98,6 +98,7 @@ export interface TrackFusionShadowDiagnostics {
     average: number | null;
     maximum: number | null;
     p95UpperBound: number | null;
+    histogram: Array<{ upperBoundNm: number | null; count: number }>;
   };
   canonicalResidualNm: {
     average: number | null;
