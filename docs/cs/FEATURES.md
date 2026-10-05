@@ -115,6 +115,38 @@ vrací PARTIAL/INSUFFICIENT. Nepřidává databázovou migraci, background polle
 SSE spojení ani práci v ADS-B hot path. Řízení upstream požadavků zůstává na
 existujících provider cache a samotný fusion endpoint je `no-store`.
 
+## Weather Corridor Intelligence V1
+
+Weather Corridor Intelligence V1 aplikuje stejné konzervativní weather
+semantiky na 30minutový 4D corridor Operational Digital Twin. Nepřidává nový
+browser request, stream ani periodický polling: rozšířený
+`GET /api/aircraft/:hex/situation` vrací `weatherCorridor` vedle stávajících
+future events.
+
+Server provede jediný omezený PIREP/AIREP dotaz do 300 NM a šesti hodin bez
+filtru na aktuální výšku, aby mohl porovnat reporty s projektovanou výškou
+jednotlivých bodů corridoru. Report turbulence nebo námrazy se publikuje pouze
+tehdy, když je blízko některému budoucímu vzorku a není výškově mimo nastavenou
+relevanci. Confidence zohledňuje vzdálenost od corridoru, rozdíl výšky, stáří
+reportu a stale stav upstream snapshotu.
+
+SIGMET se vyhodnocuje proti každému dvouminutovému corridor bodu současně
+horizontálně, vertikálně a časově. V1 publikuje první sampled vstup a výstup pro
+turbulenci, námrazu nebo konvekci; výsledek je záměrně omezený rozlišením
+corridoru a neprohlašuje přesný crossing čas mezi dvěma vzorky.
+
+ICON-EU se načítá pouze pro unikátní tlakové hladiny potřebné projektovanými
+výškami. Existující wind provider sdílí cache a in-flight snapshot, takže
+nevzniká jeden upstream request pro každý corridor bod. UI ukazuje bounded
+vzorky 0/10/20/30 minut a trend podélné složky větru jako rostoucí protivítr,
+rostoucí zadní vítr, stabilní nebo proměnlivý.
+
+Weather Corridor vrací explicitní stav AVAILABLE/PARTIAL/INSUFFICIENT a stav
+každého zdroje. Chybějící PIREP, SIGMET nebo ICON-EU zdroj nevytváří falešné
+„clear“ počasí. Funkce nepřidává databázovou migraci, background poller,
+další SSE spojení ani práci v ADS-B hot path a zůstává informačním,
+necertifikovaným produktem.
+
 ## Aviation Nav Data V1
 
 AirRadar umí načíst omezená globální referenční data NAVAID a pojmenovaných
