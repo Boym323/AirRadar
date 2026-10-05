@@ -330,7 +330,9 @@ function finite(value: number | null | undefined): value is number {
 
 function normalizeRunway(value: string | null | undefined): string | null {
   const normalized = value?.trim().toUpperCase().replace(/^RWY\s*/, "").replace(/\s+/g, "") ?? "";
-  return /^[0-3]?\d[LRC]?$/.test(normalized) ? normalized.padStart(normalized.length === 1 ? 2 : normalized.length, "0") : normalized || null;
+  const match = normalized.match(/^(\d{1,2})([LRC]?)$/);
+  if (!match) return normalized || null;
+  return `${match[1]!.padStart(2, "0")}${match[2] ?? ""}`;
 }
 
 function leadBucket(leadMinutes: number): LeadBucket {
