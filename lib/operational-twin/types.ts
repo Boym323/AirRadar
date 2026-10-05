@@ -101,6 +101,17 @@ export interface OperationalTwinSituation {
   corridor: OperationalTwinCorridor;
   weatherCorridor: WeatherCorridorIntelligence;
   windTimingShadow?: OperationalTwinWindTimingShadow;
+  windTimingPromotion?: {
+    version: "operational-digital-twin-wind-timing-promotion-v1";
+    configuredPolicy: "CANONICAL" | "WIND_GRADUATED";
+    effectivePolicy: "CANONICAL" | "WIND_GRADUATED";
+    graduationDecision: "PASS" | "WAIT" | "FAIL";
+    manualPromotionEligible: boolean;
+    promotedWaypointEvents: number;
+    failClosed: boolean;
+    fallbackReason: "configured_canonical" | "graduation_not_pass" | "wind_shadow_unavailable" | "no_matching_waypoints" | null;
+    canonicalCalibrationRemainsActive: true;
+  };
   navigationIntegrityCorridor?: NavigationIntegrityCorridorIntelligence;
   events: OperationalTwinEvent[];
   evidence: OperationalTwinEvidenceSummary;
