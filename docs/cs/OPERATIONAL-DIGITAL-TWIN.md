@@ -234,3 +234,54 @@ Model nemění geometrii corridoru, canonical event times, PUBLIC ETA, radarovou
 pozici, historii ani outcome truth. Jeho účelem je vytvořit nezávislého timing
 kandidáta, kterého pozdější Event Outcome Validation porovná s canonical
 baseline před případnou graduation.
+
+## Event Outcome Validation V2
+
+Digital Twin nově validuje predikované budoucí události odděleně od V1
+kalibrace samotné polohy corridoru. V2 je request-driven a zachytává pouze
+události, které už vytvořil existující situation výpočet.
+
+Scoreable event classes:
+
+- `WAYPOINT` — truth je budoucí LOCAL receiver poloha do 3 NM od
+  publikovaného/interpretovaného waypointu;
+- `ATC_SECTOR_ENTRY` — truth je budoucí LOCAL receiver observation uvnitř
+  přesné publikované geometrie sektoru a kompatibilního vertikálního kontextu,
+  který zachytil situation request;
+- `SIGMET_INTERSECTION` — truth je budoucí LOCAL receiver observation uvnitř
+  zachycené SIGMET geometrie, její validity a vertikálních limitů;
+- `ARRIVAL_ETA` — truth je nezávislý Flight Intelligence `LANDING` event,
+  s kontrolou destination, pokud obě strany znají letiště;
+- `RUNWAY_EXPECTATION` — truth vyžaduje nezávislou provider-reported arrival
+  runway z terminal evidence landing eventu. Inferred runway geometrie se jako
+  náhrada nepoužije.
+
+Každá predikce se vyhodnocuje v omezeném časovém okně podle typu události.
+Úspěšná truth měří signed i absolute timing error. Mismatch runway/destination
+a kontinuálně sledované spatial/arrival predikce, které v povoleném okně
+nenastanou, jsou false positive. Chybějící receiver kontinuita nebo chybějící
+provider runway truth zůstává zvlášť jako `expiredNoTruth` /
+`unscoreableTruth` a nikdy se nepřeklopí na false positive.
+
+Report obsahuje overall, per-event-type a lead-time slice
+(`0_5`, `5_15`, `15_30` minut), precision predikcí, průměrnou chybu
+časování, podíl událostí do dvou/pěti minut a dostupnost truth. Evidence je
+omezena na 24 process-local hodin v pětiminutových bucketech a pending
+predikce mají pevný kapacitní limit.
+
+V2 záměrně **neuvádí recall**. Validator začíná zachycenými predikcemi, takže
+nemůže tvrdit, že každá skutečně nastalá událost měla odpovídající predikci.
+Pro validní missed-event/recall metriku by byla potřeba pozdější truth-first
+větev.
+
+PASS/WAIT/FAIL je fail-closed. První threshold verze vyžaduje nejméně dvě
+hodiny evidence, 60 scoreable sample, 30 observed timing sample a alespoň dva
+typy událostí s 10 scoreable sample. Po naplnění evidence PASS vyžaduje
+precision >=70 %, mean absolute timing error <=240 sekund a missing truth <=40 %.
+
+Chráněný report:
+
+`GET /api/admin/operational-twin/event-outcome`
+
+Validator nepřidává persistence, čtení FlightPosition/history, upstream request,
+timer, EventSource, druhý Digital Twin výpočet ani změnu canonical corridoru.
