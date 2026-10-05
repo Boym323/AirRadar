@@ -197,15 +197,25 @@ sidecar. If no known-good pair exists, stop the timer and remove only the two
 snapshot files; AirRadar will report the fallback unavailable and hide
 unresolved OGN targets.
 
-Normal production releases should use `deploy/release.sh`. It calculates the
-next version in the current `package.json` major/minor series, writes ignored
-build metadata before an isolated `next build`, activates the completed build
-with a short service restart, and creates the matching Git tag only after
-the build, migrations, restart and both health checks pass. Release retries on
-the same commit reuse the same tag. When the runtime alert config does not yet
-exist, the release script creates `/var/lib/airradar` with service ownership
-and copies `data/alerts.json` into it without overwriting an existing runtime
-file. The old alert-event ledger is never migrated.
+Normal production releases should use `deploy/release.sh`. Manual releases
+calculate the next version in the current `package.json` major/minor series,
+build in an isolated Next directory, activate the completed build with a short
+service restart, and create the matching Git tag only after the build,
+migrations, restart and both health checks pass. Automated GitHub releases use
+the exact CI-validated standalone build artifact instead of rebuilding Next on
+the production host. The artifact is pinned to the release commit and verified
+against its release identity and SHA-256 manifest before activation.
+
+The standalone runtime does not depend on the repository-level `node_modules`
+tree for serving requests. Production keeps Prisma deployment tooling locally;
+`npm ci` is skipped on ordinary automated releases when the recorded
+`package-lock.json` hash and required Prisma packages still match, and runs
+again automatically after dependency changes or on the first standalone
+release. Release retries on the same commit reuse the same tag. When the runtime
+alert config does not yet exist, the release script creates
+`/var/lib/airradar` with service ownership and copies `data/alerts.json`
+into it without overwriting an existing runtime file. The old alert-event
+ledger is never migrated.
 
 Nginx Proxy Manager should proxy to `http://192.168.1.142:3000`. The reverse proxy is separate from the AirRadar LXC, so do not use its own `127.0.0.1`. For long-lived SSE responses, turn off proxy buffering (or add `X-Accel-Buffering: no`, which AirRadar already sends) and use a generous read timeout.
 
