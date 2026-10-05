@@ -449,6 +449,14 @@ Nejde o collision warning ani separation produkt. Snapshot starší než omezen�
 freshness okno se označí jako zastaralý a výpadek endpointu je fail-soft vůči
 zbytku Operations Center.
 
+## Regional Operations Center V1.1
+
+Regional Operations Center V1.1 zachovává existující omezený požadavek regionální situace a přidává uživatelský filtr projekčního horizontu 5/15/30 minut, lokalizovaný detail evidence a graduation stav odvozený z existujícího Regional Attention Graduation reportu. Veřejný situation endpoint zpřístupňuje jen kompaktní readiness projekci; nemění kalibrační policy ani veřejnou semantiku WATCH/ATTENTION.
+
+Mapové zvýraznění je fail-closed. Dvojici co-presence lze zvýraznit pouze tehdy, když Regional Attention Graduation vrací `PASS` a `manualPromotionEligible=true`. Overlay spojuje aktuální LOCAL radarové polohy dvojice pouze jako provozní orientaci; nekreslí chráněný prostor, predikovanou dráhu srážky, hranici ztráty rozstupu, TCAS/STCA alert ani ATC pokyn. Zavření Operations Center nebo ztráta graduation/aktuální polohy overlay vyčistí.
+
+V1.1 nepřidává provider loop, receiver poller, databázovou cestu ani druhou autoritu živého stavu. Destination clustery zůstávají mimo graduation a mapové zvýraznění neodemknou.
+
 ## Truth-first Validation V2
 
 Truth-first Validation V2 rozšiřuje měření recall mimo terminální outcome.
