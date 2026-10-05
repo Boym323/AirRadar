@@ -540,7 +540,7 @@
       "category": "intelligence",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded 30-minute aircraft situation projection with route, ATC/ATS, planned airspace, weather and PUBLIC predictive context, live map uncertainty rendering, plus process-local 5/15/30-minute outcome calibration against future LOCAL receiver truth.",
+      "summary": "Bounded 30-minute aircraft situation projection with live map uncertainty, process-local 5/15/30-minute outcome calibration, and an additive ICON-EU wind-adjusted timing shadow that never replaces canonical timing.",
       "pages": [
         "/aircraft/:hex",
         "/"
@@ -575,7 +575,12 @@
         "uncertainty coverage",
         "5 minute outcome",
         "15 minute outcome",
-        "30 minute outcome"
+        "30 minute outcome",
+        "wind timing shadow",
+        "wind-adjusted timing",
+        "still-air proxy",
+        "timing shadow",
+        "icon-eu timing"
       ]
     },
     {
