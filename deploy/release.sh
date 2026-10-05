@@ -26,6 +26,7 @@ readonly LEGACY_ALERT_CONFIG_PATH="${APP_DIR}/data/alerts.json"
 readonly RELEASE_BUILD_DIR=".next-release-${BASHPID}"
 readonly RELEASE_BUILD_BACKUP_DIR=".next-release-backup-${BASHPID}"
 readonly BUILD_SOURCE_SNAPSHOT_DIR="/tmp/airradar-release-sources-${BASHPID}"
+readonly STAGED_BUILD_METADATA_PATH="/tmp/airradar-build-metadata-${BASHPID}.json"
 readonly SMOKE_VALIDATION_TMP_PREFIX="airradar-smoke-validation-"
 readonly SMOKE_VALIDATION_TMP_MAX_AGE_MINUTES=360
 
@@ -36,6 +37,7 @@ DRY_RUN=0
 ALLOW_DIRTY=0
 AUTOMATED=0
 EXPECTED_COMMIT=""
+BUILD_ARTIFACT_DIR=""
 OLD_SHA=""
 NEW_SHA=""
 RESTART_ATTEMPTED=0
@@ -62,13 +64,15 @@ Options:
   --channel MODE    Release channel: stable (default) or rc.
   --automated       Deploy an already CI-validated commit; skip duplicate quality gates.
   --commit SHA       Require the release branch to resolve to this exact commit.
+  --build-artifact-dir DIR
+                     Reuse a CI-validated production build artifact directory.
   --allow-dirty    Release uncommitted changes without updating from origin.
   --dry-run        Run preflight checks and print the release plan only.
   --help           Show this help.
 
 The default versioned release runs all quality gates. Automated releases must
 pin --commit to the exact CI-validated commit and reuse its lint, typecheck,
-test, and browser-gate results.
+test, browser-gate, and production-build results when --build-artifact-dir is supplied.
 EOF
 }
 
@@ -146,6 +150,7 @@ on_exit() {
   if (( BUILD_SOURCE_SNAPSHOT_CREATED == 1 )); then
     restore_build_source_files || true
   fi
+  rm -f -- "${STAGED_BUILD_METADATA_PATH}" || true
   if (( SERVICE_STOPPED == 1 )); then
     error "Service was left stopped by an interrupted release; attempting to start it."
     run_privileged systemctl start "${SERVICE_NAME}" || true
@@ -234,6 +239,11 @@ parse_args() {
         (( $# >= 2 )) || die "--commit requires a full commit SHA."
         [[ "$2" =~ ^[0-9a-fA-F]{40}$ ]] || die "--commit requires a full 40-character commit SHA."
         EXPECTED_COMMIT="${2,,}"
+        shift 2
+        ;;
+      --build-artifact-dir)
+        (( $# >= 2 )) || die "--build-artifact-dir requires a directory path."
+        BUILD_ARTIFACT_DIR="$2"
         shift 2
         ;;
       --dry-run)
@@ -380,6 +390,11 @@ preflight() {
   require_command mktemp
   require_command cmp
   require_command mv
+  if [[ -n "${BUILD_ARTIFACT_DIR}" ]]; then
+    (( AUTOMATED == 1 )) || die "--build-artifact-dir is supported only with --automated."
+    require_command tar
+    require_command sha256sum
+  fi
   clean_automated_generated_changes
   check_repository
   check_node_version
@@ -517,6 +532,73 @@ prepare_release_version() {
   log "Release version candidate: ${RELEASE_VERSION} (${RELEASE_TAG}), channel=${RELEASE_BUILD_CHANNEL}"
 }
 
+stage_validated_build_artifact() {
+  local artifact_dir archive manifest metadata expected_sha actual_sha
+
+  [[ -n "${BUILD_ARTIFACT_DIR}" ]] || die "Build artifact directory is not configured."
+  [[ -d "${BUILD_ARTIFACT_DIR}" ]] || die "Build artifact directory does not exist: ${BUILD_ARTIFACT_DIR}"
+  artifact_dir="$(cd -- "${BUILD_ARTIFACT_DIR}" && pwd -P)"
+  archive="${artifact_dir}/next-build.tar.gz"
+  manifest="${artifact_dir}/manifest.json"
+  metadata="${artifact_dir}/build-version.json"
+
+  [[ -f "${archive}" ]] || die "Validated build artifact is missing ${archive}."
+  [[ -f "${manifest}" ]] || die "Validated build artifact is missing ${manifest}."
+  [[ -f "${metadata}" ]] || die "Validated build artifact is missing ${metadata}."
+
+  expected_sha="$(node - "${manifest}" "${metadata}" "${NEW_SHA}" "${RELEASE_VERSION}" "${RELEASE_TAG}" "${RELEASE_BUILD_CHANNEL}" <<\'NODE\'
+const fs = require("node:fs");
+const [manifestPath, metadataPath, commit, version, tag, channel] = process.argv.slice(2);
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf8"));
+const fail = (message) => { throw new Error(message); };
+
+if (manifest.schemaVersion !== 1) fail("unsupported artifact manifest schema");
+if (!/^[a-f0-9]{64}$/.test(manifest.archiveSha256 ?? "")) fail("invalid artifact archive SHA-256");
+if (manifest.commit !== commit) fail("artifact commit " + manifest.commit + " does not match " + commit);
+if (manifest.version !== version || manifest.tag !== tag || manifest.channel !== channel) {
+  fail("artifact release identity does not match expected release identity");
+}
+if (
+  metadata.version !== version
+  || metadata.tag !== tag
+  || metadata.channel !== channel
+  || metadata.commit !== commit
+  || metadata.shortCommit !== commit.slice(0, 8)
+  || typeof metadata.buildTime !== "string"
+  || !Number.isFinite(Date.parse(metadata.buildTime))
+) {
+  fail("build-version.json does not match the validated release identity");
+}
+if (manifest.buildTime !== metadata.buildTime) fail("artifact manifest build time does not match build metadata");
+process.stdout.write(manifest.archiveSha256);
+NODE
+)" || die "Validated build artifact manifest verification failed."
+
+  actual_sha="$(sha256sum "${archive}" | awk \'{print $1}\')"
+  [[ "${actual_sha}" == "${expected_sha}" ]] || die "Validated build artifact checksum mismatch."
+
+  if tar -tzf "${archive}" | grep -Eq \'(^/|(^|/)\.\.(/|$))\'; then
+    die "Validated build artifact contains an unsafe path."
+  fi
+
+  log "Staging CI-validated production build for ${NEW_SHA}"
+  acquire_build_lock
+  rm -rf -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
+  mkdir -p -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
+  if ! tar -xzf "${archive}" -C "${APP_DIR}/${RELEASE_BUILD_DIR}"; then
+    release_build_lock
+    die "Could not extract the validated production build."
+  fi
+  [[ -f "${APP_DIR}/${RELEASE_BUILD_DIR}/BUILD_ID" ]] || {
+    release_build_lock
+    die "Validated production build is missing BUILD_ID."
+  }
+  cp -- "${metadata}" "${STAGED_BUILD_METADATA_PATH}"
+  release_build_lock
+  log "Validated production build staged successfully (sha256=${actual_sha})."
+}
+
 generate_release_changelog() {
   local release_date
 
@@ -550,34 +632,40 @@ run_release_steps() {
   log "Generating Prisma contract"
   npm run prisma:generate
 
-  # next typegen/build may rewrite tracked TypeScript declaration files. Keep
-  # the source checkout exactly as it was before the release starts.
-  snapshot_build_source_files
-  if (( AUTOMATED == 1 )); then
-    log "Automated release: reusing CI validation for ${NEW_SHA}; skipping duplicate quality suite"
+  if [[ -n "${BUILD_ARTIFACT_DIR}" ]]; then
+    (( AUTOMATED == 1 )) || die "Validated build artifacts require --automated."
+    log "Automated release: reusing CI validation and production build for ${NEW_SHA}"
+    stage_validated_build_artifact
   else
-    run_quality_gates
-  fi
+    # next typegen/build may rewrite tracked TypeScript declaration files. Keep
+    # the source checkout exactly as it was before the release starts.
+    snapshot_build_source_files
+    if (( AUTOMATED == 1 )); then
+      log "Automated release: reusing CI validation for ${NEW_SHA}; skipping duplicate quality suite"
+    else
+      run_quality_gates
+    fi
 
-  log "Building production app"
-  acquire_build_lock
-  RELEASE_BUILD_TIME="$(date --utc --iso-8601=seconds)"
-  export AIRRADAR_BUILD_TIME="${RELEASE_BUILD_TIME}"
-  rm -rf -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
-  if ! NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" npm run build; then
-    restore_build_source_files || true
+    log "Building production app"
+    acquire_build_lock
+    RELEASE_BUILD_TIME="$(date --utc --iso-8601=seconds)"
+    export AIRRADAR_BUILD_TIME="${RELEASE_BUILD_TIME}"
+    rm -rf -- "${APP_DIR}/${RELEASE_BUILD_DIR}"
+    if ! NEXT_DIST_DIR="${RELEASE_BUILD_DIR}" npm run build; then
+      restore_build_source_files || true
+      release_build_lock
+      die "Production build failed; the active .next directory was not changed."
+    fi
+    restore_build_source_files || {
+      release_build_lock
+      die "Could not restore source files modified by the production build."
+    }
+    [[ -f "${APP_DIR}/${RELEASE_BUILD_DIR}/BUILD_ID" ]] || {
+      release_build_lock
+      die "Production build completed without ${RELEASE_BUILD_DIR}/BUILD_ID."
+    }
     release_build_lock
-    die "Production build failed; the active .next directory was not changed."
   fi
-  restore_build_source_files || {
-    release_build_lock
-    die "Could not restore source files modified by the production build."
-  }
-  [[ -f "${APP_DIR}/${RELEASE_BUILD_DIR}/BUILD_ID" ]] || {
-    release_build_lock
-    die "Production build completed without ${RELEASE_BUILD_DIR}/BUILD_ID."
-  }
-  release_build_lock
 
   log "Applying database migrations"
   npm run prisma:deploy
@@ -860,6 +948,11 @@ activate_staged_build_and_check() {
   [[ -d "${staged_build}" && -f "${staged_build}/BUILD_ID" ]] || die "Staged production build is missing or incomplete."
 
   log "Activating staged production build"
+  if [[ -f "${STAGED_BUILD_METADATA_PATH}" ]]; then
+    mkdir -p -- "${APP_DIR}/generated"
+    install -m 0644 "${STAGED_BUILD_METADATA_PATH}" "${APP_DIR}/generated/build-version.json"
+    rm -f -- "${STAGED_BUILD_METADATA_PATH}"
+  fi
   RESTART_ATTEMPTED=1
   run_privileged systemctl stop "${SERVICE_NAME}"
   SERVICE_STOPPED=1
