@@ -209,6 +209,21 @@ jobs:
       - run: npm run build:prepared
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
+          AIRRADAR_STANDALONE_BUILD: '1'
+      - name: Prepare standalone runtime assets
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ -f .next/standalone/server.js ]] || {
+            echo "::error::Standalone Next server was not emitted."
+            exit 1
+          }
+          rm -rf -- .next/standalone/public .next/standalone/.next/static
+          if [[ -d public ]]; then
+            cp -a public .next/standalone/public
+          fi
+          mkdir -p .next/standalone/.next
+          cp -a .next/static .next/standalone/.next/static
       - name: Restore Playwright browsers
         id: playwright-cache
         uses: actions/cache@v6
@@ -272,6 +287,7 @@ jobs:
             tag: metadata.tag,
             channel: metadata.channel,
             buildTime: metadata.buildTime,
+            runtime: "standalone",
             archiveSha256,
           };
           if (!manifest.commit || !/^[a-f0-9]{40}$/i.test(manifest.commit)) {
