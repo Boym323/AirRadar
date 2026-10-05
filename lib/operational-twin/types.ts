@@ -87,3 +87,14 @@ export interface OperationalTwinSituation {
   evidence: OperationalTwinEvidenceSummary;
   limitations: string[];
 }
+
+
+export interface OperationalTwinUnavailable {
+  version: typeof OPERATIONAL_TWIN_VERSION;
+  status: "unavailable" | "stale";
+  generatedAt: string;
+  icaoHex: string;
+  reason: "aircraft_not_live" | "invalid_position" | "stale_position" | "corridor_unavailable" | "internal_error";
+}
+
+export type OperationalTwinApiResponse = OperationalTwinSituation | OperationalTwinUnavailable;
