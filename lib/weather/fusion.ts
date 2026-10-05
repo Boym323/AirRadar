@@ -1,7 +1,7 @@
 import type { AircraftWeatherObservation } from "@/lib/server/aircraft-weather";
 import type { AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
-import type { MetarMapObservation, PirepObservation } from "@/lib/weather/types";
+import type { PirepObservation } from "@/lib/weather/types";
 
 export type WeatherFusionRiskKind = "TURBULENCE" | "ICING" | "CONVECTION";
 export type WeatherFusionSeverity = "NONE" | "LOW" | "MODERATE" | "HIGH" | "UNKNOWN";
@@ -85,6 +85,15 @@ export interface WeatherFusionResult {
   sources: WeatherFusionSourceStatus[];
 }
 
+export interface WeatherFusionMetarInput {
+  stationId: string;
+  observedAt: string | null;
+  temperatureC: number | null;
+  rawText: string | null;
+  stale: boolean;
+  distanceNm: number;
+}
+
 export interface WeatherFusionInput {
   aircraftHex: string;
   lat: number;
@@ -94,7 +103,7 @@ export interface WeatherFusionInput {
   aircraftObservations: readonly AircraftWeatherObservation[];
   pireps: readonly PirepObservation[];
   sigmets: readonly AircraftSigmetContext[];
-  metar: (MetarMapObservation & { distanceNm: number }) | null;
+  metar: WeatherFusionMetarInput | null;
   modelWind: AircraftWindContext | null;
   sourceAvailability?: Partial<Record<WeatherFusionSource, "AVAILABLE" | "STALE" | "UNAVAILABLE">>;
 }
@@ -147,15 +156,15 @@ function sigmetRisk(value: AircraftSigmetContext): { risk: WeatherFusionRiskKind
   return null;
 }
 
-function metarConvection(metar: MetarMapObservation): boolean {
-  const text = `${metar.rawMetar ?? ""}`.toUpperCase();
+function metarConvection(metar: WeatherFusionMetarInput): boolean {
+  const text = `${metar.rawText ?? ""}`.toUpperCase();
   return /(^|\s)[+-]?(?:TS|VCTS|TSRA|TSGR|TSGS)(?:\s|$)/.test(text)
     || /(^|\s)(?:SCT|BKN|OVC)\d{3}CB(?:\s|$)/.test(text);
 }
 
-function metarFreezingMoisture(metar: MetarMapObservation): boolean {
-  if (metar.temperature === null || metar.temperature < -20 || metar.temperature > 3) return false;
-  const text = `${metar.rawMetar ?? ""}`.toUpperCase();
+function metarFreezingMoisture(metar: WeatherFusionMetarInput): boolean {
+  if (metar.temperatureC === null || metar.temperatureC < -20 || metar.temperatureC > 3) return false;
+  const text = `${metar.rawText ?? ""}`.toUpperCase();
   return /(^|\s)[+-]?(?:RA|DZ|SN|SG|PL|FZRA|FZDZ|BR|FG)(?:\s|$)/.test(text)
     || /(^|\s)(?:BKN|OVC)\d{3}(?:CB|TCU)?(?:\s|$)/.test(text);
 }
@@ -304,7 +313,7 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
         observedAt: input.metar.observedAt,
         distanceNm: input.metar.distanceNm,
         altitudeDeltaFt: null,
-        detail: input.metar.rawMetar,
+        detail: input.metar.rawText,
       });
     }
     if (metarFreezingMoisture(input.metar)) {
@@ -318,7 +327,7 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
         observedAt: input.metar.observedAt,
         distanceNm: input.metar.distanceNm,
         altitudeDeltaFt: null,
-        detail: input.metar.rawMetar,
+        detail: input.metar.rawText,
       });
     }
   }
