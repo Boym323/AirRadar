@@ -79,6 +79,7 @@ describe("production release metadata gate", () => {
     expect(source).toContain('"operational-twin-v2-milestones"');
     expect(source).toContain('"operational-twin-v2-events"');
     expect(source).toContain('"operational-twin-v2-weather-events"');
+    expect(source).toContain('"operational-twin-navigation-integrity-corridor-v1"');
   });
 
   it("keeps visual smoke readiness independent of remote map tiles", () => {
