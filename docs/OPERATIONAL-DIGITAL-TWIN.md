@@ -391,3 +391,25 @@ Every response preserves `OPERATIONAL_CONTEXT_ONLY`,
 calculate loss of separation, collision probability, TCAS/STCA logic, or issue
 navigation/ATC instructions.
 
+## Truth-first Event Validation V1
+
+Event Outcome V2 is prediction-first and therefore cannot measure recall. The
+Truth-first V1 lane adds the inverse accounting for independent terminal truth:
+every destination-resolved Flight Intelligence `LANDING` is treated as an
+`ARRIVAL_ETA` truth event, and a landing with independent provider-reported
+arrival runway also becomes a `RUNWAY_EXPECTATION` truth event. The validator
+then asks whether a semantically matching Digital Twin prediction had already
+been captured during the preceding bounded 35-minute window.
+
+The existing protected event-outcome report now includes `truthFirst` with
+truth counts, predicted truth, missed truth, recall and timing error. Evidence
+is process-local, 24-hour bounded and deduplicated by landing lifecycle key.
+The initial quality gate remains WAIT until at least two hours and 20 scoreable
+truth events exist; afterwards recall below 70% is FAIL.
+
+V1 deliberately reports
+`WAYPOINT_SECTOR_WEATHER_RECALL_UNAVAILABLE`. A valid recall denominator for
+those event classes requires an independent truth universe, so prediction
+captures are not reused as fake truth. No public prediction policy changes as a
+result of this report.
+

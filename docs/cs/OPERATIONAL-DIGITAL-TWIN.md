@@ -373,3 +373,23 @@ Každá odpověď zachovává `OPERATIONAL_CONTEXT_ONLY`,
 rozstupu, pravděpodobnost srážky, logiku TCAS/STCA ani nevydává navigační nebo
 ATC pokyny.
 
+## Truth-first Event Validation V1
+
+Event Outcome V2 začíná predikcí, a proto nemůže korektně měřit recall.
+Truth-first V1 přidává opačné účetnictví pro nezávislou terminální pravdu:
+každý Flight Intelligence `LANDING` s rozpoznanou destinací je skutečná
+událost `ARRIVAL_ETA`; pokud landing obsahuje také nezávisle providerem
+reportovanou příletovou dráhu, vzniká i pravda `RUNWAY_EXPECTATION`. Validator
+pak ověří, zda během předchozího omezeného 35minutového okna už existovala
+sémanticky odpovídající predikce Digital Twinu.
+
+Existující chráněný event-outcome report nyní obsahuje `truthFirst`: počet
+skutečných událostí, předem predikovaných a zmeškaných událostí, recall a chybu
+časování. Evidence je process-local, omezená na 24 hodin a deduplikovaná podle
+landing lifecycle key. První quality gate zůstává WAIT do dvou hodin evidence
+a 20 scoreable truth událostí; potom je recall pod 70 % FAIL.
+
+V1 záměrně vrací `WAYPOINT_SECTOR_WEATHER_RECALL_UNAVAILABLE`. Pro tyto třídy
+zatím neexistuje nezávislý truth universe, takže predikce nejsou zneužity jako
+falešná pravda. Report sám nemění žádnou veřejnou prediction policy.
+
