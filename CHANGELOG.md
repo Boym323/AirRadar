@@ -10,6 +10,25 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.319] - 2026-10-05
+
+Changes since v1.0.318.
+
+### Added
+
+- Add Digital Twin wind timing promotion V1 (#360) (a69c852)
+
+### Maintenance
+
+- Sync generated repository metadata (#364) (86d8f20)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#364) (86d8f20)
+- feat: add Digital Twin wind timing promotion V1 (#360) (a69c852)
+
+</details>
 ## [1.0.318] - 2026-10-05
 
 Changes since v1.0.317.
