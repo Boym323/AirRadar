@@ -7,6 +7,7 @@ import type {
 import { OPERATIONAL_TWIN_VERSION } from "./types";
 import type { OperationalTwinAircraftState } from "./corridor";
 import type { WeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
+import type { OperationalTwinWindTimingShadow } from "./wind-timing-shadow";
 
 export function buildOperationalTwinSituation(input: {
   generatedAt: Date;
@@ -14,6 +15,7 @@ export function buildOperationalTwinSituation(input: {
   corridor: OperationalTwinCorridor;
   events: OperationalTwinEvent[];
   weatherCorridor: WeatherCorridorIntelligence;
+  windTimingShadow: OperationalTwinWindTimingShadow;
   atcAvailable: boolean;
   airspacePlanAvailable: boolean;
   sigmetAvailable: boolean;
@@ -53,6 +55,7 @@ export function buildOperationalTwinSituation(input: {
     },
     corridor: input.corridor,
     weatherCorridor: input.weatherCorridor,
+    windTimingShadow: input.windTimingShadow,
     events: input.events,
     evidence,
     limitations,
