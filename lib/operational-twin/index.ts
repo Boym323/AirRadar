@@ -63,3 +63,4 @@ export * from "./types";
 export * from "./corridor";
 export * from "./events";
 export * from "./outcome";
+export * from "./wind-timing-shadow";
