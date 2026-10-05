@@ -414,3 +414,22 @@ aplikuje wind timing. Odpověď obsahuje `windTimingPromotion` s nastavenou a
 efektivní politikou, graduation rozhodnutím, počtem upravených waypointů a
 důvodem fail-closed návratu.
 
+## Calibration Persistence V1
+
+Calibration Persistence V1 zachovává dokončenou kalibrační evidenci Digital
+Twinu přes běžné restarty procesu, aniž by ukládala predikce nebo truth data
+jednotlivých letadel. PostgreSQL ukládá anonymní pětiminutové agregační buckety
+pro corridor-outcome a event-outcome lane, klíčované pouze lane, verzí
+validátoru a začátkem bucketu.
+
+Persistovaný payload obsahuje jen čítače a numerické součty potřebné k obnově
+stávajících 24hodinových kalibračních oken. Záměrně neobsahuje ICAO, callsign,
+registraci, souřadnice, raw truth body, pending predikce ani jednotlivé
+deskriptory událostí. Řádky se načtou před prvním live refreshem, zapisují se
+s omezeným zpožděním a po 26 hodinách se odstraňují.
+
+Persistence je fail-soft. Pokud PostgreSQL není dostupný nebo hydration odmítne
+poškozený či starý bucket, Digital Twin pokračuje s novou process-local
+evidencí. Promotion/readiness prahy se nemění; persistence pouze zachovává
+evidenci a nezmírňuje graduation gate.
+
