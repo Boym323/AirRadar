@@ -74,6 +74,7 @@ export function AircraftOperationalTwin({
   const corridor = data.corridor;
   const evidence = data.evidence;
   const weather = data.weatherCorridor ?? null;
+  const windTimingShadow = data.windTimingShadow ?? null;
   return <section className={styles.panel} aria-labelledby="operational-twin-title" data-testid="operational-digital-twin-v1">
     <div className={styles.heading}>
       <div>
@@ -137,6 +138,21 @@ export function AircraftOperationalTwin({
         </li>)}
       </ol> : <p className={styles.status}>{t.operationalTwin.weatherCorridorNoEvents}</p>}
     </section>}
+
+    {windTimingShadow && <details className={styles.limitations} data-testid="operational-twin-wind-timing-shadow-v1">
+      <summary>{t.operationalTwin.windTimingShadowTitle} · {t.operationalTwin.windTimingShadowStatus[windTimingShadow.status]}</summary>
+      <p className={styles.status}>{t.operationalTwin.windTimingShadowSummary}</p>
+      {windTimingShadow.status !== "INSUFFICIENT" ? <>
+        <div className={styles.metrics}>
+          <div><span>{t.operationalTwin.windTimingShadowGroundSpeed}</span><strong>{windTimingShadow.observedGroundSpeedKt === null ? "—" : `${formatNumber(windTimingShadow.observedGroundSpeedKt, 0)} kt`}</strong></div>
+          <div><span>{t.operationalTwin.windTimingShadowStillAir}</span><strong>{windTimingShadow.inferredStillAirSpeedKt === null ? "—" : `${formatNumber(windTimingShadow.inferredStillAirSpeedKt, 0)} kt`}</strong></div>
+          <div><span>{t.operationalTwin.windTimingShadowMaxDelta}</span><strong>{windTimingShadow.maxAbsoluteDeltaSeconds === null ? "—" : `${formatNumber(windTimingShadow.maxAbsoluteDeltaSeconds, 0)} s`}</strong></div>
+        </div>
+        <ul>{windTimingShadow.checkpoints.map((checkpoint) => <li key={checkpoint.horizonMinutes}>
+          {t.operationalTwin.windTimingShadowCheckpoint(checkpoint.horizonMinutes, formatNumber(checkpoint.deltaSeconds, 0))}
+        </li>)}</ul>
+      </> : <p className={styles.status}>{t.operationalTwin.windTimingShadowNoData}</p>}
+    </details>}
 
     <h3>{t.operationalTwin.events}</h3>
     {data.events.length ? <ol className={styles.timeline}>
