@@ -289,3 +289,47 @@ timer, EventSource, druhý Digital Twin výpočet ani změnu canonical corridoru
 ## Navigation Integrity Corridor V1
 
 Digital Twin nově porovnává svůj existující vzorkovaný 30minutový corridor s už vypočtenými aktivními regionálními anomáliemi Navigation Integrity. Průnik vznikne pouze při současné shodě grid cell i altitude bandu. Výsledek zachovává severity, confidence, počet dotčených letadel, LOCAL/NETWORK evidence, baseline maturity a audit categories. Nula průniků neznamená all-clear a funkce nikdy netvrdí GNSS jamming, spoofing ani poruchu navigace konkrétního letadla. Nevzniká nový HTTP request, timer, detector pass, DB přístup ani persistence.
+
+## Wind Timing Graduation V1
+
+Event Outcome Validation V2 nyní obsahuje párovou graduation větev pro waypoint
+timing existujícího Wind-adjusted Timing Shadow V1. Stejný zachycený waypoint
+ukládá canonical čas i wind-adjusted shadow čas. Když budoucí LOCAL waypoint
+truth observation event vyhodnotí, AirRadar porovná oba časy proti přesně téže
+truth observation.
+
+Do graduation evidence se přijímá pouze wind shadow se stavem `AVAILABLE`.
+`STALE` ani `INSUFFICIENT` timing se nezapočítává. Porovnání je pouze pro
+waypointy, protože Wind-adjusted Timing Shadow V1 v této fázi přepočítává
+časování waypoint/checkpoint vzdáleností nad nezměněnou geometrií corridoru a
+samostatně nepřepočítává sector, SIGMET, runway ani arrival eventy.
+
+Report obsahuje:
+
+- paired waypoint samples;
+- unpaired outcomes a truth coverage;
+- canonical a shadow mean absolute timing error;
+- absolutní a relativní zlepšení MAE;
+- shadow wins, canonical wins a ties;
+- shadow win rate;
+- průměrnou absolutní wind timing korekci;
+- počet meaningful adjustment sample;
+- graduation stav PASS / WAIT / FAIL.
+
+První threshold set vyžaduje nejméně dvě hodiny process-local evidence, 30
+paired waypoint sample, 20 paired sample s alespoň 30sekundovou timing korekcí
+a 60% truth coverage. Po naplnění evidence:
+
+- PASS vyžaduje nejméně 5% relativní zlepšení MAE a shadow win rate alespoň 55%;
+- FAIL znamená materiální regresi alespoň 5% MAE nebo shadow win rate 45% a méně;
+- mezilehlý výsledek zůstává WAIT jako neprůkazný.
+
+PASS **neprovádí automatickou promotion**. Report explicitně vrací
+`autoPromotion=false`, `manualPromotionEligible=true` pouze při PASS a ve
+všech stavech `canonicalTimingRemainsActive=true`. Canonical corridor/event
+timing tedy tato fáze nemění.
+
+Párové porovnání je součástí existujícího chráněného Event Outcome reportu a
+zobrazuje se také na autentizované stránce System. Nepřidává timer, polling,
+DB persistence, čtení FlightPosition, druhý truth observer ani druhý Digital
+Twin výpočet.

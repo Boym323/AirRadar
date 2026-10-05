@@ -1952,6 +1952,18 @@ export const en = {
     operationalTwinOutcomeCapture: "Capture mode",
     operationalTwinOutcomeRequestDriven: "on-demand situation · no extra polling",
 
+    windTimingGraduationTitle: "Digital Twin · wind timing graduation",
+    windTimingGraduationDecision: "Graduation decision",
+    windTimingGraduationSamples: "Paired / pending / meaningful",
+    windTimingGraduationMae: "MAE canonical / shadow",
+    windTimingGraduationImprovement: "Relative MAE improvement",
+    windTimingGraduationWins: "Shadow / canonical / tie",
+    windTimingGraduationWinRate: "Shadow win rate",
+    windTimingGraduationCoverage: "Truth coverage",
+    windTimingGraduationPromotion: "Promotion",
+    windTimingGraduationEligible: "eligible for manual graduation",
+    windTimingGraduationCanonical: "canonical timing remains active",
+
     rateLimited: "Rate limited",
     retryAfter: "Retry after",
     nextRetry: "Next retry",

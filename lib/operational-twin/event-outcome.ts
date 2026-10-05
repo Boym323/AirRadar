@@ -48,6 +48,32 @@ export const OPERATIONAL_TWIN_EVENT_OUTCOME_THRESHOLDS = {
   maximumMissingTruthRate: 0.40,
 } as const;
 
+export const OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_VERSION =
+  "operational-digital-twin-wind-timing-graduation-v1" as const;
+
+export const OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS = {
+  version: OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_VERSION,
+  minimumSpanMinutes: 120,
+  minimumPairedSamples: 30,
+  minimumMeaningfulAdjustments: 20,
+  meaningfulAdjustmentSeconds: 30,
+  minimumTruthCoverage: 0.60,
+  minimumShadowWinRate: 0.55,
+  regressionShadowWinRate: 0.45,
+  minimumRelativeMaeImprovement: 0.05,
+  regressionRelativeMaeImprovement: -0.05,
+  tieToleranceSeconds: 5,
+} as const;
+
+export type OperationalTwinWindTimingGraduationDecision = "PASS" | "WAIT" | "FAIL";
+export type OperationalTwinWindTimingGraduationReason =
+  | "process_window_insufficient"
+  | "paired_samples_insufficient"
+  | "meaningful_adjustments_insufficient"
+  | "truth_coverage_low"
+  | "benefit_inconclusive"
+  | "shadow_regression";
+
 const KM_PER_NM = 1.852;
 const CAPTURE_DEDUP_MS = 55_000;
 const SPATIAL_EARLY_MS = 5 * 60_000;
@@ -123,6 +149,8 @@ interface PendingEventOutcome {
   confidence: OperationalTwinEvent["confidence"];
   provenance: OperationalTwinEvent["provenance"];
   descriptor: TruthDescriptor;
+  windShadowPredictedAt: number | null;
+  windShadowAdjustmentSeconds: number | null;
   truthNearTarget: boolean;
   truthNearExpiry: boolean;
 }
@@ -140,11 +168,25 @@ interface EventAggregate {
   within300Seconds: number;
 }
 
+interface WindTimingComparisonAggregate {
+  eligiblePredictions: number;
+  pairedSamples: number;
+  unpairedResolutions: number;
+  meaningfulAdjustments: number;
+  canonicalAbsoluteTimingErrorSecondsSum: number;
+  shadowAbsoluteTimingErrorSecondsSum: number;
+  shadowWins: number;
+  canonicalWins: number;
+  ties: number;
+  absoluteAdjustmentSecondsSum: number;
+}
+
 interface OutcomeBucket {
   startMs: number;
   overall: EventAggregate;
   byType: Record<OperationalTwinEventOutcomeType, EventAggregate>;
   byLead: Record<LeadBucket, EventAggregate>;
+  windTimingComparison: WindTimingComparisonAggregate;
 }
 
 export interface OperationalTwinEventOutcomeSlice {
@@ -169,6 +211,44 @@ export interface OperationalTwinEventOutcomeCaptureContext {
   atcDataset: PreparedAtcContextDataset | null;
   sigmets: SigmetSnapshot | null;
   destination: string | null;
+}
+
+export interface OperationalTwinWindTimingGraduationReport {
+  version: typeof OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_VERSION;
+  decision: OperationalTwinWindTimingGraduationDecision;
+  reasons: OperationalTwinWindTimingGraduationReason[];
+  complete: boolean;
+  thresholds: typeof OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS;
+  scope: "WAYPOINT_TIMING_ONLY";
+  truthSource: "EVENT_OUTCOME_V2_LOCAL_WAYPOINT_TRUTH";
+  autoPromotion: false;
+  manualPromotionEligible: boolean;
+  canonicalTimingRemainsActive: true;
+  eligiblePredictions: number;
+  resolvedPredictions: number;
+  pendingEligible: number;
+  pairedSamples: number;
+  unpairedResolutions: number;
+  truthCoverage: number | null;
+  meaningfulAdjustments: number;
+  canonicalMeanAbsoluteTimingErrorSeconds: number | null;
+  shadowMeanAbsoluteTimingErrorSeconds: number | null;
+  meanImprovementSeconds: number | null;
+  relativeMaeImprovement: number | null;
+  shadowWins: number;
+  canonicalWins: number;
+  ties: number;
+  shadowWinRate: number | null;
+  meanAbsoluteAdjustmentSeconds: number | null;
+}
+
+export interface OperationalTwinWindTimingGraduationDecisionInput {
+  spanMinutes: number;
+  pairedSamples: number;
+  meaningfulAdjustments: number;
+  truthCoverage: number | null;
+  shadowWinRate: number | null;
+  relativeMaeImprovement: number | null;
 }
 
 export interface OperationalTwinEventOutcomeReport {
@@ -196,12 +276,90 @@ export interface OperationalTwinEventOutcomeReport {
   overall: OperationalTwinEventOutcomeSlice;
   byType: Record<OperationalTwinEventOutcomeType, OperationalTwinEventOutcomeSlice>;
   byLeadMinutes: Record<LeadBucket, OperationalTwinEventOutcomeSlice>;
+  windTimingGraduation: OperationalTwinWindTimingGraduationReport;
 }
 
 export interface OperationalTwinEventOutcomeDecisionInput {
   spanMinutes: number;
   overall: OperationalTwinEventOutcomeSlice;
   byType: Record<OperationalTwinEventOutcomeType, OperationalTwinEventOutcomeSlice>;
+}
+
+function emptyWindTimingComparison(): WindTimingComparisonAggregate {
+  return {
+    eligiblePredictions: 0,
+    pairedSamples: 0,
+    unpairedResolutions: 0,
+    meaningfulAdjustments: 0,
+    canonicalAbsoluteTimingErrorSecondsSum: 0,
+    shadowAbsoluteTimingErrorSecondsSum: 0,
+    shadowWins: 0,
+    canonicalWins: 0,
+    ties: 0,
+    absoluteAdjustmentSecondsSum: 0,
+  };
+}
+
+function addWindTimingComparison(
+  target: WindTimingComparisonAggregate,
+  source: WindTimingComparisonAggregate,
+): void {
+  target.eligiblePredictions += source.eligiblePredictions;
+  target.pairedSamples += source.pairedSamples;
+  target.unpairedResolutions += source.unpairedResolutions;
+  target.meaningfulAdjustments += source.meaningfulAdjustments;
+  target.canonicalAbsoluteTimingErrorSecondsSum += source.canonicalAbsoluteTimingErrorSecondsSum;
+  target.shadowAbsoluteTimingErrorSecondsSum += source.shadowAbsoluteTimingErrorSecondsSum;
+  target.shadowWins += source.shadowWins;
+  target.canonicalWins += source.canonicalWins;
+  target.ties += source.ties;
+  target.absoluteAdjustmentSecondsSum += source.absoluteAdjustmentSecondsSum;
+}
+
+export function evaluateOperationalTwinWindTimingGraduation(
+  input: OperationalTwinWindTimingGraduationDecisionInput,
+): {
+  decision: OperationalTwinWindTimingGraduationDecision;
+  reasons: OperationalTwinWindTimingGraduationReason[];
+  complete: boolean;
+} {
+  const blockers: OperationalTwinWindTimingGraduationReason[] = [];
+  if (input.spanMinutes < OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.minimumSpanMinutes) {
+    blockers.push("process_window_insufficient");
+  }
+  if (input.pairedSamples < OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.minimumPairedSamples) {
+    blockers.push("paired_samples_insufficient");
+  }
+  if (input.meaningfulAdjustments < OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.minimumMeaningfulAdjustments) {
+    blockers.push("meaningful_adjustments_insufficient");
+  }
+  if (
+    input.truthCoverage === null
+    || input.truthCoverage < OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.minimumTruthCoverage
+  ) {
+    blockers.push("truth_coverage_low");
+  }
+  if (blockers.length) return { decision: "WAIT", reasons: blockers, complete: false };
+
+  const regression = (
+    input.relativeMaeImprovement !== null
+    && input.relativeMaeImprovement <= OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.regressionRelativeMaeImprovement
+  ) || (
+    input.shadowWinRate !== null
+    && input.shadowWinRate <= OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.regressionShadowWinRate
+  );
+  if (regression) return { decision: "FAIL", reasons: ["shadow_regression"], complete: true };
+
+  const beneficial = (
+    input.relativeMaeImprovement !== null
+    && input.relativeMaeImprovement >= OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.minimumRelativeMaeImprovement
+  ) && (
+    input.shadowWinRate !== null
+    && input.shadowWinRate >= OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.minimumShadowWinRate
+  );
+  return beneficial
+    ? { decision: "PASS", reasons: [], complete: true }
+    : { decision: "WAIT", reasons: ["benefit_inconclusive"], complete: true };
 }
 
 function emptyAggregate(): EventAggregate {
@@ -370,6 +528,31 @@ function sigmetForEvent(
 ): SigmetSnapshot["features"][number] | null {
   if (!sigmets) return null;
   return sigmets.features.find((feature) => event.id.startsWith(`sigmet:${feature.id}:`)) ?? null;
+}
+
+function windShadowPredictionForWaypoint(
+  situation: OperationalTwinSituation,
+  event: OperationalTwinEvent,
+  generatedAtMs: number,
+): { predictedAt: number; adjustmentSeconds: number } | null {
+  if (event.type !== "WAYPOINT") return null;
+  const shadow = situation.windTimingShadow;
+  if (!shadow || shadow.status !== "AVAILABLE") return null;
+  if (!finite(event.lat) || !finite(event.lon)) return null;
+
+  const canonicalWaypoint = situation.corridor.waypoints.find((waypoint) =>
+    waypoint.name === event.title
+    && Math.abs(waypoint.lat - event.lat!) < 1e-5
+    && Math.abs(waypoint.lon - event.lon!) < 1e-5
+    && Math.abs(waypoint.offsetMinutes - event.offsetMinutes) < 0.11);
+  if (!canonicalWaypoint) return null;
+
+  const shadowWaypoint = shadow.waypoints.find((waypoint) => waypoint.id === canonicalWaypoint.id);
+  if (!shadowWaypoint || !Number.isFinite(shadowWaypoint.shadowOffsetMinutes)) return null;
+  return {
+    predictedAt: generatedAtMs + shadowWaypoint.shadowOffsetMinutes * 60_000,
+    adjustmentSeconds: shadowWaypoint.deltaSeconds,
+  };
 }
 
 function descriptorForEvent(
@@ -548,6 +731,7 @@ export class OperationalTwinEventOutcomeValidator {
         continue;
       }
       const leadMinutes = Math.max(0, (predictedAt - now) / 60_000);
+      const windShadowPrediction = windShadowPredictionForWaypoint(situation, event, now);
       const window = windowFor(event.type);
       const id = `${dedupKey}:${now}`;
       const sample: PendingEventOutcome = {
@@ -564,6 +748,8 @@ export class OperationalTwinEventOutcomeValidator {
         confidence: event.confidence,
         provenance: event.provenance,
         descriptor: descriptor.descriptor,
+        windShadowPredictedAt: windShadowPrediction?.predictedAt ?? null,
+        windShadowAdjustmentSeconds: windShadowPrediction?.adjustmentSeconds ?? null,
         truthNearTarget: false,
         truthNearExpiry: false,
       };
@@ -649,10 +835,12 @@ export class OperationalTwinEventOutcomeValidator {
     const overall = emptyAggregate();
     const byType = typeRecord();
     const byLead = leadRecord();
+    const windTimingComparison = emptyWindTimingComparison();
     for (const bucket of buckets) {
       addAggregate(overall, bucket.overall);
       for (const type of OPERATIONAL_TWIN_EVENT_OUTCOME_SUPPORTED_TYPES) addAggregate(byType[type], bucket.byType[type]);
       for (const lead of Object.keys(byLead) as LeadBucket[]) addAggregate(byLead[lead], bucket.byLead[lead]);
+      addWindTimingComparison(windTimingComparison, bucket.windTimingComparison);
     }
 
     const overallSlice = aggregateToSlice(overall);
@@ -669,6 +857,63 @@ export class OperationalTwinEventOutcomeValidator {
       overall: overallSlice,
       byType: byTypeSlices,
     });
+    const resolvedWindPredictions = windTimingComparison.pairedSamples + windTimingComparison.unpairedResolutions;
+    const pendingEligible = [...this.pending.values()].filter((pending) => pending.windShadowPredictedAt !== null).length;
+    const truthCoverage = resolvedWindPredictions
+      ? windTimingComparison.pairedSamples / resolvedWindPredictions
+      : null;
+    const canonicalMae = windTimingComparison.pairedSamples
+      ? windTimingComparison.canonicalAbsoluteTimingErrorSecondsSum / windTimingComparison.pairedSamples
+      : null;
+    const shadowMae = windTimingComparison.pairedSamples
+      ? windTimingComparison.shadowAbsoluteTimingErrorSecondsSum / windTimingComparison.pairedSamples
+      : null;
+    const meanImprovementSeconds = canonicalMae !== null && shadowMae !== null
+      ? canonicalMae - shadowMae
+      : null;
+    const relativeMaeImprovement = canonicalMae !== null && canonicalMae > 0 && shadowMae !== null
+      ? (canonicalMae - shadowMae) / canonicalMae
+      : null;
+    const decisive = windTimingComparison.shadowWins + windTimingComparison.canonicalWins;
+    const shadowWinRate = decisive ? windTimingComparison.shadowWins / decisive : null;
+    const windEvaluated = evaluateOperationalTwinWindTimingGraduation({
+      spanMinutes,
+      pairedSamples: windTimingComparison.pairedSamples,
+      meaningfulAdjustments: windTimingComparison.meaningfulAdjustments,
+      truthCoverage,
+      shadowWinRate,
+      relativeMaeImprovement,
+    });
+    const windTimingGraduation: OperationalTwinWindTimingGraduationReport = {
+      version: OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_VERSION,
+      decision: windEvaluated.decision,
+      reasons: windEvaluated.reasons,
+      complete: windEvaluated.complete,
+      thresholds: OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS,
+      scope: "WAYPOINT_TIMING_ONLY",
+      truthSource: "EVENT_OUTCOME_V2_LOCAL_WAYPOINT_TRUTH",
+      autoPromotion: false,
+      manualPromotionEligible: windEvaluated.decision === "PASS",
+      canonicalTimingRemainsActive: true,
+      eligiblePredictions: windTimingComparison.eligiblePredictions,
+      resolvedPredictions: resolvedWindPredictions,
+      pendingEligible,
+      pairedSamples: windTimingComparison.pairedSamples,
+      unpairedResolutions: windTimingComparison.unpairedResolutions,
+      truthCoverage: truthCoverage === null ? null : Number(truthCoverage.toFixed(4)),
+      meaningfulAdjustments: windTimingComparison.meaningfulAdjustments,
+      canonicalMeanAbsoluteTimingErrorSeconds: canonicalMae === null ? null : Number(canonicalMae.toFixed(1)),
+      shadowMeanAbsoluteTimingErrorSeconds: shadowMae === null ? null : Number(shadowMae.toFixed(1)),
+      meanImprovementSeconds: meanImprovementSeconds === null ? null : Number(meanImprovementSeconds.toFixed(1)),
+      relativeMaeImprovement: relativeMaeImprovement === null ? null : Number(relativeMaeImprovement.toFixed(4)),
+      shadowWins: windTimingComparison.shadowWins,
+      canonicalWins: windTimingComparison.canonicalWins,
+      ties: windTimingComparison.ties,
+      shadowWinRate: shadowWinRate === null ? null : Number(shadowWinRate.toFixed(4)),
+      meanAbsoluteAdjustmentSeconds: windTimingComparison.pairedSamples
+        ? Number((windTimingComparison.absoluteAdjustmentSecondsSum / windTimingComparison.pairedSamples).toFixed(1))
+        : null,
+    };
 
     return {
       version: OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION,
@@ -695,6 +940,7 @@ export class OperationalTwinEventOutcomeValidator {
       overall: overallSlice,
       byType: byTypeSlices,
       byLeadMinutes: byLeadSlices,
+      windTimingGraduation,
     };
   }
 
@@ -729,6 +975,7 @@ export class OperationalTwinEventOutcomeValidator {
 
   private resolveObserved(pending: PendingEventOutcome, observedAt: number): void {
     const timingErrorSeconds = (observedAt - pending.predictedAt) / 1000;
+    this.recordWindTimingObserved(pending, observedAt);
     this.recordResolution(pending, "observed", timingErrorSeconds);
   }
 
@@ -744,12 +991,39 @@ export class OperationalTwinEventOutcomeValidator {
     this.recordResolution(pending, "unscoreableTruth", null);
   }
 
+  private recordWindTimingObserved(pending: PendingEventOutcome, observedAt: number): void {
+    if (pending.windShadowPredictedAt === null || pending.windShadowAdjustmentSeconds === null) return;
+    const aggregate = this.bucketFor(pending.capturedAt).windTimingComparison;
+    const canonicalError = Math.abs((observedAt - pending.predictedAt) / 1000);
+    const shadowError = Math.abs((observedAt - pending.windShadowPredictedAt) / 1000);
+    aggregate.pairedSamples += 1;
+    aggregate.canonicalAbsoluteTimingErrorSecondsSum += canonicalError;
+    aggregate.shadowAbsoluteTimingErrorSecondsSum += shadowError;
+    aggregate.absoluteAdjustmentSecondsSum += Math.abs(pending.windShadowAdjustmentSeconds);
+    if (
+      Math.abs(pending.windShadowAdjustmentSeconds)
+      >= OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.meaningfulAdjustmentSeconds
+    ) aggregate.meaningfulAdjustments += 1;
+
+    const difference = canonicalError - shadowError;
+    if (Math.abs(difference) <= OPERATIONAL_TWIN_WIND_TIMING_GRADUATION_THRESHOLDS.tieToleranceSeconds) {
+      aggregate.ties += 1;
+    } else if (difference > 0) {
+      aggregate.shadowWins += 1;
+    } else {
+      aggregate.canonicalWins += 1;
+    }
+  }
+
   private recordResolution(
     pending: PendingEventOutcome,
     kind: "observed" | "falsePositive" | "expiredNoTruth" | "unscoreableTruth",
     timingErrorSeconds: number | null,
   ): void {
     const bucket = this.bucketFor(pending.capturedAt);
+    if (kind !== "observed" && pending.windShadowPredictedAt !== null) {
+      bucket.windTimingComparison.unpairedResolutions += 1;
+    }
     for (const aggregate of [
       bucket.overall,
       bucket.byType[pending.eventType],
@@ -772,6 +1046,7 @@ export class OperationalTwinEventOutcomeValidator {
     bucket.overall.predictions += 1;
     bucket.byType[pending.eventType].predictions += 1;
     bucket.byLead[leadBucket(pending.leadMinutes)].predictions += 1;
+    if (pending.windShadowPredictedAt !== null) bucket.windTimingComparison.eligiblePredictions += 1;
   }
 
   private bucketFor(timestamp: number): OutcomeBucket {
@@ -783,6 +1058,7 @@ export class OperationalTwinEventOutcomeValidator {
         overall: emptyAggregate(),
         byType: typeRecord(),
         byLead: leadRecord(),
+        windTimingComparison: emptyWindTimingComparison(),
       };
       this.buckets.push(bucket);
       this.buckets.sort((left, right) => left.startMs - right.startMs);

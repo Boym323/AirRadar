@@ -458,6 +458,8 @@ export function SystemStatusPage() {
   const operationalTwinOutcome5 = asRecord(operationalTwinOutcomeHorizons?.["5"]);
   const operationalTwinOutcome15 = asRecord(operationalTwinOutcomeHorizons?.["15"]);
   const operationalTwinOutcome30 = asRecord(operationalTwinOutcomeHorizons?.["30"]);
+  const operationalTwinEventOutcome = asRecord(data?.localAdsb?.operationalTwinEventOutcome);
+  const windTimingGraduation = asRecord(operationalTwinEventOutcome?.windTimingGraduation);
   const trackFusionResidual = asRecord(trackFusion?.positionResidualNm);
   const trackFusionCanonicalResidual = asRecord(trackFusion?.canonicalResidualNm);
   const trackFusionResidualAverage = diagnosticOptionalNumber(trackFusionResidual, "average");
@@ -632,6 +634,34 @@ export function SystemStatusPage() {
             : `${formatNumber((diagnosticOptionalNumber(operationalTwinOutcome, "expiredTruthRate") ?? 0) * 100, 1, dictionary.locale)} %`} />
           <Field label={dictionary.system.operationalTwinOutcomeHorizons} value={`5m ${formatNumber(diagnosticNumber(operationalTwinOutcome5, "samples"), 0, dictionary.locale)} · 15m ${formatNumber(diagnosticNumber(operationalTwinOutcome15, "samples"), 0, dictionary.locale)} · 30m ${formatNumber(diagnosticNumber(operationalTwinOutcome30, "samples"), 0, dictionary.locale)}`} />
           <Field label={dictionary.system.operationalTwinOutcomeCapture} value={diagnosticBoolean(operationalTwinOutcome, "requestDrivenCapture") ? dictionary.system.operationalTwinOutcomeRequestDriven : dictionary.system.notAvailable} />
+        </div>
+      </Card>}
+
+      {detailed && windTimingGraduation && <Card
+        title={dictionary.system.windTimingGraduationTitle}
+        status={windTimingGraduation.decision === "PASS" ? "ok" : windTimingGraduation.decision === "FAIL" ? "degraded" : "disabled"}
+        dictionary={dictionary}
+      >
+        <div data-testid="wind-timing-graduation">
+          <Field label={dictionary.system.version} value={String(windTimingGraduation.version ?? dictionary.system.notAvailable)} />
+          <Field label={dictionary.system.windTimingGraduationDecision} value={String(windTimingGraduation.decision ?? dictionary.system.notAvailable)} />
+          <Field label={dictionary.system.windTimingGraduationSamples} value={`${formatNumber(diagnosticNumber(windTimingGraduation, "pairedSamples"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(windTimingGraduation, "pendingEligible"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(windTimingGraduation, "meaningfulAdjustments"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.windTimingGraduationMae} value={diagnosticOptionalNumber(windTimingGraduation, "canonicalMeanAbsoluteTimingErrorSeconds") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber(diagnosticOptionalNumber(windTimingGraduation, "canonicalMeanAbsoluteTimingErrorSeconds") ?? 0, 1, dictionary.locale)} / ${formatNumber(diagnosticOptionalNumber(windTimingGraduation, "shadowMeanAbsoluteTimingErrorSeconds") ?? 0, 1, dictionary.locale)} s`} />
+          <Field label={dictionary.system.windTimingGraduationImprovement} value={diagnosticOptionalNumber(windTimingGraduation, "relativeMaeImprovement") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber((diagnosticOptionalNumber(windTimingGraduation, "relativeMaeImprovement") ?? 0) * 100, 1, dictionary.locale)} %`} />
+          <Field label={dictionary.system.windTimingGraduationWins} value={`${formatNumber(diagnosticNumber(windTimingGraduation, "shadowWins"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(windTimingGraduation, "canonicalWins"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(windTimingGraduation, "ties"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.windTimingGraduationWinRate} value={diagnosticOptionalNumber(windTimingGraduation, "shadowWinRate") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber((diagnosticOptionalNumber(windTimingGraduation, "shadowWinRate") ?? 0) * 100, 1, dictionary.locale)} %`} />
+          <Field label={dictionary.system.windTimingGraduationCoverage} value={diagnosticOptionalNumber(windTimingGraduation, "truthCoverage") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber((diagnosticOptionalNumber(windTimingGraduation, "truthCoverage") ?? 0) * 100, 1, dictionary.locale)} %`} />
+          <Field label={dictionary.system.windTimingGraduationPromotion} value={diagnosticBoolean(windTimingGraduation, "manualPromotionEligible")
+            ? dictionary.system.windTimingGraduationEligible
+            : dictionary.system.windTimingGraduationCanonical} />
         </div>
       </Card>}
 
