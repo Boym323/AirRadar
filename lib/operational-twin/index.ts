@@ -62,3 +62,4 @@ export function buildOperationalTwinSituation(input: {
 export * from "./types";
 export * from "./corridor";
 export * from "./events";
+export * from "./outcome";

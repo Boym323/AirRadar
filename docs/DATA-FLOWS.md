@@ -686,3 +686,27 @@ Outcome PASS / WAIT / FAIL
 
 The future LOCAL observation is consumed only from current RAM. This feature
 does not query or write historical position persistence.
+
+## Operational Digital Twin outcome validation flow
+
+```text
+existing /api/aircraft/:hex/situation calculation
+                    ↓
+     capture +5 / +15 / +30 min targets
+                    ↓
+          bounded pending RAM samples
+                    ↓
+future LOCAL receiver refresh / local trail
+                    ↓
+ closest truth within ±20 s of target
+                    ↓
+position error + altitude error + uncertainty coverage
+                    ↓
+      24h / 5min bounded aggregates
+                    ↓
+            PASS / WAIT / FAIL
+```
+
+Capture is request-driven and deduplicated. There is no second Digital Twin
+calculation, background poller, FlightPosition read, database write or network
+truth fallback.

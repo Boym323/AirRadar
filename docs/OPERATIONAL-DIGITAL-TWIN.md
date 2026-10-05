@@ -133,7 +133,7 @@ does not yet persist or calibrate corridor outcomes.
 
 Natural follow-ups are:
 
-1. outcome truth for sector/waypoint/weather crossing timing;
+1. event-outcome truth for sector/waypoint/weather crossing timing beyond the corridor-position V1;
 2. route-aware wind-adjusted speed/time propagation;
 3. navigation-integrity region intersections;
 4. regional multi-aircraft situation graphs and operational alerts.
@@ -185,3 +185,48 @@ The uncertainty polygon is visualization of model uncertainty, not protected
 airspace, containment, separation, or a safety boundary. Weather markers remain
 evidence from Weather Corridor Intelligence and are not hazard clearances or
 avoidance instructions.
+
+## Outcome Validation V1
+
+Operational Digital Twin now has a bounded prospective calibration lane for the
+same corridor that is already returned to the selected-aircraft situation
+surface. Validation is request-driven: when an existing
+`/api/aircraft/:hex/situation` calculation succeeds, the validator captures
+the projected position, altitude and uncertainty at +5, +15 and +30 minutes.
+
+The aircraft state service later resolves those pending samples only against
+future LOCAL receiver observations already present in RAM. It prefers the
+closest local trail/current observation within a ±20 second truth tolerance and
+never substitutes network, merged-canonical, database or historical truth.
+
+The report exposes:
+
+- mean horizontal position error in NM;
+- mean projected uncertainty in NM;
+- mean position-error / uncertainty ratio;
+- share of truth observations that fell inside the stated uncertainty
+  envelope;
+- mean absolute altitude error when both sides have altitude;
+- 5/15/30 minute slices;
+- route-aware versus kinematic slices;
+- canonical-input versus Track-Fusion-input slices;
+- missing-truth expiry rate;
+- PASS / WAIT / FAIL calibration state.
+
+The evidence store is process-local and bounded to 24 hours in five-minute
+aggregate buckets. A process restart intentionally resets evidence. Capture is
+deduplicated per aircraft for 55 seconds and pending truth is capacity bounded.
+
+The first threshold set requires at least two hours of process-local evidence,
+90 completed samples overall and 20 per horizon before a quality decision can
+leave WAIT. Once complete, PASS requires at least 60% uncertainty-envelope
+coverage, mean error no greater than mean stated uncertainty, and no more than
+35% expired truth. These are calibration gates, not safety or certification
+claims.
+
+Protected inspection is available at:
+
+`GET /api/admin/operational-twin/outcome`
+
+The System page also exposes the same bounded report for authenticated admin
+diagnostics.

@@ -540,13 +540,14 @@
       "category": "intelligence",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded 30-minute aircraft situation projection with route geometry, ATC/ATS context, planned AUP/UUP, SIGMET, Weather Corridor Intelligence, readiness-gated PUBLIC predictive advisories, and a selected-aircraft uncertainty corridor rendered on the live radar map.",
+      "summary": "Bounded 30-minute aircraft situation projection with route, ATC/ATS, planned airspace, weather and PUBLIC predictive context, live map uncertainty rendering, plus process-local 5/15/30-minute outcome calibration against future LOCAL receiver truth.",
       "pages": [
         "/aircraft/:hex",
         "/"
       ],
       "apis": [
-        "/api/aircraft/:hex/situation"
+        "/api/aircraft/:hex/situation",
+        "/api/admin/operational-twin/outcome"
       ],
       "changelogScopes": [
         "operational-twin",
@@ -567,7 +568,14 @@
         "uncertainty corridor",
         "future corridor",
         "digital twin map",
-        "future event marker"
+        "future event marker",
+        "outcome validation",
+        "corridor calibration",
+        "local receiver truth",
+        "uncertainty coverage",
+        "5 minute outcome",
+        "15 minute outcome",
+        "30 minute outcome"
       ]
     },
     {

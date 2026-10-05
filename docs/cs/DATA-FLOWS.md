@@ -660,3 +660,27 @@ Outcome PASS / WAIT / FAIL
 
 Budoucí LOCAL observation se používá pouze z aktuální RAM. Feature nečte ani
 nezapisuje historickou position persistence.
+
+## Tok Operational Digital Twin outcome validation
+
+```text
+existující výpočet /api/aircraft/:hex/situation
+                    ↓
+     capture cílů +5 / +15 / +30 min
+                    ↓
+          bounded pending samples v RAM
+                    ↓
+budoucí LOCAL receiver refresh / local trail
+                    ↓
+ nejbližší truth v toleranci ±20 s od cíle
+                    ↓
+position error + altitude error + uncertainty coverage
+                    ↓
+      24h / 5min bounded agregace
+                    ↓
+            PASS / WAIT / FAIL
+```
+
+Capture je request-driven a deduplikovaný. Nevzniká druhý Digital Twin
+výpočet, background poller, čtení FlightPosition, DB zápis ani fallback na
+NETWORK truth.

@@ -126,7 +126,7 @@ corridoru.
 
 Přirozené pokračování:
 
-1. outcome truth pro přesnost sector/waypoint/weather crossing času;
+1. outcome truth pro sector/waypoint/weather crossing timing nad rámec corridor-position V1;
 2. route-aware propagace času se započtením větru;
 3. průniky s Navigation Integrity regions;
 4. regionální multi-aircraft situation graph a operational alerts.
@@ -173,3 +173,47 @@ na MapLibre `style.load`, stejně jako ostatní radarové overlaye.
 Uncertainty polygon je pouze vizualizace nejistoty modelu, nikoli chráněný
 prostor, containment, separace ani bezpečnostní hranice. Weather markery
 zůstávají evidencí Weather Corridor Intelligence a nejsou pokynem k vyhýbání.
+
+## Outcome Validation V1
+
+Operational Digital Twin má nově omezenou prospektivní kalibrační větev pro
+stejný corridor, který už vrací situation surface vybraného letadla. Capture je
+request-driven: po úspěšném existujícím výpočtu
+`/api/aircraft/:hex/situation` se uloží projektovaná poloha, výška a
+uncertainty pro +5, +15 a +30 minut.
+
+Aircraft state service později pending sample vyhodnotí výhradně proti budoucí
+LOCAL receiver observation, která už je v RAM. Použije nejbližší lokální
+trail/current observation v toleranci ±20 sekund a nikdy ji nenahrazuje NETWORK,
+merged-canonical, databázovou ani historickou truth.
+
+Report obsahuje:
+
+- průměrnou horizontální poziční chybu v NM;
+- průměrnou deklarovanou uncertainty v NM;
+- poměr position error / uncertainty;
+- podíl truth observation uvnitř deklarovaného uncertainty envelope;
+- průměrnou absolutní chybu výšky, pokud mají obě strany výšku;
+- slice pro 5/15/30 minut;
+- route-aware versus kinematic slice;
+- canonical-input versus Track-Fusion-input slice;
+- podíl expirované truth;
+- kalibrační stav PASS / WAIT / FAIL.
+
+Evidence je pouze process-local, v RAM, maximálně 24 hodin v pětiminutových
+aggregate bucketech. Restart procesu evidence záměrně resetuje. Capture se pro
+jedno letadlo deduplikuje po dobu 55 sekund a pending truth má pevný kapacitní
+limit.
+
+První threshold set vyžaduje nejméně dvě hodiny process-local evidence, 90
+dokončených sample celkem a 20 pro každý horizont, než může stav opustit WAIT.
+Po naplnění evidence PASS vyžaduje nejméně 60 % observation uvnitř uncertainty
+envelope, průměrnou chybu nejvýše rovnou průměrné deklarované uncertainty a
+nejvýše 35 % expirované truth. Jde o kalibrační gate, nikoli bezpečnostní nebo
+certifikační tvrzení.
+
+Chráněný report je dostupný na:
+
+`GET /api/admin/operational-twin/outcome`
+
+Stejný omezený report zobrazuje autentizovaným adminům také stránka System.
