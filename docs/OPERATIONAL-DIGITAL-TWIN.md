@@ -518,3 +518,21 @@ existing `OperationalTwinCalibrationBucket` table under the
 position or raw pending prediction is persisted. The readiness result is
 `WAIT/PASS/FAIL` only and does not change WATCH/ATTENTION behavior.
 
+## Digital Twin Calibration Center V1
+
+The admin page at `/admin/operational-twin/calibration` consolidates the
+existing calibration/readiness lanes into one read-only operational view. It
+uses one admin-only no-store endpoint,
+`/api/admin/operational-twin/calibration`, and does not create a second
+calibration engine or background poller.
+
+The center shows corridor outcome quality, event outcome precision/timing,
+Truth-first V2 recall, wind timing graduation evidence, Regional Attention
+outcome quality, and restart-stable calibration persistence health. Regional
+Attention includes its 5/15/30-minute horizon slices and explicitly reports
+unscored destination clusters.
+
+The page is diagnostic only. It cannot change graduation policy, public
+prediction policy, WATCH/ATTENTION semantics, thresholds, or persisted
+calibration data.
+
