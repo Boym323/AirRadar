@@ -611,3 +611,25 @@ retained NETWORK Aircraft → normalized field observations ──┘
 
 Flow je in-memory a read-only. Existující local-history lane dál dostává jen
 LOCAL provider observations a je záměrně nezávislá na shadow tracku.
+
+
+## Track Fusion graduation flow
+
+```text
+LOCAL + NETWORK retained aircraft
+          ↓
+Track Fusion Shadow
+          ↓ kumulativní diagnostika
+24h process-local / 5min readiness buckety
+          ↓
+      PASS / WAIT / FAIL
+          ↓
+explicit Digital Twin flag?
+          ↓
+GOOD observed fused track konkrétního letadla?
+          ↓ ano
+pouze Operational Digital Twin input
+```
+
+Readiness flow nemá poller ani persistence. Všechny neúspěšné gate se vrací na
+existující local canonical Digital Twin input.
