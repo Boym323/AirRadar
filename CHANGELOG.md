@@ -10,6 +10,32 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.308] - 2026-10-05
+
+Changes since v1.0.307.
+
+**Features touched:** OGN / FLARM.
+
+### Added
+
+- Add Weather Avoidance Intelligence V1 (#339) (f47469b)
+
+### Fixed
+
+- Unify ADS-B and OGN radar labels (#338) (d8c7cc0)
+
+### Maintenance
+
+- Sync generated repository metadata (#337) (1170631)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#337) (1170631)
+- feat: add Weather Avoidance Intelligence V1 (#339) (f47469b)
+- fix: unify ADS-B and OGN radar labels (#338) (d8c7cc0)
+
+</details>
 ## [1.0.307] - 2026-10-05
 
 Changes since v1.0.306.
