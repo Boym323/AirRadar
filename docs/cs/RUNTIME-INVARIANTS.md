@@ -395,3 +395,16 @@ která jej vytvořila.
   graduation/readiness gate; admin/SHADOW preview je zakázáno.
 - Chybějící externí kontext je fail-soft a nesmí způsobit degraded stav live
   radaru.
+
+
+## Track Fusion Shadow invariants
+
+- Shadow fusion nesmí měnit `localAircraft` ani `networkAircraft`.
+- Shadow fusion nesmí vstoupit do `recordAircraftSnapshot`, receiver statistik,
+  reception records ani `FlightPosition` persistence.
+- NETWORK nebo ESTIMATED state se nikdy nesmí přejmenovat na LOCAL evidence.
+- V1 nevlastní timer, socket, EventSource, upstream request ani DB handle.
+- Odmítnutí source transition smí ovlivnit pouze shadow state.
+- Estimated position je omezená na šest sekund a musí zůstat explicitně
+  označená ESTIMATED.
+- Veřejná radar/SSE serializace je ve V1 beze změny.
