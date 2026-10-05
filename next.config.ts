@@ -8,13 +8,6 @@ const nextConfig: NextConfig = {
   // Production releases use Next's traced standalone runtime so serving the
   // application does not depend on the repository-level node_modules tree.
   output: process.env.AIRRADAR_STANDALONE_BUILD === "1" ? "standalone" : undefined,
-  outputFileTracingIncludes: {
-    "/*": [
-      "./data/**/*",
-      "./generated/**/*",
-      "./docs/features.registry.json",
-    ],
-  },
   // The repository maintains its own AGENTS.md instructions. Next.js must not
   // mutate that tracked file when a development server detects an AI agent.
   agentRules: false,
