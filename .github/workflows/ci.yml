@@ -282,7 +282,7 @@ jobs:
           artifact_dir="artifacts/production-build"
           rm -rf -- "${artifact_dir}"
           mkdir -p -- "${artifact_dir}"
-          tar -C .next -czf "${artifact_dir}/next-build.tar.gz" .
+          tar -C .next --exclude='./cache' -czf "${artifact_dir}/next-build.tar.gz" .
           cp generated/build-version.json "${artifact_dir}/build-version.json"
           archive_sha="$(sha256sum "${artifact_dir}/next-build.tar.gz" | awk '{print $1}')"
           node - "${artifact_dir}/build-version.json" "${artifact_dir}/manifest.json" "${archive_sha}" <<'NODE'
@@ -324,7 +324,7 @@ jobs:
       contents: write
     steps:
       - name: Download validated production build
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: production-build-${{ github.sha }}
           path: ${{ runner.temp }}/airradar-production-build
