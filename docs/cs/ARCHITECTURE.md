@@ -497,3 +497,16 @@ Shadow output se nevrací do `localAircraft`, `networkAircraft`,
 `mergeAircraftMaps`, history persistence, receiver statistik, Navigation
 Integrity, alerts ani predictive input. Tato jednosměrná hranice je ve V1
 povinná.
+
+
+## Track Fusion Readiness / Graduation V1
+
+Shadow estimator nově napájí omezený process-local readiness monitor. Monitor
+čte pouze kumulativní shadow diagnostiku, převádí ji na pětiminutové delta
+buckety a drží nejvýše 24 hodin v RAM. Nemá vlastní timer ani databázové I/O.
+Restart procesu resetuje evidence a readiness se vrátí na WAIT.
+
+Operational Digital Twin je první připravený consumer. Fused state smí číst jen
+při explicitně zapnutém Digital Twin fusion flagu, readiness PASS a GOOD
+observed fused position konkrétního letadla. Veřejný radar, canonical Aircraft,
+history, receiver statistics i FlightPosition zůstávají beze změny.
