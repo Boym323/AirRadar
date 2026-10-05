@@ -16,12 +16,23 @@ není označován jako QNH. Provenance má uživatelské popisky pro readsb a BD
 Směr větru je meteorologický směr odkud vítr vane; šipka proudění je otočena
 o 180° a konvence je uvedena přímo v panelu.
 
-### Observed vs ICON-EU
+### Weather Fusion V1 a observed vs ICON-EU
 
-Porovnání zůstává korektně unavailable: současná ICON-EU integrace poskytuje
-tlakové hladiny a valid times modelu, ale neumí ověřené spárování stejného času,
-prostoru a výšky aircraft observation s modelem. UI proto nepoužívá zakázanou
-aproximaci surface/flight-level ani libovolně nejbližší hladiny.
+Aircraft Weather profil nadále nepředstírá, že libovolná modelová hladina je
+fyzickou náhradou za pozorování letadla ve stejném čase a místě. Weather
+Fusion V1 přidává oddělenou, výslovně aproximační kontrolu konzistence:
+nejnovější přijatý vítr z letadla se porovná s existujícím ICON-EU kontextem
+vybraným podle výšky letadla a nejbližšího povoleného grid bodu. Rozdíl směru a
+rychlosti se zobrazí jako AGREE, MIXED nebo DIVERGENT. Rozpor s modelem se
+nepřevádí na turbulenci, námrazu ani jiné riziko a stale palubní/modelová data
+snižují jistotu.
+
+Weather Fusion odděleně skládá omezené důkazy pro turbulenci, námrazu a
+konvekci z nedávných aircraft observations, PIREP/AIREP, výškově relevantního
+SIGMET kontextu a nejbližšího dostupného METARu. Každý závěr zachovává zdroj,
+čerstvost a prostorový/výškový kontext. Chybějící evidence zůstává UNKNOWN a
+nepovýší se na automatické „bez rizika“. Výsledek je orientační a nejde o
+certifikovaný letecký meteorologický produkt.
 
 AirRadar ukládá řídký, kvalitativně kontrolovaný proud počasí pozorovaného
 letadly. Jde o datový produkt AirRadaru, nikoli o oficiální AMDAR feed ani o
@@ -35,8 +46,9 @@ Poslední přijaté pozorování počasí z letadla je sekundární obohacení v
 Situace v draweru letadla na radaru. Načítá se lazy pomocí bounded dotazu
 aircraftHex=<hex>&limit=1, při změně vybraného letadla lze požadavek zrušit a
 primární detail na něj nečeká. Zobrazují se pouze skutečně vrácená pole.
-Pozorovaný vítr je výslovně oddělený od modelového větru ICON-EU; v1.1 je
-neporovnáváme.
+Pozorovaný vítr zůstává výslovně oddělený od modelového větru ICON-EU.
+Weather Fusion V1 nově přidává samostatné omezené porovnání konzistence bez
+změny původního aircraft-observation produktu nebo jeho provenience.
 
 System status zobrazuje traffic-dependent souhrn Aircraft Weather. NO DATA
 znamená, že momentálně nejsou dostupná přijatá pozorování, a nesnižuje stav

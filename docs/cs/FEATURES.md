@@ -81,6 +81,40 @@ letadla, výška, naléhavost a stáří pozorování jsou zobrazené odděleně
 vlastních Mode-S/BDS 4.4 pozorování AirRadaru. Externí hlášení se automaticky
 nepřiřazují ke konkrétním letadlům zachyceným lokálním přijímačem.
 
+## Aviation Weather Fusion V1
+
+Weather Fusion V1 přidává vysvětlitelnou syntézu na vyžádání pro živé letadlo
+zachycené lokálním přijímačem. `GET /api/aircraft/:hex/weather-fusion` skládá
+existující meteorologické produkty AirRadaru bez nové ingest nebo persistence
+cesty: nedávná kvalitativně kontrolovaná pozorování z letadel včetně Mode-S
+BDS 4,4, PIREP/AIREP do 120 NM a šesti hodin, aktuální/projektovaný a výškově
+relevantní SIGMET kontext, nejbližší dostupný METAR do 120 NM a existující
+ICON-EU vítr v odpovídající tlakové hladině.
+
+Výsledek drží samostatné signály TURBULENCE, ICING a CONVECTION. Každý pozitivní
+signál zachovává explicitní důkazy se zdrojem, závažností, jistotou, časem
+pozorování a podle typu také vzdáleností a rozdílem výšky. Shoda nezávislých
+zdrojů může zvýšit jistotu; silnější výškově relevantní SIGMET může převážit
+slabší evidenci. Chybějící evidence se nikdy nepřekládá jako automatické
+„bez rizika“: celkový stav NONE vznikne jen tehdy, když jsou všechny sledované
+typy rizika explicitně bez signálu, jinak zůstává UNKNOWN.
+
+Pozorovaný vítr z letadla lze porovnat s již vybranou nejbližší hodnotou
+ICON-EU v tlakové hladině/gridu. Výsledek ukazuje rozdíl směru a rychlosti jako
+AGREE, MIXED nebo DIVERGENT, ale samotný rozpor se nepřevádí na meteorologické
+riziko. Starší palubní pozorování a stale model snižují jistotu.
+
+METAR-based icing je záměrně pouze LOW-confidence odvozený signál z
+vlhkosti/srážek poblíž bodu mrazu; nejde o potvrzení námrazy za letu. Detail
+letadla zobrazuje fusion výsledek, pokrytí zdrojů a omezené důkazy odděleně od
+původních dat a obsahuje jasné upozornění, že nejde o certifikovaný
+meteorologický produkt.
+
+Fusion selhává fail-soft po jednotlivých providerech a při chybějících zdrojích
+vrací PARTIAL/INSUFFICIENT. Nepřidává databázovou migraci, background poller,
+SSE spojení ani práci v ADS-B hot path. Řízení upstream požadavků zůstává na
+existujících provider cache a samotný fusion endpoint je `no-store`.
+
 ## Aviation Nav Data V1
 
 AirRadar umí načíst omezená globální referenční data NAVAID a pojmenovaných
