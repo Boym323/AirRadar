@@ -31,7 +31,7 @@ function aircraft(overrides: Partial<Aircraft> & Pick<Aircraft, "icaoHex" | "lat
     seenSeconds: 1,
     seenPosSeconds: 1,
     lastSeen: overrides.lastSeen ?? "2026-10-05T15:00:00.000Z",
-    source: overrides.source ?? "readsb",
+    source: overrides.source ?? "ADS-B",
     sourceType: null,
     onGround: overrides.onGround ?? false,
     distanceKm: overrides.distanceKm ?? 10,
@@ -56,10 +56,19 @@ describe("Regional Situation Graph V1", () => {
   });
 
   it("captures a shared destination without claiming projected proximity", () => {
-    const destination = { destination: "LOWW" } as Aircraft["enrichment"]["route"];
+    const destinationRoute = {
+      callsign: "TEST",
+      airline: null,
+      airlineIcao: null,
+      airlineIata: null,
+      origin: "LKPR",
+      destination: "LOWW",
+      originAirport: null,
+      destinationAirport: null,
+    };
     const graph = buildRegionalSituationGraph([
-      aircraft({ icaoHex: "AAA111", lat: 49.0, lon: 14.0, track: 90, groundSpeed: 300, enrichment: { route: destination } }),
-      aircraft({ icaoHex: "BBB222", lat: 48.0, lon: 18.0, track: 90, groundSpeed: 300, enrichment: { route: destination } }),
+      aircraft({ icaoHex: "AAA111", lat: 49.0, lon: 14.0, track: 90, groundSpeed: 300, enrichment: { route: destinationRoute } }),
+      aircraft({ icaoHex: "BBB222", lat: 48.0, lon: 18.0, track: 90, groundSpeed: 300, enrichment: { route: destinationRoute } }),
     ], new Date("2026-10-05T15:00:00.000Z"));
 
     expect(graph.edges).toHaveLength(1);
