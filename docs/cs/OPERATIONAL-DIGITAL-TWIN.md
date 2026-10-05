@@ -74,6 +74,28 @@ Všechny budoucí události jsou omezené na 30minutový horizont.
 AUP/UUP se nikdy nepřejmenovává na potvrzenou real-time aktivaci. Endpoint
 záměrně nenačítá delayed historical actual activation data.
 
+## Weather Corridor Intelligence V1
+
+Stejný response obsahuje blok `weatherCorridor`, který aplikuje počasí na
+budoucí 4D corridor místo pouze na aktuální pozici letadla.
+
+V1 používá:
+
+- jeden omezený PIREP/AIREP dotaz do 300 NM a šesti hodin;
+- stejné severity mapování turbulence/námrazy jako Weather Fusion V1;
+- horizontální vzdálenost reportu od budoucího corridor bodu a rozdíl
+  projektované výšky;
+- časovou, horizontální a vertikální kompatibilitu SIGMET;
+- ICON-EU jen pro unikátní tlakové hladiny, které 30minutová projekce potřebuje.
+
+PIREP/AIREP se nikdy automaticky nepřiřazuje sledovanému letadlu. Report je
+pouze evidence počasí poblíž projektované budoucí trasy. SIGMET vstup/výstup
+je sampled odhad s dvouminutovým rozlišením, nikoli přesný crossing time.
+
+ICON-EU se nevydává za hazard prediction. Weather Corridor ukazuje bounded
+vzorky větru podél corridoru a trend podélné složky. Chybějící provider
+snižuje stav na PARTIAL/INSUFFICIENT; nikdy nevytváří implicitní „clear“.
+
 ## Datové a runtime hranice
 
 Server čte už běžící RAM stav letadla. Neprovádí:
@@ -87,7 +109,9 @@ Server čte už běžící RAM stav letadla. Neprovádí:
 ATC/ATS používá existující dataset loader. Procedures se čtou z validovaného
 lokálního generated datasetu. AUP/UUP používá nový plan-only cache accessor, aby
 se kvůli jednomu letadlu nenačítala delayed historical activation data. SIGMET
-používá existující bounded Aviation Weather provider/cache. Predikční vstupy
+používá existující bounded Aviation Weather provider/cache. Weather Corridor
+navíc používá existující PIREP cache a sdílený ICON-EU wind snapshot; nevytváří
+dotaz pro každý corridor bod. Predikční vstupy
 procházejí stejným readiness enforcementem a PUBLIC advisory buildery jako
 ostatní veřejné prediction surfaces.
 
