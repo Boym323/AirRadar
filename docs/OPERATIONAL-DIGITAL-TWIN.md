@@ -373,3 +373,21 @@ that the bounded contextual thresholds are tighter; it is not a collision,
 conflict, TCAS, STCA, or safety alert. A later attention layer may summarize
 these relations without changing that boundary.
 
+## Operational Attention V1
+
+Operational Attention V1 is a deterministic summary over Regional Situation
+Graph V1. It is returned by the same `GET /api/operations/situation` request
+under `attention`; no second live snapshot, poller, persistence path or
+provider call is introduced.
+
+The bounded list currently highlights two explainable patterns: an elevated
+projected co-presence relation already present in the regional graph, and a
+resolved-destination cluster containing at least three live aircraft. Items are
+ordered and capped at 12. `WATCH` and `ATTENTION` are product-priority
+labels only.
+
+Every response preserves `OPERATIONAL_CONTEXT_ONLY`,
+`NOT_COLLISION_WARNING` and `NOT_SEPARATION_PRODUCT`. The feature does not
+calculate loss of separation, collision probability, TCAS/STCA logic, or issue
+navigation/ATC instructions.
+
