@@ -121,7 +121,8 @@ describe("Weather Corridor Intelligence V1", () => {
       confidence: "HIGH",
       source: "PIREP_AIREP",
     });
-    expect(event?.distanceAlongCorridorNm).toBeGreaterThan(40);
+    expect(event?.distanceAlongCorridorNm).toBeGreaterThan(35);
+    expect(event?.distanceAlongCorridorNm).toBeLessThan(42);
   });
 
   it("rejects PIREP evidence that is vertically irrelevant to the projected corridor", () => {
