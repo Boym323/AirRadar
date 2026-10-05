@@ -87,10 +87,6 @@ describe("Aviation Nav Data V1", () => {
       { id: "ODNEM", kind: "FIX" as const, type: "I", name: null, latitude: 49.4, longitude: 17.1, elevationFt: null, frequencyMhz: null, magneticDeclination: null, state: null, country: "CZ", source: "Aviation Weather Center" as const },
     ];
     const matched = routeReferencePointIds({
-      scheduledDeparture: null,
-      actualDeparture: null,
-      scheduledArrival: null,
-      estimatedArrival: null,
       filedRoute: "BNO DCT ODNEM",
       waypoints: [],
     }, points);
