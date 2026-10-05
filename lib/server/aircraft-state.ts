@@ -58,6 +58,7 @@ import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@
 import type { Airport } from "@/lib/airports/types";
 import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
 import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation } from "@/lib/operational-twin";
+import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -206,6 +207,11 @@ export class AircraftStateService {
   private readonly operationalTwinEventOutcome = new OperationalTwinEventOutcomeValidator();
   /** Truth-first terminal recall validation from independent Flight Intelligence LANDING events. */
   private readonly operationalTwinTruthFirst = new OperationalTwinTruthFirstValidator();
+  /** PostgreSQL persistence for anonymous completed five-minute calibration aggregates only. */
+  private readonly operationalTwinCalibrationPersistence = new OperationalTwinCalibrationPersistence(
+    this.operationalTwinOutcome,
+    this.operationalTwinEventOutcome,
+  );
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -278,8 +284,14 @@ export class AircraftStateService {
         this.scheduleReceptionRecordEvaluation();
       });
     void this.loadLifetimeReceptionRecord();
-    const refresh = this.refresh();
-    this.initialRefresh = Promise.all([this.statisticsReady, refresh]).then(() => undefined);
+    const calibrationReady = this.operationalTwinCalibrationPersistence.load()
+      .catch((error) => {
+        // Calibration persistence is optional; live radar and Digital Twin
+        // must continue from fresh process-local evidence on any DB failure.
+        logger.warn({ error }, "Operational Digital Twin calibration hydration skipped");
+      });
+    const refresh = calibrationReady.then(() => this.refresh());
+    this.initialRefresh = Promise.all([this.statisticsReady, calibrationReady, refresh]).then(() => undefined);
     void this.refreshNetwork();
     this.receiverCoverage.start(() => ({
       network: [...this.networkAircraft.values()], local: this.localAircraft, receiver: this.currentReceiver,
@@ -308,6 +320,7 @@ export class AircraftStateService {
     await this.awaitUntil(networkStop, deadline);
     await this.awaitUntil(this.drainHistory(), deadline);
     await this.awaitUntil(this.predictive.flushProspective(), deadline);
+    await this.awaitUntil(this.operationalTwinCalibrationPersistence.stop(), deadline);
     // Weather coalescing is intentionally lossy on crashes, but a normal
     // restart gets a bounded best-effort flush of representative samples.
     await this.awaitUntil(flushAircraftWeatherPersistence(deadline), deadline);
@@ -485,6 +498,7 @@ export class AircraftStateService {
     trackFusionOutcome: ReturnType<TrackFusionOutcomeValidator["report"]>;
     operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
     operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
+    operationalTwinCalibrationPersistence: ReturnType<OperationalTwinCalibrationPersistence["getStatus"]>;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -518,6 +532,7 @@ export class AircraftStateService {
       trackFusionOutcome: this.getTrackFusionOutcomeReport(),
       operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
       operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
+      operationalTwinCalibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
     };
   }
 
@@ -590,6 +605,7 @@ export class AircraftStateService {
 
   captureOperationalTwinOutcome(situation: OperationalTwinSituation): void {
     this.operationalTwinOutcome.capture(situation);
+    this.operationalTwinCalibrationPersistence.scheduleFlush();
   }
 
   getOperationalTwinOutcomeReport(now = new Date()) {
@@ -602,12 +618,14 @@ export class AircraftStateService {
   ): void {
     this.operationalTwinEventOutcome.capture(situation, context);
     this.operationalTwinTruthFirst.capture(situation, context);
+    this.operationalTwinCalibrationPersistence.scheduleFlush();
   }
 
   getOperationalTwinEventOutcomeReport(now = new Date()) {
     return {
       ...this.operationalTwinEventOutcome.report(now),
       truthFirst: this.operationalTwinTruthFirst.report(now),
+      calibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
     };
   }
 
@@ -829,6 +847,7 @@ export class AircraftStateService {
       this.schedulePredictiveWatchlistAlerts(predictiveAlertCandidates);
     }
     for (const hex of this.predictiveEvaluatedAt.keys()) if (!activeHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
+    this.operationalTwinCalibrationPersistence.scheduleFlush();
     this.navigationIntegrity.observe([...this.localAircraft.values()], new Date(snapshot.fetchedAt));
     this.invalidateSnapshotCache();
   }

@@ -12,6 +12,7 @@ export const DB_TRANSACTION_LANES = [
   "aircraft-metadata.catalog",
   "maintenance.airports-sync",
   "maintenance.atc-import",
+  "operational-twin.calibration",
 ] as const;
 
 export type DbTransactionLane = (typeof DB_TRANSACTION_LANES)[number];

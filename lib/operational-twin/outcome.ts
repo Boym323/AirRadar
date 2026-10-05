@@ -79,6 +79,68 @@ interface OutcomeBucket {
   byStateSource: Record<OperationalTwinSituation["aircraft"]["stateSource"], Aggregate>;
 }
 
+
+export interface OperationalTwinOutcomeCalibrationBucket {
+  startMs: number;
+  payloadJson: string;
+}
+
+function nonNegativeFinite(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function persistedAggregate(value: unknown): Aggregate | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Partial<Aggregate>;
+  const keys: Array<keyof Aggregate> = [
+    "samples",
+    "positionErrorNmSum",
+    "uncertaintyNmSum",
+    "errorToUncertaintyRatioSum",
+    "insideUncertainty",
+    "altitudeSamples",
+    "altitudeErrorFtSum",
+  ];
+  if (!keys.every((key) => nonNegativeFinite(item[key]))) return null;
+  return Object.fromEntries(keys.map((key) => [key, item[key]])) as unknown as Aggregate;
+}
+
+function persistedOutcomeBucket(payloadJson: string, expectedStartMs: number): OutcomeBucket | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payloadJson);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const item = parsed as Partial<OutcomeBucket>;
+  if (item.startMs !== expectedStartMs || expectedStartMs % BUCKET_MS !== 0) return null;
+  if (!nonNegativeFinite(item.created) || !nonNegativeFinite(item.completed) || !nonNegativeFinite(item.expiredWithoutTruth)) return null;
+  if (!item.byHorizon || !item.byMode || !item.byStateSource) return null;
+
+  const byHorizon = Object.fromEntries(OPERATIONAL_TWIN_OUTCOME_HORIZONS_MINUTES.map((horizon) => {
+    const aggregate = persistedAggregate((item.byHorizon as Record<number, unknown>)[horizon]);
+    return [horizon, aggregate];
+  }));
+  if (Object.values(byHorizon).some((aggregate) => aggregate === null)) return null;
+
+  const routeAware = persistedAggregate((item.byMode as Record<string, unknown>).ROUTE_AWARE);
+  const kinematic = persistedAggregate((item.byMode as Record<string, unknown>).KINEMATIC);
+  const canonical = persistedAggregate((item.byStateSource as Record<string, unknown>).CANONICAL);
+  const trackFusion = persistedAggregate((item.byStateSource as Record<string, unknown>).TRACK_FUSION);
+  if (!routeAware || !kinematic || !canonical || !trackFusion) return null;
+
+  return {
+    startMs: expectedStartMs,
+    created: item.created,
+    completed: item.completed,
+    expiredWithoutTruth: item.expiredWithoutTruth,
+    byHorizon: byHorizon as Record<number, Aggregate>,
+    byMode: { ROUTE_AWARE: routeAware, KINEMATIC: kinematic },
+    byStateSource: { CANONICAL: canonical, TRACK_FUSION: trackFusion },
+  };
+}
+
 export interface OperationalTwinOutcomeSlice {
   samples: number;
   meanPositionErrorNm: number | null;
@@ -504,6 +566,38 @@ export class OperationalTwinOutcomeValidator {
       modes: modeSlices,
       stateSources: stateSourceSlices,
     };
+  }
+
+
+  exportCalibrationBuckets(now = Date.now()): OperationalTwinOutcomeCalibrationBucket[] {
+    this.cleanup(now);
+    const cutoff = now - WINDOW_MS;
+    return this.buckets
+      .filter((bucket) => bucket.startMs + BUCKET_MS > cutoff)
+      .map((bucket) => ({ startMs: bucket.startMs, payloadJson: JSON.stringify(bucket) }));
+  }
+
+  hydrateCalibrationBuckets(rows: readonly OperationalTwinOutcomeCalibrationBucket[], now = Date.now()): number {
+    const cutoff = now - WINDOW_MS;
+    const hydrated = new Map<number, OutcomeBucket>();
+    let hydratedFromPersistence = 0;
+    for (const row of rows) {
+      if (!Number.isFinite(row.startMs) || row.startMs + BUCKET_MS <= cutoff || row.startMs > now + BUCKET_MS) continue;
+      const bucket = persistedOutcomeBucket(row.payloadJson, row.startMs);
+      if (bucket) {
+        hydrated.set(bucket.startMs, bucket);
+        hydratedFromPersistence += 1;
+      }
+    }
+    for (const bucket of this.buckets) {
+      if (bucket.startMs + BUCKET_MS > cutoff) hydrated.set(bucket.startMs, bucket);
+    }
+    this.buckets = [...hydrated.values()]
+      .sort((left, right) => left.startMs - right.startMs)
+      .slice(-MAX_BUCKETS);
+    const earliest = this.buckets[0]?.startMs ?? null;
+    if (earliest !== null) this.firstObservedAt = Math.min(this.firstObservedAt ?? earliest, earliest);
+    return hydratedFromPersistence;
   }
 
   reset(): void {

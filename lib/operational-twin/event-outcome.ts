@@ -189,6 +189,69 @@ interface OutcomeBucket {
   windTimingComparison: WindTimingComparisonAggregate;
 }
 
+
+export interface OperationalTwinEventOutcomeCalibrationBucket {
+  startMs: number;
+  payloadJson: string;
+}
+
+function persistedEventNumber(value: unknown, signed = false): number | null {
+  return typeof value === "number" && Number.isFinite(value) && (signed || value >= 0) ? value : null;
+}
+
+function persistedEventAggregate(value: unknown): EventAggregate | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Partial<EventAggregate>;
+  const result: EventAggregate = emptyAggregate();
+  for (const key of Object.keys(result) as Array<keyof EventAggregate>) {
+    const number = persistedEventNumber(item[key], key === "signedTimingErrorSecondsSum");
+    if (number === null) return null;
+    result[key] = number;
+  }
+  return result;
+}
+
+function persistedWindComparison(value: unknown): WindTimingComparisonAggregate | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Partial<WindTimingComparisonAggregate>;
+  const result = emptyWindTimingComparison();
+  for (const key of Object.keys(result) as Array<keyof WindTimingComparisonAggregate>) {
+    const number = persistedEventNumber(item[key]);
+    if (number === null) return null;
+    result[key] = number;
+  }
+  return result;
+}
+
+function persistedEventOutcomeBucket(payloadJson: string, expectedStartMs: number): OutcomeBucket | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payloadJson);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const item = parsed as Partial<OutcomeBucket>;
+  if (item.startMs !== expectedStartMs || expectedStartMs % BUCKET_MS !== 0) return null;
+  const overall = persistedEventAggregate(item.overall);
+  const windTimingComparison = persistedWindComparison(item.windTimingComparison);
+  if (!overall || !windTimingComparison || !item.byType || !item.byLead) return null;
+
+  const byType = typeRecord();
+  for (const type of OPERATIONAL_TWIN_EVENT_OUTCOME_SUPPORTED_TYPES) {
+    const aggregate = persistedEventAggregate((item.byType as Record<string, unknown>)[type]);
+    if (!aggregate) return null;
+    byType[type] = aggregate;
+  }
+  const byLead = leadRecord();
+  for (const lead of Object.keys(byLead) as LeadBucket[]) {
+    const aggregate = persistedEventAggregate((item.byLead as Record<string, unknown>)[lead]);
+    if (!aggregate) return null;
+    byLead[lead] = aggregate;
+  }
+  return { startMs: expectedStartMs, overall, byType, byLead, windTimingComparison };
+}
+
 export interface OperationalTwinEventOutcomeSlice {
   predictions: number;
   scoreable: number;
@@ -942,6 +1005,38 @@ export class OperationalTwinEventOutcomeValidator {
       byLeadMinutes: byLeadSlices,
       windTimingGraduation,
     };
+  }
+
+
+  exportCalibrationBuckets(now = Date.now()): OperationalTwinEventOutcomeCalibrationBucket[] {
+    this.cleanup(now);
+    const cutoff = now - WINDOW_MS;
+    return this.buckets
+      .filter((bucket) => bucket.startMs + BUCKET_MS > cutoff)
+      .map((bucket) => ({ startMs: bucket.startMs, payloadJson: JSON.stringify(bucket) }));
+  }
+
+  hydrateCalibrationBuckets(rows: readonly OperationalTwinEventOutcomeCalibrationBucket[], now = Date.now()): number {
+    const cutoff = now - WINDOW_MS;
+    const hydrated = new Map<number, OutcomeBucket>();
+    let hydratedFromPersistence = 0;
+    for (const row of rows) {
+      if (!Number.isFinite(row.startMs) || row.startMs + BUCKET_MS <= cutoff || row.startMs > now + BUCKET_MS) continue;
+      const bucket = persistedEventOutcomeBucket(row.payloadJson, row.startMs);
+      if (bucket) {
+        hydrated.set(bucket.startMs, bucket);
+        hydratedFromPersistence += 1;
+      }
+    }
+    for (const bucket of this.buckets) {
+      if (bucket.startMs + BUCKET_MS > cutoff) hydrated.set(bucket.startMs, bucket);
+    }
+    this.buckets = [...hydrated.values()]
+      .sort((left, right) => left.startMs - right.startMs)
+      .slice(-MAX_BUCKETS);
+    const earliest = this.buckets[0]?.startMs ?? null;
+    if (earliest !== null) this.firstObservedAt = Math.min(this.firstObservedAt ?? earliest, earliest);
+    return hydratedFromPersistence;
   }
 
   reset(): void {

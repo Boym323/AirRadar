@@ -39,6 +39,8 @@ jobs:
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
       - run: npm run prisma:generate
+      - name: Verify Prisma migration integrity
+        run: npx prisma migration check
       - name: Verify feature registry
         run: npm run features:check
       - name: Verify Czech documentation localization
