@@ -114,6 +114,17 @@ function sourceState<T>(result: PromiseSettledResult<T>, stale = false): "AVAILA
   return stale ? "STALE" : "AVAILABLE";
 }
 
+function aircraftObservationSourceState(
+  observations: Awaited<ReturnType<typeof queryAircraftWeatherObservations>>["observations"],
+  source: "BDS_4_4" | "OTHER",
+  nowMs: number,
+): "AVAILABLE" | "STALE" | "UNAVAILABLE" {
+  const matching = observations.filter((item) => source === "BDS_4_4" ? item.source === "BDS_4_4" : item.source !== "BDS_4_4");
+  if (!matching.length) return "UNAVAILABLE";
+  const newestMs = Math.max(...matching.map((item) => item.observedAt.getTime()));
+  return nowMs - newestMs > 10 * 60_000 ? "STALE" : "AVAILABLE";
+}
+
 export async function getAircraftWeatherFusion(
   aircraftHex: string,
   options: { signal?: AbortSignal; now?: Date } = {},
@@ -164,11 +175,13 @@ export async function getAircraftWeatherFusion(
   const modelWind = windResult.status === "fulfilled" ? windResult.value : null;
 
   const latestObservation = observations[0] ?? null;
-  const hasBds44 = observations.some((item) => item.source === "BDS_4_4");
-  const hasOtherAircraftWeather = observations.some((item) => item.source !== "BDS_4_4");
   const sourceAvailability: Partial<Record<WeatherFusionSource, "AVAILABLE" | "STALE" | "UNAVAILABLE">> = {
-    AIRCRAFT_BDS44: hasBds44 ? sourceState(aircraftWeatherResult) : "UNAVAILABLE",
-    AIRCRAFT_OTHER: hasOtherAircraftWeather ? sourceState(aircraftWeatherResult) : "UNAVAILABLE",
+    AIRCRAFT_BDS44: aircraftWeatherResult.status === "fulfilled"
+      ? aircraftObservationSourceState(observations, "BDS_4_4", now.getTime())
+      : "UNAVAILABLE",
+    AIRCRAFT_OTHER: aircraftWeatherResult.status === "fulfilled"
+      ? aircraftObservationSourceState(observations, "OTHER", now.getTime())
+      : "UNAVAILABLE",
     PIREP_AIREP: pirepResult.status === "fulfilled" && pirepResult.value
       ? sourceState(pirepResult, pirepResult.value.stale)
       : "UNAVAILABLE",
