@@ -990,6 +990,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       trackFusionReadiness: serviceDiagnostics.trackFusionReadiness,
       trackFusionOutcome: serviceDiagnostics.trackFusionOutcome,
       operationalTwinOutcome: serviceDiagnostics.operationalTwinOutcome,
+      operationalTwinEventOutcome: serviceDiagnostics.operationalTwinEventOutcome,
     } : {
       altitudeDiagnostics: getAltitudeDiagnostics(),
       ...(serviceDiagnostics?.continuity ? { continuity: serviceDiagnostics.continuity } : {}),
@@ -997,6 +998,7 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       ...(serviceDiagnostics?.trackFusionReadiness ? { trackFusionReadiness: serviceDiagnostics.trackFusionReadiness } : {}),
       ...(serviceDiagnostics?.trackFusionOutcome ? { trackFusionOutcome: serviceDiagnostics.trackFusionOutcome } : {}),
       ...(serviceDiagnostics?.operationalTwinOutcome ? { operationalTwinOutcome: serviceDiagnostics.operationalTwinOutcome } : {}),
+      ...(serviceDiagnostics?.operationalTwinEventOutcome ? { operationalTwinEventOutcome: serviceDiagnostics.operationalTwinEventOutcome } : {}),
     },
     adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
     ogn: ognService.getDiagnostics(),
