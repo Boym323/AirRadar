@@ -30,6 +30,7 @@ describe("Operational Digital Twin V2 map boundary", () => {
     expect(radarSource).toContain("OPERATIONAL_TWIN_MILESTONE_LABEL_LAYER_ID");
     expect(radarSource).toContain("OPERATIONAL_TWIN_EVENT_LAYER_ID");
     expect(radarSource).toContain("OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID");
+    expect(radarSource).toContain("OPERATIONAL_TWIN_NAVIGATION_INTEGRITY_LAYER_ID");
     expect(radarSource).toContain('data-testid="operational-twin-map-legend"');
   });
 });
