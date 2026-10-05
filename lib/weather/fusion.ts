@@ -149,14 +149,15 @@ function sigmetRisk(value: AircraftSigmetContext): { risk: WeatherFusionRiskKind
 
 function metarConvection(metar: MetarMapObservation): boolean {
   const text = `${metar.rawMetar ?? ""}`.toUpperCase();
-  return /(^|\s)(TS|VCTS|TSRA|TSGR|TSGS)(\s|$)/.test(text) || /(^|\s)CB(\s|$)/.test(text);
+  return /(^|\s)[+-]?(?:TS|VCTS|TSRA|TSGR|TSGS)(?:\s|$)/.test(text)
+    || /(^|\s)(?:SCT|BKN|OVC)\d{3}CB(?:\s|$)/.test(text);
 }
 
 function metarFreezingMoisture(metar: MetarMapObservation): boolean {
   if (metar.temperature === null || metar.temperature < -20 || metar.temperature > 3) return false;
   const text = `${metar.rawMetar ?? ""}`.toUpperCase();
-  const moisture = /(RA|DZ|SN|SG|PL|FZ|BR|FG)|BKN|OVC/.test(text);
-  return moisture;
+  return /(^|\s)[+-]?(?:RA|DZ|SN|SG|PL|FZRA|FZDZ|BR|FG)(?:\s|$)/.test(text)
+    || /(^|\s)(?:BKN|OVC)\d{3}(?:CB|TCU)?(?:\s|$)/.test(text);
 }
 
 function evidenceConfidence(source: WeatherFusionSource, distance: number | null, altitudeDelta: number | null, stale = false): WeatherFusionConfidence {
@@ -214,6 +215,10 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
     .filter((item) => item.quality !== "REJECTED")
     .sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime())[0] ?? null;
 
+  const latestAircraftStale = latestAircraft
+    ? now.getTime() - latestAircraft.observedAt.getTime() > 10 * 60_000
+    : true;
+
   if (latestAircraft) {
     const severity = bdsTurbulenceSeverity(latestAircraft.turbulenceLevel);
     if (severity !== null) {
@@ -223,7 +228,7 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
         source,
         risk: "TURBULENCE",
         severity,
-        confidence: evidenceConfidence(source, 0, input.altitudeFt === null ? null : Math.abs(latestAircraft.altitudeFt - input.altitudeFt)),
+        confidence: evidenceConfidence(source, 0, input.altitudeFt === null ? null : Math.abs(latestAircraft.altitudeFt - input.altitudeFt), latestAircraftStale),
         code: "BDS_TURBULENCE",
         observedAt: latestAircraft.observedAt.toISOString(),
         distanceNm: distanceNm(input.lat, input.lon, latestAircraft.lat, latestAircraft.lon),
@@ -355,7 +360,11 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
         : "DIVERGENT";
     wind = {
       status,
-      confidence: observedWind.source === "AIRCRAFT_BDS44" && !modelWind.stale ? "HIGH" : modelWind.stale ? "LOW" : "MEDIUM",
+      confidence: latestAircraftStale || modelWind.stale
+        ? "LOW"
+        : observedWind.source === "AIRCRAFT_BDS44"
+          ? "HIGH"
+          : "MEDIUM",
       observed: observedWind,
       model: modelWind,
       speedDeltaKt: Number(speedDeltaKt.toFixed(1)),
