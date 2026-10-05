@@ -2094,7 +2094,15 @@ export const en = {
     weatherCorridorEventTypes: { TURBULENCE: "Turbulence", ICING: "Icing", SIGMET_ENTRY: "SIGMET entry", SIGMET_EXIT: "SIGMET exit" },
     noEvents: "No additional events can be derived from the available sources inside the next 30 minutes.",
     generated: "Computed",
-    limitations: "Model limitations",
+    windTimingShadowTitle: "Wind-adjusted timing shadow",
+    windTimingShadowSummary: "Experimental timing over the same geometry; canonical timing remains unchanged.",
+    windTimingShadowStatus: { AVAILABLE: "available", STALE: "stale weather data", INSUFFICIENT: "insufficient data" },
+    windTimingShadowGroundSpeed: "Observed groundspeed",
+    windTimingShadowStillAir: "Still-air proxy",
+    windTimingShadowMaxDelta: "Max timing shift",
+    windTimingShadowCheckpoint: (horizon: number, delta: string) => `+${horizon} min baseline · Δ ${delta} s`,
+    windTimingShadowNoData: "Shadow timing cannot be derived safely from the available wind samples.",
+        limitations: "Model limitations",
 
     limitationText: {
       BOUNDED_PROJECTION: "The corridor is a bounded 30-minute situational estimate, not a clearance or certified trajectory.",

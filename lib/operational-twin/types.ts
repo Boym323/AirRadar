@@ -1,3 +1,4 @@
+import type { OperationalTwinWindTimingShadow } from "./wind-timing-shadow";
 import type { WeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
 
 export const OPERATIONAL_TWIN_VERSION = "operational-digital-twin-v1" as const;
@@ -98,6 +99,7 @@ export interface OperationalTwinSituation {
   };
   corridor: OperationalTwinCorridor;
   weatherCorridor: WeatherCorridorIntelligence;
+  windTimingShadow?: OperationalTwinWindTimingShadow;
   events: OperationalTwinEvent[];
   evidence: OperationalTwinEvidenceSummary;
   limitations: OperationalTwinLimitationCode[];

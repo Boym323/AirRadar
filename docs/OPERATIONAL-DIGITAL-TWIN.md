@@ -230,3 +230,20 @@ Protected inspection is available at:
 
 The System page also exposes the same bounded report for authenticated admin
 diagnostics.
+
+## Wind-adjusted Timing Shadow V1
+
+The canonical corridor remains untouched. After Weather Corridor has produced
+its existing ICON-EU along-track wind samples, a separate shadow model infers a
+bounded still-air-speed proxy from the observed groundspeed and the current
+along-track wind, then re-times the same corridor distances.
+
+The shadow reports +5/+15/+30 minute checkpoint timing deltas and waypoint
+timing deltas. It is fail-closed when current wind, enough unique wind samples,
+or a plausible observed groundspeed are unavailable. Stale wind can still
+produce a result, but it is explicitly marked STALE.
+
+This model does not alter corridor geometry, canonical event times, PUBLIC ETA,
+radar position, history, or outcome truth. Its purpose is to establish an
+independent timing candidate that later Event Outcome Validation can compare
+against the canonical baseline before any graduation is considered.

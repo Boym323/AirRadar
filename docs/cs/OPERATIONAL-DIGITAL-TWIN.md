@@ -217,3 +217,20 @@ Chráněný report je dostupný na:
 `GET /api/admin/operational-twin/outcome`
 
 Stejný omezený report zobrazuje autentizovaným adminům také stránka System.
+
+## Wind-adjusted Timing Shadow V1
+
+Canonical corridor zůstává beze změny. Teprve po vytvoření existujících
+ICON-EU along-track wind sample z Weather Corridoru samostatný shadow model
+odvodí omezený still-air-speed proxy z observed groundspeed a aktuální
+podélné složky větru a přepočítá čas dosažení stejných vzdáleností corridoru.
+
+Shadow reportuje timing delta pro +5/+15/+30 minut a pro waypointy. Pokud
+chybí aktuální vítr, dostatek unikátních wind sample nebo použitelný observed
+groundspeed, model fail-closed vrátí INSUFFICIENT. Stará weather data mohou
+vytvořit výsledek, ale výslovně se označí STALE.
+
+Model nemění geometrii corridoru, canonical event times, PUBLIC ETA, radarovou
+pozici, historii ani outcome truth. Jeho účelem je vytvořit nezávislého timing
+kandidáta, kterého pozdější Event Outcome Validation porovná s canonical
+baseline před případnou graduation.
