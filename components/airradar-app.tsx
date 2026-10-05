@@ -1072,6 +1072,7 @@ export function AirRadarApp() {
       center: [startingReceiver.lon, startingReceiver.lat],
       zoom: 7.4,
       minZoom: 3,
+      crossSourceCollisions: true,
       attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
