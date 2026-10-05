@@ -125,6 +125,7 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
     if (!aircraft || !enrichment || (!plan?.filedRoute && !plan?.waypoints.length)) return null;
     return analyzePublishedRoute({
       aircraftRoute: enrichment,
+      atsNetwork: null,
       aircraftPosition: {
         lat: aircraft.lat,
         lon: aircraft.lon,
