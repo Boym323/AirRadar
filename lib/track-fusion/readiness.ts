@@ -305,7 +305,6 @@ export class TrackFusionReadinessMonitor {
     const fromMs = Math.max(
       cutoff,
       this.firstObservedAtMs ?? nowMs,
-      buckets[0]?.startMs ?? this.firstObservedAtMs ?? nowMs,
     );
     const spanMinutes = Math.max(0, Math.min(TRACK_FUSION_READINESS_WINDOW_MINUTES, (nowMs - fromMs) / 60_000));
     const sourceTransitions = aggregate.acceptedSourceTransitions + aggregate.rejectedSourceTransitions;
