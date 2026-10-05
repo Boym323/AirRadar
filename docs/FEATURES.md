@@ -13,7 +13,7 @@ not yet been historically attributed.
 | --- | --- | --- | --- | --- | --- | --- |
 | Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
 | Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, arrival sequencing, V8 arrival flow and approach-queue state, runway-flow stability, bounded operational exceptions, and LANDED completion. |
-| ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures and planned airspace activity. |
+| ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/navigation/data`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
 | Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
@@ -77,6 +77,38 @@ explicit map/aircraft center. Turbulence, icing, temperature, wind, aircraft
 type, altitude, urgency and observation age are presented separately from
 AirRadar's own Mode-S/BDS 4.4 observations. Reports are not automatically
 attributed to aircraft captured by the local receiver.
+
+## Aviation Nav Data V1
+
+AirRadar can load bounded global NAVAID and named FIX/waypoint reference data
+from the public Aviation Weather Center Data API.
+
+`GET /api/navigation/data?lat=&lon=&radiusNm=&kinds=NAVAID,FIX` is server-side,
+rate-limited and bounded to a 10–250 NM receiver-centered query. The provider
+uses only documented `bbox` and `format=json` parameters, caps normalized
+results, coalesces identical in-flight requests, caches successful responses for
+six hours, and can serve a bounded stale snapshot when the upstream service is
+temporarily unavailable.
+
+The radar exposes the data as an optional NAVAID/FIX layer. NAVAIDs and fixes
+are visually distinct and labels appear only at higher zoom. This global AWC
+reference layer does not replace or override published CZ/SK/AT eAIP ATS routes,
+procedures, or their provenance.
+
+No database migration, background poller, new SSE stream, or ADS-B hot-path work
+is introduced.
+
+Exact NAVAID/FIX identifiers also participate in global Command Search. Search
+uses the documented AWC `ids` parameter, accepts only normalized 2–8 character
+identifiers, caps each lookup to eight ids, coalesces concurrent lookups and
+reuses the same six-hour server cache policy. AWC failure is non-fatal to the
+rest of global search.
+
+Choosing a global NAVAID/FIX search result enables the map layer and centers
+the radar on that point. When a selected aircraft has a filed route, the
+already-loaded AWC points referenced by that route are highlighted using the
+existing Route Intelligence tokenizer. This is display/enrichment only:
+AWC points never replace eAIP ATS/procedure geometry or alter route authority.
 
 ## Airport Live Board V5
 

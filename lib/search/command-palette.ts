@@ -3,7 +3,7 @@ export const OPEN_OPERATIONS_CENTER_EVENT = "airradar:open-operations-center";
 export const COMMAND_SEARCH_RECENTS_KEY = "airradar.command-search.recents.v1";
 export const COMMAND_SEARCH_RECENT_LIMIT = 5;
 
-export type CommandPaletteRecentKind = "command" | "aircraft" | "airport" | "ats-point" | "flight" | "action";
+export type CommandPaletteRecentKind = "command" | "aircraft" | "airport" | "ats-point" | "nav-point" | "flight" | "action";
 
 export interface CommandPaletteRecent {
   key: string;
@@ -37,7 +37,7 @@ export function parseCommandSearchRecents(value: string | null): CommandPaletteR
         || typeof record.href !== "string"
         || !record.href.startsWith("/")
         || record.href.startsWith("//")
-        || !["command", "aircraft", "airport", "ats-point", "flight", "action"].includes(String(record.kind))
+        || !["command", "aircraft", "airport", "ats-point", "nav-point", "flight", "action"].includes(String(record.kind))
       ) return [];
       return [{
         key: record.key,

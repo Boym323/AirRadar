@@ -2,7 +2,7 @@ export const MIN_GLOBAL_SEARCH_QUERY_LENGTH = 2;
 export const MAX_GLOBAL_SEARCH_QUERY_LENGTH = 64;
 export const GLOBAL_SEARCH_RESULT_LIMIT = 12;
 
-export type SearchHref = `/aircraft/${string}` | `/airports/${string}` | `/airports/${string}#${string}` | `/flights/${string}` | `/flights?${string}` | `/recap/daily#${string}` | `/?aircraft=${string}` | `/?atsPoint=${string}`;
+export type SearchHref = `/aircraft/${string}` | `/airports/${string}` | `/airports/${string}#${string}` | `/flights/${string}` | `/flights?${string}` | `/recap/daily#${string}` | `/?aircraft=${string}` | `/?atsPoint=${string}` | `/?navPoint=${string}`;
 
 export interface AircraftSearchResult {
   kind: "aircraft";
@@ -32,6 +32,19 @@ export interface AtsPointSearchResult {
   routeDesignators: string[];
   latitude: number;
   longitude: number;
+  href: SearchHref;
+}
+
+export interface NavPointSearchResult {
+  kind: "nav-point";
+  id: string;
+  name: string;
+  pointKind: "NAVAID" | "FIX";
+  type: string | null;
+  countryCode: string | null;
+  latitude: number;
+  longitude: number;
+  frequencyMhz: number | null;
   href: SearchHref;
 }
 
@@ -66,6 +79,7 @@ export interface GlobalSearchResponse {
   aircraft: AircraftSearchResult[];
   airports: AirportSearchResult[];
   atsPoints: AtsPointSearchResult[];
+  navPoints: NavPointSearchResult[];
   flights: FlightSearchResult[];
   actions: SmartSearchActionResult[];
 }

@@ -148,6 +148,39 @@ describe("global search", () => {
     expect(result.atsPoints[0]?.href).toContain("atsPoint=AT%3ABODAL");
   });
 
+  it("searches supplied global NAVAID/FIX reference points without a live upstream dependency", async () => {
+    const result = await searchGlobal("BNO", {
+      aircraft: [],
+      database: null,
+      atsDocuments: [],
+      flights: [],
+      navPoints: [{
+        id: "BNO",
+        kind: "NAVAID",
+        type: "VOR",
+        name: "Brno",
+        latitude: 49.15,
+        longitude: 16.69,
+        elevationFt: 778,
+        frequencyMhz: 114.45,
+        magneticDeclination: null,
+        state: null,
+        country: "CZ",
+        source: "Aviation Weather Center",
+      }],
+    });
+    expect(result.navPoints).toEqual([
+      expect.objectContaining({
+        kind: "nav-point",
+        name: "Brno",
+        pointKind: "NAVAID",
+        countryCode: "CZ",
+        frequencyMhz: 114.45,
+      }),
+    ]);
+    expect(result.navPoints[0]?.href).toContain("navPoint=NAVAID%3ABNO%3A49.150000%3A16.690000");
+  });
+
   it("keeps total results bounded and every airport database query bounded", async () => {
     const rows = Array.from({ length: 40 }, (_, index) => airport({
       icao: `LK${String(index).padStart(2, "0")}`,
@@ -163,8 +196,8 @@ describe("global search", () => {
 
   it("does not query for a short or empty query and returns an empty result", async () => {
     const table = new AirportTable([airport()]);
-    await expect(searchGlobal("a", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [], flights: [], actions: [] });
-    await expect(searchGlobal("  ", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [], flights: [], actions: [] });
+    await expect(searchGlobal("a", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [], navPoints: [], flights: [], actions: [] });
+    await expect(searchGlobal("  ", { aircraft: [], database: { orm: { public: { Airport: table } } } as never })).resolves.toEqual({ query: "", aircraft: [], airports: [], atsPoints: [], navPoints: [], flights: [], actions: [] });
     expect(table.limits).toEqual([]);
   });
 
@@ -248,8 +281,8 @@ describe("global search API/UI contract", () => {
   });
 
   it("keeps Czech and English category and state labels", () => {
-    expect(getTranslations("cs").search).toMatchObject({ globalLabel: "Globální vyhledávání", aircraftResults: "Letadla", airportResults: "Letiště", atsPointResults: "Traťové body", flightResults: "Historické lety", loading: "Vyhledávání…" });
-    expect(getTranslations("en").search).toMatchObject({ globalLabel: "Global search", aircraftResults: "Aircraft", airportResults: "Airports", atsPointResults: "ATS points", flightResults: "Historical flights", loading: "Searching…" });
+    expect(getTranslations("cs").search).toMatchObject({ globalLabel: "Globální vyhledávání", aircraftResults: "Letadla", airportResults: "Letiště", atsPointResults: "Traťové body", navPointResults: "Globální NAVAID / FIX", flightResults: "Historické lety", loading: "Vyhledávání…" });
+    expect(getTranslations("en").search).toMatchObject({ globalLabel: "Global search", aircraftResults: "Aircraft", airportResults: "Airports", atsPointResults: "ATS points", navPointResults: "Global NAVAID / FIX", flightResults: "Historical flights", loading: "Searching…" });
   });
 
   it("routes the topbar trigger into the global Command Search palette", () => {
