@@ -2527,6 +2527,7 @@ export function AirRadarApp() {
             windStatus={selectedWind.status}
             routeWeather={selectedRouteWeather}
             routeCorridor={selectedRouteCorridor.corridor}
+            routeConformance={selectedRouteCorridor.conformance}
             intelligenceEvents={selectedIntelligenceEvents}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
