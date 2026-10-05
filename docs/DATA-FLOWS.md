@@ -736,3 +736,24 @@ captured WAYPOINT / SECTOR / SIGMET / ETA / RUNWAY prediction
 
 Recall is deliberately not computed because the lane begins with predictions,
 not with an exhaustive stream of independent actual events.
+
+## Navigation Integrity corridor flow
+
+```text
+existing process-local Navigation Integrity working set
+                 ↓ getCurrent("15m")
+          active anomaly regions
+                 +
+ existing 30-minute Digital Twin corridor
+                 ↓
+ sampled cell + altitude-band intersection
+                 ↓
+ Navigation Integrity Corridor V1 events
+                 ↓
+ existing /api/aircraft/:hex/situation
+                 ↓
+ detail panel + existing Digital Twin MapLibre source
+```
+
+There is no additional HTTP fetch, database query, polling loop, SSE
+connection, detector run or persistence step in this flow.
