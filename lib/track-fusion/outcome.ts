@@ -309,9 +309,6 @@ export class TrackFusionOutcomeValidator {
   private readonly lastFusedSource = new Map<string, TrackFusionSourceClass>();
   private buckets: OutcomeBucket[] = [];
   private firstObservedAt: number | null = null;
-  private created = 0;
-  private completed = 0;
-  private expiredWithoutTruth = 0;
 
   observe(input: TrackFusionOutcomeObserveInput): void {
     const now = input.now ?? Date.now();
@@ -363,7 +360,6 @@ export class TrackFusionOutcomeValidator {
           fused: fusedProjection,
           fusedPositionSource: currentSource,
         });
-        this.created += 1;
         this.bucketFor(now).created += 1;
       }
       this.lastBaselineAt.set(track.icaoHex, now);
@@ -473,9 +469,6 @@ export class TrackFusionOutcomeValidator {
     this.lastFusedSource.clear();
     this.buckets = [];
     this.firstObservedAt = null;
-    this.created = 0;
-    this.completed = 0;
-    this.expiredWithoutTruth = 0;
   }
 
   private bucketFor(timestamp: number): OutcomeBucket {
@@ -510,14 +503,12 @@ export class TrackFusionOutcomeValidator {
       if (truth && hasUsablePosition(truth) && truthAt !== null && truthAt >= sample.targetAt && truthAt <= sample.expiresAt) {
         this.recordOutcome(sample, truth, truthAt);
         this.pending.delete(id);
-        this.completed += 1;
         this.bucketFor(truthAt).completed += 1;
         continue;
       }
 
       if (now > sample.expiresAt || (truthAt !== null && truthAt > sample.expiresAt)) {
         this.pending.delete(id);
-        this.expiredWithoutTruth += 1;
         this.bucketFor(Math.min(now, sample.expiresAt)).expiredWithoutTruth += 1;
       }
     }
@@ -569,7 +560,6 @@ export class TrackFusionOutcomeValidator {
     for (const [id, sample] of this.pending) {
       if (now - sample.createdAt > PENDING_RETENTION_MS) {
         this.pending.delete(id);
-        this.expiredWithoutTruth += 1;
         this.bucketFor(Math.min(now, sample.expiresAt)).expiredWithoutTruth += 1;
       }
     }
@@ -578,7 +568,6 @@ export class TrackFusionOutcomeValidator {
       const oldest = [...this.pending.values()].sort((a, b) => a.createdAt - b.createdAt).slice(0, excess);
       for (const sample of oldest) {
         this.pending.delete(sample.id);
-        this.expiredWithoutTruth += 1;
         this.bucketFor(now).expiredWithoutTruth += 1;
       }
     }
