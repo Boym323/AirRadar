@@ -1904,6 +1904,7 @@ export const cs = {
     trackFusionTransitions: "Fusion přechody OK / reject",
     trackFusionGapFills: "Estimated gap fills",
     trackFusionCanonical: "Divergence proti canonical",
+    trackFusionCapacity: "Capacity evictions",
 
     rateLimited: "Rate limit",
     retryAfter: "Další pokus",
