@@ -333,3 +333,25 @@ Párové porovnání je součástí existujícího chráněného Event Outcome r
 zobrazuje se také na autentizované stránce System. Nepřidává timer, polling,
 DB persistence, čtení FlightPosition, druhý truth observer ani druhý Digital
 Twin výpočet.
+
+## Regional Situation Graph V1
+
+Regionální situační graf je první omezená víceletadlová vrstva Digital Twinu.
+`GET /api/operations/situation` čte jediný existující LOCAL snapshot z
+`AircraftStateService` a odvozuje nejvýše 80 čerstvých letících cílů a 160
+kontextových vazeb. Nevytváří další poller, timer, databázové čtení/zápis,
+požadavek na provider ani druhou autoritu živého stavu.
+
+Vazby představují pouze provozní kontext. V1 může spojit letadla se stejnou
+rozpoznanou destinací a letadla, jejichž jednoduché kinematické projekce za
+5/15/30 minut vstupují do stejného širokého kontextového prostoru. Projekce
+používá aktuální track/groundspeed a omezené pokračování pozorované vertikální
+rychlosti. Nepracuje s ATC povolením, neodvozuje záměr a nemodeluje minima
+rozstupu.
+
+Graf vždy nese omezení `NOT_SEPARATION_PRODUCT` a
+`NO_ATC_CLEARANCE_INFERENCE`. Vazba `ELEVATED` pouze znamená těsnější
+kontextové prahy; nejde o collision/conflict, TCAS, STCA ani bezpečnostní
+výstrahu. Navazující attention vrstva může tyto vazby pouze sumarizovat bez
+změny této hranice.
+

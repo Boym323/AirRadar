@@ -540,20 +540,23 @@
       "category": "intelligence",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded 30-minute aircraft situation projection with route, weather, Navigation Integrity and PUBLIC predictive context, live map uncertainty rendering, prospective corridor/event outcome validation, plus paired canonical-vs-wind timing graduation evidence.",
+      "summary": "Bounded 30-minute aircraft situation projection with route, weather, Navigation Integrity and PUBLIC predictive context, live map uncertainty rendering, prospective corridor/event outcome validation, paired canonical-vs-wind timing graduation evidence, and a bounded regional multi-aircraft situation graph.",
       "pages": [
         "/aircraft/:hex",
         "/"
       ],
       "apis": [
-        "/api/aircraft/:hex/situation",
+        "/api/admin/operational-twin/event-outcome",
         "/api/admin/operational-twin/outcome",
-        "/api/admin/operational-twin/event-outcome"
+        "/api/aircraft/:hex/situation",
+        "/api/operations/situation"
       ],
       "changelogScopes": [
         "operational-twin",
         "digital-twin",
-        "situation"
+        "situation",
+        "regional-situation",
+        "multi-aircraft-situation"
       ],
       "changelogKeywords": [
         "operational digital twin",
@@ -598,7 +601,11 @@
         "canonical vs shadow timing",
         "paired waypoint timing",
         "manual timing promotion",
-        "shadow win rate"
+        "shadow win rate",
+        "regional situation graph",
+        "multi-aircraft situation",
+        "projected copresence",
+        "shared destination context"
       ]
     },
     {
