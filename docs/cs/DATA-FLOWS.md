@@ -684,3 +684,29 @@ position error + altitude error + uncertainty coverage
 Capture je request-driven a deduplikovaný. Nevzniká druhý Digital Twin
 výpočet, background poller, čtení FlightPosition, DB zápis ani fallback na
 NETWORK truth.
+
+## Tok Operational Digital Twin event outcome
+
+```text
+existující situation výpočet
+  + už načtený ATC/SIGMET kontext
+                ↓
+capture WAYPOINT / SECTOR / SIGMET / ETA / RUNWAY predikce
+                ↓
+       bounded pending samples v RAM
+          ┌─────┴─────────┐
+          ↓               ↓
+ budoucí LOCAL truth   Flight Intelligence LANDING
+          └─────┬─────────┘
+                ↓
+ observed / false-positive / missing-truth
+                ↓
+ timing error + precision + truth coverage
+                ↓
+  24h / 5min bounded agregace
+                ↓
+       PASS / WAIT / FAIL
+```
+
+Recall se záměrně nepočítá, protože tato větev začíná predikcemi, nikoli
+úplným nezávislým proudem skutečných událostí.
