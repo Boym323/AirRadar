@@ -16,7 +16,7 @@ not yet been historically attributed.
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/navigation/data`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
-| Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
+| Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
 | Map Context & Weather | production | weather | Pre-registry | — | `/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context and aircraft-observed weather. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
@@ -111,6 +111,30 @@ daný bod. Pokud má vybrané letadlo filed route, body AWC z právě načtené 
 které jsou v této trase, se zvýrazní pomocí existujícího Route Intelligence
 tokenizeru. Jde pouze o zobrazení/enrichment: body AWC nikdy nenahrazují eAIP
 geometrii ATS/postupů ani nemění autoritu route resolveru.
+
+## Route Corridor Intelligence V1
+
+Route Corridor Intelligence rozšiřuje existující model Route Intelligence V2
+pro právě vybrané letadlo. Browser provede jeden omezený same-origin lookup
+navigačních referencí při změně sady identifikátorů filed route; nepřidává další
+aircraft stream, timer ani background poller.
+
+Publikovaná ATS a procedure geometrie zůstává autoritativní. Omezené AWC
+souřadnice NAVAID/FIX mohou vyřešit jinak unresolved endpointy filed/DCT, ale
+tento fallback je označen jako schematická `FILED_ROUTE` geometrie a nikdy se
+nepovažuje za publikovanou ATS evidenci.
+
+Live radar vykresluje vyřešenou geometrii jako proletěnou, aktuální a zbývající
+část a zachovává původní origin-current-destination čáru jako fallback. Drawer
+letadla zobrazuje progress, další fix, zbývající vyřešenou vzdálenost, ETA podle
+groundspeed, cross-track odchylku, očekávaný track segmentu, rozdíl tracku a
+confidence rekonstrukce.
+
+Trvalý stav `DEVIATING` vyžaduje tři různá pozorování s cross-track odchylkou
+nad 10 NM během alespoň 10 sekund; návrat vyžaduje dvě pozorování během alespoň
+pěti sekund. Jde o informativní zobrazovací thresholdy, nikoli certifikované
+navigační limity nebo ATC guidance. V1 deviation eventy nepersistuje a nepřidává
+databázovou migraci.
 
 ## Airport Live Board V5
 
