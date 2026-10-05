@@ -164,5 +164,14 @@ Evidence je explicitní. PUBLIC_STRONG vyžaduje alespoň dvě PUBLIC ETA uvnit�
 PUBLIC_PARTIAL označuje slabší veřejnou predikční evidenci; jinak V8 vrací
 RECEIVER_ONLY.
 
-V8 není ATC sequencing, FIDS, kapacita letiště, slot demand ani předpověď
-zpoždění.
+V8 navíc zveřejňuje jeden konzervativní stav Approach Queue bez další metrické
+větve. EMPTY a LOW_DENSITY pokrývají nula až dva aktivní přílety, ACTIVE běžné
+pořadí více letadel, BUILDING vyžaduje nejméně čtyři aktivní přílety a další
+potvrzující approach/final, holding, compression nebo arrival-pressure evidenci,
+COMPRESSED nejméně tři PUBLIC ETA vzorky a alespoň dvě stlačené sousední ETA
+dvojice a HOLDING_PRESENT nejméně dva HOLDING řádky v omezeném pořadí. Queue
+stav znovu používá stejnou V7/V8 evidenci a neprovádí žádné další čtení ani
+zápis.
+
+V8 není ATC sequencing, FIDS, separační minimum, kapacita letiště, slot demand,
+bezpečnostní hodnocení ani předpověď zpoždění.

@@ -170,6 +170,19 @@ function arrivalCompressionLabel(
   }[state];
 }
 
+function approachQueueLabel(
+  state: ReturnType<typeof buildAirportArrivalFlowIntelligence>["queue"]["state"],
+): string {
+  return {
+    EMPTY: t.airport.liveBoardV8QueueEmpty,
+    LOW_DENSITY: t.airport.liveBoardV8QueueLowDensity,
+    ACTIVE: t.airport.liveBoardV8QueueActive,
+    BUILDING: t.airport.liveBoardV8QueueBuilding,
+    COMPRESSED: t.airport.liveBoardV8QueueCompressed,
+    HOLDING_PRESENT: t.airport.liveBoardV8QueueHoldingPresent,
+  }[state];
+}
+
 function arrivalEvidenceLabel(
   evidence: ReturnType<typeof buildAirportArrivalFlowIntelligence>["evidence"],
 ): string {
@@ -591,6 +604,11 @@ export function AirportOperationsBoard({
               formatNumber(arrivalFlow.compression.minimumSpacingMinutes, 1),
               arrivalFlow.compression.compressedPairs,
             )}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV8Queue}
+          value={approachQueueLabel(arrivalFlow.queue.state)}
+          detail={t.airport.liveBoardV8QueueDetail(arrivalFlow.queue.approachOrFinal, arrivalFlow.queue.holding)}
         />
         <MetricCard
           label={t.airport.liveBoardV8PredictedRunway}

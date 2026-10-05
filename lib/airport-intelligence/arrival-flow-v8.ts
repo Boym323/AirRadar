@@ -6,6 +6,16 @@ export type AirportArrivalPressureLevel = "LOW" | "NORMAL" | "ELEVATED" | "HIGH"
 export type AirportArrivalCompressionState = "NORMAL" | "ELEVATED" | "HIGH" | "UNKNOWN";
 export type AirportArrivalFlowEvidence = "PUBLIC_STRONG" | "PUBLIC_PARTIAL" | "RECEIVER_ONLY";
 export type AirportPredictedObservedRunwayAlignment = "ALIGNED" | "DIFFERENT" | "UNKNOWN";
+export type AirportApproachQueueState = "EMPTY" | "LOW_DENSITY" | "ACTIVE" | "BUILDING" | "COMPRESSED" | "HOLDING_PRESENT";
+export type AirportApproachQueueReason =
+  | "no_arrivals"
+  | "sparse_traffic"
+  | "active_traffic"
+  | "arrival_density"
+  | "approach_density"
+  | "eta_compression"
+  | "holding_present"
+  | "multiple_holding";
 
 export interface AirportArrivalDemandWindows {
   within5Minutes: number;
@@ -43,6 +53,12 @@ export interface AirportArrivalFlowIntelligence {
     medianSpacingMinutes: number | null;
     compressedPairs: number;
     samples: number;
+  };
+  queue: {
+    state: AirportApproachQueueState;
+    approachOrFinal: number;
+    holding: number;
+    reasons: AirportApproachQueueReason[];
   };
   predictedRunwayLoad: AirportArrivalRunwayLoad[];
   runwayAlignment: {
@@ -132,6 +148,58 @@ function compressionState(spacings: number[]): AirportArrivalFlowIntelligence["c
   };
 }
 
+function approachQueueState(
+  sequence: AirportArrivalSequenceSummary,
+  compression: AirportArrivalFlowIntelligence["compression"],
+  pressureLevelValue: AirportArrivalPressureLevel,
+  etaSamples: number,
+): AirportArrivalFlowIntelligence["queue"] {
+  const activeArrivals = sequence.items.length;
+  const approachOrFinal = sequence.items.filter(
+    (item) => item.stage === "APPROACH" || item.stage === "FINAL",
+  ).length;
+  const holding = sequence.items.filter((item) => item.stage === "HOLDING").length;
+  const reasons: AirportApproachQueueReason[] = [];
+
+  let state: AirportApproachQueueState;
+  if (activeArrivals === 0) {
+    state = "EMPTY";
+    reasons.push("no_arrivals");
+  } else if (holding >= 2) {
+    state = "HOLDING_PRESENT";
+    reasons.push("multiple_holding");
+  } else if (etaSamples >= 3 && compression.compressedPairs >= 2) {
+    state = "COMPRESSED";
+    reasons.push("eta_compression");
+    if (holding > 0) reasons.push("holding_present");
+  } else if (
+    activeArrivals >= 4
+    && (
+      approachOrFinal >= 3
+      || holding > 0
+      || compression.state === "ELEVATED"
+      || compression.state === "HIGH"
+      || pressureLevelValue === "ELEVATED"
+      || pressureLevelValue === "HIGH"
+    )
+  ) {
+    state = "BUILDING";
+    reasons.push("arrival_density");
+    if (approachOrFinal >= 3) reasons.push("approach_density");
+    if (compression.state === "ELEVATED" || compression.state === "HIGH") reasons.push("eta_compression");
+    if (holding > 0) reasons.push("holding_present");
+  } else if (activeArrivals <= 2) {
+    state = "LOW_DENSITY";
+    reasons.push("sparse_traffic");
+  } else {
+    state = "ACTIVE";
+    reasons.push("active_traffic");
+    if (holding > 0) reasons.push("holding_present");
+  }
+
+  return { state, approachOrFinal, holding, reasons };
+}
+
 export function buildAirportArrivalFlowIntelligence(input: {
   sequence: AirportArrivalSequenceSummary;
   flowPressure: AirportFlowPressureSummary;
@@ -214,6 +282,8 @@ export function buildAirportArrivalFlowIntelligence(input: {
     + 2 * input.flowPressure.holdingRecent
     + 2 * input.flowPressure.goAroundRecent
     + compressionScore;
+  const arrivalPressureLevel = pressureLevel(pressureScore);
+  const queue = approachQueueState(input.sequence, compression, arrivalPressureLevel, demand.etaSamples);
 
   return {
     version: "airport-live-board-v8",
@@ -224,13 +294,14 @@ export function buildAirportArrivalFlowIntelligence(input: {
       trend: demandTrend(demand.within15Minutes, demand.between15And30Minutes, demand.etaSamples),
     },
     pressure: {
-      level: pressureLevel(pressureScore),
+      level: arrivalPressureLevel,
       score: pressureScore,
       activeArrivals: input.sequence.totalCandidates,
       holding: input.flowPressure.holdingRecent,
       goAround: input.flowPressure.goAroundRecent,
     },
     compression,
+    queue,
     predictedRunwayLoad,
     runwayAlignment: {
       state: runwayAlignment,

@@ -112,7 +112,7 @@
       "category": "airports",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, flow pressure, runway-flow stability and transition evidence, bounded operational exceptions, and LANDED completion.",
+      "summary": "Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, arrival sequencing, V8 arrival flow and approach-queue state, runway-flow stability, bounded operational exceptions, and LANDED completion.",
       "pages": [
         "/airports",
         "/airports/:icao"
