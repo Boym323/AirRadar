@@ -106,10 +106,12 @@ function airportContext(options: RouteIntelligenceV2Options): { origin: string |
 
 function genericTokenType(value: string, network: RouteIntelligenceNetwork | null, referencePoints: readonly AviationNavPoint[]): V2TokenType {
   if (value === "DCT") return "DCT";
-  if (network?.routes.some((route) => normalized(route.designator) === value) || /^[A-Z][0-9]{1,3}[A-Z]?$/.test(value)) return "AIRWAY";
+  const publishedAirway = network?.routes.some((route) => normalized(route.designator) === value) ?? false;
+  if (publishedAirway) return "AIRWAY";
   if (referencePoints.some((point) => normalized(point.id) === value)
     || network?.routes.some((route) => route.points.some((point) => normalized(point.name) === value))
     || /^[A-Z]{2,5}$/.test(value)) return "WAYPOINT";
+  if (/^[A-Z][0-9]{1,3}[A-Z]?$/.test(value)) return "AIRWAY";
   return "UNKNOWN";
 }
 
