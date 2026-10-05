@@ -10,6 +10,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.301] - 2026-10-05
+
+Changes since v1.0.300.
+
+### Added
+
+- Add V8 approach queue state (#319) (76a18b98)
+
+### Maintenance
+
+- Sync generated repository metadata (#318) (54d02adb)
+- Bump vite from 8.3.1 to 8.3.2 (#316) (4d18665d)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#318) (54d02adb)
+- chore(deps-dev): bump vite from 8.3.1 to 8.3.2 (#316) (4d18665d)
+- feat: add V8 approach queue state (#319) (76a18b98)
+
+</details>
 ## [1.0.300] - 2026-10-05
 
 Changes since v1.0.299.
