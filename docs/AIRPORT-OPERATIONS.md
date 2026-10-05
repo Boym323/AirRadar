@@ -158,5 +158,14 @@ inside the V8 30-minute horizon and at least 75 percent coverage of the bounded
 active-arrival sequence. PUBLIC_PARTIAL covers thinner public prediction
 evidence; otherwise V8 reports RECEIVER_ONLY.
 
-V8 is not ATC sequencing, FIDS, airport capacity, slot demand, or a delay
-forecast.
+V8 also exposes one conservative Approach Queue state without adding another
+metric pipeline. EMPTY and LOW_DENSITY cover zero to two active arrivals,
+ACTIVE covers an ordinary multi-aircraft sequence, BUILDING requires at least
+four active arrivals plus corroborating approach/final, holding, compression or
+arrival-pressure evidence, COMPRESSED requires at least three PUBLIC ETA samples
+and at least two compressed adjacent ETA pairs, and HOLDING_PRESENT requires at
+least two HOLDING rows in the bounded sequence. The queue state reuses the same
+V7/V8 evidence; it performs no additional read or write.
+
+V8 is not ATC sequencing, FIDS, separation minima, airport capacity, slot
+demand, a safety assessment, or a delay forecast.
