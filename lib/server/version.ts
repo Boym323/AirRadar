@@ -18,7 +18,7 @@ export interface PublicVersionResponse {
   channel: string;
 }
 
-const BUILD_METADATA_PATH = join(process.cwd(), "generated", "build-version.json");
+const BUILD_METADATA_PATH = join(process.env.AIRRADAR_APP_ROOT ?? process.cwd(), "generated", "build-version.json");
 const VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-rc\.[1-9]\d*)?$/;
 const COMMIT_PATTERN = /^[0-9a-f]{7,64}$/i;
 const CHANNEL_PATTERN = /^[a-z0-9._-]{1,32}$/i;
