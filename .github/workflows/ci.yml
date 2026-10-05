@@ -11,6 +11,7 @@ concurrency:
 
 jobs:
   validate:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -58,18 +59,86 @@ jobs:
           test_status=0
           npm run lint & lint_pid=$!
           npm run typecheck:prepared & typecheck_pid=$!
-          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            npm run test:full & test_pid=$!
-          else
-            export AIRRADAR_TEST_BASE_SHA="$(git merge-base HEAD "origin/${GITHUB_BASE_REF:-main}")"
-            echo "Testing changed files since ${AIRRADAR_TEST_BASE_SHA}"
-            npm run test:changed & test_pid=$!
-          fi
+          export AIRRADAR_TEST_BASE_SHA="$(git merge-base HEAD "origin/${GITHUB_BASE_REF:-main}")"
+          echo "Testing changed files since ${AIRRADAR_TEST_BASE_SHA}"
+          npm run test:changed & test_pid=$!
           wait "$lint_pid" || lint_status=$?
           wait "$typecheck_pid" || typecheck_status=$?
           wait "$test_pid" || test_status=$?
           if (( lint_status != 0 || typecheck_status != 0 || test_status != 0 )); then
             echo "Parallel validation failed (lint=$lint_status typecheck=$typecheck_status test=$test_status)"
+            exit 1
+          fi
+      - run: npm run build:prepared
+        env:
+          AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
+  release-scope:
+    name: Release scope
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      deploy: ${{ steps.scope.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - name: Detect release-required changes
+        id: scope
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          parent="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || true)"
+          if [[ -z "${parent}" ]]; then
+            echo "deploy=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          scope_json="$(git diff --name-only -z "${parent}" "${GITHUB_SHA}" | node scripts/release-scope.mjs --stdin0)"
+          deploy="$(RELEASE_SCOPE_JSON="${scope_json}" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
+          echo "deploy=${deploy}" >> "${GITHUB_OUTPUT}"
+          echo "Release scope: ${scope_json}"
+
+
+  release-validate:
+    name: Release validation
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
+    needs: release-scope
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history and tags are required by changelog/release validation.
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Restore Next compiler cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
+      - run: npm run prisma:generate
+      - name: Verify Prisma migration integrity
+        run: npx prisma migration check
+      - name: Run release typecheck and full Vitest in parallel
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          typecheck_status=0
+          test_status=0
+          npm run typecheck:prepared & typecheck_pid=$!
+          npm run test:full & test_pid=$!
+          wait "$typecheck_pid" || typecheck_status=$?
+          wait "$test_pid" || test_status=$?
+          if (( typecheck_status != 0 || test_status != 0 )); then
+            echo "Release validation failed (typecheck=$typecheck_status test=$test_status)"
             exit 1
           fi
       - run: npm run build:prepared
@@ -117,37 +186,10 @@ jobs:
             artifacts/radar-performance-baseline.md
           if-no-files-found: ignore
 
-  release-scope:
-    name: Release scope
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: validate
-    runs-on: ubuntu-24.04
-    outputs:
-      deploy: ${{ steps.scope.outputs.deploy }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-      - name: Detect release-required changes
-        id: scope
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          parent="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || true)"
-          if [[ -z "${parent}" ]]; then
-            echo "deploy=true" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-
-          scope_json="$(git diff --name-only -z "${parent}" "${GITHUB_SHA}" | node scripts/release-scope.mjs --stdin0)"
-          deploy="$(RELEASE_SCOPE_JSON="${scope_json}" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
-          echo "deploy=${deploy}" >> "${GITHUB_OUTPUT}"
-          echo "Release scope: ${scope_json}"
-
   deploy:
     name: Deploy production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release-scope.outputs.deploy == 'true'
-    needs: [validate, release-scope]
+    needs: [release-scope, release-validate]
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
     environment: production
