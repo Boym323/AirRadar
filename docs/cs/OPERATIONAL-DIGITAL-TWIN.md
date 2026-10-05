@@ -285,3 +285,7 @@ Chráněný report:
 
 Validator nepřidává persistence, čtení FlightPosition/history, upstream request,
 timer, EventSource, druhý Digital Twin výpočet ani změnu canonical corridoru.
+
+## Navigation Integrity Corridor V1
+
+Digital Twin nově porovnává svůj existující vzorkovaný 30minutový corridor s už vypočtenými aktivními regionálními anomáliemi Navigation Integrity. Průnik vznikne pouze při současné shodě grid cell i altitude bandu. Výsledek zachovává severity, confidence, počet dotčených letadel, LOCAL/NETWORK evidence, baseline maturity a audit categories. Nula průniků neznamená all-clear a funkce nikdy netvrdí GNSS jamming, spoofing ani poruchu navigace konkrétního letadla. Nevzniká nový HTTP request, timer, detector pass, DB přístup ani persistence.
