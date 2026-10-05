@@ -3,6 +3,7 @@ import type { Airport } from "@/lib/airports/types";
 import { haversineDistanceKm } from "@/lib/geo";
 import { SAMPLE_AIRPORTS } from "@/lib/server/airport-catalog";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
+import { isAviationWeatherEnabled } from "@/lib/server/config";
 import { queryAircraftWeatherObservations } from "@/lib/server/aircraft-weather";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { getPrisma } from "@/lib/server/db";
@@ -131,6 +132,7 @@ export async function getAircraftWeatherFusion(
   const windLevel = aircraft.onGround ? null : windLevelForAltitude(altitude);
   const from = new Date(now.getTime() - AIRCRAFT_OBSERVATION_WINDOW_MS);
 
+  const aviationWeatherEnabled = isAviationWeatherEnabled();
   const [aircraftWeatherResult, pirepResult, sigmetResult, metarResult, windResult] = await Promise.allSettled([
     queryAircraftWeatherObservations({
       from,
@@ -138,13 +140,15 @@ export async function getAircraftWeatherFusion(
       aircraftHex: aircraft.icaoHex.toUpperCase(),
       limit: 8,
     }),
-    defaultPirepProvider.getPireps({
-      latitude: aircraft.lat,
-      longitude: aircraft.lon,
-      radiusNm: PIREP_RADIUS_NM,
-      hours: PIREP_HOURS,
-      altitudeFt: altitude,
-    }, options.signal),
+    aviationWeatherEnabled
+      ? defaultPirepProvider.getPireps({
+          latitude: aircraft.lat,
+          longitude: aircraft.lon,
+          radiusNm: PIREP_RADIUS_NM,
+          hours: PIREP_HOURS,
+          altitudeFt: altitude,
+        }, options.signal)
+      : Promise.resolve(null),
     defaultAviationWeatherProvider.getSigmets(options.signal),
     nearestMetar(aircraft.lat, aircraft.lon, options.signal),
     windLevel === null
@@ -153,7 +157,7 @@ export async function getAircraftWeatherFusion(
   ]);
 
   const observations = aircraftWeatherResult.status === "fulfilled" ? aircraftWeatherResult.value.observations : [];
-  const pireps = pirepResult.status === "fulfilled" ? pirepResult.value.reports : [];
+  const pireps = pirepResult.status === "fulfilled" && pirepResult.value ? pirepResult.value.reports : [];
   const sigmetSnapshot = sigmetResult.status === "fulfilled" ? sigmetResult.value : null;
   const sigmets = sigmetSnapshot ? aircraftSigmetContext(aircraft, sigmetSnapshot) : [];
   const metar = metarResult.status === "fulfilled" ? metarResult.value : null;
@@ -163,7 +167,9 @@ export async function getAircraftWeatherFusion(
   const sourceAvailability: Partial<Record<WeatherFusionSource, "AVAILABLE" | "STALE" | "UNAVAILABLE">> = {
     AIRCRAFT_BDS44: latestObservation?.source === "BDS_4_4" ? sourceState(aircraftWeatherResult) : "UNAVAILABLE",
     AIRCRAFT_OTHER: latestObservation && latestObservation.source !== "BDS_4_4" ? sourceState(aircraftWeatherResult) : "UNAVAILABLE",
-    PIREP_AIREP: sourceState(pirepResult, pirepResult.status === "fulfilled" && pirepResult.value.stale),
+    PIREP_AIREP: pirepResult.status === "fulfilled" && pirepResult.value
+      ? sourceState(pirepResult, pirepResult.value.stale)
+      : "UNAVAILABLE",
     SIGMET: sourceState(sigmetResult, sigmetResult.status === "fulfilled" && sigmetResult.value.stale),
     METAR: metar ? sourceState(metarResult, metar.stale) : "UNAVAILABLE",
     ICON_EU: windLevel === null || !modelWind ? "UNAVAILABLE" : sourceState(windResult, modelWind.stale),
