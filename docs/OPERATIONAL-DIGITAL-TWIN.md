@@ -536,3 +536,20 @@ The page is diagnostic only. It cannot change graduation policy, public
 prediction policy, WATCH/ATTENTION semantics, thresholds, or persisted
 calibration data.
 
+## Regional Attention Graduation V1
+
+Regional Attention Graduation V1 converts restart-stable
+`REGIONAL_COPRESENCE` outcome evidence into a formal readiness report. The
+gate requires a four-hour observation span, at least 80 scoreable samples,
+coverage across every 5/15/30-minute horizon, at least 70% LOCAL truth
+coverage, at least 75% precision, and timing MAE no worse than 240 seconds.
+
+Insufficient evidence returns `WAIT`. Complete evidence that misses quality
+thresholds returns `FAIL`; only complete evidence that clears all thresholds
+returns `PASS`. A PASS sets `manualPromotionEligible=true`, but V1 has
+`autoPromotion=false` and does not alter public WATCH/ATTENTION semantics.
+
+The scope remains regional operational context only.
+`DESTINATION_CLUSTER`, collision-warning semantics, and separation-product
+semantics are explicitly ineligible for graduation.
+
