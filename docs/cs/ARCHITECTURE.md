@@ -510,3 +510,16 @@ Operational Digital Twin je první připravený consumer. Fused state smí čís
 při explicitně zapnutém Digital Twin fusion flagu, readiness PASS a GOOD
 observed fused position konkrétního letadla. Veřejný radar, canonical Aircraft,
 history, receiver statistics i FlightPosition zůstávají beze změny.
+
+
+## Track Fusion Outcome Validation V1
+
+Outcome Validation je shadow consumer čerstvě přepočítaných Track Fusion
+tracků. Ve stejném čase zachytí existující canonical merge i fused stav,
+naplánuje omezené prospektivní sample +5/+15/+30 s a později obě větve
+vyhodnotí proti čerstvé LOCAL receiver observation.
+
+Nevlastní ingest, scheduling, persistence ani druhý fusion pass. Pending samples
+i pětiminutové aggregate buckety jsou pouze v RAM a bounded. Validator nemůže
+měnit source affinity, canonical Aircraft state, radar SSE, receiver history ani
+Track Fusion selection.
