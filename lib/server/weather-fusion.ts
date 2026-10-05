@@ -174,7 +174,6 @@ export async function getAircraftWeatherFusion(
   const metar = metarResult.status === "fulfilled" ? metarResult.value : null;
   const modelWind = windResult.status === "fulfilled" ? windResult.value : null;
 
-  const latestObservation = observations[0] ?? null;
   const sourceAvailability: Partial<Record<WeatherFusionSource, "AVAILABLE" | "STALE" | "UNAVAILABLE">> = {
     AIRCRAFT_BDS44: aircraftWeatherResult.status === "fulfilled"
       ? aircraftObservationSourceState(observations, "BDS_4_4", now.getTime())
@@ -189,13 +188,6 @@ export async function getAircraftWeatherFusion(
     METAR: metar ? sourceState(metarResult, metar.stale) : "UNAVAILABLE",
     ICON_EU: windLevel === null || !modelWind ? "UNAVAILABLE" : sourceState(windResult, modelWind.stale),
   };
-  // If the aircraft-weather query worked but simply had no recent observation,
-  // neither aircraft-observation source should be presented as an upstream error.
-  if (aircraftWeatherResult.status === "fulfilled" && !latestObservation) {
-    sourceAvailability.AIRCRAFT_BDS44 = "UNAVAILABLE";
-    sourceAvailability.AIRCRAFT_OTHER = "UNAVAILABLE";
-  }
-
   return {
     status: "available",
     fusion: buildWeatherFusion({
