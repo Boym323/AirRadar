@@ -90,9 +90,10 @@ async function nearestMetar(
   );
   return results
     .flatMap((result) => {
-      if (result.status !== "fulfilled" || !result.value.weather.metar) return [];
+      if (result.status !== "fulfilled") return [];
       const { airport, weather } = result.value;
       const metar = weather.metar;
+      if (!metar) return [];
       const distance = haversineDistanceKm(lat, lon, airport.latitude, airport.longitude) / 1.852;
       if (distance > METAR_RADIUS_NM) return [];
       return [{
