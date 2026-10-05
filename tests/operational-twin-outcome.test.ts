@@ -213,4 +213,30 @@ describe("Operational Digital Twin Outcome Validation V1", () => {
     });
     expect(result).toEqual({ decision: "PASS", reasons: [], complete: true });
   });
+  it("round-trips anonymous calibration buckets without aircraft-level payload", () => {
+    const source = new OperationalTwinOutcomeValidator();
+    source.capture(situation());
+
+    const targets = [
+      [5, 17.25, 29500],
+      [15, 17.75, 27000],
+      [30, 18.5, 18000],
+    ] as const;
+    for (const [minutes, lon, altitude] of targets) {
+      const at = baseNow + minutes * 60_000;
+      const truth = localTruth(at, lon, altitude);
+      source.observeTruth(new Map([[truth.icaoHex, truth]]), at + 1_000);
+    }
+
+    const exported = source.exportCalibrationBuckets(baseNow + 31 * 60_000);
+    expect(exported.length).toBeGreaterThan(0);
+    const serialized = exported.map((row) => row.payloadJson).join("\n");
+    expect(serialized).not.toMatch(/ABC123|TEST123|OK-TST|icaoHex|callsign|registration|lat|lon/i);
+
+    const restored = new OperationalTwinOutcomeValidator();
+    expect(restored.hydrateCalibrationBuckets(exported, baseNow + 31 * 60_000)).toBeGreaterThan(0);
+    const report = restored.report(new Date(baseNow + 31 * 60_000));
+    expect(report.completed).toBe(3);
+    expect(report.overall.samples).toBe(3);
+  });
 });
