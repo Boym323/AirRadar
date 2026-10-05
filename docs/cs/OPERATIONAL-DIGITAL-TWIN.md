@@ -514,3 +514,20 @@ Stránka je pouze diagnostická. Nemůže měnit graduation policy, veřejnou
 prediction policy, semantiku WATCH/ATTENTION, thresholdy ani uložená kalibrační
 data.
 
+## Regional Attention Graduation V1
+
+Regional Attention Graduation V1 převádí restart-stable outcome důkazy pro
+`REGIONAL_COPRESENCE` na formální readiness report. Gate vyžaduje čtyřhodinové
+pozorovací okno, alespoň 80 skórovatelných vzorků, pokrytí všech horizontů
+5/15/30 minut, nejméně 70% LOCAL truth coverage, alespoň 75% precision a timing
+MAE nejvýše 240 sekund.
+
+Nedostatek důkazů vrací `WAIT`. Kompletní důkazy, které nesplní kvalitativní
+thresholdy, vracejí `FAIL`; pouze kompletní data nad všemi thresholdy vrátí
+`PASS`. PASS nastaví `manualPromotionEligible=true`, ale V1 má
+`autoPromotion=false` a nemění veřejnou semantiku WATCH/ATTENTION.
+
+Scope zůstává pouze regionálním provozním kontextem.
+`DESTINATION_CLUSTER`, collision-warning semantika ani separation-product
+semantika nejsou pro graduation způsobilé.
+
