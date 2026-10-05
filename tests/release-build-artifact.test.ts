@@ -6,7 +6,7 @@ describe("validated production build artifact", () => {
     const workflow = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
     expect(workflow).toContain("name: Package validated production build");
     expect(workflow).toContain("name: production-build-${{ github.sha }}");
-    expect(workflow).toContain("actions/download-artifact@v7");
+    expect(workflow).toContain("actions/download-artifact@v8");
     expect(workflow).toContain('AIRRADAR_BUILD_ARTIFACT_DIR="${RUNNER_TEMP}/airradar-production-build"');
   });
 
