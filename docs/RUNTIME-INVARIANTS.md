@@ -435,3 +435,14 @@ component that created it.
   public-radar mutation. Waypoint/SIGMET truth remains request-driven and
   process-local.
 
+## Regional Attention outcome invariants
+
+- Regional Attention outcome capture is request-driven by the existing regional
+  situation endpoint; it never starts another aircraft/provider poller.
+- Outcome truth is resolved only against fresh canonical LOCAL receiver state.
+  Network-only observations never satisfy the calibration lane.
+- Only aggregate five-minute calibration buckets are persisted. Aircraft/pair
+  identities, coordinates and pending predictions remain RAM-only.
+- `DESTINATION_CLUSTER` is deliberately unscored in V1.
+- Outcome readiness cannot change public WATCH/ATTENTION semantics by itself.
+
