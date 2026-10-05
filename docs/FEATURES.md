@@ -17,7 +17,7 @@ not yet been historically attributed.
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
 | Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
-| Map Context & Weather | production | weather | Pre-registry | — | `/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, and bounded PIREP/AIREP enrichment. |
+| Map Context & Weather | production | weather | Pre-registry | — | `/api/aircraft/:hex/weather-fusion`<br>`/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
@@ -77,6 +77,41 @@ explicit map/aircraft center. Turbulence, icing, temperature, wind, aircraft
 type, altitude, urgency and observation age are presented separately from
 AirRadar's own Mode-S/BDS 4.4 observations. Reports are not automatically
 attributed to aircraft captured by the local receiver.
+
+## Aviation Weather Fusion V1
+
+Weather Fusion V1 adds an explainable, on-demand synthesis for a live locally
+received aircraft. `GET /api/aircraft/:hex/weather-fusion` combines existing
+AirRadar weather products without creating a new ingest or persistence lane:
+recent quality-controlled aircraft weather (including Mode-S BDS 4,4),
+PIREP/AIREP within 120 NM and six hours, current/projected altitude-relevant
+SIGMET context, the nearest available METAR within 120 NM, and the existing
+ICON-EU pressure-level wind context.
+
+The result exposes separate TURBULENCE, ICING and CONVECTION signals. Every
+positive signal keeps explicit evidence records with source, severity,
+confidence, observation time and, where applicable, distance and altitude
+difference. Independent agreeing sources can raise confidence; a stronger
+altitude-relevant SIGMET can dominate weaker evidence. Missing evidence never
+turns into an implicit all-clear: an overall NONE state is emitted only when
+all tracked risks are explicitly cleared, otherwise the result remains UNKNOWN.
+
+Observed aircraft wind can be compared with the already-selected nearest
+ICON-EU pressure-level/grid value. The comparison reports direction/speed
+deltas as AGREE, MIXED or DIVERGENT, but disagreement is not converted into a
+weather hazard. Old aircraft observations and stale model snapshots reduce
+confidence.
+
+METAR-based icing is intentionally only a LOW-confidence derived signal from
+moisture/precipitation near freezing; it is not a diagnosis of in-flight icing.
+The aircraft page presents the fused result, source coverage and bounded
+evidence separately from the underlying raw products and carries an explicit
+non-certified-weather disclaimer.
+
+Fusion is fail-soft across providers and returns PARTIAL/INSUFFICIENT when
+sources are missing. It adds no database migration, background poller, SSE
+connection or ADS-B hot-path work. Existing provider caches remain authoritative
+for upstream request control and the fusion endpoint itself is `no-store`.
 
 ## Aviation Nav Data V1
 
