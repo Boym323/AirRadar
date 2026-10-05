@@ -55,7 +55,10 @@ export interface TrajectoryConformanceCounters {
 
 export interface ProbableDirectEvidence {
   fromElementId: string;
+  fromLabel: string | null;
   toElementId: string;
+  toLabel: string | null;
+  rejoinedAt: string | null;
   skippedElementIds: string[];
   skippedElements: number;
   skippedDistanceNm: number | null;
@@ -244,10 +247,14 @@ function directCandidate(
     && distance >= TRAJECTORY_CONFORMANCE_THRESHOLDS.offsetDirectMinimumSkippedDistanceNm;
   if (!qualifiesFromDeviation && !qualifiesFromOffset) return null;
   const current = input.route.dynamic.currentElement;
+  const previousElement = input.route.route.elements.find((element) => element.id === base.currentElementId) ?? null;
   if (!current || input.corridor.status !== "ON_ROUTE") return null;
   return {
     fromElementId: base.currentElementId,
+    fromLabel: previousElement?.label ?? previousElement?.to?.name ?? null,
     toElementId: current.id,
+    toLabel: current.label ?? current.from?.name ?? current.to?.name ?? null,
+    rejoinedAt: current.from?.name ?? current.to?.name ?? current.label ?? null,
     skippedElementIds: skipped.ids,
     skippedElements: skipped.count,
     skippedDistanceNm: skipped.distanceNm,
