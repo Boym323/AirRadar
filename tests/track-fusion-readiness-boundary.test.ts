@@ -9,7 +9,7 @@ const routeSource = readFileSync(new URL("../app/api/admin/track-fusion/readines
 const historySource = readFileSync(new URL("../lib/server/history.ts", import.meta.url), "utf8");
 
 describe("Track Fusion Readiness V1 boundary", () => {
-  it("uses process-local bounded aggregation without persistence or a timer", () => {
+  it("uses bounded process-local aggregation without persistence or timers", () => {
     expect(readinessSource).toContain("TRACK_FUSION_READINESS_WINDOW_MINUTES = 24 * 60");
     expect(readinessSource).toContain("TRACK_FUSION_READINESS_BUCKET_MINUTES = 5");
     expect(readinessSource).toContain("MAX_BUCKETS");
@@ -20,7 +20,7 @@ describe("Track Fusion Readiness V1 boundary", () => {
     expect(readinessSource).not.toContain("setTimeout");
   });
 
-  it("collects readiness from existing shadow evaluations only", () => {
+  it("collects readiness only from the existing shadow evaluation path", () => {
     expect(stateSource).toContain("this.trackFusionReadiness.observe(this.trackFusionShadow.diagnostics(), now)");
     expect(stateSource).toContain("getTrackFusionReadinessReport");
     expect(historySource).not.toContain("trackFusionReadiness");
@@ -35,7 +35,7 @@ describe("Track Fusion Readiness V1 boundary", () => {
     expect(twinSource).toContain('service.getAircraft(icaoHex, fusionEligible ? "extended" : "local")');
   });
 
-  it("never promotes estimated fusion fields into the first Digital Twin rollout", () => {
+  it("never promotes estimated or LOW-confidence fusion fields into Digital Twin", () => {
     expect(twinSource).toContain("!estimate.estimated");
     expect(twinSource).toContain('estimate.confidence !== "LOW"');
     expect(twinSource).toContain('stateSource: fusionEligible ? "TRACK_FUSION" : "CANONICAL"');
