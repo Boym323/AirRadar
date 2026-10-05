@@ -10,6 +10,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.304] - 2026-10-05
+
+Changes since v1.0.303.
+
+**Features touched:** Operational Digital Twin.
+
+### Added
+
+- Add Weather Corridor Intelligence V1 (#328) (cf50f71)
+
+### Maintenance
+
+- Sync generated repository metadata (#327) (d973ee5)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#327) (d973ee5)
+- feat: add Weather Corridor Intelligence V1 (#328) (cf50f71)
+
+</details>
 ## [1.0.303] - 2026-10-05
 
 Changes since v1.0.302.
