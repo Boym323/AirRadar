@@ -74,7 +74,7 @@ export interface OperationalTwinEvidenceSummary {
 
 export interface OperationalTwinSituation {
   version: typeof OPERATIONAL_TWIN_VERSION;
-  status: "available" | "unavailable" | "stale";
+  status: "available";
   generatedAt: string;
   aircraft: {
     icaoHex: string;
