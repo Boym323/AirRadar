@@ -177,12 +177,13 @@ export function buildOperationalTwinEvents(input: {
         previousPrimaryId = primary?.id ?? previousPrimaryId;
       }
 
-      if (input.airspacePlan?.status !== "unavailable") {
+      const airspacePlan = input.airspacePlan;
+      if (airspacePlan && airspacePlan.status !== "unavailable") {
         const pointMs = Date.parse(point.at);
         for (const airspace of context.currentAirspaces) {
           const canonical = canonicalAirspaceDesignator(airspace.id) ?? canonicalAirspaceDesignator(airspace.name);
           if (!canonical || emittedPlans.has(canonical)) continue;
-          const window = input.airspacePlan.windows.find((candidate) =>
+          const window = airspacePlan.windows.find((candidate) =>
             canonicalWindow(candidate) === canonical && validAt(candidate, pointMs));
           if (!window) continue;
           const plannedVertical = plannedVerticalRelation(window, point.altitudeFt);
@@ -196,7 +197,7 @@ export function buildOperationalTwinEvents(input: {
             title: canonical,
             detail: [window.activity, window.responsibleUnit, plannedVertical === "unknown" ? "vertical ?" : null].filter(Boolean).join(" · ") || null,
             provenance: "PLANNED",
-            confidence: input.airspacePlan.status === "ok" && plannedVertical === "inside" ? "HIGH" : "MEDIUM",
+            confidence: airspacePlan.status === "ok" && plannedVertical === "inside" ? "HIGH" : "MEDIUM",
             source: window.source,
             sourceReference: window.sourceReference,
             lat: point.lat,
