@@ -199,12 +199,12 @@ export function buildOperationalTwinEvents(input: {
           offsetMinutes: point.offsetMinutes,
           at: point.at,
           title: feature.properties.hazard ?? feature.properties.phenomenon ?? "SIGMET",
-          detail: [feature.properties.qualifier, feature.properties.firName, vertical === "unknown" ? "vertical match unknown" : null]
+          detail: [feature.properties.qualifier, feature.properties.firName, vertical === "unknown" ? "vertical ?" : null]
             .filter(Boolean).join(" · ") || null,
           provenance: "PREDICTED",
           confidence: vertical === "matched" && !input.sigmets.stale ? "HIGH" : "MEDIUM",
           source: feature.properties.source,
-          sourceReference: feature.properties.rawText ?? null,
+          sourceReference: feature.properties.seriesId ?? null,
           lat: point.lat,
           lon: point.lon,
           altitudeFt: point.altitudeFt,
@@ -242,7 +242,7 @@ export function buildOperationalTwinEvents(input: {
           offsetMinutes: roundedOffset(offset),
           at: input.etaAdvisory.estimatedArrivalAt,
           title: `RWY ${input.runwayAdvisory.runway}`,
-          detail: input.runwayAdvisory.alternative ? `alternative ${input.runwayAdvisory.alternative}` : null,
+          detail: input.runwayAdvisory.alternative ? `ALT ${input.runwayAdvisory.alternative}` : null,
           provenance: "PREDICTED",
           confidence: eventConfidence(input.runwayAdvisory.confidence),
           source: input.runwayAdvisory.modelVersion,
