@@ -80,6 +80,38 @@ letadla, výška, naléhavost a stáří pozorování jsou zobrazené odděleně
 vlastních Mode-S/BDS 4.4 pozorování AirRadaru. Externí hlášení se automaticky
 nepřiřazují ke konkrétním letadlům zachyceným lokálním přijímačem.
 
+## Aviation Nav Data V1
+
+AirRadar umí načíst omezená globální referenční data NAVAID a pojmenovaných
+FIX/waypoint bodů z veřejného Data API Aviation Weather Center.
+
+`GET /api/navigation/data?lat=&lon=&radiusNm=&kinds=NAVAID,FIX` běží pouze na
+serveru, je rate-limitovaný a omezený na oblast 10–250 NM kolem přijímače.
+Provider používá jen dokumentované parametry `bbox` a `format=json`, omezuje
+počet normalizovaných výsledků, slučuje identické souběžné požadavky, úspěšné
+odpovědi cachuje šest hodin a při dočasném výpadku upstreamu může vrátit
+omezený stale snapshot.
+
+Radar data nabízí jako volitelnou vrstvu NAVAID/FIX. NAVAID a FIX jsou vizuálně
+odlišené a popisky se zobrazují až při vyšším zoomu. Globální referenční vrstva
+AWC nenahrazuje ani nepřepisuje publikované CZ/SK/AT eAIP ATS tratě, postupy ani
+jejich provenance.
+
+Nevzniká databázová migrace, background poller, nový SSE stream ani práce v
+ADS-B hot path.
+
+Přesné identifikátory NAVAID/FIX jsou také součástí globálního Command Search.
+Vyhledávání používá dokumentovaný parametr AWC `ids`, přijímá pouze
+normalizované identifikátory o délce 2–8 znaků, jeden lookup omezuje na osm ID,
+slučuje souběžné požadavky a používá stejnou šestihodinovou serverovou cache.
+Výpadek AWC neblokuje ostatní části globálního vyhledávání.
+
+Výběr globálního výsledku NAVAID/FIX zapne mapovou vrstvu a vystředí radar na
+daný bod. Pokud má vybrané letadlo filed route, body AWC z právě načtené oblasti,
+které jsou v této trase, se zvýrazní pomocí existujícího Route Intelligence
+tokenizeru. Jde pouze o zobrazení/enrichment: body AWC nikdy nenahrazují eAIP
+geometrii ATS/postupů ani nemění autoritu route resolveru.
+
 ## Airport Live Board V5
 
 V5 zachovává stejnou omezenou sdílenou architekturu letiště a nepřidává žádnou
