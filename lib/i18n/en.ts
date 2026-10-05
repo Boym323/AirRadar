@@ -1906,6 +1906,7 @@ export const en = {
     trackFusionTransitions: "Fusion transitions OK / reject",
     trackFusionGapFills: "Estimated gap fills",
     trackFusionCanonical: "Canonical divergence",
+    trackFusionCapacity: "Capacity evictions",
 
     rateLimited: "Rate limited",
     retryAfter: "Retry after",
