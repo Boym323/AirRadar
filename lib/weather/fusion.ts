@@ -319,8 +319,11 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
   }
 
   const risks = (["TURBULENCE", "ICING", "CONVECTION"] as const).map((kind) => buildRisk(kind, evidence));
-  const ranked = risks.filter((risk) => risk.severity !== "UNKNOWN").sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || confidenceRank[b.confidence] - confidenceRank[a.confidence]);
-  const dominant = ranked[0] ?? null;
+  const positiveRisks = risks
+    .filter((risk) => risk.severity !== "UNKNOWN" && risk.severity !== "NONE")
+    .sort((a, b) => severityRank[b.severity] - severityRank[a.severity] || confidenceRank[b.confidence] - confidenceRank[a.confidence]);
+  const allClear = risks.every((risk) => risk.severity === "NONE");
+  const dominant = positiveRisks[0] ?? null;
 
   const observedWind = latestAircraft?.windDirectionDeg !== null && latestAircraft?.windDirectionDeg !== undefined
     && latestAircraft.windSpeedKt !== null && latestAircraft.windSpeedKt !== undefined
@@ -385,9 +388,9 @@ export function buildWeatherFusion(input: WeatherFusionInput): WeatherFusionResu
     aircraftHex: input.aircraftHex.toUpperCase(),
     position: { lat: input.lat, lon: input.lon, altitudeFt: input.altitudeFt },
     overall: {
-      severity: dominant?.severity ?? "UNKNOWN",
-      confidence: dominant?.confidence ?? "LOW",
-      dominantRisk: dominant?.severity === "NONE" ? null : dominant?.kind ?? null,
+      severity: dominant?.severity ?? (allClear ? "NONE" : "UNKNOWN"),
+      confidence: dominant?.confidence ?? (allClear ? "MEDIUM" : "LOW"),
+      dominantRisk: dominant?.kind ?? null,
     },
     risks,
     wind,
