@@ -181,6 +181,55 @@ describe("Track Fusion Shadow V1", () => {
     expect(shadow.diagnostics().estimatedGapFills).toBe(1);
   });
 
+  it("stops estimated position after the cumulative six-second gap bound", () => {
+    const shadow = new TrackFusionShadow();
+    const initial = aircraft({ origin: "local", source: "ADS-B", lat: 49.2, lon: 17.7, groundSpeed: 300, track: 90 });
+    shadow.observe({
+      ...maps(initial, null),
+      receiver,
+      localStaleAfterMs: 15_000,
+      networkStaleAfterMs: 15_000,
+      now: baseNow,
+    });
+
+    const missingAt3 = aircraft({
+      origin: "local",
+      source: "Mode-S",
+      lat: null,
+      lon: null,
+      lastSeenMs: baseNow + 3_000,
+      groundSpeed: 300,
+      track: 90,
+    });
+    shadow.observe({
+      ...maps(missingAt3, null),
+      receiver,
+      localStaleAfterMs: 15_000,
+      networkStaleAfterMs: 15_000,
+      now: baseNow + 3_000,
+    });
+    expect(shadow.getTrack("ABC123")?.quality).toBe("ESTIMATED");
+
+    const missingAt7 = aircraft({
+      origin: "local",
+      source: "Mode-S",
+      lat: null,
+      lon: null,
+      lastSeenMs: baseNow + 7_000,
+      groundSpeed: 300,
+      track: 90,
+    });
+    shadow.observe({
+      ...maps(missingAt7, null),
+      receiver,
+      localStaleAfterMs: 15_000,
+      networkStaleAfterMs: 15_000,
+      now: baseNow + 7_000,
+    });
+    expect(shadow.getTrack("ABC123")?.position).toBeNull();
+    expect(shadow.getTrack("ABC123")?.quality).toBe("NO_POSITION");
+  });
+
   it("detects divergence from the existing canonical local-first position without changing it", () => {
     const local = aircraft({ origin: "local", source: "MLAT", lat: 49.2, lon: 17.7 });
     const network = aircraft({ origin: "adsblol", source: "ADS-B", lat: 49.2, lon: 17.73 });
