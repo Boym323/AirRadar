@@ -331,17 +331,16 @@ export class RegionalAttentionOutcomeValidator {
 
   capture(summary: OperationalAttentionSummary, now = Date.parse(summary.generatedAt)): void {
     if (!Number.isFinite(now)) return;
-    const bucket = this.bucketFor(now);
     for (const item of summary.items) {
       if (item.type === "DESTINATION_CLUSTER") {
-        bucket.unscoredDestinationClusters += 1;
+        this.bucketFor(now).unscoredDestinationClusters += 1;
         continue;
       }
       if (item.type !== "REGIONAL_COPRESENCE" || item.aircraft.length !== 2) continue;
       const offsetMinutes = item.projectedOffsetMinutes;
       const horizon = offsetMinutes === null ? null : horizonForOffset(offsetMinutes);
       if (horizon === null) {
-        bucket.unscoredImmediateCopresence += 1;
+        this.bucketFor(now).unscoredImmediateCopresence += 1;
         continue;
       }
 
@@ -367,7 +366,7 @@ export class RegionalAttentionOutcomeValidator {
         sawScoreableTruth: false,
       });
       this.lastCaptureAt.set(key, now);
-      bucket.byHorizon[horizon].predictions += 1;
+      this.bucketFor(now).byHorizon[horizon].predictions += 1;
       this.firstObservedAt ??= now;
     }
     this.enforceCapacity();
