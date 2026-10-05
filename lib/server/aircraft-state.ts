@@ -15,6 +15,7 @@ import {
   getSourceAffinityFailoverGraceMs,
   isAircraftMassDropGuardEnabled,
   isTrackFusionShadowEnabled,
+  isTrackFusionDigitalTwinEnabled,
 } from "@/lib/server/config";
 import { recordAircraftSnapshot } from "@/lib/server/history";
 import { AircraftContinuityGuard, type AircraftContinuityOrigin, type AircraftMassDropDecision } from "@/lib/server/aircraft-continuity";
@@ -55,7 +56,7 @@ import { enforcePredictiveReadiness, readPredictiveReadinessReport } from "@/lib
 import type { FlightPhase } from "@/lib/intelligence/types";
 import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@/lib/predictive-intelligence/types";
 import type { Airport } from "@/lib/airports/types";
-import { TrackFusionShadow } from "@/lib/track-fusion";
+import { TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -194,6 +195,8 @@ export class AircraftStateService {
   private readonly continuity = new AircraftContinuityGuard();
   /** Shadow-only multi-source state estimator. It never mutates canonical live aircraft. */
   private readonly trackFusionShadow = new TrackFusionShadow(isTrackFusionShadowEnabled());
+  /** Process-local bounded readiness evidence. Restart intentionally resets readiness to WAIT. */
+  private readonly trackFusionReadiness = new TrackFusionReadinessMonitor();
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -469,6 +472,7 @@ export class AircraftStateService {
     destinationProvenance: ReturnType<typeof getDestinationProvenanceDiagnostics>;
     continuity: ReturnType<AircraftContinuityGuard["diagnostics"]>;
     trackFusionShadow: ReturnType<TrackFusionShadow["diagnostics"]>;
+    trackFusionReadiness: ReturnType<TrackFusionReadinessMonitor["report"]>;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -498,6 +502,7 @@ export class AircraftStateService {
         pendingAffinity: this.sourcePreferenceMissingSince.size,
       }),
       trackFusionShadow: this.trackFusionShadow.diagnostics(),
+      trackFusionReadiness: this.getTrackFusionReadinessReport(),
     };
   }
 
@@ -555,6 +560,13 @@ export class AircraftStateService {
 
   getTrackFusionShadowDiagnostics() {
     return this.trackFusionShadow.diagnostics();
+  }
+
+  getTrackFusionReadinessReport(now = new Date()) {
+    return this.trackFusionReadiness.report(isTrackFusionShadowEnabled(), {
+      now,
+      digitalTwinConfigured: isTrackFusionDigitalTwinEnabled(),
+    });
   }
 
   getNetworkDiagnostics() {
@@ -876,6 +888,7 @@ export class AircraftStateService {
       sourcePreferences: this.sourcePreferences,
       now,
     });
+    this.trackFusionReadiness.observe(this.trackFusionShadow.diagnostics(), now);
   }
 
   private logMassDropDecision(origin: AircraftContinuityOrigin, decision: AircraftMassDropDecision): void {
