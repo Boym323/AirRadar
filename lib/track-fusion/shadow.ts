@@ -35,6 +35,8 @@ interface TrackMemory {
   state: TrackFusionTrack;
   fingerprint: string;
   lastEvaluatedAt: number;
+  /** Last accepted non-estimated position. Rejected handovers never replace it. */
+  anchorPosition: TrackFusionFieldEstimate<TrackFusionPositionValue> | null;
 }
 
 interface ResidualAccumulator {
@@ -98,22 +100,20 @@ function residualNm(left: TrackFusionPositionValue, right: TrackFusionPositionVa
   return haversineDistanceKm(left.lat, left.lon, right.lat, right.lon) / 1.852;
 }
 
-function projectedPosition(
-  state: TrackFusionTrack,
+function projectObservedPosition(
+  position: TrackFusionFieldEstimate<TrackFusionPositionValue>,
+  groundSpeedKt: number | null | undefined,
+  trackDeg: number | null | undefined,
   targetAt: number,
-): TrackFusionPositionValue | null {
-  const position = state.position;
-  if (!position) return null;
+): TrackFusionPositionValue {
   const observedAt = Date.parse(position.observedAt);
-  if (!Number.isFinite(observedAt) || targetAt < observedAt) return position.value;
-  const elapsedHours = (targetAt - observedAt) / 3_600_000;
-  const speed = state.groundSpeed?.value;
-  const track = state.track?.value;
-  if (speed === null || speed === undefined || track === null || track === undefined || elapsedHours <= 0) {
+  if (!Number.isFinite(observedAt) || targetAt <= observedAt) return position.value;
+  if (groundSpeedKt === null || groundSpeedKt === undefined || trackDeg === null || trackDeg === undefined) {
     return position.value;
   }
-  const distanceNm = Math.max(0, speed * elapsedHours);
-  const [lon, lat] = destination([position.value.lon, position.value.lat], distanceNm, track);
+  const elapsedHours = (targetAt - observedAt) / 3_600_000;
+  const distanceNm = Math.max(0, groundSpeedKt * elapsedHours);
+  const [lon, lat] = destination([position.value.lon, position.value.lat], distanceNm, trackDeg);
   return { lat, lon };
 }
 
@@ -209,6 +209,7 @@ export class TrackFusionShadow {
         local,
         network,
         previous: memory?.state ?? null,
+        anchorPosition: memory?.anchorPosition ?? null,
         canonical: mergeAircraftObservations(localAircraft, networkAircraft, input.receiver, {
           localStaleAfterMs: input.localStaleAfterMs,
           networkStaleAfterMs: input.networkStaleAfterMs,
@@ -217,7 +218,10 @@ export class TrackFusionShadow {
         }),
         now,
       });
-      this.tracks.set(hex, { state: next, fingerprint, lastEvaluatedAt: now });
+      const anchorPosition = next.position && !next.position.estimated
+        ? next.position
+        : memory?.anchorPosition ?? null;
+      this.tracks.set(hex, { state: next, fingerprint, lastEvaluatedAt: now, anchorPosition });
       this.evaluations += 1;
     }
 
@@ -284,6 +288,7 @@ export class TrackFusionShadow {
     local: TrackFusionObservation | null;
     network: TrackFusionObservation | null;
     previous: TrackFusionTrack | null;
+    anchorPosition: TrackFusionFieldEstimate<TrackFusionPositionValue> | null;
     canonical: Aircraft | null;
     now: number;
   }): TrackFusionTrack {
@@ -316,16 +321,21 @@ export class TrackFusionShadow {
 
     if (
       selectedPosition
-      && input.previous?.position
-      && !input.previous.position.estimated
-      && input.previous.position.sourceClass !== selectedPosition.sourceClass
+      && input.anchorPosition
+      && input.anchorPosition.sourceClass !== "ESTIMATED"
+      && input.anchorPosition.sourceClass !== selectedPosition.sourceClass
     ) {
-      const predicted = projectedPosition(input.previous, selectedPosition.observedAt);
+      const predicted = projectObservedPosition(
+        input.anchorPosition,
+        input.previous?.groundSpeed?.value,
+        input.previous?.track?.value,
+        selectedPosition.observedAt,
+      );
       const candidateUncertainty = positionUncertaintyNm(selectedPosition);
-      const threshold = Math.max(3, (input.previous.position.uncertainty ?? 1.5) + candidateUncertainty + 0.75);
-      const handoverResidual = predicted ? residualNm(predicted, selectedPosition.value) : 0;
-      if (predicted && handoverResidual > threshold) {
-        const alternate = positionCandidates.find((candidate) => candidate.sourceClass === input.previous!.position!.sourceClass) ?? null;
+      const threshold = Math.max(3, (input.anchorPosition.uncertainty ?? 1.5) + candidateUncertainty + 0.75);
+      const handoverResidual = residualNm(predicted, selectedPosition.value);
+      if (handoverResidual > threshold) {
+        const alternate = positionCandidates.find((candidate) => candidate.sourceClass === input.anchorPosition!.sourceClass) ?? null;
         if (alternate) selectedPosition = alternate;
         else selectedPosition = null;
         rejectedTransition = true;
@@ -339,36 +349,31 @@ export class TrackFusionShadow {
       ? estimateFromCandidate(selectedPosition, positionUncertaintyNm(selectedPosition))
       : null;
 
-    if (!position && input.previous?.position) {
-      const previousAt = Date.parse(input.previous.position.observedAt);
-      const previousEvaluatedAt = Date.parse(input.previous.evaluatedAt);
-      const incrementalGapMs = Number.isFinite(previousAt) ? Math.max(0, input.now - previousAt) : Number.POSITIVE_INFINITY;
-      const cumulativeGapMs = input.previous.position.estimated && Number.isFinite(previousEvaluatedAt)
-        ? input.previous.position.ageMs + Math.max(0, input.now - previousEvaluatedAt)
-        : incrementalGapMs;
-      if (Number.isFinite(previousAt) && cumulativeGapMs <= MAX_ESTIMATION_GAP_MS) {
-        const projected = projectedPosition(input.previous, input.now);
-        if (projected) {
-          const priorUncertainty = input.previous.position.uncertainty ?? 1;
-          const speed = input.previous.groundSpeed?.value ?? 0;
-          const traveledNm = speed * incrementalGapMs / 3_600_000;
-          const uncertainty = Number((priorUncertainty + 0.15 + traveledNm * 0.08).toFixed(3));
-          const score = Math.max(20, input.previous.position.score - Math.ceil(incrementalGapMs / 1_000) * 5);
-          position = {
-            value: projected,
-            observedAt: new Date(input.now).toISOString(),
-            sourceClass: "ESTIMATED",
-            origin: null,
-            source: "ESTIMATED",
-            protocol: rejectedTransition ? "handover-rejected-dead-reckoning" : "dead-reckoning",
-            score,
-            confidence: confidenceFromScore(score),
-            ageMs: cumulativeGapMs,
-            uncertainty,
-            estimated: true,
-          };
-          this.estimatedGapFills += 1;
-        }
+    if (!position && input.anchorPosition) {
+      const anchorAt = Date.parse(input.anchorPosition.observedAt);
+      const gapMs = Number.isFinite(anchorAt) ? Math.max(0, input.now - anchorAt) : Number.POSITIVE_INFINITY;
+      if (Number.isFinite(anchorAt) && gapMs <= MAX_ESTIMATION_GAP_MS) {
+        const speed = input.previous?.groundSpeed?.value ?? 0;
+        const trackDeg = input.previous?.track?.value ?? null;
+        const projected = projectObservedPosition(input.anchorPosition, speed, trackDeg, input.now);
+        const priorUncertainty = input.anchorPosition.uncertainty ?? 1;
+        const traveledNm = speed * gapMs / 3_600_000;
+        const uncertainty = Number((priorUncertainty + 0.15 + traveledNm * 0.08).toFixed(3));
+        const score = Math.max(20, input.anchorPosition.score - Math.ceil(gapMs / 1_000) * 5);
+        position = {
+          value: projected,
+          observedAt: new Date(input.now).toISOString(),
+          sourceClass: "ESTIMATED",
+          origin: null,
+          source: "ESTIMATED",
+          protocol: rejectedTransition ? "handover-rejected-dead-reckoning" : "dead-reckoning",
+          score,
+          confidence: confidenceFromScore(score),
+          ageMs: gapMs,
+          uncertainty,
+          estimated: true,
+        };
+        this.estimatedGapFills += 1;
       }
     }
 
