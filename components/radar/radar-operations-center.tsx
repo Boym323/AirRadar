@@ -562,7 +562,7 @@ export function RadarOperationsCenter() {
                           <details className={styles.regionalEvidence}>
                             <summary>{t.intelligence.operationsRegionalEvidence}</summary>
                             <ul>
-                              {item.evidence.map((evidence) => <li key={evidence}>{evidence}</li>)}
+                              <li>{t.intelligence.operationsRegionalContextEvidence}</li>
                               {item.projectedDistanceNm !== null ? (
                                 <li>{t.intelligence.operationsRegionalProjectedDistance(item.projectedDistanceNm.toFixed(1))}</li>
                               ) : null}
