@@ -41,7 +41,34 @@ function validAt(window: PlannedAirspaceWindow, timestamp: number): boolean {
 function sigmetValidAt(feature: SigmetSnapshot["features"][number], timestamp: number): boolean {
   const from = feature.properties.validFrom ? Date.parse(feature.properties.validFrom) : Number.NEGATIVE_INFINITY;
   const to = feature.properties.validTo ? Date.parse(feature.properties.validTo) : Number.POSITIVE_INFINITY;
-  return (!Number.isFinite(from) || timestamp >= from) && (!Number.isFinite(to) || timestamp <= to);
+  if (feature.properties.validFrom && !Number.isFinite(from)) return false;
+  if (feature.properties.validTo && !Number.isFinite(to)) return false;
+  return timestamp >= from && timestamp <= to;
+}
+
+function plannedAltitudeFt(value: string, side: "lower" | "upper"): { value: number | null; known: boolean } {
+  const normalized = value.trim().toUpperCase().replace(/\s+/g, " ");
+  if (!normalized) return { value: null, known: false };
+  if (side === "lower" && /^(?:GND|SFC|SURFACE)$/.test(normalized)) return { value: 0, known: true };
+  if (side === "upper" && /^(?:UNL|UNLIMITED)$/.test(normalized)) return { value: Number.POSITIVE_INFINITY, known: true };
+  const flightLevel = normalized.match(/^FL\s*(\d{2,3})$/);
+  if (flightLevel) return { value: Number(flightLevel[1]) * 100, known: true };
+  if (/AGL/.test(normalized)) return { value: null, known: false };
+  const feet = normalized.match(/^(\d{1,5})\s*(?:FT|FEET)(?:\s*(?:AMSL|MSL))?$/);
+  if (feet) return { value: Number(feet[1]), known: true };
+  return { value: null, known: false };
+}
+
+function plannedVerticalRelation(
+  window: PlannedAirspaceWindow,
+  altitudeFt: number | null,
+): "inside" | "outside" | "unknown" {
+  if (!finite(altitudeFt)) return "unknown";
+  const lower = plannedAltitudeFt(window.lowerLimit, "lower");
+  const upper = plannedAltitudeFt(window.upperLimit, "upper");
+  if (lower.known && lower.value !== null && altitudeFt < lower.value) return "outside";
+  if (upper.known && upper.value !== null && altitudeFt > upper.value) return "outside";
+  return lower.known && upper.known ? "inside" : "unknown";
 }
 
 function sigmetVerticalMatch(
@@ -158,6 +185,8 @@ export function buildOperationalTwinEvents(input: {
           const window = input.airspacePlan.windows.find((candidate) =>
             canonicalWindow(candidate) === canonical && validAt(candidate, pointMs));
           if (!window) continue;
+          const plannedVertical = plannedVerticalRelation(window, point.altitudeFt);
+          if (plannedVertical === "outside") continue;
           emittedPlans.add(canonical);
           events.push({
             id: `plan:${canonical}:${window.sequence}:${point.at}`,
@@ -165,9 +194,9 @@ export function buildOperationalTwinEvents(input: {
             offsetMinutes: point.offsetMinutes,
             at: point.at,
             title: canonical,
-            detail: [window.activity, window.responsibleUnit].filter(Boolean).join(" · ") || null,
+            detail: [window.activity, window.responsibleUnit, plannedVertical === "unknown" ? "vertical ?" : null].filter(Boolean).join(" · ") || null,
             provenance: "PLANNED",
-            confidence: input.airspacePlan.status === "ok" ? "HIGH" : "MEDIUM",
+            confidence: input.airspacePlan.status === "ok" && plannedVertical === "inside" ? "HIGH" : "MEDIUM",
             source: window.source,
             sourceReference: window.sourceReference,
             lat: point.lat,
