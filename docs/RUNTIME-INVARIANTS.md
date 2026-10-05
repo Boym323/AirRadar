@@ -406,3 +406,20 @@ component that created it.
   estimated/LOW-confidence fused numeric fields.
 - If the per-aircraft fusion gate is not met, Digital Twin stays local-canonical
   and must not silently broaden to network-only canonical traffic.
+
+
+## Track Fusion outcome validation invariants
+
+- Outcome validation is prospective: no sample has a result before a later LOCAL
+  position observation reaches its target horizon.
+- Ground truth for V1 is current-RAM LOCAL receiver position only; NETWORK,
+  fused, estimated and historical FlightPosition rows cannot become truth.
+- Baselines are bounded to 5/15/30 seconds and pending state is capped at 6,000
+  samples with a 45-second retention bound.
+- Outcome aggregates are process-local, bounded to 24 hours in five-minute
+  buckets and reset on restart.
+- The validator owns no timer, socket, EventSource, upstream request, Prisma
+  handle or persistence path.
+- Validation cannot change canonical Aircraft, source affinity, Track Fusion
+  arbitration, public radar/SSE, receiver statistics or FlightPosition.
+- Outcome PASS is evidence only and cannot promote Track Fusion by itself.
