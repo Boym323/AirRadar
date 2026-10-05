@@ -11,9 +11,9 @@ describe("Unified Traffic Labels", () => {
     const traffic = { identity: "OK-GLD", altitudeFt: 4250, speedKt: 62 };
     expect(trafficMapLabelLines(traffic, 5)).toBeNull();
     expect(trafficMapLabelLines(traffic, 7)).toEqual({ primary: "OK-GLD", secondary: null });
-    expect(trafficMapLabelLines(traffic, 9)).toEqual({ primary: "OK-GLD", secondary: "4 250 ft" });
+    expect(trafficMapLabelLines(traffic, 9)).toEqual({ primary: "OK-GLD", secondary: "4\u00a0250 ft" });
     expect(trafficMapLabelLines(traffic, 11)).toEqual({ primary: "OK-GLD", secondary: "4 250 ft · 62KT" });
-    expect(trafficMapLabelText(traffic, 11)).toBe("OK-GLD\n4 250 ft · 62KT");
+    expect(trafficMapLabelText(traffic, 11)).toBe("OK-GLD\n4\u00a0250 ft · 62KT");
   });
 
   it("suppresses stale telemetry without changing the identity or zoom threshold", () => {
