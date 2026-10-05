@@ -593,3 +593,21 @@ Route Intelligence V2 geometry
 
 Flow je read-only a on-demand. Nečte FlightPosition historii ani nepersistuje
 výstup corridoru nebo událostí.
+
+
+## Track Fusion Shadow V1 flow
+
+```text
+retained LOCAL Aircraft ──→ normalized field observations ──┐
+                                                            ├─→ quality arbitration
+retained NETWORK Aircraft → normalized field observations ──┘
+                                                                  ↓
+                                                        shadow fused track
+                                                                  ↓
+                                              residual / transition / uncertainty
+                                                                  ↓
+                                                     pouze admin diagnostics
+```
+
+Flow je in-memory a read-only. Existující local-history lane dál dostává jen
+LOCAL provider observations a je záměrně nezávislá na shadow tracku.
