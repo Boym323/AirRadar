@@ -46,6 +46,11 @@ import type { AircraftColorMode } from "@/lib/aircraft/color-mode";
 import {
   createRouteAirportGeoJSON,
   createRouteGeoJSON,
+  createRouteIntelligenceGeoJSON,
+  ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID,
+  ROUTE_INTELLIGENCE_CURRENT_LAYER_ID,
+  ROUTE_INTELLIGENCE_REMAINING_LAYER_ID,
+  ROUTE_INTELLIGENCE_SOURCE_ID,
   ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID,
   ROUTE_V2_AIRPORT_LABEL_LAYER_ID,
   ROUTE_V2_AIRPORT_SOURCE_ID,
@@ -64,6 +69,7 @@ import { EMPTY_SIGMET_DATA, useRadarWeatherContext, type WindResponse } from "@/
 import { useSelectedAircraftWindContext } from "@/components/radar/use-selected-aircraft-wind-context";
 import { useRadarAtcMapContext, type SectorTrafficView } from "@/components/radar/use-radar-atc-map-context";
 import { useRadarNavDataContext } from "@/components/radar/use-radar-nav-data-context";
+import { useRouteCorridorIntelligence } from "@/components/radar/use-route-corridor-intelligence";
 import { IconButton, MapControlGroup, Panel, StatusBadge, UiIcon } from "@/components/ui-primitives";
 import { useDatasetQuery } from "@/components/use-dataset-query";
 import { createMapDatasetReplay } from "@/lib/map-layer-reliability";
@@ -541,6 +547,7 @@ export function AirRadarApp() {
   const selectedTrailSourceRef = useRef<readonly TrailPoint[] | null>(null);
   const routeSourceKeyRef = useRef<string | null>(null);
   const routeAirportSourceKeyRef = useRef<string | null>(null);
+  const routeIntelligenceActiveRef = useRef(false);
   const routeAirportGeoJsonRef = useRef<ReturnType<typeof createRouteAirportGeoJSON>>(createRouteAirportGeoJSON(null));
   const selectedHexRef = useRef<string | null>(null);
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
@@ -1179,6 +1186,31 @@ export function AirRadarApp() {
       map.addSource("selected-trail-live-tail", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({ id: "selected-trail-live-tail-line", type: "line", source: "selected-trail-live-tail", paint: { "line-color": AIRRADAR_MAP_THEME.selectedStrong, "line-opacity": 0.92, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 8, 2.6, 13, 3.4] } });
       map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addSource(ROUTE_INTELLIGENCE_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID,
+        type: "line",
+        source: ROUTE_INTELLIGENCE_SOURCE_ID,
+        filter: ["==", ["get", "progress"], "completed"],
+        layout: { visibility: "none" },
+        paint: { "line-color": AIRRADAR_MAP_THEME.routes.completed, "line-opacity": 0.62, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.8, 8, 2.5, 13, 3.2], "line-dasharray": [1.5, 2.5] },
+      });
+      map.addLayer({
+        id: ROUTE_INTELLIGENCE_REMAINING_LAYER_ID,
+        type: "line",
+        source: ROUTE_INTELLIGENCE_SOURCE_ID,
+        filter: ["==", ["get", "progress"], "remaining"],
+        layout: { visibility: "none" },
+        paint: { "line-color": AIRRADAR_MAP_THEME.routes.remaining, "line-opacity": 0.78, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.8, 8, 2.7, 13, 3.5] },
+      });
+      map.addLayer({
+        id: ROUTE_INTELLIGENCE_CURRENT_LAYER_ID,
+        type: "line",
+        source: ROUTE_INTELLIGENCE_SOURCE_ID,
+        filter: ["==", ["get", "progress"], "current"],
+        layout: { visibility: "none" },
+        paint: { "line-color": AIRRADAR_MAP_THEME.selectedStrong, "line-opacity": 0.98, "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2.8, 8, 4.2, 13, 5.8] },
+      });
       // Route V2 keeps the established completed-route value in the shared
       // theme (legacy assertion: "line-color": "#7ea9bd").
       map.addLayer({
@@ -1852,8 +1884,11 @@ export function AirRadarApp() {
         : { type: "FeatureCollection", features: [] });
       selectedTrailSourceRef.current = selectedTrailForMap;
     }
-    for (const layer of ["selected-trail-line", "selected-trail-live-tail-line", ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
+    for (const layer of ["selected-trail-line", "selected-trail-live-tail-line"] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible ? "visible" : "none");
+    }
+    for (const layer of [ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && !routeIntelligenceActiveRef.current ? "visible" : "none");
     }
     for (const layer of [ROUTE_V2_AIRPORT_CIRCLE_LAYER_ID, ROUTE_V2_AIRPORT_LABEL_LAYER_ID] as const) {
       if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && showAirports ? "visible" : "none");
@@ -2082,6 +2117,7 @@ export function AirRadarApp() {
     ? { ...selectedAircraftSnapshot, enrichment: aircraftDetail.liveEnrichment }
     : selectedAircraftSnapshot, [aircraftDetail, selectedAircraftSnapshot]);
   const selectedDatabaseAircraft = aircraftDetail?.aircraft ?? null;
+  const selectedRouteCorridor = useRouteCorridorIntelligence(selectedAircraft);
   const selectedSigmetContext = useMemo(() => aircraftSigmetContext(selectedAircraft, sigmetData), [selectedAircraft, sigmetData]);
   const selectedSigmetDeviation = useMemo(() => detectSigmetTrajectoryDeviation(
     selectedAircraft,
@@ -2153,6 +2189,24 @@ export function AirRadarApp() {
   }, [contextAircraftHex, contextHasPosition, selectedAtcContext?.status]);
 
   const selectedAircraftVisible = Boolean(selectedAircraft && filteredAircraft.some((aircraft) => aircraft.icaoHex === selectedAircraft.icaoHex));
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const source = map.getSource(ROUTE_INTELLIGENCE_SOURCE_ID) as GeoJSONSource | undefined;
+    const geojson = selectedAircraftVisible
+      ? createRouteIntelligenceGeoJSON(selectedRouteCorridor.route)
+      : { type: "FeatureCollection", features: [] } as const;
+    const active = selectedAircraftVisible && geojson.features.length > 0;
+    routeIntelligenceActiveRef.current = active;
+    source?.setData(geojson);
+    for (const layer of [ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID, ROUTE_INTELLIGENCE_CURRENT_LAYER_ID, ROUTE_INTELLIGENCE_REMAINING_LAYER_ID] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", active ? "visible" : "none");
+    }
+    for (const layer of [ROUTE_V2_COMPLETED_LAYER_ID, ROUTE_V2_REMAINING_LAYER_ID] as const) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", selectedAircraftVisible && !active ? "visible" : "none");
+    }
+  }, [mapReady, selectedAircraftVisible, selectedRouteCorridor.route]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -2471,6 +2525,7 @@ export function AirRadarApp() {
             destinationWind={selectedWind.destination}
             windStatus={selectedWind.status}
             routeWeather={selectedRouteWeather}
+            routeCorridor={selectedRouteCorridor.corridor}
             intelligenceEvents={selectedIntelligenceEvents}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
