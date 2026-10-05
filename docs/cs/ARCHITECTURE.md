@@ -523,3 +523,15 @@ Nevlastní ingest, scheduling, persistence ani druhý fusion pass. Pending sampl
 i pětiminutové aggregate buckety jsou pouze v RAM a bounded. Validator nemůže
 měnit source affinity, canonical Aircraft state, radar SSE, receiver history ani
 Track Fusion selection.
+
+## Operational Digital Twin Outcome Validation V1
+
+On-demand Digital Twin response nově napájí samostatný jednosměrný
+prospektivní validator. Úspěšný situation výpočet přidá pouze tři omezené cíle
+(+5/+15/+30 minut). Následující refresh LOCAL provideru tyto cíle vyhodnotí
+proti receiver truth, která už je v local aircraft mapě.
+
+Validator je pouze v RAM, nemá vlastní timer ani databázovou cestu a Digital
+Twin znovu nepřepočítává. Jeho výstup je pouze diagnostický a nemůže ovlivnit
+canonical aircraft state, Track Fusion selection, radar/SSE, historii,
+Navigation Integrity, predictive inputs ani alerts.
