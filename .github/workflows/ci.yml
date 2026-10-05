@@ -352,11 +352,12 @@ jobs:
       - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
-          sudo -n /var/www/airradar/deploy/release.sh \
+          sudo -n env \
+            AIRRADAR_BUILD_ARTIFACT_DIR="${RUNNER_TEMP}/airradar-production-build" \
+            /var/www/airradar/deploy/release.sh \
             --branch main \
             --automated \
-            --commit "${GITHUB_SHA}" \
-            --build-artifact-dir "${RUNNER_TEMP}/airradar-production-build"
+            --commit "${GITHUB_SHA}"
 
       - name: Verify deployed release identity
         shell: bash
