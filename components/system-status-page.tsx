@@ -451,6 +451,13 @@ export function SystemStatusPage() {
   const trackFusionOutcomeScenarios = asRecord(trackFusionOutcome?.scenarios);
   const trackFusionOutcomeHandoverLn = asRecord(trackFusionOutcomeScenarios?.HANDOVER_LOCAL_TO_NETWORK);
   const trackFusionOutcomeHandoverNl = asRecord(trackFusionOutcomeScenarios?.HANDOVER_NETWORK_TO_LOCAL);
+  const operationalTwinOutcome = asRecord(data?.localAdsb?.operationalTwinOutcome);
+  const operationalTwinOutcomeWindow = asRecord(operationalTwinOutcome?.window);
+  const operationalTwinOutcomeOverall = asRecord(operationalTwinOutcome?.overall);
+  const operationalTwinOutcomeHorizons = asRecord(operationalTwinOutcome?.horizons);
+  const operationalTwinOutcome5 = asRecord(operationalTwinOutcomeHorizons?.["5"]);
+  const operationalTwinOutcome15 = asRecord(operationalTwinOutcomeHorizons?.["15"]);
+  const operationalTwinOutcome30 = asRecord(operationalTwinOutcomeHorizons?.["30"]);
   const trackFusionResidual = asRecord(trackFusion?.positionResidualNm);
   const trackFusionCanonicalResidual = asRecord(trackFusion?.canonicalResidualNm);
   const trackFusionResidualAverage = diagnosticOptionalNumber(trackFusionResidual, "average");
@@ -598,6 +605,34 @@ export function SystemStatusPage() {
             dictionary.locale,
           )} />
         </>}
+      </Card>}
+
+      {detailed && operationalTwinOutcome && <Card
+        title={dictionary.system.operationalTwinOutcome}
+        status={operationalTwinOutcome.decision === "PASS" ? "ok" : operationalTwinOutcome.decision === "FAIL" ? "degraded" : "disabled"}
+        dictionary={dictionary}
+      >
+        <div data-testid="operational-twin-outcome-validation">
+          <Field label={dictionary.system.version} value={String(operationalTwinOutcome.version ?? dictionary.system.notAvailable)} />
+          <Field label={dictionary.system.operationalTwinOutcomeDecision} value={String(operationalTwinOutcome.decision ?? dictionary.system.notAvailable)} />
+          <Field label={dictionary.system.operationalTwinOutcomeTruth} value={String(operationalTwinOutcome.truthSource ?? dictionary.system.notAvailable)} />
+          <Field label={dictionary.system.operationalTwinOutcomeWindow} value={`${formatNumber(diagnosticNumber(operationalTwinOutcomeWindow, "spanMinutes"), 0, dictionary.locale)} min · ${formatNumber(diagnosticNumber(operationalTwinOutcome, "completed"), 0, dictionary.locale)} completed`} />
+          <Field label={dictionary.system.operationalTwinOutcomeSamples} value={`${formatNumber(diagnosticNumber(operationalTwinOutcome, "completed"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(operationalTwinOutcome, "pending"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.operationalTwinOutcomeError} value={diagnosticOptionalNumber(operationalTwinOutcomeOverall, "meanPositionErrorNm") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber(diagnosticOptionalNumber(operationalTwinOutcomeOverall, "meanPositionErrorNm") ?? 0, 2, dictionary.locale)} NM`} />
+          <Field label={dictionary.system.operationalTwinOutcomeCoverage} value={diagnosticOptionalNumber(operationalTwinOutcomeOverall, "uncertaintyCoverage") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber((diagnosticOptionalNumber(operationalTwinOutcomeOverall, "uncertaintyCoverage") ?? 0) * 100, 1, dictionary.locale)} %`} />
+          <Field label={dictionary.system.operationalTwinOutcomeRatio} value={diagnosticOptionalNumber(operationalTwinOutcomeOverall, "meanErrorToUncertaintyRatio") === null
+            ? dictionary.system.notAvailable
+            : formatNumber(diagnosticOptionalNumber(operationalTwinOutcomeOverall, "meanErrorToUncertaintyRatio") ?? 0, 2, dictionary.locale)} />
+          <Field label={dictionary.system.operationalTwinOutcomeExpired} value={diagnosticOptionalNumber(operationalTwinOutcome, "expiredTruthRate") === null
+            ? dictionary.system.notAvailable
+            : `${formatNumber((diagnosticOptionalNumber(operationalTwinOutcome, "expiredTruthRate") ?? 0) * 100, 1, dictionary.locale)} %`} />
+          <Field label={dictionary.system.operationalTwinOutcomeHorizons} value={`5m ${formatNumber(diagnosticNumber(operationalTwinOutcome5, "samples"), 0, dictionary.locale)} · 15m ${formatNumber(diagnosticNumber(operationalTwinOutcome15, "samples"), 0, dictionary.locale)} · 30m ${formatNumber(diagnosticNumber(operationalTwinOutcome30, "samples"), 0, dictionary.locale)}`} />
+          <Field label={dictionary.system.operationalTwinOutcomeCapture} value={diagnosticBoolean(operationalTwinOutcome, "requestDrivenCapture") ? dictionary.system.operationalTwinOutcomeRequestDriven : dictionary.system.notAvailable} />
+        </div>
       </Card>}
 
       <Card title={dictionary.system.networkCoverage} status={data.adsbLol.status} dictionary={dictionary}>
