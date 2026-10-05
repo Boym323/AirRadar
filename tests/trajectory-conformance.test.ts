@@ -136,7 +136,7 @@ describe("Trajectory Conformance V1", () => {
     const direct = observe(deviating.tracker, 15_000, 4, "ON_ROUTE", 1);
 
     expect(direct.snapshot.status).toBe("PROBABLE_DIRECT");
-    expect(direct.snapshot.confidence).toBe("HIGH");
+    expect(direct.snapshot.confidence).toBe("MEDIUM");
     expect(direct.snapshot.probableDirect).toMatchObject({
       fromElementId: "leg-1",
       toElementId: "leg-4",
@@ -146,6 +146,18 @@ describe("Trajectory Conformance V1", () => {
     });
     expect(direct.snapshot.probableDirect?.skippedDistanceNm).toBeGreaterThan(20);
     expect(direct.tracker.counters).toMatchObject({ directCandidates: 1, probableDirects: 1 });
+  });
+
+  it("raises probable-direct confidence only with stronger skip evidence", () => {
+    const deviating = observe(null, 10_000, 1, "DEVIATING", 14);
+    const direct = observe(deviating.tracker, 15_000, 5, "ON_ROUTE", 1);
+    expect(direct.snapshot.status).toBe("PROBABLE_DIRECT");
+    expect(direct.snapshot.confidence).toBe("HIGH");
+    expect(direct.snapshot.probableDirect).toMatchObject({
+      skippedElementIds: ["leg-2", "leg-3", "leg-4"],
+      skippedElements: 3,
+      rejoinedAt: "P4",
+    });
   });
 
   it("holds probable direct briefly so a valid transition is visible to the product layer", () => {
