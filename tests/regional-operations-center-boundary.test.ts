@@ -9,6 +9,14 @@ const routeSource = readFileSync(
   new URL("../app/api/operations/situation/route.ts", import.meta.url),
   "utf8",
 );
+const airradarAppSource = readFileSync(
+  new URL("../components/airradar-app.tsx", import.meta.url),
+  "utf8",
+);
+const regionalUiSource = readFileSync(
+  new URL("../lib/operational-twin/regional-attention-ui.ts", import.meta.url),
+  "utf8",
+);
 
 describe("Regional Operations Center V1 boundary", () => {
   it("polls the existing bounded regional situation endpoint only while the panel is open", () => {
