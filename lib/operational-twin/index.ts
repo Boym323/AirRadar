@@ -15,7 +15,7 @@ export function buildOperationalTwinSituation(input: {
   corridor: OperationalTwinCorridor;
   events: OperationalTwinEvent[];
   weatherCorridor: WeatherCorridorIntelligence;
-  windTimingShadow: OperationalTwinWindTimingShadow;
+  windTimingShadow?: OperationalTwinWindTimingShadow;
   atcAvailable: boolean;
   airspacePlanAvailable: boolean;
   sigmetAvailable: boolean;
