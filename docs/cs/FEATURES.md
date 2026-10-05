@@ -421,3 +421,14 @@ s receiverově pozorovaným runway flow. Evidence je označená PUBLIC_STRONG,
 PUBLIC_PARTIAL nebo RECEIVER_ONLY. Stejné omezené pořadí navíc vytváří stav
 Approach Queue (EMPTY, LOW_DENSITY, ACTIVE, BUILDING, COMPRESSED nebo
 HOLDING_PRESENT) bez dalšího requestu, streamu nebo persistence path.
+
+
+## Operational Digital Twin V1
+
+Detail letadla obsahuje omezený 30minutový 4D situační výhled z
+`/api/aircraft/:hex/situation`. Spojuje route-aware nebo kinematický corridor
+s waypoint, ATC-sector, plánovanými AUP/UUP, SIGMET a readiness-gated PUBLIC
+prediction událostmi. Každá událost zachovává provenance a confidence. Funkce
+nepřidává history scan, persistence, další SSE stream ani periodický browser
+polling loop. Podrobnosti jsou v
+[`OPERATIONAL-DIGITAL-TWIN.md`](OPERATIONAL-DIGITAL-TWIN.md).
