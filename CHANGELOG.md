@@ -10,6 +10,27 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.307] - 2026-10-05
+
+Changes since v1.0.306.
+
+**Features touched:** Track Fusion Shadow.
+
+### Added
+
+- Add Track Fusion Readiness / Graduation V1 (#336) (b57c155)
+
+### Maintenance
+
+- Sync generated repository metadata (#335) (64e2f44)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#335) (64e2f44)
+- feat: add Track Fusion Readiness / Graduation V1 (#336) (b57c155)
+
+</details>
 ## [1.0.306] - 2026-10-05
 
 Changes since v1.0.305.
