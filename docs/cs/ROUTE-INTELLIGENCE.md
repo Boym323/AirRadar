@@ -7,6 +7,8 @@ se to vykládat jako aktuální provozní dostupnost airway.
 
 Dopředně kompatibilní doménové kontrakty V2 jsou zdokumentovány v
 [ROUTE-INTELLIGENCE-V2-CONTRACTS.md](ROUTE-INTELLIGENCE-V2-CONTRACTS.md).
+Selected-aircraft conformance a odvození probable direct jsou zdokumentované v
+[TRAJECTORY-CONFORMANCE.md](TRAJECTORY-CONFORMANCE.md).
 
 ## Zdroje a hranice
 
