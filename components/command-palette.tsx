@@ -21,12 +21,13 @@ import {
   type AtsPointSearchResult,
   type FlightSearchResult,
   type GlobalSearchResponse,
+  type NavPointSearchResult,
   type SmartSearchActionResult,
 } from "@/lib/search/types";
 
 const SEARCH_DEBOUNCE_MS = 220;
 
-type SearchResult = AircraftSearchResult | AirportSearchResult | AtsPointSearchResult | FlightSearchResult | SmartSearchActionResult;
+type SearchResult = AircraftSearchResult | AirportSearchResult | AtsPointSearchResult | NavPointSearchResult | FlightSearchResult | SmartSearchActionResult;
 
 interface StaticCommand {
   key: string;
@@ -47,6 +48,7 @@ function resultKey(item: SearchResult): string {
   if (item.kind === "aircraft") return `aircraft:${item.icaoHex}`;
   if (item.kind === "airport") return `airport:${item.icaoCode}`;
   if (item.kind === "ats-point") return `ats-point:${item.id}`;
+  if (item.kind === "nav-point") return `nav-point:${item.id}`;
   if (item.kind === "flight") return `flight:${item.id}`;
   return `action:${item.intent}:${item.airportIcao ?? ""}`;
 }
@@ -92,6 +94,13 @@ function resultLabels(item: SearchResult): { label: string; detail: string } {
         .filter(Boolean).join(" · "),
     };
   }
+  if (item.kind === "nav-point") {
+    return {
+      label: item.name === item.id.split(":")[1] ? item.name : `${item.id.split(":")[1]} · ${item.name}`,
+      detail: [item.countryCode, item.pointKind, item.type, item.frequencyMhz === null ? null : `${item.frequencyMhz.toFixed(2)} MHz`]
+        .filter(Boolean).join(" · "),
+    };
+  }
   if (item.kind === "flight") {
     const label = item.callsign || item.registration || item.icaoHex;
     return {
@@ -110,6 +119,7 @@ function resultIcon(item: SearchResult): "aircraft" | "airport" | "waypoint" | "
   if (item.kind === "aircraft") return "aircraft";
   if (item.kind === "airport") return "airport";
   if (item.kind === "ats-point") return "waypoint";
+  if (item.kind === "nav-point") return "waypoint";
   if (item.kind === "flight") return "flight";
   if (item.intent === "go_arounds_today" || item.intent === "rare_aircraft_today") return "time";
   return item.intent === "airport_operations" ? "radar" : "flight";
@@ -119,6 +129,7 @@ function resultKindLabel(item: SearchResult): string {
   if (item.kind === "aircraft") return t.search.aircraftResults;
   if (item.kind === "airport") return t.search.airportResults;
   if (item.kind === "ats-point") return t.search.atsPointResults;
+  if (item.kind === "nav-point") return t.search.navPointResults;
   if (item.kind === "flight") return t.search.flightResults;
   return t.commandSearch.smartActions;
 }
@@ -257,6 +268,7 @@ export function CommandPalette() {
     ...(results?.aircraft ?? []),
     ...(results?.airports ?? []),
     ...(results?.atsPoints ?? []),
+    ...(results?.navPoints ?? []),
     ...(results?.flights ?? []),
   ], [results]);
 
@@ -466,6 +478,10 @@ export function CommandPalette() {
           {!loading && !requestFailed && results?.atsPoints.length ? <section className="command-palette-group" aria-label={t.search.atsPointResults}>
             <div className="command-palette-group-title">{t.search.atsPointResults}</div>
             {results.atsPoints.map(renderResult)}
+          </section> : null}
+          {!loading && !requestFailed && results?.navPoints.length ? <section className="command-palette-group" aria-label={t.search.navPointResults}>
+            <div className="command-palette-group-title">{t.search.navPointResults}</div>
+            {results.navPoints.map(renderResult)}
           </section> : null}
           {!loading && !requestFailed && results?.flights.length ? <section className="command-palette-group" aria-label={t.search.flightResults}>
             <div className="command-palette-group-title">{t.search.flightResults}</div>
