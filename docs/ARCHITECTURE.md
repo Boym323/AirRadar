@@ -537,3 +537,21 @@ The validator is RAM-only, owns no timer, has no database path and never
 recomputes a Digital Twin. Its output is diagnostics only and cannot influence
 canonical aircraft state, Track Fusion selection, radar/SSE, history,
 Navigation Integrity, predictive inputs or alerts.
+
+## Operational Digital Twin × Navigation Integrity Corridor V1
+
+The integration is a one-way read from the existing process-local Navigation
+Integrity service into the on-demand Operational Digital Twin assembler. The
+Digital Twin does not call the public Navigation Integrity API and does not
+trigger detector evaluation, persistence or database access.
+
+`NavigationIntegrityService.getCurrent("15m")`
+→ active regional anomaly regions
+→ sampled Digital Twin corridor points
+→ exact grid-cell + altitude-band match
+→ inferred future regional-evidence intersection
+→ existing situation response and Digital Twin map source.
+
+The result is descriptive evidence only and cannot alter Navigation Integrity
+classification, canonical aircraft state, Track Fusion, predictions, history
+or alerts.

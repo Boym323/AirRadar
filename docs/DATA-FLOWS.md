@@ -710,3 +710,24 @@ position error + altitude error + uncertainty coverage
 Capture is request-driven and deduplicated. There is no second Digital Twin
 calculation, background poller, FlightPosition read, database write or network
 truth fallback.
+
+## Navigation Integrity corridor flow
+
+```text
+existing process-local Navigation Integrity working set
+                 ↓ getCurrent("15m")
+          active anomaly regions
+                 +
+ existing 30-minute Digital Twin corridor
+                 ↓
+ sampled cell + altitude-band intersection
+                 ↓
+ Navigation Integrity Corridor V1 events
+                 ↓
+ existing /api/aircraft/:hex/situation
+                 ↓
+ detail panel + existing Digital Twin MapLibre source
+```
+
+There is no additional HTTP fetch, database query, polling loop, SSE
+connection, detector run or persistence step in this flow.

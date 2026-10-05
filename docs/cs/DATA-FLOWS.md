@@ -684,3 +684,24 @@ position error + altitude error + uncertainty coverage
 Capture je request-driven a deduplikovaný. Nevzniká druhý Digital Twin
 výpočet, background poller, čtení FlightPosition, DB zápis ani fallback na
 NETWORK truth.
+
+## Tok Navigation Integrity corridoru
+
+```text
+existující process-local Navigation Integrity working set
+                 ↓ getCurrent("15m")
+          aktivní anomaly regions
+                 +
+ existující 30minutový Digital Twin corridor
+                 ↓
+ sampled průnik cell + altitude band
+                 ↓
+ Navigation Integrity Corridor V1 events
+                 ↓
+ existující /api/aircraft/:hex/situation
+                 ↓
+ detail panel + existující Digital Twin MapLibre source
+```
+
+V tomto toku nevzniká další HTTP fetch, DB query, polling loop, SSE,
+detector run ani persistence krok.

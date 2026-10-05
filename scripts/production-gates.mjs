@@ -1954,7 +1954,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           if (!map) return false;
           const hasCount = (testId) => /\d/.test(document.querySelector(`[data-testid="${testId}"]`)?.textContent || "");
           const sourceIds = ["route-airports", "atc-sectors", "ats-routes", "aviation-sigmet", "operational-twin-v2"];
-          const layerIds = ["route-airports-circle", "atc-sectors-fill", "ats-routes-line", "aviation-sigmet-fill", "operational-twin-v2-uncertainty", "operational-twin-v2-route", "operational-twin-v2-kinematic", "operational-twin-v2-milestones", "operational-twin-v2-events", "operational-twin-v2-weather-events"];
+          const layerIds = ["route-airports-circle", "atc-sectors-fill", "ats-routes-line", "aviation-sigmet-fill", "operational-twin-v2-uncertainty", "operational-twin-v2-route", "operational-twin-v2-kinematic", "operational-twin-v2-milestones", "operational-twin-v2-events", "operational-twin-v2-weather-events", "operational-twin-navigation-integrity-corridor-v1"];
           const airports = map.querySourceFeatures("route-airports");
           const atc = map.querySourceFeatures("atc-sectors");
           const ats = map.querySourceFeatures("ats-routes");

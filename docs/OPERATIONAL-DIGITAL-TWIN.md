@@ -247,3 +247,35 @@ This model does not alter corridor geometry, canonical event times, PUBLIC ETA,
 radar position, history, or outcome truth. Its purpose is to establish an
 independent timing candidate that later Event Outcome Validation can compare
 against the canonical baseline before any graduation is considered.
+
+## Navigation Integrity Corridor V1
+
+Operational Digital Twin now evaluates the existing 30-minute sampled corridor
+against the process-local active Navigation Integrity anomaly regions already
+maintained by AirRadar.
+
+The intersection is intentionally conservative:
+
+- only active regional anomaly regions are considered;
+- the projected point must match both the Navigation Integrity grid cell and
+  altitude band;
+- the first and last matching two-minute corridor samples are retained as the
+  bounded entry/exit estimate;
+- confidence, severity, affected-aircraft counts, LOCAL/NETWORK evidence,
+  baseline maturity and audit categories are preserved;
+- a missing Navigation Integrity working set yields `INSUFFICIENT`, not an
+  implicit all-clear;
+- zero intersections means only that no current active regional evidence
+  intersects the sampled centreline.
+
+The result is included in the existing aircraft situation response as
+`navigationIntegrityCorridor` and rendered both in the Digital Twin panel and
+through the existing Digital Twin MapLibre GeoJSON source.
+
+No Navigation Integrity HTTP request, database query, persistence path, timer,
+SSE connection or second Digital Twin pass is added. The assembler calls the
+existing process-local `NavigationIntegrityService.getCurrent("15m")`.
+
+This feature is evidence correlation only. It does not identify the cause of a
+Navigation Integrity anomaly and must not be presented as proof of GPS/GNSS
+jamming, spoofing or an aircraft navigation failure. It is not safety advice.

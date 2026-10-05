@@ -67,3 +67,4 @@ export * from "./corridor";
 export * from "./events";
 export * from "./outcome";
 export * from "./wind-timing-shadow";
+export * from "./navigation-integrity-corridor";

@@ -234,3 +234,35 @@ Model nemění geometrii corridoru, canonical event times, PUBLIC ETA, radarovou
 pozici, historii ani outcome truth. Jeho účelem je vytvořit nezávislého timing
 kandidáta, kterého pozdější Event Outcome Validation porovná s canonical
 baseline před případnou graduation.
+
+## Navigation Integrity Corridor V1
+
+Operational Digital Twin nově porovnává existující vzorkovaný 30minutový
+corridor s aktivními regionálními Navigation Integrity anomaly regiony, které
+už AirRadar drží process-local v RAM.
+
+Průnik je záměrně konzervativní:
+
+- používají se pouze aktivní regionální anomaly regiony;
+- projektovaný bod musí odpovídat zároveň Navigation Integrity grid cell i
+  altitude bandu;
+- první a poslední odpovídající dvouminutový corridor sample tvoří omezený
+  odhad vstupu/výstupu;
+- zachovává se confidence, severity, počty zasažených letadel, LOCAL/NETWORK
+  evidence, baseline maturity a audit categories;
+- pokud Navigation Integrity working set neobsahuje evidence, stav je
+  `INSUFFICIENT`, nikoli implicitní all-clear;
+- nulový počet průniků znamená pouze to, že aktuální aktivní regionální
+  evidence neprotíná sampled centreline.
+
+Výsledek je součástí existujícího aircraft situation response jako
+`navigationIntegrityCorridor` a zobrazuje se v Digital Twin panelu i přes
+stávající Digital Twin MapLibre GeoJSON source.
+
+Nevzniká Navigation Integrity HTTP request, DB query, persistence path, timer,
+SSE ani druhý Digital Twin pass. Assembler používá existující process-local
+`NavigationIntegrityService.getCurrent("15m")`.
+
+Jde pouze o korelaci evidence. Funkce neurčuje příčinu Navigation Integrity
+anomálie a nesmí být prezentována jako důkaz GPS/GNSS jammingu, spoofingu ani
+navigační závady letadla. Nejde o bezpečnostní doporučení.

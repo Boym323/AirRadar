@@ -535,3 +535,21 @@ Validator je pouze v RAM, nemá vlastní timer ani databázovou cestu a Digital
 Twin znovu nepřepočítává. Jeho výstup je pouze diagnostický a nemůže ovlivnit
 canonical aircraft state, Track Fusion selection, radar/SSE, historii,
 Navigation Integrity, predictive inputs ani alerts.
+
+## Operational Digital Twin × Navigation Integrity Corridor V1
+
+Integrace je jednosměrné čtení z existujícího process-local Navigation
+Integrity service do on-demand Operational Digital Twin assembleru. Digital
+Twin nevolá veřejné Navigation Integrity API a nespouští detector evaluation,
+persistence ani databázové čtení.
+
+`NavigationIntegrityService.getCurrent("15m")`
+→ aktivní regionální anomaly regions
+→ sampled body Digital Twin corridoru
+→ přesná shoda grid cell + altitude band
+→ odvozený budoucí průnik s regionální evidencí
+→ existující situation response a Digital Twin map source.
+
+Výsledek je pouze popisná evidence a nemůže měnit Navigation Integrity
+klasifikaci, canonical aircraft state, Track Fusion, predikce, historii ani
+alerts.
