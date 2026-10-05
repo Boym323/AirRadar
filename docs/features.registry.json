@@ -550,6 +550,7 @@
         "/api/admin/operational-twin/calibration",
         "/api/admin/operational-twin/event-outcome",
         "/api/admin/operational-twin/outcome",
+        "/api/admin/operational-twin/regional-attention-graduation",
         "/api/admin/operational-twin/regional-attention-outcome",
         "/api/aircraft/:hex/situation",
         "/api/operations/situation"
@@ -562,6 +563,7 @@
         "multi-aircraft-situation",
         "operational-attention",
         "regional-attention-outcome",
+        "regional-attention-graduation",
         "digital-twin-calibration-center",
         "digital-twin-calibration-persistence"
       ],
@@ -617,6 +619,9 @@
         "destination cluster",
         "regional copresence",
         "regional attention outcome",
+        "regional attention graduation",
+        "regional attention readiness",
+        "manual attention promotion eligibility",
         "regional attention calibration",
         "calibration center",
         "calibration dashboard",
