@@ -435,6 +435,9 @@ export function SystemStatusPage() {
   const continuityLocal = asRecord(continuity?.local);
   const continuityNetwork = asRecord(continuity?.network);
   const continuityFailovers = asRecord(continuity?.sourceFailovers);
+  const trackFusion = asRecord(data?.localAdsb?.trackFusionShadow);
+  const trackFusionResidual = asRecord(trackFusion?.positionResidualNm);
+  const trackFusionCanonicalResidual = asRecord(trackFusion?.canonicalResidualNm);
 
   return <main className="history-page system-page">
     <header className="history-page-header system-page-header">
@@ -532,6 +535,19 @@ export function SystemStatusPage() {
           <Field label={dictionary.system.continuityFailovers} value={`L→N ${formatNumber(diagnosticNumber(continuityFailovers, "localToNetwork"), 0, dictionary.locale)} · N→L ${formatNumber(diagnosticNumber(continuityFailovers, "networkToLocal"), 0, dictionary.locale)} · pending ${formatNumber(diagnosticNumber(continuityFailovers, "pendingAffinity"), 0, dictionary.locale)}`} />
           <Field label={dictionary.system.continuityMassDrop} value={`L ${formatNumber(diagnosticNumber(continuityLocal, "massDropCandidates"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityLocal, "massDropConfirmed"), 0, dictionary.locale)} · N ${formatNumber(diagnosticNumber(continuityNetwork, "massDropCandidates"), 0, dictionary.locale)}/${formatNumber(diagnosticNumber(continuityNetwork, "massDropConfirmed"), 0, dictionary.locale)}${diagnosticBoolean(continuityLocal, "massDropPending") || diagnosticBoolean(continuityNetwork, "massDropPending") ? ` · ${dictionary.system.continuityPending}` : ""}`} />
         </>}
+      </Card>}
+
+      {detailed && trackFusion && <Card title={dictionary.system.trackFusionShadow} status={diagnosticBoolean(trackFusion, "enabled") ? "ok" : "disabled"} dictionary={dictionary}>
+        <Field label={dictionary.system.version} value={String(trackFusion.version ?? dictionary.system.notAvailable)} />
+        <Field label={dictionary.system.enabled} value={diagnosticBoolean(trackFusion, "enabled") ? dictionary.system.configured : dictionary.system.disabled} />
+        <Field label={dictionary.system.trackFusionTracks} value={`${formatNumber(diagnosticNumber(trackFusion, "goodTracks"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusion, "degradedTracks"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusion, "estimatedTracks"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusion, "noPositionTracks"), 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.trackFusionOverlap} value={formatNumber(diagnosticNumber(trackFusion, "overlapTracks"), 0, dictionary.locale)} />
+        <Field label={dictionary.system.trackFusionResidual} value={trackFusionResidual
+          ? `avg ${formatNumber(diagnosticNumber(trackFusionResidual, "average"), 2, dictionary.locale)} NM · p95 ≤ ${formatNumber(diagnosticNumber(trackFusionResidual, "p95UpperBound"), 2, dictionary.locale)} NM · max ${formatNumber(diagnosticNumber(trackFusionResidual, "maximum"), 2, dictionary.locale)} NM`
+          : dictionary.system.notAvailable} />
+        <Field label={dictionary.system.trackFusionTransitions} value={`${formatNumber(diagnosticNumber(trackFusion, "acceptedSourceTransitions"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusion, "rejectedSourceTransitions"), 0, dictionary.locale)}`} />
+        <Field label={dictionary.system.trackFusionGapFills} value={formatNumber(diagnosticNumber(trackFusion, "estimatedGapFills"), 0, dictionary.locale)} />
+        <Field label={dictionary.system.trackFusionCanonical} value={`${formatNumber(diagnosticNumber(trackFusion, "canonicalPositionDivergences"), 0, dictionary.locale)} / ${formatNumber(diagnosticNumber(trackFusion, "canonicalPositionComparisons"), 0, dictionary.locale)} · avg ${formatNumber(diagnosticNumber(trackFusionCanonicalResidual, "average"), 2, dictionary.locale)} NM`} />
       </Card>}
 
       <Card title={dictionary.system.networkCoverage} status={data.adsbLol.status} dictionary={dictionary}>
