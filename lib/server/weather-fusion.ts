@@ -164,8 +164,8 @@ export async function getAircraftWeatherFusion(
     AIRCRAFT_OTHER: latestObservation && latestObservation.source !== "BDS_4_4" ? sourceState(aircraftWeatherResult) : "UNAVAILABLE",
     PIREP_AIREP: sourceState(pirepResult, pirepResult.status === "fulfilled" && pirepResult.value.stale),
     SIGMET: sourceState(sigmetResult, sigmetResult.status === "fulfilled" && sigmetResult.value.stale),
-    METAR: sourceState(metarResult, metar?.stale === true),
-    ICON_EU: windLevel === null ? "UNAVAILABLE" : sourceState(windResult, modelWind?.stale === true),
+    METAR: metar ? sourceState(metarResult, metar.stale) : "UNAVAILABLE",
+    ICON_EU: windLevel === null || !modelWind ? "UNAVAILABLE" : sourceState(windResult, modelWind.stale),
   };
   // If the aircraft-weather query worked but simply had no recent observation,
   // neither aircraft-observation source should be presented as an upstream error.
