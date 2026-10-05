@@ -19,6 +19,7 @@ import {
   buildOperationalTwinEvents,
   buildOperationalTwinSituation,
   buildOperationalTwinWindTimingShadow,
+  applyOperationalTwinWindTimingPromotion,
   OPERATIONAL_TWIN_VERSION,
   type OperationalTwinAircraftState,
   type OperationalTwinApiResponse,
@@ -31,7 +32,7 @@ import { getAirspacePlan } from "@/lib/server/airspace-activity";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { defaultPirepProvider } from "@/lib/server/pirep-provider";
 import { defaultWindAloftProvider, type WindLevelHpa } from "@/lib/server/wind-aloft";
-import { isAviationWeatherEnabled, isTrackFusionDigitalTwinEnabled } from "@/lib/server/config";
+import { getOperationalTwinWindTimingPolicy, isAviationWeatherEnabled, isTrackFusionDigitalTwinEnabled } from "@/lib/server/config";
 import { windLevelForAltitude } from "@/lib/weather/aircraft-wind-context";
 import { buildWeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
 import { loadAtcContextDataset } from "@/lib/atc-context/engine";
@@ -334,7 +335,22 @@ export async function getOperationalTwinForAircraft(
     ),
   });
   situation.navigationIntegrityCorridor = navigationIntegrityCorridor;
+
+  // Calibration always consumes the untouched canonical event timing. Promotion
+  // is a presentation policy only and must never rewrite its own evidence.
   service.captureOperationalTwinOutcome(situation);
   service.captureOperationalTwinEventOutcome(situation, { atcDataset: preparedDataset, sigmets, destination });
-  return situation;
+
+  const promotion = applyOperationalTwinWindTimingPromotion({
+    events: situation.events,
+    windTimingShadow,
+    graduation: service.getOperationalTwinEventOutcomeReport(now).windTimingGraduation,
+    configuredPolicy: getOperationalTwinWindTimingPolicy(),
+    generatedAt: now,
+  });
+  return {
+    ...situation,
+    events: promotion.events,
+    windTimingPromotion: promotion.status,
+  };
 }
