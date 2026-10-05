@@ -87,7 +87,6 @@ describe("Aviation Nav Data V1", () => {
       { id: "ODNEM", kind: "FIX" as const, type: "I", name: null, latitude: 49.4, longitude: 17.1, elevationFt: null, frequencyMhz: null, magneticDeclination: null, state: null, country: "CZ", source: "Aviation Weather Center" as const },
     ];
     const matched = routeReferencePointIds({
-      callsign: "TEST1",
       scheduledDeparture: null,
       actualDeparture: null,
       scheduledArrival: null,
