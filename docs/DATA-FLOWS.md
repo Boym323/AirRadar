@@ -710,3 +710,29 @@ position error + altitude error + uncertainty coverage
 Capture is request-driven and deduplicated. There is no second Digital Twin
 calculation, background poller, FlightPosition read, database write or network
 truth fallback.
+
+## Operational Digital Twin event outcome flow
+
+```text
+existing situation calculation
+  + already-loaded ATC/SIGMET context
+                ↓
+captured WAYPOINT / SECTOR / SIGMET / ETA / RUNWAY prediction
+                ↓
+       bounded pending RAM samples
+          ┌─────┴─────────┐
+          ↓               ↓
+ future LOCAL truth   Flight Intelligence LANDING
+          └─────┬─────────┘
+                ↓
+ observed / false-positive / missing-truth
+                ↓
+ timing error + precision + truth coverage
+                ↓
+  24h / 5min bounded aggregates
+                ↓
+       PASS / WAIT / FAIL
+```
+
+Recall is deliberately not computed because the lane begins with predictions,
+not with an exhaustive stream of independent actual events.
