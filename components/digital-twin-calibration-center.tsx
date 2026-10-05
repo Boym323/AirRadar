@@ -8,6 +8,7 @@ import type {
   OperationalTwinTruthFirstReport,
   OperationalTwinWindTimingGraduationReport,
   RegionalAttentionOutcomeReport,
+  RegionalAttentionGraduationReport,
 } from "@/lib/operational-twin";
 import { StatusBadge } from "@/components/ui-primitives";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
@@ -37,6 +38,7 @@ type CalibrationCenterReport = {
   truthFirst: OperationalTwinTruthFirstReport;
   windTiming: OperationalTwinWindTimingGraduationReport;
   regionalAttention: RegionalAttentionOutcomeReport;
+  regionalAttentionGraduation: RegionalAttentionGraduationReport;
   persistence: PersistenceStatus;
 };
 
@@ -271,6 +273,36 @@ export function DigitalTwinCalibrationCenter() {
                   );
                 })}
               </div>
+            </section>
+
+            <section className="statistics-card" data-testid="calibration-regional-attention-graduation">
+              <DecisionHeader
+                title={t.calibrationCenter.regionalAttentionGraduation}
+                decision={report.regionalAttentionGraduation.decision}
+                reasons={report.regionalAttentionGraduation.reasons}
+              />
+              <div className={styles.metrics}>
+                <Metric
+                  label={t.calibrationCenter.scoreableEvidence}
+                  value={report.regionalAttentionGraduation.evidence.scoreableSamples}
+                />
+                <Metric
+                  label={t.calibrationCenter.precision}
+                  value={pct(report.regionalAttentionGraduation.evidence.precision)}
+                />
+                <Metric
+                  label={t.calibrationCenter.truthCoverage}
+                  value={pct(report.regionalAttentionGraduation.evidence.truthCoverage)}
+                />
+                <Metric
+                  label={t.calibrationCenter.timingMae}
+                  value={seconds(report.regionalAttentionGraduation.evidence.meanAbsoluteTimingErrorSeconds)}
+                />
+              </div>
+              <small>
+                {t.calibrationCenter.manualPromotionEligible}: {report.regionalAttentionGraduation.manualPromotionEligible ? t.common.yes : t.common.no}
+                {" · "}{t.calibrationCenter.publicSemanticsCanonical}
+              </small>
             </section>
 
             <section className="statistics-card" data-testid="calibration-persistence">
