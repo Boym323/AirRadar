@@ -986,9 +986,11 @@ export async function readSystemStatus(service: SystemStatusServiceLike = getAir
       ...(serviceDiagnostics.local as Record<string, unknown>),
       altitudeDiagnostics: getAltitudeDiagnostics(),
       continuity: serviceDiagnostics.continuity,
+      trackFusionShadow: serviceDiagnostics.trackFusionShadow,
     } : {
       altitudeDiagnostics: getAltitudeDiagnostics(),
       ...(serviceDiagnostics?.continuity ? { continuity: serviceDiagnostics.continuity } : {}),
+      ...(serviceDiagnostics?.trackFusionShadow ? { trackFusionShadow: serviceDiagnostics.trackFusionShadow } : {}),
     },
     adsbdb: isAdsbDbEnabled() ? serviceDiagnostics?.enrichment.adsbdb : undefined,
     ogn: ognService.getDiagnostics(),
