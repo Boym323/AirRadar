@@ -537,3 +537,16 @@ The validator is RAM-only, owns no timer, has no database path and never
 recomputes a Digital Twin. Its output is diagnostics only and cannot influence
 canonical aircraft state, Track Fusion selection, radar/SSE, history,
 Navigation Integrity, predictive inputs or alerts.
+
+## Operational Digital Twin Event Outcome Validation V2
+
+The existing on-demand Digital Twin assembly passes its already-loaded ATC and
+SIGMET context to a separate bounded event validator. No provider is called by
+the validator. Future LOCAL receiver snapshots resolve waypoint, sector and
+SIGMET truth, while already-produced Flight Intelligence LANDING events resolve
+arrival ETA and provider-reported runway truth.
+
+The lane is one-way and diagnostic only. It cannot mutate Digital Twin
+corridors, canonical Aircraft state, Track Fusion, radar/SSE, history,
+Navigation Integrity, predictive state or alerts. Evidence is process-local and
+a restart returns the outcome state to WAIT.
