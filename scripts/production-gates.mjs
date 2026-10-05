@@ -1086,8 +1086,17 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
             }
           }
           if (target.openCommandPalette) {
+            const commandPalette = visualPage.locator('[data-testid="command-palette"]');
             await visualPage.keyboard.press("Control+K");
-            await visualPage.locator('[data-testid="command-palette"]').waitFor({ state: "visible", timeout: 15_000 });
+            if (!await commandPalette.isVisible()) {
+              // The visual sweep can reach this target before the client effect
+              // registering the global shortcut has mounted. Retry the same
+              // keyboard contract once after hydration instead of weakening
+              // the smoke check to a synthetic open event.
+              await visualPage.waitForTimeout(500);
+              await visualPage.keyboard.press("Control+K");
+            }
+            await commandPalette.waitFor({ state: "visible", timeout: 15_000 });
             const commandInput = visualPage.locator("#command-palette-input");
             await commandInput.waitFor({ state: "visible", timeout: 15_000 });
             if (target.commandQuery) {
