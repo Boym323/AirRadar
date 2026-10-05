@@ -618,3 +618,16 @@ První fail-closed consumer je Operational Digital Twin. Fused vstup je defaultn
 vypnutý a vyžaduje explicitní flag, readiness PASS a GOOD observed fused
 position konkrétního letadla. Canonical radar, SSE a receiver persistence se
 nemění.
+
+
+## Track Fusion Outcome Validation V1
+
+Track Fusion nově provozuje bounded prospektivní canonical-vs-fused validation
+lane. Pro způsobilý čerstvě vyhodnocený track zachytí oba stavy, promítne je do
+horizontů 5/15/30 sekund a později je porovná proti budoucí fresh LOCAL receiver
+position.
+
+Výstup obsahuje FUSED / CANONICAL / TIE, mean position a altitude error,
+handover outcomes a samostatný PASS / WAIT / FAIL net-benefit gate. Validator
+je process-local a pouze v RAM; neprovádí history scan, DB zápis, upstream
+request, timer ani druhý fusion pass.
