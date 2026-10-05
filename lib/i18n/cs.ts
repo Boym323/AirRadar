@@ -2092,7 +2092,15 @@ export const cs = {
     weatherCorridorEventTypes: { TURBULENCE: "Turbulence", ICING: "Námraza", SIGMET_ENTRY: "Vstup do SIGMET", SIGMET_EXIT: "Výstup ze SIGMET" },
     noEvents: "V příštích 30 minutách nejsou z dostupných zdrojů odvozené žádné další události.",
     generated: "Výpočet",
-    limitations: "Omezení modelu",
+    windTimingShadowTitle: "Wind-adjusted timing shadow",
+    windTimingShadowSummary: "Experimentální časování nad stejnou geometrií; canonical timing zůstává beze změny.",
+    windTimingShadowStatus: { AVAILABLE: "dostupný", STALE: "stará weather data", INSUFFICIENT: "nedostatek dat" },
+    windTimingShadowGroundSpeed: "Observed groundspeed",
+    windTimingShadowStillAir: "Still-air proxy",
+    windTimingShadowMaxDelta: "Max. časový posun",
+    windTimingShadowCheckpoint: (horizon: number, delta: string) => `+${horizon} min baseline · Δ ${delta} s`,
+    windTimingShadowNoData: "Shadow timing nelze z dostupných wind sample bezpečně odvodit.",
+        limitations: "Omezení modelu",
 
     limitationText: {
       BOUNDED_PROJECTION: "Corridor je omezený 30minutový situační odhad, ne clearance ani certifikovaná trajektorie.",
