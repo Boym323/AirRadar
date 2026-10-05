@@ -77,8 +77,9 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
     aircraft?.enrichment?.route?.destination,
   ]);
   const identifierKey = identifiers.join(",");
-  const [referencePoints, setReferencePoints] = useState<AviationNavPoint[]>([]);
+  const [referenceSnapshot, setReferenceSnapshot] = useState<{ key: string; points: AviationNavPoint[] }>({ key: "", points: [] });
   const [referenceLoading, setReferenceLoading] = useState(false);
+  const referencePoints = referenceSnapshot.key === identifierKey ? referenceSnapshot.points : [];
   const previousDynamicRef = useRef<DynamicRouteState | null>(null);
   const trackerRef = useRef<RouteCorridorTrackerState | null>(null);
   const routeIdentityRef = useRef("");
@@ -93,8 +94,8 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
 
   useEffect(() => {
     const controller = new AbortController();
-    setReferencePoints([]);
     if (!identifierKey) {
+      setReferenceSnapshot({ key: "", points: [] });
       setReferenceLoading(false);
       return () => controller.abort();
     }
@@ -109,7 +110,7 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
       })
       .then((response) => {
         if (!response?.available) return;
-        setReferencePoints(validPoints(response.points));
+        setReferenceSnapshot({ key: identifierKey, points: validPoints(response.points) });
       })
       .catch(() => undefined)
       .finally(() => {
