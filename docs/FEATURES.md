@@ -20,6 +20,7 @@ not yet been historically attributed.
 | Map Context & Weather | production | weather | Pre-registry | — | `/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, and bounded PIREP/AIREP enrichment. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
+| Operational Digital Twin | production | intelligence | Pre-registry | `/aircraft/:hex` | `/api/aircraft/:hex/situation` | Bounded 30-minute aircraft situation projection that fuses route geometry, ATC/ATS context, planned AUP/UUP, SIGMET intersections and readiness-gated PUBLIC predictive advisories into one provenance-aware timeline. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
@@ -419,3 +420,14 @@ labelled PUBLIC_STRONG, PUBLIC_PARTIAL, or RECEIVER_ONLY. The same bounded
 sequence also produces an Approach Queue state (EMPTY, LOW_DENSITY, ACTIVE,
 BUILDING, COMPRESSED, or HOLDING_PRESENT) without another request, stream or
 persistence path.
+
+
+## Operational Digital Twin V1
+
+The aircraft detail surface includes a bounded 30-minute 4D situation outlook
+through `/api/aircraft/:hex/situation`. It combines a route-aware or
+kinematic trajectory corridor with waypoint, ATC-sector, planned AUP/UUP,
+SIGMET and readiness-gated PUBLIC predictive events. Every event retains
+provenance and confidence. The feature adds no history scan, persistence,
+additional SSE stream or periodic browser polling loop. See
+[`OPERATIONAL-DIGITAL-TWIN.md`](OPERATIONAL-DIGITAL-TWIN.md).
