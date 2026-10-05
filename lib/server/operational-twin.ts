@@ -336,6 +336,19 @@ export async function getOperationalTwinForAircraft(
   });
   situation.navigationIntegrityCorridor = navigationIntegrityCorridor;
 
+  // Truth-first V2 observes the current independent route/SIGMET truth before
+  // capturing this request's future predictions, preventing self-validation.
+  service.observeOperationalTwinTruthContext({
+    icaoHex: state.icaoHex,
+    route,
+    observed: {
+      lat: state.lat,
+      lon: state.lon,
+      altitudeFt: state.altitudeFt,
+    },
+    sigmets,
+  }, now.getTime());
+
   // Calibration always consumes the untouched canonical event timing. Promotion
   // is a presentation policy only and must never rewrite its own evidence.
   service.captureOperationalTwinOutcome(situation);
