@@ -43,5 +43,7 @@ describe("Aviation Nav Data V1 boundaries", () => {
     expect(app).toContain('id: "aviation-nav-data-labels"');
     expect(app).toContain('localStorage.setItem("airradar-nav-data-layer"');
     expect(menu).toContain('data-testid="map-layer-nav-data"');
+    expect(app).toContain('"circle-radius": ["interpolate", ["linear"], ["zoom"]');
+    expect(app).not.toContain('"circle-radius": ["case", ["==", ["get", "routeMatched"], true], ["interpolate"');
   });
 });
