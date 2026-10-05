@@ -393,3 +393,24 @@ V1 záměrně vrací `WAYPOINT_SECTOR_WEATHER_RECALL_UNAVAILABLE`. Pro tyto tř�
 zatím neexistuje nezávislý truth universe, takže predikce nejsou zneužity jako
 falešná pravda. Report sám nemění žádnou veřejnou prediction policy.
 
+## Wind Timing Promotion V1
+
+Wind Timing Promotion V1 přidává explicitní ruční přechod, který graduation
+gate záměrně neprováděl automaticky. Výchozí hodnota zůstává
+`AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY=CANONICAL`. Operátor může nastavit
+`WIND_GRADUATED`, ale politika se projeví pouze tehdy, když je Wind Timing
+Graduation v `PASS`, ruční promotion je povolená a aktuální wind shadow je
+`AVAILABLE`.
+
+Nahrazují se pouze prezentační časy Digital Twin událostí `WAYPOINT`
+graduovanými wind-adjusted časy. Geometrie koridoru, PUBLIC ETA, runway
+advisories, živý stav a historie zůstávají beze změny. Pokud readiness klesne
+na WAIT/FAIL, wind evidence není dostupná nebo aktuální waypointy nelze
+spárovat, efektivní politika se okamžitě fail-closed vrátí na `CANONICAL`.
+
+Kalibrace zůstává canonical i při aktivní promotion: Outcome/Event Outcome
+validátory zachytí původní canonical situaci dříve, než se ve vracené odpovědi
+aplikuje wind timing. Odpověď obsahuje `windTimingPromotion` s nastavenou a
+efektivní politikou, graduation rozhodnutím, počtem upravených waypointů a
+důvodem fail-closed návratu.
+

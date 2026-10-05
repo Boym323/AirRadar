@@ -413,3 +413,25 @@ those event classes requires an independent truth universe, so prediction
 captures are not reused as fake truth. No public prediction policy changes as a
 result of this report.
 
+## Wind Timing Promotion V1
+
+Wind Timing Promotion V1 adds the explicit manual transition that the graduation
+gate intentionally did not perform. The default remains
+`AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY=CANONICAL`. An operator may set
+`WIND_GRADUATED`, but it becomes effective only while Wind Timing Graduation
+is `PASS`, manual promotion is eligible and the current wind shadow is
+`AVAILABLE`.
+
+Only Digital Twin `WAYPOINT` presentation times are replaced with their
+graduated wind-adjusted counterparts. Corridor geometry, PUBLIC ETA, runway
+advisories, live state and history are unchanged. If readiness falls back to
+WAIT/FAIL, wind evidence becomes unavailable, or the current waypoint set
+cannot be paired, the effective policy immediately fails closed to
+`CANONICAL`.
+
+Calibration remains deliberately canonical even while presentation is promoted:
+the canonical situation is captured by Outcome/Event Outcome validators before
+the returned response applies wind timing. The response exposes
+`windTimingPromotion` with configured/effective policy, graduation decision,
+promoted waypoint count and fail-closed reason.
+
