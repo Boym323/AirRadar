@@ -51,8 +51,11 @@ function observationTime(
   }
   if (field === "position") return positionObservedAt(aircraft) ?? lastMessageObservedAt(aircraft);
   const times = aircraft.observationTimes;
-  const key = field === "altitude" ? "altitude" : field;
-  const timestamp = times?.[key as keyof typeof times];
+  const timestamp = field === "altitude" ? times?.altitude
+    : field === "groundSpeed" ? times?.groundSpeed
+      : field === "track" ? times?.track
+        : field === "verticalRate" ? times?.verticalRate
+          : null;
   if (finite(timestamp) && timestamp > 0) return timestamp;
   return lastMessageObservedAt(aircraft);
 }
