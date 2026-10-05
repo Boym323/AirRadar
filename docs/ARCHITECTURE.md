@@ -512,3 +512,16 @@ only when the explicit Digital Twin fusion flag is enabled, readiness is PASS,
 and the requested aircraft has a GOOD observed fused position. Public radar,
 canonical Aircraft state, history, receiver statistics and FlightPosition remain
 unchanged.
+
+
+## Track Fusion Outcome Validation V1
+
+Outcome Validation is a shadow consumer of freshly evaluated Track Fusion
+tracks. It captures the existing canonical merge and fused state at one
+timestamp, schedules bounded 5/15/30-second prospective samples, and later
+scores both against a fresh LOCAL receiver observation.
+
+It does not own ingest, scheduling, persistence or a second fusion pass.
+Pending samples and five-minute aggregate buckets are RAM-only and bounded.
+The validator cannot mutate source affinity, canonical Aircraft state, radar
+SSE, receiver history or Track Fusion selection.
