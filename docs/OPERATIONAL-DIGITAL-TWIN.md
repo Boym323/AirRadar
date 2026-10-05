@@ -301,3 +301,7 @@ Protected inspection:
 The validator adds no persistence, FlightPosition/history read, upstream
 request, timer, EventSource, second Digital Twin calculation or modification of
 the canonical corridor.
+
+## Navigation Integrity Corridor V1
+
+The Digital Twin now intersects its existing sampled 30-minute corridor with already-computed active Navigation Integrity regional anomalies. An intersection requires both grid-cell and altitude-band compatibility. The result preserves severity, confidence, affected-aircraft counts, LOCAL/NETWORK evidence, baseline maturity and audit categories. Zero intersections are not an all-clear, and the feature never claims GNSS jamming, spoofing, or an aircraft navigation fault. It adds no HTTP request, timer, detector pass, database access or persistence.
