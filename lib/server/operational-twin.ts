@@ -303,7 +303,7 @@ export async function getOperationalTwinForAircraft(
     trajectoryAdvisory: predictive.trajectoryAdvisory,
   });
 
-  return buildOperationalTwinSituation({
+  const situation = buildOperationalTwinSituation({
     generatedAt: now,
     aircraft: state,
     corridor,
@@ -316,4 +316,6 @@ export async function getOperationalTwinForAircraft(
       predictive.etaAdvisory || predictive.runwayAdvisory || predictive.trajectoryAdvisory,
     ),
   });
+  service.captureOperationalTwinOutcome(situation);
+  return situation;
 }
