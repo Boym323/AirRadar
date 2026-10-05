@@ -2,6 +2,7 @@ import type {
   OperationalTwinCorridor,
   OperationalTwinEvent,
   OperationalTwinSituation,
+  OperationalTwinLimitationCode,
 } from "./types";
 import { OPERATIONAL_TWIN_VERSION } from "./types";
 import type { OperationalTwinAircraftState } from "./corridor";
@@ -16,16 +17,16 @@ export function buildOperationalTwinSituation(input: {
   sigmetAvailable: boolean;
   publicPredictionAvailable: boolean;
 }): OperationalTwinSituation {
-  const limitations: string[] = [
-    "The corridor is a bounded 30-minute situational projection, not a cleared or certified flight trajectory.",
-    "Future crossings are sampled estimates and can occur between displayed corridor points.",
+  const limitations: OperationalTwinLimitationCode[] = [
+    "BOUNDED_PROJECTION",
+    "SAMPLED_INTERSECTIONS",
   ];
-  if (!input.atcAvailable) limitations.push("ATC/ATS context is unavailable, so sector and published-route context can be incomplete.");
-  if (!input.airspacePlanAvailable) limitations.push("AUP/UUP plan context is unavailable. Planned airspace allocation is never treated as confirmed real-time activation.");
-  if (!input.sigmetAvailable) limitations.push("SIGMET context is unavailable.");
-  if (!input.publicPredictionAvailable) limitations.push("Readiness-gated PUBLIC ETA/runway/trajectory advisories are unavailable.");
-  if (input.corridor?.mode === "KINEMATIC") limitations.push("No usable route geometry is available; horizontal projection follows current track and groundspeed.");
-  if (input.corridor?.routeAdherence === "OFF_ROUTE") limitations.push("Route Intelligence reports OFF_ROUTE; route geometry is not used for the corridor.");
+  if (!input.atcAvailable) limitations.push("ATC_UNAVAILABLE");
+  if (!input.airspacePlanAvailable) limitations.push("AIRSPACE_PLAN_UNAVAILABLE");
+  if (!input.sigmetAvailable) limitations.push("SIGMET_UNAVAILABLE");
+  if (!input.publicPredictionAvailable) limitations.push("PUBLIC_PREDICTION_UNAVAILABLE");
+  if (input.corridor.mode === "KINEMATIC") limitations.push("KINEMATIC_FALLBACK");
+  if (input.corridor.routeAdherence === "OFF_ROUTE") limitations.push("OFF_ROUTE");
 
   const evidence = {
     observed: 1,
