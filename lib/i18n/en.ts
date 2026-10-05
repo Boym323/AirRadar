@@ -1973,6 +1973,17 @@ export const en = {
     noEvents: "No additional events can be derived from the available sources inside the next 30 minutes.",
     generated: "Computed",
     limitations: "Model limitations",
+
+    limitationText: {
+      BOUNDED_PROJECTION: "The corridor is a bounded 30-minute situational estimate, not a clearance or certified trajectory.",
+      SAMPLED_INTERSECTIONS: "Future intersections are sampled every two minutes and the real crossing may occur between points.",
+      ATC_UNAVAILABLE: "ATC/ATS context is unavailable; sector and route events may be incomplete.",
+      AIRSPACE_PLAN_UNAVAILABLE: "The AUP/UUP plan is unavailable; planned allocation is never treated as confirmed real-time activation.",
+      SIGMET_UNAVAILABLE: "SIGMET context is unavailable.",
+      PUBLIC_PREDICTION_UNAVAILABLE: "Readiness-gated PUBLIC ETA/runway/trajectory advisories are unavailable.",
+      KINEMATIC_FALLBACK: "No usable route geometry is available; the corridor follows current track and groundspeed.",
+      OFF_ROUTE: "Route Intelligence reports OFF_ROUTE; published route geometry is not used for the corridor.",
+    },
     eventTypes: {
       WAYPOINT: "Waypoint",
       ATC_SECTOR_ENTRY: "ATC airspace entry",
