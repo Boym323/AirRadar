@@ -13,6 +13,8 @@ describe("Airport Live Board V8 boundary", () => {
     expect(modelSource).toContain("within15Minutes");
     expect(modelSource).toContain("within30Minutes");
     expect(modelSource).toContain("predictedRunwayLoad");
+    expect(modelSource).toContain("queue:");
+    expect(modelSource).toContain("approachQueueState");
     expect(modelSource).not.toContain("fetch(");
     expect(modelSource).not.toContain("getPrisma");
     expect(modelSource).not.toContain("process.env");
@@ -33,6 +35,8 @@ describe("Airport Live Board V8 boundary", () => {
     expect(boardSource).toContain('data-testid="airport-live-board-v7-arrival-sequence"');
     expect(boardSource).toContain('data-testid="airport-live-board-v8-arrival-flow"');
     expect(boardSource).toContain("buildAirportArrivalFlowIntelligence");
+    expect(boardSource).toContain("arrivalFlow.queue.state");
+    expect(boardSource).toContain("liveBoardV8Queue");
   });
 
   it("keeps predicted-vs-observed runway comparison evidence-gated", () => {
@@ -40,5 +44,17 @@ describe("Airport Live Board V8 boundary", () => {
     expect(modelSource).toContain("observedComparable");
     expect(modelSource).toContain("predictedTop!.runway === observedRunway");
     expect(modelSource).toContain('state: runwayAlignment');
+  });
+});
+
+describe("Airport Live Board V8 queue-state safety boundary", () => {
+  it("keeps queue classification descriptive and evidence-bounded", () => {
+    expect(modelSource).toContain('"HOLDING_PRESENT"');
+    expect(modelSource).toContain('"COMPRESSED"');
+    expect(modelSource).toContain('"BUILDING"');
+    expect(modelSource).toContain('"multiple_holding"');
+    expect(modelSource).toContain("compression.compressedPairs >= 2");
+    expect(modelSource).not.toContain("separationMinimum");
+    expect(modelSource).not.toContain("airportCapacity");
   });
 });
