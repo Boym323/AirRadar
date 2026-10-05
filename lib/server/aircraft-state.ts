@@ -56,7 +56,7 @@ import { enforcePredictiveReadiness, readPredictiveReadinessReport } from "@/lib
 import type { FlightPhase } from "@/lib/intelligence/types";
 import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@/lib/predictive-intelligence/types";
 import type { Airport } from "@/lib/airports/types";
-import { TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
+import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -197,6 +197,8 @@ export class AircraftStateService {
   private readonly trackFusionShadow = new TrackFusionShadow(isTrackFusionShadowEnabled());
   /** Process-local bounded readiness evidence. Restart intentionally resets readiness to WAIT. */
   private readonly trackFusionReadiness = new TrackFusionReadinessMonitor();
+  /** Prospective canonical-vs-fused outcome validation against future LOCAL observations. */
+  private readonly trackFusionOutcome = new TrackFusionOutcomeValidator();
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -473,6 +475,7 @@ export class AircraftStateService {
     continuity: ReturnType<AircraftContinuityGuard["diagnostics"]>;
     trackFusionShadow: ReturnType<TrackFusionShadow["diagnostics"]>;
     trackFusionReadiness: ReturnType<TrackFusionReadinessMonitor["report"]>;
+    trackFusionOutcome: ReturnType<TrackFusionOutcomeValidator["report"]>;
   } {
     return {
       aircraftCount: this.aircraft.size,
@@ -503,6 +506,7 @@ export class AircraftStateService {
       }),
       trackFusionShadow: this.trackFusionShadow.diagnostics(),
       trackFusionReadiness: this.getTrackFusionReadinessReport(),
+      trackFusionOutcome: this.getTrackFusionOutcomeReport(),
     };
   }
 
@@ -567,6 +571,10 @@ export class AircraftStateService {
       now,
       digitalTwinConfigured: isTrackFusionDigitalTwinEnabled(),
     });
+  }
+
+  getTrackFusionOutcomeReport(now = new Date()) {
+    return this.trackFusionOutcome.report(now);
   }
 
   getNetworkDiagnostics() {
@@ -879,7 +887,7 @@ export class AircraftStateService {
   }
 
   private observeTrackFusionShadow(now = Date.now()): void {
-    this.trackFusionShadow.observe({
+    const evaluatedTracks = this.trackFusionShadow.observe({
       local: this.localAircraft,
       network: this.networkAircraft,
       receiver: this.currentReceiver,
@@ -889,6 +897,16 @@ export class AircraftStateService {
       now,
     });
     this.trackFusionReadiness.observe(this.trackFusionShadow.diagnostics(), now);
+    this.trackFusionOutcome.observe({
+      local: this.localAircraft,
+      network: this.networkAircraft,
+      evaluatedTracks,
+      receiver: this.currentReceiver,
+      localStaleAfterMs: getAircraftStaleAfterMs(),
+      networkStaleAfterMs: getAdsbLolStaleAfterMs(),
+      sourcePreferences: this.sourcePreferences,
+      now,
+    });
   }
 
   private logMassDropDecision(origin: AircraftContinuityOrigin, decision: AircraftMassDropDecision): void {
