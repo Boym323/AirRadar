@@ -984,6 +984,23 @@ export const en = {
     partialDistance: "resolved geometry only",
     disclaimer: "Route Corridor is an informational comparison of the observed aircraft position with filed and published/reference route geometry. It is not an ATC clearance, navigation instruction, or certified deviation alert.",
   },
+  routeConformance: {
+    status: "Route conformance",
+    statuses: {
+      ROUTE_UNKNOWN: "Route unknown",
+      ROUTE_UNCERTAIN: "Route uncertain",
+      ON_ROUTE: "On route",
+      OFFSET: "Offset",
+      DEVIATING: "Persistent deviation",
+      REJOINING: "Rejoining route",
+      PROBABLE_DIRECT: "Probable direct",
+    },
+    confidence: "Conformance confidence",
+    confidenceValues: { HIGH: "High", MEDIUM: "Medium", LOW: "Low" },
+    probableDirect: "Probable direct",
+    directSummary: (skipped: number, rejoinedAt: string | null) => `Skipped ${skipped} resolved route elements${rejoinedAt ? ` · rejoined at ${rejoinedAt}` : ""}`,
+    disclaimer: "Trajectory Conformance compares observed motion with reconstructed filed-route geometry. Probable direct and deviation states are inferred, not ATC clearance or certified navigation guidance.",
+  },
   airport: {
     backToRadar: "← Back to radar",
     information: "Airport information",
