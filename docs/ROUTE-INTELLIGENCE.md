@@ -8,6 +8,8 @@ availability.
 
 The forward-compatible V2 domain contracts are documented in
 [ROUTE-INTELLIGENCE-V2-CONTRACTS.md](ROUTE-INTELLIGENCE-V2-CONTRACTS.md).
+Selected-aircraft conformance and probable-direct inference are documented in
+[TRAJECTORY-CONFORMANCE.md](TRAJECTORY-CONFORMANCE.md).
 
 ## Sources and boundaries
 
