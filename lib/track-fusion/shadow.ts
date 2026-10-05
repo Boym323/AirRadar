@@ -316,7 +316,7 @@ export class TrackFusionShadow {
     const positionCandidates = [localPosition, networkPosition]
       .filter((value): value is TrackFusionFieldCandidate<TrackFusionPositionValue> => value !== null)
       .sort(candidateOrder);
-    let selectedPosition = positionCandidates[0] ?? null;
+    let selectedPosition: TrackFusionFieldCandidate<TrackFusionPositionValue> | null = positionCandidates[0] ?? null;
     let rejectedTransition = false;
 
     if (
@@ -433,17 +433,16 @@ export class TrackFusionShadow {
     target.buckets[bucket < 0 ? target.buckets.length - 1 : bucket] += 1;
   }
 
-  private residualSummary(target: ResidualAccumulator, withP95: true): TrackFusionShadowDiagnostics["positionResidualNm"];
-  private residualSummary(target: ResidualAccumulator, withP95: false): TrackFusionShadowDiagnostics["canonicalResidualNm"];
-  private residualSummary(target: ResidualAccumulator, withP95: boolean) {
-    if (!target.count) return withP95
-      ? { average: null, maximum: null, p95UpperBound: null }
-      : { average: null, maximum: null };
+  private residualSummary(
+    target: ResidualAccumulator,
+    withP95: boolean,
+  ): TrackFusionShadowDiagnostics["positionResidualNm"] {
+    if (!target.count) return { average: null, maximum: null, p95UpperBound: null };
     const base = {
       average: Number((target.sum / target.count).toFixed(3)),
       maximum: Number(target.maximum.toFixed(3)),
     };
-    if (!withP95) return base;
+    if (!withP95) return { ...base, p95UpperBound: null };
     const targetCount = Math.ceil(target.count * 0.95);
     let cumulative = 0;
     let upper: number | null = null;
