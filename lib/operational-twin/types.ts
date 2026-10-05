@@ -91,7 +91,7 @@ export interface OperationalTwinSituation {
     registration: string | null;
     observedAt: string;
   };
-  corridor: OperationalTwinCorridor | null;
+  corridor: OperationalTwinCorridor;
   events: OperationalTwinEvent[];
   evidence: OperationalTwinEvidenceSummary;
   limitations: OperationalTwinLimitationCode[];
