@@ -6,6 +6,7 @@ import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import {
   analyzePublishedRoute,
   buildRouteCorridorIntelligence,
+  buildTrajectoryConformance,
   getRouteIntelligenceUpdateSnapshot,
   subscribeRouteIntelligenceUpdates,
   toRouteIntelligenceViewDTO,
@@ -13,6 +14,9 @@ import {
   type RouteCorridorSnapshot,
   type RouteCorridorTrackerState,
   type RouteIntelligenceViewDTO,
+  type TrajectoryConformanceCounters,
+  type TrajectoryConformanceSnapshot,
+  type TrajectoryConformanceTrackerState,
 } from "@/lib/route-intelligence";
 
 const MAX_ROUTE_REFERENCE_IDS = 24;
@@ -26,6 +30,8 @@ interface IdentifierLookupResponse {
 export interface SelectedRouteCorridorState {
   route: RouteIntelligenceViewDTO | null;
   corridor: RouteCorridorSnapshot | null;
+  conformance: TrajectoryConformanceSnapshot | null;
+  conformanceDiagnostics: TrajectoryConformanceCounters | null;
   referenceLoading: boolean;
   referencePointCount: number;
 }
@@ -82,6 +88,7 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
   const referencePoints = referenceSnapshot.key === identifierKey ? referenceSnapshot.points : [];
   const previousDynamicRef = useRef<DynamicRouteState | null>(null);
   const trackerRef = useRef<RouteCorridorTrackerState | null>(null);
+  const conformanceTrackerRef = useRef<TrajectoryConformanceTrackerState | null>(null);
   const routeIdentityRef = useRef("");
 
   useEffect(() => {
@@ -90,6 +97,7 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
     routeIdentityRef.current = routeIdentity;
     previousDynamicRef.current = null;
     trackerRef.current = null;
+    conformanceTrackerRef.current = null;
   }, [aircraft?.icaoHex, aircraft?.enrichment?.flightPlan?.filedRoute, aircraft?.enrichment?.flightPlan?.waypoints]);
 
   useEffect(() => {
@@ -152,14 +160,26 @@ export function useRouteCorridorIntelligence(aircraft: AircraftView | null): Sel
     }, trackerRef.current);
   }, [analysis, aircraft, observedAt]);
 
+  const conformanceResult = useMemo(() => {
+    if (!analysis?.v2 || !corridorResult || !Number.isFinite(observedAt)) return null;
+    return buildTrajectoryConformance({
+      route: analysis.v2,
+      corridor: corridorResult.snapshot,
+      observedAt,
+    }, conformanceTrackerRef.current);
+  }, [analysis, corridorResult, observedAt]);
+
   useEffect(() => {
     if (analysis?.v2 && Number.isFinite(observedAt)) previousDynamicRef.current = analysis.v2.dynamic;
     if (corridorResult) trackerRef.current = corridorResult.tracker;
-  }, [analysis, corridorResult, observedAt]);
+    if (conformanceResult) conformanceTrackerRef.current = conformanceResult.tracker;
+  }, [analysis, corridorResult, conformanceResult, observedAt]);
 
   return {
     route: analysis ? toRouteIntelligenceViewDTO(analysis, aircraft?.enrichment?.route ?? null) : null,
     corridor: corridorResult?.snapshot ?? null,
+    conformance: conformanceResult?.snapshot ?? null,
+    conformanceDiagnostics: conformanceResult?.tracker.counters ?? null,
     referenceLoading,
     referencePointCount: referencePoints.length,
   };
