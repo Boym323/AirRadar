@@ -563,6 +563,33 @@
         "pirep corridor",
         "sigmet entry"
       ]
+    },
+    {
+      "id": "track-fusion-shadow",
+      "name": "Track Fusion Shadow",
+      "category": "receiver / intelligence",
+      "status": "internal",
+      "introducedVersion": null,
+      "summary": "Shadow-only per-field multi-source state estimator with source-quality scoring, position residuals, bounded handover validation, short gap estimation and admin diagnostics; never alters canonical live state or local receiver persistence.",
+      "pages": [
+        "/system"
+      ],
+      "apis": [
+        "/api/admin/track-fusion/:hex"
+      ],
+      "changelogScopes": [
+        "track-fusion",
+        "source-fusion",
+        "state-estimation"
+      ],
+      "changelogKeywords": [
+        "track fusion",
+        "multi-source fusion",
+        "state estimator",
+        "source handover",
+        "position residual",
+        "track uncertainty"
+      ]
     }
   ]
 }

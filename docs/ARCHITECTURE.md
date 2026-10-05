@@ -473,3 +473,28 @@ PUBLIC predictive advisories.
 The layer has no persistence, background poller, EventSource, FlightPosition
 scan, or paid enrichment call. Provider failure removes only the affected
 context class and must not affect readsb → RAM → SSE.
+
+
+## Track Fusion Shadow V1
+
+Track Fusion Shadow is attached after the existing LOCAL and NETWORK snapshots
+have passed their source-specific normalization, plausibility, continuity and
+retention rules. The engine sees the retained maps but has no ownership of
+either map.
+
+```text
+LOCAL provider ──→ local map ──┐
+                               ├─→ current canonical merge ─→ radar/SSE/history boundaries
+NETWORK provider → network map ┘
+                 │             │
+                 └─────────────┴─→ Track Fusion Shadow
+                                      ├─ per-field quality selection
+                                      ├─ overlap residuals
+                                      ├─ handover validation
+                                      ├─ <=6 s estimated gap
+                                      └─ diagnostics only
+```
+
+Shadow output is not fed back into `localAircraft`, `networkAircraft`,
+`mergeAircraftMaps`, history persistence, receiver statistics, Navigation
+Integrity, alerts or predictive input. This one-way boundary is required for V1.

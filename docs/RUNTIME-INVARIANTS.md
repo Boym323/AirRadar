@@ -378,3 +378,16 @@ component that created it.
   graduation/readiness gate; admin/SHADOW previews are forbidden.
 - Missing external context is fail-soft and cannot make the live radar
   unhealthy.
+
+
+## Track Fusion Shadow invariants
+
+- Shadow fusion must never mutate `localAircraft` or `networkAircraft`.
+- Shadow fusion must never become input to `recordAircraftSnapshot`,
+  receiver statistics, reception records or `FlightPosition` persistence.
+- NETWORK or ESTIMATED state must never be relabelled as LOCAL evidence.
+- V1 owns no timer, socket, EventSource, upstream request or database handle.
+- Source-transition rejection may affect only the shadow state.
+- Estimated position is bounded to six seconds and must remain explicitly
+  marked ESTIMATED.
+- Public radar/SSE serialization is unchanged in V1.

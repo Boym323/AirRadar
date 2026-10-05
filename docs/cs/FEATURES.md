@@ -1,23 +1,23 @@
 # Funkce a routy
 
 <!-- feature-registry:start -->
-## Feature registry
+## Registr funkcí
 
-This table is generated from [`features.registry.json`](../features.registry.json).
-CI verifies that every Next.js page and API route is owned by at least one
-registered feature and that the registry contains no stale routes. “Pre-registry”
-means the feature existed before registry adoption and its original release has
-not yet been historically attributed.
+Tato tabulka je generována z [`features.registry.json`](../features.registry.json).
+CI ověřuje, že každá Next.js page a API route má alespoň jednoho vlastníka v
+registru a že registr neobsahuje zastaralé routy. „Pre-registry“ znamená, že
+funkce existovala už před zavedením registru a její původní release zatím není
+historicky přiřazený.
 
-| Feature | Status | Category | Introduced | Pages | APIs | Summary |
+| Funkce | Stav | Kategorie | Zavedeno | Stránky | API | Shrnutí |
 | --- | --- | --- | --- | --- | --- | --- |
 | Aircraft & Flight Detail | production | history | Pre-registry | `/aircraft/:hex`<br>`/flights/:id`<br>`/history`<br>`/flights` | `/api/aircraft/:hex/context`<br>`/api/aircraft/:hex/prediction`<br>`/api/aircraft/:hex/photo`<br>`/api/aircraft/:hex/route-weather`<br>`/api/history/:hex`<br>`/api/history/flights`<br>`/api/history/flights/:id` | Aircraft identity, context, photos, route weather, captured flights, sampled history, and readiness-gated predictive ETA, runway, runway-change, and trajectory advisories. |
-| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, flow pulse, bounded operational exceptions, and LANDED completion. |
+| Airport Intelligence | production | airports | Pre-registry | `/airports`<br>`/airports/:icao` | `/api/airports`<br>`/api/airports/:icao`<br>`/api/airports/:icao/movements`<br>`/api/airports/:icao/operations`<br>`/api/airports/:icao/traffic` | Airport catalog, runway context, observed traffic, inferred Airport Operations intelligence, and a shared-stream Airport Live Board with correlated journeys, arrival sequencing, V8 arrival flow and approach-queue state, runway-flow stability, bounded operational exceptions, and LANDED completion. |
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/navigation/data`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
 | Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
-| Map Context & Weather | production | weather | Pre-registry | — | `/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context and aircraft-observed weather. |
+| Map Context & Weather | production | weather | Pre-registry | — | `/api/aircraft/:hex/weather-fusion`<br>`/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
 | Operational Digital Twin | production | intelligence | Pre-registry | `/aircraft/:hex` | `/api/aircraft/:hex/situation` | Bounded 30-minute aircraft situation projection that fuses route geometry, ATC/ATS context, planned AUP/UUP, SIGMET, Weather Corridor Intelligence and readiness-gated PUBLIC predictive advisories into one provenance-aware outlook. |
@@ -25,8 +25,9 @@ not yet been historically attributed.
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback and historical context windows. |
+| Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex` | Shadow-only per-field multi-source state estimator with source-quality scoring, position residuals, bounded handover validation, short gap estimation and admin diagnostics; never alters canonical live state or local receiver persistence. |
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
-| Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, alert history, rule mutations and fleet views. |
+| Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
 ## Map Context V1/V2
 
@@ -552,3 +553,21 @@ s PIREP/AIREP relevancí podél trasy a ICON-EU wind trendem. Každá událost z
 nepřidává history scan, persistence, další SSE stream ani periodický browser
 polling loop. Podrobnosti jsou v
 [`OPERATIONAL-DIGITAL-TWIN.md`](OPERATIONAL-DIGITAL-TWIN.md).
+
+
+## Track Fusion Shadow V1
+
+Track Fusion Shadow V1 vyhodnocuje field-level multi-source state estimator
+vedle současného local/network canonical merge. Position, altitude, groundspeed,
+track a vertical rate skóruje odděleně podle source class, freshness, protocol
+provenance a dostupné ADS-B integrity evidence.
+
+Shadow měří LOCAL↔NETWORK position residualy, accepted/rejected source
+transitions, bounded šestisekundové dead-reckoning gap fills, per-field source
+selections a divergence proti dnešní canonical position. Diagnostika je
+admin-only přes `/system` a `GET /api/admin/track-fusion/:hex`.
+
+V1 záměrně nemění veřejný radar state, SSE, trails, alerts, Navigation
+Integrity, predictive inputs, receiver statistiky ani PostgreSQL history.
+Fused/estimated state nikdy není local receiver evidence. Viz
+[`TRACK-FUSION-SHADOW.md`](TRACK-FUSION-SHADOW.md).

@@ -618,3 +618,22 @@ Route Intelligence V2 geometry
 
 This flow is read-only and on-demand. It neither reads FlightPosition history
 nor persists corridor/event output.
+
+
+## Track Fusion Shadow V1 flow
+
+```text
+retained LOCAL Aircraft ──→ normalized field observations ──┐
+                                                            ├─→ quality arbitration
+retained NETWORK Aircraft → normalized field observations ──┘
+                                                                  ↓
+                                                        shadow fused track
+                                                                  ↓
+                                              residual / transition / uncertainty
+                                                                  ↓
+                                                     admin diagnostics only
+```
+
+The flow is in-memory and read-only. The existing local-history lane continues
+to receive only LOCAL provider observations and is intentionally independent of
+the shadow track.

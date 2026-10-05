@@ -228,6 +228,9 @@ export function getAdsbLolNetworkRadiusNm(): number { return boundedInteger("ADS
 
 export function getReceiverComparisonRadiusNm(): number { return boundedInteger("RECEIVER_COMPARISON_RADIUS_NM", 175, 1, 500); }
 export function getSourceAffinityFailoverGraceMs(): number { return boundedMilliseconds("SOURCE_AFFINITY_FAILOVER_GRACE_MS", 15_000, 1_000, 120_000); }
+export function isTrackFusionShadowEnabled(): boolean {
+  return process.env.AIRRADAR_TRACK_FUSION_SHADOW_ENABLED?.trim().toLowerCase() !== "false";
+}
 export function isAircraftMassDropGuardEnabled(): boolean {
   return process.env.AIRCRAFT_MASS_DROP_GUARD_ENABLED?.trim().toLowerCase() !== "false";
 }

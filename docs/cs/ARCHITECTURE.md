@@ -472,3 +472,28 @@ readiness-gated PUBLIC predictive advisories.
 Vrstva nemá persistence, background poller, EventSource, FlightPosition scan
 ani placený enrichment call. Výpadek provideru odstraní pouze danou třídu
 kontextu a nesmí ovlivnit readsb → RAM → SSE.
+
+
+## Track Fusion Shadow V1
+
+Track Fusion Shadow je připojen až za existující LOCAL/NETWORK snapshoty po
+jejich source-specific normalizaci, plausibility, continuity a retention
+kontrolách. Engine vidí retained mapy, ale žádnou z nich nevlastní.
+
+```text
+LOCAL provider ──→ local map ──┐
+                               ├─→ current canonical merge ─→ radar/SSE/history boundaries
+NETWORK provider → network map ┘
+                 │             │
+                 └─────────────┴─→ Track Fusion Shadow
+                                      ├─ per-field quality selection
+                                      ├─ overlap residuals
+                                      ├─ handover validation
+                                      ├─ <=6 s estimated gap
+                                      └─ pouze diagnostics
+```
+
+Shadow output se nevrací do `localAircraft`, `networkAircraft`,
+`mergeAircraftMaps`, history persistence, receiver statistik, Navigation
+Integrity, alerts ani predictive input. Tato jednosměrná hranice je ve V1
+povinná.
