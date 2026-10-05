@@ -594,3 +594,27 @@ rows; only significant conflicts create bounded `AltitudeAnomaly` rows. The
 full decision is available to protected admin diagnostics, while global SSE
 payloads remain unchanged. Historical positions are intentionally left with
 NULL provenance.
+
+
+## Operational Digital Twin V1 flow
+
+```text
+live aircraft RAM
+       +
+Route Intelligence V2 geometry
+       ↓
+30-minute 4D corridor (2-minute samples)
+       ├─→ ATC/ATS spatial context
+       ├─→ AUP/UUP planned windows
+       ├─→ SIGMET valid geometry
+       └─→ PUBLIC ETA/runway/trajectory advisories
+                    ↓
+       provenance-aware situation timeline
+                    ↓
+       /api/aircraft/:hex/situation
+                    ↓
+       aircraft detail panel
+```
+
+This flow is read-only and on-demand. It neither reads FlightPosition history
+nor persists corridor/event output.

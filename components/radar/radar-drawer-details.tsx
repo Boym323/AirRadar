@@ -32,6 +32,7 @@ interface RadarDrawerDetailsProps {
   destinationWind: AircraftRadarQuickDetailProps["destinationWind"];
   windStatus: AircraftRadarQuickDetailProps["windStatus"];
   routeWeather: AircraftRadarQuickDetailProps["routeWeather"];
+  routeCorridor: AircraftRadarQuickDetailProps["routeCorridor"];
   intelligenceEvents: FlightIntelligenceEvent[];
   sectorTraffic: AircraftRadarQuickDetailProps["sectorTraffic"];
   watchlisted: boolean;
@@ -58,6 +59,7 @@ export function RadarDrawerDetails({
   destinationWind,
   windStatus,
   routeWeather,
+  routeCorridor,
   intelligenceEvents,
   sectorTraffic,
   watchlisted,
@@ -89,6 +91,7 @@ export function RadarDrawerDetails({
       destinationWind={destinationWind}
       windStatus={windStatus}
       routeWeather={routeWeather}
+      routeCorridor={routeCorridor}
       intelligenceEvents={intelligenceEvents}
       sectorTraffic={sectorTraffic}
       watchlisted={watchlisted}

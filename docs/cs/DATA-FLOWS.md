@@ -569,3 +569,27 @@ Vybraná hodnota a metadata rozhodnutí putují společně do vzorkovaných řá
 `AltitudeAnomaly`. Úplné rozhodnutí je dostupné chráněné admin diagnostice,
 zatímco globální SSE payloady zůstávají beze změny. Historické pozice jsou
 záměrně ponechány s NULL proveniencí.
+
+
+## Operational Digital Twin V1 flow
+
+```text
+live aircraft RAM
+       +
+Route Intelligence V2 geometry
+       ↓
+30minutový 4D corridor (vzorek po 2 min)
+       ├─→ ATC/ATS spatial context
+       ├─→ AUP/UUP planned windows
+       ├─→ SIGMET valid geometry
+       └─→ PUBLIC ETA/runway/trajectory advisories
+                    ↓
+       provenance-aware situation timeline
+                    ↓
+       /api/aircraft/:hex/situation
+                    ↓
+       aircraft detail panel
+```
+
+Flow je read-only a on-demand. Nečte FlightPosition historii ani nepersistuje
+výstup corridoru nebo událostí.

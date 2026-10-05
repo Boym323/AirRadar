@@ -25,6 +25,7 @@ const radarOperationsCenterSource = readFileSync(new URL("../components/radar/ra
 const radarDrawerInteractionsSource = readFileSync(new URL("../components/radar/use-radar-drawer-interactions.ts", import.meta.url), "utf8");
 const radarLiveAircraftSource = readFileSync(new URL("../components/radar/use-radar-live-aircraft.ts", import.meta.url), "utf8");
 const radarAtcMapContextSource = readFileSync(new URL("../components/radar/use-radar-atc-map-context.ts", import.meta.url), "utf8");
+const routeCorridorSource = readFileSync(new URL("../components/radar/use-route-corridor-intelligence.ts", import.meta.url), "utf8");
 const trafficVirtualizationSource = readFileSync(new URL("../lib/radar/traffic-virtualization.ts", import.meta.url), "utf8");
 const radarPerformanceSource = readFileSync(new URL("../lib/radar/performance-diagnostics.ts", import.meta.url), "utf8");
 const liveSnapshotSchedulerSource = readFileSync(new URL("../lib/radar/live-snapshot-scheduler.ts", import.meta.url), "utf8");
@@ -391,12 +392,16 @@ describe("radar UI polish helpers", () => {
     expect(appSource).toContain("setMapFilters(DEFAULT_MAP_AIRCRAFT_FILTERS)");
   });
 
-  it("loads ATS data only for the explicit ATS layer or ATS point focus", () => {
+  it("keeps the full ATS map dataset gated while selected Route Corridor reuses bounded route intelligence", () => {
     expect(appSource).toContain("enabled: showAtsRoutes || Boolean(atsPointFocus)");
     expect(appSource).not.toContain("selectedHasRouteData");
     expect(appSource).not.toContain("analyzePublishedRoute");
-    expect(appSource).not.toContain("ROUTE_INTELLIGENCE_SOURCE_ID");
-    expect(appSource).not.toContain("routeIntelligenceView");
+    expect(appSource).toContain("ROUTE_INTELLIGENCE_SOURCE_ID");
+    expect(appSource).toContain("useRouteCorridorIntelligence(selectedAircraft)");
+    expect(routeCorridorSource).toContain("analyzePublishedRoute");
+    expect(routeCorridorSource).toContain("/api/navigation/data?ids=");
+    expect(routeCorridorSource).not.toContain("new EventSource");
+    expect(routeCorridorSource).not.toContain("setInterval");
     expect(appSource).toContain("selectedRoute?.originAirport?.icaoCode ?? selectedRoute?.origin");
     expect(appSource).toContain("selectedRoute?.destinationAirport?.icaoCode ?? selectedRoute?.destination");
   });

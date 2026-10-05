@@ -9,7 +9,7 @@
       "category": "radar",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state.",
+      "summary": "Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state.",
       "pages": [
         "/"
       ],
@@ -31,7 +31,8 @@
         "trail",
         "radar-perf",
         "predictive-operations",
-        "operations-center"
+        "operations-center",
+        "route-corridor"
       ],
       "changelogKeywords": [
         "live radar",
@@ -43,7 +44,11 @@
         "radar navigation",
         "predictive operations",
         "predictive operations center",
-        "operations center"
+        "operations center",
+        "route corridor",
+        "route deviation",
+        "cross-track deviation",
+        "route progress"
       ]
     },
     {
@@ -503,6 +508,32 @@
       ],
       "changelogKeywords": [
         "flightaware usage"
+      ]
+    },
+    {
+      "id": "operational-digital-twin",
+      "name": "Operational Digital Twin",
+      "category": "intelligence",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded 30-minute aircraft situation projection that fuses route geometry, ATC/ATS context, planned AUP/UUP, SIGMET intersections and readiness-gated PUBLIC predictive advisories into one provenance-aware timeline.",
+      "pages": [
+        "/aircraft/:hex"
+      ],
+      "apis": [
+        "/api/aircraft/:hex/situation"
+      ],
+      "changelogScopes": [
+        "operational-twin",
+        "digital-twin",
+        "situation"
+      ],
+      "changelogKeywords": [
+        "operational digital twin",
+        "4d situation",
+        "situation timeline",
+        "trajectory corridor",
+        "future intersection"
       ]
     }
   ]

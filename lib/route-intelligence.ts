@@ -426,3 +426,17 @@ export function clearRouteIntelligenceCache(): void {
   pendingResults.clear();
   updateVersion = 0;
 }
+
+export {
+  buildRouteCorridorIntelligence,
+  ROUTE_CORRIDOR_CONFIRMATION,
+  ROUTE_CORRIDOR_THRESHOLDS_NM,
+} from "./route-intelligence/corridor";
+export type {
+  RouteCorridorConfidence,
+  RouteCorridorObservation,
+  RouteCorridorResult,
+  RouteCorridorSnapshot,
+  RouteCorridorStatus,
+  RouteCorridorTrackerState,
+} from "./route-intelligence/corridor";

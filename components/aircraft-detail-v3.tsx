@@ -12,6 +12,7 @@ import { FlightRouteWeather } from "@/components/airport-weather";
 import { AircraftAdsbTelemetry } from "@/components/aircraft-adsb-telemetry";
 import { PredictiveAircraftAdvisories } from "@/components/predictive-aircraft-advisories";
 import { AircraftWeatherFusion } from "@/components/aircraft-weather-fusion";
+import { AircraftOperationalTwin } from "@/components/aircraft-operational-twin";
 import {
   AircraftAltitudeChart,
   AircraftHistorySummaryCard,
@@ -372,6 +373,11 @@ export function AircraftDetailV3({
         enabled={Boolean(liveAircraft && icaoHex !== t.common.emptyValue)}
       />
     </header>
+
+    <AircraftOperationalTwin
+      icaoHex={icaoHex}
+      enabled={Boolean(liveAircraft && icaoHex !== t.common.emptyValue)}
+    />
 
     <section className={styles.trackingSection} id="aircraft-track" aria-labelledby="aircraft-live-tracking-v3-title">
       <h2 id="aircraft-live-tracking-v3-title">{t.aircraft.liveTrackingTitle}</h2>

@@ -1,4 +1,5 @@
 import type { AircraftEnrichment } from "@/lib/aircraft/types";
+import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import type { CzAtsPoint, CzAtsRoute, CzAtsSegment } from "@/lib/ats/cz-routes";
 import type {
   InterpretedRoute,
@@ -25,6 +26,8 @@ export interface RouteIntelligenceV2Options {
   waypoints?: string[] | null;
   source?: string | null;
   atsNetwork?: RouteIntelligenceNetwork | null;
+  /** Bounded on-demand reference points. They may resolve filed connectors but never override published ATS/procedure geometry. */
+  referencePoints?: readonly AviationNavPoint[] | null;
   procedures?: readonly Procedure[] | null;
   originAirportIcao?: string | null;
   destinationAirportIcao?: string | null;
@@ -101,15 +104,20 @@ function airportContext(options: RouteIntelligenceV2Options): { origin: string |
   };
 }
 
-function genericTokenType(value: string, network: RouteIntelligenceNetwork | null): V2TokenType {
+function genericTokenType(value: string, network: RouteIntelligenceNetwork | null, referencePoints: readonly AviationNavPoint[]): V2TokenType {
   if (value === "DCT") return "DCT";
-  if (network?.routes.some((route) => normalized(route.designator) === value) || /^[A-Z][0-9]{1,3}[A-Z]?$/.test(value)) return "AIRWAY";
-  if (network?.routes.some((route) => route.points.some((point) => normalized(point.name) === value)) || /^[A-Z]{2,5}$/.test(value)) return "WAYPOINT";
+  const publishedAirway = network?.routes.some((route) => normalized(route.designator) === value) ?? false;
+  if (publishedAirway) return "AIRWAY";
+  if (referencePoints.some((point) => normalized(point.id) === value)
+    || network?.routes.some((route) => route.points.some((point) => normalized(point.name) === value))
+    || /^[A-Z]{2,5}$/.test(value)) return "WAYPOINT";
+  if (/^[A-Z][0-9]{1,3}[A-Z]?$/.test(value)) return "AIRWAY";
   return "UNKNOWN";
 }
 
 function tokensFor(options: RouteIntelligenceV2Options, network: RouteIntelligenceNetwork | null, procedures: readonly Procedure[]): V2Token[] {
   const fields = routeFields(options);
+  const referencePoints = options.referencePoints ?? [];
   if (!fields.text) return [];
   const context = airportContext(options);
   const raw = fields.text.split(/\s+/).map(cleanToken).filter(Boolean);
@@ -121,7 +129,7 @@ function tokensFor(options: RouteIntelligenceV2Options, network: RouteIntelligen
     const star = starContext && matches.some((procedure) => procedure.type === "STAR" && context.destination && normalized(procedure.airportIcao) === context.destination);
     if (sid) return { type: "SID", value, index };
     if (star) return { type: "STAR", value, index };
-    return { type: genericTokenType(value, network), value, index };
+    return { type: genericTokenType(value, network, referencePoints), value, index };
   });
 }
 
@@ -214,8 +222,8 @@ function sourceForAts(network: RouteIntelligenceNetwork): RouteElementSource {
   };
 }
 
-function sourceForFiled(kind: "FILED_DCT" | "SCHEMATIC", filedSource: string | null): RouteElementSource {
-  return { kind, provider: filedSource, countryCode: null, reference: null, procedureId: null, effectiveDate: null, airacCycle: null, amendment: null };
+function sourceForFiled(kind: "FILED_DCT" | "FILED_ROUTE" | "SCHEMATIC", filedSource: string | null, reference: string | null = null): RouteElementSource {
+  return { kind, provider: filedSource, countryCode: null, reference, procedureId: null, effectiveDate: null, airacCycle: null, amendment: null };
 }
 
 function point(point: ProcedurePointLike | CzAtsPoint | null): InterpretedRoutePoint | null {
@@ -270,6 +278,27 @@ function procedureElement(procedure: Procedure, sequence: number): InterpretedRo
 
 function pointFromNetwork(ref: PointRef | null): InterpretedRoutePoint | null {
   return ref ? point(ref.point) : null;
+}
+
+function referencePointCandidates(points: readonly AviationNavPoint[], name: string): AviationNavPoint[] {
+  const wanted = normalized(name);
+  return points.filter((candidate) => normalized(candidate.id) === wanted);
+}
+
+function pointFromReference(reference: AviationNavPoint | null): InterpretedRoutePoint | null {
+  if (!reference || !finiteCoordinates(reference.latitude, reference.longitude)) return null;
+  return {
+    id: `awc:${reference.kind}:${reference.id}:${reference.latitude.toFixed(5)}:${reference.longitude.toFixed(5)}`,
+    name: reference.id,
+    coordinates: { lat: reference.latitude, lon: reference.longitude },
+  };
+}
+
+function resolveFiledPoint(network: RouteIntelligenceNetwork | null, referencePoints: readonly AviationNavPoint[], name: string): InterpretedRoutePoint | null {
+  const networkCandidates = networkPointCandidates(network, name);
+  if (networkCandidates.length === 1) return pointFromNetwork(networkCandidates[0]!);
+  const referenceCandidates = referencePointCandidates(referencePoints, name);
+  return referenceCandidates.length === 1 ? pointFromReference(referenceCandidates[0]!) : null;
 }
 
 function lineGeometry(from: InterpretedRoutePoint | null, to: InterpretedRoutePoint | null): InterpretedRouteGeometry | null {
@@ -382,11 +411,10 @@ function unresolvedElement(label: string, phase: RoutePhase, sequence: number, r
   };
 }
 
-function dctElement(startName: string, endName: string, sequence: number, network: RouteIntelligenceNetwork | null, filedSource: string | null): InterpretedRouteElement {
-  const start = networkPointCandidates(network, startName);
-  const end = networkPointCandidates(network, endName);
-  const from = start.length === 1 ? pointFromNetwork(start[0]!) : null;
-  const to = end.length === 1 ? pointFromNetwork(end[0]!) : null;
+function dctElement(startName: string, endName: string, sequence: number, network: RouteIntelligenceNetwork | null, referencePoints: readonly AviationNavPoint[], filedSource: string | null): InterpretedRouteElement {
+  const from = resolveFiledPoint(network, referencePoints, startName);
+  const to = resolveFiledPoint(network, referencePoints, endName);
+  const geometry = lineGeometry(from, to);
   return {
     id: `dct:${sequence}:${startName}:${endName}`,
     sequence,
@@ -395,8 +423,35 @@ function dctElement(startName: string, endName: string, sequence: number, networ
     label: "DCT",
     from,
     to,
-    geometry: lineGeometry(from, to),
-    source: sourceForFiled("FILED_DCT", filedSource),
+    geometry,
+    source: sourceForFiled("FILED_DCT", filedSource, from && to ? "Published/reference waypoint coordinates" : null),
+    status: geometry ? "RESOLVED" : "UNRESOLVED",
+    unresolvedReason: geometry ? null : "DCT endpoints could not be resolved uniquely",
+  };
+}
+
+function filedRouteConnector(
+  startName: string,
+  endName: string,
+  label: string | null,
+  sequence: number,
+  network: RouteIntelligenceNetwork | null,
+  referencePoints: readonly AviationNavPoint[],
+  filedSource: string | null,
+): InterpretedRouteElement | null {
+  const from = resolveFiledPoint(network, referencePoints, startName);
+  const to = resolveFiledPoint(network, referencePoints, endName);
+  if (!from?.coordinates || !to?.coordinates) return null;
+  return {
+    id: `filed:${sequence}:${startName}:${endName}`,
+    sequence,
+    kind: "FILED_ROUTE",
+    phase: "EN_ROUTE",
+    label,
+    from,
+    to,
+    geometry: { type: "SCHEMATIC", coordinates: [from.coordinates, to.coordinates] },
+    source: sourceForFiled("FILED_ROUTE", filedSource, "Reference waypoint coordinates; published airway geometry unresolved"),
     status: "RESOLVED",
     unresolvedReason: null,
   };
@@ -426,6 +481,7 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
   const fields = routeFields(options);
   const procedures = options.procedures ?? [];
   const network = options.atsNetwork ?? null;
+  const referencePoints = options.referencePoints ?? [];
   if (!fields.text) {
     return { id: "filed:empty", status: "NO_ROUTE", elements: [], procedureMatches: [], sources: [], coverage: { ats: { eligibleLegs: 0, matchedLegs: 0, percent: null }, reconstruction: { totalElements: 0, resolvedElements: 0, percent: null }, progress: null } };
   }
@@ -438,6 +494,7 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
     ats: network?.source?.effectiveDate ?? null,
     procedures: procedures.map((procedure) => `${procedure.id}:${procedure.source.effectiveDate ?? ""}`).sort(),
     runway: runway.reportedRunway ?? runway.inferredRunway ?? null,
+    referencePoints: referencePoints.map((point) => `${point.kind}:${point.id}:${point.latitude.toFixed(5)}:${point.longitude.toFixed(5)}`).sort(),
   });
   const cachedRoute = staticCache.get(cacheKey);
   if (cachedRoute) return cachedRoute;
@@ -492,7 +549,7 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
     const dct = between.some((token) => token.type === "DCT");
     const airways = unique(between.filter((token) => token.type === "AIRWAY").map((token) => token.value));
     if (dct) {
-      const element = dctElement(left.value, right.value, sequence++, network, fields.source);
+      const element = dctElement(left.value, right.value, sequence++, network, referencePoints, fields.source);
       elements.push(element);
       elementOrder.set(element.id, left.index + 0.5);
       continue;
@@ -511,7 +568,18 @@ function staticRoute(options: RouteIntelligenceV2Options): InterpretedRoute {
       newElements.forEach((element, offset) => elementOrder.set(element.id, left.index + 0.5 + offset / 1000));
       sequence += path.length;
     } else {
-      const element = unresolvedElement(`${left.value}-${right.value}`, "CONNECTOR", sequence++, "ATS leg could not be resolved", fields.source);
+      const filedConnector = filedRouteConnector(
+        left.value,
+        right.value,
+        airways.length === 1 ? airways[0]! : null,
+        sequence,
+        network,
+        referencePoints,
+        fields.source,
+      );
+      const element = filedConnector
+        ?? unresolvedElement(`${left.value}-${right.value}`, "CONNECTOR", sequence, "ATS leg could not be resolved", fields.source);
+      sequence += 1;
       elements.push(element);
       elementOrder.set(element.id, left.index + 0.5);
     }

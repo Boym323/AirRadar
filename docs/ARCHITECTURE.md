@@ -458,3 +458,18 @@ uses deterministic 0.2° cells and altitude bands, and keeps regional anomaly
 state separate from receiver/database health. Its V1 contract, retention,
 limitations and API surface are documented in
 [NAVIGATION-INTEGRITY.md](NAVIGATION-INTEGRITY.md).
+
+
+## Operational Digital Twin V1
+
+The Digital Twin is an on-demand composition layer, not another live-state
+owner. `/api/aircraft/:hex/situation` reads the already-running aircraft RAM
+state and builds a bounded 30-minute corridor. Route Intelligence V2 supplies
+published/interpreted geometry when usable; otherwise projection is kinematic.
+The same corridor is evaluated against the existing prepared ATC/ATS dataset,
+the plan-only AUP/UUP cache, the bounded SIGMET provider, and readiness-gated
+PUBLIC predictive advisories.
+
+The layer has no persistence, background poller, EventSource, FlightPosition
+scan, or paid enrichment call. Provider failure removes only the affected
+context class and must not affect readsb → RAM → SSE.

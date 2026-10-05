@@ -154,6 +154,10 @@ async function cachedActual(now: Date): Promise<HistoricalAirspaceActivitySnapsh
   return actualInflight;
 }
 
+export async function getAirspacePlan(now = new Date()): Promise<AirspacePlanSnapshot> {
+  return cachedPlan(now);
+}
+
 export async function getAirspaceActivity(now = new Date()): Promise<AirspaceActivityResponse> {
   const [planned, historicalActual] = await Promise.all([cachedPlan(now), cachedActual(now)]);
   return {

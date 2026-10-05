@@ -16,10 +16,11 @@ not yet been historically attributed.
 | ATC & ATS Intelligence | production | atc | Pre-registry | — | `/api/airspace/activity`<br>`/api/atc/sectors`<br>`/api/atc/sectors/:id/history`<br>`/api/atc/sectors/:id/traffic`<br>`/api/atc/sectors/history`<br>`/api/atc/sectors/traffic`<br>`/api/atc/sectors/transitions`<br>`/api/atc/validation`<br>`/api/ats/routes`<br>`/api/navigation/data`<br>`/api/procedures` | ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data. |
 | Flight Intelligence | production | intelligence | Pre-registry | `/intelligence` | `/api/intelligence/events`<br>`/api/intelligence/stream` | Lifecycle and transition intelligence event timeline and streaming. |
 | FlightAware Usage Administration | internal | operations | Pre-registry | — | `/api/admin/flightaware/usage` | Administrative usage diagnostics for the optional FlightAware integration. |
-| Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
+| Live Radar | production | radar | Pre-registry | `/` | `/api/aircraft`<br>`/api/aircraft/:hex`<br>`/api/operations/predictive`<br>`/api/search`<br>`/api/stream` | Local and extended live ADS-B radar, search, aircraft snapshots, SSE streaming, selected-aircraft Route Corridor Intelligence, and a bounded readiness-gated Predictive Operations Center for ETA, runway, runway changes, and trajectory state. |
 | Map Context & Weather | production | weather | Pre-registry | — | `/api/aircraft/:hex/weather-fusion`<br>`/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
+| Operational Digital Twin | production | intelligence | Pre-registry | `/aircraft/:hex` | `/api/aircraft/:hex/situation` | Bounded 30-minute aircraft situation projection that fuses route geometry, ATC/ATS context, planned AUP/UUP, SIGMET intersections and readiness-gated PUBLIC predictive advisories into one provenance-aware timeline. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
@@ -144,6 +145,30 @@ the radar on that point. When a selected aircraft has a filed route, the
 already-loaded AWC points referenced by that route are highlighted using the
 existing Route Intelligence tokenizer. This is display/enrichment only:
 AWC points never replace eAIP ATS/procedure geometry or alter route authority.
+
+## Route Corridor Intelligence V1
+
+Route Corridor Intelligence extends the existing Route Intelligence V2 model for
+the currently selected aircraft. The browser performs one bounded same-origin
+navigation-reference lookup when the filed-route identifier set changes; it
+does not add another aircraft stream, timer, or background poller.
+
+Published ATS and procedure geometry remains authoritative. Bounded AWC
+NAVAID/FIX coordinates can resolve otherwise-unresolved filed/DCT endpoints,
+but that fallback is labeled as schematic `FILED_ROUTE` geometry and never
+promoted to published ATS evidence.
+
+The live radar renders resolved route geometry as completed, current and
+remaining segments and keeps the previous origin-current-destination line as a
+fallback. The aircraft drawer shows progress, next fix, remaining resolved
+distance, groundspeed-based ETA, cross-track deviation, expected segment track,
+track difference and reconstruction confidence.
+
+A persistent `DEVIATING` state requires three distinct observations with more
+than 10 NM cross-track deviation spanning at least 10 seconds; recovery requires
+two observations spanning at least five seconds. These are informational
+display thresholds, not certified navigation limits or ATC guidance. V1 does
+not persist deviation events and adds no database migration.
 
 ## Airport Live Board V5
 
@@ -454,3 +479,14 @@ labelled PUBLIC_STRONG, PUBLIC_PARTIAL, or RECEIVER_ONLY. The same bounded
 sequence also produces an Approach Queue state (EMPTY, LOW_DENSITY, ACTIVE,
 BUILDING, COMPRESSED, or HOLDING_PRESENT) without another request, stream or
 persistence path.
+
+
+## Operational Digital Twin V1
+
+The aircraft detail surface includes a bounded 30-minute 4D situation outlook
+through `/api/aircraft/:hex/situation`. It combines a route-aware or
+kinematic trajectory corridor with waypoint, ATC-sector, planned AUP/UUP,
+SIGMET and readiness-gated PUBLIC predictive events. Every event retains
+provenance and confidence. The feature adds no history scan, persistence,
+additional SSE stream or periodic browser polling loop. See
+[`OPERATIONAL-DIGITAL-TWIN.md`](OPERATIONAL-DIGITAL-TWIN.md).
