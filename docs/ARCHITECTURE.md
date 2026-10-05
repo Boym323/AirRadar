@@ -525,3 +525,15 @@ It does not own ingest, scheduling, persistence or a second fusion pass.
 Pending samples and five-minute aggregate buckets are RAM-only and bounded.
 The validator cannot mutate source affinity, canonical Aircraft state, radar
 SSE, receiver history or Track Fusion selection.
+
+## Operational Digital Twin Outcome Validation V1
+
+The on-demand Digital Twin response now feeds a separate one-way prospective
+validator. A successful situation calculation contributes only three bounded
+targets (+5/+15/+30 minutes). The live LOCAL provider refresh later resolves
+those targets against receiver truth already in the local aircraft map.
+
+The validator is RAM-only, owns no timer, has no database path and never
+recomputes a Digital Twin. Its output is diagnostics only and cannot influence
+canonical aircraft state, Track Fusion selection, radar/SSE, history,
+Navigation Integrity, predictive inputs or alerts.
