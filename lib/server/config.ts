@@ -234,6 +234,12 @@ export function isTrackFusionShadowEnabled(): boolean {
 export function isTrackFusionDigitalTwinEnabled(): boolean {
   return process.env.AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED?.trim().toLowerCase() === "true";
 }
+export type OperationalTwinWindTimingPolicy = "CANONICAL" | "WIND_GRADUATED";
+export function getOperationalTwinWindTimingPolicy(): OperationalTwinWindTimingPolicy {
+  return process.env.AIRRADAR_DIGITAL_TWIN_WIND_TIMING_POLICY?.trim().toUpperCase() === "WIND_GRADUATED"
+    ? "WIND_GRADUATED"
+    : "CANONICAL";
+}
 export function isAircraftMassDropGuardEnabled(): boolean {
   return process.env.AIRCRAFT_MASS_DROP_GUARD_ENABLED?.trim().toLowerCase() !== "false";
 }
