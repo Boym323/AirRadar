@@ -466,6 +466,14 @@ která jej vytvořila.
 - Outcome readiness sama o sobě nemůže měnit veřejnou semantiku
   WATCH/ATTENTION.
 
+## Invarianty Regional Operations Center V1.1
+
+- Operations Center znovu používá existující `/api/operations/situation`; V1.1 nepřidává provider loop, receiver poller ani databázovou cestu.
+- Filtr 5/15/30 minut je pouze prezentační a nemůže měnit zachycenou kalibrační evidenci.
+- Map focus vznikne jen pro dvouletadlovou položku `REGIONAL_COPRESENCE` po graduation `PASS` s povolenou ruční promotion.
+- Mapový overlay používá jen aktuální LOCAL polohy jako kontext. Není predikovanou trajektorií srážky, hranicí rozstupu, TCAS/STCA alertem ani ATC pokynem.
+- Destination clustery mapové zvýraznění neodemknou.
+
 ## Invarianty Regional Attention graduation
 
 - Graduation spotřebovává pouze Regional Attention outcome report; sama
