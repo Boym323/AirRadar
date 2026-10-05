@@ -552,3 +552,21 @@ s PIREP/AIREP relevancí podél trasy a ICON-EU wind trendem. Každá událost z
 nepřidává history scan, persistence, další SSE stream ani periodický browser
 polling loop. Podrobnosti jsou v
 [`OPERATIONAL-DIGITAL-TWIN.md`](OPERATIONAL-DIGITAL-TWIN.md).
+
+
+## Track Fusion Shadow V1
+
+Track Fusion Shadow V1 vyhodnocuje field-level multi-source state estimator
+vedle současného local/network canonical merge. Position, altitude, groundspeed,
+track a vertical rate skóruje odděleně podle source class, freshness, protocol
+provenance a dostupné ADS-B integrity evidence.
+
+Shadow měří LOCAL↔NETWORK position residualy, accepted/rejected source
+transitions, bounded šestisekundové dead-reckoning gap fills, per-field source
+selections a divergence proti dnešní canonical position. Diagnostika je
+admin-only přes `/system` a `GET /api/admin/track-fusion/:hex`.
+
+V1 záměrně nemění veřejný radar state, SSE, trails, alerts, Navigation
+Integrity, predictive inputs, receiver statistiky ani PostgreSQL history.
+Fused/estimated state nikdy není local receiver evidence. Viz
+[`TRACK-FUSION-SHADOW.md`](TRACK-FUSION-SHADOW.md).
