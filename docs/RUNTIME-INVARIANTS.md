@@ -446,3 +446,12 @@ component that created it.
 - `DESTINATION_CLUSTER` is deliberately unscored in V1.
 - Outcome readiness cannot change public WATCH/ATTENTION semantics by itself.
 
+## Regional Attention graduation invariants
+
+- Graduation consumes only the Regional Attention outcome report; it never
+  captures aircraft state or starts another provider/database loop.
+- `PASS` is an evidence/readiness state only. V1 never auto-promotes public
+  WATCH/ATTENTION behavior.
+- Destination clusters, collision warnings and separation-product semantics are
+  explicitly outside the graduation scope.
+
