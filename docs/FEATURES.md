@@ -571,3 +571,16 @@ V1 deliberately does not change public radar state, SSE, trails, alerts,
 Navigation Integrity, predictive inputs, receiver statistics or PostgreSQL
 history. Fused/estimated state is never local receiver evidence. See
 [`TRACK-FUSION-SHADOW.md`](TRACK-FUSION-SHADOW.md).
+
+
+## Track Fusion Readiness / Graduation V1
+
+Track Fusion Shadow now collects bounded 24-hour process-local readiness
+evidence in five-minute buckets and produces a versioned PASS / WAIT / FAIL
+decision. Admin readiness is available on `/system` and through
+`GET /api/admin/track-fusion/readiness`.
+
+The first fail-closed consumer is Operational Digital Twin. Fused input is
+disabled by default and requires an explicit flag, readiness PASS and a GOOD
+observed fused position for the requested aircraft. Canonical radar, SSE and
+receiver persistence remain unchanged.
