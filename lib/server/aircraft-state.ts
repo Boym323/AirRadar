@@ -57,7 +57,7 @@ import type { FlightPhase } from "@/lib/intelligence/types";
 import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@/lib/predictive-intelligence/types";
 import type { Airport } from "@/lib/airports/types";
 import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
-import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
+import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
 import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
 
@@ -503,6 +503,7 @@ export class AircraftStateService {
     operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
     operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
     regionalAttentionOutcome: ReturnType<RegionalAttentionOutcomeValidator["report"]>;
+    regionalAttentionGraduation: ReturnType<typeof buildRegionalAttentionGraduation>;
     operationalTwinCalibrationPersistence: ReturnType<OperationalTwinCalibrationPersistence["getStatus"]>;
   } {
     return {
@@ -538,6 +539,7 @@ export class AircraftStateService {
       operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
       operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
       regionalAttentionOutcome: this.getRegionalAttentionOutcomeReport(),
+      regionalAttentionGraduation: this.getRegionalAttentionGraduationReport(),
       operationalTwinCalibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
     };
   }
@@ -652,6 +654,10 @@ export class AircraftStateService {
       ...this.regionalAttentionOutcome.report(now),
       calibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
     };
+  }
+
+  getRegionalAttentionGraduationReport(now = new Date()) {
+    return buildRegionalAttentionGraduation(this.regionalAttentionOutcome.report(now));
   }
 
   getNetworkDiagnostics() {
