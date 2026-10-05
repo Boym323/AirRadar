@@ -9,12 +9,14 @@ export async function GET(request: Request): Promise<Response> {
   const rateLimit = checkPublicRateLimit("aircraft", request);
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
 
-  const snapshot = getAircraftStateService().getSnapshot({
+  const service = getAircraftStateService();
+  const snapshot = service.getSnapshot({
     coverage: "local",
     includeTrails: false,
   });
   const graph = buildRegionalSituationGraph(snapshot.aircraft, new Date());
   const attention = buildOperationalAttention(graph);
+  service.captureRegionalAttentionOutcome(attention);
 
   return Response.json({ ...graph, attention }, {
     headers: { "Cache-Control": "no-store" },
