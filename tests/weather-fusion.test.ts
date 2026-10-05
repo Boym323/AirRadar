@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { AircraftWeatherObservation } from "@/lib/server/aircraft-weather";
 import type { AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { AircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
-import { buildWeatherFusion } from "@/lib/weather/fusion";
-import type { MetarMapObservation, PirepObservation } from "@/lib/weather/types";
+import { buildWeatherFusion, type WeatherFusionMetarInput } from "@/lib/weather/fusion";
+import type { PirepObservation } from "@/lib/weather/types";
 
 const now = new Date("2026-10-05T05:00:00Z");
 
@@ -78,23 +78,12 @@ function sigmet(overrides: Partial<AircraftSigmetContext> = {}): AircraftSigmetC
   };
 }
 
-function metar(overrides: Partial<MetarMapObservation & { distanceNm: number }> = {}): MetarMapObservation & { distanceNm: number } {
+function metar(overrides: Partial<WeatherFusionMetarInput> = {}): WeatherFusionMetarInput {
   return {
     stationId: "LKTB",
-    lat: 49.15,
-    lon: 16.69,
     observedAt: "2026-10-05T04:50:00Z",
-    flightCategory: "VFR",
-    windDirection: 250,
-    windSpeed: 12,
-    windGust: 20,
-    visibility: 9999,
-    ceiling: 2500,
-    temperature: 2,
-    dewpoint: 1,
-    qnh: 1013,
-    clouds: [],
-    rawMetar: "LKTB 050450Z 25012G20KT 9999 -RA BKN025 02/01 Q1013",
+    temperatureC: 2,
+    rawText: "LKTB 050450Z 25012G20KT 9999 -RA BKN025 02/01 Q1013",
     stale: false,
     distanceNm: 45,
     ...overrides,
@@ -164,7 +153,7 @@ describe("Aviation Weather Fusion V1", () => {
       aircraftHex: "ABC123", lat: 49.2, lon: 17.7, altitudeFt: 15000, now,
       aircraftObservations: [], pireps: [],
       sigmets: [sigmet({ id: "TS1", hazard: "EMBD TS", phenomenon: "TS" })],
-      metar: metar({ rawMetar: "LKTB 050450Z 25012KT 6000 TSRA BKN025CB 12/10 Q1010", temperature: 12 }),
+      metar: metar({ rawText: "LKTB 050450Z 25012KT 6000 TSRA BKN025CB 12/10 Q1010", temperatureC: 12 }),
       modelWind: null,
     });
     expect(result.risks.find((risk) => risk.kind === "CONVECTION")).toMatchObject({ severity: "HIGH", confidence: "HIGH", sourceCount: 2 });
