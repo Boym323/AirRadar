@@ -573,6 +573,13 @@ export function isAviationWeatherEnabled(): boolean {
   return process.env.AVIATION_WEATHER_ENABLED?.trim().toLowerCase() === "true";
 }
 
+export function isAviationNavDataEnabled(): boolean {
+  const configured = process.env.AVIATION_NAV_DATA_ENABLED?.trim().toLowerCase();
+  if (configured === "true") return true;
+  if (configured === "false") return false;
+  return isAviationWeatherEnabled();
+}
+
 function boundedMilliseconds(name: string, fallback: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, Math.trunc(envNumber(name, fallback))));
 }
