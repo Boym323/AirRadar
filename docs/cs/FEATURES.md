@@ -519,7 +519,8 @@ HOLDING_PRESENT) bez dalšího requestu, streamu nebo persistence path.
 Detail letadla obsahuje omezený 30minutový 4D situační výhled z
 `/api/aircraft/:hex/situation`. Spojuje route-aware nebo kinematický corridor
 s waypoint, ATC-sector, plánovanými AUP/UUP, SIGMET a readiness-gated PUBLIC
-prediction událostmi. Každá událost zachovává provenance a confidence. Funkce
+prediction událostmi. Stejný response obsahuje Weather Corridor Intelligence
+s PIREP/AIREP relevancí podél trasy a ICON-EU wind trendem. Každá událost zachovává provenance a confidence. Funkce
 nepřidává history scan, persistence, další SSE stream ani periodický browser
 polling loop. Podrobnosti jsou v
 [`OPERATIONAL-DIGITAL-TWIN.md`](OPERATIONAL-DIGITAL-TWIN.md).
