@@ -479,9 +479,9 @@ export function CommandPalette() {
             <div className="command-palette-group-title">{t.search.atsPointResults}</div>
             {results.atsPoints.map(renderResult)}
           </section> : null}
-          {!loading && !requestFailed && results?.navPoints.length ? <section className="command-palette-group" aria-label={t.search.navPointResults}>
+          {!loading && !requestFailed && (results?.navPoints ?? []).length ? <section className="command-palette-group" aria-label={t.search.navPointResults}>
             <div className="command-palette-group-title">{t.search.navPointResults}</div>
-            {results.navPoints.map(renderResult)}
+            {(results?.navPoints ?? []).map(renderResult)}
           </section> : null}
           {!loading && !requestFailed && results?.flights.length ? <section className="command-palette-group" aria-label={t.search.flightResults}>
             <div className="command-palette-group-title">{t.search.flightResults}</div>
