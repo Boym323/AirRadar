@@ -70,3 +70,4 @@ export * from "./wind-timing-shadow";
 export * from "./event-outcome";
 export * from "./navigation-integrity-corridor";
 export * from "./truth-first";
+export * from "./wind-timing-promotion";
