@@ -516,7 +516,7 @@
       "category": "intelligence",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded 30-minute aircraft situation projection that fuses route geometry, ATC/ATS context, planned AUP/UUP, SIGMET intersections and readiness-gated PUBLIC predictive advisories into one provenance-aware timeline.",
+      "summary": "Bounded 30-minute aircraft situation projection that fuses route geometry, ATC/ATS context, planned AUP/UUP, SIGMET, Weather Corridor Intelligence and readiness-gated PUBLIC predictive advisories into one provenance-aware outlook.",
       "pages": [
         "/aircraft/:hex"
       ],
@@ -533,7 +533,11 @@
         "4d situation",
         "situation timeline",
         "trajectory corridor",
-        "future intersection"
+        "future intersection",
+        "weather corridor",
+        "weather ahead",
+        "pirep corridor",
+        "sigmet entry"
       ]
     }
   ]
