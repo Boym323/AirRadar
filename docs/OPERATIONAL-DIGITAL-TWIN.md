@@ -435,3 +435,22 @@ the returned response applies wind timing. The response exposes
 `windTimingPromotion` with configured/effective policy, graduation decision,
 promoted waypoint count and fail-closed reason.
 
+## Calibration Persistence V1
+
+Calibration Persistence V1 keeps completed Digital Twin calibration evidence
+stable across normal process restarts without persisting aircraft-level
+predictions or truth. PostgreSQL stores anonymous five-minute aggregate buckets
+for the corridor-outcome and event-outcome lanes, keyed only by lane, validator
+version and bucket start.
+
+The persisted payload contains counters and numeric sums used to reconstruct
+the existing 24-hour calibration windows. It deliberately excludes ICAO,
+callsign, registration, coordinates, raw truth points, pending predictions and
+individual event descriptors. Rows are loaded before the first live refresh,
+flushed on a bounded delay and pruned after 26 hours.
+
+Persistence is fail-soft. If PostgreSQL is unavailable or hydration rejects a
+malformed/stale bucket, the Digital Twin continues with fresh process-local
+evidence. Promotion/readiness thresholds are unchanged; persistence preserves
+evidence, it does not weaken graduation gates.
+
