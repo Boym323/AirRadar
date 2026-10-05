@@ -589,3 +589,17 @@ model AlertDelivery {
   @@index([status, nextAttemptAt])
   @@index([claimedAt])
 }
+
+/// Anonymous, bounded five-minute Operational Digital Twin calibration aggregates.
+/// payloadJson contains counters/sums only; no aircraft identity, coordinates,
+/// raw truth points, or individual prediction records.
+model OperationalTwinCalibrationBucket {
+  lane        String
+  version     String
+  bucketStart DateTime
+  payloadJson String
+  updatedAt   DateTime @default(now())
+
+  @@id([lane, version, bucketStart])
+}
+
