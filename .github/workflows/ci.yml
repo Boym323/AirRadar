@@ -218,10 +218,19 @@ jobs:
             echo "::error::Standalone Next server was not emitted."
             exit 1
           }
-          rm -rf -- .next/standalone/public .next/standalone/.next/static
+          rm -rf -- \
+            .next/standalone/public \
+            .next/standalone/data \
+            .next/standalone/generated \
+            .next/standalone/docs \
+            .next/standalone/.next/static
           if [[ -d public ]]; then
             cp -a public .next/standalone/public
           fi
+          cp -a data .next/standalone/data
+          cp -a generated .next/standalone/generated
+          mkdir -p .next/standalone/docs
+          cp docs/features.registry.json .next/standalone/docs/features.registry.json
           mkdir -p .next/standalone/.next
           cp -a .next/static .next/standalone/.next/static
       - name: Restore Playwright browsers
