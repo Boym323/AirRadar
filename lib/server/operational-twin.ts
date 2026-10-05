@@ -26,6 +26,11 @@ import type { SigmetSnapshot } from "@/lib/weather/types";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { getAirspacePlan } from "@/lib/server/airspace-activity";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
+import { defaultPirepProvider } from "@/lib/server/pirep-provider";
+import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
+import { isAviationWeatherEnabled } from "@/lib/server/config";
+import { windLevelForAltitude } from "@/lib/weather/aircraft-wind-context";
+import { buildWeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
 import { loadAtcContextDataset } from "@/lib/atc-context/engine";
 import { loadProcedureRepository } from "@/lib/procedures";
 import {
@@ -183,7 +188,8 @@ export async function getOperationalTwinForAircraft(
     return unavailable(icaoHex, "stale_position", "stale");
   }
 
-  const [datasetResult, airspaceResult, sigmetResult, predictive] = await Promise.all([
+  const aviationWeatherEnabled = isAviationWeatherEnabled();
+  const [datasetResult, airspaceResult, sigmetResult, pirepResult, predictive] = await Promise.all([
     loadAtcContextDataset()
       .then((value) => ({ ok: true as const, value }))
       .catch(() => ({ ok: false as const, value: null })),
@@ -193,6 +199,17 @@ export async function getOperationalTwinForAircraft(
     defaultAviationWeatherProvider.getSigmets(signal)
       .then((value) => ({ ok: true as const, value }))
       .catch(() => ({ ok: false as const, value: null })),
+    aviationWeatherEnabled
+      ? defaultPirepProvider.getPireps({
+          latitude: state.lat,
+          longitude: state.lon,
+          radiusNm: 300,
+          hours: 6,
+          altitudeFt: null,
+        }, signal)
+          .then((value) => ({ ok: true as const, value }))
+          .catch(() => ({ ok: false as const, value: null }))
+      : Promise.resolve({ ok: false as const, value: null }),
     publicPredictiveContext(icaoHex),
   ]);
 
@@ -203,6 +220,25 @@ export async function getOperationalTwinForAircraft(
 
   const airspacePlan: AirspacePlanSnapshot | null = airspaceResult.value;
   const sigmets: SigmetSnapshot | null = sigmetResult.value;
+
+  const windLevels = [...new Set(
+    corridor.points
+      .map((point) => windLevelForAltitude(point.altitudeFt))
+      .filter((level): level is NonNullable<typeof level> => level !== null),
+  )];
+  const windResults = await Promise.allSettled(
+    windLevels.map((level) => defaultWindAloftProvider.getWind(level)),
+  );
+  const windSnapshots = windResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+
+  const weatherCorridor = buildWeatherCorridorIntelligence({
+    corridor,
+    pireps: pirepResult.value,
+    sigmets,
+    windSnapshots,
+    now,
+  });
+
   const destination = live.enrichment?.route?.destination?.trim().toUpperCase() ?? null;
   const events = buildOperationalTwinEvents({
     generatedAt: now,
@@ -222,6 +258,7 @@ export async function getOperationalTwinForAircraft(
     aircraft: state,
     corridor,
     events,
+    weatherCorridor,
     atcAvailable: preparedDataset !== null,
     airspacePlanAvailable: Boolean(airspacePlan && airspacePlan.status !== "unavailable"),
     sigmetAvailable: Boolean(sigmets && sigmetResult.ok),
