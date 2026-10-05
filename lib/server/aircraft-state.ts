@@ -57,7 +57,7 @@ import type { FlightPhase } from "@/lib/intelligence/types";
 import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@/lib/predictive-intelligence/types";
 import type { Airport } from "@/lib/airports/types";
 import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
-import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation } from "@/lib/operational-twin";
+import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation } from "@/lib/operational-twin";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
 
@@ -204,6 +204,8 @@ export class AircraftStateService {
   private readonly operationalTwinOutcome = new OperationalTwinOutcomeValidator();
   /** Predicted Digital Twin event timing/precision validation against independent live evidence. */
   private readonly operationalTwinEventOutcome = new OperationalTwinEventOutcomeValidator();
+  /** Truth-first terminal recall validation from independent Flight Intelligence LANDING events. */
+  private readonly operationalTwinTruthFirst = new OperationalTwinTruthFirstValidator();
   private readonly lastHistorySample = new Map<string, number>();
   private readonly listeners = new Set<Listener>();
   private messagesPerSecond: number | null = null;
@@ -599,10 +601,14 @@ export class AircraftStateService {
     context: OperationalTwinEventOutcomeCaptureContext,
   ): void {
     this.operationalTwinEventOutcome.capture(situation, context);
+    this.operationalTwinTruthFirst.capture(situation, context);
   }
 
   getOperationalTwinEventOutcomeReport(now = new Date()) {
-    return this.operationalTwinEventOutcome.report(now);
+    return {
+      ...this.operationalTwinEventOutcome.report(now),
+      truthFirst: this.operationalTwinTruthFirst.report(now),
+    };
   }
 
   getNetworkDiagnostics() {
@@ -814,6 +820,7 @@ export class AircraftStateService {
     for (const current of this.localAircraft.values()) {
       const events = this.intelligence.observe(previousAircraft.get(current.icaoHex), current, snapshotAt);
       this.operationalTwinEventOutcome.observeIntelligence(events, snapshotAt);
+      this.operationalTwinTruthFirst.observeIntelligence(events, snapshotAt);
       for (const event of events) this.alerts.observeIntelligenceEvent(current, event);
       const prediction = this.evaluatePredictiveShadow(current, snapshotAt);
       if (prediction) predictiveAlertCandidates.push({ aircraft: current, prediction });
