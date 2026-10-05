@@ -461,6 +461,11 @@ function parseNavPointFocus(value: string | null): { kind: "NAVAID" | "FIX"; id:
   return { kind, id, lat, lon };
 }
 
+function relativeTwinMapOffset(minutes: number): string {
+  if (minutes <= 0.05) return "NOW";
+  return `+${formatNumber(minutes, minutes < 10 ? 1 : 0)} min`;
+}
+
 function ognTargetLabel(target: OgnTargetView): string {
   return ognPrimaryLabel(target);
 }
@@ -1349,6 +1354,36 @@ export function AirRadarApp() {
           "circle-stroke-width": 1.5,
         },
       });
+      const openOperationalTwinMapEvent = (event: MapLayerMouseEvent) => {
+        const properties = event.features?.[0]?.properties;
+        if (!properties) return;
+        const content = document.createElement("div");
+        content.className = "map-popup";
+        const title = document.createElement("strong");
+        title.textContent = String(properties.title ?? properties.eventType ?? t.operationalTwin.title);
+        const detail = document.createElement("span");
+        const offset = Number(properties.offsetMinutes);
+        const offsetLabel = Number.isFinite(offset) ? relativeTwinMapOffset(offset) : "";
+        detail.textContent = [
+          offsetLabel,
+          properties.eventType ? String(properties.eventType).replaceAll("_", " ") : null,
+          properties.confidence ? String(properties.confidence) : null,
+          properties.provenance ? String(properties.provenance) : null,
+          properties.severity ? String(properties.severity) : null,
+          properties.source ? String(properties.source) : null,
+          properties.detail ? String(properties.detail) : null,
+        ].filter(Boolean).join(" · ");
+        content.append(title, detail);
+        new maplibregl.Popup({ closeButton: true, maxWidth: "320px" })
+          .setLngLat(event.lngLat)
+          .setDOMContent(content)
+          .addTo(map);
+      };
+      for (const layer of [OPERATIONAL_TWIN_EVENT_LAYER_ID, OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID] as const) {
+        map.on("click", layer, openOperationalTwinMapEvent);
+        map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
+      }
       map.addLayer({
         id: ROUTE_INTELLIGENCE_COMPLETED_LAYER_ID,
         type: "line",
