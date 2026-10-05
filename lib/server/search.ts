@@ -8,6 +8,9 @@ import type { AirportDatabaseRow } from "@/lib/server/airport-resolver";
 import { loadAtAtsRoutes } from "@/lib/ats/at-routes";
 import { loadCzAtsRoutes, type CzAtsRouteDocument } from "@/lib/ats/cz-routes";
 import { loadSkAtsRoutes } from "@/lib/ats/sk-routes";
+import { defaultAviationNavDataProvider } from "@/lib/server/aviation-nav-data-provider";
+import { isAviationNavDataEnabled } from "@/lib/server/config";
+import type { AviationNavPoint } from "@/lib/navigation-data/types";
 import {
   GLOBAL_SEARCH_RESULT_LIMIT,
   MAX_GLOBAL_SEARCH_QUERY_LENGTH,
@@ -17,6 +20,7 @@ import {
   type AtsPointSearchResult,
   type FlightSearchResult,
   type GlobalSearchResponse,
+  type NavPointSearchResult,
   type SmartSearchActionResult,
 } from "@/lib/search/types";
 
@@ -33,6 +37,7 @@ export interface SearchOptions {
   aircraft?: readonly AircraftView[];
   database?: SearchDatabase | null;
   atsDocuments?: readonly (CzAtsRouteDocument | null)[];
+  navPoints?: readonly AviationNavPoint[];
   flights?: readonly FlightSearchResult[];
   now?: Date;
 }
@@ -95,7 +100,7 @@ function compareScored<T>(left: Scored<T>, right: Scored<T>): number {
     || left.identity.localeCompare(right.identity);
 }
 
-type RankedSearchResult = Scored<AircraftSearchResult> | Scored<AirportSearchResult> | Scored<AtsPointSearchResult> | Scored<FlightSearchResult>;
+type RankedSearchResult = Scored<AircraftSearchResult> | Scored<AirportSearchResult> | Scored<AtsPointSearchResult> | Scored<NavPointSearchResult> | Scored<FlightSearchResult>;
 
 function compareAnyScored(left: RankedSearchResult, right: RankedSearchResult): number {
   const tierDifference = left.score.tier - right.score.tier;
@@ -209,6 +214,45 @@ function rankAtsPoints(documents: readonly (CzAtsRouteDocument | null)[], query:
     const score = matchScore(query, [point.name, ...routeDesignators]);
     return score ? [{ item: toAtsPointResult(point, countryCode, [...routeDesignators].sort()), score, identity: `${countryCode}:${point.name}` }] : [];
   }).sort(compareScored);
+}
+
+function toNavPointResult(point: AviationNavPoint): NavPointSearchResult {
+  const focus = [point.kind, point.id, point.latitude.toFixed(6), point.longitude.toFixed(6)].join(":");
+  return {
+    kind: "nav-point",
+    id: `${point.kind}:${point.id}:${point.latitude.toFixed(6)}:${point.longitude.toFixed(6)}`,
+    name: point.name || point.id,
+    pointKind: point.kind,
+    type: point.type,
+    countryCode: point.country,
+    latitude: point.latitude,
+    longitude: point.longitude,
+    frequencyMhz: point.frequencyMhz,
+    href: `/?navPoint=${encodeURIComponent(focus)}`,
+  };
+}
+
+function rankNavPoints(points: readonly AviationNavPoint[], query: string): Scored<NavPointSearchResult>[] {
+  return points.flatMap((point) => {
+    const score = matchScore(query, [point.id, point.name, point.type]);
+    return score ? [{
+      item: toNavPointResult(point),
+      score,
+      identity: `${point.kind}:${point.id}:${point.latitude.toFixed(5)}:${point.longitude.toFixed(5)}`,
+    }] : [];
+  }).sort(compareScored);
+}
+
+async function loadNavPoints(query: string, supplied: readonly AviationNavPoint[] | undefined): Promise<AviationNavPoint[]> {
+  if (supplied) return [...supplied];
+  if (!isAviationNavDataEnabled()) return [];
+  const normalized = normalizeMatchValue(query);
+  if (!/^[A-Z0-9]{2,8}$/.test(normalized)) return [];
+  try {
+    return await defaultAviationNavDataProvider.searchIdentifiers([normalized]);
+  } catch {
+    return [];
+  }
 }
 
 function timestampIso(value: Temporal.Instant | Date): string {
@@ -369,7 +413,7 @@ async function loadAirports(query: string, database: SearchDatabase | null): Pro
 }
 
 function emptySearchResponse(query = ""): GlobalSearchResponse {
-  return { query, aircraft: [], airports: [], atsPoints: [], flights: [], actions: [] };
+  return { query, aircraft: [], airports: [], atsPoints: [], navPoints: [], flights: [], actions: [] };
 }
 
 export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {}): Promise<GlobalSearchResponse> {
@@ -383,6 +427,7 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
       aircraft: [],
       airports: [],
       atsPoints: [],
+      navPoints: [],
       flights: [],
       actions,
     };
@@ -402,16 +447,17 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
       database = null;
     }
   }
-  const [rankedAircraft, rankedAirports, rankedFlights] = await Promise.all([
+  const [rankedAircraft, rankedAirports, rankedNavPoints, rankedFlights] = await Promise.all([
     Promise.resolve(rankAircraft(aircraft, validation.query)),
     loadAirports(validation.query, database).then((items) => rankAirports(items, validation.query!)),
+    loadNavPoints(validation.query, options.navPoints).then((items) => rankNavPoints(items, validation.query!)),
     options.flights
       ? Promise.resolve(rankFlights(options.flights, validation.query))
       : loadRecentFlights(validation.query, database, options.now ?? new Date()).then((items) => rankFlights(items, validation.query!)),
   ]);
   const atsDocuments = options.atsDocuments ?? [loadCzAtsRoutes(), loadSkAtsRoutes(), loadAtAtsRoutes()];
   const rankedAtsPoints = rankAtsPoints(atsDocuments, validation.query);
-  const selected: RankedSearchResult[] = [...rankedAircraft, ...rankedAirports, ...rankedAtsPoints, ...rankedFlights]
+  const selected: RankedSearchResult[] = [...rankedAircraft, ...rankedAirports, ...rankedAtsPoints, ...rankedNavPoints, ...rankedFlights]
     .sort(compareAnyScored)
     .slice(0, GLOBAL_SEARCH_RESULT_LIMIT);
   return {
@@ -419,6 +465,7 @@ export async function searchGlobal(rawQuery: unknown, options: SearchOptions = {
     aircraft: selected.filter((result): result is Scored<AircraftSearchResult> => result.item.kind === "aircraft").map((result) => result.item),
     airports: selected.filter((result): result is Scored<AirportSearchResult> => result.item.kind === "airport").map((result) => result.item),
     atsPoints: selected.filter((result): result is Scored<AtsPointSearchResult> => result.item.kind === "ats-point").map((result) => result.item),
+    navPoints: selected.filter((result): result is Scored<NavPointSearchResult> => result.item.kind === "nav-point").map((result) => result.item),
     flights: selected.filter((result): result is Scored<FlightSearchResult> => result.item.kind === "flight").map((result) => result.item),
     actions: [],
   };
