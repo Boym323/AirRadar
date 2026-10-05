@@ -441,7 +441,7 @@ function filedRouteConnector(
 ): InterpretedRouteElement | null {
   const from = resolveFiledPoint(network, referencePoints, startName);
   const to = resolveFiledPoint(network, referencePoints, endName);
-  if (!from || !to) return null;
+  if (!from?.coordinates || !to?.coordinates) return null;
   return {
     id: `filed:${sequence}:${startName}:${endName}`,
     sequence,
@@ -450,7 +450,7 @@ function filedRouteConnector(
     label,
     from,
     to,
-    geometry: { type: "SCHEMATIC", coordinates: [from.coordinates!, to.coordinates!] },
+    geometry: { type: "SCHEMATIC", coordinates: [from.coordinates, to.coordinates] },
     source: sourceForFiled("FILED_ROUTE", filedSource, "Reference waypoint coordinates; published airway geometry unresolved"),
     status: "RESOLVED",
     unresolvedReason: null,
