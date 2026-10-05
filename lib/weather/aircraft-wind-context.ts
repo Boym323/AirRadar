@@ -34,8 +34,7 @@ export interface AircraftWindContext {
   crosswindFrom: "left" | "right" | null;
 }
 
-export interface AircraftWindAheadPoint {
-  distanceNm: number;
+export interface AircraftWindSample {
   sourceDistanceKm: number;
   windSpeedKt: number;
   windFromDeg: number;
@@ -44,6 +43,10 @@ export interface AircraftWindAheadPoint {
   crosswindKt: number;
   crosswindFrom: "left" | "right" | null;
   signedAlongTrackKt: number;
+}
+
+export interface AircraftWindAheadPoint extends AircraftWindSample {
+  distanceNm: number;
 }
 
 export interface AircraftWindAheadProfile {
@@ -105,12 +108,12 @@ function projectPosition(lat: number, lon: number, trackDeg: number, distanceNm:
   };
 }
 
-function windAtPoint(
+export function sampleWindAtPosition(
   lat: number,
   lon: number,
   trackDeg: number,
   wind: AircraftWindSnapshot,
-): Omit<AircraftWindAheadPoint, "distanceNm"> | null {
+): AircraftWindSample | null {
   let nearest: AircraftWindSnapshot["points"][number] | null = null;
   let nearestDistanceKm = Number.POSITIVE_INFINITY;
   for (const point of wind.points) {
@@ -158,7 +161,7 @@ export function buildAircraftWindContext(
   wind: AircraftWindSnapshot | null,
 ): AircraftWindContext | null {
   if (!aircraft || aircraft.onGround || !wind || aircraft.lat === null || aircraft.lon === null || aircraft.track === null) return null;
-  const point = windAtPoint(aircraft.lat, aircraft.lon, aircraft.track, wind);
+  const point = sampleWindAtPosition(aircraft.lat, aircraft.lon, aircraft.track, wind);
   if (!point) return null;
 
   return {
@@ -183,14 +186,14 @@ export function buildAircraftWindAheadProfile(
   distancesNm: readonly number[] = [25, 50, 100],
 ): AircraftWindAheadProfile | null {
   if (!aircraft || aircraft.onGround || !wind || aircraft.lat === null || aircraft.lon === null || aircraft.track === null) return null;
-  const current = windAtPoint(aircraft.lat, aircraft.lon, aircraft.track, wind);
+  const current = sampleWindAtPosition(aircraft.lat, aircraft.lon, aircraft.track, wind);
   if (!current) return null;
 
   const points = distancesNm
     .filter((distanceNm) => Number.isFinite(distanceNm) && distanceNm > 0)
     .map((distanceNm) => {
       const projected = projectPosition(aircraft.lat!, aircraft.lon!, aircraft.track!, distanceNm);
-      const sample = windAtPoint(projected.lat, projected.lon, aircraft.track!, wind);
+      const sample = sampleWindAtPosition(projected.lat, projected.lon, aircraft.track!, wind);
       return sample ? { distanceNm, ...sample } : null;
     })
     .filter((point): point is AircraftWindAheadPoint => point !== null);
@@ -234,7 +237,7 @@ export function buildAircraftDestinationWindContext(
   const distanceKm = haversineKm(aircraft.lat, aircraft.lon, destination.lat, destination.lon);
   if (distanceKm < 1) return null;
   const bearingDeg = initialBearingDeg(aircraft.lat, aircraft.lon, destination.lat, destination.lon);
-  const component = windAtPoint(aircraft.lat, aircraft.lon, bearingDeg, wind);
+  const component = sampleWindAtPosition(aircraft.lat, aircraft.lon, bearingDeg, wind);
   if (!component) return null;
 
   return {
