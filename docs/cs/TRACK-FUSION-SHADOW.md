@@ -77,3 +77,51 @@ route-conformance až po vyhodnocení shadow evidence. V1 nic nepromuje.
 4. promovat fusion pouze do opt-in display path;
 5. samostatně vyhodnotit Digital Twin input;
 6. durable local-receiver evidence ponechat beze změny.
+
+
+## Readiness / Graduation V1
+
+Track Fusion readiness je process-local a fail-closed. Shadow diagnostika se
+agreguje do omezených pětiminutových bucketů za maximálně 24 hodin. Nevzniká
+nová databázová tabulka ani background timer.
+
+Restart procesu záměrně resetuje readiness evidence a stav se vrátí na
+`WAIT`, dokud se znovu nenasbírá minimální evidence. V1 vyžaduje:
+
+- alespoň 120 minut runtime evidence;
+- alespoň 5 000 fusion evaluací;
+- alespoň 200 LOCAL↔NETWORK position comparisons;
+- alespoň 10 source transitions;
+- alespoň 1 000 porovnání proti současné canonical position.
+
+Po splnění evidence gate se kontroluje kvalita:
+
+- LOCAL↔NETWORK residual p95 maximálně 1,0 NM;
+- disagreement rate maximálně 5 %;
+- rejected source-transition rate maximálně 25 %;
+- estimated gap-fill rate maximálně 10 %;
+- canonical divergence rate maximálně 5 %;
+- žádné capacity evictions.
+
+Verzovaný výsledek je `PASS`, `WAIT` nebo `FAIL`. Admin jej vidí přes
+`GET /api/admin/track-fusion/readiness` a na stránce `/system`.
+
+### První graduation consumer: Operational Digital Twin
+
+Track Fusion stále nenahrazuje veřejný radar ani canonical Aircraft state.
+První připravený consumer je Operational Digital Twin a defaultně je vypnutý.
+
+`AIRRADAR_TRACK_FUSION_DIGITAL_TWIN_ENABLED=true` je nutná, ale ne
+dostatečná podmínka. Fused stav se použije jen tehdy, když:
+
+1. readiness je `PASS`;
+2. konkrétní letadlo má `GOOD` fused track;
+3. fused position je observed, ne dead-reckoned;
+4. position confidence není LOW.
+
+Z numerických polí se použijí pouze observed non-LOW fused hodnoty. Estimated
+altitude, speed, track nebo vertical rate se vrátí na canonical live hodnotu.
+
+Pokud některý gate není splněn, Digital Twin dál používá existující local
+canonical stav. Samotné zapnutí flagu tedy nemůže rozšířit Digital Twin na
+network-only provoz.
