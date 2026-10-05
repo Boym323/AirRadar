@@ -20,7 +20,7 @@ not yet been historically attributed.
 | Map Context & Weather | production | weather | Pre-registry | — | `/api/aircraft/:hex/weather-fusion`<br>`/api/map-context/at`<br>`/api/map-context/aup`<br>`/api/map-context/metar`<br>`/api/map-context/radar`<br>`/api/map-context/radar/frame/:id`<br>`/api/map-context/range`<br>`/api/map-context/wind`<br>`/api/weather/airport`<br>`/api/weather/airport/:icao`<br>`/api/weather/metar-map`<br>`/api/weather/pirep`<br>`/api/weather/radar/frame/:id`<br>`/api/weather/radar/frames`<br>`/api/weather/sigmet`<br>`/api/weather/wind`<br>`/api/weather/aircraft/observations`<br>`/api/weather/aircraft/profile`<br>`/api/admin/weather/diagnostics` | Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion. |
 | Navigation Integrity | production | navigation / safety / intelligence | Pre-registry | — | `/api/navigation-integrity/current`<br>`/api/navigation-integrity/aircraft/:hex`<br>`/api/navigation-integrity/history`<br>`/api/admin/navigation-integrity/diagnostics`<br>`/api/admin/navigation-integrity/candidates` | Conservative ADS-B navigation-integrity observations, bounded regional anomaly candidates, APIs, diagnostics and radar overlay. |
 | OGN / FLARM | optional | traffic | Pre-registry | — | `/api/ogn/state`<br>`/api/ogn/stream` | Privacy-aware optional OGN/FLARM state and independent SSE stream. |
-| Operational Digital Twin | production | intelligence | Pre-registry | `/aircraft/:hex` | `/api/aircraft/:hex/situation` | Bounded 30-minute aircraft situation projection that fuses route geometry, ATC/ATS context, planned AUP/UUP, SIGMET intersections and readiness-gated PUBLIC predictive advisories into one provenance-aware timeline. |
+| Operational Digital Twin | production | intelligence | Pre-registry | `/aircraft/:hex` | `/api/aircraft/:hex/situation` | Bounded 30-minute aircraft situation projection that fuses route geometry, ATC/ATS context, planned AUP/UUP, SIGMET, Weather Corridor Intelligence and readiness-gated PUBLIC predictive advisories into one provenance-aware outlook. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic` | Receiver statistics, traffic intelligence, reception records and daily/weekly recaps. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
@@ -113,6 +113,38 @@ Fusion is fail-soft across providers and returns PARTIAL/INSUFFICIENT when
 sources are missing. It adds no database migration, background poller, SSE
 connection or ADS-B hot-path work. Existing provider caches remain authoritative
 for upstream request control and the fusion endpoint itself is `no-store`.
+
+## Weather Corridor Intelligence V1
+
+Weather Corridor Intelligence V1 applies the same conservative weather
+semantics to the Operational Digital Twin's 30-minute 4D corridor. It adds no
+new browser request, stream, or periodic polling loop: the existing
+`GET /api/aircraft/:hex/situation` response now includes a
+`weatherCorridor` block alongside the existing future events.
+
+The server performs one bounded PIREP/AIREP query covering 300 NM and six hours
+without filtering to the current altitude, so reports can be compared with the
+projected altitude of each future corridor sample. Turbulence or icing is only
+published when a report is near a future corridor point and not vertically
+irrelevant. Confidence accounts for corridor distance, altitude difference,
+report age, and stale upstream state.
+
+SIGMET is evaluated at every two-minute corridor point for horizontal,
+vertical, and temporal compatibility. V1 emits the first sampled entry and exit
+for turbulence, icing, or convection. These times remain deliberately bounded
+by corridor sampling and do not claim the exact crossing time between samples.
+
+ICON-EU is requested only for the unique pressure levels required by projected
+corridor altitudes. The existing wind provider shares its cache and in-flight
+snapshot, so this does not create one upstream request per corridor point. The
+UI exposes bounded 0/10/20/30-minute samples and classifies the along-track wind
+trend as increasing headwind, increasing tailwind, stable, or variable.
+
+Weather Corridor exposes explicit AVAILABLE/PARTIAL/INSUFFICIENT state plus
+per-source availability. Missing PIREP, SIGMET, or ICON-EU evidence never
+becomes an implicit weather all-clear. The feature adds no database migration,
+background poller, additional SSE connection, or ADS-B hot-path work and
+remains informational rather than a certified aviation-weather product.
 
 ## Aviation Nav Data V1
 
