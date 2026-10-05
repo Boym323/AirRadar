@@ -47,6 +47,15 @@ import {
   OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
   OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
 } from "@/lib/operational-twin/map";
+import {
+  createRegionalAttentionMapFocusGeoJSON,
+  emptyRegionalAttentionMapFocusGeoJSON,
+  REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID,
+  REGIONAL_ATTENTION_MAP_FOCUS_EVENT,
+  REGIONAL_ATTENTION_MAP_LINE_LAYER_ID,
+  REGIONAL_ATTENTION_MAP_SOURCE_ID,
+  type RegionalAttentionMapFocusEventDetail,
+} from "@/lib/operational-twin/regional-attention-ui";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
@@ -616,6 +625,7 @@ export function AirRadarApp() {
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
   const [mapReady, setMapReady] = useState(false);
+  const [regionalAttentionMapFocus, setRegionalAttentionMapFocus] = useState<RegionalAttentionMapFocusEventDetail>(null);
 
   const readRadarLayout = useCallback(() => {
     const mapElement = mapContainerRef.current;
