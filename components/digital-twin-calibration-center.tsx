@@ -10,6 +10,7 @@ import type {
   RegionalAttentionOutcomeReport,
 } from "@/lib/operational-twin";
 import { StatusBadge } from "@/components/ui-primitives";
+import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 import styles from "./digital-twin-calibration-center.module.css";
 
 type PersistenceStatus = {
@@ -46,21 +47,23 @@ function decisionVariant(decision: "PASS" | "WAIT" | "FAIL") {
 }
 
 function pct(value: number | null): string {
-  return value === null ? "—" : `${(value * 100).toFixed(1)}%`;
+  return value === null ? t.common.emptyValue : `${formatNumber(value * 100, 1, t.locale)}%`;
 }
 
-function number(value: number | null, digits = 1): string {
-  return value === null ? "—" : value.toFixed(digits);
+function metricNumber(value: number | null, digits = 1): string {
+  return value === null ? t.common.emptyValue : formatNumber(value, digits, t.locale);
 }
 
 function seconds(value: number | null): string {
-  return value === null ? "—" : `${Math.round(value)} s`;
+  return value === null ? t.common.emptyValue : `${formatNumber(Math.round(value), 0, t.locale)} s`;
 }
 
 function timestamp(value: string | null): string {
-  if (!value) return "—";
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? new Date(parsed).toLocaleString() : value;
+  return value ? formatDateTime(value, t) : t.common.emptyValue;
+}
+
+function reasonLabel(reason: string): string {
+  return t.calibrationCenter.reasons[reason as keyof typeof t.calibrationCenter.reasons] ?? reason;
 }
 
 function Metric({ label, value }: { label: string; value: string | number }) {
@@ -85,7 +88,7 @@ function DecisionHeader({
     <div className={styles.cardHeader}>
       <div>
         <h2>{title}</h2>
-        <small>{reasons.length ? reasons.join(" · ") : "thresholds satisfied"}</small>
+        <small>{reasons.length ? reasons.map(reasonLabel).join(" · ") : t.calibrationCenter.thresholdsSatisfied}</small>
       </div>
       <StatusBadge variant={decisionVariant(decision)}>{decision}</StatusBadge>
     </div>
@@ -122,14 +125,14 @@ export function DigitalTwinCalibrationCenter() {
       <main className="history-page" data-testid="digital-twin-calibration-center">
         <header className="history-page-header">
           <div>
-            <h1>Digital Twin Calibration Center</h1>
-            <p className="statistics-subtitle">Administrative calibration and readiness diagnostics.</p>
+            <h1>{t.calibrationCenter.title}</h1>
+            <p className="statistics-subtitle">{t.calibrationCenter.subtitle}</p>
           </div>
         </header>
         <section className="statistics-card">
-          <h2>Admin session required</h2>
-          <p>Sign in through Watchlist administration, then return to this page.</p>
-          <Link className="primary-button" href="/watchlist">Open Watchlist sign-in</Link>
+          <h2>{t.calibrationCenter.adminRequiredTitle}</h2>
+          <p>{t.calibrationCenter.adminRequiredBody}</p>
+          <Link className="primary-button" href="/watchlist">{t.calibrationCenter.signIn}</Link>
         </section>
       </main>
     );
@@ -145,25 +148,25 @@ export function DigitalTwinCalibrationCenter() {
         <div>
           <h1>Digital Twin Calibration Center</h1>
           <p className="statistics-subtitle">
-            Outcome quality, truth-first recall, graduation evidence and persistence health.
+            {t.calibrationCenter.subtitle}
           </p>
         </div>
         <button className="secondary-button" type="button" onClick={() => void reload()}>
-          Refresh
+          {t.calibrationCenter.refresh}
         </button>
       </header>
 
-      {state === "loading" && !report ? <p>Loading calibration evidence…</p> : null}
-      {state === "error" ? <p role="alert">Calibration diagnostics are temporarily unavailable.</p> : null}
+      {state === "loading" && !report ? <p>{t.calibrationCenter.loading}</p> : null}
+      {state === "error" ? <p role="alert">{t.calibrationCenter.unavailable}</p> : null}
 
       {report ? (
         <>
           <div className={styles.summary}>
-            <Metric label="Generated" value={timestamp(report.generatedAt)} />
-            <Metric label="Persistence" value={report.persistence.databaseAvailable ? "PostgreSQL" : "Unavailable"} />
-            <Metric label="Persisted buckets" value={report.persistence.trackedPersistedBuckets} />
+            <Metric label={t.calibrationCenter.generated} value={timestamp(report.generatedAt)} />
+            <Metric label={t.calibrationCenter.persistence} value={report.persistence.databaseAvailable ? t.calibrationCenter.postgresql : t.common.unavailable} />
+            <Metric label={t.calibrationCenter.persistedBuckets} value={report.persistence.trackedPersistedBuckets} />
             <Metric
-              label="Persistence failures"
+              label={t.calibrationCenter.persistenceFailures}
               value={report.persistence.loadFailures + report.persistence.flushFailures}
             />
           </div>
@@ -171,89 +174,89 @@ export function DigitalTwinCalibrationCenter() {
           <div className={styles.grid}>
             <section className="statistics-card" data-testid="calibration-corridor-outcome">
               <DecisionHeader
-                title="Corridor outcome"
+                title={t.calibrationCenter.corridorOutcome}
                 decision={report.corridor.decision}
                 reasons={report.corridor.reasons}
               />
               <div className={styles.metrics}>
-                <Metric label="Samples" value={report.corridor.overall.samples} />
-                <Metric label="Uncertainty coverage" value={pct(report.corridor.overall.uncertaintyCoverage)} />
+                <Metric label={t.calibrationCenter.samples} value={report.corridor.overall.samples} />
+                <Metric label={t.calibrationCenter.uncertaintyCoverage} value={pct(report.corridor.overall.uncertaintyCoverage)} />
                 <Metric
-                  label="Error / uncertainty"
-                  value={number(report.corridor.overall.meanErrorToUncertaintyRatio, 2)}
+                  label={t.calibrationCenter.errorToUncertainty}
+                  value={metricNumber(report.corridor.overall.meanErrorToUncertaintyRatio, 2)}
                 />
-                <Metric label="Expired truth" value={pct(report.corridor.expiredTruthRate)} />
+                <Metric label={t.calibrationCenter.expiredTruth} value={pct(report.corridor.expiredTruthRate)} />
               </div>
-              <small>LOCAL receiver truth · 5 / 15 / 30 min horizons</small>
+              <small>{t.calibrationCenter.corridorFootnote}</small>
             </section>
 
             <section className="statistics-card" data-testid="calibration-event-outcome">
               <DecisionHeader
-                title="Event outcome"
+                title={t.calibrationCenter.eventOutcome}
                 decision={report.event.decision}
                 reasons={report.event.reasons}
               />
               <div className={styles.metrics}>
-                <Metric label="Predictions" value={report.event.overall.predictions} />
-                <Metric label="Scoreable" value={report.event.overall.scoreable} />
-                <Metric label="Precision" value={pct(report.event.overall.precision)} />
-                <Metric label="Timing MAE" value={seconds(report.event.overall.meanAbsoluteTimingErrorSeconds)} />
+                <Metric label={t.calibrationCenter.predictions} value={report.event.overall.predictions} />
+                <Metric label={t.calibrationCenter.scoreable} value={report.event.overall.scoreable} />
+                <Metric label={t.calibrationCenter.precision} value={pct(report.event.overall.precision)} />
+                <Metric label={t.calibrationCenter.timingMae} value={seconds(report.event.overall.meanAbsoluteTimingErrorSeconds)} />
               </div>
-              <small>Waypoint · sector · SIGMET · arrival · runway</small>
+              <small>{t.calibrationCenter.eventFootnote}</small>
             </section>
 
             <section className="statistics-card" data-testid="calibration-truth-first">
               <DecisionHeader
-                title="Truth-first recall"
+                title={t.calibrationCenter.truthFirstRecall}
                 decision={report.truthFirst.decision}
                 reasons={report.truthFirst.reasons}
               />
               <div className={styles.metrics}>
-                <Metric label="Truth events" value={report.truthFirst.overall.truthEvents} />
-                <Metric label="Recalled" value={report.truthFirst.overall.predictedTruthEvents} />
-                <Metric label="Recall" value={pct(report.truthFirst.overall.recall)} />
-                <Metric label="Timing MAE" value={seconds(report.truthFirst.overall.meanAbsoluteTimingErrorSeconds)} />
+                <Metric label={t.calibrationCenter.truthEvents} value={report.truthFirst.overall.truthEvents} />
+                <Metric label={t.calibrationCenter.recalled} value={report.truthFirst.overall.predictedTruthEvents} />
+                <Metric label={t.calibrationCenter.recall} value={pct(report.truthFirst.overall.recall)} />
+                <Metric label={t.calibrationCenter.timingMae} value={seconds(report.truthFirst.overall.meanAbsoluteTimingErrorSeconds)} />
               </div>
-              <small>Independent terminal, sector, route-progress and SIGMET truth</small>
+              <small>{t.calibrationCenter.truthFirstFootnote}</small>
             </section>
 
             <section className="statistics-card" data-testid="calibration-wind-timing">
               <DecisionHeader
-                title="Wind timing graduation"
+                title={t.calibrationCenter.windTimingGraduation}
                 decision={report.windTiming.decision}
                 reasons={report.windTiming.reasons}
               />
               <div className={styles.metrics}>
-                <Metric label="Paired samples" value={report.windTiming.pairedSamples} />
-                <Metric label="Truth coverage" value={pct(report.windTiming.truthCoverage)} />
-                <Metric label="Shadow win rate" value={pct(report.windTiming.shadowWinRate)} />
-                <Metric label="Relative MAE gain" value={pct(report.windTiming.relativeMaeImprovement)} />
+                <Metric label={t.calibrationCenter.pairedSamples} value={report.windTiming.pairedSamples} />
+                <Metric label={t.calibrationCenter.truthCoverage} value={pct(report.windTiming.truthCoverage)} />
+                <Metric label={t.calibrationCenter.shadowWinRate} value={pct(report.windTiming.shadowWinRate)} />
+                <Metric label={t.calibrationCenter.relativeMaeGain} value={pct(report.windTiming.relativeMaeImprovement)} />
               </div>
               <small>
-                Manual promotion eligible: {report.windTiming.manualPromotionEligible ? "yes" : "no"}
+                {t.calibrationCenter.manualPromotionEligible}: {report.windTiming.manualPromotionEligible ? t.common.yes : t.common.no}
               </small>
             </section>
 
             <section className="statistics-card" data-testid="calibration-regional-attention">
               <DecisionHeader
-                title="Regional Attention outcome"
+                title={t.calibrationCenter.regionalAttentionOutcome}
                 decision={report.regionalAttention.decision}
                 reasons={report.regionalAttention.reasons}
               />
               <div className={styles.metrics}>
-                <Metric label="Predictions" value={report.regionalAttention.overall.predictions} />
-                <Metric label="Scoreable" value={report.regionalAttention.overall.scoreable} />
-                <Metric label="Precision" value={pct(report.regionalAttention.overall.precision)} />
+                <Metric label={t.calibrationCenter.predictions} value={report.regionalAttention.overall.predictions} />
+                <Metric label={t.calibrationCenter.scoreable} value={report.regionalAttention.overall.scoreable} />
+                <Metric label={t.calibrationCenter.precision} value={pct(report.regionalAttention.overall.precision)} />
                 <Metric
-                  label="Truth coverage"
+                  label={t.calibrationCenter.truthCoverage}
                   value={pct(report.regionalAttention.overall.truthCoverage)}
                 />
                 <Metric
-                  label="Timing MAE"
+                  label={t.calibrationCenter.timingMae}
                   value={seconds(report.regionalAttention.overall.meanAbsoluteTimingErrorSeconds)}
                 />
                 <Metric
-                  label="Destination clusters unscored"
+                  label={t.calibrationCenter.destinationClustersUnscored}
                   value={report.regionalAttention.unscoredDestinationClusters}
                 />
               </div>
@@ -262,8 +265,8 @@ export function DigitalTwinCalibrationCenter() {
                   const slice = report.regionalAttention.horizons[String(horizon)];
                   return (
                     <span className={styles.horizon} key={horizon}>
-                      <strong>{horizon} min</strong>
-                      <small>{slice?.scoreable ?? 0} scoreable · {pct(slice?.precision ?? null)}</small>
+                      <strong>{horizon} {t.calibrationCenter.minuteSuffix}</strong>
+                      <small>{slice?.scoreable ?? 0} {t.calibrationCenter.scoreable.toLowerCase()} · {pct(slice?.precision ?? null)}</small>
                     </span>
                   );
                 })}
@@ -273,7 +276,7 @@ export function DigitalTwinCalibrationCenter() {
             <section className="statistics-card" data-testid="calibration-persistence">
               <div className={styles.cardHeader}>
                 <div>
-                  <h2>Calibration persistence</h2>
+                  <h2>{t.calibrationCenter.calibrationPersistence}</h2>
                   <small>{report.persistence.storage}</small>
                 </div>
                 <StatusBadge
@@ -285,22 +288,22 @@ export function DigitalTwinCalibrationCenter() {
                       : "warning"
                   }
                 >
-                  {report.persistence.databaseAvailable ? "DB" : "NO DB"}
+                  {report.persistence.databaseAvailable ? t.calibrationCenter.db : t.calibrationCenter.noDb}
                 </StatusBadge>
               </div>
               <div className={styles.metrics}>
-                <Metric label="Corridor hydrated" value={report.persistence.hydratedOutcomeBuckets} />
-                <Metric label="Event hydrated" value={report.persistence.hydratedEventOutcomeBuckets} />
+                <Metric label={t.calibrationCenter.corridorHydrated} value={report.persistence.hydratedOutcomeBuckets} />
+                <Metric label={t.calibrationCenter.eventHydrated} value={report.persistence.hydratedEventOutcomeBuckets} />
                 <Metric
-                  label="Regional hydrated"
+                  label={t.calibrationCenter.regionalHydrated}
                   value={report.persistence.hydratedRegionalAttentionOutcomeBuckets}
                 />
-                <Metric label="Tracked buckets" value={report.persistence.trackedPersistedBuckets} />
-                <Metric label="Rows written" value={report.persistence.rowsWritten} />
-                <Metric label="Rows deleted" value={report.persistence.rowsDeleted} />
+                <Metric label={t.calibrationCenter.trackedBuckets} value={report.persistence.trackedPersistedBuckets} />
+                <Metric label={t.calibrationCenter.rowsWritten} value={report.persistence.rowsWritten} />
+                <Metric label={t.calibrationCenter.rowsDeleted} value={report.persistence.rowsDeleted} />
               </div>
               <small>
-                Last load {timestamp(report.persistence.lastLoadAt)} · last flush {timestamp(report.persistence.lastFlushAt)}
+                {t.calibrationCenter.lastLoad} {timestamp(report.persistence.lastLoadAt)} · {t.calibrationCenter.lastFlush} {timestamp(report.persistence.lastFlushAt)}
               </small>
             </section>
           </div>
