@@ -982,6 +982,23 @@ export const cs = {
     partialDistance: "jen vyřešená geometrie",
     disclaimer: "Koridor trasy je informativní porovnání pozorované polohy letadla s podanou a publikovanou/referenční geometrií. Nejde o povolení ATC, navigační pokyn ani certifikované varování před odchylkou.",
   },
+  routeConformance: {
+    status: "Dodržení trasy",
+    statuses: {
+      ROUTE_UNKNOWN: "Trasa neznámá",
+      ROUTE_UNCERTAIN: "Trasa nejistá",
+      ON_ROUTE: "Na trase",
+      OFFSET: "Odchylka",
+      DEVIATING: "Trvalá odchylka",
+      REJOINING: "Návrat na trasu",
+      PROBABLE_DIRECT: "Pravděpodobný direct",
+    },
+    confidence: "Spolehlivost shody",
+    confidenceValues: { HIGH: "Vysoká", MEDIUM: "Střední", LOW: "Nízká" },
+    probableDirect: "Pravděpodobný direct",
+    directSummary: (skipped: number, rejoinedAt: string | null) => `Přeskočeno ${skipped} vyřešených prvků trasy${rejoinedAt ? ` · návrat u ${rejoinedAt}` : ""}`,
+    disclaimer: "Trajectory Conformance porovnává pozorovaný pohyb s rekonstruovanou filed-route geometrií. Pravděpodobný direct i odchylky jsou odvozené stavy, nikoli ATC povolení nebo certifikované navigační vedení.",
+  },
   airport: {
     backToRadar: "← Zpět na radar",
     information: "Informace o letišti",
