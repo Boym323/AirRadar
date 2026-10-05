@@ -25,15 +25,23 @@ from). The map/profile airflow arrow is rotated by 180° to show destination;
 the panel states this convention directly. Humidity and turbulence appear only
 when the API returns them. Rejected observations are not exposed.
 
-### Observed vs ICON-EU
+### Weather Fusion V1 and observed vs ICON-EU
 
-The UI deliberately shows an unavailable state for observed-vs-model comparison.
-The existing ICON-EU integration exposes pressure-level forecast grid values and
-valid times, but does not provide the validated same-time, same-position,
-aircraft-altitude/model-level matching needed for a physical comparison. The
-UI does not compare a flight-level observation with a surface or arbitrarily
-nearest model value. Aircraft observations remain fully usable without this
-optional enhancement.
+The Aircraft Weather profile still does not pretend that an arbitrary model
+level is a physical replacement for a same-time aircraft observation. Weather
+Fusion V1 adds a separate, explicitly approximate consistency check: the latest
+accepted aircraft wind is compared with the existing ICON-EU context selected
+by aircraft altitude and the nearest allowed model grid point. Direction and
+speed deltas are exposed as AGREE, MIXED or DIVERGENT. Model disagreement is
+not converted into turbulence, icing or any other hazard, and stale aircraft or
+model data reduce confidence.
+
+Weather Fusion separately combines bounded evidence for turbulence, icing and
+convection from recent aircraft observations, PIREP/AIREP, altitude-relevant
+SIGMET context and the nearest available METAR. Each conclusion retains source,
+freshness and spatial/vertical context. Missing evidence remains UNKNOWN rather
+than being promoted to an all-clear. The result is informational and is not a
+certified aviation weather product.
 
 AirRadar stores a sparse, quality-controlled stream of aircraft-observed
 weather. This is an AirRadar data product, not an official AMDAR feed and not
@@ -47,9 +55,10 @@ The latest accepted aircraft observation is a secondary enrichment in the
 radar aircraft drawer's **Situation** tab. It is fetched lazily with the
 bounded aircraftHex=<hex>&limit=1 observations query, is cancellable when
 the selected aircraft changes, and never blocks the primary aircraft detail.
-Only fields returned by the observation are shown. Aircraft-observed wind is
-labelled separately from ICON-EU model wind; the two products are not compared
-in V1.1.
+Only fields returned by the observation are shown. Aircraft-observed wind
+remains labelled separately from ICON-EU model wind. Weather Fusion V1 now adds
+a separate bounded consistency comparison without changing the original
+aircraft-observation product or its provenance.
 
 System status exposes a traffic-dependent Aircraft Weather summary. NO DATA
 means that no accepted aircraft weather is currently available and does not
