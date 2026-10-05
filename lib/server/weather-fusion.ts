@@ -10,15 +10,14 @@ import { defaultPirepProvider } from "@/lib/server/pirep-provider";
 import { defaultWindAloftProvider } from "@/lib/server/wind-aloft";
 import { aircraftSigmetContext } from "@/lib/weather/aircraft-sigmet-context";
 import { buildAircraftWindContext, windLevelForAltitude } from "@/lib/weather/aircraft-wind-context";
-import { buildWeatherFusion, type WeatherFusionResult, type WeatherFusionSource } from "@/lib/weather/fusion";
-import type { MetarMapObservation } from "@/lib/weather/types";
+import { buildWeatherFusion, type WeatherFusionMetarInput, type WeatherFusionResult, type WeatherFusionSource } from "@/lib/weather/fusion";
 
 const LIVE_MAX_AGE_MS = 60_000;
 const AIRCRAFT_OBSERVATION_WINDOW_MS = 30 * 60_000;
 const METAR_RADIUS_NM = 120;
 const PIREP_RADIUS_NM = 120;
 const PIREP_HOURS = 6;
-const MAX_METAR_AIRPORTS = 32;
+const MAX_METAR_AIRPORTS = 6;
 
 export type WeatherFusionServiceResponse =
   | { status: "available"; fusion: WeatherFusionResult }
@@ -80,19 +79,31 @@ async function nearestMetar(
   lat: number,
   lon: number,
   signal?: AbortSignal,
-): Promise<(MetarMapObservation & { distanceNm: number }) | null> {
+): Promise<WeatherFusionMetarInput | null> {
   const airports = await nearbyAirportCandidates(lat, lon);
   if (!airports.length) return null;
-  const snapshot = await defaultAviationWeatherProvider.getMetarMap(
-    airports.map((airport) => ({ stationId: airport.icaoCode, lat: airport.latitude, lon: airport.longitude })),
-    signal,
+  const results = await Promise.allSettled(
+    airports.slice(0, MAX_METAR_AIRPORTS).map(async (airport) => ({
+      airport,
+      weather: await defaultAviationWeatherProvider.getAirportWeather(airport.icaoCode, signal),
+    })),
   );
-  return snapshot.observations
-    .map((observation) => ({
-      ...observation,
-      distanceNm: haversineDistanceKm(lat, lon, observation.lat, observation.lon) / 1.852,
-    }))
-    .filter((observation) => observation.distanceNm <= METAR_RADIUS_NM)
+  return results
+    .flatMap((result) => {
+      if (result.status !== "fulfilled" || !result.value.weather.metar) return [];
+      const { airport, weather } = result.value;
+      const metar = weather.metar;
+      const distance = haversineDistanceKm(lat, lon, airport.latitude, airport.longitude) / 1.852;
+      if (distance > METAR_RADIUS_NM) return [];
+      return [{
+        stationId: airport.icaoCode,
+        observedAt: metar.observedAt ?? metar.observationTime,
+        temperatureC: metar.temperatureC,
+        rawText: metar.rawText,
+        stale: weather.stale || metar.stale === true,
+        distanceNm: distance,
+      } satisfies WeatherFusionMetarInput];
+    })
     .sort((a, b) => a.distanceNm - b.distanceNm)[0] ?? null;
 }
 
