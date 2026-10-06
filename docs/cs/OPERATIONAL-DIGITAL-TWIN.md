@@ -581,3 +581,27 @@ Drawer vybraného letadla na radaru nyní zobrazuje stejný souhrn Operational F
 Interakce Operational Focus je nyní mezi živou mapou a drawerem obousměrná. Kliknutí na aktivní úsek focus corridoru nebo cílový marker znovu otevře záložku Situace pro stejné canonical aircraft/focus URL, i když uživatel po výběru ručně přepnul jinou záložku. Kompaktní drawer vždy zahrne aktivní focus položku mezi své čtyři zobrazené řádky a v případě potřeby jí nahradí čtvrtou prioritní položku. Jde pouze o UI interakci využívající existující GeoJSON properties a už načtenou situation odpověď vybraného letadla.
 
 Drawer navíc nabízí omezenou navigaci předchozí/další přes serverem seřazené WATCH/ATTENTION focus položky. Navigace se na koncích nezacykluje; pokud zatím není žádný fokus aktivní, tlačítko Další vybere první položku. Každý krok znovu používá existující `onFocus(itemId)` URL/map interakci, takže mapa přejde na odpovídající focus segment bez dalšího situation requestu, provider callu nebo lokálního přepočítávání priority.
+
+## Aircraft Operational Focus Change Intelligence V1
+
+Radarový drawer nyní porovnává po sobě jdoucí už načtené Operational Focus snapshoty stejného letadla. Hlásí změny NEW, ESCALATED, DEESCALATED, UPDATED a RESOLVED. Přepnutí letadla resetuje srovnávací baseline a samotný posun časování menší než jedna minuta se považuje za šum. Change lane je pouze browser-local prezentační stav nad existujícím refreshem situation vybraného letadla; nepřidává API request, provider call, persistence cestu ani druhý polling loop.
+
+RESOLVED položky jsou pouze informační. Ostatní změny znovu používají existující focus-on-map interakci, a proto zachovávají stejnou serverovou identitu položky i její sémantiku.
+
+## Regional Focus Queue V1
+
+Existující odpověď `/api/operations/situation` nyní obsahuje `focusQueue`, omezenou prioritní projekci nad už vytvořeným souhrnem Regional Operational Attention. Queue neprovádí fan-out do per-aircraft Digital Twin requestů. ATTENTION má prioritu před WATCH a uvnitř úrovně se používá deterministické omezené vážení podle budoucího lead time, projektované vzdálenosti a počtu dotčených letadel.
+
+Queue zachovává stávající regionální omezení: jde o provozní kontext, ne collision warning ani separation product. Mapové zvýraznění dál řídí existující Regional Attention Graduation gate.
+
+## Operational Focus Outcome Validation V1
+
+Calibration Center nyní obsahuje read-only lane Operational Focus outcome odvozený výhradně z existující nezávislé Event Outcome truth. V1 skóruje WEATHER přes existující truth lane SIGMET_INTERSECTION. Navigation Integrity, plánovaný vzdušný prostor a trajectory focus jsou explicitně UNAVAILABLE pro skórování, dokud nebude existovat nezávislý truth universe; pozdější focus snapshot se nikdy nepoužije k validaci sebe sama.
+
+Počáteční WEATHER gate zůstává WAIT, dokud není alespoň 20 skórovatelných SIGMET vzorků a 10 timing vzorků. Při dostatku evidence vyžaduje PASS precision >=70 %, missing-truth rate <=40 % a timing MAE <=240 sekund. Nesplnění kompletního quality gate vrací FAIL. Report nemění semantiku WATCH/ATTENTION ani promotion policy.
+
+## Trajectory Quality Shadow V2
+
+Situation response nyní nese aditivní trajectory-quality shadow kandidát, zatímco canonical corridor zůstává aktivní. První verze shadow používá přesně stejnou horizontální geometrii jako canonical corridor a vyhodnocuje phase-aware vertikální profil plus kandidátní nejistotu v +5/+15/+30 minutách.
+
+Pozorovaná climb/descent vertical rate se používá plně prvních pět minut a následně se během dalších deseti minut utlumuje místo toho, aby byla považována za dlouhodobý záměr letadla. Cruise/unknown vertikální stav drží výšku. Confidence vychází z dostupné pozorované telemetrie a route-aware geometrie. Kandidát je explicitně SHADOW_ONLY, neodvozuje FMS intent ani ATC clearance a nemůže měnit veřejný corridor/events bez budoucí nezávislé outcome/graduation fáze.
