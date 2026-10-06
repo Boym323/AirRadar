@@ -14,7 +14,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: repository-metadata
+  group: repository-metadata-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || 'manual' }}
   cancel-in-progress: true
 
 jobs:
@@ -24,7 +24,8 @@ jobs:
       (
         github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.head_branch == 'main' &&
-        !startsWith(github.event.workflow_run.display_title, 'chore(metadata): sync generated repository metadata')
+        !startsWith(github.event.workflow_run.display_title, 'chore(metadata): sync generated repository metadata') &&
+        !startsWith(github.event.workflow_run.display_title, 'chore: sync repository metadata')
       )
     runs-on: ubuntu-24.04
     steps:
