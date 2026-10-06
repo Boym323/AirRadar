@@ -1,4 +1,5 @@
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
+import { buildOperationalFocusOutcomeReport } from "@/lib/operational-twin/operational-focus-outcome";
 import { isWatchlistSessionValid } from "@/lib/server/watchlist-auth";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ export async function GET(request: Request): Promise<Response> {
   const service = getAircraftStateService();
   const corridor = service.getOperationalTwinOutcomeReport();
   const event = service.getOperationalTwinEventOutcomeReport();
+  const focusOutcome = buildOperationalFocusOutcomeReport(event);
   const regionalAttention = service.getRegionalAttentionOutcomeReport();
   const regionalAttentionGraduation = service.getRegionalAttentionGraduationReport();
 
@@ -25,6 +27,7 @@ export async function GET(request: Request): Promise<Response> {
     event,
     truthFirst: event.truthFirst,
     windTiming: event.windTimingGraduation,
+    focusOutcome,
     regionalAttention,
     regionalAttentionGraduation,
     persistence: event.calibrationPersistence,
