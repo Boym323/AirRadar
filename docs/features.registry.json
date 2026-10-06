@@ -571,7 +571,7 @@
       "category": "intelligence",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded 30-minute aircraft situation projection with route, weather, Navigation Integrity and PUBLIC predictive context, prospective outcome validation, wind timing graduation/promotion, regional multi-aircraft attention with LOCAL outcome calibration and graduation-gated 5/15/30-minute map context, multi-domain truth-first recall, and restart-stable anonymous calibration aggregates.",
+      "summary": "Bounded 30-minute aircraft situation projection with route, weather, Navigation Integrity, a canonical Prediction Timeline V1 on aircraft detail, readiness-gated PUBLIC predictive context, prospective outcome validation, wind timing graduation/promotion, regional multi-aircraft attention with LOCAL outcome calibration and graduation-gated 5/15/30-minute map context, multi-domain truth-first recall, and restart-stable anonymous calibration aggregates.",
       "pages": [
         "/aircraft/:hex",
         "/",
@@ -597,7 +597,8 @@
         "regional-attention-graduation",
         "digital-twin-calibration-center",
         "digital-twin-calibration-persistence",
-        "regional-operations-center"
+        "regional-operations-center",
+        "prediction-timeline"
       ],
       "changelogKeywords": [
         "operational digital twin",
@@ -671,7 +672,11 @@
         "regional operations center",
         "regional horizon filter",
         "graduated regional map context",
-        "regional map focus"
+        "regional map focus",
+        "prediction timeline",
+        "prediction timeline v1",
+        "chronological outlook",
+        "future event timeline"
       ]
     },
     {

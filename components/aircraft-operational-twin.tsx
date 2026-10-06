@@ -105,6 +105,63 @@ export function AircraftOperationalTwin({
       {t.operationalTwin.evidenceSummary(evidence.observed, evidence.published, evidence.planned, evidence.predicted, evidence.inferred)}
     </div>
 
+    <section className={styles.predictionTimeline} aria-labelledby="prediction-timeline-v1-title" data-testid="prediction-timeline-v1">
+      <div className={styles.predictionTimelineHeading}>
+        <div>
+          <span>{t.operationalTwin.predictionTimelineKicker}</span>
+          <h3 id="prediction-timeline-v1-title">{t.operationalTwin.predictionTimelineTitle}</h3>
+        </div>
+        <small>{t.operationalTwin.predictionTimelineHorizon(corridor.horizonMinutes)}</small>
+      </div>
+      <p className={styles.predictionTimelineSubtitle}>{t.operationalTwin.predictionTimelineSubtitle}</p>
+      <ol className={styles.timeline}>
+        <li data-now="true">
+          <div className={styles.time}>
+            <strong>{t.operationalTwin.predictionTimelineNow}</strong>
+            <time dateTime={data.aircraft.observedAt}>{formatTime(data.aircraft.observedAt)}</time>
+          </div>
+          <span className={styles.dot} aria-hidden="true" />
+          <div className={styles.event}>
+            <div className={styles.eventHeader}>
+              <span>{t.operationalTwin.predictionTimelineCurrentState}</span>
+              <div className={styles.badges}>
+                <span>{t.operationalTwin.provenance.OBSERVED}</span>
+              </div>
+            </div>
+            <strong>{data.aircraft.callsign ?? data.aircraft.registration ?? data.aircraft.icaoHex}</strong>
+            <small>{t.operationalTwin.predictionTimelineSource}: {data.aircraft.stateSource}</small>
+          </div>
+        </li>
+        {data.events.slice(0, 12).map((event) => <li key={event.id} data-event-type={event.type}>
+          <div className={styles.time}>
+            <strong>{relativeTime(event.offsetMinutes)}</strong>
+            <time dateTime={event.at}>{formatTime(event.at)}</time>
+          </div>
+          <span className={styles.dot} aria-hidden="true" />
+          <div className={styles.event}>
+            <div className={styles.eventHeader}>
+              <span>{eventTypeLabel(event.type)}</span>
+              <div className={styles.badges}>
+                <span>{t.operationalTwin.provenance[event.provenance]}</span>
+                <span>{t.operationalTwin.confidence[event.confidence]}</span>
+              </div>
+            </div>
+            <strong>{event.title}</strong>
+            {event.detail && <small>{event.detail}</small>}
+            <small>
+              {t.operationalTwin.predictionTimelineSource}: {event.source}
+              {event.sourceReference ? ` · ${event.sourceReference}` : ""}
+            </small>
+          </div>
+        </li>)}
+      </ol>
+      {data.events.length === 0 && <p className={styles.status}>{t.operationalTwin.noEvents}</p>}
+      {data.limitations.includes("PUBLIC_PREDICTION_UNAVAILABLE") && <p className={styles.predictionTimelineReadiness}>
+        {t.operationalTwin.predictionTimelineReadiness}
+      </p>}
+    </section>
+
+
     {operationalFocus && <section className={styles.weatherCorridor} aria-labelledby="operational-focus-title" data-testid="aircraft-operational-focus-v1">
       <div className={styles.weatherHeading}>
         <div>
@@ -306,29 +363,6 @@ export function AircraftOperationalTwin({
       </ol> : <p className={styles.status}>{t.operationalTwin.navigationIntegrityNoEvents}</p>}
       <p className={styles.disclaimer}>{t.operationalTwin.navigationIntegrityDisclaimer}</p>
     </section>}
-
-    <h3>{t.operationalTwin.events}</h3>
-    {data.events.length ? <ol className={styles.timeline}>
-      {data.events.slice(0, 12).map((event) => <li key={event.id}>
-        <div className={styles.time}>
-          <strong>{relativeTime(event.offsetMinutes)}</strong>
-          <time dateTime={event.at}>{formatTime(event.at)}</time>
-        </div>
-        <span className={styles.dot} aria-hidden="true" />
-        <div className={styles.event}>
-          <div className={styles.eventHeader}>
-            <span>{eventTypeLabel(event.type)}</span>
-            <div className={styles.badges}>
-              <span>{t.operationalTwin.provenance[event.provenance]}</span>
-              <span>{t.operationalTwin.confidence[event.confidence]}</span>
-            </div>
-          </div>
-          <strong>{event.title}</strong>
-          {event.detail && <small>{event.detail}</small>}
-          <small>{event.source}</small>
-        </div>
-      </li>)}
-    </ol> : <p className={styles.status}>{t.operationalTwin.noEvents}</p>}
 
     <details className={styles.limitations}>
       <summary>{t.operationalTwin.limitations}</summary>
