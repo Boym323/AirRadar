@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Airport } from "@/lib/airports/types";
 import type { AtcContextResult } from "@/lib/atc-context/types";
 import { buildAtcHandoffEstimate } from "@/lib/atc-context/handoff";
@@ -14,7 +14,8 @@ import type { WeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intel
 import type { AircraftDestinationWindContext, AircraftWindAheadProfile, AircraftWindContext } from "@/lib/weather/aircraft-wind-context";
 import type { RouteWeatherContext } from "@/lib/weather/route-weather-context";
 import type { RouteCorridorSnapshot, TrajectoryConformanceSnapshot } from "@/lib/route-intelligence";
-import type { OperationalTwinApiResponse } from "@/lib/operational-twin/types";
+import type { OperationalTwinApiResponse, AircraftOperationalFocusSummary } from "@/lib/operational-twin/types";
+import { diffAircraftOperationalFocus, type AircraftOperationalFocusChangeSummary } from "@/lib/operational-twin/operational-focus-change";
 import { useNavigationIntegrityContext } from "@/components/radar/use-navigation-integrity-context";
 import { buildFlightSituationSummary, type FlightSituationSummary } from "@/lib/intelligence/flight-situation-summary";
 import type { FlightIntelligenceEvent, FlightPhase } from "@/lib/intelligence/types";
@@ -725,6 +726,8 @@ export function AircraftRadarQuickDetail({
   sectorTraffic,
 }: AircraftRadarQuickDetailProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>("flight");
+  const previousOperationalFocusRef = useRef<{ icaoHex: string; focus: AircraftOperationalFocusSummary } | null>(null);
+  const [operationalFocusChanges, setOperationalFocusChanges] = useState<AircraftOperationalFocusChangeSummary | null>(null);
   const metadata = aircraft.enrichment?.metadata;
   const registration: string | null = aircraft.registration ?? metadata?.registration ?? databaseAircraft?.registration ?? null;
   const headerType = metadata?.icaoTypeCode ?? aircraft.aircraftType ?? databaseAircraft?.aircraftType ?? null;
@@ -752,6 +755,24 @@ export function AircraftRadarQuickDetail({
     && operationalTwin.aircraft.icaoHex.toUpperCase() === aircraft.icaoHex.toUpperCase()
     ? operationalTwin.operationalFocus ?? null
     : null;
+
+  useEffect(() => {
+    const icaoHex = aircraft.icaoHex.toUpperCase();
+    if (!operationalFocus) {
+      previousOperationalFocusRef.current = null;
+      setOperationalFocusChanges(null);
+      return;
+    }
+    const previous = previousOperationalFocusRef.current;
+    if (!previous || previous.icaoHex !== icaoHex) {
+      previousOperationalFocusRef.current = { icaoHex, focus: operationalFocus };
+      setOperationalFocusChanges(null);
+      return;
+    }
+    const changes = diffAircraftOperationalFocus(previous.focus, operationalFocus);
+    previousOperationalFocusRef.current = { icaoHex, focus: operationalFocus };
+    if (changes) setOperationalFocusChanges(changes);
+  }, [aircraft.icaoHex, operationalFocus]);
 
   useEffect(() => {
     if (!operationalFocusItemId) return;
@@ -791,6 +812,7 @@ export function AircraftRadarQuickDetail({
     {activeTab === "situation" && <div className="aircraft-quick-tab-panel" role="tabpanel" id="aircraft-tabpanel-situation" aria-labelledby="aircraft-tab-situation">
       {operationalFocus && onOperationalFocus ? <RadarOperationalFocusSummary
         focus={operationalFocus}
+        changes={operationalFocusChanges}
         activeItemId={operationalFocusItemId}
         onFocus={onOperationalFocus}
       /> : null}
