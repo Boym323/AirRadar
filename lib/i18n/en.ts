@@ -613,6 +613,8 @@ export const en = {
     operationsPredictiveShadow: "SHADOW",
     operationsPredictiveUnavailable: "Predictive context is temporarily unavailable.",
     operationsRegionalTitle: "Regional attention",
+    operationsRegionalQueueTitle: "Regional focus queue",
+    operationsRegionalQueueSummary: (attention: number, watch: number) => `${attention} attention · ${watch} watch`,
     operationsRegionalHint: "bounded live context · 30 min horizon",
     operationsRegionalStale: "stale regional snapshot",
     operationsRegionalAttention: "ATTENTION",
