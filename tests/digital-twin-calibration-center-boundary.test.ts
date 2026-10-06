@@ -24,6 +24,8 @@ describe("Digital Twin Calibration Center V1 boundary", () => {
   it("aggregates existing calibration reports without creating a second calibration engine", () => {
     expect(routeSource).toContain("getOperationalTwinOutcomeReport()");
     expect(routeSource).toContain("getOperationalTwinEventOutcomeReport()");
+    expect(routeSource).toContain("getOperationalTwinTrajectoryQualityOutcomeReport()");
+    expect(routeSource).toContain("getOperationalTwinTrajectoryQualityGraduationReport()");
     expect(routeSource).toContain("getRegionalAttentionOutcomeReport()");
     expect(routeSource).not.toContain("new OperationalTwin");
     expect(routeSource).not.toContain("setInterval");
@@ -37,11 +39,14 @@ describe("Digital Twin Calibration Center V1 boundary", () => {
 
   it("surfaces every calibration lane and persistence health", () => {
     expect(componentSource).toContain('data-testid="calibration-corridor-outcome"');
+    expect(componentSource).toContain('data-testid="calibration-trajectory-quality-outcome"');
+    expect(componentSource).toContain('data-testid="calibration-trajectory-quality-graduation"');
     expect(componentSource).toContain('data-testid="calibration-event-outcome"');
     expect(componentSource).toContain('data-testid="calibration-truth-first"');
     expect(componentSource).toContain('data-testid="calibration-wind-timing"');
     expect(componentSource).toContain('data-testid="calibration-regional-attention"');
     expect(componentSource).toContain('data-testid="calibration-persistence"');
+    expect(componentSource).toContain("hydratedTrajectoryQualityOutcomeBuckets");
     expect(componentSource).toContain("hydratedRegionalAttentionOutcomeBuckets");
   });
 
