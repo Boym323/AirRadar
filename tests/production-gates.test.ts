@@ -51,6 +51,12 @@ describe("production release metadata gate", () => {
     expect(source).toContain("visual smoke ${target.path} root was not visible after initial navigation; retrying page load");
   });
 
+  it("retries secondary route navigation once when the root is not painted yet", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("const routeRoot = page.locator(rootSelector)");
+    expect(source).toContain("secondary route ${path} root was not visible after initial navigation; retrying page load");
+  });
+
   it("retries the real Operations Center click once after hydration", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("const operationsPanel = visualPage.locator('[data-testid=\"operations-center-panel\"]')");
