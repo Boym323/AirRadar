@@ -279,12 +279,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         interestingAircraft: [{ icaoHex: "49D001", callsign: "CSA123", registration: "OK-TST", reason: "rare" }],
         bestReception: { date: "2026-10-03", distanceKm: 287, icaoHex: "49D001", registration: "OK-TST", recordedAt: "2026-10-03T11:30:00.000Z", bearing: 275 },
         alertCount: 9,
-        dailyIntelligence: {
-          complete: true,
-          busiestHour: { hour: 17, flights: 142 },
-          topAirlines: [{ name: "RYANAIR", count: 176 }, { name: "AUSTRIAN", count: 131 }],
-          eventCounts: { goArounds: 3, holdings: 4, diversions: 1, emergencies: 1 },
-          highlights: [
+          dailyIntelligence: {
+            complete: true,
+            busiestHour: { hour: 17, flights: 142 },
+            topAirlines: [{ name: "RYANAIR", count: 176 }, { name: "AUSTRIAN", count: 131 }],
+            topAirports: [{ icao: "LKPR", movements: 42, arrivals: 24, departures: 18 }],
+            eventCounts: { goArounds: 3, holdings: 4, diversions: 1, emergencies: 1 },
+            weatherStatus: "available",
+            weatherHighlights: [],
+            highlights: [
             { key: "alert:emergency", kind: "emergency", occurredAt: "2026-10-03T17:42:00.000Z", icaoHex: "49D001", callsign: "CSA123", registration: "OK-TST", eventType: null, airportIcao: null, runway: null, confidenceLevel: null, squawk: "7700", distanceKm: null },
             { key: "event:go-around", kind: "flight_event", occurredAt: "2026-10-03T16:20:00.000Z", icaoHex: "4B1801", callsign: null, registration: null, eventType: "GO_AROUND", airportIcao: "LOWW", runway: "29", confidenceLevel: "high", squawk: null, distanceKm: null },
             { key: "alert:record", kind: "reception_record", occurredAt: "2026-10-03T11:30:00.000Z", icaoHex: "49D001", callsign: "CSA123", registration: "OK-TST", eventType: null, airportIcao: null, runway: null, confidenceLevel: null, squawk: null, distanceKm: 287 },
