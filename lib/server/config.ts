@@ -240,6 +240,13 @@ export function getOperationalTwinWindTimingPolicy(): OperationalTwinWindTimingP
     ? "WIND_GRADUATED"
     : "CANONICAL";
 }
+
+export type OperationalTwinTrajectoryQualityPolicy = "CANONICAL" | "TRAJECTORY_QUALITY_V2";
+export function getOperationalTwinTrajectoryQualityPolicy(): OperationalTwinTrajectoryQualityPolicy {
+  return process.env.AIRRADAR_DIGITAL_TWIN_TRAJECTORY_QUALITY_POLICY?.trim().toUpperCase() === "TRAJECTORY_QUALITY_V2"
+    ? "TRAJECTORY_QUALITY_V2"
+    : "CANONICAL";
+}
 export function isAircraftMassDropGuardEnabled(): boolean {
   return process.env.AIRCRAFT_MASS_DROP_GUARD_ENABLED?.trim().toLowerCase() !== "false";
 }

@@ -608,7 +608,7 @@ Trajectory Quality V2 je aditivní shadow profil nad existujícím canonical 30m
 
 V2 shadow zachovává všechny canonical horizontální souřadnice, track, hodnoty uncertainty i timestampy. Zpřístupňuje přesné 5/15/30minutové checkpointy canonical-versus-quality výšky, aby pozdější outcome validace mohla změřit, zda taperovaný profil vertikální projekci skutečně zlepšuje. Chybějící altitude fail-closed vrací INSUFFICIENT.
 
-V2 se záměrně nepromuje. `canonicalRemainsActive=true` a `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus i veřejné event timing dál používají canonical corridor. Shadow nepřidává provider call, síťový request, databázovou cestu ani poller a výslovně nese omezení `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` a `NOT_FMS_INTENT`.
+V2 se nikdy nepromuje samo. `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus i veřejné event timing dál používají canonical corridor. Samostatná ruční Trajectory Quality Promotion V1 může po graduation PASS nahradit pouze výškové hodnoty corridoru vraceného pro prezentaci. Shadow nepřidává provider call, síťový request, databázovou cestu ani poller a výslovně nese omezení `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` a `NOT_FMS_INTENT`.
 
 
 ## Trajectory Quality Outcome Validation V1
@@ -628,3 +628,11 @@ Trajectory Quality Graduation V1 je samostatná a přísnější rozhodovací vr
 Po splnění evidence floor musí V2 prokázat alespoň 8% relativní zlepšení altitude MAE a 60% win rate mezi rozhodnými vzorky. Graduation zároveň fail-closed selže, pokud některý dostatečně zastoupený horizont regresuje o více než 5 %, nebo některá flight phase s alespoň 12 vzorky regresuje o více než 8 %. Řídký phase šum se reportuje, ale promotion neblokuje, dokud daná phase nedosáhne guard sample floor.
 
 PASS pouze nastaví `manualPromotionEligible=true`. `autoPromotion=false` a `canonicalTrajectoryRemainsActive=true` zůstávají explicitní. Calibration Center zobrazuje graduation rozhodnutí, agregovaný přínos, truth coverage, počty regresí v horizontech/fázích a stav restart-stable persistence, aby případná budoucí promotion vyžadovala explicitní zásah operátora nebo konfigurace.
+
+## Trajectory Quality Promotion V1
+
+Trajectory Quality Promotion V1 přidává explicitní operátorem řízený přechod bez změny graduation modelu. Výchozí nastavení je `AIRRADAR_DIGITAL_TWIN_TRAJECTORY_QUALITY_POLICY=CANONICAL`. Hodnota `TRAJECTORY_QUALITY_V2` se stane efektivní pouze tehdy, když Trajectory Quality Graduation vrací `PASS`, `manualPromotionEligible=true`, aktuální V2 shadow je `AVAILABLE` a každý V2 bod přesně odpovídá canonical horizontální geometrii.
+
+Rozsah V1 je záměrně úzký: nahrazují se pouze hodnoty `altitudeFt` v corridoru vraceném klientovi. Latitude, longitude, timestampy, track, uncertainty, route mode i waypointy zůstávají canonical. Weather Corridor, SIGMET/ATC průniky, derivace eventů, Operational Focus a všechny kalibrační lane dál používají nedotčený canonical corridor. Promovaný model si tak nemůže přepisovat vlastní evidenci ani sémantiku sousedních produktů.
+
+Jakýkoli graduation stav WAIT/FAIL, nedostupný V2 shadow, rozdílný počet bodů nebo neshoda horizontální geometrie okamžitě fail-closed vrací `CANONICAL`. Odpověď obsahuje `trajectoryQualityPromotion` s nastavenou/efektivní policy, graduation stavem, počtem promovaných bodů a fallback důvodem. Nevzniká automatická změna konfigurace, provider request, databázová cesta, timer ani poller.

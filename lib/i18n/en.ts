@@ -2322,6 +2322,22 @@ export const en = {
     windTimingShadowMaxDelta: "Max timing shift",
     windTimingShadowCheckpoint: (horizon: number, delta: string) => `+${horizon} min baseline · Δ ${delta} s`,
     windTimingShadowNoData: "Shadow timing cannot be derived safely from the available wind samples.",
+    trajectoryQualityPromotionTitle: "Trajectory Quality V2 promotion",
+    trajectoryQualityPromotionSummary: "The manual policy changes only the presented corridor altitude profile; calibration, weather, events and ATC semantics remain canonical.",
+    trajectoryQualityPromotionConfigured: "Configured policy",
+    trajectoryQualityPromotionEffective: "Effective policy",
+    trajectoryQualityPromotionGraduation: "Graduation",
+    trajectoryQualityPromotionActive: "The V2 altitude profile is active for corridor presentation only.",
+    trajectoryQualityPromotionPolicies: {
+      CANONICAL: "canonical",
+      TRAJECTORY_QUALITY_V2: "Trajectory Quality V2",
+    },
+    trajectoryQualityPromotionFallback: {
+      configured_canonical: "Canonical profile is configured.",
+      graduation_not_pass: "Fail-closed: graduation is not PASS.",
+      trajectory_quality_unavailable: "Fail-closed: the current V2 profile is unavailable.",
+      geometry_mismatch: "Fail-closed: V2 does not match canonical horizontal geometry.",
+    },
         limitations: "Model limitations",
 
     limitationText: {
