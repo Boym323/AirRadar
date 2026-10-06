@@ -141,6 +141,20 @@ export interface OperationalTwinSituation {
   weatherCorridor: WeatherCorridorIntelligence;
   windTimingShadow?: OperationalTwinWindTimingShadow;
   trajectoryQualityV2?: OperationalTwinTrajectoryQualityV2;
+  trajectoryQualityPromotion?: {
+    version: "operational-digital-twin-trajectory-quality-promotion-v1";
+    configuredPolicy: "CANONICAL" | "TRAJECTORY_QUALITY_V2";
+    effectivePolicy: "CANONICAL" | "TRAJECTORY_QUALITY_V2";
+    graduationDecision: "PASS" | "WAIT" | "FAIL";
+    manualPromotionEligible: boolean;
+    promotedPoints: number;
+    failClosed: boolean;
+    fallbackReason: "configured_canonical" | "graduation_not_pass" | "trajectory_quality_unavailable" | "geometry_mismatch" | null;
+    scope: "CORRIDOR_ALTITUDE_PRESENTATION_ONLY";
+    canonicalCalibrationRemainsActive: true;
+    downstreamSemanticsRemainCanonical: true;
+    horizontalGeometryUnchanged: true;
+  };
   windTimingPromotion?: {
     version: "operational-digital-twin-wind-timing-promotion-v1";
     configuredPolicy: "CANONICAL" | "WIND_GRADUATED";
