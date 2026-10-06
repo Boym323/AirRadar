@@ -81,6 +81,7 @@ export function AircraftOperationalTwin({
   const evidence = data.evidence;
   const weather = data.weatherCorridor ?? null;
   const windTimingShadow = data.windTimingShadow ?? null;
+  const trajectoryQualityShadow = data.trajectoryQualityShadow ?? null;
   const navigationIntegrity = data.navigationIntegrityCorridor ?? null;
   const operationalFocus = data.operationalFocus ?? null;
   return <section className={styles.panel} aria-labelledby="operational-twin-title" data-testid="operational-digital-twin-v1">
@@ -189,6 +190,21 @@ export function AircraftOperationalTwin({
         </li>)}
       </ol> : <p className={styles.status}>{t.operationalTwin.weatherCorridorNoEvents}</p>}
     </section>}
+
+    {trajectoryQualityShadow && <details className={styles.limitations} data-testid="operational-twin-trajectory-quality-shadow-v1">
+      <summary>{t.operationalTwin.trajectoryQualityShadowTitle} · {trajectoryQualityShadow.status}</summary>
+      <p>{t.operationalTwin.trajectoryQualityShadowSummary}</p>
+      <div className={styles.weatherSources}>
+        <span>{trajectoryQualityShadow.phase}</span>
+        <span>{t.operationalTwin.confidence[trajectoryQualityShadow.confidence]}</span>
+        <span>{trajectoryQualityShadow.geometryMode === "ROUTE_AWARE" ? t.operationalTwin.routeAware : t.operationalTwin.kinematic}</span>
+      </div>
+      <div className={styles.weatherSources}>
+        {trajectoryQualityShadow.checkpoints.map((checkpoint) => <span key={checkpoint.offsetMinutes}>
+          +{checkpoint.offsetMinutes} min · {checkpoint.candidateAltitudeFt ?? t.common.emptyValue} ft · ± {formatNumber(checkpoint.candidateUncertaintyNm, 1)} NM
+        </span>)}
+      </div>
+    </details>}
 
     {windTimingShadow && <details className={styles.limitations} data-testid="operational-twin-wind-timing-shadow-v1">
       <summary>{t.operationalTwin.windTimingShadowTitle} · {t.operationalTwin.windTimingShadowStatus[windTimingShadow.status]}</summary>
