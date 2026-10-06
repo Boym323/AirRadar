@@ -248,7 +248,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
   const closePage = async (page) => {
     if (page.isClosed()) return;
     try {
-      await closePage(page);
+      await page.close();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (!message.includes("Target.disposeBrowserContext") || !message.includes("Failed to find context")) throw error;
