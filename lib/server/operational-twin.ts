@@ -360,6 +360,7 @@ export async function getOperationalTwinForAircraft(
   // Calibration always consumes the untouched canonical event timing. Promotion
   // is a presentation policy only and must never rewrite its own evidence.
   service.captureOperationalTwinOutcome(situation);
+  service.captureOperationalTwinTrajectoryQualityOutcome(situation);
   service.captureOperationalTwinEventOutcome(situation, { atcDataset: preparedDataset, sigmets, destination });
 
   const promotion = applyOperationalTwinWindTimingPromotion({

@@ -57,7 +57,7 @@ import type { FlightPhase } from "@/lib/intelligence/types";
 import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@/lib/predictive-intelligence/types";
 import type { Airport } from "@/lib/airports/types";
 import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
-import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
+import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeValidator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
 import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
 import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
@@ -209,6 +209,8 @@ export class AircraftStateService {
   private readonly operationalTwinOutcome = new OperationalTwinOutcomeValidator();
   /** Predicted Digital Twin event timing/precision validation against independent live evidence. */
   private readonly operationalTwinEventOutcome = new OperationalTwinEventOutcomeValidator();
+  /** Canonical-vs-Trajectory Quality V2 vertical outcome validation against future LOCAL truth. */
+  private readonly operationalTwinTrajectoryQualityOutcome = new OperationalTwinTrajectoryQualityOutcomeValidator();
   /** Final Aircraft Operational Focus validation against later independent LOCAL SIGMET truth where scoreable. */
   private readonly operationalFocusOutcome = new AircraftOperationalFocusOutcomeValidator();
   /** Truth-first multi-domain recall validation from independent later observations. */
@@ -512,6 +514,7 @@ export class AircraftStateService {
     trackFusionOutcome: ReturnType<TrackFusionOutcomeValidator["report"]>;
     operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
     operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
+    operationalTwinTrajectoryQualityOutcome: ReturnType<OperationalTwinTrajectoryQualityOutcomeValidator["report"]>;
     operationalFocusOutcome: ReturnType<AircraftOperationalFocusOutcomeValidator["report"]>;
     regionalAttentionOutcome: ReturnType<RegionalAttentionOutcomeValidator["report"]>;
     regionalAttentionGraduation: ReturnType<typeof buildRegionalAttentionGraduation>;
@@ -549,6 +552,7 @@ export class AircraftStateService {
       trackFusionOutcome: this.getTrackFusionOutcomeReport(),
       operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
       operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
+      operationalTwinTrajectoryQualityOutcome: this.getOperationalTwinTrajectoryQualityOutcomeReport(),
       operationalFocusOutcome: this.getOperationalFocusOutcomeReport(),
       regionalAttentionOutcome: this.getRegionalAttentionOutcomeReport(),
       regionalAttentionGraduation: this.getRegionalAttentionGraduationReport(),
@@ -630,6 +634,14 @@ export class AircraftStateService {
 
   getOperationalTwinOutcomeReport(now = new Date()) {
     return this.operationalTwinOutcome.report(now);
+  }
+
+  captureOperationalTwinTrajectoryQualityOutcome(situation: OperationalTwinSituation): void {
+    this.operationalTwinTrajectoryQualityOutcome.capture(situation);
+  }
+
+  getOperationalTwinTrajectoryQualityOutcomeReport(now = new Date()) {
+    return this.operationalTwinTrajectoryQualityOutcome.report(now);
   }
 
   observeOperationalTwinTruthContext(
@@ -880,6 +892,7 @@ export class AircraftStateService {
     this.reconcileSourcePreferences(now);
     this.observeTrackFusionShadow(now);
     this.operationalTwinOutcome.observeTruth(this.localAircraft, now);
+    this.operationalTwinTrajectoryQualityOutcome.observeTruth(this.localAircraft, now);
     this.operationalTwinEventOutcome.observeLocal(this.localAircraft, now);
     this.regionalAttentionOutcome.observeTruth(this.localAircraft, now);
     const activeHexes = new Set(this.localAircraft.keys());
