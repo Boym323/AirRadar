@@ -528,6 +528,7 @@ export interface RecapDailyIntelligence {
     unusualTurns: number;
     orbits: number;
   };
+  weatherStatus: "available" | "truncated" | "unavailable";
   weatherHighlights: RecapDailyWeatherHighlight[];
   highlights: RecapDailyHighlight[];
 }
