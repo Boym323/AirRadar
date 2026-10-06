@@ -149,7 +149,12 @@ function weatherHighlights(weather: DailyRecapWeatherInput[]): RecapDailyWeather
   const candidates = weather.flatMap((item) => {
     const quality = item.quality.trim().toUpperCase();
     const icaoHex = normalizeHex(item.aircraftHex);
-    if ((quality !== "HIGH" && quality !== "GOOD") || !icaoHex || !Number.isFinite(item.observedAt.getTime())) return [];
+    if (
+      (quality !== "HIGH" && quality !== "GOOD")
+      || !icaoHex
+      || !Number.isFinite(item.observedAt.getTime())
+      || !Number.isFinite(item.altitudeFt)
+    ) return [];
     const turbulence = Number.isFinite(item.turbulenceLevel) ? item.turbulenceLevel : null;
     const wind = Number.isFinite(item.windSpeedKt) ? item.windSpeedKt : null;
     const kind = turbulence !== null && turbulence >= 1
