@@ -53,6 +53,7 @@ interface BuildDailyIntelligenceInput {
   routeAggregates: DailyRecapRouteAggregateInput[];
   events: DailyRecapEventInput[];
   weather: DailyRecapWeatherInput[];
+  weatherStatus: RecapDailyIntelligence["weatherStatus"];
   alerts: AlertHistoryEntry[];
   timezone: string;
   complete: boolean;
@@ -372,6 +373,7 @@ export function buildDailyIntelligence(input: BuildDailyIntelligenceInput): Reca
       unusualTurns: aggregateCount(input.eventAggregates, "UNUSUAL_TURN"),
       orbits: aggregateCount(input.eventAggregates, "ORBIT"),
     },
+    weatherStatus: input.weatherStatus,
     weatherHighlights: weatherHighlights(input.weather),
     highlights: buildHighlights(input.events, input.alerts),
   };
