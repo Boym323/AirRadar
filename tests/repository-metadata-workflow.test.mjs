@@ -35,6 +35,8 @@ describe("repository metadata automation", () => {
       "github.event.workflow_run.head_branch == 'main'",
     );
     expect(metadataWorkflow).toContain("workflow_dispatch:");
+    expect(metadataWorkflow).toContain("repository-metadata-${{");
+    expect(metadataWorkflow).toContain("chore: sync repository metadata");
   });
 
   it("syncs changelog and metrics into one audit PR and merges it", () => {
