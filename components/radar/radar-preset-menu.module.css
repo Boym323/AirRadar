@@ -1,0 +1,114 @@
+.root {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  z-index: 35;
+  top: calc(100% + .45rem);
+  left: 0;
+  width: min(22rem, calc(100vw - 2rem));
+  display: grid;
+  gap: .7rem;
+  padding: .85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-elevated) 96%, transparent);
+  box-shadow: 0 18px 45px rgb(0 0 0 / .28);
+}
+
+.menu > small,
+.empty {
+  color: var(--text-muted);
+  font-size: .72rem;
+}
+
+.create {
+  display: grid;
+  gap: .35rem;
+  color: var(--text-secondary);
+  font-size: .72rem;
+}
+
+.createRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .4rem;
+}
+
+.createRow input,
+.createRow button,
+.apply,
+.delete {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+  color: inherit;
+}
+
+.createRow input {
+  min-width: 0;
+  padding: .55rem .6rem;
+}
+
+.createRow button {
+  padding: .45rem .65rem;
+  cursor: pointer;
+}
+
+.createRow button:disabled {
+  cursor: default;
+  opacity: .45;
+}
+
+.list {
+  display: grid;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .35rem;
+}
+
+.apply {
+  display: grid;
+  gap: .15rem;
+  padding: .55rem .6rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.apply small {
+  color: var(--text-muted);
+}
+
+.delete {
+  width: 2.35rem;
+  cursor: pointer;
+}
+
+.apply:hover,
+.delete:hover,
+.createRow button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+@media (max-width: 620px) {
+  .menu {
+    position: fixed;
+    left: 1rem;
+    right: 1rem;
+    top: auto;
+    bottom: calc(var(--radar-map-control-bottom, 10px) + 3.5rem);
+    width: auto;
+  }
+
+  .createRow {
+    grid-template-columns: 1fr;
+  }
+}

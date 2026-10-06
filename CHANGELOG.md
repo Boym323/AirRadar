@@ -6,7 +6,8 @@ All notable changes to AirRadar are documented here.
 
 ### Added
 
-- Add Aircraft Discovery V1 at `/discover` for live, new, rare, returning, watchlisted and reception-record aircraft using the existing bounded Logbook Summary.
+- Add Radar Presets V1 with up to eight browser-local named map views that restore camera, traffic filters, existing map layers and display settings without any server persistence.
+- Add Route Network Explorer V1 at `/routes` for bounded today/7d/30d top origin/destination Flight aggregates, route share and airport navigation without FlightPosition scans.
 - Add Receiver Explorer V2 on `/receiver/coverage` with directional median/P95/max range polar analytics, altitude-band reach, bounded 7/30-day trends, weak-sector health, live ADS-B/MLAT source mix, directional records, and the existing network-reference capture polar without a new ingest or persistence lane.
 - Add Live Airport Network V1 to `/airports`, prioritizing browser-local favorite airports and live-route-active airports with canonical Airport Operations, receiver-only approach queue, likely runway, bounded next-arrival estimates, and direct Live Board navigation.
 - Add Event Replay V1: replayable Flight Intelligence events can open Time Machine in a bounded ±10-minute window with the matching aircraft preselected when historical data is available.
@@ -16,225 +17,6 @@ All notable changes to AirRadar are documented here.
 - Extend Flight Intelligence with explicit initial-climb, cruise-entry, and
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
-
-## [1.0.334] - 2026-10-06
-
-Changes since v1.0.333.
-
-**Features touched:** Live Airport Network, Operational Digital Twin, Receiver Coverage, Statistics & Recaps, Time Machine.
-
-### Added
-
-- Add prediction timeline v1 (ef13865d)
-- Localize prediction timeline (2a0425c9)
-- Localize prediction timeline in English (3050273b)
-- Add directional range polar (69f330c1)
-- Add event replay link contract (74fdf966)
-- Allow bounded event replay windows (df8e42cb)
-- Expose bounded event replay window mode (a8e69073)
-- Build Receiver Explorer V2 (1239e734)
-- Open event replay in Time Machine (39724048)
-- Extend daily aviation story contract (f73e3936)
-- Compose airport and weather daily highlights (03ac6f83)
-- Link replayable intelligence events to Time Machine (f3173239)
-- Support bounded 30-day trend (015323cd)
-- Expose selected range trend (fb4e447a)
-- Localize event replay in Czech (5e1ade46)
-- Expose daily weather source status (a1666a8d)
-- Localize event replay in English (e21034b9)
-- Carry bounded weather status into daily story (835ca793)
-- Source daily airport and weather story evidence (70f9f386)
-- Present daily aviation story highlights (dc19b4b1)
-- Localize daily aviation story (ee01af1a)
-- Localize daily aviation story in English (e70b78c5)
-- Restore Live Airport Network V1 after rebase (42902224)
-- Restore Live Airport Network V1 after rebase (11be3d45)
-- Restore Live Airport Network V1 after rebase (3bd743e1)
-- Reapply Live Airport Network V1 integration (07a4c400)
-- Reapply Live Airport Network V1 integration (753629b1)
-- Reapply Czech Live Airport Network localization (985d1e08)
-- Reapply English Live Airport Network localization (4780ab67)
-
-### Changed
-
-- Surface prediction timeline before twin detail (5b318485)
-
-### Fixed
-
-- Merge metadata PRs after required checks (#435) (b4665d06)
-- Publish metadata validation status (#437) (303ede44)
-- Skip duplicate metadata pull request validation (#438) (0b9fc616)
-- Render event replay action (ae5f3c8b)
-- Handle sparse trend days (893c2a2b)
-- Validate and preserve event replay target (0123c77c)
-- Bound single-day trend window (2f197d8b)
-- Preserve replay target when selecting events (94056d2d)
-- Parameterize bounded Time Machine replay window (0ce0ab5c)
-- Scope daily story event grid styling (4fba9618)
-- Clean event replay route syntax (5f776d57)
-- Refresh replay window callback when mode changes (dba4d45f)
-- Remove escaped newline from Time Machine server (5f952f79)
-- Remove escaped newline from replay route (b9ee6f43)
-- Define event replay window constants (9515cd33)
-- Repair trend source formatting (26855356)
-- Sync Czech Event Replay registry rows (1ad762fc)
-- Reject malformed daily weather highlights (e75d2668)
-- Normalize trend source lines (bc20df4e)
-- Keep weather availability fail-soft in daily story (6ef1e31e)
-- Pin automated releases to validated commit (#444) (2ad6e93b)
-- Complete daily recap smoke fixture (#445) (273815e7)
-- Retry visual smoke navigation after paint race (#446) (6a01484d)
-
-### Documentation
-
-- Register prediction timeline v1 (4528db41)
-- Document prediction timeline v1 (64392b96)
-- Localize prediction timeline v1 (c00ad427)
-- Describe prediction timeline boundaries (69e26f5e)
-- Add prediction timeline changelog (fa8b68ed)
-- Register event replay v1 (16938900)
-- Document event replay v1 (9b88b291)
-- Localize event replay v1 (6b4c5db3)
-- Add event replay changelog (cc135fee)
-- Add Explorer V2 changelog (ee44539d)
-- Document Explorer V2 (ca1ae360)
-- Localize Explorer V2 (1a6f532f)
-- Register daily aviation story coverage (ff4a1797)
-- Describe daily aviation story (950e6262)
-- Localize daily aviation story (6df2a657)
-- Add daily aviation story changelog (5054b587)
-- Add Explorer V2 changelog (e633c963)
-- Normalize Explorer V2 changelog (fbc3cb3b)
-- Preserve changelog formatting (2248fd0b)
-- Localize prediction timeline operational twin section (b1505ccc)
-- Rebase Live Airport Network registry (6d3bd2d3)
-- Rebase Live Airport Network docs (226f5050)
-- Rebase Czech Live Airport Network docs (962e704c)
-- Rebase Live Airport Network changelog (4b8885b0)
-
-### Maintenance
-
-- Sync generated repository metadata (#436) (8329eb08)
-- Add prediction timeline presentation (12fc6ca3)
-- Guard prediction timeline v1 boundaries (391d032e)
-- Add explorer v2 layout (992027fe)
-- Add event replay affordances (9d4793d5)
-- Guard Explorer V2 boundaries (7ec7ae4f)
-- Cover 30-day trend window (c7556c27)
-- Cover 30-day trend window (b2cb19a3)
-- Extend daily aviation story layout (322bd246)
-- Cover daily airport and weather story (e6e3e3ba)
-- Guard event replay v1 boundaries (e24a50e8)
-- Target actual FlightPosition reads (69acafaa)
-- Normalize Explorer boundary source (f5c1eae7)
-- Keep 30-day trend case in suite (f973bfa1)
-
-<details>
-<summary>Technical commits</summary>
-
-- fix(ci): merge metadata PRs after required checks (#435) (b4665d06)
-- fix(ci): publish metadata validation status (#437) (303ede44)
-- chore(metadata): sync generated repository metadata (#436) (8329eb08)
-- fix(ci): skip duplicate metadata pull request validation (#438) (0b9fc616)
-- feat: add prediction timeline v1 (ef13865d)
-- style: add prediction timeline presentation (12fc6ca3)
-- feat: localize prediction timeline (2a0425c9)
-- feat: localize prediction timeline in English (3050273b)
-- test: guard prediction timeline v1 boundaries (391d032e)
-- docs: register prediction timeline v1 (4528db41)
-- feat(receiver): add directional range polar (69f330c1)
-- style(receiver): add explorer v2 layout (992027fe)
-- feat: add event replay link contract (74fdf966)
-- docs: document prediction timeline v1 (64392b96)
-- docs: localize prediction timeline v1 (c00ad427)
-- feat: allow bounded event replay windows (df8e42cb)
-- docs: describe prediction timeline boundaries (69e26f5e)
-- feat: expose bounded event replay window mode (a8e69073)
-- docs: add prediction timeline changelog (fa8b68ed)
-- feat(receiver): build Receiver Explorer V2 (1239e734)
-- feat: open event replay in Time Machine (39724048)
-- feat: extend daily aviation story contract (f73e3936)
-- feat: compose airport and weather daily highlights (03ac6f83)
-- feat: link replayable intelligence events to Time Machine (f3173239)
-- fix: render event replay action (ae5f3c8b)
-- feat(receiver): support bounded 30-day trend (015323cd)
-- refactor: surface prediction timeline before twin detail (5b318485)
-- feat(receiver): expose selected range trend (fb4e447a)
-- fix(receiver): handle sparse trend days (893c2a2b)
-- feat: localize event replay in Czech (5e1ade46)
-- feat: expose daily weather source status (a1666a8d)
-- feat: localize event replay in English (e21034b9)
-- feat: carry bounded weather status into daily story (835ca793)
-- style: add event replay affordances (9d4793d5)
-- feat: source daily airport and weather story evidence (70f9f386)
-- fix: validate and preserve event replay target (0123c77c)
-- test(receiver): guard Explorer V2 boundaries (7ec7ae4f)
-- test(receiver): cover 30-day trend window (c7556c27)
-- docs: register event replay v1 (16938900)
-- docs: document event replay v1 (9b88b291)
-- feat: present daily aviation story highlights (dc19b4b1)
-- docs: localize event replay v1 (6b4c5db3)
-- fix(receiver): bound single-day trend window (2f197d8b)
-- feat: localize daily aviation story (ee01af1a)
-- docs: add event replay changelog (cc135fee)
-- feat: localize daily aviation story in English (e70b78c5)
-- test(receiver): cover 30-day trend window (b2cb19a3)
-- style: extend daily aviation story layout (322bd246)
-- fix: preserve replay target when selecting events (94056d2d)
-- docs(receiver): add Explorer V2 changelog (ee44539d)
-- docs(receiver): document Explorer V2 (ca1ae360)
-- test: cover daily airport and weather story (e6e3e3ba)
-- test: guard event replay v1 boundaries (e24a50e8)
-- docs(receiver): localize Explorer V2 (1a6f532f)
-- test(receiver): target actual FlightPosition reads (69acafaa)
-- fix: parameterize bounded Time Machine replay window (0ce0ab5c)
-- fix: scope daily story event grid styling (4fba9618)
-- fix: clean event replay route syntax (5f776d57)
-- fix: refresh replay window callback when mode changes (dba4d45f)
-- fix: remove escaped newline from Time Machine server (5f952f79)
-- docs: register daily aviation story coverage (ff4a1797)
-- fix: remove escaped newline from replay route (b9ee6f43)
-- docs: describe daily aviation story (950e6262)
-- fix: define event replay window constants (9515cd33)
-- docs: localize daily aviation story (6df2a657)
-- fix(receiver): repair trend source formatting (26855356)
-- docs: add daily aviation story changelog (5054b587)
-- docs(receiver): add Explorer V2 changelog (e633c963)
-- fix: sync Czech Event Replay registry rows (1ad762fc)
-- fix: reject malformed daily weather highlights (e75d2668)
-- fix(receiver): normalize trend source lines (bc20df4e)
-- docs(receiver): normalize Explorer V2 changelog (fbc3cb3b)
-- docs(receiver): preserve changelog formatting (2248fd0b)
-- docs: localize prediction timeline operational twin section (b1505ccc)
-- fix: keep weather availability fail-soft in daily story (6ef1e31e)
-- test(receiver): normalize Explorer boundary source (f5c1eae7)
-- Merge pull request #439 from Boym323/feat/prediction-timeline-v1 (efcb9141)
-- test(receiver): keep 30-day trend case in suite (f973bfa1)
-- Merge main into feat/receiver-explorer-v2 (739a4043)
-- merge main into Daily Aviation Story V1 (56c83e8e)
-- Merge pull request #443 from Boym323/feat/daily-aviation-story-v1 (6f711b33)
-- merge main into Event Replay V1 (7cc74e4b)
-- Merge pull request #442 from Boym323/feat/event-replay-v1 (56617b79)
-- fix(deploy): pin automated releases to validated commit (#444) (2ad6e93b)
-- feat: restore Live Airport Network V1 after rebase (42902224)
-- feat: restore Live Airport Network V1 after rebase (11be3d45)
-- feat: restore Live Airport Network V1 after rebase (3bd743e1)
-- feat: reapply Live Airport Network V1 integration (07a4c400)
-- feat: reapply Live Airport Network V1 integration (753629b1)
-- feat: reapply Czech Live Airport Network localization (985d1e08)
-- feat: reapply English Live Airport Network localization (4780ab67)
-- docs: rebase Live Airport Network registry (6d3bd2d3)
-- docs: rebase Live Airport Network docs (226f5050)
-- docs: rebase Czech Live Airport Network docs (962e704c)
-- docs: rebase Live Airport Network changelog (4b8885b0)
-- Merge pull request #440 from Boym323/feat/live-airport-network-v1 (05f5028d)
-- Merge main into Receiver Explorer V2 (3cc67b20)
-- Merge latest main into Receiver Explorer V2 (8dec6a69)
-- Merge pull request #441 from Boym323/feat/receiver-explorer-v2 (10f4346d)
-- fix(ci): complete daily recap smoke fixture (#445) (273815e7)
-- fix(ci): retry visual smoke navigation after paint race (#446) (6a01484d)
-
-</details>
 
 ## [1.0.333] - 2026-10-06
 
@@ -314,6 +96,7 @@ Changes since v1.0.330.
 - feat: add performance-aware Trajectory Quality V3 shadow (#418) (a201f62)
 
 </details>
+
 ## [1.0.330] - 2026-10-06
 
 Changes since v1.0.329.
@@ -360,6 +143,7 @@ Changes since v1.0.329.
 - feat: add Trajectory Quality Promotion V1 (#416) (28d23eae)
 
 </details>
+
 ## [1.0.329] - 2026-10-06
 
 Changes since v1.0.328.
@@ -528,6 +312,7 @@ Changes since v1.0.327.
 - Merge pull request #406 from Boym323/feat/digital-twin-trajectory-quality-v2 (76eb08ae)
 
 </details>
+
 ## [1.0.327] - 2026-10-06
 
 Changes since v1.0.326.
@@ -695,6 +480,7 @@ Changes since v1.0.325.
 - Merge pull request #401 from Boym323/fix/allow-ats-recovery-release (597f8d66)
 
 </details>
+
 ## [1.0.325] - 2026-10-06
 
 Changes since v1.0.324.
@@ -865,6 +651,7 @@ Changes since v1.0.321.
 - Merge pull request #372 from Boym323/ci/optimize-pr-main-validation (4100abb9)
 
 </details>
+
 ## [1.0.321] - 2026-10-05
 
 Changes since v1.0.320.
@@ -891,6 +678,7 @@ Changes since v1.0.320.
 - fix: stabilize command palette browser gate (#369) (a345357)
 
 </details>
+
 ## [1.0.320] - 2026-10-05
 
 Changes since v1.0.319.
@@ -914,6 +702,7 @@ Changes since v1.0.319.
 - test: update migration chain gate for calibration persistence (#366) (32042a9)
 
 </details>
+
 ## [1.0.319] - 2026-10-05
 
 Changes since v1.0.318.
@@ -933,6 +722,7 @@ Changes since v1.0.318.
 - feat: add Digital Twin wind timing promotion V1 (#360) (a69c852)
 
 </details>
+
 ## [1.0.318] - 2026-10-05
 
 Changes since v1.0.317.
@@ -996,6 +786,7 @@ Changes since v1.0.315.
 - feat: add Regional Situation Graph V1 (#357) (54b072b)
 
 </details>
+
 ## [1.0.315] - 2026-10-05
 
 Changes since v1.0.314.
@@ -1017,6 +808,7 @@ Changes since v1.0.314.
 - feat: add Digital Twin wind timing graduation V1 (#355) (f6cb190)
 
 </details>
+
 ## [1.0.314] - 2026-10-05
 
 Changes since v1.0.313.
@@ -1038,6 +830,7 @@ Changes since v1.0.313.
 - feat: add Navigation Integrity Corridor V1 (#353) (851683b)
 
 </details>
+
 ## [1.0.313] - 2026-10-05
 
 Changes since v1.0.312.
@@ -1059,6 +852,7 @@ Changes since v1.0.312.
 - feat: add Operational Digital Twin Event Outcome Validation V2 (#351) (30dd308)
 
 </details>
+
 ## [1.0.312] - 2026-10-05
 
 Changes since v1.0.311.
@@ -1080,6 +874,7 @@ Changes since v1.0.311.
 - feat: add Digital Twin wind-adjusted timing shadow (#347) (6a714ac)
 
 </details>
+
 ## [1.0.311] - 2026-10-05
 
 Changes since v1.0.310.
@@ -1101,6 +896,7 @@ Changes since v1.0.310.
 - feat: add Operational Digital Twin Outcome Validation V1 (#345) (b18aba6)
 
 </details>
+
 ## [1.0.310] - 2026-10-05
 
 Changes since v1.0.309.
@@ -1122,6 +918,7 @@ Changes since v1.0.309.
 - feat: add Operational Digital Twin V2 map corridor (#343) (71969af)
 
 </details>
+
 ## [1.0.309] - 2026-10-05
 
 Changes since v1.0.308.
@@ -1143,6 +940,7 @@ Changes since v1.0.308.
 - feat: add Track Fusion Outcome Validation V1 (#341) (82e85fe)
 
 </details>
+
 ## [1.0.308] - 2026-10-05
 
 Changes since v1.0.307.
@@ -1169,6 +967,7 @@ Changes since v1.0.307.
 - fix: unify ADS-B and OGN radar labels (#338) (d8c7cc0)
 
 </details>
+
 ## [1.0.307] - 2026-10-05
 
 Changes since v1.0.306.
@@ -1190,6 +989,7 @@ Changes since v1.0.306.
 - feat: add Track Fusion Readiness / Graduation V1 (#336) (b57c155)
 
 </details>
+
 ## [1.0.306] - 2026-10-05
 
 Changes since v1.0.305.
@@ -1211,6 +1011,7 @@ Changes since v1.0.305.
 - feat: add Track Fusion Shadow V1 (#334) (77fc77d)
 
 </details>
+
 ## [1.0.305] - 2026-10-05
 
 Changes since v1.0.304.
@@ -1232,6 +1033,7 @@ Changes since v1.0.304.
 - feat: add Trajectory Conformance V1 (#332) (b0bd6d9)
 
 </details>
+
 ## [1.0.304] - 2026-10-05
 
 Changes since v1.0.303.
@@ -1253,6 +1055,7 @@ Changes since v1.0.303.
 - feat: add Weather Corridor Intelligence V1 (#328) (cf50f71)
 
 </details>
+
 ## [1.0.303] - 2026-10-05
 
 Changes since v1.0.302.
@@ -1433,6 +1236,7 @@ Changes since v1.0.302.
 - Merge pull request #325 from Boym323/feat/aviation-weather-fusion-v1 (0eca12cc)
 
 </details>
+
 ## [1.0.302] - 2026-10-05
 
 Changes since v1.0.301.
@@ -1452,6 +1256,7 @@ Changes since v1.0.301.
 - feat: add Aviation Nav Data V1 (#321) (03e17c01)
 
 </details>
+
 ## [1.0.301] - 2026-10-05
 
 Changes since v1.0.300.
@@ -1473,6 +1278,7 @@ Changes since v1.0.300.
 - feat: add V8 approach queue state (#319) (76a18b98)
 
 </details>
+
 ## [1.0.300] - 2026-10-05
 
 Changes since v1.0.299.
@@ -1507,6 +1313,7 @@ Changes since v1.0.299.
 - test: align Airport Intelligence boundary with V8 (#315) (2647506a)
 
 </details>
+
 ## [1.0.299] - 2026-10-04
 
 Changes since v1.0.298.
@@ -1534,6 +1341,7 @@ Changes since v1.0.298.
 - test: align Receiver Coverage V1 boundary after V2 (#305) (de5a47d7)
 
 </details>
+
 ## [1.0.298] - 2026-10-04
 
 Changes since v1.0.297.
@@ -1559,6 +1367,7 @@ Changes since v1.0.297.
 - feat: complete Aircraft Watchlist & Alerts V1 (#299) (d99feee)
 
 </details>
+
 ## [1.0.297] - 2026-10-04
 
 Changes since v1.0.296.
@@ -1580,6 +1389,7 @@ Changes since v1.0.296.
 - test: align predictive rollout boundary tests with shared engine (#295) (79d9e33)
 
 </details>
+
 ## [1.0.296] - 2026-10-04
 
 Changes since v1.0.295.
@@ -1599,6 +1409,7 @@ Changes since v1.0.295.
 - fix: auto-merge repository metadata PRs (#291) (7f4d325)
 
 </details>
+
 ## [1.0.295] - 2026-10-04
 
 Changes since v1.0.294.
@@ -2082,6 +1893,7 @@ Changes since v1.0.269.
 - feat: add Operations Center V1 to live radar (#259) (b1bcd82)
 
 </details>
+
 ## [1.0.269] - 2026-10-03
 
 Changes since v1.0.268.
@@ -2158,6 +1970,7 @@ Changes since v1.0.265.
 - Merge pull request #250 from Boym323/chore/dependency-rollup-2026-10-03 (c2e8a23)
 
 </details>
+
 ## [1.0.265] - 2026-10-03
 
 Changes since v1.0.264.
@@ -2234,6 +2047,7 @@ Changes since v1.0.262.
 - Merge pull request #238 from Boym323/fix/prospective-accounting-contract (11da5cc)
 
 </details>
+
 ## [1.0.262] - 2026-10-03
 
 Changes since v1.0.261.
@@ -2336,6 +2150,7 @@ Changes since v1.0.256.
 - Merge pull request #234 from Boym323/fix/predictive-timestamp-invariant (afcf9e2)
 
 </details>
+
 ## [1.0.256] - 2026-10-03
 
 Changes since v1.0.255.

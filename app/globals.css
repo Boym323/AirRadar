@@ -4302,6 +4302,25 @@ button, input, select, textarea { color-scheme: dark; }
   }
 }
 
+/* Keep the four map controls inside the narrow desktop overlay at the
+   821–900px breakpoint: Traffic and Layers share the second row while the
+   browser-local Presets control gets its own row below. */
+@media (min-width: 821px) and (max-width: 900px) {
+  .map-overlay-primary {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .map-overlay-primary .map-summary-card {
+    grid-column: 1 / -1;
+  }
+
+  .map-overlay-primary > [data-testid="radar-presets-v1"] {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: start;
+  }
+}
+
 
 /* Extended receiver-local ADS-B / Mode-S telemetry. */
 .aircraft-adsb-telemetry {
