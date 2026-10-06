@@ -630,7 +630,7 @@ Trajectory Quality V2 is an additive shadow profile over the existing canonical 
 
 The V2 shadow preserves every canonical horizontal coordinate, track, uncertainty value and timestamp. It exposes exact 5/15/30-minute canonical-versus-quality altitude checkpoints so later outcome validation can measure whether the tapered profile improves vertical projection. Missing altitude fails closed to INSUFFICIENT.
 
-V2 is deliberately not promoted. `canonicalRemainsActive=true` and `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus and public event timing continue to consume the canonical corridor. The shadow adds no provider call, network request, database path or poller and explicitly carries `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` and `NOT_FMS_INTENT` limitations.
+V2 never self-promotes. `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus and public event timing continue to consume the canonical corridor. A separate manual Trajectory Quality Promotion V1 may replace only the altitude values of the corridor returned for presentation after graduation PASS. The shadow adds no provider call, network request, database path or poller and explicitly carries `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` and `NOT_FMS_INTENT` limitations.
 
 ## Trajectory Quality Outcome Validation V1
 
@@ -649,3 +649,11 @@ Trajectory Quality Graduation V1 is a separate, stricter decision layer over the
 Once the evidence floor is complete, V2 must demonstrate at least 8% relative altitude-MAE improvement and a 60% decisive win rate. Graduation also fails closed when any sufficiently sampled horizon regresses by more than 5%, or any flight phase with at least 12 samples regresses by more than 8%. Sparse phase noise is reported but does not become a promotion blocker until the phase reaches the guard sample floor.
 
 A PASS only sets `manualPromotionEligible=true`. `autoPromotion=false` and `canonicalTrajectoryRemainsActive=true` remain explicit. The Calibration Center exposes the graduation decision, aggregate benefit, truth coverage, horizon/phase regression counts and restart-stable persistence health so a future promotion change can require an explicit operator/configuration action.
+
+## Trajectory Quality Promotion V1
+
+Trajectory Quality Promotion V1 adds that explicit operator-controlled transition without changing the graduation model. The default is `AIRRADAR_DIGITAL_TWIN_TRAJECTORY_QUALITY_POLICY=CANONICAL`. Setting `TRAJECTORY_QUALITY_V2` becomes effective only while Trajectory Quality Graduation is `PASS`, `manualPromotionEligible=true`, the current V2 shadow is `AVAILABLE`, and every V2 point exactly matches the canonical horizontal geometry.
+
+The V1 promotion scope is deliberately narrow: only `altitudeFt` values in the corridor returned to the client are replaced by the V2 profile. Latitude, longitude, timestamps, track, uncertainty, route mode and waypoints remain canonical. Weather Corridor, SIGMET/ATC intersections, event derivation, Operational Focus and all calibration lanes continue to use the untouched canonical corridor. This prevents the promoted model from rewriting either its own evidence or adjacent product semantics.
+
+Any WAIT/FAIL graduation state, unavailable V2 shadow, point-count mismatch or horizontal-geometry mismatch immediately fails closed to `CANONICAL`. The response exposes `trajectoryQualityPromotion` with configured/effective policy, graduation state, promoted-point count and fallback reason. No automatic configuration change, provider request, database path, timer or poller is introduced.
