@@ -762,6 +762,27 @@
         "approach queue",
         "next arrival"
       ]
+    },
+    {
+      "id": "explainable-prediction",
+      "name": "Explainable Prediction",
+      "category": "intelligence / prediction",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Why/Proč evidence panels for readiness-gated ETA, runway, runway-change and trajectory advisories using a small capability-specific whitelist from the existing canonical prediction evidence.",
+      "pages": [
+        "/aircraft/:hex"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "explainable-prediction"
+      ],
+      "changelogKeywords": [
+        "explainable prediction",
+        "prediction evidence",
+        "why prediction",
+        "prediction rationale"
+      ]
     }
   ]
 }
