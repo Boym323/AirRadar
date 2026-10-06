@@ -81,6 +81,7 @@ export function AircraftOperationalTwin({
   const evidence = data.evidence;
   const weather = data.weatherCorridor ?? null;
   const windTimingShadow = data.windTimingShadow ?? null;
+  const trajectoryQualityPromotion = data.trajectoryQualityPromotion ?? null;
   const navigationIntegrity = data.navigationIntegrityCorridor ?? null;
   const operationalFocus = data.operationalFocus ?? null;
   return <section className={styles.panel} aria-labelledby="operational-twin-title" data-testid="operational-digital-twin-v1">
@@ -203,6 +204,34 @@ export function AircraftOperationalTwin({
           {t.operationalTwin.windTimingShadowCheckpoint(checkpoint.horizonMinutes, formatNumber(checkpoint.deltaSeconds, 0))}
         </li>)}</ul>
       </> : <p className={styles.status}>{t.operationalTwin.windTimingShadowNoData}</p>}
+    </details>}
+
+    {trajectoryQualityPromotion && <details className={styles.limitations} data-testid="operational-twin-trajectory-quality-promotion-v1">
+      <summary>
+        {t.operationalTwin.trajectoryQualityPromotionTitle}
+        {" · "}
+        {t.operationalTwin.trajectoryQualityPromotionPolicies[trajectoryQualityPromotion.effectivePolicy]}
+      </summary>
+      <p className={styles.status}>{t.operationalTwin.trajectoryQualityPromotionSummary}</p>
+      <div className={styles.metrics}>
+        <div>
+          <span>{t.operationalTwin.trajectoryQualityPromotionConfigured}</span>
+          <strong>{t.operationalTwin.trajectoryQualityPromotionPolicies[trajectoryQualityPromotion.configuredPolicy]}</strong>
+        </div>
+        <div>
+          <span>{t.operationalTwin.trajectoryQualityPromotionEffective}</span>
+          <strong>{t.operationalTwin.trajectoryQualityPromotionPolicies[trajectoryQualityPromotion.effectivePolicy]}</strong>
+        </div>
+        <div>
+          <span>{t.operationalTwin.trajectoryQualityPromotionGraduation}</span>
+          <strong>{trajectoryQualityPromotion.graduationDecision}</strong>
+        </div>
+      </div>
+      <p className={styles.status}>
+        {trajectoryQualityPromotion.fallbackReason
+          ? t.operationalTwin.trajectoryQualityPromotionFallback[trajectoryQualityPromotion.fallbackReason]
+          : t.operationalTwin.trajectoryQualityPromotionActive}
+      </p>
     </details>}
 
     {navigationIntegrity && <section className={styles.weatherCorridor} aria-labelledby="navigation-integrity-corridor-title" data-testid="navigation-integrity-corridor-v1">
