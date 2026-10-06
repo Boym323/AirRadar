@@ -323,6 +323,7 @@ export interface OperationalTwinEventOutcomeReport {
   thresholds: typeof OPERATIONAL_TWIN_EVENT_OUTCOME_THRESHOLDS;
   truthSources: readonly ["LOCAL_RECEIVER", "FLIGHT_INTELLIGENCE"];
   requestDrivenCapture: true;
+  refreshDrivenSampling: true;
   supportedTypes: readonly OperationalTwinEventOutcomeType[];
   recallMeasured: false;
   window: {
@@ -987,6 +988,7 @@ export class OperationalTwinEventOutcomeValidator {
       thresholds: OPERATIONAL_TWIN_EVENT_OUTCOME_THRESHOLDS,
       truthSources: ["LOCAL_RECEIVER", "FLIGHT_INTELLIGENCE"],
       requestDrivenCapture: true,
+      refreshDrivenSampling: true,
       supportedTypes: OPERATIONAL_TWIN_EVENT_OUTCOME_SUPPORTED_TYPES,
       recallMeasured: false,
       window: {

@@ -20,11 +20,15 @@ describe("Operational Digital Twin Event Outcome Validation V2 boundary", () => 
     expect(outcomeSource).not.toContain("setTimeout");
   });
 
-  it("captures from the already-built situation and already-loaded ATC/SIGMET context", () => {
+  it("captures from the canonical situation builder and adds bounded refresh-driven sampling", () => {
     expect(situationSource).toContain("captureOperationalTwinEventOutcome(situation");
     expect(situationSource).toContain("atcDataset: preparedDataset");
     expect(situationSource).toContain("sigmets");
     expect(situationSource).not.toContain("OperationalTwinEventOutcomeValidator");
+    expect(stateSource).toContain("OPERATIONAL_TWIN_CALIBRATION_SAMPLE_INTERVAL_MS = 60_000");
+    expect(stateSource).toContain("this.scheduleOperationalTwinCalibrationSample(now)");
+    expect(stateSource).toContain('await import("@/lib/server/operational-twin")');
+    expect(outcomeSource).toContain("refreshDrivenSampling: true");
   });
 
   it("uses only LOCAL receiver state and existing Flight Intelligence events as truth", () => {
