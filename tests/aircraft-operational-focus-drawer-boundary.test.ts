@@ -33,11 +33,23 @@ describe("Aircraft Operational Focus drawer V1 boundary", () => {
     expect(summarySource).toContain("operationalFocusDrawerMore");
   });
 
+  it("uses the existing onFocus contract for previous and next navigation", () => {
+    expect(summarySource).toContain("aircraftOperationalFocusNavigation(focus.items, activeItemId)");
+    expect(summarySource).toContain("navigation.previousItem.id");
+    expect(summarySource).toContain("navigation.nextItem.id");
+    expect(summarySource).not.toContain("fetch(");
+    expect(appSource).not.toContain("operationalFocusNavigationIndex");
+  });
+
   it("keeps matching EN/CS interaction copy", () => {
     for (const source of [enSource, csSource]) {
       expect(source).toContain("operationalFocusDrawerMapAction");
       expect(source).toContain("operationalFocusDrawerActive");
       expect(source).toContain("operationalFocusDrawerMore");
+      expect(source).toContain("operationalFocusDrawerNavigation");
+      expect(source).toContain("operationalFocusDrawerPrevious");
+      expect(source).toContain("operationalFocusDrawerNext");
+      expect(source).toContain("operationalFocusDrawerPosition");
     }
   });
 });
