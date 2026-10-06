@@ -86,6 +86,44 @@ export interface OperationalTwinEvidenceSummary {
   inferred: number;
 }
 
+export type AircraftOperationalFocusLevel = "NORMAL" | "WATCH" | "ATTENTION";
+export type AircraftOperationalFocusType =
+  | "WEATHER"
+  | "NAVIGATION_INTEGRITY"
+  | "PLANNED_AIRSPACE"
+  | "TRAJECTORY";
+
+export interface AircraftOperationalFocusItem {
+  id: string;
+  type: AircraftOperationalFocusType;
+  level: Exclude<AircraftOperationalFocusLevel, "NORMAL">;
+  offsetMinutes: number;
+  at: string;
+  confidence: OperationalTwinConfidence;
+  label: string;
+  source: string;
+  sourceReference: string | null;
+  reasonCodes: string[];
+}
+
+export interface AircraftOperationalFocusSummary {
+  version: "aircraft-operational-focus-v1";
+  generatedAt: string;
+  level: AircraftOperationalFocusLevel;
+  total: number;
+  watch: number;
+  attention: number;
+  truncated: boolean;
+  items: AircraftOperationalFocusItem[];
+  limitations: Array<
+    | "OPERATIONAL_CONTEXT_ONLY"
+    | "NOT_SAFETY_ALERT"
+    | "NO_ATC_CLEARANCE_INFERENCE"
+    | "SOURCE_SEMANTICS_PRESERVED"
+    | "NO_ALL_CLEAR_INFERENCE"
+  >;
+}
+
 export interface OperationalTwinSituation {
   version: typeof OPERATIONAL_TWIN_VERSION;
   status: "available";
@@ -113,6 +151,7 @@ export interface OperationalTwinSituation {
     canonicalCalibrationRemainsActive: true;
   };
   navigationIntegrityCorridor?: NavigationIntegrityCorridorIntelligence;
+  operationalFocus?: AircraftOperationalFocusSummary;
   events: OperationalTwinEvent[];
   evidence: OperationalTwinEvidenceSummary;
   limitations: OperationalTwinLimitationCode[];
