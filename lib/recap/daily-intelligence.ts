@@ -1,6 +1,8 @@
 import type {
   RecapDailyHighlight,
+  RecapDailyAirportItem,
   RecapDailyIntelligence,
+  RecapDailyWeatherHighlight,
   RecapRankingItem,
 } from "@/lib/aircraft/types";
 import type { AlertHistoryEntry } from "@/lib/server/alert-history";
@@ -8,6 +10,25 @@ import type { AlertHistoryEntry } from "@/lib/server/alert-history";
 export interface DailyRecapFlightInput {
   startedAt: Date;
   airline: string | null;
+}
+
+export interface DailyRecapRouteAggregateInput {
+  origin: string | null;
+  destination: string | null;
+  count: number;
+}
+
+export interface DailyRecapWeatherInput {
+  id: number;
+  aircraftHex: string;
+  callsign: string | null;
+  observedAt: Date;
+  altitudeFt: number;
+  windDirectionDeg: number | null;
+  windSpeedKt: number | null;
+  turbulenceLevel: number | null;
+  quality: string;
+  source: string;
 }
 
 export interface DailyRecapEventAggregateInput {
@@ -29,7 +50,9 @@ export interface DailyRecapEventInput {
 interface BuildDailyIntelligenceInput {
   flights: DailyRecapFlightInput[];
   eventAggregates: DailyRecapEventAggregateInput[];
+  routeAggregates: DailyRecapRouteAggregateInput[];
   events: DailyRecapEventInput[];
+  weather: DailyRecapWeatherInput[];
   alerts: AlertHistoryEntry[];
   timezone: string;
   complete: boolean;
@@ -37,6 +60,8 @@ interface BuildDailyIntelligenceInput {
 
 const DAILY_HIGHLIGHT_LIMIT = 10;
 const TOP_AIRLINE_LIMIT = 5;
+const TOP_AIRPORT_LIMIT = 5;
+const WEATHER_HIGHLIGHT_LIMIT = 5;
 
 const EVENT_PRIORITY: Record<string, number> = {
   GO_AROUND: 120,
@@ -88,6 +113,90 @@ function topAirlines(flights: DailyRecapFlightInput[]): RecapRankingItem[] {
     .map(([name, count]) => ({ name, count }))
     .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name))
     .slice(0, TOP_AIRLINE_LIMIT);
+}
+
+
+function topAirports(routes: DailyRecapRouteAggregateInput[]): RecapDailyAirportItem[] {
+  const airports = new Map<string, { arrivals: number; departures: number }>();
+  const increment = (icao: string | null, direction: "arrivals" | "departures", count: number) => {
+    const normalized = icao?.trim().toUpperCase() ?? "";
+    const boundedCount = Math.max(0, Math.trunc(count));
+    if (!/^[A-Z0-9]{4}$/.test(normalized) || boundedCount <= 0) return;
+    const current = airports.get(normalized) ?? { arrivals: 0, departures: 0 };
+    current[direction] += boundedCount;
+    airports.set(normalized, current);
+  };
+  for (const route of routes) {
+    increment(route.origin, "departures", route.count);
+    increment(route.destination, "arrivals", route.count);
+  }
+  return [...airports.entries()]
+    .map(([icao, counts]) => ({
+      icao,
+      arrivals: counts.arrivals,
+      departures: counts.departures,
+      movements: counts.arrivals + counts.departures,
+    }))
+    .sort((left, right) =>
+      right.movements - left.movements
+      || right.arrivals - left.arrivals
+      || left.icao.localeCompare(right.icao))
+    .slice(0, TOP_AIRPORT_LIMIT);
+}
+
+function weatherHighlights(weather: DailyRecapWeatherInput[]): RecapDailyWeatherHighlight[] {
+  const candidates = weather.flatMap((item) => {
+    const quality = item.quality.trim().toUpperCase();
+    const icaoHex = normalizeHex(item.aircraftHex);
+    if ((quality !== "HIGH" && quality !== "GOOD") || !icaoHex || !Number.isFinite(item.observedAt.getTime())) return [];
+    const turbulence = Number.isFinite(item.turbulenceLevel) ? item.turbulenceLevel : null;
+    const wind = Number.isFinite(item.windSpeedKt) ? item.windSpeedKt : null;
+    const kind = turbulence !== null && turbulence >= 1
+      ? "turbulence"
+      : wind !== null && wind >= 50
+        ? "strong_wind"
+        : null;
+    if (!kind) return [];
+    const priority = kind === "turbulence"
+      ? 200 + (turbulence ?? 0) * 25
+      : 100 + Math.min(100, wind ?? 0);
+    return [{
+      priority,
+      value: {
+        key: `weather:${item.id}`,
+        kind,
+        observedAt: item.observedAt.toISOString(),
+        icaoHex,
+        callsign: item.callsign?.trim() || null,
+        altitudeFt: Math.round(item.altitudeFt),
+        turbulenceLevel: turbulence,
+        windSpeedKt: wind,
+        windDirectionDeg: Number.isFinite(item.windDirectionDeg) ? item.windDirectionDeg : null,
+        quality: quality as "HIGH" | "GOOD",
+        source: item.source.trim().toUpperCase() || "UNKNOWN",
+      } satisfies RecapDailyWeatherHighlight,
+    }];
+  });
+
+  const perAircraft = new Map<string, (typeof candidates)[number]>();
+  for (const candidate of candidates) {
+    const current = perAircraft.get(candidate.value.icaoHex);
+    if (
+      !current
+      || candidate.priority > current.priority
+      || (candidate.priority === current.priority
+        && Date.parse(candidate.value.observedAt) > Date.parse(current.value.observedAt))
+    ) {
+      perAircraft.set(candidate.value.icaoHex, candidate);
+    }
+  }
+  return [...perAircraft.values()]
+    .sort((left, right) =>
+      right.priority - left.priority
+      || Date.parse(right.value.observedAt) - Date.parse(left.value.observedAt)
+      || left.value.icaoHex.localeCompare(right.value.icaoHex))
+    .slice(0, WEATHER_HIGHLIGHT_LIMIT)
+    .map((item) => item.value);
 }
 
 function aggregateCount(aggregates: DailyRecapEventAggregateInput[], type: string): number {
@@ -254,12 +363,16 @@ export function buildDailyIntelligence(input: BuildDailyIntelligenceInput): Reca
     complete: input.complete,
     busiestHour: busiestHour(input.flights, input.timezone),
     topAirlines: topAirlines(input.flights),
+    topAirports: topAirports(input.routeAggregates),
     eventCounts: {
       goArounds: aggregateCount(input.eventAggregates, "GO_AROUND"),
       holdings: aggregateCount(input.eventAggregates, "HOLDING"),
       diversions: aggregateCount(input.eventAggregates, "DIVERSION"),
       emergencies: alerts.filter((entry) => alertKind(entry) === "emergency").length,
+      unusualTurns: aggregateCount(input.eventAggregates, "UNUSUAL_TURN"),
+      orbits: aggregateCount(input.eventAggregates, "ORBIT"),
     },
+    weatherHighlights: weatherHighlights(input.weather),
     highlights: buildHighlights(input.events, input.alerts),
   };
 }
