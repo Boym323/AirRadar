@@ -10,6 +10,7 @@ import type {
   RegionalAttentionOutcomeReport,
   RegionalAttentionGraduationReport,
 } from "@/lib/operational-twin";
+import type { OperationalFocusOutcomeReport } from "@/lib/operational-twin/operational-focus-outcome";
 import { StatusBadge } from "@/components/ui-primitives";
 import { formatDateTime, formatNumber, t } from "@/lib/i18n";
 import styles from "./digital-twin-calibration-center.module.css";
@@ -37,6 +38,7 @@ type CalibrationCenterReport = {
   event: OperationalTwinEventOutcomeReport;
   truthFirst: OperationalTwinTruthFirstReport;
   windTiming: OperationalTwinWindTimingGraduationReport;
+  focusOutcome: OperationalFocusOutcomeReport;
   regionalAttention: RegionalAttentionOutcomeReport;
   regionalAttentionGraduation: RegionalAttentionGraduationReport;
   persistence: PersistenceStatus;
@@ -237,6 +239,21 @@ export function DigitalTwinCalibrationCenter() {
               <small>
                 {t.calibrationCenter.manualPromotionEligible}: {report.windTiming.manualPromotionEligible ? t.common.yes : t.common.no}
               </small>
+            </section>
+
+            <section className="statistics-card" data-testid="calibration-operational-focus-outcome">
+              <DecisionHeader
+                title={t.calibrationCenter.operationalFocusOutcome}
+                decision={report.focusOutcome.decision}
+                reasons={[]}
+              />
+              <div className={styles.metrics}>
+                <Metric label={t.calibrationCenter.scoreable} value={report.focusOutcome.byType.WEATHER.scoreable} />
+                <Metric label={t.calibrationCenter.precision} value={pct(report.focusOutcome.byType.WEATHER.precision)} />
+                <Metric label={t.calibrationCenter.timingMae} value={seconds(report.focusOutcome.byType.WEATHER.meanAbsoluteTimingErrorSeconds)} />
+                <Metric label={t.calibrationCenter.truthCoverage} value={report.focusOutcome.scoreableTypes.join(", ")} />
+              </div>
+              <small>{t.calibrationCenter.operationalFocusOutcomeFootnote}</small>
             </section>
 
             <section className="statistics-card" data-testid="calibration-regional-attention">
