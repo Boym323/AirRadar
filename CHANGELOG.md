@@ -10,6 +10,52 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.330] - 2026-10-06
+
+Changes since v1.0.329.
+
+**Features touched:** Mobile / PWA mode, Operational Digital Twin, Statistics & Recaps, System Observability, Watchlist, Alerts & Fleet.
+
+### Added
+
+- Add Trajectory Quality Outcome Validation V1 (#411) (ca61cbf7)
+- Add mobile PWA and web push alerts (3766a926)
+- Add observed traffic heatmap (7ce9b528)
+- Deliver durable alerts through Pushover (831675d6)
+- Deliver durable alerts through Pushover (07890013)
+- Add Trajectory Quality Graduation V1 (#412) (e47970ee)
+- Add proactive receiver monitoring (#415) (7cd7bd6f)
+- Add Trajectory Quality Promotion V1 (#416) (28d23eae)
+
+### Documentation
+
+- Regenerate feature registry (73ec9ec2)
+
+### Maintenance
+
+- Sync generated repository metadata (#410) (bac3f8c0)
+- Type fetch mock correctly (6b233d68)
+- Type fetch mock correctly (8449aa6d)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#410) (bac3f8c0)
+- feat: add Trajectory Quality Outcome Validation V1 (#411) (ca61cbf7)
+- feat: add mobile PWA and web push alerts (3766a926)
+- feat(statistics): add observed traffic heatmap (7ce9b528)
+- feat(alerts): deliver durable alerts through Pushover (831675d6)
+- feat(alerts): deliver durable alerts through Pushover (07890013)
+- feat: add Trajectory Quality Graduation V1 (#412) (e47970ee)
+- feat(system): add proactive receiver monitoring (#415) (7cd7bd6f)
+- docs(features): regenerate feature registry (73ec9ec2)
+- test(alerts): type fetch mock correctly (6b233d68)
+- test(alerts): type fetch mock correctly (8449aa6d)
+- Merge pull request #414 from Boym323/feat/pushover-pr (8fa64124)
+- Merge pull request #413 from Boym323/feat/mobile-pwa (e082f215)
+- feat: add Trajectory Quality Promotion V1 (#416) (28d23eae)
+
+</details>
 ## [1.0.329] - 2026-10-06
 
 Changes since v1.0.328.
