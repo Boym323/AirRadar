@@ -44,6 +44,19 @@ describe("production release metadata gate", () => {
     expect(source).toContain("waitForTimeout(500)");
   });
 
+  it("retries visual route navigation once when the root is not painted yet", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("const targetRoot = visualPage.locator(target.selector)");
+    expect(source).toContain("visualPage.reload({ waitUntil: \"domcontentloaded\" })");
+    expect(source).toContain("visual smoke ${target.path} root was not visible after initial navigation; retrying page load");
+  });
+
+  it("retries the real Operations Center click once after hydration", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("const operationsPanel = visualPage.locator('[data-testid=\"operations-center-panel\"]')");
+    expect(source).toContain("if (!await operationsPanel.isVisible()) await operationsTrigger.click();");
+  });
+
   it("keeps breakpoint edges in the no-reload sweep while reloading only representative devices", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain("const sweepWidths = [430, 480, 700, 720, 820, 821, 899, 900, 901, 950, 951, 1024, 1100, 1101, 1400, 1401]");

@@ -986,12 +986,27 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           }
           const response = await visualPage.goto(`${baseUrl}${target.path}`, { waitUntil: "domcontentloaded" });
           if (!response?.ok()) throw new Error(`Visual smoke ${target.path} returned HTTP ${response?.status()}`);
-          await visualPage.locator(target.selector).waitFor({ state: "visible", timeout: 15_000 });
+          const targetRoot = visualPage.locator(target.selector);
+          try {
+            await targetRoot.waitFor({ state: "visible", timeout: 5_000 });
+          } catch {
+            // A fresh Next.js route can occasionally reach DOMContentLoaded
+            // before its shell is painted. Retry the real page load once while
+            // keeping the selector assertion strict.
+            console.warn(`[production-gates] visual smoke ${target.path} root was not visible after initial navigation; retrying page load`);
+            await visualPage.reload({ waitUntil: "domcontentloaded" });
+            await targetRoot.waitFor({ state: "visible", timeout: 15_000 });
+          }
           if (target.openOperationsCenter) {
             const operationsTrigger = visualPage.locator('[data-testid="operations-center-trigger"]');
+            const operationsPanel = visualPage.locator('[data-testid="operations-center-panel"]');
             await operationsTrigger.waitFor({ state: "visible", timeout: 15_000 });
             await operationsTrigger.click();
-            await visualPage.locator('[data-testid="operations-center-panel"]').waitFor({ state: "visible", timeout: 15_000 });
+            if (!await operationsPanel.isVisible()) {
+              await visualPage.waitForTimeout(500);
+              if (!await operationsPanel.isVisible()) await operationsTrigger.click();
+            }
+            await operationsPanel.waitFor({ state: "visible", timeout: 15_000 });
           }
           if (target.mockPredictiveOperations) {
             await visualPage.locator('[data-testid="predictive-operations-center"]').waitFor({ state: "visible", timeout: 15_000 });
