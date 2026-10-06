@@ -245,6 +245,16 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
   }
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
+  const closePage = async (page) => {
+    if (page.isClosed()) return;
+    try {
+      await page.close();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes("Target.disposeBrowserContext") || !message.includes("Failed to find context")) throw error;
+      console.warn("[production-gates] page close raced with an already-disposed browser context");
+    }
+  };
   try {
     const configuredViewport = process.env.PRODUCTION_GATE_BROWSER_VIEWPORT;
     const captureVisualSmoke = configuredViewport ? async () => {} : async () => {
@@ -1146,7 +1156,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           });
           console.log(`[production-gates] visual smoke captured ${target.name}`);
         } finally {
-          await visualPage.close();
+          await closePage(visualPage);
         }
       }
     };
@@ -1167,7 +1177,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         if (sweepFailures.length) throw new Error(`Responsive width sweep failed: ${JSON.stringify(sweepFailures.slice(0, 10))}`);
         console.log(`[production-gates] responsive width sweep ${sweepWidths.join(",")} failures=0 pageReloads=1`);
       } finally {
-        await sweepPage.close();
+        await closePage(sweepPage);
       }
     })();
     const routeErrors = [];
@@ -1208,7 +1218,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       }
     }));
     const routeSmoke = routePages[0];
-    await Promise.all(routePages.slice(1).map((page) => page.close()));
+    await Promise.all(routePages.slice(1).map((page) => closePage(page)));
     if (routeErrors.length) throw new Error(`Secondary route smoke failed: ${routeErrors.join(" | ")}`);
     if (unavailable.length) console.log(`[production-gates] expected unavailable API responses observed=${unavailable.length}`);
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
@@ -1222,7 +1232,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await routeSmoke.waitForURL(/\/(?:alerts|fleet|intelligence|operations|recap|system|watchlist)/);
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
-    await routeSmoke.close();
+    await closePage(routeSmoke);
     await responsiveSweepPromise;
     await captureVisualSmoke();
     const browserViewports = [
@@ -1868,7 +1878,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
           || contract.close !== 0 || !contract.imagesNamed || !contract.buttonsNamed) {
           throw new Error(`Responsive contract failed at ${viewport.width}px: ${JSON.stringify(contract)}`);
         }
-        await page.close();
+        await closePage(page);
         continue;
       }
 
@@ -2046,7 +2056,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         await mobileNav.locator(".mobile-bottom-more > summary").click();
       }
       logViewportPhase("total", viewportStartedAt);
-      await page.close();
+      await closePage(page);
     }
   } finally {
     await browser.close();
