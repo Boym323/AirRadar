@@ -28,6 +28,7 @@ const primaryNavigation = [
 ] as const;
 
 const moreNavigation = [
+  { href: "/airspace", label: t.locale.startsWith("cs") ? "Vzdušný prostor" : "Airspace" },
   { href: "/routes", label: t.locale.startsWith("cs") ? "Trasy" : "Routes" },
   { href: "/operations", label: t.operations.title },
   { href: "/intelligence", label: t.intelligence.title },
@@ -199,6 +200,7 @@ export function MobileBottomNav() {
           <span>{t.common.more}</span>
         </summary>
         <div>
+          <Link href="/airspace">{t.locale.startsWith("cs") ? "Vzdušný prostor" : "Airspace"}</Link>
           <Link href="/operations">{t.operations.title}</Link>
           <Link href="/routes">{t.locale.startsWith("cs") ? "Trasy" : "Routes"}</Link>
           <Link href="/fleet">{t.fleet.title}</Link>
