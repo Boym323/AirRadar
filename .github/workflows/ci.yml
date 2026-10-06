@@ -11,6 +11,27 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
 
 jobs:
+  bootstrap-permission-probe:
+    name: Bootstrap permission probe
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/deploy-bootstrap-sudo'
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 5
+    steps:
+      - name: Inspect production checkout permissions
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          repo="/var/www/airradar"
+          echo "runner_user=$(id -un)"
+          stat -c 'repo=%U:%G mode=%a' "${repo}"
+          stat -c 'git=%U:%G mode=%a' "${repo}/.git"
+          git -c "safe.directory=${repo}" -C "${repo}" status --short >/dev/null
+          if [[ -w "${repo}/.git" && -w "${repo}/.git/FETCH_HEAD" ]]; then
+            echo "checkout_git_write=allowed"
+          else
+            echo "checkout_git_write=denied"
+          fi
+
   validate:
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
     runs-on: ubuntu-24.04
