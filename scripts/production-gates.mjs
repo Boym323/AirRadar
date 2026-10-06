@@ -1190,7 +1190,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       ["/history", ".history-page"], ["/statistics", ".statistics-page"], ["/fleet", ".fleet-page"],
       ["/time-machine", ".time-machine-page"], ["/intelligence", ".intelligence-page"], ["/watchlist", ".watchlist-page"],
       ["/alerts", ".alert-history-page"], ["/recap/daily", ".recap-page"], ["/recap/weekly", ".recap-page"],
-      ["/system", ".system-page"], ["/receiver/coverage", ".statistics-page"],
+      ["/system", ".system-page"], ["/operations", ".operations-page"], ["/receiver/coverage", ".statistics-page"],
     ];
     const routePages = await Promise.all(Array.from({ length: 3 }, async () => configureRouteSmokePage(await browser.newPage({ viewport: { width: 1280, height: 800 } }))));
     await Promise.all(routePages.map(async (page, workerIndex) => {
@@ -1219,7 +1219,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     await routeSmoke.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
     await routeSmoke.locator(".mobile-bottom-more > summary").click();
     await routeSmoke.locator(".mobile-bottom-more a").first().click();
-    await routeSmoke.waitForURL(/\/(?:alerts|fleet|intelligence|recap|system|watchlist)/);
+    await routeSmoke.waitForURL(/\/(?:alerts|fleet|intelligence|operations|recap|system|watchlist)/);
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await routeSmoke.close();
