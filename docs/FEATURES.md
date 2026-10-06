@@ -30,6 +30,7 @@ not yet been historically attributed.
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence. |
 | Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex`<br>`/api/admin/track-fusion/readiness`<br>`/api/admin/track-fusion/outcome` | Shadow-only per-field multi-source state estimator with readiness graduation plus bounded prospective canonical-vs-fused outcome validation against future LOCAL truth; never alters canonical live state or local receiver persistence. |
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
+| Watchlist Intelligence V2 | production | alerts / monitoring | Pre-registry | `/watchlist` | — | Read-only watchlist intelligence dashboard combining current per-rule matches with one bounded 50-event activity feed for recent rule activity and notification-delivery outcomes. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
 
@@ -701,3 +702,7 @@ The Operational Digital Twin intersects its existing sampled 30-minute corridor 
 ## Wind Timing Graduation V1
 
 Event Outcome V2 now compares canonical and wind-adjusted timing for the same waypoint against one identical LOCAL truth observation. The process-local graduation gate is fail-closed: it requires sufficient span, paired sample volume, meaningful wind adjustments and truth coverage; PASS additionally requires at least 5% MAE improvement and a 55% shadow win rate. PASS only marks the model eligible for manual graduation — canonical timing remains active and there is no automatic promotion.
+
+### Watchlist Intelligence V2
+
+`/watchlist` now includes a read-only intelligence summary above the existing rule editor and activity feed. It combines each rule's existing `currentState` with one bounded 50-event `/api/watchlist/activity` request to show enabled rules, current matches, recent events, delivered/failed notifications and per-rule latest activity. No per-rule polling fan-out or alert-engine change is introduced.
