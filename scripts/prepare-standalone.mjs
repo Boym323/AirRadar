@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const distDir = resolve(process.argv[2] || ".next");
@@ -9,6 +9,9 @@ const standaloneStaticDir = resolve(standaloneDir, ".next", "static");
 const sourceStaticDir = resolve(distDir, "static");
 const sourcePublicDir = resolve("public");
 const standalonePublicDir = resolve(standaloneDir, "public");
+const readyMarker = resolve(standaloneDir, ".airradar-runtime-ready");
+
+rmSync(readyMarker, { force: true });
 
 if (!existsSync(resolve(standaloneDir, "server.js"))) {
   throw new Error(`Standalone server is missing under ${standaloneDir}`);
@@ -25,4 +28,5 @@ if (existsSync(sourcePublicDir)) {
   cpSync(sourcePublicDir, standalonePublicDir, { recursive: true });
 }
 
+writeFileSync(readyMarker, "standalone-v1\n", "utf8");
 process.stdout.write(`[standalone] prepared ${standaloneDir}\n`);
