@@ -15,6 +15,7 @@ export async function GET(request: Request): Promise<Response> {
   const service = getAircraftStateService();
   const corridor = service.getOperationalTwinOutcomeReport();
   const trajectoryQuality = service.getOperationalTwinTrajectoryQualityOutcomeReport();
+  const trajectoryQualityGraduation = service.getOperationalTwinTrajectoryQualityGraduationReport();
   const event = service.getOperationalTwinEventOutcomeReport();
   const focus = service.getOperationalFocusOutcomeReport();
   const regionalAttention = service.getRegionalAttentionOutcomeReport();
@@ -25,6 +26,7 @@ export async function GET(request: Request): Promise<Response> {
     generatedAt: new Date().toISOString(),
     corridor,
     trajectoryQuality,
+    trajectoryQualityGraduation,
     event,
     focus,
     truthFirst: event.truthFirst,

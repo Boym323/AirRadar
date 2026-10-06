@@ -57,7 +57,7 @@ import type { FlightPhase } from "@/lib/intelligence/types";
 import type { PredictionSample, PredictiveFlightState, PredictiveInput } from "@/lib/predictive-intelligence/types";
 import type { Airport } from "@/lib/airports/types";
 import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
-import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeValidator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
+import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTrajectoryQualityOutcomeValidator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildOperationalTwinTrajectoryQualityGraduation, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
 import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
 import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
@@ -221,6 +221,7 @@ export class AircraftStateService {
   private readonly operationalTwinCalibrationPersistence = new OperationalTwinCalibrationPersistence(
     this.operationalTwinOutcome,
     this.operationalTwinEventOutcome,
+    this.operationalTwinTrajectoryQualityOutcome,
     this.regionalAttentionOutcome,
   );
   private readonly lastHistorySample = new Map<string, number>();
@@ -515,6 +516,7 @@ export class AircraftStateService {
     operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
     operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
     operationalTwinTrajectoryQualityOutcome: ReturnType<OperationalTwinTrajectoryQualityOutcomeValidator["report"]>;
+    operationalTwinTrajectoryQualityGraduation: ReturnType<typeof buildOperationalTwinTrajectoryQualityGraduation>;
     operationalFocusOutcome: ReturnType<AircraftOperationalFocusOutcomeValidator["report"]>;
     regionalAttentionOutcome: ReturnType<RegionalAttentionOutcomeValidator["report"]>;
     regionalAttentionGraduation: ReturnType<typeof buildRegionalAttentionGraduation>;
@@ -553,6 +555,7 @@ export class AircraftStateService {
       operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
       operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
       operationalTwinTrajectoryQualityOutcome: this.getOperationalTwinTrajectoryQualityOutcomeReport(),
+      operationalTwinTrajectoryQualityGraduation: this.getOperationalTwinTrajectoryQualityGraduationReport(),
       operationalFocusOutcome: this.getOperationalFocusOutcomeReport(),
       regionalAttentionOutcome: this.getRegionalAttentionOutcomeReport(),
       regionalAttentionGraduation: this.getRegionalAttentionGraduationReport(),
@@ -638,10 +641,17 @@ export class AircraftStateService {
 
   captureOperationalTwinTrajectoryQualityOutcome(situation: OperationalTwinSituation): void {
     this.operationalTwinTrajectoryQualityOutcome.capture(situation);
+    this.operationalTwinCalibrationPersistence.scheduleFlush();
   }
 
   getOperationalTwinTrajectoryQualityOutcomeReport(now = new Date()) {
     return this.operationalTwinTrajectoryQualityOutcome.report(now);
+  }
+
+  getOperationalTwinTrajectoryQualityGraduationReport(now = new Date()) {
+    return buildOperationalTwinTrajectoryQualityGraduation(
+      this.operationalTwinTrajectoryQualityOutcome.report(now),
+    );
   }
 
   observeOperationalTwinTruthContext(

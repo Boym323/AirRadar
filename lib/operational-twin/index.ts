@@ -77,3 +77,4 @@ export * from "./wind-timing-promotion";
 export * from "./regional-attention-outcome";
 export * from "./regional-attention-graduation";
 export * from "./trajectory-quality-outcome";
+export * from "./trajectory-quality-graduation";

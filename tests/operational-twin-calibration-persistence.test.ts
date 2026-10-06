@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   OperationalTwinEventOutcomeValidator,
   OperationalTwinOutcomeValidator,
+  OperationalTwinTrajectoryQualityOutcomeValidator,
   OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION,
   OPERATIONAL_TWIN_OUTCOME_VERSION,
+  OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_VERSION,
 } from "@/lib/operational-twin";
 
 const START = Date.parse("2026-10-05T14:00:00.000Z");
@@ -53,6 +55,24 @@ const emptyEventAggregate = {
   absoluteTimingErrorSecondsSum: 0,
   within120Seconds: 0,
   within300Seconds: 0,
+};
+
+const trajectoryAggregate = {
+  pairedSamples: 2,
+  canonicalAbsoluteErrorFtSum: 1800,
+  qualityAbsoluteErrorFtSum: 1000,
+  qualityWins: 2,
+  canonicalWins: 0,
+  ties: 0,
+};
+
+const emptyTrajectoryAggregate = {
+  pairedSamples: 0,
+  canonicalAbsoluteErrorFtSum: 0,
+  qualityAbsoluteErrorFtSum: 0,
+  qualityWins: 0,
+  canonicalWins: 0,
+  ties: 0,
 };
 
 describe("Operational Digital Twin Calibration Persistence V1", () => {
@@ -128,12 +148,50 @@ describe("Operational Digital Twin Calibration Persistence V1", () => {
     expect(OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION).toBe("operational-digital-twin-event-outcome-v2");
   });
 
+  it("round-trips trajectory-quality aggregates without aircraft identity", () => {
+    const validator = new OperationalTwinTrajectoryQualityOutcomeValidator();
+    const payloadJson = JSON.stringify({
+      startMs: START,
+      captured: 2,
+      expiredWithoutTruth: 0,
+      byHorizon: {
+        5: trajectoryAggregate,
+        15: emptyTrajectoryAggregate,
+        30: emptyTrajectoryAggregate,
+      },
+      byPhase: {
+        CLIMB: emptyTrajectoryAggregate,
+        CRUISE: emptyTrajectoryAggregate,
+        DESCENT: trajectoryAggregate,
+        LEVEL: emptyTrajectoryAggregate,
+        UNKNOWN: emptyTrajectoryAggregate,
+      },
+    });
+
+    expect(validator.hydrateCalibrationBuckets([{ startMs: START, payloadJson }], NOW)).toBe(1);
+    const exported = validator.exportCalibrationBuckets(NOW);
+    expect(exported).toHaveLength(1);
+    expect(exported[0]?.payloadJson).not.toMatch(/icao|callsign|registration|route|latitude|longitude/i);
+
+    const report = validator.report(new Date(NOW));
+    expect(report.overall.pairedSamples).toBe(2);
+    expect(report.overall.canonicalMeanAbsoluteErrorFt).toBe(900);
+    expect(report.overall.qualityMeanAbsoluteErrorFt).toBe(500);
+    expect(report.phases.DESCENT.pairedSamples).toBe(2);
+    expect(report.window.restartStableAggregates).toBe(true);
+    expect(OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_VERSION)
+      .toBe("operational-digital-twin-trajectory-quality-outcome-v1");
+  });
+
   it("rejects malformed persisted buckets instead of poisoning calibration", () => {
     const outcome = new OperationalTwinOutcomeValidator();
     const eventOutcome = new OperationalTwinEventOutcomeValidator();
+    const trajectoryQuality = new OperationalTwinTrajectoryQualityOutcomeValidator();
     expect(outcome.hydrateCalibrationBuckets([{ startMs: START, payloadJson: "{bad" }], NOW)).toBe(0);
     expect(eventOutcome.hydrateCalibrationBuckets([{ startMs: START, payloadJson: "{}" }], NOW)).toBe(0);
+    expect(trajectoryQuality.hydrateCalibrationBuckets([{ startMs: START, payloadJson: "{}" }], NOW)).toBe(0);
     expect(outcome.exportCalibrationBuckets(NOW)).toEqual([]);
     expect(eventOutcome.exportCalibrationBuckets(NOW)).toEqual([]);
+    expect(trajectoryQuality.exportCalibrationBuckets(NOW)).toEqual([]);
   });
 });

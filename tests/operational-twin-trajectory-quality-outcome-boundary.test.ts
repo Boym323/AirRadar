@@ -6,6 +6,8 @@ const aircraftState = readFileSync(new URL("../lib/server/aircraft-state.ts", im
 const calibrationRoute = readFileSync(new URL("../app/api/admin/operational-twin/calibration/route.ts", import.meta.url), "utf8");
 const calibrationCenter = readFileSync(new URL("../components/digital-twin-calibration-center.tsx", import.meta.url), "utf8");
 const validator = readFileSync(new URL("../lib/operational-twin/trajectory-quality-outcome.ts", import.meta.url), "utf8");
+const calibrationPersistence = readFileSync(new URL("../lib/server/operational-twin-calibration-persistence.ts", import.meta.url), "utf8");
+const graduation = readFileSync(new URL("../lib/operational-twin/trajectory-quality-graduation.ts", import.meta.url), "utf8");
 
 describe("Trajectory Quality Outcome Validation V1 boundaries", () => {
   it("captures from the existing Digital Twin request and samples truth from the existing LOCAL refresh", () => {
@@ -17,16 +19,32 @@ describe("Trajectory Quality Outcome Validation V1 boundaries", () => {
     expect(validator).not.toContain("setTimeout(");
   });
 
-  it("keeps the validation lane process-local and non-promoting", () => {
-    expect(validator).toContain('"PROCESS_LOCAL_V1"');
+  it("persists only anonymous aggregates and remains non-promoting", () => {
+    expect(validator).toContain('"RESTART_STABLE_AGGREGATES"');
+    expect(validator).toContain("exportCalibrationBuckets");
+    expect(validator).toContain("hydrateCalibrationBuckets");
     expect(validator).toContain("canonicalRemainsActive: true");
     expect(validator).toContain("autoPromotion: false");
     expect(validator).toContain('"OUTCOME_MEASUREMENT_ONLY"');
+    expect(calibrationPersistence).toContain('"TRAJECTORY_QUALITY_OUTCOME"');
+    expect(calibrationPersistence).toContain("hydratedTrajectoryQualityOutcomeBuckets");
   });
 
-  it("exposes the report only through the existing admin Calibration Center endpoint", () => {
+  it("exposes outcome and graduation only through the existing admin Calibration Center endpoint", () => {
     expect(calibrationRoute).toContain("getOperationalTwinTrajectoryQualityOutcomeReport()");
+    expect(calibrationRoute).toContain("getOperationalTwinTrajectoryQualityGraduationReport()");
     expect(calibrationRoute).toContain("trajectoryQuality");
+    expect(calibrationRoute).toContain("trajectoryQualityGraduation");
     expect(calibrationCenter).toContain('data-testid="calibration-trajectory-quality-outcome"');
+    expect(calibrationCenter).toContain('data-testid="calibration-trajectory-quality-graduation"');
+  });
+
+  it("keeps graduation manual and fail-closed without changing the canonical trajectory", () => {
+    expect(graduation).toContain("manualPromotionEligible: decision === \"PASS\"");
+    expect(graduation).toContain("autoPromotion: false");
+    expect(graduation).toContain("canonicalTrajectoryRemainsActive: true");
+    expect(graduation).toContain('"horizon_regression"');
+    expect(graduation).toContain('"phase_regression"');
+    expect(graduation).not.toContain("applyOperationalTwin");
   });
 });
