@@ -10,6 +10,176 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.325] - 2026-10-06
+
+Changes since v1.0.324.
+
+**Features touched:** Operational Digital Twin.
+
+### Added
+
+- Add aircraft operational focus (69ddabbe)
+- Expose operational focus contract (7ebb3d74)
+- Export operational focus builder (27405d37)
+- Assemble aircraft operational focus (6d53fd21)
+
+### Fixed
+
+- Widen focus event flatMap inference (537c2673)
+
+### Documentation
+
+- Localize aircraft operational focus (4f4046d2)
+- Document aircraft operational focus (eea076fa)
+
+### Maintenance
+
+- Cover aircraft operational focus (b8b654bb)
+- Lock operational focus boundary (30e9c79e)
+- Type focus event labels as strings (bd916c9d)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(operational-twin): add aircraft operational focus (69ddabbe)
+- test(operational-twin): cover aircraft operational focus (b8b654bb)
+- test(operational-twin): lock operational focus boundary (30e9c79e)
+- feat(operational-twin): expose operational focus contract (7ebb3d74)
+- feat(operational-twin): export operational focus builder (27405d37)
+- feat(operational-twin): assemble aircraft operational focus (6d53fd21)
+- docs: localize aircraft operational focus (4f4046d2)
+- docs: document aircraft operational focus (eea076fa)
+- fix(operational-twin): widen focus event flatMap inference (537c2673)
+- test(operational-twin): type focus event labels as strings (bd916c9d)
+- Merge pull request #391 from Boym323/feat/aircraft-operational-focus-v1 (409d2d4b)
+
+</details>
+
+## [1.0.324] - 2026-10-06
+
+Changes since v1.0.323.
+
+### Added
+
+- Consolidate calibration and regional attention stack (5fe7ef47)
+
+### Fixed
+
+- Bootstrap artifact deploy and metadata validation (b7fc6aa5)
+- Gate standalone runtime on prepared assets (43500284)
+- Restore locked Prisma tooling on production (a6094147)
+
+### Maintenance
+
+- Optimize validation and production release pipeline (58adbc81)
+
+<details>
+<summary>Technical commits</summary>
+
+- ci: optimize validation and production release pipeline (58adbc81)
+- fix(ci): bootstrap artifact deploy and metadata validation (b7fc6aa5)
+- feat: consolidate calibration and regional attention stack (5fe7ef47)
+- fix(deploy): gate standalone runtime on prepared assets (43500284)
+- fix(deploy): restore locked Prisma tooling on production (a6094147)
+
+</details>
+
+## [1.0.323] - 2026-10-06
+
+Changes since v1.0.322.
+
+**Features touched:** Operational Digital Twin, System Observability.
+
+### Added
+
+- Add prospective outcome validator (4ac1b8a5)
+- Export outcome validator (2d36f29a)
+- Wire outcome validation into live state (cdd7b867)
+- Persist regional attention outcome aggregates (e996946b)
+- Capture prospective outcome samples (6cd43e68)
+- Add admin outcome diagnostics endpoint (50649050)
+- Expose regional attention outcome diagnostics (8ae8efa3)
+- Add Regional Attention Outcome Validation V1 (#373) (7a65fd98)
+
+### Changed
+
+- Export elevated truth thresholds (97e5ab6c)
+
+### Fixed
+
+- Normalize exported elevated thresholds (79a47150)
+- Avoid empty calibration buckets (1dd3ae64)
+- Sample Digital Twin calibration from receiver refresh (12a23503)
+- Expose refresh-driven calibration sampling (89098bca)
+
+### Documentation
+
+- Document outcome validation V1 (e8afef72)
+- Document outcome validation V1 (79af70a8)
+- Document outcome validation V1 (2360a200)
+- Document outcome validation V1 (2c08751b)
+- Register regional attention outcome V1 (36a2a83b)
+- Regenerate regional attention outcome summary (f5a262a0)
+
+### Maintenance
+
+- Cover prospective outcome validation (1e111ff5)
+- Lock outcome validation boundaries (7e27f686)
+- Lock refresh-driven calibration sampling boundary (66cf9790)
+- Bump source-map-js to patched 1.2.2 (3a0f7508)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(regional-attention): add prospective outcome validator (4ac1b8a5)
+- refactor(regional-situation): export elevated truth thresholds (97e5ab6c)
+- fix(regional-situation): normalize exported elevated thresholds (79a47150)
+- feat(regional-attention): export outcome validator (2d36f29a)
+- feat(regional-attention): wire outcome validation into live state (cdd7b867)
+- feat(calibration): persist regional attention outcome aggregates (e996946b)
+- feat(regional-attention): capture prospective outcome samples (6cd43e68)
+- feat(regional-attention): add admin outcome diagnostics endpoint (50649050)
+- feat(system): expose regional attention outcome diagnostics (8ae8efa3)
+- test(regional-attention): cover prospective outcome validation (1e111ff5)
+- test(regional-attention): lock outcome validation boundaries (7e27f686)
+- docs(regional-attention): document outcome validation V1 (e8afef72)
+- docs(regional-attention): document outcome validation V1 (79af70a8)
+- docs(regional-attention): document outcome validation V1 (2360a200)
+- docs(regional-attention): document outcome validation V1 (2c08751b)
+- docs(features): register regional attention outcome V1 (36a2a83b)
+- docs(features): regenerate regional attention outcome summary (f5a262a0)
+- fix(regional-attention): avoid empty calibration buckets (1dd3ae64)
+- feat: add Regional Attention Outcome Validation V1 (#373) (7a65fd98)
+- fix: sample Digital Twin calibration from receiver refresh (12a23503)
+- fix: expose refresh-driven calibration sampling (89098bca)
+- test: lock refresh-driven calibration sampling boundary (66cf9790)
+- chore: bump source-map-js to patched 1.2.2 (3a0f7508)
+- Merge pull request #383 from Boym323/fix/digital-twin-calibration-sampling-v1 (f0709c6d)
+
+</details>
+
+## [1.0.322] - 2026-10-05
+
+Changes since v1.0.321.
+
+### Added
+
+- Add Digital Twin Truth-first Validation V2 (#371) (6397a586)
+
+### Maintenance
+
+- Sync generated repository metadata (#370) (0ee56540)
+- Split PR and release validation (ac0534d1)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#370) (0ee56540)
+- feat: add Digital Twin Truth-first Validation V2 (#371) (6397a586)
+- ci: split PR and release validation (ac0534d1)
+- Merge pull request #372 from Boym323/ci/optimize-pr-main-validation (4100abb9)
+
+</details>
 ## [1.0.321] - 2026-10-05
 
 Changes since v1.0.320.
