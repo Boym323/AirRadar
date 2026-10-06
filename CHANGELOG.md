@@ -17,6 +17,78 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.339] - 2026-10-06
+
+Changes since v1.0.338.
+
+**Features touched:** Explainable Prediction.
+
+### Added
+
+- Add prediction evidence explainability contract (4246e0b5)
+- Export prediction explainability contract (f4a2e0d8)
+- Expose gated ETA explainability evidence (296955bf)
+- Expose gated runway explainability evidence (180c5d5d)
+- Expose gated runway-change explainability evidence (ef44387e)
+- Expose gated trajectory explainability evidence (5df36db2)
+- Show explainable predictive advisory evidence (5acf0e75)
+
+### Fixed
+
+- Keep explainability type import valid (7052bcaa)
+- Keep predictive advisory DTO backward compatible (2d2b29a9)
+- Keep predictive advisory DTO backward compatible (e4479448)
+- Keep predictive advisory DTO backward compatible (2c6fc252)
+- Keep predictive advisory DTO backward compatible (717718b6)
+
+### Documentation
+
+- Register Explainable Prediction V1 (aafc5e7f)
+- Document Explainable Prediction V1 (15b9d595)
+- Localize Explainable Prediction V1 (76e87dde)
+- Add Explainable Prediction V1 changelog (470e02bf)
+
+### Maintenance
+
+- Add explainable prediction evidence panel (e88ecf81)
+- Expect explainable advisory evidence (d90f99df)
+- Expect explainable advisory evidence (b248d346)
+- Expect explainable advisory evidence (08d66464)
+- Expect explainable advisory evidence (a46e8006)
+- Cover explainable prediction evidence contract (fe9a7991)
+- Guard Explainable Prediction V1 boundary (5a3517a1)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add prediction evidence explainability contract (4246e0b5)
+- feat: export prediction explainability contract (f4a2e0d8)
+- feat: expose gated ETA explainability evidence (296955bf)
+- feat: expose gated runway explainability evidence (180c5d5d)
+- feat: expose gated runway-change explainability evidence (ef44387e)
+- feat: expose gated trajectory explainability evidence (5df36db2)
+- style: add explainable prediction evidence panel (e88ecf81)
+- feat: show explainable predictive advisory evidence (5acf0e75)
+- test: expect explainable advisory evidence (d90f99df)
+- test: expect explainable advisory evidence (b248d346)
+- test: expect explainable advisory evidence (08d66464)
+- test: expect explainable advisory evidence (a46e8006)
+- test: cover explainable prediction evidence contract (fe9a7991)
+- test: guard Explainable Prediction V1 boundary (5a3517a1)
+- fix: keep explainability type import valid (7052bcaa)
+- docs: register Explainable Prediction V1 (aafc5e7f)
+- docs: document Explainable Prediction V1 (15b9d595)
+- docs: localize Explainable Prediction V1 (76e87dde)
+- docs: add Explainable Prediction V1 changelog (470e02bf)
+- fix: keep predictive advisory DTO backward compatible (2d2b29a9)
+- fix: keep predictive advisory DTO backward compatible (e4479448)
+- fix: keep predictive advisory DTO backward compatible (2c6fc252)
+- fix: keep predictive advisory DTO backward compatible (717718b6)
+- merge main into explainable prediction (8a8dae6c)
+- Merge pull request #454 from Boym323/feat/explainable-prediction-v1 (fdaf2e92)
+
+</details>
+
 ## [1.0.334] - 2026-10-06
 
 Changes since v1.0.333.
