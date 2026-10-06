@@ -81,6 +81,7 @@ export function AircraftOperationalTwin({
   const evidence = data.evidence;
   const weather = data.weatherCorridor ?? null;
   const windTimingShadow = data.windTimingShadow ?? null;
+  const trajectoryQualityV3 = data.trajectoryQualityV3 ?? null;
   const trajectoryQualityPromotion = data.trajectoryQualityPromotion ?? null;
   const navigationIntegrity = data.navigationIntegrityCorridor ?? null;
   const operationalFocus = data.operationalFocus ?? null;
@@ -204,6 +205,42 @@ export function AircraftOperationalTwin({
           {t.operationalTwin.windTimingShadowCheckpoint(checkpoint.horizonMinutes, formatNumber(checkpoint.deltaSeconds, 0))}
         </li>)}</ul>
       </> : <p className={styles.status}>{t.operationalTwin.windTimingShadowNoData}</p>}
+    </details>}
+
+    {trajectoryQualityV3 && <details className={styles.limitations} data-testid="operational-twin-trajectory-quality-v3">
+      <summary>
+        {t.operationalTwin.trajectoryQualityV3Title}
+        {" · "}
+        {t.operationalTwin.trajectoryQualityV3Status[trajectoryQualityV3.status]}
+      </summary>
+      <p className={styles.status}>{t.operationalTwin.trajectoryQualityV3Summary}</p>
+      <div className={styles.metrics}>
+        <div>
+          <span>{t.operationalTwin.trajectoryQualityV3Performance}</span>
+          <strong>{t.operationalTwin.trajectoryQualityV3PerformanceClass[trajectoryQualityV3.performance.performanceClass]}</strong>
+        </div>
+        <div>
+          <span>{t.operationalTwin.trajectoryQualityV3Profile}</span>
+          <strong>{t.operationalTwin.trajectoryQualityV3Profiles[trajectoryQualityV3.verticalProfile]}</strong>
+        </div>
+        <div>
+          <span>{t.operationalTwin.trajectoryQualityV3SelectedAltitude}</span>
+          <strong>
+            {trajectoryQualityV3.selectedAltitude.accepted && trajectoryQualityV3.selectedAltitude.altitudeFt !== null
+              ? `${formatNumber(trajectoryQualityV3.selectedAltitude.altitudeFt, 0)} ft · ${trajectoryQualityV3.selectedAltitude.source ?? "—"}`
+              : t.operationalTwin.trajectoryQualityV3SelectedAltitudeUnused}
+          </strong>
+        </div>
+      </div>
+      {trajectoryQualityV3.checkpoints.length > 0 && <ul>
+        {trajectoryQualityV3.checkpoints.map((checkpoint) => <li key={checkpoint.offsetMinutes}>
+          {t.operationalTwin.trajectoryQualityV3Checkpoint(
+            checkpoint.offsetMinutes,
+            checkpoint.deltaFromV2Ft === null ? "—" : formatNumber(checkpoint.deltaFromV2Ft, 0),
+          )}
+        </li>)}
+      </ul>}
+      <p className={styles.disclaimer}>{t.operationalTwin.trajectoryQualityV3Disclaimer}</p>
     </details>}
 
     {trajectoryQualityPromotion && <details className={styles.limitations} data-testid="operational-twin-trajectory-quality-promotion-v1">
