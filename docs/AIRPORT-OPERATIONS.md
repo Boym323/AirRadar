@@ -169,3 +169,11 @@ V7/V8 evidence; it performs no additional read or write.
 
 V8 is not ATC sequencing, FIDS, separation minima, airport capacity, slot
 demand, a safety assessment, or a delay forecast.
+
+## Airport Live Board V9 — Terminal Demand Horizon
+
+V9 preserves the V8 active-arrival sequence, PUBLIC ETA demand windows and approach-queue semantics, then adds a separate extended inbound horizon from the full current LOCAL receiver snapshot. An aircraft enters the horizon only when it has a fresh positioned observation, is airborne, and its existing route destination matches the airport ICAO or IATA identifier.
+
+The extended horizon is not another prediction engine. When current groundspeed is usable, V9 exposes a bounded direct-distance/current-groundspeed estimate up to 120 minutes only as fallback context. It reports route-matched inbound count, estimated coverage, cumulative <=30 and <=60 minute buckets, and track relation to the airport. The list is capped at 12 aircraft and the board renders at most six rows.
+
+This does not replace readiness-gated PUBLIC ETA in V7/V8, does not feed V8 pressure/compression/queue scoring, and does not infer ATC sequencing, slots, airport capacity or delay. V9 reuses the existing 30-second Airport Operations refresh and reads one existing LOCAL aircraft snapshot on the server; it adds no EventSource, browser timer, database query, provider request or persistence path.

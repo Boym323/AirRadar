@@ -18,6 +18,7 @@ import type { AirportOperationsControllerState } from "@/components/airport-oper
 import type { AirportLiveTrafficControllerState } from "@/components/airport-live-traffic-controller";
 import type { AirportMovement } from "@/lib/server/airport-movements";
 import type { AirportOperationsResponse } from "@/lib/server/airport-operations";
+import type { AirportTerminalTrackRelation } from "@/lib/server/airport-terminal-demand-horizon-v9";
 import { ContextBadge, MetricCard, MetricStrip } from "@/components/ui-primitives";
 import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatSpeed, formatTime, formatWeatherVisibility, t } from "@/lib/i18n";
 
@@ -193,6 +194,15 @@ function arrivalEvidenceLabel(
   }[evidence];
 }
 
+function terminalTrackRelationLabel(relation: AirportTerminalTrackRelation): string {
+  return {
+    TOWARD: t.airport.liveBoardV9TrackToward,
+    CROSSING: t.airport.liveBoardV9TrackCrossing,
+    AWAY: t.airport.liveBoardV9TrackAway,
+    UNKNOWN: t.airport.liveBoardV9TrackUnknown,
+  }[relation];
+}
+
 function arrivalRunwayAlignmentLabel(
   state: ReturnType<typeof buildAirportArrivalFlowIntelligence>["runwayAlignment"]["state"],
 ): string {
@@ -331,6 +341,7 @@ export function AirportOperationsBoard({
     runwayFlow,
     referenceTime: arrivalSequence.generatedAt ?? operations?.generatedAt ?? null,
   });
+  const terminalDemandHorizon = operations?.terminalDemandHorizon ?? null;
   const timeline = buildAirportOperationsTimeline(operations);
   const runwayShare = runway.inferredShare === null ? null : `${Math.round(runway.inferredShare * 100)} %`;
   const metar = weather?.metar ?? null;
@@ -640,6 +651,59 @@ export function AirportOperationsBoard({
       </div> : null}
       <p className="airport-v3-disclaimer">{t.airport.liveBoardV8Disclaimer}</p>
     </section>
+
+    {terminalDemandHorizon ? <section
+      className="airport-live-flow-pressure airport-live-terminal-horizon-v9"
+      data-testid="airport-live-board-v9-terminal-horizon"
+      data-terminal-demand-product="airport-live-board-v9"
+      aria-labelledby="airport-live-v9-terminal-title"
+    >
+      <div className="airport-live-flow-heading">
+        <div>
+          <span className="ui-kicker">{t.airport.liveBoardV9Kicker}</span>
+          <h3 id="airport-live-v9-terminal-title">{t.airport.liveBoardV9Title}</h3>
+        </div>
+        <span>{t.airport.liveBoardV9Coverage(
+          terminalDemandHorizon.coverage.routeMatchedInbound,
+          terminalDemandHorizon.coverage.localAircraft,
+        )}</span>
+      </div>
+      <MetricStrip className="airport-live-flow-metrics">
+        <MetricCard
+          label={t.airport.liveBoardV9RouteMatched}
+          value={String(terminalDemandHorizon.coverage.routeMatchedInbound)}
+          detail={t.airport.liveBoardV9LocalCoverage}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV9Within30}
+          value={String(terminalDemandHorizon.demand.within30Minutes)}
+          detail={t.airport.liveBoardV9DirectEstimate}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV9Within60}
+          value={String(terminalDemandHorizon.demand.within60Minutes)}
+          detail={t.airport.liveBoardV9DirectEstimate}
+        />
+        <MetricCard
+          label={t.airport.liveBoardV9EtaCoverage}
+          value={String(terminalDemandHorizon.coverage.etaEstimated)}
+          detail={t.airport.liveBoardV9UnknownEta(terminalDemandHorizon.demand.unknownEta)}
+        />
+      </MetricStrip>
+      {terminalDemandHorizon.items.length ? <ol className="airport-live-v9-horizon-list">
+        {terminalDemandHorizon.items.slice(0, 6).map((item) => <li key={item.icaoHex}>
+          <span className="airport-live-flight-main">
+            <Link href={`/aircraft/${encodeURIComponent(item.icaoHex)}`}>{item.label}</Link>
+            <small>{item.routeDestination} · {formatDistance(item.distanceKm)}</small>
+          </span>
+          <span className="airport-live-v9-horizon-eta">
+            <strong>{item.etaMinutes === null ? "—" : `~${formatNumber(item.etaMinutes, 0)} min`}</strong>
+            <small>{terminalTrackRelationLabel(item.trackRelation)}</small>
+          </span>
+        </li>)}
+      </ol> : <p className="airport-v3-empty">{t.airport.liveBoardV9NoInbound}</p>}
+      <p className="airport-v3-disclaimer">{t.airport.liveBoardV9Disclaimer}</p>
+    </section> : null}
 
     <div className="airport-live-active" data-testid="airport-live-board-active">
       <ActiveTrafficLane

@@ -2,6 +2,7 @@ import { getAirportInfrastructure } from "@/lib/server/airport-infrastructure";
 import { resolveAirportDetail } from "@/lib/server/airport-detail";
 import { getAirportMovements, AirportMovementsDatabaseUnavailableError } from "@/lib/server/airport-movements";
 import { buildAirportOperations } from "@/lib/server/airport-operations";
+import { getAirportTerminalDemandHorizonV9 } from "@/lib/server/airport-terminal-demand-horizon-v9";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ icao
   try {
     const infrastructure = await getAirportInfrastructure(airport);
     const movements = await getAirportMovements(airport, infrastructure, { period });
-    return Response.json(buildAirportOperations(movements, infrastructure.runways), { headers: { "Cache-Control": "no-store" } });
+    const operations = buildAirportOperations(movements, infrastructure.runways);
+    const terminalDemandHorizon = getAirportTerminalDemandHorizonV9(airport);
+    return Response.json({
+      ...operations,
+      terminalDemandHorizon,
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof AirportMovementsDatabaseUnavailableError) return Response.json({ error: "Airport operations unavailable" }, { status: 503 });
     return Response.json({ error: "Airport operations unavailable" }, { status: 503 });
