@@ -569,3 +569,5 @@ neznámou příčinou a trajectory state zůstává prediktivním kontextem. Odp
 proto explicitně nese omezení `OPERATIONAL_CONTEXT_ONLY`,
 `NOT_SAFETY_ALERT`, `NO_ATC_CLEARANCE_INFERENCE`,
 `SOURCE_SEMANTICS_PRESERVED` a `NO_ALL_CLEAR_INFERENCE`.
+
+Detail letadla tento souhrn zobrazuje před jednotlivými timeline počasí, Navigation Integrity a dalších událostí. UI zachovává backendový level i význam zdrojů, ukazuje omezené počty ATTENTION/WATCH a opakuje omezení no-all-clear / no-safety-alert místo toho, aby si vytvářelo silnější stav pouze na úrovni prezentace.
