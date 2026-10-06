@@ -47,6 +47,15 @@ import {
   OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
   OPERATIONAL_TWIN_WEATHER_EVENT_LAYER_ID,
 } from "@/lib/operational-twin/map";
+import {
+  createRegionalAttentionMapFocusGeoJSON,
+  emptyRegionalAttentionMapFocusGeoJSON,
+  REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID,
+  REGIONAL_ATTENTION_MAP_FOCUS_EVENT,
+  REGIONAL_ATTENTION_MAP_LINE_LAYER_ID,
+  REGIONAL_ATTENTION_MAP_SOURCE_ID,
+  type RegionalAttentionMapFocusEventDetail,
+} from "@/lib/operational-twin/regional-attention-ui";
 import { detectSigmetTrajectoryDeviation } from "@/lib/weather/sigmet-trajectory-deviation";
 import { buildWeatherAvoidanceIntelligence } from "@/lib/weather/avoidance-intelligence";
 import { WEATHER_RADAR_BOUNDS } from "@/lib/server/weather-radar/types";
@@ -616,6 +625,29 @@ export function AirRadarApp() {
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
   const [mapReady, setMapReady] = useState(false);
+  const [regionalAttentionMapFocus, setRegionalAttentionMapFocus] = useState<RegionalAttentionMapFocusEventDetail>(null);
+
+  useEffect(() => {
+    const onRegionalAttentionMapFocus = (event: Event) => {
+      setRegionalAttentionMapFocus((event as CustomEvent<RegionalAttentionMapFocusEventDetail>).detail ?? null);
+    };
+    window.addEventListener(REGIONAL_ATTENTION_MAP_FOCUS_EVENT, onRegionalAttentionMapFocus);
+    return () => window.removeEventListener(REGIONAL_ATTENTION_MAP_FOCUS_EVENT, onRegionalAttentionMapFocus);
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    const source = map.getSource(REGIONAL_ATTENTION_MAP_SOURCE_ID) as GeoJSONSource | undefined;
+    source?.setData(createRegionalAttentionMapFocusGeoJSON(regionalAttentionMapFocus, snapshot.aircraft));
+    const visible = regionalAttentionMapFocus !== null;
+    if (map.getLayer(REGIONAL_ATTENTION_MAP_LINE_LAYER_ID)) {
+      map.setLayoutProperty(REGIONAL_ATTENTION_MAP_LINE_LAYER_ID, "visibility", visible ? "visible" : "none");
+    }
+    if (map.getLayer(REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID)) {
+      map.setLayoutProperty(REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID, "visibility", visible ? "visible" : "none");
+    }
+  }, [mapReady, regionalAttentionMapFocus, snapshot.aircraft]);
 
   const readRadarLayout = useCallback(() => {
     const mapElement = mapContainerRef.current;
@@ -1252,6 +1284,34 @@ export function AirRadarApp() {
       map.addSource(ROUTE_V2_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource(ROUTE_INTELLIGENCE_SOURCE_ID, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource(OPERATIONAL_TWIN_MAP_SOURCE_ID, { type: "geojson", data: emptyOperationalTwinMapGeoJSON() });
+      map.addSource(REGIONAL_ATTENTION_MAP_SOURCE_ID, { type: "geojson", data: emptyRegionalAttentionMapFocusGeoJSON() });
+      map.addLayer({
+        id: REGIONAL_ATTENTION_MAP_LINE_LAYER_ID,
+        type: "line",
+        source: REGIONAL_ATTENTION_MAP_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "line"],
+        layout: { visibility: "none", "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": AIRRADAR_MAP_THEME.warning,
+          "line-opacity": 0.72,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1.4, 8, 2.2, 13, 3],
+          "line-dasharray": [2, 2],
+        },
+      });
+      map.addLayer({
+        id: REGIONAL_ATTENTION_MAP_AIRCRAFT_LAYER_ID,
+        type: "circle",
+        source: REGIONAL_ATTENTION_MAP_SOURCE_ID,
+        filter: ["==", ["get", "kind"], "aircraft"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": AIRRADAR_MAP_THEME.warning,
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3, 9, 4.5, 13, 6],
+          "circle-opacity": 0.3,
+          "circle-stroke-color": AIRRADAR_MAP_THEME.selectedStrong,
+          "circle-stroke-width": 1.5,
+        },
+      });
       map.addLayer({
         id: OPERATIONAL_TWIN_UNCERTAINTY_LAYER_ID,
         type: "fill",

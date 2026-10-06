@@ -14,11 +14,19 @@ export async function GET(request: Request): Promise<Response> {
     coverage: "local",
     includeTrails: false,
   });
-  const graph = buildRegionalSituationGraph(snapshot.aircraft, new Date());
+  const generatedAt = new Date();
+  const graph = buildRegionalSituationGraph(snapshot.aircraft, generatedAt);
   const attention = buildOperationalAttention(graph);
   service.captureRegionalAttentionOutcome(attention);
+  const graduation = service.getRegionalAttentionGraduationReport(generatedAt);
+  const attentionGraduation = {
+    version: graduation.version,
+    decision: graduation.decision,
+    graduated: graduation.decision === "PASS" && graduation.manualPromotionEligible,
+    scope: graduation.scope,
+  };
 
-  return Response.json({ ...graph, attention }, {
+  return Response.json({ ...graph, attention, attentionGraduation }, {
     headers: { "Cache-Control": "no-store" },
   });
 }

@@ -634,6 +634,7 @@ export function SystemStatusPage() {
             : `${formatNumber((diagnosticOptionalNumber(operationalTwinOutcome, "expiredTruthRate") ?? 0) * 100, 1, dictionary.locale)} %`} />
           <Field label={dictionary.system.operationalTwinOutcomeHorizons} value={`5m ${formatNumber(diagnosticNumber(operationalTwinOutcome5, "samples"), 0, dictionary.locale)} · 15m ${formatNumber(diagnosticNumber(operationalTwinOutcome15, "samples"), 0, dictionary.locale)} · 30m ${formatNumber(diagnosticNumber(operationalTwinOutcome30, "samples"), 0, dictionary.locale)}`} />
           <Field label={dictionary.system.operationalTwinOutcomeCapture} value={diagnosticBoolean(operationalTwinOutcome, "requestDrivenCapture") ? dictionary.system.operationalTwinOutcomeRequestDriven : dictionary.system.notAvailable} />
+          <Link className="secondary-button" href="/admin/operational-twin/calibration">Calibration Center</Link>
         </div>
       </Card>}
 

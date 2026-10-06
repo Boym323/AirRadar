@@ -446,3 +446,20 @@ component that created it.
 - `DESTINATION_CLUSTER` is deliberately unscored in V1.
 - Outcome readiness cannot change public WATCH/ATTENTION semantics by itself.
 
+## Regional Operations Center V1.1 invariants
+
+- The Operations Center reuses the existing `/api/operations/situation` request; V1.1 adds no provider loop, receiver poller or database path.
+- 5/15/30-minute filtering is presentation-only and cannot alter captured calibration evidence.
+- Map focus is emitted only for a two-aircraft `REGIONAL_COPRESENCE` item after graduation `PASS` with manual promotion eligibility.
+- The map overlay uses current LOCAL positions for context only. It is not a predicted collision path, separation boundary, TCAS/STCA alert or ATC instruction.
+- Destination clusters cannot unlock map highlighting.
+
+## Regional Attention graduation invariants
+
+- Graduation consumes only the Regional Attention outcome report; it never
+  captures aircraft state or starts another provider/database loop.
+- `PASS` is an evidence/readiness state only. V1 never auto-promotes public
+  WATCH/ATTENTION behavior.
+- Destination clusters, collision warnings and separation-product semantics are
+  explicitly outside the graduation scope.
+
