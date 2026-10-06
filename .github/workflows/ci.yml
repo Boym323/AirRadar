@@ -31,6 +31,9 @@ jobs:
           else
             echo "checkout_git_write=denied"
           fi
+          echo "sudo_rules_begin"
+          sudo -n -l || true
+          echo "sudo_rules_end"
 
   validate:
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
