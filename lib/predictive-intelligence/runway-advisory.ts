@@ -1,6 +1,7 @@
 import type { PredictiveReadinessCapabilityResult } from "@/lib/predictive-intelligence/readiness";
 import type { PredictiveCapabilityStatus, PredictiveGraduationPolicy } from "@/lib/predictive-intelligence/graduation";
 import type { PredictiveFlightState, PredictionConfidence, RunwayPrediction } from "@/lib/predictive-intelligence/types";
+import { explainablePredictionEvidence, type ExplainablePredictionEvidence } from "@/lib/predictive-intelligence/explainability";
 
 export const RUNWAY_ADVISORY_STALE_AFTER_MS = 45_000;
 
@@ -16,6 +17,7 @@ export interface PublicRunwayAdvisory {
   confidence: PredictionConfidence;
   modelVersion: PredictiveFlightState["modelVersion"];
   provenance: "predicted";
+  evidence: ExplainablePredictionEvidence[];
 }
 
 export interface AdminRunwayAdvisoryPreview {
@@ -34,6 +36,7 @@ export interface AdminRunwayAdvisoryPreview {
   coverage: number | null;
   modelVersion: PredictiveFlightState["modelVersion"] | null;
   provenance: "predicted";
+  evidence: ExplainablePredictionEvidence[];
 }
 
 type RunwayReadinessResult = PredictiveReadinessCapabilityResult<{
@@ -92,6 +95,7 @@ export function buildPublicRunwayAdvisory(
     confidence: status.runway.confidence,
     modelVersion: prediction.modelVersion,
     provenance: "predicted",
+    evidence: explainablePredictionEvidence("RUNWAY", status.runway.evidence),
   };
 }
 
@@ -122,5 +126,6 @@ export function buildAdminRunwayAdvisoryPreview(
     coverage: readiness.evidence.coverage,
     modelVersion: prediction?.modelVersion ?? null,
     provenance: "predicted",
+    evidence: explainablePredictionEvidence("RUNWAY", status.runway?.evidence ?? []),
   };
 }
