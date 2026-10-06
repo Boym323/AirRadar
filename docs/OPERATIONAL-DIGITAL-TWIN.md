@@ -593,3 +593,5 @@ context. The response therefore carries explicit
 `NO_ALL_CLEAR_INFERENCE` limitations.
 
 The aircraft detail UI renders this summary ahead of the individual weather, navigation-integrity and event timelines. The presentation preserves the backend level and source semantics, shows the bounded ATTENTION/WATCH counts, and repeats the no-all-clear / no-safety-alert limitation instead of deriving a stronger UI-only state.
+
+Each rendered focus item links back to the live radar with the aircraft identity and focus item ID. The radar reuses its already-loaded Operational Digital Twin response, highlights only the projected corridor segment up to that focus offset, marks the source evidence position when available, and centers the camera once. Missing or stale focus IDs fail closed and do not create a synthetic map target or another provider/API polling path.
