@@ -165,6 +165,15 @@ describe("production release metadata gate", () => {
     expect(source).not.toContain('getByRole("tab", { name: "Přehled" })');
   });
 
+  it("does not let an already-disposed Playwright page fail production-gate teardown", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("const closePage = async (page) =>");
+    expect(source).toContain('message.includes("Target.disposeBrowserContext")');
+    expect(source).toContain('message.includes("Failed to find context")');
+    expect(source).toContain("await closePage(sweepPage)");
+    expect(source).toContain("await closePage(visualPage)");
+  });
+
   it("waits for the closed drawer visibility transition before responsive assertions", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('getComputedStyle(sidebar).visibility === "hidden"');
