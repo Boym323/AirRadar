@@ -1,5 +1,6 @@
 import { buildOperationalAttention } from "@/lib/operational-twin/operational-attention";
 import { buildRegionalSituationGraph } from "@/lib/operational-twin/regional-situation";
+import { buildRegionalFocusQueue } from "@/lib/operational-twin/regional-focus-queue";
 import { getAircraftStateService } from "@/lib/server/aircraft-state";
 import { checkPublicRateLimit, rateLimitResponse } from "@/lib/server/rate-limit";
 
@@ -17,6 +18,7 @@ export async function GET(request: Request): Promise<Response> {
   const generatedAt = new Date();
   const graph = buildRegionalSituationGraph(snapshot.aircraft, generatedAt);
   const attention = buildOperationalAttention(graph);
+  const focusQueue = buildRegionalFocusQueue(graph, attention);
   service.captureRegionalAttentionOutcome(attention);
   const graduation = service.getRegionalAttentionGraduationReport(generatedAt);
   const attentionGraduation = {
@@ -26,7 +28,7 @@ export async function GET(request: Request): Promise<Response> {
     scope: graduation.scope,
   };
 
-  return Response.json({ ...graph, attention, attentionGraduation }, {
+  return Response.json({ ...graph, attention, focusQueue, attentionGraduation }, {
     headers: { "Cache-Control": "no-store" },
   });
 }
