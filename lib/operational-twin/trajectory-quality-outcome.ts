@@ -8,13 +8,23 @@ export const OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_VERSION =
 
 export const OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_HORIZONS = [5, 15, 30] as const;
 export const OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_WINDOW_MINUTES = 24 * 60;
+export const OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_BUCKET_MINUTES = 5;
 
 const MIN_CAPTURE_INTERVAL_MS = 55_000;
 const TRUTH_TOLERANCE_MS = 20_000;
 const TRUTH_GRACE_MS = 30_000;
 const MAX_PENDING = 5_000;
 const TIE_TOLERANCE_FT = 100;
+const BUCKET_MS = OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_BUCKET_MINUTES * 60_000;
 const WINDOW_MS = OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_WINDOW_MINUTES * 60_000;
+const MAX_BUCKETS = Math.ceil(WINDOW_MS / BUCKET_MS) + 2;
+const TRAJECTORY_PHASES: readonly OperationalTwinTrajectoryPhase[] = [
+  "CLIMB",
+  "CRUISE",
+  "DESCENT",
+  "LEVEL",
+  "UNKNOWN",
+];
 
 export const OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_THRESHOLDS = {
   version: OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_VERSION,
@@ -32,13 +42,15 @@ export type OperationalTwinTrajectoryQualityOutcomeReason =
   | "horizon_samples_insufficient"
   | "truth_coverage_low";
 
+type Horizon = typeof OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_HORIZONS[number];
+
 interface PendingTrajectoryQualitySample {
   id: string;
   icaoHex: string;
   capturedAt: number;
   targetAt: number;
   expiresAt: number;
-  horizonMinutes: 5 | 15 | 30;
+  horizonMinutes: Horizon;
   phase: OperationalTwinTrajectoryPhase;
   canonicalAltitudeFt: number;
   qualityAltitudeFt: number;
@@ -51,6 +63,19 @@ interface Aggregate {
   qualityWins: number;
   canonicalWins: number;
   ties: number;
+}
+
+interface OutcomeBucket {
+  startMs: number;
+  captured: number;
+  expiredWithoutTruth: number;
+  byHorizon: Record<Horizon, Aggregate>;
+  byPhase: Record<OperationalTwinTrajectoryPhase, Aggregate>;
+}
+
+export interface OperationalTwinTrajectoryQualityOutcomeCalibrationBucket {
+  startMs: number;
+  payloadJson: string;
 }
 
 export interface OperationalTwinTrajectoryQualityOutcomeSlice {
@@ -82,7 +107,9 @@ export interface OperationalTwinTrajectoryQualityOutcomeReport {
     from: string;
     to: string;
     spanMinutes: number;
-    processLocal: true;
+    bucketMinutes: number;
+    buckets: number;
+    restartStableAggregates: true;
   };
   pending: number;
   created: number;
@@ -98,7 +125,7 @@ export interface OperationalTwinTrajectoryQualityOutcomeReport {
     | "OUTCOME_MEASUREMENT_ONLY"
     | "NO_AUTO_PROMOTION"
     | "LOCAL_RECEIVER_TRUTH_ONLY"
-    | "PROCESS_LOCAL_V1"
+    | "RESTART_STABLE_AGGREGATES"
   >;
 }
 
@@ -158,6 +185,33 @@ function emptyAggregate(): Aggregate {
   };
 }
 
+function horizonRecord(): Record<Horizon, Aggregate> {
+  return {
+    5: emptyAggregate(),
+    15: emptyAggregate(),
+    30: emptyAggregate(),
+  };
+}
+
+function phaseRecord(): Record<OperationalTwinTrajectoryPhase, Aggregate> {
+  return {
+    CLIMB: emptyAggregate(),
+    CRUISE: emptyAggregate(),
+    DESCENT: emptyAggregate(),
+    LEVEL: emptyAggregate(),
+    UNKNOWN: emptyAggregate(),
+  };
+}
+
+function addAggregate(target: Aggregate, source: Aggregate): void {
+  target.pairedSamples += source.pairedSamples;
+  target.canonicalAbsoluteErrorFtSum += source.canonicalAbsoluteErrorFtSum;
+  target.qualityAbsoluteErrorFtSum += source.qualityAbsoluteErrorFtSum;
+  target.qualityWins += source.qualityWins;
+  target.canonicalWins += source.canonicalWins;
+  target.ties += source.ties;
+}
+
 function sliceFromAggregate(value: Aggregate): OperationalTwinTrajectoryQualityOutcomeSlice {
   if (!value.pairedSamples) {
     return {
@@ -190,6 +244,59 @@ function sliceFromAggregate(value: Aggregate): OperationalTwinTrajectoryQualityO
     qualityWinRate: decisive
       ? Number((value.qualityWins / decisive).toFixed(4))
       : null,
+  };
+}
+
+function nonNegativeFinite(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function persistedAggregate(value: unknown): Aggregate | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Partial<Aggregate>;
+  const result = emptyAggregate();
+  for (const key of Object.keys(result) as Array<keyof Aggregate>) {
+    const current = item[key];
+    if (!nonNegativeFinite(current)) return null;
+    result[key] = current;
+  }
+  return result;
+}
+
+function persistedBucket(payloadJson: string, expectedStartMs: number): OutcomeBucket | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payloadJson);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const item = parsed as Partial<OutcomeBucket>;
+  if (item.startMs !== expectedStartMs || expectedStartMs % BUCKET_MS !== 0) return null;
+  if (!nonNegativeFinite(item.captured) || !nonNegativeFinite(item.expiredWithoutTruth)) return null;
+  if (!item.byHorizon || typeof item.byHorizon !== "object") return null;
+  if (!item.byPhase || typeof item.byPhase !== "object") return null;
+
+  const byHorizon = horizonRecord();
+  for (const horizon of OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_HORIZONS) {
+    const aggregate = persistedAggregate((item.byHorizon as Record<number, unknown>)[horizon]);
+    if (!aggregate) return null;
+    byHorizon[horizon] = aggregate;
+  }
+
+  const byPhase = phaseRecord();
+  for (const phase of TRAJECTORY_PHASES) {
+    const aggregate = persistedAggregate((item.byPhase as Record<string, unknown>)[phase]);
+    if (!aggregate) return null;
+    byPhase[phase] = aggregate;
+  }
+
+  return {
+    startMs: expectedStartMs,
+    captured: item.captured,
+    expiredWithoutTruth: item.expiredWithoutTruth,
+    byHorizon,
+    byPhase,
   };
 }
 
@@ -229,8 +336,7 @@ export function evaluateOperationalTwinTrajectoryQualityOutcome(
 }
 
 interface CompletedTrajectoryQualitySample {
-  capturedAt: number;
-  horizonMinutes: 5 | 15 | 30;
+  horizonMinutes: Horizon;
   phase: OperationalTwinTrajectoryPhase;
   canonicalAbsoluteErrorFt: number;
   qualityAbsoluteErrorFt: number;
@@ -249,9 +355,7 @@ function addCompletedSample(target: Aggregate, sample: CompletedTrajectoryQualit
 export class OperationalTwinTrajectoryQualityOutcomeValidator {
   private readonly pending = new Map<string, PendingTrajectoryQualitySample>();
   private readonly lastCaptureAt = new Map<string, number>();
-  private completedSamples: CompletedTrajectoryQualitySample[] = [];
-  private capturedSamplesAt: number[] = [];
-  private expiredSamplesAt: number[] = [];
+  private buckets: OutcomeBucket[] = [];
   private duplicateCaptureSkips = 0;
   private capacityEvictions = 0;
 
@@ -283,12 +387,12 @@ export class OperationalTwinTrajectoryQualityOutcomeValidator {
         canonicalAltitudeFt: checkpoint.canonicalAltitudeFt,
         qualityAltitudeFt: checkpoint.qualityAltitudeFt,
       });
-      this.capturedSamplesAt.push(now);
       created += 1;
     }
 
     if (created > 0) {
       this.lastCaptureAt.set(situation.aircraft.icaoHex, now);
+      this.bucketFor(now).captured += created;
       this.enforceCapacity();
       this.cleanup(now);
     }
@@ -301,18 +405,20 @@ export class OperationalTwinTrajectoryQualityOutcomeValidator {
       const aircraft = local.get(pending.icaoHex);
       const truthAltitude = aircraft ? truthAltitudeAt(aircraft, pending.targetAt) : null;
       if (truthAltitude !== null) {
-        this.completedSamples.push({
-          capturedAt: pending.capturedAt,
+        const sample: CompletedTrajectoryQualitySample = {
           horizonMinutes: pending.horizonMinutes,
           phase: pending.phase,
           canonicalAbsoluteErrorFt: Math.abs(pending.canonicalAltitudeFt - truthAltitude),
           qualityAbsoluteErrorFt: Math.abs(pending.qualityAltitudeFt - truthAltitude),
-        });
+        };
+        const bucket = this.bucketFor(pending.capturedAt);
+        addCompletedSample(bucket.byHorizon[pending.horizonMinutes], sample);
+        addCompletedSample(bucket.byPhase[pending.phase], sample);
         this.pending.delete(id);
         continue;
       }
       if (now > pending.expiresAt) {
-        this.expiredSamplesAt.push(pending.capturedAt);
+        this.bucketFor(pending.capturedAt).expiredWithoutTruth += 1;
         this.pending.delete(id);
       }
     }
@@ -321,42 +427,46 @@ export class OperationalTwinTrajectoryQualityOutcomeValidator {
 
   report(now = new Date()): OperationalTwinTrajectoryQualityOutcomeReport {
     const nowMs = now.getTime();
+    this.cleanup(nowMs);
     const cutoff = nowMs - WINDOW_MS;
-    const completed = this.completedSamples.filter((sample) => sample.capturedAt >= cutoff);
-    const captured = this.capturedSamplesAt.filter((capturedAt) => capturedAt >= cutoff);
-    const expired = this.expiredSamplesAt.filter((capturedAt) => capturedAt >= cutoff);
+    const buckets = this.buckets.filter((bucket) => bucket.startMs + BUCKET_MS > cutoff);
 
     const overall = emptyAggregate();
-    const byHorizon = new Map<number, Aggregate>(
-      OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_HORIZONS.map((horizon) => [horizon, emptyAggregate()]),
-    );
-    const byPhase = new Map<OperationalTwinTrajectoryPhase, Aggregate>([
-      ["CLIMB", emptyAggregate()],
-      ["CRUISE", emptyAggregate()],
-      ["DESCENT", emptyAggregate()],
-      ["LEVEL", emptyAggregate()],
-      ["UNKNOWN", emptyAggregate()],
-    ]);
-    for (const sample of completed) {
-      addCompletedSample(overall, sample);
-      addCompletedSample(byHorizon.get(sample.horizonMinutes)!, sample);
-      addCompletedSample(byPhase.get(sample.phase)!, sample);
+    const byHorizon = horizonRecord();
+    const byPhase = phaseRecord();
+    let created = 0;
+    let expiredWithoutTruth = 0;
+
+    for (const bucket of buckets) {
+      created += bucket.captured;
+      expiredWithoutTruth += bucket.expiredWithoutTruth;
+      for (const horizon of OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_HORIZONS) {
+        addAggregate(byHorizon[horizon], bucket.byHorizon[horizon]);
+        addAggregate(overall, bucket.byHorizon[horizon]);
+      }
+      for (const phase of TRAJECTORY_PHASES) addAggregate(byPhase[phase], bucket.byPhase[phase]);
     }
 
-    const firstObservedAt = captured.length ? Math.max(cutoff, Math.min(...captured)) : nowMs;
-    const spanMinutes = Math.max(0, Math.min(
-      OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_WINDOW_MINUTES,
-      (nowMs - firstObservedAt) / 60_000,
-    ));
-    const evaluatedOrExpired = completed.length + expired.length;
-    const truthCoverage = evaluatedOrExpired ? completed.length / evaluatedOrExpired : null;
+    const completed = overall.pairedSamples;
+    const evaluatedOrExpired = completed + expiredWithoutTruth;
+    const truthCoverage = evaluatedOrExpired ? completed / evaluatedOrExpired : null;
     const horizonSlices = Object.fromEntries(
-      [...byHorizon.entries()].map(([horizon, aggregate]) => [String(horizon), sliceFromAggregate(aggregate)]),
+      OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_HORIZONS.map((horizon) => [
+        String(horizon),
+        sliceFromAggregate(byHorizon[horizon]),
+      ]),
     );
     const phaseSlices = Object.fromEntries(
-      [...byPhase.entries()].map(([phase, aggregate]) => [phase, sliceFromAggregate(aggregate)]),
+      TRAJECTORY_PHASES.map((phase) => [phase, sliceFromAggregate(byPhase[phase])]),
     ) as Record<OperationalTwinTrajectoryPhase, OperationalTwinTrajectoryQualityOutcomeSlice>;
     const overallSlice = sliceFromAggregate(overall);
+
+    const firstBucket = buckets[0]?.startMs ?? nowMs;
+    const first = Math.max(cutoff, firstBucket);
+    const spanMinutes = Math.max(0, Math.min(
+      OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_WINDOW_MINUTES,
+      (nowMs - first) / 60_000,
+    ));
     const evaluated = evaluateOperationalTwinTrajectoryQualityOutcome({
       spanMinutes,
       overall: overallSlice,
@@ -380,15 +490,17 @@ export class OperationalTwinTrajectoryQualityOutcomeValidator {
       autoPromotion: false,
       horizonsMinutes: OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_HORIZONS,
       window: {
-        from: new Date(firstObservedAt).toISOString(),
+        from: new Date(first).toISOString(),
         to: now.toISOString(),
         spanMinutes: Number(spanMinutes.toFixed(1)),
-        processLocal: true,
+        bucketMinutes: OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_BUCKET_MINUTES,
+        buckets: buckets.length,
+        restartStableAggregates: true,
       },
-      pending: this.pending.size,
-      created: captured.length,
-      completed: completed.length,
-      expiredWithoutTruth: expired.length,
+      pending: [...this.pending.values()].filter((sample) => sample.capturedAt >= cutoff).length,
+      created,
+      completed,
+      expiredWithoutTruth,
       truthCoverage: truthCoverage === null ? null : Number(truthCoverage.toFixed(4)),
       duplicateCaptureSkips: this.duplicateCaptureSkips,
       capacityEvictions: this.capacityEvictions,
@@ -399,19 +511,70 @@ export class OperationalTwinTrajectoryQualityOutcomeValidator {
         "OUTCOME_MEASUREMENT_ONLY",
         "NO_AUTO_PROMOTION",
         "LOCAL_RECEIVER_TRUTH_ONLY",
-        "PROCESS_LOCAL_V1",
+        "RESTART_STABLE_AGGREGATES",
       ],
     };
+  }
+
+  exportCalibrationBuckets(now = Date.now()): OperationalTwinTrajectoryQualityOutcomeCalibrationBucket[] {
+    this.cleanup(now);
+    const cutoff = now - WINDOW_MS;
+    return this.buckets
+      .filter((bucket) => bucket.startMs + BUCKET_MS > cutoff)
+      .map((bucket) => ({
+        startMs: bucket.startMs,
+        payloadJson: JSON.stringify(bucket),
+      }));
+  }
+
+  hydrateCalibrationBuckets(
+    rows: readonly OperationalTwinTrajectoryQualityOutcomeCalibrationBucket[],
+    now = Date.now(),
+  ): number {
+    const cutoff = now - WINDOW_MS;
+    const hydrated = new Map<number, OutcomeBucket>();
+    let hydratedFromPersistence = 0;
+
+    for (const row of rows) {
+      if (!Number.isFinite(row.startMs) || row.startMs + BUCKET_MS <= cutoff || row.startMs > now + BUCKET_MS) continue;
+      const bucket = persistedBucket(row.payloadJson, row.startMs);
+      if (!bucket) continue;
+      hydrated.set(bucket.startMs, bucket);
+      hydratedFromPersistence += 1;
+    }
+    for (const bucket of this.buckets) {
+      if (bucket.startMs + BUCKET_MS > cutoff) hydrated.set(bucket.startMs, bucket);
+    }
+
+    this.buckets = [...hydrated.values()]
+      .sort((left, right) => left.startMs - right.startMs)
+      .slice(-MAX_BUCKETS);
+    return hydratedFromPersistence;
   }
 
   reset(): void {
     this.pending.clear();
     this.lastCaptureAt.clear();
-    this.completedSamples = [];
-    this.capturedSamplesAt = [];
-    this.expiredSamplesAt = [];
+    this.buckets = [];
     this.duplicateCaptureSkips = 0;
     this.capacityEvictions = 0;
+  }
+
+  private bucketFor(timestamp: number): OutcomeBucket {
+    const startMs = Math.floor(timestamp / BUCKET_MS) * BUCKET_MS;
+    let bucket = this.buckets.find((candidate) => candidate.startMs === startMs);
+    if (!bucket) {
+      bucket = {
+        startMs,
+        captured: 0,
+        expiredWithoutTruth: 0,
+        byHorizon: horizonRecord(),
+        byPhase: phaseRecord(),
+      };
+      this.buckets.push(bucket);
+      this.buckets.sort((left, right) => left.startMs - right.startMs);
+    }
+    return bucket;
   }
 
   private enforceCapacity(): void {
@@ -424,12 +587,12 @@ export class OperationalTwinTrajectoryQualityOutcomeValidator {
   }
 
   private cleanup(now: number): void {
-    const cutoff = now - WINDOW_MS;
-    this.completedSamples = this.completedSamples.filter((sample) => sample.capturedAt >= cutoff);
-    this.capturedSamplesAt = this.capturedSamplesAt.filter((capturedAt) => capturedAt >= cutoff);
-    this.expiredSamplesAt = this.expiredSamplesAt.filter((capturedAt) => capturedAt >= cutoff);
+    const cutoff = now - WINDOW_MS - 60 * 60_000;
+    this.buckets = this.buckets
+      .filter((bucket) => bucket.startMs + BUCKET_MS > cutoff)
+      .slice(-MAX_BUCKETS);
     for (const [hex, capturedAt] of this.lastCaptureAt) {
-      if (capturedAt < cutoff) this.lastCaptureAt.delete(hex);
+      if (capturedAt < now - WINDOW_MS) this.lastCaptureAt.delete(hex);
     }
   }
 }
