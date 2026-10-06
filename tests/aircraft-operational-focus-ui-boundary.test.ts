@@ -11,6 +11,7 @@ const styleSource = readFileSync(
 );
 const enSource = readFileSync(new URL("../lib/i18n/en.ts", import.meta.url), "utf8");
 const csSource = readFileSync(new URL("../lib/i18n/cs.ts", import.meta.url), "utf8");
+const radarSource = readFileSync(new URL("../components/airradar-app.tsx", import.meta.url), "utf8");
 
 describe("Aircraft Operational Focus UI V1 boundary", () => {
   it("renders the server-computed focus without adding another data request", () => {
@@ -19,6 +20,15 @@ describe("Aircraft Operational Focus UI V1 boundary", () => {
     expect(componentSource).toContain("operationalFocus.items.map");
     expect(componentSource).toContain("operationalFocus.level");
     expect(componentSource.match(/fetch\(/g)).toHaveLength(1);
+  });
+
+  it("links each focus item to the existing live-radar Digital Twin projection", () => {
+    expect(componentSource).toContain("aircraftOperationalFocusRadarHref(icaoHex, item.id)");
+    expect(componentSource).toContain("operationalFocusMapAction");
+    expect(radarSource).toContain("AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM");
+    expect(radarSource).toContain("createAircraftOperationalFocusMapGeoJSON");
+    expect(radarSource).toContain("resolveAircraftOperationalFocusMapTarget");
+    expect(radarSource).not.toContain("/api/aircraft/${encodeURIComponent(aircraftFocus)}/situation");
   });
 
   it("keeps attention semantics explicit and neutral for NORMAL", () => {
