@@ -111,6 +111,16 @@
 .weatherHeading > strong[data-status="PARTIAL"] { color: var(--amber); }
 .weatherHeading > strong[data-status="INSUFFICIENT"] { color: var(--text-muted); }
 
+.weatherHeading > strong.focusLevel { color: var(--text-muted); }
+.weatherHeading > strong.focusLevel[data-level="WATCH"] {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+.weatherHeading > strong.focusLevel[data-level="ATTENTION"] {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .weatherSources {
   display: flex;
   flex-wrap: wrap;
