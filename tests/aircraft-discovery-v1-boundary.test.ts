@@ -23,7 +23,8 @@ describe("Aircraft Discovery V1 boundary", () => {
 
   it("offers discovery filters and watchlist handoff without new persistence", () => {
     expect(page).toContain('"all" | "live" | "new" | "rare" | "returning"');
-    expect(page).toContain('return "/watchlist?" + params.toString()');
+    expect(page).toContain('pathname: "/watchlist"');
+    expect(page).toContain("icaoHex: item.icaoHex");
     expect(page).not.toContain("localStorage");
   });
 });
