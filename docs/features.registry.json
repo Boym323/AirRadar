@@ -708,6 +708,29 @@
         "prospective fusion truth",
         "canonical vs fused"
       ]
+    },
+    {
+      "id": "operations-dashboard",
+      "name": "Operations Dashboard",
+      "category": "operations",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Live operational dashboard combining canonical local traffic, airport flow, bounded next-30-minute arrival context, Regional Attention, and Flight Intelligence without creating a parallel intelligence engine.",
+      "pages": [
+        "/operations"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "operations-dashboard"
+      ],
+      "changelogKeywords": [
+        "operations dashboard",
+        "live traffic",
+        "airport flow",
+        "next 30 minutes",
+        "notable events",
+        "attention dashboard"
+      ]
     }
   ]
 }
