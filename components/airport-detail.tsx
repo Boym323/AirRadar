@@ -16,6 +16,7 @@ import { formatDistance, formatTrack } from "@/lib/i18n";
 import type { NearbyAirport } from "@/lib/server/nearby-airports";
 import type { AirportInfrastructure } from "@/lib/airports/infrastructure";
 import { formatFrequencyMhz, formatNavaidFrequency, formatRunwayDimension, runwaySurfaceLabel, sortAirportFrequencies, sortAirportRunways } from "@/lib/airports/infrastructure";
+import { useFavoriteAirport } from "@/components/pwa-register";
 
 function value(value: string | null | undefined): string {
   return value || t.common.emptyValue;
@@ -70,6 +71,7 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
     [liveTrafficController.observations],
   );
   const operationsController = useAirportOperationsController(airport.icaoCode, predictiveHexes);
+  const [favorite, toggleFavorite] = useFavoriteAirport(airport.icaoCode);
 
   return <main className="airport-page">
     <PageHeader
@@ -78,6 +80,7 @@ export function AirportDetail({ airport, infrastructure = { runways: [], frequen
       kicker={airport.iataCode ? `${airport.iataCode} · ${airport.icaoCode}` : airport.icaoCode}
       title={airport.name}
       description={location}
+      actions={<button type="button" className="button-secondary" onClick={toggleFavorite} aria-pressed={favorite} title={favorite ? t.pwa.favoriteRemove : t.pwa.favoriteAdd}>{favorite ? "★" : "☆"} {t.pwa.favorites}</button>}
     />
 
     <AirportOperationsBoard airport={airport} runways={infrastructure.runways} controller={operationsController} liveTraffic={liveTrafficController} />

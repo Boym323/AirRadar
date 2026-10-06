@@ -334,6 +334,18 @@ export class AlertEngine {
         for (const geofence of config.geofences) {
           const transition = this.durableTransitions.observeGeofence(aircraft.icaoHex, geofence, aircraft.lat, aircraft.lon);
           if (!transition) continue;
+          if (transition.transition === "ENTER" && config.rules.some((rule) => rule.enabled && rule.trigger === "GEOFENCE_ENTER" && rule.geofenceId === geofence.id)) {
+            this.enqueue({
+              aircraft,
+              matchedRules: [],
+              emergency: false,
+              priority: "normal",
+              type: "entered_radius",
+              reason: "entered_radius",
+              eventId: geofenceTransitionSourceKey(aircraft.icaoHex, geofence.id, transition.transition, occurredAt),
+              radiusKm: transition.distanceMeters / 1000,
+            });
+          }
           await this.persistDurableSignal({
             sourceType: "GEOFENCE", sourceKey: geofenceTransitionSourceKey(aircraft.icaoHex, geofence.id, transition.transition, occurredAt), trigger: transition.transition === "ENTER" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
             aircraft: { icaoHex: aircraft.icaoHex, registration: aircraft.registration ?? null, callsign: aircraft.callsign ?? null }, occurredAt, geofenceId: geofence.id, geofenceName: geofence.name,

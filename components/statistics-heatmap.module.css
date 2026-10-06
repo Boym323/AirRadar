@@ -1,0 +1,14 @@
+.wrapper { max-width: 1180px; margin: 0 auto; padding: 0 24px 36px; }
+.panel { padding-bottom: 18px; }
+.header { align-items: flex-start; }
+.headerCopy p { margin: 6px 0 0; color: var(--muted); font-size: 10px; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.controls > div { margin: 0; }
+.map { position: relative; margin: 16px 20px 0; overflow: hidden; border: 1px solid rgba(153,181,207,.14); border-radius: 10px; background: #06131f; }
+.grid { display: block; width: 100%; aspect-ratio: 2 / 1; }
+.cell { fill: var(--amber); }
+.mapLabels { position: absolute; inset: 8px 10px auto; display: flex; justify-content: space-between; color: var(--muted); font: 10px var(--font-mono); pointer-events: none; }
+.meta { display: flex; flex-wrap: wrap; gap: 14px; margin: 10px 20px 0; color: var(--muted); font-size: 11px; }
+.disclaimer { margin: 12px 20px 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.status { margin: 16px 20px 0; color: var(--muted); font-size: 12px; }
+@media (max-width: 640px) { .wrapper { padding: 0 12px 28px; } .controls { width: 100%; justify-content: flex-start; } .controls > div { width: 100%; } .controls button { flex: 1; min-height: 44px; } .map { margin-left: 15px; margin-right: 15px; } .meta, .disclaimer, .status { margin-left: 15px; margin-right: 15px; } }

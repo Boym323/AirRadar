@@ -4,6 +4,35 @@
   "description": "Canonical feature registry for AirRadar. introducedVersion is null when the feature predates registry adoption and has not yet been historically attributed.",
   "features": [
     {
+      "id": "mobile-pwa",
+      "name": "Mobile / PWA mode",
+      "category": "platform",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Installable mobile PWA with offline last-state caching, browser-local favorite airports, and optional Web Push notifications for emergency squawks, watchlist aircraft, and geofence events.",
+      "pages": [
+        "/",
+        "/airports/:icao"
+      ],
+      "apis": [
+        "/api/push/vapid-public-key",
+        "/api/push/subscribe"
+      ],
+      "changelogScopes": [
+        "pwa",
+        "mobile",
+        "web-push",
+        "offline"
+      ],
+      "changelogKeywords": [
+        "PWA",
+        "mobile mode",
+        "push notifications",
+        "favorite airports",
+        "offline state"
+      ]
+    },
+    {
       "id": "live-radar",
       "name": "Live Radar",
       "category": "radar",
@@ -280,7 +309,8 @@
         "/api/reception-records",
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
-        "/api/statistics/traffic"
+        "/api/statistics/traffic",
+        "/api/statistics/heatmap"
       ],
       "changelogScopes": [
         "statistics",
