@@ -2254,6 +2254,8 @@ export const cs = {
     noEvents: "V příštích 30 minutách nejsou z dostupných zdrojů odvozené žádné další události.",
     generated: "Výpočet",
     windTimingShadowTitle: "Wind-adjusted timing shadow",
+    trajectoryQualityShadowTitle: "Trajectory quality shadow V2",
+    trajectoryQualityShadowSummary: "Phase-aware kandidát vertikálního profilu a nejistoty nad stejnou horizontální geometrií. Canonical corridor zůstává aktivní.",
     windTimingShadowSummary: "Experimentální časování nad stejnou geometrií; canonical timing zůstává beze změny.",
     windTimingShadowStatus: { AVAILABLE: "dostupný", STALE: "stará weather data", INSUFFICIENT: "nedostatek dat" },
     windTimingShadowGroundSpeed: "Observed groundspeed",
