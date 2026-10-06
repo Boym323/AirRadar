@@ -18,6 +18,57 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.337] - 2026-10-06
+
+Changes since v1.0.336.
+
+**Features touched:** Aircraft Discovery, Route Network Explorer, Watchlist, Alerts & Fleet.
+
+### Added
+
+- Add aircraft discovery route (6fae9ece)
+- Add Aircraft Discovery V1 (f56ec1bf)
+- Expose aircraft discovery in navigation (c2d7d09e)
+
+### Fixed
+
+- Type aircraft discovery watchlist link (7e723003)
+
+### Documentation
+
+- Register aircraft discovery v1 (1ad60046)
+- Document aircraft discovery v1 (95b0cd6a)
+- Localize aircraft discovery v1 (6c96c8a6)
+- Add aircraft discovery changelog (2edcba86)
+- Retain route explorer registry (513c52fe)
+
+### Maintenance
+
+- Add aircraft discovery (b13cbf9f)
+- Guard aircraft discovery v1 boundary (365359b6)
+- Expect typed watchlist handoff (cb715150)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add aircraft discovery route (6fae9ece)
+- feat: add Aircraft Discovery V1 (f56ec1bf)
+- style: add aircraft discovery (b13cbf9f)
+- feat: expose aircraft discovery in navigation (c2d7d09e)
+- test: guard aircraft discovery v1 boundary (365359b6)
+- docs: register aircraft discovery v1 (1ad60046)
+- docs: document aircraft discovery v1 (95b0cd6a)
+- docs: localize aircraft discovery v1 (6c96c8a6)
+- docs: add aircraft discovery changelog (2edcba86)
+- fix: type aircraft discovery watchlist link (7e723003)
+- test: expect typed watchlist handoff (cb715150)
+- merge main into aircraft discovery (2bb3c404)
+- docs(features): retain route explorer registry (513c52fe)
+- Merge remote-tracking branch 'origin/main' into feat/aircraft-discovery-v1 (2b5eb664)
+- Merge pull request #452 from Boym323/feat/aircraft-discovery-v1 (79057775)
+
+</details>
+
 ## [1.0.336] - 2026-10-06
 
 Changes since v1.0.335.
