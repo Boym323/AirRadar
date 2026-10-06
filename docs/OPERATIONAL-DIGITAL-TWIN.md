@@ -640,4 +640,12 @@ The report measures paired-sample count, canonical altitude MAE, V2 altitude MAE
 
 V1 is a measurement/readiness lane, not a promotion gate. WAIT requires more observation span or paired horizon evidence. PASS means that sufficient independent evidence and truth continuity exist for a later graduation decision; it does not mean V2 is better. FAIL is currently reserved for a completed evidence set with inadequate LOCAL truth coverage. The canonical corridor remains active and `autoPromotion=false`.
 
-The first version is intentionally process-local and bounded to a rolling 24-hour window. Restart-stable anonymous aggregate persistence belongs to Trajectory Quality Graduation V1, where the model-benefit thresholds and manual-promotion eligibility will be defined.
+The outcome window remains bounded to rolling 24 hours, but completed evidence is now stored as anonymous five-minute aggregates in the existing calibration bucket table. No aircraft identifier, callsign, registration, route or raw truth point is persisted. Pending samples remain process-local; after a restart only resolved aggregate evidence is hydrated.
+
+## Trajectory Quality Graduation V1
+
+Trajectory Quality Graduation V1 is a separate, stricter decision layer over the persisted outcome evidence. It does not alter the canonical trajectory and it never promotes automatically. Graduation requires at least 240 minutes of evidence, 120 paired samples, at least 24 paired samples in each 5/15/30-minute horizon, and at least 75% LOCAL truth coverage.
+
+Once the evidence floor is complete, V2 must demonstrate at least 8% relative altitude-MAE improvement and a 60% decisive win rate. Graduation also fails closed when any sufficiently sampled horizon regresses by more than 5%, or any flight phase with at least 12 samples regresses by more than 8%. Sparse phase noise is reported but does not become a promotion blocker until the phase reaches the guard sample floor.
+
+A PASS only sets `manualPromotionEligible=true`. `autoPromotion=false` and `canonicalTrajectoryRemainsActive=true` remain explicit. The Calibration Center exposes the graduation decision, aggregate benefit, truth coverage, horizon/phase regression counts and restart-stable persistence health so a future promotion change can require an explicit operator/configuration action.
