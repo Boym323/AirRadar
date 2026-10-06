@@ -69,6 +69,7 @@ describe("Predictive ETA Advisory V1", () => {
       uncertaintyBasis: "readiness_p90",
       modelVersion: "predictive-intelligence-v1",
       provenance: "predicted",
+      evidence: [],
     });
   });
 

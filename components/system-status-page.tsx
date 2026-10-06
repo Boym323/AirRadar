@@ -12,6 +12,7 @@ import type {
   PredictiveGraduationTruthRequirement,
 } from "@/lib/predictive-intelligence/graduation-calibration";
 import { Button, Card as UiCard, StatusBadge as UiStatusBadge, type StatusBadgeVariant } from "@/components/ui-primitives";
+import { SystemRuntimeTimeline } from "@/components/system-runtime-timeline";
 
 function formatUptime(seconds: number, dictionary: LocaleDictionary): string {
   const total = Math.max(0, Math.floor(seconds));
@@ -518,6 +519,8 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.metadataCache} value={data.runtime.metadataHotCacheLimit === null ? formatCount(data.runtime.metadataHotCacheSize, dictionary) : `${formatCount(data.runtime.metadataHotCacheSize, dictionary)} / ${formatCount(data.runtime.metadataHotCacheLimit, dictionary)}`} />
         <Field label={dictionary.system.providerCache} value={data.runtime.providerCacheLimit === null ? formatCount(data.runtime.providerCacheEntries, dictionary) : `${formatCount(data.runtime.providerCacheEntries, dictionary)} / ${formatCount(data.runtime.providerCacheLimit, dictionary)}`} />
       </Card>}
+
+      {detailed && <SystemRuntimeTimeline locale={locale} />}
 
       {detailed && predictiveReadiness && <PredictiveReadinessPanel report={predictiveReadiness} dictionary={dictionary} />}
       {detailed && predictiveReadinessError && !predictiveReadiness && <UiCard className="system-card system-predictive-readiness"><p className="system-message">{dictionary.system.predictiveReadinessUnavailable}</p></UiCard>}

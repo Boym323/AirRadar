@@ -1,6 +1,7 @@
 import type { PredictiveReadinessCapabilityResult } from "@/lib/predictive-intelligence/readiness";
 import type { PredictiveCapabilityStatus, PredictiveGraduationPolicy } from "@/lib/predictive-intelligence/graduation";
 import type { EtaPrediction, PredictiveFlightState, PredictionConfidence } from "@/lib/predictive-intelligence/types";
+import { explainablePredictionEvidence, type ExplainablePredictionEvidence } from "@/lib/predictive-intelligence/explainability";
 
 export const ETA_ADVISORY_STALE_AFTER_MS = 45_000;
 
@@ -19,6 +20,7 @@ export interface PublicEtaAdvisory {
   uncertaintyBasis: "readiness_p90";
   modelVersion: PredictiveFlightState["modelVersion"];
   provenance: "predicted";
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 export interface AdminEtaAdvisoryPreview {
@@ -37,6 +39,7 @@ export interface AdminEtaAdvisoryPreview {
   uncertaintyBasis: EtaUncertaintyBasis;
   modelVersion: PredictiveFlightState["modelVersion"] | null;
   provenance: "predicted";
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 type EtaReadinessResult = PredictiveReadinessCapabilityResult<{
@@ -103,6 +106,7 @@ export function buildPublicEtaAdvisory(
     uncertaintyBasis: "readiness_p90",
     modelVersion: prediction.modelVersion,
     provenance: "predicted",
+    evidence: explainablePredictionEvidence("ETA", status.eta.evidence),
   };
 }
 
@@ -136,5 +140,6 @@ export function buildAdminEtaAdvisoryPreview(
     uncertaintyBasis: uncertainty === null ? "not_calibrated" : "readiness_p90",
     modelVersion: prediction?.modelVersion ?? null,
     provenance: "predicted",
+    evidence: explainablePredictionEvidence("ETA", status.eta?.evidence ?? []),
   };
 }

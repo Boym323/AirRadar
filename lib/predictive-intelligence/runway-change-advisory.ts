@@ -1,4 +1,5 @@
 import type { PredictiveCapabilityStatus, PredictiveGraduationPolicy } from "./graduation";
+import { explainablePredictionEvidence, type ExplainablePredictionEvidence } from "./explainability";
 import type { PredictiveReadinessCapabilityResult, RunwayChangeReadinessEvidence } from "./readiness";
 import {
   RUNWAY_CHANGE_EVENT_WINDOW_MS,
@@ -23,6 +24,7 @@ export interface PublicRunwayChangeAdvisory {
   confidence: PredictionConfidence;
   modelVersion: PredictiveFlightState["modelVersion"];
   provenance: "predicted";
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 export interface AdminRunwayChangeAdvisoryPreview {
@@ -44,6 +46,7 @@ export interface AdminRunwayChangeAdvisoryPreview {
   independentChangeTruthAvailable: boolean;
   modelVersion: PredictiveFlightState["modelVersion"] | null;
   provenance: "predicted";
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 type RunwayChangeReadinessResult = PredictiveReadinessCapabilityResult<RunwayChangeReadinessEvidence>;
@@ -126,6 +129,7 @@ export function buildPublicRunwayChangeAdvisory(
     confidence: runway.confidence,
     modelVersion: prediction.modelVersion,
     provenance: "predicted",
+    evidence: explainablePredictionEvidence("RUNWAY_CHANGE", runway.evidence),
   };
 }
 
@@ -164,5 +168,6 @@ export function buildAdminRunwayChangeAdvisoryPreview(
     independentChangeTruthAvailable: readiness.evidence.independentChangeTruthAvailable,
     modelVersion: prediction?.modelVersion ?? null,
     provenance: "predicted",
+    evidence: explainablePredictionEvidence("RUNWAY_CHANGE", runway?.evidence ?? []),
   };
 }

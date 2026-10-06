@@ -6,8 +6,7 @@ All notable changes to AirRadar are documented here.
 
 ### Added
 
-- Add Radar Presets V1 with up to eight browser-local named map views that restore camera, traffic filters, existing map layers and display settings without any server persistence.
-- Add Route Network Explorer V1 at `/routes` for bounded today/7d/30d top origin/destination Flight aggregates, route share and airport navigation without FlightPosition scans.
+- Add Explainable Prediction V1 `Why?/Proč?` panels for readiness-gated ETA, runway, runway-change and trajectory advisories using whitelisted canonical prediction evidence.
 - Add Receiver Explorer V2 on `/receiver/coverage` with directional median/P95/max range polar analytics, altitude-band reach, bounded 7/30-day trends, weak-sector health, live ADS-B/MLAT source mix, directional records, and the existing network-reference capture polar without a new ingest or persistence lane.
 - Add Live Airport Network V1 to `/airports`, prioritizing browser-local favorite airports and live-route-active airports with canonical Airport Operations, receiver-only approach queue, likely runway, bounded next-arrival estimates, and direct Live Board navigation.
 - Add Event Replay V1: replayable Flight Intelligence events can open Time Machine in a bounded ±10-minute window with the matching aircraft preselected when historical data is available.
@@ -17,36 +16,6 @@ All notable changes to AirRadar are documented here.
 - Extend Flight Intelligence with explicit initial-climb, cruise-entry, and
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
-
-## [1.0.336] - 2026-10-06
-
-Changes since v1.0.335.
-
-### Added
-
-- Add static asset checks and normalize standalone server configuration (c189e8d8)
-
-### Fixed
-
-- Publish standalone build metadata (821e36d4)
-- Tolerate metadata version race for validated artifacts (0be2590f)
-
-### Maintenance
-
-- Sync generated repository metadata (#455) (4d0539bb)
-- Sync generated repository metadata (#456) (4babbcf6)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (#455) (4d0539bb)
-- feat: add static asset checks and normalize standalone server configuration (c189e8d8)
-- Merge remote-tracking branch 'origin/main' (89c7cb07)
-- chore(metadata): sync generated repository metadata (#456) (4babbcf6)
-- fix(release): publish standalone build metadata (821e36d4)
-- fix(release): tolerate metadata version race for validated artifacts (0be2590f)
-
-</details>
 
 ## [1.0.333] - 2026-10-06
 
