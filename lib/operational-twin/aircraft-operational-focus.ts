@@ -89,7 +89,7 @@ function navigationIntegrityItems(
 }
 
 function situationEventItems(events: readonly OperationalTwinEvent[]): AircraftOperationalFocusItem[] {
-  return events.flatMap((event) => {
+  return events.flatMap<AircraftOperationalFocusItem>((event) => {
     if (!inHorizon(event.offsetMinutes)) return [];
 
     if (event.type === "PLANNED_AIRSPACE") {
