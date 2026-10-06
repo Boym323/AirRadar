@@ -591,3 +591,5 @@ context. The response therefore carries explicit
 `OPERATIONAL_CONTEXT_ONLY`, `NOT_SAFETY_ALERT`,
 `NO_ATC_CLEARANCE_INFERENCE`, `SOURCE_SEMANTICS_PRESERVED`, and
 `NO_ALL_CLEAR_INFERENCE` limitations.
+
+The aircraft detail UI renders this summary ahead of the individual weather, navigation-integrity and event timelines. The presentation preserves the backend level and source semantics, shows the bounded ATTENTION/WATCH counts, and repeats the no-all-clear / no-safety-alert limitation instead of deriving a stronger UI-only state.
