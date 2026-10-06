@@ -17,6 +17,10 @@ function airportHref(code: string) {
   return { pathname: "/airports/" + encodeURIComponent(code) } as const;
 }
 
+function routeDetailHref(origin: string, destination: string) {
+  return `/routes/${encodeURIComponent(origin)}/${encodeURIComponent(destination)}`;
+}
+
 export function RouteNetworkExplorer() {
   const cs = t.locale.startsWith("cs");
   const copy = cs ? {
@@ -39,6 +43,7 @@ export function RouteNetworkExplorer() {
     origin: "Odlet",
     destination: "Přílet",
     openAirport: "Otevřít letiště",
+    openRoute: "Otevřít detail trasy",
     sourceUnavailable: "Traffic data jsou dočasně nedostupná.",
     noRoutes: "Pro toto období zatím nejsou k dispozici žádné kompletní origin/destination trasy.",
     filter: "Filtrovat trasu",
@@ -65,6 +70,7 @@ export function RouteNetworkExplorer() {
     origin: "Origin",
     destination: "Destination",
     openAirport: "Open airport",
+    openRoute: "Open route detail",
     sourceUnavailable: "Traffic data is temporarily unavailable.",
     noRoutes: "No complete origin/destination routes are available for this period yet.",
     filter: "Filter route",
@@ -189,6 +195,7 @@ export function RouteNetworkExplorer() {
           <div className={styles.airportActions}>
             <Link href={airportHref(selected.origin)}><span>{copy.origin}</span><strong>{selected.origin}</strong><small>{copy.openAirport} →</small></Link>
             <Link href={airportHref(selected.destination)}><span>{copy.destination}</span><strong>{selected.destination}</strong><small>{copy.openAirport} →</small></Link>
+            <Link className={styles.routeDetailAction} href={routeDetailHref(selected.origin, selected.destination)}><span>ROUTE V2</span><strong>{selected.origin} → {selected.destination}</strong><small>{copy.openRoute} →</small></Link>
           </div>
         </div> : <EmptyState title={copy.noRoutes} />}
       </Panel>

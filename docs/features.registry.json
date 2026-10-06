@@ -773,8 +773,11 @@
       "category": "analytics / routes",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded route aggregate explorer.",
-      "pages": ["/routes"],
+      "summary": "Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates, including top origin/destination pairs and airport navigation without FlightPosition scans.",
+      "pages": [
+        "/routes",
+        "/routes/:origin/:destination"
+      ],
       "apis": [],
       "changelogScopes": ["route-network-explorer"],
       "changelogKeywords": ["route network", "route explorer"]
