@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import type { FeatureCollection, LineString, Point } from "geojson";
 import { interpolateOperationalTwinPoint } from "./map";
 import type {
@@ -73,12 +74,12 @@ function sourceCoordinate(
   return event ? finiteCoordinate(event.lat, event.lon) : null;
 }
 
-export function aircraftOperationalFocusRadarHref(icaoHex: string, itemId: string): string {
+export function aircraftOperationalFocusRadarHref(icaoHex: string, itemId: string): Route {
   const params = new URLSearchParams({
     aircraft: icaoHex.trim().toUpperCase(),
     [AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM]: itemId,
   });
-  return `/?${params.toString()}`;
+  return `/?${params.toString()}` as Route;
 }
 
 export function resolveAircraftOperationalFocusMapTarget(
