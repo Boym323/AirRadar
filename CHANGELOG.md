@@ -10,6 +10,35 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.324] - 2026-10-06
+
+Changes since v1.0.323.
+
+### Added
+
+- Consolidate calibration and regional attention stack (5fe7ef47)
+
+### Fixed
+
+- Bootstrap artifact deploy and metadata validation (b7fc6aa5)
+- Gate standalone runtime on prepared assets (43500284)
+- Restore locked Prisma tooling on production (a6094147)
+
+### Maintenance
+
+- Optimize validation and production release pipeline (58adbc81)
+
+<details>
+<summary>Technical commits</summary>
+
+- ci: optimize validation and production release pipeline (58adbc81)
+- fix(ci): bootstrap artifact deploy and metadata validation (b7fc6aa5)
+- feat: consolidate calibration and regional attention stack (5fe7ef47)
+- fix(deploy): gate standalone runtime on prepared assets (43500284)
+- fix(deploy): restore locked Prisma tooling on production (a6094147)
+
+</details>
+
 ## [1.0.321] - 2026-10-05
 
 Changes since v1.0.320.
