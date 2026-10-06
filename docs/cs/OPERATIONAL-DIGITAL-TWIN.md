@@ -609,3 +609,14 @@ Trajectory Quality V2 je aditivní shadow profil nad existujícím canonical 30m
 V2 shadow zachovává všechny canonical horizontální souřadnice, track, hodnoty uncertainty i timestampy. Zpřístupňuje přesné 5/15/30minutové checkpointy canonical-versus-quality výšky, aby pozdější outcome validace mohla změřit, zda taperovaný profil vertikální projekci skutečně zlepšuje. Chybějící altitude fail-closed vrací INSUFFICIENT.
 
 V2 se záměrně nepromuje. `canonicalRemainsActive=true` a `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus i veřejné event timing dál používají canonical corridor. Shadow nepřidává provider call, síťový request, databázovou cestu ani poller a výslovně nese omezení `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` a `NOT_FMS_INTENT`.
+
+
+## Trajectory Quality Outcome Validation V1
+
+Trajectory Quality Outcome Validation V1 prospektivně páruje canonical projekci výšky a Trajectory Quality V2 shadow proti stejné pozdější LOCAL receiver truth v horizontech 5, 15 a 30 minut. Capture je request-driven z existujícího Digital Twin builderu včetně stávajících omezených refresh-sampled kalibračních requestů. Truth se pozoruje z běžného LOCAL receiver refreshu; nevzniká další timer, provider call, endpoint ani síťový request.
+
+Report měří počet paired samples, canonical altitude MAE, V2 altitude MAE, absolutní/relativní zlepšení MAE, V2 win rate, truth coverage a omezené řezy podle horizontu a flight phase při capture (CLIMB, CRUISE, DESCENT, LEVEL a UNKNOWN). Rozdíl chyby do 100 ft se počítá jako tie, aby se nevýznamný výškový šum neinterpretoval jako vítězství modelu.
+
+V1 je measurement/readiness lane, ne promotion gate. WAIT znamená nedostatečné observační okno nebo paired evidence v horizontech. PASS znamená, že existuje dost nezávislé evidence a kontinuity truth pro budoucí graduation rozhodnutí; neznamená, že V2 je lepší. FAIL je v této verzi vyhrazen dokončené evidenci s nedostatečným LOCAL truth coverage. Canonical corridor zůstává aktivní a `autoPromotion=false`.
+
+První verze je záměrně process-local a omezená na klouzavé 24hodinové okno. Restart-stable anonymní agregovaná persistence patří až do Trajectory Quality Graduation V1, kde budou definované thresholdy přínosu modelu a manual-promotion eligibility.
