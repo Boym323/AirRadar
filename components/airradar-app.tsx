@@ -104,6 +104,7 @@ import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
 import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
+import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud";
 import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-focus-card";
 import { useRadarDrawerInteractions, type RadarDrawerState, type RadarTrafficSource as TrafficSource } from "@/components/radar/use-radar-drawer-interactions";
 import { useRadarLiveAircraft } from "@/components/radar/use-radar-live-aircraft";
@@ -517,6 +518,7 @@ export function AirRadarApp() {
   const [trafficSource, setTrafficSource] = useState<TrafficSource>("adsb");
   const [selectedOgnId, setSelectedOgnId] = useState<string | null>(null);
   const [selectedHex, setSelectedHex] = useState<string | null>(null);
+  const [followSelected, setFollowSelected] = useState(false);
   const [aircraftDetail, setAircraftDetail] = useState<AircraftQuickDetailResponse | null>(null);
   const [selectedAtcContext, setSelectedAtcContext] = useState<AtcContextResult | null>(null);
   const [selectedRouteWeather, setSelectedRouteWeather] = useState<RouteWeatherContext | null>(null);
@@ -756,6 +758,7 @@ export function AirRadarApp() {
   const onSelectedAircraftRemoved = useCallback(() => {
     selectedHexRef.current = null;
     setSelectedHex(null);
+    setFollowSelected(false);
   }, []);
   const {
     connected: streamConnected,
@@ -995,6 +998,7 @@ export function AirRadarApp() {
     selectedHexRef.current = null;
     setTrafficSource("ogn");
     setSelectedHex(null);
+    setFollowSelected(false);
     setSelectedOgnId(id);
     setFiltersOpen(false);
     setMobileCompact(false);
@@ -1005,6 +1009,7 @@ export function AirRadarApp() {
     drawerActionGenerationRef.current += 1;
     setTrafficOpen(false);
     setFiltersOpen(false);
+    setFollowSelected(false);
     setSelectedHex(null);
     setSelectedOgnId(null);
     setMobileCompact(true);
@@ -1025,6 +1030,7 @@ export function AirRadarApp() {
   const openTrafficDrawer = useCallback((shortcut?: "search" | "filters") => {
     const actionGeneration = ++drawerActionGenerationRef.current;
     setSelectedHex(null);
+    setFollowSelected(false);
     setSelectedOgnId(null);
     setTrafficOpen(true);
     setMobileCompact(shortcut ? false : window.matchMedia("(max-width: 820px)").matches);
@@ -1051,6 +1057,7 @@ export function AirRadarApp() {
   const backToTraffic = useCallback(() => {
     drawerActionGenerationRef.current += 1;
     setSelectedHex(null);
+    setFollowSelected(false);
     setSelectedOgnId(null);
     setFiltersOpen(false);
     setTrafficOpen(true);
@@ -1067,6 +1074,43 @@ export function AirRadarApp() {
     if (lon === null || lat === null) return;
     map.easeTo({ center: [lon, lat], padding: currentRadarPadding(), duration: prefersReducedMotion() ? 0 : 350 });
   }
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !followSelected || !selectedHex) return;
+
+    let animationFrame = 0;
+    let lastFollowAt = Number.NEGATIVE_INFINITY;
+    let lastCenter: [number, number] | null = null;
+    const stopFollowingOnDrag = () => setFollowSelected(false);
+    const followRenderedAircraft = (now: number) => {
+      if (now - lastFollowAt >= 100) {
+        const aircraft = liveAircraftByHexRef.current.get(selectedHex);
+        const rendered = aircraftMarkersRef.current.get(selectedHex)?.marker.getLngLat();
+        const lon = rendered?.lng ?? aircraft?.lon ?? null;
+        const lat = rendered?.lat ?? aircraft?.lat ?? null;
+
+        if (lon !== null && lat !== null && Number.isFinite(lon) && Number.isFinite(lat)) {
+          const moved = !lastCenter
+            || Math.abs(lastCenter[0] - lon) > 0.000001
+            || Math.abs(lastCenter[1] - lat) > 0.000001;
+          if (moved) {
+            map.jumpTo({ center: [lon, lat], padding: currentRadarPadding() });
+            lastCenter = [lon, lat];
+          }
+        }
+        lastFollowAt = now;
+      }
+      animationFrame = window.requestAnimationFrame(followRenderedAircraft);
+    };
+
+    map.on("dragstart", stopFollowingOnDrag);
+    animationFrame = window.requestAnimationFrame(followRenderedAircraft);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      map.off("dragstart", stopFollowingOnDrag);
+    };
+  }, [currentRadarPadding, followSelected, liveAircraftByHexRef, mapReady, selectedHex]);
 
   useEffect(() => {
     selectedHexRef.current = selectedHex;
@@ -2955,6 +2999,14 @@ export function AirRadarApp() {
                 onClear={clearOperationalFocusMap}
               />
             ) : null}
+            {selectedAircraftVisible && selectedAircraft ? <RadarFlightFollowHud
+              aircraft={selectedAircraft}
+              corridor={selectedRouteCorridor.corridor}
+              conformance={selectedRouteCorridor.conformance}
+              operationalTwin={selectedOperationalTwin}
+              following={followSelected}
+              onToggle={() => setFollowSelected((value) => !value)}
+            /> : null}
             {(showWeatherRadar && radarCatalog?.frames.length) || (showWeatherRadar && radarStatus === "unavailable") ? <div className="map-overlay-context-row">
               {showWeatherRadar && radarCatalog?.frames.length ? <div className="weather-radar-timeline" aria-label={t.layers.weatherRadar}>
                 <div className="weather-radar-timeline-heading"><strong>{t.layers.weatherRadar}</strong><span>{selectedRadarFrame ? formatDateTime(selectedRadarFrame.observedAt, t) : t.common.loading}</span></div>
