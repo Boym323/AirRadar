@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { RecapDailyHighlight, ReceiverRecapResponse } from "@/lib/aircraft/types";
-import { formatDateTime, formatDistance, formatNumber, formatTime, getTranslations, type LocaleKey } from "@/lib/i18n";
+import type { RecapDailyHighlight, RecapDailyWeatherHighlight, ReceiverRecapResponse } from "@/lib/aircraft/types";
+import { formatAltitude, formatDateTime, formatDistance, formatNumber, formatSpeed, formatTime, getTranslations, type LocaleKey } from "@/lib/i18n";
 
 type RecapRange = "daily" | "weekly";
 type Dictionary = ReturnType<typeof getTranslations>;
@@ -47,14 +47,35 @@ function highlightContext(item: RecapDailyHighlight, dictionary: Dictionary): st
   return context.join(" · ") || item.icaoHex;
 }
 
+function weatherHighlightLabel(item: RecapDailyWeatherHighlight, dictionary: Dictionary): string {
+  return item.kind === "turbulence" ? dictionary.recap.weatherTurbulence : dictionary.recap.weatherStrongWind;
+}
+
+function weatherHighlightContext(item: RecapDailyWeatherHighlight, dictionary: Dictionary): string {
+  const weather = item.kind === "turbulence"
+    ? dictionary.recap.weatherTurbulenceValue(formatNumber(item.turbulenceLevel, 0, dictionary.locale))
+    : dictionary.recap.weatherWindValue(
+      item.windDirectionDeg === null ? dictionary.common.emptyValue : `${formatNumber(item.windDirectionDeg, 0, dictionary.locale)}°`,
+      formatSpeed(item.windSpeedKt, dictionary),
+    );
+  return [
+    formatAltitude(item.altitudeFt, dictionary),
+    weather,
+    `${item.quality} · ${item.source}`,
+  ].join(" · ");
+}
+
 function DailyIntelligence({ data, dictionary }: { data: ReceiverRecapResponse; dictionary: Dictionary }) {
   const intelligence = data.dailyIntelligence;
   if (!intelligence) return null;
   const topAirline = intelligence.topAirlines[0] ?? null;
+  const topAirport = intelligence.topAirports[0] ?? null;
   const eventCount = intelligence.eventCounts.goArounds
     + intelligence.eventCounts.holdings
     + intelligence.eventCounts.diversions
-    + intelligence.eventCounts.emergencies;
+    + intelligence.eventCounts.emergencies
+    + intelligence.eventCounts.unusualTurns
+    + intelligence.eventCounts.orbits;
 
   return <>
     <section className="recap-today-hero" aria-labelledby="recap-today-title" data-testid="daily-intelligence">
@@ -68,6 +89,10 @@ function DailyIntelligence({ data, dictionary }: { data: ReceiverRecapResponse; 
             value(data.observedFlights, dictionary),
           )}
           {data.bestReception ? ` ${dictionary.recap.dailyStoryRecord(formatDistance(data.bestReception.distanceKm, dictionary))}` : ""}
+          {topAirport ? ` ${dictionary.recap.dailyStoryAirport(topAirport.icao, formatNumber(topAirport.movements, 0, dictionary.locale))}` : ""}
+          {intelligence.weatherHighlights.length
+            ? ` ${dictionary.recap.dailyStoryWeather(formatNumber(intelligence.weatherHighlights.length, 0, dictionary.locale))}`
+            : ""}
         </p>
       </div>
       <div className="recap-today-facts">
@@ -86,8 +111,23 @@ function DailyIntelligence({ data, dictionary }: { data: ReceiverRecapResponse; 
           {topAirline ? <small>{formatNumber(topAirline.count, 0, dictionary.locale)} ×</small> : null}
         </div>
         <div>
+          <span>{dictionary.recap.busiestAirport}</span>
+          <strong>{topAirport ? topAirport.icao : dictionary.common.emptyValue}</strong>
+          {topAirport ? <small>{dictionary.recap.airportMovementValue(
+            formatNumber(topAirport.movements, 0, dictionary.locale),
+            formatNumber(topAirport.arrivals, 0, dictionary.locale),
+            formatNumber(topAirport.departures, 0, dictionary.locale),
+          )}</small> : null}
+        </div>
+        <div>
           <span>{dictionary.recap.operationalEvents}</span>
           <strong>{formatNumber(eventCount, 0, dictionary.locale)}</strong>
+        </div>
+        <div>
+          <span>{dictionary.recap.weatherSignals}</span>
+          <strong>{intelligence.weatherStatus === "unavailable"
+            ? dictionary.common.emptyValue
+            : formatNumber(intelligence.weatherHighlights.length, 0, dictionary.locale)}</strong>
         </div>
       </div>
       <div id="operational-events" className="recap-daily-event-strip" aria-label={dictionary.recap.operationalEvents}>
@@ -95,6 +135,8 @@ function DailyIntelligence({ data, dictionary }: { data: ReceiverRecapResponse; 
         <Metric label={dictionary.recap.holdings} value={formatNumber(intelligence.eventCounts.holdings, 0, dictionary.locale)} />
         <Metric label={dictionary.recap.diversions} value={formatNumber(intelligence.eventCounts.diversions, 0, dictionary.locale)} />
         <Metric label={dictionary.recap.emergencies} value={formatNumber(intelligence.eventCounts.emergencies, 0, dictionary.locale)} />
+        <Metric label={dictionary.recap.unusualTurns} value={formatNumber(intelligence.eventCounts.unusualTurns, 0, dictionary.locale)} />
+        <Metric label={dictionary.recap.orbits} value={formatNumber(intelligence.eventCounts.orbits, 0, dictionary.locale)} />
       </div>
     </section>
   </>;
@@ -158,6 +200,11 @@ export function RecapPage({ range }: { range: RecapRange }) {
       <div className="recap-grid">
         <section className="recap-card"><h2>{dictionary.recap.topTypes}</h2>{data.topAircraftTypes.length ? <ol>{data.topAircraftTypes.map((item) => <li key={item.name}><span>{item.name}</span><strong>{formatNumber(item.count, 0, dictionary.locale)}</strong></li>)}</ol> : <p>{dictionary.recap.noBreakdown}</p>}</section>
         <section className="recap-card"><h2>{dictionary.recap.topRoutes}</h2>{data.topRoutes.length ? <ol>{data.topRoutes.map((item) => <li key={`${item.origin}-${item.destination}`}><span>{item.origin} → {item.destination}</span><strong>{formatNumber(item.count, 0, dictionary.locale)}</strong></li>)}</ol> : <p>{dictionary.recap.noBreakdown}</p>}</section>
+        {range === "daily" && data.dailyIntelligence ? <section className="recap-card" data-testid="daily-top-airports"><h2>{dictionary.recap.topAirports}</h2>{data.dailyIntelligence.topAirports.length ? <ol>{data.dailyIntelligence.topAirports.map((item) => <li key={item.icao}><span><Link href={`/airports/${encodeURIComponent(item.icao)}`}>{item.icao}</Link> · {dictionary.recap.airportFlowValue(
+          formatNumber(item.arrivals, 0, dictionary.locale),
+          formatNumber(item.departures, 0, dictionary.locale),
+        )}</span><strong>{formatNumber(item.movements, 0, dictionary.locale)}</strong></li>)}</ol> : <p>{dictionary.recap.noAirportBreakdown}</p>}</section> : null}
+        {range === "daily" && data.dailyIntelligence ? <section className="recap-card recap-weather-story" data-testid="daily-weather-highlights"><h2>{dictionary.recap.weatherHighlights}</h2><p>{dictionary.recap.weatherHighlightsHint}</p>{data.dailyIntelligence.weatherStatus === "unavailable" ? <p>{dictionary.recap.weatherUnavailable}</p> : data.dailyIntelligence.weatherHighlights.length ? <ul>{data.dailyIntelligence.weatherHighlights.map((item) => <li key={item.key}><span><Link href={`/aircraft/${encodeURIComponent(item.icaoHex)}`}>{item.callsign ?? item.icaoHex}</Link><small>{weatherHighlightLabel(item, dictionary)} · {weatherHighlightContext(item, dictionary)}</small></span><time dateTime={item.observedAt}>{formatTime(item.observedAt, dictionary)}</time></li>)}</ul> : <p>{dictionary.recap.noWeatherHighlights}</p>}{data.dailyIntelligence.weatherStatus === "truncated" ? <p className="recap-weather-note">{dictionary.recap.weatherPartial}</p> : null}<p className="recap-weather-disclaimer">{dictionary.recap.weatherDisclaimer}</p></section> : null}
         {range === "daily" && data.dailyIntelligence ? <section className="recap-card"><h2>{dictionary.recap.topAirlines}</h2>{data.dailyIntelligence.topAirlines.length ? <ol>{data.dailyIntelligence.topAirlines.map((item) => <li key={item.name}><span>{item.name}</span><strong>{formatNumber(item.count, 0, dictionary.locale)}</strong></li>)}</ol> : <p>{dictionary.recap.noBreakdown}</p>}</section> : null}
         <section id="interesting-aircraft" className="recap-card"><h2>{dictionary.recap.interesting}</h2>{data.interestingAircraft.length ? <ul>{data.interestingAircraft.map((item) => <li key={`${item.icaoHex}-${item.reason}`}><Link href={`/aircraft/${encodeURIComponent(item.icaoHex)}`}>{item.callsign ?? item.registration ?? item.icaoHex}</Link><span>{dictionary.recap.reasons[item.reason]}</span></li>)}</ul> : <p>{dictionary.recap.noInteresting}</p>}</section>
         <section className="recap-card"><h2>{dictionary.recap.bestReception}</h2>{data.bestReception ? <Link className="recap-record" href={`/aircraft/${encodeURIComponent(data.bestReception.icaoHex)}`}><strong>{formatDistance(data.bestReception.distanceKm, dictionary)}</strong><span>{data.bestReception.icaoHex} · {data.bestReception.registration ?? dictionary.common.emptyValue}</span><small>{formatDateTime(data.bestReception.recordedAt, dictionary)}</small></Link> : <p>{dictionary.recap.noReception}</p>}</section>

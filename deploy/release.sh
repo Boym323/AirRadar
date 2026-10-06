@@ -449,7 +449,7 @@ detect_worktree_changes() {
 }
 
 update_repository() {
-  local remote_sha merge_base
+  local remote_sha target_sha merge_base
 
   OLD_SHA="$(git_cmd rev-parse HEAD)"
   log "Current commit: ${OLD_SHA}"
@@ -468,31 +468,46 @@ update_repository() {
   # the release to a tag commit instead of the CI-validated branch commit.
   git_cmd rev-parse --verify FETCH_HEAD >/dev/null 2>&1 || die "Fetched origin/${DEPLOY_BRANCH}, but FETCH_HEAD is unavailable."
   remote_sha="$(git_cmd rev-parse FETCH_HEAD)"
+  target_sha="${remote_sha}"
+
+  # The deploy artifact is validated for EXPECTED_COMMIT, while main may
+  # advance between release validation and the self-hosted deploy job. Deploy
+  # the exact validated ancestor in that case instead of mixing the artifact
+  # with a newer checkout. A rewritten or unrelated main history still fails
+  # closed.
+  if (( AUTOMATED == 1 )) && [[ -n "${EXPECTED_COMMIT}" && "${remote_sha}" != "${EXPECTED_COMMIT}" ]]; then
+    git_cmd cat-file -e "${EXPECTED_COMMIT}^{commit}" || die "Validated deployment commit ${EXPECTED_COMMIT} is not available after fetching ${DEPLOY_BRANCH}."
+    if ! git_cmd merge-base --is-ancestor "${EXPECTED_COMMIT}" "${remote_sha}"; then
+      die "Validated deployment commit ${EXPECTED_COMMIT} is not an ancestor of origin/${DEPLOY_BRANCH} at ${remote_sha}."
+    fi
+    target_sha="${EXPECTED_COMMIT}"
+    log "Automated release pinned to validated commit ${target_sha}; origin/${DEPLOY_BRANCH} advanced to ${remote_sha} after CI validation."
+  fi
 
   # Automated GitHub Releases create remote release tags after deployment.
   # Keep the production checkout's tag namespace synchronized so the
   # post-deploy release resolver can continue the stable patch sequence.
   git_cmd fetch --force --tags origin
 
-  merge_base="$(git_cmd merge-base HEAD "${remote_sha}")"
+  merge_base="$(git_cmd merge-base HEAD "${target_sha}")"
 
   if [[ "${merge_base}" != "${OLD_SHA}" && "${merge_base}" != "${remote_sha}" ]]; then
     if (( AUTOMATED == 1 )); then
-      log "Automated release found divergent local history; resetting ${DEPLOY_BRANCH} to origin/${DEPLOY_BRANCH}."
-      git_cmd reset --hard "${remote_sha}"
+      log "Automated release found divergent local history; resetting ${DEPLOY_BRANCH} to ${target_sha}."
+      git_cmd reset --hard "${target_sha}"
     else
       die "Local ${DEPLOY_BRANCH} and origin/${DEPLOY_BRANCH} have divergent history; refusing to merge on production."
     fi
   fi
 
-  if [[ "${OLD_SHA}" == "${remote_sha}" ]]; then
+  if [[ "${OLD_SHA}" == "${target_sha}" ]]; then
     log "No new commit; validating current release."
   elif [[ "${merge_base}" == "${OLD_SHA}" ]]; then
-    log "Fast-forwarding ${DEPLOY_BRANCH} to ${remote_sha}"
-    git_cmd merge --ff-only "${remote_sha}"
+    log "Fast-forwarding ${DEPLOY_BRANCH} to ${target_sha}"
+    git_cmd merge --ff-only "${target_sha}"
   elif (( AUTOMATED == 1 )); then
-    log "Automated release aligning ${DEPLOY_BRANCH} to ${remote_sha}."
-    git_cmd reset --hard "${remote_sha}"
+    log "Automated release aligning ${DEPLOY_BRANCH} to ${target_sha}."
+    git_cmd reset --hard "${target_sha}"
   else
     log "Local ${DEPLOY_BRANCH} is ahead of origin/${DEPLOY_BRANCH}; keeping the local fast-forward-only state."
   fi

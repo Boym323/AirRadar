@@ -198,7 +198,7 @@
       "category": "history",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded historical all-aircraft playback and historical context windows.",
+      "summary": "Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence.",
       "pages": [
         "/time-machine"
       ],
@@ -207,10 +207,13 @@
         "/api/time-machine/window"
       ],
       "changelogScopes": [
-        "time-machine"
+        "time-machine",
+        "event-replay"
       ],
       "changelogKeywords": [
-        "time machine"
+        "time machine",
+        "event replay",
+        "replay ±10 min"
       ]
     },
     {
@@ -297,7 +300,7 @@
       "category": "analytics",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Receiver statistics, traffic intelligence, reception records and daily/weekly recaps.",
+      "summary": "Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights.",
       "pages": [
         "/statistics",
         "/recap/daily",
@@ -322,7 +325,8 @@
         "statistics",
         "daily recap",
         "weekly recap",
-        "reception records"
+        "reception records",
+        "daily aviation story"
       ]
     },
     {
@@ -372,7 +376,7 @@
       "category": "intelligence",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Lifecycle and transition intelligence event timeline and streaming.",
+      "summary": "Lifecycle and transition intelligence event timeline and streaming, with bounded Event Replay links for notable persisted events.",
       "pages": [
         "/intelligence"
       ],
