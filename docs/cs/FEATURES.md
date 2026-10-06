@@ -82,6 +82,12 @@ zda operátor nakonfiguroval volitelného providera.
 | `/fleet` | Konkrétní letadla z ICAO pravidel watchlistu, live/offline stav, počty nedávných pozorovaných letů, trasy/letiště a lazy fotografie. | Produkce; neidentitní pravidla watchlistu jsou vynechána, historie PostgreSQL je volitelná. |
 | `/system` | Sanitizovaný stav runtime, přijímače, persistence, statistik, ATC, počasí, OGN, alertů a letišť plus process-local diagnostika kontinuity ADS-B s čítači omission/recovery, source failover a mass-drop guardu. Lazy providery weather/radar/wind/ADSBDB zobrazují cold-start stavy `ON DEMAND`/`LOADING` a omezené bezpečné důvody stavů degraded/offline. | Produkční read-only diagnostika; nikdy nespouští volitelné upstream požadavky. |
 
+## Event Replay V1
+
+Události Flight Intelligence typu GO_AROUND, HOLDING, DIVERSION, UNUSUAL_TURN a ORBIT nabízejí na `/intelligence` akci `Replay ±10 min`. Odkaz otevře `/time-machine` u času uložené události, přenese identitu letadla přes `hex` a volitelný `flightId` a při dostupné historii automaticky vybere odpovídající stopu.
+
+Běžný Time Machine zachovává původní pětiminutové serverové okno. Event Replay explicitně používá `mode=event-replay`, který povolí omezené 20minutové okno (10 minut před a po události) při zachování stávajících limitů počtu pozic, letadel a událostí. Nevzniká nový ingest, detektor událostí, databázová tabulka ani persistence cesta. Nouzové squawky se do Flight Intelligence uměle nepřidávají, protože patří do alert domény a nejsou `FlightEventType`.
+
 ## PIREP / AIREP Intelligence V1
 
 AirRadar může obohatit kontext počasí pozorovaného vlastním ADS-B přijímačem o
