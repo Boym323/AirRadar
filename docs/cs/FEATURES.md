@@ -706,3 +706,7 @@ Event Outcome V2 nyní párově porovnává canonical a wind-adjusted čas stejn
 ### Route Network Explorer V1
 
 `/routes` používá existující bounded Statistics Traffic API a zobrazuje nejčastější origin/destination dvojice pro dnešek, 7 nebo 30 dní. Ukazuje podíl trasy, pořadí odletových a příletových letišť a přímé odkazy na letiště. Nepřidává nový route ingest, novou databázovou cestu ani scan `FlightPosition`.
+
+### Radar Presets V1
+
+Živý radar umí uložit až osm pojmenovaných presetů pouze v prohlížeči. Preset obnoví kameru a existující coverage/source filtry, letecké, meteorologické a airspace vrstvy, range rings, barevný režim letadel, průhlednost meteorologického radaru a hladinu větru. Neukládá vybrané letadlo, živý provoz ani serverový stav a nepřidává žádné API ani databázovou závislost.

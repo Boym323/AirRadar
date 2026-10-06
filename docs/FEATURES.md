@@ -707,3 +707,7 @@ Event Outcome V2 now compares canonical and wind-adjusted timing for the same wa
 ### Route Network Explorer V1
 
 `/routes` reuses the existing bounded statistics traffic API to explore the most frequently observed origin/destination pairs for today, 7 days, or 30 days. The product layer shows route share, origin and destination rankings, and direct airport navigation. It introduces no route ingest, no new database query path, and never scans `FlightPosition`.
+
+### Radar Presets V1
+
+The live radar can save up to eight named browser-local presets. A preset restores the map camera plus existing coverage/source filters, aviation/weather/airspace layer visibility, range rings, aircraft color mode, radar opacity, and wind level. Presets never persist selected aircraft, live traffic, or server state and introduce no API or database dependency.
