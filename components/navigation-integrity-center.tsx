@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { t } from "@/lib/i18n";
 import type {
@@ -20,6 +20,11 @@ import {
   SegmentedControl,
   StatusBadge,
 } from "@/components/ui-primitives";
+import {
+  buildNavigationIntegrityInvestigation,
+  investigationHref,
+  parseNavigationIntegrityInvestigation,
+} from "@/lib/investigation-links";
 import styles from "./navigation-integrity-center.module.css";
 
 type WindowRange = "5m" | "15m" | "30m" | "60m";
@@ -221,6 +226,56 @@ export function NavigationIntegrityCenter() {
   const [currentFailed, setCurrentFailed] = useState(false);
   const [historyFailed, setHistoryFailed] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [investigationUrlReady, setInvestigationUrlReady] = useState(false);
+  const restoringInvestigationUrl = useRef(true);
+
+  useEffect(() => {
+    const restore = () => {
+      const parsed = parseNavigationIntegrityInvestigation(window.location.search);
+      setWindowRange(parsed.window);
+      setSource(parsed.source);
+      setMinAltitude(parsed.minAltitude);
+      setMaxAltitude(parsed.maxAltitude);
+      setSeverity(parsed.severity);
+      setConfidence(parsed.confidence);
+      setCategory(parsed.category);
+      setHistoryRange(parsed.history);
+    };
+    restore();
+    setInvestigationUrlReady(true);
+    const onPopState = () => {
+      restoringInvestigationUrl.current = true;
+      restore();
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (!investigationUrlReady) return;
+    const query = buildNavigationIntegrityInvestigation({
+      window: windowRange,
+      source,
+      minAltitude,
+      maxAltitude,
+      severity,
+      confidence,
+      category,
+      history: historyRange,
+    });
+    const href = investigationHref("/navigation-integrity", query);
+    const currentHref = window.location.pathname + window.location.search;
+    if (currentHref === href) {
+      restoringInvestigationUrl.current = false;
+      return;
+    }
+    if (restoringInvestigationUrl.current) {
+      window.history.replaceState(null, "", href);
+      restoringInvestigationUrl.current = false;
+    } else {
+      window.history.pushState(null, "", href);
+    }
+  }, [category, confidence, historyRange, investigationUrlReady, maxAltitude, minAltitude, severity, source, windowRange]);
 
   const loadCurrent = useCallback(async (signal?: AbortSignal) => {
     const params = new URLSearchParams({ window: windowRange });
