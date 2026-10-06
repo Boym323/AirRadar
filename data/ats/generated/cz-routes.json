@@ -1,0 +1,3554 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "name": "AIM ŘLP ČR eAIP ENR 3.2 (AIP AMDT 10/26, AIRAC 7/26)",
+    "reference": "https://aim.rlp.cz/eaip/html/eAIP/LK-ENR-3.2-en-GB.html",
+    "effectiveDate": "2026-09-03",
+    "lastVerifiedAt": "2026-09-11T11:11:25.782Z",
+    "aipAmendment": "10/26",
+    "airacAmendment": "7/26"
+  },
+  "routes": [
+    {
+      "designator": "L132",
+      "sourceId": "1075",
+      "points": [
+        {
+          "id": "DP:4277",
+          "sourceId": "4277",
+          "name": "AGNAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.56791666666667,
+          "longitude": 12.614502777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4294",
+          "sourceId": "4294",
+          "name": "BEKTO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.96582222222222,
+          "longitude": 12.712044444444444,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4404",
+          "sourceId": "4404",
+          "name": "SUPIL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.373247222222226,
+          "longitude": 12.813511111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4338",
+          "sourceId": "4338",
+          "name": "KILNU",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.47685555555556,
+          "longitude": 12.911658333333333,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-L132-1784",
+          "sourceId": "1784",
+          "fromPointId": "DP:4277",
+          "toPointId": "DP:4294",
+          "fromName": "AGNAV",
+          "toName": "BEKTO",
+          "from": [
+            12.614502777777778,
+            49.56791666666667
+          ],
+          "to": [
+            12.712044444444444,
+            49.96582222222222
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 6,
+          "magTrackReverseDeg": null,
+          "distanceNm": 24.2,
+          "geometricDistanceNm": 24.188,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L132-1785",
+          "sourceId": "1785",
+          "fromPointId": "DP:4294",
+          "toPointId": "DP:4404",
+          "fromName": "BEKTO",
+          "toName": "SUPIL",
+          "from": [
+            12.712044444444444,
+            49.96582222222222
+          ],
+          "to": [
+            12.813511111111112,
+            50.373247222222226
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 6,
+          "magTrackReverseDeg": null,
+          "distanceNm": 24.8,
+          "geometricDistanceNm": 24.771,
+          "upperLimit": "FL95",
+          "lowerLimit": "4500 FT AMSL",
+          "lowerOverride": "4500 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L132-1786",
+          "sourceId": "1786",
+          "fromPointId": "DP:4404",
+          "toPointId": "DP:4338",
+          "fromName": "SUPIL",
+          "toName": "KILNU",
+          "from": [
+            12.813511111111112,
+            50.373247222222226
+          ],
+          "to": [
+            12.911658333333333,
+            50.47685555555556
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 28,
+          "magTrackReverseDeg": null,
+          "distanceNm": 7.3,
+          "geometricDistanceNm": 7.266,
+          "upperLimit": "FL95",
+          "lowerLimit": "5300 FT AMSL",
+          "lowerOverride": "5300 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "L156",
+      "sourceId": "1076",
+      "points": [
+        {
+          "id": "DP:4347",
+          "sourceId": "4347",
+          "name": "LEDVA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 48.72878888888889,
+          "longitude": 16.789194444444448,
+          "foreignMaintainer": "AT",
+          "remarks": null
+        },
+        {
+          "id": "DP:4336",
+          "sourceId": "4336",
+          "name": "KATQA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.019999999999996,
+          "longitude": 17.241944444444446,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4443",
+          "sourceId": "4443",
+          "name": "UPLAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.32285277777778,
+          "longitude": 17.52839722222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4379",
+          "sourceId": "4379",
+          "name": "OGDAS",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.70224027777778,
+          "longitude": 17.97690111111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4400",
+          "sourceId": "4400",
+          "name": "SOPAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.93092222222222,
+          "longitude": 18.052377777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-L156-1732",
+          "sourceId": "1732",
+          "fromPointId": "DP:4347",
+          "toPointId": "DP:4336",
+          "fromName": "LEDVA",
+          "toName": "KATQA",
+          "from": [
+            16.789194444444448,
+            48.72878888888889
+          ],
+          "to": [
+            17.241944444444446,
+            49.019999999999996
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 41,
+          "magTrackReverseDeg": null,
+          "distanceNm": 25.1,
+          "geometricDistanceNm": 25.007,
+          "upperLimit": "FL95",
+          "lowerLimit": "3100 FT AMSL",
+          "lowerOverride": "3100 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L156-1733",
+          "sourceId": "1733",
+          "fromPointId": "DP:4336",
+          "toPointId": "DP:4443",
+          "fromName": "KATQA",
+          "toName": "UPLAV",
+          "from": [
+            17.241944444444446,
+            49.019999999999996
+          ],
+          "to": [
+            17.52839722222222,
+            49.32285277777778
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 27,
+          "magTrackReverseDeg": null,
+          "distanceNm": 21.4,
+          "geometricDistanceNm": 21.379,
+          "upperLimit": "FL95",
+          "lowerLimit": "3100 FT AMSL",
+          "lowerOverride": "3100 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L156-1734",
+          "sourceId": "1734",
+          "fromPointId": "DP:4443",
+          "toPointId": "DP:4379",
+          "fromName": "UPLAV",
+          "toName": "OGDAS",
+          "from": [
+            17.52839722222222,
+            49.32285277777778
+          ],
+          "to": [
+            17.97690111111111,
+            49.70224027777778
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 33,
+          "magTrackReverseDeg": 213,
+          "distanceNm": 28.8,
+          "geometricDistanceNm": 28.715,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L156-1735",
+          "sourceId": "1735",
+          "fromPointId": "DP:4379",
+          "toPointId": "DP:4400",
+          "fromName": "OGDAS",
+          "toName": "SOPAV",
+          "from": [
+            17.97690111111111,
+            49.70224027777778
+          ],
+          "to": [
+            18.052377777777778,
+            49.93092222222222
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 7,
+          "magTrackReverseDeg": 187,
+          "distanceNm": 14,
+          "geometricDistanceNm": 14.038,
+          "upperLimit": "FL95",
+          "lowerLimit": "3500 FT AMSL",
+          "lowerOverride": "3500 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "L602",
+      "sourceId": "1077",
+      "points": [
+        {
+          "id": "DP:4311",
+          "sourceId": "4311",
+          "name": "DONAD",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.08081388888889,
+          "longitude": 13,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4401",
+          "sourceId": "4401",
+          "name": "SOPGA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.17700833333333,
+          "longitude": 12.718786111111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4449",
+          "sourceId": "4449",
+          "name": "VARIK",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.29111111111111,
+          "longitude": 12.381111111111112,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-L602-1736",
+          "sourceId": "1736",
+          "fromPointId": "DP:4311",
+          "toPointId": "DP:4401",
+          "fromName": "DONAD",
+          "toName": "SOPGA",
+          "from": [
+            13,
+            50.08081388888889
+          ],
+          "to": [
+            12.718786111111111,
+            50.17700833333333
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 295,
+          "magTrackReverseDeg": null,
+          "distanceNm": 12.3,
+          "geometricDistanceNm": 12.268,
+          "upperLimit": "FL95",
+          "lowerLimit": "4200 FT AMSL",
+          "lowerOverride": "4200 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L602-1737",
+          "sourceId": "1737",
+          "fromPointId": "DP:4401",
+          "toPointId": "DP:4449",
+          "fromName": "SOPGA",
+          "toName": "VARIK",
+          "from": [
+            12.718786111111111,
+            50.17700833333333
+          ],
+          "to": [
+            12.381111111111112,
+            50.29111111111111
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 295,
+          "magTrackReverseDeg": null,
+          "distanceNm": 14.7,
+          "geometricDistanceNm": 14.667,
+          "upperLimit": "FL95",
+          "lowerLimit": "5000 FT AMSL",
+          "lowerOverride": "5000 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "L617",
+      "sourceId": "1078",
+      "points": [
+        {
+          "id": "DP:4297",
+          "sourceId": "4297",
+          "name": "BILNA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.39355277777778,
+          "longitude": 18.4473,
+          "foreignMaintainer": "SK",
+          "remarks": null
+        },
+        {
+          "id": "DP:4400",
+          "sourceId": "4400",
+          "name": "SOPAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.93092222222222,
+          "longitude": 18.052377777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4392",
+          "sourceId": "4392",
+          "name": "REGLI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.030277777777776,
+          "longitude": 17.995555555555555,
+          "foreignMaintainer": "PL",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-L617-1738",
+          "sourceId": "1738",
+          "fromPointId": "DP:4297",
+          "toPointId": "DP:4400",
+          "fromName": "BILNA",
+          "toName": "SOPAV",
+          "from": [
+            18.4473,
+            49.39355277777778
+          ],
+          "to": [
+            18.052377777777778,
+            49.93092222222222
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 332,
+          "magTrackReverseDeg": 151,
+          "distanceNm": 35.8,
+          "geometricDistanceNm": 35.728,
+          "upperLimit": "FL95",
+          "lowerLimit": "6400 FT AMSL",
+          "lowerOverride": "6400 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L617-1739",
+          "sourceId": "1739",
+          "fromPointId": "DP:4400",
+          "toPointId": "DP:4392",
+          "fromName": "SOPAV",
+          "toName": "REGLI",
+          "from": [
+            18.052377777777778,
+            49.93092222222222
+          ],
+          "to": [
+            17.995555555555555,
+            50.030277777777776
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 337,
+          "magTrackReverseDeg": 157,
+          "distanceNm": 6.4,
+          "geometricDistanceNm": 6.356,
+          "upperLimit": "FL95",
+          "lowerLimit": "2500 FT AMSL",
+          "lowerOverride": "2500 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "L620",
+      "sourceId": "1079",
+      "points": [
+        {
+          "id": "DP:4331",
+          "sourceId": "4331",
+          "name": "GOLOP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.58576111111111,
+          "longitude": 14.495730555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4380",
+          "sourceId": "4380",
+          "name": "OMELO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.83791388888889,
+          "longitude": 14.000758333333334,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-L620-1740",
+          "sourceId": "1740",
+          "fromPointId": "DP:4331",
+          "toPointId": "DP:4380",
+          "fromName": "GOLOP",
+          "toName": "OMELO",
+          "from": [
+            14.495730555555555,
+            50.58576111111111
+          ],
+          "to": [
+            14.000758333333334,
+            50.83791388888889
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 124,
+          "distanceNm": 24.2,
+          "geometricDistanceNm": 24.152,
+          "upperLimit": "FL95",
+          "lowerLimit": "5000 FT AMSL",
+          "lowerOverride": "5000 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "L624",
+      "sourceId": "1080",
+      "points": [
+        {
+          "id": "DP:4303",
+          "sourceId": "4303",
+          "name": "BULEK",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.413238888888884,
+          "longitude": 15.065305555555556,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4349",
+          "sourceId": "4349",
+          "name": "LEMBI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.55079444444444,
+          "longitude": 14.881280555555556,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1297",
+          "sourceId": "1297",
+          "name": "HDO",
+          "kind": "NAVAID",
+          "latitude": 50.928149999999995,
+          "longitude": 14.3688,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-L624-1761",
+          "sourceId": "1761",
+          "fromPointId": "DP:4303",
+          "toPointId": "DP:4349",
+          "fromName": "BULEK",
+          "toName": "LEMBI",
+          "from": [
+            15.065305555555556,
+            50.413238888888884
+          ],
+          "to": [
+            14.881280555555556,
+            50.55079444444444
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 317,
+          "magTrackReverseDeg": null,
+          "distanceNm": 10.9,
+          "geometricDistanceNm": 10.846,
+          "upperLimit": "FL95",
+          "lowerLimit": "3600 FT AMSL",
+          "lowerOverride": "3600 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L624-1789",
+          "sourceId": "1789",
+          "fromPointId": "DP:4349",
+          "toPointId": "NAV:1297",
+          "fromName": "LEMBI",
+          "toName": "HDO",
+          "from": [
+            14.881280555555556,
+            50.55079444444444
+          ],
+          "to": [
+            14.3688,
+            50.928149999999995
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 317,
+          "magTrackReverseDeg": null,
+          "distanceNm": 29.9,
+          "geometricDistanceNm": 29.875,
+          "upperLimit": "FL95",
+          "lowerLimit": "5000 FT AMSL",
+          "lowerOverride": "5000 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "L726",
+      "sourceId": "1081",
+      "points": [
+        {
+          "id": "DP:4443",
+          "sourceId": "4443",
+          "name": "UPLAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.32285277777778,
+          "longitude": 17.52839722222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1294",
+          "sourceId": "1294",
+          "name": "BNO",
+          "kind": "NAVAID",
+          "latitude": 49.15006388888889,
+          "longitude": 16.692580555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4298",
+          "sourceId": "4298",
+          "name": "BITSI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.308277777777775,
+          "longitude": 16.23631388888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4440",
+          "sourceId": "4440",
+          "name": "TUMKA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.407894444444445,
+          "longitude": 15.947266666666668,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4299",
+          "sourceId": "4299",
+          "name": "BODAL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.464108333333336,
+          "longitude": 15.782702777777779,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1312",
+          "sourceId": "1312",
+          "name": "VLM",
+          "kind": "NAVAID",
+          "latitude": 49.70427222222222,
+          "longitude": 15.066741666666667,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-L726-1796",
+          "sourceId": "1796",
+          "fromPointId": "DP:4443",
+          "toPointId": "NAV:1294",
+          "fromName": "UPLAV",
+          "toName": "BNO",
+          "from": [
+            17.52839722222222,
+            49.32285277777778
+          ],
+          "to": [
+            16.692580555555555,
+            49.15006388888889
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 248,
+          "magTrackReverseDeg": 67,
+          "distanceNm": 34.5,
+          "geometricDistanceNm": 34.369,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L726-1802",
+          "sourceId": "1802",
+          "fromPointId": "NAV:1294",
+          "toPointId": "DP:4298",
+          "fromName": "BNO",
+          "toName": "BITSI",
+          "from": [
+            16.692580555555555,
+            49.15006388888889
+          ],
+          "to": [
+            16.23631388888889,
+            49.308277777777775
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 293,
+          "magTrackReverseDeg": 113,
+          "distanceNm": 20.3,
+          "geometricDistanceNm": 20.255,
+          "upperLimit": "FL95",
+          "lowerLimit": "3500 FT AMSL",
+          "lowerOverride": "3500 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L726-1779",
+          "sourceId": "1779",
+          "fromPointId": "DP:4298",
+          "toPointId": "DP:4440",
+          "fromName": "BITSI",
+          "toName": "TUMKA",
+          "from": [
+            16.23631388888889,
+            49.308277777777775
+          ],
+          "to": [
+            15.947266666666668,
+            49.407894444444445
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 293,
+          "magTrackReverseDeg": 113,
+          "distanceNm": 12.8,
+          "geometricDistanceNm": 12.788,
+          "upperLimit": "FL95",
+          "lowerLimit": "3500 FT AMSL",
+          "lowerOverride": "3500 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L726-1780",
+          "sourceId": "1780",
+          "fromPointId": "DP:4440",
+          "toPointId": "DP:4299",
+          "fromName": "TUMKA",
+          "toName": "BODAL",
+          "from": [
+            15.947266666666668,
+            49.407894444444445
+          ],
+          "to": [
+            15.782702777777779,
+            49.464108333333336
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 293,
+          "magTrackReverseDeg": 113,
+          "distanceNm": 7.3,
+          "geometricDistanceNm": 7.258,
+          "upperLimit": "FL95",
+          "lowerLimit": "3500 FT AMSL",
+          "lowerOverride": "3500 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L726-1797",
+          "sourceId": "1797",
+          "fromPointId": "DP:4299",
+          "toPointId": "NAV:1312",
+          "fromName": "BODAL",
+          "toName": "VLM",
+          "from": [
+            15.782702777777779,
+            49.464108333333336
+          ],
+          "to": [
+            15.066741666666667,
+            49.70427222222222
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 293,
+          "magTrackReverseDeg": 112,
+          "distanceNm": 31.5,
+          "geometricDistanceNm": 31.379,
+          "upperLimit": "FL95",
+          "lowerLimit": "3600 FT AMSL",
+          "lowerOverride": "3600 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "L984",
+      "sourceId": "1082",
+      "points": [
+        {
+          "id": "DP:4382",
+          "sourceId": "4382",
+          "name": "PADKA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.93388333333333,
+          "longitude": 18.283269444444443,
+          "foreignMaintainer": "PL",
+          "remarks": null
+        },
+        {
+          "id": "DP:4400",
+          "sourceId": "4400",
+          "name": "SOPAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.93092222222222,
+          "longitude": 18.052377777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4394",
+          "sourceId": "4394",
+          "name": "RIBSI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.95376666666667,
+          "longitude": 17.661749999999998,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4288",
+          "sourceId": "4288",
+          "name": "BALTU",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.08946111111111,
+          "longitude": 13.326522222222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4311",
+          "sourceId": "4311",
+          "name": "DONAD",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.08081388888889,
+          "longitude": 13,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1304",
+          "sourceId": "1304",
+          "name": "OKG",
+          "kind": "NAVAID",
+          "latitude": 50.06514722222222,
+          "longitude": 12.405738888888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-L984-1751",
+          "sourceId": "1751",
+          "fromPointId": "DP:4382",
+          "toPointId": "DP:4400",
+          "fromName": "PADKA",
+          "toName": "SOPAV",
+          "from": [
+            18.283269444444443,
+            49.93388333333333
+          ],
+          "to": [
+            18.052377777777778,
+            49.93092222222222
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 264,
+          "magTrackReverseDeg": 84,
+          "distanceNm": 9,
+          "geometricDistanceNm": 8.925,
+          "upperLimit": "FL95",
+          "lowerLimit": "2800 FT AMSL",
+          "lowerOverride": "2800 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L984-1752",
+          "sourceId": "1752",
+          "fromPointId": "DP:4400",
+          "toPointId": "DP:4394",
+          "fromName": "SOPAV",
+          "toName": "RIBSI",
+          "from": [
+            18.052377777777778,
+            49.93092222222222
+          ],
+          "to": [
+            17.661749999999998,
+            49.95376666666667
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 270,
+          "magTrackReverseDeg": 90,
+          "distanceNm": 15.2,
+          "geometricDistanceNm": 15.156,
+          "upperLimit": "FL95",
+          "lowerLimit": "3100 FT AMSL",
+          "lowerOverride": "3100 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L984-1753",
+          "sourceId": "1753",
+          "fromPointId": "DP:4288",
+          "toPointId": "DP:4311",
+          "fromName": "BALTU",
+          "toName": "DONAD",
+          "from": [
+            13.326522222222222,
+            50.08946111111111
+          ],
+          "to": [
+            13,
+            50.08081388888889
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 264,
+          "magTrackReverseDeg": 84,
+          "distanceNm": 12.6,
+          "geometricDistanceNm": 12.59,
+          "upperLimit": "FL95",
+          "lowerLimit": "4500 FT AMSL",
+          "lowerOverride": "4500 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-L984-1788",
+          "sourceId": "1788",
+          "fromPointId": "DP:4311",
+          "toPointId": "NAV:1304",
+          "fromName": "DONAD",
+          "toName": "OKG",
+          "from": [
+            13,
+            50.08081388888889
+          ],
+          "to": [
+            12.405738888888889,
+            50.06514722222222
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 264,
+          "magTrackReverseDeg": 84,
+          "distanceNm": 23,
+          "geometricDistanceNm": 22.919,
+          "upperLimit": "FL95",
+          "lowerLimit": "4500 FT AMSL",
+          "lowerOverride": "4500 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": [
+        {
+          "afterPointId": "DP:4394",
+          "beforePointId": "DP:4288"
+        }
+      ]
+    },
+    {
+      "designator": "M725",
+      "sourceId": "1083",
+      "points": [
+        {
+          "id": "DP:4346",
+          "sourceId": "4346",
+          "name": "LANUX",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 48.888105555555555,
+          "longitude": 15.615788888888888,
+          "foreignMaintainer": "AT",
+          "remarks": null
+        },
+        {
+          "id": "NAV:1303",
+          "sourceId": "1303",
+          "name": "OKF",
+          "kind": "NAVAID",
+          "latitude": 48.969175,
+          "longitude": 15.545577777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4405",
+          "sourceId": "4405",
+          "name": "TABEM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.24331388888889,
+          "longitude": 15.221472222222223,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1313",
+          "sourceId": "1313",
+          "name": "VOZ",
+          "kind": "NAVAID",
+          "latitude": 49.53232777777777,
+          "longitude": 14.87466388888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4331",
+          "sourceId": "4331",
+          "name": "GOLOP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.58576111111111,
+          "longitude": 14.495730555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4391",
+          "sourceId": "4391",
+          "name": "RAVKU",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.76681388888889,
+          "longitude": 14.428852777777777,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1297",
+          "sourceId": "1297",
+          "name": "HDO",
+          "kind": "NAVAID",
+          "latitude": 50.928149999999995,
+          "longitude": 14.3688,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-M725-1790",
+          "sourceId": "1790",
+          "fromPointId": "DP:4346",
+          "toPointId": "NAV:1303",
+          "fromName": "LANUX",
+          "toName": "OKF",
+          "from": [
+            15.615788888888888,
+            48.888105555555555
+          ],
+          "to": [
+            15.545577777777778,
+            48.969175
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 328,
+          "magTrackReverseDeg": 148,
+          "distanceNm": 5.6,
+          "geometricDistanceNm": 5.6,
+          "upperLimit": "FL95",
+          "lowerLimit": "4400 FT AMSL",
+          "lowerOverride": "4400 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-M725-1801",
+          "sourceId": "1801",
+          "fromPointId": "NAV:1303",
+          "toPointId": "DP:4405",
+          "fromName": "OKF",
+          "toName": "TABEM",
+          "from": [
+            15.545577777777778,
+            48.969175
+          ],
+          "to": [
+            15.221472222222223,
+            49.24331388888889
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 318,
+          "magTrackReverseDeg": 138,
+          "distanceNm": 20.8,
+          "geometricDistanceNm": 20.813,
+          "upperLimit": "FL95",
+          "lowerLimit": "4400 FT AMSL",
+          "lowerOverride": "4400 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-M725-1791",
+          "sourceId": "1791",
+          "fromPointId": "DP:4405",
+          "toPointId": "NAV:1313",
+          "fromName": "TABEM",
+          "toName": "VOZ",
+          "from": [
+            15.221472222222223,
+            49.24331388888889
+          ],
+          "to": [
+            14.87466388888889,
+            49.53232777777777
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 318,
+          "magTrackReverseDeg": 138,
+          "distanceNm": 22,
+          "geometricDistanceNm": 22.019,
+          "upperLimit": "FL95",
+          "lowerLimit": "3800 FT AMSL",
+          "lowerOverride": "3800 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-M725-1762",
+          "sourceId": "1762",
+          "fromPointId": "DP:4331",
+          "toPointId": "DP:4391",
+          "fromName": "GOLOP",
+          "toName": "RAVKU",
+          "from": [
+            14.495730555555555,
+            50.58576111111111
+          ],
+          "to": [
+            14.428852777777777,
+            50.76681388888889
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 343,
+          "magTrackReverseDeg": 163,
+          "distanceNm": 11.2,
+          "geometricDistanceNm": 11.164,
+          "upperLimit": "FL95",
+          "lowerLimit": "5000 FT AMSL",
+          "lowerOverride": "5000 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-M725-1792",
+          "sourceId": "1792",
+          "fromPointId": "DP:4391",
+          "toPointId": "NAV:1297",
+          "fromName": "RAVKU",
+          "toName": "HDO",
+          "from": [
+            14.428852777777777,
+            50.76681388888889
+          ],
+          "to": [
+            14.3688,
+            50.928149999999995
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 343,
+          "magTrackReverseDeg": 163,
+          "distanceNm": 10,
+          "geometricDistanceNm": 9.951,
+          "upperLimit": "FL95",
+          "lowerLimit": "5000 FT AMSL",
+          "lowerOverride": "5000 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": [
+        {
+          "afterPointId": "NAV:1313",
+          "beforePointId": "DP:4331"
+        }
+      ]
+    },
+    {
+      "designator": "M748",
+      "sourceId": "1084",
+      "points": [
+        {
+          "id": "DP:4374",
+          "sourceId": "4374",
+          "name": "ODNEM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 48.8532,
+          "longitude": 17.167844444444444,
+          "foreignMaintainer": "SK",
+          "remarks": null
+        },
+        {
+          "id": "NAV:1294",
+          "sourceId": "1294",
+          "name": "BNO",
+          "kind": "NAVAID",
+          "latitude": 49.15006388888889,
+          "longitude": 16.692580555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-M748-1787",
+          "sourceId": "1787",
+          "fromPointId": "DP:4374",
+          "toPointId": "NAV:1294",
+          "fromName": "ODNEM",
+          "toName": "BNO",
+          "from": [
+            17.167844444444444,
+            48.8532
+          ],
+          "to": [
+            16.692580555555555,
+            49.15006388888889
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 310,
+          "magTrackReverseDeg": 130,
+          "distanceNm": 25.9,
+          "geometricDistanceNm": 25.848,
+          "upperLimit": "FL95",
+          "lowerLimit": "3500 FT AMSL",
+          "lowerOverride": "3500 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "M984",
+      "sourceId": "1085",
+      "points": [
+        {
+          "id": "DP:4364",
+          "sourceId": "4364",
+          "name": "MIKOV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 48.78474444444444,
+          "longitude": 16.62100277777778,
+          "foreignMaintainer": "AT",
+          "remarks": null
+        },
+        {
+          "id": "DP:4443",
+          "sourceId": "4443",
+          "name": "UPLAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.32285277777778,
+          "longitude": 17.52839722222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4441",
+          "sourceId": "4441",
+          "name": "TUSIN",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.84749444444445,
+          "longitude": 18.572836111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-M984-1754",
+          "sourceId": "1754",
+          "fromPointId": "DP:4364",
+          "toPointId": "DP:4443",
+          "fromName": "MIKOV",
+          "toName": "UPLAV",
+          "from": [
+            16.62100277777778,
+            48.78474444444444
+          ],
+          "to": [
+            17.52839722222222,
+            49.32285277777778
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 223,
+          "distanceNm": 48.2,
+          "geometricDistanceNm": 48.151,
+          "upperLimit": "FL95",
+          "lowerLimit": "3000 FT AMSL",
+          "lowerOverride": "3000 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-M984-1755",
+          "sourceId": "1755",
+          "fromPointId": "DP:4443",
+          "toPointId": "DP:4441",
+          "fromName": "UPLAV",
+          "toName": "TUSIN",
+          "from": [
+            17.52839722222222,
+            49.32285277777778
+          ],
+          "to": [
+            18.572836111111112,
+            49.84749444444445
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 227,
+          "distanceNm": 51.5,
+          "geometricDistanceNm": 51.429,
+          "upperLimit": "FL95",
+          "lowerLimit": "4900 FT AMSL",
+          "lowerOverride": "4900 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "M992",
+      "sourceId": "1086",
+      "points": [
+        {
+          "id": "DP:4445",
+          "sourceId": "4445",
+          "name": "UTEVO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.20992777777778,
+          "longitude": 17.511913888888888,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4276",
+          "sourceId": "4276",
+          "name": "ADADO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.20948055555556,
+          "longitude": 17.747930555555556,
+          "foreignMaintainer": "PL",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-M992-1743",
+          "sourceId": "1743",
+          "fromPointId": "DP:4445",
+          "toPointId": "DP:4276",
+          "fromName": "UTEVO",
+          "toName": "ADADO",
+          "from": [
+            17.511913888888888,
+            50.20992777777778
+          ],
+          "to": [
+            17.747930555555556,
+            50.20948055555556
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 266,
+          "distanceNm": 9.1,
+          "geometricDistanceNm": 9.069,
+          "upperLimit": "FL285",
+          "lowerLimit": "FL195",
+          "lowerOverride": "3900 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": "CDR1",
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "CDR1 FL195 - FL245 H24 Outside the described FLsPERM ALTN route via SOPAV"
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "N869",
+      "sourceId": "1087",
+      "points": [
+        {
+          "id": "NAV:1304",
+          "sourceId": "1304",
+          "name": "OKG",
+          "kind": "NAVAID",
+          "latitude": 50.06514722222222,
+          "longitude": 12.405738888888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4339",
+          "sourceId": "4339",
+          "name": "KONAR",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.445138888888884,
+          "longitude": 13.06557777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4332",
+          "sourceId": "4332",
+          "name": "GOPSI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.56630555555555,
+          "longitude": 13.569061111111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4391",
+          "sourceId": "4391",
+          "name": "RAVKU",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.76681388888889,
+          "longitude": 14.428852777777777,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4286",
+          "sourceId": "4286",
+          "name": "ASTEL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.86445,
+          "longitude": 14.860455555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4439",
+          "sourceId": "4439",
+          "name": "TOMTI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.95305555555556,
+          "longitude": 15.293333333333333,
+          "foreignMaintainer": "PL",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-N869-1799",
+          "sourceId": "1799",
+          "fromPointId": "NAV:1304",
+          "toPointId": "DP:4339",
+          "fromName": "OKG",
+          "toName": "KONAR",
+          "from": [
+            12.405738888888889,
+            50.06514722222222
+          ],
+          "to": [
+            13.06557777777778,
+            50.445138888888884
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 227,
+          "distanceNm": 34.2,
+          "geometricDistanceNm": 34.09,
+          "upperLimit": "FL95",
+          "lowerLimit": "5500 FT AMSL",
+          "lowerOverride": "5500 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-N869-1744",
+          "sourceId": "1744",
+          "fromPointId": "DP:4339",
+          "toPointId": "DP:4332",
+          "fromName": "KONAR",
+          "toName": "GOPSI",
+          "from": [
+            13.06557777777778,
+            50.445138888888884
+          ],
+          "to": [
+            13.569061111111111,
+            50.56630555555555
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 246,
+          "distanceNm": 20.6,
+          "geometricDistanceNm": 20.556,
+          "upperLimit": "FL95",
+          "lowerLimit": "5400 FT AMSL",
+          "lowerOverride": "5400 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-N869-1745",
+          "sourceId": "1745",
+          "fromPointId": "DP:4332",
+          "toPointId": "DP:4391",
+          "fromName": "GOPSI",
+          "toName": "RAVKU",
+          "from": [
+            13.569061111111111,
+            50.56630555555555
+          ],
+          "to": [
+            14.428852777777777,
+            50.76681388888889
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 247,
+          "distanceNm": 35,
+          "geometricDistanceNm": 34.864,
+          "upperLimit": "FL95",
+          "lowerLimit": "4200 FT AMSL",
+          "lowerOverride": "4200 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-N869-1746",
+          "sourceId": "1746",
+          "fromPointId": "DP:4391",
+          "toPointId": "DP:4286",
+          "fromName": "RAVKU",
+          "toName": "ASTEL",
+          "from": [
+            14.428852777777777,
+            50.76681388888889
+          ],
+          "to": [
+            14.860455555555555,
+            50.86445
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 247,
+          "distanceNm": 17.4,
+          "geometricDistanceNm": 17.39,
+          "upperLimit": "FL95",
+          "lowerLimit": "4200 FT AMSL",
+          "lowerOverride": "4200 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-N869-1747",
+          "sourceId": "1747",
+          "fromPointId": "DP:4286",
+          "toPointId": "DP:4439",
+          "fromName": "ASTEL",
+          "toName": "TOMTI",
+          "from": [
+            14.860455555555555,
+            50.86445
+          ],
+          "to": [
+            15.293333333333333,
+            50.95305555555556
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 247,
+          "distanceNm": 17.3,
+          "geometricDistanceNm": 17.23,
+          "upperLimit": "FL95",
+          "lowerLimit": "4800 FT AMSL",
+          "lowerOverride": "4800 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "P10",
+      "sourceId": "1088",
+      "points": [
+        {
+          "id": "DP:4363",
+          "sourceId": "4363",
+          "name": "MAVOR",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 48.82139444444445,
+          "longitude": 17.537502777777778,
+          "foreignMaintainer": "SK",
+          "remarks": null
+        },
+        {
+          "id": "DP:4443",
+          "sourceId": "4443",
+          "name": "UPLAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.32285277777778,
+          "longitude": 17.52839722222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4436",
+          "sourceId": "4436",
+          "name": "TIBLA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.79584444444444,
+          "longitude": 16.678858333333334,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-P10-1777",
+          "sourceId": "1777",
+          "fromPointId": "DP:4363",
+          "toPointId": "DP:4443",
+          "fromName": "MAVOR",
+          "toName": "UPLAV",
+          "from": [
+            17.537502777777778,
+            48.82139444444445
+          ],
+          "to": [
+            17.52839722222222,
+            49.32285277777778
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 354,
+          "magTrackReverseDeg": 174,
+          "distanceNm": 30.1,
+          "geometricDistanceNm": 30.11,
+          "upperLimit": "FL95",
+          "lowerLimit": "4500 FT AMSL",
+          "lowerOverride": "4500 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-P10-1778",
+          "sourceId": "1778",
+          "fromPointId": "DP:4443",
+          "toPointId": "DP:4436",
+          "fromName": "UPLAV",
+          "toName": "TIBLA",
+          "from": [
+            17.52839722222222,
+            49.32285277777778
+          ],
+          "to": [
+            16.678858333333334,
+            49.79584444444444
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 306,
+          "magTrackReverseDeg": 126,
+          "distanceNm": 43.7,
+          "geometricDistanceNm": 43.602,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": "CDR1",
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "CDR1 H24"
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "P27",
+      "sourceId": "1089",
+      "points": [
+        {
+          "id": "DP:4361",
+          "sourceId": "4361",
+          "name": "MAKAL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.246008333333336,
+          "longitude": 18.165716666666665,
+          "foreignMaintainer": "SK",
+          "remarks": null
+        },
+        {
+          "id": "DP:4443",
+          "sourceId": "4443",
+          "name": "UPLAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.32285277777778,
+          "longitude": 17.52839722222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-P27-1748",
+          "sourceId": "1748",
+          "fromPointId": "DP:4361",
+          "toPointId": "DP:4443",
+          "fromName": "MAKAL",
+          "toName": "UPLAV",
+          "from": [
+            18.165716666666665,
+            49.246008333333336
+          ],
+          "to": [
+            17.52839722222222,
+            49.32285277777778
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 276,
+          "magTrackReverseDeg": 96,
+          "distanceNm": 25.5,
+          "geometricDistanceNm": 25.383,
+          "upperLimit": "FL95",
+          "lowerLimit": "4600 FT AMSL",
+          "lowerOverride": "4600 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "P31",
+      "sourceId": "1090",
+      "points": [
+        {
+          "id": "DP:4397",
+          "sourceId": "4397",
+          "name": "RUDAP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.241258333333334,
+          "longitude": 13.26558611111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4383",
+          "sourceId": "4383",
+          "name": "PEMEL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.57033333333334,
+          "longitude": 13.344825,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-P31-1749",
+          "sourceId": "1749",
+          "fromPointId": "DP:4397",
+          "toPointId": "DP:4383",
+          "fromName": "RUDAP",
+          "toName": "PEMEL",
+          "from": [
+            13.26558611111111,
+            49.241258333333334
+          ],
+          "to": [
+            13.344825,
+            49.57033333333334
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 186,
+          "distanceNm": 20,
+          "geometricDistanceNm": 19.999,
+          "upperLimit": "FL95",
+          "lowerLimit": "FL75",
+          "lowerOverride": "5200 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "P733",
+      "sourceId": "1091",
+      "points": [
+        {
+          "id": "DP:4277",
+          "sourceId": "4277",
+          "name": "AGNAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.56791666666667,
+          "longitude": 12.614502777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4359",
+          "sourceId": "4359",
+          "name": "LOMKI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.90933611111111,
+          "longitude": 13.241222222222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4284",
+          "sourceId": "4284",
+          "name": "ARTUP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.68523611111111,
+          "longitude": 14.905102777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4439",
+          "sourceId": "4439",
+          "name": "TOMTI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.95305555555556,
+          "longitude": 15.293333333333333,
+          "foreignMaintainer": "PL",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-P733-1763",
+          "sourceId": "1763",
+          "fromPointId": "DP:4277",
+          "toPointId": "DP:4359",
+          "fromName": "AGNAV",
+          "toName": "LOMKI",
+          "from": [
+            12.614502777777778,
+            49.56791666666667
+          ],
+          "to": [
+            13.241222222222222,
+            49.90933611111111
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 46,
+          "magTrackReverseDeg": null,
+          "distanceNm": 31.9,
+          "geometricDistanceNm": 31.805,
+          "upperLimit": "FL95",
+          "lowerLimit": "4100 FT AMSL",
+          "lowerOverride": "4100 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-P733-1764",
+          "sourceId": "1764",
+          "fromPointId": "DP:4284",
+          "toPointId": "DP:4439",
+          "fromName": "ARTUP",
+          "toName": "TOMTI",
+          "from": [
+            14.905102777777778,
+            50.68523611111111
+          ],
+          "to": [
+            15.293333333333333,
+            50.95305555555556
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 38,
+          "magTrackReverseDeg": null,
+          "distanceNm": 21.8,
+          "geometricDistanceNm": 21.804,
+          "upperLimit": "FL95",
+          "lowerLimit": "5000 FT AMSL",
+          "lowerOverride": "5000 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": [
+        {
+          "afterPointId": "DP:4359",
+          "beforePointId": "DP:4284"
+        }
+      ]
+    },
+    {
+      "designator": "P861",
+      "sourceId": "1092",
+      "points": [
+        {
+          "id": "DP:4397",
+          "sourceId": "4397",
+          "name": "RUDAP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.241258333333334,
+          "longitude": 13.26558611111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4308",
+          "sourceId": "4308",
+          "name": "DOBEN",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.77333888888889,
+          "longitude": 13.561541666666667,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4331",
+          "sourceId": "4331",
+          "name": "GOLOP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.58576111111111,
+          "longitude": 14.495730555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4286",
+          "sourceId": "4286",
+          "name": "ASTEL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.86445,
+          "longitude": 14.860455555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4389",
+          "sourceId": "4389",
+          "name": "RASAN",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 51.013752777777775,
+          "longitude": 15.094666666666667,
+          "foreignMaintainer": "PL",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-P861-1765",
+          "sourceId": "1765",
+          "fromPointId": "DP:4397",
+          "toPointId": "DP:4308",
+          "fromName": "RUDAP",
+          "toName": "DOBEN",
+          "from": [
+            13.26558611111111,
+            49.241258333333334
+          ],
+          "to": [
+            13.561541666666667,
+            49.77333888888889
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 196,
+          "distanceNm": 34,
+          "geometricDistanceNm": 33.966,
+          "upperLimit": "FL95",
+          "lowerLimit": "FL75",
+          "lowerOverride": "5100 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-P861-1766",
+          "sourceId": "1766",
+          "fromPointId": "DP:4331",
+          "toPointId": "DP:4286",
+          "fromName": "GOLOP",
+          "toName": "ASTEL",
+          "from": [
+            14.495730555555555,
+            50.58576111111111
+          ],
+          "to": [
+            14.860455555555555,
+            50.86445
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 215,
+          "distanceNm": 21.8,
+          "geometricDistanceNm": 21.729,
+          "upperLimit": "FL95",
+          "lowerLimit": "4500 FT AMSL",
+          "lowerOverride": "4500 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-P861-1767",
+          "sourceId": "1767",
+          "fromPointId": "DP:4286",
+          "toPointId": "DP:4389",
+          "fromName": "ASTEL",
+          "toName": "RASAN",
+          "from": [
+            14.860455555555555,
+            50.86445
+          ],
+          "to": [
+            15.094666666666667,
+            51.013752777777775
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 220,
+          "distanceNm": 12.6,
+          "geometricDistanceNm": 12.605,
+          "upperLimit": "FL95",
+          "lowerLimit": "4500 FT AMSL",
+          "lowerOverride": "4100 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": [
+        {
+          "afterPointId": "DP:4308",
+          "beforePointId": "DP:4331"
+        }
+      ]
+    },
+    {
+      "designator": "T49",
+      "sourceId": "1095",
+      "points": [
+        {
+          "id": "DP:4388",
+          "sourceId": "4388",
+          "name": "RAPET",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.190488888888886,
+          "longitude": 12.33863888888889,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        },
+        {
+          "id": "DP:4339",
+          "sourceId": "4339",
+          "name": "KONAR",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.445138888888884,
+          "longitude": 13.06557777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-T49-1750",
+          "sourceId": "1750",
+          "fromPointId": "DP:4388",
+          "toPointId": "DP:4339",
+          "fromName": "RAPET",
+          "toName": "KONAR",
+          "from": [
+            12.33863888888889,
+            50.190488888888886
+          ],
+          "to": [
+            13.06557777777778,
+            50.445138888888884
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 240,
+          "distanceNm": 31.9,
+          "geometricDistanceNm": 31.787,
+          "upperLimit": "FL95",
+          "lowerLimit": "5500 FT AMSL",
+          "lowerOverride": "5500 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T78",
+      "sourceId": "1098",
+      "points": [
+        {
+          "id": "DP:4343",
+          "sourceId": "4343",
+          "name": "LAGAR",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.795275,
+          "longitude": 15.367088888888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1297",
+          "sourceId": "1297",
+          "name": "HDO",
+          "kind": "NAVAID",
+          "latitude": 50.928149999999995,
+          "longitude": 14.3688,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-T78-1793",
+          "sourceId": "1793",
+          "fromPointId": "DP:4343",
+          "toPointId": "NAV:1297",
+          "fromName": "LAGAR",
+          "toName": "HDO",
+          "from": [
+            15.367088888888889,
+            50.795275
+          ],
+          "to": [
+            14.3688,
+            50.928149999999995
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 99,
+          "distanceNm": 38.8,
+          "geometricDistanceNm": 38.664,
+          "upperLimit": "FL95",
+          "lowerLimit": "5400 FT AMSL",
+          "lowerOverride": "5400 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T136",
+      "sourceId": "1093",
+      "points": [
+        {
+          "id": "DP:4372",
+          "sourceId": "4372",
+          "name": "NIRGO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.33094444444445,
+          "longitude": 13.132219444444445,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4383",
+          "sourceId": "4383",
+          "name": "PEMEL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.57033333333334,
+          "longitude": 13.344825,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4308",
+          "sourceId": "4308",
+          "name": "DOBEN",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.77333888888889,
+          "longitude": 13.561541666666667,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-T136-1768",
+          "sourceId": "1768",
+          "fromPointId": "DP:4372",
+          "toPointId": "DP:4383",
+          "fromName": "NIRGO",
+          "toName": "PEMEL",
+          "from": [
+            13.132219444444445,
+            49.33094444444445
+          ],
+          "to": [
+            13.344825,
+            49.57033333333334
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 206,
+          "distanceNm": 16.6,
+          "geometricDistanceNm": 16.597,
+          "upperLimit": "FL95",
+          "lowerLimit": "FL75",
+          "lowerOverride": "4300 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-T136-1769",
+          "sourceId": "1769",
+          "fromPointId": "DP:4383",
+          "toPointId": "DP:4308",
+          "fromName": "PEMEL",
+          "toName": "DOBEN",
+          "from": [
+            13.344825,
+            49.57033333333334
+          ],
+          "to": [
+            13.561541666666667,
+            49.77333888888889
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 211,
+          "distanceNm": 14.8,
+          "geometricDistanceNm": 14.814,
+          "upperLimit": "FL95",
+          "lowerLimit": "3400 FT AMSL",
+          "lowerOverride": "3400 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T170",
+      "sourceId": "1094",
+      "points": [
+        {
+          "id": "DP:4401",
+          "sourceId": "4401",
+          "name": "SOPGA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.17700833333333,
+          "longitude": 12.718786111111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4388",
+          "sourceId": "4388",
+          "name": "RAPET",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.190488888888886,
+          "longitude": 12.33863888888889,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-T170-1756",
+          "sourceId": "1756",
+          "fromPointId": "DP:4401",
+          "toPointId": "DP:4388",
+          "fromName": "SOPGA",
+          "toName": "RAPET",
+          "from": [
+            12.718786111111111,
+            50.17700833333333
+          ],
+          "to": [
+            12.33863888888889,
+            50.190488888888886
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 270,
+          "magTrackReverseDeg": null,
+          "distanceNm": 14.7,
+          "geometricDistanceNm": 14.637,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T620",
+      "sourceId": "1096",
+      "points": [
+        {
+          "id": "DP:4331",
+          "sourceId": "4331",
+          "name": "GOLOP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.58576111111111,
+          "longitude": 14.495730555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4345",
+          "sourceId": "4345",
+          "name": "LALUK",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.80440833333333,
+          "longitude": 13.880213888888889,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-T620-1772",
+          "sourceId": "1772",
+          "fromPointId": "DP:4331",
+          "toPointId": "DP:4345",
+          "fromName": "GOLOP",
+          "toName": "LALUK",
+          "from": [
+            14.495730555555555,
+            50.58576111111111
+          ],
+          "to": [
+            13.880213888888889,
+            50.80440833333333
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 117,
+          "distanceNm": 26.9,
+          "geometricDistanceNm": 26.839,
+          "upperLimit": "FL95",
+          "lowerLimit": "3900 FT AMSL",
+          "lowerOverride": "3900 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T709",
+      "sourceId": "1097",
+      "points": [
+        {
+          "id": "NAV:1313",
+          "sourceId": "1313",
+          "name": "VOZ",
+          "kind": "NAVAID",
+          "latitude": 49.53232777777777,
+          "longitude": 14.87466388888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4444",
+          "sourceId": "4444",
+          "name": "USUPA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.52054444444445,
+          "longitude": 15.128769444444444,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4299",
+          "sourceId": "4299",
+          "name": "BODAL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.464108333333336,
+          "longitude": 15.782702777777779,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4436",
+          "sourceId": "4436",
+          "name": "TIBLA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.79584444444444,
+          "longitude": 16.678858333333334,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4292",
+          "sourceId": "4292",
+          "name": "BAXEV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.873244444444445,
+          "longitude": 17.441491666666668,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4400",
+          "sourceId": "4400",
+          "name": "SOPAV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.93092222222222,
+          "longitude": 18.052377777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4290",
+          "sourceId": "4290",
+          "name": "BAVOK",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.00277777777778,
+          "longitude": 18.19527777777778,
+          "foreignMaintainer": "PL",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-T709-1800",
+          "sourceId": "1800",
+          "fromPointId": "NAV:1313",
+          "toPointId": "DP:4444",
+          "fromName": "VOZ",
+          "toName": "USUPA",
+          "from": [
+            14.87466388888889,
+            49.53232777777777
+          ],
+          "to": [
+            15.128769444444444,
+            49.52054444444445
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 89,
+          "magTrackReverseDeg": 269,
+          "distanceNm": 10,
+          "geometricDistanceNm": 9.928,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "3700 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-T709-3611",
+          "sourceId": "3611",
+          "fromPointId": "DP:4444",
+          "toPointId": "DP:4299",
+          "fromName": "USUPA",
+          "toName": "BODAL",
+          "from": [
+            15.128769444444444,
+            49.52054444444445
+          ],
+          "to": [
+            15.782702777777779,
+            49.464108333333336
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 92,
+          "magTrackReverseDeg": 272,
+          "distanceNm": 25.8,
+          "geometricDistanceNm": 25.727,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-T709-1757",
+          "sourceId": "1757",
+          "fromPointId": "DP:4299",
+          "toPointId": "DP:4436",
+          "fromName": "BODAL",
+          "toName": "TIBLA",
+          "from": [
+            15.782702777777779,
+            49.464108333333336
+          ],
+          "to": [
+            16.678858333333334,
+            49.79584444444444
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 55,
+          "magTrackReverseDeg": 235,
+          "distanceNm": 40.2,
+          "geometricDistanceNm": 40.141,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": "CDR1",
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "CDR1 H24 Outside the described FLPERM ALTN route: BODAL L726 UPLAV L156 SOPAV"
+        },
+        {
+          "id": "CZ-T709-1758",
+          "sourceId": "1758",
+          "fromPointId": "DP:4436",
+          "toPointId": "DP:4292",
+          "fromName": "TIBLA",
+          "toName": "BAXEV",
+          "from": [
+            16.678858333333334,
+            49.79584444444444
+          ],
+          "to": [
+            17.441491666666668,
+            49.873244444444445
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 75,
+          "magTrackReverseDeg": 256,
+          "distanceNm": 30,
+          "geometricDistanceNm": 29.897,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-T709-1759",
+          "sourceId": "1759",
+          "fromPointId": "DP:4292",
+          "toPointId": "DP:4400",
+          "fromName": "BAXEV",
+          "toName": "SOPAV",
+          "from": [
+            17.441491666666668,
+            49.873244444444445
+          ],
+          "to": [
+            18.052377777777778,
+            49.93092222222222
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 76,
+          "magTrackReverseDeg": 256,
+          "distanceNm": 24,
+          "geometricDistanceNm": 23.876,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-T709-1760",
+          "sourceId": "1760",
+          "fromPointId": "DP:4400",
+          "toPointId": "DP:4290",
+          "fromName": "SOPAV",
+          "toName": "BAVOK",
+          "from": [
+            18.052377777777778,
+            49.93092222222222
+          ],
+          "to": [
+            18.19527777777778,
+            50.00277777777778
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 46,
+          "magTrackReverseDeg": 226,
+          "distanceNm": 7,
+          "geometricDistanceNm": 7.005,
+          "upperLimit": "FL95",
+          "lowerLimit": "2600 FT AMSL",
+          "lowerOverride": "2600 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T871",
+      "sourceId": "1099",
+      "points": [
+        {
+          "id": "DP:4284",
+          "sourceId": "4284",
+          "name": "ARTUP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.68523611111111,
+          "longitude": 14.905102777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4343",
+          "sourceId": "4343",
+          "name": "LAGAR",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.795275,
+          "longitude": 15.367088888888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-T871-1774",
+          "sourceId": "1774",
+          "fromPointId": "DP:4284",
+          "toPointId": "DP:4343",
+          "fromName": "ARTUP",
+          "toName": "LAGAR",
+          "from": [
+            14.905102777777778,
+            50.68523611111111
+          ],
+          "to": [
+            15.367088888888889,
+            50.795275
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 66,
+          "magTrackReverseDeg": null,
+          "distanceNm": 18.8,
+          "geometricDistanceNm": 18.756,
+          "upperLimit": "FL95",
+          "lowerLimit": "5000 FT AMSL",
+          "lowerOverride": "5000 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Y621",
+      "sourceId": "1100",
+      "points": [
+        {
+          "id": "DP:4451",
+          "sourceId": "4451",
+          "name": "VENOX",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.554986111111106,
+          "longitude": 14.133991666666667,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4304",
+          "sourceId": "4304",
+          "name": "DEKOV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.897352777777776,
+          "longitude": 14.21638611111111,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-Y621-1773",
+          "sourceId": "1773",
+          "fromPointId": "DP:4451",
+          "toPointId": "DP:4304",
+          "fromName": "VENOX",
+          "toName": "DEKOV",
+          "from": [
+            14.133991666666667,
+            50.554986111111106
+          ],
+          "to": [
+            14.21638611111111,
+            50.897352777777776
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 6,
+          "magTrackReverseDeg": null,
+          "distanceNm": 20.8,
+          "geometricDistanceNm": 20.793,
+          "upperLimit": "FL95",
+          "lowerLimit": "3900 FT AMSL",
+          "lowerOverride": "3900 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z21",
+      "sourceId": "1102",
+      "points": [
+        {
+          "id": "DP:4386",
+          "sourceId": "4386",
+          "name": "PISAM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 48.89291308333333,
+          "longitude": 15.387127111111111,
+          "foreignMaintainer": "AT",
+          "remarks": null
+        },
+        {
+          "id": "DP:4369",
+          "sourceId": "4369",
+          "name": "NELPA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.28140555555555,
+          "longitude": 14.956169444444443,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1313",
+          "sourceId": "1313",
+          "name": "VOZ",
+          "kind": "NAVAID",
+          "latitude": 49.53232777777777,
+          "longitude": 14.87466388888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-Z21-1776",
+          "sourceId": "1776",
+          "fromPointId": "DP:4386",
+          "toPointId": "DP:4369",
+          "fromName": "PISAM",
+          "toName": "NELPA",
+          "from": [
+            15.387127111111111,
+            48.89291308333333
+          ],
+          "to": [
+            14.956169444444443,
+            49.28140555555555
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 141,
+          "distanceNm": 28.9,
+          "geometricDistanceNm": 28.831,
+          "upperLimit": "FL95",
+          "lowerLimit": "6000 FT AMSL",
+          "lowerOverride": "6000 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-Z21-1795",
+          "sourceId": "1795",
+          "fromPointId": "DP:4369",
+          "toPointId": "NAV:1313",
+          "fromName": "NELPA",
+          "toName": "VOZ",
+          "from": [
+            14.956169444444443,
+            49.28140555555555
+          ],
+          "to": [
+            14.87466388888889,
+            49.53232777777777
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 166,
+          "distanceNm": 15.4,
+          "geometricDistanceNm": 15.398,
+          "upperLimit": "FL95",
+          "lowerLimit": "4000 FT AMSL",
+          "lowerOverride": "4000 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z30",
+      "sourceId": "1103",
+      "points": [
+        {
+          "id": "DP:4360",
+          "sourceId": "4360",
+          "name": "LUPEV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.009727777777776,
+          "longitude": 14.560008333333334,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4447",
+          "sourceId": "4447",
+          "name": "VAKLA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.30045555555555,
+          "longitude": 14.734169444444444,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1313",
+          "sourceId": "1313",
+          "name": "VOZ",
+          "kind": "NAVAID",
+          "latitude": 49.53232777777777,
+          "longitude": 14.87466388888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-Z30-1775",
+          "sourceId": "1775",
+          "fromPointId": "DP:4360",
+          "toPointId": "DP:4447",
+          "fromName": "LUPEV",
+          "toName": "VAKLA",
+          "from": [
+            14.560008333333334,
+            49.009727777777776
+          ],
+          "to": [
+            14.734169444444444,
+            49.30045555555555
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 18,
+          "magTrackReverseDeg": 198,
+          "distanceNm": 18.8,
+          "geometricDistanceNm": 18.747,
+          "upperLimit": "FL95",
+          "lowerLimit": "6000 FT AMSL",
+          "lowerOverride": "4600 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": "CDR1",
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "CDR1 WEEKEND from FRI 13:00 till MON 08:00(from FRI 12:00 till MON 07:00) Outside the described period NOT AVBL."
+        },
+        {
+          "id": "CZ-Z30-1794",
+          "sourceId": "1794",
+          "fromPointId": "DP:4447",
+          "toPointId": "NAV:1313",
+          "fromName": "VAKLA",
+          "toName": "VOZ",
+          "from": [
+            14.734169444444444,
+            49.30045555555555
+          ],
+          "to": [
+            14.87466388888889,
+            49.53232777777777
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 18,
+          "magTrackReverseDeg": 198,
+          "distanceNm": 15,
+          "geometricDistanceNm": 14.964,
+          "upperLimit": "FL95",
+          "lowerLimit": "6000 FT AMSL",
+          "lowerOverride": "4600 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": "EVEN",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z31",
+      "sourceId": "1104",
+      "points": [
+        {
+          "id": "DP:4331",
+          "sourceId": "4331",
+          "name": "GOLOP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.58576111111111,
+          "longitude": 14.495730555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4304",
+          "sourceId": "4304",
+          "name": "DEKOV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 50.897352777777776,
+          "longitude": 14.21638611111111,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-Z31-1741",
+          "sourceId": "1741",
+          "fromPointId": "DP:4331",
+          "toPointId": "DP:4304",
+          "fromName": "GOLOP",
+          "toName": "DEKOV",
+          "from": [
+            14.495730555555555,
+            50.58576111111111
+          ],
+          "to": [
+            14.21638611111111,
+            50.897352777777776
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 146,
+          "distanceNm": 21.5,
+          "geometricDistanceNm": 21.509,
+          "upperLimit": "FL95",
+          "lowerLimit": "5000 FT AMSL",
+          "lowerOverride": "5000 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z35",
+      "sourceId": "1105",
+      "points": [
+        {
+          "id": "DP:4359",
+          "sourceId": "4359",
+          "name": "LOMKI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.90933611111111,
+          "longitude": 13.241222222222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4375",
+          "sourceId": "4375",
+          "name": "ODOMO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.93728333333333,
+          "longitude": 12.344000000000001,
+          "foreignMaintainer": "DE",
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-Z35-1742",
+          "sourceId": "1742",
+          "fromPointId": "DP:4359",
+          "toPointId": "DP:4375",
+          "fromName": "LOMKI",
+          "toName": "ODOMO",
+          "from": [
+            13.241222222222222,
+            49.90933611111111
+          ],
+          "to": [
+            12.344000000000001,
+            49.93728333333333
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": 91,
+          "distanceNm": 34.8,
+          "geometricDistanceNm": 34.722,
+          "upperLimit": "FL95",
+          "lowerLimit": "6000 FT AMSL",
+          "lowerOverride": "6000 FT AMSL",
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": "ODD",
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z39",
+      "sourceId": "1106",
+      "points": [
+        {
+          "id": "DP:4310",
+          "sourceId": "4310",
+          "name": "DOLUP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.119197222222226,
+          "longitude": 13.394519083333332,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:5775",
+          "sourceId": "5775",
+          "name": "BUDWA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.2875,
+          "longitude": 13.631111111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4334",
+          "sourceId": "4334",
+          "name": "IPDUL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.42089022222222,
+          "longitude": 13.820325972222221,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4282",
+          "sourceId": "4282",
+          "name": "APRAQ",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.64833333333333,
+          "longitude": 14.1225,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-Z39-1782",
+          "sourceId": "1782",
+          "fromPointId": "DP:4310",
+          "toPointId": "DP:5775",
+          "fromName": "DOLUP",
+          "toName": "BUDWA",
+          "from": [
+            13.394519083333332,
+            49.119197222222226
+          ],
+          "to": [
+            13.631111111111112,
+            49.2875
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 38,
+          "magTrackReverseDeg": null,
+          "distanceNm": 13.7,
+          "geometricDistanceNm": 13.721,
+          "upperLimit": "FL95",
+          "lowerLimit": "FL75",
+          "lowerOverride": "5400 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-Z39-2771",
+          "sourceId": "2771",
+          "fromPointId": "DP:5775",
+          "toPointId": "DP:4334",
+          "fromName": "BUDWA",
+          "toName": "IPDUL",
+          "from": [
+            13.631111111111112,
+            49.2875
+          ],
+          "to": [
+            13.820325972222221,
+            49.42089022222222
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 38,
+          "magTrackReverseDeg": null,
+          "distanceNm": 10.9,
+          "geometricDistanceNm": 10.904,
+          "upperLimit": "FL95",
+          "lowerLimit": "FL75",
+          "lowerOverride": "3300 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-Z39-1783",
+          "sourceId": "1783",
+          "fromPointId": "DP:4334",
+          "toPointId": "DP:4282",
+          "fromName": "IPDUL",
+          "toName": "APRAQ",
+          "from": [
+            13.820325972222221,
+            49.42089022222222
+          ],
+          "to": [
+            14.1225,
+            49.64833333333333
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 36,
+          "magTrackReverseDeg": null,
+          "distanceNm": 18.1,
+          "geometricDistanceNm": 18.031,
+          "upperLimit": "FL95",
+          "lowerLimit": "FL75",
+          "lowerOverride": "3500 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z121",
+      "sourceId": "1101",
+      "points": [
+        {
+          "id": "DP:4336",
+          "sourceId": "4336",
+          "name": "KATQA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.019999999999996,
+          "longitude": 17.241944444444446,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4323",
+          "sourceId": "4323",
+          "name": "ESETO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.22994444444445,
+          "longitude": 17.718277777777775,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4370",
+          "sourceId": "4370",
+          "name": "NETIR",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.69466388888888,
+          "longitude": 18.708997222222223,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-Z121-1770",
+          "sourceId": "1770",
+          "fromPointId": "DP:4336",
+          "toPointId": "DP:4323",
+          "fromName": "KATQA",
+          "toName": "ESETO",
+          "from": [
+            17.241944444444446,
+            49.019999999999996
+          ],
+          "to": [
+            17.718277777777775,
+            49.22994444444445
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 51,
+          "magTrackReverseDeg": null,
+          "distanceNm": 22.6,
+          "geometricDistanceNm": 22.565,
+          "upperLimit": "FL95",
+          "lowerLimit": "5600 FT AMSL",
+          "lowerOverride": "5600 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-Z121-1771",
+          "sourceId": "1771",
+          "fromPointId": "DP:4323",
+          "toPointId": "DP:4370",
+          "fromName": "ESETO",
+          "toName": "NETIR",
+          "from": [
+            17.718277777777775,
+            49.22994444444445
+          ],
+          "to": [
+            18.708997222222223,
+            49.69466388888888
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 50,
+          "magTrackReverseDeg": null,
+          "distanceNm": 47.8,
+          "geometricDistanceNm": 47.677,
+          "upperLimit": "FL95",
+          "lowerLimit": "5600 FT AMSL",
+          "lowerOverride": "5600 FT AMSL",
+          "cruisingLevelForward": "ODD",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z401",
+      "sourceId": "1107",
+      "points": [
+        {
+          "id": "DP:4405",
+          "sourceId": "4405",
+          "name": "TABEM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.24331388888889,
+          "longitude": 15.221472222222223,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "DP:4444",
+          "sourceId": "4444",
+          "name": "USUPA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 49.52054444444445,
+          "longitude": 15.128769444444444,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "NAV:1312",
+          "sourceId": "1312",
+          "name": "VLM",
+          "kind": "NAVAID",
+          "latitude": 49.70427222222222,
+          "longitude": 15.066741666666667,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "CZ-Z401-1781",
+          "sourceId": "1781",
+          "fromPointId": "DP:4405",
+          "toPointId": "DP:4444",
+          "fromName": "TABEM",
+          "toName": "USUPA",
+          "from": [
+            15.221472222222223,
+            49.24331388888889
+          ],
+          "to": [
+            15.128769444444444,
+            49.52054444444445
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 343,
+          "magTrackReverseDeg": null,
+          "distanceNm": 17,
+          "geometricDistanceNm": 17.035,
+          "upperLimit": "FL95",
+          "lowerLimit": "3700 FT AMSL",
+          "lowerOverride": "3700 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        },
+        {
+          "id": "CZ-Z401-1798",
+          "sourceId": "1798",
+          "fromPointId": "DP:4444",
+          "toPointId": "NAV:1312",
+          "fromName": "USUPA",
+          "toName": "VLM",
+          "from": [
+            15.128769444444444,
+            49.52054444444445
+          ],
+          "to": [
+            15.066741666666667,
+            49.70427222222222
+          ],
+          "navigationSpecification": "RNAV 5",
+          "magTrackForwardDeg": 343,
+          "magTrackReverseDeg": null,
+          "distanceNm": 11.3,
+          "geometricDistanceNm": 11.292,
+          "upperLimit": "FL95",
+          "lowerLimit": "3700 FT AMSL",
+          "lowerOverride": "3700 FT AMSL",
+          "cruisingLevelForward": "EVEN",
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": null
+        }
+      ],
+      "discontinuities": []
+    }
+  ],
+  "counts": {
+    "routes": 33,
+    "points": 110,
+    "segments": 73,
+    "cdrSegments": 4,
+    "discontinuities": 4
+  }
+}
