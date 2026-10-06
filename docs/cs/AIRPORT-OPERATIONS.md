@@ -175,3 +175,11 @@ zápis.
 
 V8 není ATC sequencing, FIDS, separační minimum, kapacita letiště, slot demand,
 bezpečnostní hodnocení ani předpověď zpoždění.
+
+## Terminal Outlook V1
+
+Terminal Outlook je kompaktní read-model nad už vypočtenou evidencí Live Board V6–V8. Nepřidává další API request, EventSource, databázový dotaz, persistence cestu ani refresh timer.
+
+Outlook kombinuje existující příletovou poptávku 5/15/30 minut z PUBLIC ETA, Arrival Flow pressure, stav Approach Queue/compression, aktuální receiverově pozorovaný runway flow, predikované runway load/alignment a nedávné receiver-inferred počty holding/go-around. Pokud je k dispozici pouze receiver evidence, stav je PARTIAL; kombinovaná readiness-gated veřejná predikce a receiver evidence dává AVAILABLE.
+
+Terminal Outlook je pouze provozní kontext. Nejde o konfiguraci letiště, ATC clearance, flow-control instrukci, slot/capacity údaj, bezpečnostní hodnocení ani vysvětlení příčiny.
