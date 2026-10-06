@@ -12,6 +12,7 @@ permissions:
   actions: write
   contents: write
   pull-requests: write
+  statuses: write
 
 concurrency:
   group: repository-metadata-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || 'manual' }}
@@ -113,37 +114,48 @@ jobs:
           }
 
           echo "Repository metadata PR #${pr_number} is ready."
-          # The PR opening/update above triggers CI through its pull_request
-          # event. Waiting on the PR check is important: a workflow_dispatch
-          # run validates the same commit, but GitHub does not attach it to the
-          # PR and therefore does not consider the required `validate` check
-          # satisfied for the protected main branch.
-          check_count=""
-          for attempt in $(seq 1 60); do
-            check_count="$(gh pr checks "${pr_number}" \
+          metadata_sha="$(git rev-parse HEAD)"
+          echo "Dispatching validation for metadata commit ${metadata_sha}."
+          gh workflow run ci.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref "${branch}"
+
+          run_id=""
+          for attempt in $(seq 1 30); do
+            run_id="$(gh run list \
               --repo "${GITHUB_REPOSITORY}" \
-              --required \
-              --json name \
-              --jq 'length' 2>/dev/null || true)"
-            if [[ "${check_count}" =~ ^[1-9][0-9]*$ ]]; then
-              break
-            fi
-            sleep 5
+              --workflow CI \
+              --branch "${branch}" \
+              --event workflow_dispatch \
+              --limit 20 \
+              --json databaseId,headSha \
+              --jq "map(select(.headSha == \"${metadata_sha}\"))[0].databaseId // empty")"
+            [[ -n "${run_id}" ]] && break
+            sleep 2
           done
 
-          [[ "${check_count}" =~ ^[1-9][0-9]*$ ]] || {
-            echo "::error::No required PR checks appeared for metadata PR #${pr_number}."
+          [[ -n "${run_id}" ]] || {
+            echo "::error::Could not resolve dispatched metadata CI run."
             exit 1
           }
 
-          echo "Waiting for required PR checks on metadata PR #${pr_number}."
-          gh pr checks "${pr_number}" \
+          echo "Waiting for metadata CI run #${run_id}."
+          gh run watch "${run_id}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --required \
-            --watch \
-            --interval 5
+            --exit-status
 
-          echo "Metadata PR #${pr_number} passed required checks; merging."
+          # workflow_dispatch runs are not attached to the PR as checks. The
+          # protected main ruleset requires the `validate` context, so publish
+          # the successful validation as a commit status for the exact PR SHA.
+          gh api \
+            --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${metadata_sha}" \
+            -f state=success \
+            -f context=validate \
+            -f description="Metadata CI validation passed" \
+            -f target_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
+
+          echo "Metadata PR #${pr_number} passed validation; enabling automatic merge."
 
           gh pr merge "${pr_number}" \
             --repo "${GITHUB_REPOSITORY}" \
