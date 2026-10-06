@@ -36,26 +36,31 @@ jobs:
           scope_json="$(git diff --name-only -z "${base}" HEAD | node scripts/release-scope.mjs --stdin0)"
           code="$(RELEASE_SCOPE_JSON="${scope_json}" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
           echo "code=${code}" >> "${GITHUB_OUTPUT}"
+          if [[ "${code}" == 'true' ]]; then
+            echo "docs_only=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "docs_only=true" >> "${GITHUB_OUTPUT}"
+          fi
           echo "base=${base}" >> "${GITHUB_OUTPUT}"
           echo "PR scope: ${scope_json}"
       - name: Validate documentation-only change
-        if: steps.scope.outputs.code != 'true'
+        if: steps.scope.outputs.docs_only == 'true'
         run: |
           node scripts/docs-localization.mjs
           node scripts/changelog.mjs check
       - run: npm ci --prefer-offline --no-audit --no-fund
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
       - name: Audit production dependencies
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm audit --omit=dev --audit-level=high
       - name: Restore ESLint cache
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         uses: actions/cache@v6
         with:
           path: .cache/eslint
           key: eslint-${{ runner.os }}-${{ hashFiles('package-lock.json', 'eslint.config.mjs') }}
       - name: Restore Next compiler cache
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         uses: actions/cache@v6
         with:
           path: .next/cache
@@ -63,24 +68,24 @@ jobs:
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
       - run: npm run prisma:generate
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
       - name: Verify Prisma migration integrity
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         run: npx prisma migration check
       - name: Verify feature registry
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm run features:check
       - name: Verify Czech documentation localization
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm run docs:check
       - name: Verify visual system budget
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm run visual:check
       - name: Audit aircraft icon geometry
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm run icons:audit
       - name: Run lint, typecheck, and Vitest in parallel
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         shell: bash
         env:
           AIRRADAR_TEST_BASE_SHA: ${{ steps.scope.outputs.base }}
@@ -101,7 +106,7 @@ jobs:
             exit 1
           fi
       - run: npm run build:prepared
-        if: steps.scope.outputs.code == 'true'
+        if: steps.scope.outputs.docs_only != 'true'
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
 

@@ -6,8 +6,7 @@ All notable changes to AirRadar are documented here.
 
 ### Added
 
-- Add Radar Presets V1 with up to eight browser-local named map views that restore camera, traffic filters, existing map layers and display settings without any server persistence.
-- Add Route Network Explorer V1 at `/routes` for bounded today/7d/30d top origin/destination Flight aggregates, route share and airport navigation without FlightPosition scans.
+- Add Explainable Prediction V1 `Why?/Proč?` panels for readiness-gated ETA, runway, runway-change and trajectory advisories using whitelisted canonical prediction evidence.
 - Add Receiver Explorer V2 on `/receiver/coverage` with directional median/P95/max range polar analytics, altitude-band reach, bounded 7/30-day trends, weak-sector health, live ADS-B/MLAT source mix, directional records, and the existing network-reference capture polar without a new ingest or persistence lane.
 - Add Live Airport Network V1 to `/airports`, prioritizing browser-local favorite airports and live-route-active airports with canonical Airport Operations, receiver-only approach queue, likely runway, bounded next-arrival estimates, and direct Live Board navigation.
 - Add Event Replay V1: replayable Flight Intelligence events can open Time Machine in a bounded ±10-minute window with the matching aircraft preselected when historical data is available.
@@ -17,87 +16,6 @@ All notable changes to AirRadar are documented here.
 - Extend Flight Intelligence with explicit initial-climb, cruise-entry, and
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
-
-## [1.0.337] - 2026-10-06
-
-Changes since v1.0.336.
-
-**Features touched:** Aircraft Discovery, Route Network Explorer, Watchlist, Alerts & Fleet.
-
-### Added
-
-- Add aircraft discovery route (6fae9ece)
-- Add Aircraft Discovery V1 (f56ec1bf)
-- Expose aircraft discovery in navigation (c2d7d09e)
-
-### Fixed
-
-- Type aircraft discovery watchlist link (7e723003)
-
-### Documentation
-
-- Register aircraft discovery v1 (1ad60046)
-- Document aircraft discovery v1 (95b0cd6a)
-- Localize aircraft discovery v1 (6c96c8a6)
-- Add aircraft discovery changelog (2edcba86)
-- Retain route explorer registry (513c52fe)
-
-### Maintenance
-
-- Add aircraft discovery (b13cbf9f)
-- Guard aircraft discovery v1 boundary (365359b6)
-- Expect typed watchlist handoff (cb715150)
-
-<details>
-<summary>Technical commits</summary>
-
-- feat: add aircraft discovery route (6fae9ece)
-- feat: add Aircraft Discovery V1 (f56ec1bf)
-- style: add aircraft discovery (b13cbf9f)
-- feat: expose aircraft discovery in navigation (c2d7d09e)
-- test: guard aircraft discovery v1 boundary (365359b6)
-- docs: register aircraft discovery v1 (1ad60046)
-- docs: document aircraft discovery v1 (95b0cd6a)
-- docs: localize aircraft discovery v1 (6c96c8a6)
-- docs: add aircraft discovery changelog (2edcba86)
-- fix: type aircraft discovery watchlist link (7e723003)
-- test: expect typed watchlist handoff (cb715150)
-- merge main into aircraft discovery (2bb3c404)
-- docs(features): retain route explorer registry (513c52fe)
-- Merge remote-tracking branch 'origin/main' into feat/aircraft-discovery-v1 (2b5eb664)
-- Merge pull request #452 from Boym323/feat/aircraft-discovery-v1 (79057775)
-
-</details>
-
-## [1.0.336] - 2026-10-06
-
-Changes since v1.0.335.
-
-### Added
-
-- Add static asset checks and normalize standalone server configuration (c189e8d8)
-
-### Fixed
-
-- Publish standalone build metadata (821e36d4)
-- Tolerate metadata version race for validated artifacts (0be2590f)
-
-### Maintenance
-
-- Sync generated repository metadata (#455) (4d0539bb)
-- Sync generated repository metadata (#456) (4babbcf6)
-
-<details>
-<summary>Technical commits</summary>
-
-- chore(metadata): sync generated repository metadata (#455) (4d0539bb)
-- feat: add static asset checks and normalize standalone server configuration (c189e8d8)
-- Merge remote-tracking branch 'origin/main' (89c7cb07)
-- chore(metadata): sync generated repository metadata (#456) (4babbcf6)
-- fix(release): publish standalone build metadata (821e36d4)
-- fix(release): tolerate metadata version race for validated artifacts (0be2590f)
-
-</details>
 
 ## [1.0.333] - 2026-10-06
 

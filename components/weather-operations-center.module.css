@@ -1,0 +1,180 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+}
+
+.headerMeta {
+  display: grid;
+  justify-items: end;
+  gap: .35rem;
+  color: var(--text-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+  gap: 1rem;
+}
+
+.airportsPanel,
+.reportsPanel {
+  min-width: 0;
+}
+
+.airportList,
+.sigmetList,
+.reportList {
+  display: grid;
+  gap: .45rem;
+  margin-top: .8rem;
+}
+
+.airportList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.airportList article,
+.sigmetList article,
+.reportList article {
+  display: grid;
+  gap: .3rem;
+  padding: .7rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
+}
+
+.airportList article > div,
+.sigmetList article > div,
+.reportList article > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .65rem;
+}
+
+.airportList b,
+.windMetrics dd {
+  font-variant-numeric: tabular-nums;
+}
+
+.airportList small,
+.sigmetList small,
+.reportList small,
+.muted {
+  color: var(--text-muted);
+}
+
+.windTabs {
+  display: flex;
+  gap: .3rem;
+  flex-wrap: wrap;
+}
+
+.windTabs button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  padding: .34rem .58rem;
+  cursor: pointer;
+}
+
+.windTabs button[aria-pressed="true"] {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-elevated));
+}
+
+.windBody,
+.radarBody {
+  display: grid;
+  gap: .8rem;
+  margin-top: .8rem;
+}
+
+.windHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: .8rem;
+  padding: .85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.windHero strong {
+  font-size: 1.6rem;
+}
+
+.windHero span {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.windMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .4rem;
+  margin: 0;
+}
+
+.windMetrics div {
+  display: grid;
+  gap: .2rem;
+  padding: .62rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.windMetrics dt {
+  color: var(--text-muted);
+  font-size: .67rem;
+}
+
+.windMetrics dd {
+  margin: 0;
+  font-weight: 760;
+}
+
+.radarStatus {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .8rem;
+}
+
+.reportsPanel {
+  grid-column: 1 / -1;
+}
+
+.reportList {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 920px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reportsPanel {
+    grid-column: auto;
+  }
+
+  .reportList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .headerMeta {
+    justify-items: start;
+  }
+}
+
+@media (max-width: 620px) {
+  .airportList,
+  .reportList,
+  .windMetrics {
+    grid-template-columns: 1fr;
+  }
+}
