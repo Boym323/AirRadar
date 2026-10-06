@@ -34,7 +34,7 @@ interface StaticCommand {
   label: string;
   detail: string;
   href: string;
-  icon: "radar" | "time" | "flight" | "airport" | "statistics" | "system";
+  icon: "radar" | "time" | "flight" | "airport" | "aircraft" | "atc" | "statistics" | "system";
   keywords: string[];
   action?: "operations";
 }
