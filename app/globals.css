@@ -5568,3 +5568,45 @@ button, input, select, textarea { color-scheme: dark; }
   font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
 }
+
+.airport-live-v9-horizon-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.airport-live-v9-horizon-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(8, 17, 29, .38);
+}
+
+.airport-live-v9-horizon-eta {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.airport-live-v9-horizon-eta strong {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.airport-live-v9-horizon-eta small {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+@media (max-width: 720px) {
+  .airport-live-v9-horizon-list li {
+    align-items: flex-start;
+  }
+}
