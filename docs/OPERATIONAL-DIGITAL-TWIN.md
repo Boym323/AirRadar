@@ -603,3 +603,27 @@ The selected-aircraft radar drawer now surfaces the same Operational Focus summa
 Operational Focus interaction is bidirectional between the live map and drawer. Clicking the active focus corridor segment or target marker re-opens the Situation tab for the same canonical aircraft/focus URL, even if the operator manually switched tabs after selecting it. The compact drawer always includes the active focus item among its four rendered rows, replacing the fourth priority row when necessary. This interaction is UI-only and reuses the existing GeoJSON properties and selected-aircraft situation response.
 
 The drawer also provides bounded previous/next navigation across the server-ordered WATCH/ATTENTION focus items. Navigation does not wrap at either end; with no active focus, Next selects the first item. Every navigation step reuses the existing `onFocus(itemId)` URL/map interaction, so the map moves to the corresponding focus segment without another situation request, provider call or local re-ranking of focus priority.
+
+## Aircraft Operational Focus Change Intelligence V1
+
+The radar drawer now compares consecutive already-loaded Operational Focus snapshots for the same aircraft. It reports NEW, ESCALATED, DEESCALATED, UPDATED and RESOLVED changes. Switching aircraft resets the comparison baseline, and sub-minute timing drift alone is treated as noise. The change lane is browser-local presentation state over the existing selected-aircraft situation refresh; it adds no API request, provider call, persistence path or second polling loop.
+
+Resolved items are informational only. Other changes reuse the existing focus-on-map interaction and therefore retain the same server item identity and semantics.
+
+## Regional Focus Queue V1
+
+The existing `/api/operations/situation` response now includes `focusQueue`, a bounded priority projection over the already-built Regional Operational Attention summary. It does not fan out into per-aircraft Digital Twin requests. ATTENTION items rank above WATCH items, with deterministic bounded weighting for prospective lead time, projected distance and affected-aircraft count.
+
+The queue preserves the existing regional limitations: it is operational context, not a collision warning or separation product. Map highlighting remains governed by the existing Regional Attention Graduation gate.
+
+## Operational Focus Outcome Validation V1
+
+Calibration Center now includes a read-only Operational Focus outcome lane derived only from independent existing Event Outcome truth. V1 scores WEATHER through the existing SIGMET_INTERSECTION truth lane. Navigation Integrity, planned airspace and trajectory focus are explicitly UNAVAILABLE for scoring until an independent truth universe exists; a later focus snapshot is never used to validate itself.
+
+The initial WEATHER gate remains WAIT until at least 20 scoreable SIGMET samples and 10 timing samples exist. With enough evidence, PASS requires precision >=70%, missing-truth rate <=40% and timing MAE <=240 seconds. Failing a completed quality gate returns FAIL. This report does not alter WATCH/ATTENTION semantics or promotion policy.
+
+## Trajectory Quality Shadow V2
+
+The situation response now carries an additive trajectory-quality shadow candidate while the canonical corridor remains active. V1 of the shadow keeps the exact canonical horizontal geometry and evaluates a phase-aware vertical profile plus candidate uncertainty at +5/+15/+30 minutes.
+
+Observed climb or descent rate is used fully for the first five minutes and then damped over the next ten minutes instead of being treated as an indefinitely sustained aircraft intent. Cruise/unknown vertical state is held. Confidence is based on available observed telemetry plus route-aware geometry. The candidate is explicitly SHADOW_ONLY, does not infer FMS intent or ATC clearances, and cannot change public corridor/events without a future independent outcome/graduation process.
