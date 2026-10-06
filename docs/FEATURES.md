@@ -29,6 +29,22 @@ not yet been historically attributed.
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
+
+## Proactive Receiver Monitoring V1
+
+The system status response now includes a bounded `receiver.readsb.monitoring`
+projection derived from the existing live receiver quality snapshot. It
+classifies `HEALTHY`, `DEGRADED`, `OFFLINE`, or `INSUFFICIENT_DATA`, identifies
+sanitized likely causes such as a stale readsb source, low message rate, no
+aircraft, or stale positions, and gives the operator a first recommended
+check. Demo mode is explicitly marked as insufficient data rather than healthy.
+
+This is a read-only evaluator: it adds no poller, database table, persistence
+write, SSE lane, or upstream request. The result is available through the
+existing `/api/system/status` and `/api/system/stream` boundaries and is shown
+on `/system`. Causes are bounded codes with confidence labels; they are
+diagnostic hypotheses, not proof of an antenna or RF fault.
+
 ## Map Context V1/V2
 
 The home radar includes optional, persisted-off layers for ČHMÚ weather radar
@@ -657,4 +673,3 @@ The Operational Digital Twin intersects its existing sampled 30-minute corridor 
 ## Wind Timing Graduation V1
 
 Event Outcome V2 now compares canonical and wind-adjusted timing for the same waypoint against one identical LOCAL truth observation. The process-local graduation gate is fail-closed: it requires sufficient span, paired sample volume, meaningful wind adjustments and truth coverage; PASS additionally requires at least 5% MAE improvement and a 55% shadow win rate. PASS only marks the model eligible for manual graduation — canonical timing remains active and there is no automatic promotion.
-

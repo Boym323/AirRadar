@@ -50,6 +50,13 @@ Server-side provider boundary je `AircraftProvider`. Nakonfigurovaný lokální
 provider načítá web root readsb/tar1090; prázdná base URL vybírá deterministický
 demo provider. Frontend provider nikdy nevybírá.
 
+Receiver Monitoring V1 je čistá projekce nad již vytvořenou hodnotou
+`ReceiverQuality` a aktuálním stavem readsb zdroje. Klasifikuje stav receiveru
+a vrací omezené kódy pravděpodobných příčin pro `/system`; nespouští poller,
+upstream požadavek ani zápis a nemění live aircraft/SSE cestu. Demo režim zůstává
+výslovně stavem nedostatku dat, aby nemohl být zaměněn za zdravý produkční
+receiver.
+
 Command Search V2 zůstává jednou mountnutý z root layoutu. Search control v
 topbaru je pouze trigger; root-level palette vlastní jedinou debounce větev
 `GET /api/search?q=`, klávesový stav a omezené browser-local recents.

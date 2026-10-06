@@ -27,6 +27,7 @@ import {
   windDiagnostic,
 } from "@/lib/server/system-status-diagnostics";
 import { buildReceiverQuality } from "@/lib/server/receiver-quality";
+import { buildReceiverMonitoring } from "@/lib/server/receiver-monitoring";
 import { getAltitudeDiagnostics } from "@/lib/aircraft/altitude-provenance";
 import { getAircraftWeatherDiagnostics, type AircraftWeatherDiagnostics } from "@/lib/server/aircraft-weather";
 import { trackDbOperation } from "@/lib/server/db-operation-diagnostics";
@@ -636,6 +637,14 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
   const provider = safeLabel(input.snapshot.provider, "unknown");
   const isDemo = input.snapshot.provider === "mock";
   const sourceStatus = isDemo ? "demo" : input.snapshot.readsbOnline ? "live" : "offline";
+  const receiverQuality = buildReceiverQuality({
+    aircraft: input.snapshot.aircraft,
+    online: input.snapshot.readsbOnline,
+    latestMessageAt: lastSnapshot,
+    latestPositionAt,
+    messagesPerSecond: input.snapshot.stats.messagesPerSecond,
+    now,
+  });
   const receiverStatus: SystemStatus = isDemo || input.snapshot.readsbOnline ? "ok" : "offline";
   const atcFreshness = atcStatus(input.atc.metadata, input.database.status, now);
   const weatherEntries = nonNegativeInteger(input.weather?.entries ?? (input.weather?.metarEntries ?? 0) + (input.weather?.tafEntries ?? 0), 512);
@@ -694,14 +703,8 @@ export function buildSystemStatus(input: SystemStatusBuildInput): SystemStatusRe
           : null,
         lastSnapshot,
         snapshotAgeSeconds: ageSeconds(lastSnapshot, now),
-        quality: buildReceiverQuality({
-          aircraft: input.snapshot.aircraft,
-          online: input.snapshot.readsbOnline,
-          latestMessageAt: lastSnapshot,
-          latestPositionAt,
-          messagesPerSecond: input.snapshot.stats.messagesPerSecond,
-          now,
-        }),
+        quality: receiverQuality,
+        monitoring: buildReceiverMonitoring({ quality: receiverQuality, online: input.snapshot.readsbOnline, sourceStatus, now }),
       },
     },
     ...(input.localAdsb ? { localAdsb: input.localAdsb } : {}),
