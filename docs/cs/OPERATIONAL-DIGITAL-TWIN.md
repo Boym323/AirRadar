@@ -449,6 +449,14 @@ Nejde o collision warning ani separation produkt. Snapshot starší než omezen�
 freshness okno se označí jako zastaralý a výpadek endpointu je fail-soft vůči
 zbytku Operations Center.
 
+## Regional Operations Center V1.1
+
+Regional Operations Center V1.1 zachovává existující omezený požadavek regionální situace a přidává uživatelský filtr projekčního horizontu 5/15/30 minut, lokalizovaný detail evidence a graduation stav odvozený z existujícího Regional Attention Graduation reportu. Veřejný situation endpoint zpřístupňuje jen kompaktní readiness projekci; nemění kalibrační policy ani veřejnou semantiku WATCH/ATTENTION.
+
+Mapové zvýraznění je fail-closed. Dvojici co-presence lze zvýraznit pouze tehdy, když Regional Attention Graduation vrací `PASS` a `manualPromotionEligible=true`. Overlay spojuje aktuální LOCAL radarové polohy dvojice pouze jako provozní orientaci; nekreslí chráněný prostor, predikovanou dráhu srážky, hranici ztráty rozstupu, TCAS/STCA alert ani ATC pokyn. Zavření Operations Center nebo ztráta graduation/aktuální polohy overlay vyčistí.
+
+V1.1 nepřidává provider loop, receiver poller, databázovou cestu ani druhou autoritu živého stavu. Destination clustery zůstávají mimo graduation a mapové zvýraznění neodemknou.
+
 ## Truth-first Validation V2
 
 Truth-first Validation V2 rozšiřuje měření recall mimo terminální outcome.
@@ -495,4 +503,39 @@ existující tabulky `OperationalTwinCalibrationBucket` pod lane
 `REGIONAL_ATTENTION_OUTCOME`. Neuchovává se identita letadla, dvojice,
 poloha ani raw pending predikce. Výsledek readiness je pouze `WAIT/PASS/FAIL`
 a nemění chování WATCH/ATTENTION.
+
+## Digital Twin Calibration Center V1
+
+Admin stránka `/admin/operational-twin/calibration` sjednocuje existující
+kalibrační/readiness lane do jednoho read-only provozního přehledu. Používá
+jediný admin-only no-store endpoint
+`/api/admin/operational-twin/calibration` a nevytváří druhý kalibrační engine
+ani background poller.
+
+Center zobrazuje kvalitu corridor outcome, event outcome precision/timing,
+Truth-first V2 recall, důkazy wind timing graduation, kvalitu Regional
+Attention outcome a stav restart-stable calibration persistence. U Regional
+Attention ukazuje také řezy 5/15/30 minut a výslovně hlásí neskórované
+destination clustery.
+
+Stránka je pouze diagnostická. Nemůže měnit graduation policy, veřejnou
+prediction policy, semantiku WATCH/ATTENTION, thresholdy ani uložená kalibrační
+data.
+
+## Regional Attention Graduation V1
+
+Regional Attention Graduation V1 převádí restart-stable outcome důkazy pro
+`REGIONAL_COPRESENCE` na formální readiness report. Gate vyžaduje čtyřhodinové
+pozorovací okno, alespoň 80 skórovatelných vzorků, pokrytí všech horizontů
+5/15/30 minut, nejméně 70% LOCAL truth coverage, alespoň 75% precision a timing
+MAE nejvýše 240 sekund.
+
+Nedostatek důkazů vrací `WAIT`. Kompletní důkazy, které nesplní kvalitativní
+thresholdy, vracejí `FAIL`; pouze kompletní data nad všemi thresholdy vrátí
+`PASS`. PASS nastaví `manualPromotionEligible=true`, ale V1 má
+`autoPromotion=false` a nemění veřejnou semantiku WATCH/ATTENTION.
+
+Scope zůstává pouze regionálním provozním kontextem.
+`DESTINATION_CLUSTER`, collision-warning semantika ani separation-product
+semantika nejsou pro graduation způsobilé.
 

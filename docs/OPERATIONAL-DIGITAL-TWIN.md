@@ -470,6 +470,14 @@ terminology. It is not a collision-warning or separation product. Snapshots
 older than the bounded freshness window are visibly marked stale and endpoint
 failure is fail-soft for the rest of the Operations Center.
 
+## Regional Operations Center V1.1
+
+Regional Operations Center V1.1 keeps the existing bounded regional-situation request and adds an operator-facing 5/15/30-minute projection filter, localized evidence detail, and a graduation status derived from the existing Regional Attention Graduation report. The public situation endpoint exposes only a compact readiness projection; it does not mutate calibration policy or public WATCH/ATTENTION semantics.
+
+Map highlighting is fail-closed. A co-presence pair can be highlighted only when Regional Attention Graduation is `PASS` and `manualPromotionEligible=true`. The overlay connects the pair's current LOCAL radar positions as contextual orientation only; it does not draw a protected area, predicted collision path, loss-of-separation boundary, TCAS/STCA alert, or ATC instruction. Closing the Operations Center or losing graduation/current positions clears the overlay.
+
+V1.1 adds no provider loop, receiver poller, database path, or second live-state authority. Destination clusters remain outside graduation and cannot unlock map highlighting.
+
 ## Truth-first Validation V2
 
 Truth-first Validation V2 expands recall measurement beyond terminal outcomes.
@@ -517,4 +525,39 @@ existing `OperationalTwinCalibrationBucket` table under the
 `REGIONAL_ATTENTION_OUTCOME` lane. No aircraft identity, pair identity,
 position or raw pending prediction is persisted. The readiness result is
 `WAIT/PASS/FAIL` only and does not change WATCH/ATTENTION behavior.
+
+## Digital Twin Calibration Center V1
+
+The admin page at `/admin/operational-twin/calibration` consolidates the
+existing calibration/readiness lanes into one read-only operational view. It
+uses one admin-only no-store endpoint,
+`/api/admin/operational-twin/calibration`, and does not create a second
+calibration engine or background poller.
+
+The center shows corridor outcome quality, event outcome precision/timing,
+Truth-first V2 recall, wind timing graduation evidence, Regional Attention
+outcome quality, and restart-stable calibration persistence health. Regional
+Attention includes its 5/15/30-minute horizon slices and explicitly reports
+unscored destination clusters.
+
+The page is diagnostic only. It cannot change graduation policy, public
+prediction policy, WATCH/ATTENTION semantics, thresholds, or persisted
+calibration data.
+
+## Regional Attention Graduation V1
+
+Regional Attention Graduation V1 converts restart-stable
+`REGIONAL_COPRESENCE` outcome evidence into a formal readiness report. The
+gate requires a four-hour observation span, at least 80 scoreable samples,
+coverage across every 5/15/30-minute horizon, at least 70% LOCAL truth
+coverage, at least 75% precision, and timing MAE no worse than 240 seconds.
+
+Insufficient evidence returns `WAIT`. Complete evidence that misses quality
+thresholds returns `FAIL`; only complete evidence that clears all thresholds
+returns `PASS`. A PASS sets `manualPromotionEligible=true`, but V1 has
+`autoPromotion=false` and does not alter public WATCH/ATTENTION semantics.
+
+The scope remains regional operational context only.
+`DESTINATION_CLUSTER`, collision-warning semantics, and separation-product
+semantics are explicitly ineligible for graduation.
 

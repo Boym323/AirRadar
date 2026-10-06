@@ -211,6 +211,69 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.regionalToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.regionalHorizons {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.regionalHorizons button,
+.regionalActions button {
+  min-height: 28px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-interactive);
+  color: var(--text-secondary);
+  font-size: var(--font-size-2xs);
+  cursor: pointer;
+}
+
+.regionalHorizons button:hover,
+.regionalActions button:hover,
+.regionalHorizonActive,
+.regionalMapActive {
+  border-color: var(--border-accent) !important;
+  background: var(--surface-accent-soft) !important;
+  color: var(--accent) !important;
+}
+
+.regionalEvidence {
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+}
+
+.regionalEvidence summary {
+  width: fit-content;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.regionalEvidence ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+}
+
+.regionalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.regionalActions small {
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+}
+
 .regionalList {
   display: grid;
 }
@@ -508,6 +571,7 @@
   }
 
   .sectionHeading,
+  .regionalToolbar,
   .regionalItem,
   .regionalUnavailable,
   .highlight,
@@ -516,6 +580,11 @@
   .predictiveUnavailable,
   .airport {
     padding-inline: var(--space-3);
+  }
+
+  .regionalToolbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .sectionHeading {
