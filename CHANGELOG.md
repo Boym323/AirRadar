@@ -6,6 +6,7 @@ All notable changes to AirRadar are documented here.
 
 ### Added
 
+- Add Radar Presets V1 with up to eight browser-local named map views that restore camera, traffic filters, existing map layers and display settings without any server persistence.
 - Add Route Network Explorer V1 at `/routes` for bounded today/7d/30d top origin/destination Flight aggregates, route share and airport navigation without FlightPosition scans.
 - Add Receiver Explorer V2 on `/receiver/coverage` with directional median/P95/max range polar analytics, altitude-band reach, bounded 7/30-day trends, weak-sector health, live ADS-B/MLAT source mix, directional records, and the existing network-reference capture polar without a new ingest or persistence lane.
 - Add Live Airport Network V1 to `/airports`, prioritizing browser-local favorite airports and live-route-active airports with canonical Airport Operations, receiver-only approach queue, likely runway, bounded next-arrival estimates, and direct Live Board navigation.

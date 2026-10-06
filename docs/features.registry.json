@@ -783,6 +783,27 @@
         "top routes",
         "origin destination"
       ]
+    },
+    {
+      "id": "radar-presets",
+      "name": "Radar Presets",
+      "category": "radar",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Browser-local named radar presets that restore camera, coverage/source filters, aviation/weather/airspace layers, range rings, color mode, radar opacity, and wind level without server persistence.",
+      "pages": [
+        "/"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "radar-presets"
+      ],
+      "changelogKeywords": [
+        "radar presets",
+        "saved radar view",
+        "saved map view",
+        "browser-local preset"
+      ]
     }
   ]
 }
