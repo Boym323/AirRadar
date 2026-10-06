@@ -829,6 +829,26 @@
         "why prediction",
         "prediction rationale"
       ]
+    },
+    {
+      "id": "saved-workspaces",
+      "name": "Saved Workspaces",
+      "category": "productivity",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Browser-local named collections of canonical AirRadar links and safe URL/query context, bounded to 12 workspaces with 12 entries each.",
+      "pages": [
+        "/workspaces"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "workspaces"
+      ],
+      "changelogKeywords": [
+        "saved workspaces",
+        "browser-local workspace",
+        "workspace links"
+      ]
     }
   ]
 }
