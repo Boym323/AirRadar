@@ -1,0 +1,190 @@
+.hud {
+  position: absolute;
+  z-index: 2;
+  top: 58px;
+  left: 50%;
+  width: min(860px, calc(100% - 140px));
+  min-height: 58px;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: minmax(120px, auto) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: rgba(8, 17, 29, .94);
+  box-shadow: var(--shadow-control);
+  color: var(--text-primary);
+  pointer-events: auto;
+}
+
+.following {
+  border-color: var(--border-accent);
+}
+
+.identity {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.identity strong,
+.telemetry strong,
+.metric strong {
+  font-family: var(--font-geist-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.identity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.identity small,
+.metric small,
+.metric em,
+.kicker {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-style: normal;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.kicker {
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+.telemetry {
+  display: grid;
+  gap: 1px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.telemetry strong {
+  font-size: 12px;
+}
+
+.telemetry span {
+  color: var(--text-secondary);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrics {
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.metrics::-webkit-scrollbar {
+  display: none;
+}
+
+.metric {
+  min-width: max-content;
+  display: grid;
+  align-content: center;
+  gap: 1px;
+  padding: 4px 8px;
+  border-left: 1px solid var(--border-default);
+}
+
+.metric strong {
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.metric em {
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.toggle {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-accent-soft);
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.toggle:hover {
+  background: var(--surface-overlay);
+}
+
+.followDot {
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.following .followDot {
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+@media (max-width: 1100px) {
+  .hud {
+    width: min(720px, calc(100% - 90px));
+    grid-template-columns: minmax(110px, auto) auto minmax(0, 1fr) auto;
+  }
+
+  .identity small {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .hud {
+    top: 112px;
+    left: 0;
+    width: 100%;
+    max-width: calc(100vw - 76px);
+    transform: none;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .identity {
+    grid-column: 1;
+  }
+
+  .telemetry {
+    grid-column: 2;
+    grid-row: 1;
+    padding-left: 8px;
+  }
+
+  .metrics {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .toggle {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: stretch;
+    justify-content: center;
+  }
+}
