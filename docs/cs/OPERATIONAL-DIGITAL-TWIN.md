@@ -528,6 +528,14 @@ Stránka je pouze diagnostická. Nemůže měnit graduation policy, veřejnou
 prediction policy, semantiku WATCH/ATTENTION, thresholdy ani uložená kalibrační
 data.
 
+## Aircraft Operational Focus Outcome Validation V1
+
+Finální produktová vrstva Operational Focus má nyní vlastní prospektivní outcome lane. V1 zachycuje už sestavený focus request-driven a truth vzorkuje pouze z pozdějších kanonických LOCAL receiver refreshů; nepřidává timer, poller, provider request, history query ani veřejný endpoint.
+
+Ve V1 je skórovatelný pouze `WEATHER` focus založený na SIGMET, protože pro něj existuje nezávislá pozdější truth podmínka: sledované letadlo musí později vstoupit do zachycené, časově platné geometrie SIGMET v jeho vertikálním pásmu. Úspěšná truth vytváří timing error; souvisle pozorované letadlo, které před omezenou expirací nevstoupí, se započítá jako false positive, zatímco chybějící kontinuita přijímače zůstává `expiredNoTruth`. PIREP/AIREP weather, Navigation Integrity, Planned Airspace a Trajectory focus capture se počítají, ale zůstávají explicitně neskórované místo toho, aby se jejich vlastní predikční evidence znovu použila jako truth.
+
+Report je process-local, omezený na 24 hodin a viditelný pouze v existujícím admin Calibration Center. Readiness zůstává `WAIT`, dokud nejsou splněny prahy délky pozorování, počtu skórovatelných a pozorovaných vzorků. V1 nemění veřejné řazení Operational Focus, semantiku WATCH/ATTENTION ani promotion policy.
+
 ## Regional Attention Graduation V1
 
 Regional Attention Graduation V1 převádí restart-stable outcome důkazy pro

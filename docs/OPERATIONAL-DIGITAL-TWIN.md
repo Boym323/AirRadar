@@ -550,6 +550,14 @@ The page is diagnostic only. It cannot change graduation policy, public
 prediction policy, WATCH/ATTENTION semantics, thresholds, or persisted
 calibration data.
 
+## Aircraft Operational Focus Outcome Validation V1
+
+The final Operational Focus product layer now has a dedicated prospective outcome lane. V1 captures the already-built focus response request-driven and samples truth only from later canonical LOCAL receiver refreshes; it adds no timer, poller, provider request, history query or public endpoint.
+
+Only SIGMET-backed `WEATHER` focus is scoreable in V1 because an independent later truth condition exists: the tracked aircraft must later enter the captured, time-valid SIGMET geometry within its vertical band. Successful truth observations produce timing error; continuously observed aircraft that do not enter before the bounded expiry become false positives, while missing receiver continuity remains `expiredNoTruth`. PIREP/AIREP weather, Navigation Integrity, Planned Airspace and Trajectory focus captures are counted but explicitly unscored rather than reusing their own prediction evidence as truth.
+
+The report is process-local, 24-hour bounded and visible only in the existing admin Calibration Center. Readiness remains `WAIT` until the observation span, scoreable volume and observed sample thresholds are met. V1 does not alter public Operational Focus ranking, WATCH/ATTENTION semantics or promotion policy.
+
 ## Regional Attention Graduation V1
 
 Regional Attention Graduation V1 converts restart-stable

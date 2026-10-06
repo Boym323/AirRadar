@@ -368,10 +368,12 @@ export async function getOperationalTwinForAircraft(
     weatherCorridor,
     navigationIntegrityCorridor,
   });
-  return {
+  const finalSituation = {
     ...situation,
     events: promotion.events,
     windTimingPromotion: promotion.status,
     operationalFocus,
   };
+  service.captureOperationalFocusOutcome(finalSituation, sigmets);
+  return finalSituation;
 }

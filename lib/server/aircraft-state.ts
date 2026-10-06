@@ -59,6 +59,7 @@ import type { Airport } from "@/lib/airports/types";
 import { TrackFusionOutcomeValidator, TrackFusionReadinessMonitor, TrackFusionShadow } from "@/lib/track-fusion";
 import { OperationalTwinEventOutcomeValidator, OperationalTwinOutcomeValidator, OperationalTwinTruthFirstValidator, RegionalAttentionOutcomeValidator, buildRegionalAttentionGraduation, type OperationalTwinEventOutcomeCaptureContext, type OperationalTwinSituation, type OperationalTwinTruthObservationContext } from "@/lib/operational-twin";
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
+import { AircraftOperationalFocusOutcomeValidator } from "@/lib/operational-twin/aircraft-operational-focus-outcome";
 import { OperationalTwinCalibrationPersistence } from "@/lib/server/operational-twin-calibration-persistence";
 
 type Listener = { callback: (snapshot: StateSnapshot) => void; coverage: CoverageMode };
@@ -208,6 +209,8 @@ export class AircraftStateService {
   private readonly operationalTwinOutcome = new OperationalTwinOutcomeValidator();
   /** Predicted Digital Twin event timing/precision validation against independent live evidence. */
   private readonly operationalTwinEventOutcome = new OperationalTwinEventOutcomeValidator();
+  /** Final Aircraft Operational Focus validation against later independent LOCAL SIGMET truth where scoreable. */
+  private readonly operationalFocusOutcome = new AircraftOperationalFocusOutcomeValidator();
   /** Truth-first multi-domain recall validation from independent later observations. */
   private readonly operationalTwinTruthFirst = new OperationalTwinTruthFirstValidator();
   /** Prospective Regional Attention validation against future LOCAL pair state. */
@@ -509,6 +512,7 @@ export class AircraftStateService {
     trackFusionOutcome: ReturnType<TrackFusionOutcomeValidator["report"]>;
     operationalTwinOutcome: ReturnType<OperationalTwinOutcomeValidator["report"]>;
     operationalTwinEventOutcome: ReturnType<OperationalTwinEventOutcomeValidator["report"]>;
+    operationalFocusOutcome: ReturnType<AircraftOperationalFocusOutcomeValidator["report"]>;
     regionalAttentionOutcome: ReturnType<RegionalAttentionOutcomeValidator["report"]>;
     regionalAttentionGraduation: ReturnType<typeof buildRegionalAttentionGraduation>;
     operationalTwinCalibrationPersistence: ReturnType<OperationalTwinCalibrationPersistence["getStatus"]>;
@@ -545,6 +549,7 @@ export class AircraftStateService {
       trackFusionOutcome: this.getTrackFusionOutcomeReport(),
       operationalTwinOutcome: this.getOperationalTwinOutcomeReport(),
       operationalTwinEventOutcome: this.getOperationalTwinEventOutcomeReport(),
+      operationalFocusOutcome: this.getOperationalFocusOutcomeReport(),
       regionalAttentionOutcome: this.getRegionalAttentionOutcomeReport(),
       regionalAttentionGraduation: this.getRegionalAttentionGraduationReport(),
       operationalTwinCalibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
@@ -649,6 +654,17 @@ export class AircraftStateService {
       truthFirst: this.operationalTwinTruthFirst.report(now),
       calibrationPersistence: this.operationalTwinCalibrationPersistence.getStatus(),
     };
+  }
+
+  captureOperationalFocusOutcome(
+    situation: OperationalTwinSituation,
+    sigmets: import("@/lib/weather/types").SigmetSnapshot | null,
+  ): void {
+    this.operationalFocusOutcome.capture(situation, sigmets);
+  }
+
+  getOperationalFocusOutcomeReport(now = new Date()) {
+    return this.operationalFocusOutcome.report(now);
   }
 
   captureRegionalAttentionOutcome(summary: OperationalAttentionSummary): void {
@@ -888,6 +904,7 @@ export class AircraftStateService {
     for (const hex of this.predictiveEvaluatedAt.keys()) if (!activeHexes.has(hex)) { this.predictiveEvaluatedAt.delete(hex); this.predictive.forget(hex); }
     this.operationalTwinCalibrationPersistence.scheduleFlush();
     this.navigationIntegrity.observe([...this.localAircraft.values()], new Date(snapshot.fetchedAt));
+    this.operationalFocusOutcome.observe([...this.localAircraft.values()], new Date(snapshot.fetchedAt));
     this.scheduleOperationalTwinCalibrationSample(now);
     this.invalidateSnapshotCache();
   }
