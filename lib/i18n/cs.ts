@@ -2209,6 +2209,8 @@ export const cs = {
     operationalFocusSummary: (attention: number, watch: number) => `${attention} pozornost · ${watch} sledovat`,
     operationalFocusTruncated: "zobrazeny položky s nejvyšší prioritou",
     operationalFocusNoItems: "V aktuálně dostupné omezené evidenci není žádná prioritizovaná položka.",
+    operationalFocusMapAction: "Zobrazit na živém radaru →",
+    operationalFocusShowOnRadar: (label: string) => `Zobrazit ${label} na živém radaru`,
     operationalFocusDisclaimer: "Pouze provozní kontext. NORMAL neznamená all-clear a WATCH ani ATTENTION nejsou bezpečnostní výstraha, pokyn ATC ani odvození clearance.",
     weatherCorridorTitle: "Počasí před letadlem",
     weatherCorridorSubtitle: "30minutový výhled PIREP/AIREP, SIGMET a ICON-EU podél projektovaného corridoru",
