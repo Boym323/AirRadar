@@ -34,6 +34,7 @@ historicky přiřazený.
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 | Explainable Prediction | production | intelligence / prediction | Pre-registry | `/aircraft/:hex` | — | Panely Proč? pro readiness-gated ETA, runway, runway-change a trajectory advisory používají malý capability-specific whitelist z existující canonical prediction evidence. |
 | Route Network Explorer | production | analytics / routes | Pre-registry | `/routes` | — | Omezený explorer agregovaných tras. |
+| Mobile Spotter Mode | production | mobile / radar | Pre-registry | `/spotter` | — | Mobile-first LOCAL receiver pohled s řazením podle vzdálenosti, omezenými filtry, Discovery badge a canonical akcemi radar/watchlist/detail. |
 <!-- feature-registry:end -->
 
 ## Receiver Explorer V2
@@ -707,3 +708,17 @@ Event Outcome V2 nyní párově porovnává canonical a wind-adjusted čas stejn
 ### Explainable Prediction V1
 
 Prediktivní karty na detailu letadla mají rozbalovací panel `Proč?` pro ETA, runway, runway-change a trajectory. Evidence pochází ze stejného canonical prediction vyhodnocení a ven prochází pouze přes existující readiness-gated advisory buildery. Capability-specific whitelist dovoluje jen produktově bezpečné vstupy, například zbývající vzdálenost, efektivní rychlost, fázi letu, recent runway usage, povrchový vítr, candidate margin a trajectory geometrii. Nevzniká druhý prediction request ani paralelní model.
+
+
+## Mobile Spotter Mode V1
+
+`/spotter` je portrait-friendly živá plocha pro letadla s explicitní LOCAL
+receiver evidencí. Znovu používá existující local SSE stream a
+`/api/logbook/summary` ve stejné 30sekundové Discovery cadence pro badge NEW,
+RARE a RETURNING. Letadla zůstávají fail-closed na LOCAL evidenci a řadí se
+podle vzdálenosti od přijímače, nikoli od telefonu.
+
+V1 nepoužívá browser geolocation, nový stream, receiver-distance backend,
+history scan ani social/photo-upload funkce. Výběr na radaru, detail letadla
+a Watchlist používají existující canonical produktové route. Ztráta LOCAL feedu
+je explicitně zobrazena jako stale nebo unavailable.
