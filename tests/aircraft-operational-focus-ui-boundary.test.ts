@@ -18,7 +18,7 @@ describe("Aircraft Operational Focus UI V1 boundary", () => {
     expect(componentSource).toContain('data-testid="aircraft-operational-focus-v1"');
     expect(componentSource).toContain("operationalFocus.items.map");
     expect(componentSource).toContain("operationalFocus.level");
-    expect(componentSource.match(/fetch\\(/g)).toHaveLength(1);
+    expect(componentSource.match(/fetch\(/g)).toHaveLength(1);
   });
 
   it("keeps attention semantics explicit and neutral for NORMAL", () => {
