@@ -1,0 +1,73 @@
+.card {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 1rem;
+}
+
+.timeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline li {
+  display: grid;
+  grid-template-columns: 86px 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .65rem;
+  min-height: 50px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.timeline time {
+  color: var(--text-muted);
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.marker {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: .65;
+}
+
+.timeline li > div {
+  display: grid;
+  gap: .12rem;
+  min-width: 0;
+}
+
+.timeline strong {
+  font-size: .82rem;
+}
+
+.timeline small,
+.message {
+  color: var(--text-muted);
+}
+
+.message {
+  margin: 0;
+}
+
+.warning {
+  margin: 0;
+  color: var(--text-warning, var(--text-muted));
+  font-size: .72rem;
+}
+
+@media (max-width: 680px) {
+  .timeline li {
+    grid-template-columns: 68px 10px minmax(0, 1fr);
+    padding: .45rem 0;
+  }
+
+  .timeline li > :last-child {
+    grid-column: 3;
+    justify-self: start;
+  }
+}
