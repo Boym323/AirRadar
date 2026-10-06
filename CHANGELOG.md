@@ -18,6 +18,36 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.336] - 2026-10-06
+
+Changes since v1.0.335.
+
+### Added
+
+- Add static asset checks and normalize standalone server configuration (c189e8d8)
+
+### Fixed
+
+- Publish standalone build metadata (821e36d4)
+- Tolerate metadata version race for validated artifacts (0be2590f)
+
+### Maintenance
+
+- Sync generated repository metadata (#455) (4d0539bb)
+- Sync generated repository metadata (#456) (4babbcf6)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#455) (4d0539bb)
+- feat: add static asset checks and normalize standalone server configuration (c189e8d8)
+- Merge remote-tracking branch 'origin/main' (89c7cb07)
+- chore(metadata): sync generated repository metadata (#456) (4babbcf6)
+- fix(release): publish standalone build metadata (821e36d4)
+- fix(release): tolerate metadata version race for validated artifacts (0be2590f)
+
+</details>
+
 ## [1.0.333] - 2026-10-06
 
 Changes since v1.0.332.
