@@ -213,9 +213,9 @@ export function MobileSpotterMode() {
                 </div>
                 <div className={styles.badges}>
                   <StatusBadge variant={feedState === "live" ? "live" : "stale"}>LOCAL</StatusBadge>
-                  {labels.includes("new") ? <span>NEW</span> : null}
-                  {labels.includes("rare") ? <span>RARE</span> : null}
-                  {labels.includes("returning") ? <span>RETURNING</span> : null}
+                  {labels.includes("new") ? <span data-spotter-label>NEW</span> : null}
+                  {labels.includes("rare") ? <span data-spotter-label>RARE</span> : null}
+                  {labels.includes("returning") ? <span data-spotter-label>RETURNING</span> : null}
                 </div>
               </div>
               <dl>
