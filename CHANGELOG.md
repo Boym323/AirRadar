@@ -10,6 +10,291 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.325] - 2026-10-06
+
+Changes since v1.0.324.
+
+**Features touched:** Operational Digital Twin.
+
+### Added
+
+- Add aircraft operational focus (69ddabbe)
+- Expose operational focus contract (7ebb3d74)
+- Export operational focus builder (27405d37)
+- Assemble aircraft operational focus (6d53fd21)
+
+### Fixed
+
+- Widen focus event flatMap inference (537c2673)
+
+### Documentation
+
+- Localize aircraft operational focus (4f4046d2)
+- Document aircraft operational focus (eea076fa)
+
+### Maintenance
+
+- Cover aircraft operational focus (b8b654bb)
+- Lock operational focus boundary (30e9c79e)
+- Type focus event labels as strings (bd916c9d)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(operational-twin): add aircraft operational focus (69ddabbe)
+- test(operational-twin): cover aircraft operational focus (b8b654bb)
+- test(operational-twin): lock operational focus boundary (30e9c79e)
+- feat(operational-twin): expose operational focus contract (7ebb3d74)
+- feat(operational-twin): export operational focus builder (27405d37)
+- feat(operational-twin): assemble aircraft operational focus (6d53fd21)
+- docs: localize aircraft operational focus (4f4046d2)
+- docs: document aircraft operational focus (eea076fa)
+- fix(operational-twin): widen focus event flatMap inference (537c2673)
+- test(operational-twin): type focus event labels as strings (bd916c9d)
+- Merge pull request #391 from Boym323/feat/aircraft-operational-focus-v1 (409d2d4b)
+
+</details>
+
+## [1.0.258] - 2026-10-03
+
+Changes since v1.0.257.
+
+### Added
+
+- Implement RadarTrafficHero component and traffic presentation logic (a9fd6dcb)
+
+### Documentation
+
+- Update changelog for v1.0.258 (fcc9c819)
+
+### Maintenance
+
+- Add TypeScript SDK path to VSCode settings (b0ae168f)
+- Instrument prospective persistence failures (059a5757)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore: add TypeScript SDK path to VSCode settings (b0ae168f)
+- chore: instrument prospective persistence failures (059a5757)
+- Merge pull request #236 from Boym323/fix/predictive-persistence-diagnostics (b7ba7644)
+- feat: implement RadarTrafficHero component and traffic presentation logic (a9fd6dcb)
+- Merge remote-tracking branch 'origin/main' (fc97cb38)
+- docs: update changelog for v1.0.258 (fcc9c819)
+
+</details>
+
+## [1.0.243] - 2026-10-02
+
+Changes since v1.0.242.
+
+**Features touched:** Navigation Integrity, Watchlist, Alerts & Fleet.
+
+### Fixed
+
+- Resolve canonical FlightEvent ids before occurrence persistence (8a82ed03)
+
+### Documentation
+
+- Update changelog for v1.0.243 (6c2b0649)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(alerts): resolve canonical FlightEvent ids before occurrence persistence (8a82ed03)
+- docs: update changelog for v1.0.243 (6c2b0649)
+
+</details>
+
+## [1.0.239] - 2026-10-02
+
+Changes since v1.0.238.
+
+### Documentation
+
+- Update changelog for v1.0.238 (7dc0403b)
+- Update changelog for v1.0.239 (37086cef)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: update changelog for v1.0.238 (7dc0403b)
+- docs: update changelog for v1.0.239 (37086cef)
+
+</details>
+
+## [1.0.225] - 2026-09-29
+
+Changes since v1.0.224.
+
+### Added
+
+- Add integration tests and documentation for weather batch insert with PostgreSQL (dbea4b85)
+
+### Documentation
+
+- Update changelog for v1.0.225 (111a3c2c)
+
+### Maintenance
+
+- Sync generated repository metadata (3fa85cc6)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (3fa85cc6)
+- Merge pull request #226 from Boym323/automation/repository-metadata (740e7233)
+- feat: add integration tests and documentation for weather batch insert with PostgreSQL (dbea4b85)
+- docs: update changelog for v1.0.225 (111a3c2c)
+
+</details>
+
+## [1.0.224] - 2026-09-29
+
+Changes since v1.0.223.
+
+### Added
+
+- Enhance weather observation persistence with batch fallback mode and diagnostics (1aebb6fd)
+
+### Documentation
+
+- Update changelog for v1.0.224 (f110956a)
+
+### Maintenance
+
+- Sync generated repository metadata (a993bb62)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (a993bb62)
+- Merge pull request #225 from Boym323/automation/repository-metadata (e67c1507)
+- feat: enhance weather observation persistence with batch fallback mode and diagnostics (1aebb6fd)
+- docs: update changelog for v1.0.224 (f110956a)
+
+</details>
+
+## [1.0.215] - 2026-09-29
+
+Changes since v1.0.214.
+
+### Added
+
+- Add configurable checkpoint intervals and modes for weather data persistence (0d3b24b9)
+
+### Documentation
+
+- Update changelog for v1.0.215 (e09a9ab0)
+
+### Maintenance
+
+- Sync generated repository metadata (01f03a3a)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (01f03a3a)
+- Merge pull request #216 from Boym323/automation/repository-metadata (ddef4360)
+- feat(persistence): add configurable checkpoint intervals and modes for weather data persistence (0d3b24b9)
+- docs: update changelog for v1.0.215 (e09a9ab0)
+
+</details>
+
+## [1.0.213] - 2026-09-29
+
+Changes since v1.0.212.
+
+### Documentation
+
+- Update changelog for v1.0.213 (89ba0ff0)
+
+### Maintenance
+
+- Sync generated repository metadata (d211dbb3)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (d211dbb3)
+- Merge pull request #215 from Boym323/automation/repository-metadata (a354ad49)
+- docs: update changelog for v1.0.213 (89ba0ff0)
+
+</details>
+
+## [1.0.208] - 2026-09-29
+
+Changes since v1.0.207.
+
+**Features touched:** Receiver Coverage.
+
+### Fixed
+
+- Update status to production-measured and enhance metrics in receiver coverage hourly optimization (9e1c5892)
+
+### Documentation
+
+- Update changelog for v1.0.208 (8ac5b8d4)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(optimization): update status to production-measured and enhance metrics in receiver coverage hourly optimization (9e1c5892)
+- docs: update changelog for v1.0.208 (8ac5b8d4)
+
+</details>
+
+## [1.0.206] - 2026-09-29
+
+Changes since v1.0.205.
+
+**Features touched:** Aircraft & Flight Detail, System Observability.
+
+### Added
+
+- Add FlightPosition persistence shadow evaluator (e5c8ae95)
+- Add flight position shadow production data (97fba13c)
+- Add flight update policy and audit script for database write amplification (a2faee0c)
+- Add db update coalescing production data for performance measurement (7449f620)
+
+### Fixed
+
+- Keep shadow diagnostics admin-only (d27e85e9)
+- Isolate safe Aircraft update suppression (4c743904)
+
+### Performance
+
+- Suppress redundant hourly coverage lookups (ae814ed4)
+- Suppress redundant hourly coverage lookups (07a9d697)
+
+### Documentation
+
+- Update changelog for v1.0.206 (21e6cdd3)
+
+### Maintenance
+
+- Sync generated repository metadata (2ac17ce8)
+- Add runtime storage and database performance audit documentation (27a2cbe3)
+- Remove obsolete Flight policy coverage (e6cea8cc)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (2ac17ce8)
+- Merge pull request #209 from Boym323/automation/repository-metadata (bfad3bb0)
+- chore(audit): add runtime storage and database performance audit documentation (27a2cbe3)
+- feat(history): add FlightPosition persistence shadow evaluator (e5c8ae95)
+- fix(system): keep shadow diagnostics admin-only (d27e85e9)
+- feat(artifacts): add flight position shadow production data (97fba13c)
+- feat: add flight update policy and audit script for database write amplification (a2faee0c)
+- fix(db): isolate safe Aircraft update suppression (4c743904)
+- test(db): remove obsolete Flight policy coverage (e6cea8cc)
+- feat(artifacts): add db update coalescing production data for performance measurement (7449f620)
+- perf(stats): suppress redundant hourly coverage lookups (ae814ed4)
+- perf(stats): suppress redundant hourly coverage lookups (07a9d697)
+- docs: update changelog for v1.0.206 (21e6cdd3)
+
+</details>
 ## [1.0.324] - 2026-10-06
 
 Changes since v1.0.323.
