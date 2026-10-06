@@ -309,7 +309,8 @@
         "/heatmap",
         "/recap/daily",
         "/recap/weekly",
-        "/statistics"
+        "/statistics",
+        "/aircraft-types"
       ],
       "apis": [
         "/api/logbook/summary",
