@@ -792,6 +792,8 @@ export const cs = {
     emptyHint: "Jakmile přijímač zachytí odpovídající průběh letu, zobrazí se zde.",
     empty: "Zatím nebyly zjištěny žádné intelligence události.",
     evidence: "Důkazy",
+    replayEvent: "Replay ±10 min",
+    replayWindow: "Otevře Time Machine 10 minut před a 10 minut po události.",
     confidence: { low: "Nízká jistota", medium: "Střední jistota", high: "Vysoká jistota" },
     types: { APPROACH: "Pravděpodobné přiblížení", LANDING: "Pravděpodobné přistání", TAKEOFF: "Pravděpodobný vzlet", INITIAL_CLIMB: "Počáteční stoupání", CRUISE_ENTER: "Zahájení cestovního letu", GO_AROUND: "Go-around", HOLDING: "Pravděpodobný holding", HOLDING_CANDIDATE: "Kandidát na holding", HOLDING_ENDED: "Holding ukončen", LEVEL_OFF: "Vyrovnání", UNUSUAL_TURN: "Neobvyklá zatáčka", ORBIT: "Orbit", DIVERSION: "Pravděpodobné odklonění", TOP_OF_DESCENT: "Začátek klesání", AIRSPACE_ENTRY: "Vstup do vzdušného prostoru", AIRSPACE_EXIT: "Opustění vzdušného prostoru" },
     evidenceTypes: {
@@ -1966,6 +1968,8 @@ export const cs = {
     badge: "HISTORICKÝ PLAYBACK RADARU",
     subtitle: "Přehrajte zaznamenaný provoz přijímače bez ovlivnění živého radaru.",
     historical: "Historická data",
+    eventReplay: "EVENT REPLAY",
+    eventReplayWindow: "Okno ±10 min kolem události · cílové letadlo je předvybráno, pokud je v historii.",
     backToLive: "← Zpět na živý radar",
     play: "Spustit historický playback",
     pause: "Pozastavit historický playback",
