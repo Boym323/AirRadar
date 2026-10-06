@@ -91,7 +91,9 @@ transakce vytvoří první trvalou instanci `Flight` daného letadla. Restart v
 paměti ani řádek `Aircraft` bez Flight nemůže vytvořit NEW alert. Přechody
 příjmových rekordů se vyhodnocují až po připravení denní statistické agregace a
 porovnávají aktuální denní maximum s načtenými denními/celoživotními baseline.
-Stabilní event ID brání dvojímu emitování stejného rekordu v jednom procesu.
+Stabilní event ID brání dvojímu emitování stejného rekordu v jednom procesu;
+denní i celoživotní scope rekordu navíc používají sdílený alert cooldown, takže
+postupné navyšování maximální vzdálenosti nemůže vytvořit proud notifikací.
 
 Stránka živého radaru vytváří jeden `EventSource`, udržuje omezenou
 client-side živou stopu, animuje MapLibre DOM markery a po přerušení sítě se

@@ -190,7 +190,9 @@ An in-memory restart or an `Aircraft` row without a Flight cannot create a NEW
 alert. Reception-record transitions are evaluated only after the daily
 statistics aggregate is ready and compare the current daily maximum with the
 loaded daily/lifetime baselines. Stable event IDs prevent the same record from
-being emitted twice in one process.
+being emitted twice in one process; each daily and lifetime record scope also
+uses the shared alert cooldown, so incremental maximum-distance updates cannot
+become a notification stream.
 
 The live radar page creates one `EventSource`, maintains a bounded client-side
 live trail, animates MapLibre DOM markers, and reconnects through the browser's
