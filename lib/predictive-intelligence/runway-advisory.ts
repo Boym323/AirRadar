@@ -17,7 +17,7 @@ export interface PublicRunwayAdvisory {
   confidence: PredictionConfidence;
   modelVersion: PredictiveFlightState["modelVersion"];
   provenance: "predicted";
-  evidence: ExplainablePredictionEvidence[];
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 export interface AdminRunwayAdvisoryPreview {
@@ -36,7 +36,7 @@ export interface AdminRunwayAdvisoryPreview {
   coverage: number | null;
   modelVersion: PredictiveFlightState["modelVersion"] | null;
   provenance: "predicted";
-  evidence: ExplainablePredictionEvidence[];
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 type RunwayReadinessResult = PredictiveReadinessCapabilityResult<{
