@@ -28,6 +28,7 @@ const primaryNavigation = [
 ] as const;
 
 const moreNavigation = [
+  { href: "/discover", label: t.locale.startsWith("cs") ? "Objevovat" : "Discover" },
   { href: "/operations", label: t.operations.title },
   { href: "/intelligence", label: t.intelligence.title },
   { href: "/alerts", label: t.alerts.title },
@@ -199,6 +200,7 @@ export function MobileBottomNav() {
         </summary>
         <div>
           <Link href="/operations">{t.operations.title}</Link>
+          <Link href="/discover">{t.locale.startsWith("cs") ? "Objevovat" : "Discover"}</Link>
           <Link href="/fleet">{t.fleet.title}</Link>
           <Link href="/intelligence">{t.intelligence.title}</Link>
           <Link href="/alerts">{t.alerts.title}</Link>
