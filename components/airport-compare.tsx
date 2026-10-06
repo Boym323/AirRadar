@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import type { Airport } from "@/lib/airports/types";
 import type { FlightCategory, MetarObservation } from "@/lib/weather/types";
 import { t } from "@/lib/i18n";
@@ -82,6 +83,10 @@ function normalizeCode(value: string): string {
 
 function validIcao(value: string): boolean {
   return /^[A-Z0-9]{4}$/.test(value);
+}
+
+function airportHref(code: string): Route {
+  return ("/airports/" + encodeURIComponent(code)) as Route;
 }
 
 function weatherVariant(category: FlightCategory | null): "success" | "warning" | "danger" | "neutral" {
@@ -402,8 +407,8 @@ export function AirportCompare() {
               ))}
             </div>
             <div className={styles.links}>
-              <Link href={"/airports/" + encodeURIComponent(leftCode)}>{copy.openAirport} · {leftCode}</Link>
-              <Link href={"/airports/" + encodeURIComponent(rightCode)}>{copy.openAirport} · {rightCode}</Link>
+              <Link href={airportHref(leftCode)}>{copy.openAirport} · {leftCode}</Link>
+              <Link href={airportHref(rightCode)}>{copy.openAirport} · {rightCode}</Link>
             </div>
           </Panel>
 
