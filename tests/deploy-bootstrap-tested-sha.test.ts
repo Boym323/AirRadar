@@ -12,6 +12,7 @@ describe("production deploy checkout bootstrap", () => {
     expect(deploy).toBeGreaterThan(align);
 
     const bootstrap = workflow.slice(align, deploy);
+    expect(bootstrap).toContain('git_prod=(sudo -n git -c "safe.directory=${repo}" -C "${repo}")');
     expect(bootstrap).toContain('fetch origin main');
     expect(bootstrap).toContain('fetched_sha="$("${git_prod[@]}" rev-parse FETCH_HEAD)"');
     expect(bootstrap).toContain('if [[ "${fetched_sha}" != "${GITHUB_SHA}" ]]');
