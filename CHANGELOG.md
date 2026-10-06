@@ -10,6 +10,133 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.328] - 2026-10-06
+
+Changes since v1.0.327.
+
+**Features touched:** Live Radar, Operational Digital Twin.
+
+### Added
+
+- Add focus navigation projection (b3179118)
+- Add previous next operational focus navigation (79abac5e)
+- Add operational focus navigation copy (d3305756)
+- Localize operational focus navigation copy (0882d4de)
+- Add operational focus change intelligence (e78d2b6a)
+- Track operational focus changes across refreshes (d4fe9438)
+- Pass focus change intelligence into drawer (bb0ed354)
+- Surface focus changes in aircraft situation (6559d226)
+- Render operational focus change intelligence (c8c6e1d6)
+- Add focus change intelligence copy (5f404856)
+- Localize focus change intelligence copy (1e9fe38e)
+- Reapply app/api/operations/situation/route.ts (9a6e6407)
+- Reapply components/radar/radar-operations-center.module.css (153ff660)
+- Reapply components/radar/radar-operations-center.tsx (a808485c)
+- Restore lib/operational-twin/regional-focus-queue.ts (b5155783)
+- Restore tests/regional-focus-queue.test.ts (eba0af92)
+- Rebase regional focus queue copy (e23c09c7)
+- Localize rebased regional focus queue copy (260b5146)
+- Reapply app/api/admin/operational-twin/calibration/route.ts (9c42ebef)
+- Reapply components/digital-twin-calibration-center.tsx (4e60e562)
+- Reapply lib/server/aircraft-state.ts (0ebec074)
+- Reapply lib/server/operational-twin.ts (bc2ed491)
+- Restore lib/operational-twin/aircraft-operational-focus-outcome.ts (12d3976e)
+- Restore tests/aircraft-operational-focus-outcome-boundary.test.ts (6fbcb6c1)
+- Restore tests/aircraft-operational-focus-outcome.test.ts (299eca4a)
+- Rebase focus outcome calibration copy (7fb66067)
+- Localize rebased focus outcome calibration copy (9747692b)
+- Reapply lib/operational-twin/index.ts (7fa839e7)
+- Reapply lib/operational-twin/types.ts (7e05f94b)
+- Restore shadow implementation (fde76974)
+- Integrate quality shadow with current twin server (2c0ef62f)
+
+### Documentation
+
+- Document operational focus navigation (9185188d)
+- Localize operational focus navigation (fcec8420)
+- Document focus change intelligence (892b552b)
+- Localize focus change intelligence (a4f8e5bd)
+- Rebase regional focus queue (57928032)
+- Localize rebased regional focus queue (4b9bd11c)
+- Rebase operational focus outcome validation (c1081265)
+- Localize rebased operational focus outcome validation (35ef49e6)
+- Rebase trajectory quality v2 (3b6254fa)
+- Localize rebased trajectory quality v2 (e34c850e)
+
+### Maintenance
+
+- Add operational focus navigation controls (a9f31e2e)
+- Cover focus navigation order (ae818bc1)
+- Lock focus navigation boundary (a1631e0c)
+- Sync generated repository metadata (#396) (01538f6e)
+- Add focus change presentation (6ff13514)
+- Cover focus change intelligence (4f23c0b6)
+- Lock focus change refresh boundary (919b42b6)
+- Reapply boundary coverage (33897819)
+- Restore tests/operational-twin-trajectory-quality-v2-boundary.test.ts (6ca846c5)
+- Restore tests/operational-twin-trajectory-quality-v2.test.ts (2849ccf6)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat(operational-twin): add focus navigation projection (b3179118)
+- feat(radar): add previous next operational focus navigation (79abac5e)
+- style(radar): add operational focus navigation controls (a9f31e2e)
+- feat(i18n): add operational focus navigation copy (d3305756)
+- feat(i18n): localize operational focus navigation copy (0882d4de)
+- test(operational-twin): cover focus navigation order (ae818bc1)
+- test(radar): lock focus navigation boundary (a1631e0c)
+- docs: document operational focus navigation (9185188d)
+- docs: localize operational focus navigation (fcec8420)
+- Merge pull request #398 from Boym323/feat/aircraft-operational-focus-navigation-v1 (6a7b16d1)
+- chore(metadata): sync generated repository metadata (#396) (01538f6e)
+- feat(operational-twin): add operational focus change intelligence (e78d2b6a)
+- feat(radar): track operational focus changes across refreshes (d4fe9438)
+- feat(radar): pass focus change intelligence into drawer (bb0ed354)
+- feat(radar): surface focus changes in aircraft situation (6559d226)
+- feat(radar): render operational focus change intelligence (c8c6e1d6)
+- style(radar): add focus change presentation (6ff13514)
+- feat(i18n): add focus change intelligence copy (5f404856)
+- feat(i18n): localize focus change intelligence copy (1e9fe38e)
+- test(operational-twin): cover focus change intelligence (4f23c0b6)
+- test(radar): lock focus change refresh boundary (919b42b6)
+- docs: document focus change intelligence (892b552b)
+- docs: localize focus change intelligence (a4f8e5bd)
+- Merge pull request #403 from Boym323/feat/operational-focus-change-intelligence-v1 (998e2a1d)
+- feat(regional-focus): reapply app/api/operations/situation/route.ts (9a6e6407)
+- feat(regional-focus): reapply components/radar/radar-operations-center.module.css (153ff660)
+- feat(regional-focus): reapply components/radar/radar-operations-center.tsx (a808485c)
+- feat(regional-focus): restore lib/operational-twin/regional-focus-queue.ts (b5155783)
+- feat(regional-focus): restore tests/regional-focus-queue.test.ts (eba0af92)
+- test(regional-focus): reapply boundary coverage (33897819)
+- docs: rebase regional focus queue (57928032)
+- docs: localize rebased regional focus queue (4b9bd11c)
+- feat(i18n): rebase regional focus queue copy (e23c09c7)
+- feat(i18n): localize rebased regional focus queue copy (260b5146)
+- Merge pull request #404 from Boym323/feat/regional-focus-queue-v1 (33c1329a)
+- feat(focus-outcome): reapply app/api/admin/operational-twin/calibration/route.ts (9c42ebef)
+- feat(focus-outcome): reapply components/digital-twin-calibration-center.tsx (4e60e562)
+- feat(focus-outcome): reapply lib/server/aircraft-state.ts (0ebec074)
+- feat(focus-outcome): reapply lib/server/operational-twin.ts (bc2ed491)
+- feat(focus-outcome): restore lib/operational-twin/aircraft-operational-focus-outcome.ts (12d3976e)
+- feat(focus-outcome): restore tests/aircraft-operational-focus-outcome-boundary.test.ts (6fbcb6c1)
+- feat(focus-outcome): restore tests/aircraft-operational-focus-outcome.test.ts (299eca4a)
+- docs: rebase operational focus outcome validation (c1081265)
+- docs: localize rebased operational focus outcome validation (35ef49e6)
+- feat(i18n): rebase focus outcome calibration copy (7fb66067)
+- feat(i18n): localize rebased focus outcome calibration copy (9747692b)
+- Merge pull request #405 from Boym323/feat/operational-focus-outcome-validation-v1 (4403e81a)
+- feat(trajectory-v2): reapply lib/operational-twin/index.ts (7fa839e7)
+- feat(trajectory-v2): reapply lib/operational-twin/types.ts (7e05f94b)
+- feat(trajectory-v2): restore shadow implementation (fde76974)
+- test(trajectory-v2): restore tests/operational-twin-trajectory-quality-v2-boundary.test.ts (6ca846c5)
+- test(trajectory-v2): restore tests/operational-twin-trajectory-quality-v2.test.ts (2849ccf6)
+- feat(trajectory-v2): integrate quality shadow with current twin server (2c0ef62f)
+- docs: rebase trajectory quality v2 (3b6254fa)
+- docs: localize rebased trajectory quality v2 (e34c850e)
+- Merge pull request #406 from Boym323/feat/digital-twin-trajectory-quality-v2 (76eb08ae)
+
+</details>
 ## [1.0.327] - 2026-10-06
 
 Changes since v1.0.326.
