@@ -26,6 +26,12 @@ export interface OperationalTwinAircraftState {
   trackDeg: number | null;
   verticalRateFpm: number | null;
   onGround: boolean;
+  /** Optional aircraft metadata and ADS-B target-state inputs used only by additive shadow models. */
+  aircraftType?: string | null;
+  aircraftDescription?: string | null;
+  category?: string | null;
+  selectedAltitudeFt?: number | null;
+  selectedAltitudeSource?: "MCP/FCU" | "FMS" | "N/A" | null;
   stateSource?: "CANONICAL" | "TRACK_FUSION";
   trackFusionReadiness?: "PASS" | "WAIT" | "FAIL" | null;
 }

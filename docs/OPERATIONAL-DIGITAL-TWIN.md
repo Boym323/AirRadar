@@ -632,6 +632,14 @@ The V2 shadow preserves every canonical horizontal coordinate, track, uncertaint
 
 V2 never self-promotes. `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus and public event timing continue to consume the canonical corridor. A separate manual Trajectory Quality Promotion V1 may replace only the altitude values of the corridor returned for presentation after graduation PASS. The shadow adds no provider call, network request, database path or poller and explicitly carries `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` and `NOT_FMS_INTENT` limitations.
 
+## Digital Twin Trajectory Quality V3 — Performance Aware Shadow
+
+Trajectory Quality V3 is an additive shadow on top of V2. It keeps the canonical horizontal path and all downstream semantics unchanged while testing a stronger vertical model. V3 uses the local aircraft metadata description (for example the ICAO-style propulsion description), ADS-B emitter category and current target-state selected altitude when those signals are available.
+
+The selected-altitude path is accepted only while the aircraft is already in a matching observed climb or descent and the selected altitude is in the same direction. It is treated as a bounded level-off target, never as an ATC clearance or verified FMS intent. When selected altitude cannot be used, a conservative propulsion/size performance envelope clips extreme observed vertical rate and applies a class-specific taper. If neither enhancement is supported by current evidence, V3 copies V2 exactly.
+
+V3 is shadow-only: `autoPromotion=false`, `canonicalRemainsActive=true`, and V2 remains the current promotion candidate. It exposes 5/15/30-minute canonical/V2/V3 altitude checkpoints for the next independent outcome-validation stage. The model explicitly reports `PERFORMANCE_ENVELOPE_HEURISTIC`, `SELECTED_ALTITUDE_IS_NOT_CLEARANCE`, `NO_DESTINATION_VERTICAL_PROFILE`, `HORIZONTAL_PATH_UNCHANGED` and `NOT_FMS_INTENT`.
+
 ## Trajectory Quality Outcome Validation V1
 
 Trajectory Quality Outcome Validation V1 prospectively pairs the canonical altitude projection and the Trajectory Quality V2 shadow against the same later LOCAL receiver altitude truth at 5, 15 and 30 minutes. Capture is request-driven from the existing Digital Twin builder, including the existing bounded refresh-sampled calibration requests. Truth is observed from the normal LOCAL receiver refresh; no additional timer, provider call, endpoint or network request is introduced.

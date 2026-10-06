@@ -20,6 +20,7 @@ import {
   buildOperationalTwinEvents,
   buildOperationalTwinSituation,
   buildOperationalTwinTrajectoryQualityV2,
+  buildOperationalTwinTrajectoryQualityV3,
   buildOperationalTwinWindTimingShadow,
   applyOperationalTwinTrajectoryQualityPromotion,
   applyOperationalTwinWindTimingPromotion,
@@ -128,6 +129,11 @@ function aircraftState(
       ? observedFusionNumber(fused.verticalRate, live.verticalRate ?? live.baroRate ?? live.geomRate ?? null)
       : live.verticalRate ?? live.baroRate ?? live.geomRate ?? null,
     onGround: live.onGround,
+    aircraftType: live.enrichment?.metadata?.icaoTypeCode ?? live.aircraftType ?? null,
+    aircraftDescription: live.enrichment?.metadata?.aircraftDescription ?? live.aircraftDescription ?? null,
+    category: live.category ?? null,
+    selectedAltitudeFt: live.targetState?.selectedAltitudeFt ?? null,
+    selectedAltitudeSource: live.targetState?.selectedAltitudeSource ?? null,
     stateSource: fusionEligible ? "TRACK_FUSION" : "CANONICAL",
     trackFusionReadiness: readiness.decision,
   };
@@ -284,6 +290,11 @@ export async function getOperationalTwinForAircraft(
     aircraft: state,
     corridor,
   });
+  const trajectoryQualityV3 = buildOperationalTwinTrajectoryQualityV3({
+    aircraft: state,
+    corridor,
+    trajectoryQualityV2,
+  });
 
   const airspacePlan: AirspacePlanSnapshot | null = airspaceResult.value;
   const sigmets: SigmetSnapshot | null = sigmetResult.value;
@@ -349,6 +360,7 @@ export async function getOperationalTwinForAircraft(
   });
   situation.navigationIntegrityCorridor = navigationIntegrityCorridor;
   situation.trajectoryQualityV2 = trajectoryQualityV2;
+  situation.trajectoryQualityV3 = trajectoryQualityV3;
 
   // Truth-first V2 observes the current independent route/SIGMET truth before
   // capturing this request's future predictions, preventing self-validation.

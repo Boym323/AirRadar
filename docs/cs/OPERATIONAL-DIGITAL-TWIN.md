@@ -611,6 +611,14 @@ V2 shadow zachovává všechny canonical horizontální souřadnice, track, hodn
 V2 se nikdy nepromuje samo. `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus i veřejné event timing dál používají canonical corridor. Samostatná ruční Trajectory Quality Promotion V1 může po graduation PASS nahradit pouze výškové hodnoty corridoru vraceného pro prezentaci. Shadow nepřidává provider call, síťový request, databázovou cestu ani poller a výslovně nese omezení `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` a `NOT_FMS_INTENT`.
 
 
+## Digital Twin Trajectory Quality V3 — Performance Aware Shadow
+
+Trajectory Quality V3 je aditivní shadow vrstva nad V2. Canonical horizontální cesta i všechny downstream sémantiky zůstávají beze změny; V3 pouze testuje silnější vertikální model. Využívá lokální metadata letadla (zejména ICAO-style popis pohonu), ADS-B emitter category a aktuální target-state selected altitude, pokud jsou tyto signály dostupné.
+
+Selected altitude se přijme jen tehdy, když je letadlo už pozorovaně ve stoupání nebo klesání a zvolená výška leží ve stejném směru. Používá se jako omezený level-off target, nikdy jako ATC clearance ani jako ověřený FMS intent. Pokud selected altitude nelze použít, konzervativní performance envelope podle pohonu/velikosti omezí extrémní observed vertical rate a použije class-specific taper. Pokud aktuální evidence nepodporuje ani jedno zlepšení, V3 přesně kopíruje V2.
+
+V3 je pouze shadow: `autoPromotion=false`, `canonicalRemainsActive=true` a V2 zůstává aktuálním promotion kandidátem. V3 vystavuje canonical/V2/V3 altitude checkpointy pro 5/15/30 minut, aby mohla následovat nezávislá outcome validation. Model explicitně uvádí omezení `PERFORMANCE_ENVELOPE_HEURISTIC`, `SELECTED_ALTITUDE_IS_NOT_CLEARANCE`, `NO_DESTINATION_VERTICAL_PROFILE`, `HORIZONTAL_PATH_UNCHANGED` a `NOT_FMS_INTENT`.
+
 ## Trajectory Quality Outcome Validation V1
 
 Trajectory Quality Outcome Validation V1 prospektivně páruje canonical projekci výšky a Trajectory Quality V2 shadow proti stejné pozdější LOCAL receiver truth v horizontech 5, 15 a 30 minut. Capture je request-driven z existujícího Digital Twin builderu včetně stávajících omezených refresh-sampled kalibračních requestů. Truth se pozoruje z běžného LOCAL receiver refreshu; nevzniká další timer, provider call, endpoint ani síťový request.
