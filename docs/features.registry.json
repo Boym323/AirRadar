@@ -764,6 +764,27 @@
       ]
     },
     {
+      "id": "route-network-explorer",
+      "name": "Route Network Explorer",
+      "category": "analytics / routes",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates, including top origin/destination pairs and airport navigation without FlightPosition scans.",
+      "pages": [
+        "/routes"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "route-network-explorer"
+      ],
+      "changelogKeywords": [
+        "route network",
+        "route explorer",
+        "top routes",
+        "origin destination"
+      ]
+    },
+    {
       "id": "aircraft-discovery",
       "name": "Aircraft Discovery",
       "category": "discovery / spotting",
