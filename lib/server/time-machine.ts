@@ -28,10 +28,10 @@ function parseInstant(value: string | null): Date {
   if (!value || !Number.isFinite(Date.parse(value))) throw new TimeMachineValidationError("Invalid timestamp");
   return new Date(value);
 }
-function bounds(fromValue: string | null, toValue: string | null): { from: Date; to: Date } {
+function bounds(fromValue: string | null, toValue: string | null, maxWindowMs = TIME_MACHINE_MAX_WINDOW_MS): { from: Date; to: Date } {
   const from = parseInstant(fromValue); const to = parseInstant(toValue);
   if (to <= from) throw new TimeMachineValidationError("Reversed time range");
-  if (to.getTime() - from.getTime() > TIME_MACHINE_MAX_WINDOW_MS) throw new TimeMachineValidationError("Historical window is too large");
+  if (to.getTime() - from.getTime() > maxWindowMs) throw new TimeMachineValidationError("Historical window is too large");
   return { from, to };
 }
 
@@ -46,8 +46,8 @@ export async function getTimeMachineRange(): Promise<TimeMachineRange> {
   } catch { throw new TimeMachineDatabaseUnavailableError(); }
 }
 
-export async function getTimeMachineWindow(fromValue: string | null, toValue: string | null): Promise<{ windowStart: string; windowEnd: string; aircraft: HistoricalAircraftTrack[]; events: TimeMachineEvent[]; truncated: boolean }> {
-  const { from, to } = bounds(fromValue, toValue);
+export async function getTimeMachineWindow(fromValue: string | null, toValue: string | null, maxWindowMs = TIME_MACHINE_MAX_WINDOW_MS): Promise<{ windowStart: string; windowEnd: string; aircraft: HistoricalAircraftTrack[]; events: TimeMachineEvent[]; truncated: boolean }> {
+  const { from, to } = bounds(fromValue, toValue, maxWindowMs);
   const database = getPrisma() as unknown as TimeMachineDb | null;
   if (!database) throw new TimeMachineDatabaseUnavailableError();
   try {
