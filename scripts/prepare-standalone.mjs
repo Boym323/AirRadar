@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const distDir = resolve(process.argv[2] || ".next");
@@ -30,17 +30,31 @@ const distDirConfig = serverSource.match(/"distDir":"([^"]+)"/);
 if (!distDirConfig) {
   throw new Error(`Standalone server has no embedded distDir: ${standaloneServer}`);
 }
-const normalizedServerSource = serverSource.replace(
+let normalizedServerSource = serverSource.replace(
   distDirConfig[0],
   '"distDir":"./.next"',
 );
-if (!normalizedServerSource.includes('"distDir":"./.next"')) {
+// Next also embeds the temporary build root separately. Normalize that value
+// as well, otherwise the standalone server still looks for the build under
+// the pre-activation `.next-release-*` directory.
+normalizedServerSource = normalizedServerSource.replace(/"distDirRoot":"\.next-release-[^"]+"/, '"distDirRoot":".next"');
+if (!normalizedServerSource.includes('"distDir":"./.next"') || !normalizedServerSource.includes('"distDirRoot":".next"')) {
   throw new Error(`Could not normalize standalone distDir: ${standaloneServer}`);
 }
 writeFileSync(standaloneServer, normalizedServerSource, "utf8");
 
 rmSync(standaloneStaticDir, { recursive: true, force: true });
 mkdirSync(resolve(standaloneDir, ".next"), { recursive: true });
+// The generated server runs with `standalone` as cwd and resolves its
+// relative distDir there. Publish the build metadata alongside the copied
+// static assets so it can find BUILD_ID and the server manifests.
+for (const entry of readdirSync(distDir)) {
+  if (entry === "standalone") continue;
+  const source = resolve(distDir, entry);
+  const target = resolve(standaloneDir, ".next", entry);
+  rmSync(target, { recursive: true, force: true });
+  cpSync(source, target, { recursive: true });
+}
 if (existsSync(sourceStaticDir)) {
   cpSync(sourceStaticDir, standaloneStaticDir, { recursive: true });
 }
