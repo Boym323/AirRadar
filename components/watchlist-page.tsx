@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { WatchlistActivity } from "@/components/watchlist-activity";
+import { WatchlistIntelligenceV2 } from "@/components/watchlist-intelligence-v2";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getTranslations, type LocaleDictionary, type LocaleKey } from "@/lib/i18n";
 import type { PublicWatchlistResponse, PublicWatchlistRule } from "@/lib/server/watchlist-store";
@@ -453,6 +454,7 @@ export function WatchlistPage() {
         <small>{dictionary.watchlist.serverConfigured}</small>
       </section>
 
+      <WatchlistIntelligenceV2 locale={locale} rules={rules} />
       <WatchlistActivity locale={locale} />
     </main>
   );

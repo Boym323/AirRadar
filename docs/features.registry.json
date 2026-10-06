@@ -248,7 +248,9 @@
       "status": "production",
       "introducedVersion": null,
       "summary": "Current and historical radar, METAR, wind, SIGMET, AUP/UUP map context, aircraft-observed weather, bounded PIREP/AIREP enrichment, and explainable multi-source Weather Fusion.",
-      "pages": [],
+      "pages": [
+        "/weather"
+      ],
       "apis": [
         "/api/aircraft/:hex/weather-fusion",
         "/api/map-context/at",
@@ -402,7 +404,9 @@
       "status": "production",
       "introducedVersion": null,
       "summary": "ATC sectors, transitions, validation, ATS routes, procedures, planned airspace activity, and bounded global NAVAID/FIX reference data.",
-      "pages": [],
+      "pages": [
+        "/airspace"
+      ],
       "apis": [
         "/api/airspace/activity",
         "/api/atc/sectors",
@@ -772,18 +776,12 @@
       "introducedVersion": null,
       "summary": "Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates, including top origin/destination pairs and airport navigation without FlightPosition scans.",
       "pages": [
-        "/routes"
+        "/routes",
+        "/routes/:origin/:destination"
       ],
       "apis": [],
-      "changelogScopes": [
-        "route-network-explorer"
-      ],
-      "changelogKeywords": [
-        "route network",
-        "route explorer",
-        "top routes",
-        "origin destination"
-      ]
+      "changelogScopes": ["route-network-explorer"],
+      "changelogKeywords": ["route network", "route explorer"]
     },
     {
       "id": "aircraft-discovery",
@@ -791,20 +789,31 @@
       "category": "discovery / spotting",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded discovery page for live, new, rare, returning, watchlisted, emergency and reception-record aircraft using the existing Logbook Summary and direct watchlist handoff.",
+      "summary": "Bounded discovery page for notable aircraft.",
+      "pages": ["/discover"],
+      "apis": [],
+      "changelogScopes": ["aircraft-discovery"],
+      "changelogKeywords": ["aircraft discovery", "discover aircraft"]
+    },
+    {
+      "id": "explainable-prediction",
+      "name": "Explainable Prediction",
+      "category": "intelligence / prediction",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Why/Proč evidence panels for readiness-gated ETA, runway, runway-change and trajectory advisories using a small capability-specific whitelist from the existing canonical prediction evidence.",
       "pages": [
-        "/discover"
+        "/aircraft/:hex"
       ],
       "apis": [],
       "changelogScopes": [
-        "aircraft-discovery"
+        "explainable-prediction"
       ],
       "changelogKeywords": [
-        "aircraft discovery",
-        "discover aircraft",
-        "rare aircraft",
-        "returning aircraft",
-        "new aircraft"
+        "explainable prediction",
+        "prediction evidence",
+        "why prediction",
+        "prediction rationale"
       ]
     }
   ]

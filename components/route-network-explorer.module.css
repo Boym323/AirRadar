@@ -186,6 +186,10 @@
   border-radius: var(--radius-sm);
 }
 
+.routeDetailAction {
+  grid-column: 1 / -1;
+}
+
 .airportActions span,
 .airportActions small {
   color: var(--text-muted);

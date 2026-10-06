@@ -1,0 +1,86 @@
+.root {
+  margin-top: .7rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  padding-top: .6rem;
+}
+
+.root summary {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  width: fit-content;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: .76rem;
+  font-weight: 750;
+}
+
+.body {
+  display: grid;
+  gap: .55rem;
+  margin-top: .55rem;
+  padding: .65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-elevated) 82%, transparent);
+}
+
+.context {
+  display: flex;
+  gap: .35rem;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+  font-size: .67rem;
+}
+
+.context span {
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 999px;
+  padding: .22rem .38rem;
+}
+
+.list {
+  display: grid;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .7rem;
+  align-items: baseline;
+  padding-bottom: .3rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
+}
+
+.list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.list span {
+  color: var(--text-secondary);
+  font-size: .72rem;
+}
+
+.list strong {
+  font-size: .75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.reasons {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text-muted);
+  font-size: .68rem;
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .7rem;
+}
