@@ -63,8 +63,9 @@ This is the fast production deployment path: CI has already run typecheck, the
 full Vitest suite, production/browser gates, and the performance baseline. The
 release script validates the artifact against the exact commit and resolved
 release metadata, skips the duplicate quality suite and duplicate Next build,
-then runs dependency installation, Prisma generation/migrations, systemd
-validation, atomic build activation, restart, and local/public health checks.
+then runs deterministic dependency installation from package-lock, Prisma
+generation/migrations, systemd validation, atomic build activation, restart,
+and local/public health checks.
 The explicit commit pin and artifact manifest prevent deploying a different or
 unvalidated build.
 
