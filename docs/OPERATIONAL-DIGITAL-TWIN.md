@@ -623,3 +623,11 @@ The drawer also provides bounded previous/next navigation across the server-orde
 The radar compares consecutive successful Operational Focus snapshots for the same selected aircraft inside the browser's existing 60-second situation refresh. It does not add another request, server endpoint, provider call, persistence path or polling loop. The comparison is session-local and resets to unknown when the current situation/focus response is unavailable.
 
 Stable focus IDs classify changes as `NEW`, `ESCALATED`, `DEESCALATED`, `UPDATED` or `RESOLVED`. Level changes take precedence over generic updates. `UPDATED` is reserved for confidence/semantic changes or an absolute predicted-time shift of at least 60 seconds; the natural decrease of relative `offsetMinutes` as wall-clock time advances is not treated as a change. Missing data is never interpreted as resolution. The drawer shows bounded per-item change badges and up to three recently resolved items from the immediately preceding valid snapshot.
+
+## Digital Twin Trajectory Quality V2
+
+Trajectory Quality V2 is an additive shadow profile over the existing canonical 30-minute corridor. It classifies the current vertical phase as CLIMB, CRUISE, DESCENT, LEVEL or UNKNOWN and replaces the canonical fixed ten-minute vertical-rate hold only inside the shadow: climb/descent rate is held for three minutes and then linearly tapered to zero by minute twelve, while cruise/level flight holds the observed altitude.
+
+The V2 shadow preserves every canonical horizontal coordinate, track, uncertainty value and timestamp. It exposes exact 5/15/30-minute canonical-versus-quality altitude checkpoints so later outcome validation can measure whether the tapered profile improves vertical projection. Missing altitude fails closed to INSUFFICIENT.
+
+V2 is deliberately not promoted. `canonicalRemainsActive=true` and `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus and public event timing continue to consume the canonical corridor. The shadow adds no provider call, network request, database path or poller and explicitly carries `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` and `NOT_FMS_INTENT` limitations.
