@@ -19,6 +19,7 @@ import {
 import type { FlightEventType } from "@/lib/intelligence/types";
 import type { OperationalAttentionSummary } from "@/lib/operational-twin/operational-attention";
 import type { RegionalSituationGraph } from "@/lib/operational-twin/regional-situation";
+import type { RegionalFocusQueue } from "@/lib/operational-twin/regional-focus-queue";
 import {
   REGIONAL_ATTENTION_MAP_FOCUS_EVENT,
   regionalAttentionHorizonForOffset,
@@ -51,6 +52,7 @@ type RegionalAttentionGraduationStatus = {
 
 type RegionalOperationsResponse = RegionalSituationGraph & {
   attention: OperationalAttentionSummary;
+  focusQueue: RegionalFocusQueue;
   attentionGraduation: RegionalAttentionGraduationStatus;
 };
 
@@ -522,6 +524,41 @@ export function RadarOperationsCenter() {
                 ) : null}
                 {regionalStatus === "loading" && !regionalSituation ? (
                   <small className={styles.regionalUnavailable}>{t.common.loading}</small>
+                ) : null}
+                {regionalSituation?.focusQueue.items.length ? (
+                  <div className={styles.focusQueue} data-testid="regional-focus-queue">
+                    <div className={styles.focusQueueHeader}>
+                      <strong>{t.intelligence.operationsFocusQueueTitle}</strong>
+                      <small>{t.intelligence.operationsFocusQueueSummary(
+                        regionalSituation.focusQueue.attention,
+                        regionalSituation.focusQueue.watch,
+                      )}</small>
+                    </div>
+                    <div className={styles.focusQueueList}>
+                      {regionalSituation.focusQueue.items.slice(0, 8).map((item) => (
+                        <Link
+                          className={styles.focusQueueItem}
+                          href={`/?operations=1&aircraft=${encodeURIComponent(item.icaoHex)}`}
+                          key={item.icaoHex}
+                        >
+                          <span>
+                            <strong>{item.label}</strong>
+                            <small>{item.types.map((type) => t.intelligence.operationsFocusQueueTypes[type]).join(" · ")}</small>
+                          </span>
+                          <span>
+                            <StatusBadge variant={item.level === "ATTENTION" ? "warning" : "neutral"}>
+                              {item.level === "ATTENTION"
+                                ? t.intelligence.operationsRegionalAttention
+                                : t.intelligence.operationsRegionalWatch}
+                            </StatusBadge>
+                            <small>{item.earliestProjectedOffsetMinutes === null
+                              ? t.intelligence.operationsFocusQueueCurrent
+                              : t.intelligence.operationsFocusQueueEta(item.earliestProjectedOffsetMinutes)}</small>
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
                 ) : null}
                 {regionalItems.length ? (
                   <div className={styles.regionalList}>

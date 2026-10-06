@@ -478,6 +478,12 @@ Map highlighting is fail-closed. A co-presence pair can be highlighted only when
 
 V1.1 adds no provider loop, receiver poller, database path, or second live-state authority. Destination clusters remain outside graduation and cannot unlock map highlighting.
 
+## Regional Focus Queue V1
+
+The existing `/api/operations/situation` response now includes a bounded `focusQueue` derived from the same Regional Situation Graph and Operational Attention summary. It aggregates attention signals per aircraft, ranks ATTENTION before WATCH, then earliest projected lead time and signal count, and caps the list at 20 aircraft. The Operations Center shows the first eight queue entries and links each aircraft back to the existing radar selection query.
+
+V1 intentionally does not fan out per-aircraft Digital Twin requests and does not call weather, navigation-integrity or prediction providers again. Its scope is the regional evidence already present in the one LOCAL snapshot. The response therefore carries `REGIONAL_ATTENTION_INPUT_ONLY` and `NO_PER_AIRCRAFT_DIGITAL_TWIN_FANOUT` limitations in addition to the existing operational-context/non-separation boundary.
+
 ## Truth-first Validation V2
 
 Truth-first Validation V2 expands recall measurement beyond terminal outcomes.

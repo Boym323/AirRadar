@@ -601,3 +601,69 @@
     padding: var(--space-3);
   }
 }
+
+.focusQueue {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(8, 17, 29, .42);
+}
+
+.focusQueueHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.focusQueueHeader strong {
+  font-size: 11px;
+}
+
+.focusQueueHeader small {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.focusQueueList {
+  display: grid;
+  gap: 5px;
+}
+
+.focusQueueItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.focusQueueItem:hover,
+.focusQueueItem:focus-visible {
+  border-color: var(--accent);
+}
+
+.focusQueueItem > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.focusQueueItem > span:last-child {
+  justify-items: end;
+}
+
+.focusQueueItem strong {
+  font-size: 10px;
+}
+
+.focusQueueItem small {
+  color: var(--text-muted);
+  font-size: 9px;
+}
