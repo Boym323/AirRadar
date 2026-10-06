@@ -175,3 +175,11 @@ zápis.
 
 V8 není ATC sequencing, FIDS, separační minimum, kapacita letiště, slot demand,
 bezpečnostní hodnocení ani předpověď zpoždění.
+
+## Airport Live Board V9 — Terminal Demand Horizon
+
+V9 zachovává V8 active-arrival sequence, PUBLIC ETA demand windows i semantiku approach queue a přidává oddělený rozšířený inbound horizon z celého aktuálního LOCAL receiver snapshotu. Letadlo se do horizontu dostane pouze tehdy, když má čerstvou poziční observaci, je ve vzduchu a jeho existující route destination odpovídá ICAO nebo IATA identifikátoru letiště.
+
+Rozšířený horizont není další prediction engine. Pokud je použitelný aktuální groundspeed, V9 zpřístupní omezený fallback odhad z přímé vzdálenosti a aktuálního groundspeedu nejvýše do 120 minut. Reportuje počet inbound letadel se shodnou route destination, coverage odhadů, kumulativní <=30 a <=60minutové bucket a vztah aktuálního tracku k letišti. Seznam je omezen na 12 letadel a board vykreslí nejvýše šest řádků.
+
+Tato vrstva nenahrazuje readiness-gated PUBLIC ETA ve V7/V8, nevstupuje do V8 pressure/compression/queue skóre a neodvozuje ATC pořadí, sloty, kapacitu letiště ani zpoždění. V9 znovu používá existující 30sekundový Airport Operations refresh a na serveru přečte jeden existující LOCAL aircraft snapshot; nepřidává EventSource, browser timer, databázový dotaz, provider request ani persistence cestu.
