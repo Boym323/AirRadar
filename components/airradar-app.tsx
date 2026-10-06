@@ -516,6 +516,7 @@ export function AirRadarApp() {
   const [selectedAtcContext, setSelectedAtcContext] = useState<AtcContextResult | null>(null);
   const [selectedRouteWeather, setSelectedRouteWeather] = useState<RouteWeatherContext | null>(null);
   const [selectedOperationalTwin, setSelectedOperationalTwin] = useState<OperationalTwinApiResponse | null>(null);
+  const [operationalFocusRevealVersion, setOperationalFocusRevealVersion] = useState(0);
   const [selectedIntelligenceEvents, setSelectedIntelligenceEvents] = useState<FlightIntelligenceEvent[]>([]);
   const [selectedHistoryTrail, setSelectedHistoryTrail] = useState<{ icaoHex: string; points: TrailPoint[]; flight: HistoryResponse["flight"] } | null>(null);
   const [search, setSearch] = useState("");
@@ -1479,6 +1480,21 @@ export function AirRadarApp() {
           "circle-stroke-width": 2.4,
         },
       });
+      const revealOperationalFocusFromMap = (event: MapLayerMouseEvent) => {
+        const itemId = event.features?.[0]?.properties?.itemId;
+        const hex = selectedHexRef.current;
+        if (typeof itemId !== "string" || !itemId || !hex) return;
+        router.replace(aircraftOperationalFocusRadarHref(hex, itemId), { scroll: false });
+        setOperationalFocusRevealVersion((value) => value + 1);
+      };
+      for (const layer of [
+        AIRCRAFT_OPERATIONAL_FOCUS_MAP_LINE_LAYER_ID,
+        AIRCRAFT_OPERATIONAL_FOCUS_MAP_POINT_LAYER_ID,
+      ] as const) {
+        map.on("click", layer, revealOperationalFocusFromMap);
+        map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
+      }
       const openOperationalTwinMapEvent = (event: MapLayerMouseEvent) => {
         const properties = event.features?.[0]?.properties;
         if (!properties) return;
@@ -3034,6 +3050,7 @@ export function AirRadarApp() {
             intelligenceEvents={selectedIntelligenceEvents}
             operationalTwin={selectedOperationalTwin}
             operationalFocusItemId={operationalFocusMapId}
+            operationalFocusRevealVersion={operationalFocusRevealVersion}
             onOperationalFocus={focusOperationalItemFromDrawer}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
