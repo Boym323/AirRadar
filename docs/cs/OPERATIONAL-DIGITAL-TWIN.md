@@ -619,6 +619,16 @@ Selected altitude se přijme jen tehdy, když je letadlo už pozorovaně ve stou
 
 V3 je pouze shadow: `autoPromotion=false`, `canonicalRemainsActive=true` a V2 zůstává aktuálním promotion kandidátem. V3 vystavuje canonical/V2/V3 altitude checkpointy pro 5/15/30 minut, aby mohla následovat nezávislá outcome validation. Model explicitně uvádí omezení `PERFORMANCE_ENVELOPE_HEURISTIC`, `SELECTED_ALTITUDE_IS_NOT_CLEARANCE`, `NO_DESTINATION_VERTICAL_PROFILE`, `HORIZONTAL_PATH_UNCHANGED` a `NOT_FMS_INTENT`.
 
+## Trajectory Quality Outcome Validation V2
+
+Outcome Validation V2 běží souběžně s V1 a triple-pairuje canonical altitude projekci, Trajectory Quality V2 a Trajectory Quality V3 proti stejné pozdější LOCAL receiver altitude truth v horizontech 5, 15 a 30 minut. V1 zůstává beze změny a dál napájí stávající V2 Graduation/Promotion řetězec; comparison evidence V2 je samostatná lane a nemůže ovlivnit aktuální promotion policy.
+
+Každý dokončený vzorek ukládá pouze anonymní agregované statistiky chyb. Report vystavuje altitude MAE pro canonical, V2 a V3, relativní MAE zlepšení V3 proti canonical i V2, head-to-head win rate a nejlepší model podle mean absolute error. Evidence je rozdělená podle horizontu, flight phase, V3 performance class a režimu vertikálního profilu V3, takže lze samostatně vyhodnotit selected-altitude capture i performance-envelope chování.
+
+Capture zůstává request-driven z existujícího Digital Twin builderu a truth je dál refresh-driven z existující LOCAL receiver smyčky. Nepřidává se žádný provider request, poller ani persistence raw identity letadla. Dokončené pětiminutové agregáty znovu používají existující calibration persistence tabulku pod stejnou trajectory-quality lane, ale s odlišnou V2 verzí, takže se V1 a V2 evidence po restartu nemohou smíchat.
+
+Decision V2 vyjadřuje pouze připravenost evidence: WAIT znamená nedostatečné observační okno nebo paired horizon evidence, FAIL je vyhrazen pro zralou evidenci s nedostatečným LOCAL truth coverage a PASS znamená, že triple-paired evidence je dostatečně kompletní pro pozdější V3 graduation vrstvu. V3 nikdy automaticky negraduje ani nepromuje.
+
 ## Trajectory Quality Outcome Validation V1
 
 Trajectory Quality Outcome Validation V1 prospektivně páruje canonical projekci výšky a Trajectory Quality V2 shadow proti stejné pozdější LOCAL receiver truth v horizontech 5, 15 a 30 minut. Capture je request-driven z existujícího Digital Twin builderu včetně stávajících omezených refresh-sampled kalibračních requestů. Truth se pozoruje z běžného LOCAL receiver refreshu; nevzniká další timer, provider call, endpoint ani síťový request.
