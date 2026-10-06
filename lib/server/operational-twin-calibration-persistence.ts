@@ -3,10 +3,12 @@ import {
   OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION,
   OPERATIONAL_TWIN_OUTCOME_VERSION,
   OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_VERSION,
+  OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_V2_VERSION,
   REGIONAL_ATTENTION_OUTCOME_VERSION,
   type OperationalTwinEventOutcomeValidator,
   type OperationalTwinOutcomeValidator,
   type OperationalTwinTrajectoryQualityOutcomeValidator,
+  type OperationalTwinTrajectoryQualityOutcomeV2Validator,
   type RegionalAttentionOutcomeValidator,
 } from "@/lib/operational-twin";
 import { getPrisma } from "@/lib/server/db";
@@ -41,6 +43,7 @@ export interface OperationalTwinCalibrationPersistenceStatus {
   hydratedOutcomeBuckets: number;
   hydratedEventOutcomeBuckets: number;
   hydratedTrajectoryQualityOutcomeBuckets: number;
+  hydratedTrajectoryQualityOutcomeV2Buckets: number;
   hydratedRegionalAttentionOutcomeBuckets: number;
   trackedPersistedBuckets: number;
   rowsWritten: number;
@@ -71,6 +74,7 @@ export class OperationalTwinCalibrationPersistence {
     hydratedOutcomeBuckets: 0,
     hydratedEventOutcomeBuckets: 0,
     hydratedTrajectoryQualityOutcomeBuckets: 0,
+    hydratedTrajectoryQualityOutcomeV2Buckets: 0,
     hydratedRegionalAttentionOutcomeBuckets: 0,
     trackedPersistedBuckets: 0,
     rowsWritten: 0,
@@ -85,6 +89,7 @@ export class OperationalTwinCalibrationPersistence {
     private readonly outcome: OperationalTwinOutcomeValidator,
     private readonly eventOutcome: OperationalTwinEventOutcomeValidator,
     private readonly trajectoryQualityOutcome: OperationalTwinTrajectoryQualityOutcomeValidator,
+    private readonly trajectoryQualityOutcomeV2: OperationalTwinTrajectoryQualityOutcomeV2Validator,
     private readonly regionalAttentionOutcome: RegionalAttentionOutcomeValidator,
   ) {}
 
@@ -119,6 +124,12 @@ export class OperationalTwinCalibrationPersistence {
           && row.version === OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_VERSION
         )
         .map((row) => ({ startMs: timestampMs(row.bucketStart), payloadJson: row.payloadJson }));
+      const trajectoryQualityV2Rows = rows
+        .filter((row) =>
+          row.lane === LANE_TRAJECTORY_QUALITY_OUTCOME
+          && row.version === OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_V2_VERSION
+        )
+        .map((row) => ({ startMs: timestampMs(row.bucketStart), payloadJson: row.payloadJson }));
       const regionalAttentionRows = rows
         .filter((row) => row.lane === LANE_REGIONAL_ATTENTION_OUTCOME && row.version === REGIONAL_ATTENTION_OUTCOME_VERSION)
         .map((row) => ({ startMs: timestampMs(row.bucketStart), payloadJson: row.payloadJson }));
@@ -127,6 +138,8 @@ export class OperationalTwinCalibrationPersistence {
       this.status.hydratedEventOutcomeBuckets = this.eventOutcome.hydrateCalibrationBuckets(eventRows, now);
       this.status.hydratedTrajectoryQualityOutcomeBuckets =
         this.trajectoryQualityOutcome.hydrateCalibrationBuckets(trajectoryQualityRows, now);
+      this.status.hydratedTrajectoryQualityOutcomeV2Buckets =
+        this.trajectoryQualityOutcomeV2.hydrateCalibrationBuckets(trajectoryQualityV2Rows, now);
       this.status.hydratedRegionalAttentionOutcomeBuckets = this.regionalAttentionOutcome.hydrateCalibrationBuckets(regionalAttentionRows, now);
       for (const row of rows) {
         if (
@@ -134,7 +147,10 @@ export class OperationalTwinCalibrationPersistence {
           && (row.lane !== LANE_EVENT_OUTCOME || row.version !== OPERATIONAL_TWIN_EVENT_OUTCOME_VERSION)
           && (
             row.lane !== LANE_TRAJECTORY_QUALITY_OUTCOME
-            || row.version !== OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_VERSION
+            || (
+              row.version !== OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_VERSION
+              && row.version !== OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_V2_VERSION
+            )
           )
           && (row.lane !== LANE_REGIONAL_ATTENTION_OUTCOME || row.version !== REGIONAL_ATTENTION_OUTCOME_VERSION)
         ) continue;
@@ -186,6 +202,12 @@ export class OperationalTwinCalibrationPersistence {
       ...this.trajectoryQualityOutcome.exportCalibrationBuckets(now).map<PersistedRow>((bucket) => ({
         lane: LANE_TRAJECTORY_QUALITY_OUTCOME,
         version: OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_VERSION,
+        bucketStartMs: bucket.startMs,
+        payloadJson: bucket.payloadJson,
+      })),
+      ...this.trajectoryQualityOutcomeV2.exportCalibrationBuckets(now).map<PersistedRow>((bucket) => ({
+        lane: LANE_TRAJECTORY_QUALITY_OUTCOME,
+        version: OPERATIONAL_TWIN_TRAJECTORY_QUALITY_OUTCOME_V2_VERSION,
         bucketStartMs: bucket.startMs,
         payloadJson: bucket.payloadJson,
       })),
