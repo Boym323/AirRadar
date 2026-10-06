@@ -9,11 +9,12 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
 concurrency:
-  group: repository-metadata
+  group: repository-metadata-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || 'manual' }}
   cancel-in-progress: true
 
 jobs:
@@ -23,7 +24,8 @@ jobs:
       (
         github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.head_branch == 'main' &&
-        !startsWith(github.event.workflow_run.display_title, 'chore(metadata): sync generated repository metadata')
+        !startsWith(github.event.workflow_run.display_title, 'chore(metadata): sync generated repository metadata') &&
+        !startsWith(github.event.workflow_run.display_title, 'chore: sync repository metadata')
       )
     runs-on: ubuntu-24.04
     steps:
@@ -111,12 +113,40 @@ jobs:
           }
 
           echo "Repository metadata PR #${pr_number} is ready."
-          echo "Waiting for required PR checks before merge."
+          metadata_sha="$(git rev-parse HEAD)"
+          echo "Dispatching required CI for metadata commit ${metadata_sha}."
+          gh workflow run ci.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref "${branch}"
+
+          run_id=""
+          for attempt in $(seq 1 30); do
+            run_id="$(gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow CI \
+              --branch "${branch}" \
+              --event workflow_dispatch \
+              --limit 20 \
+              --json databaseId,headSha \
+              --jq "map(select(.headSha == \"${metadata_sha}\"))[0].databaseId // empty")"
+            [[ -n "${run_id}" ]] && break
+            sleep 2
+          done
+
+          [[ -n "${run_id}" ]] || {
+            echo "::error::Could not resolve dispatched metadata CI run."
+            exit 1
+          }
+
+          echo "Waiting for metadata CI run #${run_id}."
+          gh run watch "${run_id}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --exit-status
+
+          echo "Verifying required PR checks before merge."
           gh pr checks "${pr_number}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --watch \
-            --required \
-            --fail-fast
+            --required
 
           gh pr merge "${pr_number}" \
             --repo "${GITHUB_REPOSITORY}" \

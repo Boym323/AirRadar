@@ -4,14 +4,15 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production-main' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'workflow_dispatch' && format('dispatch-{0}', github.ref) || 'production-main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
 
 jobs:
   validate:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -279,11 +280,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Clear previous validated production build
+        run: rm -rf -- /tmp/airradar-ci-production-build
       - name: Download validated production build
         uses: actions/download-artifact@v8
         with:
           name: production-build-${{ github.sha }}
-          path: ${{ runner.temp }}/airradar-production-build
+          path: /tmp/airradar-ci-production-build
       - name: Verify production ATS routes before release
         run: |
           set -Eeuo pipefail
@@ -320,8 +323,7 @@ jobs:
           sudo -n /var/www/airradar/deploy/release.sh \
             --branch main \
             --automated \
-            --commit "${GITHUB_SHA}" \
-            --prepared-build "${RUNNER_TEMP}/airradar-production-build"
+            --commit "${GITHUB_SHA}"
 
       - name: Verify deployed release identity
         shell: bash

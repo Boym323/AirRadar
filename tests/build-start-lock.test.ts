@@ -83,6 +83,16 @@ describe("production build/start lock", () => {
     expect(release).toMatch(/acquire_build_lock[\s\S]*?npm run build[\s\S]*?release_build_lock/);
   });
 
+  it("bootstraps validated artifacts without requiring a new CLI option on the old production script", async () => {
+    const release = await readFile(new URL("../deploy/release.sh", import.meta.url), "utf8");
+    const workflow = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+
+    expect(workflow).toContain("path: /tmp/airradar-ci-production-build");
+    expect(workflow).not.toContain('--prepared-build "${RUNNER_TEMP}/airradar-production-build"');
+    expect(release).toContain('[[ -d "/tmp/airradar-ci-production-build" ]]');
+    expect(release).toContain('PREPARED_BUILD_ROOT="/tmp/airradar-ci-production-build"');
+  });
+
   it("snapshots tracked Next source files only around the local production build", async () => {
     const release = await readFile(new URL("../deploy/release.sh", import.meta.url), "utf8");
     const steps = release.slice(release.indexOf("run_release_steps()"), release.indexOf("run_quality_gates()"));

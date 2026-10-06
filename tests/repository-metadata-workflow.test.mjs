@@ -35,6 +35,8 @@ describe("repository metadata automation", () => {
       "github.event.workflow_run.head_branch == 'main'",
     );
     expect(metadataWorkflow).toContain("workflow_dispatch:");
+    expect(metadataWorkflow).toContain("repository-metadata-${{");
+    expect(metadataWorkflow).toContain("chore: sync repository metadata");
   });
 
   it("syncs changelog and metrics into one audit PR and merges it", () => {
@@ -49,10 +51,19 @@ describe("repository metadata automation", () => {
     expect(metadataWorkflow).toContain(
       '--title "chore: sync repository metadata"',
     );
+    expect(metadataWorkflow).toContain("actions: write");
+    expect(metadataWorkflow).toContain("gh workflow run ci.yml");
+    expect(metadataWorkflow).toContain("--event workflow_dispatch");
     expect(metadataWorkflow).toContain('gh pr merge "${pr_number}"');
     expect(metadataWorkflow).toContain("--squash");
     expect(metadataWorkflow).toContain("--delete-branch");
     expect(metadataWorkflow).not.toContain("automatic merge is disabled");
+  });
+
+  it("dispatches the lightweight required CI check for metadata PRs", () => {
+    expect(ciWorkflow).toContain("workflow_dispatch:");
+    expect(ciWorkflow).toContain("refs/heads/automation/repository-metadata");
+    expect(ciWorkflow).toContain("dispatch-{0}");
   });
 
   it("keeps generated metadata merges out of production deployment", () => {
