@@ -28,6 +28,7 @@ not yet been historically attributed.
 | Operations Dashboard | production | operations | Pre-registry | `/operations` | — | Live operational dashboard combining canonical local traffic, airport flow, bounded next-30-minute arrival context, Regional Attention, and Flight Intelligence without creating a parallel intelligence engine. |
 | Receiver Coverage | production | receiver | Pre-registry | `/receiver/coverage` | `/api/receiver/coverage` | Receiver coverage analysis and dedicated coverage detail. |
 | Route Network Explorer | production | analytics / routes | Pre-registry | `/routes`<br>`/routes/:origin/:destination` | — | Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates, including top origin/destination pairs and airport navigation without FlightPosition scans. |
+| Saved Workspaces | production | productivity | Pre-registry | `/workspaces` | — | Browser-local named collections of canonical AirRadar links and safe URL/query context, bounded to 12 workspaces with 12 entries each. |
 | Statistics & Recaps | production | analytics | Pre-registry | `/statistics`<br>`/recap/daily`<br>`/recap/weekly` | `/api/logbook/summary`<br>`/api/recap`<br>`/api/reception-records`<br>`/api/statistics`<br>`/api/statistics/coverage-intelligence`<br>`/api/statistics/traffic`<br>`/api/statistics/heatmap` | Receiver statistics, traffic intelligence, reception records, and daily/weekly recaps with Daily Aviation Story airport, operational-event, rare-aircraft, and quality-controlled aircraft-weather highlights. |
 | System Observability | production | operations | Pre-registry | `/system` | `/api/admin/altitude/:hex`<br>`/api/admin/predictive/readiness`<br>`/api/health`<br>`/api/system/runtime-history`<br>`/api/system/status`<br>`/api/system/stream`<br>`/api/version` | Sanitized health, runtime history, provider status, build identity, ADS-B continuity diagnostics and mass-drop guard state, bounded predictive readiness, independent outcome truth, and admin-only graduation calibration. |
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence. |
@@ -708,3 +709,15 @@ Event Outcome V2 now compares canonical and wind-adjusted timing for the same wa
 ### Explainable Prediction V1
 
 Aircraft predictive advisory cards expose a `Why?` disclosure for ETA, runway, runway-change and trajectory outputs. Evidence comes from the same canonical prediction evaluation and is passed only through the existing readiness-gated advisory builders. A capability-specific whitelist limits public evidence to product-safe inputs such as remaining distance, effective speed, phase, recent runway usage, surface wind, candidate margin and trajectory geometry. No second prediction request or parallel model is introduced.
+
+
+## Saved Workspaces V1
+
+`/workspaces` stores named working contexts entirely in browser local storage.
+Each workspace contains only canonical AirRadar links plus the safe query state
+already present in those links. The V1 contract is versioned, rejects malformed
+storage fail-closed, and is bounded to 12 workspaces with 12 entries each.
+
+Saved Workspaces adds no API, database table, account, sharing mechanism or
+cloud synchronization. Opening an entry navigates to the existing canonical
+surface and lets that surface restore its own URL state.
