@@ -245,7 +245,7 @@ export function DigitalTwinCalibrationCenter() {
               <DecisionHeader
                 title={t.calibrationCenter.operationalFocusOutcome}
                 decision={report.focusOutcome.decision}
-                reasons={[]}
+                reasons={report.focusOutcome.reasons}
               />
               <div className={styles.metrics}>
                 <Metric label={t.calibrationCenter.scoreable} value={report.focusOutcome.byType.WEATHER.scoreable} />
