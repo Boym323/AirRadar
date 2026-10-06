@@ -6,6 +6,7 @@ import type { Airport } from "@/lib/airports/types";
 import type { HistoryFlightRange, HistoryFlightSummary } from "@/lib/server/history";
 import { formatAltitude, formatDateTime, t } from "@/lib/i18n";
 import { EmptyState, Panel } from "@/components/ui-primitives";
+import { LiveAirportNetwork } from "@/components/live-airport-network";
 
 function BrowserHeader({ title, description, search, onSearch, placeholder, count, children }: {
   title: string; description: string; search: string; onSearch: (value: string) => void;
@@ -47,6 +48,7 @@ export function AirportsPage() {
 
   return <main className="browse-page">
     <BrowserHeader title={t.browse.airportsTitle} description={t.browse.airportsDescription} search={search} onSearch={setSearch} placeholder={t.browse.airportsSearch} count={loading || error ? null : visible.length} />
+    {!error ? <LiveAirportNetwork airports={airports} loading={loading} /> : null}
     <Panel className="browse-panel">
       <div className="browse-list-heading"><span>{t.browse.airportIdentity}</span><span>{t.browse.airportLocation}</span></div>
       {loading ? <BrowserState kind="loading" title={t.common.loading} /> : error ? <BrowserState kind="error" title={t.browse.unavailable} description={t.browse.tryAgain} /> : visible.length === 0 ? <BrowserState kind="empty" title={search ? t.browse.noResults : t.browse.noAirports} description={search ? t.browse.clearSearch : undefined} /> : <div className="browse-list">{visible.map((airport) => <Link className="browse-row airport-browse-row" href={`/airports/${encodeURIComponent(airport.icaoCode)}`} key={airport.icaoCode}><span className="browse-primary-code"><strong>{airport.icaoCode}</strong><small>{airport.iataCode || t.common.emptyValue}</small></span><span className="browse-secondary"><strong>{airport.name}</strong><small>{[airport.city, airport.country].filter(Boolean).join(" · ") || t.common.emptyValue}</small></span><span className="browse-row-arrow" aria-hidden="true">→</span></Link>)}</div>}
