@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import StatisticsTrafficIntelligence from "@/components/statistics-traffic-intelligence";
 import StatisticsCoverageIntelligence from "@/components/statistics-coverage-intelligence";
+import StatisticsHeatmap from "@/components/statistics-heatmap";
 import { AirRadarPageShell } from "@/components/airradar-shell";
 
 export default function StatisticsLayout({ children }: { children: ReactNode }) {
@@ -9,6 +10,7 @@ export default function StatisticsLayout({ children }: { children: ReactNode }) 
       {children}
       <StatisticsTrafficIntelligence />
       <StatisticsCoverageIntelligence />
+      <StatisticsHeatmap />
     </AirRadarPageShell>
   );
 }

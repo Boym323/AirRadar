@@ -309,7 +309,8 @@
         "/api/reception-records",
         "/api/statistics",
         "/api/statistics/coverage-intelligence",
-        "/api/statistics/traffic"
+        "/api/statistics/traffic",
+        "/api/statistics/heatmap"
       ],
       "changelogScopes": [
         "statistics",
