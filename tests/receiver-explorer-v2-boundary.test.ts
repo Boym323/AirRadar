@@ -12,7 +12,8 @@ describe("Receiver Explorer V2 boundary", () => {
     expect(pageSource).toContain('new EventSource("/api/stream?coverage=local")');
     expect(pageSource.match(/fetch\(/g)).toHaveLength(2);
     expect(pageSource).not.toContain("/api/receiver/explorer");
-    expect(serverSource).not.toContain("schema.FlightPosition");\n    expect(serverSource).not.toContain(".FlightPosition.where(");
+    expect(serverSource).not.toContain("schema.FlightPosition");
+    expect(serverSource).not.toContain(".FlightPosition.where(");
   });
 
   it("exposes the requested Explorer V2 product sections", () => {
