@@ -640,6 +640,16 @@ The selected-altitude path is accepted only while the aircraft is already in a m
 
 V3 is shadow-only: `autoPromotion=false`, `canonicalRemainsActive=true`, and V2 remains the current promotion candidate. It exposes 5/15/30-minute canonical/V2/V3 altitude checkpoints for the next independent outcome-validation stage. The model explicitly reports `PERFORMANCE_ENVELOPE_HEURISTIC`, `SELECTED_ALTITUDE_IS_NOT_CLEARANCE`, `NO_DESTINATION_VERTICAL_PROFILE`, `HORIZONTAL_PATH_UNCHANGED` and `NOT_FMS_INTENT`.
 
+## Trajectory Quality Outcome Validation V2
+
+Outcome Validation V2 runs alongside V1 and triple-pairs the canonical altitude projection, Trajectory Quality V2 and Trajectory Quality V3 against the same later LOCAL receiver altitude truth at 5, 15 and 30 minutes. V1 remains unchanged and continues to feed the existing V2 Graduation/Promotion chain; V2 comparison evidence is a separate lane and cannot affect the active promotion policy.
+
+Each completed sample records only anonymous aggregate error statistics. The report exposes canonical, V2 and V3 altitude MAE, relative MAE improvement for V3 versus both canonical and V2, head-to-head win rates, and the best model by mean absolute error. Evidence is broken down by horizon, flight phase, V3 performance class and V3 vertical-profile mode so selected-altitude capture and performance-envelope behavior can be evaluated independently.
+
+Capture remains request-driven from the existing Digital Twin builder and truth remains refresh-driven from the existing LOCAL receiver loop. No additional provider request, poller or raw aircraft persistence path is introduced. Completed five-minute aggregates reuse the existing calibration persistence table under the same trajectory-quality lane but a distinct V2 version, so V1 and V2 evidence cannot be mixed across restarts.
+
+The V2 decision is evidence readiness only: WAIT means more observation span or paired horizon evidence is required, FAIL is reserved for a mature evidence set with inadequate LOCAL truth coverage, and PASS means the triple-paired evidence is sufficiently complete for a later V3 graduation layer. It never graduates or promotes V3 automatically.
+
 ## Trajectory Quality Outcome Validation V1
 
 Trajectory Quality Outcome Validation V1 prospectively pairs the canonical altitude projection and the Trajectory Quality V2 shadow against the same later LOCAL receiver altitude truth at 5, 15 and 30 minutes. Capture is request-driven from the existing Digital Twin builder, including the existing bounded refresh-sampled calibration requests. Truth is observed from the normal LOCAL receiver refresh; no additional timer, provider call, endpoint or network request is introduced.
