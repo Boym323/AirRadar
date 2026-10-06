@@ -14,9 +14,13 @@ function aircraftHref(hex: string) {
 }
 
 function watchlistHref(item: LogbookInterestingAircraft) {
-  const params = new URLSearchParams({ icaoHex: item.icaoHex });
-  if (item.registration) params.set("registration", item.registration);
-  return "/watchlist?" + params.toString();
+  return {
+    pathname: "/watchlist",
+    query: {
+      icaoHex: item.icaoHex,
+      ...(item.registration ? { registration: item.registration } : {}),
+    },
+  } as const;
 }
 
 function reasonPriority(reason: LogbookInterestingReason): number {
