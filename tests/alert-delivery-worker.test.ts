@@ -26,13 +26,16 @@ describe("durable Pushover delivery", () => {
     vi.stubEnv("PUSHOVER_ENABLED", "true");
     vi.stubEnv("PUSHOVER_USER_KEY", "user-key");
     vi.stubEnv("PUSHOVER_API_TOKEN", "api-token");
-    const fetcher = vi.fn(async () => new Response("{}", { status: 200 }));
+    const fetcher = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () => new Response("{}", { status: 200 }),
+    );
     await sendPushoverDelivery(delivery, occurrence, fetcher as typeof fetch);
     expect(fetcher).toHaveBeenCalledTimes(1);
-    const request = fetcher.mock.calls[0]?.[1] as RequestInit;
-    expect(String(request.body)).toContain("token=api-token");
-    expect(String(request.body)).toContain("user=user-key");
-    expect(String(request.body)).toContain("Squawk+7700");
+    const request = fetcher.mock.calls[0]?.[1];
+    expect(request).toBeDefined();
+    expect(String(request?.body)).toContain("token=api-token");
+    expect(String(request?.body)).toContain("user=user-key");
+    expect(String(request?.body)).toContain("Squawk+7700");
   });
 
   it("marks provider throttling as retryable", async () => {
