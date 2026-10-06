@@ -247,18 +247,21 @@ function horizonRecord(): Record<Horizon, Aggregate> {
 }
 
 function phaseRecord(): Record<OperationalTwinTrajectoryPhase, Aggregate> {
-  return Object.fromEntries(TRAJECTORY_PHASES.map((phase) => [phase, emptyAggregate()]))
-    as Record<OperationalTwinTrajectoryPhase, Aggregate>;
+  return Object.fromEntries(
+    TRAJECTORY_PHASES.map((phase) => [phase, emptyAggregate()]),
+  ) as Record<OperationalTwinTrajectoryPhase, Aggregate>;
 }
 
 function performanceRecord(): Record<OperationalTwinPerformanceClass, Aggregate> {
-  return Object.fromEntries(PERFORMANCE_CLASSES.map((value) => [value, emptyAggregate()]))
-    as Record<OperationalTwinPerformanceClass, Aggregate>;
+  return Object.fromEntries(
+    PERFORMANCE_CLASSES.map((value) => [value, emptyAggregate()]),
+  ) as Record<OperationalTwinPerformanceClass, Aggregate>;
 }
 
 function profileRecord(): Record<OperationalTwinTrajectoryQualityV3Profile, Aggregate> {
-  return Object.fromEntries(V3_PROFILES.map((value) => [value, emptyAggregate()]))
-    as Record<OperationalTwinTrajectoryQualityV3Profile, Aggregate>;
+  return Object.fromEntries(
+    V3_PROFILES.map((value) => [value, emptyAggregate()]),
+  ) as Record<OperationalTwinTrajectoryQualityV3Profile, Aggregate>;
 }
 
 function addAggregate(target: Aggregate, source: Aggregate): void {
@@ -484,8 +487,9 @@ function recordFromKeys<K extends string>(
   keys: readonly K[],
   source: Record<K, Aggregate>,
 ): Record<K, OperationalTwinTrajectoryQualityOutcomeV2Slice> {
-  return Object.fromEntries(keys.map((key) => [key, sliceFromAggregate(source[key])]))
-    as Record<K, OperationalTwinTrajectoryQualityOutcomeV2Slice>;
+  return Object.fromEntries(
+    keys.map((key) => [key, sliceFromAggregate(source[key])]),
+  ) as Record<K, OperationalTwinTrajectoryQualityOutcomeV2Slice>;
 }
 
 export class OperationalTwinTrajectoryQualityOutcomeV2Validator {
