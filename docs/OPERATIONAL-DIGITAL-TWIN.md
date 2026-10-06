@@ -685,3 +685,21 @@ Trajectory Quality Promotion V1 adds that explicit operator-controlled transitio
 The V1 promotion scope is deliberately narrow: only `altitudeFt` values in the corridor returned to the client are replaced by the V2 profile. Latitude, longitude, timestamps, track, uncertainty, route mode and waypoints remain canonical. Weather Corridor, SIGMET/ATC intersections, event derivation, Operational Focus and all calibration lanes continue to use the untouched canonical corridor. This prevents the promoted model from rewriting either its own evidence or adjacent product semantics.
 
 Any WAIT/FAIL graduation state, unavailable V2 shadow, point-count mismatch or horizontal-geometry mismatch immediately fails closed to `CANONICAL`. The response exposes `trajectoryQualityPromotion` with configured/effective policy, graduation state, promoted-point count and fallback reason. No automatic configuration change, provider request, database path, timer or poller is introduced.
+
+
+## Prediction Timeline V1
+
+The aircraft detail reuses the existing `GET /api/aircraft/:hex/situation`
+request to render a chronological Prediction Timeline V1. The first item is the
+current observed state (NOW), followed by the already-built Operational Twin
+events such as waypoint estimates, ATC sector entry, planned airspace, SIGMET
+intersection, readiness-gated arrival ETA, runway expectation, and trajectory
+state.
+
+The timeline does not create another prediction engine, request, stream,
+polling loop, or persistence path. Event provenance, confidence, source and
+source reference are presented unchanged. ETA, runway and trajectory entries
+remain fail-closed behind the existing predictive readiness/public policy; when
+those public capabilities are unavailable, the timeline explains the gating
+while still showing independently supported route, ATC, airspace and weather
+events.

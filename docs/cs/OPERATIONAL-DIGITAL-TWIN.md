@@ -664,3 +664,20 @@ Trajectory Quality Promotion V1 přidává explicitní operátorem řízený př
 Rozsah V1 je záměrně úzký: nahrazují se pouze hodnoty `altitudeFt` v corridoru vraceném klientovi. Latitude, longitude, timestampy, track, uncertainty, route mode i waypointy zůstávají canonical. Weather Corridor, SIGMET/ATC průniky, derivace eventů, Operational Focus a všechny kalibrační lane dál používají nedotčený canonical corridor. Promovaný model si tak nemůže přepisovat vlastní evidenci ani sémantiku sousedních produktů.
 
 Jakýkoli graduation stav WAIT/FAIL, nedostupný V2 shadow, rozdílný počet bodů nebo neshoda horizontální geometrie okamžitě fail-closed vrací `CANONICAL`. Odpověď obsahuje `trajectoryQualityPromotion` s nastavenou/efektivní policy, graduation stavem, počtem promovaných bodů a fallback důvodem. Nevzniká automatická změna konfigurace, provider request, databázová cesta, timer ani poller.
+
+
+## Prediction Timeline V1
+
+Detail letadla používá existující request `GET /api/aircraft/:hex/situation`
+také pro chronologickou Prediction Timeline V1. První položkou je aktuální
+pozorovaný stav (TEĎ) a za ním následují již existující Operational Twin
+události, například odhad průletu waypointem, vstup do ATC sektoru, plánovaný
+vzdušný prostor, průnik se SIGMETem, readiness-gated ETA příletu, očekávaná
+dráha a stav trajektorie.
+
+Timeline nevytváří další prediction engine, request, stream, polling loop ani
+persistence cestu. Provenance, confidence, source a source reference každé
+události se zobrazují beze změny. ETA, runway a trajectory položky zůstávají
+fail-closed za existující predictive readiness/public policy; pokud PUBLIC
+capability není dostupná, timeline gating vysvětlí a současně dál zobrazí
+nezávisle podložené route, ATC, airspace a weather události.

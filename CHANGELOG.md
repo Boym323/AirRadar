@@ -7,6 +7,7 @@ All notable changes to AirRadar are documented here.
 ### Added
 
 - Add Receiver Explorer V2 on `/receiver/coverage` with directional median/P95/max range polar analytics, altitude-band reach, bounded 7/30-day trends, weak-sector health, live ADS-B/MLAT source mix, directional records, and the existing network-reference capture polar without a new ingest or persistence lane.
+- Add Prediction Timeline V1 to aircraft detail, reusing the existing Operational Twin situation response to show NOW plus chronological waypoint, ATC, airspace, SIGMET and readiness-gated public prediction events with preserved source, provenance and confidence.
 - Add Operations Dashboard V1 at `/operations`, reusing canonical live traffic, Airport Operations, Regional Attention, readiness-gated public ETA with an inferred terminal-demand fallback, and Flight Intelligence without adding a parallel intelligence engine.
 - Extend Flight Intelligence with explicit initial-climb, cruise-entry, and
   destination-independent top-of-descent timeline events, detector versioning,
