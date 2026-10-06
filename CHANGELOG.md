@@ -11,6 +11,84 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.333] - 2026-10-06
+
+Changes since v1.0.332.
+
+**Features touched:** Airport Intelligence, Operations Dashboard.
+
+### Added
+
+- Add Trajectory Quality V3 Graduation (#422) (b791999)
+- Add Flight Follow Mode V1 (#426) (659087a)
+- Add Operations Dashboard V1 (#427) (ca94991)
+
+### Fixed
+
+- Merge metadata PRs after dispatched CI (#423) (afb703d)
+- Preserve release branch SHA across tag fetch (#424) (c26e650)
+- Bootstrap production checkout to validated SHA (#425) (7d359f3)
+- Bootstrap legacy production release without sudo git (#428) (ddce97b)
+- Include Operations Dashboard in production browser gates (#429) (a074d36)
+- Use stable Operations Dashboard selector in browser gate (#430) (c0d7f2a)
+- Tolerate Playwright page-close race in production gates (#431) (d9f341d)
+- Ensure responsive sweep completes before route smoke to prevent browser teardown (#432) (ab74b5d)
+- Allow degraded airport operations in route smoke (#433) (7c366ff)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Trajectory Quality V3 Graduation (#422) (b791999)
+- fix: merge metadata PRs after dispatched CI (#423) (afb703d)
+- fix: preserve release branch SHA across tag fetch (#424) (c26e650)
+- fix: bootstrap production checkout to validated SHA (#425) (7d359f3)
+- feat: add Flight Follow Mode V1 (#426) (659087a)
+- feat: add Operations Dashboard V1 (#427) (ca94991)
+- fix: bootstrap legacy production release without sudo git (#428) (ddce97b)
+- fix: include Operations Dashboard in production browser gates (#429) (a074d36)
+- fix: use stable Operations Dashboard selector in browser gate (#430) (c0d7f2a)
+- fix: tolerate Playwright page-close race in production gates (#431) (d9f341d)
+- fix: ensure responsive sweep completes before route smoke to prevent browser teardown (#432) (ab74b5d)
+- fix(ci): allow degraded airport operations in route smoke (#433) (7c366ff)
+
+</details>
+
+## [1.0.332] - 2026-10-06
+
+Changes since v1.0.331.
+
+**Features touched:** Operational Digital Twin.
+
+### Added
+
+- Add Trajectory Quality Outcome Validation V2 (#420) (c53ab66)
+
+<details>
+<summary>Technical commits</summary>
+
+- feat: add Trajectory Quality Outcome Validation V2 (#420) (c53ab66)
+
+</details>
+
+## [1.0.331] - 2026-10-06
+
+Changes since v1.0.330.
+
+### Added
+
+- Add performance-aware Trajectory Quality V3 shadow (#418) (a201f62)
+
+### Maintenance
+
+- Sync generated repository metadata (#417) (035a360)
+
+<details>
+<summary>Technical commits</summary>
+
+- chore(metadata): sync generated repository metadata (#417) (035a360)
+- feat: add performance-aware Trajectory Quality V3 shadow (#418) (a201f62)
+
+</details>
 ## [1.0.330] - 2026-10-06
 
 Changes since v1.0.329.
