@@ -13,6 +13,9 @@ coverage/
 generated/
 generated/build-version.json
 data/atc/generated/
+!data/ats/
+!data/ats/generated/
+!data/ats/generated/*.json
 data/alert-events.jsonl
 data/alert-engine-state.json
 *.log

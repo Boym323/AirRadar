@@ -1,0 +1,2591 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "name": "Austro Control AIP",
+    "reference": "https://eaip.austrocontrol.at/lo/260904/PART_2/LO_ENR_3_2_en.pdf",
+    "effectiveDate": "2026-09-04",
+    "aipAmendment": null,
+    "airacAmendment": null,
+    "countryCode": "AT",
+    "provider": "AUSTRO_CONTROL",
+    "sections": [
+      "ENR 3.2"
+    ]
+  },
+  "routes": [
+    {
+      "designator": "L12",
+      "points": [
+        {
+          "id": "AT-L12-MOGTI",
+          "name": "MOGTI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.388980555555555,
+          "longitude": 10.716836111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-L12-SUDUX",
+          "name": "SUDUX",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.94501388888889,
+          "longitude": 11.008680555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-L12-UNIMI",
+          "name": "UNIMI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.860775000000004,
+          "longitude": 11.065188888888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-L12-1",
+          "fromName": "MOGTI",
+          "toName": "SUDUX",
+          "from": [
+            10.716836111111112,
+            47.388980555555555
+          ],
+          "to": [
+            11.008680555555555,
+            46.94501388888889
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-L12-2",
+          "fromName": "SUDUX",
+          "toName": "UNIMI",
+          "from": [
+            11.008680555555555,
+            46.94501388888889
+          ],
+          "to": [
+            11.065188888888889,
+            46.860775000000004
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "L607",
+      "points": [
+        {
+          "id": "AT-L607-XEBIX",
+          "name": "XEBIX",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.40001111111111,
+          "longitude": 10.479875,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-L607-ELMEM",
+          "name": "ELMEM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.28563333333333,
+          "longitude": 10.570738888888888,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-L607-GEDSO",
+          "name": "GEDSO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.080555555555556,
+          "longitude": 11.870277777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-L607-1",
+          "fromName": "XEBIX",
+          "toName": "ELMEM",
+          "from": [
+            10.479875,
+            47.40001111111111
+          ],
+          "to": [
+            10.570738888888888,
+            47.28563333333333
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-L607-2",
+          "fromName": "ELMEM",
+          "toName": "GEDSO",
+          "from": [
+            10.570738888888888,
+            47.28563333333333
+          ],
+          "to": [
+            11.870277777777778,
+            47.080555555555556
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "L608",
+      "points": [
+        {
+          "id": "AT-L608-KOGOL",
+          "name": "KOGOL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.62226666666667,
+          "longitude": 11.399849999999999,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-L608-ERKIR",
+          "name": "ERKIR",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.53777777777778,
+          "longitude": 12.008888888888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-L608-1",
+          "fromName": "KOGOL",
+          "toName": "ERKIR",
+          "from": [
+            11.399849999999999,
+            47.62226666666667
+          ],
+          "to": [
+            12.008888888888889,
+            47.53777777777778
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "M726",
+      "points": [
+        {
+          "id": "AT-M726-KOGOL",
+          "name": "KOGOL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.62226666666667,
+          "longitude": 11.399849999999999,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M726-NORIN",
+          "name": "NORIN",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.386602777777775,
+          "longitude": 11.402297222222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M726-INN)",
+          "name": "INN)",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.230019444444444,
+          "longitude": 11.401858333333333,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M726-BRENO",
+          "name": "BRENO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.980000000000004,
+          "longitude": 11.376666666666667,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-M726-1",
+          "fromName": "KOGOL",
+          "toName": "NORIN",
+          "from": [
+            11.399849999999999,
+            47.62226666666667
+          ],
+          "to": [
+            11.402297222222222,
+            47.386602777777775
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-M726-2",
+          "fromName": "NORIN",
+          "toName": "INN)",
+          "from": [
+            11.402297222222222,
+            47.386602777777775
+          ],
+          "to": [
+            11.401858333333333,
+            47.230019444444444
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-M726-3",
+          "fromName": "INN)",
+          "toName": "BRENO",
+          "from": [
+            11.401858333333333,
+            47.230019444444444
+          ],
+          "to": [
+            11.376666666666667,
+            46.980000000000004
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "M736",
+      "points": [
+        {
+          "id": "AT-M736-TULSI",
+          "name": "TULSI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.70160833333333,
+          "longitude": 11.788758333333334,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M736-BERAS",
+          "name": "BERAS",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.359366666666666,
+          "longitude": 11.769575000000001,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M736-MIMVI",
+          "name": "MIMVI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.1917,
+          "longitude": 11.760269444444445,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M736-LIZUM",
+          "name": "LIZUM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.115069444444444,
+          "longitude": 11.756036111111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M736-OLPIX",
+          "name": "OLPIX",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.01722222222222,
+          "longitude": 11.690277777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-M736-1",
+          "fromName": "TULSI",
+          "toName": "BERAS",
+          "from": [
+            11.788758333333334,
+            47.70160833333333
+          ],
+          "to": [
+            11.769575000000001,
+            47.359366666666666
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-M736-2",
+          "fromName": "BERAS",
+          "toName": "MIMVI",
+          "from": [
+            11.769575000000001,
+            47.359366666666666
+          ],
+          "to": [
+            11.760269444444445,
+            47.1917
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-M736-3",
+          "fromName": "MIMVI",
+          "toName": "LIZUM",
+          "from": [
+            11.760269444444445,
+            47.1917
+          ],
+          "to": [
+            11.756036111111111,
+            47.115069444444444
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-M736-4",
+          "fromName": "LIZUM",
+          "toName": "OLPIX",
+          "from": [
+            11.756036111111111,
+            47.115069444444444
+          ],
+          "to": [
+            11.690277777777778,
+            47.01722222222222
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "M738",
+      "points": [
+        {
+          "id": "AT-M738-OSDOV",
+          "name": "OSDOV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.44013611111111,
+          "longitude": 10.183316666666666,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M738-MADEB",
+          "name": "MADEB",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.324375,
+          "longitude": 10.288886111111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M738-TIRUL",
+          "name": "TIRUL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.057174999999994,
+          "longitude": 10.528708333333334,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-M738-NATAG",
+          "name": "NATAG",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.85799166666667,
+          "longitude": 10.61875,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-M738-1",
+          "fromName": "OSDOV",
+          "toName": "MADEB",
+          "from": [
+            10.183316666666666,
+            47.44013611111111
+          ],
+          "to": [
+            10.288886111111111,
+            47.324375
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-M738-2",
+          "fromName": "MADEB",
+          "toName": "TIRUL",
+          "from": [
+            10.288886111111111,
+            47.324375
+          ],
+          "to": [
+            10.528708333333334,
+            47.057174999999994
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-M738-3",
+          "fromName": "TIRUL",
+          "toName": "NATAG",
+          "from": [
+            10.528708333333334,
+            47.057174999999994
+          ],
+          "to": [
+            10.61875,
+            46.85799166666667
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "N503",
+      "points": [
+        {
+          "id": "AT-N503-LIZUM",
+          "name": "LIZUM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.115069444444444,
+          "longitude": 11.756036111111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-N503-LIKDA",
+          "name": "LIKDA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.01691666666667,
+          "longitude": 11.750841666666666,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-N503-1",
+          "fromName": "LIZUM",
+          "toName": "LIKDA",
+          "from": [
+            11.756036111111111,
+            47.115069444444444
+          ],
+          "to": [
+            11.750841666666666,
+            47.01691666666667
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "N606",
+      "points": [
+        {
+          "id": "AT-N606-MADEB",
+          "name": "MADEB",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.324375,
+          "longitude": 10.288886111111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-N606-ELMEM",
+          "name": "ELMEM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.28563333333333,
+          "longitude": 10.570738888888888,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-N606-BILDU",
+          "name": "BILDU",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.17044444444444,
+          "longitude": 10.661780555555556,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-N606-OTRES",
+          "name": "OTRES",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.023469444444444,
+          "longitude": 10.742369444444444,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-N606-GIRIS",
+          "name": "GIRIS",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.77178055555555,
+          "longitude": 10.884122222222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-N606-1",
+          "fromName": "MADEB",
+          "toName": "ELMEM",
+          "from": [
+            10.288886111111111,
+            47.324375
+          ],
+          "to": [
+            10.570738888888888,
+            47.28563333333333
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-N606-2",
+          "fromName": "ELMEM",
+          "toName": "BILDU",
+          "from": [
+            10.570738888888888,
+            47.28563333333333
+          ],
+          "to": [
+            10.661780555555556,
+            47.17044444444444
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-N606-3",
+          "fromName": "BILDU",
+          "toName": "OTRES",
+          "from": [
+            10.661780555555556,
+            47.17044444444444
+          ],
+          "to": [
+            10.742369444444444,
+            47.023469444444444
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-N606-4",
+          "fromName": "OTRES",
+          "toName": "GIRIS",
+          "from": [
+            10.742369444444444,
+            47.023469444444444
+          ],
+          "to": [
+            10.884122222222222,
+            46.77178055555555
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "N871",
+      "points": [
+        {
+          "id": "AT-N871-GAMSA",
+          "name": "GAMSA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.408452777777775,
+          "longitude": 9.651911111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-N871-MADEB",
+          "name": "MADEB",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.324375,
+          "longitude": 10.288886111111111,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-N871-XEBIX",
+          "name": "XEBIX",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.40001111111111,
+          "longitude": 10.479875,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-N871-GAPTO",
+          "name": "GAPTO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.468583333333335,
+          "longitude": 10.759430555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-N871-SUGIB",
+          "name": "SUGIB",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.54361111111111,
+          "longitude": 11.070277777777777,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-N871-1",
+          "fromName": "GAMSA",
+          "toName": "MADEB",
+          "from": [
+            9.651911111111112,
+            47.408452777777775
+          ],
+          "to": [
+            10.288886111111111,
+            47.324375
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-N871-2",
+          "fromName": "MADEB",
+          "toName": "XEBIX",
+          "from": [
+            10.288886111111111,
+            47.324375
+          ],
+          "to": [
+            10.479875,
+            47.40001111111111
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-N871-3",
+          "fromName": "XEBIX",
+          "toName": "GAPTO",
+          "from": [
+            10.479875,
+            47.40001111111111
+          ],
+          "to": [
+            10.759430555555555,
+            47.468583333333335
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-N871-4",
+          "fromName": "GAPTO",
+          "toName": "SUGIB",
+          "from": [
+            10.759430555555555,
+            47.468583333333335
+          ],
+          "to": [
+            11.070277777777777,
+            47.54361111111111
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "P66",
+      "points": [
+        {
+          "id": "AT-P66-SOTOV",
+          "name": "SOTOV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.943863888888885,
+          "longitude": 11.210433333333333,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-P66-NIGEB",
+          "name": "NIGEB",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.08913888888889,
+          "longitude": 11.076875,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-P66-MOGTI",
+          "name": "MOGTI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.388980555555555,
+          "longitude": 10.716836111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-P66-NESES",
+          "name": "NESES",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.54793333333333,
+          "longitude": 10.554711111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-P66-1",
+          "fromName": "SOTOV",
+          "toName": "NIGEB",
+          "from": [
+            11.210433333333333,
+            46.943863888888885
+          ],
+          "to": [
+            11.076875,
+            47.08913888888889
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-P66-2",
+          "fromName": "NIGEB",
+          "toName": "MOGTI",
+          "from": [
+            11.076875,
+            47.08913888888889
+          ],
+          "to": [
+            10.716836111111112,
+            47.388980555555555
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-P66-3",
+          "fromName": "MOGTI",
+          "toName": "NESES",
+          "from": [
+            10.716836111111112,
+            47.388980555555555
+          ],
+          "to": [
+            10.554711111111112,
+            47.54793333333333
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T23",
+      "points": [
+        {
+          "id": "AT-T23-BEMKI",
+          "name": "BEMKI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.55938888888888,
+          "longitude": 10.305594444444445,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T23-GAPTO",
+          "name": "GAPTO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.468583333333335,
+          "longitude": 10.759430555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T23-NORIN",
+          "name": "NORIN",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.386602777777775,
+          "longitude": 11.402297222222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T23-BERAS",
+          "name": "BERAS",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.359366666666666,
+          "longitude": 11.769575000000001,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T23-BIRGI",
+          "name": "BIRGI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.34777777777778,
+          "longitude": 11.923888888888888,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-T23-1",
+          "fromName": "BEMKI",
+          "toName": "GAPTO",
+          "from": [
+            10.305594444444445,
+            47.55938888888888
+          ],
+          "to": [
+            10.759430555555555,
+            47.468583333333335
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-T23-2",
+          "fromName": "GAPTO",
+          "toName": "NORIN",
+          "from": [
+            10.759430555555555,
+            47.468583333333335
+          ],
+          "to": [
+            11.402297222222222,
+            47.386602777777775
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-T23-3",
+          "fromName": "NORIN",
+          "toName": "BERAS",
+          "from": [
+            11.402297222222222,
+            47.386602777777775
+          ],
+          "to": [
+            11.769575000000001,
+            47.359366666666666
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-T23-4",
+          "fromName": "BERAS",
+          "toName": "BIRGI",
+          "from": [
+            11.769575000000001,
+            47.359366666666666
+          ],
+          "to": [
+            11.923888888888888,
+            47.34777777777778
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T101",
+      "points": [
+        {
+          "id": "AT-T101-SOTOV",
+          "name": "SOTOV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.943863888888885,
+          "longitude": 11.210433333333333,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T101-BAPGI",
+          "name": "BAPGI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.325411111111116,
+          "longitude": 11.236183333333333,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T101-OBAGA",
+          "name": "OBAGA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.54708888888889,
+          "longitude": 11.251252777777777,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-T101-1",
+          "fromName": "SOTOV",
+          "toName": "BAPGI",
+          "from": [
+            11.210433333333333,
+            46.943863888888885
+          ],
+          "to": [
+            11.236183333333333,
+            47.325411111111116
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-T101-2",
+          "fromName": "BAPGI",
+          "toName": "OBAGA",
+          "from": [
+            11.236183333333333,
+            47.325411111111116
+          ],
+          "to": [
+            11.251252777777777,
+            47.54708888888889
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T102",
+      "points": [
+        {
+          "id": "AT-T102-IVKAL",
+          "name": "IVKAL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.79416666666666,
+          "longitude": 11.037383333333333,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T102-SUDUX",
+          "name": "SUDUX",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.94501388888889,
+          "longitude": 11.008680555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T102-GOVTU",
+          "name": "GOVTU",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.345819444444444,
+          "longitude": 11.069619444444443,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T102-IRBIR",
+          "name": "IRBIR",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.56641388888889,
+          "longitude": 11.103569444444444,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-T102-1",
+          "fromName": "IVKAL",
+          "toName": "SUDUX",
+          "from": [
+            11.037383333333333,
+            46.79416666666666
+          ],
+          "to": [
+            11.008680555555555,
+            46.94501388888889
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-T102-2",
+          "fromName": "SUDUX",
+          "toName": "GOVTU",
+          "from": [
+            11.008680555555555,
+            46.94501388888889
+          ],
+          "to": [
+            11.069619444444443,
+            47.345819444444444
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-T102-3",
+          "fromName": "GOVTU",
+          "toName": "IRBIR",
+          "from": [
+            11.069619444444443,
+            47.345819444444444
+          ],
+          "to": [
+            11.103569444444444,
+            47.56641388888889
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T103",
+      "points": [
+        {
+          "id": "AT-T103-NUNRI",
+          "name": "NUNRI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.586666666666666,
+          "longitude": 9.6525,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T103-BEMKI",
+          "name": "BEMKI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.55938888888888,
+          "longitude": 10.305594444444445,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T103-NESES",
+          "name": "NESES",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.54793333333333,
+          "longitude": 10.554711111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T103-OSDER",
+          "name": "OSDER",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.68333333333333,
+          "longitude": 10.891666666666666,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-T103-1",
+          "fromName": "NUNRI",
+          "toName": "BEMKI",
+          "from": [
+            9.6525,
+            47.586666666666666
+          ],
+          "to": [
+            10.305594444444445,
+            47.55938888888888
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-T103-2",
+          "fromName": "BEMKI",
+          "toName": "NESES",
+          "from": [
+            10.305594444444445,
+            47.55938888888888
+          ],
+          "to": [
+            10.554711111111112,
+            47.54793333333333
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-T103-3",
+          "fromName": "NESES",
+          "toName": "OSDER",
+          "from": [
+            10.554711111111112,
+            47.54793333333333
+          ],
+          "to": [
+            10.891666666666666,
+            47.68333333333333
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "T307",
+      "points": [
+        {
+          "id": "AT-T307-DIRAB",
+          "name": "DIRAB",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.813716666666664,
+          "longitude": 11.062316666666668,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-T307-OTRES",
+          "name": "OTRES",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.023469444444444,
+          "longitude": 10.742369444444444,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-T307-1",
+          "fromName": "DIRAB",
+          "toName": "OTRES",
+          "from": [
+            11.062316666666668,
+            46.813716666666664
+          ],
+          "to": [
+            10.742369444444444,
+            47.023469444444444
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Y106",
+      "points": [
+        {
+          "id": "AT-Y106-TOBAD",
+          "name": "TOBAD",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.73271388888889,
+          "longitude": 12.208197222222221,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y106-MODSA",
+          "name": "MODSA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.641666666666666,
+          "longitude": 12.232222222222223,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Y106-1",
+          "fromName": "TOBAD",
+          "toName": "MODSA",
+          "from": [
+            12.208197222222221,
+            47.73271388888889
+          ],
+          "to": [
+            12.232222222222223,
+            47.641666666666666
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Y107",
+      "points": [
+        {
+          "id": "AT-Y107-BADVI",
+          "name": "BADVI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.73108611111111,
+          "longitude": 11.945380555555555,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y107-RTT)",
+          "name": "RTT)",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.43092222222222,
+          "longitude": 11.940052777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y107-TOBSO",
+          "name": "TOBSO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.01611666666667,
+          "longitude": 11.857597222222221,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Y107-1",
+          "fromName": "BADVI",
+          "toName": "RTT)",
+          "from": [
+            11.945380555555555,
+            47.73108611111111
+          ],
+          "to": [
+            11.940052777777778,
+            47.43092222222222
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Y107-2",
+          "fromName": "RTT)",
+          "toName": "TOBSO",
+          "from": [
+            11.940052777777778,
+            47.43092222222222
+          ],
+          "to": [
+            11.857597222222221,
+            47.01611666666667
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Y108",
+      "points": [
+        {
+          "id": "AT-Y108-LUXEK",
+          "name": "LUXEK",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.669086111111106,
+          "longitude": 11.616888888888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y108-ALILA",
+          "name": "ALILA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.21644722222222,
+          "longitude": 11.55366388888889,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y108-GOGEM",
+          "name": "GOGEM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.018274999999996,
+          "longitude": 11.52635,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Y108-1",
+          "fromName": "LUXEK",
+          "toName": "ALILA",
+          "from": [
+            11.616888888888889,
+            47.669086111111106
+          ],
+          "to": [
+            11.55366388888889,
+            47.21644722222222
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Y108-2",
+          "fromName": "ALILA",
+          "toName": "GOGEM",
+          "from": [
+            11.55366388888889,
+            47.21644722222222
+          ],
+          "to": [
+            11.52635,
+            47.018274999999996
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Y303",
+      "points": [
+        {
+          "id": "AT-Y303-TUNUM",
+          "name": "TUNUM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.254125,
+          "longitude": 11.507591666666666,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y303-NIGEB",
+          "name": "NIGEB",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.08913888888889,
+          "longitude": 11.076875,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Y303-1",
+          "fromName": "TUNUM",
+          "toName": "NIGEB",
+          "from": [
+            11.507591666666666,
+            47.254125
+          ],
+          "to": [
+            11.076875,
+            47.08913888888889
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Y703",
+      "points": [
+        {
+          "id": "AT-Y703-RTT)",
+          "name": "RTT)",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.43092222222222,
+          "longitude": 11.940052777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y703-INN)",
+          "name": "INN)",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.230019444444444,
+          "longitude": 11.401858333333333,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y703-ADILO",
+          "name": "ADILO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.34581388888889,
+          "longitude": 10.947652777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y703-MOGTI",
+          "name": "MOGTI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.388980555555555,
+          "longitude": 10.716836111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Y703-1",
+          "fromName": "RTT)",
+          "toName": "INN)",
+          "from": [
+            11.940052777777778,
+            47.43092222222222
+          ],
+          "to": [
+            11.401858333333333,
+            47.230019444444444
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Y703-2",
+          "fromName": "INN)",
+          "toName": "ADILO",
+          "from": [
+            11.401858333333333,
+            47.230019444444444
+          ],
+          "to": [
+            10.947652777777778,
+            47.34581388888889
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Y703-3",
+          "fromName": "ADILO",
+          "toName": "MOGTI",
+          "from": [
+            10.947652777777778,
+            47.34581388888889
+          ],
+          "to": [
+            10.716836111111112,
+            47.388980555555555
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Y740",
+      "points": [
+        {
+          "id": "AT-Y740-NESES",
+          "name": "NESES",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.54793333333333,
+          "longitude": 10.554711111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y740-XEBIX",
+          "name": "XEBIX",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.40001111111111,
+          "longitude": 10.479875,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y740-TIRUL",
+          "name": "TIRUL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.057174999999994,
+          "longitude": 10.528708333333334,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Y740-NATAG",
+          "name": "NATAG",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 46.85799166666667,
+          "longitude": 10.61875,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Y740-1",
+          "fromName": "NESES",
+          "toName": "XEBIX",
+          "from": [
+            10.554711111111112,
+            47.54793333333333
+          ],
+          "to": [
+            10.479875,
+            47.40001111111111
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Y740-2",
+          "fromName": "XEBIX",
+          "toName": "TIRUL",
+          "from": [
+            10.479875,
+            47.40001111111111
+          ],
+          "to": [
+            10.528708333333334,
+            47.057174999999994
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Y740-3",
+          "fromName": "TIRUL",
+          "toName": "NATAG",
+          "from": [
+            10.528708333333334,
+            47.057174999999994
+          ],
+          "to": [
+            10.61875,
+            46.85799166666667
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z2",
+      "points": [
+        {
+          "id": "AT-Z2-DORAP",
+          "name": "DORAP",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.47273611111111,
+          "longitude": 9.600972222222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z2-OSDOV",
+          "name": "OSDOV",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.44013611111111,
+          "longitude": 10.183316666666666,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z2-XEBIX",
+          "name": "XEBIX",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.40001111111111,
+          "longitude": 10.479875,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z2-TUNUM",
+          "name": "TUNUM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.254125,
+          "longitude": 11.507591666666666,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z2-UMVEG",
+          "name": "UMVEG",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.211619444444445,
+          "longitude": 11.896572222222222,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Z2-1",
+          "fromName": "DORAP",
+          "toName": "OSDOV",
+          "from": [
+            9.600972222222222,
+            47.47273611111111
+          ],
+          "to": [
+            10.183316666666666,
+            47.44013611111111
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Z2-2",
+          "fromName": "OSDOV",
+          "toName": "XEBIX",
+          "from": [
+            10.183316666666666,
+            47.44013611111111
+          ],
+          "to": [
+            10.479875,
+            47.40001111111111
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Z2-3",
+          "fromName": "XEBIX",
+          "toName": "TUNUM",
+          "from": [
+            10.479875,
+            47.40001111111111
+          ],
+          "to": [
+            11.507591666666666,
+            47.254125
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Z2-4",
+          "fromName": "TUNUM",
+          "toName": "UMVEG",
+          "from": [
+            11.507591666666666,
+            47.254125
+          ],
+          "to": [
+            11.896572222222222,
+            47.211619444444445
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z204",
+      "points": [
+        {
+          "id": "AT-Z204-TUNUM",
+          "name": "TUNUM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.254125,
+          "longitude": 11.507591666666666,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z204-GEDSO",
+          "name": "GEDSO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.080555555555556,
+          "longitude": 11.870277777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Z204-1",
+          "fromName": "TUNUM",
+          "toName": "GEDSO",
+          "from": [
+            11.507591666666666,
+            47.254125
+          ],
+          "to": [
+            11.870277777777778,
+            47.080555555555556
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z209",
+      "points": [
+        {
+          "id": "AT-Z209-GAMSA",
+          "name": "GAMSA",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.408452777777775,
+          "longitude": 9.651911111111112,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z209-KUSAM",
+          "name": "KUSAM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.13722222222222,
+          "longitude": 10.281944444444445,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z209-INN)",
+          "name": "INN)",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.230019444444444,
+          "longitude": 11.401858333333333,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z209-TUNUM",
+          "name": "TUNUM",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.254125,
+          "longitude": 11.507591666666666,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z209-BIRGI",
+          "name": "BIRGI",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.34777777777778,
+          "longitude": 11.923888888888888,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Z209-1",
+          "fromName": "GAMSA",
+          "toName": "KUSAM",
+          "from": [
+            9.651911111111112,
+            47.408452777777775
+          ],
+          "to": [
+            10.281944444444445,
+            47.13722222222222
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Z209-2",
+          "fromName": "KUSAM",
+          "toName": "INN)",
+          "from": [
+            10.281944444444445,
+            47.13722222222222
+          ],
+          "to": [
+            11.401858333333333,
+            47.230019444444444
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Z209-3",
+          "fromName": "INN)",
+          "toName": "TUNUM",
+          "from": [
+            11.401858333333333,
+            47.230019444444444
+          ],
+          "to": [
+            11.507591666666666,
+            47.254125
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Z209-4",
+          "fromName": "TUNUM",
+          "toName": "BIRGI",
+          "from": [
+            11.507591666666666,
+            47.254125
+          ],
+          "to": [
+            11.923888888888888,
+            47.34777777777778
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    },
+    {
+      "designator": "Z408",
+      "points": [
+        {
+          "id": "AT-Z408-GEDSO",
+          "name": "GEDSO",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.080555555555556,
+          "longitude": 11.870277777777778,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z408-NIGEB",
+          "name": "NIGEB",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.08913888888889,
+          "longitude": 11.076875,
+          "foreignMaintainer": null,
+          "remarks": null
+        },
+        {
+          "id": "AT-Z408-TIRUL",
+          "name": "TIRUL",
+          "kind": "DESIGNATED_POINT",
+          "latitude": 47.057174999999994,
+          "longitude": 10.528708333333334,
+          "foreignMaintainer": null,
+          "remarks": null
+        }
+      ],
+      "segments": [
+        {
+          "id": "AT-Z408-1",
+          "fromName": "GEDSO",
+          "toName": "NIGEB",
+          "from": [
+            11.870277777777778,
+            47.080555555555556
+          ],
+          "to": [
+            11.076875,
+            47.08913888888889
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        },
+        {
+          "id": "AT-Z408-2",
+          "fromName": "NIGEB",
+          "toName": "TIRUL",
+          "from": [
+            11.076875,
+            47.08913888888889
+          ],
+          "to": [
+            10.528708333333334,
+            47.057174999999994
+          ],
+          "navigationSpecification": "RNAV",
+          "magTrackForwardDeg": null,
+          "magTrackReverseDeg": null,
+          "distanceNm": 0,
+          "upperLimit": "UNL",
+          "lowerLimit": "SFC",
+          "lowerOverride": null,
+          "cruisingLevelForward": null,
+          "cruisingLevelReverse": null,
+          "availabilityClass": null,
+          "availabilityStatus": "UNKNOWN",
+          "remarks": "Parsed from Austro Control ENR 3.2; source row metadata retained in source reference."
+        }
+      ],
+      "discontinuities": []
+    }
+  ],
+  "counts": {
+    "routes": 25,
+    "points": 88,
+    "segments": 63,
+    "cdrSegments": 0,
+    "discontinuities": 0
+  }
+}
