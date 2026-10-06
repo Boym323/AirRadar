@@ -24,7 +24,7 @@ describe("Aircraft Operational Focus map callout V1.1 boundary", () => {
   it("keeps clear-focus navigation bounded to the same aircraft", () => {
     expect(radarSource).toContain("aircraftOperationalFocusClearHref(aircraftFocus)");
     expect(radarSource).toContain("router.replace");
-    expect(cardSource).toContain("onClear={onClear}");
+    expect(cardSource).toContain("onClick={onClear}");
     expect(cardSource).toContain('data-testid="radar-operational-focus-card"');
   });
 
