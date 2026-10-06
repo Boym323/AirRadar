@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aircraftOperationalFocusClearHref,
+  aircraftOperationalFocusNavigation,
   aircraftOperationalFocusRadarHref,
   createAircraftOperationalFocusMapGeoJSON,
   resolveAircraftOperationalFocusMapTarget,
@@ -182,6 +183,45 @@ describe("Aircraft Operational Focus map interaction V1", () => {
   it("builds a stable clear-focus href that keeps the selected aircraft", () => {
     expect(aircraftOperationalFocusClearHref("abc123"))
       .toBe("/?aircraft=ABC123");
+  });
+
+  it("navigates focus items without wrapping and selects the first item from an inactive state", () => {
+    const items = situation().operationalFocus?.items ?? [];
+
+    expect(aircraftOperationalFocusNavigation(items, null)).toMatchObject({
+      currentIndex: null,
+      total: 3,
+      previousItem: null,
+      nextItem: { id: "weather:WX1" },
+    });
+
+    expect(aircraftOperationalFocusNavigation(items, "navigation-integrity:NAV1")).toMatchObject({
+      currentIndex: 1,
+      total: 3,
+      previousItem: { id: "weather:WX1" },
+      nextItem: { id: "trajectory:TRJ1" },
+    });
+
+    expect(aircraftOperationalFocusNavigation(items, "weather:WX1")).toMatchObject({
+      currentIndex: 0,
+      previousItem: null,
+      nextItem: { id: "navigation-integrity:NAV1" },
+    });
+
+    expect(aircraftOperationalFocusNavigation(items, "trajectory:TRJ1")).toMatchObject({
+      currentIndex: 2,
+      previousItem: { id: "navigation-integrity:NAV1" },
+      nextItem: null,
+    });
+  });
+
+  it("fails closed to the first item when the active focus id is stale", () => {
+    const items = situation().operationalFocus?.items ?? [];
+    expect(aircraftOperationalFocusNavigation(items, "weather:missing")).toMatchObject({
+      currentIndex: null,
+      previousItem: null,
+      nextItem: { id: "weather:WX1" },
+    });
   });
 
   it("uses the source evidence coordinate for weather and navigation-integrity focus", () => {
