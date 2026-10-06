@@ -2,7 +2,8 @@ import Link from "next/link";
 import { AirRadarPageShell } from "@/components/airradar-shell";
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { formatTime, t } from "@/lib/i18n";
-import type { FlightEventType } from "@/lib/intelligence/types";\nimport { eventReplayQuery } from "@/lib/intelligence/event-replay";
+import type { FlightEventType } from "@/lib/intelligence/types";
+import { eventReplayQuery } from "@/lib/intelligence/event-replay";
 
 const eventTypes: FlightEventType[] = ["APPROACH", "LANDING", "TAKEOFF", "GO_AROUND", "HOLDING", "DIVERSION", "UNUSUAL_TURN", "ORBIT", "TOP_OF_DESCENT", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"];
 
@@ -34,6 +35,7 @@ export default async function IntelligencePage() {
         <div className="intelligence-aircraft"><Link href={`/aircraft/${event.icaoHex}`}>{event.callsign || event.registration || event.icaoHex}</Link><span>{event.icaoHex}</span></div>
         <div className="intelligence-location">{event.airportIcao ?? event.sectorId ?? t.intelligence.noLocation}</div>
         <div className="intelligence-evidence"><strong>{t.intelligence.evidence}</strong><ul>{event.evidence.slice(0, 4).map((item) => <li key={item}>{evidenceTypes[item] ?? item}</li>)}</ul></div>
+        {eventReplayQuery(event) ? <div className="intelligence-replay" data-testid="event-replay-action"><Link href={{ pathname: "/time-machine", query: eventReplayQuery(event)! }}>{t.intelligence.replayEvent}</Link><span>{t.intelligence.replayWindow}</span></div> : null}
       </article>) : <div className="intelligence-empty"><strong>{t.intelligence.empty}</strong><span>{t.intelligence.emptyHint}</span></div>}
     </section>
   </main></AirRadarPageShell>;
