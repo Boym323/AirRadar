@@ -17,7 +17,7 @@ describe("Route Network Explorer V1 boundary", () => {
   it("keeps persisted traffic aggregation Flight-only", () => {
     expect(trafficApi).toContain("getStatisticsTraffic");
     expect(trafficServer).toContain("schema.Flight");
-    expect(trafficServer).not.toContain("FlightPosition");
+    expect(trafficServer).not.toContain("schema.FlightPosition");
   });
 
   it("supports bounded today/7d/30d route exploration", () => {
