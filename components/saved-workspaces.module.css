@@ -1,0 +1,246 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.sidebar,
+.detail {
+  display: grid;
+  gap: 1rem;
+}
+
+.createForm,
+.entryForm,
+.renameRow {
+  display: grid;
+  gap: .7rem;
+}
+
+.createForm label,
+.entryForm label {
+  display: grid;
+  gap: .35rem;
+}
+
+.createForm label > span,
+.entryForm label > span {
+  color: var(--muted);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.createForm input,
+.createForm textarea,
+.entryForm input,
+.entryForm select,
+.renameRow input {
+  min-height: 2.55rem;
+  border: 1px solid var(--border);
+  border-radius: .65rem;
+  background: var(--panel);
+  color: var(--foreground);
+  padding: .55rem .7rem;
+  font: inherit;
+}
+
+.createForm textarea {
+  resize: vertical;
+}
+
+.createForm button,
+.entryForm button,
+.renameRow button,
+.entryActions button,
+.danger {
+  min-height: 2.55rem;
+  border: 1px solid var(--border);
+  border-radius: .65rem;
+  background: color-mix(in srgb, var(--panel) 86%, var(--foreground) 8%);
+  color: var(--foreground);
+  padding: .55rem .8rem;
+  cursor: pointer;
+}
+
+.createForm button:disabled,
+.entryForm button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.workspaceList {
+  display: grid;
+  gap: .45rem;
+}
+
+.workspaceList button {
+  display: flex;
+  justify-content: space-between;
+  gap: .8rem;
+  align-items: center;
+  min-height: 3rem;
+  border: 1px solid var(--border);
+  border-radius: .7rem;
+  background: transparent;
+  color: var(--foreground);
+  padding: .65rem .75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.workspaceList span,
+.detailHeader span,
+.entry span {
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+}
+
+.activeWorkspace {
+  border-color: color-mix(in srgb, var(--foreground) 45%, var(--border)) !important;
+  background: color-mix(in srgb, var(--panel) 80%, var(--foreground) 6%) !important;
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.detailHeader h2 {
+  margin: .2rem 0;
+}
+
+.detailHeader p {
+  margin: .25rem 0 0;
+  color: var(--muted);
+}
+
+.danger {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+  color: var(--danger);
+}
+
+.renameRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.entryForm {
+  grid-template-columns: minmax(150px, .6fr) minmax(180px, .8fr) minmax(260px, 1.5fr) auto;
+  align-items: end;
+}
+
+.entries {
+  display: grid;
+  gap: .6rem;
+}
+
+.entry {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: .8rem;
+  border: 1px solid var(--border);
+  border-radius: .7rem;
+}
+
+.entry > div:first-child {
+  display: grid;
+  gap: .2rem;
+  min-width: 0;
+}
+
+.entry code {
+  color: var(--muted);
+  font-size: .75rem;
+  overflow-wrap: anywhere;
+}
+
+.entryActions {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.entryActions a,
+.entryActions button {
+  min-height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .5rem .75rem;
+  border-radius: .6rem;
+}
+
+.entryActions a {
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+}
+
+.notice {
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .entryForm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hrefField {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: .75rem;
+  }
+
+  .detailHeader,
+  .entry {
+    display: grid;
+  }
+
+  .renameRow,
+  .entryForm {
+    grid-template-columns: 1fr;
+  }
+
+  .hrefField {
+    grid-column: auto;
+  }
+
+  .entryActions {
+    width: 100%;
+  }
+
+  .entryActions a,
+  .entryActions button,
+  .danger {
+    min-height: 44px;
+    flex: 1 1 0;
+  }
+}
