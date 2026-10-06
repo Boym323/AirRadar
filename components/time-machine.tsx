@@ -125,8 +125,10 @@ export function TimeMachine() {
   const currentAt = at ?? 0; const samples = useMemo(() => sampleHistoricalTraffic(tracks, currentAt), [currentAt, tracks]); const selectedSample = samples.find((sample) => sample.id === selected) ?? null; const selectedTrack = tracks.find((track) => track.id === selected);
   function seek(next: number): void { setPlaying(false); setAt(next); const params = new URLSearchParams({ at: new Date(next).toISOString() }); if (eventReplay && replayTarget.current) { params.set("replay", String(EVENT_REPLAY_RADIUS_MINUTES)); params.set("hex", replayTarget.current.hex); if (replayTarget.current.flightId !== null) params.set("flightId", String(replayTarget.current.flightId)); } window.history.replaceState(null, "", `/time-machine?${params.toString()}`); if (!windowRange || next < windowRange.start || next > windowRange.end) void loadWindow(next).catch((caught) => setError(caught instanceof Error ? caught.message : t.timeMachine.loadFailed)); }
   function selectEvent(event: TimeMachineEvent): void {
+    const target = { flightId: event.flightId, hex: event.icaoHex };
+    if (eventReplay) replayTarget.current = target;
+    setPendingEventTarget(target);
     seek(Date.parse(event.occurredAt));
-    setPendingEventTarget({ flightId: event.flightId, hex: event.icaoHex });
   }
   const eventClusters = useMemo(() => clusterTimeMachineEvents(events), [events]);
   const contextStatus = context.status === "loading" ? t.timeMachine.contextLoading : context.status === "partial" ? t.timeMachine.contextPartial : t.timeMachine.contextReady;
