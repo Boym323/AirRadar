@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatNumber, formatTime, t } from "@/lib/i18n";
-import type { OperationalTwinApiResponse, OperationalTwinEvent } from "@/lib/operational-twin";
+import type { AircraftOperationalFocusItem, OperationalTwinApiResponse, OperationalTwinEvent } from "@/lib/operational-twin";
 import type { WeatherCorridorEvent } from "@/lib/weather/corridor-intelligence";
 import styles from "./aircraft-operational-twin.module.css";
 
@@ -12,6 +12,10 @@ function eventTypeLabel(type: OperationalTwinEvent["type"]): string {
 
 function weatherEventTypeLabel(type: WeatherCorridorEvent["type"]): string {
   return t.operationalTwin.weatherCorridorEventTypes[type];
+}
+
+function operationalFocusTypeLabel(type: AircraftOperationalFocusItem["type"]): string {
+  return t.operationalTwin.operationalFocusTypes[type];
 }
 
 function relativeTime(minutes: number): string {
@@ -76,6 +80,7 @@ export function AircraftOperationalTwin({
   const weather = data.weatherCorridor ?? null;
   const windTimingShadow = data.windTimingShadow ?? null;
   const navigationIntegrity = data.navigationIntegrityCorridor ?? null;
+  const operationalFocus = data.operationalFocus ?? null;
   return <section className={styles.panel} aria-labelledby="operational-twin-title" data-testid="operational-digital-twin-v1">
     <div className={styles.heading}>
       <div>
@@ -95,6 +100,42 @@ export function AircraftOperationalTwin({
     <div className={styles.evidence}>
       {t.operationalTwin.evidenceSummary(evidence.observed, evidence.published, evidence.planned, evidence.predicted, evidence.inferred)}
     </div>
+
+    {operationalFocus && <section className={styles.weatherCorridor} aria-labelledby="operational-focus-title" data-testid="aircraft-operational-focus-v1">
+      <div className={styles.weatherHeading}>
+        <div>
+          <span>{t.operationalTwin.operationalFocusSubtitle}</span>
+          <h3 id="operational-focus-title">{t.operationalTwin.operationalFocusTitle}</h3>
+        </div>
+        <strong className={styles.focusLevel} data-level={operationalFocus.level}>
+          {t.operationalTwin.operationalFocusLevel[operationalFocus.level]}
+        </strong>
+      </div>
+      <div className={styles.weatherSources}>
+        <span>{t.operationalTwin.operationalFocusSummary(operationalFocus.attention, operationalFocus.watch)}</span>
+        {operationalFocus.truncated && <span>{t.operationalTwin.operationalFocusTruncated}</span>}
+      </div>
+      {operationalFocus.items.length ? <ol className={styles.weatherTimeline}>
+        {operationalFocus.items.map((item) => <li key={item.id}>
+          <div className={styles.weatherTime}>
+            <strong>{relativeTime(item.offsetMinutes)}</strong>
+            <small>{formatTime(item.at)}</small>
+          </div>
+          <div className={styles.weatherEvent}>
+            <div className={styles.eventHeader}>
+              <span>{operationalFocusTypeLabel(item.type)}</span>
+              <div className={styles.badges}>
+                <span>{t.operationalTwin.operationalFocusLevel[item.level]}</span>
+                <span>{t.operationalTwin.confidence[item.confidence]}</span>
+              </div>
+            </div>
+            <strong>{item.label}</strong>
+            <small>{item.source}{item.sourceReference ? ` · ${item.sourceReference}` : ""}</small>
+          </div>
+        </li>)}
+      </ol> : <p className={styles.status}>{t.operationalTwin.operationalFocusNoItems}</p>}
+      <p className={styles.disclaimer}>{t.operationalTwin.operationalFocusDisclaimer}</p>
+    </section>}
 
     {weather && <section className={styles.weatherCorridor} aria-labelledby="weather-corridor-title" data-testid="weather-corridor-intelligence-v1">
       <div className={styles.weatherHeading}>
