@@ -80,4 +80,5 @@ export * from "./regional-attention-graduation";
 export * from "./trajectory-quality-outcome";
 export * from "./trajectory-quality-outcome-v2";
 export * from "./trajectory-quality-graduation";
+export * from "./trajectory-quality-v3-graduation";
 export * from "./trajectory-quality-promotion";

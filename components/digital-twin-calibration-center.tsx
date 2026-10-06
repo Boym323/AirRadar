@@ -10,6 +10,7 @@ import type {
   OperationalTwinTrajectoryQualityGraduationReport,
   OperationalTwinTrajectoryQualityOutcomeReport,
   OperationalTwinTrajectoryQualityOutcomeV2Report,
+  OperationalTwinTrajectoryQualityV3GraduationReport,
   OperationalTwinWindTimingGraduationReport,
   RegionalAttentionOutcomeReport,
   RegionalAttentionGraduationReport,
@@ -42,6 +43,7 @@ type CalibrationCenterReport = {
   corridor: OperationalTwinOutcomeReport;
   trajectoryQuality: OperationalTwinTrajectoryQualityOutcomeReport;
   trajectoryQualityComparison: OperationalTwinTrajectoryQualityOutcomeV2Report;
+  trajectoryQualityV3Graduation: OperationalTwinTrajectoryQualityV3GraduationReport;
   trajectoryQualityGraduation: OperationalTwinTrajectoryQualityGraduationReport;
   event: OperationalTwinEventOutcomeReport;
   focus: AircraftOperationalFocusOutcomeReport;
@@ -336,6 +338,52 @@ export function DigitalTwinCalibrationCenter() {
                   ))}
               </div>
               <small>{t.calibrationCenter.trajectoryQualityComparisonFootnote}</small>
+            </section>
+
+            <section className="statistics-card" data-testid="calibration-trajectory-quality-v3-graduation">
+              <DecisionHeader
+                title={t.calibrationCenter.trajectoryQualityV3Graduation}
+                decision={report.trajectoryQualityV3Graduation.decision}
+                reasons={report.trajectoryQualityV3Graduation.reasons}
+              />
+              <div className={styles.metrics}>
+                <Metric
+                  label={t.calibrationCenter.pairedSamples}
+                  value={report.trajectoryQualityV3Graduation.evidence.pairedSamples}
+                />
+                <Metric
+                  label={t.calibrationCenter.qualityV2Mae}
+                  value={report.trajectoryQualityV3Graduation.evidence.v2MeanAbsoluteErrorFt === null
+                    ? t.common.emptyValue
+                    : `${formatNumber(report.trajectoryQualityV3Graduation.evidence.v2MeanAbsoluteErrorFt, 0, t.locale)} ft`}
+                />
+                <Metric
+                  label={t.calibrationCenter.qualityV3Mae}
+                  value={report.trajectoryQualityV3Graduation.evidence.v3MeanAbsoluteErrorFt === null
+                    ? t.common.emptyValue
+                    : `${formatNumber(report.trajectoryQualityV3Graduation.evidence.v3MeanAbsoluteErrorFt, 0, t.locale)} ft`}
+                />
+                <Metric
+                  label={t.calibrationCenter.v3MaeGainVsV2}
+                  value={pct(report.trajectoryQualityV3Graduation.evidence.v3RelativeMaeImprovementVsV2)}
+                />
+                <Metric
+                  label={t.calibrationCenter.v3WinRateVsV2}
+                  value={pct(report.trajectoryQualityV3Graduation.evidence.v3WinRateVsV2)}
+                />
+                <Metric
+                  label={t.calibrationCenter.truthCoverage}
+                  value={pct(report.trajectoryQualityV3Graduation.evidence.truthCoverage)}
+                />
+              </div>
+              <small>
+                {t.calibrationCenter.manualPromotionEligible}: {report.trajectoryQualityV3Graduation.manualPromotionEligible ? t.common.yes : t.common.no}
+                {" · "}{t.calibrationCenter.v3PromotionNotImplemented}
+                {" · "}{t.calibrationCenter.horizonRegressions}: {report.trajectoryQualityV3Graduation.evidence.horizonRegressions.length}
+                {" · "}{t.calibrationCenter.phaseRegressions}: {report.trajectoryQualityV3Graduation.evidence.phaseRegressions.length}
+                {" · "}{t.calibrationCenter.performanceClassRegressions}: {report.trajectoryQualityV3Graduation.evidence.performanceClassRegressions.length}
+                {" · "}{t.calibrationCenter.v3ProfileRegressions}: {report.trajectoryQualityV3Graduation.evidence.v3ProfileRegressions.length}
+              </small>
             </section>
 
             <section className="statistics-card" data-testid="calibration-trajectory-quality-graduation">

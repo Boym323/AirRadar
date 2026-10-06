@@ -650,6 +650,16 @@ Capture remains request-driven from the existing Digital Twin builder and truth 
 
 The V2 decision is evidence readiness only: WAIT means more observation span or paired horizon evidence is required, FAIL is reserved for a mature evidence set with inadequate LOCAL truth coverage, and PASS means the triple-paired evidence is sufficiently complete for a later V3 graduation layer. It never graduates or promotes V3 automatically.
 
+## Trajectory Quality V3 Graduation V1
+
+Trajectory Quality V3 Graduation is a stricter decision layer over Outcome Validation V2. It is derived entirely from the restart-stable triple-paired evidence and does not add capture, polling or persistence. The existing V2 graduation and promotion path remains independent and unchanged.
+
+The evidence floor requires at least 240 minutes, 120 triple-paired samples, at least 24 samples in every 5/15/30-minute horizon and at least 75% LOCAL receiver truth coverage. Once complete, V3 must improve altitude MAE versus V2 by at least 5%, achieve at least a 55% decisive head-to-head win rate versus V2, and still improve MAE versus canonical by at least 8%.
+
+Regression guards compare V3 directly with V2. Graduation fails closed if V3 regresses by more than 4% on any sufficiently sampled horizon, more than 6% in a flight phase with at least 12 samples, more than 8% in a performance class with at least 12 samples, or more than 8% in a V3 profile with at least 12 samples. Sparse segments do not block graduation until they reach their guard sample floor.
+
+A PASS sets `manualPromotionEligible=true` only. `autoPromotion=false`, `v3PromotionImplemented=false`, and the current V2 promotion path remains independent. Therefore V3 Graduation cannot change the production trajectory until a separate fail-closed V3 Promotion layer is implemented.
+
 ## Trajectory Quality Outcome Validation V1
 
 Trajectory Quality Outcome Validation V1 prospectively pairs the canonical altitude projection and the Trajectory Quality V2 shadow against the same later LOCAL receiver altitude truth at 5, 15 and 30 minutes. Capture is request-driven from the existing Digital Twin builder, including the existing bounded refresh-sampled calibration requests. Truth is observed from the normal LOCAL receiver refresh; no additional timer, provider call, endpoint or network request is introduced.
