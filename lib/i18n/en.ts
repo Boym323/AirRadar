@@ -2223,6 +2223,8 @@ export const en = {
     operationalFocusDrawerPrevious: "Previous operational focus",
     operationalFocusDrawerNext: "Next operational focus",
     operationalFocusDrawerPosition: (current: number, total: number) => `${current} / ${total}`,
+    operationalFocusChangesTitle: "Changed since last refresh",
+    operationalFocusChangeKinds: { NEW: "NEW", ESCALATED: "ESCALATED", DEESCALATED: "DEESCALATED", UPDATED: "UPDATED", RESOLVED: "RESOLVED" },
     operationalFocusDisclaimer: "Operational context only. NORMAL is not an all-clear, and WATCH or ATTENTION is not a safety alert, ATC instruction, or clearance inference.",
     weatherCorridorTitle: "Weather ahead",
     weatherCorridorSubtitle: "30-minute PIREP/AIREP, SIGMET and ICON-EU outlook along the projected corridor",
