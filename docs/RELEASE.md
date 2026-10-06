@@ -45,18 +45,28 @@ sudo ./deploy/release.sh --channel rc --dry-run
 `.github/workflows/ci.yml` runs the full validation gate on every pull request
 and push. A push to `main` automatically runs the production smoke checks,
 including the desktop/mobile browser gate, and then starts the `deploy` job on
-the self-hosted Linux x64 runner. The runner executes:
+the self-hosted Linux x64 runner. The release-validation job builds the exact main commit once, prepares its
+standalone runtime assets, writes a manifest containing the commit, resolved
+release version, channel, build time, and BUILD_ID, and uploads
+`production-build-COMMIT_SHA`. The self-hosted deploy job downloads that
+artifact and executes:
 
 ```bash
-sudo -n /var/www/airradar/deploy/release.sh --branch main --automated --commit COMMIT_SHA
+sudo -n /var/www/airradar/deploy/release.sh \
+  --branch main \
+  --automated \
+  --commit COMMIT_SHA \
+  --prepared-build ARTIFACT_DIR
 ```
 
-This is the fast production deployment path: CI has already run lint,
-typecheck, the full Vitest suite, and the desktop/mobile browser gate, so the
-release script skips that duplicate quality suite. It still runs dependency
-installation, the isolated production build, Prisma migrations, systemd
-validation, restart, and local/public health checks. The explicit commit pin
-prevents deploying a different or unvalidated commit.
+This is the fast production deployment path: CI has already run typecheck, the
+full Vitest suite, production/browser gates, and the performance baseline. The
+release script validates the artifact against the exact commit and resolved
+release metadata, skips the duplicate quality suite and duplicate Next build,
+then runs dependency installation, Prisma generation/migrations, systemd
+validation, atomic build activation, restart, and local/public health checks.
+The explicit commit pin and artifact manifest prevent deploying a different or
+unvalidated build.
 
 The runner needs only outbound HTTPS access to GitHub. Install it through
 GitHub's **Settings → Actions → Runners → New self-hosted runner**, configure
@@ -113,14 +123,15 @@ normal command above.
    release together with generated codebase metrics while the GitHub Release
    continues to use GitHub-generated notes.
 5. It runs `npm ci` with the local cache and without npm audit/fund network
-   checks, emits the Prisma contract, then runs lint, typecheck, and the full
-   Vitest suite in parallel. The release test invocation uses Vitest
-   `--pool=threads`; all tests still run.
-6. It acquires `/var/lib/airradar/build.lock`, writes ignored
-   `generated/build-version.json`, and runs `npm run build` with Next.js output
-   directed to an isolated `.next-release-*` directory. The active `.next`
-   directory is not changed while the service is serving traffic. The build
-   lock is released after the build.
+   checks and emits the Prisma contract. Manual releases then run lint,
+   typecheck, and the full Vitest suite in parallel. Automated releases reuse
+   the CI quality result.
+6. Manual releases acquire `/var/lib/airradar/build.lock`, write ignored
+   `generated/build-version.json`, build into an isolated
+   `.next-release-*` directory, and prepare the standalone runtime assets.
+   Automated releases instead validate the downloaded CI artifact manifest and
+   stage its already-built `.next` tree under the same build lock. The active
+   `.next` directory is unchanged in both cases.
 7. It runs `npm run prisma:deploy` against the configured database. Migrations
    are forward migrations; never reset or recreate a production database.
 8. It validates the repository systemd unit, compares/installs it atomically
@@ -153,9 +164,10 @@ return `200` while appearing unstyled and non-interactive. The build/start
 lock prevents a service from starting during an active release build, but it
 does not make an independently run build safe for an already running process.
 
-Use `deploy/release.sh` for production builds. It builds into an isolated
-`.next-release-*` directory and changes the active `.next` only during the
-short service stop/start handoff. If a build fails, the active service and
+Use `deploy/release.sh` for production releases. Manual releases build into
+an isolated `.next-release-*` directory; automated releases stage the
+validated CI artifact into that isolated directory. Both change the active
+`.next` only during the short service stop/start handoff. If a build fails, the active service and
 build remain untouched. During a failed activation, keep the service recovery
 and database migration compatibility in mind before manually restoring an old
 build.
@@ -185,8 +197,9 @@ starting an incomplete build.
 `deploy/airradar.service` runs as unprivileged `airradar`, with
 `WorkingDirectory=/var/www/airradar`, `EnvironmentFile=/var/www/airradar/.env`,
 and direct `node scripts/start-production.mjs start --hostname ... --port ...`.
-The wrapper registers the shutdown coordinator in the Next process and sets
-`NEXT_MANUAL_SIG_HANDLE=1`, so systemd tracks the actual Node process as
+The wrapper prefers the traced `.next/standalone/server.js` runtime and keeps
+a backward-compatible `next start` fallback for older rollback builds. It
+sets `NEXT_MANUAL_SIG_HANDLE=1`, so systemd tracks the actual Node process as
 `MainPID` and the application owns cleanup. The service uses
 `KillMode=control-group`, `KillSignal=SIGTERM`, and a bounded stop timeout.
 `StateDirectory=airradar` gives the service user persistent `/var/lib/airradar`
