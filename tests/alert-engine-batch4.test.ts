@@ -70,6 +70,24 @@ describe("batch 4 alert transitions", () => {
     expect(send).toHaveBeenCalledTimes(2);
   });
 
+  it("applies the shared cooldown to successive reception-record maxima", async () => {
+    const history = historyRecorder();
+    const send = vi.fn(async () => undefined);
+    let now = Date.parse("2026-09-08T12:00:00Z");
+    const engine = new AlertEngine({ history, notifier: { name: "test", enabled: true, send }, cooldownMs: 60_000, now: () => now });
+    const first = { date: "2026-09-08", distanceKm: 410, icaoHex: "ABC123", registration: "OK-ABC", recordedAt: "2026-09-08T12:00:00Z", bearing: 90 };
+    const next = { ...first, distanceKm: 411, recordedAt: "2026-09-08T12:00:03Z" };
+
+    engine.observeReceptionRecord("daily", first, null);
+    now += 3_000;
+    engine.observeReceptionRecord("daily", next, first);
+    engine.observeReceptionRecord("lifetime", next, first);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(history.detected.map((entry) => entry.record?.scope)).toEqual(["daily", "lifetime"]);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
   it("alerts once for confirmed holding and permits a separate lifecycle episode", async () => {
     const history = historyRecorder();
     const engine = new AlertEngine({ rules: [{ id: "watch", enabled: true, type: "icaoHex", value: "ABC123" }], history, notifier: { name: "test", enabled: true, send: vi.fn(async () => undefined) } });

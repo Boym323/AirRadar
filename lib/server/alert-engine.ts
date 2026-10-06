@@ -489,7 +489,12 @@ export class AlertEngine {
   /** Called only on a genuine in-memory record transition. */
   observeReceptionRecord(scope: "daily" | "lifetime", current: ReceiverDailyReceptionRecord, previous: ReceiverDailyReceptionRecord | null): void {
     const id = `record:${scope}:${current.date}:${current.icaoHex}:${current.distanceKm.toFixed(3)}:${current.recordedAt}`;
-    if (this.permanentEvents.has(id)) return;
+    // A moving aircraft can raise the receiver maximum on every poll. Keep
+    // the individual event ID for durable history, but apply the shared
+    // notification cooldown per record scope/day so that this does not turn
+    // into a notification stream.
+    const cooldownKey = `record:${scope}:${current.date}`;
+    if (this.permanentEvents.has(id) || !this.isAvailable(cooldownKey, this.now())) return;
     const record: AlertHistoryRecordValue = {
       scope,
       distanceKm: current.distanceKm,
@@ -500,6 +505,7 @@ export class AlertEngine {
     const accepted = this.enqueue({ aircraft: aircraftFromRecord(current), matchedRules: [], emergency: false, priority: "normal", type: "reception_record", reason: "record", eventId: id, record });
     if (!accepted) return;
     this.rememberPermanentEvent(id);
+    this.reserve(cooldownKey, this.now());
     this.persistState();
   }
 
