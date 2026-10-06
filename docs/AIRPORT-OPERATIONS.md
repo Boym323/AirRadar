@@ -169,3 +169,11 @@ V7/V8 evidence; it performs no additional read or write.
 
 V8 is not ATC sequencing, FIDS, separation minima, airport capacity, slot
 demand, a safety assessment, or a delay forecast.
+
+## Terminal Outlook V1
+
+Terminal Outlook is a compact read-model over the already computed Live Board V6–V8 evidence. It does not add another API request, EventSource, database query, persistence path or refresh timer.
+
+The outlook combines the existing 5/15/30-minute PUBLIC-ETA arrival demand, Arrival Flow pressure, Approach Queue/compression state, current receiver-observed runway flow, predicted runway load/alignment, and recent receiver-inferred holding/go-around counts. If only receiver evidence is available the status is PARTIAL; combined readiness-gated public prediction and receiver evidence is AVAILABLE.
+
+Terminal Outlook is operational context only. It is not an airport configuration, ATC clearance, flow-control instruction, slot/capacity statement, safety assessment or causal explanation.
