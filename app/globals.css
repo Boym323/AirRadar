@@ -1016,6 +1016,20 @@ code, pre, kbd, .mono, [data-mono="true"] {
 .time-machine-context-statuses { margin-top:9px; }
 .time-machine-context-statuses .available { color:#73d9b7; }
 .time-machine-context-statuses .unavailable { color:#e5a6a6; }
+.time-machine-event-nav { display:flex; justify-content:space-between; gap:8px; margin-top:8px; }
+.time-machine-event-nav button { min-height:32px; padding:6px 10px; border:1px solid var(--border-default); border-radius:var(--radius-md); color:var(--text-primary); background:var(--surface-interactive); cursor:pointer; }
+.time-machine-event-nav button:disabled { cursor:not-allowed; opacity:.42; }
+.time-machine-context-availability { margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+.time-machine-context-availability-heading { display:flex; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.time-machine-context-availability-heading span { color:var(--muted); font-size:10px; }
+.time-machine-context-availability-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
+.time-machine-context-availability-grid > div { display:grid; gap:2px; min-width:0; padding:7px 8px; border:1px solid var(--border-default); border-radius:var(--radius-md); background:var(--surface-interactive); }
+.time-machine-context-availability-grid strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; letter-spacing:0; text-transform:none; }
+.time-machine-context-availability-grid span, .time-machine-context-availability-grid small { color:var(--muted); font-size:9px; line-height:1.35; }
+.time-machine-context-availability-grid .available { border-color:color-mix(in srgb,#73d9b7 38%,var(--border-default)); }
+.time-machine-context-availability-grid .available > span { color:#73d9b7; }
+.time-machine-context-availability-grid .outside { border-color:color-mix(in srgb,#e5a6a6 38%,var(--border-default)); }
+.time-machine-context-availability-grid .outside > span { color:#e5a6a6; }
 .time-machine-lower { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; margin-top:16px; }
 .time-machine-aircraft-panel, .time-machine-events { min-height:180px; padding:17px; border:1px solid var(--border-default); border-radius:var(--radius-xl); background:var(--surface-card); }
 .time-machine-lower h2 { margin:0 0 12px; font-size:15px; }
@@ -1036,6 +1050,8 @@ code, pre, kbd, .mono, [data-mono="true"] {
   .time-machine-toolbar label { margin-left:0; }
   .time-machine-picker { align-items:flex-start; flex-direction:column; }
   .time-machine-context-panel > div:first-child { align-items:flex-start; flex-direction:column; }
+  .time-machine-context-availability-heading { align-items:flex-start; flex-direction:column; }
+  .time-machine-context-availability-grid { grid-template-columns:1fr 1fr; }
   .time-machine-lower { grid-template-columns:1fr; }
   .time-machine-events button { grid-template-columns:52px 1fr; }
   .time-machine-events button span { grid-column:2; }
