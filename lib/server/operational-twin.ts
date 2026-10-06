@@ -330,6 +330,7 @@ export async function getOperationalTwinForAircraft(
     events,
     weatherCorridor,
     windTimingShadow,
+    trajectoryQualityShadow,
     atcAvailable: preparedDataset !== null,
     airspacePlanAvailable: Boolean(airspacePlan && airspacePlan.status !== "unavailable"),
     sigmetAvailable: Boolean(sigmets && sigmetResult.ok),
@@ -338,7 +339,6 @@ export async function getOperationalTwinForAircraft(
     ),
   });
   situation.navigationIntegrityCorridor = navigationIntegrityCorridor;
-  situation.trajectoryQualityShadow = trajectoryQualityShadow;
 
   // Truth-first V2 observes the current independent route/SIGMET truth before
   // capturing this request's future predictions, preventing self-validation.
