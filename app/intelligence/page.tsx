@@ -2,9 +2,9 @@ import Link from "next/link";
 import { AirRadarPageShell } from "@/components/airradar-shell";
 import { getFlightIntelligenceService } from "@/lib/server/flight-intelligence";
 import { formatTime, t } from "@/lib/i18n";
-import type { FlightEventType } from "@/lib/intelligence/types";
+import type { FlightEventType } from "@/lib/intelligence/types";\nimport { eventReplayQuery } from "@/lib/intelligence/event-replay";
 
-const eventTypes: FlightEventType[] = ["APPROACH", "LANDING", "TAKEOFF", "GO_AROUND", "HOLDING", "DIVERSION", "TOP_OF_DESCENT", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"];
+const eventTypes: FlightEventType[] = ["APPROACH", "LANDING", "TAKEOFF", "GO_AROUND", "HOLDING", "DIVERSION", "UNUSUAL_TURN", "ORBIT", "TOP_OF_DESCENT", "AIRSPACE_ENTRY", "AIRSPACE_EXIT"];
 
 export const dynamic = "force-dynamic";
 export default async function IntelligencePage() {
