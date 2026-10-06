@@ -34,6 +34,7 @@ historicky přiřazený.
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 | Explainable Prediction | production | intelligence / prediction | Pre-registry | `/aircraft/:hex` | — | Panely Proč? pro readiness-gated ETA, runway, runway-change a trajectory advisory používají malý capability-specific whitelist z existující canonical prediction evidence. |
 | Route Network Explorer | production | analytics / routes | Pre-registry | `/routes` | — | Omezený explorer agregovaných tras. |
+| Saved Workspaces | production | productivity | Pre-registry | `/workspaces` | — | Pojmenované browser-local kolekce canonical odkazů AirRadaru a bezpečného URL/query kontextu, omezené na 12 workspace po 12 položkách. |
 <!-- feature-registry:end -->
 
 ## Receiver Explorer V2
@@ -707,3 +708,16 @@ Event Outcome V2 nyní párově porovnává canonical a wind-adjusted čas stejn
 ### Explainable Prediction V1
 
 Prediktivní karty na detailu letadla mají rozbalovací panel `Proč?` pro ETA, runway, runway-change a trajectory. Evidence pochází ze stejného canonical prediction vyhodnocení a ven prochází pouze přes existující readiness-gated advisory buildery. Capability-specific whitelist dovoluje jen produktově bezpečné vstupy, například zbývající vzdálenost, efektivní rychlost, fázi letu, recent runway usage, povrchový vítr, candidate margin a trajectory geometrii. Nevzniká druhý prediction request ani paralelní model.
+
+
+## Saved Workspaces V1
+
+`/workspaces` ukládá pojmenované pracovní kontexty výhradně do local storage
+prohlížeče. Každý workspace obsahuje pouze canonical odkazy AirRadaru a bezpečný
+query stav, který už je součástí daného odkazu. V1 kontrakt je verzovaný,
+poškozená data odmítá fail-closed a omezuje úložiště na 12 workspace po
+12 položkách.
+
+Saved Workspaces nepřidává API, databázovou tabulku, účet, sdílení ani cloudovou
+synchronizaci. Otevření položky naviguje na existující canonical plochu, která
+si obnoví svůj vlastní URL stav.
