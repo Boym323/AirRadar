@@ -47,6 +47,74 @@
 }
 
 
+.changes {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.changes > strong {
+  color: var(--text-secondary);
+  font-size: 9px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.change {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: rgba(4, 12, 21, .42);
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.change:not(:disabled) {
+  cursor: pointer;
+}
+
+.change:not(:disabled):hover,
+.change:not(:disabled):focus-visible {
+  border-color: var(--accent);
+}
+
+.change:disabled {
+  opacity: .64;
+}
+
+.change > span {
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.change[data-kind="ESCALATED"] > span {
+  color: var(--danger);
+}
+
+.change[data-kind="DEESCALATED"] > span,
+.change[data-kind="RESOLVED"] > span {
+  color: var(--text-muted);
+}
+
+.change > b {
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.change > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
 .navigation {
   display: grid;
   grid-template-columns: 30px minmax(64px, auto) 30px;
