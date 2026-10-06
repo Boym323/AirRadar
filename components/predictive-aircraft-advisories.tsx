@@ -10,7 +10,7 @@ import type {
   PublicRunwayAdvisory,
   PublicRunwayChangeAdvisory,
   PublicTrajectoryAdvisory,
-  type ExplainablePredictionEvidence,
+  ExplainablePredictionEvidence,
 } from "@/lib/predictive-intelligence";
 import { ETA_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/eta-advisory";
 import { RUNWAY_ADVISORY_STALE_AFTER_MS } from "@/lib/predictive-intelligence/runway-advisory";
