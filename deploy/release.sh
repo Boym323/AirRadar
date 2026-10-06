@@ -592,11 +592,13 @@ NODE
   log "Prepared CI build staged for commit ${NEW_SHA}"
 }
 
-prisma_cli() {
+install_pinned_prisma_cli() {
   local prisma_version
   prisma_version="$(node -e 'const fs=require("node:fs"); const pkg=JSON.parse(fs.readFileSync("package.json","utf8")); process.stdout.write(pkg.devDependencies?.prisma ?? pkg.dependencies?.prisma ?? "");')"
   [[ "${prisma_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die "package.json does not pin an exact Prisma CLI version."
-  npm_config_prefer_offline=true npm exec --yes --package="prisma@${prisma_version}" -- prisma "$@"
+  log "Installing pinned Prisma CLI ${prisma_version}"
+  npm install --no-save --package-lock=false --omit=dev --prefer-offline --no-audit --no-fund "prisma@${prisma_version}"
+  [[ -x node_modules/.bin/prisma ]] || die "Pinned Prisma CLI was not installed."
 }
 
 run_release_steps() {
@@ -605,8 +607,9 @@ run_release_steps() {
   if (( AUTOMATED == 1 )); then
     log "Installing production dependencies only"
     npm ci --omit=dev --prefer-offline --no-audit --no-fund
+    install_pinned_prisma_cli
     log "Generating Prisma contract with pinned CLI"
-    prisma_cli contract emit
+    node_modules/.bin/prisma contract emit
   else
     log "Installing dependencies"
     npm ci --prefer-offline --no-audit --no-fund
@@ -654,7 +657,7 @@ run_release_steps() {
 
   log "Applying database migrations"
   if (( AUTOMATED == 1 )); then
-    prisma_cli db migrate
+    node_modules/.bin/prisma db migrate
   else
     npm run prisma:deploy
   fi
