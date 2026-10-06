@@ -1,0 +1,268 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.header {
+  align-items: end;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.headerActions > span {
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+.filters {
+  display: flex;
+  gap: .8rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.filterBlock,
+.selectLabel {
+  display: grid;
+  gap: .35rem;
+}
+
+.filterBlock > span,
+.selectLabel > span {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.selectLabel select {
+  min-height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: .55rem;
+  background: var(--panel);
+  color: var(--foreground);
+  padding: .4rem .65rem;
+}
+
+.metrics {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.section {
+  display: grid;
+  gap: 1rem;
+}
+
+.error,
+.status {
+  margin: 0;
+  padding: .8rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: .65rem;
+  color: var(--muted);
+}
+
+.error {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  color: var(--danger);
+}
+
+.anomalyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+}
+
+.anomalyCard {
+  display: grid;
+  gap: .85rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: .8rem;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.anomalyHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.anomalyHead > div:first-child {
+  display: grid;
+  gap: .2rem;
+  min-width: 0;
+}
+
+.anomalyHead strong {
+  font-size: .95rem;
+}
+
+.anomalyHead span {
+  color: var(--muted);
+  font-size: .78rem;
+  overflow-wrap: anywhere;
+}
+
+.badges {
+  display: flex;
+  gap: .4rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.anomalyFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  gap: .65rem;
+}
+
+.anomalyFacts div {
+  display: grid;
+  gap: .15rem;
+}
+
+.anomalyFacts dt {
+  color: var(--muted);
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.anomalyFacts dd {
+  margin: 0;
+  font-size: .92rem;
+  font-weight: 700;
+}
+
+.anomalyFoot {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  color: var(--muted);
+  font-size: .72rem;
+  flex-wrap: wrap;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.table th,
+.table td {
+  padding: .65rem .7rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+  font-size: .78rem;
+}
+
+.table th {
+  color: var(--muted);
+  font-size: .68rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.table code {
+  font-size: .75rem;
+}
+
+.historyList {
+  display: grid;
+  gap: .45rem;
+}
+
+.historyRow {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) minmax(120px, .6fr) minmax(140px, .7fr) auto;
+  align-items: center;
+  gap: .8rem;
+  padding: .75rem .85rem;
+  border: 1px solid var(--border);
+  border-radius: .65rem;
+}
+
+.historyRow > div:first-child {
+  display: grid;
+  gap: .15rem;
+}
+
+.historyRow strong {
+  font-size: .84rem;
+}
+
+.historyRow span {
+  color: var(--muted);
+  font-size: .74rem;
+}
+
+@media (max-width: 1180px) {
+  .metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .anomalyGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .historyRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: .75rem;
+  }
+
+  .filters {
+    align-items: stretch;
+  }
+
+  .filterBlock,
+  .selectLabel {
+    width: 100%;
+  }
+
+  .selectLabel select {
+    width: 100%;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .anomalyHead {
+    display: grid;
+  }
+
+  .badges {
+    justify-content: flex-start;
+  }
+
+  .anomalyFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .historyRow {
+    grid-template-columns: 1fr;
+  }
+}
