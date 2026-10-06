@@ -12,7 +12,10 @@ concurrency:
 
 jobs:
   validate:
-    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
+    # Metadata PRs are validated by the explicit workflow_dispatch run started
+    # by repository-metadata.yml. Skipping the duplicate pull_request job keeps
+    # its auto-merge from deleting the branch while that event is still queued.
+    if: (github.event_name == 'pull_request' && github.head_ref != 'automation/repository-metadata') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/automation/repository-metadata')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
