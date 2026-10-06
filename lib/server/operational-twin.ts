@@ -21,6 +21,7 @@ import {
   buildOperationalTwinSituation,
   buildOperationalTwinTrajectoryQualityV2,
   buildOperationalTwinWindTimingShadow,
+  applyOperationalTwinTrajectoryQualityPromotion,
   applyOperationalTwinWindTimingPromotion,
   OPERATIONAL_TWIN_VERSION,
   type OperationalTwinAircraftState,
@@ -34,7 +35,12 @@ import { getAirspacePlan } from "@/lib/server/airspace-activity";
 import { defaultAviationWeatherProvider } from "@/lib/server/aviation-weather-provider";
 import { defaultPirepProvider } from "@/lib/server/pirep-provider";
 import { defaultWindAloftProvider, type WindLevelHpa } from "@/lib/server/wind-aloft";
-import { getOperationalTwinWindTimingPolicy, isAviationWeatherEnabled, isTrackFusionDigitalTwinEnabled } from "@/lib/server/config";
+import {
+  getOperationalTwinTrajectoryQualityPolicy,
+  getOperationalTwinWindTimingPolicy,
+  isAviationWeatherEnabled,
+  isTrackFusionDigitalTwinEnabled,
+} from "@/lib/server/config";
 import { windLevelForAltitude } from "@/lib/weather/aircraft-wind-context";
 import { buildWeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
 import { loadAtcContextDataset } from "@/lib/atc-context/engine";
@@ -357,13 +363,20 @@ export async function getOperationalTwinForAircraft(
     sigmets,
   }, now.getTime());
 
-  // Calibration always consumes the untouched canonical event timing. Promotion
-  // is a presentation policy only and must never rewrite its own evidence.
+  // Calibration always consumes the untouched canonical corridor and event
+  // timing. Promotion is a presentation policy only and must never rewrite
+  // its own evidence or downstream weather/event/ATC semantics.
   service.captureOperationalTwinOutcome(situation);
   service.captureOperationalTwinTrajectoryQualityOutcome(situation);
   service.captureOperationalTwinEventOutcome(situation, { atcDataset: preparedDataset, sigmets, destination });
 
-  const promotion = applyOperationalTwinWindTimingPromotion({
+  const trajectoryPromotion = applyOperationalTwinTrajectoryQualityPromotion({
+    corridor: situation.corridor,
+    trajectoryQualityV2,
+    graduation: service.getOperationalTwinTrajectoryQualityGraduationReport(now),
+    configuredPolicy: getOperationalTwinTrajectoryQualityPolicy(),
+  });
+  const windPromotion = applyOperationalTwinWindTimingPromotion({
     events: situation.events,
     windTimingShadow,
     graduation: service.getOperationalTwinEventOutcomeReport(now).windTimingGraduation,
@@ -372,14 +385,16 @@ export async function getOperationalTwinForAircraft(
   });
   const operationalFocus = buildAircraftOperationalFocus({
     generatedAt: now,
-    events: promotion.events,
+    events: windPromotion.events,
     weatherCorridor,
     navigationIntegrityCorridor,
   });
   const finalSituation = {
     ...situation,
-    events: promotion.events,
-    windTimingPromotion: promotion.status,
+    corridor: trajectoryPromotion.corridor,
+    trajectoryQualityPromotion: trajectoryPromotion.status,
+    events: windPromotion.events,
+    windTimingPromotion: windPromotion.status,
     operationalFocus,
   };
   service.captureOperationalFocusOutcome(finalSituation, sigmets);
