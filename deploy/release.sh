@@ -596,30 +596,14 @@ NODE
   log "Prepared CI build staged for commit ${NEW_SHA}"
 }
 
-install_pinned_prisma_cli() {
-  local prisma_version
-  prisma_version="$(node -e 'const fs=require("node:fs"); const pkg=JSON.parse(fs.readFileSync("package.json","utf8")); process.stdout.write(pkg.devDependencies?.prisma ?? pkg.dependencies?.prisma ?? "");')"
-  [[ "${prisma_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || die "package.json does not pin an exact Prisma CLI version."
-  log "Installing pinned Prisma CLI ${prisma_version}"
-  npm install --no-save --package-lock=false --omit=dev --prefer-offline --no-audit --no-fund "prisma@${prisma_version}"
-  [[ -x node_modules/.bin/prisma ]] || die "Pinned Prisma CLI was not installed."
-}
-
 run_release_steps() {
   cleanup_stale_smoke_validation_dirs
 
-  if (( AUTOMATED == 1 )); then
-    log "Installing production dependencies only"
-    npm ci --omit=dev --prefer-offline --no-audit --no-fund
-    install_pinned_prisma_cli
-    log "Generating Prisma contract with pinned CLI"
-    node_modules/.bin/prisma contract emit
-  else
-    log "Installing dependencies"
-    npm ci --prefer-offline --no-audit --no-fund
-    log "Generating Prisma contract"
-    npm run prisma:generate
-  fi
+  log "Installing deploy dependencies"
+  npm ci --prefer-offline --no-audit --no-fund
+
+  log "Generating Prisma contract"
+  npm run prisma:generate
 
   if (( AUTOMATED == 1 )); then
     log "Automated release: reusing CI validation for ${NEW_SHA}; skipping duplicate quality suite"
@@ -660,11 +644,7 @@ run_release_steps() {
   fi
 
   log "Applying database migrations"
-  if (( AUTOMATED == 1 )); then
-    node_modules/.bin/prisma db migrate
-  else
-    npm run prisma:deploy
-  fi
+  npm run prisma:deploy
 }
 
 run_quality_gates() {
