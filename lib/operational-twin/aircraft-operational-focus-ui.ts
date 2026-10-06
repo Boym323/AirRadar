@@ -22,6 +22,39 @@ export interface AircraftOperationalFocusMapTarget {
   lon: number;
 }
 
+export interface AircraftOperationalFocusNavigation {
+  currentIndex: number | null;
+  total: number;
+  previousItem: AircraftOperationalFocusItem | null;
+  nextItem: AircraftOperationalFocusItem | null;
+}
+
+export function aircraftOperationalFocusNavigation(
+  items: readonly AircraftOperationalFocusItem[],
+  activeItemId: string | null,
+): AircraftOperationalFocusNavigation {
+  const total = items.length;
+  const currentIndex = activeItemId
+    ? items.findIndex((item) => item.id === activeItemId)
+    : -1;
+
+  if (currentIndex < 0) {
+    return {
+      currentIndex: null,
+      total,
+      previousItem: null,
+      nextItem: items[0] ?? null,
+    };
+  }
+
+  return {
+    currentIndex,
+    total,
+    previousItem: currentIndex > 0 ? items[currentIndex - 1] ?? null : null,
+    nextItem: currentIndex < total - 1 ? items[currentIndex + 1] ?? null : null,
+  };
+}
+
 type FocusMapProperties = {
   kind: "corridor" | "target";
   itemId: string;
