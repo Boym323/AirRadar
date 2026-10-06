@@ -1,5 +1,5 @@
 # Changelog
-
+- Add Receiver Explorer V2 on `/receiver/coverage` with directional median/P95/max range polar analytics, altitude-band reach, bounded 7/30-day trends, weak-sector health, live ADS-B/MLAT source mix, directional records, and the existing network-reference capture polar without a new ingest or persistence lane.\n
 All notable changes to AirRadar are documented here.
 
 ## Unreleased
