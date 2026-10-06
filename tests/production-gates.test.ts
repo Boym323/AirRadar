@@ -60,6 +60,19 @@ describe("production release metadata gate", () => {
     expect(source).not.toContain("{ width: 1150, height: 900 }");
   });
 
+  it("completes the responsive sweep before route smoke can tear down the browser", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    const sweepStart = source.indexOf("const runResponsiveSweep =");
+    const sweepAwait = source.indexOf("await runResponsiveSweep();", sweepStart);
+    const routeSmokeSetup = source.indexOf("const routeErrors =", sweepStart);
+    const lateSweepAwait = source.indexOf("await runResponsiveSweep();", routeSmokeSetup);
+
+    expect(sweepStart).toBeGreaterThan(-1);
+    expect(sweepAwait).toBeGreaterThan(sweepStart);
+    expect(sweepAwait).toBeLessThan(routeSmokeSetup);
+    expect(lateSweepAwait).toBe(-1);
+  });
+
   it("keeps Operations Dashboard in secondary and mobile navigation smoke", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('["/operations", \'[data-testid="operations-dashboard-v1"]\']');

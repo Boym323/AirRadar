@@ -1160,14 +1160,15 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
         }
       }
     };
-    const responsiveSweepPromise = configuredViewport ? Promise.resolve() : (async () => {
+    const runResponsiveSweep = configuredViewport ? async () => {} : async () => {
       const sweepPage = await browser.newPage({ viewport: { width: 821, height: 900 } });
       try {
         await sweepPage.goto(`${baseUrl}/?mapDiagnostics=1`, { waitUntil: "domcontentloaded" });
         await sweepPage.locator("h1").first().waitFor({ state: "visible" });
         const sweepFailures = [];
         // Exercise breakpoint boundaries without paying for a full page reload
-        // at every width. This runs concurrently with the secondary-route smoke.
+        // at every width. The sweep runs before the secondary-route smoke so a
+        // route failure cannot close the browser while this page is resizing.
         const sweepWidths = [430, 480, 700, 720, 820, 821, 899, 900, 901, 950, 951, 1024, 1100, 1101, 1400, 1401];
         for (const width of sweepWidths) {
           await sweepPage.setViewportSize({ width, height: 900 });
@@ -1179,7 +1180,12 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       } finally {
         await closePage(sweepPage);
       }
-    })();
+    };
+    // Keep the sweep failure contained before starting route smoke. If both
+    // promises run concurrently, a route failure tears down the browser in
+    // the outer finally while the sweep can still be inside setViewportSize,
+    // which produces an unhandled "Target page ... has been closed" error.
+    await runResponsiveSweep();
     const routeErrors = [];
     const routeWarnings = [];
     const unavailable = [];
@@ -1233,7 +1239,6 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
     if (routeErrors.length) throw new Error(`Navigation smoke failed: ${routeErrors.join(" | ")}`);
     if (routeWarnings.length) console.log(`[production-gates] browser console warnings observed=${routeWarnings.length}`);
     await closePage(routeSmoke);
-    await responsiveSweepPromise;
     await captureVisualSmoke();
     const browserViewports = [
       { width: 320, height: 568 },
