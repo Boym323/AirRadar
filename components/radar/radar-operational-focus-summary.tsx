@@ -1,6 +1,7 @@
 import type { AircraftOperationalFocusSummary } from "@/lib/operational-twin/types";
 import { formatTime, t } from "@/lib/i18n";
-import { StatusBadge } from "@/components/ui-primitives";
+import { StatusBadge, UiIcon } from "@/components/ui-primitives";
+import { aircraftOperationalFocusNavigation } from "@/lib/operational-twin/aircraft-operational-focus-ui";
 import styles from "./radar-operational-focus-summary.module.css";
 
 function offsetLabel(minutes: number): string {
@@ -18,6 +19,7 @@ export function RadarOperationalFocusSummary({
   onFocus: (itemId: string) => void;
 }) {
   const activeItem = activeItemId ? focus.items.find((item) => item.id === activeItemId) ?? null : null;
+  const navigation = aircraftOperationalFocusNavigation(focus.items, activeItemId);
   const firstItems = focus.items.slice(0, 4);
   const visibleItems = activeItem && !firstItems.some((item) => item.id === activeItem.id)
     ? [...firstItems.slice(0, 3), activeItem]
@@ -40,6 +42,39 @@ export function RadarOperationalFocusSummary({
         <span>{t.operationalTwin.operationalFocusSummary(focus.attention, focus.watch)}</span>
         {focus.truncated ? <small>{t.operationalTwin.operationalFocusTruncated}</small> : null}
       </div>
+
+      {focus.items.length ? (
+        <div className={styles.navigation} role="group" aria-label={t.operationalTwin.operationalFocusDrawerNavigation}>
+          <button
+            type="button"
+            className={styles.navigationButton}
+            disabled={!navigation.previousItem}
+            aria-label={t.operationalTwin.operationalFocusDrawerPrevious}
+            onClick={() => {
+              if (navigation.previousItem) onFocus(navigation.previousItem.id);
+            }}
+          >
+            <UiIcon name="back" />
+          </button>
+          <span className={styles.navigationPosition}>
+            {t.operationalTwin.operationalFocusDrawerPosition(
+              navigation.currentIndex === null ? 0 : navigation.currentIndex + 1,
+              navigation.total,
+            )}
+          </span>
+          <button
+            type="button"
+            className={styles.navigationButton}
+            disabled={!navigation.nextItem}
+            aria-label={t.operationalTwin.operationalFocusDrawerNext}
+            onClick={() => {
+              if (navigation.nextItem) onFocus(navigation.nextItem.id);
+            }}
+          >
+            <span className={styles.navigationNextIcon}><UiIcon name="back" /></span>
+          </button>
+        </div>
+      ) : null}
 
       {visibleItems.length ? (
         <div className={styles.items}>
