@@ -1190,7 +1190,7 @@ async function assertBrowserSmoke({ enabled = process.env.RUN_BROWSER_GATE === "
       ["/history", ".history-page"], ["/statistics", ".statistics-page"], ["/fleet", ".fleet-page"],
       ["/time-machine", ".time-machine-page"], ["/intelligence", ".intelligence-page"], ["/watchlist", ".watchlist-page"],
       ["/alerts", ".alert-history-page"], ["/recap/daily", ".recap-page"], ["/recap/weekly", ".recap-page"],
-      ["/system", ".system-page"], ["/operations", ".operations-page"], ["/receiver/coverage", ".statistics-page"],
+      ["/system", ".system-page"], ["/operations", '[data-testid="operations-dashboard-v1"]'], ["/receiver/coverage", ".statistics-page"],
     ];
     const routePages = await Promise.all(Array.from({ length: 3 }, async () => configureRouteSmokePage(await browser.newPage({ viewport: { width: 1280, height: 800 } }))));
     await Promise.all(routePages.map(async (page, workerIndex) => {

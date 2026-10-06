@@ -62,7 +62,7 @@ describe("production release metadata gate", () => {
 
   it("keeps Operations Dashboard in secondary and mobile navigation smoke", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
-    expect(source).toContain('["/operations", ".operations-page"]');
+    expect(source).toContain('["/operations", \'[data-testid="operations-dashboard-v1"]\']');
     expect(source).toContain("alerts|fleet|intelligence|operations|recap|system|watchlist");
   });
 
