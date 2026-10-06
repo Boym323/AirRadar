@@ -631,3 +631,13 @@ Trajectory Quality V2 is an additive shadow profile over the existing canonical 
 The V2 shadow preserves every canonical horizontal coordinate, track, uncertainty value and timestamp. It exposes exact 5/15/30-minute canonical-versus-quality altitude checkpoints so later outcome validation can measure whether the tapered profile improves vertical projection. Missing altitude fails closed to INSUFFICIENT.
 
 V2 is deliberately not promoted. `canonicalRemainsActive=true` and `autoPromotion=false`; Weather Corridor, ATC/airspace intersections, Operational Focus and public event timing continue to consume the canonical corridor. The shadow adds no provider call, network request, database path or poller and explicitly carries `NO_AIRCRAFT_PERFORMANCE_MODEL`, `NO_ATC_CLEARANCE_INFERENCE`, `HORIZONTAL_PATH_UNCHANGED` and `NOT_FMS_INTENT` limitations.
+
+## Trajectory Quality Outcome Validation V1
+
+Trajectory Quality Outcome Validation V1 prospectively pairs the canonical altitude projection and the Trajectory Quality V2 shadow against the same later LOCAL receiver altitude truth at 5, 15 and 30 minutes. Capture is request-driven from the existing Digital Twin builder, including the existing bounded refresh-sampled calibration requests. Truth is observed from the normal LOCAL receiver refresh; no additional timer, provider call, endpoint or network request is introduced.
+
+The report measures paired-sample count, canonical altitude MAE, V2 altitude MAE, mean/relative MAE improvement, V2 win rate, truth coverage and bounded breakdowns by horizon and capture phase (CLIMB, CRUISE, DESCENT, LEVEL and UNKNOWN). A 100 ft error difference is treated as a tie to avoid turning insignificant altitude noise into a model win.
+
+V1 is a measurement/readiness lane, not a promotion gate. WAIT requires more observation span or paired horizon evidence. PASS means that sufficient independent evidence and truth continuity exist for a later graduation decision; it does not mean V2 is better. FAIL is currently reserved for a completed evidence set with inadequate LOCAL truth coverage. The canonical corridor remains active and `autoPromotion=false`.
+
+The first version is intentionally process-local and bounded to a rolling 24-hour window. Restart-stable anonymous aggregate persistence belongs to Trajectory Quality Graduation V1, where the model-benefit thresholds and manual-promotion eligibility will be defined.
