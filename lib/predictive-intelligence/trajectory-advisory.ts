@@ -23,7 +23,7 @@ export interface PublicTrajectoryAdvisory {
   confidence: PredictionConfidence;
   modelVersion: PredictiveFlightState["modelVersion"];
   provenance: "predicted";
-  evidence: ExplainablePredictionEvidence[];
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 export interface AdminTrajectoryAdvisoryPreview {
@@ -44,7 +44,7 @@ export interface AdminTrajectoryAdvisoryPreview {
   independentOutcomeTruthAvailable: boolean;
   modelVersion: PredictiveFlightState["modelVersion"] | null;
   provenance: "predicted";
-  evidence: ExplainablePredictionEvidence[];
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 type TrajectoryReadinessResult = PredictiveReadinessCapabilityResult<TrajectoryReadinessEvidence>;
