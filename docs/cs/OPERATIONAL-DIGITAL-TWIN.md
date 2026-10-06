@@ -619,4 +619,12 @@ Report měří počet paired samples, canonical altitude MAE, V2 altitude MAE, a
 
 V1 je measurement/readiness lane, ne promotion gate. WAIT znamená nedostatečné observační okno nebo paired evidence v horizontech. PASS znamená, že existuje dost nezávislé evidence a kontinuity truth pro budoucí graduation rozhodnutí; neznamená, že V2 je lepší. FAIL je v této verzi vyhrazen dokončené evidenci s nedostatečným LOCAL truth coverage. Canonical corridor zůstává aktivní a `autoPromotion=false`.
 
-První verze je záměrně process-local a omezená na klouzavé 24hodinové okno. Restart-stable anonymní agregovaná persistence patří až do Trajectory Quality Graduation V1, kde budou definované thresholdy přínosu modelu a manual-promotion eligibility.
+Outcome okno zůstává omezené na klouzavých 24 hodin, dokončená evidence se ale nyní ukládá jako anonymní pětiminutové agregáty do existující tabulky kalibračních bucketů. Nepersistuje se ICAO identita letadla, callsign, registrace, route ani jednotlivý raw truth bod. Pending vzorky zůstávají process-local; po restartu se hydratuje pouze vyřešená agregovaná evidence.
+
+## Trajectory Quality Graduation V1
+
+Trajectory Quality Graduation V1 je samostatná a přísnější rozhodovací vrstva nad persistovanou outcome evidencí. Canonical trajektorii nemění a nikdy neprovádí automatickou promotion. Graduation vyžaduje alespoň 240 minut evidence, 120 paired samples, nejméně 24 paired samples v každém horizontu 5/15/30 minut a alespoň 75% pokrytí LOCAL truth.
+
+Po splnění evidence floor musí V2 prokázat alespoň 8% relativní zlepšení altitude MAE a 60% win rate mezi rozhodnými vzorky. Graduation zároveň fail-closed selže, pokud některý dostatečně zastoupený horizont regresuje o více než 5 %, nebo některá flight phase s alespoň 12 vzorky regresuje o více než 8 %. Řídký phase šum se reportuje, ale promotion neblokuje, dokud daná phase nedosáhne guard sample floor.
+
+PASS pouze nastaví `manualPromotionEligible=true`. `autoPromotion=false` a `canonicalTrajectoryRemainsActive=true` zůstávají explicitní. Calibration Center zobrazuje graduation rozhodnutí, agregovaný přínos, truth coverage, počty regresí v horizontech/fázích a stav restart-stable persistence, aby případná budoucí promotion vyžadovala explicitní zásah operátora nebo konfigurace.
