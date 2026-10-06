@@ -60,6 +60,12 @@ describe("production release metadata gate", () => {
     expect(source).not.toContain("{ width: 1150, height: 900 }");
   });
 
+  it("keeps Operations Dashboard in secondary and mobile navigation smoke", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain('["/operations", ".operations-page"]');
+    expect(source).toContain("alerts|fleet|intelligence|operations|recap|system|watchlist");
+  });
+
   it("keeps production-gate weather persistence inside its temporary state", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('AVIATION_WEATHER_CACHE_FILE: resolve(runtimeStateDirectory, "weather-cache-v1.json")');
