@@ -794,6 +794,8 @@ export const en = {
     emptyHint: "Matching flight patterns will appear here when detected by the receiver.",
     empty: "No intelligence events have been detected yet.",
     evidence: "Evidence",
+    replayEvent: "Replay ±10 min",
+    replayWindow: "Opens Time Machine 10 minutes before and 10 minutes after the event.",
     confidence: { low: "Low confidence", medium: "Medium confidence", high: "High confidence" },
     types: { APPROACH: "Probable approach", LANDING: "Likely landing", TAKEOFF: "Likely takeoff", INITIAL_CLIMB: "Initial climb", CRUISE_ENTER: "Cruise entered", GO_AROUND: "Go-around", HOLDING: "Probable holding", HOLDING_CANDIDATE: "Holding candidate", HOLDING_ENDED: "Holding ended", LEVEL_OFF: "Level-off", UNUSUAL_TURN: "Unusual turn", ORBIT: "Orbit", DIVERSION: "Probable diversion", TOP_OF_DESCENT: "Top of descent", AIRSPACE_ENTRY: "Airspace entry", AIRSPACE_EXIT: "Airspace exit" },
     evidenceTypes: {
@@ -1968,6 +1970,8 @@ export const en = {
     badge: "HISTORICAL RADAR PLAYBACK",
     subtitle: "Replay the receiver’s recorded traffic without affecting the live radar.",
     historical: "Historical data",
+    eventReplay: "EVENT REPLAY",
+    eventReplayWindow: "±10 min around the event · target aircraft is preselected when present in history.",
     backToLive: "← Back to live radar",
     play: "Play historical playback",
     pause: "Pause historical playback",
