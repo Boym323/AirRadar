@@ -51,6 +51,13 @@ The server-side provider boundary is `AircraftProvider`. The configured local
 provider fetches the readsb/tar1090 web root; the empty base URL selects the
 deterministic demo provider. The frontend never selects a provider.
 
+Receiver Monitoring V1 is a pure projection over the already-built
+`ReceiverQuality` value and the current readsb source state. It classifies
+receiver health and emits bounded likely-cause codes for `/system`; it does
+not start a poller, make an upstream request, persist data, or alter the live
+aircraft/SSE path. Demo mode remains explicitly insufficient data so it cannot
+be mistaken for a healthy production receiver.
+
 Command Search V2 remains mounted once from the root layout. The topbar search
 control is only a trigger; the root-level palette owns the single debounced
 `GET /api/search?q=` interaction lane, keyboard state, and bounded

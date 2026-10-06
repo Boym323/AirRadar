@@ -545,6 +545,13 @@ export function SystemStatusPage() {
         <Field label={dictionary.system.snapshotAge} value={data.receiver.readsb.snapshotAgeSeconds === null ? dictionary.system.notAvailable : `${formatNumber(data.receiver.readsb.snapshotAgeSeconds, 0, dictionary.locale)} ${dictionary.system.seconds}`} />
       </Card>
 
+      <Card title={dictionary.system.receiverMonitoring} status={data.receiver.readsb.monitoring.state === "HEALTHY" ? "ok" : data.receiver.readsb.monitoring.state === "INSUFFICIENT_DATA" ? "disabled" : data.receiver.readsb.monitoring.state === "DEGRADED" ? "degraded" : "offline"} dictionary={dictionary}>
+        <Field label={dictionary.system.monitoringState} value={data.receiver.readsb.monitoring.state} />
+        <Field label={dictionary.system.monitoringAction} value={data.receiver.readsb.monitoring.recommendedAction} />
+        <Field label={dictionary.system.monitoringCauses} value={data.receiver.readsb.monitoring.causes.length ? data.receiver.readsb.monitoring.causes.map((cause) => `${cause.code} (${cause.confidence})`).join(" · ") : dictionary.system.monitoringNoIssues} />
+        <Field label={dictionary.system.monitoringEvaluated} value={formatDateTime(data.receiver.readsb.monitoring.evaluatedAt, dictionary)} />
+      </Card>
+
       {detailed && data.localAdsb && <Card title={dictionary.system.localAdsb} status={data.localAdsb.status === "healthy" ? "ok" : data.localAdsb.status === "connecting" ? "degraded" : "offline"} dictionary={dictionary}>
         <Field label={dictionary.system.source} value={`${data.localAdsb.activeSource ?? "beast"} · ${data.localAdsb.host ?? dictionary.system.notAvailable}:${data.localAdsb.port ?? "?"}`} />
         <Field label={dictionary.system.connected} value={data.localAdsb.connected ? dictionary.system.online : dictionary.system.offline} />

@@ -29,6 +29,22 @@ historicky přiřazený.
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
 <!-- feature-registry:end -->
+
+## Proaktivní monitoring receiveru V1
+
+Odpověď systémového statusu nyní obsahuje omezenou projekci
+`receiver.readsb.monitoring`, odvozenou z existující kvality živého receiveru.
+Rozlišuje `HEALTHY`, `DEGRADED`, `OFFLINE` a `INSUFFICIENT_DATA`, uvádí
+bezpečné pravděpodobné příčiny jako neaktuální readsb snapshot, nízkou
+rychlost zpráv, žádná letadla nebo staré pozice a doporučí první kontrolu.
+Demo režim je výslovně označen jako nedostatek dat, nikoli jako zdravý receiver.
+
+Jde o read-only evaluator bez nového polleru, databázové tabulky, persistence,
+SSE streamu nebo upstream požadavku. Výsledek je dostupný přes existující
+`/api/system/status` a `/api/system/stream` a zobrazuje se na `/system`.
+Příčiny jsou omezené kódy s úrovní confidence; jde o diagnostické hypotézy,
+nikoli o důkaz poruchy antény nebo RF části.
+
 ## Map Context V1/V2
 
 Domovský radar obsahuje volitelné vrstvy, které jsou ve výchozím stavu
@@ -656,4 +672,3 @@ The Operational Digital Twin intersects its existing sampled 30-minute corridor 
 ## Wind Timing Graduation V1
 
 Event Outcome V2 nyní párově porovnává canonical a wind-adjusted čas stejného waypointu proti jediné LOCAL truth observation. Graduation gate je process-local a fail-closed: vyžaduje dostatečný span, paired sample volume, meaningful wind adjustments a truth coverage; PASS dále vyžaduje alespoň 5% zlepšení MAE a 55% shadow win rate. PASS pouze označí model jako způsobilý k ruční graduaci — canonical timing zůstává aktivní a automatická promotion neexistuje.
-
