@@ -1,6 +1,6 @@
 import "temporal-polyfill/full/global";
 import type { ReceiverRecapComparison, ReceiverRecapResponse, RecapInterestingItem, RecapRankingItem, RecapRouteItem, ReceiverReceptionRecord } from "@/lib/aircraft/types";
-import { buildDailyIntelligence, type DailyRecapEventAggregateInput, type DailyRecapEventInput, type DailyRecapFlightInput } from "@/lib/recap/daily-intelligence";
+import { buildDailyIntelligence, type DailyRecapEventAggregateInput, type DailyRecapEventInput, type DailyRecapFlightInput, type DailyRecapRouteAggregateInput, type DailyRecapWeatherInput } from "@/lib/recap/daily-intelligence";
 import type { ReceiverDailyReceptionRecord } from "@/lib/server/statistics";
 import { dayKey, getAppTimezone } from "@/lib/server/config";
 import { getPrisma } from "@/lib/server/db";
@@ -11,6 +11,7 @@ const RECAP_RANKING_LIMIT = 5;
 const RECAP_INTERESTING_LIMIT = 8;
 const DAILY_INTELLIGENCE_FLIGHT_LIMIT = 50_000;
 const DAILY_INTELLIGENCE_EVENT_LIMIT = 250;
+const DAILY_INTELLIGENCE_WEATHER_LIMIT = 2_000;
 
 type RecapRange = "daily" | "weekly";
 
@@ -247,10 +248,11 @@ async function loadDailyIntelligence(
   from: Date,
   to: Date,
   alerts: Awaited<ReturnType<typeof listAlertHistory>>,
+  routeAggregates: RecapRouteAggregate[],
 ) {
   const fromInstant = Temporal.Instant.fromEpochMilliseconds(from.getTime());
   const toInstant = Temporal.Instant.fromEpochMilliseconds(to.getTime());
-  const [flightRowsRaw, eventAggregatesRaw, eventRowsRaw] = await Promise.all([
+  const [flightRowsRaw, eventAggregatesRaw, eventRowsRaw, weatherResult] = await Promise.all([
     (async () => await schema.Flight
       .where((row) => row.startTime.gte(fromInstant))
       .where((row) => row.startTime.lt(toInstant))
@@ -270,10 +272,24 @@ async function loadDailyIntelligence(
       .orderBy([(row) => row.occurredAt.desc(), (row) => row.id.desc()])
       .limit(DAILY_INTELLIGENCE_EVENT_LIMIT + 1)
       .all())(),
-  ]);
+    (async () => {
+      try {
+        const rows = await schema.AircraftWeatherObservation
+          .where((row) => row.observedAt.gte(fromInstant))
+          .where((row) => row.observedAt.lt(toInstant))
+          .select("id", "aircraftHex", "callsign", "observedAt", "altitudeFt", "windDirectionDeg", "windSpeedKt", "turbulenceLevel", "quality", "source")
+          .orderBy([(row) => row.observedAt.desc(), (row) => row.id.desc()])
+          .limit(DAILY_INTELLIGENCE_WEATHER_LIMIT + 1)
+          .all();
+        return { available: true as const, rows };
+      } catch {
+        return { available: false as const, rows: [] };
+      }
+    })(),  ]);
   const flightRows = flightRowsRaw as unknown as Array<{ startTime: Temporal.Instant | Date; airline: string | null }>;
   const eventAggregates = eventAggregatesRaw as unknown as DailyRecapEventAggregateInput[];
   const eventRows = eventRowsRaw as unknown as Array<Omit<DailyRecapEventInput, "occurredAt"> & { occurredAt: Temporal.Instant | Date }>;
+  const weatherRows = weatherResult.rows as unknown as Array<Omit<DailyRecapWeatherInput, "observedAt"> & { observedAt: Temporal.Instant | Date }>;
 
   const flights: DailyRecapFlightInput[] = flightRows
     .slice(0, DAILY_INTELLIGENCE_FLIGHT_LIMIT)
@@ -287,16 +303,31 @@ async function loadDailyIntelligence(
       ...row,
       occurredAt: timestamp(row.occurredAt),
     }));
+  const weather: DailyRecapWeatherInput[] = weatherRows
+    .slice(0, DAILY_INTELLIGENCE_WEATHER_LIMIT)
+    .map((row) => ({
+      ...row,
+      observedAt: timestamp(row.observedAt),
+    }));
+  const weatherStatus = !weatherResult.available
+    ? "unavailable" as const
+    : weatherRows.length > DAILY_INTELLIGENCE_WEATHER_LIMIT
+      ? "truncated" as const
+      : "available" as const;
 
   return buildDailyIntelligence({
     flights,
     eventAggregates,
+    routeAggregates: routeAggregates as DailyRecapRouteAggregateInput[],
     events,
+    weather,
+    weatherStatus,
     alerts: alerts.items,
     timezone: getAppTimezone(),
     complete: alerts.nextPage === null
       && flightRows.length <= DAILY_INTELLIGENCE_FLIGHT_LIMIT
-      && eventRows.length <= DAILY_INTELLIGENCE_EVENT_LIMIT,
+      && eventRows.length <= DAILY_INTELLIGENCE_EVENT_LIMIT
+      && weatherStatus === "available",
   });
 }
 
@@ -368,7 +399,7 @@ async function buildPeriod(
   };
   const alertCount = periodAlerts.items.length;
   const dailyIntelligence = range === "daily"
-    ? await loadDailyIntelligence(schema, bounds.from, bounds.to, periodAlerts)
+    ? await loadDailyIntelligence(schema, bounds.from, bounds.to, periodAlerts, rows.routeAggregates)
     : null;
   const response: ReceiverRecapResponse = {
     source: "postgres",
