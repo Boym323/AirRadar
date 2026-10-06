@@ -63,6 +63,10 @@ describe("Predictive Trajectory Advisory V1", () => {
       confidence: "MEDIUM",
       modelVersion: "predictive-intelligence-v1",
       provenance: "predicted",
+      evidence: [
+        { key: "crossTrackKm", value: 18.4 },
+        { key: "distanceChangeKm", value: 7.2 },
+      ],
     });
   });
 
