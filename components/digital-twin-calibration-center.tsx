@@ -7,6 +7,7 @@ import type {
   OperationalTwinEventOutcomeReport,
   OperationalTwinOutcomeReport,
   OperationalTwinTruthFirstReport,
+  OperationalTwinTrajectoryQualityGraduationReport,
   OperationalTwinTrajectoryQualityOutcomeReport,
   OperationalTwinWindTimingGraduationReport,
   RegionalAttentionOutcomeReport,
@@ -22,6 +23,7 @@ type PersistenceStatus = {
   databaseAvailable: boolean;
   hydratedOutcomeBuckets: number;
   hydratedEventOutcomeBuckets: number;
+  hydratedTrajectoryQualityOutcomeBuckets: number;
   hydratedRegionalAttentionOutcomeBuckets: number;
   trackedPersistedBuckets: number;
   rowsWritten: number;
@@ -37,6 +39,7 @@ type CalibrationCenterReport = {
   generatedAt: string;
   corridor: OperationalTwinOutcomeReport;
   trajectoryQuality: OperationalTwinTrajectoryQualityOutcomeReport;
+  trajectoryQualityGraduation: OperationalTwinTrajectoryQualityGraduationReport;
   event: OperationalTwinEventOutcomeReport;
   focus: AircraftOperationalFocusOutcomeReport;
   truthFirst: OperationalTwinTruthFirstReport;
@@ -252,6 +255,50 @@ export function DigitalTwinCalibrationCenter() {
               <small>{t.calibrationCenter.trajectoryQualityFootnote}</small>
             </section>
 
+            <section className="statistics-card" data-testid="calibration-trajectory-quality-graduation">
+              <DecisionHeader
+                title={t.calibrationCenter.trajectoryQualityGraduation}
+                decision={report.trajectoryQualityGraduation.decision}
+                reasons={report.trajectoryQualityGraduation.reasons}
+              />
+              <div className={styles.metrics}>
+                <Metric
+                  label={t.calibrationCenter.pairedSamples}
+                  value={report.trajectoryQualityGraduation.evidence.pairedSamples}
+                />
+                <Metric
+                  label={t.calibrationCenter.canonicalMae}
+                  value={report.trajectoryQualityGraduation.evidence.canonicalMeanAbsoluteErrorFt === null
+                    ? t.common.emptyValue
+                    : `${formatNumber(report.trajectoryQualityGraduation.evidence.canonicalMeanAbsoluteErrorFt, 0, t.locale)} ft`}
+                />
+                <Metric
+                  label={t.calibrationCenter.qualityV2Mae}
+                  value={report.trajectoryQualityGraduation.evidence.qualityMeanAbsoluteErrorFt === null
+                    ? t.common.emptyValue
+                    : `${formatNumber(report.trajectoryQualityGraduation.evidence.qualityMeanAbsoluteErrorFt, 0, t.locale)} ft`}
+                />
+                <Metric
+                  label={t.calibrationCenter.relativeMaeGain}
+                  value={pct(report.trajectoryQualityGraduation.evidence.relativeMaeImprovement)}
+                />
+                <Metric
+                  label={t.calibrationCenter.shadowWinRate}
+                  value={pct(report.trajectoryQualityGraduation.evidence.qualityWinRate)}
+                />
+                <Metric
+                  label={t.calibrationCenter.truthCoverage}
+                  value={pct(report.trajectoryQualityGraduation.evidence.truthCoverage)}
+                />
+              </div>
+              <small>
+                {t.calibrationCenter.manualPromotionEligible}: {report.trajectoryQualityGraduation.manualPromotionEligible ? t.common.yes : t.common.no}
+                {" · "}{t.calibrationCenter.canonicalTrajectoryActive}
+                {" · "}{t.calibrationCenter.horizonRegressions}: {report.trajectoryQualityGraduation.evidence.horizonRegressions.length}
+                {" · "}{t.calibrationCenter.phaseRegressions}: {report.trajectoryQualityGraduation.evidence.phaseRegressions.length}
+              </small>
+            </section>
+
             <section className="statistics-card" data-testid="calibration-event-outcome">
               <DecisionHeader
                 title={t.calibrationCenter.eventOutcome}
@@ -406,6 +453,10 @@ export function DigitalTwinCalibrationCenter() {
               <div className={styles.metrics}>
                 <Metric label={t.calibrationCenter.corridorHydrated} value={report.persistence.hydratedOutcomeBuckets} />
                 <Metric label={t.calibrationCenter.eventHydrated} value={report.persistence.hydratedEventOutcomeBuckets} />
+                <Metric
+                  label={t.calibrationCenter.trajectoryQualityHydrated}
+                  value={report.persistence.hydratedTrajectoryQualityOutcomeBuckets}
+                />
                 <Metric
                   label={t.calibrationCenter.regionalHydrated}
                   value={report.persistence.hydratedRegionalAttentionOutcomeBuckets}
