@@ -762,6 +762,27 @@
         "approach queue",
         "next arrival"
       ]
+    },
+    {
+      "id": "watchlist-intelligence-v2",
+      "name": "Watchlist Intelligence V2",
+      "category": "alerts / monitoring",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Read-only watchlist intelligence dashboard combining current per-rule matches with one bounded 50-event activity feed for recent rule activity and notification-delivery outcomes.",
+      "pages": [
+        "/watchlist"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "watchlist-intelligence"
+      ],
+      "changelogKeywords": [
+        "watchlist intelligence",
+        "matching rules",
+        "matching aircraft",
+        "recent watchlist activity"
+      ]
     }
   ]
 }
