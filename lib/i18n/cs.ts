@@ -2221,6 +2221,8 @@ export const cs = {
     operationalFocusDrawerPrevious: "Předchozí provozní fokus",
     operationalFocusDrawerNext: "Další provozní fokus",
     operationalFocusDrawerPosition: (current: number, total: number) => `${current} / ${total}`,
+    operationalFocusChangesTitle: "Změny od posledního obnovení",
+    operationalFocusChangeKinds: { NEW: "NOVÉ", ESCALATED: "ZESÍLENO", DEESCALATED: "ZESLABENO", UPDATED: "ZMĚNA", RESOLVED: "VYŘEŠENO" },
     operationalFocusDisclaimer: "Pouze provozní kontext. NORMAL neznamená all-clear a WATCH ani ATTENTION nejsou bezpečnostní výstraha, pokyn ATC ani odvození clearance.",
     weatherCorridorTitle: "Počasí před letadlem",
     weatherCorridorSubtitle: "30minutový výhled PIREP/AIREP, SIGMET a ICON-EU podél projektovaného corridoru",
