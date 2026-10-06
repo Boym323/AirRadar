@@ -492,16 +492,43 @@ export interface RecapDailyHighlight {
   distanceKm: number | null;
 }
 
+export interface RecapDailyAirportItem {
+  icao: string;
+  movements: number;
+  arrivals: number;
+  departures: number;
+}
+
+export type RecapDailyWeatherHighlightKind = "turbulence" | "strong_wind";
+
+export interface RecapDailyWeatherHighlight {
+  key: string;
+  kind: RecapDailyWeatherHighlightKind;
+  observedAt: string;
+  icaoHex: string;
+  callsign: string | null;
+  altitudeFt: number;
+  turbulenceLevel: number | null;
+  windSpeedKt: number | null;
+  windDirectionDeg: number | null;
+  quality: "HIGH" | "GOOD";
+  source: string;
+}
+
 export interface RecapDailyIntelligence {
   complete: boolean;
   busiestHour: { hour: number; flights: number } | null;
   topAirlines: RecapRankingItem[];
+  topAirports: RecapDailyAirportItem[];
   eventCounts: {
     goArounds: number;
     holdings: number;
     diversions: number;
     emergencies: number;
+    unusualTurns: number;
+    orbits: number;
   };
+  weatherHighlights: RecapDailyWeatherHighlight[];
   highlights: RecapDailyHighlight[];
 }
 
