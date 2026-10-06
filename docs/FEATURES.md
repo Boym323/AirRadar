@@ -33,7 +33,7 @@ not yet been historically attributed.
 | Time Machine | production | history | Pre-registry | `/time-machine` | `/api/time-machine/range`<br>`/api/time-machine/window` | Bounded historical all-aircraft playback, historical context windows, and ±10-minute Event Replay entry points from Flight Intelligence. |
 | Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex`<br>`/api/admin/track-fusion/readiness`<br>`/api/admin/track-fusion/outcome` | Shadow-only per-field multi-source state estimator with readiness graduation plus bounded prospective canonical-vs-fused outcome validation against future LOCAL truth; never alters canonical live state or local receiver persistence. |
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
-| Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
+| Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/admin/alerts`<br>`/alerts`<br>`/fleet`<br>`/notifications`<br>`/watchlist` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, a read-only Notification Center, rule mutations and fleet views. |
 <!-- feature-registry:end -->
 
 ## Receiver Explorer V2
@@ -708,3 +708,17 @@ Event Outcome V2 now compares canonical and wind-adjusted timing for the same wa
 ### Explainable Prediction V1
 
 Aircraft predictive advisory cards expose a `Why?` disclosure for ETA, runway, runway-change and trajectory outputs. Evidence comes from the same canonical prediction evaluation and is passed only through the existing readiness-gated advisory builders. A capability-specific whitelist limits public evidence to product-safe inputs such as remaining distance, effective speed, phase, recent runway usage, surface wind, candidate margin and trajectory geometry. No second prediction request or parallel model is introduced.
+
+
+## Notification Center V1
+
+`/notifications` is a bounded read-only product view over the existing
+`/api/alerts` history projection. The canonical alert history already folds
+watchlist, Flight Intelligence, emergency, reception-record and Alert V1
+delivery state into stable event IDs, so the UI does not create a second alert
+aggregator or detector. The feed is limited to 50 recent entries and performs
+no polling.
+
+Unread state is optional browser-local metadata stored under
+`airradar.notifications.v1`. V1 adds no alert engine, push provider, delivery
+worker, scheduler, database table or server-side notification persistence.
