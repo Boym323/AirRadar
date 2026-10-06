@@ -14,6 +14,7 @@ import {
 } from "@/lib/route-intelligence";
 import type { AtcContextDataset, PreparedAtcContextDataset } from "@/lib/atc-context/types";
 import {
+  buildAircraftOperationalFocus,
   buildNavigationIntegrityCorridorIntelligence,
   buildOperationalTwinCorridor,
   buildOperationalTwinEvents,
@@ -361,9 +362,16 @@ export async function getOperationalTwinForAircraft(
     configuredPolicy: getOperationalTwinWindTimingPolicy(),
     generatedAt: now,
   });
+  const operationalFocus = buildAircraftOperationalFocus({
+    generatedAt: now,
+    events: promotion.events,
+    weatherCorridor,
+    navigationIntegrityCorridor,
+  });
   return {
     ...situation,
     events: promotion.events,
     windTimingPromotion: promotion.status,
+    operationalFocus,
   };
 }

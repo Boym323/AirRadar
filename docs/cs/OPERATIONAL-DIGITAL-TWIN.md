@@ -539,3 +539,33 @@ Scope zůstává pouze regionálním provozním kontextem.
 `DESTINATION_CLUSTER`, collision-warning semantika ani separation-product
 semantika nejsou pro graduation způsobilé.
 
+## Aircraft Operational Focus V1
+
+Digital Twin vybraného letadla nově obsahuje aditivní souhrn
+`operationalFocus`. Jde o deterministické prioritizování evidence, kterou už
+vypočítal stejný požadavek `GET /api/aircraft/:hex/situation`; nevzniká nový
+dotaz na provider, browser polling, čtení/zápis do databáze, scan historie ani
+druhý prediction pass.
+
+V1 může zvýraznit čtyři omezené třídy kontextu:
+
+- počasí s vysokou závažností v corridoru a použitelnou confidence jako
+  `ATTENTION`;
+- průnik s regionální Navigation Integrity oblastí se stavem DEGRADED/SEVERE a
+  použitelnou confidence jako `ATTENTION`, zatímco REDUCED nebo
+  low-confidence evidence zůstává `WATCH`;
+- průnik s AUP/UUP `PLANNED_AIRSPACE` pouze jako `WATCH`;
+- nenormální readiness-gated PUBLIC `TRAJECTORY_STATE` pouze jako `WATCH`.
+
+Běžné waypointy, vstupy do sektorů, ETA a runway události zůstávají v existující
+timeline a do Operational Focus se nepovyšují. Vynechává se také opuštění
+SIGMETu a weather evidence s nízkou závažností. Položky se řadí podle produktové
+priority, potom podle předstihu a confidence a jejich počet je omezen na osm.
+
+`NORMAL` znamená pouze to, že z aktuálně dostupné omezené evidence nevznikla
+žádná focus položka. Není to all-clear. AUP/UUP zůstává plánovanou alokací, ne
+potvrzenou aktivací, Navigation Integrity zůstává regionální heuristikou s
+neznámou příčinou a trajectory state zůstává prediktivním kontextem. Odpověď
+proto explicitně nese omezení `OPERATIONAL_CONTEXT_ONLY`,
+`NOT_SAFETY_ALERT`, `NO_ATC_CLEARANCE_INFERENCE`,
+`SOURCE_SEMANTICS_PRESERVED` a `NO_ALL_CLEAR_INFERENCE`.

@@ -561,3 +561,33 @@ The scope remains regional operational context only.
 `DESTINATION_CLUSTER`, collision-warning semantics, and separation-product
 semantics are explicitly ineligible for graduation.
 
+## Aircraft Operational Focus V1
+
+The selected-aircraft Digital Twin response now includes an additive
+`operationalFocus` summary. It is a deterministic prioritization over evidence
+already computed by the same `GET /api/aircraft/:hex/situation` request; it
+does not add a provider call, browser poller, database read/write, history scan,
+or second prediction pass.
+
+V1 can surface four bounded context classes:
+
+- high-severity corridor weather with usable confidence as `ATTENTION`;
+- degraded/severe regional Navigation Integrity corridor intersections with
+  usable confidence as `ATTENTION`, while reduced or low-confidence evidence
+  remains `WATCH`;
+- AUP/UUP `PLANNED_AIRSPACE` intersections as `WATCH` only;
+- a non-normal readiness-gated PUBLIC `TRAJECTORY_STATE` as `WATCH` only.
+
+Routine waypoint, sector-entry, ETA and runway events remain on the existing
+timeline and are not promoted into Operational Focus. Weather exits and
+low-severity weather evidence are also omitted. Items are ordered by product
+priority, then lead time and confidence, and capped at eight.
+
+`NORMAL` means only that no focus item was produced from the currently
+available bounded evidence. It is not an all-clear. AUP/UUP remains planned
+allocation rather than confirmed activation, Navigation Integrity remains a
+regional heuristic with unknown cause, and trajectory state remains predictive
+context. The response therefore carries explicit
+`OPERATIONAL_CONTEXT_ONLY`, `NOT_SAFETY_ALERT`,
+`NO_ATC_CLEARANCE_INFERENCE`, `SOURCE_SEMANTICS_PRESERVED`, and
+`NO_ALL_CLEAR_INFERENCE` limitations.
