@@ -3,7 +3,7 @@ import { getPrisma } from "@/lib/server/db";
 import type { FlightEventType } from "@/lib/intelligence/types";
 import type { HistoricalAircraftTrack } from "@/lib/time-machine/playback";
 
-export const TIME_MACHINE_MAX_WINDOW_MS = 5 * 60_000;
+export const TIME_MACHINE_MAX_WINDOW_MS = 5 * 60_000;\nexport const TIME_MACHINE_EVENT_REPLAY_MAX_WINDOW_MS = 20 * 60_000;
 export const TIME_MACHINE_MAX_AIRCRAFT = 500;
 export const TIME_MACHINE_MAX_POSITIONS = 40_000;
 export const TIME_MACHINE_MAX_EVENTS = 200;
@@ -93,4 +93,4 @@ async function getTimeMachineEvents(database: TimeMachineDb, from: Date, to: Dat
   return rows.slice(0, TIME_MACHINE_MAX_EVENTS).map((row) => ({ id: row.eventKey || String(row.id), type: row.type, icaoHex: row.icaoHex, flightId: row.flightId ?? null, occurredAt: iso(row.occurredAt), callsign: row.flight?.callsign ?? null, registration: row.aircraft?.registration ?? null, airportIcao: row.airportIcao ?? null, sectorId: row.sectorId ?? null, latitude: row.latitude ?? null, longitude: row.longitude ?? null }));
 }
 
-export function validateTimeMachineWindow(from: string | null, to: string | null): void { bounds(from, to); }
+export function validateTimeMachineWindow(from: string | null, to: string | null, maxWindowMs = TIME_MACHINE_MAX_WINDOW_MS): void { bounds(from, to, maxWindowMs); }
