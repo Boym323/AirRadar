@@ -320,6 +320,35 @@ jobs:
           console.log(`[deploy] ATS routes OK effective=${payload.source.effectiveDate} routes=${counts.routes} points=${counts.points} segments=${counts.segments}`);
           NODE
 
+      - name: Align production checkout to tested commit
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          repo="/var/www/airradar"
+          git_prod=(sudo -n git -c "safe.directory=${repo}" -C "${repo}")
+
+          "${git_prod[@]}" fetch origin main
+          fetched_sha="$("${git_prod[@]}" rev-parse FETCH_HEAD)"
+          if [[ "${fetched_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "::error::Fetched main at ${fetched_sha}, but this deploy validated ${GITHUB_SHA}."
+            exit 1
+          fi
+
+          if [[ -n "$("${git_prod[@]}" status --porcelain)" ]]; then
+            echo "::error::Production checkout is dirty before deploy bootstrap; refusing to reset it."
+            "${git_prod[@]}" status --short
+            exit 1
+          fi
+
+          "${git_prod[@]}" reset --hard "${fetched_sha}"
+          resolved_sha="$("${git_prod[@]}" rev-parse HEAD)"
+          [[ "${resolved_sha}" == "${GITHUB_SHA}" ]] || {
+            echo "::error::Production checkout did not align to validated commit."
+            exit 1
+          }
+
+          echo "[deploy] production checkout aligned to validated commit ${resolved_sha}"
+
       - name: Deploy the tested commit locally
         run: |
           set -Eeuo pipefail
