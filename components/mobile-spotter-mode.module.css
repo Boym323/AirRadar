@@ -102,7 +102,7 @@
   justify-content: flex-end;
 }
 
-.badges > span:not(:global(.status-badge)) {
+.badges > span[data-spotter-label] {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: .18rem .38rem;
