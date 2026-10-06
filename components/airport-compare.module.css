@@ -1,0 +1,230 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.controls {
+  display: flex;
+  align-items: end;
+  gap: .8rem;
+  flex-wrap: wrap;
+}
+
+.controls label,
+.period {
+  display: grid;
+  gap: .35rem;
+}
+
+.controls label > span,
+.period > span {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.controls input {
+  min-width: 12rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: .55rem;
+  background: var(--panel);
+  color: var(--foreground);
+  padding: .4rem .65rem;
+  font: inherit;
+  text-transform: uppercase;
+}
+
+.notice {
+  padding: .8rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: .65rem;
+  color: var(--muted);
+}
+
+.comparePanel {
+  display: grid;
+  gap: .8rem;
+}
+
+.sideHeaders,
+.matrixRow {
+  display: grid;
+  grid-template-columns: minmax(150px, .7fr) repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  align-items: center;
+}
+
+.sideHeaders {
+  padding: .6rem 0 .8rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sideHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: .8rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.sideHeader > div {
+  display: grid;
+  gap: .2rem;
+  min-width: 0;
+}
+
+.sideHeader strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sideHeader span {
+  color: var(--muted);
+  font-size: .75rem;
+}
+
+.matrix {
+  display: grid;
+}
+
+.matrixRow {
+  padding: .7rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.matrixRow > strong {
+  color: var(--muted);
+  font-size: .74rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.matrixRow > span {
+  font-size: .94rem;
+  font-weight: 700;
+}
+
+.links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+  padding-left: calc(150px + .75rem);
+}
+
+.links a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.runwayGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.runwayPanel {
+  display: grid;
+  gap: .8rem;
+}
+
+.runwayList {
+  display: grid;
+  gap: .65rem;
+}
+
+.runwayRow {
+  display: grid;
+  gap: .3rem;
+}
+
+.runwayRow > div {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.runwayRow span {
+  color: var(--muted);
+  font-size: .74rem;
+}
+
+.bar {
+  display: block;
+  height: .38rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: currentColor;
+  color: var(--accent);
+}
+
+.disclaimer {
+  margin: 0;
+  color: var(--muted);
+  font-size: .74rem;
+}
+
+@media (max-width: 900px) {
+  .runwayGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sideHeaders,
+  .matrixRow {
+    grid-template-columns: 120px repeat(2, minmax(0, 1fr));
+  }
+
+  .links {
+    padding-left: calc(120px + .75rem);
+  }
+}
+
+@media (max-width: 680px) {
+  .page {
+    padding: .75rem;
+  }
+
+  .controls {
+    align-items: stretch;
+  }
+
+  .controls label,
+  .period {
+    width: 100%;
+  }
+
+  .controls input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sideHeaders {
+    display: none;
+  }
+
+  .matrixRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .matrixRow > strong {
+    grid-column: 1 / -1;
+  }
+
+  .links {
+    padding-left: 0;
+    grid-template-columns: 1fr;
+  }
+}
