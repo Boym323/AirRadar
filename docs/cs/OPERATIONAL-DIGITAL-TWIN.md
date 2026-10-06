@@ -457,6 +457,12 @@ Mapové zvýraznění je fail-closed. Dvojici co-presence lze zvýraznit pouze t
 
 V1.1 nepřidává provider loop, receiver poller, databázovou cestu ani druhou autoritu živého stavu. Destination clustery zůstávají mimo graduation a mapové zvýraznění neodemknou.
 
+## Regional Focus Queue V1
+
+Existující odpověď `/api/operations/situation` nyní obsahuje omezený `focusQueue` odvozený ze stejného Regional Situation Graph a souhrnu Operational Attention. Signály se agregují po letadlech, řazení preferuje ATTENTION před WATCH, potom nejbližší projektovaný čas a počet signálů, a seznam je omezen na 20 letadel. Operations Center ukazuje prvních osm položek a každé letadlo odkazuje zpět na existující radar selection query.
+
+V1 záměrně nevytváří fan-out per-aircraft Digital Twin requestů a znovu nevolá weather, navigation-integrity ani prediction providery. Rozsah je pouze regionální evidence už přítomná v jednom LOCAL snapshotu. Odpověď proto nese omezení `REGIONAL_ATTENTION_INPUT_ONLY` a `NO_PER_AIRCRAFT_DIGITAL_TWIN_FANOUT` vedle stávajícího operational-context/non-separation kontraktu.
+
 ## Truth-first Validation V2
 
 Truth-first Validation V2 rozšiřuje měření recall mimo terminální outcome.
