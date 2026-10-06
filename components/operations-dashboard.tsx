@@ -218,23 +218,27 @@ export function OperationsDashboard() {
     let active = true;
     const controller = new AbortController();
     const codes = airportKey.split(",").filter(Boolean);
-    void Promise.all(codes.map(async (icao) => {
-      try {
-        const response = await fetch(
-          "/api/airports/" + encodeURIComponent(icao) + "/operations?period=24h",
-          { cache: "no-store", signal: controller.signal },
-        );
-        if (!response.ok) return null;
-        return [icao, await response.json() as AirportOperationsResponse] as const;
-      } catch {
-        return null;
-      }
-    })).then((entries) => {
+    const load = async () => {
+      const entries = await Promise.all(codes.map(async (icao) => {
+        try {
+          const response = await fetch(
+            "/api/airports/" + encodeURIComponent(icao) + "/operations?period=24h",
+            { cache: "no-store", signal: controller.signal },
+          );
+          if (!response.ok) return null;
+          return [icao, await response.json() as AirportOperationsResponse] as const;
+        } catch {
+          return null;
+        }
+      }));
       if (!active) return;
       setAirportOperations(Object.fromEntries(entries.filter((entry): entry is readonly [string, AirportOperationsResponse] => entry !== null)));
-    });
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 60_000);
     return () => {
       active = false;
+      window.clearInterval(timer);
       controller.abort();
     };
   }, [airportKey]);
