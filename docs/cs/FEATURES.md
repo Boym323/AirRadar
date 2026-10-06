@@ -31,6 +31,7 @@ historicky přiřazený.
 | Track Fusion Shadow | internal | receiver / intelligence | Pre-registry | `/system` | `/api/admin/track-fusion/:hex` | Shadow-only per-field multi-source state estimator with source-quality scoring, position residuals, bounded handover validation, short gap estimation and admin diagnostics; never alters canonical live state or local receiver persistence. |
 | Trajectory Conformance | production | navigation / intelligence | Pre-registry | `/` | — | Selected-aircraft route-conformance state machine with persistent deviation, confirmed rejoin and conservative probable-direct inference over Route Corridor Intelligence. |
 | Watchlist, Alerts & Fleet | production | alerts | Pre-registry | `/watchlist`<br>`/alerts`<br>`/fleet`<br>`/admin/alerts` | `/api/alerts`<br>`/api/watchlist`<br>`/api/watchlist/:id`<br>`/api/watchlist/activity`<br>`/api/watchlist/session`<br>`/api/admin/alerts/delivery`<br>`/api/admin/alerts/fleets`<br>`/api/admin/alerts/fleets/:id`<br>`/api/admin/alerts/fleets/:id/matchers`<br>`/api/admin/alerts/fleets/:id/matchers/:matcherId`<br>`/api/admin/alerts/geofences`<br>`/api/admin/alerts/geofences/:id`<br>`/api/admin/alerts/history`<br>`/api/admin/alerts/rules`<br>`/api/admin/alerts/rules/:id` | Server watchlists, integrated rule-scoped activity, alert history, rule mutations and fleet views. |
+| Route Network Explorer | production | analytics / routes | Pre-registry | `/routes` | — | Omezený průzkumník tras pro dnešek/7d/30d nad persistovanými receiver-observed Flight agregacemi, včetně top origin/destination dvojic a navigace na letiště bez scanování FlightPosition. |
 <!-- feature-registry:end -->
 
 ## Receiver Explorer V2
@@ -700,3 +701,7 @@ The Operational Digital Twin intersects its existing sampled 30-minute corridor 
 ## Wind Timing Graduation V1
 
 Event Outcome V2 nyní párově porovnává canonical a wind-adjusted čas stejného waypointu proti jediné LOCAL truth observation. Graduation gate je process-local a fail-closed: vyžaduje dostatečný span, paired sample volume, meaningful wind adjustments a truth coverage; PASS dále vyžaduje alespoň 5% zlepšení MAE a 55% shadow win rate. PASS pouze označí model jako způsobilý k ruční graduaci — canonical timing zůstává aktivní a automatická promotion neexistuje.
+
+### Route Network Explorer V1
+
+`/routes` používá existující bounded Statistics Traffic API a zobrazuje nejčastější origin/destination dvojice pro dnešek, 7 nebo 30 dní. Ukazuje podíl trasy, pořadí odletových a příletových letišť a přímé odkazy na letiště. Nepřidává nový route ingest, novou databázovou cestu ani scan `FlightPosition`.
