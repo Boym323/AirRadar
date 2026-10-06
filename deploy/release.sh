@@ -390,6 +390,10 @@ preflight() {
   require_command cp
   clean_automated_generated_changes
   check_repository
+  if (( AUTOMATED == 1 )) && [[ -z "${PREPARED_BUILD_ROOT}" ]] && [[ -d "/tmp/airradar-ci-production-build" ]]; then
+    PREPARED_BUILD_ROOT="/tmp/airradar-ci-production-build"
+    log "Detected validated CI build artifact at ${PREPARED_BUILD_ROOT}"
+  fi
   if [[ -n "${PREPARED_BUILD_ROOT}" ]]; then
     (( AUTOMATED == 1 )) || die "--prepared-build is only supported with --automated."
     PREPARED_BUILD_ROOT="$(cd -- "${PREPARED_BUILD_ROOT}" 2>/dev/null && pwd -P)" || die "Prepared build directory is not accessible: ${PREPARED_BUILD_ROOT}"
