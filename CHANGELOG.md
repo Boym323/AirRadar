@@ -6,6 +6,7 @@ All notable changes to AirRadar are documented here.
 
 ### Added
 
+- Add Live Airport Network V1 to `/airports`, prioritizing browser-local favorite airports and live-route-active airports with canonical Airport Operations, receiver-only approach queue, likely runway, bounded next-arrival estimates, and direct Live Board navigation.
 - Add Event Replay V1: replayable Flight Intelligence events can open Time Machine in a bounded ±10-minute window with the matching aircraft preselected when historical data is available.
 - Add Daily Aviation Story V1 to `/recap/daily`: busiest-airport ranking, unusual-turn/orbit counts, and bounded quality-controlled aircraft-weather highlights on top of existing receiver, Flight Intelligence, alert, rare-aircraft, and reception-record data.
 - Add Prediction Timeline V1 to aircraft detail, reusing the existing Operational Twin situation response to show NOW plus chronological waypoint, ATC, airspace, SIGMET and readiness-gated public prediction events with preserved source, provenance and confidence.
