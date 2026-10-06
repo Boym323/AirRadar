@@ -20,7 +20,7 @@ export interface PublicEtaAdvisory {
   uncertaintyBasis: "readiness_p90";
   modelVersion: PredictiveFlightState["modelVersion"];
   provenance: "predicted";
-  evidence: ExplainablePredictionEvidence[];
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 export interface AdminEtaAdvisoryPreview {
@@ -39,7 +39,7 @@ export interface AdminEtaAdvisoryPreview {
   uncertaintyBasis: EtaUncertaintyBasis;
   modelVersion: PredictiveFlightState["modelVersion"] | null;
   provenance: "predicted";
-  evidence: ExplainablePredictionEvidence[];
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 type EtaReadinessResult = PredictiveReadinessCapabilityResult<{
