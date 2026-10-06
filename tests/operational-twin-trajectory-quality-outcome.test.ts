@@ -209,7 +209,33 @@ describe("Trajectory Quality Outcome Validation V1", () => {
     })).toEqual({ decision: "FAIL", reasons: ["truth_coverage_low"], complete: true });
   });
 
-  it("bounds completed evidence to the 24-hour process-local window", () => {
+  it("hydrates anonymous five-minute aggregates across restart", () => {
+    const validator = new OperationalTwinTrajectoryQualityOutcomeValidator();
+    validator.capture(situation(), baseNow);
+
+    for (const [minutes, altitude] of [[5, 27000], [15, 22000], [30, 15000]] as const) {
+      const at = baseNow + minutes * 60_000;
+      const truth = localTruth(at, altitude);
+      validator.observeTruth(new Map([[truth.icaoHex, truth]]), at + 1_000);
+    }
+
+    const exported = validator.exportCalibrationBuckets(baseNow + 31 * 60_000);
+    expect(exported.length).toBe(1);
+
+    const restarted = new OperationalTwinTrajectoryQualityOutcomeValidator();
+    expect(restarted.hydrateCalibrationBuckets(exported, baseNow + 31 * 60_000)).toBe(1);
+    const report = restarted.report(new Date(baseNow + 31 * 60_000));
+
+    expect(report.completed).toBe(3);
+    expect(report.created).toBe(3);
+    expect(report.pending).toBe(0);
+    expect(report.overall.canonicalMeanAbsoluteErrorFt).toBe(3000);
+    expect(report.overall.qualityMeanAbsoluteErrorFt).toBe(0);
+    expect(report.window.restartStableAggregates).toBe(true);
+    expect(report.window.bucketMinutes).toBe(5);
+  });
+
+  it("bounds completed evidence to the 24-hour restart-stable window", () => {
     const validator = new OperationalTwinTrajectoryQualityOutcomeValidator();
     validator.capture(situation(), baseNow);
     const at = baseNow + 5 * 60_000;
