@@ -106,3 +106,23 @@ describe("Receiver Coverage Intelligence V1", () => {
     expect(result.health.reasons).toContain("coverage.unique_aircraft_below_baseline");
   });
 });
+  it("supports an explicit bounded 30-day trend without changing the default", () => {
+    const dates = Array.from({ length: 30 }, (_, index) => "2026-09-" + String(index + 1).padStart(2, "0"));
+    const result = buildReceiverCoverageIntelligenceV1({
+      currentDate: "2026-09-30",
+      historyDays: 30,
+      statsRows: dates.map((date) => ({
+        date,
+        uniqueAircraftCount: 400,
+        maxDistanceKm: 250,
+        receiverMessagesCount: 700_000,
+      })),
+      coverageRows: dates.flatMap((date) => coverageForDay(date, 200)),
+    });
+
+    expect(result.trend.recentDays).toHaveLength(30);
+    expect(result.trend.recentDays[0]?.date).toBe("2026-09-01");
+    expect(result.trend.recentDays.at(-1)?.date).toBe("2026-09-30");
+  });
+
+
