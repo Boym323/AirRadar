@@ -36,6 +36,9 @@ interface RadarDrawerDetailsProps {
   routeCorridor: AircraftRadarQuickDetailProps["routeCorridor"];
   routeConformance: AircraftRadarQuickDetailProps["routeConformance"];
   intelligenceEvents: FlightIntelligenceEvent[];
+  operationalTwin: AircraftRadarQuickDetailProps["operationalTwin"];
+  operationalFocusItemId: AircraftRadarQuickDetailProps["operationalFocusItemId"];
+  onOperationalFocus: NonNullable<AircraftRadarQuickDetailProps["onOperationalFocus"]>;
   sectorTraffic: AircraftRadarQuickDetailProps["sectorTraffic"];
   watchlisted: boolean;
   onBack: () => void;
@@ -65,6 +68,9 @@ export function RadarDrawerDetails({
   routeCorridor,
   routeConformance,
   intelligenceEvents,
+  operationalTwin,
+  operationalFocusItemId,
+  onOperationalFocus,
   sectorTraffic,
   watchlisted,
   onBack,
@@ -99,6 +105,9 @@ export function RadarDrawerDetails({
       routeCorridor={routeCorridor}
       routeConformance={routeConformance}
       intelligenceEvents={intelligenceEvents}
+      operationalTwin={operationalTwin}
+      operationalFocusItemId={operationalFocusItemId}
+      onOperationalFocus={onOperationalFocus}
       sectorTraffic={sectorTraffic}
       watchlisted={watchlisted}
       onBack={onBack}

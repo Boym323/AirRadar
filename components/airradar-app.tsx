@@ -53,6 +53,7 @@ import {
   AIRCRAFT_OPERATIONAL_FOCUS_MAP_SOURCE_ID,
   AIRCRAFT_OPERATIONAL_FOCUS_QUERY_PARAM,
   aircraftOperationalFocusClearHref,
+  aircraftOperationalFocusRadarHref,
   createAircraftOperationalFocusMapGeoJSON,
   emptyAircraftOperationalFocusMapGeoJSON,
   resolveAircraftOperationalFocusMapTarget,
@@ -2616,6 +2617,10 @@ export function AirRadarApp() {
     if (!aircraftFocus) return;
     router.replace(aircraftOperationalFocusClearHref(aircraftFocus), { scroll: false });
   }, [aircraftFocus, router]);
+  const focusOperationalItemFromDrawer = useCallback((itemId: string) => {
+    if (!selectedAircraft) return;
+    router.replace(aircraftOperationalFocusRadarHref(selectedAircraft.icaoHex, itemId), { scroll: false });
+  }, [router, selectedAircraft]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -3027,6 +3032,9 @@ export function AirRadarApp() {
             routeCorridor={selectedRouteCorridor.corridor}
             routeConformance={selectedRouteCorridor.conformance}
             intelligenceEvents={selectedIntelligenceEvents}
+            operationalTwin={selectedOperationalTwin}
+            operationalFocusItemId={operationalFocusMapId}
+            onOperationalFocus={focusOperationalItemFromDrawer}
             sectorTraffic={sectorTraffic}
             watchlisted={selectedAircraft ? isWatchlisted(selectedAircraft) : false}
             onBack={backToTraffic}
