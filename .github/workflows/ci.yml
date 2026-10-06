@@ -18,21 +18,40 @@ jobs:
         with:
           # Changelog backfill tests inspect dates and commit ranges for release tags.
           fetch-depth: 0
-          # Keep tags explicit: the changelog test resolves historical release tags.
           fetch-tags: true
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
+      - name: Detect pull request scope
+        id: scope
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          base="$(git merge-base HEAD "origin/${GITHUB_BASE_REF:-main}")"
+          scope_json="$(git diff --name-only -z "${base}" HEAD | node scripts/release-scope.mjs --stdin0)"
+          code="$(RELEASE_SCOPE_JSON="${scope_json}" node -e 'process.stdout.write(String(JSON.parse(process.env.RELEASE_SCOPE_JSON).deploy))')"
+          echo "code=${code}" >> "${GITHUB_OUTPUT}"
+          echo "base=${base}" >> "${GITHUB_OUTPUT}"
+          echo "PR scope: ${scope_json}"
+      - name: Validate documentation-only change
+        if: steps.scope.outputs.code != 'true'
+        run: |
+          node scripts/docs-localization.mjs
+          node scripts/changelog.mjs check
       - run: npm ci --prefer-offline --no-audit --no-fund
+        if: steps.scope.outputs.code == 'true'
       - name: Audit production dependencies
+        if: steps.scope.outputs.code == 'true'
         run: npm audit --omit=dev --audit-level=high
       - name: Restore ESLint cache
+        if: steps.scope.outputs.code == 'true'
         uses: actions/cache@v6
         with:
           path: .cache/eslint
           key: eslint-${{ runner.os }}-${{ hashFiles('package-lock.json', 'eslint.config.mjs') }}
       - name: Restore Next compiler cache
+        if: steps.scope.outputs.code == 'true'
         uses: actions/cache@v6
         with:
           path: .next/cache
@@ -40,18 +59,27 @@ jobs:
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'postcss.config.mjs') }}-
       - run: npm run prisma:generate
+        if: steps.scope.outputs.code == 'true'
       - name: Verify Prisma migration integrity
+        if: steps.scope.outputs.code == 'true'
         run: npx prisma migration check
       - name: Verify feature registry
+        if: steps.scope.outputs.code == 'true'
         run: npm run features:check
       - name: Verify Czech documentation localization
+        if: steps.scope.outputs.code == 'true'
         run: npm run docs:check
       - name: Verify visual system budget
+        if: steps.scope.outputs.code == 'true'
         run: npm run visual:check
       - name: Audit aircraft icon geometry
+        if: steps.scope.outputs.code == 'true'
         run: npm run icons:audit
       - name: Run lint, typecheck, and Vitest in parallel
+        if: steps.scope.outputs.code == 'true'
         shell: bash
+        env:
+          AIRRADAR_TEST_BASE_SHA: ${{ steps.scope.outputs.base }}
         run: |
           set -Eeuo pipefail
           lint_status=0
@@ -59,7 +87,6 @@ jobs:
           test_status=0
           npm run lint & lint_pid=$!
           npm run typecheck:prepared & typecheck_pid=$!
-          export AIRRADAR_TEST_BASE_SHA="$(git merge-base HEAD "origin/${GITHUB_BASE_REF:-main}")"
           echo "Testing changed files since ${AIRRADAR_TEST_BASE_SHA}"
           npm run test:changed & test_pid=$!
           wait "$lint_pid" || lint_status=$?
@@ -70,8 +97,10 @@ jobs:
             exit 1
           fi
       - run: npm run build:prepared
+        if: steps.scope.outputs.code == 'true'
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
+
   release-scope:
     name: Release scope
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -114,6 +143,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Resolve release build metadata
+        id: release-meta
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          version="$(node scripts/version.mjs resolve-release-version --channel stable)"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=v${version}" >> "${GITHUB_OUTPUT}"
+          echo "build_time=$(date --utc --iso-8601=seconds)" >> "${GITHUB_OUTPUT}"
       - run: npm ci --prefer-offline --no-audit --no-fund
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
@@ -144,6 +182,51 @@ jobs:
       - run: npm run build:prepared
         env:
           AIRRADAR_SKIP_BUILD_TYPECHECK: '1'
+          AIRRADAR_VERSION: ${{ steps.release-meta.outputs.version }}
+          AIRRADAR_TAG: ${{ steps.release-meta.outputs.tag }}
+          AIRRADAR_COMMIT: ${{ github.sha }}
+          AIRRADAR_CHANNEL: production
+          AIRRADAR_BUILD_TIME: ${{ steps.release-meta.outputs.build_time }}
+      - name: Prepare standalone runtime assets
+        run: node scripts/prepare-standalone.mjs .next
+      - name: Package production build artifact
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.release-meta.outputs.version }}
+          RELEASE_BUILD_TIME: ${{ steps.release-meta.outputs.build_time }}
+        run: |
+          set -Eeuo pipefail
+          artifact_root="artifacts/production-build"
+          rm -rf -- "${artifact_root}"
+          mkdir -p -- "${artifact_root}"
+          cp -a -- .next "${artifact_root}/.next"
+          node - "${artifact_root}/manifest.json" "${GITHUB_SHA}" "${RELEASE_VERSION}" "${RELEASE_BUILD_TIME}" <<'NODE'
+          const fs = require("node:fs");
+          const [manifestPath, commit, version, buildTime] = process.argv.slice(2);
+          const metadata = JSON.parse(fs.readFileSync("generated/build-version.json", "utf8"));
+          const buildId = fs.readFileSync(".next/BUILD_ID", "utf8").trim();
+          if (metadata.commit !== commit || metadata.version !== version || metadata.channel !== "production") {
+            throw new Error(`Build metadata mismatch: ${JSON.stringify(metadata)}`);
+          }
+          const manifest = {
+            schemaVersion: 1,
+            runtime: "standalone-v1",
+            commit,
+            version,
+            channel: "production",
+            buildTime: metadata.buildTime || buildTime,
+            buildId,
+          };
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+          NODE
+      - name: Upload production build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-build-${{ github.sha }}
+          path: artifacts/production-build
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
       - name: Restore Playwright browsers
         id: playwright-cache
         uses: actions/cache@v6
@@ -196,6 +279,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Download validated production build
+        uses: actions/download-artifact@v8
+        with:
+          name: production-build-${{ github.sha }}
+          path: ${{ runner.temp }}/airradar-production-build
       - name: Verify production ATS routes before release
         run: |
           set -Eeuo pipefail
@@ -232,7 +320,8 @@ jobs:
           sudo -n /var/www/airradar/deploy/release.sh \
             --branch main \
             --automated \
-            --commit "${GITHUB_SHA}"
+            --commit "${GITHUB_SHA}" \
+            --prepared-build "${RUNNER_TEMP}/airradar-production-build"
 
       - name: Verify deployed release identity
         shell: bash
