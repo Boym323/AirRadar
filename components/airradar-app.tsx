@@ -103,6 +103,7 @@ import { AirRadarTopbar, MobileBottomNav, RadarNavRail, UtcClock } from "@/compo
 import { RadarTrafficBrowser } from "@/components/radar/radar-traffic-browser";
 import { RadarDrawerDetails } from "@/components/radar/radar-drawer-details";
 import { RadarMapLayerMenu } from "@/components/radar/radar-map-layer-menu";
+import { RadarPresetMenu } from "@/components/radar/radar-preset-menu";
 import { RadarOperationsCenter } from "@/components/radar/radar-operations-center";
 import { RadarFlightFollowHud } from "@/components/radar/radar-flight-follow-hud";
 import { RadarOperationalFocusCard } from "@/components/radar/radar-operational-focus-card";
@@ -147,6 +148,7 @@ import { classifyAircraftSource } from "@/lib/aircraft/source-awareness";
 import { ognIconKind, ognPrimaryLabel, radarTrafficAriaLabel, toOgnTrafficPresentation } from "@/lib/radar/traffic-presentation";
 import { aircraftIconSizeForPresentation, aircraftIconSizeAtZoom } from "@/lib/aircraft/icon-size";
 import { aircraftColor } from "@/lib/aircraft/color-mode";
+import { addRadarPreset, createRadarPreset, readRadarPresets, writeRadarPresets, type RadarPreset } from "@/lib/radar/presets";
 import {
   AIRCRAFT_WEBGL_LABEL_LAYER_ID,
   AIRCRAFT_WEBGL_LABEL_SOURCE_ID,
@@ -647,6 +649,7 @@ export function AirRadarApp() {
   const receiverRef = useRef<PublicReceiverPosition>(snapshot.receiver);
   const centeredReceiverRef = useRef<ReceiverPosition | null>(null);
   const [mapZoom, setMapZoom] = useState(7.4);
+  const [radarPresets, setRadarPresets] = useState<RadarPreset[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const operationalFocusMapCameraKeyRef = useRef<string | null>(null);
   const [regionalAttentionMapFocus, setRegionalAttentionMapFocus] = useState<RegionalAttentionMapFocusEventDetail>(null);
@@ -814,6 +817,7 @@ export function AirRadarApp() {
     try {
       const stored = window.localStorage.getItem("airradar-watchlist");
       if (stored) setWatchlist(JSON.parse(stored) as Array<{ kind: string; value: string }>);
+      setRadarPresets(readRadarPresets(window.localStorage));
       const storedCoverage = window.localStorage.getItem("airradar-coverage");
       if (storedCoverage === "extended" || storedCoverage === "local") setCoverage(storedCoverage);
       const storedSource = window.localStorage.getItem("airradar-source-filter");
@@ -959,6 +963,118 @@ export function AirRadarApp() {
     (aircraft: AircraftView) => normalizedWatchlist.some((rule) => matchesAircraftRule(aircraft, rule)),
     [normalizedWatchlist],
   );
+
+  const saveCurrentRadarPreset = useCallback((name: string) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const center = map.getCenter();
+    const preset = createRadarPreset({
+      name,
+      camera: { longitude: center.lng, latitude: center.lat, zoom: map.getZoom() },
+      coverage,
+      mapFilters,
+      layers: {
+        showAircraft,
+        showOgn,
+        showAirports,
+        showSignificantAirports,
+        showSmallAirports,
+        showHeliports,
+        showAtc,
+        showAtcTraffic,
+        showAtsRoutes,
+        showNavData,
+        showSids,
+        showStars,
+        showSigmet,
+        showWeatherRadar,
+        showMetar,
+        showWind,
+        showAircraftWeather,
+        showNavigationIntegrity,
+        showAupUup,
+        showRangeRings,
+      },
+      display: { colorMode, radarOpacity, windLevel },
+    });
+    setRadarPresets((current) => {
+      const next = addRadarPreset(current, preset);
+      writeRadarPresets(window.localStorage, next);
+      return next;
+    });
+  }, [
+    colorMode,
+    coverage,
+    mapFilters,
+    radarOpacity,
+    showAircraft,
+    showAircraftWeather,
+    showAirports,
+    showAtc,
+    showAtcTraffic,
+    showAtsRoutes,
+    showAupUup,
+    showHeliports,
+    showMetar,
+    showNavData,
+    showNavigationIntegrity,
+    showOgn,
+    showRangeRings,
+    showSids,
+    showSigmet,
+    showSignificantAirports,
+    showSmallAirports,
+    showStars,
+    showWeatherRadar,
+    showWind,
+    windLevel,
+  ]);
+
+  const applyRadarPreset = useCallback((preset: RadarPreset) => {
+    setCoverage(preset.coverage);
+    setMapFilters(preset.mapFilters);
+    setShowAircraft(preset.layers.showAircraft);
+    setShowOgn(preset.layers.showOgn);
+    setShowAirports(preset.layers.showAirports);
+    setShowSignificantAirports(preset.layers.showSignificantAirports);
+    setShowSmallAirports(preset.layers.showSmallAirports);
+    setShowHeliports(preset.layers.showHeliports);
+    setShowAtc(preset.layers.showAtc);
+    setShowAtcTraffic(preset.layers.showAtcTraffic);
+    setShowAtsRoutes(preset.layers.showAtsRoutes);
+    setShowNavData(preset.layers.showNavData);
+    setShowSids(preset.layers.showSids);
+    setShowStars(preset.layers.showStars);
+    setShowSigmet(preset.layers.showSigmet);
+    setShowWeatherRadar(preset.layers.showWeatherRadar);
+    setShowMetar(preset.layers.showMetar);
+    setShowWind(preset.layers.showWind);
+    setShowAircraftWeather(preset.layers.showAircraftWeather);
+    setShowNavigationIntegrity(preset.layers.showNavigationIntegrity);
+    setShowAupUup(preset.layers.showAupUup);
+    setShowRangeRings(preset.layers.showRangeRings);
+    setColorMode(preset.display.colorMode);
+    setRadarOpacity(preset.display.radarOpacity);
+    setWindLevel(preset.display.windLevel);
+    setRadarPlaying(false);
+    const map = mapRef.current;
+    if (map) {
+      map.easeTo({
+        center: [preset.camera.longitude, preset.camera.latitude],
+        zoom: preset.camera.zoom,
+        padding: currentRadarPadding(),
+        duration: prefersReducedMotion() ? 0 : 500,
+      });
+    }
+  }, [currentRadarPadding, setRadarPlaying]);
+
+  const deleteRadarPreset = useCallback((id: string) => {
+    setRadarPresets((current) => {
+      const next = current.filter((preset) => preset.id !== id);
+      writeRadarPresets(window.localStorage, next);
+      return next;
+    });
+  }, []);
 
   function updateMapFilter<Key extends keyof MapAircraftFilters>(key: Key, value: MapAircraftFilters[Key]) {
     setMapFilters((current) => ({ ...current, [key]: value }));
@@ -2920,6 +3036,7 @@ export function AirRadarApp() {
                 <strong>{formatNumber(activeTrafficCount)}</strong>
               </button>
               </MapControlGroup>
+              <RadarPresetMenu presets={radarPresets} onSave={saveCurrentRadarPreset} onApply={applyRadarPreset} onDelete={deleteRadarPreset} />
               <RadarMapLayerMenu
                 showAircraft={showAircraft}
                 onShowAircraftChange={setShowAircraft}
