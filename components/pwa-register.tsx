@@ -1,24 +1,75 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { t } from "@/lib/i18n";
 
 const FAVORITES_KEY = "airradar.favorite-airports.v1";
+const FAVORITES_CHANGED_EVENT = "airradar:favorite-airports-changed";
+
+function normalizeFavoriteAirport(value: string): string | null {
+  const normalized = value.trim().toUpperCase();
+  return /^[A-Z0-9]{4}$/.test(normalized) ? normalized : null;
+}
+
+function readFavoriteAirports(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]") as unknown[];
+    return [...new Set(raw.flatMap((item) => {
+      if (typeof item !== "string") return [];
+      const normalized = normalizeFavoriteAirport(item);
+      return normalized ? [normalized] : [];
+    }))].slice(-50);
+  } catch {
+    return [];
+  }
+}
+
+export function useFavoriteAirports(): [string[], (icao: string) => void] {
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  const refresh = useCallback(() => {
+    setFavorites(readFavoriteAirports());
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === FAVORITES_KEY) refresh();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(FAVORITES_CHANGED_EVENT, refresh);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(FAVORITES_CHANGED_EVENT, refresh);
+    };
+  }, [refresh]);
+
+  const toggle = useCallback((icao: string) => {
+    const normalized = normalizeFavoriteAirport(icao);
+    if (!normalized) return;
+    try {
+      const current = readFavoriteAirports();
+      const next = current.includes(normalized)
+        ? current.filter((item) => item !== normalized)
+        : [...current, normalized].slice(-50);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+      setFavorites(next);
+      window.dispatchEvent(new Event(FAVORITES_CHANGED_EVENT));
+    } catch {
+      // Private browsing or storage policy can reject localStorage.
+    }
+  }, []);
+
+  return [favorites, toggle];
+}
 
 export function useFavoriteAirport(icao: string): [boolean, () => void] {
-  const [favorite, setFavorite] = useState(false);
-  useEffect(() => {
-    try { setFavorite((JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]") as unknown[]).includes(icao)); } catch { /* empty */ }
-  }, [icao]);
-  const toggle = () => {
-    try {
-      const current = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]") as unknown[];
-      const next = current.filter((item): item is string => typeof item === "string" && item !== icao);
-      if (!current.includes(icao)) next.push(icao);
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(next.slice(-50)));
-      setFavorite(!favorite);
-    } catch { /* private browsing can reject localStorage */ }
-  };
+  const normalized = useMemo(() => normalizeFavoriteAirport(icao), [icao]);
+  const [favorites, toggleFavorite] = useFavoriteAirports();
+  const favorite = normalized ? favorites.includes(normalized) : false;
+  const toggle = useCallback(() => {
+    if (normalized) toggleFavorite(normalized);
+  }, [normalized, toggleFavorite]);
   return [favorite, toggle];
 }
 

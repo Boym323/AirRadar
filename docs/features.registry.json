@@ -740,6 +740,28 @@
         "notable events",
         "attention dashboard"
       ]
+    },
+    {
+      "id": "live-airport-network",
+      "name": "Live Airport Network",
+      "category": "airports",
+      "status": "production",
+      "introducedVersion": null,
+      "summary": "Bounded /airports operational network showing favorite and live-route-active airports with canonical Airport Operations, receiver-only approach-queue state, likely runway, next inbound estimate, and direct Live Board navigation.",
+      "pages": [
+        "/airports"
+      ],
+      "apis": [],
+      "changelogScopes": [
+        "live-airport-network"
+      ],
+      "changelogKeywords": [
+        "live airport network",
+        "airport network",
+        "favorite airports",
+        "approach queue",
+        "next arrival"
+      ]
     }
   ]
 }
