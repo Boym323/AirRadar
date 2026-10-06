@@ -1,4 +1,5 @@
 import type { OperationalTwinWindTimingShadow } from "./wind-timing-shadow";
+import type { OperationalTwinTrajectoryQualityV2 } from "./trajectory-quality-v2";
 import type { NavigationIntegrityCorridorIntelligence } from "./navigation-integrity-corridor";
 import type { WeatherCorridorIntelligence } from "@/lib/weather/corridor-intelligence";
 
@@ -139,6 +140,7 @@ export interface OperationalTwinSituation {
   corridor: OperationalTwinCorridor;
   weatherCorridor: WeatherCorridorIntelligence;
   windTimingShadow?: OperationalTwinWindTimingShadow;
+  trajectoryQualityV2?: OperationalTwinTrajectoryQualityV2;
   windTimingPromotion?: {
     version: "operational-digital-twin-wind-timing-promotion-v1";
     configuredPolicy: "CANONICAL" | "WIND_GRADUATED";
