@@ -13,9 +13,12 @@ describe("production release branch resolution", () => {
     expect(capture).toBeGreaterThan(branchFetch);
     expect(tagFetch).toBeGreaterThan(capture);
 
-    expect(release).toContain('merge_base="$(git_cmd merge-base HEAD "${remote_sha}")"');
-    expect(release).toContain('git_cmd merge --ff-only "${remote_sha}"');
-    expect(release).toContain('git_cmd reset --hard "${remote_sha}"');
+    expect(release).toContain('merge_base="$(git_cmd merge-base HEAD "${target_sha}")"');
+    expect(release).toContain('git_cmd merge --ff-only "${target_sha}"');
+    expect(release).toContain('git_cmd reset --hard "${target_sha}"');
+    expect(release).toContain('target_sha="${EXPECTED_COMMIT}"');
+    expect(release).toContain('git_cmd merge-base --is-ancestor "${EXPECTED_COMMIT}" "${remote_sha}"');
+    expect(release).toContain('git_cmd reset --hard "${target_sha}"');
 
     const updateRepository = release.slice(
       release.indexOf("update_repository() {"),
