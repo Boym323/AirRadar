@@ -198,7 +198,8 @@ export function OperationsDashboard() {
 
   const approachAircraft = useMemo(() => {
     const live = new Set((snapshot?.aircraft ?? []).map((aircraft) => aircraft.icaoHex));
-    const cutoff = Date.now() - 15 * 60_000;
+    const referenceAt = Date.parse(snapshot?.fetchedAt ?? "");
+    const cutoff = (Number.isFinite(referenceAt) ? referenceAt : 0) - 15 * 60_000;
     return new Set(events
       .filter((event) => event.type === "APPROACH" && live.has(event.icaoHex) && Date.parse(event.occurredAt) >= cutoff)
       .map((event) => event.icaoHex)).size;
@@ -313,7 +314,7 @@ export function OperationsDashboard() {
       </Panel>
 
       <div className={styles.grid}>
-        <Panel className={styles.panel}>
+        <Panel className={styles.panel} data-testid="operations-airport-flow">
           <SectionHeader
             kicker={t.operations.airportFlowKicker}
             title={t.operations.airportFlow}
@@ -348,7 +349,7 @@ export function OperationsDashboard() {
           )}
         </Panel>
 
-        <Panel className={styles.panel}>
+        <Panel className={styles.panel} data-testid="operations-next-30">
           <SectionHeader
             kicker={t.operations.nextKicker}
             title={t.operations.nextThirty}
@@ -434,7 +435,7 @@ export function OperationsDashboard() {
           ) : null}
         </Panel>
 
-        <Panel className={styles.panel}>
+        <Panel className={styles.panel} data-testid="operations-notable-events">
           <SectionHeader
             kicker={t.operations.eventsKicker}
             title={t.operations.notableEvents}
