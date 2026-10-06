@@ -73,6 +73,12 @@ describe("production release metadata gate", () => {
     expect(lateSweepAwait).toBe(-1);
   });
 
+  it("treats degraded airport operations as an expected 503 in route smoke", () => {
+    const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
+    expect(source).toContain("/\\/api\\/airports\\/[^/]+\\/operations(?:\\?|\\/)/.test(url)");
+    expect(source).toContain("if (expectedUnavailable) unavailable.push");
+  });
+
   it("keeps Operations Dashboard in secondary and mobile navigation smoke", () => {
     const source = readFileSync(new URL("../scripts/production-gates.mjs", import.meta.url), "utf8");
     expect(source).toContain('["/operations", \'[data-testid="operations-dashboard-v1"]\']');
