@@ -51,6 +51,15 @@ export class AlertV1OccurrenceInvariantError extends Error {
 }
 
 export interface AlertV1Delivery { id: string; occurrenceId: string; channel: string; status: string; attemptCount: number; nextAttemptAt: string; claimedAt: string | null; sentAt: string | null; lastError: string | null; }
+export interface AlertV1DeliveryOccurrence {
+  id: string;
+  trigger: string;
+  aircraftIcao: string;
+  registration: string | null;
+  callsign: string | null;
+  occurredAt: string;
+  payload: Record<string, unknown>;
+}
 
 export interface AlertV1HistoryRow {
   occurrence: Row;
@@ -185,6 +194,22 @@ export class AlertsFleetsRepository {
     }));
   }
   async listDeliveries(limit = 100): Promise<AlertV1Delivery[]> { const t = table("AlertDelivery"); if (!t) return []; return (await t.orderBy((row: { createdAt: { desc(): unknown } }) => row.createdAt.desc()).limit(Math.min(200, Math.max(1, limit))).all()).map((row) => ({ id: String(row.id), occurrenceId: String(row.occurrenceId), channel: String(row.channel), status: String(row.status), attemptCount: Number(row.attemptCount ?? 0), nextAttemptAt: iso(row.nextAttemptAt), claimedAt: row.claimedAt ? iso(row.claimedAt) : null, sentAt: row.sentAt ? iso(row.sentAt) : null, lastError: typeof row.lastError === "string" ? row.lastError.slice(0, 300) : null })); }
+
+  async getOccurrenceForDelivery(id: string): Promise<AlertV1DeliveryOccurrence | null> {
+    const t = table("AlertOccurrence");
+    if (!t) return null;
+    const row = await t.where({ id }).first();
+    if (!row) return null;
+    return {
+      id: String(row.id),
+      trigger: String(row.trigger),
+      aircraftIcao: String(row.aircraftIcao),
+      registration: typeof row.registration === "string" ? row.registration : null,
+      callsign: typeof row.callsign === "string" ? row.callsign : null,
+      occurredAt: iso(row.occurredAt),
+      payload: parseJson<Record<string, unknown>>(row.payloadJson, {}),
+    };
+  }
 
   async claimDelivery(nowMs = Date.now()): Promise<AlertV1Delivery | null> {
     const database = getPrisma(); if (!database) return null;
