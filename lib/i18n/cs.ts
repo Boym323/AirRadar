@@ -611,6 +611,8 @@ export const cs = {
     operationsPredictiveShadow: "SHADOW",
     operationsPredictiveUnavailable: "Prediktivní kontext je dočasně nedostupný.",
     operationsRegionalTitle: "Regionální pozornost",
+    operationsRegionalQueueTitle: "Regionální fronta fokusu",
+    operationsRegionalQueueSummary: (attention: number, watch: number) => `${attention} pozornost · ${watch} sledovat`,
     operationsRegionalHint: "omezený živý kontext · horizont 30 min",
     operationsRegionalStale: "zastaralý regionální snapshot",
     operationsRegionalAttention: "POZORNOST",
