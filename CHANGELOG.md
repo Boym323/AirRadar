@@ -10,6 +10,173 @@ All notable changes to AirRadar are documented here.
   destination-independent top-of-descent timeline events, detector versioning,
   and canonical Airport Operations parity for linked go-around/holding events.
 
+## [1.0.327] - 2026-10-06
+
+Changes since v1.0.326.
+
+### Fixed
+
+- Ship published ATS datasets (fccd298e)
+
+<details>
+<summary>Technical commits</summary>
+
+- fix(deploy): ship published ATS datasets (fccd298e)
+- Merge pull request #402 from Boym323/fix/ship-ats-datasets (3dbd66eb)
+
+</details>
+
+## [1.0.326] - 2026-10-06
+
+Changes since v1.0.325.
+
+**Features touched:** Live Radar, Operational Digital Twin.
+
+### Added
+
+- Render aircraft operational focus (e7c8272b)
+- Add operational focus copy (4ff132aa)
+- Localize operational focus (94227565)
+- Sync components/aircraft-operational-twin.module.css (09cf3299)
+- Sync components/aircraft-operational-twin.tsx (e597dbb7)
+- Sync components/airradar-app.tsx (0bc55040)
+- Sync docs/OPERATIONAL-DIGITAL-TWIN.md (0bf0e4ac)
+- Sync docs/cs/OPERATIONAL-DIGITAL-TWIN.md (b120bb79)
+- Sync lib/i18n/cs.ts (e6085faf)
+- Sync lib/i18n/en.ts (2472af04)
+- Add lib/operational-twin/aircraft-operational-focus-ui.ts (dcfe7101)
+- Sync lib/operational-twin/index.ts (9278026b)
+- Add tests/aircraft-operational-focus-map.test.ts (720dd277)
+- Sync tests/aircraft-operational-focus-ui-boundary.test.ts (a43f0fd6)
+- Add operational focus map callout (014ebe6c)
+- Add focus clear radar href (e1793527)
+- Add operational focus radar callout copy (e18fd7d9)
+- Localize operational focus radar callout (6021e3ec)
+- Show active operational focus callout (2ddd0145)
+- Add operational focus drawer summary (b248c901)
+- Add operational focus drawer copy (f2cb32aa)
+- Localize operational focus drawer copy (9aada61e)
+- Surface operational focus in aircraft drawer (2bd245cb)
+- Pass operational focus through drawer boundary (33f44f55)
+- Wire drawer focus actions to existing map projection (a60dc846)
+- Keep active focus visible in compact drawer (3a0fb112)
+- Reveal Situation tab for map-focused context (a4b33366)
+- Pass focus reveal signal through drawer (51c8bd5b)
+- Reveal operational focus drawer from map click (ba4b5b15)
+
+### Fixed
+
+- Type focus radar href (45325ac3)
+- Narrow available focus twin (0362effc)
+- Keep focus UI client import bounded (314b5ac7)
+- Scope operational focus kicker style (d9af19fa)
+- Include ATS datasets in standalone runtime (38e7fb09)
+- Allow ATS recovery releases (eb695121)
+
+### Documentation
+
+- Update changelog for v1.0.324 (75c004ed)
+- Document operational focus UI (f49d99ee)
+- Localize operational focus UI (67472a50)
+- Document operational focus radar callout (63669596)
+- Localize operational focus radar callout (15e83cd7)
+- Backfill missing release changelog entries (fb79e7ed)
+- Keep changelog aligned with published tags (647909ac)
+- Document operational focus drawer (93d22571)
+- Localize operational focus drawer (6c9abe7f)
+- Document operational focus map drawer sync (ec8fbb2a)
+- Localize operational focus map drawer sync (31901b21)
+
+### Maintenance
+
+- Add focus severity treatment (b00ecee8)
+- Lock operational focus UI boundary (0ce2fa4f)
+- Fix focus UI fetch assertion (129d8ce2)
+- Add operational focus map callout (a06f0fea)
+- Cover focus clear href (e416bc08)
+- Lock operational focus callout boundary (8baf3450)
+- Fix focus callout clear assertion (118d75de)
+- Sync generated repository metadata (44fd36ca)
+- Sync generated repository metadata (9bb91069)
+- Add operational focus drawer summary (b238f8a9)
+- Cover operational focus drawer boundary (c69a81d0)
+- Cover operational focus map drawer sync (3ee5994c)
+- Align quick detail contract with focus sync (73cd68f0)
+
+<details>
+<summary>Technical commits</summary>
+
+- docs: update changelog for v1.0.324 (75c004ed)
+- feat(operational-twin): render aircraft operational focus (e7c8272b)
+- style(operational-twin): add focus severity treatment (b00ecee8)
+- feat(i18n): add operational focus copy (4ff132aa)
+- feat(i18n): localize operational focus (94227565)
+- docs: document operational focus UI (f49d99ee)
+- docs: localize operational focus UI (67472a50)
+- test(operational-twin): lock operational focus UI boundary (0ce2fa4f)
+- test(operational-twin): fix focus UI fetch assertion (129d8ce2)
+- Merge pull request #392 from Boym323/feat/aircraft-operational-focus-ui-v1 (bb2b4880)
+- feat(operational-focus-map): sync components/aircraft-operational-twin.module.css (09cf3299)
+- feat(operational-focus-map): sync components/aircraft-operational-twin.tsx (e597dbb7)
+- feat(operational-focus-map): sync components/airradar-app.tsx (0bc55040)
+- feat(operational-focus-map): sync docs/OPERATIONAL-DIGITAL-TWIN.md (0bf0e4ac)
+- feat(operational-focus-map): sync docs/cs/OPERATIONAL-DIGITAL-TWIN.md (b120bb79)
+- feat(operational-focus-map): sync lib/i18n/cs.ts (e6085faf)
+- feat(operational-focus-map): sync lib/i18n/en.ts (2472af04)
+- feat(operational-focus-map): add lib/operational-twin/aircraft-operational-focus-ui.ts (dcfe7101)
+- feat(operational-focus-map): sync lib/operational-twin/index.ts (9278026b)
+- feat(operational-focus-map): add tests/aircraft-operational-focus-map.test.ts (720dd277)
+- feat(operational-focus-map): sync tests/aircraft-operational-focus-ui-boundary.test.ts (a43f0fd6)
+- fix(operational-twin): type focus radar href (45325ac3)
+- fix(radar): narrow available focus twin (0362effc)
+- fix(operational-twin): keep focus UI client import bounded (314b5ac7)
+- Merge pull request #393 from Boym323/feat/aircraft-operational-focus-map-v1 (495843a4)
+- feat(radar): add operational focus map callout (014ebe6c)
+- style(radar): add operational focus map callout (a06f0fea)
+- feat(operational-twin): add focus clear radar href (e1793527)
+- feat(i18n): add operational focus radar callout copy (e18fd7d9)
+- feat(i18n): localize operational focus radar callout (6021e3ec)
+- feat(radar): show active operational focus callout (2ddd0145)
+- test(operational-twin): cover focus clear href (e416bc08)
+- test(radar): lock operational focus callout boundary (8baf3450)
+- docs: document operational focus radar callout (63669596)
+- docs: localize operational focus radar callout (15e83cd7)
+- test(radar): fix focus callout clear assertion (118d75de)
+- chore(metadata): sync generated repository metadata (44fd36ca)
+- docs: backfill missing release changelog entries (fb79e7ed)
+- docs: keep changelog aligned with published tags (647909ac)
+- Merge pull request #390 from Boym323/release/v1.0.324 (745e10de)
+- chore(metadata): sync generated repository metadata (9bb91069)
+- Merge pull request #394 from Boym323/feat/aircraft-operational-focus-map-callout-v1 (94f2985a)
+- feat(radar): add operational focus drawer summary (b248c901)
+- style(radar): add operational focus drawer summary (b238f8a9)
+- feat(i18n): add operational focus drawer copy (f2cb32aa)
+- feat(i18n): localize operational focus drawer copy (9aada61e)
+- feat(radar): surface operational focus in aircraft drawer (2bd245cb)
+- feat(radar): pass operational focus through drawer boundary (33f44f55)
+- feat(radar): wire drawer focus actions to existing map projection (a60dc846)
+- test(radar): cover operational focus drawer boundary (c69a81d0)
+- docs: document operational focus drawer (93d22571)
+- docs: localize operational focus drawer (6c9abe7f)
+- fix(radar): scope operational focus kicker style (d9af19fa)
+- Merge pull request #385 from Boym323/automation/repository-metadata (60a70044)
+- Merge pull request #395 from Boym323/feat/aircraft-operational-focus-drawer-v1 (777a2a36)
+- feat(radar): keep active focus visible in compact drawer (3a0fb112)
+- feat(radar): reveal Situation tab for map-focused context (a4b33366)
+- feat(radar): pass focus reveal signal through drawer (51c8bd5b)
+- feat(radar): reveal operational focus drawer from map click (ba4b5b15)
+- test(radar): cover operational focus map drawer sync (3ee5994c)
+- docs: document operational focus map drawer sync (ec8fbb2a)
+- docs: localize operational focus map drawer sync (31901b21)
+- Merge pull request #397 from Boym323/feat/aircraft-operational-focus-map-drawer-sync-v1 (a1fd2642)
+- fix(deploy): include ATS datasets in standalone runtime (38e7fb09)
+- Merge pull request #399 from Boym323/fix/standalone-ats-runtime (fded5c93)
+- test: align quick detail contract with focus sync (73cd68f0)
+- Merge pull request #400 from Boym323/fix/update-quick-detail-contract-test (e3f2c74e)
+- fix(deploy): allow ATS recovery releases (eb695121)
+- Merge pull request #401 from Boym323/fix/allow-ats-recovery-release (597f8d66)
+
+</details>
 ## [1.0.325] - 2026-10-06
 
 Changes since v1.0.324.
