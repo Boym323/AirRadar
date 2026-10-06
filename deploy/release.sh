@@ -34,6 +34,7 @@ RELEASE_MODE="stable"
 RELEASE_BUILD_CHANNEL="production"
 DRY_RUN=0
 ALLOW_DIRTY=0
+OFFLINE=0
 AUTOMATED=0
 EXPECTED_COMMIT=""
 PREPARED_BUILD_ROOT=""
@@ -65,6 +66,7 @@ Options:
   --commit SHA       Require the release branch to resolve to this exact commit.
   --prepared-build DIR  Use a CI-produced .next artifact instead of rebuilding locally (automated releases only).
   --allow-dirty    Release uncommitted changes without updating from origin.
+  --offline        Do not fetch from origin; release the currently checked-out commit.
   --dry-run        Run preflight checks and print the release plan only.
   --help           Show this help.
 
@@ -251,6 +253,10 @@ parse_args() {
         ALLOW_DIRTY=1
         shift
         ;;
+      --offline)
+        OFFLINE=1
+        shift
+        ;;
       --help|-h)
         usage
         trap - EXIT
@@ -330,6 +336,7 @@ check_repository() {
   fi
   git_cmd check-ref-format --branch "${DEPLOY_BRANCH}" >/dev/null 2>&1 || die "Invalid release branch name: ${DEPLOY_BRANCH}"
   git_cmd remote get-url origin >/dev/null 2>&1 || die "Git remote origin is not configured."
+  (( AUTOMATED == 0 || OFFLINE == 0 )) || die "--offline cannot be combined with --automated."
 
   if (( ALLOW_DIRTY == 0 )); then
     dirty_status="$(git_cmd status --porcelain)"
@@ -453,6 +460,12 @@ update_repository() {
 
   OLD_SHA="$(git_cmd rev-parse HEAD)"
   log "Current commit: ${OLD_SHA}"
+
+  if (( OFFLINE == 1 )); then
+    NEW_SHA="${OLD_SHA}"
+    log "Offline release: skipping origin/${DEPLOY_BRANCH} and tag fetches."
+    return 0
+  fi
 
   if (( WORKTREE_DIRTY == 1 )); then
     warn "Skipping origin/${DEPLOY_BRANCH} update to preserve uncommitted changes. Commit or stash them before a release that must include remote updates."
@@ -1009,7 +1022,11 @@ print_dry_run_plan() {
   if (( WORKTREE_DIRTY == 1 )); then
     log "Planned release: preserve the current working tree, resolve version, generate/commit changelog, npm ci (prefer offline, no audit/fund), Prisma generate, parallel lint/typecheck/tests (Vitest threads), build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
   else
-    log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, resolve version, generate/commit changelog, npm ci (prefer offline, no audit/fund), Prisma generate, parallel lint/typecheck/tests (Vitest threads), build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
+    if (( OFFLINE == 1 )); then
+      log "Planned release: preserve the current checkout, resolve version, generate/commit changelog, npm ci (prefer offline, no audit/fund), Prisma generate, parallel lint/typecheck/tests (Vitest threads), build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
+    else
+      log "Planned release: fast-forward origin/${DEPLOY_BRANCH}, resolve version, generate/commit changelog, npm ci (prefer offline, no audit/fund), Prisma generate, parallel lint/typecheck/tests (Vitest threads), build, Prisma deploy, validate/compare/install the systemd unit, daemon-reload if changed, verify the loaded unit, restart, local health, public health."
+    fi
   fi
 }
 

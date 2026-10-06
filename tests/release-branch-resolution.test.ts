@@ -33,4 +33,13 @@ describe("production release branch resolution", () => {
     );
     expect(afterTagFetch).not.toContain("FETCH_HEAD");
   });
+
+  it("supports an offline local release without fetching origin or tags", async () => {
+    const release = await readFile(new URL("../deploy/release.sh", import.meta.url), "utf8");
+
+    expect(release).toContain("--offline");
+    expect(release).toContain('(( AUTOMATED == 0 || OFFLINE == 0 )) || die "--offline cannot be combined with --automated."');
+    expect(release).toContain('if (( OFFLINE == 1 )); then');
+    expect(release).toContain('log "Offline release: skipping origin/${DEPLOY_BRANCH} and tag fetches."');
+  });
 });
