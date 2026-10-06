@@ -68,6 +68,7 @@ describe("Predictive Runway Change Advisory V1", () => {
       confidence: "MEDIUM",
       modelVersion: "predictive-intelligence-v1",
       provenance: "predicted",
+      evidence: [],
     });
   });
 

@@ -769,18 +769,11 @@
       "category": "analytics / routes",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded today/7d/30d explorer for persisted receiver-observed Flight route aggregates.",
-      "pages": [
-        "/routes"
-      ],
+      "summary": "Bounded route aggregate explorer.",
+      "pages": ["/routes"],
       "apis": [],
-      "changelogScopes": [
-        "route-network-explorer"
-      ],
-      "changelogKeywords": [
-        "route network",
-        "route explorer"
-      ]
+      "changelogScopes": ["route-network-explorer"],
+      "changelogKeywords": ["route network", "route explorer"]
     },
     {
       "id": "aircraft-discovery",
@@ -788,38 +781,31 @@
       "category": "discovery / spotting",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Bounded discovery page for live, new, rare, returning, watchlisted, emergency and reception-record aircraft.",
-      "pages": [
-        "/discover"
-      ],
+      "summary": "Bounded discovery page for notable aircraft.",
+      "pages": ["/discover"],
       "apis": [],
-      "changelogScopes": [
-        "aircraft-discovery"
-      ],
-      "changelogKeywords": [
-        "aircraft discovery",
-        "discover aircraft"
-      ]
+      "changelogScopes": ["aircraft-discovery"],
+      "changelogKeywords": ["aircraft discovery", "discover aircraft"]
     },
     {
-      "id": "watchlist-intelligence-v2",
-      "name": "Watchlist Intelligence V2",
-      "category": "alerts / monitoring",
+      "id": "explainable-prediction",
+      "name": "Explainable Prediction",
+      "category": "intelligence / prediction",
       "status": "production",
       "introducedVersion": null,
-      "summary": "Read-only watchlist intelligence dashboard combining current per-rule matches with one bounded 50-event activity feed for recent rule activity and notification-delivery outcomes.",
+      "summary": "Why/Proč evidence panels for readiness-gated ETA, runway, runway-change and trajectory advisories using a small capability-specific whitelist from the existing canonical prediction evidence.",
       "pages": [
-        "/watchlist"
+        "/aircraft/:hex"
       ],
       "apis": [],
       "changelogScopes": [
-        "watchlist-intelligence"
+        "explainable-prediction"
       ],
       "changelogKeywords": [
-        "watchlist intelligence",
-        "matching rules",
-        "matching aircraft",
-        "recent watchlist activity"
+        "explainable prediction",
+        "prediction evidence",
+        "why prediction",
+        "prediction rationale"
       ]
     }
   ]

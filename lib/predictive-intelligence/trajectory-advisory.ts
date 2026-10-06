@@ -1,4 +1,5 @@
 import type { PredictiveCapabilityStatus, PredictiveGraduationPolicy } from "./graduation";
+import { explainablePredictionEvidence, type ExplainablePredictionEvidence } from "./explainability";
 import type {
   PredictiveReadinessCapabilityResult,
   TrajectoryReadinessEvidence,
@@ -22,6 +23,7 @@ export interface PublicTrajectoryAdvisory {
   confidence: PredictionConfidence;
   modelVersion: PredictiveFlightState["modelVersion"];
   provenance: "predicted";
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 export interface AdminTrajectoryAdvisoryPreview {
@@ -42,6 +44,7 @@ export interface AdminTrajectoryAdvisoryPreview {
   independentOutcomeTruthAvailable: boolean;
   modelVersion: PredictiveFlightState["modelVersion"] | null;
   provenance: "predicted";
+  evidence?: ExplainablePredictionEvidence[];
 }
 
 type TrajectoryReadinessResult = PredictiveReadinessCapabilityResult<TrajectoryReadinessEvidence>;
@@ -91,6 +94,7 @@ export function buildPublicTrajectoryAdvisory(
     confidence: prediction.trajectory.confidence,
     modelVersion: prediction.modelVersion,
     provenance: "predicted",
+    evidence: explainablePredictionEvidence("TRAJECTORY", prediction.trajectory.evidence),
   };
 }
 
@@ -125,5 +129,6 @@ export function buildAdminTrajectoryAdvisoryPreview(
     independentOutcomeTruthAvailable: readiness.evidence.independentOutcomeTruthAvailable,
     modelVersion: prediction?.modelVersion ?? null,
     provenance: "predicted",
+    evidence: explainablePredictionEvidence("TRAJECTORY", prediction?.trajectory.evidence ?? []),
   };
 }
