@@ -38,7 +38,7 @@ export function RadarPresetMenu({ presets, onSave, onApply, onDelete }: RadarPre
 
   return <details className={styles.root} data-testid="radar-presets-v1">
     <MapControl as="summary" aria-label={copy.title} title={copy.title}>
-      <UiIcon name="settings" />
+      <UiIcon name="system" />
       <span className="map-control-label">{copy.title}</span>
     </MapControl>
     <div className={styles.menu}>
