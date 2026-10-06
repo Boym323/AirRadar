@@ -6,6 +6,7 @@ All notable changes to AirRadar are documented here.
 
 ### Added
 
+- Add Event Replay V1: replayable Flight Intelligence events can open Time Machine in a bounded ±10-minute window with the matching aircraft preselected when historical data is available.
 - Add Operations Dashboard V1 at `/operations`, reusing canonical live traffic, Airport Operations, Regional Attention, readiness-gated public ETA with an inferred terminal-demand fallback, and Flight Intelligence without adding a parallel intelligence engine.
 - Extend Flight Intelligence with explicit initial-climb, cruise-entry, and
   destination-independent top-of-descent timeline events, detector versioning,
